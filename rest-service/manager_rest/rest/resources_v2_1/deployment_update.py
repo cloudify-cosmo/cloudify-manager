@@ -86,20 +86,13 @@ class DeploymentUpdate(SecuredResource):
         request_json = request.json
         manager, skip_install, skip_uninstall, workflow_id = \
             self._get_params_and_validate(id, request_json)
-        inputs = request_json.get('inputs', {})
-        blueprint_id = request_json.get('blueprint_id')
-        if not isinstance(inputs, dict):
-            raise manager_exceptions.BadParametersError(
-                'parameter `inputs` must be of type `dict`')
-        if not blueprint_id:
-            raise manager_exceptions.BadParametersError(
-                'Must supply the parameter `blueprint_id`')
+        blueprint, inputs = self._get_and_validate_blueprint_and_inputs(
+            id, request_json)
 
-        blueprint = get_storage_manager().get(models.Blueprint, blueprint_id)
         blueprint_dir_abs = join(config.instance.file_server_root,
                                  FILE_SERVER_BLUEPRINTS_FOLDER,
                                  blueprint.tenant_name,
-                                 blueprint_id)
+                                 blueprint.id)
         deployment_dir = join(FILE_SERVER_DEPLOYMENTS_FOLDER,
                               current_tenant.name,
                               id)
@@ -111,7 +104,7 @@ class DeploymentUpdate(SecuredResource):
                                                             deployment_dir,
                                                             file_name,
                                                             inputs,
-                                                            blueprint_id)
+                                                            blueprint.id)
         manager.extract_steps_from_deployment_update(deployment_update)
         return manager.commit_deployment_update(deployment_update,
                                                 skip_install=skip_install,
@@ -134,6 +127,27 @@ class DeploymentUpdate(SecuredResource):
             skip_install=skip_install,
             skip_uninstall=skip_uninstall,
             workflow_id=workflow_id)
+
+    @staticmethod
+    def _get_and_validate_blueprint_and_inputs(deployment_id, request_json):
+        inputs = request_json.get('inputs', {})
+        blueprint_id = request_json.get('blueprint_id')
+        if not isinstance(inputs, dict):
+            raise manager_exceptions.BadParametersError(
+                'parameter `inputs` must be of type `dict`')
+        if not blueprint_id and not inputs:
+            raise manager_exceptions.BadParametersError(
+                'Must supply either the `blueprint_id` parameter, or new '
+                'inputs, in order the preform a deployment update')
+
+        if blueprint_id is None:
+            deployment = get_storage_manager().get(models.Deployment,
+                                                   deployment_id)
+            blueprint = deployment.blueprint
+        else:
+            blueprint = get_storage_manager().get(models.Blueprint,
+                                                  blueprint_id)
+        return blueprint, inputs
 
     @staticmethod
     def _get_params_and_validate(deployment_id, request_json):
