@@ -25,18 +25,23 @@ TEST_PACKAGE_VERSION = '1.2'
 class TestPlugins(AgentlessTestCase):
 
     def test_get_plugin_by_id(self):
-        put_plugin_response = test_utils.upload_mock_plugin(
-                TEST_PACKAGE_NAME,
-                TEST_PACKAGE_VERSION)
-        plugin_id = put_plugin_response.get('id')
-        self.assertIsNotNone(plugin_id)
-        self.assertEquals(put_plugin_response.get('package_name'),
-                          TEST_PACKAGE_NAME)
-        self.assertEquals(put_plugin_response.get('package_version'),
-                          TEST_PACKAGE_VERSION)
-        get_plugin_by_id_response = self.client.plugins.get(plugin_id)
+        plugin_id = None
+        try:
+            put_plugin_response = test_utils.upload_mock_plugin(
+                    TEST_PACKAGE_NAME,
+                    TEST_PACKAGE_VERSION)
+            plugin_id = put_plugin_response.get('id')
+            self.assertIsNotNone(plugin_id)
+            self.assertEquals(put_plugin_response.get('package_name'),
+                              TEST_PACKAGE_NAME)
+            self.assertEquals(put_plugin_response.get('package_version'),
+                              TEST_PACKAGE_VERSION)
+            get_plugin_by_id_response = self.client.plugins.get(plugin_id)
 
-        self.assertEquals(put_plugin_response, get_plugin_by_id_response)
+            self.assertEquals(put_plugin_response, get_plugin_by_id_response)
+        finally:
+            if plugin_id:
+                self.client.plugins.delete(plugin_id)
 
     def test_get_plugin_not_found(self):
         try:
