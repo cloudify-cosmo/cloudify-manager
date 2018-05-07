@@ -51,7 +51,9 @@ def user_loader(request):
         return user
     if current_app.external_auth \
             and current_app.external_auth.can_extract_user_from_request():
-        return current_app.external_auth.get_user_from_request(request)
+        user = current_app.external_auth.get_user_from_request(request)
+        if isinstance(user, User):
+            return user
     return None
 
 
