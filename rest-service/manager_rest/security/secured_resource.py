@@ -16,7 +16,7 @@
 from functools import wraps
 
 from flask_restful import Resource
-from flask import request, current_app, Response, make_response
+from flask import request, current_app, Response, jsonify
 
 from manager_rest.utils import abort_error
 from manager_rest.manager_exceptions import MissingPremiumPackage
@@ -32,7 +32,8 @@ def authenticate(func):
             return auth_response
         response = func(*args, **kwargs)
         if hasattr(auth_response, 'response_headers'):
-            response = make_response(response)  # to set additional headers
+            # to set additional headers
+            response = jsonify(response)
             for header, value in auth_response.response_headers.iteritems():
                 response.headers[header] = value
         return response
