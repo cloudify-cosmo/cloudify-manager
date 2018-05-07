@@ -37,7 +37,7 @@ class TestWorkflow(AgentTestWithPlugins):
             "Task succeeded 'cloudify_agent.installer.operations.delete'"
         ]
         self._test_deploy_with_agent_worker(
-            'dsl/with_agent.yaml',
+            'dsl/agent_tests/with_agent.yaml',
             install_events,
             uninstall_events
         )
@@ -52,7 +52,7 @@ class TestWorkflow(AgentTestWithPlugins):
             "Task succeeded 'worker_installer.tasks.uninstall'"
         ]
         self._test_deploy_with_agent_worker(
-            'dsl/with_agent_3_2.yaml',
+            'dsl/agent_tests/with_agent_3_2.yaml',
             install_events,
             uninstall_events
         )
@@ -110,7 +110,7 @@ class TestWorkflow(AgentTestWithPlugins):
 
         self.setup_deployment_id = 'd{0}'.format(uuid.uuid4())
         self.setup_node_id = 'webserver_host'
-        dsl_path = resource('dsl/operation_executor_override.yaml')
+        dsl_path = resource('dsl/agent_tests/operation_executor_override.yaml')
         _, execution_id = self.deploy_application(
             dsl_path,
             deployment_id=self.setup_deployment_id

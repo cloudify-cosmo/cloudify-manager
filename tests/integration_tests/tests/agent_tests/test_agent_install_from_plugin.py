@@ -22,7 +22,7 @@ from integration_tests.tests.utils import get_resource as resource
 class TestWorkflow(AgentTestWithPlugins):
     def test_agent_install_from_plugin(self):
         deployment_id = 'd{0}'.format(uuid.uuid4())
-        dsl_path = resource('dsl/install_agent_from_plugin.yaml')
+        dsl_path = resource('dsl/agent_tests/install_agent_from_plugin.yaml')
         _, execution_id = self.deploy_application(dsl_path,
                                                   deployment_id=deployment_id)
         self.undeploy_application(deployment_id)

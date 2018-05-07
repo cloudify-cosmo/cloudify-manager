@@ -99,7 +99,7 @@ class _HelloWorld(object):
                 tar.extractall(path=workdir)
             shutil.copy(
                 test_utils.get_resource(
-                        'dockercompute_helloworld/blueprint.yaml'),
+                        'dsl/agent_tests/dockercompute_helloworld.yaml'),
                 blueprint_file)
             shutil.copy(
                 test_utils.get_resource('dsl/plugins/diamond.yaml'),
