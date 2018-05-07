@@ -24,7 +24,7 @@ install_requires = [
     'flask-migrate==2.0.3',
     'ldappy',
     'supervise==1.1.1',
-    'cloudify-dsl-parser==4.4.dev1',
+    'cloudify-common==4.4.dev1',
     'requests>=2.7.0,<3.0.0',
     'gunicorn==18.0',
     'PyYAML==3.10',

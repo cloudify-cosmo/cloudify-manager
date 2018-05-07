@@ -33,7 +33,7 @@ setup(
                 ' based on blueprint policies and starting '
                 ' a riemann core with generated configuration',
     install_requires=[
-        'cloudify-plugins-common==4.4.dev1',
+        'cloudify-common==4.4.dev1',
         'jinja2==2.7.2'
     ],
 )
