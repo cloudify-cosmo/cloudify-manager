@@ -10,6 +10,9 @@ node_types:
   my_custom_node:
     derived_from: cloudify.nodes.Compute
     properties:
+      agent_config:
+        default:
+          install_method: none
       custom_prop:
         default:
           inner_prop: 1

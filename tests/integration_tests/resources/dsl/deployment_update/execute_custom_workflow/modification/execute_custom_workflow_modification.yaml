@@ -8,7 +8,7 @@ imports:
 
 node_templates:
   site1:
-    type: cloudify.nodes.Compute
+    type: cloudify.nodes.Root
     interfaces:
       custom_lifecycle:
         custom_operation:

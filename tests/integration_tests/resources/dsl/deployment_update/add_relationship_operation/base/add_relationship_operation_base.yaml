@@ -12,10 +12,10 @@ relationships:
 
 node_templates:
   site1:
-    type: cloudify.nodes.Compute
+    type: cloudify.nodes.Root
 
   site2:
-    type: cloudify.nodes.Compute
+    type: cloudify.nodes.Root
     relationships:
       - type: new_relationship_type
         target: site1

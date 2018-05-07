@@ -8,7 +8,7 @@ description: >
 
 node_types:
   custom_node_type:
-    derived_from: cloudify.nodes.Compute
+    derived_from: cloudify.nodes.Root
     interfaces:
       custom_lifecycle:
         custom_operation:
