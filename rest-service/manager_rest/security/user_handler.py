@@ -13,6 +13,9 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import os
+import binascii
+
 from flask import current_app
 from itsdangerous import BadSignature, SignatureExpired
 
@@ -51,7 +54,11 @@ def user_loader(request):
         return user
     if current_app.external_auth \
             and current_app.external_auth.can_extract_user_from_request():
-        return current_app.external_auth.get_user_from_request(request)
+        # add unique_id to the request (for caching management)
+        request.unique_id = binascii.hexlify(os.urandom(32))
+        user = current_app.external_auth.get_user_from_request(request)
+        if isinstance(user, User):
+            return user
     return None
 
 

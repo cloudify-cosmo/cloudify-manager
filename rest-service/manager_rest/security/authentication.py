@@ -50,7 +50,6 @@ class Authentication(object):
         if self.external_auth_configured \
                 and not is_bootstrap_admin \
                 and not self.token_based_auth:
-            self.logger.debug('using external auth')
             user = user_handler.get_user_from_auth(request.authorization)
             response = self.external_auth.authenticate(request, user)
             if isinstance(response, Response):
@@ -58,14 +57,8 @@ class Authentication(object):
             user = response
         if not user:
             raise_unauthorized_user_error('No authentication info provided')
-        self.logger.info('Authenticated user: {0}'.format(user))
         user.last_login_at = datetime.now()
         user_datastore.commit()
-        # Need to reload user, otherwise current_user is `AnonymousUser`
-        try:
-            current_app.extensions['security'].login_manager.reload_user(user)
-        except Exception as ex:
-            self.logger.info('failed: {}'.format(str(ex)))
         return user
 
     def _internal_auth(self, request):
