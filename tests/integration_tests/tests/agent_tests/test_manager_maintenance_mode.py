@@ -35,7 +35,7 @@ class ManagerMaintenanceModeTest(AgentTestCase):
     def test_maintenance_mode(self):
         blueprint_id = 'b{0}'.format(uuid.uuid4())
         deployment_id = blueprint_id
-        blueprint_path = resource('dsl/maintenance_mode.yaml')
+        blueprint_path = resource('dsl/agent_tests/maintenance_mode.yaml')
         self.client.blueprints.upload(blueprint_path,
                                       entity_id=blueprint_id)
         self.client.deployments.create(blueprint_id=blueprint_id,

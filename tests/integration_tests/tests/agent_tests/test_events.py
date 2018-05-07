@@ -62,7 +62,7 @@ class TimezoneTest(AgentTestWithPlugins):
 
         """
         deployment_id = 'd{0}'.format(uuid.uuid4())
-        blueprint = 'dsl/dockercompute_timezone.yaml'
+        blueprint = 'dsl/agent_tests/dockercompute_timezone.yaml'
         dsl_path = resource(blueprint)
 
         start_timestamp = '{}Z'.format(datetime.utcnow().isoformat()[:-3])

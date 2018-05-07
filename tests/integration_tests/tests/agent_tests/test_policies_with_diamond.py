@@ -28,7 +28,7 @@ class TestPoliciesWithDiamond(AgentTestWithPlugins, PoliciesTestsBase):
         self.setup_node_id = 'node'
 
     def test_policies_flow_with_diamond(self):
-        dsl_path = resource("dsl/with_policies_and_diamond.yaml")
+        dsl_path = resource("dsl/agent_tests/with_policies_and_diamond.yaml")
         self.deployment, _ = self.deploy_application(
             dsl_path,
             deployment_id=self.setup_deployment_id
