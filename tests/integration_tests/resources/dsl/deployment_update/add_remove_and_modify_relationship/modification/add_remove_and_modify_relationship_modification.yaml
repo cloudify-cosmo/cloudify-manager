@@ -8,7 +8,7 @@ description: >
 
 node_templates:
   site0:
-    type: cloudify.nodes.Compute
+    type: cloudify.nodes.Root
     relationships:
         # New rel
       - type: cloudify.relationships.connected_to
@@ -43,13 +43,13 @@ node_templates:
 
 
   site2B:
-    type: cloudify.nodes.Compute
+    type: cloudify.nodes.Root
 
   site3:
-    type: cloudify.nodes.Compute
+    type: cloudify.nodes.Root
 
   site4:
-    type: cloudify.nodes.Compute
+    type: cloudify.nodes.Root
 
   site6:
-    type: cloudify.nodes.Compute
+    type: cloudify.nodes.Root

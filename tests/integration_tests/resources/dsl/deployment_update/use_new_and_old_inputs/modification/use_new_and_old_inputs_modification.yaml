@@ -19,7 +19,7 @@ inputs:
 
 node_types:
   my_custom_node:
-    derived_from: cloudify.nodes.Compute
+    derived_from: cloudify.nodes.Root
     properties:
       prop1:
         default: 'default_value1'

@@ -16,9 +16,15 @@ relationships:
 node_templates:
   site1:
     type: cloudify.nodes.Compute
+    properties:
+      agent_config:
+        install_method: none
 
   site2:
     type: cloudify.nodes.Compute
+    properties:
+      agent_config:
+        install_method: none
     relationships:
       - type: new_relationship_type
         target: site1

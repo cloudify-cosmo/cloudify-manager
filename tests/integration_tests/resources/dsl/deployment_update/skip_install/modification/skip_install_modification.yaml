@@ -9,7 +9,7 @@ description: >
 
 node_templates:
   site1:
-    type: cloudify.nodes.Compute
+    type: cloudify.nodes.Root
 
   site3:                                                # added node
     type: cloudify.nodes.WebServer

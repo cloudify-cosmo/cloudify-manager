@@ -235,8 +235,6 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
         modified_node = modified_nodes['affected_node'][0]
 
         added_property = modified_node['properties']
-        self.assertIsNotNone(added_property.get('ip'))
-        self.assertIsNotNone(added_property.get('os_family'))
 
         # Checking that get_property works correctly
         outputs_to_check = {

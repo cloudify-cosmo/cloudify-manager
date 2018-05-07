@@ -10,11 +10,11 @@ description: >
 node_templates:
 
   site2:
-    type: cloudify.nodes.Compute
+    type: cloudify.nodes.Root
 
 
   site3:
-    type: cloudify.nodes.Compute
+    type: cloudify.nodes.Root
     relationships:                                      # (with relationships)
     - type: cloudify.relationships.connected_to
       target: site2

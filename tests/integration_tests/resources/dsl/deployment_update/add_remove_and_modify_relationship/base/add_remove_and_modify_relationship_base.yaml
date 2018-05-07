@@ -8,7 +8,7 @@ description: >
 
 node_templates:
   site0:
-    type: cloudify.nodes.Compute
+    type: cloudify.nodes.Root
     relationships:
       - type: cloudify.relationships.connected_to
         target: site1
@@ -50,17 +50,17 @@ node_templates:
               implementation: increment.sh
               executor: central_deployment_agent
   site1:
-    type: cloudify.nodes.Compute
+    type: cloudify.nodes.Root
 
 
   site2:
-    type: cloudify.nodes.Compute
+    type: cloudify.nodes.Root
 
   site3:
-    type: cloudify.nodes.Compute
+    type: cloudify.nodes.Root
 
   site4:
-    type: cloudify.nodes.Compute
+    type: cloudify.nodes.Root
 
   site5:
-    type: cloudify.nodes.Compute
+    type: cloudify.nodes.Root

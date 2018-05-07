@@ -194,7 +194,7 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
 
     def test_add_relationships_between_added_nodes(self):
         """
-        Tests a creatiom of deployment from scratch.
+        Tests a creation of a deployment from scratch.
 
         The original deployment contains only one node that will be removed.
         The following diagrams depicts the new deployment:

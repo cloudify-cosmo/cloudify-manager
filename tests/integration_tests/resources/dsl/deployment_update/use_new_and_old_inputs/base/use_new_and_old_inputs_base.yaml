@@ -16,7 +16,7 @@ inputs:
 
 node_types:
   my_custom_node:
-    derived_from: cloudify.nodes.Compute
+    derived_from: cloudify.nodes.Root
     properties:
       # passed as input to the deployment creation to be saved
       prop1:

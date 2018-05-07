@@ -8,4 +8,4 @@ description: >
 
 node_templates:
   site_to_remove:
-    type: cloudify.nodes.Compute
+    type: cloudify.nodes.Root

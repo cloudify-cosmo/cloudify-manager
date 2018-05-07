@@ -8,7 +8,7 @@ description: >
 
 node_templates:
   site1:
-    type: cloudify.nodes.Compute
+    type: cloudify.nodes.Root
 
 outputs:
   custom_output:
