@@ -7,6 +7,10 @@ imports:
 node_types:
   host:
     derived_from: cloudify.nodes.Compute
+    properties:
+      agent_config:
+        default:
+          install_method: none
     interfaces:
       cloudify.interfaces.lifecycle:
         create: testmockoperations.testmockoperations.tasks.mock_create

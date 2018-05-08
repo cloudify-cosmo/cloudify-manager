@@ -9,10 +9,10 @@ node_templates:
     instances:
       deploy: 2
   node2:
-    type: cloudify.nodes.Compute
+    type: cloudify.nodes.Root
     instances:
       deploy: 2
   node3:
-      type: cloudify.nodes.Compute
+      type: cloudify.nodes.Root
       instances:
         deploy: 2

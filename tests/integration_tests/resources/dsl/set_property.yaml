@@ -26,3 +26,6 @@ node_types:
                 default: property_name
             value:
                 default: property_value
+            agent_config:
+                default:
+                    install_method: none
