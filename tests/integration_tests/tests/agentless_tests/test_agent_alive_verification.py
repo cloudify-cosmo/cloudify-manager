@@ -19,7 +19,7 @@ from integration_tests.tests.utils import get_resource as resource
 
 class TestAgentAliveVerification(AgentlessTestCase):
 
-    AGENT_ALIVE_FAIL = 'AGENT_ALIVE_FAIL'
+    AGENT_ALIVE_FAIL = "cloudmock.tasks has no function named 'non_existent'"
 
     def test_uninstall(self):
         deployment = self.deploy(resource("dsl/basic_stop_not_exists.yaml"))
