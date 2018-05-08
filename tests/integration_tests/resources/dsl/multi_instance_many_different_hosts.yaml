@@ -27,6 +27,10 @@ node_templates:
 node_types:
     test_host:
         derived_from: cloudify.nodes.Compute
+        properties:
+          agent_config:
+            default:
+              install_method: none
         interfaces:
             cloudify.interfaces.lifecycle:
                 create:

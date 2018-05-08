@@ -29,6 +29,10 @@ node_types:
 
     mockCompute:
         derived_from: cloudify.nodes.Compute
+        properties:
+          agent_config:
+            default:
+              install_method: none
         interfaces:
             cloudify.interfaces.lifecycle:
                 create:
