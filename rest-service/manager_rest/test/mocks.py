@@ -159,34 +159,14 @@ class MockStreamedResponse(object):
 
 
 def task_state():
+    """ This is a function in order to allow mocking it in some tests """
+
     return Execution.TERMINATED
 
 
-class MockCeleryClient(object):
-
-    def execute_task(self, task_queue, task_id=None, kwargs=None):
-        sm = get_storage_manager()
-        execution = sm.get(models.Execution, task_id)
-        execution.status = task_state()
-        execution.error = ''
-        sm.update(execution)
-        return MockAsyncResult(task_id)
-
-    def get_task_status(self, task_id):
-        return 'SUCCESS'
-
-    def get_failed_task_error(self, task_id):
-        return RuntimeError('mock error')
-
-    # this is just to be on par with the CeleryClient API
-    def close(self):
-        pass
-
-
-class MockAsyncResult(object):
-
-    def __init__(self, task_id):
-        self.id = task_id
-
-    def get(self, timeout=300, propagate=True):
-        return None
+def mock_execute_task(execution_id, **_):
+    sm = get_storage_manager()
+    execution = sm.get(models.Execution, execution_id)
+    execution.status = task_state()
+    execution.error = ''
+    sm.update(execution)

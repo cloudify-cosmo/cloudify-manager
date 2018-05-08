@@ -46,7 +46,12 @@ from manager_rest.constants import (CLOUDIFY_TENANT_HEADER,
                                     DEFAULT_TENANT_NAME,
                                     FILE_SERVER_BLUEPRINTS_FOLDER)
 
-from .mocks import MockHTTPClient, CLIENT_API_VERSION, build_query_string
+from .mocks import (
+    MockHTTPClient,
+    CLIENT_API_VERSION,
+    build_query_string,
+    mock_execute_task
+)
 
 
 FILE_SERVER_PORT = 53229
@@ -167,13 +172,6 @@ class BaseServerTestCase(unittest.TestCase):
         Mock RabbitMQ related modules - AMQP manager and workflow executor -
         that use pika, because we don't have RabbitMQ in the unittests
         """
-
-        def mock_execute_task(execution_id, **_):
-            execution = self.sm.get(models.Execution, execution_id)
-            execution.status = ExecutionState.TERMINATED
-            execution.error = ''
-            self.sm.update(execution)
-
         amqp_patches = [
             patch('manager_rest.amqp_manager.RabbitMQClient'),
             patch('manager_rest.workflow_executor._execute_task',
