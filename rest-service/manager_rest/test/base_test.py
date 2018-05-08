@@ -142,7 +142,7 @@ class BaseServerTestCase(unittest.TestCase):
     def setUp(self):
         self._create_temp_files_and_folders()
         self._init_file_server()
-        self._mock_amqp_manager()
+        self._mock_amqp_modules()
 
         server_module = self._set_config_path_and_get_server_module()
         self._create_config_and_reset_app(server_module)
@@ -160,12 +160,26 @@ class BaseServerTestCase(unittest.TestCase):
     def _restore_verify_role(self):
         rest_utils.verify_role = self._original_verify_role
 
-    def _mock_amqp_manager(self):
-        """ Mock the RabbitMQClient for all unittests - no RabbitMQ """
+    def _mock_amqp_modules(self):
+        """
+        Mock RabbitMQ related modules - AMQP manager and workflow executor -
+        that use pika, because we don't have RabbitMQ in the unittests
+        """
 
-        self._amqp_patcher = patch('manager_rest.amqp_manager.RabbitMQClient')
-        self.addCleanup(self._amqp_patcher.stop)
-        self._amqp_patcher.start()
+        def mock_execute_task(execution_id, **_):
+            execution = self.sm.get(models.Execution, execution_id)
+            execution.status = ExecutionState.TERMINATED
+            execution.error = ''
+            self.sm.update(execution)
+
+        amqp_patches = [
+            patch('manager_rest.amqp_manager.RabbitMQClient'),
+            patch('manager_rest.workflow_executor._execute_task',
+                  mock_execute_task),
+            ]
+        for amqp_patch in amqp_patches:
+            self.addCleanup(amqp_patch.stop)
+            amqp_patch.start()
 
     def _create_temp_files_and_folders(self):
         self.tmpdir = tempfile.mkdtemp(prefix='fileserver-')
