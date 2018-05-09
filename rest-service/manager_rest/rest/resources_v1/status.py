@@ -29,7 +29,7 @@ except ImportError:
     get_services = None
 
 BASE_SERVICES = {
-    'cloudify-mgmtworker.service': 'Celery Management',
+    'cloudify-mgmtworker.service': 'Management Agent',
     'cloudify-restservice.service': 'Manager Rest-Service',
     'cloudify-rabbitmq.service': 'RabbitMQ',
     'logstash.service': 'Logstash',
