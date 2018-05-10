@@ -25,7 +25,7 @@ BuildRequires: dbus-devel >= %{dbus_version}
 BuildRequires: dbus-glib-devel >= %{dbus_glib_version}
 BuildRequires: python-devel
 
-Requires:       python >= 2.7, postgresql-libs, nginx >= 1.12, sudo, dbus
+Requires:       python >= 2.7, postgresql-libs, nginx >= 1.12, sudo, dbus >= 1.10
 Requires(pre):  shadow-utils
 
 %define _diamond_version 1.3.8
