@@ -636,7 +636,7 @@ data_types:
           Used to set the the cloudify agent service name.
 
           If not set, the default value for the service name is:
-          - Linux: 'celery-<id>'
+          - Linux: 'cloudify-worker-<id>'
           - Windows: '<id>'
 
           where 'id' is the instance id of the compute node in which the agent is running.
@@ -699,7 +699,7 @@ data_types:
         required: false
       heartbeat:
         description: >
-          The interval of the AMQP and Celery heartbeats in seconds
+          The interval of the AMQP heartbeats in seconds
           Note: the AMQP heartbeat is only used on Linux.
         required: false
       disable_requiretty:
