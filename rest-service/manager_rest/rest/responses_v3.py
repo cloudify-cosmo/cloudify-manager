@@ -66,7 +66,8 @@ class UserResponse(object):
         'role': fields.String,
         'group_system_roles': fields.Raw,
         'active': fields.Boolean,
-        'last_login_at': fields.String
+        'last_login_at': fields.String,
+        'is_locked': fields.Boolean
     }
 
     def __init__(self, **kwargs):
@@ -78,6 +79,7 @@ class UserResponse(object):
         self.group_system_roles = kwargs.get('group_system_roles')
         self.active = kwargs.get('active')
         self.last_login_at = kwargs.get('last_login_at')
+        self.is_locked = kwargs.get('is_locked')
 
 
 @swagger.model

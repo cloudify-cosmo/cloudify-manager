@@ -156,3 +156,15 @@ class UsersActive(SecuredMultiTenancyResource):
             return multi_tenancy.activate_user(username)
         else:
             return multi_tenancy.deactivate_user(username)
+
+
+class UsersUnlock(SecuredMultiTenancyResource):
+    @rest_decorators.exceptions_handled
+    @authorize('user_unlock')
+    @rest_decorators.marshal_with(UserResponse)
+    def post(self, username, multi_tenancy):
+        """
+        Unlock user account
+        """
+        rest_utils.validate_inputs({'username': username})
+        return multi_tenancy.unlock_user(username)

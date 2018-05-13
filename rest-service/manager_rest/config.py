@@ -60,6 +60,9 @@ class Config(object):
         self.authorization_roles = None
         self.authorization_permissions = None
 
+        self.failed_logins_before_user_lock = 4
+        self.user_lock_period = -1
+
         self.warnings = []
 
     def load_configuration(self):

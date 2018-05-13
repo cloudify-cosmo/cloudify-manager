@@ -18,11 +18,13 @@ from collections import (
     OrderedDict,
     defaultdict,
 )
-
+from datetime import timedelta, datetime
+from time import strptime, mktime
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
 from flask_security import SQLAlchemyUserDatastore, UserMixin, RoleMixin
 
+from manager_rest import config
 from manager_rest.constants import BOOTSTRAP_ADMIN_ID, DEFAULT_TENANT_ID
 
 from .idencoder import get_encoder
@@ -269,6 +271,8 @@ class User(SQLModelBase, UserMixin):
     last_name = db.Column(db.String(255))
     password = db.Column(db.String(255))
     api_token_key = db.Column(db.String(100))
+    last_failed_login_at = db.Column(UTCDateTime)
+    failed_logins_counter = db.Column(db.Integer)
 
     tenant_associations = db.relationship(
         'UserTenantAssoc',
@@ -399,6 +403,7 @@ class User(SQLModelBase, UserMixin):
         user_dict['groups'] = self._get_groups_response()
         user_dict['role'] = self.role
         user_dict['group_system_roles'] = self.group_system_roles
+        user_dict['is_locked'] = self.is_locked
 
         if get_data:
             user_dict['tenant_roles'] = {
@@ -429,6 +434,24 @@ class User(SQLModelBase, UserMixin):
     @property
     def is_bootstrap_admin(self):
         return self.id == BOOTSTRAP_ADMIN_ID
+
+    @property
+    def is_locked(self):
+        allowed_failed_logins = config.instance.failed_logins_before_user_lock
+        lockout_period = timedelta(minutes=config.instance.user_lock_period)
+        last_failed_login = self._parse_date(self.last_failed_login_at)
+        if (self.failed_logins_counter > allowed_failed_logins)\
+                and (last_failed_login + lockout_period > datetime.now()):
+            return True
+        return False
+
+    @staticmethod
+    def _parse_date(date):
+        if not date:
+            return None
+        timestamp = strptime(date, '%Y-%m-%dT%H:%M:%S.%fZ')
+        last_failed_login = datetime.fromtimestamp(mktime(timestamp))
+        return last_failed_login
 
 
 class UserTenantAssoc(SQLModelBase):

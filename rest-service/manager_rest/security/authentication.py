@@ -44,6 +44,15 @@ class Authentication(object):
         return current_app.external_auth \
                and current_app.external_auth.configured()
 
+    @staticmethod
+    def _increment_failed_logins_counter(user):
+        user.last_failed_login_at = datetime.now()
+        if user.failed_logins_counter:
+            user.failed_logins_counter += 1
+        else:
+            user.failed_logins_counter = 1
+        user_datastore.commit()
+
     def authenticate(self, request):
         user = self._internal_auth(request)
         is_bootstrap_admin = user and user.is_bootstrap_admin
@@ -59,6 +68,7 @@ class Authentication(object):
         if not user:
             raise_unauthorized_user_error('No authentication info provided')
         self.logger.info('Authenticated user: {0}'.format(user))
+        user.failed_logins_counter = 0
         user.last_login_at = datetime.now()
         user_datastore.commit()
         return user
@@ -71,6 +81,7 @@ class Authentication(object):
         self.token_based_auth = token or api_token
         if auth:  # Basic authentication (User + Password)
             user = user_handler.get_user_from_auth(auth)
+            self._check_if_user_is_locked(user, auth)
             user = self._authenticate_password(user, auth)
         elif token:  # Token authentication
             user = self._authenticate_token(token)
@@ -80,6 +91,18 @@ class Authentication(object):
                 raise_unauthorized_user_error(
                     'API token authentication failed')
         return user
+
+    def _check_if_user_is_locked(self, user, auth):
+        if not user:
+            raise_unauthorized_user_error(
+                'Authentication failed for '
+                '<User username=`{0}`>'.format(auth.username)
+            )
+        if user.is_locked:
+            # User is locked!
+            raise_unauthorized_user_error(
+                'Authentication failed for {0}.'
+                ' Bad credentials or locked account'.format(user))
 
     def _authenticate_password(self, user, auth):
         self.logger.debug('Authenticating username/password')
@@ -107,8 +130,10 @@ class Authentication(object):
                 '<User username=`{0}`>'.format(username)
             )
         if not verify_password(password, user.password):
+            self._increment_failed_logins_counter(user)
             raise_unauthorized_user_error(
-                'Authentication failed for {0}'.format(user)
+                'Authentication failed for {0}.'
+                ' Bad credentials or locked account'.format(user)
             )
         return user
 

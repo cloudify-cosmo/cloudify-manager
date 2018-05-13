@@ -36,6 +36,12 @@ def upgrade():
     op.add_column('deployment_updates', sa.Column('new_inputs',
                                                   sa.PickleType(),
                                                   nullable=True))
+    op.add_column('users', sa.Column('last_failed_login_at',
+                                                  sa.DateTime(),
+                                                  nullable=True))
+    op.add_column('users', sa.Column('failed_logins_counter',
+                                                  sa.Integer(),
+                                                  nullable=True))
     # ### end Alembic commands ###
 
 
@@ -46,4 +52,6 @@ def downgrade():
     op.drop_column('deployment_updates', '_new_blueprint_fk')
     op.drop_column('deployment_updates', 'old_inputs')
     op.drop_column('deployment_updates', 'new_inputs')
+    op.drop_column('users', 'last_failed_login_at')
+    op.drop_column('users', 'failed_logins_counter')
     # ### end Alembic commands ###
