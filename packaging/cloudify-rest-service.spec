@@ -1,4 +1,4 @@
-%define dbus_glib_version 0.104
+%define dbus_glib_version 0.100
 %define dbus_version 1.10
 
 # due to a bug in psycopg2's 2.7.4 build, stripping their binaries must be disabled
