@@ -44,7 +44,7 @@ class SecretsKey(SecuredResource):
         secret = get_storage_manager().get(models.Secret, key)
         secret_dict = secret.to_dict()
         if secret_dict['is_hidden_value'] and not \
-                self._is_value_permitted(secret_dict['created_by']):
+                self._is_hidden_value_permitted(secret_dict['created_by']):
             # Hide the value of the secret
             secret_dict['value'] = ''
         else:
@@ -132,7 +132,7 @@ class SecretsKey(SecuredResource):
                          config.instance.security_encryption_key
         return cryptography_utils.encrypt(encryption_key, value)
 
-    def _is_value_permitted(self, creator):
+    def _is_hidden_value_permitted(self, creator):
         current_tenant = get_storage_manager().current_tenant
         current_username = current_user.username
         return is_administrator(current_tenant) or creator == current_username
@@ -140,7 +140,7 @@ class SecretsKey(SecuredResource):
     def _validate_secret_modification_permitted(self, secret):
         get_resource_manager().validate_modification_permitted(secret)
         if secret.is_hidden_value and \
-                not self._is_value_permitted(secret.created_by):
+                not self._is_hidden_value_permitted(secret.created_by):
             raise ForbiddenError(
                 'User `{0}` is not permitted to modify the hidden value '
                 'secret `{1}`'.format(current_user.username, secret.key)
@@ -148,12 +148,20 @@ class SecretsKey(SecuredResource):
 
     def _update_is_hidden_value(self, secret):
         is_hidden_value = request.json.get('is_hidden_value')
-        if is_hidden_value is not None:
-            is_hidden_value = rest_utils.verify_and_convert_bool(
-                'is_hidden_value',
-                is_hidden_value
+        if is_hidden_value is None:
+            return
+        is_hidden_value = rest_utils.verify_and_convert_bool(
+            'is_hidden_value',
+            is_hidden_value
+        )
+        # Only the creator of the secret and the admins can change a secret
+        # to be hidden value
+        if not self._is_hidden_value_permitted(secret.created_by):
+            raise ForbiddenError(
+                'User `{0}` is not permitted to modify the secret `{1}` '
+                'to be hidden value'.format(current_user.username, secret.key)
             )
-            secret.is_hidden_value = is_hidden_value
+        secret.is_hidden_value = is_hidden_value
 
     def _update_visibility(self, secret):
         visibility = rest_utils.get_visibility_parameter(
