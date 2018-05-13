@@ -1,5 +1,5 @@
 %define dbus_glib_version 0.100
-%define dbus_version 1.10
+%define dbus_version 1.6
 
 # due to a bug in psycopg2's 2.7.4 build, stripping their binaries must be disabled
 %define debug_package %{nil}
@@ -25,7 +25,7 @@ BuildRequires: dbus-devel >= %{dbus_version}
 BuildRequires: dbus-glib-devel >= %{dbus_glib_version}
 BuildRequires: python-devel
 
-Requires:       python >= 2.7, postgresql-libs, nginx >= 1.12, sudo, dbus >= 1.10
+Requires:       python >= 2.7, postgresql-libs, nginx >= 1.12, sudo, dbus >= 1.6
 Requires(pre):  shadow-utils
 
 %define _diamond_version 1.3.8
