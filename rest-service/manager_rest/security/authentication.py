@@ -123,12 +123,12 @@ class Authentication(object):
         expired, invalid, user, data, error = \
             user_handler.get_token_status(token)
 
-        if invalid or (not isinstance(data, list) or len(data) != 2):
+        if expired:
+            raise_unauthorized_user_error('Token is expired')
+        elif invalid or (not isinstance(data, list) or len(data) != 2):
             raise_unauthorized_user_error(
                 'Authentication token is invalid:\n{0}'.format(error)
             )
-        elif expired:
-            raise_unauthorized_user_error('Token is expired')
         elif not user:
             raise_unauthorized_user_error('No authentication info provided')
         elif md5(user.password) != data[1]:
