@@ -482,7 +482,7 @@ class DeploymentUpdateManager(object):
         dep_update.state = STATES.SUCCESSFUL
         self.sm.update(dep_update)
 
-        return self.get_deployment_update(deployment_update_id)
+        return dep_update
 
     def _execute_workflow(self,
                           deployment_update,
@@ -499,8 +499,8 @@ class DeploymentUpdateManager(object):
         :param force:
         :return:
         """
-        deployment_id = deployment_update.deployment_id
-        deployment = self.sm.get(models.Deployment, deployment_id)
+        deployment = deployment_update.deployment
+        deployment_id = deployment.id
         blueprint_id = deployment.blueprint_id
 
         if workflow_id not in deployment.workflows:
