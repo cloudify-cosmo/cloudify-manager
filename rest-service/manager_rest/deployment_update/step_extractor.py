@@ -130,12 +130,17 @@ class DeploymentPlan(dict):
         self['nodes'] = nodes
 
     @classmethod
-    def from_storage(cls, deployment_id):
+    def from_storage(cls, deployment_id, deployment_update):
         """ Create a DeploymentPlan from a stored deployment"""
         sm = get_storage_manager()
-        # get deployment from storage
-        deployment = sm.get(models.Deployment, deployment_id)
-        blueprint_plan = deployment.blueprint.plan
+        if deployment_update:
+            # get deployment and blueprint from deployment update
+            deployment = deployment_update.deployment
+            blueprint_plan = deployment_update.old_blueprint.plan
+        else:
+            # get deployment from storage
+            deployment = sm.get(models.Deployment, deployment_id)
+            blueprint_plan = deployment.blueprint.plan
 
         deployment_plugins_to_install = \
             blueprint_plan['deployment_plugins_to_install']
@@ -692,8 +697,12 @@ def extract_steps(deployment_update):
         StepExtractor(deployment_update)
 
     # update the steps extractor with the old and the new deployment plans
-    steps_extractor.old_deployment_plan = \
-        DeploymentPlan.from_storage(steps_extractor.deployment_id)
+    # if the old blueprint is not defined in the deployment update, we will
+    # use the old method and get it from the deployment
+    steps_extractor.old_deployment_plan = DeploymentPlan.from_storage(
+        steps_extractor.deployment_id,
+        deployment_update if deployment_update.old_blueprint_id else None
+    )
     steps_extractor.new_deployment_plan = \
         DeploymentPlan.from_deployment_update(deployment_update)
 
