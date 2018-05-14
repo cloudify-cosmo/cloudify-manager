@@ -20,18 +20,9 @@ node_types:
         default: { get_input: ssh_user }
       cloudify_packages:
         default:
-          - package_name: cloudify-dsl-parser
-            branch: { get_input: cloudify_dsl_parser_branch }
-            org: { get_input: cloudify_dsl_parser_org }
-          - package_name: cloudify-rest-client
-            branch: { get_input: cloudify_rest_client_branch }
-            org: { get_input: cloudify_rest_client_org }
-          - package_name: cloudify-plugins-common
-            branch: { get_input: cloudify_plugins_common_branch }
-            org: { get_input: cloudify_plugins_common_org }
-          - package_name: cloudify-script-plugin
-            branch: { get_input: cloudify_script_plugin_branch }
-            org: { get_input: cloudify_script_plugin_org }
+          - package_name: cloudify-common
+            branch: { get_input: cloudify_common_branch }
+            org: { get_input: cloudify_common_org }
           - package_name: cloudify-fabric-plugin
             branch: { get_input: cloudify_fabric_plugin_branch }
             org: { get_input: cloudify_fabric_plugin_org }
