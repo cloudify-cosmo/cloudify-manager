@@ -31,7 +31,7 @@ rm /opt/mgmtworker/env/lib/python2.7/site-packages/zmq/tests/_test_asyncio.py
 
 
 # Install stubs of cloudify packages that were merged into cloudify-common
-STUBS=${RPM_SOURCE_DIR}/packaging/mgmtworker/files/stub_packages
+STUBS=${RPM_SOURCE_DIR}/packaging/mgmtworker/stub_packages
 /opt/mgmtworker/env/bin/pip install --upgrade ${STUBS}/cloudify-rest-client/
 /opt/mgmtworker/env/bin/pip install --upgrade ${STUBS}/cloudify-plugins-common/
 /opt/mgmtworker/env/bin/pip install --upgrade ${STUBS}/cloudify-dsl-parser/
