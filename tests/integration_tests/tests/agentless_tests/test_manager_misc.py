@@ -109,8 +109,8 @@ class MiscManagerTest(AgentlessTestCase):
                     # Allocate 101 blocks of 1024Kb each (101M in total)
                     'dd if=/dev/zero of={0} bs=1024k count=101'
                     .format(full_log_path))
-                self.logger.info('Running cron.hourly to apply rotation...')
-                self.execute_on_manager('run-parts /etc/cron.hourly')
+                self.logger.info('Running cron.daily to apply rotation...')
+                self.execute_on_manager('run-parts /etc/cron.daily')
                 rotated_log_path = '{0}.{1}'.format(full_log_path, rotation)
                 compressed_log_path = '{0}.gz'.format(rotated_log_path)
                 if rotation == 8:
