@@ -13,11 +13,9 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import ssl
-import json
-import pika
-
 from flask_security import current_user
+
+from cloudify.amqp_client import get_client, SendHandler
 
 from manager_rest import config, utils
 from manager_rest.constants import MGMTWORKER_QUEUE, BROKER_SSL_PORT
@@ -112,33 +110,19 @@ def _execute_task(execution_id, execution_parameters, context):
     execution_parameters['__cloudify_context'] = context
     message = {
         'cloudify_task': {'kwargs': execution_parameters},
-        'id': execution_id
+        'id': execution_id,
     }
 
-    credentials = pika.credentials.PlainCredentials(
-        username=config.instance.amqp_username,
-        password=config.instance.amqp_password)
-    connection_parameters = pika.ConnectionParameters(
-        host=config.instance.amqp_host,
-        port=BROKER_SSL_PORT,
-        virtual_host='/',
-        credentials=credentials,
-        ssl=True,
-        ssl_options={
-            'ca_certs': config.instance.amqp_ca_path,
-            'cert_reqs': ssl.CERT_REQUIRED,
-        })
-    connection = pika.BlockingConnection(connection_parameters)
-    channel = connection.channel()
-    channel.confirm_delivery()
-    channel.exchange_declare(
-        exchange=MGMTWORKER_QUEUE,
-        exchange_type='direct',
-        auto_delete=False,
-        durable=True)
-    channel.basic_publish(
-        exchange=MGMTWORKER_QUEUE,
-        routing_key='workflow',
-        body=json.dumps(message))
-
-    connection.close()
+    client = get_client(
+        amqp_host=config.instance.amqp_host,
+        amqp_user=config.instance.amqp_username,
+        amqp_pass=config.instance.amqp_password,
+        amqp_port=BROKER_SSL_PORT,
+        amqp_vhost='/',
+        ssl_enabled=True,
+        ssl_cert_path=config.instance.amqp_ca_path
+    )
+    send_handler = SendHandler(MGMTWORKER_QUEUE, routing_key='workflow')
+    client.add_handler(send_handler)
+    with client:
+        send_handler.publish(message)
