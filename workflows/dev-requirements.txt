@@ -1,1 +1,1 @@
-https://github.com/cloudify-cosmo/cloudify-common/archive/CY-199-celery-replacement.zip
+https://github.com/cloudify-cosmo/cloudify-common/archive/master.zip
