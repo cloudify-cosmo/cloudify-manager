@@ -125,4 +125,4 @@ def _execute_task(execution_id, execution_parameters, context):
     with client:
         send_handler = SendHandler(MGMTWORKER_QUEUE, routing_key='workflow')
         client.add_handler(send_handler)
-        send_handler.basic_publish(message)
+        send_handler.publish(message)
