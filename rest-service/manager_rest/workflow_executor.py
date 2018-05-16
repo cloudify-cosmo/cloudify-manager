@@ -110,7 +110,7 @@ def _execute_task(execution_id, execution_parameters, context):
     execution_parameters['__cloudify_context'] = context
     message = {
         'cloudify_task': {'kwargs': execution_parameters},
-        'id': execution_id
+        'id': execution_id,
     }
 
     client = get_client(
@@ -122,7 +122,7 @@ def _execute_task(execution_id, execution_parameters, context):
         ssl_enabled=True,
         ssl_cert_path=config.instance.amqp_ca_path
     )
+    send_handler = SendHandler(MGMTWORKER_QUEUE, routing_key='workflow')
+    client.add_handler(send_handler)
     with client:
-        send_handler = SendHandler(MGMTWORKER_QUEUE, routing_key='workflow')
-        client.add_handler(send_handler)
         send_handler.publish(message)
