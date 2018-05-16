@@ -37,7 +37,7 @@ class TestWorkflow(AgentTestWithPlugins):
             "Task succeeded 'cloudify_agent.installer.operations.delete'"
         ]
         self._test_deploy_with_agent_worker(
-            'dsl/with_agent.yaml',
+            'dsl/agent_tests/with_agent.yaml',
             install_events,
             uninstall_events
         )
@@ -52,7 +52,7 @@ class TestWorkflow(AgentTestWithPlugins):
             "Task succeeded 'worker_installer.tasks.uninstall'"
         ]
         self._test_deploy_with_agent_worker(
-            'dsl/with_agent_3_2.yaml',
+            'dsl/agent_tests/with_agent_3_2.yaml',
             install_events,
             uninstall_events
         )
@@ -100,12 +100,17 @@ class TestWorkflow(AgentTestWithPlugins):
         with utils.zip_files([wagon_path, yaml_path]) as zip_path:
             self.client.plugins.upload(zip_path)
 
+        install_plugin_ex = [ex for ex in self.client.executions.list(
+            include_system_workflows=True) if
+                 ex.workflow_id == 'install_plugin'][0]
+        self.wait_for_execution_to_end(install_plugin_ex)
+
     def test_deploy_with_operation_executor_override(self):
         self._upload_mock_plugin()
 
         self.setup_deployment_id = 'd{0}'.format(uuid.uuid4())
         self.setup_node_id = 'webserver_host'
-        dsl_path = resource('dsl/operation_executor_override.yaml')
+        dsl_path = resource('dsl/agent_tests/operation_executor_override.yaml')
         _, execution_id = self.deploy_application(
             dsl_path,
             deployment_id=self.setup_deployment_id

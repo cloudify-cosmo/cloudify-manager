@@ -8,7 +8,7 @@ description: >
 
 node_templates:
   site1:
-    type: cloudify.nodes.Compute
+    type: cloudify.nodes.Root
 
   site2:                                                # This node should be removed
     type: cloudify.nodes.WebServer

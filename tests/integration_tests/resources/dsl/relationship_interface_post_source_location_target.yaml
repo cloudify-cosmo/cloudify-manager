@@ -45,6 +45,9 @@ node_types:
                 default: target_runtime_property_key
             value:
                 default: target_runtime_property_value
+            agent_config:
+                default:
+                    install_method: none
     test_app_module_type:
         derived_from: cloudify.nodes.ApplicationModule
         properties:

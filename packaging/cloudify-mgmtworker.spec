@@ -27,7 +27,6 @@ virtualenv /opt/mgmtworker/env
 /opt/mgmtworker/env/bin/pip install -r "${RPM_SOURCE_DIR}/packaging/mgmtworker/requirements.txt"
 /opt/mgmtworker/env/bin/pip install --upgrade "${RPM_SOURCE_DIR}/plugins/riemann-controller"
 /opt/mgmtworker/env/bin/pip install --upgrade "${RPM_SOURCE_DIR}/workflows"
-rm /opt/mgmtworker/env/lib/python2.7/site-packages/zmq/tests/_test_asyncio.py
 
 
 # Install stubs of cloudify packages that were merged into cloudify-common

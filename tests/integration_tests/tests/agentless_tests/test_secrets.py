@@ -60,5 +60,5 @@ class SecretsTest(AgentlessTestCase):
         )
 
         # Manage to create deployment after creating the secret
-        self.client.secrets.create('agent_key', 'test_key')
+        self.client.secrets.create('port', '8080')
         deployment, _ = self.deploy_application(dsl_path)

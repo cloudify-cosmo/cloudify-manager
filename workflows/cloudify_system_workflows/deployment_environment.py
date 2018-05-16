@@ -138,7 +138,7 @@ def delete(ctx,
 
 
 def _delete_logs(ctx):
-    log_dir = os.environ.get('CELERY_LOG_DIR')
+    log_dir = os.environ.get('AGENT_LOG_DIR')
     if log_dir:
         log_file_path = os.path.join(log_dir, 'logs',
                                      '{0}.log'.format(ctx.deployment.id))
@@ -220,5 +220,5 @@ def _delete_deployment_workdir(ctx):
 
 
 def _workdir(deployment_id, tenant):
-    base_workdir = os.environ['CELERY_WORK_DIR']
+    base_workdir = os.environ['AGENT_WORK_DIR']
     return os.path.join(base_workdir, 'deployments', tenant, deployment_id)

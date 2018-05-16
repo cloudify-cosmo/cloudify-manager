@@ -14,7 +14,7 @@ inputs:
 
 node_types:
   custom_type:
-    derived_from: cloudify.nodes.Compute
+    derived_from: cloudify.nodes.Root
     properties:
       port:
         type: integer

@@ -11,6 +11,9 @@ node_templates:
 
     webserver_host:
         type: cloudify.nodes.Compute
+        properties:
+          agent_config:
+            install_method: none
 
     db:
         type: mockRoot

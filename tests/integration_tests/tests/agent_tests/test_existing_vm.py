@@ -24,7 +24,7 @@ class BaseExistingVMTest(AgentTestWithPlugins):
         super(BaseExistingVMTest, self).setUp()
         self.setup_deployment_id = 'd{0}'.format(uuid.uuid4())
         self.setup_node_id = 'setup_host'
-        dsl_path = resource("dsl/existing-vm-setup.yaml")
+        dsl_path = resource("dsl/agent_tests/existing-vm-setup.yaml")
         self.deploy_application(dsl_path,
                                 deployment_id=self.setup_deployment_id)
 
@@ -44,7 +44,7 @@ class BaseExistingVMTest(AgentTestWithPlugins):
 
 class ExistingVMTest(BaseExistingVMTest):
     def test_existing_vm(self):
-        dsl_path = resource("dsl/existing-vm.yaml")
+        dsl_path = resource("dsl/agent_tests/existing-vm.yaml")
         inputs = {
             'ip': self._get_host_ip(),
             'agent_key': self.get_host_key_path(
@@ -60,7 +60,9 @@ class SecretAgentKeyTest(BaseExistingVMTest):
     def test_secret_ssh_key_in_existing_vm(self):
         ssh_key_content = self._get_ssh_key_content()
         self.client.secrets.create('agent_key', ssh_key_content)
-        dsl_path = resource("dsl/secret-ssh-key-in-existing-vm.yaml")
+        dsl_path = resource(
+            'dsl/agent_tests/secret-ssh-key-in-existing-vm.yaml'
+        )
         inputs = {'ip': self._get_host_ip()}
         deployment, _ = self.deploy_application(dsl_path, inputs=inputs)
         plugin_data = self.get_plugin_data('testmockoperations', deployment.id)

@@ -32,19 +32,26 @@ from mock import MagicMock, patch
 from nose.plugins.attrib import attr
 from flask.testing import FlaskClient
 
-from manager_rest.rest import rest_utils
 from cloudify_rest_client import CloudifyClient
+from cloudify_rest_client.exceptions import CloudifyClientError
+
+from manager_rest.rest import rest_utils
 from manager_rest.test.security_utils import get_admin_user
 from manager_rest import utils, config, constants, archiving
-from cloudify_rest_client.exceptions import CloudifyClientError
 from manager_rest.storage import FileServer, get_storage_manager, models
-from .mocks import MockHTTPClient, CLIENT_API_VERSION, build_query_string
 from manager_rest.storage.models_states import ExecutionState, VisibilityState
 from manager_rest.storage.storage_utils import \
     create_default_user_tenant_and_roles
 from manager_rest.constants import (CLOUDIFY_TENANT_HEADER,
                                     DEFAULT_TENANT_NAME,
                                     FILE_SERVER_BLUEPRINTS_FOLDER)
+
+from .mocks import (
+    MockHTTPClient,
+    CLIENT_API_VERSION,
+    build_query_string,
+    mock_execute_task
+)
 
 
 FILE_SERVER_PORT = 53229
@@ -142,7 +149,7 @@ class BaseServerTestCase(unittest.TestCase):
     def setUp(self):
         self._create_temp_files_and_folders()
         self._init_file_server()
-        self._mock_amqp_manager()
+        self._mock_amqp_modules()
 
         server_module = self._set_config_path_and_get_server_module()
         self._create_config_and_reset_app(server_module)
@@ -160,12 +167,19 @@ class BaseServerTestCase(unittest.TestCase):
     def _restore_verify_role(self):
         rest_utils.verify_role = self._original_verify_role
 
-    def _mock_amqp_manager(self):
-        """ Mock the RabbitMQClient for all unittests - no RabbitMQ """
-
-        self._amqp_patcher = patch('manager_rest.amqp_manager.RabbitMQClient')
-        self.addCleanup(self._amqp_patcher.stop)
-        self._amqp_patcher.start()
+    def _mock_amqp_modules(self):
+        """
+        Mock RabbitMQ related modules - AMQP manager and workflow executor -
+        that use pika, because we don't have RabbitMQ in the unittests
+        """
+        amqp_patches = [
+            patch('manager_rest.amqp_manager.RabbitMQClient'),
+            patch('manager_rest.workflow_executor._execute_task',
+                  mock_execute_task),
+            ]
+        for amqp_patch in amqp_patches:
+            self.addCleanup(amqp_patch.stop)
+            amqp_patch.start()
 
     def _create_temp_files_and_folders(self):
         self.tmpdir = tempfile.mkdtemp(prefix='fileserver-')

@@ -13,11 +13,14 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import ssl
+import json
+import pika
 
 from flask_security import current_user
 
-from manager_rest import celery_client, utils
-from manager_rest.constants import MGMTWORKER_QUEUE
+from manager_rest import config, utils
+from manager_rest.constants import MGMTWORKER_QUEUE, BROKER_SSL_PORT
 from manager_rest.storage import get_storage_manager, models
 
 
@@ -107,10 +110,35 @@ def _execute_task(execution_id, execution_parameters, context):
     context['tenant'] = _get_tenant_dict()
     context['task_target'] = MGMTWORKER_QUEUE
     execution_parameters['__cloudify_context'] = context
-    celery = celery_client.get_client()
-    try:
-        return celery.execute_task(task_queue=MGMTWORKER_QUEUE,
-                                   task_id=execution_id,
-                                   kwargs=execution_parameters)
-    finally:
-        celery.close()
+    message = {
+        'cloudify_task': {'kwargs': execution_parameters},
+        'id': execution_id
+    }
+
+    credentials = pika.credentials.PlainCredentials(
+        username=config.instance.amqp_username,
+        password=config.instance.amqp_password)
+    connection_parameters = pika.ConnectionParameters(
+        host=config.instance.amqp_host,
+        port=BROKER_SSL_PORT,
+        virtual_host='/',
+        credentials=credentials,
+        ssl=True,
+        ssl_options={
+            'ca_certs': config.instance.amqp_ca_path,
+            'cert_reqs': ssl.CERT_REQUIRED,
+        })
+    connection = pika.BlockingConnection(connection_parameters)
+    channel = connection.channel()
+    channel.confirm_delivery()
+    channel.exchange_declare(
+        exchange=MGMTWORKER_QUEUE,
+        exchange_type='direct',
+        auto_delete=False,
+        durable=True)
+    channel.basic_publish(
+        exchange=MGMTWORKER_QUEUE,
+        routing_key='workflow',
+        body=json.dumps(message))
+
+    connection.close()

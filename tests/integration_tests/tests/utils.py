@@ -23,7 +23,7 @@ from contextlib import contextmanager
 
 from cloudify.utils import setup_logger
 from cloudify_rest_client.executions import Execution
-from integration_tests.framework import utils, postgresql, docl
+from integration_tests.framework import utils, docl
 
 
 logger = setup_logger('testenv.utils')
@@ -52,7 +52,7 @@ def publish_event(queue, routing_key, event):
     channel = connection.channel()
     try:
         channel.exchange_declare(exchange=exchange_name,
-                                 type=exchange_type,
+                                 exchange_type=exchange_type,
                                  durable=False,
                                  auto_delete=True,
                                  internal=False)
@@ -200,5 +200,10 @@ def patch_yaml(yaml_path, is_json=False, default_flow_style=True):
         yield patch
 
 
+def run_postgresql_command(cmd):
+    return docl.execute('sudo -u postgres psql cloudify_db '
+                        '-c "{0}"'.format(cmd))
+
+
 def delete_provider_context():
-    postgresql.run_query('DELETE from provider_context')
+    run_postgresql_command('DELETE from provider_context')

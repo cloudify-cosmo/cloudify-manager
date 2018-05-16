@@ -25,18 +25,23 @@ TEST_PACKAGE_VERSION = '1.2'
 class TestPlugins(AgentlessTestCase):
 
     def test_get_plugin_by_id(self):
-        put_plugin_response = test_utils.upload_mock_plugin(
-                TEST_PACKAGE_NAME,
-                TEST_PACKAGE_VERSION)
-        plugin_id = put_plugin_response.get('id')
-        self.assertIsNotNone(plugin_id)
-        self.assertEquals(put_plugin_response.get('package_name'),
-                          TEST_PACKAGE_NAME)
-        self.assertEquals(put_plugin_response.get('package_version'),
-                          TEST_PACKAGE_VERSION)
-        get_plugin_by_id_response = self.client.plugins.get(plugin_id)
+        plugin_id = None
+        try:
+            put_plugin_response = test_utils.upload_mock_plugin(
+                    TEST_PACKAGE_NAME,
+                    TEST_PACKAGE_VERSION)
+            plugin_id = put_plugin_response.get('id')
+            self.assertIsNotNone(plugin_id)
+            self.assertEquals(put_plugin_response.get('package_name'),
+                              TEST_PACKAGE_NAME)
+            self.assertEquals(put_plugin_response.get('package_version'),
+                              TEST_PACKAGE_VERSION)
+            get_plugin_by_id_response = self.client.plugins.get(plugin_id)
 
-        self.assertEquals(put_plugin_response, get_plugin_by_id_response)
+            self.assertEquals(put_plugin_response, get_plugin_by_id_response)
+        finally:
+            if plugin_id:
+                self.client.plugins.delete(plugin_id)
 
     def test_get_plugin_not_found(self):
         try:
@@ -78,15 +83,28 @@ class TestPlugins(AgentlessTestCase):
             )
             self.assertEquals(404, e.status_code)
 
+    def _get_execution(self, workflow_id):
+        executions = self.client.executions.list(include_system_workflows=True)
+        ex_list = [e for e in executions if e.workflow_id == workflow_id]
+        self.assertEqual(len(ex_list), 1,
+                         msg='Expected to find 1 execution with workflow_id '
+                             '`{workflow_id}`, but found: '
+                             '{ex_list}'.format(
+                             workflow_id=workflow_id, ex_list=ex_list)
+                         )
+        return ex_list[0]
+
     def test_install_uninstall_workflows_execution(self):
-        self.clear_plugin_data('agent')
         test_utils.upload_mock_plugin(TEST_PACKAGE_NAME, TEST_PACKAGE_VERSION)
-        plugins = self.get_plugin_data('agent',
-                                       deployment_id='system')['local']
-        self.assertEqual(plugins[TEST_PACKAGE_NAME], ['installed'])
+
+        ex = self._get_execution('install_plugin')
+        self.wait_for_execution_to_end(ex)
+
         plugin = self.client.plugins.list()[0]
         self.client.plugins.delete(plugin.id)
-        plugins = self.get_plugin_data('agent',
-                                       deployment_id='system')['local']
-        self.assertEqual(plugins[TEST_PACKAGE_NAME], ['installed',
-                                                      'uninstalled'])
+
+        ex = self._get_execution('uninstall_plugin')
+        self.wait_for_execution_to_end(ex)
+
+        plugins = self.client.plugins.list()
+        self.assertEqual(len(plugins), 0)

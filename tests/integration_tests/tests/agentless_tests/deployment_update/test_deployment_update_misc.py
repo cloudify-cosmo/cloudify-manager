@@ -234,10 +234,6 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
             self._map_node_and_node_instances(deployment.id, node_mapping)
         modified_node = modified_nodes['affected_node'][0]
 
-        added_property = modified_node['properties']
-        self.assertIsNotNone(added_property.get('ip'))
-        self.assertIsNotNone(added_property.get('os_family'))
-
         # Checking that get_property works correctly
         outputs_to_check = {
             'output_prop1': {

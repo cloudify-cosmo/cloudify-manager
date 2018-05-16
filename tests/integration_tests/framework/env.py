@@ -145,13 +145,6 @@ class BaseTestEnvironment(object):
             if not os.path.isdir(directory):
                 continue
 
-            # In the AgentlessTestEnvironment cloudify_agent is mocked
-            # So we override the original cloudify_agent. In the
-            # AgentTestEnvironment the real cloudify agent is used
-            # so we skip the override
-            if basename == 'cloudify_agent' and not self.mock_cloudify_agent:
-                continue
-
             # Each code directory is mounted in two places:
             # 1. The management worker virtualenv
             # 2. /opt/agent-template is a directory created by docl that
@@ -187,17 +180,11 @@ class BaseTestEnvironment(object):
 
 
 class AgentlessTestEnvironment(BaseTestEnvironment):
-    # See _build_resource_mapping
-    mock_cloudify_agent = True
-
     def on_environment_created(self):
         self.run_manager()
 
 
 class AgentTestEnvironment(BaseTestEnvironment):
-    # See _build_resource_mapping
-    mock_cloudify_agent = False
-
     def on_environment_created(self):
         self.run_manager()
 

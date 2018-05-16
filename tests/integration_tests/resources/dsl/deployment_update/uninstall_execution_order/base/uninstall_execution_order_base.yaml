@@ -17,7 +17,7 @@ node_types:
 
 node_templates:
   site1:
-    type: cloudify.nodes.Compute
+    type: cloudify.nodes.Root
 
   site2:
     type: flagging_node

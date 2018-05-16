@@ -8,10 +8,10 @@ description: >
 
 node_templates:
   site1:
-    type: cloudify.nodes.Compute
+    type: cloudify.nodes.Root
 
   site2:
-    type: cloudify.nodes.Compute
+    type: cloudify.nodes.Root
     relationships:
     - type: cloudify.relationships.connected_to
       target: site1
