@@ -115,9 +115,5 @@ def _set_versioned_urls(api, resource_name, endpoint_suffix):
             endpoint = '{0}/{1}'.format(version_name, endpoint_suffix)
             url = '/api/{0}'.format(endpoint)
             api.add_resource(resource, url, endpoint=endpoint)
-            with open('/tmp/ilikecake', 'a') as f:
-                f.write('{0}\n{1}\n{2}\n{3}\n{4}\n'.format(api, version_name,
-                                                           resource, url,
-                                                           '#' * 80))
 
             swagger.add_swagger_resource(api, version_name, resource, url)

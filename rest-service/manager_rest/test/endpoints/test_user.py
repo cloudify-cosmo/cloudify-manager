@@ -26,8 +26,18 @@ class UserTestCase(base_test.BaseServerTestCase):
     def test_get_user(self):
         response = self.get('/user')
         result = loads(response.data)
+        self._assert_response(result)
+
+    def test_get_users_by_username(self):
+
+        response = self.get('/users/admin')
+        result = loads(response.data)
+        self._assert_response(result)
+
+    def _assert_response(self, result):
         self.assertEqual('admin', result['username'])
         self.assertEqual('sys_admin', result['role'])
         self.assertEqual(0, result['groups'])
         self.assertEqual(1, result['tenants'])
         self.assertEqual(True, result['active'])
+        self.assertEqual(False, result['is_locked'])

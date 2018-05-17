@@ -23,6 +23,8 @@ from manager_rest.utils import BASIC_AUTH_PREFIX, CLOUDIFY_AUTH_HEADER
 from .test_base import SecurityTestBase
 from ..security_utils import ADMIN_ROLE, USER_ROLE
 
+FAILED_LOGINS_NUMBER = 6
+
 
 @attr(client_min_version=1, client_max_version=LATEST_API_VERSION)
 class AuthenticationTests(SecurityTestBase):
@@ -108,3 +110,38 @@ class AuthenticationTests(SecurityTestBase):
             self.client._client.headers.pop(CLOUDIFY_TENANT_HEADER, None)
             token = self.client.tokens.get()
         self._assert_user_authorized(token=token.value)
+
+    @attr(client_min_version=3, client_max_version=LATEST_API_VERSION)
+    def test_user_lock(self):
+        """
+        1. 6 requests with wrong password (will cause account lockout)
+        2. check user is locked with `users get`
+        3. unlock user with `users unlock`
+        4. create a request with the correct password and make sure it works
+        """
+        self._assert_user_authorized(username='alice',
+                                     password='alice_password')
+        # Cause account lockout
+        for i in range(FAILED_LOGINS_NUMBER):
+            self._assert_user_unauthorized(username='alice', password='wrong')
+
+        # Make sure account is locked
+        self._check_account_status('alice', 'admin', 'admin', True)
+
+        # Unlock user account
+        self.unlock_user(user='alice', username='admin', password='admin')
+
+        # Make sure account is now unlocked
+        self._check_account_status('alice', 'admin', 'admin', False)
+        self._assert_user_authorized(username='alice',
+                                     password='alice_password')
+
+    def _check_account_status(self,
+                              account,
+                              admin_user,
+                              admin_pass,
+                              expected_status):
+        response = self.get_user_using_authorized_user(user=account,
+                                                       username=admin_user,
+                                                       password=admin_pass)
+        self.assertEqual(expected_status, response['is_locked'])

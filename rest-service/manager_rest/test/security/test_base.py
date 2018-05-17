@@ -16,7 +16,6 @@
 from contextlib import contextmanager
 
 from cloudify_rest_client.exceptions import UserUnauthorizedError
-
 from manager_rest.utils import create_auth_header
 from manager_rest.test.base_test import BaseServerTestCase
 from manager_rest.test.security_utils import get_test_users, add_users_to_db
@@ -58,3 +57,18 @@ class SecurityTestBase(BaseServerTestCase):
                     UserUnauthorizedError,
                     self.client.deployments.list
                 )
+
+    def create_configuration(self):
+        test_config = super(SecurityTestBase, self).create_configuration()
+        test_config.failed_logins_before_user_lock = 5
+        test_config.user_lock_period = 30
+
+        return test_config
+
+    def get_user_using_authorized_user(self, user, headers=None, **kwargs):
+        with self.use_secured_client(headers, **kwargs):
+            return self.client.users.get(user)
+
+    def unlock_user(self, user, headers=None, **kwargs):
+        with self.use_secured_client(headers, **kwargs):
+            return self.client.users.unlock(user)
