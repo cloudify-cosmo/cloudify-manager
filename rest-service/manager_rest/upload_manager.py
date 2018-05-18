@@ -20,6 +20,7 @@ import uuid
 
 import wagon
 import yaml
+import stat
 import urllib
 import shutil
 import zipfile
@@ -55,6 +56,11 @@ from manager_rest.resource_manager import get_resource_manager
 from manager_rest.constants import (CONVENTION_APPLICATION_BLUEPRINT_FILE,
                                     SUPPORTED_ARCHIVE_TYPES)
 
+# File and folder permissions for uploaded files
+FILE_PERMISSIONS = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
+FOLDER_PERMISSIONS = (FILE_PERMISSIONS |
+                      stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+
 
 class UploadedDataManager(object):
 
@@ -84,6 +90,28 @@ class UploadedDataManager(object):
         finally:
             remove(resource_target_path)
 
+    @staticmethod
+    def _adjust_folder_permissions(root, folder_permissions, file_permissions):
+        """
+        Recursively change root's permissions. This also changes the
+        permissions of folder that has been passed in.
+
+        Permission changes are made in bottom-up fashion in order to avoid
+        locking ourselves out of sub-tree by accident.
+
+        :param root: full path to folder
+        :param file_permissions: permissions that will be set on files
+        :param folder_permissions: permissions that will be set on folders
+        """
+        assert os.path.isdir(root)
+
+        for prefix, folders, files in os.walk(root, topdown=False):
+            for file in files:
+                os.chmod(os.path.join(prefix, file), file_permissions)
+            for folder in folders:
+                os.chmod(os.path.join(prefix, folder), folder_permissions)
+        os.chmod(root, folder_permissions)
+
     @classmethod
     def _extract_file_to_file_server(cls, archive_path, destination_root):
         """
@@ -108,6 +136,9 @@ class UploadedDataManager(object):
                     os.path.join(tempdir, archive_file_list[0])):
                 raise manager_exceptions.BadParametersError(
                         'archive must contain exactly 1 directory')
+            UploadedDataManager._adjust_folder_permissions(tempdir,
+                                                           FOLDER_PERMISSIONS,
+                                                           FILE_PERMISSIONS)
             application_dir_base_name = archive_file_list[0]
             # generating temporary unique name for app dir, to allow multiple
             # uploads of apps with the same name (as it appears in the file
