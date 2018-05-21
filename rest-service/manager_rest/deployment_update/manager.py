@@ -225,9 +225,11 @@ class DeploymentUpdateManager(object):
                                  dep_update,
                                  skip_install=False,
                                  skip_uninstall=False,
-                                 workflow_id=None):
+                                 workflow_id=None,
+                                 ignore_failure=False):
         """commit the deployment update steps
 
+        :param ignore_failure:
         :param dep_update:
         :param skip_install:
         :param skip_uninstall:
@@ -285,7 +287,9 @@ class DeploymentUpdateManager(object):
             modified_entity_ids.to_dict(),
             skip_install=skip_install,
             skip_uninstall=skip_uninstall,
-            workflow_id=workflow_id)
+            workflow_id=workflow_id,
+            ignore_failure=ignore_failure
+        )
 
         dep_update.execution = execution
         dep_update.state = STATES.EXECUTING_WORKFLOW
@@ -399,7 +403,8 @@ class DeploymentUpdateManager(object):
                                  modified_entity_ids,
                                  skip_install=False,
                                  skip_uninstall=False,
-                                 workflow_id=None):
+                                 workflow_id=None,
+                                 ignore_failure=False):
         """Executed the update workflow or a custom workflow
 
         :param dep_update:
@@ -452,6 +457,7 @@ class DeploymentUpdateManager(object):
             # Whether or not execute install or uninstall
             parameters['skip_install'] = skip_install
             parameters['skip_uninstall'] = skip_uninstall
+            parameters['ignore_failure'] = ignore_failure
 
         return self._execute_workflow(
                 deployment_update=dep_update,
