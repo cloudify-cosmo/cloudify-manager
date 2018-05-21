@@ -329,16 +329,17 @@ class SnapshotRestore(object):
     def _restore_security_file(self):
         """Update the rest security config file according to the snapshot
         """
+        with open(SECURITY_FILE_LOCATION) as security_conf_file:
+            rest_security_conf = json.load(security_conf_file)
+
         # Starting from 4.4.0 we save the rest-security.conf in the snapshot
         if self._snapshot_version < V_4_4_0:
+            self._encryption_key = str(rest_security_conf['encryption_key'])
             return
 
         snapshot_security_path = os.path.join(self._tempdir, SECURITY_FILENAME)
         with open(snapshot_security_path) as snapshot_security_file:
             snapshot_security_conf = json.load(snapshot_security_file)
-
-        with open(SECURITY_FILE_LOCATION) as security_conf_file:
-            rest_security_conf = json.load(security_conf_file)
 
         rest_security_conf.update(snapshot_security_conf)
         with open(SECURITY_FILE_LOCATION, 'w') as security_conf_file:
