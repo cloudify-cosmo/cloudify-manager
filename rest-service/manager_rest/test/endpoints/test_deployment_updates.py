@@ -216,69 +216,32 @@ class DeploymentUpdatesTestCase(base_test.BaseServerTestCase):
         self.assertEqual(1, len(dep_update.steps))
         self.assertDictContainsSubset(step, dep_update.steps[0])
 
-    def test_workflow_and_skip_conflict(self):
-        deployment_id = 'dep'
-        self._deploy_base(deployment_id, 'no_output.yaml')
-
-        msg = ('skip_install has been set to {skip_install}, skip_uninstall '
-               'has been set to {skip_uninstall}, ignore_failure has been set '
-               'to {ignore_failure}, and a custom workflow {workflow_id} has '
-               'been set to replace "update". However, skip_install, '
-               'skip_uninstall and ignore_failure are mutually exclusive with '
-               'a custom workflow')
-
-        conflicting_params_list = [
-            {
-                'skip_install': True,
-                'skip_uninstall': True,
-                'ignore_failure': False,
-                'workflow_id': 'custom_workflow'
-            },
-            {
-                'skip_install': True,
-                'skip_uninstall': False,
-                'ignore_failure': False,
-                'workflow_id': 'custom_workflow'
-            },
-            {
-                'skip_install': False,
-                'skip_uninstall': True,
-                'ignore_failure': False,
-                'workflow_id': 'custom_workflow'
-            },
-            {
-                'skip_install': True,
-                'skip_uninstall': False,
-                'ignore_failure': True,
-                'workflow_id': 'custom_workflow'
-            },
-            {
-                'skip_install': False,
-                'skip_uninstall': False,
-                'ignore_failure': True,
-                'workflow_id': 'custom_workflow'
-            }
-        ]
-
-        for conflicting_params in conflicting_params_list:
-            response = self._update(blueprint_name='no_output.yaml',
-                                    deployment_id=deployment_id,
-                                    **conflicting_params)
-            self.assertEquals(response.json['message'],
-                              msg.format(**conflicting_params))
-
     def test_ignore_failure_and_skip_uninstall_conflict(self):
         deployment_id = 'dep'
         self._deploy_base(deployment_id, 'no_output.yaml')
 
-        msg = ('The parameters `ignore_failure` and `skip_uninstall` are '
-               'mutually exclusive, since `ignore_failure` is only used in '
-               'the uninstall workflow')
+        msg = ('The parameters `ignore_failure` and `install_first` are '
+               'mutually exclusive with the parameter `skip_uninstall`, '
+               'since they are only relevant when the uninstall workflow '
+               'is being used')
 
         response = self._update(blueprint_name='no_output.yaml',
                                 deployment_id=deployment_id,
                                 skip_uninstall=True,
-                                ignore_failure=True)
+                                ignore_failure=True,
+                                install_first=True)
+        self.assertEquals(response.json['message'], msg)
+        response = self._update(blueprint_name='no_output.yaml',
+                                deployment_id=deployment_id,
+                                skip_uninstall=True,
+                                ignore_failure=True,
+                                install_first=False)
+        self.assertEquals(response.json['message'], msg)
+        response = self._update(blueprint_name='no_output.yaml',
+                                deployment_id=deployment_id,
+                                skip_uninstall=True,
+                                ignore_failure=False,
+                                install_first=True)
         self.assertEquals(response.json['message'], msg)
 
     def test_one_active_update_per_deployment(self):
