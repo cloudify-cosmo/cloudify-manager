@@ -452,6 +452,9 @@ workflows:
       ignore_failure:
         default: false
         type: boolean
+      install_first:
+        default: false
+        type: boolean
 
   uninstall:
     mapping: default_workflows.cloudify.plugins.workflows.uninstall

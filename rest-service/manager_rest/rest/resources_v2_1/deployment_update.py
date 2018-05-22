@@ -84,8 +84,8 @@ class DeploymentUpdate(SecuredResource):
         blueprint id.
         """
         request_json = request.json
-        manager, skip_install, skip_uninstall, workflow_id, ignore_failure = \
-            self._get_params_and_validate(id, request_json)
+        manager, skip_install, skip_uninstall, workflow_id, ignore_failure, \
+            install_first = self._get_params_and_validate(id, request_json)
         blueprint, inputs = self._get_and_validate_blueprint_and_inputs(
             id, request_json)
 
@@ -107,15 +107,17 @@ class DeploymentUpdate(SecuredResource):
                                                             blueprint.id)
         manager.extract_steps_from_deployment_update(deployment_update)
         return manager.commit_deployment_update(deployment_update,
-                                                skip_install=skip_install,
-                                                skip_uninstall=skip_uninstall,
-                                                workflow_id=workflow_id,
-                                                ignore_failure=ignore_failure)
+                                                skip_install,
+                                                skip_uninstall,
+                                                workflow_id,
+                                                ignore_failure,
+                                                install_first)
 
     def _commit(self, deployment_id):
         request_json = request.args
-        manager, skip_install, skip_uninstall, workflow_id, ignore_failure = \
-            self._get_params_and_validate(deployment_id, request_json)
+        manager, skip_install, skip_uninstall, workflow_id, ignore_failure, \
+            install_first = self._get_params_and_validate(deployment_id,
+                                                          request_json)
 
         deployment_update, _ = \
             UploadedBlueprintsDeploymentUpdateManager(). \
@@ -124,10 +126,11 @@ class DeploymentUpdate(SecuredResource):
         manager.extract_steps_from_deployment_update(deployment_update)
 
         return manager.commit_deployment_update(deployment_update,
-                                                skip_install=skip_install,
-                                                skip_uninstall=skip_uninstall,
-                                                workflow_id=workflow_id,
-                                                ignore_failure=ignore_failure)
+                                                skip_install,
+                                                skip_uninstall,
+                                                workflow_id,
+                                                ignore_failure,
+                                                install_first)
 
     @staticmethod
     def _get_and_validate_blueprint_and_inputs(deployment_id, request_json):
@@ -165,25 +168,25 @@ class DeploymentUpdate(SecuredResource):
         ignore_failure = verify_and_convert_bool(
             'ignore_failure',
             request_json.get('ignore_failure', 'false'))
+        install_first = verify_and_convert_bool(
+            'install_first',
+            request_json.get('install_first', 'false'))
         workflow_id = request_json.get('workflow_id', None)
 
-        if skip_uninstall and ignore_failure:
+        if skip_uninstall and (ignore_failure or install_first):
             raise manager_exceptions.BadParametersError(
-                'The parameters `ignore_failure` and `skip_uninstall` are '
-                'mutually exclusive, since `ignore_failure` is only used in '
-                'the uninstall workflow')
-        if (skip_install or skip_uninstall or ignore_failure) and workflow_id:
-            raise manager_exceptions.BadParametersError(
-                'skip_install has been set to {0}, skip_uninstall has been'
-                ' set to {1}, ignore_failure has been set to {2}, and a '
-                'custom workflow {3} has been set to replace "update". '
-                'However, skip_install, skip_uninstall and ignore_failure are '
-                'mutually exclusive with a custom workflow'.format(
-                    skip_install, skip_uninstall, ignore_failure, workflow_id))
-        manager.validate_no_active_updates_per_deployment(
-            deployment_id=deployment_id, force=force)
-        return \
-            manager, skip_install, skip_uninstall, workflow_id, ignore_failure
+                'The parameters `ignore_failure` and `install_first` are '
+                'mutually exclusive with the parameter `skip_uninstall`, '
+                'since they are only relevant when the uninstall workflow '
+                'is being used')
+        manager.validate_no_active_updates_per_deployment(deployment_id,
+                                                          force=force)
+        return (manager,
+                skip_install,
+                skip_uninstall,
+                workflow_id,
+                ignore_failure,
+                install_first)
 
 
 class DeploymentUpdateId(SecuredResource):

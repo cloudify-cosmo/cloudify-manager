@@ -382,10 +382,13 @@ class ResourceManager(object):
                                             bypass_maintenance)
         return self.sm.delete(deployment)
 
-    def execute_workflow(self, deployment_id, workflow_id,
+    def execute_workflow(self,
+                         deployment_id,
+                         workflow_id,
                          parameters=None,
                          allow_custom_parameters=False,
-                         force=False, bypass_maintenance=None,
+                         force=False,
+                         bypass_maintenance=None,
                          dry_run=False):
         deployment = self.sm.get(models.Deployment, deployment_id)
         blueprint = self.sm.get(models.Blueprint, deployment.blueprint_id)

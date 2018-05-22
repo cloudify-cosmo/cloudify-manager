@@ -226,9 +226,11 @@ class DeploymentUpdateManager(object):
                                  skip_install=False,
                                  skip_uninstall=False,
                                  workflow_id=None,
-                                 ignore_failure=False):
+                                 ignore_failure=False,
+                                 install_first=False):
         """commit the deployment update steps
 
+        :param install_first:
         :param ignore_failure:
         :param dep_update:
         :param skip_install:
@@ -288,7 +290,8 @@ class DeploymentUpdateManager(object):
             skip_install=skip_install,
             skip_uninstall=skip_uninstall,
             workflow_id=workflow_id,
-            ignore_failure=ignore_failure
+            ignore_failure=ignore_failure,
+            install_first=install_first
         )
 
         dep_update.execution = execution
@@ -404,7 +407,8 @@ class DeploymentUpdateManager(object):
                                  skip_install=False,
                                  skip_uninstall=False,
                                  workflow_id=None,
-                                 ignore_failure=False):
+                                 ignore_failure=False,
+                                 install_first=False):
         """Executed the update workflow or a custom workflow
 
         :param dep_update:
@@ -450,19 +454,21 @@ class DeploymentUpdateManager(object):
             'removed_instance_ids':
                 extract_ids(removed_instances.get(NODE_MOD_TYPES.AFFECTED)),
             'remove_target_instance_ids':
-                extract_ids(removed_instances.get(NODE_MOD_TYPES.RELATED))
+                extract_ids(removed_instances.get(NODE_MOD_TYPES.RELATED)),
+
+            # Whether or not execute install or uninstall, order of execution,
+            # and behavior in failure while uninstalling
+            'skip_install': skip_install,
+            'skip_uninstall': skip_uninstall,
+            'ignore_failure': ignore_failure,
+            'install_first': install_first
         }
 
-        if not workflow_id:
-            # Whether or not execute install or uninstall
-            parameters['skip_install'] = skip_install
-            parameters['skip_uninstall'] = skip_uninstall
-            parameters['ignore_failure'] = ignore_failure
-
         return self._execute_workflow(
-                deployment_update=dep_update,
-                workflow_id=workflow_id or DEFAULT_DEPLOYMENT_UPDATE_WORKFLOW,
-                parameters=parameters)
+            deployment_update=dep_update,
+            workflow_id=workflow_id or DEFAULT_DEPLOYMENT_UPDATE_WORKFLOW,
+            parameters=parameters
+        )
 
     def finalize_commit(self, deployment_update_id):
         """ finalizes the update process by removing any removed
