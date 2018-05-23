@@ -201,6 +201,12 @@ node_types:
           inputs:
             validate_agent_timeout:
               default: 20
+            update_runtime_properties:
+              description: |
+                If set, the agent's config in the node instance's runtime
+                properties will be updated with the current manager's host
+                and cluster settings (where applicable)
+              default: false
 
 
         #####################################################
