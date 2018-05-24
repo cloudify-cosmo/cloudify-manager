@@ -93,6 +93,8 @@ class Authentication(object):
         return user
 
     def _check_if_user_is_locked(self, user, auth):
+        if self.external_auth_configured:
+            return user
         if not user:
             raise_unauthorized_user_error(
                 'Authentication failed for '
