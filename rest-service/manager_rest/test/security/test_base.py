@@ -64,11 +64,3 @@ class SecurityTestBase(BaseServerTestCase):
         test_config.user_lock_period = 30
 
         return test_config
-
-    def get_user_using_authorized_user(self, user, headers=None, **kwargs):
-        with self.use_secured_client(headers, **kwargs):
-            return self.client.users.get(user)
-
-    def unlock_user(self, user, headers=None, **kwargs):
-        with self.use_secured_client(headers, **kwargs):
-            return self.client.users.unlock(user)
