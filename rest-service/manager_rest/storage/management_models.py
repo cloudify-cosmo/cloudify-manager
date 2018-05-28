@@ -19,7 +19,8 @@ from collections import (
     defaultdict,
 )
 from datetime import timedelta, datetime
-from time import strptime, mktime
+from dateutil import parser as date_parser
+
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
 from flask_security import SQLAlchemyUserDatastore, UserMixin, RoleMixin
@@ -272,7 +273,7 @@ class User(SQLModelBase, UserMixin):
     password = db.Column(db.String(255))
     api_token_key = db.Column(db.String(100))
     last_failed_login_at = db.Column(UTCDateTime)
-    failed_logins_counter = db.Column(db.Integer)
+    failed_logins_counter = db.Column(db.Integer, default=0)
 
     tenant_associations = db.relationship(
         'UserTenantAssoc',
@@ -438,20 +439,14 @@ class User(SQLModelBase, UserMixin):
     @property
     def is_locked(self):
         allowed_failed_logins = config.instance.failed_logins_before_user_lock
-        lockout_period = timedelta(minutes=config.instance.user_lock_period)
-        last_failed_login = self._parse_date(self.last_failed_login_at)
-        if (self.failed_logins_counter > allowed_failed_logins)\
-                and (last_failed_login + lockout_period > datetime.now()):
-            return True
+        if self.failed_logins_counter > allowed_failed_logins:
+            lockout_period = timedelta(
+                minutes=config.instance.user_lock_period)
+            last_failed_login = date_parser.parse(
+                self.last_failed_login_at, ignoretz=True)
+            if last_failed_login + lockout_period > datetime.now():
+                return True
         return False
-
-    @staticmethod
-    def _parse_date(date):
-        if not date:
-            return None
-        timestamp = strptime(date, '%Y-%m-%dT%H:%M:%S.%fZ')
-        last_failed_login = datetime.fromtimestamp(mktime(timestamp))
-        return last_failed_login
 
 
 class UserTenantAssoc(SQLModelBase):

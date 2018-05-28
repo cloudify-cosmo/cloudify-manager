@@ -7,7 +7,7 @@ Create Date: 2018-04-03 14:31:11.832546
 """
 from alembic import op
 import sqlalchemy as sa
-
+from manager_rest.storage.models_base import UTCDateTime
 
 # revision identifiers, used by Alembic.
 revision = 'c7652b2a97a4'
@@ -37,7 +37,7 @@ def upgrade():
                                                   sa.PickleType(),
                                                   nullable=True))
     op.add_column('users', sa.Column('last_failed_login_at',
-                                                  sa.DateTime(),
+                                                  UTCDateTime(),
                                                   nullable=True))
     op.add_column('users', sa.Column('failed_logins_counter',
                                                   sa.Integer(),

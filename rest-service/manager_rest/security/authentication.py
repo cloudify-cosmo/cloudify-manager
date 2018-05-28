@@ -47,10 +47,7 @@ class Authentication(object):
     @staticmethod
     def _increment_failed_logins_counter(user):
         user.last_failed_login_at = datetime.now()
-        if user.failed_logins_counter:
-            user.failed_logins_counter += 1
-        else:
-            user.failed_logins_counter = 1
+        user.failed_logins_counter += 1
         user_datastore.commit()
 
     def authenticate(self, request):
@@ -101,7 +98,6 @@ class Authentication(object):
                 '<User username=`{0}`>'.format(auth.username)
             )
         if user.is_locked:
-            # User is locked!
             raise_unauthorized_user_error(
                 'Authentication failed for {0}.'
                 ' Bad credentials or locked account'.format(user))
