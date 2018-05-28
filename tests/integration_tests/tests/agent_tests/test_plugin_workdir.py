@@ -25,7 +25,7 @@ class PluginWorkdirTest(AgentTestCase):
         filename = 'test_plugin_workdir.txt'
         host_content = 'HOST_CONTENT'
         central_content = 'CENTRAL_CONTENT'
-        dsl_path = resource("dsl/plugin_workdir.yaml")
+        dsl_path = resource("dsl/agent_tests/plugin_workdir.yaml")
         deployment, _ = self.deploy_application(
                 dsl_path,
                 inputs={
