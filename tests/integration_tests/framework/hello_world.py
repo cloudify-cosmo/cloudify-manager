@@ -102,10 +102,14 @@ class _HelloWorld(object):
                         'dsl/agent_tests/dockercompute_helloworld.yaml'),
                 blueprint_file)
             shutil.copy(
-                test_utils.get_resource('dsl/plugins/diamond.yaml'),
+                test_utils.get_resource(
+                    'dsl/agent_tests/plugins/diamond.yaml'
+                ),
                 os.path.join(blueprint_dir, 'diamond.yaml'))
             shutil.copy(
-                test_utils.get_resource('dsl/plugins/dockercompute.yaml'),
+                test_utils.get_resource(
+                    'dsl/agent_tests/plugins/dockercompute.yaml'
+                ),
                 os.path.join(blueprint_dir, 'dockercompute.yaml'))
         else:
             logger.info('Reusing existing hello world tar')
