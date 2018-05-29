@@ -15,19 +15,20 @@
 
 import os
 import uuid
+import shutil
 import tarfile
 import tempfile
 from contextlib import contextmanager
 
-import retrying
 import sh
+import retrying
 
 from cloudify import constants
 from cloudify_rest_client.exceptions import CloudifyClientError
 from cloudify_rest_client.executions import Execution
 
 from integration_tests import AgentlessTestCase
-from integration_tests.framework.utils import timeout
+from integration_tests.framework.utils import timeout, create_zip
 from integration_tests.tests.utils import (
     get_resource,
     do_retries,
@@ -376,50 +377,74 @@ class BasicWorkflowsTest(AgentlessTestCase):
         node_instance = self.client.node_instances.get(node_id)
         self.assertEqual('started', node_instance.state)
 
-    def test_deployment_creation_workflow(self):
-        dsl_path = get_resource(
-            'dsl/basic_with_deployment_plugin_and_workflow_plugin.yaml'
-        )
-        deployment, _ = self.deploy_application(dsl_path)
+    def test_deployment_create_workflow_and_source_plugin(self):
+        # Get the whole directory
+        dsl_path = get_resource('dsl/plugin_tests')
 
-        deployment_dir_path = os.path.join(
+        # Copy the blueprint folder into a temp dir, because we want to
+        # create a plugin zip, in order to install it from source
+        base_temp_dir = tempfile.mkdtemp()
+        blueprint_dir = os.path.join(base_temp_dir, 'blueprint')
+        shutil.copytree(dsl_path, blueprint_dir)
+
+        blueprint_path = os.path.join(blueprint_dir, 'source_plugin.yaml')
+
+        # Create a zip archive of the
+        source_plugin = os.path.join(
+            blueprint_dir, 'plugins', 'mock-plugin'
+        )
+        plugin_zip = '{0}.zip'.format(source_plugin)
+
+        try:
+            create_zip(source_plugin, plugin_zip)
+
+            deployment, _ = self.deploy_application(blueprint_path)
+            deployment_folder = self._get_deployment_folder(deployment)
+            plugin_path = self._get_plugin_path(deployment)
+
+            # assert plugin installer installed the necessary plugin
+            self._assert_path_exists_on_manager(deployment_folder, True)
+            self._assert_path_exists_on_manager(plugin_path)
+
+            self.undeploy_application(deployment.id, is_delete_deployment=True)
+
+            # Retry several times, because uninstalling plugins may take time
+            self._assert_paths_removed(deployment_folder, plugin_path)
+        finally:
+            shutil.rmtree(base_temp_dir)
+
+    @retrying.retry(wait_fixed=5000, stop_max_attempt_number=10)
+    def _assert_paths_removed(self, deployment_folder, plugin_path):
+        # assert plugin installer uninstalled the necessary plugin
+        self._assert_path_doesnt_exist_on_manager(deployment_folder, True)
+        self._assert_path_doesnt_exist_on_manager(plugin_path)
+
+    @staticmethod
+    def _get_deployment_folder(deployment):
+        return os.path.join(
             '/opt/mgmtworker/work/deployments',
             DEFAULT_TENANT_NAME,
             deployment.id
         )
 
-        self.execute_on_manager('test -d {0}'.format(deployment_dir_path))
+    @staticmethod
+    def _get_plugin_path(deployment):
+        return os.path.join(
+            '/opt/mgmtworker/env/plugins/',
+            DEFAULT_TENANT_NAME,
+            '{0}-plugin1'.format(deployment.id),
+            'lib/python2.7/site-packages/',
+            'mock_plugin/ops.py'
+        )
 
-        # assert plugin installer installed
-        # the necessary plugins.
-        agent_data = self.get_plugin_data(
-            plugin_name='agent',
-            deployment_id=deployment.id)
-
-        # cloudmock and mock_workflows should have been installed
-        # on the management worker as local tasks
-        installed = ['installed']
-        self.assertEqual(agent_data['local']['cloudmock'], installed)
-        self.assertEqual(agent_data['local']['mock_workflows'], installed)
-
-        self.undeploy_application(deployment.id, is_delete_deployment=True)
-
-        # assert plugin installer uninstalled
-        # the necessary plugins.
-        self._assert_plugin_uninstalled(deployment)
-
+    def _assert_path_doesnt_exist_on_manager(self, path, directory=False):
         self.assertRaises(sh.ErrorReturnCode,
-                          self.execute_on_manager,
-                          'test -d {0}'.format(deployment_dir_path))
+                          self._assert_path_exists_on_manager,
+                          path, directory)
 
-    @retrying.retry(wait_fixed=5000, stop_max_attempt_number=10)
-    def _assert_plugin_uninstalled(self, deployment):
-        agent_data = self.get_plugin_data(
-                plugin_name='agent',
-                deployment_id=deployment.id)
-        uninstalled = ['installed', 'uninstalled']
-        self.assertEqual(agent_data['local']['cloudmock'], uninstalled)
-        self.assertEqual(agent_data['local']['mock_workflows'], uninstalled)
+    def _assert_path_exists_on_manager(self, path, directory=False):
+        flag = '-d' if directory else '-f'
+        self.execute_on_manager('test {0} {1}'.format(flag, path))
 
     def test_get_attribute(self):
         # assertion happens in operation get_attribute.tasks.assertion
