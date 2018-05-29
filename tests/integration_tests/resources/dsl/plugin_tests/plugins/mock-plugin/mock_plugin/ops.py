@@ -12,13 +12,12 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
-# ***************************************************************************/
+# **************************************************************************/
 
-from setuptools import setup
+from cloudify import ctx
+from cloudify.decorators import operation
 
 
-setup(
-    name='mock-wagon-plugin',
-    version='4.0a11',
-    packages=['mock_wagon_plugin'],
-)
+@operation
+def op(**_):
+    ctx.logger.info('Performing OP')
