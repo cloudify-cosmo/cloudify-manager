@@ -1,1 +1,1 @@
--e git+https://github.com/cloudify-cosmo/cloudify-common@master#egg=cloudify-common==4.4.dev1
+-e git+https://github.com/cloudify-cosmo/cloudify-common@CY-329-account-lock#egg=cloudify-common==4.4.dev1
