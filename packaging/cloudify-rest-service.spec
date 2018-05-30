@@ -50,7 +50,7 @@ export REST_SERVICE_BUILD=True  # TODO: remove this hack from setup.py
 # Jinja2 includes 2 files which will only be imported if async is available,
 # but rpmbuild's brp-python-bytecompile falls over when it finds them. Here
 # we remove them.
-rm /opt/manager/env/lib/python2.7/site-packages/jinja2/async*.py
+rm -f /opt/manager/env/lib/python2.7/site-packages/jinja2/async*.py
 
 
 %install
