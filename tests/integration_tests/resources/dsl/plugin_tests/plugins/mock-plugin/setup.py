@@ -12,12 +12,13 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
-# **************************************************************************/
+# ***************************************************************************/
 
-from cloudify import ctx
-from cloudify.decorators import operation
+from setuptools import setup
 
 
-@operation
-def op(test_input, **_):
-    ctx.instance.runtime_properties['test_output'] = test_input
+setup(
+    name='mock-plugin',
+    version='4.0a11',
+    packages=['mock_plugin'],
+)

@@ -91,8 +91,7 @@ def verify_deployment_environment_creation_complete(deployment_id):
     if not execs \
             or execs[0].status != Execution.TERMINATED \
             or execs[0].workflow_id != 'create_deployment_environment':
-        log_path = ('/var/log/cloudify/mgmtworker/'
-                    'cloudify.management_worker.log')
+        log_path = '/var/log/cloudify/mgmtworker/mgmtworker.log'
         logs = docl.execute('tail -n 100 {0}'.format(log_path))
         raise RuntimeError(
                 "Expected a single execution for workflow "
