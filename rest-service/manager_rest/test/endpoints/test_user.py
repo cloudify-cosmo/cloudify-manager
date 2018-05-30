@@ -28,6 +28,8 @@ class UserTestCase(base_test.BaseServerTestCase):
         result = loads(response.data)
         self._assert_response(result)
 
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
     def test_get_users_by_username(self):
 
         response = self.get('/users/admin')
