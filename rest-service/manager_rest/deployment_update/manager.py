@@ -467,7 +467,8 @@ class DeploymentUpdateManager(object):
         return self._execute_workflow(
             deployment_update=dep_update,
             workflow_id=workflow_id or DEFAULT_DEPLOYMENT_UPDATE_WORKFLOW,
-            parameters=parameters
+            parameters=parameters,
+            allow_custom_parameters=True
         )
 
     def finalize_commit(self, deployment_update_id):
