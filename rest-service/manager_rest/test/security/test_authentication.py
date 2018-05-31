@@ -23,6 +23,8 @@ from manager_rest.utils import BASIC_AUTH_PREFIX, CLOUDIFY_AUTH_HEADER
 from .test_base import SecurityTestBase
 from ..security_utils import ADMIN_ROLE, USER_ROLE
 
+FAILED_LOGINS_NUMBER = 6
+
 
 @attr(client_min_version=1, client_max_version=LATEST_API_VERSION)
 class AuthenticationTests(SecurityTestBase):

@@ -21,8 +21,6 @@ defaults:
     steps:
       - checkout
 
-      - run: cat "${TOX_CONFIG}/"{setup.py,dev-requirements.txt,tox.ini} > deps_files
-
       - run: sudo apt-get install libldap-dev libsasl2-dev
       - run: pip install --user tox
 

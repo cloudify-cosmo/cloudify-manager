@@ -83,6 +83,7 @@ def setup_resources(api):
         'Users': 'users',
         'UsersId': 'users/<string:username>',
         'UsersActive': 'users/active/<string:username>',
+        'UsersUnlock': 'users/unlock/<string:username>',
         'Cluster': 'cluster',
         'ClusterNodes': 'cluster/nodes',
         'ClusterNodesId': 'cluster/nodes/<string:node_id>',
@@ -114,4 +115,5 @@ def _set_versioned_urls(api, resource_name, endpoint_suffix):
             endpoint = '{0}/{1}'.format(version_name, endpoint_suffix)
             url = '/api/{0}'.format(endpoint)
             api.add_resource(resource, url, endpoint=endpoint)
+
             swagger.add_swagger_resource(api, version_name, resource, url)
