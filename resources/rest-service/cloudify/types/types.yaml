@@ -455,6 +455,8 @@ workflows:
       install_first:
         default: false
         type: boolean
+      node_instances_to_reinstall:
+        default: []
 
   uninstall:
     mapping: default_workflows.cloudify.plugins.workflows.uninstall

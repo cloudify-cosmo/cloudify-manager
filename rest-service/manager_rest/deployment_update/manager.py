@@ -227,9 +227,11 @@ class DeploymentUpdateManager(object):
                                  skip_uninstall=False,
                                  workflow_id=None,
                                  ignore_failure=False,
-                                 install_first=False):
+                                 install_first=False,
+                                 reinstall_list=None):
         """commit the deployment update steps
 
+        :param reinstall_list:
         :param install_first:
         :param ignore_failure:
         :param dep_update:
@@ -291,7 +293,8 @@ class DeploymentUpdateManager(object):
             skip_uninstall=skip_uninstall,
             workflow_id=workflow_id,
             ignore_failure=ignore_failure,
-            install_first=install_first
+            install_first=install_first,
+            reinstall_list=reinstall_list
         )
 
         dep_update.execution = execution
@@ -408,7 +411,8 @@ class DeploymentUpdateManager(object):
                                  skip_uninstall=False,
                                  workflow_id=None,
                                  ignore_failure=False,
-                                 install_first=False):
+                                 install_first=False,
+                                 reinstall_list=None):
         """Executed the update workflow or a custom workflow
 
         :param dep_update:
@@ -456,12 +460,15 @@ class DeploymentUpdateManager(object):
             'remove_target_instance_ids':
                 extract_ids(removed_instances.get(NODE_MOD_TYPES.RELATED)),
 
-            # Whether or not execute install or uninstall, order of execution,
-            # and behavior in failure while uninstalling
+            # Whether or not execute install/uninstall/reinstall,
+            # order of execution, and behavior in failure while uninstalling
             'skip_install': skip_install,
             'skip_uninstall': skip_uninstall,
             'ignore_failure': ignore_failure,
-            'install_first': install_first
+            'install_first': install_first,
+
+            # List of node-instances to reinstall
+            'reinstall_list': reinstall_list
         }
 
         return self._execute_workflow(
