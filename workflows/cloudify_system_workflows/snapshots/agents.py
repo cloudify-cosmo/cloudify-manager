@@ -21,8 +21,8 @@ from cloudify import broker_config
 from cloudify.manager import get_rest_client
 from cloudify.utils import get_broker_ssl_cert_path
 
+from .constants import V_4_1_0, V_4_4_0
 from .utils import is_compute, get_tenants_list
-from .constants import BROKER_DEFAULT_VHOST, V_4_1_0
 
 
 class Agents(object):
@@ -31,10 +31,12 @@ class Agents(object):
     def __init__(self):
         with open(get_broker_ssl_cert_path(), 'r') as f:
             self._broker_ssl_cert = f.read()
+        self._manager_version = None
 
     def restore(self, tempdir, version):
         with open(os.path.join(tempdir, self._AGENTS_FILE)) as agents_file:
             agents = json.load(agents_file)
+        self._manager_version = version
         if version < V_4_1_0:
             self._insert_agents_data(agents)
             return
@@ -91,17 +93,10 @@ class Agents(object):
         the info from the bootstrap context as the fallback defaults
         """
         agent = node_instance.runtime_properties.get('cloudify_agent', {})
-        tenant = agent.get('rest_tenant', {})
         broker_conf = {
             'broker_ip': agent.get('broker_ip', broker_config.broker_hostname),
             'broker_ssl_cert': self._broker_ssl_cert,
-            'broker_ssl_enabled': True,
-            'broker_user': tenant.get('rabbitmq_username',
-                                      broker_config.broker_username),
-            'broker_pass': tenant.get('rabbitmq_password',
-                                      broker_config.broker_password),
-            'broker_vhost': tenant.get('rabbitmq_vhost',
-                                       broker_config.broker_vhost)
+            'broker_ssl_enabled': True
         }
         return {
             'version': str(self._manager_version),
@@ -117,17 +112,6 @@ class Agents(object):
                     'Failed restoring agents for deployment `{0}` in tenant '
                     '`{1}`'.format(deployment_id, tenant_name),
                     exc_info=True)
-
-    def _create_rest_tenant(self, old_agent, broker_config, tenant_name):
-        old_rest_tenant = old_agent.get('rest_tenant', tenant_name)
-        if isinstance(old_rest_tenant, dict):
-            return old_rest_tenant
-        return {
-            'rabbitmq_vhost': broker_config['broker_vhost'],
-            'rabbitmq_username': broker_config['broker_user'],
-            'rabbitmq_password': broker_config['broker_pass'],
-            'name': old_rest_tenant
-        }
 
     @classmethod
     def _get_tenant_name(cls, node_instance_id):
@@ -159,16 +143,17 @@ class Agents(object):
                 if not broker_config.get('broker_ip'):
                     broker_config['broker_ip'] = \
                         old_agent.get('manager_ip', '')
-                broker_config['broker_vhost'] = \
-                    broker_config.get('broker_vhost', BROKER_DEFAULT_VHOST)
-                agent['rest_tenant'] = self._create_rest_tenant(
-                    old_agent, broker_config, tenant_name)
                 agent['broker_config'] = broker_config
                 old_agent.update(agent)
                 runtime_properties['cloudify_agent'] = old_agent
                 # Results of agent validation on old manager.
                 # Might be incorrect for new manager.
                 runtime_properties.pop('agent_status', None)
+                # Starting from version 4.4 the rest_tenant is not being saved
+                # in the runtime properties
+                if self._manager_version < V_4_4_0:
+                    runtime_properties.pop('rest_tenant', None)
+
                 client.node_instances.update(
                     node_instance_id=node_instance_id,
                     runtime_properties=runtime_properties,
