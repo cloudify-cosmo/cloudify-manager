@@ -86,8 +86,8 @@ class DeploymentUpdate(SecuredResource):
         request_json = request.json
         manager, skip_install, skip_uninstall, workflow_id, ignore_failure, \
             install_first = self._get_params_and_validate(id, request_json)
-        blueprint, inputs = self._get_and_validate_blueprint_and_inputs(
-            id, request_json)
+        blueprint, inputs, reinstall_list = \
+            self._get_and_validate_blueprint_and_inputs(id, request_json)
 
         blueprint_dir_abs = join(config.instance.file_server_root,
                                  FILE_SERVER_BLUEPRINTS_FOLDER,
@@ -111,7 +111,8 @@ class DeploymentUpdate(SecuredResource):
                                                 skip_uninstall,
                                                 workflow_id,
                                                 ignore_failure,
-                                                install_first)
+                                                install_first,
+                                                reinstall_list)
 
     def _commit(self, deployment_id):
         request_json = request.args
@@ -135,10 +136,14 @@ class DeploymentUpdate(SecuredResource):
     @staticmethod
     def _get_and_validate_blueprint_and_inputs(deployment_id, request_json):
         inputs = request_json.get('inputs', {})
+        reinstall_list = request_json.get('reinstall_list', [])
         blueprint_id = request_json.get('blueprint_id')
         if not isinstance(inputs, dict):
             raise manager_exceptions.BadParametersError(
                 'parameter `inputs` must be of type `dict`')
+        if not isinstance(reinstall_list, list):
+            raise manager_exceptions.BadParametersError(
+                'parameter `reinstall_list` must be of type `list`')
         if not blueprint_id and not inputs:
             raise manager_exceptions.BadParametersError(
                 'Must supply either the `blueprint_id` parameter, or new '
@@ -151,7 +156,7 @@ class DeploymentUpdate(SecuredResource):
         else:
             blueprint = get_storage_manager().get(models.Blueprint,
                                                   blueprint_id)
-        return blueprint, inputs
+        return blueprint, inputs, reinstall_list
 
     @staticmethod
     def _get_params_and_validate(deployment_id, request_json):
@@ -173,12 +178,6 @@ class DeploymentUpdate(SecuredResource):
             request_json.get('install_first', 'false'))
         workflow_id = request_json.get('workflow_id', None)
 
-        if skip_uninstall and (ignore_failure or install_first):
-            raise manager_exceptions.BadParametersError(
-                'The parameters `ignore_failure` and `install_first` are '
-                'mutually exclusive with the parameter `skip_uninstall`, '
-                'since they are only relevant when the uninstall workflow '
-                'is being used')
         manager.validate_no_active_updates_per_deployment(deployment_id,
                                                           force=force)
         return (manager,

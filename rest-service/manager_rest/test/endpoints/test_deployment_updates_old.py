@@ -215,34 +215,6 @@ class DeploymentUpdatesOldTestCase(base_test.BaseServerTestCase):
         self.assertEqual(1, len(dep_update.steps))
         self.assertDictContainsSubset(step, dep_update.steps[0])
 
-    def test_ignore_failure_and_skip_uninstall_conflict(self):
-        deployment_id = 'dep'
-        self._deploy_base(deployment_id, 'no_output.yaml')
-
-        msg = ('The parameters `ignore_failure` and `install_first` are '
-               'mutually exclusive with the parameter `skip_uninstall`, '
-               'since they are only relevant when the uninstall workflow '
-               'is being used')
-
-        response = self._update(blueprint_name='no_output.yaml',
-                                deployment_id=deployment_id,
-                                skip_uninstall=True,
-                                ignore_failure=True,
-                                install_first=True)
-        self.assertEquals(response.json['message'], msg)
-        response = self._update(blueprint_name='no_output.yaml',
-                                deployment_id=deployment_id,
-                                skip_uninstall=True,
-                                ignore_failure=True,
-                                install_first=False)
-        self.assertEquals(response.json['message'], msg)
-        response = self._update(blueprint_name='no_output.yaml',
-                                deployment_id=deployment_id,
-                                skip_uninstall=True,
-                                ignore_failure=False,
-                                install_first=True)
-        self.assertEquals(response.json['message'], msg)
-
     def test_one_active_update_per_deployment(self):
         deployment_id = 'dep'
         self._deploy_base(deployment_id, 'no_output.yaml')
