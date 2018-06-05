@@ -84,8 +84,9 @@ class DeploymentUpdate(SecuredResource):
         blueprint id.
         """
         request_json = request.json
-        manager, skip_install, skip_uninstall, workflow_id, ignore_failure, \
-            install_first = self._get_params_and_validate(id, request_json)
+        manager, skip_install, skip_uninstall, skip_reinstall, workflow_id, \
+            ignore_failure, install_first = self._get_params_and_validate(
+                id, request_json)
         blueprint, inputs, reinstall_list = \
             self._get_and_validate_blueprint_and_inputs(id, request_json)
 
@@ -109,6 +110,7 @@ class DeploymentUpdate(SecuredResource):
         return manager.commit_deployment_update(deployment_update,
                                                 skip_install,
                                                 skip_uninstall,
+                                                skip_reinstall,
                                                 workflow_id,
                                                 ignore_failure,
                                                 install_first,
@@ -116,9 +118,9 @@ class DeploymentUpdate(SecuredResource):
 
     def _commit(self, deployment_id):
         request_json = request.args
-        manager, skip_install, skip_uninstall, workflow_id, ignore_failure, \
-            install_first = self._get_params_and_validate(deployment_id,
-                                                          request_json)
+        manager, skip_install, skip_uninstall, skip_reinstall, workflow_id, \
+            ignore_failure, install_first = self._get_params_and_validate(
+                deployment_id, request_json, skip_reinstall_default=True)
 
         deployment_update, _ = \
             UploadedBlueprintsDeploymentUpdateManager(). \
@@ -159,7 +161,9 @@ class DeploymentUpdate(SecuredResource):
         return blueprint, inputs, reinstall_list
 
     @staticmethod
-    def _get_params_and_validate(deployment_id, request_json):
+    def _get_params_and_validate(deployment_id,
+                                 request_json,
+                                 skip_reinstall_default=False):
         manager = get_deployment_updates_manager()
         skip_install = verify_and_convert_bool(
             'skip_install',
@@ -167,6 +171,9 @@ class DeploymentUpdate(SecuredResource):
         skip_uninstall = verify_and_convert_bool(
             'skip_uninstall',
             request_json.get('skip_uninstall', 'false'))
+        skip_reinstall = verify_and_convert_bool(
+            'skip_reinstall',
+            request_json.get('skip_reinstall', skip_reinstall_default))
         force = verify_and_convert_bool(
             'force',
             request_json.get('force', 'false'))
@@ -183,6 +190,7 @@ class DeploymentUpdate(SecuredResource):
         return (manager,
                 skip_install,
                 skip_uninstall,
+                skip_reinstall,
                 workflow_id,
                 ignore_failure,
                 install_first)

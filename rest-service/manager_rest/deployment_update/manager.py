@@ -225,12 +225,14 @@ class DeploymentUpdateManager(object):
                                  dep_update,
                                  skip_install=False,
                                  skip_uninstall=False,
+                                 skip_reinstall=False,
                                  workflow_id=None,
                                  ignore_failure=False,
                                  install_first=False,
                                  reinstall_list=None):
         """commit the deployment update steps
 
+        :param skip_reinstall:
         :param reinstall_list:
         :param install_first:
         :param ignore_failure:
@@ -291,6 +293,7 @@ class DeploymentUpdateManager(object):
             modified_entity_ids.to_dict(),
             skip_install=skip_install,
             skip_uninstall=skip_uninstall,
+            skip_reinstall=skip_reinstall,
             workflow_id=workflow_id,
             ignore_failure=ignore_failure,
             install_first=install_first,
@@ -403,12 +406,44 @@ class DeploymentUpdateManager(object):
 
                 relationship['rel_index'] = rel_index
 
+    @staticmethod
+    def _update_reinstall_list(reinstall_list,
+                               modified_entity_ids,
+                               dep_update,
+                               skip_reinstall):
+        """Add nodes that their properties have been updated to the list of
+        node instances to reinstall, unless skip_reinstall is true"""
+        reinstall_list = reinstall_list or []
+        if skip_reinstall:
+            return reinstall_list
+        sm = get_storage_manager()
+
+        # get all entities with modified properties
+        for modified in modified_entity_ids['property']:
+            modified = modified.split(':')
+
+            # pick only entities that are nodes
+            if modified[0].lower() != 'nodes':
+                continue
+
+            # list instances of each node
+            node_instances = sm.list(
+                models.NodeInstance,
+                filters={'deployment_id': dep_update.deployment_id,
+                         'node_id': modified[1]}
+            )
+
+            # add instances ids to the reinstall list
+            reinstall_list += [e.id for e in node_instances.items]
+        return reinstall_list
+
     def _execute_update_workflow(self,
                                  dep_update,
                                  node_instances,
                                  modified_entity_ids,
                                  skip_install=False,
                                  skip_uninstall=False,
+                                 skip_reinstall=False,
                                  workflow_id=None,
                                  ignore_failure=False,
                                  install_first=False,
@@ -427,6 +462,10 @@ class DeploymentUpdateManager(object):
             node_instances[NODE_MOD_TYPES.EXTENDED_AND_RELATED]
         reduced_instances = node_instances[NODE_MOD_TYPES.REDUCED_AND_RELATED]
         removed_instances = node_instances[NODE_MOD_TYPES.REMOVED_AND_RELATED]
+        reinstall_list = self._update_reinstall_list(reinstall_list,
+                                                     modified_entity_ids,
+                                                     dep_update,
+                                                     skip_reinstall)
 
         parameters = {
             # needed in order to finalize the commit
