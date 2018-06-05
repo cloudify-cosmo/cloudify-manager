@@ -468,7 +468,7 @@ class DeploymentUpdateManager(object):
             'install_first': install_first,
 
             # List of node-instances to reinstall
-            'reinstall_list': reinstall_list
+            'node_instances_to_reinstall': reinstall_list
         }
 
         return self._execute_workflow(
