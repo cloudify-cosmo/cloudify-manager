@@ -164,10 +164,7 @@ class DeploymentUpdateManager(object):
             new_blueprint = self.sm.get(models.Blueprint, new_blueprint_id)
             deployment_update.old_blueprint = old_blueprint
             deployment_update.new_blueprint = new_blueprint
-            deployment.blueprint = new_blueprint
         self.sm.put(deployment_update)
-        deployment.inputs = new_inputs
-        self.sm.update(deployment)
         return deployment_update
 
     def create_deployment_update_step(self,
@@ -299,6 +296,12 @@ class DeploymentUpdateManager(object):
             install_first=install_first,
             reinstall_list=reinstall_list
         )
+
+        deployment = self.sm.get(models.Deployment, dep_update.deployment_id)
+        deployment.inputs = dep_update.new_inputs
+        if dep_update.new_blueprint:
+            deployment.blueprint = dep_update.new_blueprint
+        self.sm.update(deployment)
 
         dep_update.execution = execution
         dep_update.state = STATES.EXECUTING_WORKFLOW
