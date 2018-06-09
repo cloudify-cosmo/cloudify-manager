@@ -107,6 +107,23 @@ def _get_tenant_dict():
     return tenant_dict
 
 
+def _send_mgmtworker_task(message, routing_key='workflow'):
+    """Send a message to the mgmtworker exchange"""
+    client = get_client(
+        amqp_host=config.instance.amqp_host,
+        amqp_user=config.instance.amqp_username,
+        amqp_pass=config.instance.amqp_password,
+        amqp_port=BROKER_SSL_PORT,
+        amqp_vhost='/',
+        ssl_enabled=True,
+        ssl_cert_path=config.instance.amqp_ca_path
+    )
+    send_handler = SendHandler(MGMTWORKER_QUEUE, routing_key=routing_key)
+    client.add_handler(send_handler)
+    with client:
+        send_handler.publish(message)
+
+
 def _execute_task(execution_id, execution_parameters, context):
     context['rest_token'] = current_user.get_auth_token()
     context['tenant'] = _get_tenant_dict()
@@ -117,16 +134,18 @@ def _execute_task(execution_id, execution_parameters, context):
         'id': execution_id,
     }
 
-    client = get_client(
-        amqp_host=config.instance.amqp_host,
-        amqp_user=config.instance.amqp_username,
-        amqp_pass=config.instance.amqp_password,
-        amqp_port=BROKER_SSL_PORT,
-        amqp_vhost='/',
-        ssl_enabled=True,
-        ssl_cert_path=config.instance.amqp_ca_path
-    )
-    send_handler = SendHandler(MGMTWORKER_QUEUE, routing_key='workflow')
-    client.add_handler(send_handler)
-    with client:
-        send_handler.publish(message)
+    _send_mgmtworker_task(message)
+
+
+def cancel_execution(execution_id):
+    message = {
+        'service_task': {
+            'task_name': 'cancel-workflow',
+            'kwargs': {
+                'execution_id': execution_id,
+                'rest_token': current_user.get_auth_token(),
+                'tenant': _get_tenant_dict()
+            }
+        }
+    }
+    _send_mgmtworker_task(message, routing_key='service')

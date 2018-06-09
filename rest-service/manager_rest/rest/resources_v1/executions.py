@@ -169,16 +169,15 @@ class ExecutionsId(SecuredResource):
         request_dict = get_json_and_verify_params({'action'})
         action = request_dict['action']
 
-        valid_actions = ['cancel', 'force-cancel']
+        valid_actions = ['cancel', 'force-cancel', 'kill']
 
         if action not in valid_actions:
             raise manager_exceptions.BadParametersError(
                 'Invalid action: {0}, Valid action values are: {1}'.format(
                     action, valid_actions))
 
-        if action in ('cancel', 'force-cancel'):
-            return get_resource_manager().cancel_execution(
-                execution_id, action == 'force-cancel')
+        return get_resource_manager().cancel_execution(
+            execution_id, action == 'force-cancel', action == 'kill')
 
     @swagger.operation(
         responseClass=models.Execution,

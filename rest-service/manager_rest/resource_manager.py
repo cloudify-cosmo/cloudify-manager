@@ -527,7 +527,7 @@ class ResourceManager(object):
 
         return execution
 
-    def cancel_execution(self, execution_id, force=False):
+    def cancel_execution(self, execution_id, force=False, kill=False):
         """
         Cancel an execution by its id
 
@@ -553,22 +553,30 @@ class ResourceManager(object):
         :rtype: models.Execution
         :raises manager_exceptions.IllegalActionError
         """
-
+        if kill:
+            force = True
         execution = self.sm.get(models.Execution, execution_id)
         if execution.status not in (ExecutionState.PENDING,
                                     ExecutionState.STARTED) and \
-                (not force or execution.status != ExecutionState.CANCELLING):
+                (not force or execution.status != ExecutionState.CANCELLING)\
+                and not kill:
             raise manager_exceptions.IllegalActionError(
                 "Can't {0}cancel execution {1} because it's in status {2}"
                 .format(
-                    'force-' if force else '',
+                    'kill-' if kill else 'force-' if force else '',
                     execution_id,
                     execution.status))
 
-        new_status = ExecutionState.CANCELLING if not force \
-            else ExecutionState.FORCE_CANCELLING
+        if kill:
+            new_status = ExecutionState.KILL_CANCELLING
+        elif force:
+            new_status = ExecutionState.FORCE_CANCELLING
+        else:
+            new_status = ExecutionState.CANCELLING
         execution.status = new_status
         execution.error = ''
+        if kill:
+            workflow_executor.cancel_execution(execution_id)
         return self.sm.update(execution)
 
     @staticmethod
