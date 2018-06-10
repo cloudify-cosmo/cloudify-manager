@@ -417,6 +417,7 @@ class BaseTestCase(unittest.TestCase):
         client = test_utils.create_rest_client()
         deadline = time.time() + timeout_seconds
         while execution.status not in Execution.END_STATES:
+            assert execution.ended_at is None
             time.sleep(0.5)
             execution = client.executions.get(execution.id)
             if time.time() > deadline:

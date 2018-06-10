@@ -37,11 +37,14 @@ def upgrade():
                                                   sa.PickleType(),
                                                   nullable=True))
     op.add_column('users', sa.Column('last_failed_login_at',
-                                                  UTCDateTime(),
-                                                  nullable=True))
+                                     UTCDateTime(),
+                                     nullable=True))
     op.add_column('users', sa.Column('failed_logins_counter',
-                                                  sa.Integer(),
-                                                  nullable=True))
+                                     sa.Integer(),
+                                     nullable=True))
+    op.add_column('executions', sa.Column('ended_at',
+                                          UTCDateTime(),
+                                          nullable=True))
     # ### end Alembic commands ###
 
 
@@ -54,4 +57,5 @@ def downgrade():
     op.drop_column('deployment_updates', 'new_inputs')
     op.drop_column('users', 'last_failed_login_at')
     op.drop_column('users', 'failed_logins_counter')
+    op.drop_column('executions', 'ended_at')
     # ### end Alembic commands ###

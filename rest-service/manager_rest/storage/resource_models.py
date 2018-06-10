@@ -212,6 +212,7 @@ class Execution(SQLResourceBase):
     }
 
     created_at = db.Column(UTCDateTime, nullable=False, index=True)
+    ended_at = db.Column(UTCDateTime, nullable=True)
     error = db.Column(db.Text)
     is_system_workflow = db.Column(db.Boolean, nullable=False)
     parameters = db.Column(db.PickleType)
