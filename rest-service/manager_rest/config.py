@@ -60,8 +60,8 @@ class Config(object):
         self.authorization_roles = None
         self.authorization_permissions = None
 
-        self.failed_logins_before_user_lock = 4
-        self.user_lock_period = -1
+        self.failed_logins_before_account_lock = 4
+        self.account_lock_period = -1
 
         self.warnings = []
 

@@ -438,10 +438,10 @@ class User(SQLModelBase, UserMixin):
 
     @property
     def is_locked(self):
-        allowed_failed_logins = config.instance.failed_logins_before_user_lock
-        if self.failed_logins_counter > allowed_failed_logins:
+        allowed_bad_logins = config.instance.failed_logins_before_account_lock
+        if self.failed_logins_counter > allowed_bad_logins:
             lockout_period = timedelta(
-                minutes=config.instance.user_lock_period)
+                minutes=config.instance.account_lock_period)
             last_failed_login = date_parser.parse(
                 self.last_failed_login_at, ignoretz=True)
             if last_failed_login + lockout_period > datetime.now():
