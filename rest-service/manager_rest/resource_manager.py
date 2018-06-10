@@ -78,6 +78,8 @@ class ResourceManager(object):
                 .format(execution.status, status))
         execution.status = status
         execution.error = error
+        if status in ExecutionState.END_STATES:
+            execution.ended_at = utils.get_formatted_timestamp()
         return self.sm.update(execution)
 
     def _validate_execution_update(self, current_status, future_status):

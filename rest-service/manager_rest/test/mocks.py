@@ -19,6 +19,7 @@ import urllib
 
 from functools import wraps
 
+from manager_rest import utils
 from cloudify_rest_client.client import HTTPClient
 from cloudify_rest_client.executions import Execution
 from manager_rest.storage import get_storage_manager, models
@@ -168,5 +169,6 @@ def mock_execute_task(execution_id, **_):
     sm = get_storage_manager()
     execution = sm.get(models.Execution, execution_id)
     execution.status = task_state()
+    execution.ended_at = utils.get_formatted_timestamp()
     execution.error = ''
     sm.update(execution)

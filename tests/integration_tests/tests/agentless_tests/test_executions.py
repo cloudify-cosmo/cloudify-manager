@@ -112,6 +112,8 @@ class ExecutionsTest(AgentlessTestCase):
                 deployments_executions[0] if execution_id == \
                 deployments_executions[0].id else deployments_executions[1]
             self.assertEquals(Execution.TERMINATED, install_execution.status)
+            self.assertIsNotNone(install_execution.created_at)
+            self.assertIsNotNone(install_execution.ended_at)
             self.assertEquals('', install_execution.error)
 
         self.do_assertions(assertions, timeout=10)
@@ -226,6 +228,7 @@ class ExecutionsTest(AgentlessTestCase):
 
     def _assert_execution_cancelled(self, execution, deployment_id):
         self.assertEquals(Execution.CANCELLED, execution.status)
+        self.assertIsNotNone(execution.ended_at)
         invocations = self.get_plugin_data(
             plugin_name='testmockoperations',
             deployment_id=deployment_id

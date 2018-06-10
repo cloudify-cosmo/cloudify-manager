@@ -53,6 +53,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         self.assertEquals(get_execution['deployment_id'],
                           deployment_response['id'])
         self.assertIsNotNone(get_execution['created_at'])
+        self.assertIsNotNone(get_execution['ended_at'])
 
         return get_execution
 
