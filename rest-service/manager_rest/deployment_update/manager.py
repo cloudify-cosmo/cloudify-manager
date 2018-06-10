@@ -54,11 +54,6 @@ class DeploymentUpdateManager(object):
         self._step_validator = StepValidator()
 
     def get_deployment_update(self, deployment_update_id):
-        """Return the deployment update object
-
-        :param deployment_update_id:
-        :return:
-        """
         return self.sm.get(models.DeploymentUpdate, deployment_update_id)
 
     def list_deployment_updates(self,
@@ -67,23 +62,12 @@ class DeploymentUpdateManager(object):
                                 pagination=None,
                                 sort=None,
                                 substr_filters=None):
-        """Return a list of deployment updates.
-
-        :param substr_filters:
-        :param include:
-        :param filters:
-        :param pagination:
-        :param sort:
-        :return:
-        """
-        return self.sm.list(
-            models.DeploymentUpdate,
-            include=include,
-            filters=filters,
-            pagination=pagination,
-            substr_filters=substr_filters,
-            sort=sort
-        )
+        return self.sm.list(models.DeploymentUpdate,
+                            include=include,
+                            filters=filters,
+                            pagination=pagination,
+                            substr_filters=substr_filters,
+                            sort=sort)
 
     def stage_deployment_update(self,
                                 deployment_id,
@@ -91,29 +75,16 @@ class DeploymentUpdateManager(object):
                                 app_blueprint,
                                 additional_inputs,
                                 new_blueprint_id=None):
-        """Stage a deployment update
-
-        :param new_blueprint_id:
-        :param additional_inputs:
-        :param app_blueprint:
-        :param app_dir:
-        :param deployment_id: the deployment id for the update
-        :return:
-        """
-
         # enables reverting to original blueprint resources
         deployment = self.sm.get(models.Deployment, deployment_id)
         old_blueprint = deployment.blueprint
         file_server_root = config.instance.file_server_root
-
-        blueprint_resource_dir = os.path.join(
-            file_server_root,
-            'blueprints',
-            old_blueprint.tenant_name,
-            old_blueprint.id)
+        blueprint_resource_dir = os.path.join(file_server_root,
+                                              'blueprints',
+                                              old_blueprint.tenant_name,
+                                              old_blueprint.id)
         # The dsl parser expects a URL
         blueprint_resource_dir_url = 'file:{0}'.format(blueprint_resource_dir)
-
         app_path = os.path.join(file_server_root, app_dir, app_blueprint)
 
         # parsing the blueprint from here
@@ -122,8 +93,8 @@ class DeploymentUpdateManager(object):
                 app_path,
                 resources_base_path=file_server_root,
                 additional_resources=[blueprint_resource_dir_url],
-                **app_context.get_parser_context())
-
+                **app_context.get_parser_context()
+            )
         except parser_exceptions.DSLParsingException as ex:
             raise manager_exceptions.InvalidBlueprintError(
                 'Invalid blueprint - {0}'.format(ex))
@@ -172,51 +143,35 @@ class DeploymentUpdateManager(object):
                                       action,
                                       entity_type,
                                       entity_id):
-        """Create deployment update step
-
-        :param deployment_update_id:
-        :param action: add/remove/modify
-        :param entity_type: add/relationship
-        :param entity_id:
-        :return:
-        """
-        step = models.DeploymentUpdateStep(
-            id=str(uuid.uuid4()),
-            action=action,
-            entity_type=entity_type,
-            entity_id=entity_id,
-        )
+        step = models.DeploymentUpdateStep(id=str(uuid.uuid4()),
+                                           action=action,
+                                           entity_type=entity_type,
+                                           entity_id=entity_id)
         deployment_update = self.get_deployment_update(deployment_update_id)
         step.set_deployment_update(deployment_update)
         return self.sm.put(step)
 
     def extract_steps_from_deployment_update(self, deployment_update):
-        supported_steps, unsupported_steps = \
-            step_extractor.extract_steps(deployment_update)
+        supported_steps, unsupported_steps = step_extractor.extract_steps(
+            deployment_update)
 
-        if not unsupported_steps:
-            for step in supported_steps:
-                self.create_deployment_update_step(
-                    deployment_update_id=deployment_update.id,
-                    action=step.action,
-                    entity_type=step.entity_type,
-                    entity_id=step.entity_id,
-                )
-
-        # if there are unsupported steps, raise an exception telling the user
-        # about these unsupported steps
-        else:
+        if unsupported_steps:
             deployment_update.state = STATES.FAILED
             self.sm.update(deployment_update)
             unsupported_entity_ids = [step.entity_id
                                       for step in unsupported_steps]
-            raise \
-                manager_exceptions.UnsupportedChangeInDeploymentUpdate(
-                    'The blueprint you provided for the deployment update '
-                    'contains changes currently unsupported by the deployment '
-                    'update mechanism.\n'
-                    'Unsupported changes: {0}'
-                    .format('\n'.join(unsupported_entity_ids)))
+            raise manager_exceptions.UnsupportedChangeInDeploymentUpdate(
+                'The blueprint you provided for the deployment update '
+                'contains changes currently unsupported by the deployment '
+                'update mechanism.\n'
+                'Unsupported changes: {0}'.format('\n'.join(
+                    unsupported_entity_ids)))
+
+        for step in supported_steps:
+            self.create_deployment_update_step(deployment_update.id,
+                                               step.action,
+                                               step.entity_type,
+                                               step.entity_id)
 
     def commit_deployment_update(self,
                                  dep_update,
@@ -227,19 +182,7 @@ class DeploymentUpdateManager(object):
                                  ignore_failure=False,
                                  install_first=False,
                                  reinstall_list=None):
-        """commit the deployment update steps
-
-        :param skip_reinstall:
-        :param reinstall_list:
-        :param install_first:
-        :param ignore_failure:
-        :param dep_update:
-        :param skip_install:
-        :param skip_uninstall:
-        :param workflow_id:
-        :return:
-        """
-        # mark deployment update as committing
+        # Mark deployment update as committing
         dep_update.state = STATES.UPDATING
         self.sm.update(dep_update)
 
@@ -248,14 +191,12 @@ class DeploymentUpdateManager(object):
             self._deployment_handler.handle(dep_update)
 
         # Retrieve previous_nodes
-        previous_nodes = \
-            [node.to_dict() for node in self.sm.list(
-                models.Node,
-                filters={'deployment_id': dep_update.deployment_id})]
+        previous_nodes = [node.to_dict() for node in self.sm.list(
+            models.Node, filters={'deployment_id': dep_update.deployment_id})]
 
         # Update the nodes on the storage
-        modified_entity_ids, depup_nodes = \
-            self._node_handler.handle(dep_update)
+        modified_entity_ids, depup_nodes = self._node_handler.handle(
+            dep_update)
 
         # Extract changes from raw nodes
         node_instance_changes = self._extract_changes(dep_update,
@@ -264,17 +205,16 @@ class DeploymentUpdateManager(object):
 
         # Create (and update for adding step type) node instances
         # according to the changes in raw_nodes
-        depup_node_instances = \
-            self._node_instance_handler.handle(dep_update,
-                                               node_instance_changes)
+        depup_node_instances = self._node_instance_handler.handle(
+            dep_update, node_instance_changes)
 
-        # Saving the needed changes back to sm for future use
+        # Saving the needed changes back to the storage manager for future use
         # (removing entities).
         dep_update.deployment_update_deployment = raw_updated_deployment
         dep_update.deployment_update_nodes = depup_nodes
         dep_update.deployment_update_node_instances = depup_node_instances
-        dep_update.modified_entity_ids = \
-            modified_entity_ids.to_dict(include_rel_order=True)
+        dep_update.modified_entity_ids = modified_entity_ids.to_dict(
+            include_rel_order=True)
         self.sm.update(dep_update)
 
         # Execute the default 'update' workflow or a custom workflow using
@@ -283,7 +223,6 @@ class DeploymentUpdateManager(object):
         # executions.
         # The raw_node_instances are being used only for their ids, Thus
         # They should really hold the finished version for the node instance.
-
         execution = self._execute_update_workflow(
             dep_update,
             depup_node_instances,
@@ -297,63 +236,57 @@ class DeploymentUpdateManager(object):
             reinstall_list=reinstall_list
         )
 
+        # Update deployment attributes in the storage manager
         deployment = self.sm.get(models.Deployment, dep_update.deployment_id)
         deployment.inputs = dep_update.new_inputs
         if dep_update.new_blueprint:
             deployment.blueprint = dep_update.new_blueprint
         self.sm.update(deployment)
 
+        # Update deployment update attributes in the storage manager
         dep_update.execution = execution
         dep_update.state = STATES.EXECUTING_WORKFLOW
         self.sm.update(dep_update)
 
+        # Return the deployment update object
         return self.get_deployment_update(dep_update.id)
 
     def validate_no_active_updates_per_deployment(self,
                                                   deployment_id,
                                                   force=False):
-        """
-        Validate there are no active updates for provided deployment.
-        raises conflict error if there are any.
-        :param deployment_id: deployment id
-        :param force: force
-        """
-        existing_updates = \
-            self.list_deployment_updates(filters={
-                'deployment_id': deployment_id
-            }).items
+        existing_updates = self.list_deployment_updates(
+            filters={'deployment_id': deployment_id}).items
+        active_updates = [u for u in existing_updates
+                          if u.state not in (STATES.SUCCESSFUL, STATES.FAILED)]
+        if not active_updates:
+            return
 
-        active_updates = [u for u in existing_updates if u.state
-                          not in (STATES.SUCCESSFUL, STATES.FAILED)]
+        if not force:
+            raise manager_exceptions.ConflictError(
+                'there are deployment updates still active; update IDs: {0}'
+                .format(', '.join([u.id for u in active_updates])))
 
-        if active_updates:
-            if not force:
-                raise manager_exceptions.ConflictError(
-                    'there are deployment updates still active; '
-                    'update IDs: {0}'.format(
-                        ', '.join([u.id for u in active_updates])))
+        # real active updates are those with an execution in a running status
+        real_active_updates = [
+            u for u in active_updates if u.execution_id is not None
+            and self.sm.get(models.Execution, u.execution_id).status
+            not in ExecutionState.END_STATES
+        ]
 
-            # real active updates are those with
-            # an execution in a running status
-            real_active_updates = \
-                [u for u in active_updates if u.execution_id is not None and
-                 self.sm.get(models.Execution, u.execution_id).status not in
-                 ExecutionState.END_STATES]
-
-            if real_active_updates:
-                raise manager_exceptions.ConflictError(
-                    'there are deployment updates still active; the "force" '
-                    'flag was used yet these updates have actual executions '
-                    'running update IDs: {0}'.format(
-                        ', '.join([u.id for u in real_active_updates])))
-            else:
-                # the active updates aren't really active - either their
-                # executions were failed/cancelled, or the update failed at
-                # the finalizing stage.
-                # updating their states to failed and continuing.
-                for dep_update in active_updates:
-                    dep_update.state = STATES.FAILED
-                    self.sm.update(dep_update)
+        if real_active_updates:
+            raise manager_exceptions.ConflictError(
+                'there are deployment updates still active; the "force" flag '
+                'was used yet these updates have actual executions running '
+                'update IDs: {0}'.format(', '.join(
+                    [u.id for u in real_active_updates])))
+        else:
+            # the active updates aren't really active - either their
+            # executions were failed/cancelled, or the update failed at
+            # the finalizing stage.
+            # updating their states to failed and continuing.
+            for dep_update in active_updates:
+                dep_update.state = STATES.FAILED
+                self.sm.update(dep_update)
 
     def _extract_changes(self,
                          dep_update,
@@ -362,21 +295,20 @@ class DeploymentUpdateManager(object):
         """Extracts the changes between the current node_instances and
         the raw_nodes specified
 
-        :param dep_update:
-        :param raw_nodes:
+        :param dep_update: deployment update object
+        :param raw_nodes: node objects from deployment update
         :return: a dictionary of modification type and node instanced modified
         """
         deployment = self.sm.get(models.Deployment, dep_update.deployment_id)
-
         deployment_id_filter = {'deployment_id': deployment.id}
 
         # By this point the node_instances aren't updated yet
-        previous_node_instances = \
-            [instance.to_dict() for instance in
-             self.sm.list(models.NodeInstance, filters=deployment_id_filter)]
+        previous_node_instances = [instance.to_dict() for instance in
+                                   self.sm.list(models.NodeInstance,
+                                                filters=deployment_id_filter)]
 
-        # extract all the None relationships from the depup nodes in order
-        # to use in the extract changes
+        # extract all the None relationships from the deployment update nodes
+        # in order to use in the extract changes
         no_none_relationships_nodes = copy.deepcopy(raw_nodes)
         for node in no_none_relationships_nodes:
             node['relationships'] = [r for r in node['relationships'] if r]
@@ -389,10 +321,8 @@ class DeploymentUpdateManager(object):
                 scaling_groups=deployment.scaling_groups,
                 modified_nodes=()
         )
-
         self._patch_changes_with_relationship_index(
-                changes[NODE_MOD_TYPES.EXTENDED_AND_RELATED],
-                raw_nodes)
+                changes[NODE_MOD_TYPES.EXTENDED_AND_RELATED], raw_nodes)
         return changes
 
     @staticmethod
@@ -403,10 +333,9 @@ class DeploymentUpdateManager(object):
                             if n['id'] == raw_node_instance['node_id'])
             for relationship in raw_node_instance['relationships']:
                 target_node_id = relationship['target_name']
-                rel_index = \
-                    next(i for i, d in enumerate(raw_node['relationships'])
-                         if d['target_id'] == target_node_id)
-
+                rel_index = next(i for i, d
+                                 in enumerate(raw_node['relationships'])
+                                 if d['target_id'] == target_node_id)
                 relationship['rel_index'] = rel_index
 
     @staticmethod
@@ -453,12 +382,12 @@ class DeploymentUpdateManager(object):
                                  reinstall_list=None):
         """Executed the update workflow or a custom workflow
 
-        :param dep_update:
+        :param dep_update: deployment update object
         :param node_instances: a dictionary of modification type and
         add_node.modification instances
         :param modified_entity_ids: the entire add_node.modification entities
         list (by id)
-        :return:
+        :return: Execution object
         """
         added_instances = node_instances[NODE_MOD_TYPES.ADDED_AND_RELATED]
         extended_instances = \
@@ -469,7 +398,6 @@ class DeploymentUpdateManager(object):
                                                      modified_entity_ids,
                                                      dep_update,
                                                      skip_reinstall)
-
         parameters = {
             # needed in order to finalize the commit
             'update_id': dep_update.id,
@@ -512,7 +440,6 @@ class DeploymentUpdateManager(object):
             # List of node-instances to reinstall
             'node_instances_to_reinstall': reinstall_list
         }
-
         return self._execute_workflow(
             deployment_update=dep_update,
             workflow_id=workflow_id or DEFAULT_DEPLOYMENT_UPDATE_WORKFLOW,
@@ -522,15 +449,10 @@ class DeploymentUpdateManager(object):
 
     def finalize_commit(self, deployment_update_id):
         """ finalizes the update process by removing any removed
-        node/node instances and updating any reduced node
-
-        :param deployment_update_id:
-        :return:
+        node/node-instances and updating any reduced node
         """
-
-        dep_update = self.get_deployment_update(deployment_update_id)
-
         # mark deployment update as finalizing
+        dep_update = self.get_deployment_update(deployment_update_id)
         dep_update.state = STATES.FINALIZING
         self.sm.update(dep_update)
 
@@ -543,40 +465,23 @@ class DeploymentUpdateManager(object):
         # mark deployment update as successful
         dep_update.state = STATES.SUCCESSFUL
         self.sm.update(dep_update)
-
         return dep_update
 
     def _execute_workflow(self,
                           deployment_update,
                           workflow_id,
                           parameters=None,
-                          allow_custom_parameters=False,
-                          force=False):
-        """Executes the specified workflow
-
-        :param deployment_update:
-        :param workflow_id:
-        :param parameters:
-        :param allow_custom_parameters:
-        :param force:
-        :return:
-        """
+                          allow_custom_parameters=False):
         deployment = deployment_update.deployment
-        deployment_id = deployment.id
-        blueprint_id = deployment.blueprint_id
-
         if workflow_id not in deployment.workflows:
             raise manager_exceptions.NonexistentWorkflowError(
-                'Workflow {0} does not exist in deployment {1}'
-                .format(workflow_id, deployment_id))
+                'Workflow {0} does not exist in deployment {1}'.format(
+                    workflow_id, deployment.id))
         workflow = deployment.workflows[workflow_id]
-
         execution_parameters = \
             ResourceManager._merge_and_validate_execution_parameters(
                 workflow, workflow_id, parameters, allow_custom_parameters)
-
         execution_id = str(uuid.uuid4())
-
         new_execution = models.Execution(
             id=execution_id,
             status=ExecutionState.PENDING,
@@ -585,26 +490,25 @@ class DeploymentUpdateManager(object):
             error='',
             parameters=ResourceManager._get_only_user_execution_parameters(
                 execution_parameters),
-            is_system_workflow=False)
-
+            is_system_workflow=False
+        )
         if deployment:
             new_execution.set_deployment(deployment)
             deployment_update.execution = new_execution
         self.sm.put(new_execution)
 
         # executing the user workflow
-        workflow_plugins = \
-            deployment_update.deployment_plan[
-                constants.WORKFLOW_PLUGINS_TO_INSTALL]
+        workflow_plugins = deployment_update.deployment_plan[
+            constants.WORKFLOW_PLUGINS_TO_INSTALL]
         workflow_executor.execute_workflow(
             workflow_id,
             workflow,
             workflow_plugins=workflow_plugins,
-            blueprint_id=blueprint_id,
-            deployment_id=deployment_id,
+            blueprint_id=deployment.blueprint_id,
+            deployment_id=deployment.id,
             execution_id=execution_id,
-            execution_parameters=execution_parameters)
-
+            execution_parameters=execution_parameters
+        )
         return new_execution
 
 
