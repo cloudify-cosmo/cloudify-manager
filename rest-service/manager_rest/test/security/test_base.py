@@ -60,7 +60,7 @@ class SecurityTestBase(BaseServerTestCase):
 
     def create_configuration(self):
         test_config = super(SecurityTestBase, self).create_configuration()
-        test_config.failed_logins_before_user_lock = 5
-        test_config.user_lock_period = 30
+        test_config.failed_logins_before_account_lock = 5
+        test_config.account_lock_period = 30
 
         return test_config
