@@ -201,7 +201,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
 
         resource_path = '/deployments/{0}'.format(deployment_id)
         workflows = self.get(resource_path).json['workflows']
-        self.assertEquals(13, len(workflows))
+        self.assertEquals(12, len(workflows))
         workflow = next((workflow for workflow in workflows if
                         workflow['name'] == 'mock_workflow'), None)
         self.assertIsNotNone(workflow)

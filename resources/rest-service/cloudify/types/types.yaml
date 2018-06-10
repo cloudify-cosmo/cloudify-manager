@@ -183,6 +183,9 @@ node_types:
             manager_certificate:
               description: The cloudify_internal_ca_cert.pem of the new manager
               default: ''
+            stop_old_agent:
+              description: Stop the old agent after installing the new one
+              default: false
 
 
         #####################################################
@@ -558,6 +561,9 @@ workflows:
       manager_certificate:
         description: The cloudify_internal_ca_cert.pem of the new manager
         default: ''
+      stop_old_agent:
+        description: Stop the old agent after the new agent is installed
+        default: false
 
   validate_agents:
     mapping: default_workflows.cloudify.plugins.workflows.validate_agents
