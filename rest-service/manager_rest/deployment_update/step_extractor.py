@@ -12,11 +12,13 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
 from contextlib import contextmanager
 
 import networkx as nx
 
 import manager_rest.resource_manager
+
 from manager_rest.storage import get_storage_manager, models
 
 
@@ -108,7 +110,6 @@ class DeploymentPlan(dict):
         from a list to a dict, were the keys are the ids of each node.
         """
         super(DeploymentPlan, self).__init__()
-
         filtered_deployment = {k: v
                                for k, v in deployment.iteritems()
                                if k in RELEVANT_DEPLOYMENT_FIELDS}
@@ -116,17 +117,18 @@ class DeploymentPlan(dict):
 
         # update the plan with deployment_plugins_to_install and with
         # workflow_plugins_to_install
-        deployment_plugins_to_install_by_name = \
-            self._transform_plugins(deployment_plugins_to_install)
+        deployment_plugins_to_install_by_name = self._transform_plugins(
+            deployment_plugins_to_install)
         self.update({
             'deployment_plugins_to_install':
-                deployment_plugins_to_install_by_name})
-        workflow_plugins_to_install_by_name = \
-            self._transform_plugins(workflow_plugins_to_install)
+                deployment_plugins_to_install_by_name
+        })
+        workflow_plugins_to_install_by_name = self._transform_plugins(
+            workflow_plugins_to_install)
         self.update({
             'workflow_plugins_to_install':
-                workflow_plugins_to_install_by_name})
-
+                workflow_plugins_to_install_by_name
+        })
         self['nodes'] = nodes
 
     @classmethod
@@ -141,19 +143,18 @@ class DeploymentPlan(dict):
             # get deployment from storage
             deployment = sm.get(models.Deployment, deployment_id)
             blueprint_plan = deployment.blueprint.plan
-
         deployment_plugins_to_install = \
             blueprint_plan['deployment_plugins_to_install']
         workflow_plugins_to_install = \
             blueprint_plan['workflow_plugins_to_install']
 
         # get the nodes from the storage
-        nodes = sm.list(
-            models.Node,
-            filters={'deployment_id': [deployment_id]}
-        )
+        nodes = sm.list(models.Node,
+                        filters={'deployment_id': [deployment_id]})
         nodes = {node.id: node.to_dict() for node in nodes}
-        return cls(deployment.to_dict(), nodes, deployment_plugins_to_install,
+        return cls(deployment.to_dict(),
+                   nodes,
+                   deployment_plugins_to_install,
                    workflow_plugins_to_install)
 
     @classmethod
@@ -165,34 +166,26 @@ class DeploymentPlan(dict):
         creates a deployment a nodes in their stored format, to pass to the
         constructor.
         """
-
         rm = manager_rest.resource_manager.get_resource_manager()
-
         deployment_plan = deployment_update.deployment_plan
         deployment_id = deployment_update.deployment_id
-
-        blueprint = deployment_update.deployment.blueprint
-
-        new_deployment = rm.prepare_deployment_for_storage(
-            deployment_id,
-            deployment_plan
-        )
+        new_deployment = rm.prepare_deployment_for_storage(deployment_id,
+                                                           deployment_plan)
         dep_dict = new_deployment.to_dict(suppress_error=True)
-        dep_dict['blueprint_id'] = blueprint.id
-
+        dep_dict['blueprint_id'] = deployment_update.deployment.blueprint.id
         deployment_plugins_to_install = \
             deployment_plan['deployment_plugins_to_install']
         workflow_plugins_to_install = \
             deployment_plan['workflow_plugins_to_install']
-
         nodes = rm.prepare_deployment_nodes_for_storage(deployment_plan)
         nodes_dict = dict()
-
         for node in nodes:
             node_dict = node.to_dict(suppress_error=True)
             node_dict['deployment_id'] = deployment_id
             nodes_dict[node.id] = node_dict
-        return cls(dep_dict, nodes_dict, deployment_plugins_to_install,
+        return cls(dep_dict,
+                   nodes_dict,
+                   deployment_plugins_to_install,
                    workflow_plugins_to_install)
 
     @staticmethod
@@ -202,10 +195,12 @@ class DeploymentPlan(dict):
 
 
 class DeploymentUpdateStep(object):
-
-    def __init__(self, action, entity_type, entity_id,
-                 supported=True, topology_order=DEFAULT_TOPOLOGY_LEVEL):
-
+    def __init__(self,
+                 action,
+                 entity_type,
+                 entity_id,
+                 supported=True,
+                 topology_order=DEFAULT_TOPOLOGY_LEVEL):
         self.action = action
         self.entity_type = entity_type
         self.entity_id = entity_id
@@ -229,7 +224,6 @@ class DeploymentUpdateStep(object):
         return str(self.__dict__)
 
     def __cmp__(self, other):
-
         if self.action != other.action:
             # the order is 'remove' < 'add' < 'modify'
             if self.action == 'remove' and other.action != 'remove':
@@ -250,10 +244,9 @@ class DeploymentUpdateStep(object):
                             return -1
                         else:
                             return 1
-
             elif self.action == 'remove':
-                if (self.entity_type == RELATIONSHIP and
-                        other.entity_type == NODE):
+                if (self.entity_type == RELATIONSHIP
+                        and other.entity_type == NODE):
                     # remove relationships before removing nodes
                     return -1
         # other comparisons don't matter
@@ -305,30 +298,23 @@ class StepExtractor(object):
     def extract_steps(self):
         old = self.old_deployment_plan
         new = self.new_deployment_plan
-
         self._extract_steps_from_description(old[DESCRIPTION],
                                              new[DESCRIPTION])
-
         self._extract_host_agent_plugins_steps(old[NODES], new[NODES])
-
         self._extract_central_deployment_agent_plugins_steps(
             old[DEPLOYMENT_PLUGINS_TO_INSTALL],
-            new[DEPLOYMENT_PLUGINS_TO_INSTALL])
-
+            new[DEPLOYMENT_PLUGINS_TO_INSTALL]
+        )
         self._extract_steps(new, old)
         self._inverted_diff_perspective = True
         self._extract_steps(old, new)
-
         supported_steps = [step for step in self.steps if step.supported]
         self._sort_supported_steps(supported_steps)
-
         unsupported_steps = [step for step in self.steps if not step.supported]
-
         return supported_steps, unsupported_steps
 
     @staticmethod
     def _extract_added_nodes_names(supported_steps):
-
         add_node_steps = [step for step in supported_steps
                           if step.action == 'add' and step.entity_type == NODE]
         added_nodes_names = [step.entity_name for step in add_node_steps]
@@ -341,10 +327,8 @@ class StepExtractor(object):
         :rtype: nx.Digraph
         """
         added_nodes_names = self._extract_added_nodes_names(supported_steps)
-
         added_nodes_graph = nx.DiGraph()
         added_nodes_graph.add_nodes_from(added_nodes_names)
-
         nodes = self.new_deployment_plan[NODES]
         for node_name, node in nodes.iteritems():
             if node_name in added_nodes_names:
@@ -354,11 +338,9 @@ class StepExtractor(object):
                                                    relationship[TARGET_ID])
         return added_nodes_graph
 
-    def _update_topology_order_of_add_node_steps(
-            self,
-            supported_steps,
-            topologically_sorted_added_nodes):
-
+    def _update_topology_order_of_add_node_steps(self,
+                                                 supported_steps,
+                                                 topologically_sorted_added_nodes):
         for i, node_name in enumerate(topologically_sorted_added_nodes):
             # Get the corresponding 'add node' step for this node name,
             # and assign it its topology_order order
@@ -368,15 +350,11 @@ class StepExtractor(object):
                     step.topology_order = i
 
     def _sort_supported_steps(self, supported_steps):
-
         added_nodes_graph = self._create_added_nodes_graph(supported_steps)
-
-        topologically_sorted_added_nodes = \
-            nx.topological_sort(added_nodes_graph)
-
+        topologically_sorted_added_nodes = nx.topological_sort(
+            added_nodes_graph)
         self._update_topology_order_of_add_node_steps(
             supported_steps, topologically_sorted_added_nodes)
-
         supported_steps.sort()
 
     def _extract_steps_from_description(self,
@@ -425,7 +403,8 @@ class StepExtractor(object):
     def _extract_central_deployment_agent_plugins_steps(
             self,
             old_deployment_plugins_to_install,
-            new_deployment_plugins_to_install):
+            new_deployment_plugins_to_install
+    ):
         with self.entity_id_builder.extend_id(
                 CENTRAL_DEPLOYMENT_AGENT_PLUGINS):
             for new_cda_plugin in new_deployment_plugins_to_install:
@@ -447,14 +426,11 @@ class StepExtractor(object):
 
     @staticmethod
     def _get_matching_relationship(relationship, relationships):
-
         r_type = relationship[TYPE]
         target_id = relationship[TARGET_ID]
-
         for rel_index, other_relationship in enumerate(relationships):
             other_r_type = other_relationship[TYPE]
             other_target_id = other_relationship[TARGET_ID]
-
             if r_type == other_r_type and other_target_id == target_id:
                 return other_relationship, rel_index
         return None, None
@@ -463,16 +439,12 @@ class StepExtractor(object):
                                           relationships,
                                           old_relationships):
         with self.entity_id_builder.extend_id(RELATIONSHIPS):
-
             for relationship_index, relationship in enumerate(relationships):
-
                 with self.entity_id_builder.extend_id(
                         '[{0}]'.format(relationship_index)):
-
                     matching_relationship, old_rel_index = \
-                        self._get_matching_relationship(
-                            relationship, old_relationships)
-
+                        self._get_matching_relationship(relationship,
+                                                        old_relationships)
                     if matching_relationship:
                         # relationship has been reordered to a different index
                         if old_rel_index != relationship_index:
@@ -481,7 +453,6 @@ class StepExtractor(object):
                                     '[{0}]'.format(old_rel_index)):
                                 self._create_step(RELATIONSHIP,
                                                   modify=True)
-
                         for field_name in relationship:
                             if field_name in [SOURCE_OPERATIONS,
                                               TARGET_OPERATIONS]:
@@ -489,8 +460,8 @@ class StepExtractor(object):
                                     operations_type_name=field_name,
                                     operations=relationship[field_name],
                                     old_operations=matching_relationship[
-                                        field_name])
-
+                                        field_name]
+                                )
                             elif field_name == PROPERTIES:
                                 # modifying relationship properties is not
                                 # supported yet
@@ -499,7 +470,8 @@ class StepExtractor(object):
                                     new_entities=relationship[PROPERTIES],
                                     old_entities=matching_relationship[
                                         PROPERTIES],
-                                    supported=False)
+                                    supported=False
+                                )
                     else:
                         self._create_step(RELATIONSHIP)
 
@@ -507,7 +479,6 @@ class StepExtractor(object):
                                        operations_type_name,
                                        operations,
                                        old_operations):
-
         with self.entity_id_builder.extend_id(operations_type_name):
             for operation_name in operations:
                 with self.entity_id_builder.extend_id(operation_name):
@@ -524,9 +495,7 @@ class StepExtractor(object):
                                      old_workflows,
                                      old_workflow_plugins_to_install,
                                      new_workflow_plugins_to_install):
-
         with self.entity_id_builder.extend_id(WORKFLOWS):
-
             for workflow_name in new_workflows:
                 with self.entity_id_builder.extend_id(workflow_name):
                     new_workflow = new_workflows[workflow_name]
@@ -568,7 +537,6 @@ class StepExtractor(object):
                 with self.entity_id_builder.extend_id(node_name):
                     if node_name in old_nodes:
                         old_node = old_nodes[node_name]
-
                         if node[TYPE] != old_node[TYPE] or \
                             _is_contained_in_changed(node, old_node):
                             # a node that changed its type or its host_id
@@ -580,21 +548,20 @@ class StepExtractor(object):
                             # removed, there is no need to compare its other
                             # fields.
                             continue
-
                         self._extract_steps_from_operations(
                             operations_type_name=OPERATIONS,
                             operations=node[OPERATIONS],
-                            old_operations=old_node[OPERATIONS])
-
+                            old_operations=old_node[OPERATIONS]
+                        )
                         self._extract_steps_from_relationships(
                             relationships=node[RELATIONSHIPS],
-                            old_relationships=old_node[RELATIONSHIPS])
-
+                            old_relationships=old_node[RELATIONSHIPS]
+                        )
                         self._extract_steps_from_entities(
                             PROPERTIES,
                             new_entities=node[PROPERTIES],
-                            old_entities=old_node[PROPERTIES])
-
+                            old_entities=old_node[PROPERTIES]
+                        )
                     else:
                         # add (remove) node step
                         self._create_step(NODE)
@@ -604,9 +571,7 @@ class StepExtractor(object):
                                      new_entities,
                                      old_entities,
                                      supported=True):
-
         with self.entity_id_builder.extend_id(entities_name):
-
             for entity_name in new_entities:
                 with self.entity_id_builder.extend_id(entity_name):
                     if entity_name in old_entities:
@@ -616,25 +581,24 @@ class StepExtractor(object):
                                 self.entity_id_segment_to_entity_type[
                                     entities_name],
                                 supported,
-                                modify=True)
+                                modify=True
+                            )
                     else:
                         self._create_step(
                             self.entity_id_segment_to_entity_type[
                                 entities_name],
-                            supported)
+                            supported
+                        )
 
     def _extract_steps(self, new, old):
-
         for entities_name, new_entities in new.iteritems():
             old_entities = old.get(entities_name, {})
-
             if entities_name == NODES:
                 self._extract_steps_from_nodes(new_entities, old_entities)
-
             elif entities_name == OUTPUTS:
-                self._extract_steps_from_entities(
-                    OUTPUTS, new_entities, old_entities)
-
+                self._extract_steps_from_entities(OUTPUTS,
+                                                  new_entities,
+                                                  old_entities)
             elif entities_name == WORKFLOWS:
                 self._extract_step_from_workflows(
                     new_workflows=new_entities,
@@ -642,22 +606,23 @@ class StepExtractor(object):
                     old_workflow_plugins_to_install=self.old_deployment_plan[
                         'workflow_plugins_to_install'],
                     new_workflow_plugins_to_install=self.new_deployment_plan[
-                        'workflow_plugins_to_install'])
-
+                        'workflow_plugins_to_install']
+                )
             elif entities_name == POLICY_TYPES:
-                self._extract_steps_from_entities(
-                    POLICY_TYPES, new_entities, old_entities,
-                    supported=False)
-
+                self._extract_steps_from_entities(POLICY_TYPES,
+                                                  new_entities,
+                                                  old_entities,
+                                                  supported=False)
             elif entities_name == POLICY_TRIGGERS:
-                self._extract_steps_from_entities(
-                    POLICY_TRIGGERS, new_entities, old_entities,
-                    supported=False)
-
+                self._extract_steps_from_entities(POLICY_TRIGGERS,
+                                                  new_entities,
+                                                  old_entities,
+                                                  supported=False)
             elif entities_name == GROUPS:
-                self._extract_steps_from_entities(
-                    GROUPS, new_entities, old_entities,
-                    supported=False)
+                self._extract_steps_from_entities(GROUPS,
+                                                  new_entities,
+                                                  old_entities,
+                                                  supported=False)
 
     def _determine_step_action(self, modify):
         """ Determine if the step will be of type 'add', 'remove', 'modify' or
@@ -680,10 +645,8 @@ class StepExtractor(object):
             return 'add'
 
     def _create_step(self, entity_type, supported=True, modify=False):
-
         action = self._determine_step_action(modify)
         entity_id = self.entity_id_builder.entity_id
-
         if action:
             step = DeploymentUpdateStep(action,
                                         entity_type,
@@ -693,8 +656,7 @@ class StepExtractor(object):
 
 
 def extract_steps(deployment_update):
-    steps_extractor = \
-        StepExtractor(deployment_update)
+    steps_extractor = StepExtractor(deployment_update)
 
     # update the steps extractor with the old and the new deployment plans
     # if the old blueprint is not defined in the deployment update, we will
@@ -708,16 +670,14 @@ def extract_steps(deployment_update):
 
     # create the steps
     supported_steps, unsupported_steps = steps_extractor.extract_steps()
-
     return supported_steps, unsupported_steps
 
 
 def _is_contained_in_changed(node, other_node):
-    node_container = \
-        next((r['target_id'] for r in node['relationships']
-              if CONTAINED_IN_RELATIONSHIP_TYPE in r[TYPE_HIERARCHY]), None)
-    other_node_container = \
-        next((r['target_id'] for r in other_node['relationships']
-              if CONTAINED_IN_RELATIONSHIP_TYPE in r[TYPE_HIERARCHY]), None)
-
+    node_container = next(
+        (r['target_id'] for r in node['relationships']
+         if CONTAINED_IN_RELATIONSHIP_TYPE in r[TYPE_HIERARCHY]), None)
+    other_node_container = next(
+        (r['target_id'] for r in other_node['relationships']
+         if CONTAINED_IN_RELATIONSHIP_TYPE in r[TYPE_HIERARCHY]), None)
     return node_container != other_node_container

@@ -121,13 +121,10 @@ class DeploymentUpdate(SecuredResource):
         manager, skip_install, skip_uninstall, skip_reinstall, workflow_id, \
             ignore_failure, install_first = self._get_params_and_validate(
                 deployment_id, request_json, skip_reinstall_default=True)
-
         deployment_update, _ = \
             UploadedBlueprintsDeploymentUpdateManager(). \
             receive_uploaded_data(deployment_id)
-
         manager.extract_steps_from_deployment_update(deployment_update)
-
         return manager.commit_deployment_update(deployment_update,
                                                 skip_install,
                                                 skip_uninstall,
@@ -150,7 +147,6 @@ class DeploymentUpdate(SecuredResource):
             raise manager_exceptions.BadParametersError(
                 'Must supply either the `blueprint_id` parameter, or new '
                 'inputs, in order the preform a deployment update')
-
         if blueprint_id is None:
             deployment = get_storage_manager().get(models.Deployment,
                                                    deployment_id)
@@ -166,25 +162,19 @@ class DeploymentUpdate(SecuredResource):
                                  skip_reinstall_default=False):
         manager = get_deployment_updates_manager()
         skip_install = verify_and_convert_bool(
-            'skip_install',
-            request_json.get('skip_install', 'false'))
+            'skip_install', request_json.get('skip_install', 'false'))
         skip_uninstall = verify_and_convert_bool(
-            'skip_uninstall',
-            request_json.get('skip_uninstall', 'false'))
+            'skip_uninstall', request_json.get('skip_uninstall', 'false'))
         skip_reinstall = verify_and_convert_bool(
-            'skip_reinstall',
-            request_json.get('skip_reinstall', skip_reinstall_default))
+            'skip_reinstall', request_json.get('skip_reinstall',
+                                               skip_reinstall_default))
         force = verify_and_convert_bool(
-            'force',
-            request_json.get('force', 'false'))
+            'force', request_json.get('force', 'false'))
         ignore_failure = verify_and_convert_bool(
-            'ignore_failure',
-            request_json.get('ignore_failure', 'false'))
+            'ignore_failure', request_json.get('ignore_failure', 'false'))
         install_first = verify_and_convert_bool(
-            'install_first',
-            request_json.get('install_first', 'false'))
+            'install_first', request_json.get('install_first', 'false'))
         workflow_id = request_json.get('workflow_id', None)
-
         manager.validate_no_active_updates_per_deployment(deployment_id,
                                                           force=force)
         return (manager,
@@ -202,21 +192,20 @@ class DeploymentUpdateId(SecuredResource):
             nickname="DeploymentUpdate",
             notes='Return a single deployment update',
             parameters=create_filter_params_list_description(
-                models.DeploymentUpdate.response_fields, 'deployment update'
-            )
+                models.DeploymentUpdate.response_fields, 'deployment update')
     )
     @rest_decorators.exceptions_handled
     @authorize('deployment_update_get')
     @rest_decorators.marshal_with(models.DeploymentUpdate)
     def get(self, update_id):
-        return \
-            get_deployment_updates_manager().get_deployment_update(update_id)
+        """Get a deployment update by id"""
+        return get_deployment_updates_manager().get_deployment_update(
+            update_id)
 
 
 class DeploymentUpdates(SecuredResource):
     @swagger.operation(
-            responseClass='List[{0}]'.format(
-                    models.DeploymentUpdate.__name__),
+            responseClass='List[{0}]'.format(models.DeploymentUpdate.__name__),
             nickname="listDeploymentUpdates",
             notes='Returns a list of deployment updates',
             parameters=create_filter_params_list_description(
@@ -231,11 +220,14 @@ class DeploymentUpdates(SecuredResource):
     @rest_decorators.paginate
     @rest_decorators.sortable(models.DeploymentUpdate)
     @rest_decorators.search('id')
-    def get(self, _include=None, filters=None, pagination=None,
-            sort=None, search=None, **kwargs):
-        """
-        List deployment modification stages
-        """
+    def get(self,
+            _include=None,
+            filters=None,
+            pagination=None,
+            sort=None,
+            search=None,
+            **kwargs):
+        """List deployment updates"""
         deployment_updates = \
             get_deployment_updates_manager().list_deployment_updates(
                 include=_include,

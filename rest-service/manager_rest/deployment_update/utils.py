@@ -1,3 +1,4 @@
+
 import copy
 
 from constants import ENTITY_TYPES, PATH_SEPARATOR
@@ -20,10 +21,9 @@ def extract_ids(node_instances, key='id'):
 
 
 class ModifiedEntitiesDict(object):
-
     def __init__(self):
-        self.modified_entity_ids = \
-            {entity_type: [] for entity_type in ENTITY_TYPES}
+        self.modified_entity_ids = {entity_type: []
+                                    for entity_type in ENTITY_TYPES}
 
     def __setitem__(self, entity_type, entity_id):
         self.modified_entity_ids[entity_type].append(entity_id)
@@ -46,7 +46,6 @@ class ModifiedEntitiesDict(object):
         :param include_rel_order: whether to extract the changes.
         :return: dict of modified entity ids.
         """
-
         relationships = {}
         rel_order = {}
         for s_id, t_id in self.modified_entity_ids[ENTITY_TYPES.RELATIONSHIP]:
@@ -61,13 +60,11 @@ class ModifiedEntitiesDict(object):
                     relationships[s_id].append(t_id)
                 else:
                     relationships[s_id] = [t_id]
-
         modified_entities_to_return = copy.deepcopy(self.modified_entity_ids)
         modified_entities_to_return[ENTITY_TYPES.RELATIONSHIP] = \
             relationships
         if include_rel_order:
             modified_entities_to_return['rel_mappings'] = rel_order
-
         return modified_entities_to_return
 
 
@@ -80,11 +77,9 @@ def traverse_object(obj, breadcrumbs):
     by [x]
     :return: the object at the end of the breadcrumbs
     """
-
     if not breadcrumbs:
         return obj
     current_key = breadcrumbs[0]
-
     if isinstance(obj, dict):
         if current_key in obj:
             return traverse_object(obj[breadcrumbs[0]], breadcrumbs[1:])
@@ -128,7 +123,6 @@ def check_is_int(s):
         int(s)
     except ValueError:
         return False
-
     return True
 
 

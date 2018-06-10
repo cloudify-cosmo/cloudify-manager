@@ -1,7 +1,7 @@
+
 import utils
 
 from constants import ENTITY_TYPES
-
 from manager_rest.storage import get_storage_manager, models, get_node
 
 
@@ -15,9 +15,7 @@ def get_entity_context(plan, deployment_id, entity_type, entity_id):
         ENTITY_TYPES.OUTPUT: OutputContext,
         ENTITY_TYPES.DESCRIPTION: DescriptionContext
     }
-
     context = entity_context_by_type[entity_type]
-
     return context(plan, deployment_id, *utils.get_entity_keys(entity_id))
 
 
@@ -26,7 +24,6 @@ def _operation_context(plan, deployment_id, *entity_keys):
         entity_context = RelationshipInterfaceOperationContext
     else:
         entity_context = NodeInterfaceOperationContext
-
     return entity_context(plan, deployment_id, *entity_keys)
 
 
@@ -73,14 +70,13 @@ class EntityContextBase(object):
 
 
 class NodeContextBase(EntityContextBase):
-
     def __init__(self, plan, deployment_id, entity_type, top_level_entity_id):
         super(NodeContextBase, self).__init__(plan,
                                               deployment_id,
                                               entity_type,
                                               top_level_entity_id)
-        self._raw_super_entity = \
-            utils.get_raw_node(self.deployment_plan, self._top_level_entity_id)
+        self._raw_super_entity = utils.get_raw_node(self.deployment_plan,
+                                                    self._top_level_entity_id)
 
     @property
     def entity_id(self):
@@ -148,20 +144,21 @@ class RelationshipContext(NodeContextBase):
                                                   deployment_id,
                                                   ENTITY_TYPES.RELATIONSHIP,
                                                   top_level_entity_id)
-
         self._relationship_index = utils.parse_index(relationship_index)
         self._modification_breadcrumbs = modification_breadcrumbs
         self._raw_target_node = utils.get_raw_node(self.deployment_plan,
                                                    self.target_id)
-        entity_keys = [nodes_key, top_level_entity_id, relationships_key,
+        entity_keys = [nodes_key,
+                       top_level_entity_id,
+                       relationships_key,
                        relationship_index]
         entity_keys.extend(modification_breadcrumbs)
         self._entity_id = ':'.join(entity_keys)
 
     @property
     def target_id(self):
-        return self.raw_entity_value.get('target_id') or \
-               self.storage_entity_value.get('target_id')
+        return self.raw_entity_value.get('target_id') \
+               or self.storage_entity_value.get('target_id')
 
     @property
     def storage_target_node(self):
@@ -211,11 +208,12 @@ class PropertyContext(NodeContextBase):
                                               deployment_id,
                                               ENTITY_TYPES.PROPERTY,
                                               top_level_entity_id)
-
         self._property_id = property_id
         self._modification_breadcrumbs = modification_breadcrumbs
-        entity_keys = \
-            [nodes_key, top_level_entity_id, properties_key, property_id]
+        entity_keys = [nodes_key,
+                       top_level_entity_id,
+                       properties_key,
+                       property_id]
         entity_keys.extend(modification_breadcrumbs)
         self._entity_id = ':'.join(entity_keys)
 
@@ -251,7 +249,6 @@ class PropertyContext(NodeContextBase):
 
 
 class NodeInterfaceOperationContext(NodeContextBase):
-
     def __init__(self,
                  plan,
                  deployment_id,
@@ -265,7 +262,6 @@ class NodeInterfaceOperationContext(NodeContextBase):
                 deployment_id,
                 ENTITY_TYPES.OPERATION,
                 top_level_entity_id)
-
         self._operation_id = operation_id
         self._modification_breadcrumbs = modification_breadcrumbs
         entity_keys = [nodes_key, top_level_entity_id, operation_id]
@@ -304,7 +300,6 @@ class NodeInterfaceOperationContext(NodeContextBase):
 
 
 class RelationshipInterfaceOperationContext(NodeContextBase):
-
     def __init__(self,
                  plan,
                  deployment_id,
@@ -320,23 +315,22 @@ class RelationshipInterfaceOperationContext(NodeContextBase):
             deployment_id,
             ENTITY_TYPES.OPERATION,
             top_level_entity_id)
-
         self._relationships_index = utils.parse_index(relationship_index)
         self._operations_key = operations_key
         self._operation_id = operation_id
         self._modification_breadcrumbs = modification_breadcrumbs
-        entity_keys = [nodes_key, top_level_entity_id, relatonships_key,
-                       relationship_index, operation_id]
+        entity_keys = [nodes_key,
+                       top_level_entity_id,
+                       relatonships_key,
+                       relationship_index,
+                       operation_id]
         entity_keys.extend(modification_breadcrumbs)
         self._entity_id = ':'.join(entity_keys)
 
     @property
     def operations_key(self):
-        """
-        Operation key could hold only two possible keys. e.g. source and
-        target operations.
-        :return:
-        """
+        """Operation key could hold only two possible keys. e.g. source and
+        target operations."""
         return self._operations_key
 
     @property
@@ -413,7 +407,6 @@ class DeploymentContextBase(EntityContextBase):
 
 
 class WorkflowContext(DeploymentContextBase):
-
     def __init__(self,
                  plan,
                  deployment_id,
@@ -460,7 +453,6 @@ class WorkflowContext(DeploymentContextBase):
 
 
 class DescriptionContext(DeploymentContextBase):
-
     def __init__(self,
                  plan,
                  deployment_id,
@@ -493,7 +485,6 @@ class DescriptionContext(DeploymentContextBase):
 
 
 class OutputContext(DeploymentContextBase):
-
     def __init__(self,
                  plan,
                  deployment_id,
