@@ -35,7 +35,7 @@ jobs:
     steps:
       - checkout
       - run: pip install --user flake8
-      - run: python -m flake8 plugins/riemann-controller/ workflows/ rest-service/ tests/
+      - run: python -m flake8 plugins/riemann-controller/ workflows/ rest-service/ tests/ amqp-postgres/
 
   test_v1:
     <<: *tox_defaults
@@ -77,6 +77,27 @@ jobs:
     environment:
       TOX_CONFIG: ./workflows
       DO_ENV: py27
+
+  test_amqp_postgres:
+    docker:
+      - image: circleci/python:2.7.14
+        environment:
+          TEST_DATABASE_URL: postgresql://cloudify:cloudify@localhost/cloudify_db
+      - image: rabbitmq:3.7.4
+      - image: circleci/postgres:9.5-alpine
+        environment:
+          POSTGRES_USER: cloudify
+          POSTGRES_PASSWORD: cloudify
+          POSTGRES_DB: cloudify_db
+    steps:
+      - checkout
+      - run: sudo apt-get install libldap-dev libsasl2-dev
+      - run:
+          name: Install tox and run test
+          command: |
+            sudo pip install -U pip==9.0.1
+            sudo pip install tox
+            tox -c amqp-postgres/tox.ini
 
 
   test_premium:
@@ -133,16 +154,18 @@ workflows:
 
   build_and_test:
     jobs:
-      - flake8
-      - build-rpms
+      # - flake8
+      # - build-rpms
 
-      - test_v1
-      - test_clientv2_endpoints
-      - test_clientv2_infrastructure
-      - test_clientv2_1_endpoints
-      - test_clientv2_1_infrastructure
-      - test_clientv3_endpoints
-      - test_clientv3_infrastructure
-      - test_workflows
+      # - test_v1
+      # - test_clientv2_endpoints
+      # - test_clientv2_infrastructure
+      # - test_clientv2_1_endpoints
+      # - test_clientv2_1_infrastructure
+      # - test_clientv3_endpoints
+      # - test_clientv3_infrastructure
+      # - test_workflows
 
-      - test_premium
+      # - test_premium
+
+      - test_amqp_postgres
