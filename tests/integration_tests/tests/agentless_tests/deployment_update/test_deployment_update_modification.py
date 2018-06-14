@@ -120,7 +120,7 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
+                deployment.id, BLUEPRINT_ID, skip_reinstall=True)
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
