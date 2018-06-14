@@ -34,6 +34,7 @@ from manager_rest.storage.models_states import ExecutionState
 from manager_rest.deployment_update.validator import StepValidator
 from manager_rest.deployment_update.constants import (
     STATES,
+    ENTITY_TYPES,
     NODE_MOD_TYPES,
     DEFAULT_DEPLOYMENT_UPDATE_WORKFLOW
 )
@@ -350,23 +351,24 @@ class DeploymentUpdateManager(object):
             return reinstall_list
         sm = get_storage_manager()
 
-        # get all entities with modified properties
-        for modified in modified_entity_ids['property']:
-            modified = modified.split(':')
+        # get all entities with modifications in properties or operations
+        for change_type in (ENTITY_TYPES.PROPERTY, ENTITY_TYPES.OPERATION):
+            for modified in modified_entity_ids[change_type]:
+                modified = modified.split(':')
 
-            # pick only entities that are nodes
-            if modified[0].lower() != 'nodes':
-                continue
+                # pick only entities that are part of nodes
+                if modified[0].lower() != 'nodes':
+                    continue
 
-            # list instances of each node
-            node_instances = sm.list(
-                models.NodeInstance,
-                filters={'deployment_id': dep_update.deployment_id,
-                         'node_id': modified[1]}
-            )
+                # list instances of each node
+                node_instances = sm.list(
+                    models.NodeInstance,
+                    filters={'deployment_id': dep_update.deployment_id,
+                             'node_id': modified[1]}
+                )
 
-            # add instances ids to the reinstall list
-            reinstall_list += [e.id for e in node_instances.items]
+                # add instances ids to the reinstall list
+                reinstall_list += [e.id for e in node_instances.items]
         return reinstall_list
 
     def _execute_update_workflow(self,
