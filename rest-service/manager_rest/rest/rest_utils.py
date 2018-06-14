@@ -90,10 +90,11 @@ def get_args_and_verify_arguments(arguments):
 def verify_and_convert_bool(attribute_name, str_bool):
     if isinstance(str_bool, bool):
         return str_bool
-    if str_bool.lower() == 'true':
-        return True
-    if str_bool.lower() == 'false':
-        return False
+    if isinstance(str_bool, basestring):
+        if str_bool.lower() == 'true':
+            return True
+        if str_bool.lower() == 'false':
+            return False
     raise manager_exceptions.BadParametersError(
         '{0} must be <true/false>, got {1}'.format(attribute_name, str_bool))
 
