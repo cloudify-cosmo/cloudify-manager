@@ -37,7 +37,7 @@ class DBLogEventPublisher(object):
         else:
             raise StandardError('Unknown exchange type: {0}'.format(exchange))
 
-        item.execution = execution
+        item.set_execution(execution)
         self._sm.put(item)
 
     @staticmethod
