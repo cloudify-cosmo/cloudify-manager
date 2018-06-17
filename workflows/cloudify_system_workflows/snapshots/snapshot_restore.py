@@ -15,6 +15,7 @@
 
 import os
 import json
+import time
 import shutil
 import zipfile
 import platform
@@ -30,6 +31,7 @@ from cloudify.exceptions import NonRecoverableError
 from cloudify.constants import FILE_SERVER_SNAPSHOTS_FOLDER
 from cloudify.utils import ManagerVersion, get_local_rest_certificate
 
+from cloudify_rest_client.executions import Execution
 from cloudify_system_workflows.deployment_environment import \
     generate_create_dep_tasks_graph
 
@@ -557,6 +559,27 @@ class SnapshotRestore(object):
                               visibility=plugin['visibility'])
         os.remove(temp_plugin)
 
+    def _wait_for_plugin_executions(self, client):
+        while True:
+            executions = client.executions.list(
+                include_system_workflows=True,
+                _all_tenants=True
+            )
+            waiting = []
+            for execution in executions:
+                if execution.workflow_id == 'install_plugin':
+                    if execution.status not in Execution.END_STATES:
+                        waiting.append(execution)
+            if not waiting:
+                break
+            else:
+                msg = ', '.join('{0} (state: {1})'
+                                .format(execution.id, execution.status))
+                ctx.logger.info(
+                    'Waiting for plugin install executions to finish: {0}'
+                    .format(msg))
+                time.sleep(3)
+
     def _restore_plugins(self, existing_plugins):
         """Install any plugins that weren't installed prior to the restore
 
@@ -570,6 +593,7 @@ class SnapshotRestore(object):
             try:
                 for plugin in plugins:
                     self._restore_plugin(client, tenant, plugin, plugins_tmp)
+                self._wait_for_plugin_executions(client)
             finally:
                 os.rmdir(plugins_tmp)
         ctx.logger.info('Successfully restored plugins')
