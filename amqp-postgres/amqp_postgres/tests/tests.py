@@ -14,28 +14,17 @@
 # limitations under the License.
 ############
 
-import os
 import time
-import yaml
-import json
-import unittest
-import tempfile
 import threading
 from uuid import uuid4
 from datetime import datetime
 
-from mock import patch, MagicMock
-
 from cloudify.amqp_client import create_events_publisher
 
+from manager_rest.storage import models
 from manager_rest.config import instance
 from manager_rest.amqp_manager import AMQPManager
-from manager_rest.cryptography_utils import encrypt
-from manager_rest.flask_utils import setup_flask_app
-from manager_rest.storage import get_storage_manager, db, models
-from manager_rest.utils import get_formatted_timestamp, set_current_tenant
-from manager_rest.storage.storage_utils import \
-    create_default_user_tenant_and_roles
+from manager_rest.utils import get_formatted_timestamp
 from manager_rest.test.base_test import BaseServerTestCase
 
 
@@ -93,35 +82,6 @@ class Test(BaseServerTestCase):
 
         self._assert_log(log, db_log)
         self._assert_event(event, db_event)
-
-    def _remove_after_test(self, filename):
-        self.addCleanup(os.remove, filename)
-
-    def _create_security_config(self):
-        fd, temp_security_conf = tempfile.mkstemp()
-        os.close(fd)
-        with open(temp_security_conf, 'w') as f:
-            json.dump({
-                'encryption_key':
-                    'f2ytTjQ-R2yKFMzgqDAw6vgQIHGZ9SiJoW-BhktapFQ=',
-                'hash_salt': 'hash_salt',
-                'secret_key': 'secret_key'
-            }, f)
-
-        self._remove_after_test(temp_security_conf)
-
-        os.environ['MANAGER_REST_SECURITY_CONFIG_PATH'] = temp_security_conf
-
-        return temp_security_conf
-
-    def _mock_security_config(self):
-        security_config = self._create_security_config()
-        security_config_patcher = patch(
-            'manager_rest.cryptography_utils.SECURITY_FILE_LOCATION',
-            security_config
-        )
-        self.addCleanup(security_config_patcher.stop)
-        security_config_patcher.start()
 
     @staticmethod
     def _get_amqp_manager():
