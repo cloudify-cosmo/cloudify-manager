@@ -16,6 +16,7 @@
 
 import logging
 
+from manager_rest.utils import set_current_tenant
 from manager_rest.storage import get_storage_manager
 from manager_rest.storage.models import Event, Log, Execution
 
@@ -29,6 +30,7 @@ class DBLogEventPublisher(object):
 
     def process(self, message, exchange):
         execution = self._sm.get(Execution, message['context']['execution_id'])
+        set_current_tenant(execution.tenant)
 
         if exchange == 'cloudify-events':
             item = self._get_event(message)

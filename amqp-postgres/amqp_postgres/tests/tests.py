@@ -17,16 +17,16 @@
 import time
 import threading
 from uuid import uuid4
-from datetime import datetime
+from dateutil import parser as date_parser
 
 from cloudify.amqp_client import create_events_publisher
 
-from manager_rest import utils
 from manager_rest.storage import models
 from manager_rest.config import instance
 from manager_rest.amqp_manager import AMQPManager
 from manager_rest.utils import get_formatted_timestamp
 from manager_rest.test.base_test import BaseServerTestCase
+from manager_rest.storage.models_states import VisibilityState
 
 
 from amqp_postgres.main import main
@@ -69,8 +69,8 @@ class AMQPPostgresTest(BaseServerTestCase):
         """
         Override here to allow using postgresql instead of sqlite
         """
-        self.server_configuration = self.create_configuration()
-        utils.copy_resources(self.server_configuration.file_server_root)
+        super(AMQPPostgresTest, self)._create_config_and_reset_app(server)
+        server.SQL_DIALECT = 'postgresql'
         server.reset_app(self.server_configuration)
 
     @staticmethod
@@ -136,53 +136,50 @@ class AMQPPostgresTest(BaseServerTestCase):
         self.assertEqual(len(items), 1)
         return items[0]
 
+    def _assert_timestamp(self, elem):
+        timestamp = date_parser.parse(elem.timestamp)
+        reported_timestamp = date_parser.parse(elem.reported_timestamp)
+
+        # timestamp comes from `postgres_publisher` when creating the new
+        # element, while `reported_timestamp` comes from the message object,
+        # which should be created beforehand
+        self.assertGreaterEqual(timestamp, reported_timestamp)
+
     def _assert_log(self, log, db_log):
-        self.assertEqual(len(db_log), 14)
+        self._assert_timestamp(db_log)
 
-        db_timestamp = '{0}Z'.format(
-            db_log.reported_timestamp.isoformat()[:-3]
-        )
-
-        self.assertEqual(type(db_log.timestamp), datetime)
         self.assertEqual(db_log.message, log['message']['text'])
         self.assertEqual(db_log.message_code, None)
         self.assertEqual(db_log.logger, log['logger'])
         self.assertEqual(db_log.level, log['level'])
         self.assertEqual(db_log.operation, log['context']['operation'])
         self.assertEqual(db_log.node_id, log['context']['node_id'])
-        self.assertEqual(db_log.execution.id, 0)
+        self.assertEqual(db_log.execution.id, log['context']['execution_id'])
         self.assertEqual(db_log.creator.id, 0)
         self.assertEqual(db_log.tenant.id, 0)
-        self.assertEqual(db_timestamp, log['timestamp'])
-        self.assertEqual(db_log.private_resource, None)
-        self.assertEqual(db_log.visibility, None)
+        self.assertEqual(db_log.reported_timestamp, log['timestamp'])
+        self.assertEqual(db_log.private_resource, False)
+        self.assertEqual(db_log.visibility, VisibilityState.TENANT)
 
     def _assert_event(self, event, db_event):
-        self.assertEqual(len(db_event), 14)
+        self._assert_timestamp(db_event)
 
-        db_timestamp = '{0}Z'.format(
-            db_event.reported_timestamp.isoformat()[:-3]
-        )
-
-        self.assertEqual(type(db_event.timestamp), datetime)
         self.assertEqual(db_event.message, event['message']['text'])
         self.assertEqual(db_event.message_code, None)
         self.assertEqual(db_event.event_type, event['event_type'])
         self.assertEqual(db_event.error_causes, None)
-        self.assertEqual(db_event.operation, event['context']['operation'])
-        self.assertEqual(db_event.node_id, event['context']['node_id'])
-        self.assertEqual(db_event.execution.id, 0)
+        self.assertEqual(db_event.operation, None)
+        self.assertEqual(db_event.node_id, None)
+        self.assertEqual(db_event.execution.id,
+                         event['context']['execution_id'])
         self.assertEqual(db_event.creator.id, 0)
         self.assertEqual(db_event.tenant.id, 0)
-        self.assertEqual(db_timestamp, event['timestamp'])
-        self.assertEqual(db_event.private_resource, None)
-        self.assertEqual(db_event.visibility, None)
+        self.assertEqual(db_event.reported_timestamp, event['timestamp'])
+        self.assertEqual(db_event.private_resource, False)
+        self.assertEqual(db_event.visibility, VisibilityState.TENANT)
 
     @staticmethod
-    def now():
-        return '{0}Z'.format(datetime.utcnow().isoformat()[:-3])
-
-    def _get_log(self, execution_id):
+    def _get_log(execution_id):
         return {
             'context': {
                 'blueprint_id': 'bp',
@@ -203,10 +200,11 @@ class AMQPPostgresTest(BaseServerTestCase):
             'message': {
                 'text': 'Test log'
             },
-            'timestamp': self.now()
+            'timestamp': get_formatted_timestamp()
         }
 
-    def _get_event(self, execution_id):
+    @staticmethod
+    def _get_event(execution_id):
         return {
             'message': {
                 'text': "Starting 'install' workflow execution",
@@ -219,5 +217,5 @@ class AMQPPostgresTest(BaseServerTestCase):
                 'execution_id': execution_id,
                 'blueprint_id': 'bp'
             },
-            'timestamp': self.now()
+            'timestamp': get_formatted_timestamp()
         }
