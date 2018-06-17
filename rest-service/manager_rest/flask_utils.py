@@ -19,7 +19,7 @@ from flask import Flask
 from flask_migrate import Migrate
 from flask_security import Security
 
-from manager_rest import config, utils
+from manager_rest import utils
 from manager_rest.storage import user_datastore, db
 from manager_rest.storage.models import User, Tenant
 from manager_rest.config import instance as manager_config
@@ -83,8 +83,8 @@ def set_flask_security_config(app, hash_salt=None, secret_key=None):
     :param hash_salt: The salt to be used when creating user passwords
     :param secret_key: Secret key used when hashing flask tokens
     """
-    hash_salt = hash_salt or config.instance.security_hash_salt
-    secret_key = secret_key or config.instance.security_secret_key
+    hash_salt = hash_salt or manager_config.security_hash_salt
+    secret_key = secret_key or manager_config.security_secret_key
 
     # Make sure that it's possible to get users from the datastore
     # by username and not just by email (the default behavior)
