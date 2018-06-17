@@ -70,8 +70,8 @@ class Test(unittest.TestCase):
         os.environ['AGENT_NAME'] = 'test'
 
         self.sm = get_storage_manager()
-        self._security_config = self._create_security_config()
         self.events_publisher = create_events_publisher()
+        self._mock_security_config()
         self._thread = None
 
     def _run_amqp_postgres(self):
@@ -124,7 +124,7 @@ class Test(unittest.TestCase):
         set_current_tenant(default_tenant)
 
     def _remove_after_test(self, filename):
-        self.addCleanup(os.remove, args=(filename, ))
+        self.addCleanup(os.remove, filename)
 
     def _create_security_config(self):
         fd, temp_security_conf = tempfile.mkstemp()
@@ -141,17 +141,23 @@ class Test(unittest.TestCase):
 
         return temp_security_conf
 
-    def _get_amqp_manager(self):
-        with patch(
-                'manager_rest.cryptography_utils.SECURITY_FILE_LOCATION',
-                self._security_config
-        ):
-            return AMQPManager(
-                host=instance.amqp_management_host,
-                username=instance.amqp_username,
-                password=instance.amqp_password,
-                verify=instance.amqp_ca_path
-            )
+    def _mock_security_config(self):
+        security_config = self._create_security_config()
+        security_config_patcher = patch(
+            'manager_rest.cryptography_utils.SECURITY_FILE_LOCATION',
+            security_config
+        )
+        self.addCleanup(security_config_patcher.stop)
+        security_config_patcher.start()
+
+    @staticmethod
+    def _get_amqp_manager():
+        return AMQPManager(
+            host=instance.amqp_management_host,
+            username=instance.amqp_username,
+            password=instance.amqp_password,
+            verify=instance.amqp_ca_path
+        )
 
     def _create_execution(self, execution_id):
         new_execution = models.Execution(
