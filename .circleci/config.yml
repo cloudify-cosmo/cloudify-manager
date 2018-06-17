@@ -132,7 +132,6 @@ jobs:
           builder="docker run --cap-add SYS_ADMIN --security-opt apparmor:unconfined --mount type=bind,source=$(pwd),target=/source cloudify3/mock-builder:0.1 python /source/packaging/build_rpm.py /source/packaging/"
           parallel --results logs $builder{} ::: \
               cloudify-rest-service.spec \
-              cloudify-logstash.spec \
               cloudify-manager-ip-setter.spec \
               cloudify-mgmtworker.spec \
               cloudify-agents.spec \
@@ -154,18 +153,18 @@ workflows:
 
   build_and_test:
     jobs:
-      # - flake8
-      # - build-rpms
+      - flake8
+      - build-rpms
 
-      # - test_v1
-      # - test_clientv2_endpoints
-      # - test_clientv2_infrastructure
-      # - test_clientv2_1_endpoints
-      # - test_clientv2_1_infrastructure
-      # - test_clientv3_endpoints
-      # - test_clientv3_infrastructure
-      # - test_workflows
+      - test_v1
+      - test_clientv2_endpoints
+      - test_clientv2_infrastructure
+      - test_clientv2_1_endpoints
+      - test_clientv2_1_infrastructure
+      - test_clientv3_endpoints
+      - test_clientv3_infrastructure
+      - test_workflows
 
-      # - test_premium
+      - test_premium
 
       - test_amqp_postgres
