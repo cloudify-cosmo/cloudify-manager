@@ -14,11 +14,10 @@
 # limitations under the License.
 ############
 
-import argparse
-
 from cloudify.amqp_client import get_client
 
 from manager_rest.flask_utils import setup_flask_app
+from manager_rest.config import instance as manager_config
 
 from .amqp_consumer import AMQPLogsEventsConsumer
 from .postgres_publisher import DBLogEventPublisher
@@ -27,38 +26,19 @@ BROKER_PORT_SSL = 5671
 BROKER_PORT_NO_SSL = 5672
 
 
-def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--amqp-hostname', required=False,
-                        default='localhost')
-    parser.add_argument('--amqp-username', required=False,
-                        default='guest')
-    parser.add_argument('--amqp-password', required=False,
-                        default='guest')
-    parser.add_argument('--amqp-ssl-enabled', required=False,
-                        type=bool, default=True)
-    parser.add_argument('--amqp-ca-cert-path', required=False,
-                        default='')
-    parser.add_argument('--postgres-hostname', required=False,
-                        default='localhost')
-    parser.add_argument('--postgres-db', required=True)
-    parser.add_argument('--postgres-user', required=True)
-    parser.add_argument('--postgres-password', required=True)
-    return parser.parse_args()
-
-
-def main(args):
+def main():
     setup_flask_app()
 
-    port = BROKER_PORT_SSL if args.amqp_ssl_enabled else BROKER_PORT_NO_SSL
+    port = BROKER_PORT_SSL if \
+        manager_config.amqp_ca_path else BROKER_PORT_NO_SSL
     amqp_client = get_client(
-        amqp_host=args.amqp_hostname,
-        amqp_user=args.amqp_username,
-        amqp_pass=args.amqp_password,
+        amqp_host=manager_config.amqp_host,
+        amqp_user=manager_config.amqp_username,
+        amqp_pass=manager_config.amqp_password,
         amqp_vhost='/',
         amqp_port=port,
-        ssl_enabled=args.amqp_ssl_enabled,
-        ssl_cert_path=args.amqp_ca_cert_path
+        ssl_enabled=bool(manager_config.amqp_ca_path),
+        ssl_cert_path=manager_config.amqp_ca_path
     )
 
     db_publisher = DBLogEventPublisher()
@@ -71,4 +51,4 @@ def main(args):
 
 
 if __name__ == '__main__':
-    main(parse_args())
+    main()

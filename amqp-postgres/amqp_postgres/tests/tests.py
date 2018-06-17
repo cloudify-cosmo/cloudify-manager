@@ -23,7 +23,8 @@ import tempfile
 import threading
 from uuid import uuid4
 from datetime import datetime
-from collections import namedtuple
+
+from mock import patch
 
 from cloudify.amqp_client import create_events_publisher
 
@@ -31,7 +32,6 @@ from manager_rest.config import instance
 from manager_rest.amqp_manager import AMQPManager
 from manager_rest.cryptography_utils import encrypt
 from manager_rest.flask_utils import setup_flask_app
-from manager_rest.constants import SECURITY_FILE_LOCATION
 from manager_rest.storage import get_storage_manager, db, models
 from manager_rest.utils import get_formatted_timestamp, set_current_tenant
 from manager_rest.storage.storage_utils import \
@@ -40,19 +40,6 @@ from manager_rest.storage.storage_utils import \
 
 from amqp_postgres.main import main
 
-
-Args = namedtuple(
-    'Args',
-    'amqp_hostname '
-    'amqp_username '
-    'amqp_password '
-    'amqp_ssl_enabled '
-    'amqp_ca_cert_path '
-    'postgres_hostname '
-    'postgres_db '
-    'postgres_user '
-    'postgres_password '
-)
 
 permitted_roles = ['sys_admin', 'manager', 'user', 'operations', 'viewer']
 auth_dict = {
@@ -80,35 +67,15 @@ class Test(unittest.TestCase):
         setup_flask_app()
         db.create_all()
 
-        self.sm = get_storage_manager()
-        self.args = Args(
-                amqp_hostname='localhost',
-                amqp_username='guest',
-                amqp_password='guest',
-                amqp_ssl_enabled=False,
-                amqp_ca_cert_path='',
-                postgres_hostname='localhost',
-                postgres_db='cloudify_db',
-                postgres_user='cloudify',
-                postgres_password='cloudify'
+        os.environ['AGENT_NAME'] = 'test'
 
-            )
-        self.events_publisher = self._create_events_publisher()
+        self.sm = get_storage_manager()
+        self._security_config = self._create_security_config()
+        self.events_publisher = create_events_publisher()
         self._thread = None
 
-    def _create_events_publisher(self):
-        os.environ['AGENT_NAME'] = 'test'
-        return create_events_publisher(
-            amqp_host=self.args.amqp_hostname,
-            amqp_user=self.args.amqp_username,
-            amqp_pass=self.args.amqp_password,
-            amqp_vhost='/',
-            ssl_enabled=False,
-            ssl_cert_path=''
-        )
-
     def _run_amqp_postgres(self):
-        self._thread = threading.Thread(target=main, args=(self.args,))
+        self._thread = threading.Thread(target=main)
         self._thread.daemon = True
         self._thread.start()
 
@@ -142,37 +109,49 @@ class Test(unittest.TestCase):
         with open(temp_auth_file, 'w') as f:
             yaml.dump(auth_dict, f)
 
-        try:
-            default_tenant = create_default_user_tenant_and_roles(
-                admin_username='admin',
-                admin_password='admin',
-                amqp_manager=self._get_amqp_manager(),
-                authorization_file_path=temp_auth_file
-            )
-            default_tenant.rabbitmq_password = encrypt(
-                AMQPManager._generate_user_password()
-            )
-        finally:
-            os.remove(temp_auth_file)
+        self.addCleanup(os.remove, args=(temp_auth_file,))
+
+        default_tenant = create_default_user_tenant_and_roles(
+            admin_username='admin',
+            admin_password='admin',
+            amqp_manager=self._get_amqp_manager(),
+            authorization_file_path=temp_auth_file
+        )
+        default_tenant.rabbitmq_password = encrypt(
+            AMQPManager._generate_user_password()
+        )
 
         set_current_tenant(default_tenant)
 
-    @staticmethod
-    def _get_amqp_manager():
-        os.mkdir(os.path.dirname(SECURITY_FILE_LOCATION))
+    def _remove_after_test(self, filename):
+        self.addCleanup(os.remove, args=(filename, ))
 
-        with open(SECURITY_FILE_LOCATION, 'w') as f:
+    def _create_security_config(self):
+        fd, temp_security_conf = tempfile.mkstemp()
+        os.close(fd)
+        with open(temp_security_conf, 'w') as f:
             json.dump({
                 'encryption_key':
                     'f2ytTjQ-R2yKFMzgqDAw6vgQIHGZ9SiJoW-BhktapFQ='
             }, f)
 
-        return AMQPManager(
-            host=instance.amqp_management_host,
-            username=instance.amqp_username,
-            password=instance.amqp_password,
-            verify=instance.amqp_ca_path
-        )
+        self._remove_after_test(temp_security_conf)
+
+        os.environ['MANAGER_REST_SECURITY_CONFIG_PATH'] = temp_security_conf
+
+        return temp_security_conf
+
+    def _get_amqp_manager(self):
+        with patch(
+                'manager_rest.cryptography_utils.SECURITY_FILE_LOCATION',
+                self._security_config
+        ):
+            return AMQPManager(
+                host=instance.amqp_management_host,
+                username=instance.amqp_username,
+                password=instance.amqp_password,
+                verify=instance.amqp_ca_path
+            )
 
     def _create_execution(self, execution_id):
         new_execution = models.Execution(
