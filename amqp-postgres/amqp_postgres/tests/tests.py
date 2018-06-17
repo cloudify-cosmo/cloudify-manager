@@ -21,6 +21,7 @@ from datetime import datetime
 
 from cloudify.amqp_client import create_events_publisher
 
+from manager_rest import utils
 from manager_rest.storage import models
 from manager_rest.config import instance
 from manager_rest.amqp_manager import AMQPManager
@@ -51,7 +52,27 @@ auth_dict = {
 }
 
 
-class Test(BaseServerTestCase):
+class AMQPPostgresTest(BaseServerTestCase):
+
+    def create_configuration(self):
+        """
+        Override here to allow using postgresql instead of sqlite
+        """
+        config = super(AMQPPostgresTest, self).create_configuration()
+        config.postgresql_host = 'localhost'
+        config.postgresql_db_name = 'cloudify_db'
+        config.postgresql_username = 'cloudify'
+        config.postgresql_password = 'cloudify'
+        return config
+
+    def _create_config_and_reset_app(self, server):
+        """
+        Override here to allow using postgresql instead of sqlite
+        """
+        self.server_configuration = self.create_configuration()
+        utils.copy_resources(self.server_configuration.file_server_root)
+        server.reset_app(self.server_configuration)
+
     @staticmethod
     def _run_amqp_postgres():
         thread = threading.Thread(target=main)
