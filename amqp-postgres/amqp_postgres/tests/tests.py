@@ -36,6 +36,7 @@ from manager_rest.storage import get_storage_manager, db, models
 from manager_rest.utils import get_formatted_timestamp, set_current_tenant
 from manager_rest.storage.storage_utils import \
     create_default_user_tenant_and_roles
+from manager_rest.test.base_test import BaseServerTestCase
 
 
 from amqp_postgres.main import main
@@ -61,30 +62,18 @@ auth_dict = {
 }
 
 
-class Test(unittest.TestCase):
-
-    def setUp(self):
-        setup_flask_app()
-        db.create_all()
-
-        os.environ['AGENT_NAME'] = 'test'
-
-        self.sm = get_storage_manager()
-        self.events_publisher = create_events_publisher()
-        self._mock_security_config()
-        self._thread = None
-
-    def _run_amqp_postgres(self):
-        self._thread = threading.Thread(target=main)
-        self._thread.daemon = True
-        self._thread.start()
+class Test(BaseServerTestCase):
+    @staticmethod
+    def _run_amqp_postgres():
+        thread = threading.Thread(target=main)
+        thread.daemon = True
+        thread.start()
+        return thread
 
     def test(self):
-        self._run_amqp_postgres()
+        main_thread = self._run_amqp_postgres()
 
         time.sleep(5)
-
-        self._create_user_and_tenant()
 
         execution_id = str(uuid4())
         self._create_execution(execution_id)
@@ -92,37 +81,18 @@ class Test(unittest.TestCase):
         log = self._get_log(execution_id)
         event = self._get_event(execution_id)
 
-        self.events_publisher.publish_message(log, message_type='log')
-        self.events_publisher.publish_message(event, message_type='event')
+        events_publisher = create_events_publisher()
 
-        self._thread.join(3)
+        events_publisher.publish_message(log, message_type='log')
+        events_publisher.publish_message(event, message_type='event')
+
+        main_thread.join(3)
 
         db_log = self._get_db_element(models.Log)
         db_event = self._get_db_element(models.Event)
 
         self._assert_log(log, db_log)
         self._assert_event(event, db_event)
-
-    def _create_user_and_tenant(self):
-        fd, temp_auth_file = tempfile.mkstemp()
-        os.close(fd)
-        with open(temp_auth_file, 'w') as f:
-            yaml.dump(auth_dict, f)
-
-        self._remove_after_test(temp_auth_file)
-
-        # Mock AMQPManager because we don't need it
-        default_tenant = create_default_user_tenant_and_roles(
-            admin_username='admin',
-            admin_password='admin',
-            amqp_manager=MagicMock(),
-            authorization_file_path=temp_auth_file
-        )
-        default_tenant.rabbitmq_password = encrypt(
-            AMQPManager._generate_user_password()
-        )
-
-        set_current_tenant(default_tenant)
 
     def _remove_after_test(self, filename):
         self.addCleanup(os.remove, filename)
@@ -133,7 +103,9 @@ class Test(unittest.TestCase):
         with open(temp_security_conf, 'w') as f:
             json.dump({
                 'encryption_key':
-                    'f2ytTjQ-R2yKFMzgqDAw6vgQIHGZ9SiJoW-BhktapFQ='
+                    'f2ytTjQ-R2yKFMzgqDAw6vgQIHGZ9SiJoW-BhktapFQ=',
+                'hash_salt': 'hash_salt',
+                'secret_key': 'secret_key'
             }, f)
 
         self._remove_after_test(temp_security_conf)
