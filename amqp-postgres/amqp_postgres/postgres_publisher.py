@@ -28,7 +28,7 @@ class DBLogEventPublisher(object):
         self._sm = get_storage_manager()
 
     def process(self, message, exchange):
-        execution = self._sm.get(Execution, message['execution_id'])
+        execution = self._sm.get(Execution, message['context']['execution_id'])
 
         if exchange == 'cloudify-events':
             item = self._get_event(message)
