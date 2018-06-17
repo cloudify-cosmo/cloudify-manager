@@ -120,7 +120,7 @@ class DeploymentUpdate(SecuredResource):
         request_json = request.args
         manager, skip_install, skip_uninstall, skip_reinstall, workflow_id, \
             ignore_failure, install_first = self._get_params_and_validate(
-                deployment_id, request_json, skip_reinstall_default=True)
+                deployment_id, request_json, preserve_old_behavior=True)
         deployment_update, _ = \
             UploadedBlueprintsDeploymentUpdateManager(). \
             receive_uploaded_data(deployment_id)
@@ -159,7 +159,7 @@ class DeploymentUpdate(SecuredResource):
     @staticmethod
     def _get_params_and_validate(deployment_id,
                                  request_json,
-                                 skip_reinstall_default=False):
+                                 preserve_old_behavior=False):
         manager = get_deployment_updates_manager()
         skip_install = verify_and_convert_bool(
             'skip_install', request_json.get('skip_install', 'false'))
@@ -167,13 +167,14 @@ class DeploymentUpdate(SecuredResource):
             'skip_uninstall', request_json.get('skip_uninstall', 'false'))
         skip_reinstall = verify_and_convert_bool(
             'skip_reinstall', request_json.get('skip_reinstall',
-                                               skip_reinstall_default))
+                                               preserve_old_behavior))
         force = verify_and_convert_bool(
             'force', request_json.get('force', 'false'))
         ignore_failure = verify_and_convert_bool(
             'ignore_failure', request_json.get('ignore_failure', 'false'))
         install_first = verify_and_convert_bool(
-            'install_first', request_json.get('install_first', 'false'))
+            'install_first', request_json.get('install_first',
+                                              preserve_old_behavior))
         workflow_id = request_json.get('workflow_id', None)
         manager.validate_no_active_updates_per_deployment(deployment_id,
                                                           force=force)

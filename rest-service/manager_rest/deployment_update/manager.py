@@ -339,17 +339,52 @@ class DeploymentUpdateManager(object):
                                  if d['target_id'] == target_node_id)
                 relationship['rel_index'] = rel_index
 
-    @staticmethod
-    def _update_reinstall_list(reinstall_list,
+    def _validate_reinstall_list(self,
+                                 reinstall,
+                                 add,
+                                 remove,
+                                 dep_update):
+        """validate node-instances explicitly supplied to reinstall list exist
+        and are not about to be installed or uninstalled in this update"""
+        node_instances = self.sm.list(
+            models.NodeInstance,
+            filters={'deployment_id': dep_update.deployment_id}
+        )
+        node_instances_ids = [n.id for n in node_instances]
+        add_conflict = [n for n in reinstall if n in add]
+        remove_conflict = [n for n in reinstall if n in remove]
+        not_existing = [n for n in reinstall if n not in node_instances_ids]
+        msg = 'Invalid reinstall list supplied.'
+        if not_existing:
+            msg += '\nFollowing node instances do not exist in this ' \
+                   'deployment: ' + ', '.join(not_existing)
+        if add_conflict:
+            msg += '\nFollowing node instances are just being added in the ' \
+                   'update: ' + ', '.join(add_conflict)
+        if remove_conflict:
+            msg += '\nFollowing node instances are just being removed in ' \
+                   'the update: ' + ', '.join(remove_conflict)
+        if any([not_existing, add_conflict, remove_conflict]):
+            dep_update.state = STATES.FAILED
+            self.sm.update(dep_update)
+            raise manager_exceptions.BadParametersError(msg)
+
+    def _update_reinstall_list(self,
+                               reinstall_list,
+                               add_list,
+                               remove_list,
                                modified_entity_ids,
                                dep_update,
                                skip_reinstall):
         """Add nodes that their properties have been updated to the list of
         node instances to reinstall, unless skip_reinstall is true"""
         reinstall_list = reinstall_list or []
+        self._validate_reinstall_list(reinstall_list,
+                                      add_list,
+                                      remove_list,
+                                      dep_update)
         if skip_reinstall:
             return reinstall_list
-        sm = get_storage_manager()
 
         # get all entities with modifications in properties or operations
         for change_type in (ENTITY_TYPES.PROPERTY, ENTITY_TYPES.OPERATION):
@@ -361,14 +396,17 @@ class DeploymentUpdateManager(object):
                     continue
 
                 # list instances of each node
-                node_instances = sm.list(
+                node_instances = self.sm.list(
                     models.NodeInstance,
                     filters={'deployment_id': dep_update.deployment_id,
                              'node_id': modified[1]}
                 )
 
-                # add instances ids to the reinstall list
-                reinstall_list += [e.id for e in node_instances.items]
+                # add instances ids to the reinstall list, if they are not in
+                # the install/uninstall list
+                reinstall_list += [e.id for e in node_instances.items
+                                   if e.id not in add_list
+                                   and e.id not in remove_list]
         return reinstall_list
 
     def _execute_update_workflow(self,
@@ -396,7 +434,13 @@ class DeploymentUpdateManager(object):
             node_instances[NODE_MOD_TYPES.EXTENDED_AND_RELATED]
         reduced_instances = node_instances[NODE_MOD_TYPES.REDUCED_AND_RELATED]
         removed_instances = node_instances[NODE_MOD_TYPES.REMOVED_AND_RELATED]
+        added_instance_ids = extract_ids(
+            added_instances.get(NODE_MOD_TYPES.AFFECTED))
+        removed_instance_ids = extract_ids(
+            removed_instances.get(NODE_MOD_TYPES.AFFECTED))
         reinstall_list = self._update_reinstall_list(reinstall_list,
+                                                     added_instance_ids,
+                                                     removed_instance_ids,
                                                      modified_entity_ids,
                                                      dep_update,
                                                      skip_reinstall)
@@ -405,8 +449,7 @@ class DeploymentUpdateManager(object):
             'update_id': dep_update.id,
 
             # For any added node instance
-            'added_instance_ids':
-                extract_ids(added_instances.get(NODE_MOD_TYPES.AFFECTED)),
+            'added_instance_ids': added_instance_ids,
             'added_target_instances_ids':
                 extract_ids(added_instances.get(NODE_MOD_TYPES.RELATED)),
 
@@ -427,8 +470,7 @@ class DeploymentUpdateManager(object):
                 extract_ids(reduced_instances.get(NODE_MOD_TYPES.RELATED)),
 
             # Any nodes which were removed as a whole
-            'removed_instance_ids':
-                extract_ids(removed_instances.get(NODE_MOD_TYPES.AFFECTED)),
+            'removed_instance_ids': removed_instance_ids,
             'remove_target_instance_ids':
                 extract_ids(removed_instances.get(NODE_MOD_TYPES.RELATED)),
 
