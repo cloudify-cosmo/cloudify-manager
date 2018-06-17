@@ -24,7 +24,7 @@ import threading
 from uuid import uuid4
 from datetime import datetime
 
-from mock import patch
+from mock import patch, MagicMock
 
 from cloudify.amqp_client import create_events_publisher
 
@@ -109,12 +109,13 @@ class Test(unittest.TestCase):
         with open(temp_auth_file, 'w') as f:
             yaml.dump(auth_dict, f)
 
-        self.addCleanup(os.remove, args=(temp_auth_file,))
+        self._remove_after_test(temp_auth_file)
 
+        # Mock AMQPManager because we don't need it
         default_tenant = create_default_user_tenant_and_roles(
             admin_username='admin',
             admin_password='admin',
-            amqp_manager=self._get_amqp_manager(),
+            amqp_manager=MagicMock(),
             authorization_file_path=temp_auth_file
         )
         default_tenant.rabbitmq_password = encrypt(
