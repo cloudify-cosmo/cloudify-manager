@@ -70,6 +70,9 @@ mkdir -p %{buildroot}/var/log/cloudify/rest
 # section of this spec file.
 cp -R ${RPM_SOURCE_DIR}/packaging/rest-service/files/* %{buildroot}
 
+# AMQP Postgres files go in here as well, as there's no separate RPM for it
+cp -R ${RPM_SOURCE_DIR}/packaging/amqp-postgres/files/* %{buildroot}
+
 visudo -cf %{buildroot}/etc/sudoers.d/cloudify-restservice
 
 
@@ -99,10 +102,13 @@ systemd-tmpfiles --create
 
 /opt/manager
 /etc/cloudify/delete_logs_and_events_from_db.py*
+/etc/logrotate.d/cloudify-rest-service
+/etc/logrotate.d/cloudify-amqp-postgres
 /etc/sudoers.d/cloudify-restservice
 /opt/restservice
 /opt/manager/scripts/set-manager-ssl.py*
 /usr/lib/systemd/system/cloudify-restservice.service
+/usr/lib/systemd/system/cloudify-amqp-postgres.service
 /usr/lib/tmpfiles.d/cloudify-restservice.conf
 
 %attr(750,cfyuser,adm) /var/log/cloudify/rest
