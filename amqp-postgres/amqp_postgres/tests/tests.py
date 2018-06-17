@@ -114,6 +114,9 @@ class AMQPPostgresTest(BaseServerTestCase):
         )
 
     def _create_execution(self, execution_id):
+        admin_user = self.sm.get(models.User, 0)
+        default_tenant = self.sm.get(models.Tenant, 0)
+
         new_execution = models.Execution(
             id=execution_id,
             status='terminated',
@@ -123,6 +126,9 @@ class AMQPPostgresTest(BaseServerTestCase):
             parameters={},
             is_system_workflow=False
         )
+        new_execution.creator = admin_user
+        new_execution.tenant = default_tenant
+
         self.sm.put(new_execution)
 
     def _get_db_element(self, model):
@@ -137,7 +143,6 @@ class AMQPPostgresTest(BaseServerTestCase):
             db_log.reported_timestamp.isoformat()[:-3]
         )
 
-        self.assertEqual(db_log.id, None)
         self.assertEqual(type(db_log.timestamp), datetime)
         self.assertEqual(db_log.message, log['message']['text'])
         self.assertEqual(db_log.message_code, None)
@@ -159,7 +164,6 @@ class AMQPPostgresTest(BaseServerTestCase):
             db_event.reported_timestamp.isoformat()[:-3]
         )
 
-        self.assertEqual(db_event.id, None)
         self.assertEqual(type(db_event.timestamp), datetime)
         self.assertEqual(db_event.message, event['message']['text'])
         self.assertEqual(db_event.message_code, None)
