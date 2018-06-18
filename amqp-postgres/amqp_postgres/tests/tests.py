@@ -73,7 +73,6 @@ class AMQPPostgresTest(BaseServerTestCase):
 
     def setUp(self):
         super(AMQPPostgresTest, self).setUp()
-        amqp_main._setup_flask_app()
         self._amqp_client = amqp_main._create_amqp_client()
         self._amqp_client.consume_in_thread()
 
