@@ -15,11 +15,9 @@
 ############
 
 import json
-import logging
 from uuid import uuid4
 
-logging.basicConfig()
-logger = logging.getLogger('amqp_postgres.consumer')
+from flask import current_app
 
 
 class AMQPLogsEventsConsumer(object):
@@ -61,4 +59,4 @@ class AMQPLogsEventsConsumer(object):
             parsed_body = json.loads(body)
             self._message_processor(parsed_body, method.exchange)
         except Exception as e:
-            logger.warn('Failed message processing: {0}'.format(e))
+            current_app.logger.warn('Failed message processing: {0}'.format(e))
