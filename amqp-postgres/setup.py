@@ -21,7 +21,7 @@ setup(
     name='cloudify-amqp-postgres',
     version='4.4',
     author='Cloudify',
-    author_email='cosmo-admin@gigaspaces.com',
+    author_email='cosmo-admin@cloudify.co',
     packages=['amqp_postgres'],
     entry_points={
         'console_scripts': [
