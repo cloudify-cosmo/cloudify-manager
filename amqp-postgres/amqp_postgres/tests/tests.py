@@ -177,18 +177,9 @@ class AMQPPostgresTest(BaseServerTestCase):
     def _get_log(execution_id):
         return {
             'context': {
-                'blueprint_id': 'bp',
-                'deployment_id': 'dep',
                 'execution_id': execution_id,
                 'node_id': 'vm_7j36my',
-                'node_name': 'vm',
                 'operation': 'cloudify.interfaces.cloudify_agent.create',
-                'plugin': 'agent',
-                'task_id': 'a13973d5-3866-4054-baa1-479e242fff75',
-                'task_name': 'cloudify_agent.installer.operations.create',
-                'task_queue': 'cloudify.management',
-                'task_target': 'cloudify.management',
-                'workflow_id': 'install'
             },
             'level': 'debug',
             'logger': 'ctx.a13973d5-3866-4054-baa1-479e242fff75',
@@ -207,10 +198,7 @@ class AMQPPostgresTest(BaseServerTestCase):
             },
             'event_type': 'workflow_started',
             'context': {
-                'deployment_id': 'dep',
-                'workflow_id': 'install',
                 'execution_id': execution_id,
-                'blueprint_id': 'bp'
             },
             'timestamp': get_formatted_timestamp()
         }
