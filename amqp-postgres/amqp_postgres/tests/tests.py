@@ -30,26 +30,6 @@ from manager_rest.storage.models_states import VisibilityState
 from amqp_postgres import main as amqp_main
 
 
-permitted_roles = ['sys_admin', 'manager', 'user', 'operations', 'viewer']
-auth_dict = {
-    'roles': [
-        {'name': 'sys_admin', 'description': ''},
-        {'name': 'manager', 'description': ''},
-        {'name': 'user', 'description': ''},
-        {'name': 'viewer', 'description': ''},
-        {'name': 'default', 'description': ''}
-    ],
-    'permissions': {
-        'all_tenants': ['sys_admin', 'manager'],
-        'administrators': ['sys_admin', 'manager'],
-        'create_global_resource': ['sys_admin'],
-        'execution_list': permitted_roles,
-        'deployment_list': permitted_roles,
-        'blueprint_list': permitted_roles
-    }
-}
-
-
 class AMQPPostgresTest(BaseServerTestCase):
 
     def create_configuration(self):
