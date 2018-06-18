@@ -14,6 +14,8 @@
 # limitations under the License.
 ############
 
+from uuid import uuid4
+
 from manager_rest.utils import set_current_tenant
 from manager_rest.storage import get_storage_manager
 from manager_rest.storage.models import Event, Log, Execution
@@ -40,6 +42,7 @@ class DBLogEventPublisher(object):
     @staticmethod
     def _get_log(message):
         return Log(
+            id=str(uuid4()),
             reported_timestamp=message['timestamp'],
             logger=message['logger'],
             level=message['level'],
@@ -51,6 +54,7 @@ class DBLogEventPublisher(object):
     @staticmethod
     def _get_event(message):
         return Event(
+            id=str(uuid4()),
             reported_timestamp=message['timestamp'],
             event_type=message['event_type'],
             message=message['message']['text'],
