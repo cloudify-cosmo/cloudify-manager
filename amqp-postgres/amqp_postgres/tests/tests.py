@@ -14,8 +14,6 @@
 # limitations under the License.
 ############
 
-import time
-import threading
 from uuid import uuid4
 from dateutil import parser as date_parser
 
@@ -29,7 +27,7 @@ from manager_rest.test.base_test import BaseServerTestCase
 from manager_rest.storage.models_states import VisibilityState
 
 
-from amqp_postgres.main import main
+from amqp_postgres import main as amqp_main
 
 
 permitted_roles = ['sys_admin', 'manager', 'user', 'operations', 'viewer']
@@ -73,18 +71,17 @@ class AMQPPostgresTest(BaseServerTestCase):
         server.SQL_DIALECT = 'postgresql'
         server.reset_app(self.server_configuration)
 
-    @staticmethod
-    def _run_amqp_postgres():
-        thread = threading.Thread(target=main)
-        thread.daemon = True
-        thread.start()
-        return thread
+    def setUp(self):
+        super(AMQPPostgresTest, self).setUp()
+        amqp_main._setup_flask_app()
+        self._amqp_client = amqp_main._create_amqp_client()
+        self._amqp_client.consume_in_thread()
+
+    def tearDown(self):
+        self._amqp_client.close()
+        super(AMQPPostgresTest, self).tearDown()
 
     def test(self):
-        main_thread = self._run_amqp_postgres()
-
-        time.sleep(5)
-
         execution_id = str(uuid4())
         self._create_execution(execution_id)
 
@@ -95,8 +92,6 @@ class AMQPPostgresTest(BaseServerTestCase):
 
         events_publisher.publish_message(log, message_type='log')
         events_publisher.publish_message(event, message_type='event')
-
-        main_thread.join(3)
 
         db_log = self._get_db_element(models.Log)
         db_event = self._get_db_element(models.Event)
