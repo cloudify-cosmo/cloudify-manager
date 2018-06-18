@@ -44,7 +44,7 @@ class DBLogEventPublisher(object):
         elif exchange == 'cloudify-logs':
             return self._get_log(message)
         else:
-            raise StandardError('Unknown exchange type: {0}'.format(exchange))
+            raise ValueError('Unknown exchange type: {0}'.format(exchange))
 
     @staticmethod
     def _get_log(message):
