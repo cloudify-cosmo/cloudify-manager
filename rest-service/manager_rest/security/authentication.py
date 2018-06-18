@@ -66,7 +66,10 @@ class Authentication(object):
             raise_unauthorized_user_error('No authentication info provided')
         self.logger.debug('Authenticated user: {0}'.format(user))
 
-        if request.authorization:  # Basic authentication (User + Password)
+        if request.authorization:
+            # Reset the counter only when using basic authentication
+            # (User + Password), otherwise the counter will be reset on
+            # every UI refresh (every 4 sec) and accounts won't be locked.
             user.failed_logins_counter = 0
         user.last_login_at = datetime.now()
         user_datastore.commit()
