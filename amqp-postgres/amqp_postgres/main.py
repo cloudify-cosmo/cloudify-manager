@@ -40,8 +40,11 @@ def _setup_flask_app():
     return app
 
 
-def main():
-    app = _setup_flask_app()
+def _create_amqp_client():
+    db_publisher = DBLogEventPublisher()
+    amqp_consumer = AMQPLogsEventsConsumer(
+        message_processor=db_publisher.process
+    )
 
     port = BROKER_PORT_SSL if \
         config.amqp_ca_path else BROKER_PORT_NO_SSL
@@ -54,13 +57,14 @@ def main():
         ssl_enabled=bool(config.amqp_ca_path),
         ssl_cert_path=config.amqp_ca_path
     )
-
-    db_publisher = DBLogEventPublisher()
-    amqp_consumer = AMQPLogsEventsConsumer(
-        message_processor=db_publisher.process
-    )
-
     amqp_client.add_handler(amqp_consumer)
+    return amqp_client
+
+
+def main():
+    app = _setup_flask_app()
+
+    amqp_client = _create_amqp_client()
 
     app.logger.info('Starting consuming...')
     amqp_client.consume()
