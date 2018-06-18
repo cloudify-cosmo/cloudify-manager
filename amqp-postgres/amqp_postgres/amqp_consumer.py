@@ -15,7 +15,6 @@
 ############
 
 import json
-from uuid import uuid4
 
 from flask import current_app
 
@@ -25,7 +24,7 @@ class AMQPLogsEventsConsumer(object):
     EVENTS_EXCHANGE = 'cloudify-events'
 
     def __init__(self, message_processor):
-        self.queue = str(uuid4())
+        self.queue = 'cloudify-logs-events'
         self._message_processor = message_processor
 
         # This is here because AMQPConnection expects it
