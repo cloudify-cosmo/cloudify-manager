@@ -26,19 +26,13 @@ class AMQPLogsEventsConsumer(object):
 
     def __init__(self, message_processor):
         self.queue = str(uuid4())
-        self._connection = None
-        self._in_channel = None
         self._message_processor = message_processor
 
         # This is here because AMQPConnection expects it
         self.routing_key = ''
 
     def register(self, connection):
-        self._connection = connection
-        self._in_channel = connection.channel()
-        self._register_queue(self._in_channel)
-
-    def _register_queue(self, channel):
+        channel = connection.channel()
         channel.confirm_delivery()
         channel.queue_declare(queue=self.queue,
                               durable=True,
