@@ -75,10 +75,7 @@ class AMQPPostgresTest(BaseServerTestCase):
         super(AMQPPostgresTest, self).setUp()
         self._amqp_client = amqp_main._create_amqp_client()
         self._amqp_client.consume_in_thread()
-
-    def tearDown(self):
-        self._amqp_client.close()
-        super(AMQPPostgresTest, self).tearDown()
+        self.addCleanup(self._amqp_client.close)
 
     def test(self):
         execution_id = str(uuid4())
