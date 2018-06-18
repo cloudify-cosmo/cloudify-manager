@@ -55,6 +55,7 @@ class AMQPLogsEventsConsumer(object):
         channel.basic_consume(self.process, self.queue)
 
     def process(self, channel, method, properties, body):
+        channel.basic_ack(method.delivery_tag)
         try:
             parsed_body = json.loads(body)
             self._message_processor(parsed_body, method.exchange)
