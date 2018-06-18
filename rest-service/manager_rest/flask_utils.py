@@ -19,7 +19,7 @@ from flask import Flask
 from flask_migrate import Migrate
 from flask_security import Security
 
-from manager_rest import utils, config
+from manager_rest import config, utils
 from manager_rest.storage import user_datastore, db
 from manager_rest.storage.models import User, Tenant
 from manager_rest.config import instance as manager_config
