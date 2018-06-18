@@ -14,14 +14,9 @@
 # limitations under the License.
 ############
 
-import logging
-
 from manager_rest.utils import set_current_tenant
 from manager_rest.storage import get_storage_manager
 from manager_rest.storage.models import Event, Log, Execution
-
-logging.basicConfig()
-logger = logging.getLogger('amqp_postgres.publisher')
 
 
 class DBLogEventPublisher(object):
