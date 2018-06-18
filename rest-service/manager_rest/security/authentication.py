@@ -65,7 +65,9 @@ class Authentication(object):
         if not user:
             raise_unauthorized_user_error('No authentication info provided')
         self.logger.debug('Authenticated user: {0}'.format(user))
-        user.failed_logins_counter = 0
+
+        if request.authorization:  # Basic authentication (User + Password)
+            user.failed_logins_counter = 0
         user.last_login_at = datetime.now()
         user_datastore.commit()
         return user
