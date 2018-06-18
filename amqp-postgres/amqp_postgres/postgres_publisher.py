@@ -26,21 +26,25 @@ class DBLogEventPublisher(object):
         self._sm = get_storage_manager()
 
     def process(self, message, exchange):
-        execution = self._sm.get(Execution, message['context']['execution_id'])
-
-        if exchange == 'cloudify-events':
-            item = self._get_event(message)
-        elif exchange == 'cloudify-logs':
-            item = self._get_log(message)
-        else:
-            raise StandardError('Unknown exchange type: {0}'.format(exchange))
-
+        execution = self._get_current_execution(message)
+        item = self._get_item(message, exchange)
         try:
             set_current_tenant(execution.tenant)
             item.set_execution(execution)
+            self._sm.put(item)
         finally:
             set_current_tenant(None)
-        self._sm.put(item)
+
+    def _get_current_execution(self, message):
+        return self._sm.get(Execution, message['context']['execution_id'])
+
+    def _get_item(self, message, exchange):
+        if exchange == 'cloudify-events':
+            return self._get_event(message)
+        elif exchange == 'cloudify-logs':
+            return self._get_log(message)
+        else:
+            raise StandardError('Unknown exchange type: {0}'.format(exchange))
 
     @staticmethod
     def _get_log(message):
