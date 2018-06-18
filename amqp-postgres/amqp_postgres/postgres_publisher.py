@@ -27,7 +27,6 @@ class DBLogEventPublisher(object):
 
     def process(self, message, exchange):
         execution = self._sm.get(Execution, message['context']['execution_id'])
-        set_current_tenant(execution.tenant)
 
         if exchange == 'cloudify-events':
             item = self._get_event(message)
@@ -36,7 +35,11 @@ class DBLogEventPublisher(object):
         else:
             raise StandardError('Unknown exchange type: {0}'.format(exchange))
 
-        item.set_execution(execution)
+        try:
+            set_current_tenant(execution.tenant)
+            item.set_execution(execution)
+        finally:
+            set_current_tenant(None)
         self._sm.put(item)
 
     @staticmethod
