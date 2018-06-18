@@ -15,6 +15,7 @@
 ############
 
 from uuid import uuid4
+from threading import Thread
 from dateutil import parser as date_parser
 
 from cloudify.amqp_client import create_events_publisher
@@ -27,7 +28,7 @@ from manager_rest.test.base_test import BaseServerTestCase
 from manager_rest.storage.models_states import VisibilityState
 
 
-from amqp_postgres import main as amqp_main
+from amqp_postgres.main import main
 
 
 class AMQPPostgresTest(BaseServerTestCase):
@@ -53,9 +54,10 @@ class AMQPPostgresTest(BaseServerTestCase):
 
     def setUp(self):
         super(AMQPPostgresTest, self).setUp()
-        self._amqp_client = amqp_main._create_amqp_client()
-        self._amqp_client.consume_in_thread()
-        self.addCleanup(self._amqp_client.close)
+
+        amqp_thread = Thread(target=main)
+        amqp_thread.daemon = True
+        amqp_thread.start()
 
     def test(self):
         execution_id = str(uuid4())
