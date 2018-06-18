@@ -62,8 +62,9 @@ mv /opt/manager/env %{buildroot}/opt/manager
 mkdir -p %{buildroot}/opt/manager/resources/
 cp -R "${RPM_SOURCE_DIR}/resources/rest-service/cloudify/" "%{buildroot}/opt/manager/resources/"
 
-# Create the log dir
+# Create the log dirs
 mkdir -p %{buildroot}/var/log/cloudify/rest
+mkdir -p %{buildroot}/var/log/cloudify/amqp-postgres
 
 # Copy static files into place. In order to have files in /packaging/files
 # actually included in the RPM, they must have an entry in the %files
@@ -112,3 +113,4 @@ systemd-tmpfiles --create
 /usr/lib/tmpfiles.d/cloudify-restservice.conf
 
 %attr(750,cfyuser,adm) /var/log/cloudify/rest
+%attr(750,cfyuser,adm) /var/log/cloudify/amqp-postgres
