@@ -17,10 +17,12 @@
 from uuid import uuid4
 from time import time, sleep
 from threading import Thread, Lock
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 
 from manager_rest.storage import db
 from manager_rest.storage.models import Event, Log, Execution
+
+Exec = namedtuple('Execution', 'storage_id creator_id tenant_id')
 
 
 class DBLogEventPublisher(object):
@@ -31,7 +33,7 @@ class DBLogEventPublisher(object):
         self._batch = []
         self._last_commit = time()
         self._app = app
-        self._executions_cache = LimitedSizeDict(1000)
+        self._executions_cache = LimitedSizeDict(10000)
 
         # Create a separate thread to allow proper batching without losing
         # messages. Without this thread, if the messages were just committed,
@@ -76,7 +78,12 @@ class DBLogEventPublisher(object):
         execution_id = message['context']['execution_id']
         execution = self._executions_cache.get(execution_id)
         if not execution:
-            execution = Execution.query.filter_by(id=execution_id).first()
+            db_execution = Execution.query.filter_by(id=execution_id).first()
+            execution = Exec(
+                storage_id=db_execution._storage_id,
+                creator_id=db_execution._creator_id,
+                tenant_id=db_execution._tenant_id
+            )
             self._executions_cache[execution_id] = execution
         return execution
 
@@ -98,9 +105,9 @@ class DBLogEventPublisher(object):
             message=message['message']['text'],
             operation=message['context'].get('operation'),
             node_id=message['context'].get('node_id'),
-            _execution_fk=execution._storage_id,
-            _tenant_id=execution._tenant_id,
-            _creator_id=execution._creator_id
+            _execution_fk=execution.storage_id,
+            _tenant_id=execution.tenant_id,
+            _creator_id=execution.creator_id
         )
 
     @staticmethod
@@ -113,9 +120,9 @@ class DBLogEventPublisher(object):
             operation=message['context'].get('operation'),
             node_id=message['context'].get('node_id'),
             error_causes=message['context'].get('task_error_causes'),
-            _execution_fk=execution._storage_id,
-            _tenant_id=execution._tenant_id,
-            _creator_id=execution._creator_id
+            _execution_fk=execution.storage_id,
+            _tenant_id=execution.tenant_id,
+            _creator_id=execution.creator_id
         )
 
 
