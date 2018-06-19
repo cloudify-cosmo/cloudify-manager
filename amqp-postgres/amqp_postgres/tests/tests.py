@@ -15,6 +15,7 @@
 ############
 
 from uuid import uuid4
+from time import sleep
 from threading import Thread
 from dateutil import parser as date_parser
 
@@ -70,6 +71,10 @@ class AMQPPostgresTest(BaseServerTestCase):
 
         events_publisher.publish_message(log, message_type='log')
         events_publisher.publish_message(event, message_type='event')
+
+        # The messages are dumped to the DB every 0.1 seconds, so we should
+        # wait before trying to query SQL
+        sleep(0.5)
 
         db_log = self._get_db_element(models.Log)
         db_event = self._get_db_element(models.Event)
