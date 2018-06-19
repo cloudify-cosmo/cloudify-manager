@@ -40,8 +40,8 @@ def _setup_flask_app():
     return app
 
 
-def _create_amqp_client():
-    db_publisher = DBLogEventPublisher()
+def _create_amqp_client(app):
+    db_publisher = DBLogEventPublisher(app)
     amqp_consumer = AMQPLogsEventsConsumer(
         message_processor=db_publisher.process
     )
@@ -64,7 +64,7 @@ def _create_amqp_client():
 def main():
     app = _setup_flask_app()
 
-    amqp_client = _create_amqp_client()
+    amqp_client = _create_amqp_client(app)
 
     app.logger.info('Starting consuming...')
     amqp_client.consume()
