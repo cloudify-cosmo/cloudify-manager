@@ -15,39 +15,75 @@
 ############
 
 from uuid import uuid4
+from time import time, sleep
+from threading import Thread, Lock
 
-from manager_rest.utils import set_current_tenant
-from manager_rest.storage import get_storage_manager
+from manager_rest.storage import db
 from manager_rest.storage.models import Event, Log, Execution
 
 
 class DBLogEventPublisher(object):
-    def __init__(self):
-        self._sm = get_storage_manager()
+    COMMIT_DELAY = 0.1  # seconds
+
+    def __init__(self, app):
+        self._lock = Lock()
+        self._batch = []
+        self._last_commit = time()
+        self._app = app
+
+        # Create a separate thread to allow proper batching without losing
+        # messages. Without this thread, if the messages were just committed,
+        # and 1 new message is sent, then process will never commit, because
+        # batch size wasn't exceeded and commit delay hasn't passed yet
+        publish_thread = Thread(target=self._message_publisher)
+        publish_thread.daemon = True
+        publish_thread.start()
 
     def process(self, message, exchange):
         execution = self._get_current_execution(message)
-        item = self._get_item(message, exchange)
+        item = self._get_item(message, exchange, execution)
+        with self._lock:
+            self._batch.append(item)
+
+    def _message_publisher(self):
+        # This needs to be done here, because we need to push the app context
+        # in each separate thread for the `db` object to work in it
+        db.init_app(self._app)
+        self._app.app_context().push()
+
+        while True:
+            if self._batch:
+                with self._lock:
+                    db.session.bulk_save_objects(self._batch)
+                    self._safe_commit()
+                    self._last_commit = time()
+                    self._batch = []
+            sleep(self.COMMIT_DELAY)
+
+    @staticmethod
+    def _safe_commit():
         try:
-            set_current_tenant(execution.tenant)
-            item.set_execution(execution)
-            self._sm.put(item)
-        finally:
-            set_current_tenant(None)
+            db.session.commit()
+        except BaseException:
+            db.session.rollback()
+            raise
 
-    def _get_current_execution(self, message):
-        return self._sm.get(Execution, message['context']['execution_id'])
+    @staticmethod
+    def _get_current_execution(message):
+        return Execution.query.filter_by(
+            id=message['context']['execution_id']
+        ).first()
 
-    def _get_item(self, message, exchange):
+    def _get_item(self, message, exchange, execution):
         if exchange == 'cloudify-events':
-            return self._get_event(message)
+            return self._get_event(message, execution)
         elif exchange == 'cloudify-logs':
-            return self._get_log(message)
+            return self._get_log(message, execution)
         else:
             raise ValueError('Unknown exchange type: {0}'.format(exchange))
 
     @staticmethod
-    def _get_log(message):
+    def _get_log(message, execution):
         return Log(
             id=str(uuid4()),
             reported_timestamp=message['timestamp'],
@@ -55,11 +91,14 @@ class DBLogEventPublisher(object):
             level=message['level'],
             message=message['message']['text'],
             operation=message['context'].get('operation'),
-            node_id=message['context'].get('node_id')
+            node_id=message['context'].get('node_id'),
+            _execution_fk=execution._storage_id,
+            _tenant_id=execution._tenant_id,
+            _creator_id=execution._creator_id
         )
 
     @staticmethod
-    def _get_event(message):
+    def _get_event(message, execution):
         return Event(
             id=str(uuid4()),
             reported_timestamp=message['timestamp'],
@@ -67,5 +106,8 @@ class DBLogEventPublisher(object):
             message=message['message']['text'],
             operation=message['context'].get('operation'),
             node_id=message['context'].get('node_id'),
-            error_causes=message['context'].get('task_error_causes')
+            error_causes=message['context'].get('task_error_causes'),
+            _execution_fk=execution._storage_id,
+            _tenant_id=execution._tenant_id,
+            _creator_id=execution._creator_id
         )
