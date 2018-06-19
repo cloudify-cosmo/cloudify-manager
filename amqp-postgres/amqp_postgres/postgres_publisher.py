@@ -17,6 +17,7 @@
 from uuid import uuid4
 from time import time, sleep
 from threading import Thread, Lock
+from collections import OrderedDict
 
 from manager_rest.storage import db
 from manager_rest.storage.models import Event, Log, Execution
@@ -30,6 +31,7 @@ class DBLogEventPublisher(object):
         self._batch = []
         self._last_commit = time()
         self._app = app
+        self._executions_cache = LimitedSizeDict(1000)
 
         # Create a separate thread to allow proper batching without losing
         # messages. Without this thread, if the messages were just committed,
@@ -68,11 +70,15 @@ class DBLogEventPublisher(object):
             db.session.rollback()
             raise
 
-    @staticmethod
-    def _get_current_execution(message):
-        return Execution.query.filter_by(
-            id=message['context']['execution_id']
-        ).first()
+    def _get_current_execution(self, message):
+        """ Return execution from cache if exists, or from DB if needed """
+
+        execution_id = message['context']['execution_id']
+        execution = self._executions_cache.get(execution_id)
+        if not execution:
+            execution = Execution.query.filter_by(id=execution_id).first()
+            self._executions_cache[execution_id] = execution
+        return execution
 
     def _get_item(self, message, exchange, execution):
         if exchange == 'cloudify-events':
@@ -111,3 +117,23 @@ class DBLogEventPublisher(object):
             _tenant_id=execution._tenant_id,
             _creator_id=execution._creator_id
         )
+
+
+class LimitedSizeDict(OrderedDict):
+    """
+    A FIFO dictionary with a maximum size limit. If number of keys reaches
+    the limit, the elements added first will be popped
+    """
+    def __init__(self, size_limit=None, *args, **kwds):
+        self.size_limit = size_limit
+        OrderedDict.__init__(self, *args, **kwds)
+        self._check_size_limit()
+
+    def __setitem__(self, key, value):
+        OrderedDict.__setitem__(self, key, value)
+        self._check_size_limit()
+
+    def _check_size_limit(self):
+        if self.size_limit is not None:
+            while len(self) > self.size_limit:
+                self.popitem(last=False)
