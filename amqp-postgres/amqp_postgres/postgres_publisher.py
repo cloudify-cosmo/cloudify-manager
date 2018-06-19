@@ -123,6 +123,7 @@ class LimitedSizeDict(OrderedDict):
     """
     A FIFO dictionary with a maximum size limit. If number of keys reaches
     the limit, the elements added first will be popped
+    Implementation taken from https://stackoverflow.com/a/2437645/978089
     """
     def __init__(self, size_limit=None, *args, **kwds):
         self.size_limit = size_limit
