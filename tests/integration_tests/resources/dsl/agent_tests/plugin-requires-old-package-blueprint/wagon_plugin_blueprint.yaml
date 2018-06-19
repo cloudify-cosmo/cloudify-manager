@@ -1,0 +1,5 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - blueprint.yaml
+  - plugin:requires-old-package-plugin?version=1.0

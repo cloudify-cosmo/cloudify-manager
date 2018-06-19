@@ -1,0 +1,6 @@
+plugins:
+  requires_old_package_plugin:
+      executor: host_agent
+      package_name: requires-old-package-plugin
+      package_version: '1.0'
+      install: true

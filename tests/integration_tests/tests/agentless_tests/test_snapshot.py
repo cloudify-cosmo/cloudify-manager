@@ -16,7 +16,6 @@
 import os
 import time
 import json
-import tempfile
 import requests
 from collections import Counter
 
@@ -398,13 +397,8 @@ class TestSnapshot(AgentlessTestCase):
     def _get_snapshot(self, name):
         snapshot_url = os.path.join(SNAPSHOTS, name)
         self.logger.info('Retrieving snapshot: {0}'.format(snapshot_url))
-        response = requests.get(snapshot_url, stream=True)
-        destination_file = tempfile.NamedTemporaryFile(delete=False)
-        destination = destination_file.name
-        with destination_file as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                f.write(chunk)
-        return destination
+        tmp_file = os.path.join(self.workdir, name)
+        return utils.download_file(snapshot_url, tmp_file)
 
     def _upload_and_restore_snapshot(self,
                                      snapshot_path,

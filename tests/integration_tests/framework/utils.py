@@ -22,6 +22,7 @@ import yaml
 import shutil
 import zipfile
 import tempfile
+import requests
 
 from functools import wraps
 from multiprocessing import Process
@@ -201,6 +202,15 @@ def create_zip(source, destination, include_folder=True):
                 zip_file.write(
                     file_path, os.path.relpath(file_path, source_dir))
     return destination
+
+
+def download_file(file_url, tmp_file):
+    logger.info('Retrieving file: {0}'.format(file_url))
+    response = requests.get(file_url, stream=True)
+    with open(tmp_file, "w") as f:
+        for chunk in response.iter_content(chunk_size=8192):
+            f.write(chunk)
+    return tmp_file
 
 
 class YamlPatcher(object):
