@@ -41,9 +41,10 @@ class ExecutionState(object):
     STARTED = 'started'
     CANCELLING = 'cancelling'
     FORCE_CANCELLING = 'force_cancelling'
+    KILL_CANCELLING = 'kill_cancelling'
 
     STATES = [TERMINATED, FAILED, CANCELLED, PENDING, STARTED,
-              CANCELLING, FORCE_CANCELLING]
+              CANCELLING, FORCE_CANCELLING, KILL_CANCELLING]
     END_STATES = [TERMINATED, FAILED, CANCELLED]
     ACTIVE_STATES = [state for state in STATES if state not in END_STATES]
 
