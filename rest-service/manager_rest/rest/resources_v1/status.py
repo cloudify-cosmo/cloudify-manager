@@ -40,7 +40,7 @@ OPTIONAL_SERVICES = {
     'cloudify-influxdb.service': 'InfluxDB',
     'cloudify-riemann.service': 'Riemann',
     'cloudify-amqpinflux.service': 'AMQP InfluxDB',
-    'cloudify-stage.service': 'Cloudify Stage',
+    'cloudify-stage.service': 'Cloudify Console',
     'cloudify-composer.service': 'Cloudify Composer',
 }
 CLUSTER_SERVICES = {
