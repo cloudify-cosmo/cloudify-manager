@@ -13,10 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ############
-
 import json
+import logging
 
-from flask import current_app
+
+logger = logging.getLogger(__name__)
 
 
 class AMQPLogsEventsConsumer(object):
@@ -53,4 +54,4 @@ class AMQPLogsEventsConsumer(object):
             parsed_body = json.loads(body)
             self._message_processor(parsed_body, method.exchange)
         except Exception as e:
-            current_app.logger.warn('Failed message processing: {0}'.format(e))
+            logger.warn('Failed message processing: {0}'.format(e))

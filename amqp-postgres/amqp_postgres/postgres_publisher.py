@@ -14,25 +14,91 @@
 # limitations under the License.
 ############
 
-from uuid import uuid4
-from time import time, sleep
+import Queue
+from time import time
 from threading import Thread, Lock
-from collections import OrderedDict, namedtuple
 
-from manager_rest.storage import db
-from manager_rest.storage.models import Event, Log, Execution
+import psycopg2
+from psycopg2.extras import execute_batch, DictCursor
+from collections import OrderedDict
 
-Exec = namedtuple('Execution', 'storage_id creator_id tenant_id')
+
+EVENT_INSERT_QUERY = """
+    INSERT INTO events (
+        timestamp,
+        reported_timestamp,
+        _execution_fk,
+        _tenant_id,
+        _creator_id,
+        event_type,
+        message,
+        message_code,
+        operation,
+        node_id,
+        error_causes)
+    VALUES (
+        now() AT TIME ZONE 'utc',
+        CAST (%s AS TIMESTAMP),
+        %s,
+        %s,
+        %s,
+        %s,
+        %s,
+        %s,
+        NULLIF(%s, ''),
+        NULLIF(%s, ''),
+        NULLIF(%s, '')
+    )
+"""
+
+LOG_INSERT_QUERY = """
+    INSERT INTO logs (
+        timestamp,
+        reported_timestamp,
+        _execution_fk,
+        _tenant_id,
+        _creator_id,
+        logger,
+        level,
+        message,
+        message_code,
+        operation,
+        node_id)
+    VALUES (
+        now() AT TIME ZONE 'utc',
+        CAST (%s AS TIMESTAMP),
+        %s,
+        %s,
+        %s,
+        %s,
+        %s,
+        %s,
+        %s,
+        NULLIF(%s, ''),
+        NULLIF(%s, '')
+    )
+"""
+
+EXECUTION_SELECT_QUERY = """
+    SELECT
+        id,
+        _storage_id,
+        _creator_id,
+        _tenant_id
+    FROM executions
+    WHERE id = %s
+"""
 
 
 class DBLogEventPublisher(object):
     COMMIT_DELAY = 0.1  # seconds
 
-    def __init__(self, app):
+    def __init__(self, config):
         self._lock = Lock()
-        self._batch = []
+        self._batch = Queue.Queue()
+
         self._last_commit = time()
-        self._app = app
+        self.config = config
         self._executions_cache = LimitedSizeDict(10000)
 
         # Create a separate thread to allow proper batching without losing
@@ -44,85 +110,87 @@ class DBLogEventPublisher(object):
         publish_thread.start()
 
     def process(self, message, exchange):
-        execution = self._get_current_execution(message)
-        item = self._get_item(message, exchange, execution)
-        with self._lock:
-            self._batch.append(item)
+        self._batch.put((message, exchange))
 
     def _message_publisher(self):
-        # This needs to be done here, because we need to push the app context
-        # in each separate thread for the `db` object to work in it
-        db.init_app(self._app)
-        self._app.app_context().push()
-
+        conn = psycopg2.connect(
+            dbname=self.config['postgresql_db_name'],
+            host=self.config['postgresql_host'],
+            user=self.config['postgresql_username'],
+            password=self.config['postgresql_password'],
+            cursor_factory=DictCursor
+        )
+        items = []
         while True:
-            if self._batch:
-                with self._lock:
-                    db.session.bulk_save_objects(self._batch)
-                    self._safe_commit()
-                    self._last_commit = time()
-                    self._batch = []
-            sleep(self.COMMIT_DELAY)
+            try:
+                items.append(self._batch.get(0.3))
+            except Queue.Empty:
+                pass
+            if len(items) > 100 or \
+                    (items and (time() - self._last_commit > 0.5)):
+                self._store(conn, items)
+                items = []
+                self._last_commit = time()
 
-    @staticmethod
-    def _safe_commit():
-        try:
-            db.session.commit()
-        except BaseException:
-            db.session.rollback()
-            raise
+    def _get_execution(self, conn, item):
+        execution_id = item['context']['execution_id']
+        if execution_id not in self._executions_cache:
+            with conn.cursor() as cur:
+                cur.execute(EXECUTION_SELECT_QUERY, (execution_id, ))
+                executions = cur.fetchall()
+            if len(executions) != 1:
+                raise ValueError('Expected 1 execution, found {0} (id: {1})'
+                                 .format(len(executions), execution_id))
+            self._executions_cache[execution_id] = executions[0]
+        return self._executions_cache[execution_id]
 
-    def _get_current_execution(self, message):
-        """ Return execution from cache if exists, or from DB if needed """
+    def _store(self, conn, items):
+        events, logs = [], []
 
-        execution_id = message['context']['execution_id']
-        execution = self._executions_cache.get(execution_id)
-        if not execution:
-            db_execution = Execution.query.filter_by(id=execution_id).first()
-            execution = Exec(
-                storage_id=db_execution._storage_id,
-                creator_id=db_execution._creator_id,
-                tenant_id=db_execution._tenant_id
-            )
-            self._executions_cache[execution_id] = execution
-        return execution
+        for item, exchange in items:
+            execution = self._get_execution(conn, item)
+            if exchange == 'cloudify-events':
+                events.append(self._get_event(item, execution))
+            elif exchange == 'cloudify-logs':
+                logs.append(self._get_log(item, execution))
+            else:
+                raise ValueError('Unknown exchange type: {0}'.format(exchange))
 
-    def _get_item(self, message, exchange, execution):
-        if exchange == 'cloudify-events':
-            return self._get_event(message, execution)
-        elif exchange == 'cloudify-logs':
-            return self._get_log(message, execution)
-        else:
-            raise ValueError('Unknown exchange type: {0}'.format(exchange))
+        with conn.cursor() as cur:
+            if events:
+                execute_batch(cur, EVENT_INSERT_QUERY, events)
+            if logs:
+                execute_batch(cur, LOG_INSERT_QUERY, logs)
+        conn.commit()
 
     @staticmethod
     def _get_log(message, execution):
-        return Log(
-            id=str(uuid4()),
-            reported_timestamp=message['timestamp'],
-            logger=message['logger'],
-            level=message['level'],
-            message=message['message']['text'],
-            operation=message['context'].get('operation'),
-            node_id=message['context'].get('node_id'),
-            _execution_fk=execution.storage_id,
-            _tenant_id=execution.tenant_id,
-            _creator_id=execution.creator_id
+        return (
+            message['timestamp'],
+            execution['_storage_id'],
+            execution['_tenant_id'],
+            execution['_creator_id'],
+            message['logger'],
+            message['level'],
+            message['message']['text'],
+            message['message_code'],
+            message['context'].get('operation'),
+            message['context'].get('node_id')
         )
 
     @staticmethod
     def _get_event(message, execution):
-        return Event(
-            id=str(uuid4()),
-            reported_timestamp=message['timestamp'],
-            event_type=message['event_type'],
-            message=message['message']['text'],
-            operation=message['context'].get('operation'),
-            node_id=message['context'].get('node_id'),
-            error_causes=message['context'].get('task_error_causes'),
-            _execution_fk=execution.storage_id,
-            _tenant_id=execution.tenant_id,
-            _creator_id=execution.creator_id
+        return (
+            message['timestamp'],
+            execution['_storage_id'],
+            execution['_tenant_id'],
+            execution['_creator_id'],
+            message['event_type'],
+            message['message']['text'],
+            message['message_code'],
+            message['context'].get('operation'),
+            message['context'].get('node_id'),
+            message['context'].get('task_error_causes')
         )
 
 
