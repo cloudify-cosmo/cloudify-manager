@@ -22,6 +22,9 @@ def upgrade():
                                        sa.Boolean(),
                                        nullable=False,
                                        server_default='f'))
+    op.add_column('deployment_updates', sa.Column('_second_execution_fk',
+                                                  sa.Integer(),
+                                                  nullable=True))
     op.add_column('deployment_updates', sa.Column('_old_blueprint_fk',
                                                   sa.Integer(),
                                                   nullable=True))
@@ -48,6 +51,7 @@ def upgrade():
 
 def downgrade():
     op.drop_column('secrets', 'is_hidden_value')
+    op.drop_column('deployment_updates', '_second_execution_fk')
     op.drop_column('deployment_updates', '_old_blueprint_fk')
     op.drop_column('deployment_updates', '_new_blueprint_fk')
     op.drop_column('deployment_updates', 'old_inputs')

@@ -174,6 +174,61 @@ class DeploymentUpdateManager(object):
                                                step.entity_type,
                                                step.entity_id)
 
+    def _perform_changes(self, dep_update, dry_run):
+        # Handle any deployment related changes. i.e. workflows and deployments
+        modified_deployment_entities, raw_updated_deployment = \
+            self._deployment_handler.handle(dep_update, dry_run=dry_run)
+
+        # Retrieve previous_nodes
+        previous_nodes = [node.to_dict() for node in self.sm.list(
+            models.Node, filters={'deployment_id': dep_update.deployment_id})]
+
+        # Update the nodes on the storage
+        modified_entity_ids, depup_nodes = self._node_handler.handle(
+            dep_update, dry_run=dry_run)
+
+        # Extract changes from raw nodes
+        node_instance_changes = self._extract_changes(dep_update,
+                                                      depup_nodes,
+                                                      previous_nodes,
+                                                      dry_run=dry_run)
+
+        # Create (and update for adding step type) node instances
+        # according to the changes in raw_nodes
+        depup_node_instances = self._node_instance_handler.handle(
+            dep_update, node_instance_changes, dry_run=dry_run)
+
+        return (raw_updated_deployment,
+                modified_entity_ids,
+                depup_nodes,
+                depup_node_instances)
+
+    def perform_changes(self,
+                        depup_id,
+                        skip_install,
+                        skip_uninstall,
+                        workflow_id,
+                        reinstall_list):
+        depup = self.get_deployment_update(depup_id)
+        (raw_updated_deployment,
+         modified_entity_ids,
+         depup_nodes,
+         depup_node_instances) = self._perform_changes(depup, dry_run=False)
+        execution = self._execute_update_workflow(
+            depup,
+            depup_node_instances,
+            modified_entity_ids.to_dict(),
+            skip_install=skip_install,
+            skip_uninstall=skip_uninstall,
+            skip_reinstall=True,
+            workflow_id=workflow_id,
+            install_first=False,
+            reinstall_list=reinstall_list
+        )
+        depup.second_execution = execution
+        self.sm.update(depup)
+        return depup
+
     def commit_deployment_update(self,
                                  dep_update,
                                  skip_install=False,
@@ -187,27 +242,13 @@ class DeploymentUpdateManager(object):
         dep_update.state = STATES.UPDATING
         self.sm.update(dep_update)
 
-        # Handle any deployment related changes. i.e. workflows and deployments
-        modified_deployment_entities, raw_updated_deployment = \
-            self._deployment_handler.handle(dep_update)
-
-        # Retrieve previous_nodes
-        previous_nodes = [node.to_dict() for node in self.sm.list(
-            models.Node, filters={'deployment_id': dep_update.deployment_id})]
-
-        # Update the nodes on the storage
-        modified_entity_ids, depup_nodes = self._node_handler.handle(
-            dep_update)
-
-        # Extract changes from raw nodes
-        node_instance_changes = self._extract_changes(dep_update,
-                                                      depup_nodes,
-                                                      previous_nodes)
-
-        # Create (and update for adding step type) node instances
-        # according to the changes in raw_nodes
-        depup_node_instances = self._node_instance_handler.handle(
-            dep_update, node_instance_changes)
+        # if install first is False, we want to update the deployment data only
+        # after uninstalling the removed nodes
+        (raw_updated_deployment,
+         modified_entity_ids,
+         depup_nodes,
+         depup_node_instances) = self._perform_changes(
+            dep_update, dry_run=not install_first)
 
         # Saving the needed changes back to the storage manager for future use
         # (removing entities).
@@ -292,7 +333,8 @@ class DeploymentUpdateManager(object):
     def _extract_changes(self,
                          dep_update,
                          raw_nodes,
-                         previous_nodes):
+                         previous_nodes,
+                         dry_run=False):
         """Extracts the changes between the current node_instances and
         the raw_nodes specified
 
@@ -308,6 +350,13 @@ class DeploymentUpdateManager(object):
                                    self.sm.list(models.NodeInstance,
                                                 filters=deployment_id_filter)]
 
+        scaling_groups = deployment.scaling_groups
+        if dry_run:
+            previous_node_instances = copy.deepcopy(previous_node_instances)
+            raw_nodes = copy.deepcopy(raw_nodes)
+            previous_nodes = copy.deepcopy(previous_nodes)
+            scaling_groups = copy.deepcopy(scaling_groups)
+
         # extract all the None relationships from the deployment update nodes
         # in order to use in the extract changes
         no_none_relationships_nodes = copy.deepcopy(raw_nodes)
@@ -319,7 +368,7 @@ class DeploymentUpdateManager(object):
                 nodes=no_none_relationships_nodes,
                 previous_nodes=previous_nodes,
                 previous_node_instances=previous_node_instances,
-                scaling_groups=deployment.scaling_groups,
+                scaling_groups=scaling_groups,
                 modified_nodes=()
         )
         self._patch_changes_with_relationship_index(
@@ -339,21 +388,17 @@ class DeploymentUpdateManager(object):
                                  if d['target_id'] == target_node_id)
                 relationship['rel_index'] = rel_index
 
-    def _validate_reinstall_list(self,
-                                 reinstall,
-                                 add,
-                                 remove,
-                                 dep_update):
+    def _validate_reinstall(self, reinstall, add, remove, dep_update):
         """validate node-instances explicitly supplied to reinstall list exist
         and are not about to be installed or uninstalled in this update"""
         node_instances = self.sm.list(
             models.NodeInstance,
             filters={'deployment_id': dep_update.deployment_id}
         )
-        node_instances_ids = [n.id for n in node_instances]
-        add_conflict = [n for n in reinstall if n in add]
-        remove_conflict = [n for n in reinstall if n in remove]
-        not_existing = [n for n in reinstall if n not in node_instances_ids]
+        node_instances_ids = {n.id for n in node_instances.items}
+        add_conflict = reinstall & add
+        remove_conflict = reinstall & remove
+        not_existing = reinstall - node_instances_ids
         msg = 'Invalid reinstall list supplied.'
         if not_existing:
             msg += '\nFollowing node instances do not exist in this ' \
@@ -379,12 +424,12 @@ class DeploymentUpdateManager(object):
         """Add nodes that their properties have been updated to the list of
         node instances to reinstall, unless skip_reinstall is true"""
         reinstall_list = reinstall_list or []
-        self._validate_reinstall_list(reinstall_list,
-                                      add_list,
-                                      remove_list,
-                                      dep_update)
+        reinstall = set(reinstall_list)
+        add = set(add_list)
+        remove = set(remove_list)
+        self._validate_reinstall(reinstall, add, remove, dep_update)
         if skip_reinstall:
-            return reinstall_list
+            return list(reinstall)
 
         # get all entities with modifications in properties or operations
         for change_type in (ENTITY_TYPES.PROPERTY, ENTITY_TYPES.OPERATION):
@@ -402,12 +447,12 @@ class DeploymentUpdateManager(object):
                              'node_id': modified[1]}
                 )
 
-                # add instances ids to the reinstall list, if they are not in
-                # the install/uninstall list
-                reinstall_list += [e.id for e in node_instances.items
-                                   if e.id not in add_list
-                                   and e.id not in remove_list]
-        return reinstall_list
+                # add instances ids to the reinstall list
+                reinstall |= {e.id for e in node_instances.items}
+
+        # return the nodes that need to be reinstalled, not including those
+        # that need to be installed/uninstalled
+        return list(reinstall - remove - add)
 
     def _execute_update_workflow(self,
                                  dep_update,
@@ -538,8 +583,13 @@ class DeploymentUpdateManager(object):
         )
         if deployment:
             new_execution.set_deployment(deployment)
-            deployment_update.execution = new_execution
+            if deployment_update.execution_id \
+                    and deployment_update.execution_id != execution_id:
+                deployment_update.second_execution = new_execution
+            else:
+                deployment_update.execution = new_execution
         self.sm.put(new_execution)
+        self.sm.update(deployment_update)
 
         # executing the user workflow
         workflow_plugins = deployment_update.deployment_plan[

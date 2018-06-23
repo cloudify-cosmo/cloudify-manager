@@ -43,7 +43,7 @@ class DeploymentUpdate(SecuredResource):
     @rest_decorators.marshal_with(models.DeploymentUpdate)
     def post(self, id, phase):
         """
-        Provides support for two phases of deployment update. The phase is
+        Provides support for three phases of deployment update. The phase is
         chosen according to the phase arg, and the id is used by this step.
 
         In the first phase the deployment update is
@@ -57,16 +57,22 @@ class DeploymentUpdate(SecuredResource):
         The second step finalizes the commit by manipulating the data model
         according to any removal steps.
 
+
+        The middle step is available in the new API, to allow performing
+        changes after uninstalling and then run workflow for installing.
+
         In order
         :param id: for the initiate step it's the deployment_id, and for the
         finalize step it's the update_id
-        :param phase: initiate or finalize
+        :param phase: initiate, finalize or perform
         :return: update response
         """
         if phase == PHASES.INITIAL:
             return self._commit(id)
         elif phase == PHASES.FINAL:
             return get_deployment_updates_manager().finalize_commit(id)
+        elif phase == PHASES.MIDDLE:
+            return self._middle(id)
 
     @rest_decorators.exceptions_handled
     @authorize('deployment_update_create')
@@ -115,6 +121,21 @@ class DeploymentUpdate(SecuredResource):
                                                 ignore_failure,
                                                 install_first,
                                                 reinstall_list)
+
+    def _middle(self, depup_id):
+        request_json = request.json
+        manager = get_deployment_updates_manager()
+        skip_install = verify_and_convert_bool(
+            'skip_install', request_json.get('skip_install', 'false'))
+        skip_uninstall = verify_and_convert_bool(
+            'skip_uninstall', request_json.get('skip_uninstall', 'false'))
+        workflow_id = request_json.get('workflow_id', None)
+        reinstall_list = request_json.get('reinstall_list', [])
+        return manager.perform_changes(depup_id,
+                                       skip_install,
+                                       skip_uninstall,
+                                       workflow_id,
+                                       reinstall_list)
 
     def _commit(self, deployment_id):
         request_json = request.args

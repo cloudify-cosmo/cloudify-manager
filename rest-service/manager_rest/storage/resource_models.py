@@ -327,6 +327,7 @@ class DeploymentUpdate(SQLResourceBase):
     state = db.Column(db.Text)
 
     _execution_fk = foreign_key(Execution._storage_id, nullable=True)
+    _second_execution_fk = foreign_key(Execution._storage_id, nullable=True)
     _deployment_fk = foreign_key(Deployment._storage_id)
     _old_blueprint_fk = foreign_key(Blueprint._storage_id, nullable=True)
     _new_blueprint_fk = foreign_key(Blueprint._storage_id, nullable=True)
@@ -334,6 +335,13 @@ class DeploymentUpdate(SQLResourceBase):
     @declared_attr
     def execution(cls):
         return one_to_many_relationship(cls, Execution, cls._execution_fk)
+
+    @declared_attr
+    def second_execution(cls):
+        return one_to_many_relationship(cls,
+                                        Execution,
+                                        cls._second_execution_fk,
+                                        backreference='update_second_phase')
 
     @declared_attr
     def deployment(cls):
@@ -357,6 +365,7 @@ class DeploymentUpdate(SQLResourceBase):
 
     deployment_id = association_proxy('deployment', 'id')
     execution_id = association_proxy('execution', 'id')
+    second_execution_id = association_proxy('second_execution', 'id')
     old_blueprint_id = association_proxy('old_blueprint', 'id')
     new_blueprint_id = association_proxy('new_blueprint', 'id')
 

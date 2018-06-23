@@ -37,7 +37,7 @@ DeploymentUpdateNodeModificationTypes = namedtuple(
 )
 
 DeploymentUpdatePhases = namedtuple('DeploymentUpdatePhases',
-                                    ['INITIAL', 'FINAL'])
+                                    ['INITIAL', 'FINAL', 'MIDDLE'])
 
 ENTITY_TYPES = DeploymentUpdateEntityTypes(NODE='node',
                                            RELATIONSHIP='relationship',
@@ -71,7 +71,9 @@ NODE_MOD_TYPES = DeploymentUpdateNodeModificationTypes(
         RELATED='related'
 )
 
-PHASES = DeploymentUpdatePhases(INITIAL='initiate', FINAL='finalize')
+PHASES = DeploymentUpdatePhases(INITIAL='initiate',
+                                FINAL='finalize',
+                                MIDDLE='middle')
 
 PATH_SEPARATOR = ':'
 
