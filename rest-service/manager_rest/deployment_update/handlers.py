@@ -28,7 +28,7 @@ class UpdateHandler(StorageClient):
                                 supported_entity_types,
                                 entity_handlers,
                                 modified_entities,
-                                entity):
+                                current_entities_dict):
         """
         Iterate over the steps of the deployment update and handle each
         step according to its operation, passing the deployment update
@@ -44,7 +44,8 @@ class UpdateHandler(StorageClient):
                                                     dep_update.deployment_id,
                                                     step.entity_type,
                                                     step.entity_id)
-                entity_id = entity_updater(entity_context, entity)
+                entity_id = entity_updater(entity_context,
+                                           current_entities_dict)
                 modified_entities[step.entity_type].append(entity_id)
 
 
@@ -407,7 +408,7 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
             supported_entity_types=self._supported_entity_types,
             entity_handlers=self._entity_handlers,
             modified_entities=modified_entities,
-            entity=nodes_dict
+            current_entities_dict=nodes_dict
         )
         return modified_entities, nodes_dict.values()
 
@@ -703,7 +704,7 @@ class DeploymentUpdateDeploymentHandler(UpdateHandler):
             supported_entity_types=self._supported_entity_types,
             entity_handlers=self._entity_handlers,
             modified_entities=modified_entities,
-            entity=deployment
+            current_entities_dict=deployment
         )
         return modified_entities, deployment
 
