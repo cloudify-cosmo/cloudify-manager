@@ -56,6 +56,7 @@ DEPLOYMENT_PLUGINS_TO_INSTALL = 'deployment_plugins_to_install'
 CENTRAL_DEPLOYMENT_AGENT_PLUGINS = 'central_deployment_agent_plugins'
 HOST_AGENT_PLUGINS = 'host_agent_plugins'
 PLUGIN = 'plugin'
+PLUGINS = 'plugins'
 PLUGINS_TO_INSTALL = 'plugins_to_install'
 DESCRIPTION = 'description'
 CONTAINED_IN_RELATIONSHIP_TYPE = 'cloudify.relationships.contained_in'
@@ -374,26 +375,28 @@ class StepExtractor(object):
                         self._create_step(DESCRIPTION, modify=True)
 
     def _extract_host_agent_plugins_steps(self, old_nodes, new_nodes):
-        with self.entity_id_builder.extend_id(HOST_AGENT_PLUGINS):
+        # We want to update both the node's `plugins_to_install` and `plugins`
+        for entity_type in (PLUGINS_TO_INSTALL, PLUGINS):
             for new_node_name, new_node in new_nodes.items():
-                new_plugins_to_install = new_node[PLUGINS_TO_INSTALL]
+                new_plugins = new_node[entity_type]
 
                 # If it's a new node, the plugin will be installed anyway
-                if not new_plugins_to_install or \
-                        new_node_name not in old_nodes:
+                if not new_plugins or new_node_name not in old_nodes:
                     continue
 
-                with self.entity_id_builder.extend_id(new_node_name):
+                # Add the entity type to the ID, to be able to differentiate
+                # between `plugins_to_install` and `plugins` in the handler
+                with self.entity_id_builder.extend_id(entity_type), \
+                        self.entity_id_builder.extend_id(new_node_name):
                     old_node = old_nodes[new_node_name]
                     if old_node == new_node:
                         continue
-                    old_plugins_to_install = old_node[PLUGINS_TO_INSTALL]
-                    for new_plugin in new_plugins_to_install:
-                        if not new_plugin['install']:
-                            continue
-
-                        new_plug_name = new_plugin['name']
-                        old_plugin = next((p for p in old_plugins_to_install if p['name'] == new_plug_name), None)
+                    old_plugins = old_node[entity_type]
+                    for new_plugin in new_plugins:
+                        old_plugin = next(
+                            (p for p in old_plugins if
+                             p['name'] == new_plugin['name']),
+                            None)
                         if not old_plugin:
                             self._create_step(PLUGIN)
                         elif new_plugin != old_plugin:
