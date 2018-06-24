@@ -302,10 +302,7 @@ class StepExtractor(object):
         self._extract_steps_from_description(old[DESCRIPTION],
                                              new[DESCRIPTION])
         self._extract_host_agent_plugins_steps(old[NODES], new[NODES])
-        self._extract_central_deployment_agent_plugins_steps(
-            old[DEPLOYMENT_PLUGINS_TO_INSTALL],
-            new[DEPLOYMENT_PLUGINS_TO_INSTALL]
-        )
+
         self._extract_steps(new, old)
         self._inverted_diff_perspective = True
         self._extract_steps(old, new)
@@ -400,26 +397,6 @@ class StepExtractor(object):
                         if not old_plugin:
                             self._create_step(PLUGIN)
                         elif new_plugin != old_plugin:
-                            self._create_step(PLUGIN, modify=True)
-
-    def _extract_central_deployment_agent_plugins_steps(
-            self,
-            old_deployment_plugins_to_install,
-            new_deployment_plugins_to_install
-    ):
-        with self.entity_id_builder.extend_id(
-                CENTRAL_DEPLOYMENT_AGENT_PLUGINS):
-            for new_cda_plugin in new_deployment_plugins_to_install:
-                if new_deployment_plugins_to_install[
-                        new_cda_plugin]['install']:
-                    with self.entity_id_builder.extend_id(new_cda_plugin):
-                        if new_cda_plugin not in \
-                                old_deployment_plugins_to_install:
-                            self._create_step(PLUGIN)
-                        elif new_deployment_plugins_to_install[
-                            new_cda_plugin] != \
-                                old_deployment_plugins_to_install[
-                                    new_cda_plugin]:
                             self._create_step(PLUGIN, modify=True)
 
     @staticmethod
