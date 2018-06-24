@@ -13,7 +13,8 @@ def get_entity_context(plan, deployment_id, entity_type, entity_id):
         ENTITY_TYPES.OPERATION: _operation_context,
         ENTITY_TYPES.WORKFLOW: WorkflowContext,
         ENTITY_TYPES.OUTPUT: OutputContext,
-        ENTITY_TYPES.DESCRIPTION: DescriptionContext
+        ENTITY_TYPES.DESCRIPTION: DescriptionContext,
+        ENTITY_TYPES.PLUGIN: PluginContext
     }
     context = entity_context_by_type[entity_type]
     return context(plan, deployment_id, *utils.get_entity_keys(entity_id))

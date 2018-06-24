@@ -667,18 +667,21 @@ class DeploymentUpdateDeploymentHandler(UpdateHandler):
         self._entity_handlers = {
             ENTITY_TYPES.WORKFLOW: WorkflowHandler(),
             ENTITY_TYPES.OUTPUT: OutputHandler(),
-            ENTITY_TYPES.DESCRIPTION: DescriptionHandler()
+            ENTITY_TYPES.DESCRIPTION: DescriptionHandler(),
+            ENTITY_TYPES.PLUGIN: PluginHandler()
         }
         self._supported_entity_types = {ENTITY_TYPES.WORKFLOW,
                                         ENTITY_TYPES.OUTPUT,
-                                        ENTITY_TYPES.DESCRIPTION}
+                                        ENTITY_TYPES.DESCRIPTION,
+                                        ENTITY_TYPES.PLUGIN}
 
     def handle(self, dep_update):
         deployment = dep_update.deployment.to_dict()
         modified_entities = {
             ENTITY_TYPES.WORKFLOW: [],
             ENTITY_TYPES.OUTPUT: [],
-            ENTITY_TYPES.DESCRIPTION: []
+            ENTITY_TYPES.DESCRIPTION: [],
+            ENTITY_TYPES.PLUGIN: []
         }
         for step in dep_update.steps:
             if step.entity_type in self._supported_entity_types:
