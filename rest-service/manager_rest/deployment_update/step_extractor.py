@@ -378,6 +378,7 @@ class StepExtractor(object):
             for new_node_name, new_node in new_nodes.items():
                 new_plugins_to_install = new_node[PLUGINS_TO_INSTALL]
 
+                # If it's a new node, the plugin will be installed anyway
                 if not new_plugins_to_install or \
                         new_node_name not in old_nodes:
                     continue
@@ -387,15 +388,15 @@ class StepExtractor(object):
                     if old_node == new_node:
                         continue
                     old_plugins_to_install = old_node[PLUGINS_TO_INSTALL]
-                    for new_plugin_to_install in new_plugins_to_install:
-                        if not new_plugin_to_install['install']:
+                    for new_plugin in new_plugins_to_install:
+                        if not new_plugin['install']:
                             continue
 
-                        new_plug_name = new_plugin_to_install['name']
-                        old_plugins_to_install = next((p for p in old_plugins_to_install if p['name'] == new_plug_name), None)
-                        if not old_plugins_to_install:
+                        new_plug_name = new_plugin['name']
+                        old_plugin = next((p for p in old_plugins_to_install if p['name'] == new_plug_name), None)
+                        if not old_plugin:
                             self._create_step(PLUGIN)
-                        elif new_plugin_to_install != old_plugins_to_install:
+                        elif new_plugin != old_plugin:
                             self._create_step(PLUGIN, modify=True)
 
     def _extract_central_deployment_agent_plugins_steps(
