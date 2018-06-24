@@ -20,7 +20,7 @@ from unittest import TestCase
 from faker import Faker
 from flask import Flask
 from mock import patch
-from nose.plugins.attrib import attr
+from manager_rest.test.attribute import attr
 
 from manager_rest.manager_exceptions import BadParametersError
 from manager_rest.rest.resources_v1 import Events as EventsV1

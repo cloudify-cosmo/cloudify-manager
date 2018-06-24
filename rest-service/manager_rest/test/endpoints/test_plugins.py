@@ -15,7 +15,7 @@
 
 import os
 from mock import patch
-from nose.plugins.attrib import attr
+from manager_rest.test.attribute import attr
 
 from manager_rest import manager_exceptions
 from manager_rest.test import base_test

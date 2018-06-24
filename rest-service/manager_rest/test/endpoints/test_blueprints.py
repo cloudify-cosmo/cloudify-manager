@@ -17,7 +17,7 @@ import os
 import tempfile
 import shutil
 
-from nose.plugins.attrib import attr
+from manager_rest.test.attribute import attr
 
 from manager_rest import archiving
 from manager_rest.test import base_test

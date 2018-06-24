@@ -29,7 +29,7 @@ import yaml
 import wagon
 
 from mock import MagicMock, patch
-from nose.plugins.attrib import attr
+from manager_rest.test.attribute import attr
 from flask.testing import FlaskClient
 
 from cloudify_rest_client import CloudifyClient

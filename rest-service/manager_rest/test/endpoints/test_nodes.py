@@ -14,7 +14,7 @@
 #  * limitations under the License.
 from datetime import datetime
 
-from nose.plugins.attrib import attr
+from manager_rest.test.attribute import attr
 from unittest import skip
 
 from cloudify_rest_client.exceptions import CloudifyClientError

@@ -16,7 +16,7 @@
 import os
 
 from mock import patch
-from nose.plugins.attrib import attr
+from manager_rest.test.attribute import attr
 
 from manager_rest.utils import read_json_file, write_dict_to_json_file
 from manager_rest.utils import plugin_installable_on_current_platform

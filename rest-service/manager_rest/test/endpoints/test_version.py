@@ -13,7 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from nose.plugins.attrib import attr
+from manager_rest.test.attribute import attr
 
 from manager_rest.rest.resources_v1.version import get_version_data
 from manager_rest.test.security_utils import get_admin_user

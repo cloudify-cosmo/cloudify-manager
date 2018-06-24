@@ -18,8 +18,7 @@ import shutil
 import tarfile
 
 import requests
-import nose.tools
-
+from pytest.mark import skip
 
 from integration_tests.framework import utils
 from integration_tests.tests import utils as test_utils
@@ -40,7 +39,7 @@ class _HelloWorld(object):
         self.modify_blueprint_func = modify_blueprint_func
         self.skip_uninstall = skip_uninstall
 
-    @nose.tools.nottest
+    @skip("Basic test frame")
     def test_hello_world(self):
         blueprint_file = self._prepare_hello_world()
         deployment, _ = self.test_case.deploy_application(

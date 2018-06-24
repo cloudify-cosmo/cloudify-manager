@@ -15,7 +15,7 @@
 
 from json import loads
 
-from nose.plugins.attrib import attr
+from manager_rest.test.attribute import attr
 
 from manager_rest.test import base_test
 

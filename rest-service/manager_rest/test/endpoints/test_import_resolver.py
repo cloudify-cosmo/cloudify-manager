@@ -14,7 +14,7 @@
 #  * limitations under the License.
 
 import mock
-from nose.plugins.attrib import attr
+from manager_rest.test.attribute import attr
 
 from manager_rest.test import base_test
 from cloudify_rest_client.exceptions import CloudifyClientError
