@@ -353,12 +353,14 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         self._supported_entity_types = {ENTITY_TYPES.NODE,
                                         ENTITY_TYPES.RELATIONSHIP,
                                         ENTITY_TYPES.OPERATION,
-                                        ENTITY_TYPES.PROPERTY}
+                                        ENTITY_TYPES.PROPERTY,
+                                        ENTITY_TYPES.PLUGIN}
         self._entity_handlers = {
             ENTITY_TYPES.NODE: NodeHandler(),
             ENTITY_TYPES.RELATIONSHIP: RelationshipHandler(),
             ENTITY_TYPES.OPERATION: OperationHandler(),
-            ENTITY_TYPES.PROPERTY: PropertyHandler()
+            ENTITY_TYPES.PROPERTY: PropertyHandler(),
+            ENTITY_TYPES.PLUGIN: PluginHandler()
         }
 
     def handle(self, dep_update):
@@ -668,20 +670,17 @@ class DeploymentUpdateDeploymentHandler(UpdateHandler):
             ENTITY_TYPES.WORKFLOW: WorkflowHandler(),
             ENTITY_TYPES.OUTPUT: OutputHandler(),
             ENTITY_TYPES.DESCRIPTION: DescriptionHandler(),
-            ENTITY_TYPES.PLUGIN: PluginHandler()
         }
         self._supported_entity_types = {ENTITY_TYPES.WORKFLOW,
                                         ENTITY_TYPES.OUTPUT,
-                                        ENTITY_TYPES.DESCRIPTION,
-                                        ENTITY_TYPES.PLUGIN}
+                                        ENTITY_TYPES.DESCRIPTION}
 
     def handle(self, dep_update):
         deployment = dep_update.deployment.to_dict()
         modified_entities = {
             ENTITY_TYPES.WORKFLOW: [],
             ENTITY_TYPES.OUTPUT: [],
-            ENTITY_TYPES.DESCRIPTION: [],
-            ENTITY_TYPES.PLUGIN: []
+            ENTITY_TYPES.DESCRIPTION: []
         }
         for step in dep_update.steps:
             if step.entity_type in self._supported_entity_types:
