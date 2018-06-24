@@ -485,45 +485,6 @@ class StepExtractor(object):
                     else:
                         self._create_step(OPERATION)
 
-    def _extract_step_from_workflows(self,
-                                     new_workflows,
-                                     old_workflows,
-                                     old_workflow_plugins_to_install,
-                                     new_workflow_plugins_to_install):
-        with self.entity_id_builder.extend_id(WORKFLOWS):
-            for workflow_name in new_workflows:
-                with self.entity_id_builder.extend_id(workflow_name):
-                    new_workflow = new_workflows[workflow_name]
-                    if workflow_name in old_workflows:
-                        old_workflow = old_workflows[workflow_name]
-                        if old_workflow != new_workflow:
-                            if new_workflow['plugin'] not in \
-                                    old_workflow_plugins_to_install:
-                                # the plugin of the workflow was modified
-                                if new_workflow_plugins_to_install[new_workflow['plugin']]['install']:
-                                    self._create_step(WORKFLOW,
-                                                      supported=False,
-                                                      modify=True)
-                            else:
-                                self._create_step(WORKFLOW,
-                                                  modify=True)
-                    else:
-                        if new_workflow['plugin'] not in \
-                            old_workflow_plugins_to_install and \
-                            new_workflow_plugins_to_install[
-                                new_workflow['plugin']]['install']:
-                            if not self._inverted_diff_perspective:
-                                # the added workflow's plugin does not exist
-                                # in the old workflows_plugins_to_install
-                                self._create_step(WORKFLOW,
-                                                  supported=False)
-                            else:
-                                # if we are in an inversed perspective, then
-                                # remove the workflow as usual
-                                self._create_step(WORKFLOW)
-                        else:
-                            self._create_step(WORKFLOW)
-
     def _extract_steps_from_nodes(self,
                                   new_nodes,
                                   old_nodes):
@@ -595,14 +556,9 @@ class StepExtractor(object):
                                                   new_entities,
                                                   old_entities)
             elif entities_name == WORKFLOWS:
-                self._extract_step_from_workflows(
-                    new_workflows=new_entities,
-                    old_workflows=old_entities,
-                    old_workflow_plugins_to_install=self.old_deployment_plan[
-                        'workflow_plugins_to_install'],
-                    new_workflow_plugins_to_install=self.new_deployment_plan[
-                        'workflow_plugins_to_install']
-                )
+                self._extract_steps_from_entities(WORKFLOWS,
+                                                  new_entities,
+                                                  old_entities)
             elif entities_name == POLICY_TYPES:
                 self._extract_steps_from_entities(POLICY_TYPES,
                                                   new_entities,
