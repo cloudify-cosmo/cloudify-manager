@@ -23,6 +23,30 @@ class UpdateHandler(StorageClient):
     def finalize(self, *_, **__):
         raise NotImplementedError
 
+    @staticmethod
+    def _fill_modified_entities(dep_update,
+                                supported_entity_types,
+                                entity_handlers,
+                                modified_entities,
+                                entity):
+        """
+        Iterate over the steps of the deployment update and handle each
+        step according to its operation, passing the deployment update
+        object, step entity type, entity id and a dict of updated nodes.
+        Each handler updated the dict of updated nodes, which enables
+        accumulating changes.
+        """
+        for step in dep_update.steps:
+            if step.entity_type in supported_entity_types:
+                entity_handler = entity_handlers[step.entity_type]
+                entity_updater = getattr(entity_handler, step.action)
+                entity_context = get_entity_context(dep_update.deployment_plan,
+                                                    dep_update.deployment_id,
+                                                    step.entity_type,
+                                                    step.entity_id)
+                entity_id = entity_updater(entity_context, entity)
+                modified_entities[step.entity_type].append(entity_id)
+
 
 class FrozenEntitiesHandlerBase(StorageClient):
     def add(self, ctx, current_entities):
@@ -378,21 +402,13 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
                       for node in current_nodes}
         modified_entities = deployment_update_utils.ModifiedEntitiesDict()
 
-        # Iterate over the steps of the deployment update and handle each
-        # step according to its operation, passing the deployment update
-        # object, step entity type, entity id and a dict of updated nodes.
-        # Each handler updated the dict of updated nodes, which enables
-        # accumulating changes.
-        for step in dep_update.steps:
-            if step.entity_type in self._supported_entity_types:
-                entity_handler = self._entity_handlers[step.entity_type]
-                entity_updater = getattr(entity_handler, step.action)
-                entity_context = get_entity_context(dep_update.deployment_plan,
-                                                    dep_update.deployment_id,
-                                                    step.entity_type,
-                                                    step.entity_id)
-                entity_id = entity_updater(entity_context, nodes_dict)
-                modified_entities[step.entity_type].append(entity_id)
+        self._fill_modified_entities(
+            dep_update=dep_update,
+            supported_entity_types=self._supported_entity_types,
+            entity_handlers=self._entity_handlers,
+            modified_entities=modified_entities,
+            entity=nodes_dict
+        )
         return modified_entities, nodes_dict.values()
 
     def finalize(self, dep_update):
@@ -682,16 +698,13 @@ class DeploymentUpdateDeploymentHandler(UpdateHandler):
             ENTITY_TYPES.OUTPUT: [],
             ENTITY_TYPES.DESCRIPTION: []
         }
-        for step in dep_update.steps:
-            if step.entity_type in self._supported_entity_types:
-                entity_handler = self._entity_handlers[step.entity_type]
-                entity_updater = getattr(entity_handler, step.action)
-                entity_context = get_entity_context(dep_update.deployment_plan,
-                                                    dep_update.deployment_id,
-                                                    step.entity_type,
-                                                    step.entity_id)
-                entity_id = entity_updater(entity_context, deployment)
-                modified_entities[step.entity_type].append(entity_id)
+        self._fill_modified_entities(
+            dep_update=dep_update,
+            supported_entity_types=self._supported_entity_types,
+            entity_handlers=self._entity_handlers,
+            modified_entities=modified_entities,
+            entity=deployment
+        )
         return modified_entities, deployment
 
     def finalize(self, dep_update):
