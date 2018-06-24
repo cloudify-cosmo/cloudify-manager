@@ -391,13 +391,11 @@ class StepExtractor(object):
                                         new_plug_name = new_plugin_to_install['name']
                                         old_plugins_to_install = next((p for p in old_plugins_to_install if p['name'] == new_plug_name), None)
                                         if not old_plugins_to_install:
-                                            self._create_step(PLUGIN,
-                                                              supported=False)
+                                            self._create_step(PLUGIN)
                                         else:
                                             if new_plugin_to_install != old_plugins_to_install:
                                                 self._create_step(
                                                     PLUGIN,
-                                                    supported=False,
                                                     modify=True)
 
     def _extract_central_deployment_agent_plugins_steps(
@@ -413,16 +411,13 @@ class StepExtractor(object):
                     with self.entity_id_builder.extend_id(new_cda_plugin):
                         if new_cda_plugin not in \
                                 old_deployment_plugins_to_install:
-                            self._create_step(PLUGIN,
-                                              supported=False)
+                            self._create_step(PLUGIN)
                         else:
                             if new_deployment_plugins_to_install[
                                 new_cda_plugin] != \
                                     old_deployment_plugins_to_install[
                                         new_cda_plugin]:
-                                self._create_step(PLUGIN,
-                                                  supported=False,
-                                                  modify=True)
+                                self._create_step(PLUGIN, modify=True)
 
     @staticmethod
     def _get_matching_relationship(relationship, relationships):
