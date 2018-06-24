@@ -11,8 +11,7 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-
-from nose.tools import nottest
+from pytest import mark
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 
@@ -402,7 +401,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         deployment = self.client.deployments.get(dep_update.deployment_id)
         self.assertNotIn('custom_output', deployment.outputs)
 
-    @nottest
+    @mark.skip
     def test_remove_description(self):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('remove_description')

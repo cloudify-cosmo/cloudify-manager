@@ -28,8 +28,7 @@ import unittest
 import sh
 from contextlib import contextmanager
 
-import nose.tools
-
+from pytest.mark import skip
 import wagon
 
 import cloudify.utils
@@ -524,7 +523,7 @@ class BaseAgentTestCase(BaseTestCase):
             node_id=node_id)[0]
         return instance.runtime_properties
 
-    @nose.tools.nottest
+    @skip("Basic test frame to be used in other tests")
     def test_hello_world(self,
                          use_cli=False,
                          modify_blueprint_func=None,

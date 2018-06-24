@@ -15,7 +15,7 @@
 
 import os
 
-from nose.plugins.attrib import attr
+from manager_rest.test.attribute import attr
 
 from manager_rest.test.base_test import LATEST_API_VERSION
 from manager_rest.storage.models_states import VisibilityState

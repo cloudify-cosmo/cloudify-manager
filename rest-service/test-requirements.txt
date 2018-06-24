@@ -1,0 +1,4 @@
+mock
+python-dateutil
+wagon[venv]==0.6.3
+faker

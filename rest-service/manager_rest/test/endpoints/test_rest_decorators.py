@@ -19,7 +19,7 @@ from unittest import TestCase
 
 from dateutil.parser import parse as parse_datetime
 from mock import Mock, patch, MagicMock
-from nose.plugins.attrib import attr
+from manager_rest.test.attribute import attr
 from voluptuous import Invalid
 
 from manager_rest.rest.rest_decorators import (

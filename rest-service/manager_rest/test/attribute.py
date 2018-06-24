@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2014 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2017 GigaSpaces Technologies Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,18 +13,15 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from manager_rest.test.attribute import attr
 
-from manager_rest.test import base_test
-
-
-@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
-class StatusTestCase(base_test.BaseServerTestCase):
-
-    def test_get_empty(self):
-        result = self.get('/status')
-        self.assertEqual(result.json['status'], 'running')
-
-    def test_get_services(self):
-        result = self.get('/status')
-        self.assertEqual(type(result.json['services']), list)
+def attr(*args, **kwargs):
+    """Decorator that adds attributes to classes or functions
+    for use with unit tests runner.
+    """
+    def wrapped(element):
+        for name in args:
+            setattr(element, name, True)
+        for name, value in kwargs.iteritems():
+            setattr(element, name, value)
+        return element
+    return wrapped

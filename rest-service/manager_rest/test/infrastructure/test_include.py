@@ -16,7 +16,7 @@
 import uuid
 
 import mock
-from nose.plugins.attrib import attr
+from manager_rest.test.attribute import attr
 
 from cloudify_rest_client.exceptions import NoSuchIncludeFieldError
 

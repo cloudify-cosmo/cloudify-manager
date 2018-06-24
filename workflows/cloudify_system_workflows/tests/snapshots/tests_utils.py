@@ -6,7 +6,7 @@ import subprocess
 import unittest
 import tempfile
 
-from nose.tools import nottest
+from pytest import mark
 
 from cloudify_system_workflows.snapshots.utils import make_zip64_archive
 
@@ -57,7 +57,7 @@ class MakeZip64Test(unittest.TestCase):
             'count={}'.format(chunk_count),
         ])
 
-    @nottest
+    @mark.skip
     def test_huge_file(self):
         """Size should not be be a problem with zip64 enabled.
 

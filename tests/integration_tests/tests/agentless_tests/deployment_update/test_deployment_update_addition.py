@@ -16,7 +16,7 @@ import os
 import shutil
 import tempfile
 
-from nose.tools import nottest
+from pytest import mark
 
 from integration_tests.tests.utils import tar_blueprint
 
@@ -560,7 +560,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         self.assertDictContainsSubset({'custom_output': {'value': 0}},
                                       deployment.outputs)
 
-    @nottest
+    @mark.skip
     def test_add_description(self):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('add_description')

@@ -18,7 +18,7 @@ import os
 import uuid
 import exceptions
 
-from nose.plugins.attrib import attr
+from manager_rest.test.attribute import attr
 
 from manager_rest.test import base_test
 from manager_rest import manager_exceptions

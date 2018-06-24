@@ -17,7 +17,7 @@ import copy
 import uuid
 import dateutil.parser
 from datetime import timedelta
-from nose.plugins.attrib import attr
+from manager_rest.test.attribute import attr
 
 from manager_rest.test.base_test import CLIENT_API_VERSION
 

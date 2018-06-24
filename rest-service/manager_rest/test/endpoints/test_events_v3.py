@@ -14,7 +14,7 @@
 
 from unittest import TestCase
 
-from nose.plugins.attrib import attr
+from manager_rest.test.attribute import attr
 
 from manager_rest.rest.resources_v3 import Events as EventsV3
 from manager_rest.test import base_test

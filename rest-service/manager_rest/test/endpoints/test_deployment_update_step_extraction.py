@@ -2,7 +2,7 @@ import copy
 import json
 
 from mock import patch
-from nose.plugins.attrib import attr
+from manager_rest.test.attribute import attr
 import networkx as nx
 
 

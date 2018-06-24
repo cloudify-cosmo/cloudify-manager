@@ -19,8 +19,8 @@ import uuid
 import datetime
 
 from mock import patch
-from nose.tools import nottest
-from nose.plugins.attrib import attr
+from pytest import mark
+from manager_rest.test.attribute import attr
 
 from dsl_parser import exceptions as parser_exceptions
 from cloudify_rest_client.exceptions import CloudifyClientError
@@ -310,7 +310,7 @@ class DeploymentUpdatesTestCase(base_test.BaseServerTestCase):
                              getattr(depup, att))
 
 
-@nottest
+@mark.skip
 class DeploymentUpdatesStepAndStageTestCase(base_test.BaseServerTestCase):
     def test_step_invalid_operation(self):
         deployment_id = 'dep'

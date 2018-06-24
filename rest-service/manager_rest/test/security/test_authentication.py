@@ -13,7 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from nose.plugins.attrib import attr
+from manager_rest.test.attribute import attr
 from base64 import urlsafe_b64encode
 
 from manager_rest.constants import CLOUDIFY_TENANT_HEADER

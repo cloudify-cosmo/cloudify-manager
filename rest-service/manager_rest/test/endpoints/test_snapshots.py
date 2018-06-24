@@ -1,7 +1,7 @@
 
 import os
 
-from nose.plugins.attrib import attr
+from manager_rest.test.attribute import attr
 
 from manager_rest.test import base_test
 from .test_utils import generate_progress_func

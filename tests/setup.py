@@ -33,11 +33,5 @@ setup(
         'sh==1.11',
         'awscli==1.11.14',
         'docl',
-    ],
-    entry_points={
-        'nose.plugins.0.10': [
-            'suitesplitter = integration_tests.framework.'
-            'suite_splitter:SuiteSplitter',
-        ]
-    },
+    ]
 )

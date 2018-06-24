@@ -13,7 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from nose.plugins.attrib import attr
+from manager_rest.test.attribute import attr
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 from manager_rest import manager_exceptions
