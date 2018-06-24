@@ -43,7 +43,7 @@ class SecretsKey(SecuredResource):
         secret = get_storage_manager().get(models.Secret, key)
         secret_dict = secret.to_dict()
         if secret_dict['is_hidden_value'] and not \
-                self._is_hidden_value_permitted(secret_dict['created_by']):
+                self._is_hidden_value_permitted(secret):
             # Hide the value of the secret
             secret_dict['value'] = ''
         else:
@@ -124,15 +124,14 @@ class SecretsKey(SecuredResource):
         self._validate_secret_modification_permitted(secret)
         return storage_manager.delete(secret)
 
-    def _is_hidden_value_permitted(self, creator):
-        current_tenant = get_storage_manager().current_tenant
-        current_username = current_user.username
-        return is_administrator(current_tenant) or creator == current_username
+    def _is_hidden_value_permitted(self, secret):
+        return is_administrator(secret.tenant) or \
+               secret.created_by == current_user.username
 
     def _validate_secret_modification_permitted(self, secret):
         get_resource_manager().validate_modification_permitted(secret)
         if secret.is_hidden_value and \
-                not self._is_hidden_value_permitted(secret.created_by):
+                not self._is_hidden_value_permitted(secret):
             raise ForbiddenError(
                 'User `{0}` is not permitted to modify the hidden value '
                 'secret `{1}`'.format(current_user.username, secret.key)
@@ -148,7 +147,7 @@ class SecretsKey(SecuredResource):
         )
         # Only the creator of the secret and the admins can change a secret
         # to be hidden value
-        if not self._is_hidden_value_permitted(secret.created_by):
+        if not self._is_hidden_value_permitted(secret):
             raise ForbiddenError(
                 'User `{0}` is not permitted to modify the secret `{1}` '
                 'to be hidden value'.format(current_user.username, secret.key)
