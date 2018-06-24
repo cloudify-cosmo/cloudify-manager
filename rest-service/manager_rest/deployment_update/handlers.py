@@ -372,6 +372,43 @@ class DescriptionHandler(ModifiableEntityHandlerBase):
         return ctx.entity_id
 
 
+class PluginHandler(ModifiableEntityHandlerBase):
+    def add(self, ctx, current_entities):
+        return self._mutate_plugins_list(ctx, current_entities, self._add)
+
+    def remove(self, ctx, current_entities):
+        return self._mutate_plugins_list(ctx, current_entities, self._remove)
+
+    def modify(self, ctx, current_entities):
+        return self._mutate_plugins_list(ctx, current_entities, self._modify)
+
+    @staticmethod
+    def _add(ctx, plugins):
+        new_plugin = ctx.raw_entity_value
+        plugins.append(new_plugin)
+        return plugins
+
+    @staticmethod
+    def _modify(ctx, plugins):
+        plugins = PluginHandler._remove(ctx, plugins)
+        return PluginHandler._add(ctx, plugins)
+
+    @staticmethod
+    def _remove(ctx, plugins):
+        return [p for p in plugins if p['name'] != ctx.plugin_name]
+
+    def _mutate_plugins_list(self, ctx, current_entities, mutate_func):
+        node = get_node(ctx.deployment_id, ctx.raw_node_id)
+        # Can be either node.plugins or node.plugins_to_install
+        plugins_dict = getattr(node, ctx.plugin_key, {})
+        plugins = deepcopy(plugins_dict)
+        plugins = mutate_func(ctx, plugins)
+        current_entities[ctx.raw_node_id][ctx.plugin_key] = plugins
+        setattr(node, ctx.plugin_key, plugins)
+        self.sm.update(node)
+        return ctx.entity_id
+
+
 class DeploymentUpdateNodeHandler(UpdateHandler):
     def __init__(self):
         super(DeploymentUpdateNodeHandler, self).__init__()
