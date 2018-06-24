@@ -375,8 +375,7 @@ class StepExtractor(object):
 
     def _extract_host_agent_plugins_steps(self, old_nodes, new_nodes):
         with self.entity_id_builder.extend_id(HOST_AGENT_PLUGINS):
-            for new_node_name in new_nodes:
-                new_node = new_nodes[new_node_name]
+            for new_node_name, new_node in new_nodes.items():
                 new_plugins_to_install = new_node[PLUGINS_TO_INSTALL]
 
                 if not new_plugins_to_install or \
@@ -407,8 +406,8 @@ class StepExtractor(object):
         with self.entity_id_builder.extend_id(
                 CENTRAL_DEPLOYMENT_AGENT_PLUGINS):
             for new_cda_plugin in new_deployment_plugins_to_install:
-                if new_deployment_plugins_to_install[new_cda_plugin] \
-                        ['install']:
+                if new_deployment_plugins_to_install[
+                        new_cda_plugin]['install']:
                     with self.entity_id_builder.extend_id(new_cda_plugin):
                         if new_cda_plugin not in \
                                 old_deployment_plugins_to_install:
