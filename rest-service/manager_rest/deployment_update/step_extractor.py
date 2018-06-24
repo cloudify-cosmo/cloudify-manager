@@ -378,25 +378,26 @@ class StepExtractor(object):
             for new_node_name in new_nodes:
                 new_node = new_nodes[new_node_name]
                 new_plugins_to_install = new_node[PLUGINS_TO_INSTALL]
-                if new_plugins_to_install:
-                    if new_node_name in old_nodes:
-                        with self.entity_id_builder.extend_id(new_node_name):
-                            old_node = old_nodes[new_node_name]
-                            if old_node != new_node:
-                                old_plugins_to_install = old_node[
-                                    PLUGINS_TO_INSTALL]
-                                for new_plugin_to_install in \
-                                        new_plugins_to_install:
-                                    if new_plugin_to_install['install']:
-                                        new_plug_name = new_plugin_to_install['name']
-                                        old_plugins_to_install = next((p for p in old_plugins_to_install if p['name'] == new_plug_name), None)
-                                        if not old_plugins_to_install:
-                                            self._create_step(PLUGIN)
-                                        else:
-                                            if new_plugin_to_install != old_plugins_to_install:
-                                                self._create_step(
-                                                    PLUGIN,
-                                                    modify=True)
+
+                if not new_plugins_to_install or \
+                        new_node_name not in old_nodes:
+                    continue
+
+                with self.entity_id_builder.extend_id(new_node_name):
+                    old_node = old_nodes[new_node_name]
+                    if old_node == new_node:
+                        continue
+                    old_plugins_to_install = old_node[PLUGINS_TO_INSTALL]
+                    for new_plugin_to_install in new_plugins_to_install:
+                        if not new_plugin_to_install['install']:
+                            continue
+
+                        new_plug_name = new_plugin_to_install['name']
+                        old_plugins_to_install = next((p for p in old_plugins_to_install if p['name'] == new_plug_name), None)
+                        if not old_plugins_to_install:
+                            self._create_step(PLUGIN)
+                        elif new_plugin_to_install != old_plugins_to_install:
+                            self._create_step(PLUGIN, modify=True)
 
     def _extract_central_deployment_agent_plugins_steps(
             self,
@@ -412,12 +413,11 @@ class StepExtractor(object):
                         if new_cda_plugin not in \
                                 old_deployment_plugins_to_install:
                             self._create_step(PLUGIN)
-                        else:
-                            if new_deployment_plugins_to_install[
-                                new_cda_plugin] != \
-                                    old_deployment_plugins_to_install[
-                                        new_cda_plugin]:
-                                self._create_step(PLUGIN, modify=True)
+                        elif new_deployment_plugins_to_install[
+                            new_cda_plugin] != \
+                                old_deployment_plugins_to_install[
+                                    new_cda_plugin]:
+                            self._create_step(PLUGIN, modify=True)
 
     @staticmethod
     def _get_matching_relationship(relationship, relationships):
