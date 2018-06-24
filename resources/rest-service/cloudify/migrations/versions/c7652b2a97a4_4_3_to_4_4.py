@@ -7,6 +7,7 @@ Create Date: 2018-04-03 14:31:11.832546
 """
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 from manager_rest.storage.models_base import UTCDateTime
 
 # revision identifiers, used by Alembic.
@@ -65,14 +66,30 @@ def downgrade():
       set status='failed'
       where status='kill_cancelling'
       """)
+
     # unfortunately postgres doesn't directly support removing enum values,
-    # so we need to resort to changing pg_enum directly
-    op.execute("""
-        delete from pg_enum
-        where
-            enumtypid=(
-                select oid from pg_catalog.pg_type
-                where typname='execution_status'
-            )
-            and enumlabel='kill_cancelling'
-    """)
+    # so we create a new type with the correct enum values and swap
+    # out the old one
+    op.execute("alter type execution_status rename to execution_status_old")
+
+    # create the new type
+    execution_status = sa.Enum(
+        'terminated',
+        'failed',
+        'cancelled',
+        'pending',
+        'started',
+        'cancelling',
+        'force_cancelling',
+        name='execution_status',
+    )
+    execution_status.create(op.get_bind())
+
+    # update executions to use the new type
+    op.alter_column('executions',
+                    'status',
+                    type_=execution_status,
+                    postgresql_using='status::text::execution_status')
+
+    # remove the old type
+    op.execute("DROP TYPE execution_status_old;")
