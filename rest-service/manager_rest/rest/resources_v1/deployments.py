@@ -41,6 +41,11 @@ from manager_rest.rest.rest_utils import (get_args_and_verify_arguments,
                                           validate_inputs)
 
 
+def logit(msg):
+    with open('/tmp/adi', 'a') as fh:
+        fh.write('{0}\n'.format(msg))
+
+
 class Deployments(SecuredResource):
 
     @swagger.operation(
@@ -150,24 +155,36 @@ class DeploymentsId(SecuredResource):
         """
         Delete deployment by id
         """
+
         args = get_args_and_verify_arguments(
-            [Argument('ignore_live_nodes', type=types.boolean, default=False)]
+            [Argument('ignore_live_nodes', type=types.boolean, default=False),
+             Argument('delete_db_mode', type=types.boolean, default=False)]
         )
 
+        msg = 'REST V1: ignore_live_nodes={0}, delete_db_mode={1}'.format(
+            args.ignore_live_nodes, args.delete_db_mode)
+        logit(msg)
+
         bypass_maintenance = is_bypass_maintenance_mode()
-
         deployment = get_resource_manager().delete_deployment(
-            deployment_id, bypass_maintenance, args.ignore_live_nodes)
+            deployment_id,
+            bypass_maintenance,
+            args.ignore_live_nodes,
+            args.delete_db_mode)
+        logit('REST V1: after resource manager!')
+        if args.delete_db_mode:
+            logit('REST V1: in delete_db_mode')
 
-        # Delete deployment resources from file server
-        deployment_folder = os.path.join(
-            config.instance.file_server_root,
-            FILE_SERVER_DEPLOYMENTS_FOLDER,
-            utils.current_tenant.name,
-            deployment.id)
-        if os.path.exists(deployment_folder):
-            shutil.rmtree(deployment_folder)
-
+            # Delete deployment resources from file server
+            deployment_folder = os.path.join(
+                config.instance.file_server_root,
+                FILE_SERVER_DEPLOYMENTS_FOLDER,
+                utils.current_tenant.name,
+                deployment.id)
+            logit('REST V1: trying to delete deployment_folder: {0}'.format(deployment_folder))
+            if os.path.exists(deployment_folder):
+                shutil.rmtree(deployment_folder)
+        logit('REST V1: Done. deployment = {0}'.format(deployment))
         return deployment, 200
 
 
