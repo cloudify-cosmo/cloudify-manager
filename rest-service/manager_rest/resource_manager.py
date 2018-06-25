@@ -204,8 +204,9 @@ class ResourceManager(object):
         for plugin_spec in plugins.values():
             if plugin_spec.get(constants.PLUGIN_PACKAGE_NAME) == \
                     plugin.package_name:
-                return plugin_spec.get(constants.PLUGIN_EXECUTOR_KEY) == \
-                    constants.CENTRAL_DEPLOYMENT_AGENT
+                if plugin_spec.get(constants.PLUGIN_EXECUTOR_KEY) == \
+                        constants.CENTRAL_DEPLOYMENT_AGENT:
+                    return True
 
         return False
 
