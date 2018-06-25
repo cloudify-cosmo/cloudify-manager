@@ -639,7 +639,11 @@ class UploadedPluginsManager(UploadedDataManager):
                                  logger=current_app.logger)
             os.remove(archive_target_path)
             shutil.move(archive_name, archive_target_path)
-            wagon_target_path, _ = self._verify_archive(archive_target_path)
+            try:
+                wagon_target_path, _ = \
+                    self._verify_archive(archive_target_path)
+            except RuntimeError as re:
+                raise manager_exceptions.InvalidPluginError(re.message)
 
         args = self._get_args()
         visibility = kwargs.get('visibility', None)
@@ -723,7 +727,12 @@ class UploadedPluginsManager(UploadedDataManager):
         #     raise manager_exceptions.InvalidPluginError(
         #         'the provided wagon can not be read.')
 
-        return wagon.show(wagon_source)
+        try:
+            return wagon.show(wagon_source)
+        except wagon.WagonError as e:
+            raise manager_exceptions.InvalidPluginError(
+                'The provided wagon archive can not be read.\n{0}'
+                .format(e.message))
 
 
 class UploadedCaravanManager(UploadedPluginsManager):

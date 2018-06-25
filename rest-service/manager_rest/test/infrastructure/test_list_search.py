@@ -75,5 +75,5 @@ class ResourceListSearchTestCase(BaseListTest):
         self.assertEqual(NUM_OF_RESOURCES,
                          len(self.client.plugins.list(_search='')))
         self.assertEqual(NUM_OF_RESOURCES,
-                         len(self.client.plugins.list(_search='pack')))
+                         len(self.client.plugins.list(_search='script')))
         self.assertEqual(0, len(self.client.plugins.list(_search='bla')))
