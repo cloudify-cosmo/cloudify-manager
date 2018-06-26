@@ -543,9 +543,10 @@ class SQLStorageManager(object):
         current_app.logger.debug('Returning: {0}'.format(results))
         return ListResult(items=results, metadata={'pagination': pagination})
 
-    def count(self, model_class, filters):
+    def count(self, model_class, filters=None):
         query = model_class.query
-        query = self._add_value_filter(query, filters)
+        if filters:
+            query = self._add_value_filter(query, filters)
         count = query.order_by(None).count()  # Fastest way to count
         return count
 
