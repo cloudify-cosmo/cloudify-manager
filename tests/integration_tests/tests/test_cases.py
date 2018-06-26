@@ -577,7 +577,7 @@ class AgentTestWithPlugins(AgentTestCase):
         data = json.loads(data)
         return data.get(deployment_id, {})
 
-    def create_test_wagon(self, plugin_path):
+    def _create_test_wagon(self, plugin_path):
         target_dir = tempfile.mkdtemp(dir=self.workdir)
         return wagon.create(
             plugin_path,
@@ -591,7 +591,7 @@ class AgentTestWithPlugins(AgentTestCase):
                 'plugins/{0}'.format(plugin_name)
             )
 
-        wagon_path = self.create_test_wagon(plugin_path)
+        wagon_path = self._create_test_wagon(plugin_path)
 
         yaml_path = os.path.join(plugin_path, 'plugin.yaml')
         with utils.zip_files([wagon_path, yaml_path]) as zip_path:
