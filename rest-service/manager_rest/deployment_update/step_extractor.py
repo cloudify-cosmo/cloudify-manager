@@ -53,8 +53,6 @@ POLICY_TYPES = 'policy_types'
 POLICY_TRIGGER = 'policy_trigger'
 POLICY_TRIGGERS = 'policy_triggers'
 DEPLOYMENT_PLUGINS_TO_INSTALL = 'deployment_plugins_to_install'
-CENTRAL_DEPLOYMENT_AGENT_PLUGINS = 'central_deployment_agent_plugins'
-HOST_AGENT_PLUGINS = 'host_agent_plugins'
 PLUGIN = 'plugin'
 PLUGINS = 'plugins'
 PLUGINS_TO_INSTALL = 'plugins_to_install'
@@ -224,6 +222,9 @@ class DeploymentUpdateStep(object):
     def __str__(self):
         return str(self.__dict__)
 
+    def __repr__(self):
+        return self.__str__()
+
     def __cmp__(self, other):
         if self.action != other.action:
             # the order is 'remove' < 'add' < 'modify'
@@ -375,7 +376,7 @@ class StepExtractor(object):
         # We want to update both the node's `plugins_to_install` and `plugins`
         for entity_type in (PLUGINS_TO_INSTALL, PLUGINS):
             for new_node_name, new_node in new_nodes.items():
-                new_plugins = new_node[entity_type]
+                new_plugins = new_node.get(entity_type)
 
                 # If it's a new node, the plugin will be installed anyway
                 if not new_plugins or new_node_name not in old_nodes:
