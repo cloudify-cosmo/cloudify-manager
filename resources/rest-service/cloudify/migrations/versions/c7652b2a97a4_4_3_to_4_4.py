@@ -7,7 +7,6 @@ Create Date: 2018-04-03 14:31:11.832546
 """
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 from manager_rest.storage.models_base import UTCDateTime
 
 # revision identifiers, used by Alembic.
@@ -44,6 +43,7 @@ def upgrade():
     op.add_column('executions', sa.Column('ended_at',
                                           UTCDateTime(),
                                           nullable=True))
+    op.execute('COMMIT')
     op.execute("alter type execution_status add value 'kill_cancelling'")
 
 
