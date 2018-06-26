@@ -30,6 +30,8 @@ from contextlib import contextmanager
 
 import nose.tools
 
+import wagon
+
 import cloudify.utils
 import cloudify.logs
 import cloudify.event
@@ -574,3 +576,33 @@ class AgentTestWithPlugins(AgentTestCase):
             return {}
         data = json.loads(data)
         return data.get(deployment_id, {})
+
+    def create_test_wagon(self, plugin_path):
+        target_dir = tempfile.mkdtemp(dir=self.workdir)
+        return wagon.create(
+            plugin_path,
+            archive_destination_dir=target_dir,
+            force=True
+        )
+
+    def upload_mock_plugin(self,
+                           plugin_name,
+                           plugin_path=None,
+                           yaml_path=None):
+        if not plugin_path:
+            plugin_path = test_utils.get_resource(
+                'plugins/{0}'.format(plugin_name)
+            )
+        if not yaml_path:
+            yaml_path = test_utils.get_resource(
+                'plugins/{0}/plugin.yaml'.format(plugin_name)
+            )
+        wagon_path = self.create_test_wagon(plugin_path)
+
+        with utils.zip_files([wagon_path, yaml_path]) as zip_path:
+            self.client.plugins.upload(zip_path)
+
+        install_plugin_ex = [ex for ex in self.client.executions.list(
+            include_system_workflows=True) if
+                 ex.workflow_id == 'install_plugin'][0]
+        self.wait_for_execution_to_end(install_plugin_ex)
