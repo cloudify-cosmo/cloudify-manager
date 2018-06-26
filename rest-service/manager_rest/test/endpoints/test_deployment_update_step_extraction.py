@@ -1848,14 +1848,14 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
 
         self.step_extractor.new_deployment_plan.update(workflows_new)
 
-        _, steps = self.step_extractor.extract_steps()
+        steps, _ = self.step_extractor.extract_steps()
 
         expected_steps = [
             DeploymentUpdateStep(
                 action='add',
                 entity_type=WORKFLOW,
                 entity_id='workflows:added_workflow',
-                supported=False)
+                supported=True)
         ]
 
         self.assertEquals(expected_steps, steps)
@@ -1892,14 +1892,14 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
         self.step_extractor.old_deployment_plan.update(workflows_old)
         self.step_extractor.new_deployment_plan.update(workflows_new)
 
-        _, steps = self.step_extractor.extract_steps()
+        steps, _ = self.step_extractor.extract_steps()
 
         expected_steps = [
             DeploymentUpdateStep(
                 action='modify',
                 entity_type=WORKFLOW,
                 entity_id='workflows:added_workflow',
-                supported=False)
+                supported=True)
         ]
 
         self.assertEquals(expected_steps, steps)
@@ -1991,17 +1991,10 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
 
         self.step_extractor.new_deployment_plan.update(cda_plugins_new)
 
-        _, steps = self.step_extractor.extract_steps()
+        steps, _ = self.step_extractor.extract_steps()
 
-        expected_steps = [
-            DeploymentUpdateStep(
-                action='add',
-                entity_type=PLUGIN,
-                entity_id='central_deployment_agent_plugins:cda_plugin1',
-                supported=False)
-        ]
-
-        self.assertEquals(expected_steps, steps)
+        # Managed CDA plugins are handled during plugin upload/delete
+        self.assertEquals([], steps)
 
     def test_cda_plugins_modify_cda_plugin(self):
 
@@ -2019,17 +2012,10 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
         self.step_extractor.old_deployment_plan.update(cda_plugins_old)
         self.step_extractor.new_deployment_plan.update(cda_plugins_new)
 
-        _, steps = self.step_extractor.extract_steps()
+        steps, _ = self.step_extractor.extract_steps()
 
-        expected_steps = [
-            DeploymentUpdateStep(
-                action='modify',
-                entity_type=PLUGIN,
-                entity_id='central_deployment_agent_plugins:cda_plugin1',
-                supported=False)
-        ]
-
-        self.assertEquals(expected_steps, steps)
+        # Managed CDA plugins are handled during plugin upload/delete
+        self.assertEquals([], steps)
 
     def test_ha_plugins_no_install(self):
 
@@ -2048,7 +2034,7 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
         self.step_extractor.old_deployment_plan[NODES].update(nodes_old)
         self.step_extractor.new_deployment_plan[NODES].update(nodes_new)
 
-        _, steps = self.step_extractor.extract_steps()
+        steps, _ = self.step_extractor.extract_steps()
 
         self.assertEquals([], steps)
 
@@ -2069,14 +2055,14 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
         self.step_extractor.old_deployment_plan[NODES].update(nodes_old)
         self.step_extractor.new_deployment_plan[NODES].update(nodes_new)
 
-        _, steps = self.step_extractor.extract_steps()
+        steps, _ = self.step_extractor.extract_steps()
 
         expected_steps = [
             DeploymentUpdateStep(
                 action='add',
                 entity_type=PLUGIN,
-                entity_id='host_agent_plugins:node1',
-                supported=False)
+                entity_id='plugins_to_install:node1:new',
+                supported=True)
         ]
 
         self.assertEquals(expected_steps, steps)
@@ -2100,14 +2086,14 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
         self.step_extractor.old_deployment_plan[NODES].update(nodes_old)
         self.step_extractor.new_deployment_plan[NODES].update(nodes_new)
 
-        _, steps = self.step_extractor.extract_steps()
+        steps, _ = self.step_extractor.extract_steps()
 
         expected_steps = [
             DeploymentUpdateStep(
                 action='modify',
                 entity_type=PLUGIN,
-                entity_id='host_agent_plugins:node1',
-                supported=False)
+                entity_id='plugins_to_install:node1:name',
+                supported=True)
         ]
 
         self.assertEquals(expected_steps, steps)
@@ -2287,8 +2273,7 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
             'add_workflow_new_plugin': DeploymentUpdateStep(
                 'add',
                 WORKFLOW,
-                'workflows:added_workflow_new_plugin',
-                supported=False),
+                'workflows:added_workflow_new_plugin'),
 
             'remove_workflow': DeploymentUpdateStep(
                 'remove',
@@ -2303,8 +2288,7 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
             'modify_workflow_new_plugin': DeploymentUpdateStep(
                 'modify',
                 WORKFLOW,
-                'workflows:modified_workflow_new_plugin',
-                supported=False),
+                'workflows:modified_workflow_new_plugin'),
 
             'add_policy_type': DeploymentUpdateStep(
                 'add',
@@ -2381,17 +2365,75 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
                 'properties:modified_relationship_prop',
                 supported=False),
 
-            'add_cda_plugin': DeploymentUpdateStep(
+            'add_ha_plugin_plugins_to_install': DeploymentUpdateStep(
                 'add',
                 PLUGIN,
-                'central_deployment_agent_plugins:cda_plugin_for_operations2',
-                supported=False),
+                'plugins_to_install:node18:plugin3_name'),
 
-            'add_ha_plugin': DeploymentUpdateStep(
+            'add_ha_plugin_plugins': DeploymentUpdateStep(
                 'add',
                 PLUGIN,
-                'host_agent_plugins:node18',
-                supported=False),
+                'plugins:node18:plugin3_name'),
+
+            'add_cda_plugin_used_by_host': DeploymentUpdateStep(
+                'add',
+                PLUGIN,
+                'plugins:node16:cda_plugin_for_operations2'),
+
+            'modify_ha_plugin_6': DeploymentUpdateStep(
+                'modify',
+                PLUGIN,
+                'plugins:node6:agent'),
+
+            'modify_ha_plugin_7': DeploymentUpdateStep(
+                'modify',
+                PLUGIN,
+                'plugins:node7:agent'),
+
+            'modify_ha_plugin_8': DeploymentUpdateStep(
+                'modify',
+                PLUGIN,
+                'plugins:node8:agent'),
+
+            'modify_ha_plugin_9': DeploymentUpdateStep(
+                'modify',
+                PLUGIN,
+                'plugins:node9:agent'),
+
+            'modify_ha_plugin_10': DeploymentUpdateStep(
+                'modify',
+                PLUGIN,
+                'plugins:node10:agent'),
+
+            'modify_ha_plugin_11': DeploymentUpdateStep(
+                'modify',
+                PLUGIN,
+                'plugins:node11:agent'),
+
+            'modify_ha_plugin_12': DeploymentUpdateStep(
+                'modify',
+                PLUGIN,
+                'plugins:node12:agent'),
+
+            'modify_ha_plugin_13': DeploymentUpdateStep(
+                'modify',
+                PLUGIN,
+                'plugins:node13:agent'),
+
+            'modify_ha_plugin_16': DeploymentUpdateStep(
+                'modify',
+                PLUGIN,
+                'plugins:node16:agent'),
+
+            'modify_ha_plugin_17': DeploymentUpdateStep(
+                'modify',
+                PLUGIN,
+                'plugins:node17:agent'),
+
+            'modify_ha_plugin_18': DeploymentUpdateStep(
+                'modify',
+                PLUGIN,
+                'plugins:node18:agent'),
 
             # the steps below are intended just to make the test pass.
             # ideally, they should be removed since they are incorrect
