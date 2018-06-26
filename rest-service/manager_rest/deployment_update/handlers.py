@@ -3,6 +3,8 @@ from copy import deepcopy
 
 import utils as deployment_update_utils
 
+from cloudify.constants import COMPUTE_NODE_TYPE
+
 from manager_rest import utils
 from entity_context import get_entity_context
 from constants import ENTITY_TYPES, NODE_MOD_TYPES
@@ -382,31 +384,45 @@ class PluginHandler(ModifiableEntityHandlerBase):
     def modify(self, ctx, current_entities):
         return self._mutate_plugins_list(ctx, current_entities, self._modify)
 
-    @staticmethod
-    def _add(ctx, plugins):
+    def _add(self, ctx, plugins, node, return_dict):
         new_plugin = ctx.raw_entity_value
         plugins.append(new_plugin)
+        if self._is_installable(new_plugin, node):
+            return_dict['add'] = (node.id, new_plugin)
         return plugins
 
-    @staticmethod
-    def _modify(ctx, plugins):
-        plugins = PluginHandler._remove(ctx, plugins)
-        return PluginHandler._add(ctx, plugins)
+    def _modify(self, ctx, plugins, node, return_dict):
+        plugins = self._remove(ctx, plugins, node, return_dict)
+        return self._add(ctx, plugins, node, return_dict)
 
-    @staticmethod
-    def _remove(ctx, plugins):
-        return [p for p in plugins if p['name'] != ctx.plugin_name]
+    def _remove(self, ctx, plugins, node, return_dict):
+        old_plugin = [p for p in plugins if p['name'] == ctx.plugin_name][0]
+        plugins.remove(old_plugin)
+        if self._is_installable(old_plugin, node):
+            return_dict['remove'] = (node.id, old_plugin)
+        return plugins
 
     def _mutate_plugins_list(self, ctx, current_entities, mutate_func):
+        return_dict = {}
         node = get_node(ctx.deployment_id, ctx.raw_node_id)
+
         # Can be either node.plugins or node.plugins_to_install
         plugins_dict = getattr(node, ctx.plugin_key, {})
         plugins = deepcopy(plugins_dict)
-        plugins = mutate_func(ctx, plugins)
+        plugins = mutate_func(ctx, plugins, node, return_dict)
+
         current_entities[ctx.raw_node_id][ctx.plugin_key] = plugins
         setattr(node, ctx.plugin_key, plugins)
         self.sm.update(node)
-        return ctx.entity_id
+        return return_dict
+
+    @staticmethod
+    def _is_installable(plugin, node):
+        # We only want to host agent plugins on Compute nodes.
+        # Central deployment agent plugins are handled during plugin upload,
+        # and non-compute nodes don't have plugins anyway
+        return COMPUTE_NODE_TYPE in node.type_hierarchy and \
+               plugin['install'] and plugin['executor'] == 'host_agent'
 
 
 class DeploymentUpdateNodeHandler(UpdateHandler):
