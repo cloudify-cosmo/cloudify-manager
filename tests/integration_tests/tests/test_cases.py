@@ -585,24 +585,21 @@ class AgentTestWithPlugins(AgentTestCase):
             force=True
         )
 
-    def upload_mock_plugin(self,
-                           plugin_name,
-                           plugin_path=None,
-                           yaml_path=None):
+    def upload_mock_plugin(self, plugin_name, plugin_path=None):
         if not plugin_path:
             plugin_path = test_utils.get_resource(
                 'plugins/{0}'.format(plugin_name)
             )
-        if not yaml_path:
-            yaml_path = test_utils.get_resource(
-                'plugins/{0}/plugin.yaml'.format(plugin_name)
-            )
+
         wagon_path = self.create_test_wagon(plugin_path)
 
+        yaml_path = os.path.join(plugin_path, 'plugin.yaml')
         with utils.zip_files([wagon_path, yaml_path]) as zip_path:
             self.client.plugins.upload(zip_path)
 
+        self._wait_for_execution_by_wf_name('install_plugin')
+
+    def _wait_for_execution_by_wf_name(self, wf_name):
         install_plugin_ex = [ex for ex in self.client.executions.list(
-            include_system_workflows=True) if
-                 ex.workflow_id == 'install_plugin'][0]
+            include_system_workflows=True) if ex.workflow_id == wf_name][0]
         self.wait_for_execution_to_end(install_plugin_ex)
