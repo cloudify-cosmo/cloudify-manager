@@ -2036,7 +2036,19 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
 
         steps, _ = self.step_extractor.extract_steps()
 
-        self.assertEquals([], steps)
+        # Although install is set to False on the new plugin, we are still
+        # creating the step. We won't need to install the plugin (the
+        # PluginHandler takes care of that), but the value still needs to be
+        # updated in the node in the DB
+        expected_steps = [
+            DeploymentUpdateStep(
+                action='add',
+                entity_type=PLUGIN,
+                entity_id='plugins_to_install:node1:new'
+            )
+        ]
+
+        self.assertEquals(expected_steps, steps)
 
     def test_ha_plugins_add_ha_plugin(self):
 
