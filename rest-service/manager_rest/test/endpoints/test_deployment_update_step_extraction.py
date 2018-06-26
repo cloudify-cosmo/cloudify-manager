@@ -2084,6 +2084,7 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
         node_old = self._get_node_scheme()
         node_old.update({PLUGINS_TO_INSTALL: [
             {'name': 'name',
+             'executor': 'host_agent',
              'install': True,
              'source': 'old'}]})
         nodes_old = {'node1': node_old}
@@ -2091,6 +2092,7 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
         node_new = self._get_node_scheme()
         node_new.update({PLUGINS_TO_INSTALL: [
             {'name': 'name',
+             'executor': 'host_agent',
              'install': True,
              'source': 'new'}]})
         nodes_new = {'node1': node_new}
