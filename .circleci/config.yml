@@ -28,7 +28,6 @@ defaults:
 
 
 jobs:
-
   flake8:
     <<: *tox_defaults
 
@@ -71,6 +70,16 @@ jobs:
     <<: *tox_defaults
     environment:
       DO_ENV: clientV3-infrastructure
+
+  test_clientv3_1_endpoints:
+    <<: *tox_defaults
+    environment:
+      DO_ENV: clientV3_1-endpoints
+
+  test_clientv3_1_infrastructure:
+    <<: *tox_defaults
+    environment:
+      DO_ENV: clientV3_1-infrastructure
 
   test_workflows:
     <<: *tox_defaults
@@ -142,5 +151,7 @@ workflows:
       - test_clientv2_1_infrastructure
       - test_clientv3_endpoints
       - test_clientv3_infrastructure
+      - test_clientv3_1_endpoints
+      - test_clientv3_1_infrastructure
       - test_workflows
       - test_premium
