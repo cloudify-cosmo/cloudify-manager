@@ -36,6 +36,7 @@ class EntityContextBase(object):
     WORKFLOWS = utils.pluralize(ENTITY_TYPES.WORKFLOW)
     OUTPUTS = utils.pluralize(ENTITY_TYPES.OUTPUT)
     PLUGINS = utils.pluralize(ENTITY_TYPES.PLUGIN)
+    DESCRIPTION = 'description'
 
     def __init__(self, plan, deployment_id, entity_type, top_level_entity_id):
         self.sm = get_storage_manager()
