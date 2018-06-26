@@ -13,7 +13,8 @@ def get_entity_context(plan, deployment_id, entity_type, entity_id):
         ENTITY_TYPES.OPERATION: _operation_context,
         ENTITY_TYPES.WORKFLOW: WorkflowContext,
         ENTITY_TYPES.OUTPUT: OutputContext,
-        ENTITY_TYPES.DESCRIPTION: DescriptionContext
+        ENTITY_TYPES.DESCRIPTION: DescriptionContext,
+        ENTITY_TYPES.PLUGIN: PluginContext
     }
     context = entity_context_by_type[entity_type]
     return context(plan, deployment_id, *utils.get_entity_keys(entity_id))
@@ -34,8 +35,8 @@ class EntityContextBase(object):
     PROPERTIES = utils.pluralize(ENTITY_TYPES.PROPERTY)
     WORKFLOWS = utils.pluralize(ENTITY_TYPES.WORKFLOW)
     OUTPUTS = utils.pluralize(ENTITY_TYPES.OUTPUT)
+    PLUGINS = utils.pluralize(ENTITY_TYPES.PLUGIN)
     DESCRIPTION = 'description'
-    PLUGINS = 'plugins'
 
     def __init__(self, plan, deployment_id, entity_type, top_level_entity_id):
         self.sm = get_storage_manager()
@@ -293,6 +294,75 @@ class NodeInterfaceOperationContext(NodeContextBase):
     @property
     def operation_id(self):
         return self._operation_id
+
+    @property
+    def entity_id(self):
+        return self._entity_id
+
+
+class PluginContext(NodeContextBase):
+    def __init__(self,
+                 plan,
+                 deployment_id,
+                 plugin_key,
+                 node_id,
+                 plugin_name,
+                 *modification_breadcrumbs):
+        super(PluginContext, self).__init__(
+                plan,
+                deployment_id,
+                ENTITY_TYPES.PLUGIN,
+                node_id)
+        self._plugin_key = plugin_key
+        self._plugin_name = plugin_name
+        self._modification_breadcrumbs = modification_breadcrumbs
+        entity_keys = [node_id, plugin_name]
+        entity_keys.extend(modification_breadcrumbs)
+        self._entity_id = ':'.join(entity_keys)
+
+    @property
+    def raw_entity_value(self):
+        return utils.traverse_object(self.raw_entity,
+                                     self.modification_breadcrumbs)
+
+    @property
+    def storage_entity_value(self):
+        return utils.traverse_object(self.storage_entity,
+                                     self._modification_breadcrumbs)
+
+    @property
+    def raw_entity(self):
+        return self._get_plugin_from_list(self.raw_node[self.plugin_key])
+
+    @property
+    def storage_entity(self):
+        return self._get_plugin_from_list(self.storage_node.plugins)
+
+    def _get_plugin_from_list(self, plugin_list):
+        for plugin in plugin_list:
+            if plugin['name'] == self.plugin_name:
+                return plugin
+        raise KeyError(
+            'Plugin with name `{0}` not found in plugin list'.format(
+                self.plugin_name
+            )
+        )
+
+    @property
+    def modification_breadcrumbs(self):
+        return self._modification_breadcrumbs
+
+    @property
+    def plugin_name(self):
+        return self._plugin_name
+
+    @property
+    def plugin_key(self):
+        """
+        Can be either `plugins` or `plugins_to_install`. This controls which
+        of those two values should be updated on the node object
+        """
+        return self._plugin_key
 
     @property
     def entity_id(self):

@@ -53,9 +53,8 @@ POLICY_TYPES = 'policy_types'
 POLICY_TRIGGER = 'policy_trigger'
 POLICY_TRIGGERS = 'policy_triggers'
 DEPLOYMENT_PLUGINS_TO_INSTALL = 'deployment_plugins_to_install'
-CENTRAL_DEPLOYMENT_AGENT_PLUGINS = 'central_deployment_agent_plugins'
-HOST_AGENT_PLUGINS = 'host_agent_plugins'
 PLUGIN = 'plugin'
+PLUGINS = 'plugins'
 PLUGINS_TO_INSTALL = 'plugins_to_install'
 DESCRIPTION = 'description'
 CONTAINED_IN_RELATIONSHIP_TYPE = 'cloudify.relationships.contained_in'
@@ -223,6 +222,9 @@ class DeploymentUpdateStep(object):
     def __str__(self):
         return str(self.__dict__)
 
+    def __repr__(self):
+        return self.__str__()
+
     def __cmp__(self, other):
         if self.action != other.action:
             # the order is 'remove' < 'add' < 'modify'
@@ -301,10 +303,7 @@ class StepExtractor(object):
         self._extract_steps_from_description(old[DESCRIPTION],
                                              new[DESCRIPTION])
         self._extract_host_agent_plugins_steps(old[NODES], new[NODES])
-        self._extract_central_deployment_agent_plugins_steps(
-            old[DEPLOYMENT_PLUGINS_TO_INSTALL],
-            new[DEPLOYMENT_PLUGINS_TO_INSTALL]
-        )
+
         self._extract_steps(new, old)
         self._inverted_diff_perspective = True
         self._extract_steps(old, new)
@@ -374,55 +373,41 @@ class StepExtractor(object):
                         self._create_step(DESCRIPTION, modify=True)
 
     def _extract_host_agent_plugins_steps(self, old_nodes, new_nodes):
-        with self.entity_id_builder.extend_id(HOST_AGENT_PLUGINS):
-            for new_node_name in new_nodes:
-                new_node = new_nodes[new_node_name]
-                new_plugins_to_install = new_node[PLUGINS_TO_INSTALL]
-                if new_plugins_to_install:
-                    if new_node_name in old_nodes:
-                        with self.entity_id_builder.extend_id(new_node_name):
-                            old_node = old_nodes[new_node_name]
-                            if old_node != new_node:
-                                old_plugins_to_install = old_node[
-                                    PLUGINS_TO_INSTALL]
-                                for new_plugin_to_install in \
-                                        new_plugins_to_install:
-                                    if new_plugin_to_install['install']:
-                                        new_plug_name = new_plugin_to_install['name']
-                                        old_plugins_to_install = next((p for p in old_plugins_to_install if p['name'] == new_plug_name), None)
-                                        if not old_plugins_to_install:
-                                            self._create_step(PLUGIN,
-                                                              supported=False)
-                                        else:
-                                            if new_plugin_to_install != old_plugins_to_install:
-                                                self._create_step(
-                                                    PLUGIN,
-                                                    supported=False,
-                                                    modify=True)
+        # We want to update both the node's `plugins_to_install` and `plugins`
+        for entity_type in (PLUGINS_TO_INSTALL, PLUGINS):
+            for new_node_name, new_node in new_nodes.items():
+                new_plugins = new_node.get(entity_type)
 
-    def _extract_central_deployment_agent_plugins_steps(
-            self,
-            old_deployment_plugins_to_install,
-            new_deployment_plugins_to_install
-    ):
-        with self.entity_id_builder.extend_id(
-                CENTRAL_DEPLOYMENT_AGENT_PLUGINS):
-            for new_cda_plugin in new_deployment_plugins_to_install:
-                if new_deployment_plugins_to_install[new_cda_plugin] \
-                        ['install']:
-                    with self.entity_id_builder.extend_id(new_cda_plugin):
-                        if new_cda_plugin not in \
-                                old_deployment_plugins_to_install:
-                            self._create_step(PLUGIN,
-                                              supported=False)
-                        else:
-                            if new_deployment_plugins_to_install[
-                                new_cda_plugin] != \
-                                    old_deployment_plugins_to_install[
-                                        new_cda_plugin]:
-                                self._create_step(PLUGIN,
-                                                  supported=False,
-                                                  modify=True)
+                # If it's a new node, the plugin will be installed anyway
+                if not new_plugins or new_node_name not in old_nodes:
+                    continue
+
+                # Add the entity type to the ID, to be able to differentiate
+                # between `plugins_to_install` and `plugins` in the handler
+                with self.entity_id_builder.extend_id(entity_type), \
+                        self.entity_id_builder.extend_id(new_node_name):
+                    old_node = old_nodes[new_node_name]
+                    if old_node.get(entity_type) == new_node.get(entity_type):
+                        continue
+                    old_plugins = old_node[entity_type]
+                    for new_plugin in new_plugins:
+                        old_plugin = self._find_matching_plugin(new_plugin,
+                                                                old_plugins)
+                        if old_plugin == new_plugin:
+                            continue
+                        with self.entity_id_builder.extend_id(new_plugin['name']):
+                            if not old_plugin:
+                                self._create_step(PLUGIN)
+                            elif new_plugin != old_plugin:
+                                self._create_step(PLUGIN, modify=True)
+
+    @staticmethod
+    def _find_matching_plugin(new_plugin, old_plugins):
+        for old_plugin in old_plugins:
+            if (old_plugin['name'] == new_plugin['name'] and
+                    old_plugin['executor'] == new_plugin['executor']):
+                return old_plugin
+        return None
 
     @staticmethod
     def _get_matching_relationship(relationship, relationships):
@@ -489,45 +474,6 @@ class StepExtractor(object):
                                 OPERATION, modify=True)
                     else:
                         self._create_step(OPERATION)
-
-    def _extract_step_from_workflows(self,
-                                     new_workflows,
-                                     old_workflows,
-                                     old_workflow_plugins_to_install,
-                                     new_workflow_plugins_to_install):
-        with self.entity_id_builder.extend_id(WORKFLOWS):
-            for workflow_name in new_workflows:
-                with self.entity_id_builder.extend_id(workflow_name):
-                    new_workflow = new_workflows[workflow_name]
-                    if workflow_name in old_workflows:
-                        old_workflow = old_workflows[workflow_name]
-                        if old_workflow != new_workflow:
-                            if new_workflow['plugin'] not in \
-                                    old_workflow_plugins_to_install:
-                                # the plugin of the workflow was modified
-                                if new_workflow_plugins_to_install[new_workflow['plugin']]['install']:
-                                    self._create_step(WORKFLOW,
-                                                      supported=False,
-                                                      modify=True)
-                            else:
-                                self._create_step(WORKFLOW,
-                                                  modify=True)
-                    else:
-                        if new_workflow['plugin'] not in \
-                            old_workflow_plugins_to_install and \
-                            new_workflow_plugins_to_install[
-                                new_workflow['plugin']]['install']:
-                            if not self._inverted_diff_perspective:
-                                # the added workflow's plugin does not exist
-                                # in the old workflows_plugins_to_install
-                                self._create_step(WORKFLOW,
-                                                  supported=False)
-                            else:
-                                # if we are in an inversed perspective, then
-                                # remove the workflow as usual
-                                self._create_step(WORKFLOW)
-                        else:
-                            self._create_step(WORKFLOW)
 
     def _extract_steps_from_nodes(self,
                                   new_nodes,
@@ -600,14 +546,9 @@ class StepExtractor(object):
                                                   new_entities,
                                                   old_entities)
             elif entities_name == WORKFLOWS:
-                self._extract_step_from_workflows(
-                    new_workflows=new_entities,
-                    old_workflows=old_entities,
-                    old_workflow_plugins_to_install=self.old_deployment_plan[
-                        'workflow_plugins_to_install'],
-                    new_workflow_plugins_to_install=self.new_deployment_plan[
-                        'workflow_plugins_to_install']
-                )
+                self._extract_steps_from_entities(WORKFLOWS,
+                                                  new_entities,
+                                                  old_entities)
             elif entities_name == POLICY_TYPES:
                 self._extract_steps_from_entities(POLICY_TYPES,
                                                   new_entities,

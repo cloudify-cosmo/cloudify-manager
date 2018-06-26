@@ -3,6 +3,8 @@ from copy import deepcopy
 
 import utils as deployment_update_utils
 
+from cloudify.constants import COMPUTE_NODE_TYPE
+
 from manager_rest import utils
 from entity_context import get_entity_context
 from constants import ENTITY_TYPES, NODE_MOD_TYPES
@@ -22,6 +24,31 @@ class UpdateHandler(StorageClient):
 
     def finalize(self, *_, **__):
         raise NotImplementedError
+
+    @staticmethod
+    def _fill_modified_entities(dep_update,
+                                supported_entity_types,
+                                entity_handlers,
+                                modified_entities,
+                                current_entities_dict):
+        """
+        Iterate over the steps of the deployment update and handle each
+        step according to its operation, passing the deployment update
+        object, step entity type, entity id and a dict of updated nodes.
+        Each handler updated the dict of updated nodes, which enables
+        accumulating changes.
+        """
+        for step in dep_update.steps:
+            if step.entity_type in supported_entity_types:
+                entity_handler = entity_handlers[step.entity_type]
+                entity_updater = getattr(entity_handler, step.action)
+                entity_context = get_entity_context(dep_update.deployment_plan,
+                                                    dep_update.deployment_id,
+                                                    step.entity_type,
+                                                    step.entity_id)
+                entity_id = entity_updater(entity_context,
+                                           current_entities_dict)
+                modified_entities[step.entity_type].append(entity_id)
 
 
 class FrozenEntitiesHandlerBase(StorageClient):
@@ -347,18 +374,71 @@ class DescriptionHandler(ModifiableEntityHandlerBase):
         return ctx.entity_id
 
 
+class PluginHandler(ModifiableEntityHandlerBase):
+    def add(self, ctx, current_entities):
+        return self._mutate_plugins_list(ctx, current_entities, self._add)
+
+    def remove(self, ctx, current_entities):
+        return self._mutate_plugins_list(ctx, current_entities, self._remove)
+
+    def modify(self, ctx, current_entities):
+        return self._mutate_plugins_list(ctx, current_entities, self._modify)
+
+    def _add(self, ctx, plugins, node, return_dict):
+        new_plugin = ctx.raw_entity_value
+        plugins.append(new_plugin)
+        if self._is_installable(new_plugin, node):
+            return_dict['add'] = (node.id, new_plugin)
+        return plugins
+
+    def _modify(self, ctx, plugins, node, return_dict):
+        plugins = self._remove(ctx, plugins, node, return_dict)
+        return self._add(ctx, plugins, node, return_dict)
+
+    def _remove(self, ctx, plugins, node, return_dict):
+        old_plugin = [p for p in plugins if p['name'] == ctx.plugin_name][0]
+        plugins.remove(old_plugin)
+        if self._is_installable(old_plugin, node):
+            return_dict['remove'] = (node.id, old_plugin)
+        return plugins
+
+    def _mutate_plugins_list(self, ctx, current_entities, mutate_func):
+        return_dict = {}
+        node = get_node(ctx.deployment_id, ctx.raw_node_id)
+
+        # Can be either node.plugins or node.plugins_to_install
+        plugins_dict = getattr(node, ctx.plugin_key, {})
+        plugins = deepcopy(plugins_dict)
+        plugins = mutate_func(ctx, plugins, node, return_dict)
+
+        current_entities[ctx.raw_node_id][ctx.plugin_key] = plugins
+        setattr(node, ctx.plugin_key, plugins)
+        self.sm.update(node)
+        return return_dict
+
+    @staticmethod
+    def _is_installable(plugin, node):
+        # We only want to host agent plugins on Compute nodes.
+        # Central deployment agent plugins are handled during plugin upload,
+        # and non-compute nodes don't have plugins anyway
+        return COMPUTE_NODE_TYPE in node.type_hierarchy and \
+               plugin['install'] and plugin['executor'] == 'host_agent'
+
+
 class DeploymentUpdateNodeHandler(UpdateHandler):
     def __init__(self):
         super(DeploymentUpdateNodeHandler, self).__init__()
         self._supported_entity_types = {ENTITY_TYPES.NODE,
                                         ENTITY_TYPES.RELATIONSHIP,
                                         ENTITY_TYPES.OPERATION,
-                                        ENTITY_TYPES.PROPERTY}
+                                        ENTITY_TYPES.PROPERTY,
+                                        ENTITY_TYPES.PLUGIN}
         self._entity_handlers = {
             ENTITY_TYPES.NODE: NodeHandler(),
             ENTITY_TYPES.RELATIONSHIP: RelationshipHandler(),
             ENTITY_TYPES.OPERATION: OperationHandler(),
-            ENTITY_TYPES.PROPERTY: PropertyHandler()
+            ENTITY_TYPES.PROPERTY: PropertyHandler(),
+            ENTITY_TYPES.PLUGIN: PluginHandler()
         }
 
     def handle(self, dep_update):
@@ -376,21 +456,13 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
                       for node in current_nodes}
         modified_entities = deployment_update_utils.ModifiedEntitiesDict()
 
-        # Iterate over the steps of the deployment update and handle each
-        # step according to its operation, passing the deployment update
-        # object, step entity type, entity id and a dict of updated nodes.
-        # Each handler updated the dict of updated nodes, which enables
-        # accumulating changes.
-        for step in dep_update.steps:
-            if step.entity_type in self._supported_entity_types:
-                entity_handler = self._entity_handlers[step.entity_type]
-                entity_updater = getattr(entity_handler, step.action)
-                entity_context = get_entity_context(dep_update.deployment_plan,
-                                                    dep_update.deployment_id,
-                                                    step.entity_type,
-                                                    step.entity_id)
-                entity_id = entity_updater(entity_context, nodes_dict)
-                modified_entities[step.entity_type].append(entity_id)
+        self._fill_modified_entities(
+            dep_update=dep_update,
+            supported_entity_types=self._supported_entity_types,
+            entity_handlers=self._entity_handlers,
+            modified_entities=modified_entities,
+            current_entities_dict=nodes_dict
+        )
         return modified_entities, nodes_dict.values()
 
     def finalize(self, dep_update):
@@ -667,7 +739,7 @@ class DeploymentUpdateDeploymentHandler(UpdateHandler):
         self._entity_handlers = {
             ENTITY_TYPES.WORKFLOW: WorkflowHandler(),
             ENTITY_TYPES.OUTPUT: OutputHandler(),
-            ENTITY_TYPES.DESCRIPTION: DescriptionHandler()
+            ENTITY_TYPES.DESCRIPTION: DescriptionHandler(),
         }
         self._supported_entity_types = {ENTITY_TYPES.WORKFLOW,
                                         ENTITY_TYPES.OUTPUT,
@@ -680,16 +752,13 @@ class DeploymentUpdateDeploymentHandler(UpdateHandler):
             ENTITY_TYPES.OUTPUT: [],
             ENTITY_TYPES.DESCRIPTION: []
         }
-        for step in dep_update.steps:
-            if step.entity_type in self._supported_entity_types:
-                entity_handler = self._entity_handlers[step.entity_type]
-                entity_updater = getattr(entity_handler, step.action)
-                entity_context = get_entity_context(dep_update.deployment_plan,
-                                                    dep_update.deployment_id,
-                                                    step.entity_type,
-                                                    step.entity_id)
-                entity_id = entity_updater(entity_context, deployment)
-                modified_entities[step.entity_type].append(entity_id)
+        self._fill_modified_entities(
+            dep_update=dep_update,
+            supported_entity_types=self._supported_entity_types,
+            entity_handlers=self._entity_handlers,
+            modified_entities=modified_entities,
+            current_entities_dict=deployment
+        )
         return modified_entities, deployment
 
     def finalize(self, dep_update):

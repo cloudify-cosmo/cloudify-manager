@@ -13,14 +13,7 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-import os
 import uuid
-import tempfile
-
-import wagon
-
-from integration_tests.framework import utils
-from integration_tests.tests import utils as test_utils
 from integration_tests import AgentTestWithPlugins, BaseTestCase
 from integration_tests.tests.utils import get_resource as resource
 
@@ -82,31 +75,8 @@ class TestWorkflow(AgentTestWithPlugins):
         # Make sure the uninstall events were called (in the correct order)
         self.assertListEqual(uninstall_events, filtered_events)
 
-    def _create_test_wagon(self, plugin_name):
-        source_dir = resource('plugins/{0}'.format(plugin_name))
-        target_dir = tempfile.mkdtemp(dir=self.workdir)
-        return wagon.create(
-            source_dir,
-            archive_destination_dir=target_dir,
-            force=True
-        )
-
-    def _upload_mock_plugin(self):
-        wagon_path = self._create_test_wagon('target-aware-mock')
-        self.downloaded_archive_path = os.path.join(
-            self.workdir, os.path.basename(wagon_path))
-        yaml_path = test_utils.get_resource('plugins/target-aware-mock/'
-                                            'plugin.yaml')
-        with utils.zip_files([wagon_path, yaml_path]) as zip_path:
-            self.client.plugins.upload(zip_path)
-
-        install_plugin_ex = [ex for ex in self.client.executions.list(
-            include_system_workflows=True) if
-                 ex.workflow_id == 'install_plugin'][0]
-        self.wait_for_execution_to_end(install_plugin_ex)
-
     def test_deploy_with_operation_executor_override(self):
-        self._upload_mock_plugin()
+        self.upload_mock_plugin('target-aware-mock')
 
         self.setup_deployment_id = 'd{0}'.format(uuid.uuid4())
         self.setup_node_id = 'webserver_host'
