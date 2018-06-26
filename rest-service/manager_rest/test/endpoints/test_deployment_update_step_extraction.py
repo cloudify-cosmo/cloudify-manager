@@ -2382,7 +2382,7 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
                 PLUGIN,
                 'plugins_to_install:node18:plugin3_name'),
 
-            'add_ha_plugin_plugins': DeploymentUpdateStep(
+            'add_ha_plugin_plugin3_name': DeploymentUpdateStep(
                 'add',
                 PLUGIN,
                 'plugins:node18:plugin3_name'),
@@ -2391,61 +2391,6 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
                 'add',
                 PLUGIN,
                 'plugins:node16:cda_plugin_for_operations2'),
-
-            'modify_ha_plugin_6': DeploymentUpdateStep(
-                'modify',
-                PLUGIN,
-                'plugins:node6:agent'),
-
-            'modify_ha_plugin_7': DeploymentUpdateStep(
-                'modify',
-                PLUGIN,
-                'plugins:node7:agent'),
-
-            'modify_ha_plugin_8': DeploymentUpdateStep(
-                'modify',
-                PLUGIN,
-                'plugins:node8:agent'),
-
-            'modify_ha_plugin_9': DeploymentUpdateStep(
-                'modify',
-                PLUGIN,
-                'plugins:node9:agent'),
-
-            'modify_ha_plugin_10': DeploymentUpdateStep(
-                'modify',
-                PLUGIN,
-                'plugins:node10:agent'),
-
-            'modify_ha_plugin_11': DeploymentUpdateStep(
-                'modify',
-                PLUGIN,
-                'plugins:node11:agent'),
-
-            'modify_ha_plugin_12': DeploymentUpdateStep(
-                'modify',
-                PLUGIN,
-                'plugins:node12:agent'),
-
-            'modify_ha_plugin_13': DeploymentUpdateStep(
-                'modify',
-                PLUGIN,
-                'plugins:node13:agent'),
-
-            'modify_ha_plugin_16': DeploymentUpdateStep(
-                'modify',
-                PLUGIN,
-                'plugins:node16:agent'),
-
-            'modify_ha_plugin_17': DeploymentUpdateStep(
-                'modify',
-                PLUGIN,
-                'plugins:node17:agent'),
-
-            'modify_ha_plugin_18': DeploymentUpdateStep(
-                'modify',
-                PLUGIN,
-                'plugins:node18:agent'),
 
             # the steps below are intended just to make the test pass.
             # ideally, they should be removed since they are incorrect
