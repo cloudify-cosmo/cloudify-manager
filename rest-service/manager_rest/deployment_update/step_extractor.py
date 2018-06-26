@@ -387,7 +387,7 @@ class StepExtractor(object):
                 with self.entity_id_builder.extend_id(entity_type), \
                         self.entity_id_builder.extend_id(new_node_name):
                     old_node = old_nodes[new_node_name]
-                    if old_node == new_node:
+                    if old_node.get(entity_type) == new_node.get(entity_type):
                         continue
                     old_plugins = old_node[entity_type]
                     for new_plugin in new_plugins:
