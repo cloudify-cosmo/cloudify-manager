@@ -22,15 +22,16 @@ import fasteners
 
 
 @contextmanager
-def update_storage(ctx):
+def update_storage(ctx, plugin_name=None):
     """
     A context manager for updating plugin state.
 
+    :param plugin_name: Pass directly if running from a WF context
     :param ctx: task invocation context
     """
 
     deployment_id = ctx.deployment.id or 'system'
-    plugin_name = ctx.plugin.name
+    plugin_name = plugin_name or ctx.plugin.name
     if not plugin_name:
         # hack for tasks that are executed locally.
         if ctx.task_name.startswith('cloudify_agent'):
