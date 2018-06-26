@@ -159,6 +159,18 @@ node_types:
           implementation: agent.cloudify_agent.operations.install_plugins
           executor: host_agent
 
+        #####################################################
+        # This operation will uninstall plugins
+        # on the agent environment.
+        # ---------------------------------------------------
+        # It will be executed directly on the agent via AMQP.
+        # not requiring any new remote connection to be
+        # established.
+        #####################################################
+
+        uninstall_plugins:
+          implementation: agent.cloudify_agent.operations.uninstall_plugins
+          executor: host_agent
 
         #####################################################
         # This operation will install new agent on specific
