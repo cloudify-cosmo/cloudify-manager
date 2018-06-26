@@ -26,11 +26,6 @@ from cloudify.workflows import workflow_context
 from cloudify.manager import get_rest_client
 
 
-def logit(msg):
-    with open('/tmp/adi', 'a') as fh:
-        fh.write('{0}\n'.format(msg))
-
-
 def _should_create_policy_engine_core(policy_configuration):
     """Examine the policy_configuration and decide to start a riemann core
     """
@@ -110,7 +105,6 @@ def delete(ctx,
            deployment_plugins_to_uninstall,
            workflow_plugins_to_uninstall,
            **kwargs):
-    logit('Starting delete deployment workflow...')
     graph = ctx.graph_mode()
     sequence = graph.sequence()
 
@@ -134,20 +128,13 @@ def delete(ctx,
                        '(if applicable)'),
         ctx.execute_task('riemann_controller.tasks.delete'))
 
-    # for task in graph.tasks_iter():
-    #     _ignore_task_on_fail_and_send_event(task, ctx)
-
-
     graph.execute()
-    logit('Finished graph.execute delete deployment workflow...')
     _delete_deployment_workdir(ctx)
     _delete_logs(ctx)
-    logit('deleted logss and workdir...')
-    _delete_deployment_from_db(ctx)
+    _send_request_to_delete_deployment_from_db(ctx)
 
 
-def _delete_deployment_from_db(ctx):
-    logit('Sending delete with delete_db_mode=True...')
+def _send_request_to_delete_deployment_from_db(ctx):
     client = get_rest_client()
     client.deployments.delete(deployment_id=ctx.deployment.id,
                               ignore_live_nodes=False,

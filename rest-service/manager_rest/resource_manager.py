@@ -43,11 +43,6 @@ from . import workflow_executor
 from . import manager_exceptions
 
 
-def logit(msg):
-    with open('/tmp/adi', 'a') as fh:
-        fh.write('{0}\n'.format(msg))
-
-
 class ResourceManager(object):
 
     def __init__(self):
@@ -346,29 +341,21 @@ class ResourceManager(object):
                           bypass_maintenance=None,
                           ignore_live_nodes=False,
                           delete_db_mode=False):
-        # import pydevd
-        # pydevd.settrace('192.168.8.188', port=53100, stdoutToServer=True,
-        #                 stderrToServer=True, suspend=True)
 
-        logit('[resource_manager::delete_deployment] Starting...')
         # Verify deployment exists.
         deployment = self.sm.get(models.Deployment, deployment_id)
-        logit('[resource_manager::delete_deployment] 351...')
 
         # Validate there are no running executions for this deployment
         deplyment_id_filter = self.create_filters_dict(
             deployment_id=deployment_id,
             status=ExecutionState.ACTIVE_STATES
         )
-        logit('[resource_manager::delete_deployment] 358...')
         executions = self.sm.list(
             models.Execution,
             filters=deplyment_id_filter
         )
-        logit('[resource_manager::delete_deployment] execs: {0}'.format(executions))
-        logit('[resource_manager::delete_deployment] 363...')
-        if (not delete_db_mode) and (any(execution.status not in ExecutionState.END_STATES for
-           execution in executions)):
+
+        if not delete_db_mode and self._any_running_executions(executions):
             raise manager_exceptions.DependentExistsError(
                 "Can't delete deployment {0} - There are running "
                 "executions for this deployment. Running executions ids: {1}"
@@ -377,7 +364,6 @@ class ResourceManager(object):
                     ','.join([execution.id for execution in
                               executions if execution.status not
                               in ExecutionState.END_STATES])))
-        logit('[resource_manager::delete_deployment] 374...')
         if not ignore_live_nodes:
             deplyment_id_filter = self.create_filters_dict(
                 deployment_id=deployment_id)
@@ -397,18 +383,16 @@ class ResourceManager(object):
                                      if node.state not in
                                      ('uninitialized', 'deleted')])))
 
-        logit('[resource_manager::delete_deployment] 394...')
-        # Delete deployment data from DB
-        if delete_db_mode:
-            logit('[resource_manager::delete_deployment] delete deployment from db mode')
-            return self.sm.delete(deployment)
-
         # Start delete_deployment_env workflow
-        else:
-            logit('[resource_manager::delete_deployment] delete deployment enviroment mode')
+        if not delete_db_mode:
             self._delete_deployment_environment(deployment,
                                                 bypass_maintenance)
             return self.sm.get(models.Deployment, deployment_id)
+
+        # Delete deployment data  DB (should only happen AFTER the workflow
+        # finished successfully, hence the delete_db_mode flag)
+        else:
+            return self.sm.delete(deployment)
 
     def execute_workflow(self,
                          deployment_id,
@@ -1415,6 +1399,11 @@ class ResourceManager(object):
             raise manager_exceptions.IllegalActionError(
                 "Can't modify the global resource `{0}` from outside its "
                 "tenant `{1}`".format(resource.id, resource.tenant_name))
+
+    @staticmethod
+    def _any_running_executions(executions):
+        return any(execution.status not in
+                   ExecutionState.END_STATES for execution in executions)
 
 
 # What we need to access this manager in Flask
