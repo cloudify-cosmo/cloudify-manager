@@ -391,16 +391,23 @@ class StepExtractor(object):
                         continue
                     old_plugins = old_node[entity_type]
                     for new_plugin in new_plugins:
-                        plugin_name = new_plugin['name']
-                        old_plugin = next(
-                            (p for p in old_plugins if
-                             p['name'] == plugin_name),
-                            None)
-                        with self.entity_id_builder.extend_id(plugin_name):
+                        old_plugin = self._find_matching_plugin(new_plugin,
+                                                                old_plugins)
+                        if old_plugin == new_plugin:
+                            continue
+                        with self.entity_id_builder.extend_id(new_plugin['name']):
                             if not old_plugin:
                                 self._create_step(PLUGIN)
                             elif new_plugin != old_plugin:
                                 self._create_step(PLUGIN, modify=True)
+
+    @staticmethod
+    def _find_matching_plugin(new_plugin, old_plugins):
+        for old_plugin in old_plugins:
+            if (old_plugin['name'] == new_plugin['name'] and
+                    old_plugin['executor'] == new_plugin['executor']):
+                return old_plugin
+        return None
 
     @staticmethod
     def _get_matching_relationship(relationship, relationships):
