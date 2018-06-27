@@ -23,6 +23,7 @@ from retrying import retry
 from cloudify.decorators import workflow
 from cloudify.workflows import tasks as workflow_tasks
 from cloudify.workflows import workflow_context
+from cloudify.manager import get_rest_client
 
 
 def _should_create_policy_engine_core(policy_configuration):
@@ -127,14 +128,17 @@ def delete(ctx,
                        '(if applicable)'),
         ctx.execute_task('riemann_controller.tasks.delete'))
 
-    for task in graph.tasks_iter():
-        _ignore_task_on_fail_and_send_event(task, ctx)
+    graph.execute()
+    _delete_deployment_workdir(ctx)
+    _delete_logs(ctx)
+    _send_request_to_delete_deployment_from_db(ctx)
 
-    try:
-        return graph.execute()
-    finally:
-        _delete_deployment_workdir(ctx)
-        _delete_logs(ctx)
+
+def _send_request_to_delete_deployment_from_db(ctx):
+    client = get_rest_client()
+    client.deployments.delete(deployment_id=ctx.deployment.id,
+                              ignore_live_nodes=False,
+                              delete_db_mode=True)
 
 
 def _delete_logs(ctx):

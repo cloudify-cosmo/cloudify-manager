@@ -24,6 +24,8 @@ from manager_rest.test import base_test
 from manager_rest import manager_exceptions
 from manager_rest.constants import DEFAULT_TENANT_NAME
 from cloudify_rest_client.exceptions import CloudifyClientError
+from cloudify_rest_client.deployments import Deployment
+
 from manager_rest.constants import FILE_SERVER_DEPLOYMENTS_FOLDER
 
 
@@ -228,10 +230,9 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         self.assertTrue(len(nodes) > 0)
         nodes_ids = [node['id'] for node in nodes]
 
-        delete_deployment_response = self.delete(
-            '/deployments/{0}'.format(deployment_id),
-            query_params={'ignore_live_nodes': 'true'}).json
-        self.assertEquals(deployment_id, delete_deployment_response['id'])
+        response = self._delete_deployment(deployment_id, True)
+
+        self.assertEquals(deployment_id, response['id'])
 
         # verifying deletion of deployment nodes and executions
         for node_id in nodes_ids:
@@ -254,12 +255,13 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
 
         # attempting to delete the deployment - should fail because there
         # are live nodes for the deployment
-        delete_deployment_response = self.delete('/deployments/{0}'.format(
-            deployment_id))
-        self.assertEquals(400, delete_deployment_response.status_code)
-        self.assertEquals(delete_deployment_response.json['error_code'],
-                          manager_exceptions.DependentExistsError
-                          .DEPENDENT_EXISTS_ERROR_CODE)
+
+        try:
+            self._delete_deployment(deployment_id)
+        except CloudifyClientError as e:
+            self.assertEquals(e.status_code, 400)
+            self.assertEquals(e.error_code, manager_exceptions.
+                              DependentExistsError.DEPENDENT_EXISTS_ERROR_CODE)
 
     def test_delete_deployment_with_uninitialized_nodes(self):
         # simulates a deletion of a deployment right after its creation
@@ -288,11 +290,10 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             self.assertEquals(200, resp.status_code)
 
         # deleting the deployment
-        delete_deployment_response = self.delete('/deployments/{0}'.format(
-            deployment_id))
-        self.assertEquals(200, delete_deployment_response.status_code)
-        self.assertEquals(deployment_id,
-                          delete_deployment_response.json['id'])
+        delete_deployment_response = self._delete_deployment(deployment_id)
+        self.assertEquals(delete_deployment_response['id'],
+                          deployment_id)
+
         # verifying deletion of deployment
         resp = self.get('/deployments/{0}'.format(deployment_id))
         self.assertEquals(404, resp.status_code)
@@ -301,10 +302,8 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
-        delete_deployment_response = self.delete(
-            '/deployments/{0}'.format(deployment_id),
-            query_params={'ignore_live_nodes': 'true'}).json
-        self.assertEquals(deployment_id, delete_deployment_response['id'])
+        response = self._delete_deployment(deployment_id)
+        self.assertEquals(deployment_id, response['id'])
 
         # verifying deletion of deployment
         resp = self.get('/deployments/{0}'.format(deployment_id))
@@ -354,7 +353,9 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             deployment_resource_path))
         with open(deployment_resource_path, 'w') as f:
             f.write('deployment resource')
-        self.client.deployments.delete(deployment_id)
+
+        self._delete_deployment(deployment_id)
+
         self.assertFalse(os.path.exists(deployment_folder))
 
     def test_inputs(self):
@@ -590,3 +591,14 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                                  'install_plugin_False.yaml',
              blueprint_id=id_,
              deployment_id=id_)
+
+    def _delete_deployment(self, deployment_id, ignore_live_nodes=False):
+
+        ignore_live_nodes = 'true' if ignore_live_nodes else 'false'
+        delete_db_mode = 'true'
+        params = {'ignore_live_nodes': ignore_live_nodes,
+                  'delete_db_mode': delete_db_mode}
+        response = self.client._client.delete(
+            '/deployments/{0}'.format(deployment_id), params=params)
+
+        return Deployment(response)

@@ -339,11 +339,13 @@ class ResourceManager(object):
     def delete_deployment(self,
                           deployment_id,
                           bypass_maintenance=None,
-                          ignore_live_nodes=False):
+                          ignore_live_nodes=False,
+                          delete_db_mode=False):
+
         # Verify deployment exists.
         deployment = self.sm.get(models.Deployment, deployment_id)
 
-        # validate there are no running executions for this deployment
+        # Validate there are no running executions for this deployment
         deplyment_id_filter = self.create_filters_dict(
             deployment_id=deployment_id,
             status=ExecutionState.ACTIVE_STATES
@@ -352,8 +354,8 @@ class ResourceManager(object):
             models.Execution,
             filters=deplyment_id_filter
         )
-        if any(execution.status not in ExecutionState.END_STATES for
-           execution in executions):
+
+        if not delete_db_mode and self._any_running_executions(executions):
             raise manager_exceptions.DependentExistsError(
                 "Can't delete deployment {0} - There are running "
                 "executions for this deployment. Running executions ids: {1}"
@@ -362,7 +364,6 @@ class ResourceManager(object):
                     ','.join([execution.id for execution in
                               executions if execution.status not
                               in ExecutionState.END_STATES])))
-
         if not ignore_live_nodes:
             deplyment_id_filter = self.create_filters_dict(
                 deployment_id=deployment_id)
@@ -381,9 +382,17 @@ class ResourceManager(object):
                             ','.join([node.id for node in node_instances
                                      if node.state not in
                                      ('uninitialized', 'deleted')])))
-        self._delete_deployment_environment(deployment,
-                                            bypass_maintenance)
-        return self.sm.delete(deployment)
+
+        # Start delete_deployment_env workflow
+        if not delete_db_mode:
+            self._delete_deployment_environment(deployment,
+                                                bypass_maintenance)
+            return self.sm.get(models.Deployment, deployment_id)
+
+        # Delete deployment data  DB (should only happen AFTER the workflow
+        # finished successfully, hence the delete_db_mode flag)
+        else:
+            return self.sm.delete(deployment)
 
     def execute_workflow(self,
                          deployment_id,
@@ -1390,6 +1399,11 @@ class ResourceManager(object):
             raise manager_exceptions.IllegalActionError(
                 "Can't modify the global resource `{0}` from outside its "
                 "tenant `{1}`".format(resource.id, resource.tenant_name))
+
+    @staticmethod
+    def _any_running_executions(executions):
+        return any(execution.status not in
+                   ExecutionState.END_STATES for execution in executions)
 
 
 # What we need to access this manager in Flask

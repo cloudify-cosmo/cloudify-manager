@@ -150,24 +150,28 @@ class DeploymentsId(SecuredResource):
         """
         Delete deployment by id
         """
+
         args = get_args_and_verify_arguments(
-            [Argument('ignore_live_nodes', type=types.boolean, default=False)]
+            [Argument('ignore_live_nodes', type=types.boolean, default=False),
+             Argument('delete_db_mode', type=types.boolean, default=False)]
         )
 
         bypass_maintenance = is_bypass_maintenance_mode()
-
         deployment = get_resource_manager().delete_deployment(
-            deployment_id, bypass_maintenance, args.ignore_live_nodes)
+            deployment_id,
+            bypass_maintenance,
+            args.ignore_live_nodes,
+            args.delete_db_mode)
 
-        # Delete deployment resources from file server
-        deployment_folder = os.path.join(
-            config.instance.file_server_root,
-            FILE_SERVER_DEPLOYMENTS_FOLDER,
-            utils.current_tenant.name,
-            deployment.id)
-        if os.path.exists(deployment_folder):
-            shutil.rmtree(deployment_folder)
-
+        if args.delete_db_mode:
+            # Delete deployment resources from file server
+            deployment_folder = os.path.join(
+                config.instance.file_server_root,
+                FILE_SERVER_DEPLOYMENTS_FOLDER,
+                utils.current_tenant.name,
+                deployment.id)
+            if os.path.exists(deployment_folder):
+                shutil.rmtree(deployment_folder)
         return deployment, 200
 
 
