@@ -48,6 +48,10 @@ from integration_tests.framework.riemann import RIEMANN_CONFIGS_DIR
 from integration_tests.tests import utils as test_utils
 from integration_tests.framework.constants import (PLUGIN_STORAGE_DIR,
                                                    CLOUDIFY_USER)
+from integration_tests.tests.utils import (
+    wait_for_deployment_creation_to_complete,
+    wait_for_deployment_deletion_to_complete
+)
 
 from cloudify_rest_client.executions import Execution
 
@@ -324,8 +328,7 @@ class BaseTestCase(unittest.TestCase):
                 inputs=inputs,
                 skip_plugins_validation=True)
 
-        test_utils.wait_for_deployment_creation_to_complete(
-            deployment_id=deployment_id)
+        wait_for_deployment_creation_to_complete(deployment_id=deployment_id)
         return deployment
 
     @staticmethod
@@ -395,7 +398,7 @@ class BaseTestCase(unittest.TestCase):
             raise RuntimeError(
                     'Workflow execution failed: {0}'.format(execution.error))
         if is_delete_deployment:
-            BaseTestCase.delete_deployment(deployment_id)
+            BaseTestCase.delete_deployment(deployment_id, validate=True)
         return execution.id
 
     @staticmethod
@@ -403,10 +406,15 @@ class BaseTestCase(unittest.TestCase):
         return utils.get_manager_ip()
 
     @staticmethod
-    def delete_deployment(deployment_id, ignore_live_nodes=False):
+    def delete_deployment(deployment_id,
+                          ignore_live_nodes=False,
+                          validate=False):
         client = test_utils.create_rest_client()
-        return client.deployments.delete(deployment_id,
-                                         ignore_live_nodes=ignore_live_nodes)
+        result = client.deployments.delete(deployment_id,
+                                           ignore_live_nodes=ignore_live_nodes)
+        if validate:
+            wait_for_deployment_deletion_to_complete(deployment_id)
+        return result
 
     @staticmethod
     def is_node_started(node_id):

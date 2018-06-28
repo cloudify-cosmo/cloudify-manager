@@ -101,6 +101,21 @@ def verify_deployment_environment_creation_complete(deployment_id):
                         json.dumps(execs.items, indent=2), logs))
 
 
+def wait_for_deployment_deletion_to_complete(
+        deployment_id, timeout_seconds=60):
+    do_retries(func=verify_deployment_delete_complete,
+               timeout_seconds=timeout_seconds,
+               deployment_id=deployment_id)
+
+
+def verify_deployment_delete_complete(deployment_id):
+    client = create_rest_client()
+    deployment = client.deployments.list(id=deployment_id)
+    if deployment:
+        raise RuntimeError('Deployment with id {0} was not deleted yet.'
+                           .format(deployment_id))
+
+
 def get_resource(resource):
 
     """

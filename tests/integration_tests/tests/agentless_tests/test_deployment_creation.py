@@ -43,3 +43,4 @@ class TestDeploymentCreation(AgentlessTestCase):
                 blueprint_id, deployment_id, skip_plugins_validation=True)
             utils.wait_for_deployment_creation_to_complete(deployment_id)
             self.client.deployments.delete(deployment_id)
+            utils.wait_for_deployment_deletion_to_complete(deployment_id)
