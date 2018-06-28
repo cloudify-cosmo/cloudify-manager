@@ -21,7 +21,9 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 from integration_tests.tests.utils import (
-    verify_deployment_environment_creation_complete)
+    verify_deployment_environment_creation_complete,
+    wait_for_deployment_deletion_to_complete
+    )
 from integration_tests.tests.utils import do_retries
 from integration_tests.framework.constants import (PLUGIN_STORAGE_DIR,
                                                    CLOUDIFY_USER)
@@ -115,6 +117,7 @@ class TestDeploymentWorkflows(AgentlessTestCase):
         self.wait_for_execution_to_end(execution)
 
         self.client.deployments.delete(deployment_id)
+        wait_for_deployment_deletion_to_complete(deployment_id)
         try:
             self.client.deployments.get(deployment_id)
             self.fail("Expected deployment to be deleted")

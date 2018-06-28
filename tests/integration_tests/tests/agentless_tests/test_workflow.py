@@ -238,7 +238,9 @@ class BasicWorkflowsTest(AgentlessTestCase):
                    timeout_seconds=60,
                    deployment_id=deployment_id)
 
-        self.delete_deployment(deployment_id, ignore_live_nodes=False)
+        self.delete_deployment(deployment_id,
+                               ignore_live_nodes=False,
+                               validate=True)
         self.client.blueprints.delete(blueprint_id)
 
         # recreating the deployment, this time actually deploying it too
@@ -287,7 +289,8 @@ class BasicWorkflowsTest(AgentlessTestCase):
 
         # deleting deployment - this time there's no execution running,
         # and using the ignore_live_nodes parameter to force deletion
-        deleted_deployment_id = self.delete_deployment(deployment_id, True).id
+        deleted_deployment_id = self.delete_deployment(
+            deployment_id, True, validate=True).id
         self.assertEqual(deployment_id, deleted_deployment_id)
 
         # verifying deployment does no longer exist

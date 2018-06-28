@@ -21,7 +21,10 @@ import sh
 
 from integration_tests import AgentlessTestCase
 from integration_tests.framework.constants import CLOUDIFY_USER
-from integration_tests.tests.utils import get_resource as resource
+from integration_tests.tests.utils import (
+    get_resource as resource,
+    wait_for_deployment_deletion_to_complete
+)
 
 from manager_rest.constants import DEFAULT_TENANT_NAME
 
@@ -71,6 +74,7 @@ class DeploymentResourceTest(AgentlessTestCase):
                           self.read_manager_file(download_resource_path))
 
         self.client.deployments.delete(deployment_id, ignore_live_nodes=True)
+        wait_for_deployment_deletion_to_complete(deployment_id)
         self.assertRaises(
             sh.ErrorReturnCode,
             self.execute_on_manager,
