@@ -50,7 +50,6 @@ class ExecutionLoggingTest(AgentlessTestCase):
 
         def assert_output(verbosity,
                           expect_debug,
-                          expect_traceback,
                           expect_rest_logs):
             events = self.cfy.events.list(
                 verbosity,
@@ -66,8 +65,7 @@ class ExecutionLoggingTest(AgentlessTestCase):
             assert_in('ERROR_MESSAGE', events)
             debug_assert = assert_in if expect_debug else assert_not_in
             debug_assert('DEBUG: DEBUG_MESSAGE', events)
-            trace_assert = assert_in if expect_traceback else assert_not_in
-            trace_assert('NonRecoverableError: ERROR_MESSAGE', events)
+            assert_in('NonRecoverableError: ERROR_MESSAGE', events)
             assert_not_in('Causes', events)
             assert_not_in('RuntimeError: ERROR_MESSAGE', events)
             rest_assert = assert_in if expect_rest_logs else assert_not_in
@@ -76,24 +74,19 @@ class ExecutionLoggingTest(AgentlessTestCase):
                 verbosity,
                 execution_id=user_cause_ex_id,
             )
-            causes_assert = assert_in if expect_traceback else assert_not_in
-            causes_assert('Causes', user_cause_events)
-            causes_assert('RuntimeError: ERROR_MESSAGE', user_cause_events)
+            assert_in('Causes', user_cause_events)
+            assert_in('RuntimeError: ERROR_MESSAGE', user_cause_events)
 
         assert_output(verbosity=[],  # sh handles '' as an argument, but not []
-                      expect_traceback=False,
                       expect_debug=False,
                       expect_rest_logs=False)
         assert_output(verbosity='-v',
-                      expect_traceback=True,
                       expect_debug=False,
                       expect_rest_logs=False)
         assert_output(verbosity='-vv',
-                      expect_traceback=True,
                       expect_debug=True,
                       expect_rest_logs=False)
         assert_output(verbosity='-vvv',
-                      expect_traceback=True,
                       expect_debug=True,
                       expect_rest_logs=True)
 
