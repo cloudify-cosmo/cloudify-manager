@@ -493,7 +493,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
           client_max_version=base_test.LATEST_API_VERSION)
     def test_creation_success_when_source_plugin_with_address_exists(self):
         self.upload_plugin(TEST_PACKAGE_NAME, TEST_PACKAGE_VERSION).json
-        id_ = str(uuid.uuid4())
+        id_ = 'i{0}'.format(uuid.uuid4())
         self.put_deployment(
             blueprint_file_name='deployment_with_source_address.yaml',
             blueprint_id=id_,
