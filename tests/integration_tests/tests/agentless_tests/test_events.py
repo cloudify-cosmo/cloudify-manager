@@ -17,6 +17,7 @@ import uuid
 import time
 import json
 from datetime import datetime
+from requests.exceptions import ConnectionError
 from integration_tests import AgentlessTestCase
 from integration_tests.framework.postgresql import run_query
 from integration_tests.tests.utils import get_resource as resource
@@ -182,7 +183,7 @@ class EventsTest(AgentlessTestCase):
             self, execution, message, timeout_seconds=60):
         """ It might take longer for events to show up in the DB than it takes
         for Execution status to return, this method waits until a specific
-        event is listed in the DB, and wil fail in case of a time out.
+        event is listed in the DB, and will fail in case of a time out.
         """
 
         deadline = time.time() + timeout_seconds
@@ -196,10 +197,12 @@ class EventsTest(AgentlessTestCase):
                     )
                 )
             # This might fail due to the fact that we're changing the DB in
-            # real time - it's OK. Just try again
+            # real time - it's OK. When restoring a snapshot we also restart
+            # the rest service and nginx, which might lead to intermittent
+            # connection errors. Just try again
             try:
                 all_events = self.client.events.list(include_logs=True)
-            except CloudifyClientError:
+            except (CloudifyClientError, ConnectionError):
                 pass
 
 
