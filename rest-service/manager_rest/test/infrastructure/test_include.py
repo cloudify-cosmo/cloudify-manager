@@ -113,21 +113,42 @@ class IncludeQueryParamTests(base_test.BaseServerTestCase):
         )
         for e in response:
             self.assertEqual(1, len(e))
-            self.assertTrue('id' in e)
+            self.assertIn('id', e)
             execution_id = e.id
         self.assertRaises(
             NoSuchIncludeFieldError,
             lambda: self.client.executions.list(deployment_id=deployment_id,
                                                 _include=['hello', 'world']))
         response = self.client.executions.get(execution_id,
-                                              _include=['id', 'status'])
+                                              _include=['id', 'created_at'])
         self.assertEqual(2, len(response))
         self.assertEqual(execution_id, response.id)
-        self.assertIsNotNone(response.status)
-        self.assertRaises(
-            NoSuchIncludeFieldError,
-            lambda: self.client.executions.get(execution_id,
-                                               _include=['hello']))
+        self.assertIsNotNone(response.created_at)
+
+    def test_execution_with_status_field(self):
+        # status_display field is a computed field for status,
+        # so they will always fo together.
+        deployment_id = self.client.deployments.list()[0].id
+        response = self.client.executions.list(
+            deployment_id=deployment_id,
+            _include=['id', 'status']
+        )
+        for e in response:
+            self.assertEqual(3, len(e))
+            self.assertIn('id', e)
+            self.assertIn('status', e)
+            self.assertIn('status_display', e)
+
+    def test_execution_with_status_display_field(self):
+        deployment_id = self.client.deployments.list()[0].id
+        response = self.client.executions.list(
+            deployment_id=deployment_id,
+            _include=['id', 'status_display']
+        )
+        for e in response:
+            self.assertEqual(2, len(e))
+            self.assertIn('id', e)
+            self.assertIn('status_display', e)
 
     def test_nodes(self):
         deployment_id = self.client.deployments.list()[0].id

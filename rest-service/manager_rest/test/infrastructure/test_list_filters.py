@@ -123,6 +123,17 @@ class ResourceListFiltersTestCase(BaseListTest):
         self.assertEqual(execution['deployment_id'], self.first_deployment_id)
         self.assertEquals(execution['status'], 'terminated')
 
+    def test_executions_list_with_hybrid_field_filter(self):
+        filter_params = {'status_display': 'completed'}
+        response = self.client.executions.list(**filter_params)
+        self.assertEqual(2, len(response), 'expecting 2 execution results, '
+                                           'got {0}'.format(len(response)))
+        self.assertEqual(response[0]['deployment_id'],
+                         self.first_deployment_id)
+        self.assertEquals(response[0]['status'], 'terminated')
+        self.assertEqual(response[1]['deployment_id'], self.sec_deployment_id)
+        self.assertEquals(response[1]['status'], 'terminated')
+
     def test_executions_list_with_filters_multiple_values(self):
         filter_params = {'deployment_id':
                          [self.first_deployment_id, self.sec_deployment_id],
