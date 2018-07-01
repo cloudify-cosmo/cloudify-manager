@@ -54,8 +54,8 @@ class MaintenanceModeTest(BaseServerTestCase):
         self._terminate_execution(execution.id)
         self.assertRaises(exceptions.MaintenanceModeActiveError,
                           self.client.blueprints.upload,
-                          blueprint_path=self.get_mock_blueprint_path(),
-                          blueprint_id='b1')
+                          self.get_mock_blueprint_path(),
+                          'b1')
         self.client.maintenance_mode.deactivate()
 
         maintenance_file = os.path.join(self.maintenance_mode_dir,
