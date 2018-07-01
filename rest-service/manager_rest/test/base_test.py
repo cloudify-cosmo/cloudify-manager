@@ -546,14 +546,21 @@ class BaseServerTestCase(unittest.TestCase):
                                 blueprint_response['message']))
         return blueprint_response
 
-    def _create_wagon_and_yaml(self, package_name, package_version):
+    def _create_wagon_and_yaml(self,
+                               package_name,
+                               package_version,
+                               package_yaml_file='mock_blueprint/plugin.yaml'):
         temp_file_path = self.create_wheel(package_name, package_version)
-        yaml_path = self.get_full_path('mock_blueprint/plugin.yaml')
+        yaml_path = self.get_full_path(package_yaml_file)
         return temp_file_path, yaml_path
 
-    def upload_plugin(self, package_name, package_version):
+    def upload_plugin(self,
+                      package_name,
+                      package_version,
+                      package_yaml='mock_blueprint/plugin.yaml'):
         wgn_path, yaml_path = self._create_wagon_and_yaml(package_name,
-                                                          package_version)
+                                                          package_version,
+                                                          package_yaml)
         zip_path = self.zip_files([wgn_path, yaml_path])
         response = self.post_file('/plugins', zip_path)
         os.remove(wgn_path)
@@ -588,8 +595,11 @@ class BaseServerTestCase(unittest.TestCase):
 
     def upload_caravan(self, packages):
         mapping = dict(
-            self._create_wagon_and_yaml(package, version)
-            for package, version in packages.items()
+            self._create_wagon_and_yaml(
+                package,
+                version_and_yaml[0],
+                version_and_yaml[1])
+            for package, version_and_yaml in packages.items()
         )
 
         caravan_path = self._create_caravan(mapping, tempfile.gettempdir())
