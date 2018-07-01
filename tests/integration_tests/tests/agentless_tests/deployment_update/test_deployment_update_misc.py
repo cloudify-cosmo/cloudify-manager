@@ -14,7 +14,9 @@
 
 import os
 from uuid import uuid4
-
+from integration_tests.tests.utils import (
+    wait_for_deployment_deletion_to_complete
+)
 from . import DeploymentUpdateBase, BLUEPRINT_ID
 
 
@@ -530,6 +532,7 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
         self.client.executions.start(del_deployment.id, 'uninstall')
         self._wait_for_execution_to_terminate(del_deployment.id, 'uninstall')
         self.client.deployments.delete(del_deployment.id)
+        wait_for_deployment_deletion_to_complete(del_deployment.id)
         deployment_update_list = self.client.deployment_updates.list(
             deployment_id=del_deployment.id,
             _include=['id']
