@@ -191,6 +191,30 @@ class ResourceManager(object):
         )
         return execution
 
+    def _is_valid_yaml_file(self, plugin):
+        """Is the plugin YAML file valid?"""
+
+        with open(plugin.yaml_file_path()) as f:
+            plugin_yaml = yaml.safe_load(f)
+
+        plugins = plugin_yaml.get(constants.PLUGINS, {})
+        if not plugin_yaml.get(constants.PLUGINS, {}):
+            raise manager_exceptions.InvalidPluginError(
+                'YAML file must be in correct plugin format.'
+            )
+        for plugin_spec in plugins.values():
+            if plugin_spec.get(constants.PLUGIN_PACKAGE_NAME) == \
+                    plugin.package_name:
+                return True
+            else:
+                raise manager_exceptions.InvalidPluginError(
+                    'Plugin package name in YAML file must '
+                    'match plugin package name in Wagon archive. '
+                    'YAML package name:{0},'
+                    'Wagon package name:{1}'.format(plugin_spec.get(
+                        constants.PLUGIN_PACKAGE_NAME), plugin.package_name)
+                )
+
     def _is_central_executor_plugin(self, plugin):
         """Is the plugin using a central_deployment_agent executor?
 
@@ -202,11 +226,8 @@ class ResourceManager(object):
 
         plugins = plugin_yaml.get(constants.PLUGINS, {})
         for plugin_spec in plugins.values():
-            if plugin_spec.get(constants.PLUGIN_PACKAGE_NAME) == \
-                    plugin.package_name:
-                if plugin_spec.get(constants.PLUGIN_EXECUTOR_KEY) == \
-                        constants.CENTRAL_DEPLOYMENT_AGENT:
-                    return True
+            return plugin_spec.get(constants.PLUGIN_EXECUTOR_KEY) == \
+                constants.CENTRAL_DEPLOYMENT_AGENT
 
         return False
 
@@ -219,8 +240,10 @@ class ResourceManager(object):
         the plugin's executor is central_deployment_agent.
         """
         plugin_yaml_path = plugin.yaml_file_path()
-        if plugin_yaml_path and not self._is_central_executor_plugin(plugin):
-            return
+        if plugin_yaml_path:
+            if self._is_valid_yaml_file(plugin):
+                if not self._is_central_executor_plugin(plugin):
+                    return
 
         if not utils.plugin_installable_on_current_platform(plugin):
             raise manager_exceptions.PluginDistributionNotSupported(

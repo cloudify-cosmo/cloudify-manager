@@ -53,7 +53,8 @@ class BaseListTest(BaseServerTestCase):
             tmpdir = tempfile.mkdtemp(prefix='test-pagination-')
             with open(os.path.join(tmpdir, 'setup.py'), 'w') as f:
                 f.write('from setuptools import setup\n')
-                f.write('setup(name="some-package", version={0})'.format(i))
+                f.write('setup(name="cloudify-script-plugin", version={0})'
+                        .format(i))
             plugin_path = wagon.create(tmpdir, archive_destination_dir=tmpdir)
             yaml_path = self.get_full_path('mock_blueprint/plugin.yaml')
             zip_path = self.zip_files([plugin_path, yaml_path])
