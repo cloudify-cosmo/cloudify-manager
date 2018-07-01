@@ -97,9 +97,9 @@ def exceptions_handled(func):
                 return func(*args, **kwargs)
             except Invalid as e:
                 # Re-raise voluptuous validation errors
-                # to handle them properly in the outer try/excep block
+                # to handle them properly in the outer try/except block
                 raise manager_exceptions.BadParametersError(e.error_message)
-        except (manager_exceptions.ManagerException) as e:
+        except manager_exceptions.ManagerException as e:
             utils.abort_error(e, current_app.logger)
     return wrapper
 

@@ -26,8 +26,16 @@ from .test_utils import generate_progress_func
 
 TEST_PACKAGE_NAME = 'cloudify-script-plugin'
 TEST_PACKAGE_VERSION = '1.2'
-TEST_PACKAGE_NAME2 = 'requests'
-TEST_PACKAGE_VERSION2 = '2.13.0'
+TEST_PACKAGE_YAML_FILE = 'mock_blueprint/plugin.yaml'
+TEST_PACKAGE_NAME2 = 'cloudify-diamond-plugin'
+TEST_PACKAGE_VERSION2 = '1.3'
+TEST_PACKAGE_YAML_FILE2 = 'mock_blueprint/plugin-cloudify-diamond-plugin.yaml'
+
+TEST_PACKAGE_BAD_YAML_FILE = 'mock_blueprint/plugin_bad.yaml'
+TEST_PACKAGE_EMPTY_YAML_FILE = 'mock_blueprint/plugin_empty.yaml'
+TEST_PACKAGE_INCONSISTENT_YAML_FILE = \
+    'mock_blueprint/plugin_inconsistent_with_wagon.yaml'
+
 OLD_TEST_PACKAGE_VERSION = '1.1'
 
 
@@ -219,7 +227,7 @@ class PluginsTest(BaseServerTestCase):
     @attr(client_min_version=3,
           client_max_version=base_test.LATEST_API_VERSION)
     def test_plugin_upload_progress(self):
-        tmp_file_path = self.create_wheel('wagon', '0.6.1')
+        tmp_file_path = self.create_wheel('cloudify-script-plugin', '1.5.3')
         yaml_path = self.get_full_path('mock_blueprint/plugin.yaml')
         zip_path = self.zip_files([tmp_file_path, yaml_path])
         total_size = os.path.getsize(zip_path)
@@ -247,8 +255,10 @@ class PluginsTest(BaseServerTestCase):
     @attr(client_min_version=3,
           client_max_version=base_test.LATEST_API_VERSION)
     def test_plugin_download_progress(self):
-        tmp_file_path = self.create_wheel('wagon', '0.6.1')
-        yaml_path = self.get_full_path('mock_blueprint/plugin.yaml')
+        tmp_file_path = self.create_wheel(
+            TEST_PACKAGE_NAME,
+            TEST_PACKAGE_VERSION)
+        yaml_path = self.get_full_path(TEST_PACKAGE_YAML_FILE)
         zip_path = self.zip_files([tmp_file_path, yaml_path])
         tmp_local_path = '/tmp/plugin.whl'
 
@@ -272,8 +282,55 @@ class PluginsTest(BaseServerTestCase):
           client_max_version=base_test.LATEST_API_VERSION)
     def test_caravan_upload(self):
         self.upload_caravan(
-            {TEST_PACKAGE_NAME: TEST_PACKAGE_VERSION,
-             TEST_PACKAGE_NAME2: TEST_PACKAGE_VERSION2}
+            {
+                TEST_PACKAGE_NAME:
+                    [TEST_PACKAGE_VERSION, TEST_PACKAGE_YAML_FILE],
+                TEST_PACKAGE_NAME2:
+                    [TEST_PACKAGE_VERSION2, TEST_PACKAGE_YAML_FILE2]
+            }
         )
         plugins_list = self.client.plugins.list()
         self.assertEqual(len(plugins_list), 2)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_plugin_upload_fails_with_empty_yaml(self):
+        tmp_file_path = self.create_wheel(
+            TEST_PACKAGE_NAME,
+            TEST_PACKAGE_VERSION)
+        yaml_path = self.get_full_path(TEST_PACKAGE_EMPTY_YAML_FILE)
+        zip_path = self.zip_files([tmp_file_path, yaml_path])
+
+        with self.assertRaises(exceptions.PluginInstallationError):
+            self.client.plugins.upload(zip_path)
+
+        self.quiet_delete(tmp_file_path)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_plugin_upload_fails_with_bad_yaml(self):
+        tmp_file_path = self.create_wheel(
+            TEST_PACKAGE_NAME,
+            TEST_PACKAGE_VERSION)
+        yaml_path = self.get_full_path(TEST_PACKAGE_BAD_YAML_FILE)
+        zip_path = self.zip_files([tmp_file_path, yaml_path])
+
+        with self.assertRaises(exceptions.PluginInstallationError):
+            self.client.plugins.upload(zip_path)
+
+        self.quiet_delete(tmp_file_path)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_plugin_upload_fails_with_inconsistent_with_wagon_yaml(self):
+        tmp_file_path = self.create_wheel(
+            TEST_PACKAGE_NAME,
+            TEST_PACKAGE_VERSION)
+        yaml_path = self.get_full_path(
+            TEST_PACKAGE_INCONSISTENT_YAML_FILE)
+        zip_path = self.zip_files([tmp_file_path, yaml_path])
+
+        with self.assertRaises(exceptions.PluginInstallationError):
+            self.client.plugins.upload(zip_path)
+
+        self.quiet_delete(tmp_file_path)
