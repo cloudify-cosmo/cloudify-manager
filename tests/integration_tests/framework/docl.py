@@ -200,7 +200,7 @@ def _retry(func, exceptions, cleanup=None):
         except exceptions:
             time.sleep(0.1)
     else:
-        raise
+        raise RuntimeError()
 
 
 def _wait_for_services(container_ip=None):
@@ -215,11 +215,6 @@ def _wait_for_services(container_ip=None):
     _retry(func=rest_client.blueprints.list,
            exceptions=(requests.exceptions.ConnectionError,
                        cloudify_rest_client.exceptions.CloudifyClientError))
-    logger.info('Waiting for logstash')
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    _retry(func=lambda: sock.connect((container_ip, 9999)),
-           cleanup=lambda _: sock.close(),
-           exceptions=IOError)
     logger.info('Waiting for postgres')
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     _retry(func=lambda: sock.connect((container_ip, 5432)),

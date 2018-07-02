@@ -32,7 +32,7 @@ BASE_SERVICES = {
     'cloudify-mgmtworker.service': 'Management Worker',
     'cloudify-restservice.service': 'Manager Rest-Service',
     'cloudify-rabbitmq.service': 'RabbitMQ',
-    'logstash.service': 'Logstash',
+    'cloudify-amqp-postgres.service': 'AMQP-Postgres',
     'nginx.service': 'Webserver',
     'postgresql-9.5.service': 'PostgreSQL'
 }

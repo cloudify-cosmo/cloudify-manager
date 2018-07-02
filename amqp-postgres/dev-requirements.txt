@@ -1,0 +1,2 @@
+git+https://github.com/cloudify-cosmo/cloudify-common@master#egg=cloudify-common==4.4
+-e git+https://github.com/cloudify-cosmo/cloudify-manager@master#egg=cloudify-manager==4.4&subdirectory=rest-service

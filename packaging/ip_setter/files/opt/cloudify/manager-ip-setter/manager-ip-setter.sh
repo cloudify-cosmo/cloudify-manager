@@ -41,9 +41,6 @@ function set_manager_ip() {
   echo "Creating internal SSL certificates.."
   cfy_manager create-internal-certs --manager-ip ${ip}
 
-  echo "Updating logstash config..."
-  /usr/bin/sed -i -e 's/host => ".*"/host => "'"${ip}"'"/g' /etc/logstash/conf.d/logstash.conf
-
   echo "Done!"
 
 }
