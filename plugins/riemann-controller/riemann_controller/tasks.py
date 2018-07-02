@@ -87,6 +87,10 @@ def delete(**_):
         # on every deployment env deletion
         return
     deployment_config_dir_path = _deployment_config_dir()
+    if not path.isdir(deployment_config_dir_path):
+        # Riemann is installed but no deployment with policies was created,
+        # no need to delete anything
+        return
     _publish_configuration_event('stop', deployment_config_dir_path)
     _verify_core_down(deployment_config_dir_path)
     shutil.rmtree(deployment_config_dir_path)
