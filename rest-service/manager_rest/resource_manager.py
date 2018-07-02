@@ -225,8 +225,9 @@ class ResourceManager(object):
 
         plugins = plugin_yaml.get(constants.PLUGINS, {})
         for plugin_spec in plugins.values():
-            return plugin_spec.get(constants.PLUGIN_EXECUTOR_KEY) == \
-                constants.CENTRAL_DEPLOYMENT_AGENT
+            if plugin_spec.get(constants.PLUGIN_EXECUTOR_KEY) == \
+                    constants.CENTRAL_DEPLOYMENT_AGENT:
+                return True
 
         return False
 
@@ -238,6 +239,7 @@ class ResourceManager(object):
         If the yaml file is provided, it is additionally checked that
         the plugin's executor is central_deployment_agent.
         """
+
         plugin_yaml_path = plugin.yaml_file_path()
         if plugin_yaml_path:
             if self._is_valid_yaml_file(plugin) and \
