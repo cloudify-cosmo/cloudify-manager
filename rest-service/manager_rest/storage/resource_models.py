@@ -16,6 +16,7 @@
 from os import path
 from datetime import datetime
 
+from sqlalchemy import case
 from flask_restful import fields as flask_fields
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.ext.declarative import declared_attr
@@ -206,7 +207,9 @@ class Deployment(SQLResourceBase):
 
 class Execution(SQLResourceBase):
     __tablename__ = 'executions'
-
+    STATUS_DISPLAY_NAMES = {
+        ExecutionState.TERMINATED: 'completed'
+    }
     _extra_fields = {
         'status_display': flask_fields.String
     }
@@ -230,12 +233,19 @@ class Execution(SQLResourceBase):
     deployment_id = association_proxy('deployment', 'id')
     blueprint_id = association_proxy('deployment', 'blueprint_id')
 
-    @property
+    @hybrid_property
     def status_display(self):
         status = self.status
-        return {
-            ExecutionState.TERMINATED: 'completed'
-        }.get(status, status)
+        return self.STATUS_DISPLAY_NAMES.get(status, status)
+
+    @status_display.expression
+    def status_display(cls):
+        table = cls.__table__
+        cases = [
+            (table.c.status == status, label)
+            for status, label in cls.STATUS_DISPLAY_NAMES.items()
+        ]
+        return case(cases, else_=table.c.status)
 
     def _get_identifier_dict(self):
         id_dict = super(Execution, self)._get_identifier_dict()
