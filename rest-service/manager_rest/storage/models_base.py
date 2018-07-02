@@ -22,6 +22,8 @@ from flask_sqlalchemy import SQLAlchemy, inspect
 from flask_restful import fields as flask_fields
 from sqlalchemy import MetaData
 from sqlalchemy.ext.associationproxy import ASSOCIATION_PROXY
+from sqlalchemy.ext.hybrid import HYBRID_PROPERTY
+
 
 from manager_rest.utils import classproperty
 
@@ -157,34 +159,36 @@ class SQLModelBase(db.Model):
         columns = inspect(cls).columns
         columns_dict = {col.name: col.type for col in columns
                         if not col.name.startswith('_')}
-        columns_dict.update(cls._get_association_proxies())
+        columns_dict.update(cls._get_orm_descriptors())
         for field_name, field_type in columns_dict.iteritems():
             field_type_name = field_type.__class__.__name__
             fields[field_name] = cls._sql_to_flask_type_map[field_type_name]
         return fields
 
     @classmethod
-    def _get_association_proxies(cls):
-        """Return a dictionary with all association proxy names as keys, and
-        their types (TEXT, DateTime, etc.) as values
-       """
-        all_descs = inspect(cls).all_orm_descriptors
-        attrs_dict = dict()
+    def _get_orm_descriptors(cls):
+        """Return a dictionary with all ORM descriptor names as keys, and
+        their types (TEXT, DateTime, etc.) as values.
 
+        """
         # The descriptor needs to be invoked once (using __get__) in order
         # to have access to its attributes (e.g. `remote_attr`)
-        proxies = {name: desc.__get__(None, cls)
-                   for name, desc in all_descs.items()
-                   if desc.extension_type is ASSOCIATION_PROXY
-                   and not name.startswith('_')}
+        all_descs = {name: desc.__get__(None, cls)
+                     for name, desc in inspect(cls).all_orm_descriptors.items()
+                     if not name.startswith('_')}
+        attrs_dict = dict()
 
-        for proxy_name, proxy in proxies.iteritems():
-            # Get the underlying attribute in case of multiple assoc. proxies
-            while not proxy.remote_attr.is_attribute:
-                proxy = proxy.remote_attr
+        for name, desc in all_descs.items():
+            if desc.extension_type is ASSOCIATION_PROXY:
+                # Association proxies must be followed to get their type
+                while not desc.remote_attr.is_attribute:
+                    desc = desc.remote_attr
 
-            # Get the type of the remote attribute
-            attrs_dict[proxy_name] = proxy.remote_attr.expression.type
+                # Get the type of the remote attribute
+                attrs_dict[name] = desc.remote_attr.expression.type
+            elif desc.extension_type is HYBRID_PROPERTY:
+                attrs_dict[name] = desc.type
+
         return attrs_dict
 
     def _get_identifier_dict(self):
