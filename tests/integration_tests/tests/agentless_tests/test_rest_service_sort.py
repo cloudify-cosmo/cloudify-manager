@@ -78,7 +78,8 @@ class TestRestServiceListSort(AgentlessTestCase):
             tmpdir = tempfile.mkdtemp(prefix='test-sort-')
             with open(os.path.join(tmpdir, 'setup.py'), 'w') as f:
                 f.write('from setuptools import setup\n')
-                f.write('setup(name="some-package", version={0})'.format(i))
+                f.write('setup(name="cloudify-script-plugin", version={0})'
+                        .format(i))
             wagon_path = wagon.create(tmpdir, archive_destination_dir=tmpdir)
             yaml_path = resource('plugins/plugin.yaml')
             with utils.zip_files([wagon_path, yaml_path]) as zip_path:
