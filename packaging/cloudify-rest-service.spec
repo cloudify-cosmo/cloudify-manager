@@ -1,6 +1,8 @@
 %define dbus_glib_version 0.100
 %define dbus_version 1.6
 
+%global __requires_exclude LIBDBUS_1_3
+
 Name:           cloudify-rest-service
 Version:        %{CLOUDIFY_VERSION}
 Release:        %{CLOUDIFY_PACKAGE_RELEASE}%{?dist}
