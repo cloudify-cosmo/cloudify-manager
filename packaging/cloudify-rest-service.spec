@@ -98,7 +98,6 @@ systemd-tmpfiles --create
 
 /opt/manager
 /etc/cloudify/delete_logs_and_events_from_db.py*
-/etc/logrotate.d/cloudify-rest-service
 /etc/sudoers.d/cloudify-restservice
 /opt/restservice
 /opt/manager/scripts/set-manager-ssl.py*
