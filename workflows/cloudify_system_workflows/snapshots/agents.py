@@ -18,6 +18,7 @@ import json
 
 from cloudify.workflows import ctx
 from cloudify import broker_config
+from cloudify_rest_client.exceptions import CloudifyClientError
 from cloudify.manager import get_rest_client
 from cloudify.utils import get_broker_ssl_cert_path
 
@@ -123,11 +124,15 @@ class Agents(object):
         :param node_instance_id: a node instance from the agents.json file
         :return: the tenant of the given node instance
         """
+        node_instance = None
         client = get_rest_client()
-        node_instances = client.node_instances.list(_all_tenants=True).items
-        for node_instance in node_instances:
-            if node_instance['id'] == node_instance_id:
-                return node_instance['tenant_name']
+        try:
+            node_instance = client.node_instances.get(node_instance_id)
+        except CloudifyClientError as e:
+            pass
+        if node_instance:
+            return node_instance['tenant_name']
+
 
     def _create_agent(self, nodes, tenant_name):
         client = None
