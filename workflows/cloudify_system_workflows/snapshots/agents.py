@@ -133,7 +133,6 @@ class Agents(object):
         if node_instance:
             return node_instance['tenant_name']
 
-
     def _create_agent(self, nodes, tenant_name):
         client = None
         for node_instances in nodes.itervalues():
