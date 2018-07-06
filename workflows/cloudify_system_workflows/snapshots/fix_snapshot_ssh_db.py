@@ -93,7 +93,7 @@ def main(original_string, secret_name):
     """
     sm = get_storage_manager()
 
-    res = sm.list(model_class=Deployment)
+    res = sm.list(model_class=Deployment, get_all_results=True)
     for deployment in res:
         for node in deployment.nodes:
             for node_instance in node.node_instances:
