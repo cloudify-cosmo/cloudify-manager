@@ -110,8 +110,8 @@ def delete(ctx,
 
     sequence.add(
         ctx.send_event(
-                'Deleting deployment [{}] environment'.format(
-                    ctx.deployment.id)))
+            'Deleting deployment [{}] environment'.format(
+                ctx.deployment.id)))
 
     dep_plugins = [p for p in deployment_plugins_to_uninstall if p['install']]
     wf_plugins = [p for p in workflow_plugins_to_uninstall if p['install']]
@@ -121,7 +121,10 @@ def delete(ctx,
             ctx.send_event('Uninstalling deployment plugins'),
             ctx.execute_task(
                 task_name='cloudify_agent.operations.uninstall_plugins',
-                kwargs={'plugins': plugins_to_uninstall}))
+                kwargs={
+                    'plugins': plugins_to_uninstall,
+                    'delete_managed_plugins': False
+                }))
 
     sequence.add(
         ctx.send_event('Stopping deployment policy engine core '
