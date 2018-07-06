@@ -128,7 +128,7 @@ class Agents(object):
         client = get_rest_client()
         try:
             node_instance = client.node_instances.get(node_instance_id)
-        except CloudifyClientError as e:
+        except CloudifyClientError:
             pass
         if node_instance:
             return node_instance['tenant_name']
