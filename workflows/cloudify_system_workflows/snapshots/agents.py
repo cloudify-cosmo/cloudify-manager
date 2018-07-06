@@ -18,6 +18,7 @@ import json
 
 from cloudify.workflows import ctx
 from cloudify import broker_config
+from cloudify_rest_client.exceptions import CloudifyClientError
 from cloudify.manager import get_rest_client
 from cloudify_rest_client.exceptions import CloudifyClientError
 from cloudify.utils import get_broker_ssl_cert_path
