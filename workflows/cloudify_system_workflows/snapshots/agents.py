@@ -130,13 +130,14 @@ class Agents(object):
         When restoring a snapshot from versions 4.0.0/4.0.1 the tenant name is
         not defined and the only way to `guess` it is by finding the
         node_instance from the agents.json file in the DB and checking its
-        tenant.
+        tenant. Using list to scan all tenants and filter by id.
         :param node_instance_id: a node instance from the agents.json file
         :return: the tenant of the given node instance
         """
         client = get_rest_client()
         try:
-            node_instance = client.node_instances.get(node_instance_id)
+            node_instance = client.node_instances.list(
+                _all_tenants=True, id=node_instance_id).items[0]
             return node_instance['tenant_name']
         except CloudifyClientError:
             pass
