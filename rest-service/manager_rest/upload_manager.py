@@ -30,7 +30,7 @@ from setuptools import archive_util
 from urllib2 import urlopen, URLError
 
 from flask import request, current_app
-from flask_restful import types
+from flask_restful import fields
 from flask_restful.reqparse import RequestParser
 
 from manager_rest.constants import (FILE_SERVER_PLUGINS_FOLDER,
@@ -525,7 +525,7 @@ class UploadedBlueprintsManager(UploadedDataManager):
     @classmethod
     def _get_args(cls):
         args_parser = RequestParser()
-        args_parser.add_argument('private_resource', type=types.boolean)
+        args_parser.add_argument('private_resource', type=fields.Boolean)
         args_parser.add_argument('visibility', type=str)
         args_parser.add_argument('application_file_name', type=str, default='')
         return args_parser.parse_args()
@@ -617,7 +617,7 @@ class UploadedPluginsManager(UploadedDataManager):
     @staticmethod
     def _get_args():
         args_parser = RequestParser()
-        args_parser.add_argument('private_resource', type=types.boolean)
+        args_parser.add_argument('private_resource', type=fields.Boolean)
         args_parser.add_argument('visibility', type=str)
         return args_parser.parse_args()
 
