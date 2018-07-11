@@ -119,7 +119,6 @@ class MockHTTPClient(HTTPClient):
 
         if response.status_code != expected_status_code:
             response.content = response.data
-            response.json = lambda: json.loads(response.data)
             self._raise_client_error(response, request_url)
 
         if stream:

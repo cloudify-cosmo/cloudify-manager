@@ -409,7 +409,7 @@ class ExecutionsTestCase(BaseServerTestCase):
             error = manager_exceptions.IllegalExecutionParametersError
             self.assertEquals(
                 error.ILLEGAL_EXECUTION_PARAMETERS_ERROR_CODE,
-                e.error_code)
+                e.message)
             # ensure all missing mandatory parameters are mentioned in message
             self.assertIn('mandatory_param', e.message)
             self.assertIn('mandatory_param2', e.message)
@@ -490,9 +490,9 @@ class ExecutionsTestCase(BaseServerTestCase):
                 execution=execution, new_status=last_status)
             response = self.patch(resource_path, {'status': next_status})
             self.assertEqual(
-                expected_error.http_code, response.status_code)
+                expected_error.status_code, response.status_code)
             self.assertEqual(
-                expected_error.error_code, response.json['error_code'])
+                expected_error.message, response.json['error_code'])
             self.assertEqual(
                 expected_message.format(last_status, next_status),
                 response.json['message'])
