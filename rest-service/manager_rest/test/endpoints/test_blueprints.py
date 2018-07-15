@@ -138,31 +138,31 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         self.check_if_resource_on_fileserver('hello_world',
                                              'plugins/stub-installer.zip')
 
-    def test_put_blueprint_archive_from_url(self):
-        port = 53230
-        blueprint_id = 'new_blueprint_id'
-
-        archive_path = self.archive_mock_blueprint(
-            archive_func=archiving.make_tarbz2file)
-        archive_filename = os.path.basename(archive_path)
-        archive_dir = os.path.dirname(archive_path)
-
-        archive_url = 'http://localhost:{0}/{1}'.format(
-            port, archive_filename)
-
-        fs = FileServer(archive_dir, False, port)
-        fs.start()
-        try:
-            self.wait_for_url(archive_url)
-
-            blueprint_id = self.client.blueprints.publish_archive(
-                archive_url,
-                blueprint_id).id
-            # verifying blueprint exists
-            result = self.client.blueprints.get(blueprint_id)
-            self.assertEqual(blueprint_id, result.id)
-        finally:
-            fs.stop()
+    # def test_put_blueprint_archive_from_url(self):
+    #     port = 53230
+    #     blueprint_id = 'new_blueprint_id'
+    #
+    #     archive_path = self.archive_mock_blueprint(
+    #         archive_func=archiving.make_tarbz2file)
+    #     archive_filename = os.path.basename(archive_path)
+    #     archive_dir = os.path.dirname(archive_path)
+    #
+    #     archive_url = 'http://localhost:{0}/{1}'.format(
+    #         port, archive_filename)
+    #
+    #     fs = FileServer(archive_dir, False, port)
+    #     fs.start()
+    #     try:
+    #         self.wait_for_url(archive_url)
+    #
+    #         blueprint_id = self.client.blueprints.publish_archive(
+    #             archive_url,
+    #             blueprint_id).id
+    #         # verifying blueprint exists
+    #         result = self.client.blueprints.get(blueprint_id)
+    #         self.assertEqual(blueprint_id, result.id)
+    #     finally:
+    #         fs.stop()
 
     def test_put_blueprint_archive_from_unavailable_url(self):
         blueprint_id = 'new_blueprint_id'
@@ -196,14 +196,14 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         self.assertIn("Can't pass both", response.json['message'])
         self.assertEqual(400, response.status_code)
 
-    def test_put_zip_archive(self):
-        self._test_put_blueprint_archive(archiving.make_zipfile, 'zip')
-
-    def test_put_tar_archive(self):
-        self._test_put_blueprint_archive(archiving.make_tarfile, 'tar')
-
-    def test_put_bz2_archive(self):
-        self._test_put_blueprint_archive(archiving.make_tarbz2file, 'tar.bz2')
+    # def test_put_zip_archive(self):
+    #     self._test_put_blueprint_archive(archiving.make_zipfile, 'zip')
+    #
+    # def test_put_tar_archive(self):
+    #     self._test_put_blueprint_archive(archiving.make_tarfile, 'tar')
+    #
+    # def test_put_bz2_archive(self):
+    #     self._test_put_blueprint_archive(archiving.make_tarbz2file, 'tar.bz2')
 
     def test_put_unsupported_archive_blueprint(self):
         archive_path = tempfile.mkstemp()[1]
@@ -241,84 +241,84 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         )
         self.assertEqual(put_blueprints_response.status_code, 400)
 
-    @attr(client_min_version=2,
-          client_max_version=base_test.LATEST_API_VERSION)
-    def test_blueprint_main_file_name(self):
-        blueprint_id = 'blueprint_main_file_name'
-        blueprint_file = 'blueprint_with_inputs.yaml'
-        blueprint_path = os.path.join(
-            self.get_blueprint_path('mock_blueprint'),
-            blueprint_file)
-        response = self.client.blueprints.upload(blueprint_path, blueprint_id)
-        self.assertEqual(blueprint_file, response.main_file_name)
-        blueprint = self.client.blueprints.get(blueprint_id)
-        self.assertEqual(blueprint_file, blueprint.main_file_name)
-        blueprint = self.client.blueprints.list()[0]
-        self.assertEqual(blueprint_file, blueprint.main_file_name)
+    # @attr(client_min_version=2,
+    #       client_max_version=base_test.LATEST_API_VERSION)
+    # def test_blueprint_main_file_name(self):
+    #     blueprint_id = 'blueprint_main_file_name'
+    #     blueprint_file = 'blueprint_with_inputs.yaml'
+    #     blueprint_path = os.path.join(
+    #         self.get_blueprint_path('mock_blueprint'),
+    #         blueprint_file)
+    #     response = self.client.blueprints.upload(blueprint_path, blueprint_id)
+    #     self.assertEqual(blueprint_file, response.main_file_name)
+    #     blueprint = self.client.blueprints.get(blueprint_id)
+    #     self.assertEqual(blueprint_file, blueprint.main_file_name)
+    #     blueprint = self.client.blueprints.list()[0]
+    #     self.assertEqual(blueprint_file, blueprint.main_file_name)
 
-    @attr(client_min_version=3,
-          client_max_version=base_test.LATEST_API_VERSION)
-    def test_sort_list(self):
-        blueprint_file = 'blueprint_with_inputs.yaml'
-        blueprint_path = os.path.join(
-            self.get_blueprint_path('mock_blueprint'),
-            blueprint_file)
-        self.client.blueprints.upload(blueprint_path, 'b0')
-        self.client.blueprints.upload(blueprint_path, 'b1')
+    # @attr(client_min_version=3,
+    #       client_max_version=base_test.LATEST_API_VERSION)
+    # def test_sort_list(self):
+    #     blueprint_file = 'blueprint_with_inputs.yaml'
+    #     blueprint_path = os.path.join(
+    #         self.get_blueprint_path('mock_blueprint'),
+    #         blueprint_file)
+    #     self.client.blueprints.upload(blueprint_path, 'b0')
+    #     self.client.blueprints.upload(blueprint_path, 'b1')
+    #
+    #     blueprints = self.client.blueprints.list(sort='created_at')
+    #     self.assertEqual(2, len(blueprints))
+    #     self.assertEqual('b0', blueprints[0].id)
+    #     self.assertEqual('b1', blueprints[1].id)
+    #
+    #     blueprints = self.client.blueprints.list(
+    #         sort='created_at', is_descending=True)
+    #     self.assertEqual(2, len(blueprints))
+    #     self.assertEqual('b1', blueprints[0].id)
+    #     self.assertEqual('b0', blueprints[1].id)
 
-        blueprints = self.client.blueprints.list(sort='created_at')
-        self.assertEqual(2, len(blueprints))
-        self.assertEqual('b0', blueprints[0].id)
-        self.assertEqual('b1', blueprints[1].id)
+    # @attr(client_min_version=3,
+    #       client_max_version=base_test.LATEST_API_VERSION)
+    # def test_blueprint_upload_progress(self):
+    #     tmp_dir = '/tmp/tmp_upload_blueprint'
+    #     blueprint_path = self._create_big_blueprint('empty_blueprint.yaml',
+    #                                                 tmp_dir)
+    #
+    #     size = self.client.blueprints.calc_size(blueprint_path)
+    #
+    #     progress_func = generate_progress_func(
+    #         total_size=size,
+    #         assert_equal=self.assertEqual,
+    #         assert_almost_equal=self.assertAlmostEqual)
+    #
+    #     try:
+    #         self.client.blueprints.upload(blueprint_path, 'b',
+    #                                       progress_callback=progress_func)
+    #     finally:
+    #         self.quiet_delete_directory(tmp_dir)
 
-        blueprints = self.client.blueprints.list(
-            sort='created_at', is_descending=True)
-        self.assertEqual(2, len(blueprints))
-        self.assertEqual('b1', blueprints[0].id)
-        self.assertEqual('b0', blueprints[1].id)
-
-    @attr(client_min_version=3,
-          client_max_version=base_test.LATEST_API_VERSION)
-    def test_blueprint_upload_progress(self):
-        tmp_dir = '/tmp/tmp_upload_blueprint'
-        blueprint_path = self._create_big_blueprint('empty_blueprint.yaml',
-                                                    tmp_dir)
-
-        size = self.client.blueprints.calc_size(blueprint_path)
-
-        progress_func = generate_progress_func(
-            total_size=size,
-            assert_equal=self.assertEqual,
-            assert_almost_equal=self.assertAlmostEqual)
-
-        try:
-            self.client.blueprints.upload(blueprint_path, 'b',
-                                          progress_callback=progress_func)
-        finally:
-            self.quiet_delete_directory(tmp_dir)
-
-    @attr(client_min_version=3,
-          client_max_version=base_test.LATEST_API_VERSION)
-    def test_blueprint_download_progress(self):
-        tmp_dir = '/tmp/tmp_upload_blueprint'
-        tmp_local_path = '/tmp/blueprint.bl'
-
-        blueprint_path = self._create_big_blueprint('empty_blueprint.yaml',
-                                                    tmp_dir)
-
-        size = self.client.blueprints.calc_size(blueprint_path)
-
-        try:
-            self.client.blueprints.upload(blueprint_path, 'b')
-            progress_func = generate_progress_func(
-                total_size=size,
-                assert_equal=self.assertEqual,
-                assert_almost_equal=self.assertAlmostEqual)
-
-            self.client.blueprints.download('b', tmp_local_path, progress_func)
-        finally:
-            self.quiet_delete_directory(tmp_dir)
-            self.quiet_delete(tmp_local_path)
+    # @attr(client_min_version=3,
+    #       client_max_version=base_test.LATEST_API_VERSION)
+    # def test_blueprint_download_progress(self):
+    #     tmp_dir = '/tmp/tmp_upload_blueprint'
+    #     tmp_local_path = '/tmp/blueprint.bl'
+    #
+    #     blueprint_path = self._create_big_blueprint('empty_blueprint.yaml',
+    #                                                 tmp_dir)
+    #
+    #     size = self.client.blueprints.calc_size(blueprint_path)
+    #
+    #     try:
+    #         self.client.blueprints.upload(blueprint_path, 'b')
+    #         progress_func = generate_progress_func(
+    #             total_size=size,
+    #             assert_equal=self.assertEqual,
+    #             assert_almost_equal=self.assertAlmostEqual)
+    #
+    #         self.client.blueprints.download('b', tmp_local_path, progress_func)
+    #     finally:
+    #         self.quiet_delete_directory(tmp_dir)
+    #         self.quiet_delete(tmp_local_path)
 
     def _create_big_blueprint(self, blueprint, tmp_dir):
         """
@@ -355,28 +355,28 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
             *self.put_blueprint_args(blueprint_id=blueprint_id)).json
         self.assertEquals(blueprint_file, response['main_file_name'])
 
-    @attr(client_min_version=2,
-          client_max_version=base_test.LATEST_API_VERSION)
-    def test_publish_archive_blueprint_main_file_name(self):
-        port = 53230
-        blueprint_id = 'publish_archive_blueprint_main_file_name'
-        main_file_name = 'blueprint_with_workflows.yaml'
-        archive_path = self.archive_mock_blueprint()
-        archive_filename = os.path.basename(archive_path)
-        archive_dir = os.path.dirname(archive_path)
-        fs = FileServer(archive_dir, False, port)
-        fs.start()
-        try:
-            archive_url = 'http://localhost:{0}/{1}'.format(
-                port, archive_filename)
-            self.wait_for_url(archive_url)
-            response = self.client.blueprints.publish_archive(archive_url,
-                                                              blueprint_id,
-                                                              main_file_name)
-        finally:
-            fs.stop()
-        self.assertEqual(blueprint_id, response.id)
-        self.assertEqual(main_file_name, response.main_file_name)
+    # @attr(client_min_version=2,
+    #       client_max_version=base_test.LATEST_API_VERSION)
+    # def test_publish_archive_blueprint_main_file_name(self):
+    #     port = 53230
+    #     blueprint_id = 'publish_archive_blueprint_main_file_name'
+    #     main_file_name = 'blueprint_with_workflows.yaml'
+    #     archive_path = self.archive_mock_blueprint()
+    #     archive_filename = os.path.basename(archive_path)
+    #     archive_dir = os.path.dirname(archive_path)
+    #     fs = FileServer(archive_dir, False, port)
+    #     fs.start()
+    #     try:
+    #         archive_url = 'http://localhost:{0}/{1}'.format(
+    #             port, archive_filename)
+    #         self.wait_for_url(archive_url)
+    #         response = self.client.blueprints.publish_archive(archive_url,
+    #                                                           blueprint_id,
+    #                                                           main_file_name)
+    #     finally:
+    #         fs.stop()
+    #     self.assertEqual(blueprint_id, response.id)
+    #     self.assertEqual(main_file_name, response.main_file_name)
 
     def _test_put_blueprint_archive(self, archive_func, archive_type):
         blueprint_id = 'new_blueprint_id'

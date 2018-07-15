@@ -47,6 +47,19 @@ def mock_authorize(action):
     return authorize_dec
 
 
+class MockResponse(object):
+    def __init__(self, response):
+        self.json = lambda: self._to_json(response.json)
+        self.status_code = response.status_code
+        self.content = response.content
+
+    @staticmethod
+    def _to_json(json_source):
+        if json_source:
+            return json_source
+        raise Exception('Empty json string to load')
+
+
 class MockHTTPClient(HTTPClient):
 
     def __init__(self, app, headers=None, file_server=None):
@@ -119,7 +132,7 @@ class MockHTTPClient(HTTPClient):
 
         if response.status_code != expected_status_code:
             response.content = response.data
-            self._raise_client_error(response, request_url)
+            self._raise_client_error(MockResponse(response), request_url)
 
         if stream:
             return MockStreamedResponse(response, self._file_server)

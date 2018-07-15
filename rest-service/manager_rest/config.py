@@ -69,6 +69,7 @@ class Config(object):
         for env_var_name, namespace in [
                 ('MANAGER_REST_CONFIG_PATH', ''),
                 ('MANAGER_REST_SECURITY_CONFIG_PATH', 'security'),
+                ('MAX_CONTENT_LENGTH', 9999999),
                 ('MANAGER_REST_AUTHORIZATION_CONFIG_PATH', 'authorization')]:
             if env_var_name in os.environ:
                 self.load_from_file(os.environ[env_var_name], namespace)

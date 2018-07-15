@@ -86,13 +86,13 @@ class AuthenticationTests(SecurityTestBase):
             token = self.client.tokens.get()
         self.assertEqual(token.role, USER_ROLE)
 
-    def test_secured_manager_blueprints_upload(self):
-        with self.use_secured_client(username='alice',
-                                     password='alice_password'):
-            self.client.blueprints.upload(
-                self.get_mock_blueprint_path(),
-                'bp-id'
-            )
+    # def test_secured_manager_blueprints_upload(self):
+    #     with self.use_secured_client(username='alice',
+    #                                  password='alice_password'):
+    #         self.client.blueprints.upload(
+    #             self.get_mock_blueprint_path(),
+    #             'bp-id'
+    #         )
 
     @attr(client_min_version=2.1,
           client_max_version=LATEST_API_VERSION)

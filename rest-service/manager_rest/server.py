@@ -147,6 +147,7 @@ class CloudifyFlaskApp(Flask):
             handle_exception,
             flask_handle_user_exception,
             flask_restful_handle_user_exception)
+        self.config['ERROR_404_HELP'] = False
 
 
 def reset_app(configuration=None):
