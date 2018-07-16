@@ -2,7 +2,7 @@ import sys
 import logging
 
 from flask import current_app, request
-from logging.handlers import RotatingFileHandler
+from logging.handlers import WatchedFileHandler
 
 from manager_rest import config
 from manager_rest.utils import abort_error
@@ -16,13 +16,12 @@ def setup_logger(logger):
     """
     cfy_config = config.instance
 
-    # setting up the app logger with a rotating file handler, in addition to
+    # setting up the app logger with a watched file handler, in addition to
     #  the built-in flask logger which can be helpful in debug mode.
+    # log rotation is handled by logrotate.
     additional_log_handlers = [
-        RotatingFileHandler(
-            filename=cfy_config.rest_service_log_path,
-            maxBytes=cfy_config.rest_service_log_file_size_MB * 1024 * 1024,
-            backupCount=cfy_config.rest_service_log_files_backup_count
+        WatchedFileHandler(
+            filename=cfy_config.rest_service_log_path
         )
     ]
 
