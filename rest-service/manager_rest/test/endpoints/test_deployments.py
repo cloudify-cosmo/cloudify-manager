@@ -437,14 +437,9 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             blueprint_file_name='blueprint_with_illegal_output.yaml',
             blueprint_id=id_,
             deployment_id=id_)
-        try:
-            self.client.deployments.outputs.get(id_)
-            self.fail()
-        except CloudifyClientError, e:
-            self.assertEqual(400, e.status_code)
-            self.assertEqual(
-                manager_exceptions.DeploymentOutputsEvaluationError.ERROR_CODE,
-                e.error_code)
+        outputs = self.client.deployments.outputs.get(id_)
+        self.assertIn("More than one node instance found for node",
+                      outputs['outputs']['ip_address'])
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
