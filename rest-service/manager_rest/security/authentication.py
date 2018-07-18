@@ -17,7 +17,7 @@ from datetime import datetime
 from collections import namedtuple
 
 from flask import current_app, Response
-from flask_security.utils import verify_password, md5
+from flask_security.utils import verify_password, verify_hash
 
 from . import user_handler
 from manager_rest.storage import user_datastore
@@ -159,7 +159,7 @@ class Authentication(object):
             )
         elif not user:
             raise_unauthorized_user_error('No authentication info provided')
-        elif md5(user.password) != data[1]:
+        elif not verify_hash(compare_data=user.password, hashed_data=data[1]):
             raise_unauthorized_user_error(
                 'Authentication failed for {0}'.format(user)
             )
