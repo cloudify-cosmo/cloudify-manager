@@ -14,7 +14,7 @@
 #  * limitations under the License.
 
 from yaml import load
-from flask_security.utils import encrypt_password
+from flask_security.utils import hash_password
 
 from manager_rest import constants
 from manager_rest.storage.models import Node
@@ -55,7 +55,7 @@ def create_default_user_tenant_and_roles(admin_username,
     admin_user = user_datastore.create_user(
         id=constants.BOOTSTRAP_ADMIN_ID,
         username=admin_username,
-        password=encrypt_password(admin_password),
+        password=hash_password(admin_password),
         roles=[admin_role]
     )
 

@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from flask_security.utils import encrypt_password
+from flask_security.utils import hash_password
 
 from manager_rest.storage.models import Tenant, UserTenantAssoc
 from manager_rest.storage import user_datastore
@@ -69,7 +69,7 @@ def add_users_to_db(user_list):
         role = user_datastore.find_role(user['role'])
         user_obj = user_datastore.create_user(
             username=user['username'],
-            password=encrypt_password(user['password']),
+            password=hash_password(user['password']),
             roles=[role]
         )
 
