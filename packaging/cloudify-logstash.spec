@@ -10,7 +10,6 @@ Vendor:         Cloudify Platform Ltd.
 Packager:       Cloudify Platform Ltd.
 
 BuildRequires:  jre, rsync, logstash = 1:1.5.0
-Requires:       jre
 Conflicts:      logstash
 
 Source0:        http://repository.cloudifysource.org/cloudify/components/postgresql-9.4.1212.jar
