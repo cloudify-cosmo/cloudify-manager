@@ -19,7 +19,7 @@ install_requires = [
     'Flask==0.10.1',
     'flask-restful==0.2.5',
     'flask-restful-swagger==0.12',
-    'flask-sqlalchemy==2.1',
+    'flask-sqlalchemy==2.3.2',
     'flask-security==3.0.0',
     'flask-migrate==2.2.1',
     'supervise==1.1.1',
@@ -56,5 +56,5 @@ setup(
     install_requires=install_requires,
     extras_require={
         'dbus': ['dbus-python==1.2.4'],
-    },
+    }
 )
