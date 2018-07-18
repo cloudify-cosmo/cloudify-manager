@@ -19,7 +19,7 @@ install_requires = [
     'Flask',
     'flask-restful',
     'flask-restful-swagger',
-    'flask-sqlalchemy==2.1',
+    'flask-sqlalchemy',
     'flask-security',
     'flask-migrate',
     'ldappy',
