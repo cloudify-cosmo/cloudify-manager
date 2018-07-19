@@ -12,10 +12,10 @@ EnvironmentFile=/etc/sysconfig/cloudify-rabbitmq
 ExecStartPre=-/bin/sh -c "/usr/sbin/rabbitmqctl status > /dev/null 2>&1"
 
 ExecStart=/usr/sbin/rabbitmq-server
-ExecStartPost=/usr/sbin/rabbitmqctl wait /tmp/rabbitmq.pid
+ExecStartPost=/usr/sbin/rabbitmqctl wait /var/run/rabbitmq/rabbitmq.pid
 
-ExecStop=/usr/sbin/rabbitmqctl stop /tmp/rabbitmq.pid
-ExecStopPost=-/usr/bin/rm /tmp/rabbitmq.pid
+ExecStop=/usr/sbin/rabbitmqctl stop /var/run/rabbitmq/rabbitmq.pid
+ExecStopPost=-/usr/bin/rm /var/run/rabbitmq/rabbitmq.pid
 
 LimitNOFILE=102400
 
