@@ -34,8 +34,8 @@ cp -R ${RPM_SOURCE_DIR}/packaging/rabbitmq/files/* %{buildroot}
 
 
 %files
-
 /etc/logrotate.d/cloudify-rabbitmq
+%dir /etc/cloudify/rabbitmq
 /etc/cloudify/rabbitmq/definitions.json
 /etc/cloudify/rabbitmq/enabled_plugins
 /etc/cloudify/rabbitmq/rabbitmq.config
