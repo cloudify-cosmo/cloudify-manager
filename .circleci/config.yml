@@ -134,10 +134,7 @@ workflows:
   build_and_test:
     jobs:
       - flake8
-      - build-rpms:
-          filters:
-                branches:
-                  only: master
+      - build-rpms
       - test_v1
       - test_clientv2_endpoints
       - test_clientv2_infrastructure
