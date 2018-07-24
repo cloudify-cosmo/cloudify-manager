@@ -28,7 +28,7 @@ import unittest
 import sh
 from contextlib import contextmanager
 
-from pytest.mark import skip
+from pytest import mark
 import wagon
 
 import cloudify.utils
@@ -523,7 +523,7 @@ class BaseAgentTestCase(BaseTestCase):
             node_id=node_id)[0]
         return instance.runtime_properties
 
-    @skip("Basic test frame to be used in other tests")
+    @mark.skip("Basic test frame to be used in other tests")
     def test_hello_world(self,
                          use_cli=False,
                          modify_blueprint_func=None,
