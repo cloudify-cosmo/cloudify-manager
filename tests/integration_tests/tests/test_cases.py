@@ -40,7 +40,7 @@ from logging.handlers import RotatingFileHandler
 from manager_rest.utils import mkdirs
 from manager_rest.constants import CLOUDIFY_TENANT_HEADER
 
-from integration_tests.framework import utils, hello_world, docl
+from integration_tests.framework import utils, hello_world, docl, env
 from integration_tests.framework.flask_utils import reset_storage, \
     prepare_reset_storage_script
 from integration_tests.framework.riemann import RIEMANN_CONFIGS_DIR
@@ -60,12 +60,14 @@ class BaseTestCase(unittest.TestCase):
     A test case for cloudify integration tests.
     """
 
-    env = None
-
     @classmethod
     def setUpClass(cls):
-        import integration_tests.framework.env
-        BaseTestCase.env = integration_tests.framework.env.instance
+        env.create_env(cls.environment_type)
+        cls.env = env.instance
+
+    @classmethod
+    def tearDownClass(cls):
+        env.destroy_env()
 
     def setUp(self):
         self.workdir = tempfile.mkdtemp(
@@ -460,6 +462,7 @@ class BaseTestCase(unittest.TestCase):
 
 
 class AgentlessTestCase(BaseTestCase):
+    environment_type = env.AgentlessTestEnvironment
 
     @classmethod
     def setUpClass(cls):
@@ -485,6 +488,11 @@ class AgentlessTestCase(BaseTestCase):
 
 
 class BaseAgentTestCase(BaseTestCase):
+    environment_type = env.AgentTestEnvironment
+
+    @classmethod
+    def setUpClass(cls):
+        super(BaseAgentTestCase, cls).setUpClass()
 
     def tearDown(self):
         self.logger.info('Removing leftover test containers')
