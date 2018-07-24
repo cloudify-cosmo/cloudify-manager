@@ -49,7 +49,7 @@ def mock_authorize(action):
 
 class MockResponse(object):
     def __init__(self, response):
-        self.json = lambda: self._to_json(response.json)
+        self.json = self._to_json(response.json)
         self.status_code = response.status_code
         self.content = response.content
 
