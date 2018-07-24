@@ -16,9 +16,9 @@
 from setuptools import setup, find_packages
 
 install_requires = [
-    'Flask',
-    'flask-restful',
-    'flask-restful-swagger',
+    'Flask==0.10.1',
+    'flask-restful==0.2.5',
+    'flask-restful-swagger==0.12',
     'flask-sqlalchemy',
     'flask-security',
     'flask-migrate',
