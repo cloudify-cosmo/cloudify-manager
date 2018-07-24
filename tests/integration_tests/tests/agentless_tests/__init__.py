@@ -12,13 +12,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from integration_tests.framework import env
-
-
-def setup_package():
-    env.create_env(env.AgentlessTestEnvironment)
-
-
-def teardown_package():
-    env.destroy_env()
