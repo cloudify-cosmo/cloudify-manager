@@ -125,9 +125,10 @@ class IncludeQueryParamTests(base_test.BaseServerTestCase):
         self.assertEqual(execution_id, response.id)
         self.assertIsNotNone(response.created_at)
 
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
     def test_execution_with_status_field(self):
-        # status_display field is a computed field for status,
-        # so they will always fo together.
+        # status_display is defaulted to status in recent clients
         deployment_id = self.client.deployments.list()[0].id
         response = self.client.executions.list(
             deployment_id=deployment_id,
