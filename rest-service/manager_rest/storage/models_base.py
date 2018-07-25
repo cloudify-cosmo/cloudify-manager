@@ -23,7 +23,7 @@ from flask_restful import fields as flask_fields
 from sqlalchemy import MetaData
 from sqlalchemy.ext.associationproxy import ASSOCIATION_PROXY
 from sqlalchemy.ext.hybrid import HYBRID_PROPERTY
-
+from sqlalchemy.orm.interfaces import NOT_EXTENSION
 
 from manager_rest.utils import classproperty
 
@@ -91,6 +91,20 @@ class CIColumn(db.Column):
     """A column for case insensitive string fields
     """
     is_ci = True
+
+
+def _get_extension_type(desc):
+    """Return the extension_type of a SQLAlchemy descriptors.
+
+    This also handles proxy descriptors, looking up the extension type on
+    the proxied-to descriptor.
+    """
+    extension_type = desc.extension_type
+    if extension_type is NOT_EXTENSION:
+        proxied_desc = getattr(desc, 'descriptor', None)
+        if proxied_desc is not None:
+            extension_type = proxied_desc.extension_type
+    return extension_type
 
 
 class SQLModelBase(db.Model):
@@ -179,14 +193,15 @@ class SQLModelBase(db.Model):
         attrs_dict = dict()
 
         for name, desc in all_descs.items():
-            if desc.extension_type is ASSOCIATION_PROXY:
+            extension_type = _get_extension_type(desc)
+            if extension_type is ASSOCIATION_PROXY:
                 # Association proxies must be followed to get their type
                 while not desc.remote_attr.is_attribute:
                     desc = desc.remote_attr
 
                 # Get the type of the remote attribute
                 attrs_dict[name] = desc.remote_attr.expression.type
-            elif desc.extension_type is HYBRID_PROPERTY:
+            elif extension_type is HYBRID_PROPERTY:
                 attrs_dict[name] = desc.type
 
         return attrs_dict
