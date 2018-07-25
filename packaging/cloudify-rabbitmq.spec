@@ -39,7 +39,6 @@ cp -R ${RPM_SOURCE_DIR}/packaging/rabbitmq/files/* %{buildroot}
 /etc/logrotate.d/cloudify-rabbitmq
 /etc/cloudify/rabbitmq/definitions.json
 /etc/cloudify/rabbitmq/enabled_plugins
-/etc/cloudify/rabbitmq/rabbitmq.config
 /etc/security/limits.d/rabbitmq.conf
 /opt/rabbitmq_NOTICE.txt
 /usr/lib/systemd/system/cloudify-rabbitmq.service
