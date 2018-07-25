@@ -46,7 +46,9 @@ class TestUtils(base_test.BaseServerTestCase):
         def create_plugin(supported_platform=None,
                           distribution=None,
                           distribution_release=None):
-            mock_data = {k: 'stub' for k in models.Plugin.resource_fields}
+            fields_to_skip = ['resource_availability']
+            mock_data = {k: 'stub' for k in models.Plugin.resource_fields
+                         if k not in fields_to_skip}
             mock_data.pop('tenant_name')
             mock_data.pop('created_by')
             if supported_platform:
