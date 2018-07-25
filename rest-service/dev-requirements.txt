@@ -1,4 +1,4 @@
-git+https://github.com/cloudify-cosmo/cloudify-common@4.4#egg=cloudify-common==4.4
+git+https://github.com/cloudify-cosmo/cloudify-common@4.4.1#egg=cloudify-common==4.4.1
 
 # test dependencies
 mock
