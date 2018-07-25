@@ -46,7 +46,10 @@ class TestUtils(base_test.BaseServerTestCase):
         def create_plugin(supported_platform=None,
                           distribution=None,
                           distribution_release=None):
-            fields_to_skip = ['resource_availability']
+            # don't attempt to set read-only properties
+            fields_to_skip = [
+                'resource_availability',  # deprecated, proxies to .visibility
+            ]
             mock_data = {k: 'stub' for k in models.Plugin.resource_fields
                          if k not in fields_to_skip}
             mock_data.pop('tenant_name')
