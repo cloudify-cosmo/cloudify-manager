@@ -44,8 +44,4 @@ cp -R ${RPM_SOURCE_DIR}/packaging/rabbitmq/files/* %{buildroot}
 /opt/rabbitmq_NOTICE.txt
 /usr/lib/systemd/system/cloudify-rabbitmq.service
 %attr(750,%_user,adm) /var/log/cloudify/%_user
-%attr(755,%_user,adm) /var/run/rabbitmq
-
-%clean
-
-rm -rf /var/run/rabbitmq
+%dir %attr(755,%_user,adm) /var/run/rabbitmq
