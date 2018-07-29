@@ -29,7 +29,6 @@ Cloudify's RabbitMQ configuration
 %install
 
 mkdir -p %{buildroot}/var/log/cloudify/rabbitmq
-mkdir -p %{buildroot}/var/run/rabbitmq
 
 cp -R ${RPM_SOURCE_DIR}/packaging/rabbitmq/files/* %{buildroot}
 
@@ -44,4 +43,3 @@ cp -R ${RPM_SOURCE_DIR}/packaging/rabbitmq/files/* %{buildroot}
 /opt/rabbitmq_NOTICE.txt
 /usr/lib/systemd/system/cloudify-rabbitmq.service
 %attr(750,%_user,adm) /var/log/cloudify/%_user
-%dir %attr(755,%_user,adm) /var/run/rabbitmq

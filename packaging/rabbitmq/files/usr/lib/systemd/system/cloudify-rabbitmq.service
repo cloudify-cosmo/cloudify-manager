@@ -19,5 +19,11 @@ ExecStopPost=-/usr/bin/rm /var/run/rabbitmq/rabbitmq.pid
 
 LimitNOFILE=102400
 
+User=rabbitmq
+Group=rabbitmq
+PermissionsStartOnly=True
+RuntimeDirectory=rabbitmq
+RuntimeDirectoryMode=0755
+
 [Install]
 WantedBy=multi-user.target
