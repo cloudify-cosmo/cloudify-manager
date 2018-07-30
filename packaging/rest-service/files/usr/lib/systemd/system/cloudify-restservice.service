@@ -13,7 +13,7 @@ ExecStart=/bin/sh -c '/opt/manager/env/bin/gunicorn \
     --pid /run/cloudify-restservice/pid \
     -w ${GUNICORN_WORKER_COUNT} \
     --max-requests ${GUNICORN_MAX_REQUESTS} \
-    -b 127.0.0.1:${REST_PORT} \
+    -b unix:/run/cloudify-restservice/gunicorn.socket \
     --timeout 300 manager_rest.wsgi:app \
     --log-file /var/log/cloudify/rest/gunicorn.log \
     --access-logfile /var/log/cloudify/rest/gunicorn-access.log'
