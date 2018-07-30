@@ -14,7 +14,9 @@
 # limitations under the License.
 ############
 
+import os
 import Queue
+import logging
 from time import time
 from threading import Thread, Lock
 
@@ -22,6 +24,8 @@ import psycopg2
 from psycopg2.extras import execute_values, DictCursor
 from collections import OrderedDict
 
+
+logger = logging.getLogger(__name__)
 
 EVENT_INSERT_QUERY = """
     INSERT INTO events (
@@ -98,15 +102,17 @@ EXECUTION_SELECT_QUERY = """
 class DBLogEventPublisher(object):
     COMMIT_DELAY = 0.1  # seconds
 
-    def __init__(self, config, acks_queue):
+    def __init__(self, config, connection):
         self._lock = Lock()
         self._batch = Queue.Queue()
 
         self._last_commit = time()
         self.config = config
         self._executions_cache = LimitedSizeDict(10000)
-        self._acks_queue = acks_queue
+        self._amqp_connection = connection
+        self._started = Queue.Queue()
 
+    def start(self):
         # Create a separate thread to allow proper batching without losing
         # messages. Without this thread, if the messages were just committed,
         # and 1 new message is sent, then process will never commit, because
@@ -114,27 +120,51 @@ class DBLogEventPublisher(object):
         publish_thread = Thread(target=self._message_publisher)
         publish_thread.daemon = True
         publish_thread.start()
+        try:
+            started = self._started.get(3)
+        except Queue.Empty:
+            raise RuntimeError('Timeout connecting to database')
+        else:
+            if isinstance(started, Exception):
+                raise started
+            
 
     def process(self, message, exchange, tag):
         self._batch.put((message, exchange, tag))
 
-    def _message_publisher(self):
-        conn = psycopg2.connect(
+    def connect(self):
+        return psycopg2.connect(
             dbname=self.config['postgresql_db_name'],
             host=self.config['postgresql_host'],
             user=self.config['postgresql_username'],
             password=self.config['postgresql_password'],
             cursor_factory=DictCursor
         )
+
+    def _message_publisher(self):
+        try:
+            conn = self.connect()
+        except psycopg2.OperationalError as e:
+            self._started.put(e)
+            self.on_db_connection_error()
+        else:
+            self._started.put(True)
         items = []
         while True:
             try:
-                items.append(self._batch.get(0.3))
+                items.append(self._batch.get(timeout=0.3))
             except Queue.Empty:
                 pass
             if len(items) > 100 or \
                     (items and (time() - self._last_commit > 0.5)):
-                self._store(conn, items)
+                try:
+                    self._store(conn, items)
+                except psycopg2.OperationalError:
+                    self.on_db_connection_error()
+                except psycopg2.IntegrityError:
+                    logger.exception('Error storing %d logs+events',
+                                     len(logs) + len(events))
+                    conn.rollback()
                 items = []
                 self._last_commit = time()
 
@@ -153,8 +183,8 @@ class DBLogEventPublisher(object):
     def _store(self, conn, items):
         events, logs = [], []
 
-        tags = set()
-        for item, exchange, tag in items:
+        acks = []
+        for item, exchange, ack in items:
             execution = self._get_execution(conn, item)
             if exchange == 'cloudify-events':
                 events.append(self._get_event(item, execution))
@@ -162,7 +192,7 @@ class DBLogEventPublisher(object):
                 logs.append(self._get_log(item, execution))
             else:
                 raise ValueError('Unknown exchange type: {0}'.format(exchange))
-            tags.add(tag)
+            acks.append(ack)
 
         with conn.cursor() as cur:
             if events:
@@ -171,10 +201,16 @@ class DBLogEventPublisher(object):
             if logs:
                 execute_values(cur, LOG_INSERT_QUERY, logs,
                                template=LOG_VALUES_TEMPLATE)
+        logger.debug('commit %s', len(logs) + len(events))
         conn.commit()
-        for tag in tags:
-            self._acks_queue.put(tag)
+        for ack in acks:
+            self._amqp_connection.acks_queue.put(ack)
 
+    def on_db_connection_error(self):
+        logger.critical('Database down - cannot continue')
+        self._amqp_connection.close()
+        raise RuntimeError('Database down')
+     
     @staticmethod
     def _get_log(message, execution):
         return {

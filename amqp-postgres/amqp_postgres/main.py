@@ -20,7 +20,7 @@ import logging
 
 from cloudify.amqp_client import get_client
 
-from .amqp_consumer import AMQPLogsEventsConsumer
+from .amqp_consumer import AMQPLogsEventsConsumer, AckingAMQPConnection
 from .postgres_publisher import DBLogEventPublisher
 
 logger = logging.getLogger(__name__)
@@ -33,12 +33,6 @@ CONFIG_PATH = '/opt/manager/cloudify-rest.conf'
 
 def _create_amqp_client(config):
     acks_queue = Queue.Queue()
-    db_publisher = DBLogEventPublisher(config, acks_queue)
-    amqp_consumer = AMQPLogsEventsConsumer(
-        message_processor=db_publisher.process,
-        acks_queue=acks_queue
-    )
-
     port = BROKER_PORT_SSL if config['amqp_ca_path'] else BROKER_PORT_NO_SSL
     amqp_client = get_client(
         amqp_host=config['amqp_host'],
@@ -47,9 +41,17 @@ def _create_amqp_client(config):
         amqp_vhost='/',
         amqp_port=port,
         ssl_enabled=bool(config['amqp_ca_path']),
-        ssl_cert_path=config['amqp_ca_path']
+        ssl_cert_path=config['amqp_ca_path'],
+        cls=AckingAMQPConnection
     )
+    amqp_client.acks_queue = acks_queue
+    db_publisher = DBLogEventPublisher(config, amqp_client)
+    amqp_consumer = AMQPLogsEventsConsumer(
+        message_processor=db_publisher.process
+    )
+
     amqp_client.add_handler(amqp_consumer)
+    db_publisher.start()
     return amqp_client
 
 

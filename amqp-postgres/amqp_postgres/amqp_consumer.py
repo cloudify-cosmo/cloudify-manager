@@ -18,6 +18,21 @@ import json
 import Queue
 import logging
 
+from cloudify.amqp_client import AMQPConnection
+
+class AckingAMQPConnection(AMQPConnection):
+    def _process_publish(self, channel):
+        self._process_acks()
+        super(AckingAMQPConnection, self)._process_publish(channel)
+
+    def _process_acks(self):
+        while True:
+            try:
+                channel, tag = self.acks_queue.get_nowait()
+                channel.basic_ack(tag)
+            except Queue.Empty:
+                return
+
 
 logger = logging.getLogger(__name__)
 
@@ -26,13 +41,12 @@ class AMQPLogsEventsConsumer(object):
     LOGS_EXCHANGE = 'cloudify-logs'
     EVENTS_EXCHANGE = 'cloudify-events'
 
-    def __init__(self, message_processor, acks_queue):
+    def __init__(self, message_processor):
         self.queue = 'cloudify-logs-events'
         self._message_processor = message_processor
 
         # This is here because AMQPConnection expects it
         self.routing_key = ''
-        self._acks_queue = acks_queue
 
     def register(self, connection):
         channel = connection.channel()
@@ -46,28 +60,18 @@ class AMQPLogsEventsConsumer(object):
                                      auto_delete=False,
                                      durable=True,
                                      exchange_type='fanout')
-            channel.basic_recover(requeue=True)
             channel.queue_bind(queue=self.queue,
                                exchange=exchange)
 
         channel.basic_consume(self.process, self.queue)
-
-    def _process_publish(self, channel):
-        self._process_acks(channel)
-        super(AMQPLogsEventsConsumer, self)._process_publish(channel)
-
-    def _process_acks(self, channel):
-        while True:
-            try:
-                channel.basic_ack(self._acks_queue.get_nowait())
-            except Queue.Empty:
-                return
+#        channel.basic_recover(requeue=True)
 
     def process(self, channel, method, properties, body):
         try:
             parsed_body = json.loads(body)
             self._message_processor(parsed_body, method.exchange,
-                                    method.delivery_tag)
+                                    (channel, method.delivery_tag))
         except Exception as e:
             logger.warn('Failed message processing: %s', e)
             logger.debug('Message was: %s', body)
+
