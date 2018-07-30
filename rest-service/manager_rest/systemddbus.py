@@ -6,12 +6,12 @@ MANAGER_IFACE = 'org.freedesktop.systemd1.Manager'
 PROP_IFACE = 'org.freedesktop.DBus.Properties'
 UNIT_IFACE = 'org.freedesktop.systemd1.Unit'
 SVC_IFACE = 'org.freedesktop.systemd1.Service'
+SVC_PROPERTIES = ['MainPID']
+UNIT_PROPERTIES = ['Id', 'Description', 'LoadState', 'ActiveState',
+                   'SubState']
 
 
-class DBusClient:
-    SVC_PROPERTIES = ['MainPID']
-    UNIT_PROPERTIES = ['Id', 'Description', 'LoadState', 'ActiveState',
-                       'SubState']
+class DBusClient(object):
 
     def __init__(self):
         self.bus = dbus.SystemBus()
@@ -33,10 +33,14 @@ class DBusClient:
             properties = tmp_properties
         return properties
 
-    def get_unit_properties(self, unit_name, property_names=UNIT_PROPERTIES):
+    def get_unit_properties(self, unit_name, property_names=None):
+        if property_names is None:
+            property_names = UNIT_PROPERTIES
         return self.get_properties(unit_name, property_names, UNIT_IFACE)
 
-    def get_service_properties(self, unit_name, property_names=SVC_PROPERTIES):
+    def get_service_properties(self, unit_name, property_names=None):
+        if property_names is None:
+            property_names = SVC_PROPERTIES
         return self.get_properties(unit_name, property_names, SVC_IFACE)
 
 
