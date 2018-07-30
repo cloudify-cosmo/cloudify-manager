@@ -46,6 +46,7 @@ class AMQPLogsEventsConsumer(object):
                                      auto_delete=False,
                                      durable=True,
                                      exchange_type='fanout')
+            channel.basic_recover(requeue=True)
             channel.queue_bind(queue=self.queue,
                                exchange=exchange)
 

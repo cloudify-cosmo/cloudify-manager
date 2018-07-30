@@ -45,12 +45,12 @@ EVENT_VALUES_TEMPLATE = """(
         %(execution_id)s,
         %(tenant_id)s,
         %(creator_id)s,
-        %(logger)s,
-        %(level)s,
+        %(event_type)s,
         %(message)s,
         %(message_code)s,
         %(operation)s,
-        %(node_id)s
+        %(node_id)s,
+        %(error_causes)s
     )
 """
 
@@ -197,12 +197,12 @@ class DBLogEventPublisher(object):
             'execution_id': execution['_storage_id'],
             'tenant_id': execution['_tenant_id'],
             'creator_id': execution['_creator_id'],
-            'logger': message['event_type'],
-            'level': message['message']['text'],
-            'message': message['message_code'],
-            'message_code': message['context'].get('operation', ''),
-            'operation': message['context'].get('node_id', ''),
-            'node_id': message['context'].get('task_error_causes', '')
+            'event_type': message['event_type'],
+            'message': message['message']['text'],
+            'message_code': message['message_code'],
+            'operation': message['context'].get('operation', ''),
+            'node_id': message['context'].get('node_id', ''),
+            'error_causes': message['context'].get('task_error_causes')
         }
 
 
