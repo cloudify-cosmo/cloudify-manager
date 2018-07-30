@@ -229,7 +229,7 @@ class Postgres(object):
         run_shell(command)
 
     def _dump_to_file(self, destination_path, db_name, exclude_tables=None):
-        ctx.logger.debug('Creating db dump file: {0}, excluding: {0}'.
+        ctx.logger.debug('Creating db dump file: {0}, excluding: {1}'.
                          format(destination_path, exclude_tables))
         flags = []
         if exclude_tables:
