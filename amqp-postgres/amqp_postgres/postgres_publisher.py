@@ -50,7 +50,7 @@ EVENT_VALUES_TEMPLATE = """(
         %(message)s,
         %(message_code)s,
         %(operation)s,
-        %(ndoe_id)s
+        %(node_id)s
     )
 """
 

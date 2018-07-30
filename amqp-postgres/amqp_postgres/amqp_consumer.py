@@ -68,4 +68,5 @@ class AMQPLogsEventsConsumer(object):
             self._message_processor(parsed_body, method.exchange,
                                     method.delivery_tag)
         except Exception as e:
-            logger.warn('Failed message processing: {0}'.format(e))
+            logger.warn('Failed message processing: %s', e)
+            logger.debug('Message was: %s', body)
