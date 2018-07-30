@@ -19,7 +19,7 @@ from time import time
 from threading import Thread, Lock
 
 import psycopg2
-from psycopg2.extras import execute_batch, DictCursor
+from psycopg2.extras import execute_values, DictCursor
 from collections import OrderedDict
 
 
@@ -36,18 +36,21 @@ EVENT_INSERT_QUERY = """
         operation,
         node_id,
         error_causes)
-    VALUES (
+    VALUES %s
+"""
+
+EVENT_VALUES_TEMPLATE = """(
         now() AT TIME ZONE 'utc',
-        CAST (%s AS TIMESTAMP),
-        %s,
-        %s,
-        %s,
-        %s,
-        %s,
-        %s,
-        NULLIF(%s, ''),
-        NULLIF(%s, ''),
-        NULLIF(%s, '')
+        CAST (%(timestamp)s AS TIMESTAMP),
+        %(execution_id)s,
+        %(tenant_id)s,
+        %(creator_id)s,
+        %(logger)s,
+        %(level)s,
+        %(message)s,
+        %(message_code)s,
+        %(operation)s,
+        %(ndoe_id)s
     )
 """
 
@@ -64,18 +67,20 @@ LOG_INSERT_QUERY = """
         message_code,
         operation,
         node_id)
-    VALUES (
+    VALUES %s
+"""
+LOG_VALUES_TEMPLATE = """(
         now() AT TIME ZONE 'utc',
-        CAST (%s AS TIMESTAMP),
-        %s,
-        %s,
-        %s,
-        %s,
-        %s,
-        %s,
-        %s,
-        NULLIF(%s, ''),
-        NULLIF(%s, '')
+        CAST (%(timestamp)s AS TIMESTAMP),
+        %(execution_id)s,
+        %(tenant_id)s,
+        %(creator_id)s,
+        %(logger)s,
+        %(level)s,
+        %(message)s,
+        %(message_code)s,
+        %(operation)s,
+        %(node_id)s
     )
 """
 
@@ -161,42 +166,44 @@ class DBLogEventPublisher(object):
 
         with conn.cursor() as cur:
             if events:
-                execute_batch(cur, EVENT_INSERT_QUERY, events)
+                execute_values(cur, EVENT_INSERT_QUERY, events,
+                               template=EVENT_VALUES_TEMPLATE)
             if logs:
-                execute_batch(cur, LOG_INSERT_QUERY, logs)
+                execute_values(cur, LOG_INSERT_QUERY, logs,
+                               template=LOG_VALUES_TEMPLATE)
         conn.commit()
         for tag in tags:
             self._acks_queue.put(tag)
 
     @staticmethod
     def _get_log(message, execution):
-        return (
-            message['timestamp'],
-            execution['_storage_id'],
-            execution['_tenant_id'],
-            execution['_creator_id'],
-            message['logger'],
-            message['level'],
-            message['message']['text'],
-            message['message_code'],
-            message['context'].get('operation'),
-            message['context'].get('node_id')
-        )
+        return {
+            'timestamp': message['timestamp'],
+            'execution_id': execution['_storage_id'],
+            'tenant_id': execution['_tenant_id'],
+            'creator_id': execution['_creator_id'],
+            'logger': message['logger'],
+            'level': message['level'],
+            'message': message['message']['text'],
+            'message_code': message['message_code'],
+            'operation': message['context'].get('operation', ''),
+            'node_id': message['context'].get('node_id', '')
+        }
 
     @staticmethod
     def _get_event(message, execution):
-        return (
-            message['timestamp'],
-            execution['_storage_id'],
-            execution['_tenant_id'],
-            execution['_creator_id'],
-            message['event_type'],
-            message['message']['text'],
-            message['message_code'],
-            message['context'].get('operation'),
-            message['context'].get('node_id'),
-            message['context'].get('task_error_causes')
-        )
+        return {
+            'timestamp': message['timestamp'],
+            'execution_id': execution['_storage_id'],
+            'tenant_id': execution['_tenant_id'],
+            'creator_id': execution['_creator_id'],
+            'logger': message['event_type'],
+            'level': message['message']['text'],
+            'message': message['message_code'],
+            'message_code': message['context'].get('operation', ''),
+            'operation': message['context'].get('node_id', ''),
+            'node_id': message['context'].get('task_error_causes', '')
+        }
 
 
 class LimitedSizeDict(OrderedDict):
