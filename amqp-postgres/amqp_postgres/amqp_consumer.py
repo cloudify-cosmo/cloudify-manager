@@ -13,7 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ############
+
 import json
+import Queue
 import logging
 
 
@@ -24,12 +26,13 @@ class AMQPLogsEventsConsumer(object):
     LOGS_EXCHANGE = 'cloudify-logs'
     EVENTS_EXCHANGE = 'cloudify-events'
 
-    def __init__(self, message_processor):
+    def __init__(self, message_processor, acks_queue):
         self.queue = 'cloudify-logs-events'
         self._message_processor = message_processor
 
         # This is here because AMQPConnection expects it
         self.routing_key = ''
+        self._acks_queue = acks_queue
 
     def register(self, connection):
         channel = connection.channel()
@@ -48,10 +51,21 @@ class AMQPLogsEventsConsumer(object):
 
         channel.basic_consume(self.process, self.queue)
 
+    def _process_publish(self, channel):
+        self._process_acks(channel)
+        super(AMQPLogsEventsConsumer, self)._process_publish(channel)
+
+    def _process_acks(self, channel):
+        while True:
+            try:
+                channel.basic_ack(self._acks_queue.get_nowait())
+            except Queue.Empty:
+                return
+
     def process(self, channel, method, properties, body):
-        channel.basic_ack(method.delivery_tag)
         try:
             parsed_body = json.loads(body)
-            self._message_processor(parsed_body, method.exchange)
+            self._message_processor(parsed_body, method.exchange,
+                                    method.delivery_tag)
         except Exception as e:
             logger.warn('Failed message processing: {0}'.format(e))

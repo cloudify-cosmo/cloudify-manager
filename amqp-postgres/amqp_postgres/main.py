@@ -13,7 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ############
+
 import yaml
+import Queue
 import logging
 
 from cloudify.amqp_client import get_client
@@ -30,9 +32,11 @@ CONFIG_PATH = '/opt/manager/cloudify-rest.conf'
 
 
 def _create_amqp_client(config):
-    db_publisher = DBLogEventPublisher(config)
+    acks_queue = Queue.Queue()
+    db_publisher = DBLogEventPublisher(config, acks_queue)
     amqp_consumer = AMQPLogsEventsConsumer(
-        message_processor=db_publisher.process
+        message_processor=db_publisher.process,
+        acks_queue=acks_queue
     )
 
     port = BROKER_PORT_SSL if config['amqp_ca_path'] else BROKER_PORT_NO_SSL

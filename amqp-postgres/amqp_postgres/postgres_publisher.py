@@ -93,13 +93,14 @@ EXECUTION_SELECT_QUERY = """
 class DBLogEventPublisher(object):
     COMMIT_DELAY = 0.1  # seconds
 
-    def __init__(self, config):
+    def __init__(self, config, acks_queue):
         self._lock = Lock()
         self._batch = Queue.Queue()
 
         self._last_commit = time()
         self.config = config
         self._executions_cache = LimitedSizeDict(10000)
+        self._acks_queue = acks_queue
 
         # Create a separate thread to allow proper batching without losing
         # messages. Without this thread, if the messages were just committed,
@@ -109,8 +110,8 @@ class DBLogEventPublisher(object):
         publish_thread.daemon = True
         publish_thread.start()
 
-    def process(self, message, exchange):
-        self._batch.put((message, exchange))
+    def process(self, message, exchange, tag):
+        self._batch.put((message, exchange, tag))
 
     def _message_publisher(self):
         conn = psycopg2.connect(
@@ -147,7 +148,8 @@ class DBLogEventPublisher(object):
     def _store(self, conn, items):
         events, logs = [], []
 
-        for item, exchange in items:
+        tags = set()
+        for item, exchange, tag in items:
             execution = self._get_execution(conn, item)
             if exchange == 'cloudify-events':
                 events.append(self._get_event(item, execution))
@@ -155,6 +157,7 @@ class DBLogEventPublisher(object):
                 logs.append(self._get_log(item, execution))
             else:
                 raise ValueError('Unknown exchange type: {0}'.format(exchange))
+            tags.add(tag)
 
         with conn.cursor() as cur:
             if events:
@@ -162,6 +165,8 @@ class DBLogEventPublisher(object):
             if logs:
                 execute_batch(cur, LOG_INSERT_QUERY, logs)
         conn.commit()
+        for tag in tags:
+            self._acks_queue.put(tag)
 
     @staticmethod
     def _get_log(message, execution):
