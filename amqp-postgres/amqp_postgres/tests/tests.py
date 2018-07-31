@@ -14,6 +14,9 @@
 # limitations under the License.
 ############
 
+import os
+import json
+import tempfile
 from uuid import uuid4
 from time import sleep
 from threading import Thread
@@ -55,8 +58,21 @@ class AMQPPostgresTest(BaseServerTestCase):
 
     def setUp(self):
         super(AMQPPostgresTest, self).setUp()
-
-        amqp_thread = Thread(target=main)
+        config = self.server_configuration
+        config_keys = [
+            'postgresql_{0}'.format(n)
+            for n in ['host', 'db_name', 'username', 'password']
+        ] + [
+            'amqp_{0}'.format(n)
+            for n in ['host', 'username', 'password', 'ca_path']
+        ]
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            json.dump({k: getattr(config, k) for k in config_keys}, f)
+        self.addCleanup(os.unlink, f.name)
+        args = {
+            'config': f.name
+        }
+        amqp_thread = Thread(target=main, args=(args,))
         amqp_thread.daemon = True
         amqp_thread.start()
 
@@ -72,9 +88,9 @@ class AMQPPostgresTest(BaseServerTestCase):
         events_publisher.publish_message(log, message_type='log')
         events_publisher.publish_message(event, message_type='event')
 
-        # The messages are dumped to the DB every 0.1 seconds, so we should
+        # The messages are dumped to the DB every 0.5 seconds, so we should
         # wait before trying to query SQL
-        sleep(0.5)
+        sleep(2)
 
         db_log = self._get_db_element(models.Log)
         db_event = self._get_db_element(models.Event)
@@ -136,7 +152,6 @@ class AMQPPostgresTest(BaseServerTestCase):
         self.assertEqual(db_log.creator.id, 0)
         self.assertEqual(db_log.tenant.id, 0)
         self.assertEqual(db_log.reported_timestamp, log['timestamp'])
-        self.assertEqual(db_log.private_resource, False)
         self.assertEqual(db_log.visibility, VisibilityState.TENANT)
 
     def _assert_event(self, event, db_event):
@@ -153,7 +168,6 @@ class AMQPPostgresTest(BaseServerTestCase):
         self.assertEqual(db_event.creator.id, 0)
         self.assertEqual(db_event.tenant.id, 0)
         self.assertEqual(db_event.reported_timestamp, event['timestamp'])
-        self.assertEqual(db_event.private_resource, False)
         self.assertEqual(db_event.visibility, VisibilityState.TENANT)
 
     @staticmethod

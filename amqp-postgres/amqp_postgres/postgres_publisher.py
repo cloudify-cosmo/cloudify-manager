@@ -38,7 +38,8 @@ EVENT_INSERT_QUERY = """
         message_code,
         operation,
         node_id,
-        error_causes)
+        error_causes,
+        visibility)
     VALUES %s
 """
 
@@ -53,7 +54,8 @@ EVENT_VALUES_TEMPLATE = """(
         %(message_code)s,
         %(operation)s,
         %(node_id)s,
-        %(error_causes)s
+        %(error_causes)s,
+        %(visibility)s
     )
 """
 
@@ -69,7 +71,8 @@ LOG_INSERT_QUERY = """
         message,
         message_code,
         operation,
-        node_id)
+        node_id,
+        visibility)
     VALUES %s
 """
 LOG_VALUES_TEMPLATE = """(
@@ -83,7 +86,8 @@ LOG_VALUES_TEMPLATE = """(
         %(message)s,
         %(message_code)s,
         %(operation)s,
-        %(node_id)s
+        %(node_id)s,
+        %(visibility)s
     )
 """
 
@@ -185,9 +189,13 @@ class DBLogEventPublisher(object):
         for item, exchange, ack in items:
             execution = self._get_execution(conn, item)
             if exchange == 'cloudify-events':
-                events.append(self._get_event(item, execution))
+                event = self._get_event(item, execution)
+                if event is not None:
+                    events.append(event)
             elif exchange == 'cloudify-logs':
-                logs.append(self._get_log(item, execution))
+                log = self._get_log(item, execution)
+                if log is not None:
+                    logs.append(log)
             else:
                 raise ValueError('Unknown exchange type: {0}'.format(exchange))
             acks.append(ack)
@@ -211,33 +219,45 @@ class DBLogEventPublisher(object):
 
     @staticmethod
     def _get_log(message, execution):
-        return {
-            'timestamp': message['timestamp'],
-            'execution_id': execution['_storage_id'],
-            'tenant_id': execution['_tenant_id'],
-            'creator_id': execution['_creator_id'],
-            'logger': message['logger'],
-            'level': message['level'],
-            'message': message['message']['text'],
-            'message_code': message['message_code'],
-            'operation': message['context'].get('operation', ''),
-            'node_id': message['context'].get('node_id', '')
-        }
+        try:
+            return {
+                'timestamp': message['timestamp'],
+                'execution_id': execution['_storage_id'],
+                'tenant_id': execution['_tenant_id'],
+                'creator_id': execution['_creator_id'],
+                'logger': message['logger'],
+                'level': message['level'],
+                'message': message['message']['text'],
+                'message_code': message.get('message_code'),
+                'operation': message['context'].get('operation'),
+                'node_id': message['context'].get('node_id'),
+                'visibility': 'tenant'
+            }
+        except KeyError as e:
+            logger.warning('Error formatting log: %s', e)
+            logger.debug('Malformed log: %s', message)
+            return None
 
     @staticmethod
     def _get_event(message, execution):
-        return {
-            'timestamp': message['timestamp'],
-            'execution_id': execution['_storage_id'],
-            'tenant_id': execution['_tenant_id'],
-            'creator_id': execution['_creator_id'],
-            'event_type': message['event_type'],
-            'message': message['message']['text'],
-            'message_code': message['message_code'],
-            'operation': message['context'].get('operation', ''),
-            'node_id': message['context'].get('node_id', ''),
-            'error_causes': message['context'].get('task_error_causes')
-        }
+        try:
+            return {
+                'timestamp': message['timestamp'],
+                'execution_id': execution['_storage_id'],
+                'tenant_id': execution['_tenant_id'],
+                'creator_id': execution['_creator_id'],
+                'event_type': message['event_type'],
+                'message': message['message']['text'],
+                'message_code': message.get('message_code'),
+                'operation': message['context'].get('operation'),
+                'node_id': message['context'].get('node_id'),
+                'error_causes': message['context'].get('task_error_causes'),
+                'visibility': 'tenant'
+            }
+        except KeyError as e:
+            logger.warning('Error formatting event: %s', e)
+            logger.debug('Malformed event: %s', message)
+            return None
 
 
 class LimitedSizeDict(OrderedDict):

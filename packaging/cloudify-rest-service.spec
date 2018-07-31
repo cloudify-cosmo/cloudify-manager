@@ -103,7 +103,6 @@ systemd-tmpfiles --create
 
 /opt/manager
 /etc/cloudify/delete_logs_and_events_from_db.py*
-/etc/logrotate.d/cloudify-rest-service
 /etc/logrotate.d/cloudify-amqp-postgres
 /etc/sudoers.d/cloudify-restservice
 /opt/restservice

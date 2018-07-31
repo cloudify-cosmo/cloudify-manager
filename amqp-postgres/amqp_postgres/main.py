@@ -17,6 +17,7 @@
 import yaml
 import Queue
 import logging
+import argparse
 
 from cloudify.amqp_client import get_client
 
@@ -55,9 +56,9 @@ def _create_amqp_client(config):
     return amqp_client
 
 
-def main():
+def main(args):
     logging.basicConfig(level=logging.INFO)
-    with open(CONFIG_PATH) as f:
+    with open(args['config']) as f:
         config = yaml.safe_load(f)
     amqp_client = _create_amqp_client(config)
 
@@ -66,4 +67,8 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', default=CONFIG_PATH,
+                        help='Path to the config file')
+    args = parser.parse_args()
+    main(vars(args))
