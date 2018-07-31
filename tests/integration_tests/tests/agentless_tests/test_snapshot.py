@@ -503,6 +503,18 @@ class TestSnapshot(AgentlessTestCase):
         # function _add_restart_command.
         time.sleep(5)
 
+    def _upload_and_validate_snapshot(self,
+                                      snapshot_path,
+                                      snapshot_id,
+                                      rest_client):
+        self.logger.debug('Uploading snapshot: {0}'.format(snapshot_path))
+        rest_client.snapshots.upload(snapshot_path, snapshot_id)
+        snapshot = rest_client.snapshots.get(snapshot_id)
+        self.logger.debug('Retrieved snapshot: {0}'.format(snapshot))
+        self.assertEquals(snapshot['id'], snapshot_id)
+        self.assertEquals(snapshot['status'], 'uploaded')
+        self.logger.info('Snapshot uploaded and validated')
+
     def _wait_for_restore_execution_to_end(
             self, execution, rest_client, timeout_seconds=60):
         """Can't use the `wait_for_execution_to_end` in the class because
