@@ -14,7 +14,6 @@
 # limitations under the License.
 ############
 
-import os
 import Queue
 import logging
 from time import time
@@ -127,7 +126,6 @@ class DBLogEventPublisher(object):
         else:
             if isinstance(started, Exception):
                 raise started
-            
 
     def process(self, message, exchange, tag):
         self._batch.put((message, exchange, tag))
@@ -163,7 +161,7 @@ class DBLogEventPublisher(object):
                     self.on_db_connection_error()
                 except psycopg2.IntegrityError:
                     logger.exception('Error storing %d logs+events',
-                                     len(logs) + len(events))
+                                     len(items))
                     conn.rollback()
                 items = []
                 self._last_commit = time()
@@ -210,7 +208,7 @@ class DBLogEventPublisher(object):
         logger.critical('Database down - cannot continue')
         self._amqp_connection.close()
         raise RuntimeError('Database down')
-     
+
     @staticmethod
     def _get_log(message, execution):
         return {

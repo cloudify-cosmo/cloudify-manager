@@ -20,6 +20,7 @@ import logging
 
 from cloudify.amqp_client import AMQPConnection
 
+
 class AckingAMQPConnection(AMQPConnection):
     def _process_publish(self, channel):
         self._process_acks()
@@ -74,4 +75,3 @@ class AMQPLogsEventsConsumer(object):
         except Exception as e:
             logger.warn('Failed message processing: %s', e)
             logger.debug('Message was: %s', body)
-
