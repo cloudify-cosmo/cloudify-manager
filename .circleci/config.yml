@@ -92,7 +92,7 @@ jobs:
       - image: circleci/python:2.7.14
         environment:
           TEST_DATABASE_URL: postgresql://cloudify:cloudify@localhost/cloudify_db
-      - image: rabbitmq:3.7.4
+      - image: rabbitmq:3.7.7
       - image: circleci/postgres:9.5-alpine
         environment:
           POSTGRES_USER: cloudify
