@@ -66,9 +66,14 @@ def main(args):
     amqp_client.consume()
 
 
-if __name__ == '__main__':
+def cli():
+    """Parse arguments and run main"""
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', default=CONFIG_PATH,
                         help='Path to the config file')
     args = parser.parse_args()
     main(vars(args))
+
+
+if __name__ == '__main__':
+    cli()

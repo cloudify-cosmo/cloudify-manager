@@ -25,7 +25,7 @@ setup(
     packages=['amqp_postgres'],
     entry_points={
         'console_scripts': [
-            'cloudify-amqp-postgres = amqp_postgres.main:main',
+            'cloudify-amqp-postgres = amqp_postgres.main:cli',
         ]
     },
     install_requires=[
