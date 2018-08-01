@@ -490,7 +490,7 @@ class TestSnapshot(AgentlessTestCase):
         self.logger.debug('Restoring snapshot...')
         execution = rest_client.snapshots.restore(
             snapshot_id,
-            ignore_plugin_install_failure=ignore_plugin_install_failure)
+            ignore_plugin_installation_failure=ignore_plugin_install_failure)
         execution = self._wait_for_restore_execution_to_end(
             execution, rest_client)
         if execution.status == error_execution_status:
