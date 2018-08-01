@@ -1,6 +1,4 @@
-/var/log/cloudify/logstash/*.log
-/var/log/cloudify/logstash/*.err
-/var/log/cloudify/logstash/*.stdout {
+/var/log/cloudify/amqp-postgres/*.log {
         hourly
         rotate 7
         size 100M

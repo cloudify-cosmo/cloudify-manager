@@ -46,6 +46,7 @@ export REST_SERVICE_BUILD=True  # TODO: remove this hack from setup.py
 /opt/manager/env/bin/pip install --upgrade pip setuptools
 /opt/manager/env/bin/pip install -r "${RPM_SOURCE_DIR}/rest-service/dev-requirements.txt"
 /opt/manager/env/bin/pip install "${RPM_SOURCE_DIR}/rest-service"[dbus]
+/opt/manager/env/bin/pip install "${RPM_SOURCE_DIR}/amqp-postgres"
 
 # Jinja2 includes 2 files which will only be imported if async is available,
 # but rpmbuild's brp-python-bytecompile falls over when it finds them. Here
@@ -61,13 +62,17 @@ mv /opt/manager/env %{buildroot}/opt/manager
 mkdir -p %{buildroot}/opt/manager/resources/
 cp -R "${RPM_SOURCE_DIR}/resources/rest-service/cloudify/" "%{buildroot}/opt/manager/resources/"
 
-# Create the log dir
+# Create the log dirs
 mkdir -p %{buildroot}/var/log/cloudify/rest
+mkdir -p %{buildroot}/var/log/cloudify/amqp-postgres
 
 # Copy static files into place. In order to have files in /packaging/files
 # actually included in the RPM, they must have an entry in the %files
 # section of this spec file.
 cp -R ${RPM_SOURCE_DIR}/packaging/rest-service/files/* %{buildroot}
+
+# AMQP Postgres files go in here as well, as there's no separate RPM for it
+cp -R ${RPM_SOURCE_DIR}/packaging/amqp-postgres/files/* %{buildroot}
 
 visudo -cf %{buildroot}/etc/sudoers.d/cloudify-restservice
 
@@ -98,10 +103,13 @@ systemd-tmpfiles --create
 
 /opt/manager
 /etc/cloudify/delete_logs_and_events_from_db.py*
+/etc/logrotate.d/cloudify-amqp-postgres
 /etc/sudoers.d/cloudify-restservice
 /opt/restservice
 /opt/manager/scripts/set-manager-ssl.py*
 /usr/lib/systemd/system/cloudify-restservice.service
+/usr/lib/systemd/system/cloudify-amqp-postgres.service
 /usr/lib/tmpfiles.d/cloudify-restservice.conf
 
 %attr(750,cfyuser,adm) /var/log/cloudify/rest
+%attr(750,cfyuser,adm) /var/log/cloudify/amqp-postgres
