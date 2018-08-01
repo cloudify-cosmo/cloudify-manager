@@ -63,7 +63,7 @@ class BaseTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         env.create_env(cls.environment_type)
-        cls.env = env.instance
+        BaseTestCase.env = env.instance
 
     @classmethod
     def tearDownClass(cls):
@@ -206,8 +206,8 @@ class BaseTestCase(unittest.TestCase):
             BaseTestCase.env.chown(owner, target)
         return ret_val
 
-    @staticmethod
-    def write_data_to_file_on_manager(data,
+    def write_data_to_file_on_manager(self,
+                                      data,
                                       target_path,
                                       to_json=False,
                                       owner=None):
@@ -216,7 +216,7 @@ class BaseTestCase(unittest.TestCase):
                 data = json.dumps(data)
             f.write(data)
             f.flush()
-            BaseTestCase.copy_file_to_manager(f.name, target_path, owner=owner)
+            self.copy_file_to_manager(f.name, target_path, owner=owner)
 
     @staticmethod
     def restart_service(service_name):
