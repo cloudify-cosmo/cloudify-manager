@@ -170,16 +170,19 @@ class DBLogEventPublisher(object):
                 items = []
                 self._last_commit = time()
 
-    def _get_execution(self, conn, item):
-        execution_id = item['context']['execution_id']
+    def _get_execution(self, conn, execution_id):
         if execution_id not in self._executions_cache:
             with conn.cursor() as cur:
                 cur.execute(EXECUTION_SELECT_QUERY, (execution_id, ))
                 executions = cur.fetchall()
-            if len(executions) != 1:
+            if len(executions) > 1:
                 raise ValueError('Expected 1 execution, found {0} (id: {1})'
                                  .format(len(executions), execution_id))
-            self._executions_cache[execution_id] = executions[0]
+            elif not executions:
+                execution = None
+            else:
+                execution = executions[0]
+            self._executions_cache[execution_id] = execution
         return self._executions_cache[execution_id]
 
     def _store(self, conn, items):
@@ -187,7 +190,12 @@ class DBLogEventPublisher(object):
 
         acks = []
         for item, exchange, ack in items:
-            execution = self._get_execution(conn, item)
+            acks.append(ack)
+            execution_id = item['context']['execution_id']
+            execution = self._get_execution(conn, execution_id)
+            if execution is None:
+                logger.warning('No execution found: %s', execution_id)
+                continue
             if exchange == 'cloudify-events':
                 event = self._get_event(item, execution)
                 if event is not None:
@@ -198,7 +206,6 @@ class DBLogEventPublisher(object):
                     logs.append(log)
             else:
                 raise ValueError('Unknown exchange type: {0}'.format(exchange))
-            acks.append(ack)
 
         with conn.cursor() as cur:
             if events:
