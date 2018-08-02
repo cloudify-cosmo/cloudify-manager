@@ -45,8 +45,8 @@ install_requires = [
 setup(
     name='cloudify-rest-service',
     version='4.5.dev1',
-    author='Gigaspaces',
-    author_email='cosmo-admin@gigaspaces.com',
+    author='Cloudify',
+    author_email='cosmo-admin@cloudify.co',
     packages=find_packages(
         include='manager_rest*', exclude=('manager_rest.test*',)
     ),
