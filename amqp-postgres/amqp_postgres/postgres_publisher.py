@@ -14,6 +14,7 @@
 # limitations under the License.
 ############
 
+import json
 import Queue
 import logging
 from time import time
@@ -247,6 +248,9 @@ class DBLogEventPublisher(object):
 
     @staticmethod
     def _get_event(message, execution):
+        task_error_causes = message['context'].get('task_error_causes')
+        if task_error_causes is not None:
+            task_error_causes = json.dumps(task_error_causes)
         try:
             return {
                 'timestamp': message['timestamp'],
@@ -258,7 +262,7 @@ class DBLogEventPublisher(object):
                 'message_code': message.get('message_code'),
                 'operation': message['context'].get('operation'),
                 'node_id': message['context'].get('node_id'),
-                'error_causes': message['context'].get('task_error_causes'),
+                'error_causes': task_error_causes,
                 'visibility': 'tenant'
             }
         except KeyError as e:
