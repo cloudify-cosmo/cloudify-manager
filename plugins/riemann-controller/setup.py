@@ -20,8 +20,8 @@ from setuptools import setup
 setup(
     name='cloudify-riemann-controller-plugin',
     version='4.5.dev1',
-    author='Gigaspaces',
-    author_email='cosmo-admin@gigaspaces.com',
+    author='Cloudify',
+    author_email='cosmo-admin@cloudify.co',
     packages=['riemann_controller',
               'riemann_controller.resources'],
     package_data={'riemann_controller.resources': [

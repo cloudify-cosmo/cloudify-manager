@@ -19,8 +19,8 @@ from setuptools import setup
 setup(
     name='cloudify-workflows',
     version='4.5.dev1',
-    author='elip',
-    author_email='elip@gigaspaces.com',
+    author='Cloudify',
+    author_email='cosmo-admin@cloudify.co',
     packages=[
         'cloudify_system_workflows',
         'cloudify_system_workflows.snapshots'
