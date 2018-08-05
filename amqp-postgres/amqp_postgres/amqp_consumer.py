@@ -19,6 +19,7 @@ import Queue
 import logging
 
 from cloudify.amqp_client import AMQPConnection
+from cloudify.constants import EVENTS_EXCHANGE_NAME, LOGS_EXCHANGE_NAME
 
 
 class AckingAMQPConnection(AMQPConnection):
@@ -39,8 +40,6 @@ logger = logging.getLogger(__name__)
 
 
 class AMQPLogsEventsConsumer(object):
-    LOGS_EXCHANGE = 'cloudify-logs'
-    EVENTS_EXCHANGE = 'cloudify-events'
 
     def __init__(self, message_processor):
         self.queue = 'cloudify-logs-events'
@@ -56,14 +55,14 @@ class AMQPLogsEventsConsumer(object):
                               durable=True,
                               auto_delete=False)
 
-        for exchange in [self.LOGS_EXCHANGE, self.EVENTS_EXCHANGE]:
-            channel.exchange_declare(exchange=exchange,
-                                     auto_delete=False,
-                                     durable=True,
-                                     exchange_type='fanout')
-            channel.queue_bind(queue=self.queue,
-                               exchange=exchange)
+        # Binding the logs queue
+        self._bind_queue_to_exchange(channel, LOGS_EXCHANGE_NAME, 'fanout')
 
+        # Binding the events queue
+        self._bind_queue_to_exchange(channel,
+                                     EVENTS_EXCHANGE_NAME,
+                                     'topic',
+                                     routing_key='events.#')
         channel.basic_consume(self.process, self.queue)
 #        channel.basic_recover(requeue=True)
 
@@ -75,3 +74,16 @@ class AMQPLogsEventsConsumer(object):
         except Exception as e:
             logger.warn('Failed message processing: %s', e)
             logger.debug('Message was: %s', body)
+
+    def _bind_queue_to_exchange(self,
+                                channel,
+                                exchange_name,
+                                exchange_type,
+                                routing_key=None):
+        channel.exchange_declare(exchange=exchange_name,
+                                 auto_delete=False,
+                                 durable=True,
+                                 exchange_type=exchange_type)
+        channel.queue_bind(queue=self.queue,
+                           exchange=exchange_name,
+                           routing_key=routing_key)
