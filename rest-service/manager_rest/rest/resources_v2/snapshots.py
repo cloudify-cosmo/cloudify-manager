@@ -255,7 +255,7 @@ class SnapshotsIdRestore(SecuredResource):
         _verify_no_multi_node_cluster(action="restore snapshot")
         request_dict = rest_utils.get_json_and_verify_params(
             {'recreate_deployments_envs',
-             'ignore_plugin_installation_failure'}
+             'ignore_plugin_failure'}
         )
         recreate_deployments_envs = rest_utils.verify_and_convert_bool(
             'recreate_deployments_envs',
@@ -274,10 +274,10 @@ class SnapshotsIdRestore(SecuredResource):
             'no_reboot',
             request_dict.get('no_reboot', 'false')
         )
-        ignore_plugin_installation_failure = \
+        ignore_plugin_failure = \
             rest_utils.verify_and_convert_bool(
-                'ignore_plugin_installation_failure',
-                request_dict.get('ignore_plugin_installation_failure', 'false')
+                'ignore_plugin_failure',
+                request_dict.get('ignore_plugin_failure', 'false')
             )
         if no_reboot and not restore_certificates:
             raise manager_exceptions.BadParametersError(
@@ -294,6 +294,6 @@ class SnapshotsIdRestore(SecuredResource):
             timeout,
             restore_certificates,
             no_reboot,
-            ignore_plugin_installation_failure
+            ignore_plugin_failure
         )
         return execution, 200
