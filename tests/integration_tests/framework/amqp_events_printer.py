@@ -23,6 +23,7 @@ from pika.exceptions import ConnectionClosed
 import cloudify.event
 import cloudify.logs
 from cloudify_cli.colorful_event import ColorfulEvent
+from cloudify.constants import EVENTS_EXCHANGE_NAME, LOGS_EXCHANGE_NAME
 
 from integration_tests.framework import utils
 
@@ -47,16 +48,19 @@ class EventsPrinter(threading.Thread):
         """
         connection = utils.create_pika_connection()
         channel = connection.channel()
-        exchanges = ['cloudify-events', 'cloudify-logs']
         queues = []
-        for exchange in exchanges:
-            channel.exchange_declare(exchange=exchange, exchange_type='fanout',
-                                     auto_delete=False,
-                                     durable=True)
-            result = channel.queue_declare(exclusive=True)
-            queue_name = result.method.queue
-            queues.append(queue_name)
-            channel.queue_bind(exchange=exchange, queue=queue_name)
+
+        # Binding the logs queue
+        self._bind_queue_to_exchange(channel,
+                                     LOGS_EXCHANGE_NAME,
+                                     'fanout',
+                                     queues)
+
+        # Binding the events queue
+        self._bind_queue_to_exchange(channel,
+                                     EVENTS_EXCHANGE_NAME,
+                                     'topic',
+                                     routing_key='events.#')
 
         if not os.environ.get('CI'):
             cloudify.logs.EVENT_CLASS = ColorfulEvent
@@ -78,3 +82,20 @@ class EventsPrinter(threading.Thread):
             channel.start_consuming()
         except ConnectionClosed:
             pass
+
+    def _bind_queue_to_exchange(self,
+                                channel,
+                                exchange_name,
+                                exchange_type,
+                                queues,
+                                routing_key=None):
+        channel.exchange_declare(exchange=exchange_name,
+                                 exchange_type=exchange_type,
+                                 auto_delete=False,
+                                 durable=True)
+        result = channel.queue_declare(exclusive=True)
+        queue_name = result.method.queue
+        queues.append(queue_name)
+        channel.queue_bind(exchange=exchange_name,
+                           queue=queue_name,
+                           routing_key=routing_key)

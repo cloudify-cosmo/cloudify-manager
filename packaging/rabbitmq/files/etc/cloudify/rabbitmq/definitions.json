@@ -15,7 +15,7 @@
     {
       "name": "cloudify-events",
       "vhost": "/",
-      "type": "fanout",
+      "type": "topic",
       "durable": true,
       "auto_delete": false,
       "internal": false,
