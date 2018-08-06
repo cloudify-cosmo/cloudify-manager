@@ -22,7 +22,6 @@ install_requires = [
     'flask-sqlalchemy==2.1',
     'flask-security==1.7.5',
     'flask-migrate==2.0.3',
-    'ldappy',
     'supervise==1.1.1',
     'cloudify-common==4.5.dev1',
     'requests>=2.7.0,<3.0.0',
