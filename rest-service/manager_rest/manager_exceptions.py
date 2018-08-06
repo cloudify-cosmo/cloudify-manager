@@ -18,9 +18,9 @@ INTERNAL_SERVER_ERROR_CODE = 'internal_server_error'
 
 
 class ManagerException(Exception):
-    def __init__(self, http_code, error_code, *args, **kwargs):
+    def __init__(self, status_code, error_code, *args, **kwargs):
         super(ManagerException, self).__init__(*args, **kwargs)
-        self.http_code = http_code
+        self.status_code = status_code
         self.error_code = error_code
 
 

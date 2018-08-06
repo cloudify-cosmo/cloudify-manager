@@ -25,20 +25,18 @@ import shutil
 import zipfile
 import tempfile
 import contextlib
-from os import path
+
+from voluptuous import Boolean
 from setuptools import archive_util
 from urllib2 import urlopen, URLError
-
 from flask import request, current_app
-from flask_restful import types
-from flask_restful.reqparse import RequestParser
+from flask_restful.reqparse import Argument
 
 from manager_rest.constants import (FILE_SERVER_PLUGINS_FOLDER,
                                     FILE_SERVER_SNAPSHOTS_FOLDER,
                                     FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
                                     FILE_SERVER_BLUEPRINTS_FOLDER,
                                     FILE_SERVER_DEPLOYMENTS_FOLDER)
-
 from manager_rest.deployment_update.manager import \
     get_deployment_updates_manager
 from manager_rest.archiving import get_archive_type
@@ -54,6 +52,10 @@ from manager_rest.utils import (mkdirs,
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.constants import (CONVENTION_APPLICATION_BLUEPRINT_FILE,
                                     SUPPORTED_ARCHIVE_TYPES)
+from manager_rest.rest.rest_utils import get_args_and_verify_arguments
+
+_PRIVATE_RESOURCE = 'private_resource'
+_VISIBILITY = 'visibility'
 
 
 class UploadedDataManager(object):
@@ -484,7 +486,7 @@ class UploadedBlueprintsManager(UploadedDataManager):
                 archive_target_path,
                 file_server_root
             )
-        visibility = kwargs.get('visibility', None)
+        visibility = kwargs.get(_VISIBILITY, None)
         return self._prepare_and_submit_blueprint(file_server_root,
                                                   application_dir,
                                                   data_id,
@@ -492,28 +494,29 @@ class UploadedBlueprintsManager(UploadedDataManager):
 
     @classmethod
     def _process_plugins(cls, file_server_root, blueprint_id):
-        plugins_directory = path.join(
+        plugins_directory = os.path.join(
             file_server_root,
             FILE_SERVER_BLUEPRINTS_FOLDER,
             current_tenant.name,
             blueprint_id,
             "plugins")
-        if not path.isdir(plugins_directory):
+        if not os.path.isdir(plugins_directory):
             return
-        plugins = [path.join(plugins_directory, directory)
+        plugins = [os.path.join(plugins_directory, directory)
                    for directory in os.listdir(plugins_directory)
-                   if path.isdir(path.join(plugins_directory, directory))]
+                   if os.path.isdir(os.path.join(plugins_directory,
+                                                 directory))]
 
         for plugin_dir in plugins:
-            final_zip_name = '{0}.zip'.format(path.basename(plugin_dir))
-            target_zip_path = path.join(plugins_directory, final_zip_name)
+            final_zip_name = '{0}.zip'.format(os.path.basename(plugin_dir))
+            target_zip_path = os.path.join(plugins_directory, final_zip_name)
             cls._zip_dir(plugin_dir, target_zip_path)
 
     @classmethod
     def _zip_dir(cls, dir_to_zip, target_zip_path):
         zipf = zipfile.ZipFile(target_zip_path, 'w', zipfile.ZIP_DEFLATED)
         try:
-            plugin_dir_base_name = path.basename(dir_to_zip)
+            plugin_dir_base_name = os.path.basename(dir_to_zip)
             rootlen = len(dir_to_zip) - len(plugin_dir_base_name)
             for base, dirs, files in os.walk(dir_to_zip):
                 for entry in files:
@@ -523,21 +526,17 @@ class UploadedBlueprintsManager(UploadedDataManager):
             zipf.close()
 
     @classmethod
-    def _get_args(cls):
-        args_parser = RequestParser()
-        args_parser.add_argument('private_resource', type=types.boolean)
-        args_parser.add_argument('visibility', type=str)
-        args_parser.add_argument('application_file_name', type=str, default='')
-        return args_parser.parse_args()
-
-    @classmethod
     def _prepare_and_submit_blueprint(cls,
                                       file_server_root,
                                       app_dir,
                                       blueprint_id,
                                       visibility):
+        args = get_args_and_verify_arguments([
+            Argument('private_resource', type=Boolean(unicode)),
+            Argument('visibility', type=unicode),
+            Argument('application_file_name', type=unicode,
+                     default='')])
 
-        args = cls._get_args()
         app_file_name = cls._extract_application_file(
             file_server_root, app_dir, args.application_file_name)
 
@@ -574,23 +573,23 @@ class UploadedBlueprintsManager(UploadedDataManager):
                                   application_dir,
                                   application_file_name):
 
-        full_application_dir = path.join(file_server_root, application_dir)
+        full_application_dir = os.path.join(file_server_root, application_dir)
 
         if application_file_name:
             application_file_name = urllib.unquote(
                 application_file_name).decode('utf-8')
-            application_file = path.join(full_application_dir,
-                                         application_file_name)
-            if not path.isfile(application_file):
+            application_file = os.path.join(full_application_dir,
+                                            application_file_name)
+            if not os.path.isfile(application_file):
                 raise manager_exceptions.BadParametersError(
                     '{0} does not exist in the application '
                     'directory'.format(application_file_name)
                 )
         else:
             application_file_name = CONVENTION_APPLICATION_BLUEPRINT_FILE
-            application_file = path.join(full_application_dir,
-                                         application_file_name)
-            if not path.isfile(application_file):
+            application_file = os.path.join(full_application_dir,
+                                            application_file_name)
+            if not os.path.isfile(application_file):
                 raise manager_exceptions.BadParametersError(
                     'application directory is missing blueprint.yaml and '
                     'application_file_name query parameter was not passed')
@@ -613,13 +612,6 @@ class UploadedPluginsManager(UploadedDataManager):
 
     def _get_archive_type(self, archive_path):
         return 'tar.gz'
-
-    @staticmethod
-    def _get_args():
-        args_parser = RequestParser()
-        args_parser.add_argument('private_resource', type=types.boolean)
-        args_parser.add_argument('visibility', type=str)
-        return args_parser.parse_args()
 
     def _prepare_and_process_doc(self,
                                  data_id,
@@ -645,8 +637,11 @@ class UploadedPluginsManager(UploadedDataManager):
             except RuntimeError as re:
                 raise manager_exceptions.InvalidPluginError(re.message)
 
-        args = self._get_args()
-        visibility = kwargs.get('visibility', None)
+        args = get_args_and_verify_arguments([
+            Argument('private_resource', type=Boolean(unicode)),
+            Argument('visibility', type=unicode)])
+
+        visibility = kwargs.get(_VISIBILITY, None)
         new_plugin = self._create_plugin_from_archive(data_id,
                                                       wagon_target_path,
                                                       args.private_resource,
