@@ -68,7 +68,7 @@ def abort_error(error, logger, hide_server_message=False):
     else:
         traceback.print_exc(file=s_traceback)
 
-    abort(error.http_code,
+    abort(error.status_code,
           message=str(error),
           error_code=error.error_code,
           server_traceback=s_traceback.getvalue())

@@ -378,7 +378,6 @@ class BaseServerTestCase(unittest.TestCase):
             tarfile_.add(tempdir, arcname=tar_name)
         finally:
             tarfile_.close()
-
         return tar_path
 
     def post(self, resource_path, data, query_params=None):
@@ -387,7 +386,6 @@ class BaseServerTestCase(unittest.TestCase):
                                content_type='application/json',
                                data=json.dumps(data),
                                query_string=build_query_string(query_params))
-        result.json = json.loads(result.data)
         return result
 
     def post_file(self, resource_path, file_path, query_params=None):
@@ -397,7 +395,6 @@ class BaseServerTestCase(unittest.TestCase):
                                    data=f.read(),
                                    query_string=build_query_string(
                                        query_params))
-            result.json = json.loads(result.data)
             return result
 
     def put_file(self, resource_path, file_path, query_params=None):
@@ -407,7 +404,6 @@ class BaseServerTestCase(unittest.TestCase):
                                   data=f.read(),
                                   query_string=build_query_string(
                                       query_params))
-            result.json = json.loads(result.data)
             return result
 
     def put(self, resource_path, data=None, query_params=None):
@@ -416,7 +412,6 @@ class BaseServerTestCase(unittest.TestCase):
                               content_type='application/json',
                               data=json.dumps(data) if data else None,
                               query_string=build_query_string(query_params))
-        result.json = json.loads(result.data)
         return result
 
     def patch(self, resource_path, data):
@@ -424,7 +419,6 @@ class BaseServerTestCase(unittest.TestCase):
         result = self.app.patch(urllib.quote(url),
                                 content_type='application/json',
                                 data=json.dumps(data))
-        result.json = json.loads(result.data)
         return result
 
     def get(self, resource_path, query_params=None, headers=None):
@@ -432,7 +426,6 @@ class BaseServerTestCase(unittest.TestCase):
         result = self.app.get(urllib.quote(url),
                               headers=headers,
                               query_string=build_query_string(query_params))
-        result.json = json.loads(result.data)
         return result
 
     def head(self, resource_path):
@@ -444,7 +437,6 @@ class BaseServerTestCase(unittest.TestCase):
         url = self._version_url(resource_path)
         result = self.app.delete(urllib.quote(url),
                                  query_string=build_query_string(query_params))
-        result.json = json.loads(result.data)
         return result
 
     def _check_if_resource_on_fileserver(self,

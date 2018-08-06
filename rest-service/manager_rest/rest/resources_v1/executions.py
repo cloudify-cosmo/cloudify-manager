@@ -14,9 +14,9 @@
 #  * limitations under the License.
 #
 
-from flask_restful import types
 from flask_restful.reqparse import Argument
 from flask_restful_swagger import swagger
+from voluptuous import Boolean
 
 from manager_rest import manager_exceptions
 from manager_rest.maintenance import is_bypass_maintenance_mode
@@ -70,8 +70,8 @@ class Executions(SecuredResource):
     def get(self, _include=None, **kwargs):
         """List executions"""
         args = get_args_and_verify_arguments(
-            [Argument('deployment_id', type=str, required=False),
-             Argument('include_system_workflows', type=types.boolean,
+            [Argument('deployment_id', type=unicode, required=False),
+             Argument('include_system_workflows', type=Boolean(unicode),
                       default=False)]
         )
         if args.deployment_id:

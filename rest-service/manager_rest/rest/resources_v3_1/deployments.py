@@ -13,7 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from flask_restful import types
+from voluptuous import Boolean
 from flask_restful.reqparse import Argument
 
 from manager_rest.storage import models
@@ -51,7 +51,7 @@ class DeploymentsId(resources_v1.DeploymentsId):
         blueprint_id = request_dict['blueprint_id']
         bypass_maintenance = is_bypass_maintenance_mode()
         args = get_args_and_verify_arguments(
-            [Argument('private_resource', type=types.boolean)]
+            [Argument('private_resource', type=Boolean(unicode))]
         )
         visibility = rest_utils.get_visibility_parameter(
             optional=True,

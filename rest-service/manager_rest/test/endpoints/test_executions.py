@@ -59,7 +59,8 @@ class ExecutionsTestCase(BaseServerTestCase):
 
     def test_list_system_executions(self):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
+         deployment_response) = self.put_deployment(
+            deployment_id=self.DEPLOYMENT_ID)
 
         # manually pushing a system workflow execution to the storage
         system_wf_execution_id = 'mock_execution_id'
@@ -490,7 +491,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                 execution=execution, new_status=last_status)
             response = self.patch(resource_path, {'status': next_status})
             self.assertEqual(
-                expected_error.http_code, response.status_code)
+                expected_error.status_code, response.status_code)
             self.assertEqual(
                 expected_error.error_code, response.json['error_code'])
             self.assertEqual(
