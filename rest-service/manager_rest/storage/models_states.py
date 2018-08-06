@@ -42,11 +42,15 @@ class ExecutionState(object):
     CANCELLING = 'cancelling'
     FORCE_CANCELLING = 'force_cancelling'
     KILL_CANCELLING = 'kill_cancelling'
+    QUEUED = 'queued'
 
     STATES = [TERMINATED, FAILED, CANCELLED, PENDING, STARTED,
-              CANCELLING, FORCE_CANCELLING, KILL_CANCELLING]
+              CANCELLING, FORCE_CANCELLING, KILL_CANCELLING, QUEUED]
+
+    QUEUED_STATE = [QUEUED]
     END_STATES = [TERMINATED, FAILED, CANCELLED]
-    ACTIVE_STATES = [state for state in STATES if state not in END_STATES]
+    ACTIVE_STATES = [state for state in STATES if state not in END_STATES and
+                     state not in QUEUED_STATE]
 
 
 class VisibilityState(object):

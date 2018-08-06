@@ -135,6 +135,10 @@ class SnapshotsId(SecuredResource):
             'include_events',
             request_dict.get('include_events', 'true')
         )
+        queue = rest_utils.verify_and_convert_bool(
+            'queue',
+            request_dict.get('queue', 'false')
+        )
         bypass_maintenance = is_bypass_maintenance_mode()
         execution = get_resource_manager().create_snapshot(
             snapshot_id,
@@ -142,7 +146,8 @@ class SnapshotsId(SecuredResource):
             include_credentials,
             include_logs,
             include_events,
-            bypass_maintenance
+            bypass_maintenance,
+            queue
         )
 
         return execution, 201

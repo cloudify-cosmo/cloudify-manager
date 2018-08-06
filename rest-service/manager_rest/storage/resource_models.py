@@ -223,6 +223,7 @@ class Execution(SQLResourceBase):
         db.Enum(*ExecutionState.STATES, name='execution_status')
     )
     workflow_id = db.Column(db.Text, nullable=False)
+    started_at = db.Column(UTCDateTime, nullable=True)
 
     _deployment_fk = foreign_key(Deployment._storage_id, nullable=True)
 
