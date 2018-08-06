@@ -81,7 +81,7 @@ class SnapshotRestore(object):
                  user_is_bootstrap_admin,
                  restore_certificates,
                  no_reboot,
-                 ignore_plugin_installation_failure):
+                 ignore_plugin_failure):
         self._npm = Npm()
         self._config = utils.DictToAttributes(config)
         self._snapshot_id = snapshot_id
@@ -91,8 +91,8 @@ class SnapshotRestore(object):
         self._no_reboot = no_reboot
         self._premium_enabled = premium_enabled
         self._user_is_bootstrap_admin = user_is_bootstrap_admin
-        self._ignore_plugin_installation_failure = \
-            ignore_plugin_installation_failure
+        self._ignore_plugin_failure = \
+            ignore_plugin_failure
         self._post_restore_commands = []
 
         self._tempdir = None
@@ -186,7 +186,7 @@ class SnapshotRestore(object):
     def __should_ignore_deployment_failure(self,
                                            message):
         return 'cloudify_agent.operations.install_plugins' in \
-               message and self._ignore_plugin_installation_failure
+               message and self._ignore_plugin_failure
 
     def _restore_deployment_envs(self, postgres):
         deps = utils.get_dep_contexts(self._snapshot_version)
@@ -228,7 +228,7 @@ class SnapshotRestore(object):
                 except RuntimeError as re:
                     if self.__should_ignore_deployment_failure(re.message):
                         ctx.logger.warning('Failed to create deployment: {0},'
-                                           'ignore_plugin_installation_failure'
+                                           'ignore_plugin_failure'
                                            'flag used, proceeding...'
                                            .format(deployment_id))
                         ctx.logger.debug('Deployment creation error: {0}'
@@ -683,7 +683,7 @@ class SnapshotRestore(object):
                                              plugin,
                                              plugins_tmp)
                     except Exception as ex:
-                        if self._ignore_plugin_installation_failure:
+                        if self._ignore_plugin_failure:
                             ctx.logger.warning(
                                 'Failed to restore plugin: {0}, '
                                 'ignore-plugin-installation-failure flag '
