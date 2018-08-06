@@ -58,7 +58,8 @@ def _create_amqp_client(config):
 
 def main(args):
     logging.basicConfig(
-        level=args['loglevel'].upper(), filename=args['logfile'])
+        level=args.get('loglevel', 'INFO').upper(),
+        filename=args.get('logfile', DEFAULT_LOG_PATH))
     with open(args['config']) as f:
         config = yaml.safe_load(f)
     amqp_client = _create_amqp_client(config)
