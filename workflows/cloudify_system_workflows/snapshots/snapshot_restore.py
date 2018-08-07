@@ -686,7 +686,7 @@ class SnapshotRestore(object):
                         if self._ignore_plugin_failure:
                             ctx.logger.warning(
                                 'Failed to restore plugin: {0}, '
-                                'ignore-plugin-installation-failure flag '
+                                'ignore-plugin-failure flag '
                                 'used. Proceeding...'.format(plugin))
                             ctx.logger.debug('Restore plugin failure error: '
                                              '{0}'.format(ex))
