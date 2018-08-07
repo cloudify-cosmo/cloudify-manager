@@ -90,7 +90,7 @@ class TestSnapshot(AgentlessTestCase):
             snapshot_path,
             desired_execution_status=Execution.TERMINATED,
             error_execution_status=Execution.FAILED,
-            ignore_plugin_install_failure=True)
+            ignore_plugin_failure=True)
 
         # Now make sure all the resources really exist in the DB
         # Assert snapshot restored
@@ -103,7 +103,7 @@ class TestSnapshot(AgentlessTestCase):
             snapshot_path,
             desired_execution_status=Execution.TERMINATED,
             error_execution_status=Execution.FAILED,
-            ignore_plugin_install_failure=True)
+            ignore_plugin_failure=True)
 
         # Now make sure all the resources really exist in the DB
         # Assert snapshot restored
@@ -116,7 +116,7 @@ class TestSnapshot(AgentlessTestCase):
             snapshot_path,
             desired_execution_status=Execution.TERMINATED,
             error_execution_status=Execution.FAILED,
-            ignore_plugin_install_failure=True)
+            ignore_plugin_failure=True)
 
         # Now make sure all the resources really exist in the DB
         # Assert snapshot restored
@@ -479,7 +479,7 @@ class TestSnapshot(AgentlessTestCase):
             snapshot_id=None,
             desired_execution_status=Execution.TERMINATED,
             error_execution_status=Execution.FAILED,
-            ignore_plugin_install_failure=False):
+            ignore_plugin_failure=False):
         """Upload the snapshot and launch the restore workflow
         """
         snapshot_id = snapshot_id or self.SNAPSHOT_ID
@@ -490,7 +490,7 @@ class TestSnapshot(AgentlessTestCase):
         self.logger.debug('Restoring snapshot...')
         execution = rest_client.snapshots.restore(
             snapshot_id,
-            ignore_plugin_installation_failure=ignore_plugin_install_failure)
+            ignore_plugin_failure=ignore_plugin_failure)
         execution = self._wait_for_restore_execution_to_end(
             execution, rest_client)
         if execution.status == error_execution_status:
