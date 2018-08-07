@@ -16,6 +16,7 @@
 
 import os
 import json
+import shutil
 import tempfile
 from uuid import uuid4
 from time import sleep
@@ -69,8 +70,11 @@ class AMQPPostgresTest(BaseServerTestCase):
         with tempfile.NamedTemporaryFile(delete=False) as f:
             json.dump({k: getattr(config, k) for k in config_keys}, f)
         self.addCleanup(os.unlink, f.name)
+        log_dir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, log_dir)
         args = {
-            'config': f.name
+            'config': f.name,
+            'logfile': os.path.join(log_dir, 'amqp_postgres.log')
         }
         amqp_thread = Thread(target=main, args=(args,))
         amqp_thread.daemon = True
