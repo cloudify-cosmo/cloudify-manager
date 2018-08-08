@@ -18,20 +18,22 @@ from flask_restful import fields
 from flask_restful_swagger import swagger
 
 
-@swagger.model
 class BaseResponse(object):
     resource_fields = {}
 
+    def __init__(self, **kwargs):
+        for name in self.resource_fields:
+            setattr(self, name, kwargs.get(name))
 
+
+@swagger.model
 class ResourceID(BaseResponse):
     resource_fields = {
         'resource_id': fields.String
     }
 
-    def __init__(self, **kwargs):
-        self.resource_id = kwargs.get('resource_id')
 
-
+@swagger.model
 class SecretsListResponse(BaseResponse):
     resource_fields = {
         'key': fields.String,
@@ -44,19 +46,9 @@ class SecretsListResponse(BaseResponse):
         'is_hidden_value': fields.Boolean,
     }
 
-    def __init__(self, **kwargs):
-        self.key = kwargs.get('key')
-        self.created_at = kwargs.get('created_at')
-        self.updated_at = kwargs.get('updated_at')
-        self.resource_availability = kwargs.get('resource_availability')
-        self.visibility = kwargs.get('visibility')
-        self.tenant_name = kwargs.get('tenant_name')
-        self.created_by = kwargs.get('created_by')
-        self.is_hidden_value = kwargs.get('is_hidden_value')
-
 
 @swagger.model
-class UserResponse(object):
+class UserResponse(BaseResponse):
 
     resource_fields = {
         'username': fields.String,
@@ -70,20 +62,9 @@ class UserResponse(object):
         'is_locked': fields.Boolean
     }
 
-    def __init__(self, **kwargs):
-        self.username = kwargs.get('username')
-        self.tenants = kwargs.get('tenants')
-        self.tenant_roles = kwargs.get('tenant_roles')
-        self.groups = kwargs.get('groups')
-        self.role = kwargs.get('role')
-        self.group_system_roles = kwargs.get('group_system_roles')
-        self.active = kwargs.get('active')
-        self.last_login_at = kwargs.get('last_login_at')
-        self.is_locked = kwargs.get('is_locked')
-
 
 @swagger.model
-class TenantResponse(object):
+class TenantResponse(BaseResponse):
 
     resource_fields = {
         'name': fields.String,
@@ -92,8 +73,16 @@ class TenantResponse(object):
         'user_roles': fields.Raw,
     }
 
-    def __init__(self, **kwargs):
-        self.name = kwargs.get('name')
-        self.groups = kwargs.get('groups')
-        self.users = kwargs.get('users')
-        self.user_roles = kwargs.get('user_roles')
+
+@swagger.model
+class AgentResponse(BaseResponse):
+    resource_fields = {
+        'id': fields.String,
+        'host_id': fields.String,
+        'ip': fields.String,
+        'install_method': fields.String,
+        'system': fields.String,
+        'version': fields.String,
+        'node': fields.String,
+        'deployment': fields.String
+    }

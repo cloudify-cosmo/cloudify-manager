@@ -24,13 +24,17 @@ from StringIO import StringIO
 from flask import current_app
 from flask_security import current_user
 
+from cloudify import constants as cloudify_constants, utils as cloudify_utils
 from dsl_parser import constants, tasks
 from dsl_parser import exceptions as parser_exceptions
 from manager_rest import premium_enabled
 from manager_rest.constants import DEFAULT_TENANT_NAME
 from manager_rest.dsl_functions import get_secret_method
 from manager_rest.utils import is_create_global_permitted
-from manager_rest.storage import get_storage_manager, models, get_node
+from manager_rest.storage import (get_storage_manager,
+                                  models,
+                                  get_node,
+                                  ListResult)
 from manager_rest.storage.models_states import (SnapshotState,
                                                 ExecutionState,
                                                 DeploymentModificationState,
@@ -1056,6 +1060,76 @@ class ResourceManager(object):
         # resource_availability is deprecated. For backwards compatibility -
         # adding it to the response.
         instance_dict['resource_availability'] = resource_availability
+
+    def list_agents(self, deployment_id=None, node_ids=None,
+                    node_instance_ids=None, install_method=None):
+        filters = {}
+        if deployment_id is not None:
+            filters['deployment_id'] = deployment_id
+        if node_ids is not None:
+            filters['id'] = node_ids
+        nodes = {n._storage_id: n
+                 for n in self.sm.list(models.Node, filters=filters,
+                                       get_all_results=True)
+                 if self._is_agent_node(n)}
+
+        if not nodes:
+            pagination = {'total': 0, 'size': 0, 'offset': 0}
+            return ListResult([], metadata={'pagination': pagination})
+
+        instance_filters = {'_node_fk': list(nodes)}
+        if node_instance_ids:
+            instance_filters['id'] = node_instance_ids
+        node_instances = self.sm.list(models.NodeInstance,
+                                      filters=instance_filters,
+                                      get_all_results=True)
+        agents = []
+        for inst in node_instances:
+            agent = self._agent_from_instance(inst)
+            if agent is None:
+                continue
+            if install_method is not None and \
+                    agent['install_method'] not in install_method:
+                continue
+            agents.append(agent)
+
+        # there's no real way to implement pagination in a meaningful manner,
+        # since we need to query node-instances anyway; still, include the
+        # sizes to keep response object shape consistent with all other
+        # endpoints
+        pagination = {'total': len(agents), 'size': len(agents), 'offset': 0}
+        return ListResult(agents, metadata={'pagination': pagination})
+
+    def _agent_from_instance(self, instance):
+        if instance.state != 'started':
+            return
+        agent = instance.runtime_properties.get('cloudify_agent')
+        if not agent:
+            return
+        if agent.get('windows'):
+            system = 'windows'
+        else:
+            system = agent.get('distro')
+            if agent.get('distro_codename'):
+                system = '{0} {1}'.format(system, agent.get('distro_codename'))
+        return dict(
+            id=instance.id,
+            host_id=instance.host_id,
+            ip=agent.get('ip'),
+            install_method=agent.get('install_method'),
+            system=system,
+            version=agent.get('version'),
+            node=instance.node_id,
+            deployment=instance.deployment_id
+        )
+
+    def _is_agent_node(self, node):
+        if cloudify_constants.COMPUTE_NODE_TYPE not in node.type_hierarchy:
+            return False
+        if cloudify_utils.internal.get_install_method(node.properties) == \
+                cloudify_constants.AGENT_INSTALL_METHOD_NONE:
+            return False
+        return True
 
     @staticmethod
     def _try_convert_from_str(string, target_type):

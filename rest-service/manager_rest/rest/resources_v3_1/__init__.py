@@ -39,3 +39,5 @@ from .blueprints import (                        # NOQA
     BlueprintsSetGlobal,
     BlueprintsSetVisibility
 )
+
+from .agents import Agents                       # NOQA

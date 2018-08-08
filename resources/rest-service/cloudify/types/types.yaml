@@ -561,6 +561,8 @@ workflows:
         default: []
       node_instance_ids:
         default: []
+      install_methods:
+        default: null
       validate:
         default: True
       install:
@@ -584,7 +586,8 @@ workflows:
         default: []
       node_instance_ids:
         default: []
-
+      install_methods:
+        default: null
 
 ##################################################################################
 # Base data type definitions
