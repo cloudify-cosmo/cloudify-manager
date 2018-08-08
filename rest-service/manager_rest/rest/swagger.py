@@ -38,7 +38,16 @@ versions of the same resource on the same API
 
 
 def add_swagger_resource(api, api_version, resource, resource_path):
-    return
+    swagger.register_once(
+        api=api,
+        add_resource_func=api.add_resource,
+        apiVersion=api_version,
+        swaggerVersion='2.0',
+        basePath='http://localhost:8100',
+        resourcePath='/',
+        produces=["application/json"],
+        endpoint_path='/api/spec',
+        description='Cloudify')
     endpoint = swagger.swagger_endpoint(api, resource, resource_path)
     # Add a .help.json help url
     swagger_path = swagger.extract_swagger_path(resource_path)
@@ -49,9 +58,3 @@ def add_swagger_resource(api, api_version, resource, resource_path):
     endpoint_path = "{0}_{1}_help_html".format(api_version, resource.__name__)
     api.add_resource(endpoint, "%s.help.html" % swagger_path,
                      endpoint=endpoint_path)
-    swagger.register_once(
-        add_resource_func=api.add_resource, apiVersion=api_version,
-        swaggerVersion='2.0',
-        basePath='http://localhost:8100',
-        resourcePath='/', produces=["application/json"],
-        endpoint='/api/spec')
