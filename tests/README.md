@@ -102,7 +102,7 @@ To test everything is working as it should, run:
 
 ```
 $ cd <root directory of cloudify-manager repository>
-$ nosetests -s tests/integration_tests/tests/agentless_tests/test_workflow.py:BasicWorkflowsTest.test_execute_operation
+$ pytest -s tests/integration_tests/tests/agentless_tests/test_workflow.py:BasicWorkflowsTest.test_execute_operation
 ```
 
 ## Using Docl
