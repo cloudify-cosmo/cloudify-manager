@@ -18,5 +18,8 @@ ExecStart=/bin/sh -c '/opt/manager/env/bin/gunicorn \
     --log-file /var/log/cloudify/rest/gunicorn.log \
     --access-logfile /var/log/cloudify/rest/gunicorn-access.log'
 
+RuntimeDirectory=cloudify-restservice
+RuntimeDirectoryMode=0750
+
 [Install]
 WantedBy=multi-user.target

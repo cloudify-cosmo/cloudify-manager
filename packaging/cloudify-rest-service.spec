@@ -94,11 +94,6 @@ groupadd -fr cfyuser
 getent passwd cfyuser >/dev/null || useradd -r -g cfyuser -d /etc/cloudify -s /sbin/nologin cfyuser
 
 
-%post
-
-systemd-tmpfiles --create
-
-
 %files
 
 /opt/manager
@@ -109,7 +104,6 @@ systemd-tmpfiles --create
 /opt/manager/scripts/set-manager-ssl.py*
 /usr/lib/systemd/system/cloudify-restservice.service
 /usr/lib/systemd/system/cloudify-amqp-postgres.service
-/usr/lib/tmpfiles.d/cloudify-restservice.conf
 
 %attr(750,cfyuser,adm) /var/log/cloudify/rest
 %attr(750,cfyuser,adm) /var/log/cloudify/amqp-postgres
