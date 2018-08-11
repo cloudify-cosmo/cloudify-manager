@@ -36,13 +36,13 @@ from manager_rest.storage.models_states import VisibilityState
 from amqp_postgres.main import main
 
 
-class AMQPPostgresTest(BaseServerTestCase):
+class TestAMQPPostgres(BaseServerTestCase):
 
     def create_configuration(self):
         """
         Override here to allow using postgresql instead of sqlite
         """
-        config = super(AMQPPostgresTest, self).create_configuration()
+        config = super(TestAMQPPostgres, self).create_configuration()
         config.postgresql_host = 'localhost'
         config.postgresql_db_name = 'cloudify_db'
         config.postgresql_username = 'cloudify'
@@ -53,12 +53,12 @@ class AMQPPostgresTest(BaseServerTestCase):
         """
         Override here to allow using postgresql instead of sqlite
         """
-        super(AMQPPostgresTest, self)._create_config_and_reset_app(server)
+        super(TestAMQPPostgres, self)._create_config_and_reset_app(server)
         server.SQL_DIALECT = 'postgresql'
         server.reset_app(self.server_configuration)
 
     def setUp(self):
-        super(AMQPPostgresTest, self).setUp()
+        super(TestAMQPPostgres, self).setUp()
         config = self.server_configuration
         config_keys = [
             'postgresql_{0}'.format(n)
