@@ -104,9 +104,8 @@ jobs:
       - run:
           name: Install tox and run test
           command: |
-            sudo pip install -U pip==9.0.1
-            sudo pip install tox
-            tox -c amqp-postgres/tox.ini
+            pip install --user tox
+            python -m tox -c amqp-postgres/tox.ini
 
 
   test_premium:
