@@ -737,7 +737,9 @@ class ResourceManager(object):
             deployment=deployment,
             execution_parameters=execution_parameters,
             bypass_maintenance=bypass_maintenance,
-            update_execution_status=update_execution_status)
+            update_execution_status=update_execution_status,
+            is_system_workflow=is_system_workflow
+        )
 
         return execution
 

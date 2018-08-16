@@ -86,3 +86,10 @@ def terminate(**kwargs):
             raise RuntimeError('machine with id [{0}] does not exist'
                                .format(ctx.instance.id))
         del data['machines'][ctx.instance.id]
+
+
+@operation
+def hook_task(context, **kwargs):
+    with open('/tmp/hook_task.txt', 'a') as f:
+        f.write("In hook_task, context: {0} kwargs: {1}"
+                .format(context, kwargs))
