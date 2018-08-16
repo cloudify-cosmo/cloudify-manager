@@ -76,7 +76,6 @@ class ResourceManager(object):
         )
 
     def update_execution_status(self, execution_id, status, error):
-        self.log('[update_execution_status] about to update status to `{0}`...'.format(status))
         execution = self.sm.get(models.Execution, execution_id)
         if not self._validate_execution_update(execution.status, status):
             raise manager_exceptions.InvalidExecutionUpdateStatus(
@@ -86,7 +85,6 @@ class ResourceManager(object):
         execution.error = error
 
         if status in ExecutionState.END_STATES:
-            self.log('[update_execution_status] status is END_STATE, need to call queued execs...')
             execution.ended_at = utils.get_formatted_timestamp()
 
         res = self.sm.update(execution)
@@ -95,17 +93,10 @@ class ResourceManager(object):
         return res
 
     def start_queued_executions(self):
-        # self.log('[start_queued_executions] Getting queued execs')
         queued_executions = self._get_queued_executions()
-        self.log('[start_queued_executions] Queued_executions: {0}'.format(queued_executions))
 
         for e in queued_executions:
-            # To make sure 2 executions in the same deployment don't
-            # start together
-            # time.sleep(10)
-            self.log('[start_queued_executions] about to re-execute id={0}, time {1}'.format(e.id, utils.get_formatted_timestamp()))
             self.execute_queued_workflow(e)
-
             if e.is_system_workflow:  # To avoid starvation of system workflows
                 break
 
@@ -166,10 +157,6 @@ class ResourceManager(object):
                                        error='')
         return self.sm.put(new_snapshot)
 
-    def log(self, msg):
-        with open('/tmp/cake', 'a') as fh:
-            fh.write('{0}\n'.format(msg))
-
     def create_snapshot(self,
                         snapshot_id,
                         include_metrics,
@@ -178,8 +165,6 @@ class ResourceManager(object):
                         include_events,
                         bypass_maintenance,
                         queue):
-        if queue:
-            self.log('[create_snapshot] !!! QUEUED SNAPSHOT'.format(queue))
 
         self.create_snapshot_model(snapshot_id)
         try:
@@ -476,7 +461,6 @@ class ResourceManager(object):
                          bypass_maintenance=None,
                          dry_run=False,
                          queue=False):
-        # self.log('[execute_workflow] queue = {0}'.format(queue))
         deployment = self.sm.get(models.Deployment, deployment_id)
         blueprint = self.sm.get(models.Blueprint, deployment.blueprint_id)
         self._verify_workflow_in_deployment(workflow_id, deployment,
@@ -485,8 +469,6 @@ class ResourceManager(object):
 
         self._verify_deployment_environment_created_successfully(deployment_id)
         should_queue = self._check_for_executions(deployment_id, force, queue)
-
-        # self.log('[execute_workflow] queue = {0}, should_queue={1}'.format(queue, should_queue))
 
         execution_parameters = \
             ResourceManager._merge_and_validate_execution_parameters(
@@ -509,10 +491,8 @@ class ResourceManager(object):
         self.sm.put(new_execution)
 
         if should_queue:
-            self.log('[execute_workflow] !!!! queue={0}, execution is queued...stoping for now !!!!')
             return new_execution
 
-        self.log('[execute_workflow] *** about run execution ***')
         # executing the user workflow
         workflow_plugins = blueprint.plan[
             constants.WORKFLOW_PLUGINS_TO_INSTALL]
@@ -537,7 +517,7 @@ class ResourceManager(object):
         Both system and `regular` workflows are being de-queued, and each kind
         should be executed using a different executor function
         (`execute_system_workflow`/`execute_workflow`).
-        * Deployment environment creation and deletion are considered to be
+        * Deployment environment creation and deletion are considered
         system workflows
 
         """
@@ -551,14 +531,13 @@ class ResourceManager(object):
     def execute_queued_workflow(self, execution):
         """
         Whenever an execution is about to change to END status this function
-        is called. Since the execution exists in the DB (it was created and then
-        queued), we don't need to do all the logic of 'execute_workflow', but
-        only to extract the needed information and re-run with the correct
+        is called. Since the execution exists in the DB (it was created and
+        then queued), we don't need to do all the logic of 'execute_workflow',
+        but only to extract the needed information and re-run with the correct
         workflow executor
         :param execution: an execution DB object
         :return:
         """
-        self.log('************{0} Starting queued execution {1} ************'.format(utils.get_formatted_timestamp(), execution.id))
         queue = True
         force = False
         deployment = execution.deployment
@@ -570,20 +549,16 @@ class ResourceManager(object):
 
         if self._should_use_system_workflow_executor(execution):
             # Use `execute_system_workflow`
-            self.log('************{0} Using  `execute_system_workflow` ************'.format(utils.get_formatted_timestamp()))
             verify_no_executions = True
-
             should_queue = False
             # It means that a system-wide workflow is about to be launched
             if deployment is None and verify_no_executions:
                 should_queue = self._check_for_any_active_executions(queue)
-                self.log('[execute_queued_workflow] Checked for running executions should_queue={0}'.format(should_queue))
 
             # Execution can't currently run,it's queued and will run later
             if should_queue:
-                self.log('%%%%% [execute_queued_workflow] execution {0} cant run! %%%%%%'.format(execution.id))
                 return execution
-            self.log('[execute_queued_workflow] {0} about to run system workflow...'.format(utils.get_formatted_timestamp()))
+
             execution.started_at = utils.get_formatted_timestamp()
             execution.status = ExecutionState.PENDING
             self.sm.put(execution)
@@ -597,7 +572,6 @@ class ResourceManager(object):
             return execution
 
         else:  # User `execute_workflow`
-            self.log('************{0} Using  `execute_workflow` ************'.format(utils.get_formatted_timestamp()))
 
             blueprint = self.sm.get(models.Blueprint, deployment.blueprint_id)
             self._verify_workflow_in_deployment(workflow_id, deployment,
@@ -608,13 +582,9 @@ class ResourceManager(object):
             should_queue = self._check_for_executions(deployment_id, force,
                                                       queue)
 
-            self.log('[execute_queued_workflow] execution {0} should_queue={1}'.format(execution.id, should_queue))
-
             if should_queue:
-                self.log('%%%%% [execute_queued_workflow] execution {0} can`t run! %%%%%%'.format(execution.id))
                 return execution
 
-            self.log('[execute_queued_workflow]{0} *** about run execution {1} ***'.format(utils.get_formatted_timestamp(), execution.id))
             # executing the user workflow
             workflow_plugins = blueprint.plan[
                 constants.WORKFLOW_PLUGINS_TO_INSTALL]
@@ -646,20 +616,17 @@ class ResourceManager(object):
 
     def _check_for_executions(self, deployment_id, force, queue):
         """
-        This function returns True if one of the following is currently running:
-        1) A system workflow
+        This function returns True if one of the following is running:
+        1) A system workflow (*will return true if a system workflow is queued)
         2) A regular workflow under the same deployment
         """
-        self.log('[_check_for_executions] time {0}'.format(utils.get_formatted_timestamp()))
         system_exec_running = self._check_for_active_system_wide_execution(
             queue)
         execution_running = self._check_for_active_executions(
             deployment_id, force, queue)
-        self.log('[_check_for_executions] queue={0}, system_exec_running={1}, execution_running={2}'.format(queue, system_exec_running, execution_running))
         return system_exec_running or execution_running
 
     def _check_for_any_active_executions(self, queue):
-        self.log('[_check_for_any_active_executions] time={0}'.format(utils.get_formatted_timestamp()))
         filters = {
             'status': ExecutionState.ACTIVE_STATES
         }
@@ -668,7 +635,6 @@ class ResourceManager(object):
             for e in self.list_executions(is_include_system_workflows=True,
                                           filters=filters).items
         ]
-        self.log('[_check_for_any_active_executions] executions={0}'.format(executions))
         should_queue = False
         # Execution can't currently run because other executions are running,
         # since `queue` flag is on - we will queue the execution and it will
@@ -682,7 +648,6 @@ class ResourceManager(object):
                 'other executions running. '
                 'Currently running executions: {0}'
                 .format(executions))
-        self.log('[_check_for_any_active_executions] queue={0}, should_queue={1}'.format(queue, should_queue))
         return should_queue
 
     def _check_for_active_system_wide_execution(self, queue):
@@ -692,12 +657,11 @@ class ResourceManager(object):
         should_queue = False
         for e in self.list_executions(is_include_system_workflows=True,
                                       filters=filters).items:
-            # Execution can't currently run because system execution is running.
-            # since `queue` flag is on - we will queue the execution and it will
-            # run when possible
+            # Execution can't currently run because system execution is
+            # running. since `queue` flag is on - we will queue the execution
+            #  and it will run when possible
             if e.deployment_id is None and queue:
                 should_queue = True
-                self.log('[_check_for_active_system_wide_execution] queue={0}, should_queue={1}'.format(queue, should_queue))
                 break
             elif e.deployment_id is None:
                 raise manager_exceptions.ExistingRunningExecutionError(
@@ -729,11 +693,6 @@ class ResourceManager(object):
         queued and automatically run when the blocking workflows are finished
         :return: (async task object, execution object)
         """
-        # if queue:
-        #     self.log('[_execute_system_workflow] !!! QUEUED: running {0}, queue={1}'.format(wf_id, queue))
-        # else:
-        #     self.log('[_execute_system_workflow] ### REGULAR {0}'.format(wf_id))
-
         execution_id = str(uuid.uuid4())  # will also serve as the task id
         execution_parameters = execution_parameters or {}
 
@@ -746,9 +705,7 @@ class ResourceManager(object):
         # It means that a system-wide workflow is about to be launched
         if deployment is None and verify_no_executions:
             should_queue = self._check_for_any_active_executions(queue)
-            # self.log('[_execute_system_workflow] queue={0}, should_queue={1}, wf_id={2}'.format(queue, should_queue, wf_id))
 
-        # self.log('[_execute_system_workflow] queue={0}, should_queue={1}, status={2}, wf_id={3}'.format(queue, should_queue, self._get_proper_status(should_queue), wf_id))
         execution = models.Execution(
             id=execution_id,
             status=self._get_proper_status(should_queue),
@@ -765,11 +722,9 @@ class ResourceManager(object):
 
         # Execution can't currently run,it's queued and will run later
         if should_queue:
-            self.log('[_execute_system_workflow] queue={0} execution create in DB and queued'.format(queue))
             return execution
         execution.started_at = utils.get_formatted_timestamp()
         self.sm.put(execution)
-        self.log('[_execute_system_workflow] queue={0} about to run system workflow {1}...'.format(queue, wf_id))
         workflow_executor.execute_system_workflow(
             wf_id=wf_id,
             task_id=execution_id,
@@ -810,6 +765,10 @@ class ResourceManager(object):
         if kill:
             force = True
         execution = self.sm.get(models.Execution, execution_id)
+        # When a user cancels queued execution automatically use the kill flag
+        if execution.status == ExecutionState.QUEUED:
+            kill = True
+            force = True
         if execution.status not in (ExecutionState.PENDING,
                                     ExecutionState.STARTED) and \
                 (not force or execution.status != ExecutionState.CANCELLING)\
