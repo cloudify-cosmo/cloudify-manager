@@ -60,6 +60,7 @@ class EventsPrinter(threading.Thread):
         self._bind_queue_to_exchange(channel,
                                      EVENTS_EXCHANGE_NAME,
                                      'topic',
+                                     queues,
                                      routing_key='events.#')
 
         if not os.environ.get('CI'):

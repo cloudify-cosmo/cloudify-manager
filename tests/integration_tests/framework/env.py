@@ -79,7 +79,8 @@ class BaseTestEnvironment(object):
             cfy.init(**kwargs)
             docl.init(resources=self._build_resource_mapping())
             self.on_environment_created()
-        except Exception:
+        except BaseException as e:
+            logger.error(e)
             self.destroy()
             raise
 
