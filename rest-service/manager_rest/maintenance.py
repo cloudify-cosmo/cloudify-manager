@@ -33,7 +33,7 @@ from manager_rest.constants import (MAINTENANCE_MODE_ACTIVATED,
 
 FORBIDDEN_METHODS = ['POST', 'PATCH', 'PUT']
 ALLOWED_ENDPOINTS = ['maintenance',
-                     'snapshots',                     
+                     'snapshots',
                      'status',
                      'version']
 LOCAL_ADDRESS = '127.0.0.1'
