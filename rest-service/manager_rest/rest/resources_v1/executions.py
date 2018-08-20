@@ -104,6 +104,9 @@ class Executions(SecuredResource):
         dry_run = verify_and_convert_bool(
             'dry_run',
             request_dict.get('dry_run', 'false'))
+        queue = verify_and_convert_bool(
+            'queue',
+            request_dict.get('queue', 'false'))
 
         deployment_id = request_dict['deployment_id']
         workflow_id = request_dict['workflow_id']
@@ -118,7 +121,8 @@ class Executions(SecuredResource):
         execution = get_resource_manager().execute_workflow(
             deployment_id, workflow_id, parameters=parameters,
             allow_custom_parameters=allow_custom_parameters, force=force,
-            dry_run=dry_run, bypass_maintenance=bypass_maintenance)
+            dry_run=dry_run, bypass_maintenance=bypass_maintenance,
+            queue=queue)
         return execution, 201
 
 
