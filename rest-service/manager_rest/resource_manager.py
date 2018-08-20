@@ -102,11 +102,11 @@ class ResourceManager(object):
 
     def _get_queued_executions(self):
         filters = {'status': ExecutionState.QUEUED_STATE}
-        queued_executions = [
-            e for e in self.list_executions(is_include_system_workflows=True,
-                                            filters=filters,
-                                            sort={'created_at': 'asc'}).items
-        ]
+
+        queued_executions = self.list_executions(
+            is_include_system_workflows=True,
+            filters=filters,
+            sort={'created_at': 'asc'}).items
 
         return queued_executions
 
@@ -460,42 +460,54 @@ class ResourceManager(object):
                          force=False,
                          bypass_maintenance=None,
                          dry_run=False,
-                         queue=False):
+                         queue=False,
+                         execution=None):
+
         deployment = self.sm.get(models.Deployment, deployment_id)
         blueprint = self.sm.get(models.Blueprint, deployment.blueprint_id)
         self._verify_workflow_in_deployment(workflow_id, deployment,
                                             deployment_id)
         workflow = deployment.workflows[workflow_id]
 
-        self._verify_deployment_environment_created_successfully(deployment_id)
-        should_queue = self._check_for_executions(deployment_id, force, queue)
+        if execution:
+            new_execution = execution
+            execution_parameters = parameters
+            execution_id = execution.id
 
-        execution_parameters = \
-            ResourceManager._merge_and_validate_execution_parameters(
-                workflow, workflow_id, parameters, allow_custom_parameters)
+        else:
+            self._verify_deployment_environment_created_successfully(
+                deployment_id)
+            execution_parameters = \
+                ResourceManager._merge_and_validate_execution_parameters(
+                    workflow, workflow_id, parameters, allow_custom_parameters)
 
-        execution_id = str(uuid.uuid4())
+            execution_parameters = self._get_only_user_execution_parameters(
+                    execution_parameters)
 
-        new_execution = models.Execution(
-            id=execution_id,
-            status=self._get_proper_status(should_queue),
-            created_at=utils.get_formatted_timestamp(),
-            workflow_id=workflow_id,
-            error='',
-            parameters=self._get_only_user_execution_parameters(
-                execution_parameters),
-            is_system_workflow=False)
+            execution_id = str(uuid.uuid4())
 
-        if deployment:
-            new_execution.set_deployment(deployment)
-        self.sm.put(new_execution)
+        should_queue = self._check_for_executions(deployment_id, force,
+                                                  queue, execution)
+        if not execution:
+            new_execution = models.Execution(
+                id=execution_id,
+                status=self._get_proper_status(should_queue),
+                created_at=utils.get_formatted_timestamp(),
+                workflow_id=workflow_id,
+                error='',
+                parameters=execution_parameters,
+                is_system_workflow=False)
 
+            if deployment:
+                new_execution.set_deployment(deployment)
         if should_queue:
+            self.sm.put(new_execution)
             return new_execution
 
         # executing the user workflow
         workflow_plugins = blueprint.plan[
             constants.WORKFLOW_PLUGINS_TO_INSTALL]
+        new_execution.status = ExecutionState.PENDING
         new_execution.started_at = utils.get_formatted_timestamp()
         self.sm.put(new_execution)
         workflow_executor.execute_workflow(
@@ -532,75 +544,36 @@ class ResourceManager(object):
         """
         Whenever an execution is about to change to END status this function
         is called. Since the execution exists in the DB (it was created and
-        then queued), we don't need to do all the logic of 'execute_workflow',
-        but only to extract the needed information and re-run with the correct
-        workflow executor
+        then queued), we extract the needed information and re-run it with the
+        correct workflow executor.
         :param execution: an execution DB object
         :return:
         """
-        queue = True
-        force = False
         deployment = execution.deployment
         deployment_id = None
         if deployment:
             deployment_id = deployment.id
         workflow_id = execution.workflow_id
         execution_parameters = execution.parameters
+        task_mapping = self.task_mapping.get(workflow_id)
 
         if self._should_use_system_workflow_executor(execution):
             # Use `execute_system_workflow`
-            verify_no_executions = True
-            should_queue = False
-            # It means that a system-wide workflow is about to be launched
-            if deployment is None and verify_no_executions:
-                should_queue = self._check_for_any_active_executions(queue)
+            self._execute_system_workflow(
+                workflow_id, task_mapping, deployment=deployment,
+                execution_parameters=execution_parameters, timeout=0,
+                created_at=None, verify_no_executions=True,
+                bypass_maintenance=None, update_execution_status=True,
+                queue=True, execution=execution
+            )
 
-            # Execution can't currently run,it's queued and will run later
-            if should_queue:
-                return execution
-
-            execution.started_at = utils.get_formatted_timestamp()
-            execution.status = ExecutionState.PENDING
-            self.sm.put(execution)
-            workflow_executor.execute_system_workflow(
-                wf_id=workflow_id,
-                task_id=execution.id,
-                task_mapping=self.task_mapping.get(workflow_id),
-                deployment=deployment,
-                execution_parameters=execution_parameters)
-
-            return execution
-
-        else:  # User `execute_workflow`
-
-            blueprint = self.sm.get(models.Blueprint, deployment.blueprint_id)
-            self._verify_workflow_in_deployment(workflow_id, deployment,
-                                                deployment_id)
-            workflow = deployment.workflows[workflow_id]
-            self._verify_deployment_environment_created_successfully(
-                deployment_id)
-            should_queue = self._check_for_executions(deployment_id, force,
-                                                      queue)
-
-            if should_queue:
-                return execution
-
-            # executing the user workflow
-            workflow_plugins = blueprint.plan[
-                constants.WORKFLOW_PLUGINS_TO_INSTALL]
-            execution.started_at = utils.get_formatted_timestamp()
-            execution.status = ExecutionState.PENDING
-            self.sm.put(execution)
-            workflow_executor.execute_workflow(
-                workflow_id,
-                workflow,
-                workflow_plugins=workflow_plugins,
-                blueprint_id=deployment.blueprint_id,
-                deployment_id=deployment_id,
-                execution_id=execution.id,
-                execution_parameters=execution_parameters)
-
-            return execution
+        else:  # Use `execute_workflow`
+            self.execute_workflow(
+                deployment_id, workflow_id, parameters=execution_parameters,
+                allow_custom_parameters=False, force=False,
+                bypass_maintenance=None, dry_run=False, queue=True,
+                execution=execution
+            )
 
     @staticmethod
     def _get_proper_status(should_queue):
@@ -614,14 +587,21 @@ class ResourceManager(object):
                 'Workflow {0} does not exist in deployment {1}'.format(
                     wf_id, dep_id))
 
-    def _check_for_executions(self, deployment_id, force, queue):
+    def _check_for_executions(self, deployment_id, force, queue, execution):
         """
-        This function returns True if one of the following is running:
-        1) A system workflow (*will return true if a system workflow is queued)
-        2) A regular workflow under the same deployment
+        :param deployment_id: The id of the deployment the workflow belongs to.
+        :param force: If set, 2 executions under the same deployment can run
+                together.
+        :param queue: If set, in case an execution can't currently run it will
+                be queued (instead of raising an exception).
+        :param execution: An execution DB object, if exists it means this
+                execution was de-queued.
+
+        If the `queue` flag is False and there are running executions an
+        Exception will be raised
         """
         system_exec_running = self._check_for_active_system_wide_execution(
-            queue)
+            queue, execution)
         execution_running = self._check_for_active_executions(
             deployment_id, force, queue)
         return system_exec_running or execution_running
@@ -633,7 +613,8 @@ class ResourceManager(object):
         executions = [
             e.id
             for e in self.list_executions(is_include_system_workflows=True,
-                                          filters=filters).items
+                                          filters=filters,
+                                          get_all_results=True).items
         ]
         should_queue = False
         # Execution can't currently run because other executions are running,
@@ -650,13 +631,24 @@ class ResourceManager(object):
                 .format(executions))
         return should_queue
 
-    def _check_for_active_system_wide_execution(self, queue):
+    def _check_for_active_system_wide_execution(self, queue, execution):
+        """
+        If execution is passed (execution is de-queued) we only check for
+        ACTIVE system executions.
+        If execution is None (it's the first time this execution is trying to
+        run) we check for ACTIVE and QUEUED executions.
+        We do this to avoid starving executions.
+        """
+
+        status = ExecutionState.ACTIVE_STATES if execution else \
+            ExecutionState.ACTIVE_STATES+ExecutionState.QUEUED_STATE
         filters = {
-            'status': ExecutionState.ACTIVE_STATES
+            'status': status
         }
         should_queue = False
         for e in self.list_executions(is_include_system_workflows=True,
-                                      filters=filters).items:
+                                      filters=filters,
+                                      get_all_results=True).items:
             # Execution can't currently run because system execution is
             # running. since `queue` flag is on - we will queue the execution
             #  and it will run when possible
@@ -676,7 +668,7 @@ class ResourceManager(object):
                                  created_at=None, verify_no_executions=True,
                                  bypass_maintenance=None,
                                  update_execution_status=True,
-                                 queue=False):
+                                 queue=False, execution=None):
         """
         :param deployment: deployment for workflow execution
         :param wf_id: workflow id
@@ -691,38 +683,51 @@ class ResourceManager(object):
         the manager maintenance mode activated.
         :param queue: If set, in case the execution is blocked it will be
         queued and automatically run when the blocking workflows are finished
+        :param execution: an execution DB object. If it was passed it means
+        this execution was queued and now trying to run again. If the execution
+        can currently run it will, if not it will be queued again.
         :return: (async task object, execution object)
         """
-        execution_id = str(uuid.uuid4())  # will also serve as the task id
-        execution_parameters = execution_parameters or {}
 
-        # currently, deployment env creation/deletion are not set as
-        # system workflows
-        is_system_workflow = wf_id not in ('create_deployment_environment',
-                                           'delete_deployment_environment')
+        if execution:
+            execution_id = execution.id
+
+        else:
+            # First time we try to execute this workflows,
+            # we need all the details to create a DB object
+            execution_id = str(uuid.uuid4())  # will also serve as the task id
+            execution_parameters = execution_parameters or {}
+            execution_parameters = self._get_only_user_execution_parameters(
+                    execution_parameters)
+            # currently, deployment env creation/deletion are not set as
+            # system workflows
+            is_system_workflow = wf_id not in ('create_deployment_environment',
+                                               'delete_deployment_environment')
 
         should_queue = False
         # It means that a system-wide workflow is about to be launched
         if deployment is None and verify_no_executions:
             should_queue = self._check_for_any_active_executions(queue)
 
-        execution = models.Execution(
-            id=execution_id,
-            status=self._get_proper_status(should_queue),
-            created_at=created_at or utils.get_formatted_timestamp(),
-            workflow_id=wf_id,
-            error='',
-            parameters=self._get_only_user_execution_parameters(
-                execution_parameters),
-            is_system_workflow=is_system_workflow)
+        if not execution:
+            execution = models.Execution(
+                id=execution_id,
+                status=self._get_proper_status(should_queue),
+                created_at=created_at or utils.get_formatted_timestamp(),
+                workflow_id=wf_id,
+                error='',
+                parameters=execution_parameters,
+                is_system_workflow=is_system_workflow)
 
-        if deployment:
-            execution.set_deployment(deployment)
-        self.sm.put(execution)
+            if deployment:
+                execution.set_deployment(deployment)
 
         # Execution can't currently run,it's queued and will run later
         if should_queue:
+            self.sm.put(execution)
             return execution
+
+        execution.status = ExecutionState.PENDING
         execution.started_at = utils.get_formatted_timestamp()
         self.sm.put(execution)
         workflow_executor.execute_system_workflow(
@@ -1482,7 +1487,6 @@ class ResourceManager(object):
         wf_id = 'create_deployment_environment'
         deployment_env_creation_task_name = \
             'cloudify_system_workflows.deployment_environment.create'
-        # time.sleep(30)
         self._execute_system_workflow(
             wf_id=wf_id,
             task_mapping=deployment_env_creation_task_name,
