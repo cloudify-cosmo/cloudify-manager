@@ -74,9 +74,10 @@ if __name__ == '__main__':
               'CLOUDIFY_EDITION'
         exit(1)
 
-    logs_path = os.environ.get('CFY_LOGS_PATH')
+    logs_path = os.environ.get('CFY_LOGS_PATH_REMOTE')
     if not logs_path:
-        print 'The environment variable "CFY_LOGS_PATH" is not specified'
+        print 'The environment variable "CFY_LOGS_PATH_REMOTE" is not ' \
+              'specified'
         exit(1)
 
     main(s3_uri=S3_URI,

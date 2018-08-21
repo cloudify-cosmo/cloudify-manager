@@ -97,13 +97,12 @@ This project runs tests on a Cloudify Manager container created by [`docl`](http
 All done!
 
 Here'es all the commands together:
-     ```
+
      sudo brctl addbr cfy0
      sudo ip addr add 172.20.0.1/24 dev cfy0
      sudo ip link set dev cfy0 up
      sudo dockerd --bridge cfy0 --host 172.20.0.1
      export DOCKER_HOST=172.20.0.1
-     ```
 
 ## Running Tests
 
@@ -114,6 +113,28 @@ $ cd <root directory of cloudify-manager repository>
 $ pytest -s tests/integration_tests/tests/agentless_tests/test_workflow.py:BasicWorkflowsTest.test_execute_operation
 ```
 
+### Saving the Cloudify Manager's logs
+In order to save the logs for tests before the test environment is destroyed, specify the path via an environment variable as follows:
+
+```
+export CFY_LOGS_PATH_REMOTE=<YOUR-PATH-HERE>
+```
+This will save the logs where the tests are *actually* run.
+
+You may also set `export SKIP_LOGS_EXTRACTION=True` if you'd like to skip extraction and keep the `tar.gz` log archives.
+
+To skip saving logs for successful tests, run `export SKIP_LOG_SAVE_ON_SUCCESS=True`.
+
+For example you may want to run this before running the tests:
+ ```
+export CFY_LOGS_PATH_REMOTE=/tmp/cfy_test_logs/
+export SKIP_LOGS_EXTRACTION=True
+export SKIP_LOG_SAVE_ON_SUCCESS=True
+``` 
+
+_Note: when running with the `itests-runner` you need to also provide a `CFY_LOGS_PATH_LOCAL` env var via:
+`export CFY_LOGS_PATH_LOCAL=<YOUR-LOCAL-PATH>` as the test runs on containers and `CFY_LOGS_PATH_REMOTE` is the path inside the containers.
+This will save the logs on your local storage (where you ran `itests-runner`) at the `CFY_LOGS_PATH_LOCAL` path._ 
 ## Using Docl
 * To get an overview of different features supplied by docl, see the README at [`docl`'s](https://github.com/cloudify-cosmo/docl) repo.
 
@@ -171,29 +192,6 @@ If you work with `IntelliJ` or `PyCharm` IDE, you can debug the container's rest
   ```
   export DEBUG_MODE=
   ```
-
-
-## Manager Logs
-
-To keep the manager logs after the tests has finished running, set the environment variable `CFY_LOGS_PATH`, to be the path the logs would be saved into:
-
-```
-export CFY_LOGS_PATH=<path>
-```
-
-Now, when running test(s), the manager logs will be saved in the given path, before the environment is destroyed.
-To turn off logs saving, unset `CFY_LOGS_PATH`:
-
-  ```
-  unset CFY_LOGS_PATH
-  ```
-  
-  or:
-  
-  ```
-  export CFY_LOGS_PATH=
-  ```
-
 
 ## Framework Logs
 
