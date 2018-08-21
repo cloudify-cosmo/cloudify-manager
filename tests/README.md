@@ -14,7 +14,7 @@ This project runs tests on a Cloudify Manager container created by [`docl`](http
    machine (your machine) and the containers. This is because we will be running
    docker with no security enabled so we don't want it exposed on external network
    interfaces because that would be quite bad.
-   * Run the following to create a bridge named `cfy0` (Based off of docker [docs] (https://docs.docker.com/engine/userguide/networking/default_network/build-bridges/))
+   * Run the following to create a bridge named `cfy0` (Based off of docker [docs] (https://docs.docker.com/engine/userguide/networking/default_network/build-bridges/), this isn't permanent)
 
      ```
      $ sudo brctl addbr cfy0
@@ -95,6 +95,15 @@ This project runs tests on a Cloudify Manager container created by [`docl`](http
       ```
 
 All done!
+
+Here'es all the commands together:
+     ```
+     sudo brctl addbr cfy0
+     sudo ip addr add 172.20.0.1/24 dev cfy0
+     sudo ip link set dev cfy0 up
+     sudo dockerd --bridge cfy0 --host 172.20.0.1
+     export DOCKER_HOST=172.20.0.1
+     ```
 
 ## Running Tests
 
