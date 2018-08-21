@@ -406,7 +406,7 @@ class ResourceManager(object):
         # Validate there are no running executions for this deployment
         deplyment_id_filter = self.create_filters_dict(
             deployment_id=deployment_id,
-            status=ExecutionState.ACTIVE_STATES
+            status=ExecutionState.ACTIVE_STATES+ExecutionState.QUEUED_STATE
         )
         executions = self.sm.list(
             models.Execution,
@@ -415,7 +415,7 @@ class ResourceManager(object):
 
         if not delete_db_mode and self._any_running_executions(executions):
             raise manager_exceptions.DependentExistsError(
-                "Can't delete deployment {0} - There are running "
+                "Can't delete deployment {0} - There are running or queued"
                 "executions for this deployment. Running executions ids: {1}"
                 .format(
                     deployment_id,
