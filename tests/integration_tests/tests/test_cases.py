@@ -106,7 +106,7 @@ class BaseTestCase(unittest.TestCase):
         if not logs_dir:
             self.logger.debug('not saving manager logs')
             return
-        if os.environ.get('SKIP_LOG_SAVE_ON_SUCCESS') \
+        if bool(os.environ.get('SKIP_LOG_SAVE_ON_SUCCESS')) \
                 and sys.exc_info() == (None, None, None):
             self.logger.info('Not saving manager logs for successful test:  '
                              '{0}'.format(test_path[-1]))
@@ -121,11 +121,15 @@ class BaseTestCase(unittest.TestCase):
         if purge:
             self.cfy.logs.purge(force=True)
 
-        self.logger.debug('opening tar.gz: {0}'.format(target))
-        with tarfile.open(target) as tar:
-            tar.extractall(path=logs_dir)
-        self.logger.debug('removing {0}'.format(target))
-        os.remove(target)
+        if not bool(os.environ.get('SKIP_TAR_EXTRACT')):
+            self.logger.debug('opening tar.gz: {0}'.format(target))
+            with tarfile.open(target) as tar:
+                tar.extractall(path=logs_dir)
+            self.logger.debug('removing {0}'.format(target))
+            os.remove(target)
+        else:
+            self.logger.debug('Skipped tar.gz log extraction.')
+
         self.logger.debug('_save_manager_logs_after_test completed')
 
     @staticmethod
