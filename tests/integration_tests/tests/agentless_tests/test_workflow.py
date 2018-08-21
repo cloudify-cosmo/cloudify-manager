@@ -413,6 +413,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
 
             # Retry several times, because uninstalling plugins may take time
             self._assert_paths_removed(deployment_folder, plugin_path)
+
         finally:
             shutil.rmtree(base_temp_dir)
 
