@@ -52,7 +52,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
             plugin_name='cloudmock',
             deployment_id=deployment.id
         )['machines']
-        self.assertEquals(1, len(machines))
+        self.assertNotEquals(1, len(machines))
 
         outputs = self.client.deployments.outputs.get(deployment.id).outputs
         self.assertEquals(outputs['ip_address'], '')
