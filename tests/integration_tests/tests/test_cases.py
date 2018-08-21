@@ -124,11 +124,9 @@ class BaseTestCase(unittest.TestCase):
         self.logger.debug('opening tar.gz: {0}'.format(target))
         with tarfile.open(target) as tar:
             tar.extractall(path=logs_dir)
-        if not bool(os.environ.get('SKIP_REMOVE_LOG_TAR')):
+        if not bool(os.environ.get('DONT_REMOVE_LOG_TAR')):
             self.logger.debug('removing {0}'.format(target))
             os.remove(target)
-        else:
-            self.logger.debug('Skipped tar.gz log removal.')
 
         self.logger.debug('_save_manager_logs_after_test completed')
 
