@@ -52,10 +52,12 @@ class BasicWorkflowsTest(AgentlessTestCase):
             plugin_name='cloudmock',
             deployment_id=deployment.id
         )['machines']
-        self.assertNotEquals(1, len(machines))
+        self.assertEquals(1, len(machines))
 
         outputs = self.client.deployments.outputs.get(deployment.id).outputs
         self.assertEquals(outputs['ip_address'], '')
+
+        self.assertEqual(True,False)
 
     def test_dependencies_order_with_two_nodes(self):
         dsl_path = get_resource("dsl/dependencies_order_with_two_nodes.yaml")
@@ -72,6 +74,8 @@ class BasicWorkflowsTest(AgentlessTestCase):
         self.assertEquals(2, len(states))
         self.assertTrue('host_node' in states[0]['id'])
         self.assertTrue('db_node' in states[1]['id'])
+
+        self.assertEqual(True, False)
 
     @timeout(seconds=120)
     def test_execute_operation_failure(self):
@@ -102,10 +106,12 @@ class BasicWorkflowsTest(AgentlessTestCase):
                           len(node_runtime_props),
                           msg='Expected 2 but contains: {0}'.format(
                               node_runtime_props))
+        self.assertEqual(True, False)
 
     def test_non_existing_operation_exception(self):
         dsl_path = get_resource("dsl/wrong_operation_name.yaml")
         self.assertRaises(RuntimeError, self.deploy_application, dsl_path)
+        self.assertEqual(True, False)
 
     def test_inject_properties_to_operation(self):
         dsl_path = get_resource("dsl/hardcoded_operation_properties.yaml")
@@ -122,6 +128,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
         invocation = invocations[0]
         self.assertEqual('mockpropvalue', invocation['mockprop'])
         self.assertEqual(states[0]['id'], invocation['id'])
+        self.assertEqual(True, False)
 
     def test_start_monitor_node_operation(self):
         dsl_path = get_resource("dsl/hardcoded_operation_properties.yaml")
@@ -133,6 +140,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
         self.assertEqual(1, len(invocations))
         invocation = invocations[0]
         self.assertEqual('start_monitor', invocation['operation'])
+        self.assertEqual(True, False)
 
     def test_plugin_get_resource(self):
         dsl_path = get_resource("dsl/get_resource_in_plugin.yaml")
@@ -154,6 +162,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
         # resource was saved
         self.assertEquals(invocation['custom_filepath'],
                           invocation['res2_path'])
+        self.assertEqual(True, False)
 
     def test_get_blueprint(self):
         dsl_path = get_resource("dsl/basic.yaml")
@@ -165,6 +174,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
         blueprint = self.client.blueprints.get(blueprint_id)
         self.assertEqual(blueprint_id, blueprint.id)
         self.assertTrue(len(blueprint['plan']) > 0)
+        self.assertEqual(True, False)
 
     def test_publish_tar_archive(self):
         archive_location = self._make_archive_file("dsl/basic.yaml")
@@ -174,6 +184,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
         # verifying blueprint exists
         result = self.client.blueprints.get(blueprint_id)
         self.assertEqual(blueprint_id, result.id)
+        self.assertEqual(True, False)
 
     def _make_archive_file(self, blueprint_path, write_mode='w'):
         dsl_path = get_resource(blueprint_path)
@@ -334,6 +345,8 @@ class BasicWorkflowsTest(AgentlessTestCase):
                 expect_in_error_message='not found'):
             self.delete_deployment(deployment_id)
 
+        self.assertEqual(True, False)
+
     def test_node_state_uninitialized(self):
         dsl_path = get_resource('dsl/node_states.yaml')
         _id = uuid.uuid1()
@@ -355,6 +368,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
         node_id = deployment_nodes[0].id
         node_instance = self.client.node_instances.get(node_id)
         self.assertEqual('uninitialized', node_instance.state)
+        self.assertEqual(True, False)
 
     def test_node_states(self):
         dsl_path = get_resource('dsl/node_states.yaml')
@@ -379,6 +393,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
         node_id = deployment_nodes[0].id
         node_instance = self.client.node_instances.get(node_id)
         self.assertEqual('started', node_instance.state)
+        self.assertEqual(True, False)
 
     def test_deployment_create_workflow_and_source_plugin(self):
         # Get the whole directory
@@ -413,6 +428,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
 
             # Retry several times, because uninstalling plugins may take time
             self._assert_paths_removed(deployment_folder, plugin_path)
+            self.assertEqual(True, False)
         finally:
             shutil.rmtree(base_temp_dir)
 
@@ -462,3 +478,4 @@ class BasicWorkflowsTest(AgentlessTestCase):
         self.assertEqual(1, len([
             i for i in invocations
             if i == constants.NODE_INSTANCE]))
+        self.assertEqual(True, False)
