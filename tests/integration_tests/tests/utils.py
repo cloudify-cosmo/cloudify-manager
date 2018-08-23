@@ -79,6 +79,7 @@ def create_rest_client(**kwargs):
 def wait_for_deployment_creation_to_complete(
         deployment_id, timeout_seconds=60):
     do_retries(func=verify_deployment_environment_creation_complete,
+               exception_class=Exception,
                timeout_seconds=timeout_seconds,
                deployment_id=deployment_id)
 
