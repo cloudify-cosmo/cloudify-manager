@@ -691,6 +691,7 @@ class ResourceManager(object):
 
         if execution:
             execution_id = execution.id
+            is_system_workflow = execution.is_system_workflow
 
         else:
             # First time we try to execute this workflows,
