@@ -40,6 +40,7 @@ from manager_rest.constants import DEFAULT_TENANT_NAME
 
 class BasicWorkflowsTest(AgentlessTestCase):
     def test_execute_operation(self):
+        print("HIIIII!!!!")
         dsl_path = get_resource('dsl/basic.yaml')
         blueprint_id = self.id()
         deployment, _ = self.deploy_application(
