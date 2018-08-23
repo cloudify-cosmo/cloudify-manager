@@ -5,6 +5,7 @@ After=postgresql-9.5.service cloudify-rabbitmq.service
 
 [Service]
 TimeoutStartSec=0
+RestartSec=2
 Restart=on-failure
 EnvironmentFile=/etc/sysconfig/cloudify-amqp-postgres
 User=cfyuser
