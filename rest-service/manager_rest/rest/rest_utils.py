@@ -231,7 +231,7 @@ def get_visibility_parameter(optional=False,
                              valid_values=VISIBILITY_EXCEPT_PRIVATE):
     if is_argument:
         args = get_args_and_verify_arguments(
-            [Argument('visibility', type=unicode, default=None)]
+            [Argument('visibility', default=None)]
         )
         visibility = args.visibility
     else:

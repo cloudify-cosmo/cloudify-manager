@@ -14,9 +14,9 @@
 #  * limitations under the License.
 #
 
-from voluptuous import Boolean
 from flask_restful.reqparse import Argument
 from flask_restful_swagger import swagger
+from flask_restful.inputs import boolean
 
 from dsl_parser import utils as dsl_parser_utils
 from manager_rest import manager_exceptions
@@ -84,7 +84,7 @@ class ProviderContext(SecuredResource):
         """
         request_dict = get_json_and_verify_params({'context', 'name'})
         args = get_args_and_verify_arguments(
-            [Argument('update', type=Boolean(unicode), default=False)]
+            [Argument('update', type=boolean, default=False)]
         )
         update = args['update']
         context = dict(

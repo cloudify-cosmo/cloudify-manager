@@ -60,8 +60,8 @@ class Nodes(SecuredResource):
         List nodes
         """
         args = get_args_and_verify_arguments(
-            [Argument('deployment_id', type=unicode, required=False),
-             Argument('node_id', type=unicode, required=False)]
+            [Argument('deployment_id', required=False),
+             Argument('node_id', required=False)]
         )
 
         deployment_id = args.get('deployment_id')
@@ -110,8 +110,8 @@ class NodeInstances(SecuredResource):
         List node instances
         """
         args = get_args_and_verify_arguments(
-            [Argument('deployment_id', type=unicode, required=False),
-             Argument('node_name', type=unicode, required=False)]
+            [Argument('deployment_id', required=False),
+             Argument('node_name', required=False)]
         )
         deployment_id = args.get('deployment_id')
         node_id = args.get('node_name')
