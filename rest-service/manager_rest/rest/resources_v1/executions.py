@@ -16,7 +16,7 @@
 
 from flask_restful.reqparse import Argument
 from flask_restful_swagger import swagger
-from voluptuous import Boolean
+from flask_restful.inputs import boolean
 
 from manager_rest import manager_exceptions
 from manager_rest.maintenance import is_bypass_maintenance_mode
@@ -70,8 +70,8 @@ class Executions(SecuredResource):
     def get(self, _include=None, **kwargs):
         """List executions"""
         args = get_args_and_verify_arguments(
-            [Argument('deployment_id', type=unicode, required=False),
-             Argument('include_system_workflows', type=Boolean(unicode),
+            [Argument('deployment_id', required=False),
+             Argument('include_system_workflows', type=boolean,
                       default=False)]
         )
         if args.deployment_id:

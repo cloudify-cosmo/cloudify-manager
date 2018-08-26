@@ -17,9 +17,9 @@
 import os
 import shutil
 
-from voluptuous import Boolean
 from flask_restful_swagger import swagger
 from flask_restful.reqparse import Argument
+from flask_restful.inputs import boolean
 
 from manager_rest import config, utils
 from manager_rest.security import SecuredResource
@@ -104,7 +104,7 @@ class DeploymentsId(SecuredResource):
         blueprint_id = request_dict['blueprint_id']
         bypass_maintenance = is_bypass_maintenance_mode()
         args = get_args_and_verify_arguments(
-            [Argument('private_resource', type=Boolean(unicode),
+            [Argument('private_resource', type=boolean,
                       default=False)]
         )
         deployment = get_resource_manager().create_deployment(
@@ -152,9 +152,9 @@ class DeploymentsId(SecuredResource):
         """
 
         args = get_args_and_verify_arguments(
-            [Argument('ignore_live_nodes', type=Boolean(unicode),
+            [Argument('ignore_live_nodes', type=boolean,
                       default=False),
-             Argument('delete_db_mode', type=Boolean(unicode),
+             Argument('delete_db_mode', type=boolean,
                       default=False)]
         )
 
@@ -227,7 +227,7 @@ class DeploymentModifications(SecuredResource):
     @marshal_with(models.DeploymentModification)
     def get(self, _include=None, **kwargs):
         args = get_args_and_verify_arguments(
-            [Argument('deployment_id', type=unicode, required=False)]
+            [Argument('deployment_id', required=False)]
         )
         deployment_id_filter = ResourceManager.create_filters_dict(
             deployment_id=args.deployment_id)

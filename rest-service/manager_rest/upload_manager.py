@@ -26,11 +26,11 @@ import zipfile
 import tempfile
 import contextlib
 
-from voluptuous import Boolean
 from setuptools import archive_util
 from urllib2 import urlopen, URLError
 from flask import request, current_app
 from flask_restful.reqparse import Argument
+from flask_restful.inputs import boolean
 
 from manager_rest.constants import (FILE_SERVER_PLUGINS_FOLDER,
                                     FILE_SERVER_SNAPSHOTS_FOLDER,
@@ -532,9 +532,9 @@ class UploadedBlueprintsManager(UploadedDataManager):
                                       blueprint_id,
                                       visibility):
         args = get_args_and_verify_arguments([
-            Argument('private_resource', type=Boolean(unicode)),
-            Argument('visibility', type=unicode),
-            Argument('application_file_name', type=unicode,
+            Argument('private_resource', type=boolean),
+            Argument('visibility'),
+            Argument('application_file_name',
                      default='')])
 
         app_file_name = cls._extract_application_file(
@@ -638,8 +638,8 @@ class UploadedPluginsManager(UploadedDataManager):
                 raise manager_exceptions.InvalidPluginError(re.message)
 
         args = get_args_and_verify_arguments([
-            Argument('private_resource', type=Boolean(unicode)),
-            Argument('visibility', type=unicode)])
+            Argument('private_resource', type=boolean),
+            Argument('visibility')])
 
         visibility = kwargs.get(_VISIBILITY, None)
         new_plugin = self._create_plugin_from_archive(data_id,
