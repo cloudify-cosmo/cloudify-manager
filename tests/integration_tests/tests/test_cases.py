@@ -102,6 +102,7 @@ class BaseTestCase(unittest.TestCase):
     def _save_manager_logs_after_test(self, purge=True):
         self.logger.debug('_save_manager_logs_after_test started')
         logs_dir = os.environ.get('CFY_LOGS_PATH')
+        self.logger.info("CFY_LOGS_PATH: {}".format(logs_dir))
         test_path = self.id().split('.')[-2:]
         if not logs_dir:
             self.logger.debug('not saving manager logs')
@@ -124,8 +125,10 @@ class BaseTestCase(unittest.TestCase):
         self.logger.debug('opening tar.gz: {0}'.format(target))
         with tarfile.open(target) as tar:
             tar.extractall(path=logs_dir)
-        self.logger.debug('removing {0}'.format(target))
-        os.remove(target)
+        if not bool(os.environ.get('DONT_REMOVE_LOG_TAR')):
+            self.logger.debug('removing {0}'.format(target))
+            os.remove(target)
+
         self.logger.debug('_save_manager_logs_after_test completed')
 
     @staticmethod

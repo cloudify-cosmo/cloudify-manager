@@ -97,13 +97,12 @@ This project runs tests on a Cloudify Manager container created by [`docl`](http
 All done!
 
 Here'es all the commands together:
-     ```
+
      sudo brctl addbr cfy0
      sudo ip addr add 172.20.0.1/24 dev cfy0
      sudo ip link set dev cfy0 up
      sudo dockerd --bridge cfy0 --host 172.20.0.1
      export DOCKER_HOST=172.20.0.1
-     ```
 
 ## Running Tests
 
@@ -114,6 +113,17 @@ $ cd <root directory of cloudify-manager repository>
 $ pytest -s tests/integration_tests/tests/agentless_tests/test_workflow.py:BasicWorkflowsTest.test_execute_operation
 ```
 
+### Saving the Cloudify Manager's logs
+In order to save the logs for tests, specify the path via an environment variable as follows:
+
+`export CFY_LOGS_PATH=<YOUR-PATH-HERE>`
+
+You may also set `export DONT_REMOVE_LOG_TAR=True` if you'd like to leave the `tar.gz` log archives along with the logs.
+
+To skip saving logs for successful tests, run `export SKIP_LOG_SAVE_ON_SUCCESS=True`.
+
+_Note: when running with the `itests-runner` you need to also provide a `CFY_LOGS_PATH_LOCAL` env var via:
+`export CFY_LOGS_PATH_LOCAL=<YOUR-LOCAL-PATH>` as the test runs on remote servers and `CFY_LOGS_PATH` is the path on the remote server._ 
 ## Using Docl
 * To get an overview of different features supplied by docl, see the README at [`docl`'s](https://github.com/cloudify-cosmo/docl) repo.
 
