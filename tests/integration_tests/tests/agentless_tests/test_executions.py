@@ -16,10 +16,11 @@
 import time
 import uuid
 
-from cloudify_rest_client.executions import Execution
-
 from integration_tests import AgentlessTestCase
 from integration_tests.framework import postgresql
+from cloudify_rest_client.executions import Execution
+from integration_tests.framework.postgresql import run_query
+from cloudify_rest_client.exceptions import CloudifyClientError
 from integration_tests.tests.utils import (
     verify_deployment_environment_creation_complete,
     do_retries,
@@ -27,6 +28,487 @@ from integration_tests.tests.utils import (
 
 
 class ExecutionsTest(AgentlessTestCase):
+
+    def _wait_for_exec_to_end_and_modify_status(self, execution, new_status):
+        self.wait_for_execution_to_end(execution)
+        self._manually_update_execution_status(new_status, execution.id)
+        self._assert_correct_execution_status(execution.id, new_status)
+
+        return execution
+
+    def _create_snapshot_and_modify_execution_status(self, new_status):
+        snapshot = self.client.snapshots.create('snapshot_1',
+                                                include_metrics=True,
+                                                include_credentials=True,
+                                                include_logs=True,
+                                                include_events=True,
+                                                queue=True)
+        execution = self._wait_for_exec_to_end_and_modify_status(snapshot,
+                                                                 new_status)
+        return execution
+
+    def _update_to_terminated_and_assert_propper_dequeue(self, id1, id2):
+
+        """
+        This method modifies the status of the first execution (id1) to
+        `terminated` in order to enable the de-queue mechanism to start, and
+        then assert that the second execution (that was queued) was properly
+        de-queued and run.
+        :param id1: execution id of the first execution that was created, and
+                    about to change status to `terminated`.
+        :param id2: execution id of the second execution that was created
+
+        """
+
+        self.client.executions.update(id1, 'terminated')
+
+        queued_execution = self.client.executions.get(id2)
+        self.wait_for_execution_to_end(queued_execution)
+
+        self._assert_correct_execution_status(id1, 'terminated')
+        self._assert_correct_execution_status(id2, 'terminated')
+
+    def _get_executions_list(self):
+        return self.client.executions.list(deployment_id=None,
+                                           include_system_workflows=True,
+                                           sort='created_at',
+                                           is_descending=False,
+                                           _all_tenants=True,
+                                           _offset=0,
+                                           _size=1000).items
+
+    @staticmethod
+    def _manually_update_execution_status(new_status, id):
+        run_query("UPDATE executions SET status = '{0}' WHERE id = '{1}'"
+                  .format(new_status, id))
+
+    def _assert_correct_execution_status(self, execution_id, wanted_status):
+        current_status = self.client.executions.get(execution_id).status
+        self.assertEquals(current_status, wanted_status)
+
+    def test_queue_execution_while_system_execution_is_running(self):
+
+        # Create snapshot and make sure it's state remains 'started'
+        # so that new executions will be queued
+        snapshot = self._create_snapshot_and_modify_execution_status('started')
+
+        # Create an 'install' execution and make sure it's being queued
+        dsl_path = resource("dsl/basic.yaml")
+        deployment, execution_id = self.deploy_application(
+            dsl_path, wait_for_execution=False, queue=True)
+        self._assert_correct_execution_status(execution_id, 'queued')
+
+        # Update snapshot state to 'terminated' so the queued 'install'
+        #  execution will start
+        self._update_to_terminated_and_assert_propper_dequeue(
+            snapshot.id, execution_id)
+
+    def test_queue_system_execution_while_system_execution_is_running(self):
+
+        # Create snapshot and make sure it's state remains 'started'
+        # so that new executions will be queued
+        snapshot = self._create_snapshot_and_modify_execution_status('started')
+
+        # Create another system execution and make sure it's being  queued
+        second_snap = self.client.snapshots.create('snapshot_2',
+                                                   include_metrics=True,
+                                                   include_credentials=True,
+                                                   include_logs=True,
+                                                   include_events=True,
+                                                   queue=True)
+        self._assert_correct_execution_status(second_snap.id, 'queued')
+
+        # Update first snapshot state to 'terminated', so the second snapshot
+        #  will start.
+        self._update_to_terminated_and_assert_propper_dequeue(
+            snapshot.id, second_snap.id)
+
+    def test_queue_execution_while_system_execution_is_queued(self):
+
+        # Create deployment
+        dsl_path = resource("dsl/basic.yaml")
+        deployment = self.deploy(dsl_path)
+
+        # Create snapshot and make sure it's state remains 'queud'
+        # so that new executions will be queued
+        snapshot = self._create_snapshot_and_modify_execution_status('queued')
+
+        # Create an 'install' execution
+        execution = self.execute_workflow(workflow_name='install',
+                                          deployment_id=deployment.id,
+                                          wait_for_execution=False,
+                                          queue=True)
+        self._assert_correct_execution_status(execution.id, 'queued')
+
+        # Update snapshot state to 'terminated' so the queued 'install'
+        #  execution will start
+        self._update_to_terminated_and_assert_propper_dequeue(
+            snapshot.id, execution.id)
+
+    def test_queue_system_execution_while_execution_is_running(self):
+
+        # Create deployment and start 'install' execution
+        dsl_path = resource("dsl/basic.yaml")
+        deployment = self.deploy(dsl_path)
+        execution = self.execute_workflow(workflow_name='install',
+                                          deployment_id=deployment.id,
+                                          wait_for_execution=False,
+                                          queue=True)
+        # Make sure the install execution stays 'started'
+        execution = self._wait_for_exec_to_end_and_modify_status(execution,
+                                                                 'started')
+
+        # Create a system execution and make sure it's being queued
+        second_snap = self.client.snapshots.create('snapshot_2',
+                                                   include_metrics=True,
+                                                   include_credentials=True,
+                                                   include_logs=True,
+                                                   include_events=True,
+                                                   queue=True)
+        self._assert_correct_execution_status(second_snap.id, 'queued')
+
+        # Update first snapshot state to 'terminated', so the second snapshot
+        #  will start.
+        self._update_to_terminated_and_assert_propper_dequeue(
+            execution.id, second_snap.id)
+
+    def test_queue_execution_while_execution_is_running_under_same_dep(self):
+
+        # Create deployment
+        dsl_path = resource("dsl/basic.yaml")
+        deployment = self.deploy(dsl_path)
+
+        # Start 'install' execution and
+        execution_1 = self.execute_workflow(workflow_name='install',
+                                            deployment_id=deployment.id,
+                                            wait_for_execution=False,
+                                            queue=True)
+
+        # Make sure the install execution stays 'started'
+        execution_1 = self._wait_for_exec_to_end_and_modify_status(execution_1,
+                                                                   'started')
+
+        # Start a second 'install' under the same deployment and assert it's
+        # being queued
+        execution_2 = self.execute_workflow(workflow_name='uninstall',
+                                            deployment_id=deployment.id,
+                                            wait_for_execution=False,
+                                            queue=True)
+        self._assert_correct_execution_status(execution_2.id, 'queued')
+
+        # Update first snapshot state to 'terminated', so the second snapshot
+        #  will start.
+        self._update_to_terminated_and_assert_propper_dequeue(
+            execution_1.id, execution_2.id)
+
+    def test_start_exec_while_other_exec_is_running_under_different_dep(self):
+
+        # Create deployments
+        dsl_path = resource("dsl/basic.yaml")
+        deployment_1 = self.deploy(dsl_path)
+        deployment_2 = self.deploy(dsl_path)
+
+        # Start 'install' execution and make sure it's status stays 'started'
+        execution_1 = self.execute_workflow(workflow_name='install',
+                                            deployment_id=deployment_1.id,
+                                            wait_for_execution=False,
+                                            queue=True)
+        self._wait_for_exec_to_end_and_modify_status(execution_1, 'started')
+
+        # Start a second 'install' under different deployment
+        execution_2 = self.execute_workflow(workflow_name='install',
+                                            deployment_id=deployment_2.id,
+                                            wait_for_execution=False,
+                                            queue=True)
+
+        # Make sure the second 'install' ran in parallel
+        self.wait_for_execution_to_end(execution_2)
+        self._assert_correct_execution_status(execution_2.id, 'terminated')
+
+    def test_queue_exec_from_queue_while_system_execution_is_running(self):
+        """
+        - System execution (snapshot) is running
+        - Queue contains: another snapshot and a regular execution.
+        Once the first snapshot finishes we expect the second one to run and
+        the execution to be queued again.
+
+        """
+        # Create deployment
+        dsl_path = resource('dsl/sleep_workflows.yaml')
+        deployment = self.deploy(dsl_path)
+
+        # Create snapshot and make sure it's state remains 'started'
+        # so that new executions will be queued
+        snapshot = self._create_snapshot_and_modify_execution_status('started')
+
+        # Create another system execution
+        snapshot_2 = self.client.snapshots.create('snapshot_2',
+                                                  include_metrics=True,
+                                                  include_credentials=True,
+                                                  include_logs=True,
+                                                  include_events=True,
+                                                  queue=True)
+
+        # Start 'install' execution
+        execution = self.execute_workflow(workflow_name='sleep',
+                                          deployment_id=deployment.id,
+                                          wait_for_execution=False,
+                                          queue=True)
+
+        # Make sure snapshot_2 and execution are queued (since there's a
+        # running system execution)
+        self._assert_correct_execution_status(snapshot_2.id, 'queued')
+        self._assert_correct_execution_status(execution.id, 'queued')
+
+        # Update first snapshot status to terminated
+        self.client.executions.update(snapshot.id, 'terminated')
+
+        # Make sure snapshot_2 started (or pending) while the execution
+        # is queued again
+        current_status = self.client.executions.get(snapshot_2.id).status
+        self.assertIn(current_status, ['pending', 'started'])
+        self._assert_correct_execution_status(execution.id, 'queued')
+
+    def test_run_exec_from_queue_while_system_execution_is_queued(self):
+        """
+        - System execution (snapshot) is running
+        - Queue contains: a regular execution and another system execution
+        Once the first snapshot finishes we expect the regular execution to run
+        (even though snapshot_2 is in the queue) and the second snapshot
+        to be queued again.
+
+        """
+        # Create deployment
+        dsl_path = resource('dsl/sleep_workflows.yaml')
+        deployment = self.deploy(dsl_path)
+
+        # Create snapshot and make sure it's state remains 'started'
+        # so that new executions will be queued
+        snapshot = self._create_snapshot_and_modify_execution_status('started')
+
+        # Start 'install' execution
+        execution = self.execute_workflow(workflow_name='sleep',
+                                          deployment_id=deployment.id,
+                                          wait_for_execution=False,
+                                          queue=True)
+
+        # Create another system execution
+        snapshot_2 = self.client.snapshots.create('snapshot_2',
+                                                  include_metrics=True,
+                                                  include_credentials=True,
+                                                  include_logs=True,
+                                                  include_events=True,
+                                                  queue=True)
+
+        # Make sure execution and snapshot_2 are queued (since there's a
+        # running system execution)
+        self._assert_correct_execution_status(snapshot_2.id, 'queued')
+        self._assert_correct_execution_status(execution.id, 'queued')
+
+        # Update first snapshot status to terminated
+        self.client.executions.update(snapshot.id, 'terminated')
+
+        # Make sure exeuction status is started (or pending) even though
+        # there's a queued system execution
+        current_status = self.client.executions.get(execution.id).status
+        self.assertIn(current_status, ['pending', 'started'])
+        self._assert_correct_execution_status(snapshot_2.id, 'queued')
+
+    def test_queue_exec_from_queue_while_exec_in_same_dep_is_running(self):
+        """
+        - System execution (snapshot) is running
+        - Queue contains: 2 regular executions under the same deployment.
+        Once the snapshot finishes we expect only the first execution in
+        the queue to start running, and the second execution to be queued
+        again.
+
+        """
+        # Create deployment
+        dsl_path = resource('dsl/sleep_workflows.yaml')
+        deployment = self.deploy(dsl_path)
+
+        # Create snapshot and make sure it's state remains 'started'
+        # so that new executions will be queued
+        snapshot = self._create_snapshot_and_modify_execution_status('started')
+
+        # create 2 executions under the same deployment
+        execution_1 = self.execute_workflow(workflow_name='install',
+                                            deployment_id=deployment.id,
+                                            wait_for_execution=False,
+                                            queue=True)
+
+        execution_2 = self.execute_workflow(workflow_name='uninstall',
+                                            deployment_id=deployment.id,
+                                            wait_for_execution=False,
+                                            queue=True)
+
+        # Make sure the 2 executions are queued (since there's a
+        # running system execution)
+        self._assert_correct_execution_status(execution_1.id, 'queued')
+        self._assert_correct_execution_status(execution_2.id, 'queued')
+
+        # Update snapshot status to terminated
+        self.client.executions.update(snapshot.id, 'terminated')
+
+        # Make sure exeuction_1 status is started (or pending) and that
+        #  execution_2 is still queued
+        current_status = self.client.executions.get(execution_1.id).status
+        self.assertIn(current_status, ['pending', 'started'])
+        self._assert_correct_execution_status(execution_2.id, 'queued')
+
+    def test_run_exec_from_queue_while_exec_in_diff_dep_is_running(self):
+        """
+        - System execution (snapshot) is running
+        - Queue contains: 2 regular executions under different deployments.
+        Once the snapshot finishes we expect both execution to run in parallel
+
+        """
+        # Create deployment
+        dsl_path = resource('dsl/sleep_workflows.yaml')
+        deployment_1 = self.deploy(dsl_path)
+        deployment_2 = self.deploy(dsl_path)
+
+        # Create snapshot and make sure it's state remains 'started'
+        # so that new executions will be queued
+        snapshot = self._create_snapshot_and_modify_execution_status('started')
+
+        # create 2 executions under the same deployment
+        execution_1 = self.execute_workflow(workflow_name='install',
+                                            deployment_id=deployment_1.id,
+                                            wait_for_execution=False,
+                                            queue=True)
+
+        execution_2 = self.execute_workflow(workflow_name='install',
+                                            deployment_id=deployment_2.id,
+                                            wait_for_execution=False,
+                                            queue=True)
+
+        # Make sure the 2 executions are queued (since there's a
+        # running system execution)
+        self._assert_correct_execution_status(execution_1.id, 'queued')
+        self._assert_correct_execution_status(execution_2.id, 'queued')
+
+        # Update snapshot status to terminated
+        self.client.executions.update(snapshot.id, 'terminated')
+
+        # Make sure both executions' status is started (or pending)
+        execution_1_status = self.client.executions.get(execution_1.id).status
+        execution_2_status = self.client.executions.get(execution_2.id).status
+        self.assertIn(execution_1_status, ['pending', 'started'])
+        self.assertIn(execution_2_status, ['pending', 'started'])
+
+    def test_queue_system_exec_from_queue_while_system_exec_is_running(self):
+        """
+        - System execution (snapshot) is running
+        - Queue contains: two more snapshots. (3 snapshots in total)
+        Once the first snapshot finishes we expect the second one to run and
+        the third one to be queued again.
+
+        """
+
+        # Create snapshot and make sure it's state remains 'started'
+        # so that new executions will be queued
+        snapshot = self._create_snapshot_and_modify_execution_status('started')
+
+        # Create another system execution
+        snapshot_2 = self.client.snapshots.create('snapshot_2',
+                                                  include_metrics=True,
+                                                  include_credentials=True,
+                                                  include_logs=True,
+                                                  include_events=True,
+                                                  queue=True)
+        snapshot_3 = self.client.snapshots.create('snapshot_3',
+                                                  include_metrics=True,
+                                                  include_credentials=True,
+                                                  include_logs=True,
+                                                  include_events=True,
+                                                  queue=True)
+
+        # Make sure the 2 snapshots are queued (since there's a
+        # running system execution)
+        self._assert_correct_execution_status(snapshot_2.id, 'queued')
+        self._assert_correct_execution_status(snapshot_3.id, 'queued')
+
+        # Update first snapshot status to terminated
+        self.client.executions.update(snapshot.id, 'terminated')
+
+        # Make sure snapshot_2 started (or pending) while the snapshot_3
+        # is queued again
+        current_status = self.client.executions.get(snapshot_2.id).status
+        self.assertIn(current_status, ['pending', 'started'])
+        self._assert_correct_execution_status(snapshot_3.id, 'queued')
+
+    def test_queue_system_exec_from_queue_while_exec_is_running(self):
+        """
+        - System execution (snapshot) is running
+        - Queue contains: a regular execution ('install') and a system
+          execution (snapshot).
+        Once the first snapshot finishes we expect the regular execution to run
+        and the third one (the snapshot) to be queued again.
+
+        """
+        # Create deployment
+        dsl_path = resource('dsl/sleep_workflows.yaml')
+        deployment_1 = self.deploy(dsl_path)
+
+        # Create snapshot and make sure it's state remains 'started'
+        # so that new executions will be queued
+        snapshot_1 = self._create_snapshot_and_modify_execution_status(
+            'started')
+
+        # create a regular execution and a system execution
+        execution = self.execute_workflow(workflow_name='install',
+                                          deployment_id=deployment_1.id,
+                                          wait_for_execution=False,
+                                          queue=True)
+
+        snapshot_2 = self.client.snapshots.create('snapshot_2',
+                                                  include_metrics=True,
+                                                  include_credentials=True,
+                                                  include_logs=True,
+                                                  include_events=True,
+                                                  queue=True)
+
+        # Make sure snapshot_2 and execution are queued (since there's a
+        # running system execution)
+        self._assert_correct_execution_status(execution.id, 'queued')
+        self._assert_correct_execution_status(snapshot_2.id, 'queued')
+
+        # Update first snapshot status to terminated
+        self.client.executions.update(snapshot_1.id, 'terminated')
+
+        # Make sure snapshot_2 started (or pending) while the snapshot_3
+        # is queued again
+        current_status = self.client.executions.get(execution.id).status
+        self.assertIn(current_status, ['pending', 'started'])
+        self._assert_correct_execution_status(snapshot_2.id, 'queued')
+
+    def test_fail_to_delete_deployment_of_queued_execution(self):
+        """
+        Make sure users can't delete deployment of a queued exeuction
+        """
+
+        # Create deployment
+        dsl_path = resource('dsl/sleep_workflows.yaml')
+        deployment_1 = self.deploy(dsl_path)
+        execution = self.execute_workflow(workflow_name='install',
+                                          deployment_id=deployment_1.id,
+                                          wait_for_execution=False,
+                                          queue=True)
+        self._wait_for_exec_to_end_and_modify_status(execution, 'queued')
+        try:
+            self.client.deployments.delete(deployment_1.id)
+        except CloudifyClientError as e:
+            self.assertIn('There are running or queued', e.message)
+            self.assertEquals(e.status_code, 400)
+            self.assertEquals(e.error_code, 'dependent_exists_error')
+
+    def test_cancel_queued_execution(self):
+        # Create snapshot and make sure it's state remains 'queued'
+        snapshot = self._create_snapshot_and_modify_execution_status('queued')
+        self.client.executions.cancel(snapshot.id)
+        time.sleep(3)
+        self._assert_correct_execution_status(snapshot.id, 'cancelled')
 
     def test_cancel_execution(self):
         execution, deployment_id = self._execute_and_cancel_execution(
