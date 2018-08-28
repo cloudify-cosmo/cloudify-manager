@@ -31,16 +31,16 @@ MAX_RESULT_FOR_TESTING = 9
 
 class TestRestServiceListPagination(AgentlessTestCase):
     @classmethod
-    def setup_class(cls):
+    def setUpClass(cls):
         super(TestRestServiceListPagination, cls).setUpClass()
         TestRestServiceListPagination._update_config(
             {'max_results': MAX_RESULT_FOR_TESTING})
 
     @classmethod
-    def teardown_class(cls):
-        super(TestRestServiceListPagination, cls).setUpClass()
+    def tearDownClass(cls):
         TestRestServiceListPagination._update_config(
             {'max_results': config.instance.max_results})
+        super(TestRestServiceListPagination, cls).tearDownClass()
 
     def test_blueprints_pagination(self):
         for i in range(10):
