@@ -32,7 +32,6 @@ class TestHooks(AgentlessTestCase):
         new_config = """
 hooks:
   - event_type: test_event_type
-    hook_type: test_hook_type
     implementation: package.module.task
     inputs:
       input1: bla
@@ -52,7 +51,6 @@ hooks:
         new_config = """
 hooks:
   - event_type: workflow_started
-    hook_type: workflow_started_hook
     implementation: package.module.task
     inputs:
       input1: bla
@@ -62,7 +60,7 @@ hooks:
         self._update_hooks_config(new_config)
         self._start_a_workflow()
         workflow_started_msg = "received `workflow_started` event and the " \
-                               "hook type is: `workflow_started_hook`"
+                               "hook implementation is: `package.module.task`"
         invalid_implementation_msg = "No module named package.module"
         workflow_succeeded_msg = "received `workflow_succeeded` event but " \
                                  "didn't find a compatible hook"
@@ -74,7 +72,6 @@ hooks:
         new_config = """
 hooks:
   - event_type: workflow_started
-    hook_type: workflow_started_hook
     implementation: cloudmock.tasks.test
     inputs:
       input1: bla
@@ -84,7 +81,7 @@ hooks:
         self._update_hooks_config(new_config)
         self._start_a_workflow()
         workflow_started_msg = "received `workflow_started` event and the " \
-                               "hook type is: `workflow_started_hook`"
+                               "hook implementation is: `cloudmock.tasks.test`"
         invalid_task_msg = "cloudmock.tasks has no function named \\'test\\'"
         workflow_succeeded_msg = "received `workflow_succeeded` event but " \
                                  "didn't find a compatible hook"
@@ -96,7 +93,6 @@ hooks:
         new_config = """
 hooks:
   - event_type: workflow_started
-    hook_type: workflow_started_hook
     inputs:
       input1: bla
       input2: bla
@@ -104,9 +100,8 @@ hooks:
 """
         self._update_hooks_config(new_config)
         self._start_a_workflow()
-        error_msg = "ERROR - KeyError('implementation',), while running " \
-                    "hook: workflow_started_hook triggered by the event: " \
-                    "workflow_started"
+        error_msg = "ERROR - KeyError('implementation',), while running the " \
+                    "hook triggered by the event: workflow_started"
         workflow_succeeded_msg = "received `workflow_succeeded` event but " \
                                  "didn't find a compatible hook"
         self._assert_messages_in_log([error_msg,
@@ -116,7 +111,6 @@ hooks:
         new_config = """
 hooks:
   - event_type: workflow_started
-    hook_type: workflow_started_hook
     implementation: cloudmock.tasks.hook_task
     description: test hook
 """
@@ -127,31 +121,61 @@ hooks:
         self._assert_messages_in_log([event_type_msg, kwargs_msg],
                                      log_path=self.PLUGIN_LOG_PATH)
 
-    def test_invalid_hooks_config(self):
+    def test_missing_hooks_key(self):
         new_config = """
 test_hook:
     invalid: true
 """
         self._update_hooks_config(new_config)
         self._start_a_workflow()
-        workflow_started_error = "ERROR - The hook consumer received " \
-                                 "`workflow_started` event but the hook " \
-                                 "config file is invalid"
-        workflow_succeeded_error = "ERROR - The hook consumer received " \
-                                   "`workflow_succeeded` event but the " \
-                                   "hook config file is invalid"
-        self._assert_messages_in_log([workflow_started_error,
-                                      workflow_succeeded_error])
+        workflow_started_msg = "received `workflow_started` event but " \
+                               "didn't find a compatible hook"
+        workflow_succeeded_msg = "received `workflow_succeeded` event but " \
+                                 "didn't find a compatible hook"
+        self._assert_messages_in_log([workflow_started_msg,
+                                      workflow_succeeded_msg])
 
-    def test_missing_hook_config(self):
+    def test_missing_hooks_config(self):
         self.delete_manager_file(self.HOOKS_CONFIG_PATH)
         self._start_a_workflow()
         workflow_started_msg = "The hook consumer received " \
                                "`workflow_started` event but the " \
-                               "hook config file doesn't exist"
+                               "hooks config file doesn't exist"
         workflow_succeeded_msg = "The hook consumer received " \
                                  "`workflow_succeeded` event but the " \
-                                 "hook config file doesn't exist"
+                                 "hooks config file doesn't exist"
+        self._assert_messages_in_log([workflow_started_msg,
+                                      workflow_succeeded_msg])
+
+    def test_hook_config_invalid_yaml(self):
+        new_config = """
+        test_hook
+            invalid: true
+"""
+
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(new_config)
+            f.flush()
+            docl.copy_file_to_manager(source=f.name,
+                                      target=self.HOOKS_CONFIG_PATH)
+            docl.execute('chown cfyuser: {0}'.format(self.HOOKS_CONFIG_PATH))
+
+        self._start_a_workflow()
+        workflow_started_error = "ERROR - The hook consumer received " \
+                                 "`workflow_started` event but the hook " \
+                                 "config file is invalid yaml"
+        workflow_succeeded_error = "ERROR - The hook consumer received " \
+                                   "`workflow_succeeded` event but the " \
+                                   "hook config file is invalid yaml"
+        self._assert_messages_in_log([workflow_started_error,
+                                      workflow_succeeded_error])
+
+    def test_default_hook_config(self):
+        self._start_a_workflow()
+        workflow_started_msg = "received `workflow_started` event but " \
+                               "didn't find a compatible hook"
+        workflow_succeeded_msg = "received `workflow_succeeded` event but " \
+                                 "didn't find a compatible hook"
         self._assert_messages_in_log([workflow_started_msg,
                                       workflow_succeeded_msg])
 
@@ -159,7 +183,6 @@ test_hook:
         new_config = """
 hooks:
   - event_type: workflow_started
-    hook_type: workflow_started_hook
     implementation: cloudmock.tasks.hook_task
     inputs:
       input1: input1_test
@@ -178,7 +201,6 @@ hooks:
         new_config = """
 hooks:
   - event_type: workflow_started
-    hook_type: workflow_started_hook
     implementation: cloudify.tests.mocks.mock_module.mock_hook_function
     inputs:
       input1: input1_test
@@ -199,21 +221,18 @@ hooks:
         new_config = """
 hooks:
   - event_type: workflow_started
-    hook_type: workflow_started_hook
     implementation: cloudify.tests.mocks.mock_module.mock_hook_function
     inputs:
       input1: input1_workflow_started
       input2: input2_workflow_started
     description: test hook
   - event_type: workflow_succeeded
-    hook_type: workflow_succeeded_hook
     implementation: cloudify.tests.mocks.mock_module.mock_hook_function
     inputs:
       input1: input1_workflow_succeeded
       input2: input2_workflow_succeeded
     description: test hook
   - event_type: workflow_failed
-    hook_type: workflow_failed_hook
     implementation: cloudify.tests.mocks.mock_module.mock_hook_function
     inputs:
       input1: input1_workflow_failed
