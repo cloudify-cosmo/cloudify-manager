@@ -101,7 +101,11 @@ class BaseTestCase(unittest.TestCase):
 
     def _save_manager_logs_after_test(self, purge=True):
         self.logger.debug('_save_manager_logs_after_test started')
-        logs_dir = os.environ.get('CFY_LOGS_PATH')
+        logs_dir = os.environ.get('CFY_LOGS_PATH_REMOTE')
+        self.logger.info("Cloudify remote log saving path found: [{}]. If "
+                         "you're running via itest-runner, make sure to set a "
+                         "local path as well with CFY_LOGS_PATH_LOCAL."
+                         .format(logs_dir))
         test_path = self.id().split('.')[-2:]
         if not logs_dir:
             self.logger.debug('not saving manager logs')
@@ -121,11 +125,13 @@ class BaseTestCase(unittest.TestCase):
         if purge:
             self.cfy.logs.purge(force=True)
 
-        self.logger.debug('opening tar.gz: {0}'.format(target))
-        with tarfile.open(target) as tar:
-            tar.extractall(path=logs_dir)
-        self.logger.debug('removing {0}'.format(target))
-        os.remove(target)
+        if not bool(os.environ.get('SKIP_LOGS_EXTRACTION')):
+            with tarfile.open(target) as tar:
+                self.logger.debug('Extracting tar.gz: {0}'.format(target))
+                tar.extractall(path=logs_dir)
+                self.logger.debug('Removing {0}'.format(target))
+                os.remove(target)
+
         self.logger.debug('_save_manager_logs_after_test completed')
 
     @staticmethod

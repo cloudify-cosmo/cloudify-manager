@@ -8,7 +8,7 @@ VENV_PATH=$1
 SUITE_RUNNER_PATH=$2
 TESTS=$3
 
-export CFY_LOGS_PATH=$4
+export CFY_LOGS_PATH_REMOTE=$4
 export JENKINS_JOB=true
 
 echo 'activating venv ' $VENV_PATH
