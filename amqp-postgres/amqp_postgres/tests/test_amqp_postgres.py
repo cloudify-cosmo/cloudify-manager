@@ -20,6 +20,7 @@ from dateutil import parser as date_parser
 
 from cloudify.amqp_client import create_events_publisher
 
+from manager_rest.server import db
 from manager_rest.storage import models
 from manager_rest.config import instance
 from manager_rest.amqp_manager import AMQPManager
@@ -36,8 +37,6 @@ EVENT_MESSAGE = 'event'
 
 
 class TestAMQPPostgres(BaseServerTestCase):
-    sql_dialect = 'postgresql'
-
     def create_configuration(self):
         """
         Override here to allow using postgresql instead of sqlite
@@ -48,6 +47,14 @@ class TestAMQPPostgres(BaseServerTestCase):
         config.postgresql_username = 'cloudify'
         config.postgresql_password = 'cloudify'
         return config
+
+    def _create_config_and_reset_app(self, server):
+        """
+        Override here to allow using postgresql instead of sqlite
+        """
+        super(TestAMQPPostgres, self)._create_config_and_reset_app(server)
+        server.SQL_DIALECT = 'postgresql'
+        server.reset_app(self.server_configuration)
 
     def setUp(self):
         super(TestAMQPPostgres, self).setUp()
@@ -64,6 +71,11 @@ class TestAMQPPostgres(BaseServerTestCase):
         amqp_client.consume_in_thread()
         self.addCleanup(amqp_client.close)
         self.events_publisher = create_events_publisher()
+        self.addCleanup(self._cleanup_db)
+
+    def _cleanup_db(self):
+        db.session.remove()
+        db.drop_all()
 
     def publish_messages(self, messages):
         for message, message_type in messages:
@@ -114,16 +126,13 @@ class TestAMQPPostgres(BaseServerTestCase):
         log = self._get_log(execution_id)
         log_2 = self._get_log(execution_id_2)
         self.publish_messages([
-            (log, LOG_MESSAGE)
+            (log, LOG_MESSAGE),
             (log_2, LOG_MESSAGE)
         ])
 
-        execution_1_logs = self.sm.list(
-            models.Log, filters={'execution_id': execution_id})
         execution_2_logs = self.sm.list(
             models.Log, filters={'execution_id': execution_id_2})
 
-        self.assertEqual(len(execution_1_logs), 1)
         self.assertEqual(len(execution_2_logs), 1)
 
         self._assert_log(log_2, execution_2_logs[0])

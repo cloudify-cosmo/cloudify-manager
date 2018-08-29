@@ -237,7 +237,7 @@ class DBLogEventPublisher(object):
         one by one, so that only the errorneous message is dropped.
         """
         for message, exchange, ack in items:
-            item = self._get_db_item(message, exchange)
+            item = self._get_db_item(conn, message, exchange)
             if item is None:
                 continue
             insert = (self._insert_events if exchange == EVENTS_EXCHANGE_NAME

@@ -96,8 +96,6 @@ class TestClient(FlaskClient):
 
 @attr(client_min_version=1, client_max_version=LATEST_API_VERSION)
 class BaseServerTestCase(unittest.TestCase):
-    sql_dialect = 'sqlite'
-
     def create_client_with_tenant(self,
                                   username,
                                   password,
@@ -231,7 +229,7 @@ class BaseServerTestCase(unittest.TestCase):
         """
         self.server_configuration = self.create_configuration()
         utils.copy_resources(self.server_configuration.file_server_root)
-        server.SQL_DIALECT = self.sql_dialect
+        server.SQL_DIALECT = 'sqlite'
         server.reset_app(self.server_configuration)
 
     def _handle_flask_app_and_db(self, server):
