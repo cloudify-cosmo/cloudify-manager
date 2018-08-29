@@ -82,8 +82,8 @@ class TestAMQPPostgres(BaseServerTestCase):
             self.events_publisher.publish_message(
                 message, message_type=message_type)
 
-        # The messages are dumped to the DB every 0.5 seconds, so we should
-        # wait before trying to query SQL
+        # The messages are dumped to the DB every BATCH_DELAY seconds, so
+        # we should wait before trying to query SQL
         sleep(BATCH_DELAY * 2)
 
     def test_insert(self):
