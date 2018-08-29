@@ -23,9 +23,12 @@ from threading import Thread, Lock
 import psycopg2
 from psycopg2.extras import execute_values, DictCursor
 from collections import OrderedDict
+from cloudify.constants import EVENTS_EXCHANGE_NAME, LOGS_EXCHANGE_NAME
 
 
 logger = logging.getLogger(__name__)
+
+BATCH_DELAY = 0.5
 
 EVENT_INSERT_QUERY = """
     INSERT INTO events (
@@ -157,11 +160,11 @@ class DBLogEventPublisher(object):
         items = []
         while True:
             try:
-                items.append(self._batch.get(timeout=0.3))
+                items.append(self._batch.get(timeout=BATCH_DELAY / 2))
             except Queue.Empty:
                 pass
             if len(items) > 100 or \
-                    (items and (time() - self._last_commit > 0.5)):
+                    (items and (time() - self._last_commit > BATCH_DELAY)):
                 try:
                     self._store(conn, items)
                 except psycopg2.OperationalError:
@@ -170,6 +173,7 @@ class DBLogEventPublisher(object):
                     logger.exception('Error storing %d logs+events',
                                      len(items))
                     conn.rollback()
+                    self._store_nobatch(conn, items)
                 items = []
                 self._last_commit = time()
 
@@ -188,39 +192,77 @@ class DBLogEventPublisher(object):
             self._executions_cache[execution_id] = execution
         return self._executions_cache[execution_id]
 
+    def _get_db_item(self, conn, message, exchange):
+        execution_id = message['context']['execution_id']
+        execution = self._get_execution(conn, execution_id)
+        if execution is None:
+            logger.warning('No execution found: %s', execution_id)
+            return
+
+        if exchange == EVENTS_EXCHANGE_NAME:
+            get_item = self._get_event
+        elif exchange == LOGS_EXCHANGE_NAME:
+            get_item = self._get_log
+        else:
+            raise ValueError('Unknown exchange type: {0}'.format(exchange))
+        return get_item(message, execution)
+
     def _store(self, conn, items):
         events, logs = [], []
 
         acks = []
-        for item, exchange, ack in items:
+        for message, exchange, ack in items:
             acks.append(ack)
-            execution_id = item['context']['execution_id']
-            execution = self._get_execution(conn, execution_id)
-            if execution is None:
-                logger.warning('No execution found: %s', execution_id)
+            item = self._get_db_item(conn, message, exchange)
+            if item is None:
                 continue
-            if exchange == 'cloudify-events':
-                event = self._get_event(item, execution)
-                if event is not None:
-                    events.append(event)
-            elif exchange == 'cloudify-logs':
-                log = self._get_log(item, execution)
-                if log is not None:
-                    logs.append(log)
-            else:
-                raise ValueError('Unknown exchange type: {0}'.format(exchange))
+            target = events if exchange == EVENTS_EXCHANGE_NAME else logs
+            target.append(item)
 
         with conn.cursor() as cur:
-            if events:
-                execute_values(cur, EVENT_INSERT_QUERY, events,
-                               template=EVENT_VALUES_TEMPLATE)
-            if logs:
-                execute_values(cur, LOG_INSERT_QUERY, logs,
-                               template=LOG_VALUES_TEMPLATE)
+            execute_values(cur, EVENT_INSERT_QUERY, events,
+                           template=EVENT_VALUES_TEMPLATE)
+            execute_values(cur, LOG_INSERT_QUERY, logs,
+                           template=LOG_VALUES_TEMPLATE)
         logger.debug('commit %s', len(logs) + len(events))
         conn.commit()
         for ack in acks:
             self._amqp_connection.acks_queue.put(ack)
+
+    def _store_nobatch(self, conn, items):
+        """Store the items one by one, without batching.
+
+        This is to be used in the anomalous cases where inserting the whole
+        batch throws an IntegrityError - we fall back to inserting the items
+        one by one, so that only the errorneous message is dropped.
+        """
+        for message, exchange, ack in items:
+            item = self._get_db_item(conn, message, exchange)
+            if item is None:
+                continue
+            insert = (self._insert_events if exchange == EVENTS_EXCHANGE_NAME
+                      else self._insert_logs)
+            try:
+                with conn.cursor() as cur:
+                    insert(cur, [item])
+                conn.commit()
+            except psycopg2.OperationalError:
+                self.on_db_connection_error()
+            except psycopg2.IntegrityError:
+                logger.debug('Error storing %s: %s', exchange, item)
+                conn.rollback()
+
+    def _insert_events(self, cursor, events):
+        if not events:
+            return
+        execute_values(cursor, EVENT_INSERT_QUERY, events,
+                       template=EVENT_VALUES_TEMPLATE)
+
+    def _insert_logs(self, cursor, logs):
+        if not logs:
+            return
+        execute_values(cursor, LOG_INSERT_QUERY, logs,
+                       template=LOG_VALUES_TEMPLATE)
 
     def on_db_connection_error(self):
         logger.critical('Database down - cannot continue')

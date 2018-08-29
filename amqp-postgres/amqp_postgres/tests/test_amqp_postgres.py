@@ -14,17 +14,13 @@
 # limitations under the License.
 ############
 
-import os
-import json
-import shutil
-import tempfile
 from uuid import uuid4
 from time import sleep
-from threading import Thread
 from dateutil import parser as date_parser
 
 from cloudify.amqp_client import create_events_publisher
 
+from manager_rest.server import db
 from manager_rest.storage import models
 from manager_rest.config import instance
 from manager_rest.amqp_manager import AMQPManager
@@ -33,11 +29,14 @@ from manager_rest.test.base_test import BaseServerTestCase
 from manager_rest.storage.models_states import VisibilityState
 
 
-from amqp_postgres.main import main
+from amqp_postgres.main import _create_amqp_client
+from amqp_postgres.postgres_publisher import BATCH_DELAY
+
+LOG_MESSAGE = 'log'
+EVENT_MESSAGE = 'event'
 
 
 class TestAMQPPostgres(BaseServerTestCase):
-
     def create_configuration(self):
         """
         Override here to allow using postgresql instead of sqlite
@@ -67,40 +66,76 @@ class TestAMQPPostgres(BaseServerTestCase):
             'amqp_{0}'.format(n)
             for n in ['host', 'username', 'password', 'ca_path']
         ]
-        with tempfile.NamedTemporaryFile(delete=False) as f:
-            json.dump({k: getattr(config, k) for k in config_keys}, f)
-        self.addCleanup(os.unlink, f.name)
-        log_dir = tempfile.mkdtemp()
-        self.addCleanup(shutil.rmtree, log_dir)
-        args = {
-            'config': f.name,
-            'logfile': os.path.join(log_dir, 'amqp_postgres.log')
-        }
-        amqp_thread = Thread(target=main, args=(args,))
-        amqp_thread.daemon = True
-        amqp_thread.start()
+        amqp_client = _create_amqp_client(
+            {k: getattr(config, k) for k in config_keys})
+        amqp_client.consume_in_thread()
+        self.addCleanup(amqp_client.close)
+        self.events_publisher = create_events_publisher()
+        self.addCleanup(self._cleanup_db)
 
-    def test(self):
+    def _cleanup_db(self):
+        db.session.remove()
+        db.drop_all()
+
+    def publish_messages(self, messages):
+        for message, message_type in messages:
+            self.events_publisher.publish_message(
+                message, message_type=message_type)
+
+        # The messages are dumped to the DB every BATCH_DELAY seconds, so
+        # we should wait before trying to query SQL
+        sleep(BATCH_DELAY * 2)
+
+    def test_insert(self):
         execution_id = str(uuid4())
         self._create_execution(execution_id)
 
         log = self._get_log(execution_id)
         event = self._get_event(execution_id)
 
-        events_publisher = create_events_publisher()
-
-        events_publisher.publish_message(log, message_type='log')
-        events_publisher.publish_message(event, message_type='event')
-
-        # The messages are dumped to the DB every 0.5 seconds, so we should
-        # wait before trying to query SQL
-        sleep(2)
+        self.publish_messages([
+            (event, EVENT_MESSAGE),
+            (log, LOG_MESSAGE)
+        ])
 
         db_log = self._get_db_element(models.Log)
         db_event = self._get_db_element(models.Event)
 
         self._assert_log(log, db_log)
         self._assert_event(event, db_event)
+
+    def test_missing_execution(self):
+        execution_id = str(uuid4())
+        self._create_execution(execution_id)
+        execution_id_2 = str(uuid4())
+        self._create_execution(execution_id_2)
+
+        # insert a log for execution 1 so that the execution gets cached
+        log = self._get_log(execution_id)
+        self.publish_messages([
+            (log, LOG_MESSAGE)
+        ])
+        db_log = self._get_db_element(models.Log)
+        self._assert_log(log, db_log)
+
+        # delete execution 1, and insert logs for both execution 1 and 2
+        # 1 was deleted, so the log will be lost, but we still expect that
+        # the log for execution 2 will be stored
+        self._delete_execution(execution_id)
+
+        log = self._get_log(execution_id)
+        log_2 = self._get_log(execution_id_2)
+        self.publish_messages([
+            (log, LOG_MESSAGE),
+            (log_2, LOG_MESSAGE)
+        ])
+
+        execution_2_logs = self.sm.list(
+            models.Log, filters={'execution_id': execution_id_2})
+
+        self.assertEqual(len(execution_2_logs), 1)
+
+        self._assert_log(log_2, execution_2_logs[0])
 
     @staticmethod
     def _get_amqp_manager():
@@ -128,6 +163,10 @@ class TestAMQPPostgres(BaseServerTestCase):
         new_execution.tenant = default_tenant
 
         self.sm.put(new_execution)
+
+    def _delete_execution(self, execution_id):
+        execution = self.sm.get(models.Execution, execution_id)
+        self.sm.delete(execution)
 
     def _get_db_element(self, model):
         items = self.sm.list(model)
@@ -175,7 +214,7 @@ class TestAMQPPostgres(BaseServerTestCase):
         self.assertEqual(db_event.visibility, VisibilityState.TENANT)
 
     @staticmethod
-    def _get_log(execution_id):
+    def _get_log(execution_id, message='Test log'):
         return {
             'context': {
                 'execution_id': execution_id,
@@ -185,16 +224,17 @@ class TestAMQPPostgres(BaseServerTestCase):
             'level': 'debug',
             'logger': 'ctx.a13973d5-3866-4054-baa1-479e242fff75',
             'message': {
-                'text': 'Test log'
+                'text': message
             },
             'timestamp': get_formatted_timestamp()
         }
 
     @staticmethod
-    def _get_event(execution_id):
+    def _get_event(execution_id,
+                   message="Starting 'install' workflow execution"):
         return {
             'message': {
-                'text': "Starting 'install' workflow execution",
+                'text': message,
                 'arguments': None
             },
             'event_type': 'workflow_started',
