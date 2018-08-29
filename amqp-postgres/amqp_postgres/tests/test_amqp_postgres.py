@@ -80,7 +80,7 @@ class TestAMQPPostgres(BaseServerTestCase):
         amqp_thread.daemon = True
         amqp_thread.start()
 
-    def test(self):
+    def test_insert(self):
         execution_id = str(uuid4())
         self._create_execution(execution_id)
 
@@ -101,6 +101,40 @@ class TestAMQPPostgres(BaseServerTestCase):
 
         self._assert_log(log, db_log)
         self._assert_event(event, db_event)
+
+    def test_missing_execution(self):
+        execution_id = str(uuid4())
+        self._create_execution(execution_id)
+
+        execution_id_2 = str(uuid4())
+        self._create_execution(execution_id_2)
+        events_publisher = create_events_publisher()
+
+        # insert a log for execution 1 so that the execution gets cached
+        log = self._get_log(execution_id)
+        events_publisher.publish_message(log, message_type='log')
+        sleep(2)
+        db_log = self._get_db_element(models.Log)
+        self._assert_log(log, db_log)
+
+        # delete execution 1, and insert logs for both execution 1 and 2
+        # 1 was deleted, so the log will be lost, but we still expect that
+        # the log for execution 2 will be stored
+        self._delete_execution(execution_id)
+        log = self._get_log(execution_id)
+        log_2 = self._get_log(execution_id_2)
+        events_publisher.publish_message(log, message_type='log')
+        events_publisher.publish_message(log_2, message_type='log')
+
+        execution_1_logs = self.sm.list(
+            models.Log, filters={'execution_id': execution_id})
+        execution_2_logs = self.sm.list(
+            models.Log, filters={'execution_id': execution_id_2})
+
+        self.assertEqual(len(execution_1_logs), 1)
+        self.assertEqual(len(execution_2_logs), 1)
+
+        self._assert_log(log_2, execution_2_logs[0])
 
     @staticmethod
     def _get_amqp_manager():
@@ -128,6 +162,10 @@ class TestAMQPPostgres(BaseServerTestCase):
         new_execution.tenant = default_tenant
 
         self.sm.put(new_execution)
+
+    def _delete_execution(self, execution_id):
+        execution = self.sm.get(models.Execution, execution_id)
+        self.sm.delete(execution)
 
     def _get_db_element(self, model):
         items = self.sm.list(model)
@@ -175,7 +213,7 @@ class TestAMQPPostgres(BaseServerTestCase):
         self.assertEqual(db_event.visibility, VisibilityState.TENANT)
 
     @staticmethod
-    def _get_log(execution_id):
+    def _get_log(execution_id, message='Test log'):
         return {
             'context': {
                 'execution_id': execution_id,
@@ -185,16 +223,17 @@ class TestAMQPPostgres(BaseServerTestCase):
             'level': 'debug',
             'logger': 'ctx.a13973d5-3866-4054-baa1-479e242fff75',
             'message': {
-                'text': 'Test log'
+                'text': message
             },
             'timestamp': get_formatted_timestamp()
         }
 
     @staticmethod
-    def _get_event(execution_id):
+    def _get_event(execution_id,
+                   message="Starting 'install' workflow execution"):
         return {
             'message': {
-                'text': "Starting 'install' workflow execution",
+                'text': message,
                 'arguments': None
             },
             'event_type': 'workflow_started',
