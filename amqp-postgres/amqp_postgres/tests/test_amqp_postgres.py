@@ -30,6 +30,9 @@ from manager_rest.storage.models_states import VisibilityState
 
 from amqp_postgres.main import _create_amqp_client
 
+LOG_MESSAGE = 'log'
+EVENT_MESSAGE = 'event'
+
 
 class TestAMQPPostgres(BaseServerTestCase):
 
@@ -76,8 +79,8 @@ class TestAMQPPostgres(BaseServerTestCase):
 
         events_publisher = create_events_publisher()
 
-        events_publisher.publish_message(log, message_type='log')
-        events_publisher.publish_message(event, message_type='event')
+        events_publisher.publish_message(log, message_type=LOG_MESSAGE)
+        events_publisher.publish_message(event, message_type=EVENT_MESSAGE)
 
         # The messages are dumped to the DB every 0.5 seconds, so we should
         # wait before trying to query SQL
@@ -99,7 +102,7 @@ class TestAMQPPostgres(BaseServerTestCase):
 
         # insert a log for execution 1 so that the execution gets cached
         log = self._get_log(execution_id)
-        events_publisher.publish_message(log, message_type='log')
+        events_publisher.publish_message(log, message_type=LOG_MESSAGE)
         sleep(2)
         db_log = self._get_db_element(models.Log)
         self._assert_log(log, db_log)
@@ -110,8 +113,8 @@ class TestAMQPPostgres(BaseServerTestCase):
         self._delete_execution(execution_id)
         log = self._get_log(execution_id)
         log_2 = self._get_log(execution_id_2)
-        events_publisher.publish_message(log, message_type='log')
-        events_publisher.publish_message(log_2, message_type='log')
+        events_publisher.publish_message(log, message_type=LOG_MESSAGE)
+        events_publisher.publish_message(log_2, message_type=LOG_MESSAGE)
         sleep(2)
 
         execution_1_logs = self.sm.list(
