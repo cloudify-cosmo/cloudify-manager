@@ -27,6 +27,8 @@ from collections import OrderedDict
 
 logger = logging.getLogger(__name__)
 
+BATCH_DELAY = 0.5
+
 EVENT_INSERT_QUERY = """
     INSERT INTO events (
         timestamp,
@@ -157,11 +159,11 @@ class DBLogEventPublisher(object):
         items = []
         while True:
             try:
-                items.append(self._batch.get(timeout=0.3))
+                items.append(self._batch.get(timeout=BATCH_DELAY / 2))
             except Queue.Empty:
                 pass
             if len(items) > 100 or \
-                    (items and (time() - self._last_commit > 0.5)):
+                    (items and (time() - self._last_commit > BATCH_DELAY)):
                 try:
                     self._store(conn, items)
                 except psycopg2.OperationalError:

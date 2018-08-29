@@ -29,6 +29,7 @@ from manager_rest.storage.models_states import VisibilityState
 
 
 from amqp_postgres.main import _create_amqp_client
+from amqp_postgres.postgres_publisher import BATCH_DELAY
 
 LOG_MESSAGE = 'log'
 EVENT_MESSAGE = 'event'
@@ -69,6 +70,16 @@ class TestAMQPPostgres(BaseServerTestCase):
             {k: getattr(config, k) for k in config_keys})
         amqp_client.consume_in_thread()
         self.addCleanup(amqp_client.close)
+        self.events_publisher = create_events_publisher()
+
+    def publish_messages(self, messages):
+        for message, message_type in messages:
+            self.events_publisher.publish_message(
+                message, message_type=message_type)
+
+        # The messages are dumped to the DB every 0.5 seconds, so we should
+        # wait before trying to query SQL
+        sleep(BATCH_DELAY * 2)
 
     def test_insert(self):
         execution_id = str(uuid4())
@@ -77,14 +88,10 @@ class TestAMQPPostgres(BaseServerTestCase):
         log = self._get_log(execution_id)
         event = self._get_event(execution_id)
 
-        events_publisher = create_events_publisher()
-
-        events_publisher.publish_message(log, message_type=LOG_MESSAGE)
-        events_publisher.publish_message(event, message_type=EVENT_MESSAGE)
-
-        # The messages are dumped to the DB every 0.5 seconds, so we should
-        # wait before trying to query SQL
-        sleep(2)
+        self.publish_messages([
+            (event, EVENT_MESSAGE),
+            (log, LOG_MESSAGE)
+        ])
 
         db_log = self._get_db_element(models.Log)
         db_event = self._get_db_element(models.Event)
@@ -95,15 +102,14 @@ class TestAMQPPostgres(BaseServerTestCase):
     def test_missing_execution(self):
         execution_id = str(uuid4())
         self._create_execution(execution_id)
-
         execution_id_2 = str(uuid4())
         self._create_execution(execution_id_2)
-        events_publisher = create_events_publisher()
 
         # insert a log for execution 1 so that the execution gets cached
         log = self._get_log(execution_id)
-        events_publisher.publish_message(log, message_type=LOG_MESSAGE)
-        sleep(2)
+        self.publish_messages([
+            (log, LOG_MESSAGE)
+        ])
         db_log = self._get_db_element(models.Log)
         self._assert_log(log, db_log)
 
@@ -111,11 +117,13 @@ class TestAMQPPostgres(BaseServerTestCase):
         # 1 was deleted, so the log will be lost, but we still expect that
         # the log for execution 2 will be stored
         self._delete_execution(execution_id)
+
         log = self._get_log(execution_id)
         log_2 = self._get_log(execution_id_2)
-        events_publisher.publish_message(log, message_type=LOG_MESSAGE)
-        events_publisher.publish_message(log_2, message_type=LOG_MESSAGE)
-        sleep(2)
+        self.publish_messages([
+            (log, LOG_MESSAGE)
+            (log_2, LOG_MESSAGE)
+        ])
 
         execution_1_logs = self.sm.list(
             models.Log, filters={'execution_id': execution_id})
