@@ -220,10 +220,8 @@ class DBLogEventPublisher(object):
             target.append(item)
 
         with conn.cursor() as cur:
-            execute_values(cur, EVENT_INSERT_QUERY, events,
-                           template=EVENT_VALUES_TEMPLATE)
-            execute_values(cur, LOG_INSERT_QUERY, logs,
-                           template=LOG_VALUES_TEMPLATE)
+            self._insert_events(cur, events)
+            self._insert_logs(cur, logs)
         logger.debug('commit %s', len(logs) + len(events))
         conn.commit()
         for ack in acks:
