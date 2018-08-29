@@ -71,6 +71,9 @@ class TenantResponse(BaseResponse):
         'groups': fields.Raw,
         'users': fields.Raw,
         'user_roles': fields.Raw,
+        'rabbitmq_username': fields.String,
+        'rabbitmq_password': fields.String,
+        'rabbitmq_vhost': fields.String,
     }
 
 
