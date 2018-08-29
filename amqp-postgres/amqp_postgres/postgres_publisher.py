@@ -23,6 +23,7 @@ from threading import Thread, Lock
 import psycopg2
 from psycopg2.extras import execute_values, DictCursor
 from collections import OrderedDict
+from cloudify.constants import EVENTS_EXCHANGE_NAME, LOGS_EXCHANGE_NAME
 
 
 logger = logging.getLogger(__name__)
@@ -198,9 +199,9 @@ class DBLogEventPublisher(object):
             logger.warning('No execution found: %s', execution_id)
             return
 
-        if exchange == 'cloudify-events':
+        if exchange == EVENTS_EXCHANGE_NAME:
             get_item = self._get_event
-        elif exchange == 'cloudify-logs':
+        elif exchange == LOGS_EXCHANGE_NAME:
             get_item = self._get_log
         else:
             raise ValueError('Unknown exchange type: {0}'.format(exchange))
@@ -215,7 +216,7 @@ class DBLogEventPublisher(object):
             item = self._get_db_item(conn, message, exchange)
             if item is None:
                 continue
-            target = events if exchange == 'cloudify-events' else logs
+            target = events if exchange == EVENTS_EXCHANGE_NAME else logs
             target.append(item)
 
         with conn.cursor() as cur:
@@ -239,7 +240,7 @@ class DBLogEventPublisher(object):
             item = self._get_db_item(message, exchange)
             if item is None:
                 continue
-            insert = (self._insert_events if exchange == 'cloudify-events'
+            insert = (self._insert_events if exchange == EVENTS_EXCHANGE_NAME
                       else self._insert_logs)
             try:
                 with conn.cursor() as cur:
