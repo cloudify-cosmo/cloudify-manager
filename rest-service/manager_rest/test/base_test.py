@@ -96,9 +96,7 @@ class TestClient(FlaskClient):
 
 @attr(client_min_version=1, client_max_version=LATEST_API_VERSION)
 class BaseServerTestCase(unittest.TestCase):
-
-    def __init__(self, *args, **kwargs):
-        super(BaseServerTestCase, self).__init__(*args, **kwargs)
+    sql_dialect = 'sqlite'
 
     def create_client_with_tenant(self,
                                   username,
@@ -179,7 +177,7 @@ class BaseServerTestCase(unittest.TestCase):
             patch('manager_rest.amqp_manager.RabbitMQClient'),
             patch('manager_rest.workflow_executor._execute_task',
                   mock_execute_task),
-            ]
+        ]
         for amqp_patch in amqp_patches:
             self.addCleanup(amqp_patch.stop)
             amqp_patch.start()
@@ -233,7 +231,7 @@ class BaseServerTestCase(unittest.TestCase):
         """
         self.server_configuration = self.create_configuration()
         utils.copy_resources(self.server_configuration.file_server_root)
-        server.SQL_DIALECT = 'sqlite'
+        server.SQL_DIALECT = self.sql_dialect
         server.reset_app(self.server_configuration)
 
     def _handle_flask_app_and_db(self, server):

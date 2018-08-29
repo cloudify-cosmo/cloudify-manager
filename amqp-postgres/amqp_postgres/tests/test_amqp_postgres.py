@@ -36,6 +36,7 @@ EVENT_MESSAGE = 'event'
 
 
 class TestAMQPPostgres(BaseServerTestCase):
+    sql_dialect = 'postgresql'
 
     def create_configuration(self):
         """
@@ -47,14 +48,6 @@ class TestAMQPPostgres(BaseServerTestCase):
         config.postgresql_username = 'cloudify'
         config.postgresql_password = 'cloudify'
         return config
-
-    def _create_config_and_reset_app(self, server):
-        """
-        Override here to allow using postgresql instead of sqlite
-        """
-        super(TestAMQPPostgres, self)._create_config_and_reset_app(server)
-        server.SQL_DIALECT = 'postgresql'
-        server.reset_app(self.server_configuration)
 
     def setUp(self):
         super(TestAMQPPostgres, self).setUp()
