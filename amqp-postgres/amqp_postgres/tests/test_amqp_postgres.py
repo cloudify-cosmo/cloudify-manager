@@ -14,13 +14,8 @@
 # limitations under the License.
 ############
 
-import os
-import json
-import shutil
-import tempfile
 from uuid import uuid4
 from time import sleep
-from threading import Thread
 from dateutil import parser as date_parser
 
 from cloudify.amqp_client import create_events_publisher
@@ -33,7 +28,7 @@ from manager_rest.test.base_test import BaseServerTestCase
 from manager_rest.storage.models_states import VisibilityState
 
 
-from amqp_postgres.main import main
+from amqp_postgres.main import _create_amqp_client
 
 
 class TestAMQPPostgres(BaseServerTestCase):
@@ -67,18 +62,10 @@ class TestAMQPPostgres(BaseServerTestCase):
             'amqp_{0}'.format(n)
             for n in ['host', 'username', 'password', 'ca_path']
         ]
-        with tempfile.NamedTemporaryFile(delete=False) as f:
-            json.dump({k: getattr(config, k) for k in config_keys}, f)
-        self.addCleanup(os.unlink, f.name)
-        log_dir = tempfile.mkdtemp()
-        self.addCleanup(shutil.rmtree, log_dir)
-        args = {
-            'config': f.name,
-            'logfile': os.path.join(log_dir, 'amqp_postgres.log')
-        }
-        amqp_thread = Thread(target=main, args=(args,))
-        amqp_thread.daemon = True
-        amqp_thread.start()
+        amqp_client = _create_amqp_client(
+            {k: getattr(config, k) for k in config_keys})
+        amqp_client.consume_in_thread()
+        self.addCleanup(amqp_client.close)
 
     def test_insert(self):
         execution_id = str(uuid4())
@@ -125,6 +112,7 @@ class TestAMQPPostgres(BaseServerTestCase):
         log_2 = self._get_log(execution_id_2)
         events_publisher.publish_message(log, message_type='log')
         events_publisher.publish_message(log_2, message_type='log')
+        sleep(2)
 
         execution_1_logs = self.sm.list(
             models.Log, filters={'execution_id': execution_id})
