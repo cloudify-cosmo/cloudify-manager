@@ -42,7 +42,6 @@ def setup_flask_app(manager_ip='localhost',
     app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['ENV'] = 'production'
-    app.config['DEBUG'] = 'false'
     set_flask_security_config(app, hash_salt, secret_key)
     Security(app=app, datastore=user_datastore)
     Migrate(app=app, db=db)
