@@ -304,6 +304,7 @@ class BaseTestCase(unittest.TestCase):
                          timeout_seconds=240,
                          wait_for_execution=True,
                          force=False,
+                         queue=False,
                          **kwargs):
         """
         A blocking method which runs the requested workflow
@@ -312,7 +313,7 @@ class BaseTestCase(unittest.TestCase):
 
         execution = client.executions.start(deployment_id, workflow_name,
                                             parameters=parameters or {},
-                                            force=force, **kwargs)
+                                            force=force, queue=queue, **kwargs)
 
         if wait_for_execution:
             BaseTestCase.wait_for_execution_to_end(
@@ -347,6 +348,7 @@ class BaseTestCase(unittest.TestCase):
                                     wait_for_execution=True,
                                     parameters=None,
                                     inputs=None,
+                                    queue=False,
                                     **kwargs):
         """
         A blocking method which deploys an application from
@@ -358,7 +360,7 @@ class BaseTestCase(unittest.TestCase):
                                          inputs)
         execution = BaseTestCase.execute_workflow(
                 workflow_name, deployment.id, parameters,
-                timeout_seconds, wait_for_execution, **kwargs)
+                timeout_seconds, wait_for_execution, queue=queue, **kwargs)
         return deployment, execution.id
 
     @staticmethod
@@ -368,6 +370,7 @@ class BaseTestCase(unittest.TestCase):
                            deployment_id=None,
                            wait_for_execution=True,
                            inputs=None,
+                           queue=False,
                            **kwargs):
         """
         A blocking method which deploys an application
@@ -381,6 +384,7 @@ class BaseTestCase(unittest.TestCase):
                 deployment_id=deployment_id,
                 wait_for_execution=wait_for_execution,
                 inputs=inputs,
+                queue=queue,
                 **kwargs
         )
 
