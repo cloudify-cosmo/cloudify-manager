@@ -34,7 +34,7 @@ BASE_SERVICES = {
     'cloudify-rabbitmq.service': 'RabbitMQ',
     'cloudify-amqp-postgres.service': 'AMQP-Postgres',
     'nginx.service': 'Webserver',
-    'postgresql-9.5.service': 'PostgreSQL'
+    'postgresql-10.service': 'PostgreSQL'
 }
 OPTIONAL_SERVICES = {
     'cloudify-influxdb.service': 'InfluxDB',
@@ -102,7 +102,7 @@ class Status(SecuredResource):
             # clustered postgresql service is named differently -
             # the old service is not used in a clustered manager,
             # so we can ignore its status
-            del services['postgresql-9.5.service']
+            del services['postgresql-10.service']
 
             # services that are only running in a clustered manager
             services.update(CLUSTER_SERVICES)

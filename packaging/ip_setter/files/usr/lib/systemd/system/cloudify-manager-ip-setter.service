@@ -1,8 +1,8 @@
 [Unit]
 Description=Cloudify Manager IP Setter
 Before=cloudify-amqpinflux.service cloudify-influxdb.service cloudify-mgmtworker.service cloudify-restservice.service cloudify-riemann.service cloudify-stage.service nginx.service cloudify-rabbitmq.service cloudify-amqp-postgres.service
-Requires=postgresql-9.5.service
-After=network-online.target postgresql-9.5.service
+Requires=postgresql-10.service
+After=network-online.target postgresql-10.service
 
 [Service]
 Type=oneshot
