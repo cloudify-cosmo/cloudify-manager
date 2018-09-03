@@ -30,7 +30,7 @@ from dsl_parser import exceptions as parser_exceptions
 from manager_rest import premium_enabled
 from manager_rest.constants import DEFAULT_TENANT_NAME
 from manager_rest.dsl_functions import get_secret_method
-from manager_rest.utils import is_create_global_permitted
+from manager_rest.utils import is_create_global_permitted, send_event
 from manager_rest.storage import (get_storage_manager,
                                   models,
                                   get_node,
@@ -502,6 +502,7 @@ class ResourceManager(object):
                 new_execution.set_deployment(deployment)
         if should_queue:
             self.sm.put(new_execution)
+            self._workflow_queued(new_execution)
             return new_execution
 
         # executing the user workflow
@@ -723,9 +724,10 @@ class ResourceManager(object):
             if deployment:
                 execution.set_deployment(deployment)
 
-        # Execution can't currently run,it's queued and will run later
+        # Execution can't currently run, it's queued and will run later
         if should_queue:
             self.sm.put(execution)
+            self._workflow_queued(execution)
             return execution
 
         execution.status = ExecutionState.PENDING
@@ -1695,6 +1697,34 @@ class ResourceManager(object):
     def _any_running_executions(executions):
         return any(execution.status not in
                    ExecutionState.END_STATES for execution in executions)
+
+    def _workflow_queued(self, execution):
+        message_context = {
+            'message_type': 'hook',
+            'is_system_workflow': execution.is_system_workflow,
+            'blueprint_id': execution.blueprint_id,
+            'deployment_id': execution.deployment_id,
+            'execution_id': execution.id,
+            'workflow_id': execution.workflow_id,
+            'tenant_name': execution.tenant_name
+        }
+
+        if not execution.is_system_workflow:
+            message_context['execution_parameters'] = execution.parameters
+
+        event = {
+            'type': 'cloudify_event',
+            'event_type': 'workflow_queued',
+            'context': message_context,
+            'message': {
+                'text': "'{0}' workflow execution was queued".format(
+                    execution.workflow_id
+                ),
+                'arguments': None
+            }
+        }
+
+        send_event(event, 'hook')
 
 
 # What we need to access this manager in Flask
