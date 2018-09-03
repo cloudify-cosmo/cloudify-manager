@@ -115,9 +115,12 @@ class DBLogEventPublisher(object):
 
         self._last_commit = time()
         self.config = config
-        self._executions_cache = LimitedSizeDict(10000)
         self._amqp_connection = connection
         self._started = Queue.Queue()
+        self._reset_cache()
+
+    def _reset_cache(self):
+        self._executions_cache = LimitedSizeDict(10000)
 
     def start(self):
         # Create a separate thread to allow proper batching without losing
@@ -173,6 +176,11 @@ class DBLogEventPublisher(object):
                     logger.exception('Error storing %d logs+events',
                                      len(items))
                     conn.rollback()
+                    # in case the integrityError was caused by stale cache,
+                    # clean it entirely before trying to insert without
+                    # batching.
+                    # This happens rarely.
+                    self._reset_cache()
                     self._store_nobatch(conn, items)
                 items = []
                 self._last_commit = time()
