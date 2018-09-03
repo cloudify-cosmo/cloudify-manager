@@ -1,2 +1,1 @@
 https://github.com/cloudify-cosmo/cloudify-common/archive/master.zip
-psycopg2==2.7 --no-binary psycopg2
