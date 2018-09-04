@@ -58,17 +58,7 @@ def authorize(action,
             if config.instance.test_mode:
                 return func(*args, **kwargs)
 
-            # extracting tenant roles for user in the tenant
-            tenant_roles = []
-            for t in current_user.all_tenants:
-                if (allow_all_tenants and request_use_all_tenants()) \
-                        or t.name == tenant_name:
-                    tenant_roles += current_user.all_tenants[t]
-
-            # joining user's system role with his tenant roles
-            user_roles = [role.name for role in tenant_roles] \
-                + current_user.system_roles
-
+            user_roles = get_current_user_roles(tenant_name, allow_all_tenants)
             # getting the roles allowed to perform requested action
             action_roles = config.instance.authorization_permissions[action]
 
@@ -85,3 +75,18 @@ def authorize(action,
             raise ForbiddenError(error_message)
         return wrapper
     return authorize_dec
+
+
+def get_current_user_roles(tenant_name=None, allow_all_tenants=False):
+    tenant_roles = []
+
+    # extracting tenant roles for user in the tenant
+    for t in current_user.all_tenants:
+        if (allow_all_tenants and request_use_all_tenants()) \
+                or t.name == tenant_name:
+            tenant_roles += current_user.all_tenants[t]
+
+    # joining user's system role with his tenant roles
+    user_roles = [role.name for role in tenant_roles] \
+        + current_user.system_roles
+    return user_roles
