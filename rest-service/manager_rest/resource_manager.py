@@ -295,7 +295,7 @@ class ResourceManager(object):
                     'package_version': plugin.package_version
                 }
             },
-            verify_no_executions=False,
+            verify_no_executions=True,
             timeout=300)
 
     def remove_plugin(self, plugin_id, force):
@@ -332,7 +332,7 @@ class ResourceManager(object):
                         'wagon': True
                     }
                 },
-                verify_no_executions=False,
+                verify_no_executions=True,
                 timeout=300)
 
         # Remove from storage
