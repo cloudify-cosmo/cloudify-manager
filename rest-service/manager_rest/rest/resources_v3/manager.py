@@ -150,7 +150,7 @@ class LdapAuthentication(SecuredResource):
     @rest_decorators.exceptions_handled
     @authorize('ldap_status_get')
     def get(self):
-        return 'enabled' if authenticator.ldap else 'disabled'
+        return 'enabled' if config.instance.ldap_server else 'disabled'
 
     @staticmethod
     def _only_admin_in_manager():
