@@ -71,6 +71,7 @@ auth_dict = {
     'permissions': {
         'all_tenants': ['sys_admin', 'manager'],
         'administrators': ['sys_admin', 'manager'],
+        'tenant_rabbitmq_credentials': ['sys_admin', 'manager'],
         'create_global_resource': ['sys_admin'],
         'execution_list': permitted_roles,
         'deployment_list': permitted_roles,
