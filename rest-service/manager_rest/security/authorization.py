@@ -58,14 +58,9 @@ def authorize(action,
             if config.instance.test_mode:
                 return func(*args, **kwargs)
 
-            user_roles = get_current_user_roles(tenant_name, allow_all_tenants)
-            # getting the roles allowed to perform requested action
-            action_roles = config.instance.authorization_permissions[action]
-
             # checking if any of the user's roles is allowed to perform action
-            for user_role in user_roles:
-                if user_role in action_roles:
-                    return func(*args, **kwargs)
+            if is_user_action_allowed(action, tenant_name, allow_all_tenants):
+                return func(*args, **kwargs)
 
             # none of the user's role is allowed to perform the action
             error_message = 'User `{0}` is not permitted to perform the ' \
@@ -90,3 +85,9 @@ def get_current_user_roles(tenant_name=None, allow_all_tenants=False):
     user_roles = [role.name for role in tenant_roles] \
         + current_user.system_roles
     return user_roles
+
+
+def is_user_action_allowed(action, tenant_name=None, allow_all_tenants=False):
+    user_roles = get_current_user_roles(tenant_name, allow_all_tenants)
+    action_roles = config.instance.authorization_permissions[action]
+    return set(user_roles) & set(action_roles)
