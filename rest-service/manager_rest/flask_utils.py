@@ -91,7 +91,7 @@ def set_flask_security_config(app, hash_salt=None, secret_key=None):
     # by username and not just by email (the default behavior)
     app.config['SECURITY_USER_IDENTITY_ATTRIBUTES'] = 'username, email'
     app.config['SECURITY_PASSWORD_HASH'] = 'pbkdf2_sha256'
-    app.config['SECURITY_HASHING_SCHEMES'] = ['pbkdf2_sha256']
+    app.config['SECURITY_HASHING_SCHEMES'] = ['hex_md5']
     app.config['SECURITY_DEPRECATED_HASHING_SCHEMES'] = []
     app.config['SECURITY_TOKEN_MAX_AGE'] = 36000  # 10 hours
 
