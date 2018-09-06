@@ -16,6 +16,7 @@
 
 from flask_restful_swagger import swagger
 
+from manager_rest import config
 from manager_rest.rest import responses, rest_utils
 from manager_rest.rest.rest_decorators import (
     exceptions_handled,
@@ -68,6 +69,10 @@ class Status(SecuredResource):
                 job for job in jobs
                 if self._should_be_in_services_output(job)
             ]
+            if config.instance.postgresql_host != 'localhost':
+                for job in jobs:
+                    if job['display_name'] == 'PostgreSQL':
+                        job['instances'][0]['state'] = 'remote'
         else:
             jobs = ['undefined']
 
