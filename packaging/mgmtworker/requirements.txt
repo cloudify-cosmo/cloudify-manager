@@ -1,2 +1,2 @@
-git+https://github.com/cloudify-cosmo/cloudify-common@master#egg=cloudify-common==4.5.dev1
-git+https://github.com/cloudify-cosmo/cloudify-agent@master#egg=cloudify-agent[celery,kerberos]==4.5.dev1
+git+https://github.com/cloudify-cosmo/cloudify-common@4.5#egg=cloudify-common==4.5
+git+https://github.com/cloudify-cosmo/cloudify-agent@4.5#egg=cloudify-agent[celery,kerberos]==4.5
