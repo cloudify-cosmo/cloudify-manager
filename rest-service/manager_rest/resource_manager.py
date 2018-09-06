@@ -415,7 +415,7 @@ class ResourceManager(object):
 
         if not delete_db_mode and self._any_running_executions(executions):
             raise manager_exceptions.DependentExistsError(
-                "Can't delete deployment {0} - There are running or queued"
+                "Can't delete deployment {0} - There are running or queued "
                 "executions for this deployment. Running executions ids: {1}"
                 .format(
                     deployment_id,
