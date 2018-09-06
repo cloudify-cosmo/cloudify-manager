@@ -1,6 +1,11 @@
-# psycopg2 ships with its own required shared libraries
+#Due to a bug in psycopg2's 2.7.4 build, stripping their binaries must be disabled
+%define debug_package %{nil}
+%define __strip /bin/true
+
+%global __requires_exclude LIBDBUS_1_3
 %global __requires_exclude_from site-packages/psycopg2
 %global __provides_exclude_from site-packages/psycopg2
+
 %define _python_bytecompile_errors_terminate_build 0
 
 Name:           cloudify-management-worker
@@ -16,7 +21,6 @@ Packager:       Cloudify Platform Ltd.
 BuildRequires:  python >= 2.7, python-virtualenv, openssl-devel, git
 Requires:       python >= 2.7
 Requires(pre):  shadow-utils
-
 
 %description
 Cloudify's Management worker
