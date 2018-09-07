@@ -32,7 +32,7 @@ DEFAULT_LOG_PATH = '/var/log/cloudify/amqp-postgres/amqp_postgres.log'
 CONFIG_PATH = '/opt/manager/cloudify-rest.conf'
 
 
-def _create_amqp_client(config):
+def _create_connections(config):
     acks_queue = Queue.Queue()
     port = BROKER_PORT_SSL if config['amqp_ca_path'] else BROKER_PORT_NO_SSL
     amqp_client = get_client(
@@ -53,7 +53,7 @@ def _create_amqp_client(config):
 
     amqp_client.add_handler(amqp_consumer)
     db_publisher.start()
-    return amqp_client
+    return amqp_client, db_publisher
 
 
 def main(args):
@@ -62,7 +62,7 @@ def main(args):
         filename=args.get('logfile', DEFAULT_LOG_PATH))
     with open(args['config']) as f:
         config = yaml.safe_load(f)
-    amqp_client = _create_amqp_client(config)
+    amqp_client, db_publisher = _create_connections(config)
 
     logger.info('Starting consuming...')
     amqp_client.consume()
