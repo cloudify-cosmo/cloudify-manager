@@ -118,11 +118,14 @@ class DBLogEventPublisher(object):
         self._amqp_connection = connection
         self._started = Queue.Queue()
         self._reset_cache()
+        # exception stored here will be raised by the main thread
+        self.error_exit = None
 
     def _reset_cache(self):
         self._executions_cache = LimitedSizeDict(10000)
 
     def start(self):
+        self.error_exit = None
         # Create a separate thread to allow proper batching without losing
         # messages. Without this thread, if the messages were just committed,
         # and 1 new message is sent, then process will never commit, because
@@ -273,7 +276,8 @@ class DBLogEventPublisher(object):
     def on_db_connection_error(self):
         logger.critical('Database down - cannot continue')
         self._amqp_connection.close()
-        raise RuntimeError('Database down')
+        self.error_exit = RuntimeError('Database down')
+        raise self.error_exit
 
     @staticmethod
     def _get_log(message, execution):

@@ -66,6 +66,8 @@ def main(args):
 
     logger.info('Starting consuming...')
     amqp_client.consume()
+    if db_publisher.error_exit:
+        raise db_publisher.error_exit
 
 
 def cli():
