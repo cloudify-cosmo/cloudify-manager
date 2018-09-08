@@ -29,7 +29,7 @@ from manager_rest.test.base_test import BaseServerTestCase
 from manager_rest.storage.models_states import VisibilityState
 
 
-from amqp_postgres.main import _create_amqp_client
+from amqp_postgres.main import _create_connections
 from amqp_postgres.postgres_publisher import BATCH_DELAY
 
 LOG_MESSAGE = 'log'
@@ -66,7 +66,7 @@ class TestAMQPPostgres(BaseServerTestCase):
             'amqp_{0}'.format(n)
             for n in ['host', 'username', 'password', 'ca_path']
         ]
-        amqp_client = _create_amqp_client(
+        amqp_client, _ = _create_connections(
             {k: getattr(config, k) for k in config_keys})
         amqp_client.consume_in_thread()
         self.addCleanup(amqp_client.close)
