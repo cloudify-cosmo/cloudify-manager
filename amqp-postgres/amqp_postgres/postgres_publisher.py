@@ -160,7 +160,7 @@ class DBLogEventPublisher(object):
             conn = self.connect()
         except psycopg2.OperationalError as e:
             self._started.put(e)
-            self.on_db_connection_error()
+            self.on_db_connection_error(e)
         else:
             self._started.put(True)
         items = []
@@ -173,8 +173,8 @@ class DBLogEventPublisher(object):
                     (items and (time() - self._last_commit > BATCH_DELAY)):
                 try:
                     self._store(conn, items)
-                except psycopg2.OperationalError:
-                    self.on_db_connection_error()
+                except psycopg2.OperationalError as e:
+                    self.on_db_connection_error(e)
                 except psycopg2.IntegrityError:
                     logger.exception('Error storing %d logs+events',
                                      len(items))
@@ -255,8 +255,8 @@ class DBLogEventPublisher(object):
                 with conn.cursor() as cur:
                     insert(cur, [item])
                 conn.commit()
-            except psycopg2.OperationalError:
-                self.on_db_connection_error()
+            except psycopg2.OperationalError as e:
+                self.on_db_connection_error(e)
             except psycopg2.IntegrityError:
                 logger.debug('Error storing %s: %s', exchange, item)
                 conn.rollback()
@@ -273,10 +273,10 @@ class DBLogEventPublisher(object):
         execute_values(cursor, LOG_INSERT_QUERY, logs,
                        template=LOG_VALUES_TEMPLATE)
 
-    def on_db_connection_error(self):
+    def on_db_connection_error(self, err):
         logger.critical('Database down - cannot continue')
         self._amqp_connection.close()
-        self.error_exit = RuntimeError('Database down')
+        self.error_exit = err
         raise self.error_exit
 
     @staticmethod
