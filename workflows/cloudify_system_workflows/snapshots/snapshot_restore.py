@@ -35,7 +35,8 @@ from cloudify.constants import FILE_SERVER_SNAPSHOTS_FOLDER
 from cloudify.utils import ManagerVersion, get_local_rest_certificate
 
 from cloudify_system_workflows.deployment_environment import \
-    generate_create_dep_tasks_graph
+    generate_create_dep_tasks_graph,
+    _merge_deployment_and_workflow_plugins
 
 from . import utils
 from .npm import Npm
@@ -180,6 +181,14 @@ class SnapshotRestore(object):
                     except Exception as e:
                         th_ctx.logger.exception('Failed handling deployment {}'.format(deployment_id))
                         exc[threading.current_thread().name] = e
+                        tasks_graph = self._get_uninstall_tasks_graph(blueprint)
+                        tasks_graph.execute()
+                        ctx.logger.info(
+                            'Failed creating deployment environment '
+                            'for deployment {deployment}. Creation of '
+                            'deployment environment was rolled back.'.format(
+                                deployment=deployment_id,
+                            )
                 except Queue.Empty:
                     # No more items in the queue; nothing to do.
                     break
@@ -604,6 +613,24 @@ class SnapshotRestore(object):
                 'groups': deployment['groups']
             }
         )
+
+    def _get_uninstall_tasks_graph(self, blueprint):
+        blueprint_plan = blueprint['plan']
+        graph = ctx.graph_mode()
+        sequence = graph.sequence()
+        deployment_plugins_to_install = blueprint_plan['deployment_plugins_to_install']
+        workflow_plugins_to_install = blueprint_plan['workflow_plugins_to_install']
+        dep_plugins = [p for p in deployment_plugins_to_install if p['install']]
+        wf_plugins = [p for p in workflow_plugins_to_install if p['install']]
+
+        plugins_to_install = _merge_deployment_and_workflow_plugins(dep_plugins,
+                                                                    wf_plugins)
+        if plugins_to_install:
+            sequence.add(
+                ctx.send_event('Uninstalling deployment plugins'),
+                ctx.execute_task('cloudify_agent.operations.uninstall_plugins',
+                                 kwargs={'plugins': plugins_to_install}))
+        return graph
 
     def _load_hash_salt(self):
         hash_salt = None
