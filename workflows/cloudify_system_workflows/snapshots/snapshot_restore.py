@@ -34,9 +34,9 @@ from cloudify.exceptions import NonRecoverableError
 from cloudify.constants import FILE_SERVER_SNAPSHOTS_FOLDER
 from cloudify.utils import ManagerVersion, get_local_rest_certificate
 
-from cloudify_system_workflows.deployment_environment import \
+from cloudify_system_workflows.deployment_environment import (
     generate_create_dep_tasks_graph,
-    _merge_deployment_and_workflow_plugins
+    _merge_deployment_and_workflow_plugins)
 
 from . import utils
 from .npm import Npm
@@ -143,17 +143,25 @@ class SnapshotRestore(object):
         token_info = postgres.get_deployment_creator_ids_and_tokens()
 
         dep_queue = Queue.Queue()
-        num_threads = 10
-        exc = {}
+
+        try:
+            num_threads = self._config.snapshot_restore_threads
+        except:
+            ctx.logger.info("Deployment environments thread count not configured - assuming default")
+            num_threads = 10
+
+        ctx.logger.info("Will use {} threads for deployment environments restore".format(num_threads))
+        failed_deployments = set()
+        retried_deployments = set()
 
         def _restore_env(th_ctx):
             from cloudify.state import current_workflow_ctx
             current_workflow_ctx.set(th_ctx)
-            while True:
-                try:
-                    th_ctx.logger.info('Trying to get from queue')
-                    dep_id, dep_ctx = dep_queue.get(block=False)
+            try:
+                while True:
                     try:
+                        th_ctx.logger.info('Trying to get from queue')
+                        dep_id, dep_ctx = dep_queue.get(block=False)
                         th_ctx.logger.info('Restoring deployment {dep_id}'.format(
                             dep_id=dep_id,
                         ))
@@ -171,27 +179,39 @@ class SnapshotRestore(object):
                                 dep,
                                 api_token,
                             )
-                            tasks_graph.execute()
-                            th_ctx.logger.info(
-                                'Successfully created deployment environment '
-                                'for deployment {deployment}'.format(
-                                    deployment=dep_id,
+
+                            try:
+                                tasks_graph.execute()
+                            except:
+                                th_ctx.logger.exception('Failed handling deployment {}'.format(dep_id))
+                                th_ctx.logger.info("Trying to undo restore of {}".format(dep_id))
+                                tasks_graph = self._get_uninstall_tasks_graph(blueprint)
+
+                                try:
+                                    tasks_graph.execute()
+                                except:
+                                    th_ctx.logger.exception("Failed undoing restore of {}".format(dep_id))
+                                    failed_deployments.add(dep_id)
+                                    if dep_id in retried_deployments:
+                                        retried_deployments.remove(dep_id)
+                                else:
+                                    th_ctx.logger.info(
+                                        "Successfully undid restore of {}; putting it back into the queue".format(
+                                            dep_id))
+                                    dep_queue.put((dep_id, dep_ctx))
+                                    retried_deployments.add(dep_id)
+                            else:
+                                th_ctx.logger.info(
+                                    'Successfully created deployment environment '
+                                    'for deployment {deployment}'.format(
+                                        deployment=dep_id,
+                                    )
                                 )
-                            )
-                    except Exception as e:
-                        th_ctx.logger.exception('Failed handling deployment {}'.format(deployment_id))
-                        exc[threading.current_thread().name] = e
-                        tasks_graph = self._get_uninstall_tasks_graph(blueprint)
-                        tasks_graph.execute()
-                        ctx.logger.info(
-                            'Failed creating deployment environment '
-                            'for deployment {deployment}. Creation of '
-                            'deployment environment was rolled back.'.format(
-                                deployment=deployment_id,
-                            )
-                except Queue.Empty:
-                    # No more items in the queue; nothing to do.
-                    break
+                    except Queue.Empty:
+                        # No more items in the queue; nothing to do.
+                        break
+            finally:
+                current_workflow_ctx.clear()
 
         for tenant, deployments in deps:
             ctx.logger.info(
@@ -214,8 +234,12 @@ class SnapshotRestore(object):
             for t in threads:
                 t.join()
 
-            if exc:
-                raise Exception("Failed restoring virtualenvs: {}".format(str(exc)))
+            ctx.logger.info("The following deployments were retried and eventually succeeded: {}".format(
+                retried_deployments))
+            if failed_deployments:
+                raise Exception("Some deployments failed during restore and could not recover: {}".format(
+                    failed_deployments))
+
             ctx.logger.info(
                 'Finished restoring deployment environments for '
                 '{tenant}'.format(
