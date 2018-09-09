@@ -36,7 +36,9 @@ from cloudify.state import current_workflow_ctx
 
 from cloudify_system_workflows.deployment_environment import (
     generate_create_dep_tasks_graph,
-    _merge_deployment_and_workflow_plugins)
+    _merge_deployment_and_workflow_plugins,
+    _ignore_task_on_fail_and_send_event,
+    _delete_deployment_workdir)
 
 from . import utils
 from .npm import Npm
@@ -148,7 +150,6 @@ class SnapshotRestore(object):
         ctx.logger.info("Will use {} threads for deployment environments restore".format(num_threads))
 
         failed_deployments = set()
-        retried_deployments = set()
 
         def _restore_env(th_ctx):
             current_workflow_ctx.set(th_ctx)
@@ -183,22 +184,7 @@ class SnapshotRestore(object):
                             tasks_graph.execute()
                         except:
                             th_ctx.logger.exception('Failed handling deployment {}'.format(dep_id))
-                            th_ctx.logger.info("Trying to undo restore of {}".format(dep_id))
-                            tasks_graph = self._get_uninstall_tasks_graph(blueprint)
-
-                            try:
-                                tasks_graph.execute()
-                            except:
-                                th_ctx.logger.exception("Failed undoing restore of {}".format(dep_id))
-                                failed_deployments.add(dep_id)
-                                if dep_id in retried_deployments:
-                                    retried_deployments.remove(dep_id)
-                            else:
-                                th_ctx.logger.info(
-                                    "Successfully undid restore of {}; putting it back into the queue".format(
-                                        dep_id))
-                                dep_queue.put((dep_id, dep_ctx, tenant_client, tenant))
-                                retried_deployments.add(dep_id)
+                            failed_deployments.add(dep_id)
                         else:
                             th_ctx.logger.info(
                                 'Successfully created deployment environment '
@@ -230,10 +216,8 @@ class SnapshotRestore(object):
             for t in threads:
                 t.join()
 
-            ctx.logger.info("The following deployments were retried and eventually succeeded: {}".format(
-                retried_deployments))
             if failed_deployments:
-                raise Exception("Some deployments failed during restore and could not recover: {}".format(
+                raise Exception("Some deployments failed during restore: {}".format(
                     failed_deployments))
 
             ctx.logger.info(
@@ -633,24 +617,6 @@ class SnapshotRestore(object):
                 'groups': deployment['groups']
             }
         )
-
-    def _get_uninstall_tasks_graph(self, blueprint):
-        blueprint_plan = blueprint['plan']
-        graph = ctx.graph_mode()
-        sequence = graph.sequence()
-        deployment_plugins_to_install = blueprint_plan['deployment_plugins_to_install']
-        workflow_plugins_to_install = blueprint_plan['workflow_plugins_to_install']
-        dep_plugins = [p for p in deployment_plugins_to_install if p['install']]
-        wf_plugins = [p for p in workflow_plugins_to_install if p['install']]
-
-        plugins_to_install = _merge_deployment_and_workflow_plugins(dep_plugins,
-                                                                    wf_plugins)
-        if plugins_to_install:
-            sequence.add(
-                ctx.send_event('Uninstalling deployment plugins'),
-                ctx.execute_task('cloudify_agent.operations.uninstall_plugins',
-                                 kwargs={'plugins': plugins_to_install}))
-        return graph
 
     def _load_hash_salt(self):
         hash_salt = None
