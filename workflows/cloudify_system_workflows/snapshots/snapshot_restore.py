@@ -18,8 +18,11 @@ import json
 import shutil
 import zipfile
 import platform
+import Queue
 import tempfile
+import threading
 import subprocess
+import sys
 
 import wagon
 
@@ -137,6 +140,50 @@ class SnapshotRestore(object):
     def _restore_deployment_envs(self, postgres):
         deps = utils.get_dep_contexts(self._snapshot_version)
         token_info = postgres.get_deployment_creator_ids_and_tokens()
+
+        dep_queue = Queue.Queue()
+        num_threads = 10
+        exc = {}
+
+        def _restore_env(th_ctx):
+            from cloudify.state import current_workflow_ctx
+            current_workflow_ctx.set(th_ctx)
+            while True:
+                try:
+                    th_ctx.logger.info('Trying to get from queue')
+                    dep_id, dep_ctx = dep_queue.get(block=False)
+                    try:
+                        th_ctx.logger.info('Restoring deployment {dep_id}'.format(
+                            dep_id=dep_id,
+                        ))
+                        api_token = self._get_api_token(
+                            token_info[tenant][dep_id]
+                        )
+                        with dep_ctx:
+                            dep = tenant_client.deployments.get(dep_id)
+                            blueprint = tenant_client.blueprints.get(
+                                dep_ctx.blueprint.id,
+                            )
+                            tasks_graph = self._get_tasks_graph(
+                                dep_ctx,
+                                blueprint,
+                                dep,
+                                api_token,
+                            )
+                            tasks_graph.execute()
+                            th_ctx.logger.info(
+                                'Successfully created deployment environment '
+                                'for deployment {deployment}'.format(
+                                    deployment=dep_id,
+                                )
+                            )
+                    except Exception as e:
+                        th_ctx.logger.exception('Failed handling deployment {}'.format(deployment_id))
+                        exc[threading.current_thread().name] = e
+                except Queue.Empty:
+                    # No more items in the queue; nothing to do.
+                    break
+
         for tenant, deployments in deps:
             ctx.logger.info(
                 'Restoring deployment environments for {tenant}'.format(
@@ -145,30 +192,21 @@ class SnapshotRestore(object):
             )
             tenant_client = get_rest_client(tenant=tenant)
             for deployment_id, dep_ctx in deployments.iteritems():
-                ctx.logger.info('Restoring deployment {dep_id}'.format(
-                    dep_id=deployment_id,
-                ))
-                api_token = self._get_api_token(
-                    token_info[tenant][deployment_id]
-                )
-                with dep_ctx:
-                    dep = tenant_client.deployments.get(deployment_id)
-                    blueprint = tenant_client.blueprints.get(
-                        dep_ctx.blueprint.id,
-                    )
-                    tasks_graph = self._get_tasks_graph(
-                        dep_ctx,
-                        blueprint,
-                        dep,
-                        api_token,
-                    )
-                    tasks_graph.execute()
-                    ctx.logger.info(
-                        'Successfully created deployment environment '
-                        'for deployment {deployment}'.format(
-                            deployment=deployment_id,
-                        )
-                    )
+                dep_queue.put((deployment_id, dep_ctx))
+
+            ctx.logger.info("Will create {} threads for create deployments environments".format(num_threads))
+            threads = list()
+            for i in range(num_threads):
+                t = threading.Thread(target=_restore_env, kwargs={'th_ctx': ctx._get_current_object()})
+                threads.append(t)
+                t.start()
+
+            ctx.logger.info("Threads created, waiting for them all to finish")
+            for t in threads:
+                t.join()
+
+            if exc:
+                raise Exception("Failed restoring virtualenvs: {}".format(str(exc)))
             ctx.logger.info(
                 'Finished restoring deployment environments for '
                 '{tenant}'.format(
