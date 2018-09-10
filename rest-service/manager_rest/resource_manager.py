@@ -113,7 +113,8 @@ class ResourceManager(object):
             'postgresql_password': config_instance.postgresql_password,
             'postgresql_db_name': config_instance.postgresql_db_name,
             'postgresql_host': config_instance.postgresql_host,
-            'default_tenant_name': DEFAULT_TENANT_NAME
+            'default_tenant_name': DEFAULT_TENANT_NAME,
+            'snapshot_restore_threads': config_instance.snapshot_restore_threads
         }
 
     def create_snapshot_model(self,

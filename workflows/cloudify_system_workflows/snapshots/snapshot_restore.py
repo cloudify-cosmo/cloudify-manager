@@ -144,13 +144,9 @@ class SnapshotRestore(object):
 
         dep_queue = Queue.Queue()
 
-        try:
-            num_threads = self._config.snapshot_restore_threads
-        except:
-            ctx.logger.info("Deployment environments thread count not configured - assuming default")
-            num_threads = 10
-
+        num_threads = self._config.snapshot_restore_threads
         ctx.logger.info("Will use {} threads for deployment environments restore".format(num_threads))
+
         failed_deployments = set()
         retried_deployments = set()
 
