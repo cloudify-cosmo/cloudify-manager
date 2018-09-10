@@ -22,7 +22,6 @@ import Queue
 import tempfile
 import threading
 import subprocess
-import sys
 
 import wagon
 
@@ -33,6 +32,7 @@ from cloudify.manager import get_rest_client
 from cloudify.exceptions import NonRecoverableError
 from cloudify.constants import FILE_SERVER_SNAPSHOTS_FOLDER
 from cloudify.utils import ManagerVersion, get_local_rest_certificate
+from cloudify.state import current_workflow_ctx
 
 from cloudify_system_workflows.deployment_environment import (
     generate_create_dep_tasks_graph,
@@ -155,12 +155,11 @@ class SnapshotRestore(object):
         retried_deployments = set()
 
         def _restore_env(th_ctx):
-            from cloudify.state import current_workflow_ctx
             current_workflow_ctx.set(th_ctx)
             try:
                 while True:
                     try:
-                        dep_id, dep_ctx = dep_queue.get(block=False)
+                        dep_id, dep_ctx, tenant_client, tenant = dep_queue.get(block=False)
                     except Queue.Empty:
                         # No more items in the queue; nothing to do.
                         break
@@ -202,7 +201,7 @@ class SnapshotRestore(object):
                                 th_ctx.logger.info(
                                     "Successfully undid restore of {}; putting it back into the queue".format(
                                         dep_id))
-                                dep_queue.put((dep_id, dep_ctx))
+                                dep_queue.put((dep_id, dep_ctx, tenant_client, tenant))
                                 retried_deployments.add(dep_id)
                         else:
                             th_ctx.logger.info(
@@ -222,7 +221,7 @@ class SnapshotRestore(object):
             )
             tenant_client = get_rest_client(tenant=tenant)
             for deployment_id, dep_ctx in deployments.iteritems():
-                dep_queue.put((deployment_id, dep_ctx))
+                dep_queue.put((deployment_id, dep_ctx, tenant_client, tenant))
 
             ctx.logger.info("Will create {} threads for create deployments environments".format(num_threads))
             threads = list()
