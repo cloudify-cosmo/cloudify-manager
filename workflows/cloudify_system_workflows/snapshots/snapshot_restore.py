@@ -160,56 +160,57 @@ class SnapshotRestore(object):
             try:
                 while True:
                     try:
-                        th_ctx.logger.info('Trying to get from queue')
                         dep_id, dep_ctx = dep_queue.get(block=False)
-                        th_ctx.logger.info('Restoring deployment {dep_id}'.format(
-                            dep_id=dep_id,
-                        ))
-                        api_token = self._get_api_token(
-                            token_info[tenant][dep_id]
+                    except Queue.Empty:
+                        # No more items in the queue; nothing to do.
+                        break
+
+                    th_ctx.logger.info('Trying to get from queue')
+                    th_ctx.logger.info('Restoring deployment {dep_id}'.format(
+                        dep_id=dep_id,
+                    ))
+                    api_token = self._get_api_token(
+                        token_info[tenant][dep_id]
+                    )
+                    with dep_ctx:
+                        dep = tenant_client.deployments.get(dep_id)
+                        blueprint = tenant_client.blueprints.get(
+                            dep_ctx.blueprint.id,
                         )
-                        with dep_ctx:
-                            dep = tenant_client.deployments.get(dep_id)
-                            blueprint = tenant_client.blueprints.get(
-                                dep_ctx.blueprint.id,
-                            )
-                            tasks_graph = self._get_tasks_graph(
-                                dep_ctx,
-                                blueprint,
-                                dep,
-                                api_token,
-                            )
+                        tasks_graph = self._get_tasks_graph(
+                            dep_ctx,
+                            blueprint,
+                            dep,
+                            api_token,
+                        )
+
+                        try:
+                            tasks_graph.execute()
+                        except:
+                            th_ctx.logger.exception('Failed handling deployment {}'.format(dep_id))
+                            th_ctx.logger.info("Trying to undo restore of {}".format(dep_id))
+                            tasks_graph = self._get_uninstall_tasks_graph(blueprint)
 
                             try:
                                 tasks_graph.execute()
                             except:
-                                th_ctx.logger.exception('Failed handling deployment {}'.format(dep_id))
-                                th_ctx.logger.info("Trying to undo restore of {}".format(dep_id))
-                                tasks_graph = self._get_uninstall_tasks_graph(blueprint)
-
-                                try:
-                                    tasks_graph.execute()
-                                except:
-                                    th_ctx.logger.exception("Failed undoing restore of {}".format(dep_id))
-                                    failed_deployments.add(dep_id)
-                                    if dep_id in retried_deployments:
-                                        retried_deployments.remove(dep_id)
-                                else:
-                                    th_ctx.logger.info(
-                                        "Successfully undid restore of {}; putting it back into the queue".format(
-                                            dep_id))
-                                    dep_queue.put((dep_id, dep_ctx))
-                                    retried_deployments.add(dep_id)
+                                th_ctx.logger.exception("Failed undoing restore of {}".format(dep_id))
+                                failed_deployments.add(dep_id)
+                                if dep_id in retried_deployments:
+                                    retried_deployments.remove(dep_id)
                             else:
                                 th_ctx.logger.info(
-                                    'Successfully created deployment environment '
-                                    'for deployment {deployment}'.format(
-                                        deployment=dep_id,
-                                    )
+                                    "Successfully undid restore of {}; putting it back into the queue".format(
+                                        dep_id))
+                                dep_queue.put((dep_id, dep_ctx))
+                                retried_deployments.add(dep_id)
+                        else:
+                            th_ctx.logger.info(
+                                'Successfully created deployment environment '
+                                'for deployment {deployment}'.format(
+                                    deployment=dep_id,
                                 )
-                    except Queue.Empty:
-                        # No more items in the queue; nothing to do.
-                        break
+                            )
             finally:
                 current_workflow_ctx.clear()
 
