@@ -17,7 +17,8 @@ from datetime import datetime
 from collections import namedtuple
 
 from flask import current_app, Response
-from flask_security.utils import verify_password, verify_hash
+from flask_security.utils import verify_password
+from passlib.hash import pbkdf2_sha256
 
 from . import user_handler
 from manager_rest.storage import user_datastore
@@ -159,7 +160,7 @@ class Authentication(object):
             )
         elif not user:
             raise_unauthorized_user_error('No authentication info provided')
-        elif not verify_hash(compare_data=user.password, hashed_data=data[1]):
+        elif not pbkdf2_sha256.verify(user.password, data[1]):
             raise_unauthorized_user_error(
                 'Authentication failed for {0}'.format(user)
             )
