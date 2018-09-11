@@ -34,11 +34,8 @@ from cloudify.constants import FILE_SERVER_SNAPSHOTS_FOLDER
 from cloudify.utils import ManagerVersion, get_local_rest_certificate
 from cloudify.state import current_workflow_ctx
 
-from cloudify_system_workflows.deployment_environment import (
-    generate_create_dep_tasks_graph,
-    _merge_deployment_and_workflow_plugins,
-    _ignore_task_on_fail_and_send_event,
-    _delete_deployment_workdir)
+from cloudify_system_workflows.deployment_environment import \
+    generate_create_dep_tasks_graph
 
 from . import utils
 from .npm import Npm
@@ -161,7 +158,6 @@ class SnapshotRestore(object):
                         # No more items in the queue; nothing to do.
                         break
 
-                    th_ctx.logger.info('Trying to get from queue')
                     th_ctx.logger.info('Restoring deployment {dep_id}'.format(
                         dep_id=dep_id,
                     ))
@@ -217,7 +213,7 @@ class SnapshotRestore(object):
                 t.join()
 
             if failed_deployments:
-                raise Exception("Some deployments failed during restore: {}".format(
+                raise NonRecoverableError("Some deployments failed during restore: {}".format(
                     failed_deployments))
 
             ctx.logger.info(
