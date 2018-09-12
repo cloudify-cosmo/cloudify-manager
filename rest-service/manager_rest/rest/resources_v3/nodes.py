@@ -36,7 +36,7 @@ class Nodes(v2_Nodes):
 
 
 class NodeInstancesId(v1_NodeInstancesId):
-    @authorize('node_instance_list')
+    @authorize('node_instance_get')
     @rest_decorators.evaluate_functions
     def get(self, evaluate_functions=False, *args, **kwargs):
         # We don't skip marshalling, because we want an already marshalled
