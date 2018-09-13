@@ -38,7 +38,7 @@ class Config(object):
         self.ldap_domain = None
         self.ldap_is_active_directory = True
         self.ldap_dn_extra = {}
-        self.ldap_timeout = 30.0
+        self.ldap_timeout = 5.0
         self.file_server_root = None
         self.file_server_url = None
         self.maintenance_folder = None
