@@ -1,13 +1,7 @@
 %define dbus_glib_version 0.100
 %define dbus_version 1.6
 
-# due to a bug in psycopg2's 2.7.4 build, stripping their binaries must be disabled
-%define debug_package %{nil}
-%define __strip /bin/true
-
 %global __requires_exclude LIBDBUS_1_3
-%global __requires_exclude_from site-packages/psycopg2
-%global __provides_exclude_from site-packages/psycopg2
 
 Name:           cloudify-rest-service
 Version:        %{CLOUDIFY_VERSION}
@@ -20,7 +14,7 @@ Vendor:         Cloudify Platform Ltd.
 Packager:       Cloudify Platform Ltd.
 
 BuildRequires:  python >= 2.7, python-virtualenv
-BuildRequires:  openssl-devel, openldap-devel, libffi-devel
+BuildRequires:  openssl-devel, openldap-devel, libffi-devel, postgresql-devel
 BuildRequires:  git, sudo
 BuildRequires: dbus-devel >= %{dbus_version}
 BuildRequires: dbus-glib-devel >= %{dbus_glib_version}
