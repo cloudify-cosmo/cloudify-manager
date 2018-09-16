@@ -69,7 +69,9 @@ class Status(SecuredResource):
                 job for job in jobs
                 if self._should_be_in_services_output(job)
             ]
-            if config.instance.postgresql_host != 'localhost':
+            # If PostgreSQL is not local, print it as 'remote'
+            if config.instance.postgresql_host.startswith('localhost') \
+                    or config.instance.postgresql_host.startswith('127.0.0.1'):
                 for job in jobs:
                     if job['display_name'] == 'PostgreSQL':
                         job['instances'][0]['state'] = 'remote'
