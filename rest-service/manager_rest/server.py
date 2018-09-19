@@ -20,8 +20,10 @@ import os
 import yaml
 
 from flask_restful import Api
+from jaeger_client import Config
 from flask import Flask, jsonify, Blueprint
 from flask_security import Security
+from flask_opentracing import FlaskTracer
 
 from manager_rest import config, premium_enabled
 from manager_rest.storage import db, user_datastore
@@ -87,6 +89,16 @@ class CloudifyFlaskApp(Flask):
 
         setup_resources(Api(self))
         self.register_blueprint(app_errors)
+
+        # Opentracing API obj setup
+        config = Config(
+            config={
+                'sampler': {'type': 'const', 'param': 1}
+            },
+            service_name='hello-world')
+        opentracing_tracer = config.initialize_tracer()
+        self.tracer = FlaskTracer(opentracing_tracer, True, app)
+
 
     def _set_flask_security(self):
         """Set Flask-Security specific configurations and init the extension
