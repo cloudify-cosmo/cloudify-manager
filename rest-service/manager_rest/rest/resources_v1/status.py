@@ -62,7 +62,7 @@ class Status(SecuredResource):
     @exceptions_handled
     @authorize('status_get')
     @marshal_with(responses.Status)
-    @stitch_parent_trace_span
+    # @stitch_parent_trace_span
     def get(self, **kwargs):
         """Get the status of running system services"""
         if get_services:
@@ -80,9 +80,9 @@ class Status(SecuredResource):
         else:
             jobs = ['undefined']
 
-        with opentracing.tracer.start_span(
-                'get-services', child_of=self.get.otracer_parent_span) as span:
-            span.set_tag('services', jobs)
+        # with opentracing.tracer.start_span(
+        #         'get-services', child_of=self.get.otracer_parent_span) as span:
+        #     span.set_tag('services', jobs)
         return {'status': 'running', 'services': jobs}
 
     def _should_be_in_services_output(self, job):
