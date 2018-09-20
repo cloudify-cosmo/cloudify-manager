@@ -94,7 +94,7 @@ class CloudifyFlaskApp(Flask):
         config = Config(
             config={
                 'sampler': {'type': 'const', 'param': 1},
-                'local_agent': {'local_agent_reporting_host': '172.20.0.2'}
+                'local_agent': {'local_agent_reporting_host': '172.20.0.3'}
             },
             service_name='hello-world-inside-manager')
         opentracing_tracer = config.initialize_tracer()
