@@ -13,7 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 #
-
+import opentracing
 from flask_restful_swagger import swagger
 
 from manager_rest import config
@@ -21,6 +21,7 @@ from manager_rest.rest import responses, rest_utils
 from manager_rest.rest.rest_decorators import (
     exceptions_handled,
     marshal_with,
+    stitch_parent_trace_span
 )
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
@@ -61,6 +62,7 @@ class Status(SecuredResource):
     @exceptions_handled
     @authorize('status_get')
     @marshal_with(responses.Status)
+    @stitch_parent_trace_span
     def get(self, **kwargs):
         """Get the status of running system services"""
         if get_services:
@@ -78,6 +80,9 @@ class Status(SecuredResource):
         else:
             jobs = ['undefined']
 
+        with opentracing.tracer.start_span(
+                'get-services', child_of=self.get.otracer_parent_span) as span:
+            span.set_tag('services', jobs)
         return {'status': 'running', 'services': jobs}
 
     def _should_be_in_services_output(self, job):

@@ -95,7 +95,7 @@ class CloudifyFlaskApp(Flask):
             config={
                 'sampler': {'type': 'const', 'param': 1}
             },
-            service_name='hello-world')
+            service_name='hello-world-inside-manager')
         opentracing_tracer = config.initialize_tracer()
         self.tracer = FlaskTracer(opentracing_tracer, True, app)
 

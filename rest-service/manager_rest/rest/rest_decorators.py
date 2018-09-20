@@ -213,6 +213,18 @@ class marshal_with(object):
             return self.response_class.skipped_fields.get(api_version, [])
         return []
 
+
+def stitch_parent_trace_span(f):
+    """Enables Flask Opentracing tracing.
+    """
+
+    @wraps(f)
+    def with_otracer_parent_span(*args, **kwargs):
+        f.otracer_parent_span = current_app.tracer.get_span()
+        f(*args, **kwargs)
+
+    return with_otracer_parent_span
+
 # endregion
 
 
