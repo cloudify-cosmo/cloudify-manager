@@ -98,7 +98,7 @@ class CloudifyFlaskApp(Flask):
             },
             service_name='hello-world-inside-manager')
         opentracing_tracer = tracer_config.initialize_tracer()
-        self.tracer = FlaskTracer(opentracing_tracer, True, app)
+        self.tracer = FlaskTracer(opentracing_tracer, True, self)
 
 
     def _set_flask_security(self):
