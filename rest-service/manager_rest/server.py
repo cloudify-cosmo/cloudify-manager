@@ -91,14 +91,14 @@ class CloudifyFlaskApp(Flask):
         self.register_blueprint(app_errors)
 
         # Opentracing API obj setup
-        # config = Config(
-        #     config={
-        #         'sampler': {'type': 'const', 'param': 1},
-        #         'local_agent': {'local_agent_reporting_host': '172.20.0.3'}
-        #     },
-        #     service_name='hello-world-inside-manager')
-        # opentracing_tracer = config.initialize_tracer()
-        # self.tracer = FlaskTracer(opentracing_tracer, True, app)
+        config = Config(
+            config={
+                'sampler': {'type': 'const', 'param': 1},
+                'local_agent': {'local_agent_reporting_host': '172.20.0.3'}
+            },
+            service_name='hello-world-inside-manager')
+        opentracing_tracer = config.initialize_tracer()
+        self.tracer = FlaskTracer(opentracing_tracer, True, app)
 
 
     def _set_flask_security(self):
