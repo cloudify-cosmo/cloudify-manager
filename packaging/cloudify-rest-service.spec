@@ -23,7 +23,7 @@ BuildRequires: python-devel
 Requires:       python >= 2.7, postgresql-libs, nginx >= 1.12, sudo, dbus >= 1.6
 Requires(pre):  shadow-utils
 
-%define _diamond_version 1.3.14
+%define _diamond-plugin 1.3.15
 Source0:  http://www.getcloudify.org/spec/diamond-plugin/1.3.15/plugin.yaml
 
 
@@ -77,7 +77,7 @@ types_yaml="${specs}/cloudify/4.5/types.yaml"
 mkdir -p $(dirname "$types_yaml")
 cp "${RPM_SOURCE_DIR}/resources/rest-service/cloudify/types/types.yaml" "$types_yaml"
 
-diamond_yaml="${specs}/diamond-plugin/%{_diamond_version}/plugin.yaml"
+diamond_yaml="${specs}/diamond-plugin/%{_diamond-plugin}/plugin.yaml"
 mkdir -p $(dirname "$diamond_yaml")
 cp "%{S:0}" "$diamond_yaml"
 
