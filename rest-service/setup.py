@@ -39,7 +39,8 @@ install_requires = [
     'psycopg2==2.7.4',
     'pytz==2018.4',
     'jaeger-client==3.11.0',
-    'Flask-OpenTracing==0.2.0'
+    'Flask-OpenTracing==0.2.0',
+    'opentracing_instrumentation==2.4.3'
 ]
 
 

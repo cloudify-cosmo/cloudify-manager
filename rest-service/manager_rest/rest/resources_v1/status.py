@@ -15,7 +15,8 @@
 #
 import opentracing
 from flask_restful_swagger import swagger
-from flask import current_app
+from opentracing_instrumentation.request_context import get_current_span, \
+    span_in_context
 
 from manager_rest import config
 from manager_rest.rest import responses, rest_utils
@@ -65,17 +66,18 @@ class Status(SecuredResource):
     def get(self, **kwargs):
         """Get the status of running system services"""
         with opentracing.tracer.start_span(
-                'get-services',
-                child_of=current_app.tracer.get_span()) as span:
+                'get',
+                child_of=get_current_span()) as span:
             if get_services:
-                jobs = get_services(self._get_systemd_manager_services())
-                jobs = [
-                    job for job in jobs
-                    if self._should_be_in_services_output(job)
-                ]
+                with span_in_context(span):
+                    jobs = get_services(self._get_systemd_manager_services())
+                    jobs = [
+                        job for job in jobs
+                        if self._should_be_in_services_output(job)
+                    ]
                 # If PostgreSQL is not local, print it as 'remote'
-                if not config.instance.postgresql_host.startswith(('localhost',
-                                                                   '127.0.0.1')):
+                if not config.instance.postgresql_host.startswith(
+                        ('localhost', '127.0.0.1')):
                     for job in jobs:
                         if job['display_name'] == 'PostgreSQL':
                             job['instances'][0]['state'] = 'remote'
