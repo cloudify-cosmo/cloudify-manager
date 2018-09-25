@@ -24,6 +24,7 @@ import StringIO
 import tempfile
 import platform
 import traceback
+from functools import wraps
 from datetime import datetime
 from os import path, makedirs
 from base64 import urlsafe_b64encode
@@ -33,6 +34,8 @@ from flask import g
 from flask_restful import abort
 from flask_security import current_user
 from werkzeug.local import LocalProxy
+from opentracing_instrumentation.request_context import get_current_span, \
+    span_in_context
 
 from cloudify import logs
 from cloudify.amqp_client import create_events_publisher
@@ -275,3 +278,32 @@ def send_event(event, message_type):
 
     events_publisher.publish_message(event, message_type)
     events_publisher.close()
+
+
+class WithFlaskTracing(object):
+    """Wrapper class for Flask operation call tracing.
+    This class must live iff the following two conditions apply:
+        1. One of the upper call stack consists of a Flask operation call
+            (e.g. inside a 'get' operation).
+        2. One of the parent calls must be done inside a
+            'with span_in_context(span)' scope (otherwise you'd get a
+            parentless span).
+    """
+
+    def __init__(self, other_cls, *args, **kwargs):
+        self.other = other_cls(*args, **kwargs)
+
+    def __getattribute__(self, attr):
+        other_attr = self.other.__getattribute__(attr)
+        if callable(other_attr):
+            @wraps(other_attr)
+            def with_tracing(*args, **kwargs):
+                with span_in_context(get_current_span()):
+                    r = other_attr(*args, **kwargs)
+                if r == self.other:
+                    return self
+                return r
+
+            return with_tracing
+        else:
+            return other_attr
