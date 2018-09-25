@@ -15,13 +15,13 @@
 #
 import opentracing
 from flask_restful_swagger import swagger
+from flask import current_app
 
 from manager_rest import config
 from manager_rest.rest import responses, rest_utils
 from manager_rest.rest.rest_decorators import (
     exceptions_handled,
-    marshal_with,
-    stitch_parent_trace_span
+    marshal_with
 )
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
@@ -81,7 +81,8 @@ class Status(SecuredResource):
             jobs = ['undefined']
 
         with opentracing.tracer.start_span(
-                'get-services', child_of=self.get.otracer_parent_span) as span:
+                'get-services',
+                child_of=current_app.tracer.get_span()) as span:
             span.set_tag('services', jobs)
         return {'status': 'running', 'services': jobs}
 

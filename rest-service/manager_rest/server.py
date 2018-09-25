@@ -99,10 +99,10 @@ class CloudifyFlaskApp(Flask):
         tracer_config = Config(
             config={
                 'sampler': {'type': 'const', 'param': 1},
-                'local_agent': {'reporting_host': '172.20.0.3'},
+                'local_agent': {'reporting_host': '172.20.0.2'},
                 'logging': True
             },
-            service_name='hello-world-inside-manager')
+            service_name='cloudify-manager')
         self.logger.debug("Initializing Jaeger tracer...")
         opentracing_tracer = tracer_config.initialize_tracer()
         self.logger.debug("Done initializing Jaeger tracer.")
