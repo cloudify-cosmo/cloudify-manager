@@ -62,7 +62,6 @@ class Status(SecuredResource):
     @exceptions_handled
     @authorize('status_get')
     @marshal_with(responses.Status)
-    @stitch_parent_trace_span
     def get(self, **kwargs):
         """Get the status of running system services"""
         if get_services:
