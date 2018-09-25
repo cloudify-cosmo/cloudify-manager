@@ -122,10 +122,12 @@ class EvaluatedFunctions(object):
 class Tokens(object):
 
     resource_fields = {
+        'username': fields.String,
         'value': fields.String,
         'role': fields.String
     }
 
     def __init__(self, **kwargs):
+        self.username = kwargs.get('username')
         self.value = kwargs.get('value')
         self.role = kwargs.get('role')
