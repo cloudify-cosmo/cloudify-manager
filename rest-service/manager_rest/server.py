@@ -90,16 +90,23 @@ class CloudifyFlaskApp(Flask):
         setup_resources(Api(self))
         self.register_blueprint(app_errors)
 
+        self.before_first_request(self._init_jeager_tracer)
+
+    def _init_jeager_tracer(self):
+        """Initializes the Jaeger tracer.
+        """
         # Opentracing API obj setup
         tracer_config = Config(
             config={
                 'sampler': {'type': 'const', 'param': 1},
-                'local_agent': {'local_agent_reporting_host': '172.20.0.2'}
+                'local_agent': {'reporting_host': '172.20.0.3'},
+                'logging': True
             },
             service_name='hello-world-inside-manager')
+        self.logger.debug("Initializing Jaeger tracer...")
         opentracing_tracer = tracer_config.initialize_tracer()
+        self.logger.debug("Done initializing Jaeger tracer.")
         self.tracer = FlaskTracer(opentracing_tracer, True, self)
-
 
     def _set_flask_security(self):
         """Set Flask-Security specific configurations and init the extension
