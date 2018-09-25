@@ -169,11 +169,12 @@ class LdapAuthentication(SecuredResource):
             raise MethodNotAllowedError('LDAP is only supported in the '
                                         'Cloudify premium edition.')
         ldap_config = rest_utils.get_json_and_verify_params({
-            'ldap_server',
-            'ldap_username',
-            'ldap_password',
-            'ldap_domain',
-            'ldap_is_active_directory',
-            'ldap_dn_extra'
+            'ldap_server': {},
+            'ldap_username': {},
+            'ldap_password': {},
+            'ldap_domain': {},
+            'ldap_ou': {'optional': True},
+            'ldap_is_active_directory': {},
+            'ldap_dn_extra': {}
         })
         return ldap_config

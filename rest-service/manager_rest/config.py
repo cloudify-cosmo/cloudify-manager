@@ -36,6 +36,7 @@ class Config(object):
         self.ldap_username = None
         self.ldap_password = None
         self.ldap_domain = None
+        self.ldap_ou = None
         self.ldap_is_active_directory = True
         self.ldap_dn_extra = {}
         self.ldap_timeout = 5.0
