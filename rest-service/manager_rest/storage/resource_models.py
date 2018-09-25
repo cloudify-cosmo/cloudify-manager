@@ -278,7 +278,7 @@ class Event(SQLResourceBase):
     node_id = db.Column(db.Text)
     error_causes = db.Column(JSONString)
 
-    _execution_fk = foreign_key(Execution._storage_id)
+    _execution_fk = foreign_key(Execution._storage_id, index=True)
 
     @declared_attr
     def execution(cls):
@@ -311,7 +311,7 @@ class Log(SQLResourceBase):
     operation = db.Column(db.Text)
     node_id = db.Column(db.Text)
 
-    _execution_fk = foreign_key(Execution._storage_id)
+    _execution_fk = foreign_key(Execution._storage_id, index=True)
 
     @declared_attr
     def execution(cls):

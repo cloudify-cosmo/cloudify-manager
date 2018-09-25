@@ -27,6 +27,17 @@ def upgrade():
     # Add new execution status
     op.execute("alter type execution_status add value 'queued'")
 
+    op.create_index(
+        op.f('events__execution_fk_idx'),
+        'events',
+        ['_execution_fk'],
+        unique=False)
+    op.create_index(
+        op.f('logs__execution_fk_idx'),
+        'logs',
+        ['_execution_fk'],
+        unique=False)
+
 
 def downgrade():
     op.drop_column('executions', 'started_at')
@@ -67,3 +78,6 @@ def downgrade():
 
     # remove the old type
     op.execute("DROP TYPE execution_status_old;")
+
+    op.drop_index(op.f('logs__execution_fk_idx'), table_name='logs')
+    op.drop_index(op.f('events__execution_fk_idx'), table_name='events')
