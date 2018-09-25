@@ -30,6 +30,7 @@ from os import path, makedirs
 from base64 import urlsafe_b64encode
 
 import wagon
+import opentracing
 from flask import g
 from flask_restful import abort
 from flask_security import current_user
@@ -282,12 +283,9 @@ def send_event(event, message_type):
 
 class WithFlaskTracing(object):
     """Wrapper class for Flask operation call tracing.
-    This class must live iff the following two conditions apply:
-        1. One of the upper call stack consists of a Flask operation call
-            (e.g. inside a 'get' operation).
-        2. One of the parent calls must be done inside a
-            'with span_in_context(span)' scope (otherwise you'd get a
-            parentless span).
+    This class must live iff the following condition apply. One of the parent
+    calls must be done inside a 'with span_in_context(span)' scope (otherwise
+    you'd get a parentless span).
     """
 
     def __init__(self, other_cls, *args, **kwargs):
@@ -298,8 +296,12 @@ class WithFlaskTracing(object):
         if callable(other_attr):
             @wraps(other_attr)
             def with_tracing(*args, **kwargs):
-                with span_in_context(get_current_span()):
-                    r = other_attr(*args, **kwargs)
+                root_span = get_current_span()
+                with opentracing.tracer.start_span(
+                        other_attr.__name__,
+                        child_of=root_span) as span:
+                    with span_in_context(span):
+                        r = other_attr(*args, **kwargs)
                 if r == self.other:
                     return self
                 return r
