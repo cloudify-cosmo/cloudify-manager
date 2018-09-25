@@ -64,24 +64,23 @@ class Status(SecuredResource):
     @marshal_with(responses.Status)
     def get(self, **kwargs):
         """Get the status of running system services"""
-        if get_services:
-            jobs = get_services(self._get_systemd_manager_services())
-            jobs = [
-                job for job in jobs
-                if self._should_be_in_services_output(job)
-            ]
-            # If PostgreSQL is not local, print it as 'remote'
-            if not config.instance.postgresql_host.startswith(('localhost',
-                                                               '127.0.0.1')):
-                for job in jobs:
-                    if job['display_name'] == 'PostgreSQL':
-                        job['instances'][0]['state'] = 'remote'
-        else:
-            jobs = ['undefined']
-
         with opentracing.tracer.start_span(
                 'get-services',
                 child_of=current_app.tracer.get_span()) as span:
+            if get_services:
+                jobs = get_services(self._get_systemd_manager_services())
+                jobs = [
+                    job for job in jobs
+                    if self._should_be_in_services_output(job)
+                ]
+                # If PostgreSQL is not local, print it as 'remote'
+                if not config.instance.postgresql_host.startswith(('localhost',
+                                                                   '127.0.0.1')):
+                    for job in jobs:
+                        if job['display_name'] == 'PostgreSQL':
+                            job['instances'][0]['state'] = 'remote'
+            else:
+                jobs = ['undefined']
             span.set_tag('services', jobs)
         return {'status': 'running', 'services': jobs}
 
