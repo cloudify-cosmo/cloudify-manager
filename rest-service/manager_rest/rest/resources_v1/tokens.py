@@ -58,4 +58,4 @@ class Tokens(SecuredResource):
         but supports authenticating via saml-response in the body
         """
         token = current_user.get_auth_token()
-        return dict(value=token, role=current_user.role)
+        return dict(username=current_user.username, value=token, role=current_user.role)
