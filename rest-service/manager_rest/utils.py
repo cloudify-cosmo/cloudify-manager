@@ -24,6 +24,7 @@ import StringIO
 import tempfile
 import platform
 import traceback
+from functools import wraps
 from datetime import datetime
 from os import path, makedirs
 from base64 import urlsafe_b64encode
@@ -280,41 +281,27 @@ def send_event(event, message_type):
     events_publisher.close()
 
 
-class WithFlaskTracing(object):
-    """Wrapper class for Flask operation call tracing.
-    This class must live iff the following condition apply. One of the parent
-    calls must be done inside a 'with span_in_context(span)' scope (otherwise
-    you'd get a parentless span).
+def enable_tracing(other_cls):
+    """Wrapper function for Flask operation call tracing.
+    This functino wraps all the functions of the given class with a tracing
+    enabled function. Make sure to call the class's functions only withing a
+    `with span_in_context(span)` call.
+
+    :param other_cls: other class to wrap it's methods.
     """
 
-    def __init__(self, other_cls, *args, **kwargs):
-        self.other = other_cls(*args, **kwargs)
-        self.other_cls = other_cls
+    def decorator(f, name):
+        @wraps(f)
+        def with_tracing_wrapper(*args, **kwargs):
+            root_span = get_current_span()
+            with opentracing.tracer.start_span(
+                    name, child_of=root_span) as span:
+                with span_in_context(span):
+                    return f(*args, **kwargs)
 
-    def __getattr__(self, attr):
-        other_attr = self.other.__getattribute__(attr)
-        if callable(other_attr):
-            other_attr = self.other_cls.__getattribute__(self.other_cls, attr)
+        return with_tracing_wrapper
 
-            def with_tracing(*args, **kwargs):
-                root_span = get_current_span()
-                name = getattr(other_attr, '__name__', None)
-                static = False
-                if not name:
-                    static = True
-                    name = other_attr.__func__.__name__
-                with opentracing.tracer.start_span(
-                        name,
-                        child_of=root_span) as span:
-                    with span_in_context(span):
-                        if static:
-                            r = other_attr.__func__(*args, **kwargs)
-                        else:
-                            r = other_attr(self, *args, **kwargs)
-                if r == self.other:
-                    return self
-                return r
-
-            return with_tracing
-        else:
-            return other_attr
+    for attr in other_cls.__dict__.keys():
+        if callable(getattr(other_cls, attr)):
+            setattr(other_cls, attr, decorator(getattr(other_cls, attr), attr))
+    return other_cls

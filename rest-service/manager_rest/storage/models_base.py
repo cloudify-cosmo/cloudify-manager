@@ -25,10 +25,10 @@ from sqlalchemy.ext.associationproxy import ASSOCIATION_PROXY
 from sqlalchemy.ext.hybrid import HYBRID_PROPERTY
 from sqlalchemy.orm.interfaces import NOT_EXTENSION
 
-from manager_rest.utils import classproperty
+from manager_rest.utils import classproperty, enable_tracing
 
 
-db = SQLAlchemy(metadata=MetaData(naming_convention={
+db = enable_tracing(SQLAlchemy)(metadata=MetaData(naming_convention={
     # This is to generate migration scripts with constraint names
     # using the same naming convention used by PostgreSQL by default
     # http://stackoverflow.com/a/4108266/183066

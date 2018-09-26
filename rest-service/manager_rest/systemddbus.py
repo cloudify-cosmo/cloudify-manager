@@ -1,5 +1,5 @@
 import dbus
-from manager_rest.utils import WithFlaskTracing
+from manager_rest.utils import enable_tracing
 
 SYSTEMD_BUS = 'org.freedesktop.systemd1'
 SYSTEMD_PATH = '/org/freedesktop/systemd1'
@@ -47,7 +47,7 @@ class DBusClient(object):
 
 def get_services(units):
     out = []
-    client = WithFlaskTracing(DBusClient)
+    client = enable_tracing(DBusClient)()
     for unit_id, display_name in units.iteritems():
         service = {}
         service['display_name'] = display_name
