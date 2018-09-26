@@ -13,8 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 #
-import opentracing
-from flask import current_app
 from flask_restful_swagger import swagger
 from opentracing_instrumentation.request_context import get_current_span, \
     span_in_context
