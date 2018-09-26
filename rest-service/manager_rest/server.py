@@ -176,7 +176,8 @@ class CloudifyFlaskApp(Flask):
         """Wraps up the super 'dispatch_request' func to enable easier tracing.
         """
         request = stack.top.request
-        operation_name = request.endpoint
+        operation_name = '{} ({})'.format(str(request.endpoint),
+                                          str(request.method))
         headers = {}
         for k, v in request.headers:
             headers[k.lower()] = v
