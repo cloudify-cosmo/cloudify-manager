@@ -25,7 +25,8 @@ from sqlalchemy.orm.attributes import flag_modified
 from manager_rest.storage.models_base import db
 from manager_rest import manager_exceptions, config, utils
 from manager_rest.storage.models_states import VisibilityState
-from manager_rest.utils import all_tenants_authorization, is_administrator
+from manager_rest.utils import all_tenants_authorization, is_administrator, \
+    WithFlaskTracing
 
 try:
     from psycopg2 import DatabaseError as Psycopg2DBError
@@ -610,7 +611,7 @@ def get_storage_manager():
     """Get the current Flask app's storage manager, create if necessary
     """
     return current_app.config.setdefault('storage_manager',
-                                         SQLStorageManager())
+                                         WithFlaskTracing(SQLStorageManager))
 
 
 class ListResult(object):
