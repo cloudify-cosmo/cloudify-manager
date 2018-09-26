@@ -23,7 +23,6 @@ import opentracing
 from flask_restful import Api
 from jaeger_client import Config
 from flask_security import Security
-from flask_opentracing import FlaskTracer
 from flask import Flask, jsonify, Blueprint
 from flask import _request_ctx_stack as stack
 from opentracing_instrumentation.request_context import span_in_context
@@ -109,7 +108,6 @@ class CloudifyFlaskApp(Flask):
         self.logger.debug("Initializing Jaeger tracer...")
         self.tracer = tracer_config.initialize_tracer()
         self.logger.debug("Done initializing Jaeger tracer.")
-        # self.tracer = FlaskTracer(opentracing_tracer, True, self)
 
     def _set_flask_security(self):
         """Set Flask-Security specific configurations and init the extension
