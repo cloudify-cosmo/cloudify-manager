@@ -24,7 +24,6 @@ import StringIO
 import tempfile
 import platform
 import traceback
-from functools import wraps
 from datetime import datetime
 from os import path, makedirs
 from base64 import urlsafe_b64encode
