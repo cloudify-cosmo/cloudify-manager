@@ -290,18 +290,20 @@ class WithFlaskTracing(object):
 
     def __init__(self, other_cls, *args, **kwargs):
         self.other = other_cls(*args, **kwargs)
+        self.other_cls = other_cls
 
-    def __getattribute__(self, attr):
+    def __getattr__(self, attr):
         other_attr = self.other.__getattribute__(attr)
         if callable(other_attr):
-            @wraps(other_attr)
+            other_attr = self.other_cls.__getattribute__(self.other_cls, attr)
+
             def with_tracing(*args, **kwargs):
                 root_span = get_current_span()
                 with opentracing.tracer.start_span(
                         other_attr.__name__,
                         child_of=root_span) as span:
                     with span_in_context(span):
-                        r = other_attr(*args, **kwargs)
+                        r = other_attr(self, *args, **kwargs)
                 if r == self.other:
                     return self
                 return r
