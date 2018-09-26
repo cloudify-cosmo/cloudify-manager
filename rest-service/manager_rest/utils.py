@@ -298,11 +298,19 @@ class WithFlaskTracing(object):
 
             def with_tracing(*args, **kwargs):
                 root_span = get_current_span()
+                name = getattr(other_attr, '__name__', None)
+                static = False
+                if not name:
+                    static = True
+                    name = other_attr.__func__.__name__
                 with opentracing.tracer.start_span(
-                        other_attr.__name__,
+                        name,
                         child_of=root_span) as span:
                     with span_in_context(span):
-                        r = other_attr(self, *args, **kwargs)
+                        if static:
+                            r = other_attr.__func__(*args, **kwargs)
+                        else:
+                            r = other_attr(self, *args, **kwargs)
                 if r == self.other:
                     return self
                 return r
