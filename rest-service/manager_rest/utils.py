@@ -281,27 +281,20 @@ def send_event(event, message_type):
     events_publisher.close()
 
 
-def enable_tracing(other_cls):
-    """Wrapper function for Flask operation call tracing.
-    This functino wraps all the functions of the given class with a tracing
-    enabled function. Make sure to call the class's functions only withing a
-    `with span_in_context(span)` call.
-
-    :param other_cls: other class to wrap it's methods.
+class WithFlaskTracing(object):
+    """Wrapper class for Flask operation call tracing.
+    This class must live iff the following condition apply. One of the parent
+    calls must be done inside a 'with span_in_context(span)' scope (otherwise
+    you'd get a parentless span).
     """
 
-    def decorator(f, name):
-        @wraps(f)
-        def with_tracing_wrapper(*args, **kwargs):
-            root_span = get_current_span()
-            with opentracing.tracer.start_span(
-                    name, child_of=root_span) as span:
-                with span_in_context(span):
-                    return f(*args, **kwargs)
+    def __init__(self, other):
+        self.other = other
 
-        return with_tracing_wrapper
-
-    for attr in other_cls.__dict__.keys():
-        if callable(getattr(other_cls, attr)):
-            setattr(other_cls, attr, decorator(getattr(other_cls, attr), attr))
-    return other_cls
+    def __getattr__(self, attr):
+        root_span = get_current_span()
+        with opentracing.tracer.start_span(
+                attr,
+                child_of=root_span) as span:
+            with span_in_context(span):
+                return getattr(self.other, attr)

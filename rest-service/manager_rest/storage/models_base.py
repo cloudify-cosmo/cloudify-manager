@@ -25,10 +25,10 @@ from sqlalchemy.ext.associationproxy import ASSOCIATION_PROXY
 from sqlalchemy.ext.hybrid import HYBRID_PROPERTY
 from sqlalchemy.orm.interfaces import NOT_EXTENSION
 
-from manager_rest.utils import classproperty, enable_tracing
+from manager_rest.utils import classproperty, WithFlaskTracing
 
 
-db = enable_tracing(SQLAlchemy)(metadata=MetaData(naming_convention={
+db = WithFlaskTracing(SQLAlchemy(metadata=MetaData(naming_convention={
     # This is to generate migration scripts with constraint names
     # using the same naming convention used by PostgreSQL by default
     # http://stackoverflow.com/a/4108266/183066
@@ -37,7 +37,7 @@ db = enable_tracing(SQLAlchemy)(metadata=MetaData(naming_convention={
     'ck': '%(table_name)s_%(column_0_name)s_check',
     'fk': '%(table_name)s_%(column_0_name)s_fkey',
     'pk': '%(table_name)s_pkey',
-}))
+})))
 
 
 class UTCDateTime(db.TypeDecorator):
