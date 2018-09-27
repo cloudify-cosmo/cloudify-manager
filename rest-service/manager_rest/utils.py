@@ -281,20 +281,19 @@ def send_event(event, message_type):
     events_publisher.close()
 
 
-class WithFlaskTracing(object):
-    """Wrapper class for Flask operation call tracing.
-    This class must live iff the following condition apply. One of the parent
-    calls must be done inside a 'with span_in_context(span)' scope (otherwise
-    you'd get a parentless span).
+def with_tracing(f):
+    """Wrapper function for Flask operation call tracing.
+    This decorator must be activate iff the following condition apply. One of
+    the parent calls must be done inside a 'with span_in_context(span)' scope
+    (otherwise you'd get a parentless span).
     """
 
-    def __init__(self, other):
-        self.other = other
-
-    def __getattr__(self, attr):
+    @wraps(f)
+    def with_tracing_wrapper(*args, **kwargs):
         root_span = get_current_span()
         with opentracing.tracer.start_span(
-                attr,
+                f.__name__,
                 child_of=root_span) as span:
             with span_in_context(span):
-                return getattr(self.other, attr)
+                return f(*args, **kwargs)
+    return with_tracing_wrapper

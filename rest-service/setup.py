@@ -40,7 +40,8 @@ install_requires = [
     'pytz==2018.4',
     'opentracing==1.3.0',
     'opentracing_instrumentation==2.4.3',
-    'jaeger-client==3.11.0'
+    'jaeger-client==3.11.0',
+    'sqlalchemy_opentracing'
 ]
 
 
