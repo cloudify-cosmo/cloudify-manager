@@ -37,7 +37,8 @@ install_requires = [
     'pika==0.11.2',
     'cryptography==2.1.4',
     'psycopg2==2.7.4',
-    'pytz==2018.4'
+    'pytz==2018.4',
+    'click==6.7'
 ]
 
 
