@@ -14,13 +14,17 @@
 #  * limitations under the License.
 
 import psutil
+import opentracing
 from collections import OrderedDict
+from sqlalchemy.event import listen
+from sqlalchemy.engine import Engine
 from flask_security import current_user
 from sqlalchemy import or_ as sql_or, func
 from sqlalchemy.exc import SQLAlchemyError
 from flask import current_app, has_request_context
 from sqlite3 import DatabaseError as SQLiteDBError
 from sqlalchemy.orm.attributes import flag_modified
+from opentracing_instrumentation.request_context import get_current_span
 
 from manager_rest.storage.models_base import db
 from manager_rest import manager_exceptions, config, utils
@@ -37,6 +41,10 @@ except ImportError:
 
 
 class SQLStorageManager(object):
+    @with_tracing
+    def __init__(self):
+        self._enable_tracing()
+
     @staticmethod
     @with_tracing
     def _safe_commit():
@@ -636,6 +644,12 @@ class SQLStorageManager(object):
         self._load_relationships(instance)
         return instance
 
+    @with_tracing
+    def _enable_tracing(self):
+        """Enable tracing for all SQLAlchemy engines.
+        """
+        SQLAlchemyTracingHelper.enable_tracing_for_all_engines()
+
 @with_tracing
 def get_storage_manager():
     """Get the current Flask app's storage manager, create if necessary
@@ -660,3 +674,91 @@ class ListResult(object):
 
     def __getitem__(self, item):
         return self.items[item]
+
+
+class SQLAlchemyTracingHelper(object):
+    @staticmethod
+    def enable_tracing_for_all_engines():
+        listen(Engine, 'before_cursor_execute',
+               SQLAlchemyTracingHelper._engine_before_cursor_handler)
+        listen(Engine, 'after_cursor_execute',
+               SQLAlchemyTracingHelper._engine_after_cursor_handler)
+        listen(Engine, 'handle_error',
+               SQLAlchemyTracingHelper._engine_error_handler)
+
+    @staticmethod
+    def _clear_traced(obj):
+        '''
+        Clear an object's decorated tracing fields,
+        to prevent unintended further tracing.
+        '''
+        if hasattr(obj, '_parent_span'):
+            del obj._parent_span
+        if hasattr(obj, '_traced'):
+            del obj._traced
+
+    @staticmethod
+    def _normalize_stmt(statement):
+        return statement.strip().replace('\n', '').replace('\t', '')
+
+    @staticmethod
+    def _engine_before_cursor_handler(conn, cursor,
+                                      statement, parameters,
+                                      context, executemany):
+        stmt_obj = None
+        if context.compiled is not None:
+            stmt_obj = context.compiled.statement
+
+        # Don't trace PRAGMA statements coming from SQLite
+        if stmt_obj is None and statement.startswith('PRAGMA'):
+            return
+
+        # Start a new span for this query.
+        name = SQLAlchemyTracingHelper._get_operation_name(stmt_obj)
+        span = opentracing.tracer.start_span(
+            operation_name=name, child_of=get_current_span())
+        span.set_tag('component', 'sqlalchemy')
+        span.set_tag('db.type', 'sql')
+        span.set_tag('db.statement',
+                     SQLAlchemyTracingHelper._normalize_stmt(statement))
+        span.set_tag('sqlalchemy.dialect', context.dialect.name)
+
+        context._span = span
+
+    @staticmethod
+    def _engine_after_cursor_handler(conn, cursor,
+                                     statement, parameters,
+                                     context, executemany):
+        span = getattr(context, '_span', None)
+        if span is None:
+            return
+
+        span.finish()
+
+        if context.compiled is not None:
+            SQLAlchemyTracingHelper._clear_traced(context.compiled.statement)
+
+    @staticmethod
+    def _engine_error_handler(exception_context):
+        execution_context = exception_context.execution_context
+        span = getattr(execution_context, '_span', None)
+        if span is None:
+            return
+
+        exc = exception_context.original_exception
+        span.set_tag('sqlalchemy.exception', str(exc))
+        span.set_tag('error', 'true')
+        span.finish()
+
+        if execution_context.compiled is not None:
+            SQLAlchemyTracingHelper._clear_traced(
+                execution_context.compiled.statement)
+
+    @staticmethod
+    def _get_operation_name(stmt_obj):
+        if stmt_obj is None:
+            # Match what the ORM shows when raw SQL
+            # statements are invoked.
+            return 'textclause'
+
+        return stmt_obj.__visit_name__
