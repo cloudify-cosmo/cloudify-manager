@@ -30,8 +30,7 @@ from os import path, makedirs
 from base64 import urlsafe_b64encode
 
 import wagon
-import opentracing
-from flask import g
+from flask import g, current_app
 from flask_restful import abort
 from flask_security import current_user
 from werkzeug.local import LocalProxy
@@ -281,19 +280,29 @@ def send_event(event, message_type):
     events_publisher.close()
 
 
-def with_tracing(f):
+def with_tracing(func_name=None):
     """Wrapper function for Flask operation call tracing.
     This decorator must be activate iff the following condition apply. One of
     the parent calls must be done inside a 'with span_in_context(span)' scope
     (otherwise you'd get a parentless span).
+
+    :param name: name to display in tracing
     """
 
-    @wraps(f)
-    def with_tracing_wrapper(*args, **kwargs):
-        root_span = get_current_span()
-        with opentracing.tracer.start_span(
-                f.__name__,
-                child_of=root_span) as span:
-            with span_in_context(span):
-                return f(*args, **kwargs)
-    return with_tracing_wrapper
+    def decorator(f):
+        name = func_name
+        if func_name is None:
+            name = f.__name__
+
+        @wraps(f)
+        def with_tracing_wrapper(*args, **kwargs):
+            root_span = get_current_span()
+            with current_app.tracer.start_span(
+                    name,
+                    child_of=root_span) as span:
+                with span_in_context(span):
+                    return f(*args, **kwargs)
+
+        return with_tracing_wrapper
+
+    return decorator

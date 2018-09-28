@@ -13,13 +13,13 @@ UNIT_PROPERTIES = ['Id', 'Description', 'LoadState', 'ActiveState',
 
 
 class DBusClient(object):
-    @with_tracing
+    @with_tracing()
     def __init__(self):
         self.bus = dbus.SystemBus()
         self.proxy = self.bus.get_object(SYSTEMD_BUS, SYSTEMD_PATH)
         self.interface = dbus.Interface(self.proxy, MANAGER_IFACE)
 
-    @with_tracing
+    @with_tracing()
     def get_properties(self, name, prop_names, property_interface):
         objpath = self.interface.GetUnit(name)
         proxy = self.bus.get_object(SYSTEMD_BUS, objpath)
@@ -35,19 +35,19 @@ class DBusClient(object):
             properties = tmp_properties
         return properties
 
-    @with_tracing
+    @with_tracing()
     def get_unit_properties(self, unit_name, property_names=None):
         if property_names is None:
             property_names = UNIT_PROPERTIES
         return self.get_properties(unit_name, property_names, UNIT_IFACE)
 
-    @with_tracing
+    @with_tracing()
     def get_service_properties(self, unit_name, property_names=None):
         if property_names is None:
             property_names = SVC_PROPERTIES
         return self.get_properties(unit_name, property_names, SVC_IFACE)
 
-@with_tracing
+@with_tracing()
 def get_services(units):
     out = []
     client = DBusClient()

@@ -19,6 +19,7 @@ def authorize(action,
               allow_all_tenants=False):
     def authorize_dec(func):
         @wraps(func)
+        @utils.with_tracing('authorize')
         def wrapper(*args, **kwargs):
 
             # getting the tenant name
