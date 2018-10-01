@@ -25,7 +25,7 @@ from sqlalchemy.ext.associationproxy import ASSOCIATION_PROXY
 from sqlalchemy.ext.hybrid import HYBRID_PROPERTY
 from sqlalchemy.orm.interfaces import NOT_EXTENSION
 
-from manager_rest.utils import classproperty
+from manager_rest.utils import classproperty, with_tracing
 
 
 db = SQLAlchemy(metadata=MetaData(naming_convention={

@@ -19,9 +19,13 @@ import traceback
 import os
 import yaml
 
+import opentracing
 from flask_restful import Api
-from flask import Flask, jsonify, Blueprint
+from jaeger_client import Config
 from flask_security import Security
+from flask import Flask, jsonify, Blueprint
+from flask import _request_ctx_stack as stack
+from opentracing_instrumentation.request_context import span_in_context
 
 from manager_rest import config, premium_enabled
 from manager_rest.storage import db, user_datastore
@@ -88,6 +92,29 @@ class CloudifyFlaskApp(Flask):
         setup_resources(Api(self))
         self.register_blueprint(app_errors)
 
+        self.tracer = None
+        if config.instance.enable_tracing:
+            self.before_first_request(self._init_jeager_tracer)
+
+    def _init_jeager_tracer(self):
+        """Initializes the Jaeger tracer.
+        """
+        if not config.instance.jaeger_server_ip:
+            self.logger.error('Tracing has been enabled but the Jaeger API '
+                              'server IP has not been set.')
+            return
+        tracer_config = Config(
+            config={
+                'sampler': {'type': 'const', 'param': 1},
+                'local_agent': {'reporting_host':
+                                    config.instance.jaeger_server_ip},
+                'logging': True
+            },
+            service_name='cloudify-manager')
+        self.logger.debug("Initializing Jaeger tracer...")
+        self.tracer = tracer_config.initialize_tracer()
+        self.logger.debug("Done initializing Jaeger tracer.")
+
     def _set_flask_security(self):
         """Set Flask-Security specific configurations and init the extension
         """
@@ -148,6 +175,31 @@ class CloudifyFlaskApp(Flask):
             flask_handle_user_exception,
             flask_restful_handle_user_exception)
         self.config['ERROR_404_HELP'] = False
+
+    def dispatch_request(self):
+        """Wraps up the super 'dispatch_request' func to enable easier tracing.
+        """
+        if not self.tracer:
+            return super(CloudifyFlaskApp, self).dispatch_request()
+
+        request = stack.top.request
+        operation_name = '{} ({})'.format(str(request.endpoint),
+                                          str(request.method))
+        headers = {}
+        for k, v in request.headers:
+            headers[k.lower()] = v
+        kw = {'operation_name': operation_name}
+        span_ctx = None
+        try:
+            span_ctx = self.tracer.extract(
+                opentracing.Format.HTTP_HEADERS, headers)
+            kw['child_of'] = span_ctx
+        except opentracing.UnsupportedFormatException as e:
+            kw['tags'] = {"Extract failed": str(e)}
+
+        with self.tracer.start_span(**kw) as span:
+            with span_in_context(span):
+                return super(CloudifyFlaskApp, self).dispatch_request()
 
 
 def reset_app(configuration=None):
