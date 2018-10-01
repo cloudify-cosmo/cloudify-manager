@@ -192,13 +192,15 @@ class CloudifyFlaskApp(Flask):
         with self.tracer.start_span(**kw) as span:
             with span_in_context(span):
                 r = super(CloudifyFlaskApp, self).dispatch_request()
-        if span_ctx and 'spans_to_report' in span_ctx.baggage:
+        if span_ctx and 'spans-to-report' in span_ctx.baggage:
             try:
                 spans_to_report = pickle.loads(
-                    span_ctx.baggage['spans_to_report'])
+                    span_ctx.baggage['spans-to-report'])
                 self._send_spans_for_report(spans_to_report, span_ctx.span_id)
             except pickle.UnpicklingError as e:
-                self.logger.error(e.message)
+                self.logger.error(e)
+            except Exception as e:
+                self.logger.error(e)
         return r
 
     def _send_spans_for_report(self, spans_to_report, leaf_span_id):
@@ -209,36 +211,46 @@ class CloudifyFlaskApp(Flask):
         span & span context fields}.
         :param leaf_span_id: span id of the bottom span in the trace.
         """
-        if not spans_to_report or leaf_span_id not in spans_to_report:
+        if not spans_to_report \
+                or not isinstance(spans_to_report, dict) \
+                or leaf_span_id not in spans_to_report:
             return
 
         curr_span = self._build_span_from_dict(spans_to_report[leaf_span_id])
-        self.tracer.report_span(curr_span)
+        curr_span.finish()
 
         parent_id = curr_span.context.parent_id
         parent_span = self._build_span_from_dict(
             spans_to_report.get(parent_id))
         while parent_span:
-            self.tracer.report_span(parent_span)
+            parent_span.finish()
             parent_span = self._build_span_from_dict(
                 spans_to_report.get(parent_id))
 
     def _build_span_from_dict(self, s_dict):
         """Builds a Jaeger client Span obj from the given dict.
 
-        :param s_dict: dict with all the needed fields.
+        :param s_dict: dict with all the needed fields (unpickled).
         :return: jaeger_client.Span object
         """
-        if not s_dict or not self._is_span_dict_valid(s_dict):
+        if not s_dict:
             return None
+
+        s_dict = pickle.loads(s_dict)
+        if not self._is_span_dict_valid(s_dict):
+            return None
+
         span_ctx = SpanContext(trace_id=s_dict['trace_id'],
                                span_id=s_dict['span_id'],
                                parent_id=s_dict['parent_id'],
                                flags=s_dict['flags'])
         span = Span(context=span_ctx, tracer=self.tracer,
                     operation_name=s_dict.get('operation_name'),
-                    tags=s_dict.get('tags'),
                     start_time=s_dict.get('start_time'))
+        # The tags received in here are raw
+        tags = s_dict.get('tags')
+        if tags and isinstance(tags, list):
+            span.tags.extend(tags)
         return span
 
     @staticmethod
