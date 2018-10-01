@@ -14,10 +14,11 @@
 #  * limitations under the License.
 
 import os
-import yaml
 
 from json import dump
 
+import yaml
+import jaeger_client
 
 CONFIG_TYPES = [
     ('MANAGER_REST_CONFIG_PATH', ''),
@@ -79,10 +80,15 @@ class Config(object):
 
         self.warnings = []
 
+        self.enable_tracing = False
+        self.tracing_endpoint_ip = None
+        self.tracer_config = None
+
     def load_configuration(self):
         for env_var_name, namespace in CONFIG_TYPES:
             if env_var_name in os.environ:
                 self.load_from_file(os.environ[env_var_name], namespace)
+        self._create_tracer_config()
 
     def load_from_file(self, filename, namespace=''):
         with open(filename) as f:

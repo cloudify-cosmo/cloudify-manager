@@ -15,18 +15,22 @@
 
 import psutil
 from collections import OrderedDict
+from sqlalchemy.event import listen
+from sqlalchemy.engine import Engine
 from flask_security import current_user
 from sqlalchemy import or_ as sql_or, func
 from sqlalchemy.exc import SQLAlchemyError
 from flask import current_app, has_request_context
 from sqlite3 import DatabaseError as SQLiteDBError
 from sqlalchemy.orm.attributes import flag_modified
+from opentracing_instrumentation.request_context import get_current_span
 
 from cloudify.models_states import VisibilityState
 
 from manager_rest.storage.models_base import db
 from manager_rest import manager_exceptions, config, utils
-from manager_rest.utils import all_tenants_authorization, is_administrator
+from manager_rest.utils import all_tenants_authorization, is_administrator, \
+    traces
 
 try:
     from psycopg2 import DatabaseError as Psycopg2DBError
@@ -37,7 +41,12 @@ except ImportError:
 
 
 class SQLStorageManager(object):
+    @traces()
+    def __init__(self):
+        self._enable_sql_engine_tracing()
+
     @staticmethod
+    @traces()
     def _safe_commit():
         """Try to commit changes in the session. Roll back if exception raised
         Excepts SQLAlchemy errors and rollbacks if they're caught
@@ -50,6 +59,7 @@ class SQLStorageManager(object):
                 'SQL Storage error: {0}'.format(str(e))
             )
 
+    @traces()
     def _get_base_query(self, model_class, include, joins):
         """Create the initial query from the model class and included columns
 
@@ -71,6 +81,7 @@ class SQLStorageManager(object):
         return query
 
     @staticmethod
+    @traces()
     def _sort_query(query, model_class, sort=None):
         """Add sorting clauses to the query
 
@@ -90,6 +101,7 @@ class SQLStorageManager(object):
                 query = query.order_by(default_sort)
         return query
 
+    @traces()
     def _filter_query(self,
                       query,
                       model_class,
@@ -110,6 +122,7 @@ class SQLStorageManager(object):
         query = self._add_substr_filter(query, substr_filters)
         return query
 
+    @traces()
     def _add_value_filter(self, query, filters):
         for column, value in filters.iteritems():
             column, value = self._update_case_insensitive(column, value)
@@ -119,6 +132,7 @@ class SQLStorageManager(object):
                 query = query.filter(column == value)
         return query
 
+    @traces()
     def _add_substr_filter(self, query, filters):
         for column, value in filters.iteritems():
             column, value = self._update_case_insensitive(column, value, True)
@@ -131,6 +145,7 @@ class SQLStorageManager(object):
         return query
 
     @staticmethod
+    @traces()
     def _update_case_insensitive(column, value, force=False):
         """Check if the column in question should be case insensitive, and
         if so, make sure the column (and the value) will be converted to lower
@@ -159,6 +174,7 @@ class SQLStorageManager(object):
 
         return column, value
 
+    @traces()
     def _add_tenant_filter(self, query, model_class, all_tenants):
         """Filter by the tenant ID associated with `model_class` (either
         directly via a relationship with the tenants table, or via an
@@ -197,6 +213,7 @@ class SQLStorageManager(object):
         )
         return query.filter(tenant_filter)
 
+    @traces()
     def _add_permissions_filter(self, query, model_class):
         """Filter by the users present in either the `viewers` or `owners`
         lists
@@ -224,6 +241,7 @@ class SQLStorageManager(object):
         return query.filter(user_filter)
 
     @staticmethod
+    @traces()
     def _get_joins(model_class, columns):
         """Get a list of all the attributes on which we need to join
 
@@ -245,6 +263,7 @@ class SQLStorageManager(object):
                 column = column.remote_attr
         return joins.values()
 
+    @traces()
     def _get_joins_and_converted_columns(self,
                                          model_class,
                                          include,
@@ -268,6 +287,7 @@ class SQLStorageManager(object):
                 model_class, include, filters, substr_filters, sort)
         return include, filters, substr_filters, sort, joins
 
+    @traces()
     def _get_query(self,
                    model_class,
                    include=None,
@@ -297,6 +317,7 @@ class SQLStorageManager(object):
         query = self._sort_query(query, model_class, sort)
         return query
 
+    @traces()
     def _get_columns_from_field_names(self,
                                       model_class,
                                       include,
@@ -317,6 +338,7 @@ class SQLStorageManager(object):
         return include, filters, substr_filters, sort
 
     @staticmethod
+    @traces()
     def _get_column(model_class, column_name):
         """Return the column on which an action (filtering, sorting, etc.)
         would need to be performed. Can be either an attribute of the class,
@@ -334,6 +356,7 @@ class SQLStorageManager(object):
             return column.remote_attr.label(column_name)
 
     @staticmethod
+    @traces()
     def _paginate(query, pagination, get_all_results=False):
         """Paginate the query by size and offset
 
@@ -361,6 +384,7 @@ class SQLStorageManager(object):
             return results, len(results), 0, 0
 
     @staticmethod
+    @traces()
     def _validate_pagination(pagination_size):
         if pagination_size < 0:
             raise manager_exceptions.IllegalActionError(
@@ -378,6 +402,7 @@ class SQLStorageManager(object):
             )
 
     @staticmethod
+    @traces()
     def _validate_returned_size(size):
         if size > config.instance.max_results:
             raise manager_exceptions.IllegalActionError(
@@ -388,6 +413,7 @@ class SQLStorageManager(object):
                 )
             )
 
+    @traces()
     def _validate_unique_resource_id_per_tenant(self, instance):
         """Assert that only a single resource exists with a given id in a
         given tenant
@@ -415,6 +441,7 @@ class SQLStorageManager(object):
                 )
             )
 
+    @traces()
     def _get_unique_resource_id_query(self, model_class, resource_id):
         """
         Query for all the resources with the same id of the given instance,
@@ -430,6 +457,7 @@ class SQLStorageManager(object):
         query = query.filter(unique_resource_filter)
         return query
 
+    @traces()
     def _associate_users_and_tenants(self, instance):
         """Associate, if necessary, the instance with the current tenant/user
         """
@@ -440,6 +468,7 @@ class SQLStorageManager(object):
                 instance.creator = current_user
 
     @staticmethod
+    @traces()
     def _load_relationships(instance):
         """A helper method used to overcome a problem where the relationships
         that rely on joins aren't being loaded automatically
@@ -449,6 +478,7 @@ class SQLStorageManager(object):
                 getattr(instance, rel.key)
 
     @property
+    @traces()
     def current_tenant(self):
         """Return the tenant with which the user accessed the app
         """
@@ -457,6 +487,7 @@ class SQLStorageManager(object):
         except manager_exceptions.TenantNotProvided:
             return None
 
+    @traces()
     def get(self,
             model_class,
             element_id,
@@ -483,6 +514,7 @@ class SQLStorageManager(object):
         return result
 
     @staticmethod
+    @traces()
     def _validate_available_memory():
         """Validate minimal available memory in manager
         """
@@ -497,6 +529,7 @@ class SQLStorageManager(object):
                 'needed: {0}mb, available: {1}mb'
                 ''.format(min_available_memory_mb, available_mb))
 
+    @traces()
     def list(self,
              model_class,
              include=None,
@@ -548,6 +581,7 @@ class SQLStorageManager(object):
         current_app.logger.debug('Returning: {0}'.format(results))
         return ListResult(items=results, metadata={'pagination': pagination})
 
+    @traces()
     def count(self, model_class, filters=None):
         query = model_class.query
         if filters:
@@ -555,6 +589,7 @@ class SQLStorageManager(object):
         count = query.order_by(None).count()  # Fastest way to count
         return count
 
+    @traces()
     def put(self, instance):
         """Create a `model_class` instance from a serializable `model` object
 
@@ -569,6 +604,7 @@ class SQLStorageManager(object):
         self._validate_unique_resource_id_per_tenant(instance)
         return instance
 
+    @traces()
     def delete(self, instance):
         """Delete the passed instance
         """
@@ -578,6 +614,7 @@ class SQLStorageManager(object):
         self._safe_commit()
         return instance
 
+    @traces()
     def update(self, instance, log=True, modified_attrs=()):
         """Add `instance` to the DB session, and attempt to commit
 
@@ -599,6 +636,7 @@ class SQLStorageManager(object):
         self._safe_commit()
         return instance
 
+    @traces()
     def refresh(self, instance):
         """Reload the instance with fresh information from the DB
 
@@ -610,7 +648,14 @@ class SQLStorageManager(object):
         self._load_relationships(instance)
         return instance
 
+    @traces()
+    def _enable_sql_engine_tracing(self):
+        """Enable tracing for all SQLAlchemy engines.
+        """
+        enable_tracing_for_all_engines()
 
+
+@traces()
 def get_storage_manager():
     """Get the current Flask app's storage manager, create if necessary
     """
@@ -634,3 +679,60 @@ class ListResult(object):
 
     def __getitem__(self, item):
         return self.items[item]
+
+
+def enable_tracing_for_all_engines():
+    def _get_operation_name(stmt_obj):
+        if stmt_obj is None:
+            # Match what the ORM shows when raw SQL
+            # statements are invoked.
+            return 'textclause'
+
+        return stmt_obj.__visit_name__
+
+    def _engine_before_cursor_handler(conn, cursor, statement, parameters,
+                                      context, executemany):
+        current_span = get_current_span()
+        if not current_span:
+            return
+
+        # context is a ExecutionContext object (https://kite.com/python/docs/
+        # sqlalchemy.engine.interfaces.ExecutionContext)
+        # stmt_obj is a sqlalchemy.sql.expression.ClauseElement
+        # This is used to get the statement type
+        stmt_obj = context.compiled.statement if context.compiled else None
+
+        # Start a new span for this query.
+        name = _get_operation_name(stmt_obj)
+        span = current_app.tracer.start_span(
+            operation_name=name, child_of=current_span)
+        span.set_tag('component', 'sqlalchemy')
+        span.set_tag('db.type', 'sql')
+        span.set_tag('db.statement', statement)
+        span.set_tag('sqlalchemy.dialect', context.dialect.name)
+
+        context._span = span
+
+    def _engine_after_cursor_handler(conn, cursor, statement, parameters,
+                                     context,
+                                     executemany):
+        span = getattr(context, '_span', None)
+        if span is None:
+            return
+
+        span.finish()
+
+    def _engine_error_handler(exception_context):
+        execution_context = exception_context.execution_context
+        span = getattr(execution_context, '_span', None)
+        if span is None:
+            return
+
+        exc = exception_context.original_exception
+        span.set_tag('sqlalchemy.exception', str(exc))
+        span.set_tag('error', True)
+        span.finish()
+
+    listen(Engine, 'before_cursor_execute', _engine_before_cursor_handler)
+    listen(Engine, 'after_cursor_execute', _engine_after_cursor_handler)
+    listen(Engine, 'handle_error', _engine_error_handler)
