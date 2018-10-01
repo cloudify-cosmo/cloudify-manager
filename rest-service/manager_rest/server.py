@@ -18,10 +18,11 @@ import functools
 import traceback
 import os
 import yaml
+import pickle
 
 import opentracing
 from flask_restful import Api
-from jaeger_client import Config
+from jaeger_client import Config, Span, SpanContext
 from flask_security import Security
 from flask import Flask, jsonify, Blueprint
 from flask import _request_ctx_stack as stack
@@ -180,6 +181,7 @@ class CloudifyFlaskApp(Flask):
         for k, v in request.headers:
             headers[k.lower()] = v
         kw = {'operation_name': operation_name}
+        span_ctx = None
         try:
             span_ctx = self.tracer.extract(
                 opentracing.Format.HTTP_HEADERS, headers)
@@ -189,7 +191,65 @@ class CloudifyFlaskApp(Flask):
 
         with self.tracer.start_span(**kw) as span:
             with span_in_context(span):
-                return super(CloudifyFlaskApp, self).dispatch_request()
+                r = super(CloudifyFlaskApp, self).dispatch_request()
+        if span_ctx and 'spans_to_report' in span_ctx.baggage:
+            try:
+                spans_to_report = pickle.loads(
+                    span_ctx.baggage['spans_to_report'])
+                self._send_spans_for_report(spans_to_report, span_ctx.span_id)
+            except pickle.UnpicklingError as e:
+                self.logger.error(e.message)
+        return r
+
+    def _send_spans_for_report(self, spans_to_report, leaf_span_id):
+        """Adds Jaeger client spans from the CLI client to report to the Jaeger
+        server.
+
+        :param spans_to_report: spans to report dict {span_id ->
+        span & span context fields}.
+        :param leaf_span_id: span id of the bottom span in the trace.
+        """
+        if not spans_to_report or leaf_span_id not in spans_to_report:
+            return
+
+        curr_span = self._build_span_from_dict(spans_to_report[leaf_span_id])
+        self.tracer.report_span(curr_span)
+
+        parent_id = curr_span.context.parent_id
+        parent_span = self._build_span_from_dict(
+            spans_to_report.get(parent_id))
+        while parent_span:
+            self.tracer.report_span(parent_span)
+            parent_span = self._build_span_from_dict(
+                spans_to_report.get(parent_id))
+
+    def _build_span_from_dict(self, s_dict):
+        """Builds a Jaeger client Span obj from the given dict.
+
+        :param s_dict: dict with all the needed fields.
+        :return: jaeger_client.Span object
+        """
+        if not s_dict or not self._is_span_dict_valid(s_dict):
+            return None
+        span_ctx = SpanContext(trace_id=s_dict['trace_id'],
+                               span_id=s_dict['span_id'],
+                               parent_id=s_dict['parent_id'],
+                               flags=s_dict['flags'])
+        span = Span(context=span_ctx, tracer=self.tracer,
+                    operation_name=s_dict.get('operation_name'),
+                    tags=s_dict.get('tags'),
+                    start_time=s_dict.get('start_time'))
+        return span
+
+    @staticmethod
+    def _is_span_dict_valid(s_dict):
+        """
+        :param s_dict: dict representing a span..
+        :return: True if the s_dict is a valid span dict, False otherwise.
+        """
+        keys = ['trace_id', 'span_id', 'parent_id', 'flags']
+        return all(map(lambda k: k in s_dict, keys))
+
 
 def reset_app(configuration=None):
     global app
