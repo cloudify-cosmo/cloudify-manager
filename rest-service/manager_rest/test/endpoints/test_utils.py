@@ -15,13 +15,15 @@
 
 import os
 
-from mock import patch
-from manager_rest.test.attribute import attr
+from flask import current_app
+from mock import patch, MagicMock
 
+from manager_rest.utils import traces
 from manager_rest.utils import read_json_file, write_dict_to_json_file
 from manager_rest.utils import plugin_installable_on_current_platform
-from manager_rest.test import base_test
 from manager_rest.storage import models
+from manager_rest.test import base_test
+from manager_rest.test.attribute import attr
 
 
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
@@ -95,6 +97,57 @@ class TestUtils(base_test.BaseServerTestCase):
                 self.assertTrue(
                     plugin_installable_on_current_platform(plugin))
 
+    @patch('flask.current_app')
+    @patch('opentracing_instrumentation.request_context.span_in_context')
+    @patch('opentracing_instrumentation.request_context.get_current_span')
+    def test_traces_wrapper_uses_orig_func_when_not_tracing(self, curr_span, _,
+                                                            current_app):
+        dummy_f, decorated_f, return_value, _ = get_dummy_function_and_params()
+        current_app.tracer = False
+        r = decorated_f('bar', k='v')
+        self.assertEqual(r, return_value)
+        dummy_f.assert_called_once_with('bar', k='v')
+        curr_span.assert_not_called()
+
+
+@attr(setup_config_enable_tracing=True,
+      setup_config_tracing_endpoint_ip='some_ip')
+class TestUtilsWithTracingTestCase(base_test.WithInitTracerTestCase):
+    """Test the tracing wrapper when tracing is enabled.
+    """
+
+    @patch('manager_rest.utils.span_in_context')
+    @patch('manager_rest.utils.get_current_span')
+    def test_tracing_wrapper_works(self, curr_span, span_ctx):
+        curr_span.return_value = curr_span
+        current_app.tracer.start_span.reset_mock()
+
+        dummy_f, decorated_f, return_value, _ = get_dummy_function_and_params(
+            'not_foo')
+        r = decorated_f('bar', k='v')
+        self.assertEqual(r, return_value)
+        dummy_f.assert_called_once_with('bar', k='v')
+        curr_span.assert_called_once()
+        current_app.tracer.start_span.assert_called_once_with(
+            'not_foo', child_of=curr_span)
+        span_ctx.assert_called_once()
+
+    @patch('manager_rest.utils.span_in_context')
+    @patch('manager_rest.utils.get_current_span')
+    def test_tracing_wrapper_works_no_name(self, curr_span, span_ctx):
+        curr_span.return_value = curr_span
+        current_app.tracer.start_span.reset_mock()
+
+        dummy_f, decorated_f, return_value, decorated_func_name = \
+            get_dummy_function_and_params()
+        r = decorated_f('bar', k='v')
+        self.assertEqual(r, return_value)
+        dummy_f.assert_called_once_with('bar', k='v')
+        curr_span.assert_called_once()
+        current_app.tracer.start_span.assert_called_once_with(
+            decorated_func_name, child_of=curr_span)
+        span_ctx.assert_called_once()
+
 
 def generate_progress_func(total_size, assert_equal,
                            assert_almost_equal, buffer_size=8192):
@@ -126,3 +179,18 @@ def generate_progress_func(total_size, assert_equal,
         iteration[0] += 1
 
     return print_progress
+
+
+def get_dummy_function_and_params(func_trace_name=None):
+    """Creates a dummy function using MagicMock.
+
+    :param func_trace_name: function name to pass to the traces() decorator.
+    :return: (dummy function, decorated dummy function, return value,
+     function name)
+    """
+    decorated_func_name = 'foo'
+    return_value = 'something'
+    foo = MagicMock(return_value=return_value)
+    foo.__name__ = decorated_func_name
+    f = traces(func_trace_name)(foo)
+    return foo, f, return_value, decorated_func_name

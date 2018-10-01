@@ -30,6 +30,7 @@ import wagon
 
 from mock import MagicMock, patch
 from manager_rest.test.attribute import attr
+from flask import current_app
 from flask.testing import FlaskClient
 
 from cloudify_rest_client import CloudifyClient
@@ -153,6 +154,7 @@ class BaseServerTestCase(unittest.TestCase):
         self._create_temp_files_and_folders()
         self._init_file_server()
         self._mock_amqp_modules()
+        self._patch_jaeger_config()
 
         server_module = self._set_config_path_and_get_server_module()
         self._create_config_and_reset_app(server_module)
@@ -339,6 +341,12 @@ class BaseServerTestCase(unittest.TestCase):
         test_config.authorization_permissions = auth_dict['permissions']
         test_config.security_encryption_key = \
             'f2ytTjQ-R2yKFMzgqDAw6vgQIHGZ9SiJoW-BhktapFQ='
+        if getattr(self, 'setup_config_enable_tracing', None) is not None:
+            test_config.enable_tracing = self.setup_config_enable_tracing
+        if getattr(self, 'setup_config_tracing_endpoint_ip', None) is not None:
+            test_config.tracing_endpoint_ip = \
+                self.setup_config_tracing_endpoint_ip
+        test_config._create_tracer_config()
         return test_config
 
     def _version_url(self, url):
@@ -732,3 +740,24 @@ class BaseServerTestCase(unittest.TestCase):
             func,
             *args
         )
+
+    def _patch_jaeger_config(self):
+        config.j_client.Config = MagicMock()
+        self.jaeger_mock_config = config.j_client.Config
+        self.jaeger_mock_config.return_value = self.jaeger_mock_config
+
+
+class WithInitTracerTestCase(BaseServerTestCase):
+    def setUp(self):
+        super(WithInitTracerTestCase, self).setUp()
+        self._init_tracer(current_app)
+
+    @staticmethod
+    def _init_tracer(app):
+        """Initializes the tracer directly
+
+        :param app: Flask app instance.
+        """
+        app._init_jaeger_tracer()
+        # This makes sure the initialization doesn't happen again.
+        app._init_jaeger_tracer = lambda: None

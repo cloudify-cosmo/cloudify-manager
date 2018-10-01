@@ -16,6 +16,7 @@
 import os
 import yaml
 
+import jaeger_client as j_client
 from json import dump
 
 
@@ -76,10 +77,15 @@ class Config(object):
 
         self.warnings = []
 
+        self.enable_tracing = False
+        self.tracing_endpoint_ip = None
+        self.tracer_config = None
+
     def load_configuration(self):
         for env_var_name, namespace in CONFIG_TYPES:
             if env_var_name in os.environ:
                 self.load_from_file(os.environ[env_var_name], namespace)
+        self._create_tracer_config()
 
     def load_from_file(self, filename, namespace=''):
         with open(filename) as f:
@@ -93,6 +99,20 @@ class Config(object):
                 self.warnings.append(
                     "Ignoring unknown key '{0}' in configuration file "
                     "'{1}'".format(key, filename))
+
+    def _create_tracer_config(self):
+        """Creates the tracer config.
+        """
+        if not self.enable_tracing or not self.tracing_endpoint_ip:
+            return
+        self.tracer_config = j_client.Config(
+            config={
+                'sampler': {'type': 'const', 'param': 1},
+                'local_agent': {
+                    'reporting_host': self.tracing_endpoint_ip},
+                'logging': True
+            },
+            service_name='cloudify-manager')
 
 
 instance = Config()

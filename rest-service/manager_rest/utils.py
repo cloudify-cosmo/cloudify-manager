@@ -24,15 +24,18 @@ import StringIO
 import tempfile
 import platform
 import traceback
+from functools import wraps
 from datetime import datetime
 from os import path, makedirs
 from base64 import urlsafe_b64encode
 
 import wagon
-from flask import g
+from flask import g, current_app
 from flask_restful import abort
 from flask_security import current_user
 from werkzeug.local import LocalProxy
+from opentracing_instrumentation.request_context import get_current_span, \
+    span_in_context
 
 from cloudify import logs
 from cloudify.amqp_client import create_events_publisher
@@ -275,3 +278,36 @@ def send_event(event, message_type):
 
     events_publisher.publish_message(event, message_type)
     events_publisher.close()
+
+
+def traces(func_name=None):
+    """Wrapper function for Flask operation call tracing.
+    This decorator must be activate iff the following condition apply. One of
+    the parent calls must be done inside a 'with span_in_context(span)' scope
+    (otherwise you'd get a parentless span).
+
+    If you'd like to trace a decorator, make sure to use this decorator on the
+    inner wrapper function and not on the decorator as the decorator runs once
+    per input while the wrapper runs every time the wrapped function is
+    invoked.
+
+    :param func_name: name to display in tracing
+    """
+
+    def decorator(f):
+        name = func_name
+        if func_name is None:
+            name = f.__name__
+
+        @wraps(f)
+        def with_tracing_wrapper(*args, **kwargs):
+            tracer = getattr(current_app, 'tracer', None)
+            if not tracer:
+                return f(*args, **kwargs)
+            root_span = get_current_span()
+            with tracer.start_span(name, child_of=root_span) as span:
+                with span_in_context(span):
+                    return f(*args, **kwargs)
+        return with_tracing_wrapper
+
+    return decorator

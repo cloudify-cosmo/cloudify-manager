@@ -19,9 +19,12 @@ import traceback
 import os
 import yaml
 
+import opentracing
 from flask_restful import Api
-from flask import Flask, jsonify, Blueprint
 from flask_security import Security
+from flask import Flask, jsonify, Blueprint
+from flask import _request_ctx_stack as stack
+from opentracing_instrumentation.request_context import span_in_context
 
 from manager_rest import config, premium_enabled
 from manager_rest.storage import db, user_datastore
@@ -88,6 +91,26 @@ class CloudifyFlaskApp(Flask):
         setup_resources(Api(self))
         self.register_blueprint(app_errors)
 
+        self.tracer = None
+        # Don't attempt tracer initiation when tracing isn't enabled
+        if config.instance.enable_tracing:
+            # Jaeger initialization while initializing this class causes a hang
+            # due to tornado IOLoop initialization. Therefore, the
+            # initialization is scheduled to be executed before the first
+            # request, before there's anything to trace.
+            self.before_first_request(self._init_jaeger_tracer)
+
+    def _init_jaeger_tracer(self):
+        """Initializes the Jaeger tracer.
+        """
+        self.logger.info("Initializing the Jaeger tracer...")
+        if not config.instance.tracing_endpoint_ip:
+            self.logger.error("Did not find 'tracing_endpoint_ip' in the "
+                              "config. Aborting tracer initialization...")
+            return
+        self.tracer = config.instance.tracer_config.initialize_tracer()
+        self.logger.debug("Done initializing Jaeger tracer.")
+
     def _set_flask_security(self):
         """Set Flask-Security specific configurations and init the extension
         """
@@ -148,6 +171,33 @@ class CloudifyFlaskApp(Flask):
             flask_handle_user_exception,
             flask_restful_handle_user_exception)
         self.config['ERROR_404_HELP'] = False
+
+    def dispatch_request(self):
+        """Wraps up the super 'dispatch_request' func to enable easier tracing.
+        The super function does the request dispatching. Matches the URL and
+        returns the return value of the view or error handler.
+        This function creates a new span and injects it to the current thread
+        local for other inner executions to fetch.
+        """
+        if not self.tracer:
+            return super(CloudifyFlaskApp, self).dispatch_request()
+
+        request = stack.top.request
+        operation_name = '{} ({})'.format(request.endpoint, request.method)
+        headers = {}
+        for k, v in request.headers:
+            headers[k.lower()] = v
+        kw = {'operation_name': operation_name}
+        try:
+            span_ctx = self.tracer.extract(
+                opentracing.Format.HTTP_HEADERS, headers)
+            kw['child_of'] = span_ctx
+        except opentracing.UnsupportedFormatException as e:
+            kw['tags'] = {"Extract failed": str(e)}
+
+        with self.tracer.start_span(**kw) as span:
+            with span_in_context(span):
+                return super(CloudifyFlaskApp, self).dispatch_request()
 
 
 def reset_app(configuration=None):

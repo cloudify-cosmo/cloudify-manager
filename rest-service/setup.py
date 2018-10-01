@@ -38,7 +38,9 @@ install_requires = [
     'cryptography==2.1.4',
     'psycopg2==2.7.4',
     'pytz==2018.4',
-    'click==6.7'
+    'click==6.7',
+    'opentracing-instrumentation==2.4.3',
+    'jaeger-client==3.11.0'
 ]
 
 
