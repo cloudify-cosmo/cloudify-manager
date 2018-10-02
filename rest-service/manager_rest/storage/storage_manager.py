@@ -704,6 +704,10 @@ class SQLAlchemyTracingHelper(object):
     def _engine_before_cursor_handler(conn, cursor,
                                       statement, parameters,
                                       context, executemany):
+        current_span = get_current_span()
+        if not current_span:
+            return
+
         stmt_obj = None
         if context.compiled is not None:
             stmt_obj = context.compiled.statement
@@ -715,7 +719,7 @@ class SQLAlchemyTracingHelper(object):
         # Start a new span for this query.
         name = SQLAlchemyTracingHelper._get_operation_name(stmt_obj)
         span = current_app.tracer.start_span(
-            operation_name=name, child_of=get_current_span())
+            operation_name=name, child_of=current_span)
         span.set_tag('component', 'sqlalchemy')
         span.set_tag('db.type', 'sql')
         span.set_tag('db.statement',
