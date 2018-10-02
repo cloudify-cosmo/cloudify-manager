@@ -902,6 +902,23 @@ class ResourceManager(object):
         for node_instance in node_instances:
             self.sm.put(node_instance)
 
+    def _assert_no_snapshot_creation_running_or_queued(self):
+        """
+        Make sure no 'create_snapshot' workflow is currently running or queued.
+        We do this to avoid DB modifications during snapshot creation
+        :return:
+        """
+        status = ExecutionState.ACTIVE_STATES + ExecutionState.QUEUED_STATE
+        filters = {'status': status}
+        for e in self.list_executions(is_include_system_workflows=True,
+                                      filters=filters,
+                                      get_all_results=True).items:
+            if e.deployment_id == 'create_snapshot':
+                raise manager_exceptions.ExistingRunningExecutionError(
+                    'You cannot start an execution that modifies DB state ' 
+                    ' while `create_snapshot` is running or queued (id: {0})'
+                        .format(e.id))
+
     def create_deployment(self,
                           blueprint_id,
                           deployment_id,
@@ -910,7 +927,7 @@ class ResourceManager(object):
                           inputs=None,
                           bypass_maintenance=None,
                           skip_plugins_validation=False):
-
+        self._assert_no_snapshot_creation_running_or_queued()
         blueprint = self.sm.get(models.Blueprint, blueprint_id)
         plan = blueprint.plan
         try:
