@@ -23,7 +23,7 @@ from manager_rest.security import (MissingPremiumFeatureResource,
                                    SecuredResource)
 
 from .. import rest_decorators, rest_utils
-from ..responses_v3 import TenantResponse
+from ..responses_v3 import TenantResponse, TenantDetailsResponse
 
 try:
     from cloudify_premium import SecuredMultiTenancyResource
@@ -76,7 +76,7 @@ class Tenants(TenantsListResource):
 class TenantsId(SecuredMultiTenancyResource):
     @rest_decorators.exceptions_handled
     @authorize('tenant_create')
-    @rest_decorators.marshal_with(TenantResponse)
+    @rest_decorators.marshal_with(TenantDetailsResponse)
     def post(self, tenant_name, multi_tenancy):
         """
         Create a tenant
@@ -93,7 +93,7 @@ class TenantsId(SecuredMultiTenancyResource):
 
     @rest_decorators.exceptions_handled
     @authorize('tenant_get', get_tenant_from='param')
-    @rest_decorators.marshal_with(TenantResponse)
+    @rest_decorators.marshal_with(TenantDetailsResponse)
     def get(self, tenant_name, multi_tenancy):
         """
         Get details for a single tenant
@@ -103,7 +103,7 @@ class TenantsId(SecuredMultiTenancyResource):
 
     @rest_decorators.exceptions_handled
     @authorize('tenant_delete')
-    @rest_decorators.marshal_with(TenantResponse)
+    @rest_decorators.marshal_with(TenantDetailsResponse)
     def delete(self, tenant_name, multi_tenancy):
         """
         Delete a tenant
