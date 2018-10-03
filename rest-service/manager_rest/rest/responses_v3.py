@@ -70,6 +70,17 @@ class TenantResponse(BaseResponse):
         'name': fields.String,
         'groups': fields.Raw,
         'users': fields.Raw,
+        'user_roles': fields.Raw
+    }
+
+
+@swagger.model
+class TenantDetailsResponse(BaseResponse):
+
+    resource_fields = {
+        'name': fields.String,
+        'groups': fields.Raw,
+        'users': fields.Raw,
         'user_roles': fields.Raw,
         'rabbitmq_username': fields.String,
         'rabbitmq_password': fields.String,
