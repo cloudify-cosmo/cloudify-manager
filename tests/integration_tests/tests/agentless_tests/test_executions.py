@@ -88,14 +88,19 @@ class ExecutionsTest(AgentlessTestCase):
 
     def test_queue_execution_while_system_execution_is_running(self):
 
+        dsl_path = resource("dsl/basic.yaml")
+        deployment = self.deploy(dsl_path)
+
         # Create snapshot and make sure it's state remains 'started'
         # so that new executions will be queued
         snapshot = self._create_snapshot_and_modify_execution_status('started')
 
         # Create an 'install' execution and make sure it's being queued
-        dsl_path = resource("dsl/basic.yaml")
-        deployment, execution_id = self.deploy_application(
-            dsl_path, wait_for_execution=False, queue=True)
+        execution = self.execute_workflow(workflow_name='install',
+                                          deployment_id=deployment.id,
+                                          wait_for_execution=False,
+                                          queue=True)
+        execution_id = execution.id
         self._assert_correct_execution_status(execution_id, 'queued')
 
         # Update snapshot state to 'terminated' so the queued 'install'
