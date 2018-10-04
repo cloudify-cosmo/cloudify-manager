@@ -65,6 +65,8 @@ class Config(object):
         self.account_lock_period = -1
 
         self.warnings = []
+        self.enable_tracing = False
+        self.jaeger_server_ip = None
 
     def load_configuration(self):
         for env_var_name, namespace in [

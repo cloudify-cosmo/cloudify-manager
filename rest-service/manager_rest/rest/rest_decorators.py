@@ -91,6 +91,7 @@ def insecure_rest_method(func):
 
 def exceptions_handled(func):
     @wraps(func)
+    @utils.with_tracing('exceptions_handled')
     def wrapper(*args, **kwargs):
         try:
             try:
@@ -123,6 +124,8 @@ class marshal_with(object):
 
     def __call__(self, f):
         @wraps(f)
+        @utils.with_tracing('marshal_with {}'.format(
+            self.response_class.__name__))
         def wrapper(*args, **kwargs):
             if hasattr(request, '__skip_marshalling'):
                 return f(*args, **kwargs)
