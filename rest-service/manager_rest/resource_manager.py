@@ -273,7 +273,6 @@ class ResourceManager(object):
         If the yaml file is provided, it is additionally checked that
         the plugin's executor is central_deployment_agent.
         """
-
         plugin_yaml_path = plugin.yaml_file_path()
         if plugin_yaml_path:
             if self._is_valid_yaml_file(plugin) and \
@@ -399,7 +398,6 @@ class ResourceManager(object):
                           bypass_maintenance=None,
                           ignore_live_nodes=False,
                           delete_db_mode=False):
-
         # Verify deployment exists.
         deployment = self.sm.get(models.Deployment, deployment_id)
 
@@ -666,6 +664,16 @@ class ResourceManager(object):
 
         return should_queue
 
+    @staticmethod
+    def _workflow_modifies_db(wf_id):
+        """ Returns `True` if the workflow modifies the DB and
+            needs to be blocked while a `create_snapshot` workflow
+            is running or queued.
+        """
+        return wf_id in ('create_deployment_environment',
+                         'delete_deployment_environment',
+                         'uninstall_plugin')
+
     def _execute_system_workflow(self, wf_id, task_mapping, deployment=None,
                                  execution_parameters=None, timeout=0,
                                  created_at=None, verify_no_executions=True,
@@ -709,7 +717,10 @@ class ResourceManager(object):
                                                'delete_deployment_environment')
 
         should_queue = False
-        # It means that a system-wide workflow is about to be launched
+        if self._workflow_modifies_db(wf_id):
+            self.assert_no_snapshot_creation_running_or_queued(wf_id,
+                                                               deployment)
+
         if deployment is None and verify_no_executions:
             should_queue = self._check_for_any_active_executions(queue)
 
@@ -902,22 +913,28 @@ class ResourceManager(object):
         for node_instance in node_instances:
             self.sm.put(node_instance)
 
-    def _assert_no_snapshot_creation_running_or_queued(self):
+    def assert_no_snapshot_creation_running_or_queued(self,
+                                                      wf_id=None,
+                                                      dep=None):
         """
         Make sure no 'create_snapshot' workflow is currently running or queued.
-        We do this to avoid DB modifications during snapshot creation
-        :return:
+        We do this to avoid DB modifications during snapshot creation.
         """
         status = ExecutionState.ACTIVE_STATES + ExecutionState.QUEUED_STATE
         filters = {'status': status}
         for e in self.list_executions(is_include_system_workflows=True,
                                       filters=filters,
                                       get_all_results=True).items:
-            if e.deployment_id == 'create_snapshot':
+            if e.workflow_id == 'create_snapshot':
+                if wf_id == 'create_deployment_environment':
+                    # delete deployment object from db
+                    self.delete_deployment(deployment_id=dep.id,
+                                           ignore_live_nodes=True,
+                                           delete_db_mode=True)
                 raise manager_exceptions.ExistingRunningExecutionError(
-                    'You cannot start an execution that modifies DB state ' 
-                    ' while `create_snapshot` is running or queued (id: {0})'
-                        .format(e.id))
+                    'You cannot start an execution that modifies DB state'
+                    ' while a `create_snapshot` workflow is running or queued'
+                    ' (snapshot id: {0})'.format(e.id))
 
     def create_deployment(self,
                           blueprint_id,
@@ -927,7 +944,6 @@ class ResourceManager(object):
                           inputs=None,
                           bypass_maintenance=None,
                           skip_plugins_validation=False):
-        self._assert_no_snapshot_creation_running_or_queued()
         blueprint = self.sm.get(models.Blueprint, blueprint_id)
         plan = blueprint.plan
         try:
