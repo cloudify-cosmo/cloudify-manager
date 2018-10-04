@@ -16,6 +16,16 @@
 import os
 import yaml
 
+from json import dump
+
+
+CONFIG_TYPES = [
+    ('MANAGER_REST_CONFIG_PATH', ''),
+    ('MANAGER_REST_SECURITY_CONFIG_PATH', 'security'),
+    ('MANAGER_REST_AUTHORIZATION_CONFIG_PATH', 'authorization')
+]
+SKIP_RESET_WRITE = ['authorization']
+
 
 class Config(object):
 
@@ -67,10 +77,7 @@ class Config(object):
         self.warnings = []
 
     def load_configuration(self):
-        for env_var_name, namespace in [
-                ('MANAGER_REST_CONFIG_PATH', ''),
-                ('MANAGER_REST_SECURITY_CONFIG_PATH', 'security'),
-                ('MANAGER_REST_AUTHORIZATION_CONFIG_PATH', 'authorization')]:
+        for env_var_name, namespace in CONFIG_TYPES:
             if env_var_name in os.environ:
                 self.load_from_file(os.environ[env_var_name], namespace)
 
@@ -94,9 +101,24 @@ instance = Config()
 def reset(configuration=None, write=False):
     global instance
     instance = configuration
-    if write:
-        with open(os.environ['MANAGER_REST_CONFIG_PATH'], 'w') as f:
-            if instance:
-                yaml.safe_dump(instance.__dict__, f, default_flow_style=False)
+    if not write:
+        return
+
+    configs = {}
+    config = vars(instance)
+    for key in config:
+        conf_type = ''
+        for env_var_name, namespace in CONFIG_TYPES:
+            if key.startswith(namespace) and len(namespace) >= len(conf_type):
+                conf_type = namespace
+        file_key = key[len(conf_type) + 1:] if conf_type else key
+        configs.setdefault(conf_type, {})[file_key] = config[key]
+
+    for config_file_env_var, namespace in CONFIG_TYPES:
+        if namespace in SKIP_RESET_WRITE:
+            continue
+        with open(os.environ[config_file_env_var], 'w') as f:
+            if namespace in configs and configs[namespace]:
+                dump(configs[namespace], f, indent=4)
             else:
-                yaml.safe_dump({}, f)
+                dump({}, f)
