@@ -259,8 +259,7 @@ class SnapshotsIdRestore(SecuredResource):
     def post(self, snapshot_id):
         _verify_no_multi_node_cluster(action="restore snapshot")
         request_dict = rest_utils.get_json_and_verify_params(
-            {'recreate_deployments_envs',
-             'ignore_plugin_failure'}
+            {'recreate_deployments_envs'}
         )
         recreate_deployments_envs = rest_utils.verify_and_convert_bool(
             'recreate_deployments_envs',
