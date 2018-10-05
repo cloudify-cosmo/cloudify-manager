@@ -23,9 +23,11 @@ defaults:
 
       - run: sudo apt-get install libldap-dev libsasl2-dev
       - run: pip install --user tox
-
       - run: python -m tox -c $TOX_CONFIG/tox.ini -e $DO_ENV
-
+      - run:
+          name: Push coverage data to codecov
+          command: |
+            bash <(curl -s https://codecov.io/bash) -F $TOX_TEST
 
 jobs:
   flake8:
@@ -106,7 +108,10 @@ jobs:
           command: |
             pip install --user tox
             python -m tox -c amqp-postgres/tox.ini
-
+      - run:
+          name: Push coverage data to codecov
+          command: |
+            bash <(curl -s https://codecov.io/bash)
 
   test_premium:
     docker:
