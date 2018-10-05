@@ -1,0 +1,16 @@
+comment: off
+coverage:
+  status:
+    patch:
+      default:
+        target: '80'
+    project:
+      rest-service:
+        paths:
+          - rest-service
+      workflows:
+        paths:
+          - workflows
+      amqp-postgres:
+        paths:
+          - amqp-postgres
