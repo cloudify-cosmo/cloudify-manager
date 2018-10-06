@@ -7,4 +7,17 @@
         delaycompress
         missingok
         notifempty
+        nodateext
+}
+
+/var/log/cloudify/mgmtworker/cloudify.management_worker.log {
+        hourly
+        rotate 7
+        size 100M
+        copytruncate
+        compress
+        delaycompress
+        missingok
+        notifempty
+        nodateext
 }
