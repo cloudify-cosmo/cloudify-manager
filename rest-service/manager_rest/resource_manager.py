@@ -665,7 +665,7 @@ class ResourceManager(object):
         return should_queue
 
     @staticmethod
-    def _workflow_modifies_db(wf_id):
+    def _system_workflow_modifies_db(wf_id):
         """ Returns `True` if the workflow modifies the DB and
             needs to be blocked while a `create_snapshot` workflow
             is running or queued.
@@ -717,9 +717,8 @@ class ResourceManager(object):
                                                'delete_deployment_environment')
 
         should_queue = False
-        if self._workflow_modifies_db(wf_id):
-            self.assert_no_snapshot_creation_running_or_queued(wf_id,
-                                                               deployment)
+        if self._system_workflow_modifies_db(wf_id):
+            self.assert_no_snapshot_creation_running_or_queued()
 
         if deployment is None and verify_no_executions:
             should_queue = self._check_for_any_active_executions(queue)
@@ -913,9 +912,7 @@ class ResourceManager(object):
         for node_instance in node_instances:
             self.sm.put(node_instance)
 
-    def assert_no_snapshot_creation_running_or_queued(self,
-                                                      wf_id=None,
-                                                      dep=None):
+    def assert_no_snapshot_creation_running_or_queued(self):
         """
         Make sure no 'create_snapshot' workflow is currently running or queued.
         We do this to avoid DB modifications during snapshot creation.
@@ -926,11 +923,6 @@ class ResourceManager(object):
                                       filters=filters,
                                       get_all_results=True).items:
             if e.workflow_id == 'create_snapshot':
-                if wf_id == 'create_deployment_environment':
-                    # delete deployment object from db
-                    self.delete_deployment(deployment_id=dep.id,
-                                           ignore_live_nodes=True,
-                                           delete_db_mode=True)
                 raise manager_exceptions.ExistingRunningExecutionError(
                     'You cannot start an execution that modifies DB state'
                     ' while a `create_snapshot` workflow is running or queued'
@@ -990,9 +982,16 @@ class ResourceManager(object):
             deployment_id,
             dsl_node_instances=deployment_plan['node_instances'])
 
-        self._create_deployment_environment(new_deployment,
-                                            deployment_plan,
-                                            bypass_maintenance)
+        try:
+            self._create_deployment_environment(new_deployment,
+                                                deployment_plan,
+                                                bypass_maintenance)
+        except manager_exceptions.ExistingRunningExecutionError as e:
+            self.delete_deployment(deployment_id=deployment_id,
+                                   ignore_live_nodes=True,
+                                   delete_db_mode=True)
+            raise e
+
         return new_deployment
 
     def validate_plugin_is_installed(self, plugin):
