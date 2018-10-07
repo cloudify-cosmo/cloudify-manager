@@ -1,0 +1,8 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+    - blueprint:imported_blueprint
+
+node_templates:
+    test:
+        type: cloudify.nodes.Compute
