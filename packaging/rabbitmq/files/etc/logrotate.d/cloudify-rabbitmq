@@ -10,4 +10,5 @@
         postrotate
             /usr/sbin/rabbitmqctl -n cloudify-manager@localhost rotate_logs
         endscript
+        nodateext
 }
