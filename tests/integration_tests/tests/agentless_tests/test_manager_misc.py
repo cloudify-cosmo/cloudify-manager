@@ -87,8 +87,17 @@ class MiscManagerTest(AgentlessTestCase):
             'touch /var/log/cloudify/mgmtworker/logs/test.log')
 
         self.logger.info('Cancelling date suffix on rotation...')
-        sed_cmd = 'sed -i -e s/dateext/#dateext/ /etc/logrotate.conf'
-        self.execute_on_manager(sed_cmd)
+        # We need to do this separately for each logrotate configuration.
+        for logrotate_cfg in ['cloudify-amqp-postgres',
+                              'cloudify-mgmtworker',
+                              'cloudify-rabbitmq',
+                              'composer',
+                              'nginx',
+                              'restservice',
+                              'stage']:
+            self.logger.info('Cancelling for %s' % logrotate_cfg)
+            sed_cmd = 'sed -i -e s/dateext.*/nodateext/ /etc/logrotate.d/%s' % logrotate_cfg
+            self.execute_on_manager(sed_cmd)
 
         self.logger.info('Installing crontab on manager')
         self.execute_on_manager('yum install -y cronie')
