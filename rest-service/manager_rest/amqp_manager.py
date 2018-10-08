@@ -90,7 +90,8 @@ class RabbitMQClient(object):
     def delete_user(self, username):
         self._do_request(requests.delete, 'users/{0}'.format(username))
 
-    def set_vhost_permissions(self, vhost, username, configure, write, read):
+    def set_vhost_permissions(self, vhost, username, configure='', write='',
+                              read=''):
         vhost = quote(vhost, '')
         self._do_request(requests.put,
                          'permissions/{0}/{1}'.format(vhost, username),
@@ -133,9 +134,13 @@ class AMQPManager(object):
         self._client.create_user(username, password)
         self._client.set_vhost_permissions(vhost, username, '.*', '.*', '.*')
 
-        # TODO: Maybe won't be necessary in the future
-        self._client.set_vhost_permissions('/', username, '.*', '.*', '.*')
-
+        # Gives configure and write permissions to the specific exchanges of
+        # events, logs and monitoring
+        allowed_resources = '^cloudify-(events|logs|monitoring)$'
+        self._client.set_vhost_permissions('/',
+                                           username,
+                                           configure=allowed_resources,
+                                           write=allowed_resources)
         tenant.rabbitmq_vhost = vhost
         tenant.rabbitmq_username = username
         tenant.rabbitmq_password = encrypted_password
