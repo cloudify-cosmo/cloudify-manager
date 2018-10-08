@@ -6,11 +6,14 @@ coverage:
         target: '80'
     project:
       rest-service:
+        threshold: 0.05
         paths:
           - rest-service
       workflows:
+        threshold: 0.05
         paths:
           - workflows
       amqp-postgres:
+        threshold: 0.05
         paths:
           - amqp-postgres
