@@ -95,8 +95,9 @@ class MiscManagerTest(AgentlessTestCase):
                               'nginx',
                               'restservice',
                               'stage']:
-            self.logger.info('Cancelling for %s' % logrotate_cfg)
-            sed_cmd = 'sed -i -e s/dateext.*/nodateext/ /etc/logrotate.d/%s' % logrotate_cfg
+            self.logger.info('Cancelling for %s', logrotate_cfg)
+            sed_cmd = 'sed -i -e s/dateext.*/nodateext/ /etc/logrotate.d/' \
+                      '{}'.format(logrotate_cfg)
             self.execute_on_manager(sed_cmd)
 
         self.logger.info('Installing crontab on manager')
