@@ -496,7 +496,9 @@ class ResourceManager(object):
                 workflow_id=workflow_id,
                 error='',
                 parameters=execution_parameters,
-                is_system_workflow=False)
+                is_system_workflow=False,
+                is_dry_run=dry_run
+            )
 
             if deployment:
                 new_execution.set_deployment(deployment)
