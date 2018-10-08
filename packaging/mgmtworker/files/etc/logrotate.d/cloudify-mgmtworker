@@ -1,3 +1,4 @@
+/var/log/cloudify/mgmtworker/mgmtworker.log
 /var/log/cloudify/mgmtworker/logs/*.log {
         hourly
         rotate 7
