@@ -742,9 +742,13 @@ class ExecutionsTest(AgentlessTestCase):
                                                   dry_run=True)
         # We're waiting for the final event (workflow execution success),
         # which might arrive after the execution status has changed to
-        # "termindated", because it arrives via a different mechanism
+        # "terminated", because it arrives via a different mechanism
         time.sleep(3)
         events = self.client.events.list(execution_id=execution_id)
         event_messages = {event['message'] for event in events}
 
         self.assertEquals(event_messages, expected_messages)
+
+        # We expect the instances to remain unchaged after a dry run
+        for instance in self.client.node_instances.list():
+            self.assertEqual(instance['state'], 'uninitialized')
