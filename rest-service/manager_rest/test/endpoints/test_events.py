@@ -528,7 +528,7 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
         expected_events = [
             event
             for event in self.events
-            if word in event.message.lower()
+            if word.lower() in event.message.lower()
         ]
         expected_event_ids = [event.id for event in expected_events]
         self.assertListEqual(event_ids, expected_event_ids)
