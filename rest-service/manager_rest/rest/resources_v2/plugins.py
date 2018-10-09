@@ -116,6 +116,7 @@ class Plugins(SecuredResource):
         storage_manager = get_storage_manager()
         is_caravan = False
         installed_plugins = []
+        get_resource_manager().assert_no_snapshot_creation_running_or_queued()
         try:
             plugins, code = UploadedCaravanManager().receive_uploaded_data(
                 **kwargs)
