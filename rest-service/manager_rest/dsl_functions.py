@@ -59,6 +59,20 @@ def evaluate_deployment_outputs(deployment_id):
         raise DeploymentOutputsEvaluationError(str(e))
 
 
+def evaluate_deployment_capabilities(deployment_id):
+    sm = get_storage_manager()
+    deployment = sm.get(Deployment, deployment_id, include=['capabilities'])
+    methods = _get_methods(deployment_id, sm)
+
+    try:
+        return functions.evaluate_capabilities(
+            capabilities=deployment.capabilities,
+            **methods
+            )
+    except parser_exceptions.FunctionEvaluationError, e:
+        raise DeploymentOutputsEvaluationError(str(e))
+
+
 def get_secret_method():
     sm = get_storage_manager()
     methods = _get_methods(None, sm)

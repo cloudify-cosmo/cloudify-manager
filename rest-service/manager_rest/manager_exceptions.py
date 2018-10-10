@@ -345,6 +345,18 @@ class DeploymentOutputsEvaluationError(ManagerException):
         )
 
 
+class DeploymentCapabilitiesEvaluationError(ManagerException):
+    ERROR_CODE = 'deployment_capabilities_evaluation_error'
+
+    def __init__(self, *args, **kwargs):
+        super(DeploymentCapabilitiesEvaluationError, self).__init__(
+            400,
+            DeploymentCapabilitiesEvaluationError.ERROR_CODE,
+            *args,
+            **kwargs
+        )
+
+
 class FunctionsEvaluationError(ManagerException):
     ERROR_CODE = 'functions_evaluation_error'
 
