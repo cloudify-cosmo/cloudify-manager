@@ -1,0 +1,23 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - cloudify/types/types.yaml
+
+node_types:
+  test_type:
+    derived_from: cloudify.nodes.Root
+    properties:
+      key:
+        default: { get_capability: [ shared, node_1_key ] }
+
+node_templates:
+  node1:
+    type: test_type
+  node2:
+    type: test_type
+    properties:
+      key: { get_capability: [ shared, node_2_key ] }
+
+outputs:
+  complex_output:
+    value: { get_capability: [ shared, complex_capability ] }
