@@ -169,6 +169,7 @@ class Deployment(SQLResourceBase):
     policy_triggers = db.Column(db.PickleType)
     policy_types = db.Column(db.PickleType)
     outputs = db.Column(db.PickleType(comparator=lambda *a: False))
+    capabilities = db.Column(db.PickleType(comparator=lambda *a: False))
     scaling_groups = db.Column(db.PickleType)
     updated_at = db.Column(UTCDateTime)
     workflows = db.Column(db.PickleType(comparator=lambda *a: False))

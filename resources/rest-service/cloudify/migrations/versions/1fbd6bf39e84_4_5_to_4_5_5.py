@@ -1,4 +1,6 @@
-"""4.5 to 4.5.5 - Add dry_run indication in executions table
+"""4.5 to 4.5.5
+ - Add dry_run indication in executions table
+ - Add capabilities field to deployments
 
 Revision ID: 1fbd6bf39e84
 Revises: a6d00b128933
@@ -23,6 +25,12 @@ def upgrade():
                                           nullable=False,
                                           server_default='f'))
 
+    op.add_column(
+        'deployments',
+        sa.Column('capabilities', sa.PickleType(comparator=lambda *a: False))
+    )
+
 
 def downgrade():
     op.drop_column('executions', 'is_dry_run')
+    op.drop_column('deployments', 'capabilities')

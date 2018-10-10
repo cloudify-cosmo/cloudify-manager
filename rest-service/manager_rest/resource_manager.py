@@ -829,6 +829,7 @@ class ResourceManager(object):
             groups=deployment_plan['groups'],
             scaling_groups=deployment_plan['scaling_groups'],
             outputs=deployment_plan['outputs'],
+            capabilities=deployment_plan['capabilities']
         )
 
     def prepare_deployment_nodes_for_storage(self,
