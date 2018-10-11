@@ -20,6 +20,7 @@ import shutil
 import zipfile
 import platform
 import tempfile
+import threading
 import subprocess
 from contextlib import closing
 
@@ -100,8 +101,10 @@ class SnapshotRestore(object):
         self._client = get_rest_client()
         self._manager_version = utils.get_manager_version(self._client)
         self._encryption_key = None
+        self._semaphore = threading.Semaphore(20)
 
     def restore(self):
+        start = time.time()
         self._tempdir = tempfile.mkdtemp('-snapshot-data')
         snapshot_path = self._get_snapshot_path()
         ctx.logger.debug('Going to restore snapshot, '
@@ -139,6 +142,9 @@ class SnapshotRestore(object):
             if self._restore_certificates:
                 self._restore_certificate()
             self._trigger_post_restore_commands()
+            end = time.time()
+            time_to_restore = end - start
+            ctx.logger.info(' ******** Restore snapshot took {0} seconds ********'.format(time_to_restore))
         finally:
             ctx.logger.debug('Removing temp dir: {0}'.format(self._tempdir))
             shutil.rmtree(self._tempdir)
@@ -188,43 +194,86 @@ class SnapshotRestore(object):
         return 'cloudify_agent.operations.install_plugins' in \
                message and self._ignore_plugin_failure
 
+    # def execute_task_graph(self, task_graph):
+    #     # ctx.logger.info('@@@@@@ Thread task for deployment {0} @@@@@@'.format(dep_id))
+    #     # with dep_ctx:
+    #     task_graph.execute()
+    #     self._semaphore.release()
+
+    # def create_threads(self, queue, num_of_threads=100):
+    #     for i in range(num_of_threads):
+    #         t = threading.Thread(target=self.start_create_dep_env, args=(queue,))
+    #         t.setDaemon(True)
+    #         t.start()
+
+    @staticmethod
+    def logit(msg):
+        with open('/tmp/cake', 'a') as fh:
+            fh.write('{0}\n'.format(msg))
+
+    def _execute_tasks_graph(self, dep_ctx, tasks_graph):
+        # self.logit('Thread: {0}, currently active {1}'.format(threading.current_thread().name, threading.active_count()))
+        with dep_ctx:
+            tasks_graph.execute()
+        self._semaphore.release()
+
     def _restore_deployment_envs(self, postgres):
         deps = utils.get_dep_contexts(self._snapshot_version)
         token_info = postgres.get_deployment_creator_ids_and_tokens()
         failed_deployments = []
+        # ctx.logger.info('*#*#*#*# deps = {0}, active threads = {1}'.format(deps, threading.active_count()))
+        threads = list()
         for tenant, deployments in deps:
+            # ctx.logger.info('tenant = {0}, deployments = {1}'.format(tenant, deployments))
+
             ctx.logger.info(
                 'Restoring deployment environments for {tenant}'.format(
                     tenant=tenant,
                 )
             )
             tenant_client = get_rest_client(tenant=tenant)
+            # ctx.logger.info('**** current thread 1: {0}, id {1}'.format(threading.current_thread().name, id(threading.current_thread())))
             for deployment_id, dep_ctx in deployments.iteritems():
                 try:
-                    ctx.logger.info('Restoring deployment {dep_id}'.format(
-                        dep_id=deployment_id,
-                    ))
+                    # ctx.logger.info('############ Restoring deployment {dep_id}'.format(dep_id=deployment_id,))
                     api_token = self._get_api_token(
                         token_info[tenant][deployment_id]
                     )
-                    with dep_ctx:
-                        dep = tenant_client.deployments.get(deployment_id)
-                        blueprint = tenant_client.blueprints.get(
-                            dep_ctx.blueprint.id,
+                    # ctx.logger.info('dep_ctx = {0}, type = {1}'.format(dep_ctx, type(dep_ctx)))
+                    # with dep_ctx:
+                    # ctx.logger.info('** Inside with statement **')
+                    # ctx.logger.info('**** current thread 2: {0}, id {1}'.format(threading.current_thread().name, id(threading.current_thread())))
+                    dep = tenant_client.deployments.get(deployment_id)
+                    blueprint = tenant_client.blueprints.get(
+                        dep_ctx.blueprint.id,
+                    )
+                    tasks_graph = self._get_tasks_graph(
+                        dep_ctx,
+                        blueprint,
+                        dep,
+                        api_token,
+                    )
+
+                    # ctx.logger.info('number of running threads: {0}'.format(threading.active_count()))
+                    self._semaphore.acquire()
+                    t = threading.Thread(target=self._execute_tasks_graph, args=(dep_ctx, tasks_graph))
+                    t.setDaemon(True)
+                    threads.append(t)
+                    t.start()
+                    # # ctx.logger.info('******* Added deployment {deployment} to threads list *******'.format(deployment=deployment_id))
+                    # t = threading.Thread(target=tasks_graph.execute)
+                    # threads.append(t)
+                    # t.start()
+                    # ctx.logger.info('**** current thread 3: {0}, id {1}'.format(threading.current_thread().name, id(threading.current_thread())))
+
+                    # self._execute_tasks_graph(dep_ctx, tasks_graph)
+                    # tasks_graph.execute()
+                    ctx.logger.info(
+                        'Successfully created deployment environment '
+                        'for deployment {deployment}'.format(
+                            deployment=deployment_id,
                         )
-                        tasks_graph = self._get_tasks_graph(
-                            dep_ctx,
-                            blueprint,
-                            dep,
-                            api_token,
-                        )
-                        tasks_graph.execute()
-                        ctx.logger.info(
-                            'Successfully created deployment environment '
-                            'for deployment {deployment}'.format(
-                                deployment=deployment_id,
-                            )
-                        )
+                    )
                 except RuntimeError as re:
                     if self.__should_ignore_deployment_failure(re.message):
                         ctx.logger.warning('Failed to create deployment: {0},'
@@ -236,10 +285,14 @@ class SnapshotRestore(object):
                         failed_deployments.append(deployment_id)
                     else:
                         raise re
+
             SnapshotRestore.__remove_failed_deployments_footprints(
                 tenant_client, failed_deployments)
             SnapshotRestore.__log_message_for_deployment_restore(
                 deployments, failed_deployments, tenant)
+        for t in threads:
+            t.join()
+
 
     def _restore_amqp_vhosts_and_users(self):
         subprocess.check_call(
