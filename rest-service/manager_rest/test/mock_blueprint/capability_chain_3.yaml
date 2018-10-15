@@ -1,0 +1,20 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - cloudify/types/types.yaml
+
+node_types:
+  test_type:
+    derived_from: cloudify.nodes.Root
+    properties:
+      key:
+        default: { get_capability: [ chain_2, chain_2_capability ] }
+
+node_templates:
+  chain_3_node:
+    type: test_type
+
+
+outputs:
+  chain_3_output:
+    value: { get_attribute: [ chain_3_node, key ]}

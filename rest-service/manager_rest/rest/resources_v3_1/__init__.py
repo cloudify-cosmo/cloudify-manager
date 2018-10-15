@@ -31,7 +31,8 @@ from .plugins import (                           # NOQA
 
 from .deployments import (                       # NOQA
     DeploymentsId,
-    DeploymentsSetVisibility
+    DeploymentsSetVisibility,
+    DeploymentsIdCapabilities
 )
 
 from .blueprints import (                        # NOQA

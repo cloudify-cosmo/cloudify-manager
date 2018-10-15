@@ -1,0 +1,32 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - cloudify/types/types.yaml
+
+node_types:
+  test_type:
+    derived_from: cloudify.nodes.Root
+    properties:
+      key:
+        default: default_value
+
+node_templates:
+  node1:
+    type: test_type
+  node2:
+    type: test_type
+    properties:
+      key: override_value
+
+capabilities:
+  node_1_key:
+    value: { get_attribute: [ node1, key ]}
+  node_2_key:
+    value: { get_attribute: [ node2, key ]}
+  complex_capability:
+    value:
+      level_1:
+        level_2:
+          level_3: [ value_1, value_2 ]
+          key_1: value_3
+        key_2: value_4

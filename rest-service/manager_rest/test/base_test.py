@@ -143,6 +143,10 @@ class BaseServerTestCase(unittest.TestCase):
                     client.ldap.api = mock_http_client
                     client.secrets.api = mock_http_client
 
+                    # only exists in v3.1 and above
+                    if CLIENT_API_VERSION != 'v3':
+                        client.deployments.capabilities.api = mock_http_client
+
         return client
 
     def setUp(self):

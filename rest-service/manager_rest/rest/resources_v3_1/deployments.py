@@ -15,16 +15,22 @@
 
 from flask_restful.reqparse import Argument
 from flask_restful.inputs import boolean
+from flask_restful_swagger import swagger
 
 from manager_rest.storage import models
 from manager_rest.security import SecuredResource
+
 from manager_rest.security.authorization import authorize
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.storage.models_states import VisibilityState
 from manager_rest.maintenance import is_bypass_maintenance_mode
-from manager_rest.rest import rest_utils, resources_v1, rest_decorators
-from manager_rest.rest.rest_utils import (get_args_and_verify_arguments,
-                                          get_json_and_verify_params)
+from manager_rest.dsl_functions import evaluate_deployment_capabilities
+from manager_rest.rest import (
+    rest_utils,
+    resources_v1,
+    rest_decorators,
+    responses_v3
+)
 
 
 class DeploymentsId(resources_v1.DeploymentsId):
@@ -47,10 +53,10 @@ class DeploymentsId(resources_v1.DeploymentsId):
         """
         rest_utils.validate_inputs({'deployment_id': deployment_id})
         request_schema = self.create_request_schema()
-        request_dict = get_json_and_verify_params(request_schema)
+        request_dict = rest_utils.get_json_and_verify_params(request_schema)
         blueprint_id = request_dict['blueprint_id']
         bypass_maintenance = is_bypass_maintenance_mode()
-        args = get_args_and_verify_arguments(
+        args = rest_utils.get_args_and_verify_arguments(
             [Argument('private_resource', type=boolean)]
         )
         visibility = rest_utils.get_visibility_parameter(
@@ -85,3 +91,19 @@ class DeploymentsSetVisibility(SecuredResource):
         return get_resource_manager().set_visibility(models.Deployment,
                                                      deployment_id,
                                                      visibility)
+
+
+class DeploymentsIdCapabilities(SecuredResource):
+
+    @swagger.operation(
+        responseClass=responses_v3.DeploymentCapabilities.__name__,
+        nickname="get",
+        notes="Gets a specific deployment's capabilities."
+    )
+    @rest_decorators.exceptions_handled
+    @authorize('deployment_capabilities')
+    @rest_decorators.marshal_with(responses_v3.DeploymentCapabilities)
+    def get(self, deployment_id, **kwargs):
+        """Get deployment capabilities"""
+        capabilities = evaluate_deployment_capabilities(deployment_id)
+        return dict(deployment_id=deployment_id, capabilities=capabilities)

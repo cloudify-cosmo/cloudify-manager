@@ -40,6 +40,8 @@ def setup_resources(api):
         'Deployments': 'deployments',
         'DeploymentsId': 'deployments/<string:deployment_id>',
         'DeploymentsIdOutputs': 'deployments/<string:deployment_id>/outputs',
+        'DeploymentsIdCapabilities':
+            'deployments/<string:deployment_id>/capabilities',
         'DeploymentsSetVisibility': 'deployments/<string:deployment_id>/'
                                     'set-visibility',
         'DeploymentModifications': 'deployment-modifications',
