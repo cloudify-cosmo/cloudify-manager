@@ -16,6 +16,8 @@
 from manager_rest.test import base_test
 from manager_rest.test.attribute import attr
 
+from cloudify_rest_client.exceptions import CloudifyClientError
+
 
 @attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
 class CapabilitiesTestCase(base_test.BaseServerTestCase):
@@ -108,3 +110,37 @@ class CapabilitiesTestCase(base_test.BaseServerTestCase):
 
         outputs = self.client.deployments.outputs.get(chain_3)['outputs']
         self.assertEqual(outputs['chain_3_output'], 'initial_value')
+
+    def test_non_existent_deployment(self):
+        dep_id = 'dep_id'
+        self._deploy(dep_id, 'blueprint_with_non_existent_deployment.yaml')
+
+        # Trying to evaluate functions on the node's properties will trigger
+        # `get_capability` evaluation, which should fail
+        self.assertRaisesRegexp(
+            CloudifyClientError,
+            'Requested `Deployment` with ID `wrong_id` was not found',
+            self.client.nodes.get,
+            deployment_id=dep_id,
+            node_id='node1',
+            evaluate_functions=True
+        )
+
+    def test_non_existent_capability(self):
+        deployment_id = 'shared'
+        other_dep_id = 'other_dep_id'
+        self._deploy(deployment_id, 'blueprint_with_capabilities.yaml')
+        self._deploy(other_dep_id,
+                     'blueprint_with_non_existent_capability.yaml')
+
+        # Trying to evaluate functions on the node's properties will trigger
+        # `get_capability` evaluation, which should fail
+        self.assertRaisesRegexp(
+            CloudifyClientError,
+            'Requested capability `wrong_capability` is not '
+            'declared in deployment `other_dep_id`',
+            self.client.nodes.get,
+            deployment_id=other_dep_id,
+            node_id='node1',
+            evaluate_functions=True
+        )
