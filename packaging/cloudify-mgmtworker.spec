@@ -1,5 +1,5 @@
 %define _python_bytecompile_errors_terminate_build 0
-
+%define PIP_INSTALL /opt/mgmtworker/env/bin/pip install -c "${RPM_SOURCE_DIR}/packaging/mgmtworker/constraints.txt"
 Name:           cloudify-management-worker
 Version:        %{CLOUDIFY_VERSION}
 Release:        %{CLOUDIFY_PACKAGE_RELEASE}%{?dist}
@@ -21,18 +21,18 @@ Cloudify's Management worker
 
 %build
 virtualenv /opt/mgmtworker/env
-/opt/mgmtworker/env/bin/pip install --upgrade pip setuptools
-/opt/mgmtworker/env/bin/pip install -r "${RPM_SOURCE_DIR}/packaging/mgmtworker/requirements.txt"
-/opt/mgmtworker/env/bin/pip install --upgrade "${RPM_SOURCE_DIR}/plugins/riemann-controller"
-/opt/mgmtworker/env/bin/pip install --upgrade "${RPM_SOURCE_DIR}/workflows"
+%{PIP_INSTALL} --upgrade pip setuptools
+%{PIP_INSTALL} -r "${RPM_SOURCE_DIR}/packaging/mgmtworker/requirements.txt"
+%{PIP_INSTALL} --upgrade "${RPM_SOURCE_DIR}/plugins/riemann-controller"
+%{PIP_INSTALL} --upgrade "${RPM_SOURCE_DIR}/workflows"
 
 
 # Install stubs of cloudify packages that were merged into cloudify-common
 STUBS=${RPM_SOURCE_DIR}/packaging/mgmtworker/stub_packages
-/opt/mgmtworker/env/bin/pip install --upgrade ${STUBS}/cloudify-rest-client/
-/opt/mgmtworker/env/bin/pip install --upgrade ${STUBS}/cloudify-plugins-common/
-/opt/mgmtworker/env/bin/pip install --upgrade ${STUBS}/cloudify-dsl-parser/
-/opt/mgmtworker/env/bin/pip install --upgrade ${STUBS}/cloudify-script-plugin/
+%{PIP_INSTALL} --upgrade ${STUBS}/cloudify-rest-client/
+%{PIP_INSTALL} --upgrade ${STUBS}/cloudify-plugins-common/
+%{PIP_INSTALL} --upgrade ${STUBS}/cloudify-dsl-parser/
+%{PIP_INSTALL} --upgrade ${STUBS}/cloudify-script-plugin/
 
 %install
 mkdir -p %{buildroot}/opt/mgmtworker
