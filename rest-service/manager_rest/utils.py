@@ -142,7 +142,7 @@ def plugin_installable_on_current_platform(plugin):
 
 def get_formatted_timestamp():
     # Adding 'Z' to match ISO format
-    return '{0}Z'.format(datetime.now().isoformat()[:-3])
+    return '{0}Z'.format(datetime.datetime.utcnow().isoformat()[:-3])
 
 
 class classproperty(object):  # NOQA  # class CapWords
