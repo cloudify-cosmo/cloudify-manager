@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2018 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 from functools import wraps
 
 from flask_restful import Resource
+from flask_restful.utils import unpack
 from flask import request, current_app, Response, jsonify
 
 from manager_rest.utils import abort_error
@@ -25,6 +26,16 @@ from .authentication import authenticator
 
 
 def authenticate(func):
+    def _extend_response_headers(response, extra_headers):
+        response = jsonify(response)
+        response.headers.extend(extra_headers)
+        return response
+
+    def _extend_tuple_response_headers(response, extra_headers):
+        data, code, headers = unpack(response)
+        headers.update(extra_headers)
+        return data, code, headers
+
     @wraps(func)
     def wrapper(*args, **kwargs):
         auth_response = authenticator.authenticate(request)
@@ -32,10 +43,14 @@ def authenticate(func):
             return auth_response
         response = func(*args, **kwargs)
         if hasattr(auth_response, 'response_headers'):
-            # to set additional headers
-            response = jsonify(response)
-            for header, value in auth_response.response_headers.iteritems():
-                response.headers[header] = value
+            if isinstance(response, tuple):
+                response = _extend_tuple_response_headers(
+                    response=response,
+                    extra_headers=auth_response.response_headers)
+            else:
+                response = _extend_response_headers(
+                    response=response,
+                    extra_headers=auth_response.response_headers)
         return response
     return wrapper
 
