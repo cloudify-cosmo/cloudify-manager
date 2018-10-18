@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2018 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,13 +17,14 @@ import os
 import tempfile
 import shutil
 
-from manager_rest.test.attribute import attr
 
 from manager_rest import archiving
 from manager_rest.test import base_test
 from manager_rest.storage import FileServer
+from manager_rest.test.attribute import attr
 from .test_utils import generate_progress_func
-from cloudify_rest_client.exceptions import CloudifyClientError
+
+from cloudify_rest_client import exceptions
 
 
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
@@ -34,20 +35,19 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         self.assertEquals(0, len(result))
 
     def test_get_nonexistent_blueprint(self):
-        try:
-            self.client.blueprints.get('15')
-        except CloudifyClientError, e:
-            self.assertEqual(404, e.status_code)
+        self.assertRaises(exceptions.CloudifyClientError,
+                          self.client.blueprints.get,
+                          '15')
 
     def test_upload_blueprint_illegal_id(self):
         # try id with whitespace
-        self.assertRaisesRegexp(CloudifyClientError,
+        self.assertRaisesRegexp(exceptions.CloudifyClientError,
                                 'contains illegal characters',
                                 self.client.blueprints.upload,
                                 'path',
                                 'illegal id')
         # try id that starts with a number
-        self.assertRaisesRegexp(CloudifyClientError,
+        self.assertRaisesRegexp(exceptions.CloudifyClientError,
                                 'must begin with a letter',
                                 self.client.blueprints.upload,
                                 'path',
@@ -56,7 +56,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
     def test_server_traceback_on_error(self):
         try:
             self.client.blueprints.get('15')
-        except CloudifyClientError, e:
+        except exceptions.CloudifyClientError, e:
             self.assertIsNotNone(e.server_traceback)
 
     def test_post_and_then_search(self):
@@ -114,8 +114,8 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
                 post_blueprints_response['id'], 'blueprint.yaml'))
 
         # deleting the blueprint that was just uploaded
-        delete_blueprint_response = self.delete(
-            '/blueprints/{0}'.format(post_blueprints_response['id'])).json
+        delete_blueprint_response =\
+            self.client.blueprints.delete(post_blueprints_response['id'])
         self.assertEquals(post_blueprints_response['id'],
                           delete_blueprint_response['id'])
 
@@ -129,9 +129,9 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
             self.check_if_resource_on_fileserver(
                 post_blueprints_response['id'], 'blueprint.yaml'))
 
-        # trying to delete a nonexistent blueprint
-        resp = self.delete('/blueprints/nonexistent-blueprint')
-        self.assertEquals(404, resp.status_code)
+        self.assertRaises(exceptions.CloudifyClientError,
+                          self.client.blueprints.delete,
+                          'nonexistent-blueprint')
 
     def test_zipped_plugin(self):
         self.put_file(*self.put_blueprint_args())
@@ -394,3 +394,58 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
                         response.headers['Content-Disposition'])
         self.assertTrue(archive_filename in
                         response.headers['X-Accel-Redirect'])
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_delete_used_blueprints_via_import(self):
+        """
+        Test deletion protection of a blueprint which is used in another
+        blueprint.
+        """
+        second_blueprint_id = 'imported_blueprint'
+        self.put_blueprint('mock_blueprint',
+                           'blueprint.yaml', second_blueprint_id)
+
+        first_blueprint_id = 'first_imported_blueprint'
+        self.put_blueprint('mock_blueprint',
+                           'blueprint_with_blueprint_import.yaml',
+                           first_blueprint_id)
+
+        app_blueprint_id = 'app'
+        self.put_blueprint('mock_blueprint',
+                           'blueprint_with_2_layer_blueprint_import.yaml',
+                           app_blueprint_id)
+
+        self.assertRaises(exceptions.BlueprintInUseError,
+                          self.client.blueprints.delete,
+                          first_blueprint_id)
+
+        self.assertRaises(exceptions.BlueprintInUseError,
+                          self.client.blueprints.delete,
+                          second_blueprint_id)
+
+        self.client.blueprints.delete(app_blueprint_id)
+        self.client.blueprints.delete(first_blueprint_id)
+        self.client.blueprints.delete(second_blueprint_id)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_force_delete_used_blueprints_via_import(self):
+        """
+        Test force deletion protection of a blueprint which is used in another
+        blueprint.
+        """
+        first_blueprint_id = 'imported_blueprint'
+        self.put_blueprint('mock_blueprint',
+                           'blueprint.yaml', first_blueprint_id)
+
+        app_blueprint_id = 'first_imported_blueprint'
+        self.put_blueprint('mock_blueprint',
+                           'blueprint_with_blueprint_import.yaml',
+                           app_blueprint_id)
+
+        self.assertRaises(exceptions.BlueprintInUseError,
+                          self.client.blueprints.delete,
+                          first_blueprint_id)
+
+        self.client.blueprints.delete(first_blueprint_id, True)

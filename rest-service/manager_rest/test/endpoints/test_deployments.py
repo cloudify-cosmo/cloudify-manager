@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2018 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,15 +18,14 @@ import os
 import uuid
 import exceptions
 
-from manager_rest.test.attribute import attr
-
 from manager_rest.test import base_test
+from manager_rest.test.attribute import attr
 from manager_rest import manager_exceptions
-from manager_rest.constants import DEFAULT_TENANT_NAME
+from manager_rest.constants import (DEFAULT_TENANT_NAME,
+                                    FILE_SERVER_DEPLOYMENTS_FOLDER)
+
 from cloudify_rest_client.exceptions import CloudifyClientError
 from cloudify_rest_client.deployments import Deployment
-
-from manager_rest.constants import FILE_SERVER_DEPLOYMENTS_FOLDER
 
 
 TEST_PACKAGE_NAME = 'cloudify-script-plugin'
@@ -97,14 +96,15 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
          deployment_id,
          blueprint_response,
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
-        resp = self.delete('/blueprints/{0}'.format(blueprint_id))
-        self.assertEqual(400, resp.status_code)
-        self.assertTrue('There exist deployments for this blueprint' in
-                        resp.json['message'])
+        with self.assertRaises(CloudifyClientError) as context:
+            self.client.blueprints.delete(blueprint_id)
+        self.assertEquals(400, context.exception.status_code)
+        self.assertIn('There exist deployments for this blueprint',
+                      str(context.exception))
         self.assertEquals(
-            resp.json['error_code'],
-            manager_exceptions.DependentExistsError
-                .DEPENDENT_EXISTS_ERROR_CODE)
+            context.exception.error_code,
+            manager_exceptions.DependentExistsError.
+            DEPENDENT_EXISTS_ERROR_CODE)
 
     def test_deployment_already_exists(self):
         (blueprint_id,
