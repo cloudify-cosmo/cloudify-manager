@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2016 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2018 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +13,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from flask_restful_swagger import swagger
+
 from manager_rest.storage import models
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
@@ -22,6 +24,7 @@ from manager_rest.upload_manager import UploadedBlueprintsManager
 from manager_rest.rest import (rest_utils,
                                resources_v2,
                                rest_decorators)
+from ..rest_utils import verify_and_convert_bool, get_json_and_verify_params
 
 
 class BlueprintsSetGlobal(SecuredResource):
@@ -72,3 +75,23 @@ class BlueprintsId(resources_v2.BlueprintsId):
         return UploadedBlueprintsManager().\
             receive_uploaded_data(data_id=blueprint_id,
                                   visibility=visibility)
+
+    @swagger.operation(
+        responseClass=models.Blueprint,
+        nickname="deleteById",
+        notes="deletes a blueprint by its id."
+    )
+    @rest_decorators.exceptions_handled
+    @authorize('blueprint_delete')
+    @rest_decorators.marshal_with(models.Blueprint)
+    def delete(self, blueprint_id, **kwargs):
+        """
+        Delete blueprint by id
+        """
+        request_dict = get_json_and_verify_params()
+        force = verify_and_convert_bool(
+            'force', request_dict.get('force', False)
+        )
+        blueprint = get_resource_manager().delete_blueprint(blueprint_id,
+                                                            force=force)
+        return blueprint, 200

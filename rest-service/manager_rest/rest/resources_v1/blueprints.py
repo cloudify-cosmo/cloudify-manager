@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2017 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2018 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,11 +15,10 @@
 #
 
 import os
-import shutil
 
 from flask_restful_swagger import swagger
 
-from manager_rest import config, utils
+from manager_rest import config
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.resource_manager import get_resource_manager
@@ -32,7 +31,6 @@ from manager_rest.rest.rest_utils import (make_streaming_response,
                                           validate_inputs)
 from manager_rest.constants import (SUPPORTED_ARCHIVE_TYPES,
                                     FILE_SERVER_RESOURCES_FOLDER,
-                                    FILE_SERVER_BLUEPRINTS_FOLDER,
                                     FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER)
 
 
@@ -180,20 +178,6 @@ class BlueprintsId(SecuredResource):
         # for the blueprint exists, the deletion operation will fail.
         # However, there is no handling of possible concurrency issue with
         # regard to that matter at the moment.
-        blueprint = get_resource_manager().delete_blueprint(blueprint_id)
-
-        # Delete blueprint resources from file server
-        blueprint_folder = os.path.join(
-            config.instance.file_server_root,
-            FILE_SERVER_BLUEPRINTS_FOLDER,
-            utils.current_tenant.name,
-            blueprint.id)
-        shutil.rmtree(blueprint_folder)
-        uploaded_blueprint_folder = os.path.join(
-            config.instance.file_server_root,
-            FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
-            utils.current_tenant.name,
-            blueprint.id)
-        shutil.rmtree(uploaded_blueprint_folder)
-
+        blueprint = get_resource_manager().delete_blueprint(blueprint_id,
+                                                            force=False)
         return blueprint, 200

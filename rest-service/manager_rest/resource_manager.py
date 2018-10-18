@@ -28,7 +28,9 @@ from cloudify import constants as cloudify_constants, utils as cloudify_utils
 from dsl_parser import constants, tasks
 from dsl_parser import exceptions as parser_exceptions
 from manager_rest import premium_enabled
-from manager_rest.constants import DEFAULT_TENANT_NAME
+from manager_rest.constants import (DEFAULT_TENANT_NAME,
+                                    FILE_SERVER_BLUEPRINTS_FOLDER,
+                                    FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER)
 from manager_rest.dsl_functions import get_secret_method
 from manager_rest.utils import is_create_global_permitted, send_event
 from manager_rest.storage import (get_storage_manager,
@@ -379,9 +381,29 @@ class ResourceManager(object):
         )
         return self.sm.put(new_blueprint)
 
-    def delete_blueprint(self, blueprint_id):
+    def _remove_folder(self, folder_name, blueprints_location):
+        blueprint_folder = os.path.join(
+            config.instance.file_server_root,
+            blueprints_location,
+            utils.current_tenant.name,
+            folder_name.id)
+        shutil.rmtree(blueprint_folder)
+
+    def delete_blueprint(self, blueprint_id, force):
         blueprint = self.sm.get(models.Blueprint, blueprint_id)
         self.validate_modification_permitted(blueprint)
+
+        if not force:
+            imported_list = [b.plan[constants.IMPORTED]
+                             for b in self.sm.list(
+                    models.Blueprint,
+                    include=['id', 'plan'])]
+            import_blueprint_format = "blueprint:{}".format(blueprint_id)
+            for imported in imported_list:
+                if import_blueprint_format in imported:
+                    raise manager_exceptions.BlueprintInUseError(
+                        'Blueprint {} is currently in use. You can "force" '
+                        'blueprint removal.'.format(blueprint_id))
 
         if len(blueprint.deployments) > 0:
             raise manager_exceptions.DependentExistsError(
@@ -390,6 +412,12 @@ class ResourceManager(object):
                 .format(blueprint_id,
                         ','.join([dep.id for dep
                                   in blueprint.deployments])))
+        # Delete blueprint resources from file server
+        self._remove_folder(folder_name=blueprint,
+                            blueprints_location=FILE_SERVER_BLUEPRINTS_FOLDER)
+        self._remove_folder(
+            folder_name=blueprint,
+            blueprints_location=FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER)
 
         return self.sm.delete(blueprint)
 
