@@ -340,14 +340,6 @@ class SQLStorageManager(object):
                 )
             )
 
-        if pagination_size > config.instance.max_results:
-            raise manager_exceptions.IllegalActionError(
-                'Invalid pagination size: {0}. Max allowed: {1}'.format(
-                    pagination_size,
-                    config.instance.max_results
-                )
-            )
-
     @staticmethod
     def _validate_returned_size(size):
         if size > config.instance.max_results:
