@@ -18,10 +18,11 @@ import json
 
 from cloudify.workflows import ctx
 from cloudify import broker_config
+from cloudify.manager import get_rest_client
 from cloudify.models_states import AgentState
 from cloudify.utils import get_broker_ssl_cert_path
+from cloudify.agent_utils import create_agent_record
 from cloudify.constants import AGENT_INSTALL_METHOD_NONE
-from cloudify.manager import get_rest_client, create_agent_record
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 
