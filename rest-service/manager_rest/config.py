@@ -97,6 +97,24 @@ class Config(object):
                     "Ignoring unknown key '{0}' in configuration file "
                     "'{1}'".format(key, filename))
 
+    def to_dict(self):
+        config_dict = vars(self)
+        insecure_keys = {
+            'security_hash_salt',
+            'security_secret_key',
+            'security_encoding_alphabet',
+            'security_encoding_block_size',
+            'security_encoding_min_length',
+            'security_encryption_key',
+            'authorization_roles',
+            'authorization_permissions',
+            'failed_logins_before_account_lock',
+            'account_lock_period',
+            'warnings'
+        }
+        return {key: config_dict[key] for key in config_dict
+                if key not in insecure_keys}
+
 
 instance = Config()
 

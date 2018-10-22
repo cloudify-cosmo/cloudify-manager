@@ -49,3 +49,25 @@ class ManagerConfig(SecuredResource):
             'permissions': cfy_config.authorization_permissions
         }
         return authorization
+
+
+class ManagerRestConfig(SecuredResource):
+    @rest_decorators.exceptions_handled
+    @authorize('manager_rest_config_get')
+    def get(self):
+        """
+        Get the Manager's REST configuration
+        :return: Manager's REST configuration data
+        """
+        request_args = request.args.to_dict(flat=False)
+        current_app.logger.info('Retrieving Manager REST config. filter: {0}'.
+                                format(request_args))
+        result = dict()
+        filter_by = request_args.get('filter', [])
+        for key in filter_by:
+            result[key] = config.instance.to_dict().get(key, None)
+        if not filter_by:
+            current_app.logger.debug('Retrieving Manager REST config without a'
+                                     ' filter')
+            result = config.instance.to_dict()
+        return result

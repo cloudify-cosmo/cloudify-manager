@@ -504,3 +504,21 @@ class DeploymentPluginNotFound(ManagerException):
 class TenantNotProvided(ForbiddenError):
     def __init__(self, *args, **kwargs):
         super(TenantNotProvided, self).__init__(*args, **kwargs)
+
+
+class IncompatibleClusterArchitectureError(ManagerException):
+    """
+    Raise when a cluster node with architecture X is trying to join a cluster
+    with architecture Y
+
+    I.E - Master is all-in-one and slave has an external database
+    """
+    ERROR_CODE = 'incompatible_cluster_architecture'
+
+    def __init__(self, *args, **kwargs):
+        super(IncompatibleClusterArchitectureError, self).__init__(
+            400,
+            IncompatibleClusterArchitectureError.ERROR_CODE,
+            *args,
+            **kwargs
+        )

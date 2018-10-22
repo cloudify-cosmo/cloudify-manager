@@ -15,6 +15,7 @@
 
 from manager_rest.security.authorization import authorize
 from manager_rest.security import MissingPremiumFeatureResource
+from manager_rest import config
 
 from .. import rest_decorators, rest_utils
 from ..responses_v3 import BaseResponse
@@ -112,6 +113,7 @@ class ClusterNodesId(ClusterResourceBase):
             'host_ip': {'type': unicode},
             'node_name': {'type': unicode},
         })
+        details.update({'database_ip': config.instance.postgresql_host})
         return cluster.add_node(details)
 
     @rest_decorators.exceptions_handled
