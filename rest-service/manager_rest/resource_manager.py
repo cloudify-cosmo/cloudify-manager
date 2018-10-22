@@ -1078,9 +1078,7 @@ class ResourceManager(object):
             instance.to_dict() for instance in
             self.sm.list(models.NodeInstance,
                          filters=deployment_id_filter,
-                         get_all_results=True
-            )
-        ]
+                         get_all_results=True)]
 
         now = utils.get_formatted_timestamp()
         modification_id = str(uuid.uuid4())
