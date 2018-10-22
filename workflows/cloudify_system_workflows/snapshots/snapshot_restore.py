@@ -101,12 +101,15 @@ class SnapshotRestore(object):
         self._client = get_rest_client()
         self._manager_version = utils.get_manager_version(self._client)
         self._encryption_key = None
-        self._semaphore = threading.Semaphore(20)
+        # self._semaphore = threading.Semaphore(20)
+        # threads_limit = self._config.max_num_of_threads
+        self._semaphore = threading.Semaphore(self._config.max_num_of_threads)
 
     def restore(self):
         start = time.time()
         self._tempdir = tempfile.mkdtemp('-snapshot-data')
         snapshot_path = self._get_snapshot_path()
+        ctx.logger.info('*** Semaphore = {0} ***'.format(self._config.max_num_of_threads))
         ctx.logger.debug('Going to restore snapshot, '
                          'snapshot_path: {0}'.format(snapshot_path))
         try:
@@ -144,7 +147,7 @@ class SnapshotRestore(object):
             self._trigger_post_restore_commands()
             end = time.time()
             time_to_restore = end - start
-            ctx.logger.info(' ******** Restore snapshot took {0} seconds ********'.format(time_to_restore))
+            ctx.logger.info(' @@@ ******** {0} Restore snapshot took {1} seconds ********'.format(self._config.max_num_of_threads, time_to_restore))
         finally:
             ctx.logger.debug('Removing temp dir: {0}'.format(self._tempdir))
             shutil.rmtree(self._tempdir)

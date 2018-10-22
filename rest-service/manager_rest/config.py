@@ -74,6 +74,8 @@ class Config(object):
         self.failed_logins_before_account_lock = 4
         self.account_lock_period = -1
 
+        self.max_num_of_threads = 20
+
         self.warnings = []
 
     def load_configuration(self):
