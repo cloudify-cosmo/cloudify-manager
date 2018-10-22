@@ -33,6 +33,31 @@ class ExecutionsTestCase(BaseServerTestCase):
 
     DEPLOYMENT_ID = 'deployment'
 
+    def _test_start_execution_dep_env(self, task_state, expected_ex):
+        with mock.patch('manager_rest.test.mocks.task_state',
+                        return_value=task_state):
+            _, deployment_id, _, _ = self.put_deployment(self.DEPLOYMENT_ID)
+        self.assertRaises(expected_ex, self.client.executions.start,
+                          deployment_id, 'install')
+
+    def _modify_execution_status(self, execution_id, new_status):
+        execution = self.client.executions.update(execution_id, new_status)
+        self.assertEquals(new_status, execution.status)
+        return execution
+
+    def _modify_execution_status_in_database(
+            self, execution, new_status):
+        try:
+            execution_id = execution['id']
+        except TypeError:
+            execution_id = execution.id
+        execution = self.sm.get(models.Execution, execution_id)
+        execution.status = new_status
+        self.sm.update(execution)
+        updated_execution = self.client.executions.get(
+            execution_id=execution_id)
+        self.assertEqual(new_status, updated_execution['status'])
+
     def test_get_deployment_executions_empty(self):
         _, deployment_id, _, _ = self.put_deployment(self.DEPLOYMENT_ID)
         executions = self.client.executions.list(deployment_id=deployment_id)
@@ -730,27 +755,15 @@ class ExecutionsTestCase(BaseServerTestCase):
             ExecutionState.STARTED,
             exceptions.DeploymentEnvironmentCreationInProgressError)
 
-    def _test_start_execution_dep_env(self, task_state, expected_ex):
-        with mock.patch('manager_rest.test.mocks.task_state',
-                        return_value=task_state):
-            _, deployment_id, _, _ = self.put_deployment(self.DEPLOYMENT_ID)
-        self.assertRaises(expected_ex, self.client.executions.start,
-                          deployment_id, 'install')
+    def test_install_empty_blueprint(self):
+        (blueprint_id, deployment_id, _,
+         deployment_response) = self.put_deployment(
+            deployment_id=self.DEPLOYMENT_ID,
+            blueprint_file_name='empty_blueprint.yaml')
 
-    def _modify_execution_status(self, execution_id, new_status):
-        execution = self.client.executions.update(execution_id, new_status)
-        self.assertEquals(new_status, execution.status)
-        return execution
-
-    def _modify_execution_status_in_database(
-            self, execution, new_status):
-        try:
-            execution_id = execution['id']
-        except TypeError:
-            execution_id = execution.id
-        execution = self.sm.get(models.Execution, execution_id)
-        execution.status = new_status
-        self.sm.update(execution)
-        updated_execution = self.client.executions.get(
-            execution_id=execution_id)
-        self.assertEqual(new_status, updated_execution['status'])
+        execution = self.client.executions.start(deployment_id, 'install')
+        get_execution = self.client.executions.get(execution.id)
+        self.assertEquals(get_execution.status, 'terminated')
+        self.assertEquals(get_execution['blueprint_id'], blueprint_id)
+        self.assertEquals(get_execution['deployment_id'],
+                          deployment_response['id'])
