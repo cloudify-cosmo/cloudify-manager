@@ -128,7 +128,7 @@ class MockHTTPClient(HTTPClient):
                                        data=body,
                                        query_string=build_query_string(params))
         else:
-            raise NotImplemented()
+            raise NotImplementedError()
 
         if response.status_code != expected_status_code:
             response.content = response.data
