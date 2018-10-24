@@ -48,7 +48,7 @@ EVENT_INSERT_QUERY = """
 """
 
 EVENT_VALUES_TEMPLATE = """(
-        now() AT TIME ZONE 'utc',
+        now(),
         CAST (%(timestamp)s AS TIMESTAMP),
         %(execution_id)s,
         %(tenant_id)s,
