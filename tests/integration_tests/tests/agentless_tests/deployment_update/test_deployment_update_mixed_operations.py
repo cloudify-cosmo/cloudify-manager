@@ -27,8 +27,8 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
          2. site3 connected_to site1.
          3. site2 connected_to site3.
          site2=====>site1
-            \         ^
-             \       /
+            \\         ^
+             \\       //
               ->site3
         :return:
         """
