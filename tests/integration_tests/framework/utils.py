@@ -215,8 +215,8 @@ def download_file(file_url, tmp_file):
 
 class YamlPatcher(object):
 
-    pattern = re.compile("(.+)\[(\d+)\]")
-    set_pattern = re.compile("(.+)\[(\d+|append)\]")
+    pattern = re.compile(r'(.+)\[(\d+)\]')
+    set_pattern = re.compile(r'(.+)\[(\d+|append)\]')
 
     def __init__(self, yaml_path, is_json=False, default_flow_style=True):
         self.yaml_path = yaml_path
@@ -263,8 +263,8 @@ class YamlPatcher(object):
 
     def _split_path(self, path):
         # allow escaping '.' with '\.'
-        parts = re.split('(?<![^\\\\]\\\\)\.', path)
-        return [p.replace('\.', '.').replace('\\\\', '\\') for p in parts]
+        parts = re.split(r'(?<![^\\\\]\\\\)\.', path)
+        return [p.replace(r'\.', '.').replace('\\\\', '\\') for p in parts]
 
     def _get_object_by_path(self, prop_path):
         current = self.obj
@@ -296,7 +296,7 @@ class YamlPatcher(object):
         split = self._split_path(prop_path)
         if len(split) == 1:
             return self.obj, prop_path
-        parent_path = '.'.join(p.replace('.', '\.') for p in split[:-1])
+        parent_path = '.'.join(p.replace('.', r'\.') for p in split[:-1])
         parent_obj = self._get_object_by_path(parent_path)
         prop_name = split[-1]
         return parent_obj, prop_name

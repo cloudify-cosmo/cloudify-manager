@@ -110,7 +110,7 @@ class EventsTest(AgentlessTestCase):
         self.assertEquals(pagination_info.size, size)
 
     def test_query_with_reserved_characters(self):
-        message = '+ - = && || > < ! ( ) { } [ ] ^ " ~ * ? : \ /'
+        message = '+ - = && || > < ! ( ) { } [ ] ^ " ~ * ? : \\ /'
         self._events_list(message=message,
                           skip_assertion=True)
 
