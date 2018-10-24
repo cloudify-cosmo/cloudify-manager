@@ -228,7 +228,6 @@ class TenantGroups(SecuredMultiTenancyResource):
     @rest_decorators.exceptions_handled
     @authorize('tenant_update_group', get_tenant_from='data')
     @rest_decorators.marshal_with(TenantResponse)
-    @rest_decorators.no_external_authenticator('update group in tenant')
     def patch(self, multi_tenancy):
         """Update role in group tenant association."""
         request_dict = rest_utils.get_json_and_verify_params(
