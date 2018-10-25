@@ -94,7 +94,7 @@ class TestSnapshot(AgentlessTestCase):
 
         # Now make sure all the resources really exist in the DB
         # Assert snapshot restored
-        self._assert_4_4_0_snapshot_restored_bad_plugin_no_deployments()
+        self._assert_4_4_0_snapshot_restored_bad_plugin()
 
     def test_4_4_snapshot_restore_with_bad_plugin_no_directory(self):
         snapshot_path = \
@@ -107,7 +107,7 @@ class TestSnapshot(AgentlessTestCase):
 
         # Now make sure all the resources really exist in the DB
         # Assert snapshot restored
-        self._assert_4_4_0_snapshot_restored_bad_plugin_no_deployments()
+        self._assert_4_4_0_snapshot_restored_bad_plugin()
 
     def test_4_4_snapshot_restore_with_bad_plugin_with_deps(self):
         snapshot_path = self._get_snapshot(
@@ -120,7 +120,8 @@ class TestSnapshot(AgentlessTestCase):
 
         # Now make sure all the resources really exist in the DB
         # Assert snapshot restored
-        self._assert_4_4_0_snapshot_restored_bad_plugin_no_deployments()
+        self._assert_4_4_0_snapshot_restored_bad_plugin(
+            number_of_deployments=1)
 
     def test_4_4_snapshot_restore_with_bad_plugin_fails(self):
         snapshot_path = \
@@ -222,11 +223,13 @@ class TestSnapshot(AgentlessTestCase):
         self._assert_3_3_1_snapshot_restored()
         self._assert_3_3_1_plugins_restored()
 
-    def _assert_4_4_0_snapshot_restored_bad_plugin_no_deployments(
+    def _assert_4_4_0_snapshot_restored_bad_plugin(
             self,
-            tenant_name=DEFAULT_TENANT_NAME):
-        self._assert_4_4_0_plugins_restored_bad_plugin_no_deployments(
+            tenant_name=DEFAULT_TENANT_NAME,
+            number_of_deployments=0):
+        self._assert_4_4_0_plugins_restored_bad_plugin(
             tenant_name=tenant_name,
+            number_of_deployments=number_of_deployments
         )
 
     def _assert_3_3_1_snapshot_restored(self,
@@ -402,18 +405,19 @@ class TestSnapshot(AgentlessTestCase):
         self.assertEqual(package_name_counts['cloudify-script-plugin'], 1)
         self.assertEqual(package_name_counts['cloudify-diamond-plugin'], 5)
 
-    def _assert_4_4_0_plugins_restored_bad_plugin_no_deployments(
+    def _assert_4_4_0_plugins_restored_bad_plugin(
             self,
-            tenant_name=DEFAULT_TENANT_NAME):
+            tenant_name=DEFAULT_TENANT_NAME,
+            number_of_deployments=0):
         """
-        Validate only 7 of the 8 plugins in the snapshot are being restored
-        also, no deployments have been restored
+        Validate only 7 of the 8 plugins in the snapshot are being restored.
+        Also, validating all deployments exist
         """
         with self.client_using_tenant(self.client, tenant_name):
             plugins = self.client.plugins.list()
             deployments = self.client.deployments.list()
         self.assertEqual(len(plugins), 7)
-        self.assertEqual(len(deployments), 0)
+        self.assertEqual(len(deployments), number_of_deployments)
         package_names = [plugin.package_name for plugin in plugins]
         package_name_counts = Counter(package_names)
         self.assertEqual(package_name_counts['cloudify-fabric-plugin'], 1)
