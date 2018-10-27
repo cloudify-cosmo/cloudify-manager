@@ -14,8 +14,13 @@
 #  * limitations under the License.
 
 import os
+import mock
 
 from dsl_parser import tasks, constants
+from dsl_parser.utils import ResolverInstantiationError
+
+from cloudify_rest_client.exceptions import CloudifyClientError
+
 from manager_rest.test.attribute import attr
 from manager_rest.test.base_test import (BaseServerTestCase,
                                          LATEST_API_VERSION)
@@ -64,3 +69,80 @@ class TestParseWithResolver(BaseServerTestCase):
         nodes = {node["name"] for node in plan[constants.NODES]}
 
         self.assertEqual(nodes, {"test", "vm", "http_web_server"})
+
+
+@attr(client_min_version=1, client_max_version=LATEST_API_VERSION)
+class UploadBlueprintsWithImportResolverTests(BaseServerTestCase):
+
+    def _update_provider_context(self, resolver_section=None):
+        cloudify_section = {}
+        if resolver_section:
+            cloudify_section[constants.IMPORT_RESOLVER_KEY] = resolver_section
+        self.client.manager.update_context(self.id(),
+                                           {'cloudify': cloudify_section})
+
+    @mock.patch('dsl_parser.tasks.parse_dsl')
+    def test_upload_blueprint_with_resolver(self, mock_parse_dsl):
+
+        resolver_section = {'rules': ['mock resolver section']}
+        create_import_resolver_inputs = []
+
+        def mock_create_import_resolver(resolver_section):
+            create_import_resolver_inputs.append(resolver_section)
+            return 'mock expected import resolver'
+
+        mock_parse_dsl.return_value = dict()
+        with mock.patch(
+                'dsl_parser.utils.create_import_resolver',
+                new=mock_create_import_resolver):
+            self._update_provider_context(resolver_section)
+            self.put_file(*self.put_blueprint_args())
+
+        # asserts
+        mock_parse_dsl.assert_called_once_with(
+            mock.ANY, mock.ANY,
+            resolver='mock expected import resolver',
+            validate_version=mock.ANY)
+
+        # just check one key - additional keys might have been added
+        # when creating the parser context
+        self.assertEqual(create_import_resolver_inputs[0]['rules'],
+                         resolver_section['rules'])
+
+        self.assertEqual(self.app.application.parser_context['resolver'],
+                         'mock expected import resolver')
+
+    def test_resolver_update_in_app(self):
+        # upload blueprint
+        self.test_upload_blueprint_with_resolver()
+        # update current app
+        self.app.application.parser_context = {
+            'resolver': 'mock resolver',
+            'validate_version': True
+        }
+        # upload blueprint again and check that
+        # the expected resolver passed to the parser
+        with mock.patch(
+                'dsl_parser.tasks.parse_dsl',
+                mock.MagicMock(return_value={})
+        ) as mock_parse_dsl:
+            self.put_file(*self.put_blueprint_args())
+            mock_parse_dsl.assert_called_once_with(
+                mock.ANY, mock.ANY,
+                resolver='mock resolver',
+                validate_version=mock.ANY)
+
+    def test_failed_to_initialize_resolver(self):
+
+        err_msg = 'illegal default resolve initialization'
+
+        def mock_create_import_resolver(_):
+            raise ResolverInstantiationError(err_msg)
+
+        with mock.patch('dsl_parser.utils.create_import_resolver',
+                        new=mock_create_import_resolver):
+            try:
+                self._update_provider_context()
+                self.fail('CloudifyClientError expected')
+            except CloudifyClientError, ex:
+                self.assertIn(err_msg, str(ex))

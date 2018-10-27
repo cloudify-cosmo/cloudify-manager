@@ -429,6 +429,18 @@ class PluginInUseError(ManagerException):
         )
 
 
+class BlueprintInUseError(ManagerException):
+    ERROR_CODE = 'blueprint_in_use'
+
+    def __init__(self, *args, **kwargs):
+        super(BlueprintInUseError, self).__init__(
+            405,
+            BlueprintInUseError.ERROR_CODE,
+            *args,
+            **kwargs
+        )
+
+
 class PluginInstallationError(ManagerException):
     ERROR_CODE = 'plugin_installation_error'
 
