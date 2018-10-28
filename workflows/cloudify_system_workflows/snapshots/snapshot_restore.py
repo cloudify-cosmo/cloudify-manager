@@ -16,6 +16,7 @@
 import os
 import json
 import time
+import Queue
 import shutil
 import zipfile
 import platform
@@ -25,9 +26,9 @@ import subprocess
 from contextlib import closing
 
 import wagon
-
 from cloudify.workflows import ctx
 from cloudify.manager import get_rest_client
+from cloudify.state import current_workflow_ctx
 from cloudify.exceptions import NonRecoverableError
 from cloudify.constants import FILE_SERVER_SNAPSHOTS_FOLDER
 from cloudify.utils import ManagerVersion, get_local_rest_certificate
@@ -101,15 +102,12 @@ class SnapshotRestore(object):
         self._client = get_rest_client()
         self._manager_version = utils.get_manager_version(self._client)
         self._encryption_key = None
-        # self._semaphore = threading.Semaphore(20)
-        # threads_limit = self._config.max_num_of_threads
-        self._semaphore = threading.Semaphore(self._config.max_num_of_threads)
+        self._semaphore = threading.Semaphore(
+            self._config.snapshot_restore_threads)
 
     def restore(self):
-        start = time.time()
         self._tempdir = tempfile.mkdtemp('-snapshot-data')
         snapshot_path = self._get_snapshot_path()
-        ctx.logger.info('*** Semaphore = {0} ***'.format(self._config.max_num_of_threads))
         ctx.logger.debug('Going to restore snapshot, '
                          'snapshot_path: {0}'.format(snapshot_path))
         try:
@@ -145,157 +143,119 @@ class SnapshotRestore(object):
             if self._restore_certificates:
                 self._restore_certificate()
             self._trigger_post_restore_commands()
-            end = time.time()
-            time_to_restore = end - start
-            ctx.logger.info(' @@@ ******** {0} Restore snapshot took {1} seconds ********'.format(self._config.max_num_of_threads, time_to_restore))
         finally:
             ctx.logger.debug('Removing temp dir: {0}'.format(self._tempdir))
             shutil.rmtree(self._tempdir)
 
-    @staticmethod
-    def __remove_failed_deployments_footprints(tenant_client,
-                                               failed_deployments):
-        '''
-        Used to remove any deployments footprints in the DB or File System
-        :param tenant_client: Client to use to delete the deployment from
-        :param failed_deployments: Deployments that have failed to be recreated
-        and are needed to be removed from DB or File System
-        :exception ex: Caught only for informational purposes since the
-        deployment could be only partially installed, thus partially deleted
-        '''
-        for failed_deployment in failed_deployments:
-            try:
-                ctx.logger.info('Removing failed deployment {0}'
-                                ' footprints'.format(failed_deployment))
-                tenant_client.deployments.delete(failed_deployment)
-            except Exception as ex:
-                ctx.logger.warning('Failed to delete deployment footprints {0}'
-                                   ' with error: {1}'.format(failed_deployment,
-                                                             ex.message))
-
-    @staticmethod
-    def __log_message_for_deployment_restore(deployments,
-                                             failed_deployments,
-                                             tenant):
-        if not failed_deployments:
-            ctx.logger.info(
-                'Finished restoring deployment environments for '
-                '{tenant}'.format(tenant=tenant, )
-            )
-        else:
-            ctx.logger.warning(
-                'Finished restoring {0}/{1} deployment environments for '
-                '{tenant}'.format(
-                    len(deployments) - len(failed_deployments),
-                    len(deployments),
-                    tenant=tenant,
-                )
-            )
-
-    def __should_ignore_deployment_failure(self,
-                                           message):
+    def _should_ignore_plugin_failure(self,
+                                      message):
         return 'cloudify_agent.operations.install_plugins' in \
                message and self._ignore_plugin_failure
 
-    # def execute_task_graph(self, task_graph):
-    #     # ctx.logger.info('@@@@@@ Thread task for deployment {0} @@@@@@'.format(dep_id))
-    #     # with dep_ctx:
-    #     task_graph.execute()
-    #     self._semaphore.release()
+    def _get_and_execute_task_graph(self, token_info, deployment_id,
+                                    dep_ctx, tenant, tenant_client,
+                                    workflow_ctx, ctx_params,
+                                    deps_with_failed_plugins,
+                                    failed_deployments):
+        """
+        While in the correct workflow context, this method
+        creates a `create_deployment_env` task graph and executes it.
+        Since this method is being executed by threads, it appends errors
+        to thread-safe queues, in order to handle them later outside of
+        this scope.
+        """
+        with current_workflow_ctx.push(workflow_ctx, ctx_params):
+            try:
+                api_token = self._get_api_token(
+                    token_info[tenant][deployment_id]
+                )
+                dep = tenant_client.deployments.get(deployment_id)
+                blueprint = tenant_client.blueprints.get(
+                    dep_ctx.blueprint.id,
+                )
+                tasks_graph = self._get_tasks_graph(
+                    dep_ctx,
+                    blueprint,
+                    dep,
+                    api_token,
+                )
+                with dep_ctx:
+                    tasks_graph.execute()
+            except RuntimeError as re:
+                if self._should_ignore_plugin_failure(re.message):
+                    ctx.logger.warning('Failed to install plugins for '
+                                       'deployment `{0}` under tenant `{1}`. '
+                                       ' Proceeding since '
+                                       '`ignore_plugin_failure` flag was used.'
+                                       .format(deployment_id, tenant))
+                    ctx.logger.debug(re.message)
+                    deps_with_failed_plugins.put((deployment_id, tenant))
+                else:
+                    failed_deployments.put((deployment_id, tenant))
+                    ctx.logger.info(re)
 
-    # def create_threads(self, queue, num_of_threads=100):
-    #     for i in range(num_of_threads):
-    #         t = threading.Thread(target=self.start_create_dep_env, args=(queue,))
-    #         t.setDaemon(True)
-    #         t.start()
-
-    @staticmethod
-    def logit(msg):
-        with open('/tmp/cake', 'a') as fh:
-            fh.write('{0}\n'.format(msg))
-
-    def _execute_tasks_graph(self, dep_ctx, tasks_graph):
-        # self.logit('Thread: {0}, currently active {1}'.format(threading.current_thread().name, threading.active_count()))
-        with dep_ctx:
-            tasks_graph.execute()
         self._semaphore.release()
 
     def _restore_deployment_envs(self, postgres):
         deps = utils.get_dep_contexts(self._snapshot_version)
         token_info = postgres.get_deployment_creator_ids_and_tokens()
-        failed_deployments = []
-        # ctx.logger.info('*#*#*#*# deps = {0}, active threads = {1}'.format(deps, threading.active_count()))
+        deps_with_failed_plugins = Queue.Queue()
+        failed_deployments = Queue.Queue()
         threads = list()
-        for tenant, deployments in deps:
-            # ctx.logger.info('tenant = {0}, deployments = {1}'.format(tenant, deployments))
 
+        for tenant, deployments in deps:
             ctx.logger.info(
                 'Restoring deployment environments for {tenant}'.format(
                     tenant=tenant,
                 )
             )
             tenant_client = get_rest_client(tenant=tenant)
-            # ctx.logger.info('**** current thread 1: {0}, id {1}'.format(threading.current_thread().name, id(threading.current_thread())))
+
             for deployment_id, dep_ctx in deployments.iteritems():
-                try:
-                    # ctx.logger.info('############ Restoring deployment {dep_id}'.format(dep_id=deployment_id,))
-                    api_token = self._get_api_token(
-                        token_info[tenant][deployment_id]
-                    )
-                    # ctx.logger.info('dep_ctx = {0}, type = {1}'.format(dep_ctx, type(dep_ctx)))
-                    # with dep_ctx:
-                    # ctx.logger.info('** Inside with statement **')
-                    # ctx.logger.info('**** current thread 2: {0}, id {1}'.format(threading.current_thread().name, id(threading.current_thread())))
-                    dep = tenant_client.deployments.get(deployment_id)
-                    blueprint = tenant_client.blueprints.get(
-                        dep_ctx.blueprint.id,
-                    )
-                    tasks_graph = self._get_tasks_graph(
-                        dep_ctx,
-                        blueprint,
-                        dep,
-                        api_token,
-                    )
+                # Task graph is created and executed by threads to
+                # shorten restore time significantly
+                wf_ctx = current_workflow_ctx.get_ctx()
+                wf_parameters = current_workflow_ctx.get_parameters()
+                self._semaphore.acquire()
+                t = threading.Thread(target=self._get_and_execute_task_graph,
+                                     args=(token_info, deployment_id, dep_ctx,
+                                           tenant, tenant_client, wf_ctx,
+                                           wf_parameters,
+                                           deps_with_failed_plugins,
+                                           failed_deployments)
+                                     )
+                t.setDaemon(True)
+                threads.append(t)
+                t.start()
 
-                    # ctx.logger.info('number of running threads: {0}'.format(threading.active_count()))
-                    self._semaphore.acquire()
-                    t = threading.Thread(target=self._execute_tasks_graph, args=(dep_ctx, tasks_graph))
-                    t.setDaemon(True)
-                    threads.append(t)
-                    t.start()
-                    # # ctx.logger.info('******* Added deployment {deployment} to threads list *******'.format(deployment=deployment_id))
-                    # t = threading.Thread(target=tasks_graph.execute)
-                    # threads.append(t)
-                    # t.start()
-                    # ctx.logger.info('**** current thread 3: {0}, id {1}'.format(threading.current_thread().name, id(threading.current_thread())))
-
-                    # self._execute_tasks_graph(dep_ctx, tasks_graph)
-                    # tasks_graph.execute()
-                    ctx.logger.info(
-                        'Successfully created deployment environment '
-                        'for deployment {deployment}'.format(
-                            deployment=deployment_id,
-                        )
-                    )
-                except RuntimeError as re:
-                    if self.__should_ignore_deployment_failure(re.message):
-                        ctx.logger.warning('Failed to create deployment: {0},'
-                                           'ignore_plugin_failure'
-                                           'flag used, proceeding...'
-                                           .format(deployment_id))
-                        ctx.logger.debug('Deployment creation error: {0}'
-                                         .format(re))
-                        failed_deployments.append(deployment_id)
-                    else:
-                        raise re
-
-            SnapshotRestore.__remove_failed_deployments_footprints(
-                tenant_client, failed_deployments)
-            SnapshotRestore.__log_message_for_deployment_restore(
-                deployments, failed_deployments, tenant)
         for t in threads:
             t.join()
 
+        if not failed_deployments.empty():
+            deployments = list(failed_deployments.queue)
+            raise NonRecoverableError('Failed to restore snapshot, the '
+                                      'following deployment environments were'
+                                      ' not restored: {0}. See exception'
+                                      ' tracebacks logged above for more'
+                                      ' details.'.format(deployments))
+
+        self._log_final_information(deps_with_failed_plugins)
+
+    @staticmethod
+    def _log_final_information(deps_with_failed_plugins):
+        if deps_with_failed_plugins.empty():
+            ctx.logger.info('Successfully restored deployment environments.')
+
+        # Alert users that some deployments were restored but their
+        # plugins were not installed.
+        else:
+            deployments = list(deps_with_failed_plugins.queue)
+            ctx.logger.warning('Finished restoring deployment evnironments.'
+                               ' Please note that the following deployment '
+                               'plugins were not installed and need to be'
+                               ' installed manually on each deployment`s '
+                               'virtual env: {0}'.
+                               format(deployments))
 
     def _restore_amqp_vhosts_and_users(self):
         subprocess.check_call(
@@ -858,7 +818,6 @@ class SnapshotRestore(object):
             '--user_id',
             str(token_info['uid']),
         ]).aggr_stdout.strip()
-
         return prefix + token_info['token']
 
     def _add_restart_command(self):

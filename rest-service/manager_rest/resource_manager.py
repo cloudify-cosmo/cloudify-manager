@@ -145,7 +145,8 @@ class ResourceManager(object):
             'postgresql_db_name': config_instance.postgresql_db_name,
             'postgresql_host': config_instance.postgresql_host,
             'default_tenant_name': DEFAULT_TENANT_NAME,
-            'max_num_of_threads': config_instance.max_num_of_threads
+            'snapshot_restore_threads':
+                config_instance.snapshot_restore_threads
         }
 
     def create_snapshot_model(self,
