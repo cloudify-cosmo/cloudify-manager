@@ -133,7 +133,7 @@ class SnapshotRestore(object):
                 self._encrypt_rabbitmq_passwords(postgres)
                 self._restore_plugins(existing_plugins)
                 self._restore_influxdb()
-                self._restore_credentials(postgres)
+                # self._restore_credentials(postgres)
                 self._restore_agents()
                 self._restore_amqp_vhosts_and_users()
                 self._restore_deployment_envs(postgres)
@@ -153,8 +153,7 @@ class SnapshotRestore(object):
                message and self._ignore_plugin_failure
 
     def _get_and_execute_task_graph(self, token_info, deployment_id,
-                                    dep_ctx, tenant, tenant_client,
-                                    workflow_ctx, ctx_params,
+                                    dep_ctx, tenant, tenant_client, workflow_ctx, ctx_params,
                                     deps_with_failed_plugins,
                                     failed_deployments):
         """
@@ -169,6 +168,7 @@ class SnapshotRestore(object):
                 api_token = self._get_api_token(
                     token_info[tenant][deployment_id]
                 )
+                # tenant_client = get_rest_client(tenant=tenant)
                 dep = tenant_client.deployments.get(deployment_id)
                 blueprint = tenant_client.blueprints.get(
                     dep_ctx.blueprint.id,
@@ -197,6 +197,7 @@ class SnapshotRestore(object):
         self._semaphore.release()
 
     def _restore_deployment_envs(self, postgres):
+        ctx.logger.info('******** Using {0} threads *******'.format(self._config.snapshot_restore_threads))
         deps = utils.get_dep_contexts(self._snapshot_version)
         token_info = postgres.get_deployment_creator_ids_and_tokens()
         deps_with_failed_plugins = Queue.Queue()
@@ -219,8 +220,7 @@ class SnapshotRestore(object):
                 self._semaphore.acquire()
                 t = threading.Thread(target=self._get_and_execute_task_graph,
                                      args=(token_info, deployment_id, dep_ctx,
-                                           tenant, tenant_client, wf_ctx,
-                                           wf_parameters,
+                                           tenant, tenant_client, wf_ctx, wf_parameters,
                                            deps_with_failed_plugins,
                                            failed_deployments)
                                      )
@@ -641,7 +641,8 @@ class SnapshotRestore(object):
         while True:
             executions = client.executions.list(
                 include_system_workflows=True,
-                _all_tenants=True
+                _all_tenants=True,
+                _get_all_results=True
             )
             waiting = []
             for execution in executions:
