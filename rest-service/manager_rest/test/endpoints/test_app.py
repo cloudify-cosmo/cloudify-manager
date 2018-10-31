@@ -40,26 +40,26 @@ class AppTestCase(base_test.BaseServerTestCase):
 
 
 @attr(client_min_version=base_test.LATEST_API_VERSION,
-      client_max_version=base_test.LATEST_API_VERSION,
-      setup_config_enable_tracing=True,
-      setup_config_tracing_endpoint_ip=None)
+      client_max_version=base_test.LATEST_API_VERSION)
 class AppWithTracingNoIPTestCase(base_test.TracerTestCase):
     """Test the basic setup of the tracer and dispatch wrapping for the
     tracing when tracing is enabled but no endpoint IP is set.
     """
+    setup_config_enable_tracing = True
+    setup_config_tracing_endpoint_ip = None
 
     def test_does_not_init_tracer_no_tracer_ip(self):
         self.jaeger_mock_config.assert_not_called()
 
 
 @attr(client_min_version=base_test.LATEST_API_VERSION,
-      client_max_version=base_test.LATEST_API_VERSION,
-      setup_config_enable_tracing=True,
-      setup_config_tracing_endpoint_ip='some_ip')
+      client_max_version=base_test.LATEST_API_VERSION)
 class AppWithTracingTestCase(base_test.TracerTestCase):
     """Test the basic setup of the tracer and dispatch wrapping for the
     tracing when tracing is enabled and an endpoint IP is set.
     """
+    setup_config_enable_tracing = True
+    setup_config_tracing_endpoint_ip = 'some_ip'
 
     def test_does_init_tracer(self):
         self.jaeger_mock_config.assert_called_with(

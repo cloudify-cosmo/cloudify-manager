@@ -111,11 +111,11 @@ class TestUtils(base_test.BaseServerTestCase):
         curr_span.assert_not_called()
 
 
-@attr(setup_config_enable_tracing=True,
-      setup_config_tracing_endpoint_ip='some_ip')
 class TestUtilsWithTracingTestCase(base_test.TracerTestCase):
     """Test the tracing wrapper when tracing is enabled.
     """
+    setup_config_enable_tracing = True
+    setup_config_tracing_endpoint_ip = 'some_ip'
 
     @patch('manager_rest.utils.span_in_context')
     @patch('manager_rest.utils.get_current_span')

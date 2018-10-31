@@ -98,6 +98,9 @@ class TestClient(FlaskClient):
 
 @attr(client_min_version=1, client_max_version=LATEST_API_VERSION)
 class BaseServerTestCase(unittest.TestCase):
+    setup_config_enable_tracing = None
+    setup_config_tracing_endpoint_ip = None
+
     def create_client_with_tenant(self,
                                   username,
                                   password,
@@ -341,11 +344,8 @@ class BaseServerTestCase(unittest.TestCase):
         test_config.authorization_permissions = auth_dict['permissions']
         test_config.security_encryption_key = \
             'f2ytTjQ-R2yKFMzgqDAw6vgQIHGZ9SiJoW-BhktapFQ='
-        if getattr(self, 'setup_config_enable_tracing', None) is not None:
-            test_config.enable_tracing = self.setup_config_enable_tracing
-        if getattr(self, 'setup_config_tracing_endpoint_ip', None) is not None:
-            test_config.tracing_endpoint_ip = \
-                self.setup_config_tracing_endpoint_ip
+        test_config.enable_tracing = self.setup_config_enable_tracing
+        test_config.tracing_endpoint_ip = self.setup_config_tracing_endpoint_ip
         test_config._create_tracer_config()
         return test_config
 
