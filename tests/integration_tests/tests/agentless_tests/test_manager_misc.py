@@ -76,6 +76,7 @@ class MiscManagerTest(AgentlessTestCase):
             'mgmtworker/mgmtworker.log',
             'mgmtworker/logs/test.log',
             'rabbitmq/rabbit@cloudifyman.log',
+            'rabbitmq/log/crash.log',
             'rest/cloudify-rest-service.log',
             'amqp-postgres/amqp_postgres.log',
             'nginx/cloudify.access.log',

@@ -56,6 +56,9 @@ class Events(SecuredResource):
     DEFAULT_SEARCH_SIZE = 10000
 
     ALLOWED_FILTERS = {
+        'node_id': (Node.id, 'in'),
+        'node_instance_id': (NodeInstance.id, 'in'),
+        'operation': ('operation', 'in'),
         'blueprint_id': (Blueprint.id, 'in'),
         'execution_id': (Execution.id, 'in'),
         'deployment_id': (Deployment.id, 'in'),
