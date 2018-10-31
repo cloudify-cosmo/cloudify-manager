@@ -102,17 +102,18 @@ class TestUtils(base_test.BaseServerTestCase):
     @patch('opentracing_instrumentation.request_context.get_current_span')
     def test_traces_wrapper_uses_orig_func_when_not_tracing(self, curr_span, _,
                                                             current_app):
-        dummy_f, decorated_f, return_value, _ = get_dummy_function_and_params()
+        dummy_f, decorated_f, return_value, _ = get_dummy_function_and_params(
+            decorator=traces)
         current_app.tracer = False
-        r = decorated_f('bar', k='v')
-        self.assertEqual(r, return_value)
+        result = decorated_f('bar', k='v')
+        self.assertEqual(result, return_value)
         dummy_f.assert_called_once_with('bar', k='v')
         curr_span.assert_not_called()
 
 
 @attr(setup_config_enable_tracing=True,
       setup_config_tracing_endpoint_ip='some_ip')
-class TestUtilsWithTracingTestCase(base_test.WithInitTracerTestCase):
+class TestUtilsWithTracingTestCase(base_test.TracerTestCase):
     """Test the tracing wrapper when tracing is enabled.
     """
 
@@ -123,9 +124,9 @@ class TestUtilsWithTracingTestCase(base_test.WithInitTracerTestCase):
         current_app.tracer.start_span.reset_mock()
 
         dummy_f, decorated_f, return_value, _ = get_dummy_function_and_params(
-            'not_foo')
-        r = decorated_f('bar', k='v')
-        self.assertEqual(r, return_value)
+            'not_foo', decorator=traces)
+        result = decorated_f('bar', k='v')
+        self.assertEqual(result, return_value)
         dummy_f.assert_called_once_with('bar', k='v')
         curr_span.assert_called_once()
         current_app.tracer.start_span.assert_called_once_with(
@@ -139,9 +140,9 @@ class TestUtilsWithTracingTestCase(base_test.WithInitTracerTestCase):
         current_app.tracer.start_span.reset_mock()
 
         dummy_f, decorated_f, return_value, decorated_func_name = \
-            get_dummy_function_and_params()
-        r = decorated_f('bar', k='v')
-        self.assertEqual(r, return_value)
+            get_dummy_function_and_params(decorator=traces)
+        result = decorated_f('bar', k='v')
+        self.assertEqual(result, return_value)
         dummy_f.assert_called_once_with('bar', k='v')
         curr_span.assert_called_once()
         current_app.tracer.start_span.assert_called_once_with(
@@ -181,10 +182,11 @@ def generate_progress_func(total_size, assert_equal,
     return print_progress
 
 
-def get_dummy_function_and_params(func_trace_name=None):
+def get_dummy_function_and_params(func_trace_name=None, decorator=None):
     """Creates a dummy function using MagicMock.
 
     :param func_trace_name: function name to pass to the traces() decorator.
+    :param decorator: decorator to decorate the function.
     :return: (dummy function, decorated dummy function, return value,
      function name)
     """
@@ -192,5 +194,8 @@ def get_dummy_function_and_params(func_trace_name=None):
     return_value = 'something'
     foo = MagicMock(return_value=return_value)
     foo.__name__ = decorated_func_name
-    f = traces(func_trace_name)(foo)
+    if decorator:
+        f = decorator(func_trace_name)(foo)
+    else:
+        f = foo
     return foo, f, return_value, decorated_func_name

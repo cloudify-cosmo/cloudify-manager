@@ -43,7 +43,7 @@ class AppTestCase(base_test.BaseServerTestCase):
       client_max_version=base_test.LATEST_API_VERSION,
       setup_config_enable_tracing=True,
       setup_config_tracing_endpoint_ip=None)
-class AppWithTracingNoIPTestCase(base_test.WithInitTracerTestCase):
+class AppWithTracingNoIPTestCase(base_test.TracerTestCase):
     """Test the basic setup of the tracer and dispatch wrapping for the
     tracing when tracing is enabled but no endpoint IP is set.
     """
@@ -56,7 +56,7 @@ class AppWithTracingNoIPTestCase(base_test.WithInitTracerTestCase):
       client_max_version=base_test.LATEST_API_VERSION,
       setup_config_enable_tracing=True,
       setup_config_tracing_endpoint_ip='some_ip')
-class AppWithTracingTestCase(base_test.WithInitTracerTestCase):
+class AppWithTracingTestCase(base_test.TracerTestCase):
     """Test the basic setup of the tracer and dispatch wrapping for the
     tracing when tracing is enabled and an endpoint IP is set.
     """

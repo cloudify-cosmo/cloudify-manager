@@ -677,12 +677,24 @@ class ListResult(object):
 
 
 def enable_tracing_for_all_engines():
+    def _get_operation_name(stmt_obj):
+        if stmt_obj is None:
+            # Match what the ORM shows when raw SQL
+            # statements are invoked.
+            return 'textclause'
+
+        return stmt_obj.__visit_name__
+
     def _engine_before_cursor_handler(conn, cursor, statement, parameters,
                                       context, executemany):
         current_span = get_current_span()
         if not current_span:
             return
 
+        # context is a ExecutionContext object (https://kite.com/python/docs/
+        # sqlalchemy.engine.interfaces.ExecutionContext)
+        # stmt_obj is a sqlalchemy.sql.expression.ClauseElement
+        # This is used to get the statement type
         stmt_obj = context.compiled.statement if context.compiled else None
 
         # Start a new span for this query.
@@ -719,12 +731,3 @@ def enable_tracing_for_all_engines():
     listen(Engine, 'before_cursor_execute', _engine_before_cursor_handler)
     listen(Engine, 'after_cursor_execute', _engine_after_cursor_handler)
     listen(Engine, 'handle_error', _engine_error_handler)
-
-
-def _get_operation_name(stmt_obj):
-    if stmt_obj is None:
-        # Match what the ORM shows when raw SQL
-        # statements are invoked.
-        return 'textclause'
-
-    return stmt_obj.__visit_name__

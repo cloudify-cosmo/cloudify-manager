@@ -742,14 +742,14 @@ class BaseServerTestCase(unittest.TestCase):
         )
 
     def _patch_jaeger_config(self):
-        config.j_client.Config = MagicMock()
-        self.jaeger_mock_config = config.j_client.Config
+        config.jaeger_client.Config = MagicMock()
+        self.jaeger_mock_config = config.jaeger_client.Config
         self.jaeger_mock_config.return_value = self.jaeger_mock_config
 
 
-class WithInitTracerTestCase(BaseServerTestCase):
+class TracerTestCase(BaseServerTestCase):
     def setUp(self):
-        super(WithInitTracerTestCase, self).setUp()
+        super(TracerTestCase, self).setUp()
         self._init_tracer(current_app)
 
     @staticmethod
