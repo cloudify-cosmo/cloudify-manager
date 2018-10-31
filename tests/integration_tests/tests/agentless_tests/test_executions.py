@@ -777,18 +777,28 @@ class ExecutionsTest(AgentlessTestCase):
     def test_dry_run_execution(self):
         expected_messages = {
             "Starting 'install' workflow execution (dry run)",
-            "Creating node",
+            "Creating node instance",
             "Sending task 'cloudmock.tasks.provision'",
             "Task started 'cloudmock.tasks.provision'",
             "Task succeeded 'cloudmock.tasks.provision (dry run)'",
-            "Configuring node",
-            "Starting node",
+            "Node instance created",
+            "Pre-configuring relationships",
+            "Relationships pre-configured",
+            "Configuring node instance",
+            "Node instance configured",
+            "Post-configuring relationships",
+            "Relationships post-configured",
+            "Starting node instance",
             "Sending task 'cloudmock.tasks.start'",
             "Task started 'cloudmock.tasks.start'",
             "Task succeeded 'cloudmock.tasks.start (dry run)'",
             "Sending task 'cloudmock.tasks.get_state'",
             "Task started 'cloudmock.tasks.get_state'",
             "Task succeeded 'cloudmock.tasks.get_state (dry run)'",
+            "Plugins installed",
+            "Establishing relationships",
+            "Relationships established",
+            "Node instance started",
             "'install' workflow execution succeeded (dry run)"
         }
 
