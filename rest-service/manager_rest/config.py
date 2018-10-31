@@ -16,7 +16,7 @@
 import os
 import yaml
 
-import jaeger_client as j_client
+import jaeger_client
 from json import dump
 
 
@@ -101,11 +101,9 @@ class Config(object):
                     "'{1}'".format(key, filename))
 
     def _create_tracer_config(self):
-        """Creates the tracer config.
-        """
         if not self.enable_tracing or not self.tracing_endpoint_ip:
             return
-        self.tracer_config = j_client.Config(
+        self.tracer_config = jaeger_client.Config(
             config={
                 'sampler': {'type': 'const', 'param': 1},
                 'local_agent': {

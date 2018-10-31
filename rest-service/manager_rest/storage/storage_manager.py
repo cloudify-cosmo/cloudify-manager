@@ -677,50 +677,48 @@ class ListResult(object):
 
 
 def enable_tracing_for_all_engines():
+    def _engine_before_cursor_handler(conn, cursor, statement, parameters,
+                                      context, executemany):
+        current_span = get_current_span()
+        if not current_span:
+            return
+
+        stmt_obj = context.compiled.statement if context.compiled else None
+
+        # Start a new span for this query.
+        name = _get_operation_name(stmt_obj)
+        span = current_app.tracer.start_span(
+            operation_name=name, child_of=current_span)
+        span.set_tag('component', 'sqlalchemy')
+        span.set_tag('db.type', 'sql')
+        span.set_tag('db.statement', statement)
+        span.set_tag('sqlalchemy.dialect', context.dialect.name)
+
+        context._span = span
+
+    def _engine_after_cursor_handler(conn, cursor, statement, parameters,
+                                     context,
+                                     executemany):
+        span = getattr(context, '_span', None)
+        if span is None:
+            return
+
+        span.finish()
+
+    def _engine_error_handler(exception_context):
+        execution_context = exception_context.execution_context
+        span = getattr(execution_context, '_span', None)
+        if span is None:
+            return
+
+        exc = exception_context.original_exception
+        span.set_tag('sqlalchemy.exception', str(exc))
+        span.set_tag('error', True)
+        span.finish()
+
     listen(Engine, 'before_cursor_execute', _engine_before_cursor_handler)
     listen(Engine, 'after_cursor_execute', _engine_after_cursor_handler)
     listen(Engine, 'handle_error', _engine_error_handler)
-
-
-def _engine_before_cursor_handler(conn, cursor, statement, parameters, context,
-                                  executemany):
-    current_span = get_current_span()
-    if not current_span:
-        return
-
-    stmt_obj = context.compiled.statement if context.compiled else None
-
-    # Start a new span for this query.
-    name = _get_operation_name(stmt_obj)
-    span = current_app.tracer.start_span(
-        operation_name=name, child_of=current_span)
-    span.set_tag('component', 'sqlalchemy')
-    span.set_tag('db.type', 'sql')
-    span.set_tag('db.statement', statement)
-    span.set_tag('sqlalchemy.dialect', context.dialect.name)
-
-    context._span = span
-
-
-def _engine_after_cursor_handler(conn, cursor, statement, parameters, context,
-                                 executemany):
-    span = getattr(context, '_span', None)
-    if span is None:
-        return
-
-    span.finish()
-
-
-def _engine_error_handler(exception_context):
-    execution_context = exception_context.execution_context
-    span = getattr(execution_context, '_span', None)
-    if span is None:
-        return
-
-    exc = exception_context.original_exception
-    span.set_tag('sqlalchemy.exception', str(exc))
-    span.set_tag('error', True)
-    span.finish()
 
 
 def _get_operation_name(stmt_obj):
