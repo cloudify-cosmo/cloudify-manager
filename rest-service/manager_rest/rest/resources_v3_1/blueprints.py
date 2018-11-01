@@ -13,6 +13,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from flask_restful.inputs import boolean
+from flask_restful.reqparse import Argument
 from flask_restful_swagger import swagger
 
 from manager_rest.storage import models
@@ -24,7 +26,7 @@ from manager_rest.upload_manager import UploadedBlueprintsManager
 from manager_rest.rest import (rest_utils,
                                resources_v2,
                                rest_decorators)
-from ..rest_utils import verify_and_convert_bool, get_json_and_verify_params
+from manager_rest.rest.rest_utils import get_args_and_verify_arguments
 
 
 class BlueprintsSetGlobal(SecuredResource):
@@ -88,10 +90,9 @@ class BlueprintsId(resources_v2.BlueprintsId):
         """
         Delete blueprint by id
         """
-        request_dict = get_json_and_verify_params()
-        force = verify_and_convert_bool(
-            'force', request_dict.get('force', False)
-        )
-        blueprint = get_resource_manager().delete_blueprint(blueprint_id,
-                                                            force=force)
+        query_args = get_args_and_verify_arguments(
+            [Argument('force', type=boolean, default=False)])
+        blueprint = get_resource_manager().delete_blueprint(
+            blueprint_id,
+            force=query_args.force)
         return blueprint, 200
