@@ -18,7 +18,6 @@ import os
 from json import dump
 
 import yaml
-import jaeger_client
 
 CONFIG_TYPES = [
     ('MANAGER_REST_CONFIG_PATH', ''),
@@ -88,7 +87,6 @@ class Config(object):
         for env_var_name, namespace in CONFIG_TYPES:
             if env_var_name in os.environ:
                 self.load_from_file(os.environ[env_var_name], namespace)
-        self._create_tracer_config()
 
     def load_from_file(self, filename, namespace=''):
         with open(filename) as f:

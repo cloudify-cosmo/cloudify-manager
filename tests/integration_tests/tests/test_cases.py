@@ -77,6 +77,7 @@ class BaseTestCase(unittest.TestCase):
         self.addCleanup(shutil.rmtree, self.workdir, ignore_errors=True)
         self._set_tests_framework_logger()
         self.client = None
+        self._setup_tracing()
 
     @classmethod
     def _update_config(cls, new_config):
@@ -469,6 +470,16 @@ class BaseTestCase(unittest.TestCase):
             yield
         finally:
             client._client.headers[CLOUDIFY_TENANT_HEADER] = curr_tenant
+
+    def _setup_tracing(self):
+        """Updates the rest server config to enable tracing if
+        TRACING_ENDPOINT_IP env var is set.
+        """
+        tracing_endpoint_ip = os.environ.get('TRACING_ENDPOINT_IP')
+        if tracing_endpoint_ip:
+            self._update_config(
+                {'enable_tracing': True,
+                 'tracing_endpoint_ip': tracing_endpoint_ip})
 
 
 class AgentlessTestCase(BaseTestCase):

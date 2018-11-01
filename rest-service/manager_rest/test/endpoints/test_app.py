@@ -69,7 +69,7 @@ class AppWithTracingTestCase(base_test.TracerTestCase):
                     'reporting_host': 'some_ip'},
                 'logging': True
             },
-            service_name='cloudify-manager'
+            service_name='cloudify-restservice'
         )
         self.jaeger_mock_config.initialize_tracer.assert_called()
 

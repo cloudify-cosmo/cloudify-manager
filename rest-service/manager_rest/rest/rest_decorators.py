@@ -40,7 +40,6 @@ from voluptuous import (
     Schema,
 )
 from ..security.authentication import authenticator
-from manager_rest.utils import traces
 from manager_rest import utils, config, manager_exceptions
 from manager_rest.storage.models_base import SQLModelBase
 from manager_rest.rest.rest_utils import (verify_and_convert_bool,
@@ -92,7 +91,7 @@ def insecure_rest_method(func):
 
 def exceptions_handled(func):
     @wraps(func)
-    @traces('exceptions_handled')
+    @utils.traces('exceptions_handled')
     def wrapper(*args, **kwargs):
         try:
             try:
@@ -125,7 +124,7 @@ class marshal_with(object):
 
     def __call__(self, f):
         @wraps(f)
-        @traces('marshal_with {}'.format(self.response_class.__name__))
+        @utils.traces('marshal_with {}'.format(self.response_class.__name__))
         def wrapper(*args, **kwargs):
             if hasattr(request, '__skip_marshalling'):
                 return f(*args, **kwargs)

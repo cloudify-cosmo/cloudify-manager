@@ -4,7 +4,6 @@ from functools import wraps
 from flask import request
 from flask_security import current_user
 
-from manager_rest.utils import traces
 from manager_rest import config, utils
 from manager_rest.storage.models import Tenant
 from manager_rest.storage import get_storage_manager
@@ -20,7 +19,7 @@ def authorize(action,
               allow_all_tenants=False):
     def authorize_dec(func):
         @wraps(func)
-        @traces('authorize')
+        @utils.traces('authorize')
         def wrapper(*args, **kwargs):
 
             # getting the tenant name

@@ -20,10 +20,10 @@ import os
 import yaml
 
 import opentracing
+import jaeger_client
 from flask_restful import Api
 from flask_security import Security
-from flask import Flask, jsonify, Blueprint
-from flask import _request_ctx_stack as stack
+from flask import Flask, jsonify, Blueprint, request
 from opentracing_instrumentation.request_context import span_in_context
 
 from manager_rest import config, premium_enabled
@@ -108,7 +108,15 @@ class CloudifyFlaskApp(Flask):
             self.logger.error("Did not find 'tracing_endpoint_ip' in the "
                               "config. Aborting tracer initialization...")
             return
-        self.tracer = config.instance.tracer_config.initialize_tracer()
+        tracer_config = jaeger_client.Config(
+            config={
+                'sampler': {'type': 'const', 'param': 1},
+                'local_agent': {
+                    'reporting_host': config.instance.tracing_endpoint_ip},
+                'logging': True
+            },
+            service_name='cloudify-restservice')
+        self.tracer = tracer_config.initialize_tracer()
         self.logger.debug("Done initializing Jaeger tracer.")
 
     def _set_flask_security(self):
@@ -182,15 +190,11 @@ class CloudifyFlaskApp(Flask):
         if not self.tracer:
             return super(CloudifyFlaskApp, self).dispatch_request()
 
-        request = stack.top.request
         operation_name = '{} ({})'.format(request.endpoint, request.method)
-        headers = {}
-        for k, v in request.headers:
-            headers[k.lower()] = v
         kw = {'operation_name': operation_name}
         try:
             span_ctx = self.tracer.extract(
-                opentracing.Format.HTTP_HEADERS, headers)
+                opentracing.Format.HTTP_HEADERS, request.headers)
             kw['child_of'] = span_ctx
         except opentracing.UnsupportedFormatException as e:
             kw['tags'] = {"Extract failed": str(e)}

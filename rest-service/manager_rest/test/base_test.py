@@ -160,7 +160,6 @@ class BaseServerTestCase(unittest.TestCase):
         self._create_temp_files_and_folders()
         self._init_file_server()
         self._mock_amqp_modules()
-        self._patch_jaeger_config()
 
         server_module = self._set_config_path_and_get_server_module()
         self._create_config_and_reset_app(server_module)
@@ -170,6 +169,7 @@ class BaseServerTestCase(unittest.TestCase):
         self.sm = get_storage_manager()
         self.initialize_provider_context()
         self._mock_verify_role()
+        self._patch_jaeger_config(server_module)
 
     def _mock_verify_role(self):
         self._original_verify_role = rest_utils.verify_role
@@ -351,7 +351,6 @@ class BaseServerTestCase(unittest.TestCase):
         )
         test_config.enable_tracing = self.setup_config_enable_tracing
         test_config.tracing_endpoint_ip = self.setup_config_tracing_endpoint_ip
-        test_config._create_tracer_config()
         return test_config
 
     def _version_url(self, url):
@@ -746,9 +745,9 @@ class BaseServerTestCase(unittest.TestCase):
             *args
         )
 
-    def _patch_jaeger_config(self):
-        config.jaeger_client.Config = MagicMock()
-        self.jaeger_mock_config = config.jaeger_client.Config
+    def _patch_jaeger_config(self, server_module):
+        server_module.jaeger_client.Config = MagicMock()
+        self.jaeger_mock_config = server_module.jaeger_client.Config
         self.jaeger_mock_config.return_value = self.jaeger_mock_config
 
 
