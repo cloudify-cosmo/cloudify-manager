@@ -17,7 +17,6 @@ import os
 import tempfile
 import shutil
 
-
 from manager_rest import archiving
 from manager_rest.test import base_test
 from manager_rest.storage import FileServer
@@ -35,9 +34,9 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         self.assertEquals(0, len(result))
 
     def test_get_nonexistent_blueprint(self):
-        self.assertRaises(exceptions.CloudifyClientError,
-                          self.client.blueprints.get,
-                          '15')
+        with self.assertRaises(exceptions.CloudifyClientError) as context:
+            self.client.blueprints.get('15')
+            self.assertEqual(404, context.exception.status_code)
 
     def test_upload_blueprint_illegal_id(self):
         # try id with whitespace
@@ -56,7 +55,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
     def test_server_traceback_on_error(self):
         try:
             self.client.blueprints.get('15')
-        except exceptions.CloudifyClientError, e:
+        except exceptions.CloudifyClientError as e:
             self.assertIsNotNone(e.server_traceback)
 
     def test_post_and_then_search(self):
@@ -114,8 +113,8 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
                 post_blueprints_response['id'], 'blueprint.yaml'))
 
         # deleting the blueprint that was just uploaded
-        delete_blueprint_response =\
-            self.client.blueprints.delete(post_blueprints_response['id'])
+        delete_blueprint_response = self.delete(
+            '/blueprints/{0}'.format(post_blueprints_response['id'])).json
         self.assertEquals(post_blueprints_response['id'],
                           delete_blueprint_response['id'])
 
@@ -129,9 +128,9 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
             self.check_if_resource_on_fileserver(
                 post_blueprints_response['id'], 'blueprint.yaml'))
 
-        self.assertRaises(exceptions.CloudifyClientError,
-                          self.client.blueprints.delete,
-                          'nonexistent-blueprint')
+        # trying to delete a nonexistent blueprint
+        resp = self.delete('/blueprints/nonexistent-blueprint')
+        self.assertEquals(404, resp.status_code)
 
     def test_zipped_plugin(self):
         self.put_file(*self.put_blueprint_args())
