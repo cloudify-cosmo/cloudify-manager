@@ -153,7 +153,8 @@ class SnapshotRestore(object):
                message and self._ignore_plugin_failure
 
     def _get_and_execute_task_graph(self, token_info, deployment_id,
-                                    dep_ctx, tenant, tenant_client, workflow_ctx, ctx_params,
+                                    dep_ctx, tenant, tenant_client,
+                                    workflow_ctx, ctx_params,
                                     deps_with_failed_plugins,
                                     failed_deployments):
         """
@@ -220,7 +221,8 @@ class SnapshotRestore(object):
                 self._semaphore.acquire()
                 t = threading.Thread(target=self._get_and_execute_task_graph,
                                      args=(token_info, deployment_id, dep_ctx,
-                                           tenant, tenant_client, wf_ctx, wf_parameters,
+                                           tenant, tenant_client, wf_ctx,
+                                           wf_parameters,
                                            deps_with_failed_plugins,
                                            failed_deployments)
                                      )
