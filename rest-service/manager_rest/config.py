@@ -75,7 +75,7 @@ class Config(object):
         self.account_lock_period = -1
 
         # max number of threads that will be used in a `restore snapshot` wf
-        self.snapshot_restore_threads = 20
+        self.snapshot_restore_threads = 15
 
         self.warnings = []
 

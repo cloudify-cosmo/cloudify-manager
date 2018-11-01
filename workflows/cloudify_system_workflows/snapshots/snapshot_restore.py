@@ -133,7 +133,7 @@ class SnapshotRestore(object):
                 self._encrypt_rabbitmq_passwords(postgres)
                 self._restore_plugins(existing_plugins)
                 self._restore_influxdb()
-                # self._restore_credentials(postgres)
+                self._restore_credentials(postgres)
                 self._restore_agents()
                 self._restore_amqp_vhosts_and_users()
                 self._restore_deployment_envs(postgres)
@@ -164,12 +164,13 @@ class SnapshotRestore(object):
         to thread-safe queues, in order to handle them later outside of
         this scope.
         """
+        # The workflow context is thread local so we need to push it for
+        # each thread.
         with current_workflow_ctx.push(workflow_ctx, ctx_params):
             try:
                 api_token = self._get_api_token(
                     token_info[tenant][deployment_id]
                 )
-                # tenant_client = get_rest_client(tenant=tenant)
                 dep = tenant_client.deployments.get(deployment_id)
                 blueprint = tenant_client.blueprints.get(
                     dep_ctx.blueprint.id,
@@ -198,7 +199,6 @@ class SnapshotRestore(object):
         self._semaphore.release()
 
     def _restore_deployment_envs(self, postgres):
-        ctx.logger.info('******** Using {0} threads *******'.format(self._config.snapshot_restore_threads))
         deps = utils.get_dep_contexts(self._snapshot_version)
         token_info = postgres.get_deployment_creator_ids_and_tokens()
         deps_with_failed_plugins = Queue.Queue()
