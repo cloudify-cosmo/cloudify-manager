@@ -59,7 +59,8 @@ class TestWorkflow(AgentTestWithPlugins):
         _, execution_id = self.deploy_application(dsl_path,
                                                   deployment_id=deployment_id)
 
-        events = self.client.events.list(execution_id=execution_id)
+        events = self.client.events.list(execution_id=execution_id,
+                                         sort='timestamp')
         filtered_events = [event['message'] for event in events if
                            event['message'] in install_events]
 
@@ -68,7 +69,8 @@ class TestWorkflow(AgentTestWithPlugins):
 
         execution_id = self.undeploy_application(deployment_id)
 
-        events = self.client.events.list(execution_id=execution_id)
+        events = self.client.events.list(execution_id=execution_id,
+                                         sort='timestamp')
         filtered_events = [event['message'] for event in events if
                            event['message'] in uninstall_events]
 
