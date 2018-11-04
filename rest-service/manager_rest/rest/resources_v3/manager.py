@@ -16,11 +16,12 @@
 from flask import request
 from flask import current_app
 
-from manager_rest import config, premium_enabled, utils
+from cloudify.models_states import VisibilityState
+
 from manager_rest.security import SecuredResource
+from manager_rest import config, premium_enabled, utils
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager
-from manager_rest.storage.models_states import VisibilityState
 from manager_rest.manager_exceptions import (BadParametersError,
                                              MethodNotAllowedError,
                                              UnauthorizedError,

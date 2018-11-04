@@ -65,7 +65,6 @@ from .constants import (
     V_4_2_0,
     V_4_3_0,
     V_4_4_0,
-    VisibilityState,
     SECURITY_FILE_LOCATION,
     SECURITY_FILENAME
 )
@@ -128,7 +127,6 @@ class SnapshotRestore(object):
 
             with Postgres(self._config) as postgres:
                 self._restore_db(postgres, schema_revision, stage_revision)
-                self._update_visibility(postgres)
                 self._restore_files_to_manager()
                 self._encrypt_secrets(postgres)
                 self._encrypt_rabbitmq_passwords(postgres)
@@ -473,29 +471,6 @@ class SnapshotRestore(object):
         # This is returned so that we can decide whether to restore the admin
         # user depending on whether we have the hash salt
         return admin_user_update_command
-
-    def _update_visibility(self, postgres):
-        if self._snapshot_version >= V_4_2_0:
-            return
-        update_query = """
-                 UPDATE {0}
-                 SET visibility = CAST (CASE
-                     WHEN (private_resource is true) THEN {1}
-                     WHEN (private_resource is false) THEN {2}
-                 END AS visibility_states);
-             """
-
-        ctx.logger.info('Updating visibility')
-        resources_tables = ['blueprints', 'plugins', 'snapshots',
-                            'deployments']
-        for table in resources_tables:
-            postgres.run_query(update_query.format(
-                table,
-                "'{}'".format(VisibilityState.PRIVATE),
-                "'{}'".format(VisibilityState.TENANT))
-            )
-
-        ctx.logger.info('Successfully updated visibility')
 
     def _encrypt_secrets(self, postgres):
         # The secrets are encrypted

@@ -15,7 +15,7 @@
 import os
 import time
 
-from manager_rest.storage.models_states import ExecutionState
+from cloudify.models_states import ExecutionState
 from manager_rest.deployment_update.constants import STATES
 
 from integration_tests import AgentlessTestCase

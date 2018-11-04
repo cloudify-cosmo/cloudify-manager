@@ -18,6 +18,7 @@ from uuid import uuid4
 from time import sleep
 from dateutil import parser as date_parser
 
+from cloudify.models_states import VisibilityState
 from cloudify.amqp_client import create_events_publisher
 
 from manager_rest.server import db
@@ -26,7 +27,6 @@ from manager_rest.config import instance
 from manager_rest.amqp_manager import AMQPManager
 from manager_rest.utils import get_formatted_timestamp
 from manager_rest.test.base_test import BaseServerTestCase
-from manager_rest.storage.models_states import VisibilityState
 
 
 from amqp_postgres.main import _create_connections

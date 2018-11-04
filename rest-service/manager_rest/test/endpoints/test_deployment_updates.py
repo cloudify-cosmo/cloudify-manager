@@ -22,6 +22,7 @@ from mock import patch
 from pytest import mark
 from manager_rest.test.attribute import attr
 
+from cloudify.models_states import ExecutionState
 from dsl_parser import exceptions as parser_exceptions
 from cloudify_rest_client.exceptions import CloudifyClientError
 
@@ -29,7 +30,6 @@ from manager_rest.test import base_test
 from manager_rest.storage import models
 from manager_rest.deployment_update.constants import STATES
 from manager_rest.test.utils import get_resource as resource
-from manager_rest.storage.models_states import ExecutionState
 
 
 @attr(client_min_version=2.1, client_max_version=base_test.LATEST_API_VERSION)

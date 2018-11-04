@@ -14,6 +14,7 @@
 #  * limitations under the License.
 
 from cloudify.cryptography_utils import encrypt
+from cloudify.models_states import VisibilityState
 
 from manager_rest import utils
 from manager_rest.security import SecuredResource
@@ -21,7 +22,6 @@ from manager_rest.manager_exceptions import ConflictError
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.resource_manager import get_resource_manager
-from manager_rest.storage.models_states import VisibilityState
 from manager_rest.rest import (rest_decorators,
                                resources_v3,
                                rest_utils)

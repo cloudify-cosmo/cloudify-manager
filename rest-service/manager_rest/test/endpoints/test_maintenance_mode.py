@@ -15,15 +15,15 @@
 
 import os
 from mock import patch
-from manager_rest.test.attribute import attr
 
 from cloudify_rest_client import exceptions
+from cloudify.models_states import ExecutionState
 
 from manager_rest import utils
 from manager_rest.test import base_test
 from manager_rest.storage import models
+from manager_rest.test.attribute import attr
 from manager_rest.test.base_test import BaseServerTestCase
-from manager_rest.storage.models_states import ExecutionState
 from manager_rest.constants import (MAINTENANCE_MODE_ACTIVATED,
                                     MAINTENANCE_MODE_ACTIVATING,
                                     MAINTENANCE_MODE_DEACTIVATED,

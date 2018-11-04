@@ -36,13 +36,13 @@ from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from cloudify.cryptography_utils import encrypt
+from cloudify.models_states import ExecutionState, VisibilityState
 
 from manager_rest.rest import rest_utils
 from manager_rest.amqp_manager import AMQPManager
 from manager_rest.test.security_utils import get_admin_user
 from manager_rest import utils, config, constants, archiving
 from manager_rest.storage import FileServer, get_storage_manager, models
-from manager_rest.storage.models_states import ExecutionState, VisibilityState
 from manager_rest.storage.storage_utils import \
     create_default_user_tenant_and_roles
 from manager_rest.constants import (CLOUDIFY_TENANT_HEADER,
@@ -148,6 +148,7 @@ class BaseServerTestCase(unittest.TestCase):
                     # only exists in v3.1 and above
                     if CLIENT_API_VERSION != 'v3':
                         client.deployments.capabilities.api = mock_http_client
+                        client.agents.api = mock_http_client
 
         return client
 

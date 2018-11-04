@@ -17,11 +17,12 @@ from flask_restful.inputs import boolean
 from flask_restful.reqparse import Argument
 from flask_restful_swagger import swagger
 
+from cloudify.models_states import VisibilityState
+
 from manager_rest.storage import models
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.resource_manager import get_resource_manager
-from manager_rest.storage.models_states import VisibilityState
 from manager_rest.upload_manager import UploadedBlueprintsManager
 from manager_rest.rest import (rest_utils,
                                resources_v2,

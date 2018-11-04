@@ -24,7 +24,7 @@ from integration_tests.framework import utils
 from integration_tests import AgentlessTestCase
 from integration_tests.framework import postgresql
 
-from manager_rest.storage.models_states import ExecutionState
+from cloudify.models_states import ExecutionState
 from manager_rest.constants import DEFAULT_TENANT_NAME, DEFAULT_TENANT_ROLE
 
 from cloudify_rest_client.executions import Execution
