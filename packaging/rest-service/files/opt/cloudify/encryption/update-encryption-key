@@ -1,0 +1,143 @@
+#! /opt/manager/env/bin/python
+import argparse
+import base64
+import json
+import os
+import sys
+
+from manager_rest.flask_utils import setup_flask_app
+from manager_rest.storage import get_storage_manager, models
+from manager_rest.cryptography_utils import (
+    _get_encryption_key,
+    decrypt,
+    decrypt128,
+    encrypt,
+)
+from cryptography.fernet import InvalidToken
+
+
+DECRYPT_FUNCTIONS = {
+    32: decrypt128,
+    64: decrypt,
+}
+NEW_ENCRYPTION_KEY_STAGING_PATH = '/opt/manager/new_encryption_key'
+
+
+def update_encryption_key(old_key, new_key, commit=False):
+    try:
+        decrypt_func = DECRYPT_FUNCTIONS[len(
+            base64.urlsafe_b64decode(old_key)
+        )]
+    except KeyError:
+        print('Old key length must be 32 bytes (AES128) or 64 bytes (AES256)')
+        sys.exit(2)
+
+    failures = []
+    rmq_failures = []
+
+    with setup_flask_app().app_context():
+        sm = get_storage_manager()
+        secrets = sm.list(models.Secret)
+        for secret in secrets:
+            # Test the old key. If that works, we need to re-encrypt with the
+            # new key.
+            # Otherwise, test the new key. If neither key worked, this secret
+            # is either corrupted or otherwise inaccessible.
+            # If the new key works, we can move on to the next secret.
+            try:
+                val = decrypt_func(secret.value, old_key)
+            except InvalidToken:
+                try:
+                    decrypt(secret.value, new_key)
+                except InvalidToken:
+                    failures.append((secret.key, secret.tenant_name))
+                continue
+            new_val = encrypt(val, new_key)
+            if commit:
+                secret.value = new_val
+                sm.update(secret)
+
+        tenants = sm.list(models.Tenant)
+        for tenant in tenants:
+            # Test the old key. If that works, we need to re-encrypt with the
+            # new key.
+            # Otherwise, test the new key. If neither key worked, this
+            # password is either corrupted or otherwise inaccessible.
+            # If the new key works, we can move on to the next password.
+            try:
+                val = decrypt_func(tenant.rabbitmq_password, old_key)
+            except InvalidToken:
+                try:
+                    decrypt(tenant.rabbitmq_password, new_key)
+                except InvalidToken:
+                    rmq_failures.append(tenant.name)
+                continue
+            new_val = encrypt(val, new_key)
+            if commit:
+                tenant.rabbitmq_password = new_val
+                sm.update(tenant)
+
+        if len(failures) == 0 and len(rmq_failures) == 0:
+            if commit:
+                with open(
+                    '/opt/manager/rest-security.conf'
+                ) as sec_conf_handle:
+                    sec_conf = json.load(sec_conf_handle)
+                sec_conf['encryption_key'] = new_key
+                with open(
+                    '/opt/manager/rest-security.conf', 'w'
+                ) as sec_conf_handle:
+                    sec_conf_handle.write(json.dumps(sec_conf))
+                os.unlink(NEW_ENCRYPTION_KEY_STAGING_PATH)
+                print('Encryption key updated.')
+            else:
+                print('Dry run complete, no problems encountered.')
+                print(
+                    'New encryption key prepared and stored in {path} ready '
+                    'to commit changes.'.format(
+                        path=NEW_ENCRYPTION_KEY_STAGING_PATH,
+                    )
+                )
+        else:
+            print(
+                'The following encrypted data could not be decrypted with '
+                'the new key or the old key. Please correct these errors '
+                'and re-run the key update.'
+            )
+            for failure in failures:
+                print('Secret "{name}" in {tenant}'.format(
+                    name=failure[0],
+                    tenant=failure[1],
+                ))
+            for rmq_failure in rmq_failures:
+                print('RabbitMQ credentials for {tenant}'.format(
+                    tenant=rmq_failure,
+                ))
+            sys.exit(1)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description=(
+            'Update the secrets and rabbitmq credentials encryption key'
+        )
+    )
+    parser.add_argument(
+        '-c', '--commit',
+        default=False,
+        action='store_true',
+        help='Apply the new encryption key. '
+             'Without this argument this will be a dry-run, '
+             'with no changes made to the stored secrets',
+    )
+    args = parser.parse_args()
+    if os.path.exists(NEW_ENCRYPTION_KEY_STAGING_PATH):
+        with open(NEW_ENCRYPTION_KEY_STAGING_PATH) as key_handle:
+            new_key = key_handle.read()
+    else:
+        new_key = os.urandom(64)
+        with open(NEW_ENCRYPTION_KEY_STAGING_PATH, 'w') as key_handle:
+            key_handle.write(new_key)
+    old_key = str(_get_encryption_key())
+    new_key = base64.urlsafe_b64encode(new_key)
+    update_encryption_key(old_key, new_key, commit=args.commit)
