@@ -654,11 +654,10 @@ class SnapshotRestore(object):
             if not waiting:
                 break
             else:
-                msg = ', '.join('{0} (state: {1})'
-                                .format(execution.id, execution.status))
                 ctx.logger.info(
-                    'Waiting for plugin install executions to finish: '
-                    '{0}'.format(msg))
+                    'Waiting for plugin install executions to finish: {0} '
+                    '(state: {1})'
+                    .format(execution.id, execution.status))
                 time.sleep(3)
 
     @staticmethod
