@@ -282,6 +282,8 @@ class Event(SQLResourceBase):
     event_type = db.Column(db.Text)
     operation = db.Column(db.Text)
     node_id = db.Column(db.Text)
+    source_id = db.Column(db.Text)
+    target_id = db.Column(db.Text)
     error_causes = db.Column(JSONString)
 
     _execution_fk = foreign_key(Execution._storage_id, index=True)
@@ -320,6 +322,8 @@ class Log(SQLResourceBase):
     level = db.Column(db.Text)
     operation = db.Column(db.Text)
     node_id = db.Column(db.Text)
+    source_id = db.Column(db.Text)
+    target_id = db.Column(db.Text)
 
     _execution_fk = foreign_key(Execution._storage_id, index=True)
 
