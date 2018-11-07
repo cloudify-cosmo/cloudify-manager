@@ -329,6 +329,8 @@ class Events(SecuredResource):
                 select_column('event_type'),
                 select_column('operation'),
                 select_column('node_id'),
+                select_column('source_id'),
+                select_column('target_id'),
                 NodeInstance.id.label('node_instance_id'),
                 Node.id.label('node_name'),
                 select_column('logger'),
