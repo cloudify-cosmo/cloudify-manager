@@ -158,7 +158,7 @@ class ResourceListFiltersTestCase(BaseListTest):
         self.assertEquals(error.BAD_PARAMETERS_ERROR_CODE, e.error_code)
         for filter_val in fields:
             self.assertIn(filter_val,
-                          e.message,
+                          str(e),
                           'expecting available filter names be contained '
                           'in error message {0}'.format(e.message))
 
