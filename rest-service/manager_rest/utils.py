@@ -133,7 +133,7 @@ def plugin_installable_on_current_platform(plugin):
         dist = dist or None
         release = release or None
 
-    return (plugin.supported_platform == 'any' or all([
+    return (plugin.supported_platform in ('any', 'manylinux1_x86_64') or all([
         plugin.supported_platform == wagon.get_platform(),
         plugin.distribution == dist,
         plugin.distribution_release == release
