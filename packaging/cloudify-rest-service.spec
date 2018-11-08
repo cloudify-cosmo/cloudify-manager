@@ -24,7 +24,7 @@ Requires:       python >= 2.7, postgresql-libs, nginx >= 1.12, sudo, dbus >= 1.6
 Requires(pre):  shadow-utils
 
 %define _diamond_version 1.3.8
-Source0:  http://www.getcloudify.org/spec/diamond-plugin/1.3.8/plugin.yaml
+Source0:  http://www.getcloudify.org/spec/diamond-plugin/1.3.6/plugin.yaml
 
 
 %description
@@ -68,7 +68,7 @@ visudo -cf %{buildroot}/etc/sudoers.d/cloudify-restservice
 
 # Install local copies of specs for URL resolver
 specs="%{buildroot}/opt/manager/resources/spec"
-types_yaml="${specs}/cloudify/4.3.3/types.yaml"
+types_yaml="${specs}/cloudify/4.3.4/types.yaml"
 mkdir -p $(dirname "$types_yaml")
 cp "${RPM_SOURCE_DIR}/resources/rest-service/cloudify/types/types.yaml" "$types_yaml"
 

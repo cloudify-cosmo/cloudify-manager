@@ -1,5 +1,5 @@
-git+https://github.com/cloudify-cosmo/cloudify-dsl-parser@4.3.3#egg=cloudify-dsl-parser==4.3.3
-git+https://github.com/cloudify-cosmo/cloudify-rest-client@4.3.3#egg=cloudify-rest-client==4.3.3
+git+https://github.com/cloudify-cosmo/cloudify-dsl-parser@4.3.4#egg=cloudify-dsl-parser==4.3.4
+git+https://github.com/cloudify-cosmo/cloudify-rest-client@4.3.4#egg=cloudify-rest-client==4.3.4
 
 https://github.com/cloudify-cosmo/incubator-ariatosca/archive/master.zip
 # test dependencies

@@ -1,2 +1,2 @@
-https://github.com/cloudify-cosmo/cloudify-rest-client/archive/4.3.3.zip
-https://github.com/cloudify-cosmo/cloudify-plugins-common/archive/4.3.3.zip
+https://github.com/cloudify-cosmo/cloudify-rest-client/archive/4.3.4.zip
+https://github.com/cloudify-cosmo/cloudify-plugins-common/archive/4.3.4.zip
