@@ -15,6 +15,8 @@
 
 from subprocess import check_call
 
+from flask import request
+
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 
@@ -61,9 +63,7 @@ class SSLConfig(SecuredResource):
 
     @staticmethod
     def _is_enabled():
-        with open(DEFAULT_CONF_PATH) as f:
-            content = f.read()
-        return content.find(HTTPS_PATH) >= 0
+        return request.scheme == 'https'
 
     @staticmethod
     def _set_ssl_state(state):
