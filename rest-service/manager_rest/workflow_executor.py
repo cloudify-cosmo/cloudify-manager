@@ -15,10 +15,10 @@
 
 from flask_security import current_user
 
+from cloudify.cryptography_utils import decrypt
 from cloudify.amqp_client import get_client, SendHandler
 
 from manager_rest import config, utils
-from manager_rest.cryptography_utils import decrypt
 from manager_rest.storage import get_storage_manager, models
 from manager_rest.constants import MGMTWORKER_QUEUE, BROKER_SSL_PORT
 
