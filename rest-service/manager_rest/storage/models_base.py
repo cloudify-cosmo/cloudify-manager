@@ -216,6 +216,15 @@ class SQLModelBase(db.Model):
     def unique_id(cls):
         return 'id'
 
+    @classmethod
+    def default_sort_column(cls):
+        """If no sort is requested, order by the column specified by this.
+
+        This is so that requests with pagination make sense even with no
+        sort requested by the user.
+        """
+        return getattr(cls, cls.unique_id())
+
     def __repr__(self):
         """Return a representation of the class, based on the ordered dict of
         identifiers returned by `_get_identifier_dict`

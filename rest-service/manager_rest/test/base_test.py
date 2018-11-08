@@ -337,8 +337,10 @@ class BaseServerTestCase(unittest.TestCase):
         test_config.security_encoding_block_size = 24
         test_config.security_encoding_min_length = 5
         test_config.authorization_permissions = auth_dict['permissions']
-        test_config.security_encryption_key = \
-            'f2ytTjQ-R2yKFMzgqDAw6vgQIHGZ9SiJoW-BhktapFQ='
+        test_config.security_encryption_key = (
+            'lF88UP5SJKluylJIkPDYrw5UMKOgv9w8TikS0Ds8m2UmM'
+            'SzFe0qMRa0EcTgHst6LjmF_tZbq_gi_VArepMsrmw=='
+        )
         return test_config
 
     def _version_url(self, url):

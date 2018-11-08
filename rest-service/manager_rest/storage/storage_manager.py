@@ -70,7 +70,7 @@ class SQLStorageManager(object):
         return query
 
     @staticmethod
-    def _sort_query(query, sort=None):
+    def _sort_query(query, model_class, sort=None):
         """Add sorting clauses to the query
 
         :param query: Base SQL query
@@ -83,6 +83,10 @@ class SQLStorageManager(object):
                 if order == 'desc':
                     column = column.desc()
                 query = query.order_by(column)
+        else:
+            default_sort = model_class.default_sort_column()
+            if default_sort:
+                query = query.order_by(default_sort)
         return query
 
     def _filter_query(self,
@@ -289,7 +293,7 @@ class SQLStorageManager(object):
         query = self._get_base_query(model_class, include, joins)
         query = self._filter_query(
             query, model_class, filters, substr_filters, all_tenants)
-        query = self._sort_query(query, sort)
+        query = self._sort_query(query, model_class, sort)
         return query
 
     def _get_columns_from_field_names(self,

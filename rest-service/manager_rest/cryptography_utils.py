@@ -13,7 +13,10 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import base64
 import json
+import os
+
 from cryptography.fernet import Fernet
 
 from manager_rest.constants import SECURITY_FILE_LOCATION
@@ -21,11 +24,17 @@ from manager_rest.constants import SECURITY_FILE_LOCATION
 
 def encrypt(data, key=None):
     key = key or _get_encryption_key()
-    fernet = Fernet(str(key))
+    fernet = Fernet256(str(key))
     return fernet.encrypt(bytes(data))
 
 
 def decrypt(encrypted_data, key=None):
+    key = key or _get_encryption_key()
+    fernet = Fernet256(str(key))
+    return fernet.decrypt(bytes(encrypted_data))
+
+
+def decrypt128(encrypted_data, key=None):
     key = key or _get_encryption_key()
     fernet = Fernet(str(key))
     return fernet.decrypt(bytes(encrypted_data))
@@ -39,3 +48,20 @@ def _get_encryption_key():
     with open(SECURITY_FILE_LOCATION) as security_conf_file:
         rest_security_conf = json.load(security_conf_file)
         return rest_security_conf['encryption_key']
+
+
+class Fernet256(Fernet):
+    def __init__(self, key, **kwargs):
+        super(Fernet256, self).__init__(Fernet.generate_key(), **kwargs)
+        key = base64.urlsafe_b64decode(key)
+        if len(key) != 64:
+            raise ValueError(
+                "Fernet256 key must be 64 url-safe base64-encoded bytes."
+            )
+
+        self._signing_key = key[:32]
+        self._encryption_key = key[32:]
+
+    @classmethod
+    def generate_key(cls):
+        return base64.urlsafe_b64encode(os.urandom(64))

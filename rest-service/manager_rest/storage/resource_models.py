@@ -41,9 +41,18 @@ from .models_states import (DeploymentModificationState,
                             ExecutionState)
 
 
+class CreatedAtMixin(object):
+    created_at = db.Column(UTCDateTime, nullable=False, index=True)
+
+    @classmethod
+    def default_sort_column(cls):
+        """Models that have created_at, sort on it by default."""
+        return cls.created_at
+
+
 # region Top Level Resources
 
-class Blueprint(SQLResourceBase):
+class Blueprint(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'blueprints'
 
     skipped_fields = dict(
@@ -51,17 +60,15 @@ class Blueprint(SQLResourceBase):
         v1=['main_file_name', 'description']
     )
 
-    created_at = db.Column(UTCDateTime, nullable=False, index=True)
     main_file_name = db.Column(db.Text, nullable=False)
     plan = db.Column(db.PickleType, nullable=False)
     updated_at = db.Column(UTCDateTime)
     description = db.Column(db.Text)
 
 
-class Snapshot(SQLResourceBase):
+class Snapshot(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'snapshots'
 
-    created_at = db.Column(UTCDateTime, nullable=False, index=True)
     status = db.Column(db.Enum(*SnapshotState.STATES, name='snapshot_status'))
     error = db.Column(db.Text)
 
@@ -129,11 +136,10 @@ class Plugin(SQLResourceBase):
         return plugin_dict
 
 
-class Secret(SQLResourceBase):
+class Secret(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'secrets'
 
     value = db.Column(db.Text)
-    created_at = db.Column(UTCDateTime, nullable=False, index=True)
     updated_at = db.Column(UTCDateTime)
     is_hidden_value = db.Column(db.Boolean, nullable=False, default=False)
 
@@ -152,7 +158,7 @@ class Secret(SQLResourceBase):
 # region Derived Resources
 
 
-class Deployment(SQLResourceBase):
+class Deployment(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'deployments'
 
     skipped_fields = dict(
@@ -161,7 +167,6 @@ class Deployment(SQLResourceBase):
         v2=['scaling_groups']
     )
 
-    created_at = db.Column(UTCDateTime, nullable=False, index=True)
     description = db.Column(db.Text)
     inputs = db.Column(db.PickleType)
     groups = db.Column(db.PickleType)
@@ -206,7 +211,7 @@ class Deployment(SQLResourceBase):
                 for wf_name, wf in deployment_workflows.iteritems()]
 
 
-class Execution(SQLResourceBase):
+class Execution(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'executions'
     STATUS_DISPLAY_NAMES = {
         ExecutionState.TERMINATED: 'completed'
@@ -215,7 +220,6 @@ class Execution(SQLResourceBase):
         'status_display': flask_fields.String
     }
 
-    created_at = db.Column(UTCDateTime, nullable=False, index=True)
     ended_at = db.Column(UTCDateTime, nullable=True)
     error = db.Column(db.Text)
     is_system_workflow = db.Column(db.Boolean, nullable=False)
@@ -278,9 +282,15 @@ class Event(SQLResourceBase):
     event_type = db.Column(db.Text)
     operation = db.Column(db.Text)
     node_id = db.Column(db.Text)
+    source_id = db.Column(db.Text)
+    target_id = db.Column(db.Text)
     error_causes = db.Column(JSONString)
 
     _execution_fk = foreign_key(Execution._storage_id, index=True)
+
+    @classmethod
+    def default_sort_column(cls):
+        return cls.reported_timestamp
 
     @declared_attr
     def execution(cls):
@@ -312,8 +322,14 @@ class Log(SQLResourceBase):
     level = db.Column(db.Text)
     operation = db.Column(db.Text)
     node_id = db.Column(db.Text)
+    source_id = db.Column(db.Text)
+    target_id = db.Column(db.Text)
 
     _execution_fk = foreign_key(Execution._storage_id, index=True)
+
+    @classmethod
+    def default_sort_column(cls):
+        return cls.reported_timestamp
 
     @declared_attr
     def execution(cls):
@@ -326,10 +342,9 @@ class Log(SQLResourceBase):
         self.execution = execution
 
 
-class DeploymentUpdate(SQLResourceBase):
+class DeploymentUpdate(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'deployment_updates'
 
-    created_at = db.Column(UTCDateTime, nullable=False, index=True)
     deployment_plan = db.Column(db.PickleType)
     deployment_update_node_instances = db.Column(db.PickleType)
     deployment_update_deployment = db.Column(db.PickleType)
@@ -415,11 +430,10 @@ class DeploymentUpdateStep(SQLResourceBase):
         self.deployment_update = deployment_update
 
 
-class DeploymentModification(SQLResourceBase):
+class DeploymentModification(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'deployment_modifications'
 
     context = db.Column(db.PickleType)
-    created_at = db.Column(UTCDateTime, nullable=False, index=True)
     ended_at = db.Column(UTCDateTime, index=True)
     modified_nodes = db.Column(db.PickleType)
     node_instances = db.Column(db.PickleType)

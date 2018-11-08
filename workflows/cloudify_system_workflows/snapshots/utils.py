@@ -150,10 +150,8 @@ def restore_stage_files(archive_root, override=False):
     try:
         sudo(
             [
-                snapshot_constants.MANAGER_PYTHON,
                 snapshot_constants.STAGE_TOKEN_SCRIPT
             ],
-            user=snapshot_constants.STAGE_USER,
         )
         restore_command = [snapshot_constants.STAGE_RESTORE_SCRIPT,
                            stage_tempdir]
@@ -426,6 +424,7 @@ def stage_db_schema_get_current_revision():
     if version['edition'] != 'premium':
         return None
     output = subprocess.check_output([
+        'sudo', '-u', snapshot_constants.STAGE_USER,
         '/opt/nodejs/bin/node',
         '/opt/cloudify-stage/backend/migration.js',
         'current',
@@ -446,6 +445,7 @@ def composer_db_schema_get_current_revision():
     if version['edition'] != 'premium':
         return None
     output = subprocess.check_output([
+        'sudo', '-u', snapshot_constants.COMPOSER_USER,
         '/opt/nodejs/bin/npm',
         'run',
         '--prefix', snapshot_constants.COMPOSER_BASE_FOLDER,

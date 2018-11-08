@@ -13,6 +13,7 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import base64
 import os
 import json
 import time
@@ -134,6 +135,7 @@ class SnapshotRestore(object):
                 self._restore_plugins(existing_plugins)
                 self._restore_influxdb()
                 self._restore_credentials(postgres)
+                self._possibly_update_encryption_key()
                 self._restore_agents()
                 self._restore_amqp_vhosts_and_users()
                 self._restore_deployment_envs(postgres)
@@ -142,6 +144,7 @@ class SnapshotRestore(object):
 
             if self._restore_certificates:
                 self._restore_certificate()
+
             self._trigger_post_restore_commands()
         finally:
             ctx.logger.debug('Removing temp dir: {0}'.format(self._tempdir))
@@ -197,6 +200,20 @@ class SnapshotRestore(object):
                     ctx.logger.info(re)
 
         self._semaphore.release()
+
+    def _possibly_update_encryption_key(self):
+        with open(SECURITY_FILE_LOCATION) as security_conf_file:
+            rest_security_conf = json.load(security_conf_file)
+        enc_key = base64.urlsafe_b64decode(str(
+            rest_security_conf['encryption_key'],
+        ))
+        if len(enc_key) == 32:
+            ctx.logger.info(
+                'Updating encryption key for AES256'
+            )
+            subprocess.check_call([
+                '/opt/cloudify/encryption/update-encryption-key', '--commit'
+            ])
 
     def _restore_deployment_envs(self, postgres):
         deps = utils.get_dep_contexts(self._snapshot_version)
@@ -654,11 +671,10 @@ class SnapshotRestore(object):
             if not waiting:
                 break
             else:
-                msg = ', '.join('{0} (state: {1})'
-                                .format(execution.id, execution.status))
                 ctx.logger.info(
-                    'Waiting for plugin install executions to finish: '
-                    '{0}'.format(msg))
+                    'Waiting for plugin install executions to finish: {0} '
+                    '(state: {1})'
+                    .format(execution.id, execution.status))
                 time.sleep(3)
 
     @staticmethod
