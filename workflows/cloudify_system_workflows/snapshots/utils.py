@@ -150,7 +150,6 @@ def restore_stage_files(archive_root, override=False):
     try:
         sudo(
             [
-                snapshot_constants.MANAGER_PYTHON,
                 snapshot_constants.STAGE_TOKEN_SCRIPT
             ],
         )
