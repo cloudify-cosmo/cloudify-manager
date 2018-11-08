@@ -23,7 +23,8 @@ from functools import wraps
 
 from manager_rest.storage.models import Tenant
 from manager_rest.storage import get_storage_manager
-from manager_rest.cryptography_utils import encrypt, decrypt
+
+from cloudify.cryptography_utils import encrypt, decrypt
 
 
 def ignore_not_found(func):

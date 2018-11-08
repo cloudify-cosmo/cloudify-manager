@@ -18,7 +18,8 @@ from collections import namedtuple
 from dsl_parser import functions
 from dsl_parser import exceptions as parser_exceptions
 
-from manager_rest import cryptography_utils
+from cloudify import cryptography_utils
+
 from manager_rest.storage import get_storage_manager
 from manager_rest.storage import get_node as get_storage_node
 from manager_rest.storage.models import NodeInstance, Deployment, Secret
