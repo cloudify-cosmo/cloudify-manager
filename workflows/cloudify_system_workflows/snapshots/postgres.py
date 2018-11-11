@@ -17,10 +17,10 @@ import os
 import psycopg2
 from uuid import uuid4
 from contextlib import closing
-from cryptography.fernet import Fernet
 from psycopg2.extras import execute_values
 
 from cloudify.workflows import ctx
+from cloudify.cryptography_utils import encrypt
 from cloudify.exceptions import NonRecoverableError
 
 from .constants import ADMIN_DUMP_FILE
@@ -392,9 +392,8 @@ class Postgres(object):
             return
 
         encrypted_values = []
-        fernet = Fernet(encryption_key)
         for value in values['all']:
-            encrypted_value = fernet.encrypt(bytes(value[1]))
+            encrypted_value = encrypt(bytes(value[1]), encryption_key)
             encrypted_values.append((value[0], encrypted_value))
 
         update_query = """
