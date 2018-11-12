@@ -1000,6 +1000,12 @@ class ResourceManager(object):
                                                   deployment_id,
                                                   visibility,
                                                   private_resource)
+        if (visibility == VisibilityState.GLOBAL and
+                blueprint.visibility != VisibilityState.GLOBAL):
+            raise manager_exceptions.ForbiddenError(
+                "Can't create global deployment {0} because blueprint {1} "
+                "is not global".format(deployment_id, blueprint_id)
+            )
         new_deployment = self.prepare_deployment_for_storage(
             deployment_id,
             deployment_plan
