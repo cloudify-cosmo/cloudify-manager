@@ -61,7 +61,7 @@ class DeploymentsId(resources_v1.DeploymentsId):
         )
         visibility = rest_utils.get_visibility_parameter(
             optional=True,
-            valid_values=[VisibilityState.PRIVATE, VisibilityState.TENANT]
+            valid_values=VisibilityState.STATES
         )
         deployment = get_resource_manager().create_deployment(
             blueprint_id,
