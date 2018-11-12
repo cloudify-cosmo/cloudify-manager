@@ -493,6 +493,7 @@ class ResourceManager(object):
                          execution=None):
 
         deployment = self.sm.get(models.Deployment, deployment_id)
+        self._validate_permitted_to_execute_global_workflow(deployment)
         blueprint = self.sm.get(models.Blueprint, deployment.blueprint_id)
         self._verify_workflow_in_deployment(workflow_id, deployment,
                                             deployment_id)
@@ -1761,6 +1762,17 @@ class ResourceManager(object):
                 "Can't set or create the resource `{0}`, it's visibility "
                 "can't be global because it also exists in other tenants"
                 .format(resource_id)
+            )
+
+    def _validate_permitted_to_execute_global_workflow(self, deployment):
+        if (deployment.visibility == VisibilityState.GLOBAL and
+                deployment.tenant != self.sm.current_tenant and
+                not utils.can_execute_global_workflow(utils.current_tenant)):
+            raise manager_exceptions.ForbiddenError(
+                'User `{0}` is not allowed to execute workflows on '
+                'a global deployment {1} from a different tenant'.format(
+                    current_user.username, deployment.id
+                )
             )
 
     def validate_modification_permitted(self, resource):
