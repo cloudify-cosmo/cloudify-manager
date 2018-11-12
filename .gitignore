@@ -61,3 +61,7 @@ riemann.log
 *.tar.gz
 *.exe
 .vagrant/
+
+# Created when running pytest
+.cloudify/
+config.yaml

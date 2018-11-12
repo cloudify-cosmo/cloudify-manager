@@ -148,12 +148,6 @@ def restore_stage_files(archive_root, override=False):
     shutil.copytree(stage_archive, stage_tempdir)
     run(['/bin/chmod', 'a+r', '-R', stage_tempdir])
     try:
-        sudo(
-            [
-                snapshot_constants.MANAGER_PYTHON
-            ],
-            user=snapshot_constants.STAGE_USER,
-        )
         restore_command = [snapshot_constants.STAGE_RESTORE_SCRIPT,
                            stage_tempdir]
         if override:

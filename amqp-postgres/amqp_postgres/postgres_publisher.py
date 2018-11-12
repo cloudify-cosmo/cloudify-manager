@@ -43,7 +43,9 @@ EVENT_INSERT_QUERY = """
         operation,
         node_id,
         error_causes,
-        visibility)
+        visibility,
+        source_id,
+        target_id)
     VALUES %s
 """
 
@@ -63,7 +65,9 @@ EVENT_VALUES_TEMPLATE = """(
         %(operation)s,
         %(node_id)s,
         %(error_causes)s,
-        %(visibility)s
+        %(visibility)s,
+        %(source_id)s,
+        %(target_id)s
     )
 """
 
@@ -80,7 +84,9 @@ LOG_INSERT_QUERY = """
         message_code,
         operation,
         node_id,
-        visibility)
+        visibility,
+        source_id,
+        target_id)
     VALUES %s
 """
 # see comment above regarding now()
@@ -96,7 +102,9 @@ LOG_VALUES_TEMPLATE = """(
         %(message_code)s,
         %(operation)s,
         %(node_id)s,
-        %(visibility)s
+        %(visibility)s,
+        %(source_id)s,
+        %(target_id)s
     )
 """
 
@@ -298,6 +306,8 @@ class DBLogEventPublisher(object):
                 'message_code': message.get('message_code'),
                 'operation': message['context'].get('operation'),
                 'node_id': message['context'].get('node_id'),
+                'source_id': message['context'].get('source_id'),
+                'target_id': message['context'].get('target_id'),
                 'visibility': 'tenant'
             }
         except KeyError as e:
@@ -321,6 +331,8 @@ class DBLogEventPublisher(object):
                 'message_code': message.get('message_code'),
                 'operation': message['context'].get('operation'),
                 'node_id': message['context'].get('node_id'),
+                'source_id': message['context'].get('source_id'),
+                'target_id': message['context'].get('target_id'),
                 'error_causes': task_error_causes,
                 'visibility': 'tenant'
             }

@@ -12,7 +12,7 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-
+from cloudify.exceptions import CommandExecutionException
 from flask import request, current_app
 
 from manager_rest import config
@@ -49,3 +49,33 @@ class ManagerConfig(SecuredResource):
             'permissions': cfy_config.authorization_permissions
         }
         return authorization
+
+
+class ManagerRestConfig(SecuredResource):
+    @rest_decorators.exceptions_handled
+    @authorize('manager_rest_config_get')
+    def get(self):
+        """
+        Get the Manager's REST configuration
+        :return: Manager's REST configuration data
+        """
+        request_args = request.args.to_dict(flat=False)
+        current_app.logger.info('Retrieving Manager REST config. filter: {0}'.
+                                format(request_args))
+        result = dict()
+        filter_by = request_args.get('filter', [])
+        for key in filter_by:
+            try:
+                result[key] = config.instance.to_dict()[key]
+            except KeyError as ke:
+                current_app.logger.error(
+                    'KeyError thrown: {0}'.format(str(ke)))
+                raise CommandExecutionException(command='manager.config.get',
+                                                error=str(ke),
+                                                code=400,
+                                                output=None)
+        if not filter_by:
+            current_app.logger.debug('Retrieving Manager REST config without a'
+                                     ' filter')
+            result = config.instance.to_dict()
+        return result
