@@ -42,7 +42,6 @@ STAGE_USERDATA_FOLDER = 'dist/userData'
 STAGE_USER = 'stage_user'
 # created during bootstrap
 STAGE_RESTORE_SCRIPT = '/opt/cloudify/stage/restore-snapshot.py'
-STAGE_TOKEN_SCRIPT = '/opt/cloudify/stage/make-auth-token.py'
 MANAGER_PYTHON = '/opt/manager/env/bin/python'
 COMPOSER_BASE_FOLDER = '/opt/cloudify-composer'
 COMPOSER_CONFIG_FOLDER = 'backend/conf'
