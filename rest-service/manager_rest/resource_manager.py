@@ -996,15 +996,15 @@ class ResourceManager(object):
             for node in deployment_plan.get('nodes', []):
                 for plugin in node.get('plugins_to_install', []):
                     self.validate_plugin_is_installed(plugin)
+        visibility = self.get_resource_visibility(models.Deployment,
+                                                  deployment_id,
+                                                  visibility,
+                                                  private_resource)
         new_deployment = self.prepare_deployment_for_storage(
             deployment_id,
             deployment_plan
         )
         new_deployment.blueprint = blueprint
-        visibility = self.get_resource_visibility(models.Deployment,
-                                                  deployment_id,
-                                                  visibility,
-                                                  private_resource)
         new_deployment.visibility = visibility
         self.sm.put(new_deployment)
 
