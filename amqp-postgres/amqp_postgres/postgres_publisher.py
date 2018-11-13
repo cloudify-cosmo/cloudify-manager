@@ -113,7 +113,8 @@ EXECUTION_SELECT_QUERY = """
         id,
         _storage_id,
         _creator_id,
-        _tenant_id
+        _tenant_id,
+        visibility
     FROM executions
     WHERE id = %s
 """
@@ -308,7 +309,7 @@ class DBLogEventPublisher(object):
                 'node_id': message['context'].get('node_id'),
                 'source_id': message['context'].get('source_id'),
                 'target_id': message['context'].get('target_id'),
-                'visibility': 'tenant'
+                'visibility': execution['visibility']
             }
         except KeyError as e:
             logger.warning('Error formatting log: %s', e)
@@ -334,7 +335,7 @@ class DBLogEventPublisher(object):
                 'source_id': message['context'].get('source_id'),
                 'target_id': message['context'].get('target_id'),
                 'error_causes': task_error_causes,
-                'visibility': 'tenant'
+                'visibility': execution['visibility']
             }
         except KeyError as e:
             logger.warning('Error formatting event: %s', e)

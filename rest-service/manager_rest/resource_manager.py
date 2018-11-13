@@ -493,6 +493,7 @@ class ResourceManager(object):
                          execution=None):
 
         deployment = self.sm.get(models.Deployment, deployment_id)
+        self._validate_permitted_to_execute_global_workflow(deployment)
         blueprint = self.sm.get(models.Blueprint, deployment.blueprint_id)
         self._verify_workflow_in_deployment(workflow_id, deployment,
                                             deployment_id)
@@ -996,15 +997,21 @@ class ResourceManager(object):
             for node in deployment_plan.get('nodes', []):
                 for plugin in node.get('plugins_to_install', []):
                     self.validate_plugin_is_installed(plugin)
+        visibility = self.get_resource_visibility(models.Deployment,
+                                                  deployment_id,
+                                                  visibility,
+                                                  private_resource)
+        if (visibility == VisibilityState.GLOBAL and
+                blueprint.visibility != VisibilityState.GLOBAL):
+            raise manager_exceptions.ForbiddenError(
+                "Can't create global deployment {0} because blueprint {1} "
+                "is not global".format(deployment_id, blueprint_id)
+            )
         new_deployment = self.prepare_deployment_for_storage(
             deployment_id,
             deployment_plan
         )
         new_deployment.blueprint = blueprint
-        visibility = self.get_resource_visibility(models.Deployment,
-                                                  deployment_id,
-                                                  visibility,
-                                                  private_resource)
         new_deployment.visibility = visibility
         self.sm.put(new_deployment)
 
@@ -1702,6 +1709,26 @@ class ResourceManager(object):
 
         return visibility or VisibilityState.TENANT
 
+    @staticmethod
+    def _is_visibility_wider(first, second):
+        states = VisibilityState.STATES
+        return states.index(first) > states.index(second)
+
+    def set_deployment_visibility(self, deployment_id, visibility):
+        deployment = self.sm.get(models.Deployment, deployment_id)
+        blueprint = deployment.blueprint
+        if self._is_visibility_wider(visibility, blueprint.visibility):
+            raise manager_exceptions.IllegalActionError(
+                "The visibility of deployment `{0}` can't be wider than "
+                "the visibility of its blueprint `{1}`. Current "
+                "blueprint visibility is {2}".format(deployment.id,
+                                                     blueprint.id,
+                                                     blueprint.visibility)
+            )
+        return self.set_visibility(models.Deployment,
+                                   deployment_id,
+                                   visibility)
+
     def set_visibility(self, model_class, resource_id, visibility):
         resource = self.sm.get(model_class, resource_id)
         self.validate_visibility_value(model_class, resource, visibility)
@@ -1712,8 +1739,7 @@ class ResourceManager(object):
 
     def validate_visibility_value(self, model_class, resource, new_visibility):
         current_visibility = resource.visibility
-        states = VisibilityState.STATES
-        if states.index(new_visibility) < states.index(current_visibility):
+        if self._is_visibility_wider(current_visibility, new_visibility):
             raise manager_exceptions.IllegalActionError(
                 "Can't set the visibility of `{0}` to {1} because it "
                 "already has wider visibility".format(resource.id,
@@ -1755,6 +1781,17 @@ class ResourceManager(object):
                 "Can't set or create the resource `{0}`, it's visibility "
                 "can't be global because it also exists in other tenants"
                 .format(resource_id)
+            )
+
+    def _validate_permitted_to_execute_global_workflow(self, deployment):
+        if (deployment.visibility == VisibilityState.GLOBAL and
+                deployment.tenant != self.sm.current_tenant and
+                not utils.can_execute_global_workflow(utils.current_tenant)):
+            raise manager_exceptions.ForbiddenError(
+                'User `{0}` is not allowed to execute workflows on '
+                'a global deployment {1} from a different tenant'.format(
+                    current_user.username, deployment.id
+                )
             )
 
     def validate_modification_permitted(self, resource):

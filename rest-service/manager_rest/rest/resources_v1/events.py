@@ -21,6 +21,7 @@ from sqlalchemy import (
     desc,
     func,
     literal_column,
+    or_ as sql_or
 )
 from toolz import dicttoolz
 
@@ -33,6 +34,7 @@ from manager_rest.rest.rest_utils import get_json_and_verify_params
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage.models_base import db
+from manager_rest.storage.models_states import VisibilityState
 from manager_rest.storage.resource_models import (
     Blueprint,
     Deployment,
@@ -338,8 +340,12 @@ class Events(SecuredResource):
                 literal_column("'cloudify_{}'".format(model.__name__.lower()))
                 .label('type'),
             )
-            .filter(model._tenant_id == tenant_id)
-
+            .filter(
+                sql_or(
+                    model._tenant_id == tenant_id,
+                    model.visibility == VisibilityState.GLOBAL
+                )
+            )
             .outerjoin(NodeInstance, NodeInstance.id == model.node_id)
             .outerjoin(Node, Node._storage_id == NodeInstance._node_fk)
             .outerjoin(Execution, Execution._storage_id == model._execution_fk)
@@ -433,7 +439,10 @@ class Events(SecuredResource):
                 model._execution_fk == Execution._storage_id,
                 Execution._deployment_fk == Deployment._storage_id,
                 Deployment._blueprint_fk == Blueprint._storage_id,
-                model._tenant_id == tenant_id
+                sql_or(
+                    model._tenant_id == tenant_id,
+                    model.visibility == VisibilityState.GLOBAL
+                )
             )
         )
 

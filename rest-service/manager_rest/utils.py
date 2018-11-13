@@ -221,6 +221,15 @@ def is_create_global_permitted(tenant):
     )
 
 
+def can_execute_global_workflow(tenant):
+    execute_global_roles = \
+        config.instance.authorization_permissions['execute_global_workflow']
+    return (
+            current_user.id == constants.BOOTSTRAP_ADMIN_ID or
+            current_user.has_role_in(tenant, execute_global_roles)
+    )
+
+
 @LocalProxy
 def current_tenant():
     tenant = getattr(g, 'current_tenant', None)
