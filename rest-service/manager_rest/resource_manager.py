@@ -1709,6 +1709,26 @@ class ResourceManager(object):
 
         return visibility or VisibilityState.TENANT
 
+    @staticmethod
+    def _is_visibility_wider(first, second):
+        states = VisibilityState.STATES
+        return states.index(first) > states.index(second)
+
+    def set_deployment_visibility(self, deployment_id, visibility):
+        deployment = self.sm.get(models.Deployment, deployment_id)
+        blueprint = deployment.blueprint
+        if self._is_visibility_wider(visibility, blueprint.visibility):
+            raise manager_exceptions.IllegalActionError(
+                "The visibility of deployment `{0}` can't be wider than "
+                "the visibility of its blueprint `{1}`. Current "
+                "blueprint visibility is {2}".format(deployment.id,
+                                                     blueprint.id,
+                                                     blueprint.visibility)
+            )
+        return self.set_visibility(models.Deployment,
+                                   deployment_id,
+                                   visibility)
+
     def set_visibility(self, model_class, resource_id, visibility):
         resource = self.sm.get(model_class, resource_id)
         self.validate_visibility_value(model_class, resource, visibility)
@@ -1719,8 +1739,7 @@ class ResourceManager(object):
 
     def validate_visibility_value(self, model_class, resource, new_visibility):
         current_visibility = resource.visibility
-        states = VisibilityState.STATES
-        if states.index(new_visibility) < states.index(current_visibility):
+        if self._is_visibility_wider(current_visibility, new_visibility):
             raise manager_exceptions.IllegalActionError(
                 "Can't set the visibility of `{0}` to {1} because it "
                 "already has wider visibility".format(resource.id,

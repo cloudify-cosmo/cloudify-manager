@@ -86,9 +86,10 @@ class DeploymentsSetVisibility(SecuredResource):
         Set the deployment's visibility
         """
         visibility = rest_utils.get_visibility_parameter()
-        return get_resource_manager().set_visibility(models.Deployment,
-                                                     deployment_id,
-                                                     visibility)
+        return get_resource_manager().set_deployment_visibility(
+            deployment_id,
+            visibility
+        )
 
 
 class DeploymentsIdCapabilities(SecuredResource):
