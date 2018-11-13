@@ -80,8 +80,8 @@ class CapabilitiesTestCase(base_test.BaseServerTestCase):
                 values_mapping[node.id]
             )
 
-        # Node properties are not evaluated by default, so we expect to see
-        # the actual intrinsic function dict here
+        # We're passing evaluate_functions=True, so we expect to see the
+        # evaluated values here
         nodes = self.client.nodes.list(
             deployment_id=other_dep_id,
             evaluate_functions=True
