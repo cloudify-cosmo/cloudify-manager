@@ -100,10 +100,6 @@ class Events(resources_v1.Events):
             'offset': offset,
         }
 
-        count_query = self._build_count_query(filters, range_filters,
-                                              self.current_tenant.id)
-        total = count_query.params(**params).scalar()
-
         select_query = self._build_select_query(filters, sort, range_filters,
                                                 self.current_tenant.id)
 
@@ -112,11 +108,24 @@ class Events(resources_v1.Events):
             for event in select_query.params(**params).all()
         ]
 
+        events_total = None
+        logs_total = None
+        for r in results:
+            if events_total is None and r['type'] == 'cloudify_event':
+                events_total = r['full_count']
+            if logs_total is None and r['type'] == 'cloudify_log':
+                logs_total = r['full_count']
+            if events_total is not None and logs_total is not None:
+                break
+
+        events_total = events_total or 0
+        logs_total = logs_total or 0
+
         metadata = {
             'pagination': {
                 'size': size,
                 'offset': offset,
-                'total': total,
+                'total': events_total + logs_total,
             }
         }
         return ListResult(results, metadata)

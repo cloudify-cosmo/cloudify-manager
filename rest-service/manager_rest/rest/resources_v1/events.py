@@ -337,6 +337,7 @@ class Events(SecuredResource):
                 select_column('level'),
                 literal_column("'cloudify_{}'".format(model.__name__.lower()))
                 .label('type'),
+                func.count('*').over().label('full_count'),
             )
             .filter(model._tenant_id == tenant_id)
 
