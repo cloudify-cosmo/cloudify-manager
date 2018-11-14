@@ -91,6 +91,7 @@ getent passwd cfyuser >/dev/null || useradd -r -g cfyuser -d /etc/cloudify -s /s
 
 /opt/manager
 /etc/cloudify/delete_logs_and_events_from_db.py*
+%dir /opt/cloudify/encryption
 /opt/cloudify/encryption/update-encryption-key
 /etc/logrotate.d/cloudify-amqp-postgres
 /etc/sudoers.d/cloudify-restservice
