@@ -42,3 +42,5 @@ from .blueprints import (                        # NOQA
 )
 
 from .agents import Agents                       # NOQA
+
+from .events import Events                       # NOQA

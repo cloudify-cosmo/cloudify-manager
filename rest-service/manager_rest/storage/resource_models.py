@@ -298,6 +298,15 @@ class Event(SQLResourceBase):
 
     execution_id = association_proxy('execution', 'id')
 
+    def to_response(self, **kwargs):
+        response = super(Event, self).to_response(**kwargs)
+        response['node_name'] = self.node_id  # TODO: Change to node
+        response['deployment_id'] = self.execution.deployment_id
+        response['workflow_id'] = self.execution.workflow_id
+        response['node_instance_id'] = self.node_id
+        response['type'] = 'cloudify_event'
+        return response
+
     def set_execution(self, execution):
         self._set_parent(execution)
         self.execution = execution
@@ -336,6 +345,15 @@ class Log(SQLResourceBase):
         return one_to_many_relationship(cls, Execution, cls._execution_fk)
 
     execution_id = association_proxy('execution', 'id')
+
+    def to_response(self, **kwargs):
+        response = super(Log, self).to_response(**kwargs)
+        response['node_name'] = self.node_id  # TODO: Change to node
+        response['deployment_id'] = self.execution.deployment_id
+        response['workflow_id'] = self.execution.workflow_id
+        response['node_instance_id'] = self.node_id
+        response['type'] = 'cloudify_log'
+        return response
 
     def set_execution(self, execution):
         self._set_parent(execution)
