@@ -169,37 +169,39 @@ class SnapshotRestore(object):
         """
         # The workflow context is thread local so we need to push it for
         # each thread.
-        with current_workflow_ctx.push(workflow_ctx, ctx_params):
-            try:
-                api_token = self._get_api_token(
-                    token_info[tenant][deployment_id]
-                )
-                dep = tenant_client.deployments.get(deployment_id)
-                blueprint = tenant_client.blueprints.get(
-                    dep_ctx.blueprint.id,
-                )
-                tasks_graph = self._get_tasks_graph(
-                    dep_ctx,
-                    blueprint,
-                    dep,
-                    api_token,
-                )
-                with dep_ctx:
-                    tasks_graph.execute()
-            except RuntimeError as re:
-                if self._should_ignore_plugin_failure(re.message):
-                    ctx.logger.warning('Failed to install plugins for '
-                                       'deployment `{0}` under tenant `{1}`. '
-                                       ' Proceeding since '
-                                       '`ignore_plugin_failure` flag was used.'
-                                       .format(deployment_id, tenant))
-                    ctx.logger.debug(re.message)
-                    deps_with_failed_plugins.put((deployment_id, tenant))
-                else:
-                    failed_deployments.put((deployment_id, tenant))
-                    ctx.logger.info(re)
-
-        self._semaphore.release()
+        try:
+            with current_workflow_ctx.push(workflow_ctx, ctx_params):
+                try:
+                    api_token = self._get_api_token(
+                        token_info[tenant][deployment_id]
+                    )
+                    dep = tenant_client.deployments.get(deployment_id)
+                    blueprint = tenant_client.blueprints.get(
+                        dep_ctx.blueprint.id,
+                    )
+                    tasks_graph = self._get_tasks_graph(
+                        dep_ctx,
+                        blueprint,
+                        dep,
+                        api_token,
+                    )
+                    with dep_ctx:
+                        tasks_graph.execute()
+                except RuntimeError as re:
+                    if self._should_ignore_plugin_failure(re.message):
+                        ctx.logger.warning('Failed to install plugins for '
+                                           'deployment `{0}` under tenant '
+                                           '`{1}`.  Proceeding since '
+                                           '`ignore_plugin_failure` flag was'
+                                           ' used.'
+                                           .format(deployment_id, tenant))
+                        ctx.logger.debug(re.message)
+                        deps_with_failed_plugins.put((deployment_id, tenant))
+                    else:
+                        failed_deployments.put((deployment_id, tenant))
+                        ctx.logger.info(re)
+        finally:
+            self._semaphore.release()
 
     def _possibly_update_encryption_key(self):
         with open(SECURITY_FILE_LOCATION) as security_conf_file:
