@@ -268,6 +268,7 @@ class Events(SecuredResource):
                 lambda left, right: left.union_all(right),
                 subqueries,
             )
+            total = query.count()
             query = Events._apply_sort(query, sort)
             query = (
                 query
@@ -281,8 +282,9 @@ class Events(SecuredResource):
                 db.session.query(Event.timestamp)
                 .filter(Event.timestamp is None)
             )
+            total = query.count()
 
-        return query
+        return query, total
 
     @staticmethod
     def _build_select_subquery(model, filters, range_filters, tenant_id):
