@@ -41,4 +41,4 @@ from .blueprints import (                        # NOQA
     BlueprintsSetVisibility
 )
 
-from .agents import Agents                       # NOQA
+from .agents import Agents, AgentsName           # NOQA

@@ -13,11 +13,12 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from cloudify.models_states import VisibilityState
+
 from manager_rest.storage import models
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.resource_manager import get_resource_manager
-from manager_rest.storage.models_states import VisibilityState
 from manager_rest.rest import (resources_v2,
                                rest_decorators,
                                rest_utils)

@@ -15,11 +15,11 @@
 
 import os
 
-from manager_rest.test.attribute import attr
-
-from manager_rest.test.base_test import LATEST_API_VERSION
-from manager_rest.storage.models_states import VisibilityState
+from cloudify.models_states import VisibilityState
 from cloudify_rest_client.exceptions import CloudifyClientError
+
+from manager_rest.test.attribute import attr
+from manager_rest.test.base_test import LATEST_API_VERSION
 
 from .test_base import SecurityTestBase
 

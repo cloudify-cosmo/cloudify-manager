@@ -25,8 +25,14 @@ from flask import current_app
 from flask_security import current_user
 
 from cloudify import constants as cloudify_constants, utils as cloudify_utils
+from cloudify.models_states import (SnapshotState,
+                                    ExecutionState,
+                                    VisibilityState,
+                                    DeploymentModificationState)
+
 from dsl_parser import constants, tasks
 from dsl_parser import exceptions as parser_exceptions
+
 from manager_rest import premium_enabled
 from manager_rest.constants import (DEFAULT_TENANT_NAME,
                                     FILE_SERVER_BLUEPRINTS_FOLDER,
@@ -37,10 +43,6 @@ from manager_rest.storage import (get_storage_manager,
                                   models,
                                   get_node,
                                   ListResult)
-from manager_rest.storage.models_states import (SnapshotState,
-                                                ExecutionState,
-                                                DeploymentModificationState,
-                                                VisibilityState)
 
 from . import utils
 from . import config
@@ -1300,6 +1302,7 @@ class ResourceManager(object):
         tenant_name = instance_dict.pop('tenant_name')
         created_by = instance_dict.pop('created_by')
         resource_availability = instance_dict.pop('resource_availability')
+        private_resource = instance_dict.pop('private_resource')
 
         # Link the node instance object to to the node, and add it to the DB
         new_node_instance = models.NodeInstance(**instance_dict)
@@ -1318,9 +1321,10 @@ class ResourceManager(object):
         instance_dict['tenant_name'] = tenant_name
         instance_dict['created_by'] = created_by
 
-        # resource_availability is deprecated. For backwards compatibility -
-        # adding it to the response.
+        # resource_availability and private_resource are deprecated.
+        # For backwards compatibility - adding it to the response.
         instance_dict['resource_availability'] = resource_availability
+        instance_dict['private_resource'] = private_resource
 
     def list_agents(self, deployment_id=None, node_ids=None,
                     node_instance_ids=None, install_method=None):

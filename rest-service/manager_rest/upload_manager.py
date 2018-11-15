@@ -32,6 +32,8 @@ from flask import request, current_app
 from flask_restful.reqparse import Argument
 from flask_restful.inputs import boolean
 
+from cloudify.models_states import SnapshotState
+
 from manager_rest.constants import (FILE_SERVER_PLUGINS_FOLDER,
                                     FILE_SERVER_SNAPSHOTS_FOLDER,
                                     FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
@@ -41,7 +43,6 @@ from manager_rest.deployment_update.manager import \
     get_deployment_updates_manager
 from manager_rest.archiving import get_archive_type
 from manager_rest.storage.models import Plugin
-from manager_rest.storage.models_states import SnapshotState
 from manager_rest import config, chunked, manager_exceptions
 from manager_rest.utils import (mkdirs,
                                 get_formatted_timestamp,

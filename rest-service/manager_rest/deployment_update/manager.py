@@ -19,18 +19,20 @@ import uuid
 
 from flask import current_app
 
+from cloudify.models_states import ExecutionState
+
+from dsl_parser import constants, tasks
+from dsl_parser import exceptions as parser_exceptions
+
 from manager_rest import utils
 from manager_rest import config
-from dsl_parser import constants, tasks
 from manager_rest import workflow_executor
-from dsl_parser import exceptions as parser_exceptions
 from manager_rest.dsl_functions import get_secret_method
 from manager_rest import app_context, manager_exceptions
 from manager_rest.resource_manager import ResourceManager
 from manager_rest.deployment_update import step_extractor
 from manager_rest.deployment_update.utils import extract_ids
 from manager_rest.storage import get_storage_manager, models
-from manager_rest.storage.models_states import ExecutionState
 from manager_rest.deployment_update.validator import StepValidator
 from manager_rest.deployment_update.constants import (
     STATES,

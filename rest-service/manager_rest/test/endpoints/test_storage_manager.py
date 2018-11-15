@@ -13,12 +13,12 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from manager_rest.test.attribute import attr
+from cloudify.models_states import VisibilityState
 
 from manager_rest import utils
 from manager_rest.test import base_test
 from manager_rest.storage import models
-from manager_rest.storage.models_states import VisibilityState
+from manager_rest.test.attribute import attr
 from manager_rest.manager_exceptions import IllegalActionError
 
 
@@ -163,7 +163,11 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         serialized_dep.pop('blueprint_id')
         serialized_dep.pop('tenant_name')
         serialized_dep.pop('created_by')
+
+        # Deprecated columns, for backwards compatibility -
+        # was added to the response
         serialized_dep.pop('resource_availability')
+        serialized_dep.pop('private_resource')
 
         deserialized_dep = models.Deployment(**serialized_dep)
         self.assertEquals(dep.id, deserialized_dep.id)

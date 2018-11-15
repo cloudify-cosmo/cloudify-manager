@@ -20,9 +20,10 @@ import traceback
 
 from flask import jsonify, request
 
+from cloudify.models_states import ExecutionState
+
 from manager_rest import config
 from manager_rest import utils
-from manager_rest.storage.models_states import ExecutionState
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.constants import (MAINTENANCE_MODE_ACTIVATED,
                                     MAINTENANCE_MODE_STATUS_FILE,

@@ -25,9 +25,10 @@ from flask import request, make_response
 from flask_restful.reqparse import Argument
 from flask_restful.reqparse import RequestParser
 
+from cloudify.models_states import VisibilityState
+
 from manager_rest import manager_exceptions, config
 from manager_rest.constants import REST_SERVICE_NAME
-from manager_rest.storage.models_states import VisibilityState
 
 try:
     from cloudify_premium.ha import node_status

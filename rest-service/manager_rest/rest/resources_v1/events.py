@@ -25,6 +25,8 @@ from sqlalchemy import (
 )
 from toolz import dicttoolz
 
+from cloudify.models_states import VisibilityState
+
 from manager_rest import manager_exceptions, utils
 from manager_rest.rest.rest_decorators import (
     exceptions_handled,
@@ -34,7 +36,6 @@ from manager_rest.rest.rest_utils import get_json_and_verify_params
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage.models_base import db
-from manager_rest.storage.models_states import VisibilityState
 from manager_rest.storage.resource_models import (
     Blueprint,
     Deployment,

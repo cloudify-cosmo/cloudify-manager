@@ -18,9 +18,9 @@ from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
 
 from manager_rest.utils import classproperty
+from cloudify.models_states import VisibilityState
 
 from .models_base import db, SQLModelBase
-from .models_states import VisibilityState
 from .management_models import Tenant, User
 from .relationships import one_to_many_relationship, foreign_key
 
@@ -48,10 +48,6 @@ class SQLResourceBase(SQLModelBase):
     def response_fields(cls):
         fields = cls.resource_fields.copy()
         fields.update(cls._extra_fields)
-
-        # resource_availability is deprecated.
-        # For backwards compatibility - adding it to the response.
-        fields['resource_availability'] = fields['visibility']
         return fields
 
     @classmethod
@@ -61,7 +57,6 @@ class SQLResourceBase(SQLModelBase):
     # Some must-have columns for all resources
     _storage_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     id = db.Column(db.Text, index=True)
-    private_resource = db.Column(db.Boolean, default=False)  # Deprecated
     visibility = db.Column(
         db.Enum(*VisibilityState.STATES, name='visibility_states'),
         default=VisibilityState.TENANT
@@ -97,13 +92,14 @@ class SQLResourceBase(SQLModelBase):
         # For backwards compatibility - adding it to the response.
         return self.visibility
 
+    @hybrid_property
+    def private_resource(self):
+        # private_resource is deprecated.
+        # For backwards compatibility - adding it to the response.
+        return self.visibility == VisibilityState.PRIVATE
+
     def to_response(self, **kwargs):
         fields = {f: getattr(self, f) for f in self.response_fields}
-
-        # Fix the value of the deprecated property private_resource
-        # for backwards compatibility
-        private = fields['visibility'] == VisibilityState.PRIVATE
-        fields['private_resource'] = private
         return fields
 
     def _get_identifier_dict(self):
