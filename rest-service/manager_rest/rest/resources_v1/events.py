@@ -19,7 +19,6 @@ from sqlalchemy import (
     asc,
     bindparam,
     desc,
-    func,
     literal_column,
     or_ as sql_or
 )
@@ -362,97 +361,6 @@ class Events(SecuredResource):
         return query
 
     @staticmethod
-    def _build_count_query(filters, range_filters, tenant_id):
-        """Build query used to count events for a given execution.
-
-        :param filters:
-            Filters selection.
-
-            Valid filtering criteria are:
-                - Type (return events or both events and logs):
-                    {'type': ['cloudify_event', 'cloudify_log']}
-                - Execution:
-                    {'execution_id': <some_id>}
-                - Deployment:
-                    {'deployment_id': <some_id>}
-
-            Results must match every the filtering criteria. In particular,
-            filtering by a deployment and an execution that doesn't belong to
-            that deployment won't return any result.
-        :type filters: dict(str, str)
-        :param range_filters:
-            Filter out events that don't fall in a given range.
-
-            The only field that is supported for now is @timestamp (note the
-            `@` inherited from the old Elasticsearch implementation):
-                {'timestamp': {'from': <iso8601-date>, 'to': <iso8601-date>}}
-        :type range_filters: dict(str, str)
-        :returns:
-            A SQL query that returns the number of events found that match the
-            conditions passed as arguments.
-        :rtype: :class:`sqlalchemy.orm.query.Query`
-
-        """
-        assert isinstance(filters, dict), \
-            'Filters is expected to be a dictionary'
-
-        subqueries = []
-        if (('type' not in filters or 'cloudify_event' in filters['type']) and
-                ('level' not in filters)):
-            events_query = Events._build_count_subquery(
-                Event, filters, range_filters, tenant_id)
-            subqueries.append(events_query)
-
-        if (('type' not in filters or 'cloudify_log' in filters['type']) and
-                ('event_type' not in filters)):
-            logs_query = Events._build_count_subquery(
-                Log, filters, range_filters, tenant_id)
-            subqueries.append(logs_query)
-
-        if subqueries:
-            query = db.session.query(sum(subqueries))
-        else:
-            query = (
-                db.session.query(func.count('*').label('count'))
-                .filter(Event.timestamp is None)
-            )
-
-        return query
-
-    @staticmethod
-    def _build_count_subquery(model, filters, range_filters, tenant_id):
-        """Build count subquery.
-
-        :param model: Count either events or logs
-        :type model:
-            :class:`manager_rest.storage.resource_models.Event`
-            :class:`manager_rest.storage.resource_models.Log`
-        :param filters: Filters passed as request argument
-        :type filters: dict(str, list(str))
-        :param range_filters: Range filters passed as request argument
-        :type range_filters: dict(str, dict(str))
-        :returns: Count events query
-        :rtype: :class:`sqlalchemy.sql.elements.ColumnClause`
-
-        """
-        query = (
-            db.session.query(func.count('*').label('count'))
-            .filter(
-                model._execution_fk == Execution._storage_id,
-                Execution._deployment_fk == Deployment._storage_id,
-                Deployment._blueprint_fk == Blueprint._storage_id,
-                sql_or(
-                    model._tenant_id == tenant_id,
-                    model.visibility == VisibilityState.GLOBAL
-                )
-            )
-        )
-
-        query = Events._apply_filters(query, model, filters)
-        query = Events._apply_range_filters(query, model, range_filters)
-        return query.subquery().c.count
-
-    @staticmethod
     def _map_event_to_dict(_include, sql_event):
         """Map event to a dictionary to be sent as an API response.
 
@@ -555,12 +463,9 @@ class Events(SecuredResource):
             'offset': pagination['offset'],
         }
 
-        count_query = Events._build_count_query(filters, range_filters,
-                                                self.current_tenant.id)
-        total = count_query.params(**params).scalar()
-
-        select_query = self._build_select_query(filters, sort, range_filters,
-                                                self.current_tenant.id)
+        select_query, total = self._build_select_query(
+            filters, sort, range_filters, self.current_tenant.id
+        )
 
         events = [
             self._map_event_to_dict(_include, event)
