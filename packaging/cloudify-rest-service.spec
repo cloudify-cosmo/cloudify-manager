@@ -102,3 +102,4 @@ getent passwd cfyuser >/dev/null || useradd -r -g cfyuser -d /etc/cloudify -s /s
 
 %attr(750,cfyuser,adm) /var/log/cloudify/rest
 %attr(750,cfyuser,adm) /var/log/cloudify/amqp-postgres
+%attr(550,root,cfyuser) /opt/cloudify/encryption/update-encryption-key
