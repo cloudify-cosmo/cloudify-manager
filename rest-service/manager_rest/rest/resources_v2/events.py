@@ -100,12 +100,9 @@ class Events(resources_v1.Events):
             'offset': offset,
         }
 
-        count_query = self._build_count_query(filters, range_filters,
-                                              self.current_tenant.id)
-        total = count_query.params(**params).scalar()
-
-        select_query = self._build_select_query(filters, sort, range_filters,
-                                                self.current_tenant.id)
+        select_query, total = self._build_select_query(
+            filters, sort, range_filters, self.current_tenant.id
+        )
 
         results = [
             self._map_event_to_dict(_include, event)
