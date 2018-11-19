@@ -31,7 +31,8 @@ def execute_workflow(name,
                      execution_id,
                      execution_parameters=None,
                      bypass_maintenance=None,
-                     dry_run=False):
+                     dry_run=False,
+                     wait_after_fail=600):
     execution_parameters = execution_parameters or {}
     task_name = workflow['operation']
     plugin_name = workflow['plugin']
@@ -56,6 +57,7 @@ def execute_workflow(name,
         'bypass_maintenance': bypass_maintenance,
         'dry_run': dry_run,
         'is_system_workflow': False,
+        'wait_after_fail': wait_after_fail,
         'plugin': {
             'name': plugin_name,
             'package_name': plugin.get('package_name'),

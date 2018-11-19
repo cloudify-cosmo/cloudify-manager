@@ -111,6 +111,7 @@ class Executions(SecuredResource):
         deployment_id = request_dict['deployment_id']
         workflow_id = request_dict['workflow_id']
         parameters = request_dict.get('parameters', None)
+        wait_after_fail = request_dict.get('wait_after_fail', 600)
 
         if parameters is not None and parameters.__class__ is not dict:
             raise manager_exceptions.BadParametersError(
@@ -122,7 +123,7 @@ class Executions(SecuredResource):
             deployment_id, workflow_id, parameters=parameters,
             allow_custom_parameters=allow_custom_parameters, force=force,
             dry_run=dry_run, bypass_maintenance=bypass_maintenance,
-            queue=queue)
+            queue=queue, wait_after_fail=wait_after_fail)
         return execution, 201
 
 
