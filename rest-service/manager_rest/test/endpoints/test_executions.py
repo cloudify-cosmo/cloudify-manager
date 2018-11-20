@@ -16,16 +16,16 @@
 from itertools import dropwhile
 
 import mock
-from manager_rest.test.attribute import attr
 
 from cloudify_rest_client import exceptions
+from cloudify.models_states import ExecutionState
 
 from manager_rest import utils
 from manager_rest.storage import models
 from manager_rest import manager_exceptions
+from manager_rest.test.attribute import attr
 from manager_rest.test.base_test import BaseServerTestCase
 from manager_rest.test.base_test import LATEST_API_VERSION
-from manager_rest.storage.models_states import ExecutionState
 
 
 @attr(client_min_version=1, client_max_version=LATEST_API_VERSION)

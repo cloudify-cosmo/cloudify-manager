@@ -16,6 +16,7 @@
 from flask import request
 from flask_security import current_user
 
+from cloudify.models_states import VisibilityState
 from cloudify.cryptography_utils import encrypt, decrypt
 
 from ... import utils
@@ -26,7 +27,6 @@ from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.resource_manager import get_resource_manager
-from manager_rest.storage.models_states import VisibilityState
 from manager_rest.manager_exceptions import (ConflictError,
                                              ForbiddenError,
                                              IllegalActionError)

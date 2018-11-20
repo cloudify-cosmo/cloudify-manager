@@ -274,7 +274,7 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             'blueprint_id': [blueprint.id],
             'type': ['cloudify_event', 'cloudify_log']
         }
-        query = EventsV1._build_select_query(
+        query, event_count = EventsV1._build_select_query(
             filters,
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
@@ -282,13 +282,6 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
         event_ids = [event.id for event in events]
-
-        count_query = EventsV1._build_count_query(
-            filters,
-            self.DEFAULT_RANGE_FILTERS,
-            self.tenant.id
-        )
-        event_count = count_query.params(**self.DEFAULT_RANGE_FILTERS).scalar()
 
         expected_deployment_ids = [
             deployment._storage_id
@@ -317,7 +310,7 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             'type': ['cloudify_event', 'cloudify_log']
         }
 
-        query = EventsV1._build_select_query(
+        query, event_count = EventsV1._build_select_query(
             filters,
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
@@ -325,13 +318,6 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
         event_ids = [event.id for event in events]
-
-        count_query = EventsV1._build_count_query(
-            filters,
-            self.DEFAULT_RANGE_FILTERS,
-            self.tenant.id
-        )
-        event_count = count_query.params(**self.DEFAULT_RANGE_FILTERS).scalar()
 
         expected_execution_ids = [
             execution._storage_id
@@ -354,7 +340,7 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             'execution_id': [execution.id],
             'type': ['cloudify_event', 'cloudify_log']
         }
-        query = EventsV1._build_select_query(
+        query, event_count = EventsV1._build_select_query(
             filters,
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
@@ -362,13 +348,6 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
         event_ids = [event.id for event in events]
-
-        count_query = EventsV1._build_count_query(
-            filters,
-            self.DEFAULT_RANGE_FILTERS,
-            self.tenant.id
-        )
-        event_count = count_query.params(**self.DEFAULT_RANGE_FILTERS).scalar()
 
         expected_events = [
             event
@@ -387,7 +366,7 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             'type': ['cloudify_event', 'cloudify_log']
         }
 
-        query = EventsV1._build_select_query(
+        query, event_count = EventsV1._build_select_query(
             filters,
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
@@ -395,13 +374,6 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
         event_ids = [event.id for event in events]
-
-        count_query = EventsV1._build_count_query(
-            filters,
-            self.DEFAULT_RANGE_FILTERS,
-            self.tenant.id
-        )
-        event_count = count_query.params(**self.DEFAULT_RANGE_FILTERS).scalar()
 
         expected_events = [
             event
@@ -420,20 +392,13 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             'type': ['cloudify_log']
         }
 
-        query = EventsV1._build_select_query(
+        query, event_count = EventsV1._build_select_query(
             filters,
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
             self.tenant.id
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
-
-        count_query = EventsV1._build_count_query(
-            filters,
-            self.DEFAULT_RANGE_FILTERS,
-            self.tenant.id
-        )
-        event_count = count_query.params(**self.DEFAULT_RANGE_FILTERS).scalar()
 
         # logs don't have event_type, so query should return no results
         expected_events = []
@@ -448,7 +413,7 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             'type': ['cloudify_event', 'cloudify_log']
         }
 
-        query = EventsV1._build_select_query(
+        query, event_count = EventsV1._build_select_query(
             filters,
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
@@ -456,13 +421,6 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
         event_ids = [event.id for event in events]
-
-        count_query = EventsV1._build_count_query(
-            filters,
-            self.DEFAULT_RANGE_FILTERS,
-            self.tenant.id
-        )
-        event_count = count_query.params(**self.DEFAULT_RANGE_FILTERS).scalar()
 
         expected_events = [
             event
@@ -481,20 +439,13 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             'type': ['cloudify_event']
         }
 
-        query = EventsV1._build_select_query(
+        query, event_count = EventsV1._build_select_query(
             filters,
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
             self.tenant.id
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
-
-        count_query = EventsV1._build_count_query(
-            filters,
-            self.DEFAULT_RANGE_FILTERS,
-            self.tenant.id
-        )
-        event_count = count_query.params(**self.DEFAULT_RANGE_FILTERS).scalar()
 
         # events don't have level, so query should return no results
         expected_events = []
@@ -509,7 +460,7 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             'type': ['cloudify_event', 'cloudify_log']
         }
 
-        query = EventsV1._build_select_query(
+        query, event_count = EventsV1._build_select_query(
             filters,
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
@@ -517,13 +468,6 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
         event_ids = [event.id for event in events]
-
-        count_query = EventsV1._build_count_query(
-            filters,
-            self.DEFAULT_RANGE_FILTERS,
-            self.tenant.id
-        )
-        event_count = count_query.params(**self.DEFAULT_RANGE_FILTERS).scalar()
 
         expected_events = [
             event
@@ -552,12 +496,6 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             EventsV1._build_select_query(
                 filters,
                 self.DEFAULT_SORT,
-                self.DEFAULT_RANGE_FILTERS,
-                self.tenant.id
-            )
-        with self.assertRaises(BadParametersError):
-            EventsV1._build_count_query(
-                filters,
                 self.DEFAULT_RANGE_FILTERS,
                 self.tenant.id
             )
@@ -596,7 +534,7 @@ class SelectEventsFilterTypeTest(SelectEventsBaseTest):
         ])
         filters = {'type': event_types}
 
-        query = EventsV1._build_select_query(
+        query, event_count = EventsV1._build_select_query(
             filters,
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
@@ -604,13 +542,6 @@ class SelectEventsFilterTypeTest(SelectEventsBaseTest):
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
         event_ids = [event.id for event in events]
-
-        count_query = EventsV1._build_count_query(
-            filters,
-            self.DEFAULT_RANGE_FILTERS,
-            self.tenant.id
-        )
-        event_count = count_query.params(**self.DEFAULT_RANGE_FILTERS).scalar()
 
         expected_events = [
             event
@@ -629,7 +560,7 @@ class SelectEventsFilterTypeTest(SelectEventsBaseTest):
         """Get both events and logs implicitly without passing any filter."""
         filters = {}
 
-        query = EventsV1._build_select_query(
+        query, event_count = EventsV1._build_select_query(
             filters,
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
@@ -637,13 +568,6 @@ class SelectEventsFilterTypeTest(SelectEventsBaseTest):
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
         event_ids = [event.id for event in events]
-
-        count_query = EventsV1._build_count_query(
-            filters,
-            self.DEFAULT_RANGE_FILTERS,
-            self.tenant.id
-        )
-        event_count = count_query.params(**self.DEFAULT_RANGE_FILTERS).scalar()
 
         expected_events = self.events
         expected_event_ids = [event.id for event in expected_events]
@@ -684,7 +608,7 @@ class SelectEventsSortTest(SelectEventsBaseTest):
         """
         sort = {field: direction}
 
-        query = EventsV1._build_select_query(
+        query, event_count = EventsV1._build_select_query(
             self.DEFAULT_FILTERS,
             sort,
             self.DEFAULT_RANGE_FILTERS,
@@ -692,13 +616,6 @@ class SelectEventsSortTest(SelectEventsBaseTest):
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
         event_timestamps = [event.timestamp for event in events]
-
-        count_query = EventsV1._build_count_query(
-            self.DEFAULT_FILTERS,
-            self.DEFAULT_RANGE_FILTERS,
-            self.tenant.id
-        )
-        event_count = count_query.params(**self.DEFAULT_RANGE_FILTERS).scalar()
 
         expected_events = sorted(
             self.events,
@@ -778,7 +695,7 @@ class SelectEventsRangeFilterTest(SelectEventsBaseTest):
             range_filter['to'] = to_datetime
         range_filters = {field: range_filter}
 
-        query = EventsV1._build_select_query(
+        query, event_count = EventsV1._build_select_query(
             self.DEFAULT_FILTERS,
             self.DEFAULT_SORT,
             range_filters,
@@ -786,13 +703,6 @@ class SelectEventsRangeFilterTest(SelectEventsBaseTest):
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
         event_timestamps = [event.timestamp for event in events]
-
-        count_query = EventsV1._build_count_query(
-            self.DEFAULT_FILTERS,
-            range_filters,
-            self.tenant.id
-        )
-        event_count = count_query.params(**range_filters).scalar()
 
         sorted_events = sorted(
             self.events,
@@ -831,12 +741,6 @@ class SelectEventsRangeFilterTest(SelectEventsBaseTest):
                 {'unknown': {'from': 'a', 'to': 'b'}},
                 self.tenant.id
             )
-        with self.assertRaises(BadParametersError):
-            EventsV1._build_count_query(
-                self.DEFAULT_FILTERS,
-                {'unknown': {'from': 'a', 'to': 'b'}},
-                self.tenant.id
-            )
 
     def test_filter_do_not_include_from(self):
         """Filter by timestamp without including from field."""
@@ -867,16 +771,13 @@ class SelectEventTenantTest(SelectEventsBaseTest):
         db.session.add(tenant)
         db.session.commit()
 
-        query = EventsV1._build_select_query(
+        query, event_count = EventsV1._build_select_query(
             self.DEFAULT_FILTERS, self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS, tenant.id)
         events = query.params(**self.DEFAULT_PAGINATION).all()
-        events_count = EventsV1._build_count_query(
-            self.DEFAULT_FILTERS, self.DEFAULT_RANGE_FILTERS,
-            tenant.id).scalar()
 
         self.assertEqual(events, [])
-        self.assertEqual(events_count, 0)
+        self.assertEqual(event_count, 0)
 
 
 @attr(client_min_version=1, client_max_version=1)
@@ -924,9 +825,8 @@ class BuildCountQueryTest(TestCase):
     def test_filter_required(self):
         """Filter parameter is expected to be dictionary."""
         filters = None
-        range_filters = {}
         with self.assertRaises(AssertionError):
-            EventsV1._build_count_query(filters, range_filters, tenant_id=1)
+            EventsV1._build_select_query(filters, {}, {}, tenant_id=1)
 
 
 @attr(client_min_version=1, client_max_version=1)

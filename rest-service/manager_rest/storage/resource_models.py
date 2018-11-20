@@ -22,6 +22,11 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
 
+from cloudify.models_states import (AgentState,
+                                    SnapshotState,
+                                    ExecutionState,
+                                    DeploymentModificationState)
+
 from manager_rest import config
 from manager_rest.rest.responses import Workflow
 from manager_rest.utils import classproperty, files_in_folder
@@ -34,11 +39,8 @@ from .models_base import (
     JSONString,
     UTCDateTime,
 )
-from .relationships import foreign_key, one_to_many_relationship
 from .resource_models_base import SQLResourceBase
-from .models_states import (DeploymentModificationState,
-                            SnapshotState,
-                            ExecutionState)
+from .relationships import foreign_key, one_to_many_relationship
 
 
 class CreatedAtMixin(object):
@@ -531,5 +533,45 @@ class NodeInstance(SQLResourceBase):
     def set_node(self, node):
         self._set_parent(node)
         self.node = node
+
+
+class Agent(CreatedAtMixin, SQLResourceBase):
+    __tablename__ = 'agents'
+
+    ip = db.Column(db.Text)
+    name = db.Column(db.Text)
+    install_method = db.Column(db.Text)
+    system = db.Column(db.Text)
+    version = db.Column(db.Text)
+    state = db.Column(db.Enum(*AgentState.STATES, name='agent_states'),
+                      default=AgentState.CREATING)
+    rabbitmq_username = db.Column(db.Text)
+    rabbitmq_password = db.Column(db.Text)
+    rabbitmq_exchange = db.Column(db.Text)
+    updated_at = db.Column(UTCDateTime)
+
+    _node_instance_fk = foreign_key(NodeInstance._storage_id)
+
+    @declared_attr
+    def node_instance(cls):
+        # When upgrading an agent we want to save both the old and new agents
+        # with the same node_instance_id
+        return one_to_many_relationship(cls,
+                                        NodeInstance,
+                                        cls._node_instance_fk)
+
+    node_instance_id = association_proxy('node_instance', 'id')
+    node_id = association_proxy('node_instance', 'node_id')
+    deployment_id = association_proxy('node_instance', 'deployment_id')
+
+    def set_node_instance(self, node_instance):
+        self._set_parent(node_instance)
+        self.node_instance = node_instance
+
+    def to_response(self, **kwargs):
+        agent_dict = super(Agent, self).to_response()
+        agent_dict.pop('rabbitmq_username')
+        agent_dict.pop('rabbitmq_password')
+        return agent_dict
 
 # endregion

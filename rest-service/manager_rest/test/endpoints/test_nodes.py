@@ -12,7 +12,6 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-from datetime import datetime
 
 from manager_rest.test.attribute import attr
 from unittest import skip
@@ -21,11 +20,7 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 
 from manager_rest.test import base_test
 from manager_rest import manager_exceptions
-from manager_rest.storage import get_node
-from manager_rest.storage.models import (Blueprint,
-                                         Deployment,
-                                         Node,
-                                         NodeInstance)
+from manager_rest.test.mocks import put_node_instance
 
 
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
@@ -43,7 +38,8 @@ class NodesTest(base_test.BaseServerTestCase):
         self.assertEqual(404, response.status_code)
 
     def test_get_node(self):
-        self.put_node_instance(
+        put_node_instance(
+            self.sm,
             instance_id='1234',
             deployment_id='111',
             runtime_properties={
@@ -90,7 +86,8 @@ class NodesTest(base_test.BaseServerTestCase):
 
     def test_partial_patch_node(self):
         """PATCH requests with partial data are accepted."""
-        self.put_node_instance(
+        put_node_instance(
+            self.sm,
             instance_id='1234',
             deployment_id='111',
             runtime_properties={
@@ -136,7 +133,8 @@ class NodesTest(base_test.BaseServerTestCase):
     def test_old_version(self):
         """Can't update a node instance passing new version != old version."""
         node_instance_id = '1234'
-        self.put_node_instance(
+        put_node_instance(
+            self.sm,
             instance_id=node_instance_id,
             deployment_id='111',
             runtime_properties={
@@ -154,7 +152,8 @@ class NodesTest(base_test.BaseServerTestCase):
     def test_patch_node(self):
         """Getting an instance after updating it, returns the updated data."""
         node_instance_id = '1234'
-        self.put_node_instance(
+        put_node_instance(
+            self.sm,
             instance_id=node_instance_id,
             deployment_id='111',
             runtime_properties={
@@ -183,7 +182,8 @@ class NodesTest(base_test.BaseServerTestCase):
         preexisting runtime properties.
         """
         node_instance_id = '1234'
-        self.put_node_instance(
+        put_node_instance(
+            self.sm,
             instance_id=node_instance_id,
             deployment_id='111',
             runtime_properties={
@@ -208,7 +208,8 @@ class NodesTest(base_test.BaseServerTestCase):
         runtime properties, the new value wins.
         """
         node_instance_id = '1234'
-        self.put_node_instance(
+        put_node_instance(
+            self.sm,
             instance_id=node_instance_id,
             deployment_id='111',
             runtime_properties={
@@ -226,7 +227,8 @@ class NodesTest(base_test.BaseServerTestCase):
     def test_patch_node_runtime_props_cleanup(self):
         """Sending empty runtime properties, removes preexisting ones."""
         node_instance_id = '1234'
-        self.put_node_instance(
+        put_node_instance(
+            self.sm,
             instance_id=node_instance_id,
             deployment_id='111',
             runtime_properties={
@@ -251,7 +253,8 @@ class NodesTest(base_test.BaseServerTestCase):
             raise manager_exceptions.ConflictError()
 
         node_instance_id = '1234'
-        self.put_node_instance(
+        put_node_instance(
+            self.sm,
             instance_id=node_instance_id,
             deployment_id='111',
             runtime_properties={
@@ -274,22 +277,22 @@ class NodesTest(base_test.BaseServerTestCase):
     @attr(client_min_version=2,
           client_max_version=base_test.LATEST_API_VERSION)
     def test_list_node_instances_multiple_value_filter(self):
-        self.put_node_instance(node_id='1', instance_id='11',
-                               deployment_id='111')
-        self.put_node_instance(node_id='1', instance_id='12',
-                               deployment_id='111')
-        self.put_node_instance(node_id='2', instance_id='21',
-                               deployment_id='111')
-        self.put_node_instance(node_id='2', instance_id='22',
-                               deployment_id='111')
-        self.put_node_instance(node_id='3', instance_id='31',
-                               deployment_id='222')
-        self.put_node_instance(node_id='3', instance_id='32',
-                               deployment_id='222')
-        self.put_node_instance(node_id='4', instance_id='41',
-                               deployment_id='222')
-        self.put_node_instance(node_id='4', instance_id='42',
-                               deployment_id='222')
+        put_node_instance(
+            self.sm, node_id='1', instance_id='11', deployment_id='111')
+        put_node_instance(
+            self.sm, node_id='1', instance_id='12', deployment_id='111')
+        put_node_instance(
+            self.sm, node_id='2', instance_id='21', deployment_id='111')
+        put_node_instance(
+            self.sm, node_id='2', instance_id='22', deployment_id='111')
+        put_node_instance(
+            self.sm, node_id='3', instance_id='31', deployment_id='222')
+        put_node_instance(
+            self.sm, node_id='3', instance_id='32', deployment_id='222')
+        put_node_instance(
+            self.sm, node_id='4', instance_id='41', deployment_id='222')
+        put_node_instance(
+            self.sm, node_id='4', instance_id='42', deployment_id='222')
 
         all_instances = self.client.node_instances.list()
         dep1_node_instances = \
@@ -302,22 +305,22 @@ class NodesTest(base_test.BaseServerTestCase):
         self.assertEquals(4, len(dep1_node_instances))
 
     def test_list_node_instances(self):
-        self.put_node_instance(node_id='1', instance_id='11',
-                               deployment_id='111')
-        self.put_node_instance(node_id='1', instance_id='12',
-                               deployment_id='111')
-        self.put_node_instance(node_id='2', instance_id='21',
-                               deployment_id='111')
-        self.put_node_instance(node_id='2', instance_id='22',
-                               deployment_id='111')
-        self.put_node_instance(node_id='3', instance_id='31',
-                               deployment_id='222')
-        self.put_node_instance(node_id='3', instance_id='32',
-                               deployment_id='222')
-        self.put_node_instance(node_id='4', instance_id='41',
-                               deployment_id='222')
-        self.put_node_instance(node_id='4', instance_id='42',
-                               deployment_id='222')
+        put_node_instance(
+            self.sm, node_id='1', instance_id='11', deployment_id='111')
+        put_node_instance(
+            self.sm, node_id='1', instance_id='12', deployment_id='111')
+        put_node_instance(
+            self.sm, node_id='2', instance_id='21', deployment_id='111')
+        put_node_instance(
+            self.sm, node_id='2', instance_id='22', deployment_id='111')
+        put_node_instance(
+            self.sm, node_id='3', instance_id='31', deployment_id='222')
+        put_node_instance(
+            self.sm, node_id='3', instance_id='32', deployment_id='222')
+        put_node_instance(
+            self.sm, node_id='4', instance_id='41', deployment_id='222')
+        put_node_instance(
+            self.sm, node_id='4', instance_id='42', deployment_id='222')
 
         all_instances = self.client.node_instances.list()
         dep1_instances = self.client.node_instances.list(
@@ -365,10 +368,10 @@ class NodesTest(base_test.BaseServerTestCase):
     @attr(client_min_version=3,
           client_max_version=base_test.LATEST_API_VERSION)
     def test_sort_node_instances_list(self):
-        self.put_node_instance(
-            node_id='0', instance_id='00', deployment_id='000')
-        self.put_node_instance(
-            node_id='1', instance_id='11', deployment_id='111')
+        put_node_instance(
+            self.sm, node_id='0', instance_id='00', deployment_id='000')
+        put_node_instance(
+            self.sm, node_id='1', instance_id='11', deployment_id='111')
 
         instances = self.client.node_instances.list(sort='node_id')
         self.assertEqual(2, len(instances))
@@ -390,69 +393,6 @@ class NodesTest(base_test.BaseServerTestCase):
             )
 
         self.assertEqual(cm.exception.status_code, 404)
-
-    def put_node_instance(self,
-                          instance_id,
-                          deployment_id,
-                          runtime_properties=None,
-                          node_id='node_id',
-                          version=None,
-                          blueprint_id='blueprint_id'):
-        runtime_properties = runtime_properties or {}
-
-        blueprint = self._get_or_create_blueprint(blueprint_id)
-        deployment = self._get_or_create_deployment(deployment_id, blueprint)
-        node = self._get_or_create_node(node_id, deployment)
-        node_instance = NodeInstance(
-            id=instance_id,
-            runtime_properties=runtime_properties,
-            state='',
-            version=version,
-            relationships=None,
-            host_id=None,
-            scaling_groups=None
-        )
-        node_instance.node = node
-        return self.sm.put(node_instance)
-
-    def _get_or_create_blueprint(self, blueprint_id):
-        try:
-            return self.sm.get(Blueprint, blueprint_id)
-        except manager_exceptions.NotFoundError:
-            blueprint = Blueprint(
-                id=blueprint_id,
-                created_at=datetime.now(),
-                main_file_name='',
-                plan={}
-            )
-            return self.sm.put(blueprint)
-
-    def _get_or_create_deployment(self, deployment_id, blueprint):
-        try:
-            return self.sm.get(Deployment, deployment_id)
-        except manager_exceptions.NotFoundError:
-            deployment = Deployment(
-                id=deployment_id,
-                created_at=datetime.now()
-            )
-            deployment.blueprint = blueprint
-            return self.sm.put(deployment)
-
-    def _get_or_create_node(self, node_id, deployment):
-        try:
-            return get_node(deployment.id, node_id)
-        except manager_exceptions.NotFoundError:
-            node = Node(
-                id=node_id,
-                type='',
-                number_of_instances=1,
-                planned_number_of_instances=1,
-                deploy_number_of_instances=1,
-                min_number_of_instances=1,
-                max_number_of_instances=1
-            )
-            node.deployment = deployment
-            return self.sm.put(node)
 
     @attr(client_min_version=2.1,
           client_max_version=base_test.LATEST_API_VERSION)

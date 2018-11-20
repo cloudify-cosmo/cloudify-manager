@@ -37,4 +37,5 @@ from .resource_models import (Blueprint,
                               DeploymentUpdate,
                               DeploymentModificationState,
                               DeploymentUpdateStep,
-                              Secret)
+                              Secret,
+                              Agent)

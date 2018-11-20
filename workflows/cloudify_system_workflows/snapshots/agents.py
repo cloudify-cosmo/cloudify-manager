@@ -18,12 +18,15 @@ import json
 
 from cloudify.workflows import ctx
 from cloudify import broker_config
-from cloudify.manager import get_rest_client
-from cloudify_rest_client.exceptions import CloudifyClientError
+from cloudify.models_states import AgentState
 from cloudify.utils import get_broker_ssl_cert_path
+from cloudify.constants import AGENT_INSTALL_METHOD_NONE
+from cloudify.manager import get_rest_client, create_agent_record
 
-from .constants import V_4_1_0, V_4_4_0
+from cloudify_rest_client.exceptions import CloudifyClientError
+
 from .utils import is_compute, get_tenants_list
+from .constants import V_4_1_0, V_4_4_0, V_4_5_5
 
 
 class Agents(object):
@@ -143,6 +146,7 @@ class Agents(object):
                 node_instance = client.node_instances.get(node_instance_id)
                 runtime_properties = node_instance.runtime_properties
                 old_agent = runtime_properties.get('cloudify_agent', {})
+                self.insert_agent_to_db(old_agent, node_instance_id, client)
                 if not broker_config.get('broker_ip'):
                     broker_config['broker_ip'] = \
                         old_agent.get('manager_ip', '')
@@ -156,12 +160,24 @@ class Agents(object):
                 # in the runtime properties
                 if self._manager_version < V_4_4_0:
                     runtime_properties.pop('rest_tenant', None)
-
                 client.node_instances.update(
                     node_instance_id=node_instance_id,
                     runtime_properties=runtime_properties,
                     version=node_instance.version
                 )
+
+    def insert_agent_to_db(self, cloudify_agent, node_instance_id, client):
+        # Add an agent to the db, the snapshot is from a version with no
+        # agent table
+        if self._manager_version >= V_4_5_5:
+            return
+        cloudify_agent['node_instance_id'] = node_instance_id
+        install_method = cloudify_agent.get('install_method')
+        if cloudify_agent and install_method and \
+           install_method != AGENT_INSTALL_METHOD_NONE:
+            create_agent_record(cloudify_agent,
+                                state=AgentState.STARTED,
+                                client=client)
 
     @staticmethod
     def _get_broker_config(agent):

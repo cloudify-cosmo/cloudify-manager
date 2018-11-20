@@ -98,7 +98,8 @@ def setup_resources(api):
         'SecretsSetVisibility': 'secrets/<string:key>/set-visibility',
         'ManagerConfig': 'config',
         'ManagerRestConfig': 'rest/config',
-        'Agents': 'agents'
+        'Agents': 'agents',
+        'AgentsName': 'agents/<string:name>'
     }
 
     # Set version endpoint as a non versioned endpoint
