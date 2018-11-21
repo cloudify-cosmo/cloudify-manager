@@ -17,6 +17,8 @@ import copy
 import urllib
 import subprocess
 
+import dateutil.parser
+from datetime import datetime
 from string import ascii_letters
 from contextlib import contextmanager
 
@@ -247,3 +249,8 @@ def get_visibility_parameter(optional=False,
             .format(visibility, valid_values)
         )
     return visibility
+
+
+def parse_datetime(datetime_str):
+    formated_date = dateutil.parser.parse(datetime_str)
+    return formated_date
