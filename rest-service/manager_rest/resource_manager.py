@@ -502,9 +502,11 @@ class ResourceManager(object):
                          queue=False,
                          execution=None,
                          wait_after_fail=600,
-                         execution_creator=None):
+                         execution_creator=None,
+                         scheduled_time=None):
 
         execution_creator = execution_creator or current_user
+
         deployment = self.sm.get(models.Deployment, deployment_id)
         self._validate_permitted_to_execute_global_workflow(deployment)
         blueprint = self.sm.get(models.Blueprint, deployment.blueprint_id)
