@@ -35,7 +35,6 @@ from flask.testing import FlaskClient
 from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.exceptions import CloudifyClientError
 
-from cloudify.cryptography_utils import encrypt
 from cloudify.models_states import ExecutionState, VisibilityState
 
 from manager_rest.rest import rest_utils
@@ -282,9 +281,10 @@ class BaseServerTestCase(unittest.TestCase):
                 amqp_manager=MagicMock(),
                 authorization_file_path=temp_auth_file
             )
-            default_tenant.rabbitmq_password = encrypt(
-                AMQPManager._generate_user_password()
-            )
+            default_tenant.rabbitmq_password = \
+                'gAAAAABb9p7U_Lnlmg7vyijjoxovyg215ThYi-VCTCzVYa1p-vpzi31WGko' \
+                'KD_hK1mQyKgjRss_Nz-3m-cgHpZChnVT4bxZIjnOnL6sF8RtozvlRoGHtnF' \
+                'G6jxqQDeEf5Heos0ia4Q5H  '
         finally:
             os.remove(temp_auth_file)
 
