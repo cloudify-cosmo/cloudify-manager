@@ -37,8 +37,8 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 
 from cloudify.models_states import ExecutionState, VisibilityState
 
+from manager_rest import server
 from manager_rest.rest import rest_utils
-from manager_rest.amqp_manager import AMQPManager
 from manager_rest.test.security_utils import get_admin_user
 from manager_rest import utils, config, constants, archiving
 from manager_rest.storage import FileServer, get_storage_manager, models
@@ -157,10 +157,9 @@ class BaseServerTestCase(unittest.TestCase):
         self._mock_amqp_modules()
         self._mock_swagger()
 
-        server_module = self._set_config_path_and_get_server_module()
-        self._create_config_and_reset_app(server_module)
+        self._create_config_and_reset_app()
         self._mock_get_encryption_key()
-        self._handle_flask_app_and_db(server_module)
+        self._handle_flask_app_and_db()
         self.client = self.create_client()
         self.sm = get_storage_manager()
         self.initialize_provider_context()
@@ -220,51 +219,29 @@ class BaseServerTestCase(unittest.TestCase):
         self.file_server.start()
         self.addCleanup(self.cleanup)
 
-    def _set_config_path_and_get_server_module(self):
-        """Workaround for setting the rest service log path, since it's
-        needed when 'server' module is imported.
-        right after the import the log path is set normally like the rest
-        of the variables (used in the reset_state)
-        """
-
-        with open(self.tmp_conf_file, 'w') as f:
-            json.dump({'rest_service_log_path': self.rest_service_log,
-                       'rest_service_log_file_size_MB': 1,
-                       'rest_service_log_files_backup_count': 1,
-                       'rest_service_log_level': 'DEBUG'},
-                      f)
-        os.environ['MANAGER_REST_CONFIG_PATH'] = self.tmp_conf_file
-        try:
-            from manager_rest import server
-        finally:
-            del(os.environ['MANAGER_REST_CONFIG_PATH'])
-        return server
-
-    def _create_config_and_reset_app(self, server):
+    def _create_config_and_reset_app(self):
         """Create config, and reset Flask app
-        :type server: module
         """
         self.server_configuration = self.create_configuration()
         utils.copy_resources(self.server_configuration.file_server_root)
         server.SQL_DIALECT = 'sqlite'
         server.reset_app(self.server_configuration)
 
-    def _handle_flask_app_and_db(self, server):
+    def _handle_flask_app_and_db(self):
         """Set up Flask app context, and handle DB related tasks
-        :type server: module
         """
-        self._set_flask_app_context(server.app)
+        self._set_flask_app_context()
         self.app = self._get_app(server.app)
-        self._handle_default_db_config(server)
-        self._setup_anonymous_user(server.app, server.user_datastore)
+        self._handle_default_db_config()
+        self._setup_anonymous_user()
 
-    def _set_flask_app_context(self, flask_app):
-        flask_app_context = flask_app.test_request_context()
+    def _set_flask_app_context(self):
+        flask_app_context = server.app.test_request_context()
         flask_app_context.push()
         self.addCleanup(flask_app_context.pop)
 
     @staticmethod
-    def _handle_default_db_config(server):
+    def _handle_default_db_config():
         server.db.create_all()
         admin_user = get_admin_user()
 
@@ -301,14 +278,14 @@ class BaseServerTestCase(unittest.TestCase):
         return flask_app.test_client()
 
     @staticmethod
-    def _setup_anonymous_user(flask_app, user_datastore):
+    def _setup_anonymous_user():
         """Change the anonymous user to be admin, in order to have arbitrary
         access to the storage manager (which otherwise requires a valid user)
-
-        :param flask_app: Flask app
         """
-        admin_user = user_datastore.get_user(get_admin_user()['username'])
-        login_manager = flask_app.extensions['security'].login_manager
+        admin_user = server.user_datastore.get_user(
+            get_admin_user()['username']
+        )
+        login_manager = server.app.extensions['security'].login_manager
         login_manager.anonymous_user = MagicMock(return_value=admin_user)
 
     def cleanup(self):
