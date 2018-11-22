@@ -156,6 +156,7 @@ class BaseServerTestCase(unittest.TestCase):
         self._create_temp_files_and_folders()
         self._init_file_server()
         self._mock_amqp_modules()
+        self._mock_swagger()
 
         server_module = self._set_config_path_and_get_server_module()
         self._create_config_and_reset_app(server_module)
@@ -173,6 +174,15 @@ class BaseServerTestCase(unittest.TestCase):
 
     def _restore_verify_role(self):
         rest_utils.verify_role = self._original_verify_role
+
+    def _mock_swagger(self):
+        """ We don't need swagger for tests, so might as well mock it """
+
+        self._swagger_patcher = patch(
+            'manager_rest.rest.swagger.add_swagger_resource'
+        )
+        self.addCleanup(self._swagger_patcher.stop)
+        self._swagger_patcher.start()
 
     def _mock_amqp_modules(self):
         """
