@@ -102,8 +102,9 @@ class CloudifyFlaskApp(Flask):
             'security'].remember_token_serializer
 
     def _set_sql_alchemy(self):
-        """Set SQLAlchemy specific configurations, init the db object and create
-         the tables if necessary
+        """
+        Set SQLAlchemy specific configurations, init the db object and create
+        the tables if necessary
         """
         cfy_config = config.instance
 
@@ -115,6 +116,10 @@ class CloudifyFlaskApp(Flask):
                 cfy_config.postgresql_host,
                 cfy_config.postgresql_db_name
         )
+        if cfy_config.postgresql_ssl_enabled:
+            # The ssl certificate and key should be found in the default
+            # ~/.postgresql directory
+            self.config['SQLALCHEMY_DATABASE_URI'] += '?sslmode=verify-full'
         self.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
         db.init_app(self)  # Prepare the app for use with flask-sqlalchemy
 
