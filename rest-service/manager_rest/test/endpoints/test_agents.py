@@ -76,17 +76,15 @@ class AgentsTest(base_test.BaseServerTestCase):
                                 'agent@',
                                 'node_instance_1')
 
-    def test_create_agent_conflict(self):
+    def test_update_agent_in_create(self):
         self._get_or_create_node_instance()
         self.client.agents.create('agent_1', 'node_instance_1')
-        self._get_or_create_node_instance('node_instance_2')
-        error_message = '<Agent id=`agent_1` tenant=`default_tenant`> ' \
-                        'already exists on <Tenant name=`default_tenant`>'
-        self.assertRaisesRegexp(CloudifyClientError,
-                                error_message,
-                                self.client.agents.create,
-                                'agent_1',
-                                'node_instance_2')
+        self.client.agents.create('agent_1',
+                                  'node_instance_1',
+                                  state=AgentState.CREATED)
+        agent = self.client.agents.get('agent_1')
+        self.assertEqual(agent.name, 'agent_1')
+        self.assertEqual(agent.state, AgentState.CREATED)
 
     def test_create_agent_invalid_node_instance(self):
         error_message = '404: Requested `NodeInstance` with ID ' \
