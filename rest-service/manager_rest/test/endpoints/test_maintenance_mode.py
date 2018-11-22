@@ -24,6 +24,7 @@ from manager_rest.test import base_test
 from manager_rest.storage import models
 from manager_rest.test.attribute import attr
 from manager_rest.test.base_test import BaseServerTestCase
+from manager_rest.maintenance import get_maintenance_file_path
 from manager_rest.constants import (MAINTENANCE_MODE_ACTIVATED,
                                     MAINTENANCE_MODE_ACTIVATING,
                                     MAINTENANCE_MODE_DEACTIVATED,
@@ -32,6 +33,12 @@ from manager_rest.constants import (MAINTENANCE_MODE_ACTIVATED,
 
 @attr(client_min_version=2.1, client_max_version=base_test.LATEST_API_VERSION)
 class MaintenanceModeTest(BaseServerTestCase):
+    def tearDown(self):
+        super(MaintenanceModeTest, self).tearDown()
+        try:
+            os.remove(get_maintenance_file_path())
+        except OSError:
+            pass
 
     def test_maintenance_mode_inactive(self):
         response = self.client.maintenance_mode.status()
