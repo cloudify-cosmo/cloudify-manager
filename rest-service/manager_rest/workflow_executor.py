@@ -32,7 +32,9 @@ def execute_workflow(name,
                      execution_parameters=None,
                      bypass_maintenance=None,
                      dry_run=False,
-                     wait_after_fail=600):
+                     wait_after_fail=600,
+                     execution_creator=None):
+
     execution_parameters = execution_parameters or {}
     task_name = workflow['operation']
     plugin_name = workflow['plugin']
@@ -68,38 +70,7 @@ def execute_workflow(name,
     }
     return _execute_task(execution_id=execution_id,
                          execution_parameters=execution_parameters,
-                         context=context)
-
-
-def execute_system_workflow(wf_id,
-                            task_id,
-                            task_mapping,
-                            deployment=None,
-                            execution_parameters=None,
-                            bypass_maintenance=None,
-                            update_execution_status=True,
-                            dry_run=False,
-                            is_system_workflow=True):
-    execution_parameters = execution_parameters or {}
-    context = {
-        'type': 'workflow',
-        'task_id': task_id,
-        'task_name': task_mapping,
-        'execution_id': task_id,
-        'workflow_id': wf_id,
-        'bypass_maintenance': bypass_maintenance,
-        'dry_run': dry_run,
-        'update_execution_status': update_execution_status,
-        'is_system_workflow': is_system_workflow
-    }
-
-    if deployment:
-        context['blueprint_id'] = deployment.blueprint_id
-        context['deployment_id'] = deployment.id
-
-    return _execute_task(execution_id=context['task_id'],
-                         execution_parameters=execution_parameters,
-                         context=context)
+                         context=context, execution_creator=execution_creator)
 
 
 def _get_tenant_dict():
@@ -129,8 +100,43 @@ def _send_mgmtworker_task(message, routing_key='workflow'):
         send_handler.publish(message)
 
 
-def _execute_task(execution_id, execution_parameters, context):
-    context['rest_token'] = current_user.get_auth_token()
+def execute_system_workflow(wf_id,
+                            task_id,
+                            task_mapping,
+                            deployment=None,
+                            execution_parameters=None,
+                            bypass_maintenance=None,
+                            update_execution_status=True,
+                            dry_run=False,
+                            is_system_workflow=True,
+                            execution_creator=None):
+    execution_parameters = execution_parameters or {}
+    context = {
+        'type': 'workflow',
+        'task_id': task_id,
+        'task_name': task_mapping,
+        'execution_id': task_id,
+        'workflow_id': wf_id,
+        'bypass_maintenance': bypass_maintenance,
+        'dry_run': dry_run,
+        'update_execution_status': update_execution_status,
+        'is_system_workflow': is_system_workflow
+    }
+
+    if deployment:
+        context['blueprint_id'] = deployment.blueprint_id
+        context['deployment_id'] = deployment.id
+
+    return _execute_task(execution_id=context['task_id'],
+                         execution_parameters=execution_parameters,
+                         context=context, execution_creator=execution_creator)
+
+
+def _execute_task(execution_id,
+                  execution_parameters,
+                  context,
+                  execution_creator):
+    context['rest_token'] = execution_creator.get_auth_token()
     context['tenant'] = _get_tenant_dict()
     context['task_target'] = MGMTWORKER_QUEUE
     execution_parameters['__cloudify_context'] = context
