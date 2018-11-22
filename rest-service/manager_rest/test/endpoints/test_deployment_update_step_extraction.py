@@ -1,12 +1,13 @@
 import copy
 import json
 
+import unittest
 from mock import patch
 from manager_rest.test.attribute import attr
 import networkx as nx
 
 
-from manager_rest.test import base_test
+from manager_rest.test.base_test import LATEST_API_VERSION
 from manager_rest.storage import models
 from manager_rest.deployment_update.step_extractor import (
     PROPERTY, PROPERTIES, OUTPUT, OUTPUTS, WORKFLOW, WORKFLOWS, NODE,
@@ -20,8 +21,8 @@ from manager_rest.deployment_update.step_extractor \
 from manager_rest.test.utils import get_resource
 
 
-@attr(client_min_version=2.1, client_max_version=base_test.LATEST_API_VERSION)
-class StepExtractorTestCase(base_test.BaseServerTestCase):
+@attr(client_min_version=2.1, client_max_version=LATEST_API_VERSION)
+class StepExtractorTestCase(unittest.TestCase):
 
     @staticmethod
     def _get_node_scheme():
