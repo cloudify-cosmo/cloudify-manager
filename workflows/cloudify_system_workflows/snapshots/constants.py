@@ -49,6 +49,7 @@ COMPOSER_BLUEPRINTS_FOLDER = 'backend/dev'
 COMPOSER_USER = 'composer_user'
 SECURITY_FILENAME = 'rest-security.conf'
 SECURITY_FILE_LOCATION = join('/opt/manager/', SECURITY_FILENAME)
+NEW_TOKEN_FILE_NAME = 'new_token'
 
 V_4_0_0 = ManagerVersion('4.0.0')
 V_4_1_0 = ManagerVersion('4.1.0')

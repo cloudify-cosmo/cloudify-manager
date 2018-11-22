@@ -31,7 +31,10 @@ from cloudify.workflows import ctx
 from cloudify.manager import get_rest_client
 from cloudify.state import current_workflow_ctx
 from cloudify.exceptions import NonRecoverableError
-from cloudify.constants import FILE_SERVER_SNAPSHOTS_FOLDER
+from cloudify.constants import (
+    FILE_SERVER_SNAPSHOTS_FOLDER,
+    NEW_TOKEN_FILE_NAME
+)
 from cloudify.utils import ManagerVersion, get_local_rest_certificate
 
 from cloudify_rest_client.executions import Execution
@@ -128,7 +131,7 @@ class SnapshotRestore(object):
             with Postgres(self._config) as postgres:
                 self._restore_files_to_manager()
                 self._restore_db(postgres, schema_revision, stage_revision)
-                self._get_new_rest_token()
+                self._generate_new_rest_token()
                 self._restart_rest_service()
                 self._encrypt_secrets(postgres)
                 self._encrypt_rabbitmq_passwords(postgres)
@@ -150,7 +153,7 @@ class SnapshotRestore(object):
             ctx.logger.debug('Removing temp dir: {0}'.format(self._tempdir))
             shutil.rmtree(self._tempdir)
 
-    def _get_new_rest_token(self):
+    def _generate_new_rest_token(self):
         """
         `snapshot restore` is triggered with a REST call that is authenticated
         using security keys that are located in opt/manager/rest-security.conf.
@@ -165,7 +168,7 @@ class SnapshotRestore(object):
         3. Continue with restore snapshot
         (CY-767)
         """
-        self._get_new_token()
+        self._generate_new_token()
         new_token = self._get_token_from_file()
         # Replace old token with new one in the workflow context, and create
         # new REST client
@@ -190,14 +193,18 @@ class SnapshotRestore(object):
             except Exception:
                 pass
 
-    def _get_new_token(self):
+    def _generate_new_token(self):
         dir_path = os.path.dirname(os.path.realpath(__file__))
-        script_path = os.path.join(dir_path, 'get_new_rest_token.py')
+        script_path = os.path.join(dir_path, 'generate_new_rest_token.py')
         command = [MANAGER_PYTHON, script_path, self._tempdir]
         utils.run(command)
 
     def _get_token_from_file(self):
-        new_token_path = os.path.join(self._tempdir, 'new_token')
+        """
+        The new token in saved at the snapshot`s temp dir (which is passed as
+        an argument to the 'generate_new_rest_token.py' script).
+        """
+        new_token_path = os.path.join(self._tempdir, NEW_TOKEN_FILE_NAME)
         with open(new_token_path, 'r') as f:
             new_token = f.read()
         return new_token
