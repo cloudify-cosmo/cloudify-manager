@@ -55,13 +55,18 @@ def _get_postgres_db_uri(manager_ip, driver):
     """
     dialect = 'postgresql+{0}'.format(driver) if driver else 'postgres'
     conf = get_postgres_conf(manager_ip)
-    return '{dialect}://{username}:{password}@{host}/{db_name}'.format(
+    conn_string = '{dialect}://{username}:{password}@{host}/{db_name}'.format(
         dialect=dialect,
         username=conf.username,
         password=conf.password,
         host=conf.host,
         db_name=conf.db_name
     )
+    if config.instance.postgresql_ssl_enabled:
+        # The ssl certificate and key should be found in the default
+        # ~/.postgresql directory
+        conn_string += '?sslmode=verify-full'
+    return conn_string
 
 
 def get_postgres_conf(manager_ip='localhost'):
