@@ -65,9 +65,9 @@ class AgentsName(SecuredResource):
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(models.Agent)
     @authorize('agent_create')
-    def post(self, name):
+    def put(self, name):
         """
-        Create a new agent
+        Create a new agent or update its state if exists
         """
         request_dict = get_json_and_verify_params({
             'node_instance_id': {'type': unicode},
@@ -76,8 +76,29 @@ class AgentsName(SecuredResource):
         validate_inputs({'name': name})
         state = request_dict.get('state')
         self._validate_state(state)
-        timestamp = utils.get_formatted_timestamp()
 
+        try:
+            return self._create_agent(name, state, request_dict)
+        except manager_exceptions.ConflictError:
+            return self._update_agent(name, state)
+
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(models.Agent)
+    @authorize('agent_update')
+    def patch(self, name):
+        """
+        Update an existing agent
+        """
+        request_dict = get_json_and_verify_params({
+            'state': {'type': unicode}
+        })
+        validate_inputs({'name': name})
+        state = request_dict['state']
+        self._validate_state(state)
+        return self._update_agent(name, state)
+
+    def _create_agent(self, name, state, request_dict):
+        timestamp = utils.get_formatted_timestamp()
         # TODO: remove these fields from the runtime properties
         new_agent = models.Agent(
             id=name,
@@ -99,21 +120,9 @@ class AgentsName(SecuredResource):
             request_dict.get('node_instance_id')
         )
         new_agent.node_instance = node_instance
-        return storage_manager.put(new_agent), 201
+        return storage_manager.put(new_agent)
 
-    @rest_decorators.exceptions_handled
-    @rest_decorators.marshal_with(models.Agent)
-    @authorize('agent_update')
-    def patch(self, name):
-        """
-        Update an existing agent
-        """
-        request_dict = get_json_and_verify_params({
-            'state': {'type': unicode}
-        })
-        validate_inputs({'name': name})
-        state = request_dict.get('state')
-        self._validate_state(state)
+    def _update_agent(self, name, state):
         storage_manager = get_storage_manager()
         updated_agent = storage_manager.get(models.Agent, name)
         updated_agent.state = state

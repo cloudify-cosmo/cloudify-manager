@@ -548,6 +548,28 @@ workflows:
             and this property is 'true', operate on the compute node instead
             of the specified node.
         default: false
+      include_instances:
+        description: >
+            A node instance ID or list of node instance IDs to prioritise for
+            scaling down.
+            If a larger amount of included instances are provided than the delta
+            then one of the included instances will be scaled down while the
+            others will be ignored.
+            If a smaller amount of included instances are provided than the delta
+            then the remaining instances will be selected arbitrarily.
+            This is only valid for scaling down and cannot be used with
+            scale_compute set to true.
+        default: null
+      exclude_instances:
+        description: >
+            A node instance ID or list of node instance IDs which must not be
+            removed when scaling down.
+            If the amount of excluded instances plus the absolute delta is equal
+            to or greater than the total amount of instances then the scaling
+            operation will fail and no nodes will be scaled down.
+            This is only valid for scaling down and cannot be used with
+            scale_compute set to true.
+        default: null
       ignore_failure:
         default: false
         type: boolean

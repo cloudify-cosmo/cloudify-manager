@@ -492,7 +492,8 @@ class ResourceManager(object):
                          bypass_maintenance=None,
                          dry_run=False,
                          queue=False,
-                         execution=None):
+                         execution=None,
+                         wait_after_fail=600):
 
         deployment = self.sm.get(models.Deployment, deployment_id)
         self._validate_permitted_to_execute_global_workflow(deployment)
@@ -554,7 +555,8 @@ class ResourceManager(object):
             execution_id=execution_id,
             execution_parameters=execution_parameters,
             bypass_maintenance=bypass_maintenance,
-            dry_run=dry_run)
+            dry_run=dry_run,
+            wait_after_fail=wait_after_fail)
 
         return new_execution
 
