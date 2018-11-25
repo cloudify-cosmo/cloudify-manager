@@ -21,8 +21,10 @@ import time
 
 from cloudify import ctx
 from cloudify.decorators import operation
-from cloudify.utils import LocalCommandRunner, CommandExecutionException
 from cloudify.exceptions import NonRecoverableError
+from cloudify.constants import AGENT_INSTALL_METHOD_PLUGIN
+from cloudify.utils import LocalCommandRunner, CommandExecutionException
+
 
 IMAGE = 'cloudify/centos:7'
 PUBLIC_KEY_CONTAINER_PATH = '/etc/ssh/ssh_host_rsa_key.pub'
@@ -40,6 +42,9 @@ def start(image=IMAGE, label=('marker=test',), install_agent=True, **_):
             _init_script_agent_setup(container_id, install_agent_script)
         else:
             _remote_agent_setup(container_id)
+    elif ctx.node.properties['agent_config']['install_method'] == \
+            AGENT_INSTALL_METHOD_PLUGIN:
+        _install_agent_from_download_link()
 
 
 @operation
@@ -54,8 +59,7 @@ def delete(**_):
         os.remove(key_path)
 
 
-@operation
-def install_agent_from_download_link(**_):
+def _install_agent_from_download_link(**_):
     container_id = ctx.instance.runtime_properties['container_id']
     with ctx.agent.install_script_download_link() as download_link:
         ctx.logger.info('Download link: {0}'.format(download_link))

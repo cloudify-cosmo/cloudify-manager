@@ -16,5 +16,3 @@ node_templates:
         start:
           inputs:
             install_agent: false
-      cloudify.interfaces.cloudify_agent:
-        create: dockercompute.dockercompute.operations.install_agent_from_download_link
