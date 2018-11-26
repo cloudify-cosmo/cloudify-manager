@@ -18,6 +18,7 @@ import copy
 import uuid
 
 from flask import current_app
+from flask_security import current_user
 
 from cloudify.models_states import ExecutionState
 
@@ -558,7 +559,8 @@ class DeploymentUpdateManager(object):
             blueprint_id=deployment.blueprint_id,
             deployment_id=deployment.id,
             execution_id=execution_id,
-            execution_parameters=execution_parameters
+            execution_parameters=execution_parameters,
+            execution_creator=current_user
         )
         return new_execution
 
