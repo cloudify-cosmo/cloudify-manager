@@ -172,6 +172,20 @@ class BaseServerTestCase(unittest.TestCase):
         self.initialize_provider_context()
         self._setup_current_user()
 
+    def tearDown(self):
+        self._drop_db(['roles'])
+
+    @staticmethod
+    def _drop_db(keep_tables):
+        """Creates a single transaction that *always* drops all tables, regardless
+        of relationships and foreign key constraints (as opposed to `db.drop_all`)
+        """
+        meta = server.db.metadata
+        for table in reversed(meta.sorted_tables):
+            if table.name in keep_tables:
+                continue
+            server.db.session.execute(table.delete())
+        server.db.session.commit()
 
     @classmethod
     def _mock_verify_role(cls):
