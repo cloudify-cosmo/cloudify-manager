@@ -493,8 +493,10 @@ class ResourceManager(object):
                          dry_run=False,
                          queue=False,
                          execution=None,
-                         wait_after_fail=600):
+                         wait_after_fail=600,
+                         execution_creator=None):
 
+        execution_creator = execution_creator or current_user
         deployment = self.sm.get(models.Deployment, deployment_id)
         self._validate_permitted_to_execute_global_workflow(deployment)
         blueprint = self.sm.get(models.Blueprint, deployment.blueprint_id)
@@ -549,6 +551,7 @@ class ResourceManager(object):
         workflow_executor.execute_workflow(
             workflow_id,
             workflow,
+            execution_creator=execution_creator,
             workflow_plugins=workflow_plugins,
             blueprint_id=deployment.blueprint_id,
             deployment_id=deployment_id,
@@ -581,10 +584,9 @@ class ResourceManager(object):
         """
         Whenever an execution is about to change to END status this function
         is called. Since the execution exists in the DB (it was created and
-        then queued), we extract the needed information and re-run it with the
-        correct workflow executor.
+        then queued), we extract the needed information, set the correct user
+        and re-run it with the correct workflow executor.
         :param execution: an execution DB object
-        :return:
         """
         deployment = execution.deployment
         deployment_id = None
@@ -594,6 +596,12 @@ class ResourceManager(object):
         execution_parameters = execution.parameters
         task_mapping = self.task_mapping.get(workflow_id)
 
+        # Since this method is triggered by another execution we need to
+        # make sure we use the correct user to execute the queued execution.
+        # That is, the user that created the execution (instead of
+        # `current_user` which we usually use)
+        execution_creator = execution.creator
+
         if self._should_use_system_workflow_executor(execution):
             # Use `execute_system_workflow`
             self._execute_system_workflow(
@@ -601,7 +609,8 @@ class ResourceManager(object):
                 execution_parameters=execution_parameters, timeout=0,
                 created_at=None, verify_no_executions=True,
                 bypass_maintenance=None, update_execution_status=True,
-                queue=True, execution=execution
+                queue=True, execution=execution,
+                execution_creator=execution_creator
             )
 
         else:  # Use `execute_workflow`
@@ -609,7 +618,7 @@ class ResourceManager(object):
                 deployment_id, workflow_id, parameters=execution_parameters,
                 allow_custom_parameters=False, force=False,
                 bypass_maintenance=None, dry_run=False, queue=True,
-                execution=execution
+                execution=execution, execution_creator=execution_creator
             )
 
     @staticmethod
@@ -715,7 +724,8 @@ class ResourceManager(object):
                                  created_at=None, verify_no_executions=True,
                                  bypass_maintenance=None,
                                  update_execution_status=True,
-                                 queue=False, execution=None):
+                                 queue=False, execution=None,
+                                 execution_creator=None):
         """
         :param deployment: deployment for workflow execution
         :param wf_id: workflow id
@@ -735,7 +745,7 @@ class ResourceManager(object):
         can currently run it will, if not it will be queued again.
         :return: (async task object, execution object)
         """
-
+        execution_creator = execution_creator or current_user
         if execution:
             execution_id = execution.id
             is_system_workflow = execution.is_system_workflow
@@ -789,7 +799,8 @@ class ResourceManager(object):
             execution_parameters=execution_parameters,
             bypass_maintenance=bypass_maintenance,
             update_execution_status=update_execution_status,
-            is_system_workflow=is_system_workflow
+            is_system_workflow=is_system_workflow,
+            execution_creator=execution_creator
         )
 
         return execution
