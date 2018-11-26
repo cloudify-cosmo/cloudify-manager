@@ -181,9 +181,10 @@ class BaseServerTestCase(unittest.TestCase):
         self.initialize_provider_context()
         self._mock_verify_role()
 
-    def _mock_verify_role(self):
-        self._original_verify_role = rest_utils.verify_role
-        self.addCleanup(self._restore_verify_role)
+
+    @classmethod
+    def _mock_verify_role(cls):
+        cls._original_verify_role = rest_utils.verify_role
         rest_utils.verify_role = MagicMock()
 
     def _restore_verify_role(self):
