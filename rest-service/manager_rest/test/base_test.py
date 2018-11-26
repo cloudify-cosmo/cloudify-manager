@@ -168,18 +168,9 @@ class BaseServerTestCase(unittest.TestCase):
         cls._mock_verify_role()
 
     def setUp(self):
-        self._create_temp_files_and_folders()
-        self._init_file_server()
-        self._mock_amqp_modules()
-        self._mock_swagger()
-
-        self._create_config_and_reset_app()
-        self._mock_get_encryption_key()
-        self._handle_flask_app_and_db()
-        self.client = self.create_client()
-        self.sm = get_storage_manager()
+        self._handle_default_db_config()
         self.initialize_provider_context()
-        self._mock_verify_role()
+        self._setup_current_user()
 
 
     @classmethod
