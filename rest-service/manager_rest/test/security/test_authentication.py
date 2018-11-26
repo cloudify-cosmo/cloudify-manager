@@ -13,11 +13,13 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from manager_rest.test.attribute import attr
+import os
 from base64 import urlsafe_b64encode
 
+from manager_rest.test.attribute import attr
 from manager_rest.constants import CLOUDIFY_TENANT_HEADER
 from manager_rest.test.base_test import LATEST_API_VERSION
+from manager_rest.maintenance import get_maintenance_file_path
 from manager_rest.utils import BASIC_AUTH_PREFIX, CLOUDIFY_AUTH_HEADER
 
 from .test_base import SecurityTestBase
@@ -97,11 +99,17 @@ class AuthenticationTests(SecurityTestBase):
     @attr(client_min_version=2.1,
           client_max_version=LATEST_API_VERSION)
     def test_requested_by_secured(self):
-        with self.use_secured_client(username='alice',
-                                     password='alice_password'):
-            self.client.maintenance_mode.activate()
-            response = self.client.maintenance_mode.status()
-        self.assertEqual(response.requested_by, 'alice')
+        try:
+            with self.use_secured_client(username='alice',
+                                         password='alice_password'):
+                self.client.maintenance_mode.activate()
+                response = self.client.maintenance_mode.status()
+            self.assertEqual(response.requested_by, 'alice')
+        finally:
+            try:
+                os.remove(get_maintenance_file_path())
+            except OSError:
+                pass
 
     def test_token_does_not_require_tenant_header(self):
         with self.use_secured_client(username='alice',
