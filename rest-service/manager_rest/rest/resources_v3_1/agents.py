@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from flask import current_app
 from flask_restful.reqparse import Argument
 
 from cloudify.models_states import AgentState
@@ -67,7 +68,7 @@ class AgentsName(SecuredResource):
     @authorize('agent_create')
     def put(self, name):
         """
-        Create a new agent or update its state if exists
+        Create a new agent
         """
         request_dict = get_json_and_verify_params({
             'node_instance_id': {'type': unicode},
@@ -80,7 +81,11 @@ class AgentsName(SecuredResource):
         try:
             return self._create_agent(name, state, request_dict)
         except manager_exceptions.ConflictError:
-            return self._update_agent(name, state)
+            # Assuming the agent was already created in cases of reinstalling
+            # or healing
+            current_app.logger.info("Not creating agent {0} because it "
+                                    "already exists".format(name))
+            return {}
 
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(models.Agent)
