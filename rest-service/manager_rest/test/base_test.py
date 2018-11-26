@@ -29,7 +29,6 @@ import yaml
 import wagon
 
 from mock import MagicMock, patch
-from manager_rest.test.attribute import attr
 from flask.testing import FlaskClient
 
 from cloudify_rest_client import CloudifyClient
@@ -39,6 +38,8 @@ from cloudify.models_states import ExecutionState, VisibilityState
 
 from manager_rest import server
 from manager_rest.rest import rest_utils
+from manager_rest.test.attribute import attr
+from manager_rest.flask_utils import set_admin_current_user
 from manager_rest.test.security_utils import get_admin_user
 from manager_rest import utils, config, constants, archiving
 from manager_rest.storage import FileServer, get_storage_manager, models
@@ -250,7 +251,22 @@ class BaseServerTestCase(unittest.TestCase):
         cls.server_configuration = cls.create_configuration()
         utils.copy_resources(cls.server_configuration.file_server_root)
         server.SQL_DIALECT = 'sqlite'
-        server.reset_app(self.server_configuration)
+        server.reset_app(cls.server_configuration)
+
+        cls._set_hash_mechanism_to_plaintext()
+
+    @staticmethod
+    def _set_hash_mechanism_to_plaintext():
+        """
+        Hashing is the most time consuming task we perform during unittesets,
+        so we will not encrypt user passwords during tests, as this should
+        be tested elsewhere more in depth
+        """
+        security = server.app.extensions['security']
+        security.password_hash = 'plaintext'
+        record = security.pwd_context._config._records[('plaintext', None)]
+        security.pwd_context._config._records[(None, None)] = record
+
 
 
     @classmethod
