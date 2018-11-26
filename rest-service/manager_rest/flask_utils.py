@@ -63,9 +63,16 @@ def _get_postgres_db_uri(manager_ip, driver):
         db_name=conf.db_name
     )
     if config.instance.postgresql_ssl_enabled:
-        # The ssl certificate and key should be found in the default
-        # ~/.postgresql directory
-        conn_string += '?sslmode=verify-full'
+        conn_string += \
+            '?sslmode={sslmode}&' \
+            'sslcert={sslcert}&' \
+            'sslkey={sslkey}&' \
+            'sslrootcert={sslrootcert}'.format(
+                sslmode='verify-full',
+                sslcert=config.instance.postgresql_ssl_cert_path,
+                sslkey=config.instance.postgresql_ssl_key_path,
+                sslrootcert=config.instance.ca_cert_path
+            )
     return conn_string
 
 
