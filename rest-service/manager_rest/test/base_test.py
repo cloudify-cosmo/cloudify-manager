@@ -192,17 +192,15 @@ class BaseServerTestCase(unittest.TestCase):
         cls._original_verify_role = rest_utils.verify_role
         rest_utils.verify_role = MagicMock()
 
-    def _restore_verify_role(self):
-        rest_utils.verify_role = self._original_verify_role
-
-    def _mock_swagger(self):
+    @classmethod
+    def _mock_swagger(cls):
         """ We don't need swagger for tests, so might as well mock it """
 
-        self._swagger_patcher = patch(
+        cls._swagger_patcher = patch(
             'manager_rest.rest.swagger.add_swagger_resource'
         )
-        self.addCleanup(self._swagger_patcher.stop)
-        self._swagger_patcher.start()
+        # cls.addCleanup(cls._swagger_patcher.stop)
+        cls._swagger_patcher.start()
 
     @classmethod
     def _mock_amqp_modules(cls):
@@ -254,13 +252,13 @@ class BaseServerTestCase(unittest.TestCase):
         server.SQL_DIALECT = 'sqlite'
         server.reset_app(self.server_configuration)
 
-    def _handle_flask_app_and_db(self):
+
+    @classmethod
+    def _handle_flask_app_and_db(cls):
         """Set up Flask app context, and handle DB related tasks
         """
-        self._set_flask_app_context()
-        self.app = self._get_app(server.app)
-        self._handle_default_db_config()
-        self._setup_anonymous_user()
+        cls._set_flask_app_context()
+        cls.app = cls._get_app(server.app)
 
     @classmethod
     def _set_flask_app_context(cls):
