@@ -98,7 +98,8 @@ class TestClient(FlaskClient):
 
 @attr(client_min_version=1, client_max_version=LATEST_API_VERSION)
 class BaseServerTestCase(unittest.TestCase):
-    def create_client_with_tenant(self,
+    @classmethod
+    def create_client_with_tenant(cls,
                                   username,
                                   password,
                                   tenant=DEFAULT_TENANT_NAME):
@@ -106,14 +107,15 @@ class BaseServerTestCase(unittest.TestCase):
                                            password=password)
 
         headers[CLOUDIFY_TENANT_HEADER] = tenant
-        return self.create_client(headers=headers)
+        return cls.create_client(headers=headers)
 
-    def create_client(self, headers=None):
+    @classmethod
+    def create_client(cls, headers=None):
         client = CloudifyClient(host='localhost',
                                 headers=headers)
-        mock_http_client = MockHTTPClient(self.app,
+        mock_http_client = MockHTTPClient(cls.app,
                                           headers=headers,
-                                          file_server=self.file_server)
+                                          file_server=cls.file_server)
         client._client = mock_http_client
         client.blueprints.api = mock_http_client
         client.deployments.api = mock_http_client
@@ -196,7 +198,8 @@ class BaseServerTestCase(unittest.TestCase):
         self.addCleanup(self._swagger_patcher.stop)
         self._swagger_patcher.start()
 
-    def _mock_amqp_modules(self):
+    @classmethod
+    def _mock_amqp_modules(cls):
         """
         Mock RabbitMQ related modules - AMQP manager and workflow executor -
         that use pika, because we don't have RabbitMQ in the unittests
@@ -207,37 +210,41 @@ class BaseServerTestCase(unittest.TestCase):
                   mock_execute_task),
         ]
         for amqp_patch in amqp_patches:
-            self.addCleanup(amqp_patch.stop)
+            # cls.addCleanup(amqp_patch.stop)
             amqp_patch.start()
 
-    def _mock_get_encryption_key(self):
+    @classmethod
+    def _mock_get_encryption_key(cls):
         """ Mock the _get_encryption_key_patcher function for all unittests """
-        self._get_encryption_key_patcher = patch(
+        cls._get_encryption_key_patcher = patch(
             'cloudify.cryptography_utils._get_encryption_key'
         )
-        self.addCleanup(self._get_encryption_key_patcher.stop)
-        self._get_encryption_key = self._get_encryption_key_patcher.start()
-        self._get_encryption_key.return_value = \
+        # cls.addCleanup(cls._get_encryption_key_patcher.stop)
+        cls._get_encryption_key = cls._get_encryption_key_patcher.start()
+        cls._get_encryption_key.return_value = \
             config.instance.security_encryption_key
 
-    def _create_temp_files_and_folders(self):
-        self.tmpdir = tempfile.mkdtemp(prefix='fileserver-')
-        fd, self.rest_service_log = tempfile.mkstemp(prefix='rest-log-')
+    @classmethod
+    def _create_temp_files_and_folders(cls):
+        cls.tmpdir = tempfile.mkdtemp(prefix='fileserver-')
+        fd, cls.rest_service_log = tempfile.mkstemp(prefix='rest-log-')
         os.close(fd)
-        self.maintenance_mode_dir = tempfile.mkdtemp(prefix='maintenance-')
-        fd, self.tmp_conf_file = tempfile.mkstemp(prefix='conf-file-')
+        cls.maintenance_mode_dir = tempfile.mkdtemp(prefix='maintenance-')
+        fd, cls.tmp_conf_file = tempfile.mkstemp(prefix='conf-file-')
         os.close(fd)
 
-    def _init_file_server(self):
-        self.file_server = FileServer(self.tmpdir)
-        self.file_server.start()
-        self.addCleanup(self.cleanup)
+    @classmethod
+    def _init_file_server(cls):
+        cls.file_server = FileServer(cls.tmpdir)
+        cls.file_server.start()
+        # cls.addCleanup(cls.cleanup)
 
-    def _create_config_and_reset_app(self):
+    @classmethod
+    def _create_config_and_reset_app(cls):
         """Create config, and reset Flask app
         """
-        self.server_configuration = self.create_configuration()
-        utils.copy_resources(self.server_configuration.file_server_root)
+        cls.server_configuration = cls.create_configuration()
+        utils.copy_resources(cls.server_configuration.file_server_root)
         server.SQL_DIALECT = 'sqlite'
         server.reset_app(self.server_configuration)
 
@@ -249,10 +256,10 @@ class BaseServerTestCase(unittest.TestCase):
         self._handle_default_db_config()
         self._setup_anonymous_user()
 
-    def _set_flask_app_context(self):
+    @classmethod
+    def _set_flask_app_context(cls):
         flask_app_context = server.app.test_request_context()
         flask_app_context.push()
-        self.addCleanup(flask_app_context.pop)
 
     @staticmethod
     def _handle_default_db_config():
@@ -310,30 +317,32 @@ class BaseServerTestCase(unittest.TestCase):
             self.file_server.stop()
         self.quiet_delete_directory(self.tmpdir)
 
-    def initialize_provider_context(self):
+    @classmethod
+    def initialize_provider_context(cls):
         provider_context = models.ProviderContext(
             id=constants.PROVIDER_CONTEXT_ID,
-            name=self.id(),
+            name=cls.__name__,
             context={'cloudify': {}}
         )
-        self.sm.put(provider_context)
+        cls.sm.put(provider_context)
 
-    def create_configuration(self):
+    @classmethod
+    def create_configuration(cls):
         test_config = config.Config()
         test_config.test_mode = True
         test_config.postgresql_db_name = ':memory:'
         test_config.postgresql_host = ''
         test_config.postgresql_username = ''
         test_config.postgresql_password = ''
-        test_config.file_server_root = self.tmpdir
+        test_config.file_server_root = cls.tmpdir
         test_config.file_server_url = 'http://localhost:{0}'.format(
-            self.file_server.port)
+            cls.file_server.port)
 
         test_config.rest_service_log_level = 'DEBUG'
         test_config.rest_service_log_path = self.rest_service_log
         test_config.rest_service_log_file_size_MB = 100,
         test_config.rest_service_log_files_backup_count = 7
-        test_config.maintenance_folder = self.maintenance_mode_dir
+        test_config.maintenance_folder = cls.maintenance_mode_dir
         test_config.security_hash_salt = 'hash_salt'
         test_config.security_secret_key = 'secret_key'
         test_config.security_encoding_alphabet = \
@@ -347,7 +356,8 @@ class BaseServerTestCase(unittest.TestCase):
         )
         return test_config
 
-    def _version_url(self, url):
+    @staticmethod
+    def _version_url(url):
         # method for versionifying URLs for requests which don't go through
         # the REST client; the version is taken from the REST client regardless
         if not url.startswith('/api/'):
@@ -395,13 +405,14 @@ class BaseServerTestCase(unittest.TestCase):
                                query_string=build_query_string(query_params))
         return result
 
-    def post_file(self, resource_path, file_path, query_params=None):
-        url = self._version_url(resource_path)
+    @classmethod
+    def post_file(cls, resource_path, file_path, query_params=None):
+        url = cls._version_url(resource_path)
         with open(file_path) as f:
-            result = self.app.post(urllib.quote(url),
-                                   data=f.read(),
-                                   query_string=build_query_string(
-                                       query_params))
+            result = cls.app.post(urllib.quote(url),
+                                  data=f.read(),
+                                  query_string=build_query_string(
+                                      query_params))
             return result
 
     def put_file(self, resource_path, file_path, query_params=None):
@@ -467,7 +478,8 @@ class BaseServerTestCase(unittest.TestCase):
         return os.path.join(os.path.dirname(
             os.path.abspath(__file__)), blueprint_dir_name)
 
-    def get_full_path(self, relative_file_path):
+    @staticmethod
+    def get_full_path(relative_file_path):
         return os.path.join(os.path.dirname(
             os.path.abspath(__file__)), relative_file_path)
 
@@ -545,35 +557,42 @@ class BaseServerTestCase(unittest.TestCase):
                                 blueprint_response['message']))
         return blueprint_response
 
-    def _create_wagon_and_yaml(self,
-                               package_name,
+    @staticmethod
+    def _create_wagon_and_yaml(package_name,
                                package_version,
                                package_yaml_file='mock_blueprint/plugin.yaml'):
-        temp_file_path = self.create_wheel(package_name, package_version)
-        yaml_path = self.get_full_path(package_yaml_file)
+        temp_file_path = BaseServerTestCase.create_wheel(package_name,
+                                                         package_version)
+        yaml_path = BaseServerTestCase.get_full_path(package_yaml_file)
         return temp_file_path, yaml_path
 
-    def upload_plugin(self,
+    @classmethod
+    def upload_plugin(cls,
                       package_name,
                       package_version,
                       package_yaml='mock_blueprint/plugin.yaml'):
-        wgn_path, yaml_path = self._create_wagon_and_yaml(package_name,
-                                                          package_version,
-                                                          package_yaml)
-        zip_path = self.zip_files([wgn_path, yaml_path])
-        response = self.post_file('/plugins', zip_path)
+        wgn_path, yaml_path = cls._create_wagon_and_yaml(
+            package_name,
+            package_version,
+            package_yaml
+        )
+        zip_path = cls.zip_files([wgn_path, yaml_path])
+        response = cls.post_file('/plugins', zip_path)
         os.remove(wgn_path)
         return response
 
-    def zip_files(self, files):
+    @staticmethod
+    def zip_files(files):
         source_folder = tempfile.mkdtemp()
         destination_zip = source_folder + '.zip'
         for path in files:
             shutil.copy(path, source_folder)
-        self.zip(source_folder, destination_zip, include_folder=False)
+        BaseServerTestCase.zip(source_folder, destination_zip,
+                               include_folder=False)
         return destination_zip
 
-    def zip(self, source, destination, include_folder=True):
+    @staticmethod
+    def zip(source, destination, include_folder=True):
         with zipfile.ZipFile(destination, 'w') as zip_file:
             for root, _, files in os.walk(source):
                 for filename in files:
@@ -584,7 +603,8 @@ class BaseServerTestCase(unittest.TestCase):
                         file_path, os.path.relpath(file_path, source_dir))
         return destination
 
-    def create_wheel(self, package_name, package_version):
+    @staticmethod
+    def create_wheel(package_name, package_version):
         module_src = '{0}=={1}'.format(package_name, package_version)
         return wagon.create(
             module_src,
