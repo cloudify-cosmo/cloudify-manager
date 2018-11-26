@@ -151,6 +151,20 @@ class BaseServerTestCase(unittest.TestCase):
 
         return client
 
+    @classmethod
+    def setUpClass(cls):
+        cls._create_temp_files_and_folders()
+        cls._init_file_server()
+        cls._mock_amqp_modules()
+        cls._mock_swagger()
+
+        cls._create_config_and_reset_app()
+        cls._mock_get_encryption_key()
+        cls._handle_flask_app_and_db()
+        cls.client = cls.create_client()
+        cls.sm = get_storage_manager()
+        cls._mock_verify_role()
+
     def setUp(self):
         self._create_temp_files_and_folders()
         self._init_file_server()
