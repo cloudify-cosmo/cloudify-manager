@@ -23,7 +23,8 @@ from manager_rest.manager_exceptions import SQLStorageException
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
 class ProviderContextTestCase(base_test.BaseServerTestCase):
 
-    def initialize_provider_context(self):
+    @classmethod
+    def initialize_provider_context(cls):
         pass  # each test in this class creates its own provider context
 
     def test_post_provider_context(self):

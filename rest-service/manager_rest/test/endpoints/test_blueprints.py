@@ -14,6 +14,7 @@
 #  * limitations under the License.
 
 import os
+import uuid
 import tempfile
 import shutil
 
@@ -378,7 +379,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         self.assertEqual(main_file_name, response.main_file_name)
 
     def _test_put_blueprint_archive(self, archive_func, archive_type):
-        blueprint_id = 'new_blueprint_id'
+        blueprint_id = 'b{0}'.format(str(uuid.uuid4()))
         put_blueprints_response = self.put_file(
             *self.put_blueprint_args(blueprint_id=blueprint_id,
                                      archive_func=archive_func)).json

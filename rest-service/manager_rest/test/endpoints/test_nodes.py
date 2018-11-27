@@ -18,6 +18,7 @@ from unittest import skip
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 
+from manager_rest.storage import db
 from manager_rest.test import base_test
 from manager_rest import manager_exceptions
 from manager_rest.test.mocks import put_node_instance
@@ -250,6 +251,7 @@ class NodesTest(base_test.BaseServerTestCase):
             self.sm.update = func
 
         def conflict_update_node_func(node):
+            db.session.rollback()
             raise manager_exceptions.ConflictError()
 
         node_instance_id = '1234'
