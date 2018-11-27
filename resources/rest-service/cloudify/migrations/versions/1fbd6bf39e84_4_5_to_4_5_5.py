@@ -12,11 +12,8 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
+from manager_rest.storage.models_base import UTCDateTime
 from cloudify.models_states import AgentState, VisibilityState
-
-# Adding this manually
-import manager_rest
-
 
 # revision identifiers, used by Alembic.
 revision = '1fbd6bf39e84'
@@ -36,6 +33,8 @@ def upgrade():
                                           sa.Boolean(),
                                           nullable=False,
                                           server_default='f'))
+    op.add_column('executions',
+                  sa.Column('scheduled_for', UTCDateTime(), nullable=True))
 
     op.add_column(
         'deployments',
@@ -52,7 +51,6 @@ def upgrade():
                                       create_type=False)
     agent_states_enum = postgresql.ENUM(*AgentState.STATES,
                                         name='agent_states')
-    utc_datetime = manager_rest.storage.models_base.UTCDateTime()
     op.create_table(
         'agents',
         sa.Column('_storage_id', sa.Integer(), nullable=False),
@@ -66,9 +64,9 @@ def upgrade():
         sa.Column('visibility', visibility_enum, nullable=True),
         sa.Column('rabbitmq_username', sa.Text(), nullable=True),
         sa.Column('rabbitmq_password', sa.Text(), nullable=True),
-        sa.Column('rabbitmq_exchange', sa.Text(), nullable=False),
-        sa.Column('created_at', utc_datetime, nullable=False),
-        sa.Column('updated_at', utc_datetime, nullable=True),
+        sa.Column('rabbitmq_exchange', sa.Text(), nullable=True),
+        sa.Column('created_at', UTCDateTime(), nullable=False),
+        sa.Column('updated_at', UTCDateTime(), nullable=True),
         sa.Column('_node_instance_fk', sa.Integer(), nullable=False),
         sa.Column('_tenant_id', sa.Integer(), nullable=False),
         sa.Column('_creator_id', sa.Integer(), nullable=False),
@@ -120,6 +118,7 @@ def downgrade():
     op.drop_column('events', 'target_id')
     op.drop_column('logs', 'source_id')
     op.drop_column('logs', 'target_id')
+    op.drop_column('executions', 'scheduled_for')
 
     # Remove the agents table
     op.drop_index(op.f('agents_id_idx'), table_name='agents')

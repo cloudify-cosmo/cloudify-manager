@@ -231,6 +231,7 @@ class Execution(CreatedAtMixin, SQLResourceBase):
     )
     workflow_id = db.Column(db.Text, nullable=False)
     started_at = db.Column(UTCDateTime, nullable=True)
+    scheduled_for = db.Column(UTCDateTime, nullable=True)
     is_dry_run = db.Column(db.Boolean, nullable=False, default=False)
 
     _deployment_fk = foreign_key(Deployment._storage_id, nullable=True)
