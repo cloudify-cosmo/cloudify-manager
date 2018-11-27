@@ -156,6 +156,9 @@ class BaseServerTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        super(BaseServerTestCase, cls).setUpClass()
+
+        cls._patchers = []
         cls._create_temp_files_and_folders()
         cls._init_file_server()
         cls._mock_amqp_modules()
@@ -167,6 +170,9 @@ class BaseServerTestCase(unittest.TestCase):
         cls.client = cls.create_client()
         cls.sm = get_storage_manager()
         cls._mock_verify_role()
+
+        for patcher in cls._patchers:
+            patcher.start()
 
     def setUp(self):
         self._handle_default_db_config()
@@ -197,11 +203,10 @@ class BaseServerTestCase(unittest.TestCase):
     def _mock_swagger(cls):
         """ We don't need swagger for tests, so might as well mock it """
 
-        cls._swagger_patcher = patch(
+        swagger_patcher = patch(
             'manager_rest.rest.swagger.add_swagger_resource'
         )
-        # cls.addCleanup(cls._swagger_patcher.stop)
-        cls._swagger_patcher.start()
+        cls._patchers.append(swagger_patcher)
 
     @classmethod
     def _mock_amqp_modules(cls):
@@ -214,20 +219,16 @@ class BaseServerTestCase(unittest.TestCase):
             patch('manager_rest.workflow_executor._execute_task',
                   mock_execute_task),
         ]
-        for amqp_patch in amqp_patches:
-            # cls.addCleanup(amqp_patch.stop)
-            amqp_patch.start()
+        cls._patchers.extend(amqp_patches)
 
     @classmethod
     def _mock_get_encryption_key(cls):
         """ Mock the _get_encryption_key_patcher function for all unittests """
-        cls._get_encryption_key_patcher = patch(
-            'cloudify.cryptography_utils._get_encryption_key'
+        get_encryption_key_patcher = patch(
+            'cloudify.cryptography_utils._get_encryption_key',
+            MagicMock(return_value=config.instance.security_encryption_key)
         )
-        # cls.addCleanup(cls._get_encryption_key_patcher.stop)
-        cls._get_encryption_key = cls._get_encryption_key_patcher.start()
-        cls._get_encryption_key.return_value = \
-            config.instance.security_encryption_key
+        cls._patchers.append(get_encryption_key_patcher)
 
     @classmethod
     def _create_temp_files_and_folders(cls):
@@ -242,7 +243,6 @@ class BaseServerTestCase(unittest.TestCase):
     def _init_file_server(cls):
         cls.file_server = FileServer(cls.tmpdir)
         cls.file_server.start()
-        # cls.addCleanup(cls.cleanup)
 
     @classmethod
     def _create_config_and_reset_app(cls):
