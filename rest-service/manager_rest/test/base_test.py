@@ -319,13 +319,11 @@ class BaseServerTestCase(unittest.TestCase):
         return flask_app.test_client()
 
     @staticmethod
-    def _setup_anonymous_user():
+    def _setup_current_user():
         """Change the anonymous user to be admin, in order to have arbitrary
         access to the storage manager (which otherwise requires a valid user)
         """
-        admin_user = server.user_datastore.get_user(
-            get_admin_user()['username']
-        )
+        admin_user = set_admin_current_user(server.app)
         login_manager = server.app.extensions['security'].login_manager
         login_manager.anonymous_user = MagicMock(return_value=admin_user)
 
