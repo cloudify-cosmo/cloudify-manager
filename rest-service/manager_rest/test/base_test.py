@@ -327,13 +327,18 @@ class BaseServerTestCase(unittest.TestCase):
         login_manager = server.app.extensions['security'].login_manager
         login_manager.anonymous_user = MagicMock(return_value=admin_user)
 
-    def cleanup(self):
-        self.quiet_delete(self.rest_service_log)
-        self.quiet_delete(self.tmp_conf_file)
-        self.quiet_delete_directory(self.maintenance_mode_dir)
-        if self.file_server:
-            self.file_server.stop()
-        self.quiet_delete_directory(self.tmpdir)
+    @classmethod
+    def tearDownClass(cls):
+        cls.quiet_delete(cls.rest_service_log)
+        cls.quiet_delete(cls.tmp_conf_file)
+        cls.quiet_delete_directory(cls.maintenance_mode_dir)
+        cls.quiet_delete_directory(cls.tmpdir)
+
+        if cls.file_server:
+            cls.file_server.stop()
+
+        for patcher in cls._patchers:
+            patcher.start()
 
     @classmethod
     def initialize_provider_context(cls):
