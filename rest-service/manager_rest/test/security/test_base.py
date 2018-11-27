@@ -42,10 +42,11 @@ class SecurityTestBase(BaseServerTestCase):
         finally:
             self.client = client
 
-    def get_secured_client(self, headers=None, **kwargs):
+    @classmethod
+    def get_secured_client(cls, headers=None, **kwargs):
         headers = headers or create_auth_header(**kwargs)
         headers.setdefault(CLOUDIFY_TENANT_HEADER, DEFAULT_TENANT_NAME)
-        return self.create_client(headers)
+        return cls.create_client(headers)
 
     def _assert_user_authorized(self, headers=None, **kwargs):
         with self.use_secured_client(headers, **kwargs):
@@ -58,8 +59,9 @@ class SecurityTestBase(BaseServerTestCase):
                     self.client.deployments.list
                 )
 
-    def create_configuration(self):
-        test_config = super(SecurityTestBase, self).create_configuration()
+    @classmethod
+    def create_configuration(cls):
+        test_config = super(SecurityTestBase, cls).create_configuration()
         test_config.failed_logins_before_account_lock = 5
         test_config.account_lock_period = 30
 
