@@ -184,8 +184,9 @@ class BaseServerTestCase(unittest.TestCase):
 
     @staticmethod
     def _drop_db(keep_tables):
-        """Creates a single transaction that *always* drops all tables, regardless
-        of relationships and foreign key constraints (as opposed to `db.drop_all`)
+        """Creates a single transaction that *always* drops all tables,
+        regardless of relationships and foreign key constraints (as opposed to
+        `db.drop_all`)
         """
         meta = server.db.metadata
         for table in reversed(meta.sorted_tables):
@@ -266,8 +267,6 @@ class BaseServerTestCase(unittest.TestCase):
         security.password_hash = 'plaintext'
         record = security.pwd_context._config._records[('plaintext', None)]
         security.pwd_context._config._records[(None, None)] = record
-
-
 
     @classmethod
     def _handle_flask_app_and_db(cls):
