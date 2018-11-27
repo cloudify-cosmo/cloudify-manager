@@ -338,7 +338,7 @@ class BaseServerTestCase(unittest.TestCase):
             cls.file_server.stop()
 
         for patcher in cls._patchers:
-            patcher.start()
+            patcher.stop()
 
     @classmethod
     def initialize_provider_context(cls):
