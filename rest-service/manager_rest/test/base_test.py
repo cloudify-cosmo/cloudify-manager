@@ -361,8 +361,8 @@ class BaseServerTestCase(unittest.TestCase):
         test_config.file_server_url = 'http://localhost:{0}'.format(
             cls.file_server.port)
 
-        test_config.rest_service_log_level = 'DEBUG'
-        test_config.rest_service_log_path = self.rest_service_log
+        test_config.rest_service_log_level = 'INFO'
+        test_config.rest_service_log_path = cls.rest_service_log
         test_config.rest_service_log_file_size_MB = 100,
         test_config.rest_service_log_files_backup_count = 7
         test_config.maintenance_folder = cls.maintenance_mode_dir
