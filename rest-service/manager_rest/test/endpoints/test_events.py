@@ -25,7 +25,7 @@ from manager_rest.test.attribute import attr
 from manager_rest.manager_exceptions import BadParametersError
 from manager_rest.rest.resources_v1 import Events as EventsV1
 from manager_rest.storage import db
-from manager_rest.storage.management_models import Tenant
+from manager_rest.storage.management_models import Tenant, User
 from manager_rest.storage.resource_models import (
     Blueprint,
     Deployment,
@@ -136,6 +136,10 @@ class SelectEventsBaseTest(TestCase):
         session.add(tenant)
         session.commit()
 
+        user = User(username=fake.name(), email=fake.email())
+        session.add(user)
+        session.commit()
+
         blueprints = [
             Blueprint(
                 id='blueprint_{}'.format(fake.uuid4()),
@@ -143,7 +147,7 @@ class SelectEventsBaseTest(TestCase):
                 main_file_name=fake.file_name(),
                 plan='<plan>',
                 _tenant_id=tenant.id,
-                _creator_id=fake.uuid4(),
+                _creator_id=user.id
             )
             for _ in xrange(self.BLUEPRINT_COUNT)
         ]
@@ -157,7 +161,7 @@ class SelectEventsBaseTest(TestCase):
                 id='deployment_{}'.format(fake.uuid4()),
                 created_at=fake.date_time(),
                 _blueprint_fk=blueprint._storage_id,
-                _creator_id=fake.uuid4(),
+                _creator_id=blueprint._creator_id,
                 _tenant_id=blueprint._tenant_id
             ))
         session.add_all(deployments)
@@ -172,7 +176,7 @@ class SelectEventsBaseTest(TestCase):
                 is_system_workflow=False,
                 workflow_id=fake.uuid4(),
                 _tenant_id=deployment._tenant_id,
-                _creator_id=fake.uuid4(),
+                _creator_id=deployment._creator_id,
                 _deployment_fk=deployment._storage_id,
             ))
         session.add_all(executions)
