@@ -35,17 +35,17 @@ class ResourceListTestCase(BaseListTest):
         self._resource_list_sorted_test('blueprints', '+id')
 
     def test_executions_list_sorted(self):
-        self._resource_list_sorted_test('executions', '-workflow_id')
+        self._resource_list_sorted_test('executions', ['-workflow_id', 'id'])
 
     def test_nodes_list_sorted(self):
-        self._resource_list_sorted_test('nodes', 'blueprint_id')
+        self._resource_list_sorted_test('nodes', ['blueprint_id', 'id'])
 
     def test_node_instances_list_sorted(self):
         self._resource_list_sorted_test('node_instances', ['+node_id', '-id'])
 
     def test_deployment_modifications_list_sorted(self):
         self._resource_list_sorted_test('deployment_modifications',
-                                        '-deployment_id')
+                                        ['-deployment_id', 'id'])
 
     def test_plugins_list_sorted(self):
         self._put_n_plugins(number_of_plugins=3)

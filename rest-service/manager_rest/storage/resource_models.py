@@ -254,7 +254,7 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             (table.c.status == status, label)
             for status, label in cls.STATUS_DISPLAY_NAMES.items()
         ]
-        return case(cases, else_=table.c.status)
+        return case(cases, else_=db.cast(table.c.status, db.Text))
 
     def _get_identifier_dict(self):
         id_dict = super(Execution, self)._get_identifier_dict()
