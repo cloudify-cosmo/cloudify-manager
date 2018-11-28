@@ -178,16 +178,17 @@ class BaseServerTestCase(unittest.TestCase):
         self._handle_default_db_config()
         self.initialize_provider_context()
         self._setup_current_user()
-
-    def tearDown(self):
-        self._drop_db(['roles'])
+        self.addCleanup(self._drop_db)
 
     @staticmethod
-    def _drop_db(keep_tables):
-        """Creates a single transaction that *always* drops all tables,
-        regardless of relationships and foreign key constraints (as opposed to
-        `db.drop_all`)
+    def _drop_db(keep_tables=None):
+        """Creates a single transaction that clears all tables by deleting
+        their contents, which is faster than dropping and recreating
+        the tables.
         """
+        server.db.session.remove()
+        if keep_tables is None:
+            keep_tables = []
         meta = server.db.metadata
         for table in reversed(meta.sorted_tables):
             if table.name in keep_tables:
