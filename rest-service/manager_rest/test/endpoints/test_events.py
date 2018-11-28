@@ -108,15 +108,24 @@ class SelectEventsBaseTest(TestCase):
     def setUp(self):
         """Initialize mock application with in memory sql database."""
         app = Flask(__name__)
-        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+        app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+        app.config['SQLALCHEMY_DATABASE_URI'] =\
+            'postgresql://cloudify:cloudify@localhost/cloudify_db'
         context = app.app_context()
         context.push()
         self.addCleanup(context.pop)
 
         db.init_app(app)
         db.create_all()
-
+        self.addCleanup(self._clean_db)
         self._populate_db()
+
+    def _clean_db(self):
+        db.session.remove()
+        meta = db.metadata
+        for table in reversed(meta.sorted_tables):
+            db.session.execute(table.delete())
+        db.session.commit()
 
     def _populate_db(self):
         """Populate database with events and logs."""
