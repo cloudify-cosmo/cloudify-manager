@@ -251,7 +251,6 @@ class BaseServerTestCase(unittest.TestCase):
         """
         cls.server_configuration = cls.create_configuration()
         utils.copy_resources(cls.server_configuration.file_server_root)
-        server.SQL_DIALECT = 'sqlite'
         server.reset_app(cls.server_configuration)
 
         cls._set_hash_mechanism_to_plaintext()
@@ -352,10 +351,10 @@ class BaseServerTestCase(unittest.TestCase):
     def create_configuration(cls):
         test_config = config.Config()
         test_config.test_mode = True
-        test_config.postgresql_db_name = ':memory:'
-        test_config.postgresql_host = ''
-        test_config.postgresql_username = ''
-        test_config.postgresql_password = ''
+        test_config.postgresql_db_name = 'cloudify_db'
+        test_config.postgresql_host = 'localhost'
+        test_config.postgresql_username = 'cloudify'
+        test_config.postgresql_password = 'cloudify'
         test_config.file_server_root = cls.tmpdir
         test_config.file_server_url = 'http://localhost:{0}'.format(
             cls.file_server.port)
