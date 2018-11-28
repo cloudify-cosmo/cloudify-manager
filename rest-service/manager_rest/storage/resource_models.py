@@ -254,7 +254,7 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             (table.c.status == status, label)
             for status, label in cls.STATUS_DISPLAY_NAMES.items()
         ]
-        return case(cases, else_=table.c.status)
+        return case(cases, else_=db.cast(table.c.status, db.Text))
 
     def _get_identifier_dict(self):
         id_dict = super(Execution, self)._get_identifier_dict()
@@ -539,15 +539,15 @@ class Agent(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'agents'
 
     ip = db.Column(db.Text)
-    name = db.Column(db.Text)
-    install_method = db.Column(db.Text)
+    name = db.Column(db.Text, nullable=False)
+    install_method = db.Column(db.Text, nullable=False)
     system = db.Column(db.Text)
-    version = db.Column(db.Text)
+    version = db.Column(db.Text, nullable=False)
     state = db.Column(db.Enum(*AgentState.STATES, name='agent_states'),
-                      default=AgentState.CREATING)
+                      default=AgentState.CREATING, nullable=False)
     rabbitmq_username = db.Column(db.Text)
     rabbitmq_password = db.Column(db.Text)
-    rabbitmq_exchange = db.Column(db.Text)
+    rabbitmq_exchange = db.Column(db.Text, nullable=False)
     updated_at = db.Column(UTCDateTime)
 
     _node_instance_fk = foreign_key(NodeInstance._storage_id)

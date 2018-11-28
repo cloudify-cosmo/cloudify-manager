@@ -49,6 +49,7 @@ class ValidateVersionTestCase(base_test.BaseServerTestCase):
             blueprint_file_name='blueprint_validate_definitions_version.yaml'))
         return response.status_code
 
-    def initialize_provider_context(self, *_, **__):
+    @classmethod
+    def initialize_provider_context(cls):
         # each test in this class creates its own provider context
         pass

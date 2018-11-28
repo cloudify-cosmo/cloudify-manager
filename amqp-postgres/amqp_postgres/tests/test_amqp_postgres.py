@@ -21,7 +21,6 @@ from dateutil import parser as date_parser
 from cloudify.models_states import VisibilityState
 from cloudify.amqp_client import create_events_publisher
 
-from manager_rest.server import db
 from manager_rest.storage import models
 from manager_rest.config import instance
 from manager_rest.amqp_manager import AMQPManager
@@ -37,25 +36,6 @@ EVENT_MESSAGE = 'event'
 
 
 class TestAMQPPostgres(BaseServerTestCase):
-    def create_configuration(self):
-        """
-        Override here to allow using postgresql instead of sqlite
-        """
-        config = super(TestAMQPPostgres, self).create_configuration()
-        config.postgresql_host = 'localhost'
-        config.postgresql_db_name = 'cloudify_db'
-        config.postgresql_username = 'cloudify'
-        config.postgresql_password = 'cloudify'
-        return config
-
-    def _create_config_and_reset_app(self, server):
-        """
-        Override here to allow using postgresql instead of sqlite
-        """
-        super(TestAMQPPostgres, self)._create_config_and_reset_app(server)
-        server.SQL_DIALECT = 'postgresql'
-        server.reset_app(self.server_configuration)
-
     def setUp(self):
         super(TestAMQPPostgres, self).setUp()
         config = self.server_configuration
@@ -71,11 +51,6 @@ class TestAMQPPostgres(BaseServerTestCase):
         amqp_client.consume_in_thread()
         self.addCleanup(amqp_client.close)
         self.events_publisher = create_events_publisher()
-        self.addCleanup(self._cleanup_db)
-
-    def _cleanup_db(self):
-        db.session.remove()
-        db.drop_all()
 
     def publish_messages(self, messages):
         for message, message_type in messages:

@@ -30,6 +30,11 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 
 @attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
 class AgentsTest(base_test.BaseServerTestCase):
+    agent_data = {
+        'install_method': 'remote',
+        'version': '4.5.5',
+        'rabbitmq_exchange': 'agent_1'
+    }
 
     def test_get_agent(self):
         self.put_agent()
@@ -60,7 +65,9 @@ class AgentsTest(base_test.BaseServerTestCase):
                           instance_id='node_instance_1',
                           deployment_id='deployment_1',
                           runtime_properties={'key': 'value'})
-        self.client.agents.create('agent_1', 'node_instance_1')
+        self.client.agents.create('agent_1',
+                                  'node_instance_1',
+                                  **self.agent_data)
         agent = self.sm.get(Agent, 'agent_1')
         self.assertEqual(agent.name, 'agent_1')
         self.assertEqual(agent.node_instance_id, 'node_instance_1')
@@ -76,15 +83,16 @@ class AgentsTest(base_test.BaseServerTestCase):
                                 'agent@',
                                 'node_instance_1')
 
-    def test_update_agent_in_create(self):
+    def test_create_agent_already_exists(self):
         self._get_or_create_node_instance()
-        self.client.agents.create('agent_1', 'node_instance_1')
         self.client.agents.create('agent_1',
                                   'node_instance_1',
-                                  state=AgentState.CREATED)
-        agent = self.client.agents.get('agent_1')
-        self.assertEqual(agent.name, 'agent_1')
-        self.assertEqual(agent.state, AgentState.CREATED)
+                                  **self.agent_data)
+        none_response = self.client.agents.create('agent_1',
+                                                  'node_instance_1',
+                                                  **self.agent_data)
+        self.assertEqual(none_response.name, None)
+        self.assertEqual(none_response.state, None)
 
     def test_create_agent_invalid_node_instance(self):
         error_message = '404: Requested `NodeInstance` with ID ' \
