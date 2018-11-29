@@ -117,9 +117,16 @@ class CloudifyFlaskApp(Flask):
                 cfy_config.postgresql_db_name
         )
         if cfy_config.postgresql_ssl_enabled:
-            # The ssl certificate and key should be found in the default
-            # ~/.postgresql directory
-            self.config['SQLALCHEMY_DATABASE_URI'] += '?sslmode=verify-full'
+            self.config['SQLALCHEMY_DATABASE_URI'] += \
+                '?sslmode={sslmode}&' \
+                'sslcert={sslcert}&' \
+                'sslkey={sslkey}&' \
+                'sslrootcert={sslrootcert}'.format(
+                    sslmode='verify-full',
+                    sslcert=config.instance.postgresql_ssl_cert_path,
+                    sslkey=config.instance.postgresql_ssl_key_path,
+                    sslrootcert=config.instance.ca_cert_path
+                )
         self.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
         db.init_app(self)  # Prepare the app for use with flask-sqlalchemy
 

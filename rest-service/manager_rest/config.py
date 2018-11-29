@@ -38,6 +38,9 @@ class Config(object):
         self.postgresql_password = None
         self.postgresql_bin_path = None
         self.postgresql_ssl_enabled = False
+        self.postgresql_ssl_cert_path = ''
+        self.postgresql_ssl_key_path = ''
+        self.ca_cert_path = ''
         self.amqp_host = 'localhost'
         self.amqp_management_host = 'localhost'
         self.amqp_username = 'guest'
