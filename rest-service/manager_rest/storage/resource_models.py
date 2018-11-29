@@ -21,6 +21,7 @@ from flask_restful import fields as flask_fields
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
+from sqlalchemy.dialects import postgresql
 
 from cloudify.models_states import (AgentState,
                                     SnapshotState,
@@ -568,4 +569,41 @@ class Agent(CreatedAtMixin, SQLResourceBase):
         self._set_parent(node_instance)
         self.node_instance = node_instance
 
-# endregion
+    def to_response(self, **kwargs):
+        agent_dict = super(Agent, self).to_response()
+        agent_dict.pop('rabbitmq_username')
+        agent_dict.pop('rabbitmq_password')
+        return agent_dict
+
+
+class TasksGraph(SQLResourceBase):
+    __tablename__ = 'tasks_graphs'
+
+    name = db.Column(db.Text)
+    created_at = db.Column(UTCDateTime, nullable=False, index=True)
+
+    _execution_fk = foreign_key(Execution._storage_id)
+
+    @declared_attr
+    def execution(cls):
+        return one_to_many_relationship(cls, Execution, cls._execution_fk)
+
+    execution_id = association_proxy('execution', 'id')
+
+
+class Operation(SQLResourceBase):
+    __tablename__ = 'operations'
+
+    name = db.Column(db.Text)
+    state = db.Column(db.Text, nullable=False)
+    created_at = db.Column(UTCDateTime, nullable=False, index=True)
+
+    dependencies = db.Column(db.ARRAY(db.Text))
+    type = db.Column(db.Text)
+    parameters = db.Column(JSONString)
+
+    _tasks_graph_fk = foreign_key(TasksGraph._storage_id)
+
+    @declared_attr
+    def tasks_graph(cls):
+        return one_to_many_relationship(cls, TasksGraph, cls._tasks_graph_fk)
