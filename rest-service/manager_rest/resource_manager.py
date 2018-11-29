@@ -459,6 +459,37 @@ class ResourceManager(object):
         else:
             return self.sm.delete(deployment)
 
+    def resume_execution(self, execution_id):
+        execution = self.sm.list(
+            models.Execution, filters={'id': execution_id},
+            get_all_results=True)[0]
+        if execution.status in ExecutionState.END_STATES or \
+                execution.status in ExecutionState.QUEUED_STATE:
+            raise manager_exceptions.ConflictError(
+                'Cannot resume execution in state {0}'
+                .format(execution.status))
+        execution.status = ExecutionState.STARTED
+        self.sm.update(execution)
+
+        workflow_id = execution.workflow_id
+        deployment = execution.deployment
+        blueprint = deployment.blueprint
+        workflow_plugins = blueprint.plan[
+            constants.WORKFLOW_PLUGINS_TO_INSTALL]
+        workflow = deployment.workflows[workflow_id]
+
+        workflow_executor.execute_workflow(
+            workflow_id,
+            workflow,
+            workflow_plugins=workflow_plugins,
+            blueprint_id=deployment.blueprint_id,
+            deployment_id=deployment.id,
+            execution_id=execution_id,
+            execution_parameters=execution.parameters,
+            bypass_maintenance=False,
+            dry_run=False)
+        return execution
+
     def execute_workflow(self,
                          deployment_id,
                          workflow_id,
