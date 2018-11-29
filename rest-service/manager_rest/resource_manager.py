@@ -1317,16 +1317,25 @@ class ResourceManager(object):
         instance_dict['resource_availability'] = resource_availability
         instance_dict['private_resource'] = private_resource
 
-    def create_operation(self, operation_id, name, graph_id, dependencies,
-                         parameters, type):
-        graph = self.sm.list(models.TasksGraph,
-                             filters={'id': graph_id},
-                             get_all_results=True,
-                             all_tenants=True)[0]
+    def create_operation(self, operation_id, name, dependencies,
+                         parameters, type, graph_id=None,
+                         graph_storage_id=None):
+        # allow passing graph_storage_id directly as an optimization, so that
+        # we don't need to query for the graph based on display id
+        if (graph_id and graph_storage_id) or \
+                (not graph_id and not graph_storage_id):
+            raise ValueError(
+                'Pass exactly one of graph_id and graph_storage_id')
+        if graph_id:
+            graph = self.sm.list(models.TasksGraph,
+                                 filters={'id': graph_id},
+                                 get_all_results=True,
+                                 all_tenants=True)[0]
+            graph_storage_id = graph._storage_id
         operation = models.Operation(
             id=operation_id,
             name=name,
-            _tasks_graph_fk=graph._storage_id,
+            _tasks_graph_fk=graph_storage_id,
             created_at=utils.get_formatted_timestamp(),
             state='pending',
             dependencies=dependencies,
@@ -1352,7 +1361,7 @@ class ResourceManager(object):
         self.sm.put(graph)
         if operations:
             for operation in operations:
-                operation['graph_id'] = graph.id
+                operation['graph_storage_id'] = graph._storage_id
                 self.create_operation(**operation)
         return graph
 
