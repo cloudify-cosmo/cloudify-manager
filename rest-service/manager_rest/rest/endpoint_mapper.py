@@ -105,7 +105,11 @@ def setup_resources(api):
         'SummarizeNodeInstances': 'summary/node_instances',
         'SummarizeExecutions': 'summary/executions',
         'SummarizeBlueprints': 'summary/blueprints',
-        'UserTokens': 'user-tokens/<string:user_id>'
+        'UserTokens': 'user-tokens/<string:user_id>',
+        'Operations': 'operations',
+        'OperationsId': 'operations/<string:operation_id>',
+        'TasksGraphs': 'tasks_graphs',
+        'TasksGraphsId': 'tasks_graphs/<string:tasks_graph_id>',
     }
 
     # Set version endpoint as a non versioned endpoint
