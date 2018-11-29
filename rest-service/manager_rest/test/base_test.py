@@ -153,6 +153,8 @@ class BaseServerTestCase(unittest.TestCase):
                     if CLIENT_API_VERSION != 'v3':
                         client.deployments.capabilities.api = mock_http_client
                         client.agents.api = mock_http_client
+                        client.tasks_graphs.api = mock_http_client
+                        client.operations.api = mock_http_client
 
         return client
 
