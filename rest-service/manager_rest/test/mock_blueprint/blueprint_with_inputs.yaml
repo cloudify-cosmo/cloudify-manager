@@ -6,6 +6,10 @@ imports:
 inputs:
     http_web_server_port:
         description: Hello!
+    http_web_server_port2:
+        description: Hello again!
+        default:
+            a: [8000]
 
 node_templates:
     vm:
@@ -15,6 +19,13 @@ node_templates:
         type: cloudify.nodes.WebServer
         properties:
             port: { get_input: http_web_server_port }
+        relationships:
+            -   type: cloudify.relationships.contained_in
+                target: vm
+    http_web_server2:
+        type: cloudify.nodes.WebServer
+        properties:
+            port: { get_input: [http_web_server_port2, a, 0]}
         relationships:
             -   type: cloudify.relationships.contained_in
                 target: vm
