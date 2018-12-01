@@ -68,7 +68,7 @@ class TestParseWithResolver(BaseServerTestCase):
 
         nodes = {node["name"] for node in plan[constants.NODES]}
 
-        self.assertEqual(nodes, {"test", "vm", "http_web_server"})
+        self.assertEqual(nodes, {"test", "ns->vm", "ns->http_web_server"})
 
 
 @attr(client_min_version=1, client_max_version=LATEST_API_VERSION)

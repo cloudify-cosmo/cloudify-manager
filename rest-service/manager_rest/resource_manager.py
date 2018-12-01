@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2018 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -295,7 +295,8 @@ class ResourceManager(object):
                            for b in
                            self.sm.list(models.Blueprint,
                                         include=['plan'],
-                                        filters={'id': used_blueprints})]
+                                        filters={'id': used_blueprints},
+                                        get_all_results=True)]
                 plugins = set((p.get('package_name'), p.get('package_version'))
                               for sublist in plugins for p in sublist)
                 if (plugin.package_name, plugin.package_version) in plugins:
@@ -374,13 +375,13 @@ class ResourceManager(object):
         self.validate_modification_permitted(blueprint)
 
         if not force:
-            imported_list = [b.plan[constants.IMPORTED]
-                             for b in self.sm.list(
-                    models.Blueprint,
-                    include=['id', 'plan'])]
-            import_blueprint_format = "blueprint:{}".format(blueprint_id)
-            for imported in imported_list:
-                if import_blueprint_format in imported:
+            imported_blueprints_list = [b.plan[constants.IMPORTED_BLUEPRINTS]
+                                        for b in self.sm.list(
+                                        models.Blueprint,
+                                        include=['id', 'plan'],
+                                        get_all_results=True)]
+            for imported in imported_blueprints_list:
+                if blueprint_id in imported:
                     raise manager_exceptions.BlueprintInUseError(
                         'Blueprint {} is currently in use. You can "force" '
                         'blueprint removal.'.format(blueprint_id))
