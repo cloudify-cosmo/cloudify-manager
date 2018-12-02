@@ -8,6 +8,8 @@ from manager_rest.storage import get_storage_manager
 
 config_env_var = 'MANAGER_REST_SECURITY_CONFIG_PATH'
 os.environ[config_env_var] = '/opt/manager/rest-security.conf'
+config_env_var = 'MANAGER_REST_CONFIG_PATH'
+os.environ[config_env_var] = '/opt/manager/cloudify-rest.conf'
 
 
 def _write_token_to_file(tempdir, token):
