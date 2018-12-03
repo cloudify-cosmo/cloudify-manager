@@ -21,7 +21,6 @@ from flask_restful import fields as flask_fields
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
-from sqlalchemy.dialects import postgresql
 
 from cloudify.models_states import (AgentState,
                                     SnapshotState,
