@@ -7,6 +7,8 @@ from manager_rest.storage import (get_storage_manager,
                                   models)
 from manager_rest import manager_exceptions
 
+from functools import wraps
+
 
 class BaseSummary(SecuredResource):
     summary_fields = []
@@ -40,12 +42,21 @@ class BaseSummary(SecuredResource):
         )
 
 
-def marshal_summary(func):
-    def wrapper(*args, **kwargs):
-        result = func(*args, **kwargs)
-        items = [{item[0]: item[1]} for item in result.items]
-        return {"items": items, "metadata": result.metadata}
-    return wrapper
+def marshal_summary(summary_type):
+    def build_wrapper(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            result = func(*args, **kwargs)
+            target_field = request.args.get('_target_field')
+            items = [
+                {
+                    target_field: item[0],
+                    summary_type: item[1],
+                } for item in result.items
+            ]
+            return {"items": items, "metadata": result.metadata}
+        return wrapper
+    return build_wrapper
 
 
 class SummarizeDeployments(BaseSummary):
@@ -56,7 +67,7 @@ class SummarizeDeployments(BaseSummary):
     model = models.Deployment
 
     @authorize(auth_req, allow_all_tenants=True)
-    @marshal_summary
+    @marshal_summary('deployments')
     @rest_decorators.exceptions_handled
     @rest_decorators.all_tenants
     @rest_decorators.create_filters(models.Deployment)
@@ -66,14 +77,14 @@ class SummarizeDeployments(BaseSummary):
 
 
 class SummarizeNodes(BaseSummary):
-    summary_fields = [
-        'deployment_id',
-    ]
+    summary_fields = {
+        'deployment_id': models.Deployment.id,
+    }
     auth_req = 'node_list'
     model = models.Node
 
     @authorize(auth_req, allow_all_tenants=True)
-    @marshal_summary
+    @marshal_summary('nodes')
     @rest_decorators.exceptions_handled
     @rest_decorators.create_filters(models.Node)
     @rest_decorators.paginate
@@ -92,7 +103,7 @@ class SummarizeNodeInstances(BaseSummary):
     model = models.NodeInstance
 
     @authorize(auth_req, allow_all_tenants=True)
-    @marshal_summary
+    @marshal_summary('node_instances')
     @rest_decorators.exceptions_handled
     @rest_decorators.create_filters(models.NodeInstance)
     @rest_decorators.paginate
