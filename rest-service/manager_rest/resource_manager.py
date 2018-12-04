@@ -276,19 +276,9 @@ class ResourceManager(object):
 
         The plugin will be installed if the declared platform/distro
         is the same as the manager's.
-        If the yaml file is provided, it is additionally checked that
-        the plugin's executor is central_deployment_agent.
         """
-        plugin_yaml_path = plugin.yaml_file_path()
-        if plugin_yaml_path:
-            if self._is_valid_yaml_file(plugin) and \
-                    not self._is_central_executor_plugin(plugin):
-                return
-
         if not utils.plugin_installable_on_current_platform(plugin):
-            raise manager_exceptions.PluginDistributionNotSupported(
-                'Plugin `{0}` is not supported for the manager platform '
-                'or distribution.'.format(plugin))
+            return
 
         self._execute_system_workflow(
             wf_id='install_plugin',
