@@ -503,7 +503,7 @@ class ResourceManager(object):
         if not execution:
             new_execution = models.Execution(
                 id=execution_id,
-                status=self._get_proper_status(should_queue),
+                status=self._get_proper_status(should_queue, scheduled_time),
                 created_at=utils.get_formatted_timestamp(),
                 workflow_id=workflow_id,
                 error='',
@@ -519,12 +519,18 @@ class ResourceManager(object):
             self._workflow_queued(new_execution)
             return new_execution
 
+        if scheduled_time:
+            self.sm.put(new_execution)
+            # Insert execution to Dead Letter Exchange
+
         # executing the user workflow
         workflow_plugins = blueprint.plan[
             constants.WORKFLOW_PLUGINS_TO_INSTALL]
-        new_execution.status = ExecutionState.PENDING
-        new_execution.started_at = utils.get_formatted_timestamp()
-        self.sm.put(new_execution)
+        if not scheduled_time:
+            # This execution will start now (it's not scheduled for later)
+            new_execution.status = ExecutionState.PENDING
+            new_execution.started_at = utils.get_formatted_timestamp()
+            self.sm.put(new_execution)
         workflow_executor.execute_workflow(
             workflow_id,
             workflow,
@@ -536,7 +542,8 @@ class ResourceManager(object):
             execution_parameters=execution_parameters,
             bypass_maintenance=bypass_maintenance,
             dry_run=dry_run,
-            wait_after_fail=wait_after_fail)
+            wait_after_fail=wait_after_fail,
+            scheduled_time=scheduled_time)
 
         return new_execution
 
@@ -599,9 +606,15 @@ class ResourceManager(object):
             )
 
     @staticmethod
-    def _get_proper_status(should_queue):
-        return ExecutionState.QUEUED if should_queue else\
-            ExecutionState.PENDING
+    def _get_proper_status(should_queue, scheduled):
+        if should_queue:
+            return ExecutionState.QUEUED
+
+        elif scheduled:
+            return ExecutionState.SCHEDULED
+
+        return ExecutionState.PENDING
+
 
     @staticmethod
     def _verify_workflow_in_deployment(wf_id, deployment, dep_id):
