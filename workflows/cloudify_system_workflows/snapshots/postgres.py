@@ -70,11 +70,6 @@ class Postgres(object):
         # Add the current execution
         self._append_dump(dump_file, self._get_execution_restore_query())
 
-        # Don't change admin user during the restore or the workflow will
-        # fail to correctly execute (the admin user update query reverts it
-        # to the one from before the restore)
-        self._append_dump(dump_file, self._get_admin_user_update_query())
-
         self._restore_dump(dump_file, self._db_name)
 
         self._make_api_token_keys()

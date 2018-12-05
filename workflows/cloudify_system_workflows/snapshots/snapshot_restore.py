@@ -395,36 +395,6 @@ class SnapshotRestore(object):
 
         return admin_account
 
-    def _restore_admin_user(self):
-        admin_account = self._load_admin_dump()
-
-        with Postgres(self._config) as postgres:
-            psql_command = ' '.join(postgres.get_psql_command())
-        psql_command += ' -c '
-
-        update_prefix = '"UPDATE users SET '
-        # Hardcoded uid as we only allow running restore on a clean manager
-        # at the moment, so admin must be the first user (ID=0)
-        update_suffix = ' WHERE users.id=0"'
-
-        # Discard the id, we don't need it
-        admin_account.pop('id')
-        updates = []
-        for column, value in admin_account.items():
-            if value:
-                updates.append("{column}='{value}'".format(
-                    column=column,
-                    value=value,
-                ))
-        updates = ','.join(updates)
-        updates = updates.replace('$', '\\$')
-
-        command = psql_command + update_prefix + updates + update_suffix
-
-        # We have to do this after the restore process or it'll break the
-        # workflow execution updating and thus cause the workflow to fail
-        self._post_restore_commands.append(command)
-
     def _get_admin_user_token(self):
         return self._load_admin_dump()['api_token_key']
 
@@ -501,7 +471,6 @@ class SnapshotRestore(object):
         with open(SECURITY_FILE_LOCATION, 'w') as security_conf_file:
             json.dump(rest_security_conf, security_conf_file)
         self._encryption_key = str(rest_security_conf['encryption_key'])
-        self._add_restart_command()
 
     def _restore_db(self, postgres, schema_revision, stage_revision):
         """Restore database from snapshot.
@@ -851,9 +820,6 @@ class SnapshotRestore(object):
 
             with open(SECURITY_FILE_LOCATION, 'w') as security_conf_handle:
                 json.dump(rest_security_conf, security_conf_handle)
-            self._add_restart_command()
-
-        self._restore_admin_user()
 
     def _get_script_path(self, script_name):
         return os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -876,11 +842,6 @@ class SnapshotRestore(object):
             str(token_info['uid']),
         ]).aggr_stdout.strip()
         return prefix + token_info['token']
-
-    def _add_restart_command(self):
-        restart_rest = 'sudo systemctl restart cloudify-restservice'
-        if restart_rest not in self._post_restore_commands:
-            self._post_restore_commands.append(restart_rest)
 
 
 class SnapshotRestoreValidator(object):
