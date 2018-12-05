@@ -704,7 +704,6 @@ data_types:
       heartbeat:
         description: >
           The interval of the AMQP heartbeats in seconds
-          Note: the AMQP heartbeat is only used on Linux.
         required: false
       disable_requiretty:
         description: >
