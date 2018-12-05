@@ -3,12 +3,19 @@ tosca_definitions_version: cloudify_dsl_1_3
 imports:
   - cloudify/types/types.yaml
 
+inputs:
+  a:
+    default: 0
+  b:
+    default: shared
 node_types:
   test_type:
     derived_from: cloudify.nodes.Root
     properties:
       key:
         default: { get_capability: [ shared, node_1_key ] }
+      key_nested:
+        default: { get_capability: [ shared, node_1_key_nested, 0, nested ] }
 
 node_templates:
   node1:
@@ -17,7 +24,10 @@ node_templates:
     type: test_type
     properties:
       key: { get_capability: [ shared, node_2_key ] }
+      key_nested: { get_capability: [ shared, node_2_key_nested, 0, nested ] }
 
 outputs:
   complex_output:
     value: { get_capability: [ shared, complex_capability ] }
+  complex_output_nested:
+    value: { get_capability: [ {get_input: b}, complex_capability, level_1, level_2, level_3, {get_input: a} ] }

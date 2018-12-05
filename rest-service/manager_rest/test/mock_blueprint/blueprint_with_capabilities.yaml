@@ -9,6 +9,9 @@ node_types:
     properties:
       key:
         default: default_value
+      key_nested:
+        default:
+          - nested: default_value
 
 node_templates:
   node1:
@@ -17,12 +20,20 @@ node_templates:
     type: test_type
     properties:
       key: override_value
+      key_nested:
+        - nested: override_value
 
 capabilities:
   node_1_key:
     value: { get_attribute: [ node1, key ]}
   node_2_key:
     value: { get_attribute: [ node2, key ]}
+  node_1_key_nested:
+    value:
+    - nested: { get_attribute: [ node1, key_nested, 0, nested ]}
+  node_2_key_nested:
+    value:
+    - nested: { get_attribute: [ node2, key_nested, 0, nested ]}
   complex_capability:
     value:
       level_1:
