@@ -108,25 +108,30 @@ class CloudifyFlaskApp(Flask):
         """
         cfy_config = config.instance
 
-        self.config['SQLALCHEMY_DATABASE_URI'] = \
-            '{0}://{1}:{2}@{3}/{4}'.format(
-                SQL_DIALECT,
-                cfy_config.postgresql_username,
-                cfy_config.postgresql_password,
-                cfy_config.postgresql_host,
-                cfy_config.postgresql_db_name
-        )
+        params = {}
+        params.update(config.instance.postgresql_connection_options)
         if cfy_config.postgresql_ssl_enabled:
-            self.config['SQLALCHEMY_DATABASE_URI'] += \
-                '?sslmode={sslmode}&' \
-                'sslcert={sslcert}&' \
-                'sslkey={sslkey}&' \
-                'sslrootcert={sslrootcert}'.format(
-                    sslmode='verify-full',
-                    sslcert=config.instance.postgresql_ssl_cert_path,
-                    sslkey=config.instance.postgresql_ssl_key_path,
-                    sslrootcert=config.instance.ca_cert_path
-                )
+            params.update({
+                'sslmode': 'verify-full',
+                'sslcert': config.instance.postgresql_ssl_cert_path,
+                'sslkey': config.instance.postgresql_ssl_key_path,
+                'sslrootcert': config.instance.ca_cert_path
+            })
+
+         db_uri = '{0}://{1}:{2}@{3}/{4}'.format(
+            SQL_DIALECT,
+            cfy_config.postgresql_username,
+            cfy_config.postgresql_password,
+            cfy_config.postgresql_host,
+            cfy_config.postgresql_db_name
+        )
+        if any(params.values()):
+            query = '&'.join('{0}={1}'.format(key, value)
+                             for key, value in params.items()
+                             if value)
+            db_uri = '{0}?{1}'.format(db_uri, query)
+
+        self.config['SQLALCHEMY_DATABASE_URI'] = db_uri
         self.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
         db.init_app(self)  # Prepare the app for use with flask-sqlalchemy
 
