@@ -19,11 +19,13 @@ import time
 import uuid
 import urllib
 import shutil
+import logging
 import zipfile
 import urllib2
 import tarfile
 import unittest
 import tempfile
+import sqlalchemy.exc
 
 import yaml
 import wagon
@@ -282,7 +284,18 @@ class BaseServerTestCase(unittest.TestCase):
 
     @staticmethod
     def _handle_default_db_config():
-        server.db.create_all()
+        try:
+            server.db.create_all()
+        except sqlalchemy.exc.OperationalError:
+            logger = logging.getLogger()
+            logger.error("Could not connect to the database - is a "
+                         "postgresql server running on localhost?")
+            logger.error("HINT: Create a docker container running postgresql "
+                         "by doing `docker run --name cloudify-db-unit-test "
+                         "-e POSTGRES_PASSWORD=cloudify -e POSTGRES_USER="
+                         "cloudify -e POSTGRES_DB=cloudify_db -p 5432:5432 "
+                         "-d postgres`")
+            raise
         admin_user = get_admin_user()
 
         fd, temp_auth_file = tempfile.mkstemp()
@@ -356,6 +369,9 @@ class BaseServerTestCase(unittest.TestCase):
         test_config.postgresql_host = 'localhost'
         test_config.postgresql_username = 'cloudify'
         test_config.postgresql_password = 'cloudify'
+        test_config.postgresql_connection_options = {
+            'connect_timeout': 2
+        }
         test_config.file_server_root = cls.tmpdir
         test_config.file_server_url = 'http://localhost:{0}'.format(
             cls.file_server.port)
