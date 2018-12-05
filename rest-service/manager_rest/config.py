@@ -40,6 +40,9 @@ class Config(object):
         self.postgresql_ssl_enabled = False
         self.postgresql_ssl_cert_path = ''
         self.postgresql_ssl_key_path = ''
+        self.postgresql_connection_options = {
+            'connect_timeout': 10
+        }
         self.ca_cert_path = ''
         self.amqp_host = 'localhost'
         self.amqp_management_host = 'localhost'
