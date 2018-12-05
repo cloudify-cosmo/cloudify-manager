@@ -118,7 +118,7 @@ class CloudifyFlaskApp(Flask):
                 'sslrootcert': config.instance.ca_cert_path
             })
 
-         db_uri = '{0}://{1}:{2}@{3}/{4}'.format(
+        db_uri = '{0}://{1}:{2}@{3}/{4}'.format(
             SQL_DIALECT,
             cfy_config.postgresql_username,
             cfy_config.postgresql_password,
