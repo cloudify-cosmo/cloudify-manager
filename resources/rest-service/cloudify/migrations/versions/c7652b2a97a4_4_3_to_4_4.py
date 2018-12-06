@@ -39,7 +39,8 @@ def upgrade():
                                      nullable=True))
     op.add_column('users', sa.Column('failed_logins_counter',
                                      sa.Integer(),
-                                     nullable=True))
+                                     nullable=False,
+                                     server_default=0))
     op.add_column('executions', sa.Column('ended_at',
                                           UTCDateTime(),
                                           nullable=True))
