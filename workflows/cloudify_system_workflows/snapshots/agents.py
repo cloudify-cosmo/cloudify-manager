@@ -167,14 +167,15 @@ class Agents(object):
                 )
 
     def insert_agent_to_db(self, cloudify_agent, node_instance_id, client):
-        # Add an agent to the db, the snapshot is from a version with no
-        # agent table
+        # Add an agent to the db if the snapshot is from a version with no
+        # agents table
         if self._manager_version >= V_4_5_5:
             return
         cloudify_agent['node_instance_id'] = node_instance_id
+        cloudify_agent['version'] = cloudify_agent.get('version') or \
+            str(self._manager_version)
         install_method = cloudify_agent.get('install_method')
-        if cloudify_agent and install_method and \
-           install_method != AGENT_INSTALL_METHOD_NONE:
+        if install_method and install_method != AGENT_INSTALL_METHOD_NONE:
             create_agent_record(cloudify_agent,
                                 state=AgentState.STARTED,
                                 client=client)

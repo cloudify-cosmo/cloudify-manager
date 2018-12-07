@@ -17,6 +17,7 @@ from functools import wraps
 
 from flask_restful import Resource
 from flask_restful.utils import unpack
+from werkzeug.exceptions import HTTPException
 from flask import request, current_app, Response, jsonify
 
 from manager_rest.utils import abort_error
@@ -36,13 +37,30 @@ def authenticate(func):
         headers.update(extra_headers)
         return data, code, headers
 
+    def _handle_exception_response_headers(auth_headers, e):
+        """
+        Also in a case of failure there is a need to add auth headers to
+        the response.
+        """
+        if auth_headers:
+            response = e.get_response()
+            response.headers.extend(auth_headers)
+            e.response = response
+
     @wraps(func)
     def wrapper(*args, **kwargs):
         auth_response = authenticator.authenticate(request)
+        auth_headers = getattr(auth_response, 'response_headers', {})
         if isinstance(auth_response, Response):
             return auth_response
-        response = func(*args, **kwargs)
-        if hasattr(auth_response, 'response_headers'):
+        try:
+            response = func(*args, **kwargs)
+        except HTTPException as e:
+            # Handling werkzeug HTTPException instead of internal one
+            # for gaining access to the returned error http response.
+            _handle_exception_response_headers(auth_headers, e)
+            raise e
+        if auth_headers:
             if isinstance(response, tuple):
                 response = _extend_tuple_response_headers(
                     response=response,

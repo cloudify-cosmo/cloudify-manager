@@ -363,36 +363,74 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             blueprint_file_name='blueprint_with_inputs.yaml',
             blueprint_id='b5566',
             deployment_id=self.DEPLOYMENT_ID,
-            inputs={'http_web_server_port': '8080'})
+            inputs={'http_web_server_port': '8080',
+                    'http_web_server_port2': {'a': ['9090']}})
         node = self.client.nodes.get(self.DEPLOYMENT_ID, 'http_web_server')
         self.assertEqual('8080', node.properties['port'])
-        try:
-            self.put_deployment(
-                blueprint_file_name='blueprint_with_inputs.yaml',
-                blueprint_id='b1122',
-                deployment_id=self.DEPLOYMENT_ID,
-                inputs='illegal')
-        except CloudifyClientError, e:
-            self.assertTrue('inputs parameter is expected' in str(e))
-        try:
-            self.put_deployment(
-                blueprint_id='b3344',
-                blueprint_file_name='blueprint_with_inputs.yaml',
-                deployment_id=self.DEPLOYMENT_ID,
-                inputs={'some_input': '1234'})
-        except CloudifyClientError, e:
-            self.assertIn('were not specified', str(e))
-        try:
-            self.put_deployment(
-                blueprint_id='b7788',
-                blueprint_file_name='blueprint_with_inputs.yaml',
-                deployment_id=self.DEPLOYMENT_ID,
-                inputs={
-                    'http_web_server_port': '1234',
-                    'unknown_input': 'yey'
-                })
-        except CloudifyClientError, e:
-            self.assertTrue('Unknown input' in str(e))
+        node2 = self.client.nodes.get(self.DEPLOYMENT_ID, 'http_web_server2')
+        self.assertEqual('9090', node2.properties['port'])
+        self.assertRaisesRegexp(CloudifyClientError,
+                                'inputs parameter is expected',
+                                self.put_deployment,
+                                blueprint_id='b1122',
+                                blueprint_file_name='blueprint_with_inputs'
+                                                    '.yaml',
+                                deployment_id=self.DEPLOYMENT_ID,
+                                inputs='illegal')
+        self.assertRaisesRegexp(CloudifyClientError,
+                                'were not specified',
+                                self.put_deployment,
+                                blueprint_id='b3344',
+                                blueprint_file_name='blueprint_with_inputs'
+                                                    '.yaml',
+                                deployment_id=self.DEPLOYMENT_ID,
+                                inputs={'some_input': '1234'})
+        self.assertRaisesRegexp(CloudifyClientError,
+                                'Unknown input',
+                                self.put_deployment,
+                                blueprint_id='b7788',
+                                blueprint_file_name='blueprint_with_inputs'
+                                                    '.yaml',
+                                deployment_id=self.DEPLOYMENT_ID,
+                                inputs={
+                                    'http_web_server_port': '1234',
+                                    'http_web_server_port2': {'a': ['9090']},
+                                    'unknown_input': 'yay'
+                                })
+        self.assertRaisesRegexp(CloudifyClientError,
+                                "(Input attribute).+(doesn't exist)",
+                                self.put_deployment,
+                                blueprint_id='b7789',
+                                blueprint_file_name='blueprint_with_inputs'
+                                                    '.yaml',
+                                deployment_id=self.DEPLOYMENT_ID,
+                                inputs={
+                                    'http_web_server_port': '1234',
+                                    'http_web_server_port2': {
+                                        'something_new': ['9090']}
+                                })
+        self.assertRaisesRegexp(CloudifyClientError,
+                                'is expected to be an int but got',
+                                self.put_deployment,
+                                blueprint_id='b7790',
+                                blueprint_file_name='blueprint_with_inputs'
+                                                    '.yaml',
+                                deployment_id=self.DEPLOYMENT_ID,
+                                inputs={
+                                    'http_web_server_port': '1234',
+                                    'http_web_server_port2': [1234]
+                                })
+        self.assertRaisesRegexp(CloudifyClientError,
+                                "(List size of).+(but index)",
+                                self.put_deployment,
+                                blueprint_id='b7791',
+                                blueprint_file_name='blueprint_with_inputs'
+                                                    '.yaml',
+                                deployment_id=self.DEPLOYMENT_ID,
+                                inputs={
+                                    'http_web_server_port': '1234',
+                                    'http_web_server_port2': {'a': []}
+                                })
 
     def test_outputs(self):
         id_ = 'i{0}'.format(uuid.uuid4())

@@ -369,14 +369,6 @@ class SQLStorageManager(object):
                 )
             )
 
-        if pagination_size > config.instance.max_results:
-            raise manager_exceptions.IllegalActionError(
-                'Invalid pagination size: {0}. Max allowed: {1}'.format(
-                    pagination_size,
-                    config.instance.max_results
-                )
-            )
-
     @staticmethod
     def _validate_returned_size(size):
         if size > config.instance.max_results:
@@ -526,6 +518,7 @@ class SQLStorageManager(object):
         :return: A (possibly empty) list of `model_class` results
         """
         self._validate_available_memory()
+
         if filters:
             msg = 'List `{0}` with filter {1}'.format(model_class.__name__,
                                                       filters)
@@ -546,6 +539,23 @@ class SQLStorageManager(object):
         pagination = {'total': total, 'size': size, 'offset': offset}
 
         current_app.logger.debug('Returning: {0}'.format(results))
+        return ListResult(items=results, metadata={'pagination': pagination})
+
+    def summarize(self, target_field, model_class,
+                  pagination, get_all_results, all_tenants, filters):
+        f = self._get_column(model_class, target_field)
+        query = self._get_query(
+            model_class,
+            all_tenants=all_tenants,
+            filters=filters,
+            sort={target_field: f.desc()},
+        ).with_entities(f, db.func.count(f)).group_by(f)
+
+        results, total, size, offset = self._paginate(query,
+                                                      pagination,
+                                                      get_all_results)
+        pagination = {'total': total, 'size': size, 'offset': offset}
+
         return ListResult(items=results, metadata={'pagination': pagination})
 
     def count(self, model_class, filters=None):

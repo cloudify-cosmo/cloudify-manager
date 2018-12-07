@@ -99,7 +99,10 @@ def setup_resources(api):
         'ManagerConfig': 'config',
         'ManagerRestConfig': 'rest/config',
         'Agents': 'agents',
-        'AgentsName': 'agents/<string:name>'
+        'AgentsName': 'agents/<string:name>',
+        'SummarizeDeployments': 'summary/deployments',
+        'SummarizeNodes': 'summary/nodes',
+        'SummarizeNodeInstances': 'summary/node_instances',
     }
 
     # Set version endpoint as a non versioned endpoint
