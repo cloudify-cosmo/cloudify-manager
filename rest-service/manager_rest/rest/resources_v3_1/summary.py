@@ -17,6 +17,7 @@ class BaseSummary(SecuredResource):
 
     def get(self, pagination=None, all_tenants=None, filters=None):
         target_field = request.args.get('_target_field')
+        subfield = request.args.get('_sub_field')
 
         get_all_results = rest_utils.verify_and_convert_bool(
             '_get_all_results',
@@ -32,8 +33,18 @@ class BaseSummary(SecuredResource):
                 )
             )
 
+        if subfield and subfield not in self.summary_fields:
+            raise manager_exceptions.BadParametersError(
+                'Field {target} is not available for summary. Valid fields '
+                'are: {valid}'.format(
+                    target=subfield,
+                    valid=', '.join(self.summary_fields),
+                )
+            )
+
         return get_storage_manager().summarize(
             target_field=target_field,
+            sub_field=subfield,
             model_class=self.model,
             pagination=pagination,
             all_tenants=all_tenants,
@@ -48,13 +59,28 @@ def marshal_summary(summary_type):
         def wrapper(*args, **kwargs):
             result = func(*args, **kwargs)
             target_field = request.args.get('_target_field')
-            items = [
-                {
-                    target_field: item[0],
-                    summary_type: item[1],
-                } for item in result.items
-            ]
-            return {"items": items, "metadata": result.metadata}
+            subfield = request.args.get('_sub_field')
+
+            marshalled_items = {}
+            for item in result.items:
+                if item[0] not in marshalled_items:
+                    marshalled_items[item[0]] = {
+                        target_field: item[0],
+                        summary_type: 0,
+                    }
+
+                if subfield:
+                    subfield_key = 'by {0}'.format(subfield)
+                    if subfield_key not in marshalled_items[item[0]]:
+                        marshalled_items[item[0]][subfield_key] = []
+                    marshalled_items[item[0]][subfield_key].append({
+                        subfield: item[1],
+                        summary_type: item[-1],
+                    })
+                marshalled_items[item[0]][summary_type] += item[-1]
+
+            return {"items": marshalled_items.values(),
+                    "metadata": result.metadata}
         return wrapper
     return build_wrapper
 
@@ -62,6 +88,8 @@ def marshal_summary(summary_type):
 class SummarizeDeployments(BaseSummary):
     summary_fields = [
         'blueprint_id',
+        'tenant_name',
+        'visibility',
     ]
     auth_req = 'deployment_list'
     model = models.Deployment
@@ -77,9 +105,11 @@ class SummarizeDeployments(BaseSummary):
 
 
 class SummarizeNodes(BaseSummary):
-    summary_fields = {
-        'deployment_id': models.Deployment.id,
-    }
+    summary_fields = [
+        'deployment_id',
+        'tenant_name',
+        'visibility',
+    ]
     auth_req = 'node_list'
     model = models.Node
 
@@ -98,6 +128,9 @@ class SummarizeNodeInstances(BaseSummary):
         'deployment_id',
         'node_id',
         'state',
+        'host_id',
+        'tenant_name',
+        'visibility',
     ]
     auth_req = 'node_instance_list'
     model = models.NodeInstance
@@ -110,3 +143,43 @@ class SummarizeNodeInstances(BaseSummary):
     @rest_decorators.all_tenants
     def get(self, *args, **kwargs):
         return super(SummarizeNodeInstances, self).get(*args, **kwargs)
+
+
+class SummarizeExecutions(BaseSummary):
+    summary_fields = [
+        'status',
+        'blueprint_id',
+        'deployment_id',
+        'workflow_id',
+        'tenant_name',
+        'visibility',
+    ]
+    auth_req = 'execution_list'
+    model = models.Execution
+
+    @authorize(auth_req, allow_all_tenants=True)
+    @marshal_summary('executions')
+    @rest_decorators.exceptions_handled
+    @rest_decorators.create_filters(models.Execution)
+    @rest_decorators.paginate
+    @rest_decorators.all_tenants
+    def get(self, *args, **kwargs):
+        return super(SummarizeExecutions, self).get(*args, **kwargs)
+
+
+class SummarizeBlueprints(BaseSummary):
+    summary_fields = [
+        'tenant_name',
+        'visibility',
+    ]
+    auth_req = 'blueprint_list'
+    model = models.Blueprint
+
+    @authorize(auth_req, allow_all_tenants=True)
+    @marshal_summary('blueprints')
+    @rest_decorators.exceptions_handled
+    @rest_decorators.all_tenants
+    @rest_decorators.create_filters(models.Blueprint)
+    @rest_decorators.paginate
+    def get(self, *args, **kwargs):
+        return super(SummarizeBlueprints, self).get(*args, **kwargs)
