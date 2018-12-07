@@ -30,6 +30,7 @@ SKIP_RESET_WRITE = ['authorization']
 class Config(object):
 
     def __init__(self):
+        self.public_ip = None
         self.db_address = 'localhost'
         self.db_port = 9200
         self.postgresql_db_name = None
