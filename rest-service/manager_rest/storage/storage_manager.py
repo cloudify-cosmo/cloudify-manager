@@ -347,18 +347,16 @@ class SQLStorageManager(object):
         """
 
         if pagination:
-            size = pagination.get('size', 0)
+            size = pagination.get('size', config.instance.default_page_size)
             SQLStorageManager._validate_pagination(size)
             offset = pagination.get('offset', 0)
-            total = query.order_by(None).count()  # Fastest way to count
-            results = query.limit(size).offset(offset).all()
-            return results, total, size, offset
         else:
-            total = query.order_by(None).count()
-            if not get_all_results:
-                SQLStorageManager._validate_returned_size(total)
-            results = query.all()
-            return results, len(results), 0, 0
+            size = config.instance.default_page_size
+            offset = 0
+
+        total = query.order_by(None).count()  # Fastest way to count
+        results = query.limit(size).offset(offset).all()
+        return results, total, size, offset
 
     @staticmethod
     def _validate_pagination(pagination_size):
@@ -366,17 +364,6 @@ class SQLStorageManager(object):
             raise manager_exceptions.IllegalActionError(
                 'Invalid pagination size: {0}.'.format(
                     pagination_size
-                )
-            )
-
-    @staticmethod
-    def _validate_returned_size(size):
-        if size > config.instance.max_results:
-            raise manager_exceptions.IllegalActionError(
-                'Response size ({0}) bigger than max allowed ({1}), '
-                'please use pagination.'.format(
-                    size,
-                    config.instance.max_results
                 )
             )
 

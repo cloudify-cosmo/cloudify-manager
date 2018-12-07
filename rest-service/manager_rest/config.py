@@ -66,7 +66,7 @@ class Config(object):
         self.rest_service_log_files_backup_count = None
         self.test_mode = False
         self.insecure_endpoints_disabled = True
-        self.max_results = 1000
+        self.default_page_size = 1000
         self.min_available_memory_mb = None
 
         self.security_hash_salt = None

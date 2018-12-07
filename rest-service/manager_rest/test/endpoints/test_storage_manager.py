@@ -19,7 +19,6 @@ from manager_rest import utils
 from manager_rest.test import base_test
 from manager_rest.storage import models
 from manager_rest.test.attribute import attr
-from manager_rest.manager_exceptions import IllegalActionError
 
 
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
@@ -207,17 +206,9 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                    visibility=VisibilityState.TENANT)
             self.sm.put(secret)
 
-        error_message = '^Response size .*? bigger than max allowed .*?' \
-                        'please use pagination.$'
-        self.assertRaisesRegexp(IllegalActionError,
-                                error_message,
-                                self.sm.list,
-                                models.Secret,
-                                include=['id', 'created_at'])
-
         secret_list = self.sm.list(
             models.Secret,
             include=['id', 'created_at'],
             get_all_results=True
         )
-        self.assertEquals(1001, len(secret_list))
+        self.assertEquals(1000, len(secret_list))
