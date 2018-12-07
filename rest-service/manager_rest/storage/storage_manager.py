@@ -541,15 +541,22 @@ class SQLStorageManager(object):
         current_app.logger.debug('Returning: {0}'.format(results))
         return ListResult(items=results, metadata={'pagination': pagination})
 
-    def summarize(self, target_field, model_class,
+    def summarize(self, target_field, sub_field, model_class,
                   pagination, get_all_results, all_tenants, filters):
         f = self._get_column(model_class, target_field)
+        fields = [f]
+        string_fields = [target_field]
+        if sub_field:
+            fields.append(self._get_column(model_class, sub_field))
+            string_fields.append(sub_field)
+        entities = fields + [db.func.count('*')]
         query = self._get_query(
             model_class,
             all_tenants=all_tenants,
             filters=filters,
             sort={target_field: f.desc()},
-        ).with_entities(f, db.func.count(f)).group_by(f)
+            include=string_fields,
+        ).with_entities(*entities).group_by(*fields)
 
         results, total, size, offset = self._paginate(query,
                                                       pagination,

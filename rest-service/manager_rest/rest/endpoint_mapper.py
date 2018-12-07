@@ -103,6 +103,8 @@ def setup_resources(api):
         'SummarizeDeployments': 'summary/deployments',
         'SummarizeNodes': 'summary/nodes',
         'SummarizeNodeInstances': 'summary/node_instances',
+        'SummarizeExecutions': 'summary/executions',
+        'SummarizeBlueprints': 'summary/blueprints',
     }
 
     # Set version endpoint as a non versioned endpoint
