@@ -143,7 +143,7 @@ class SnapshotRestore(object):
                 self._restore_amqp_vhosts_and_users()
                 self._restore_deployment_envs(postgres)
 
-            self._restore_hash_salt()
+            # self._restore_hash_salt()
 
             if self._restore_certificates:
                 self._restore_certificate()
@@ -450,6 +450,7 @@ class SnapshotRestore(object):
         self._restore_security_file()
         utils.restore_stage_files(self._tempdir, stage_restore_override)
         utils.restore_composer_files(self._tempdir)
+        self._restore_hash_salt()
         ctx.logger.info('Successfully restored archive files')
 
     def _restore_security_file(self):
