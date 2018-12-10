@@ -20,11 +20,9 @@ from functools import partial
 
 import wagon
 
-from manager_rest import config
 from integration_tests import AgentlessTestCase
 from integration_tests.framework import utils
 from integration_tests.tests.utils import get_resource as resource
-from cloudify_rest_client.exceptions import CloudifyClientError
 
 MAX_RESULT_FOR_TESTING = 9
 
@@ -33,13 +31,9 @@ class TestRestServiceListPagination(AgentlessTestCase):
     @classmethod
     def setUpClass(cls):
         super(TestRestServiceListPagination, cls).setUpClass()
-        TestRestServiceListPagination._update_config(
-            {'max_results': MAX_RESULT_FOR_TESTING})
 
     @classmethod
     def tearDownClass(cls):
-        TestRestServiceListPagination._update_config(
-            {'max_results': config.instance.max_results})
         super(TestRestServiceListPagination, cls).tearDownClass()
 
     def test_blueprints_pagination(self):
@@ -107,18 +101,6 @@ class TestRestServiceListPagination(AgentlessTestCase):
         self._test_pagination(self.client.plugins.list)
 
     def _test_pagination(self, list_func, total=10):
-        if total > MAX_RESULT_FOR_TESTING:
-            self.assertRaisesRegexp(CloudifyClientError,
-                                    'Response size',
-                                    list_func)
-
-            too_big_pagination = MAX_RESULT_FOR_TESTING + 1
-            self.assertRaisesRegexp(CloudifyClientError,
-                                    'Invalid pagination size',
-                                    list_func,
-                                    _offset=0,
-                                    _size=too_big_pagination)
-
         all_results = list_func(_sort=['id'],
                                 _offset=0,
                                 _size=MAX_RESULT_FOR_TESTING).items
