@@ -30,6 +30,7 @@ SKIP_RESET_WRITE = ['authorization']
 class Config(object):
 
     def __init__(self):
+        self.public_ip = None
         self.db_address = 'localhost'
         self.db_port = 9200
         self.postgresql_db_name = None
@@ -65,7 +66,7 @@ class Config(object):
         self.rest_service_log_files_backup_count = None
         self.test_mode = False
         self.insecure_endpoints_disabled = True
-        self.max_results = 1000
+        self.default_page_size = 1000
         self.min_available_memory_mb = None
 
         self.security_hash_salt = None

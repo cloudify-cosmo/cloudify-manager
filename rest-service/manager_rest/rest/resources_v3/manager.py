@@ -184,7 +184,7 @@ class LdapAuthentication(SecuredResource):
         ldap_config['ldap_is_active_directory'] = \
             rest_utils.verify_and_convert_bool(
                 'ldap_is_active_directory',
-                ldap_config.get('skip_uninstall', 'false')
+                ldap_config.get('ldap_is_active_directory') or False
             )
 
         if ((ldap_config['ldap_username']
