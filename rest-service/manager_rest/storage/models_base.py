@@ -132,7 +132,7 @@ class SQLModelBase(db.Model):
         'Enum': flask_fields.String,
         'Boolean': flask_fields.Boolean,
         'ARRAY': flask_fields.Raw,
-        'JSONString': flask_fields.Raw
+        'JSONString': flask_fields.Raw,
     }
 
     def to_dict(self, suppress_error=False):
