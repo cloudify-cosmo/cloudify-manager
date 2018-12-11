@@ -36,6 +36,9 @@ def upgrade():
     op.add_column('executions',
                   sa.Column('scheduled_for', UTCDateTime(), nullable=True))
 
+    op.execute('COMMIT')
+    # Add new execution status
+    op.execute("alter type execution_status add value 'scheduled'")
     op.add_column(
         'deployments',
         sa.Column('capabilities', sa.PickleType(comparator=lambda *a: False))
@@ -133,3 +136,42 @@ def downgrade():
             table_name,
             sa.Column('private_resource', sa.Boolean(), nullable=True)
         )
+
+    # remove the 'scheduled' value of the execution status enum.
+    # Since we are downgrading, and in older versions the `schedule` option does
+    # not exist, we change it to `failed`.
+    op.execute("""
+      update executions
+      set status='failed'
+      where status='scheduled'
+      """)
+
+    # unfortunately postgres doesn't directly support removing enum values,
+    # so we create a new type with the correct enum values and swap
+    # out the old one
+    op.execute("alter type execution_status rename to execution_status_old")
+
+    # create the new type
+    execution_status = sa.Enum(
+        'terminated',
+        'failed',
+        'cancelled',
+        'pending',
+        'started',
+        'cancelling',
+        'force_cancelling',
+        'kill_cancelling',
+        'queued',
+        name='execution_status',
+    )
+    execution_status.create(op.get_bind())
+
+    # update executions to use the new type
+    op.alter_column(
+        'executions',
+        'status',
+        type_=execution_status,
+        postgresql_using='status::text::execution_status')
+
+    # remove the old type
+    op.execute("DROP TYPE execution_status_old;")
