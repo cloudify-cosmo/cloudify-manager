@@ -47,4 +47,6 @@ from .summary import (                           # NOQA
     SummarizeDeployments,
     SummarizeNodes,
     SummarizeNodeInstances,
+    SummarizeExecutions,
+    SummarizeBlueprints,
 )

@@ -17,9 +17,12 @@ from flask import current_app
 from flask_restful.reqparse import Argument
 
 from cloudify.models_states import AgentState
+from cloudify.cryptography_utils import encrypt, decrypt
 
+from manager_rest.config import instance
 from manager_rest.rest import rest_decorators
 from manager_rest.security import SecuredResource
+from manager_rest.amqp_manager import AMQPManager
 from manager_rest import utils, manager_exceptions
 from manager_rest.rest.responses_v3 import AgentResponse
 from manager_rest.security.authorization import authorize
@@ -61,7 +64,10 @@ class AgentsName(SecuredResource):
         Get agent by name
         """
         validate_inputs({'name': name})
-        return get_storage_manager().get(models.Agent, name)
+        agent = get_storage_manager().get(models.Agent, name)
+        agent_dict = agent.to_dict()
+        agent_dict['rabbitmq_password'] = decrypt(agent.rabbitmq_password)
+        return agent_dict
 
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(models.Agent)
@@ -77,15 +83,21 @@ class AgentsName(SecuredResource):
         validate_inputs({'name': name})
         state = request_dict.get('state')
         self._validate_state(state)
+        response = {}
 
         try:
-            return self._create_agent(name, state, request_dict)
+            new_agent = self._create_agent(name, state, request_dict)
+            response = new_agent
         except manager_exceptions.ConflictError:
             # Assuming the agent was already created in cases of reinstalling
             # or healing
             current_app.logger.info("Not creating agent {0} because it "
                                     "already exists".format(name))
-            return {}
+            new_agent = get_storage_manager().get(models.Agent, name)
+
+        # Create rabbitmq user
+        self._get_amqp_manager().create_agent_user(new_agent)
+        return response
 
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(models.Agent)
@@ -104,6 +116,10 @@ class AgentsName(SecuredResource):
 
     def _create_agent(self, name, state, request_dict):
         timestamp = utils.get_formatted_timestamp()
+        rabbitmq_password = request_dict.get('rabbitmq_password')
+        rabbitmq_password = encrypt(rabbitmq_password) if rabbitmq_password \
+            else rabbitmq_password
+
         # TODO: remove these fields from the runtime properties
         new_agent = models.Agent(
             id=name,
@@ -114,7 +130,7 @@ class AgentsName(SecuredResource):
             state=state,
             version=request_dict.get('version'),
             rabbitmq_username=request_dict.get('rabbitmq_username'),
-            rabbitmq_password=request_dict.get('rabbitmq_password'),
+            rabbitmq_password=rabbitmq_password,
             rabbitmq_exchange=request_dict.get('rabbitmq_exchange'),
             created_at=timestamp,
             updated_at=timestamp,
@@ -139,3 +155,11 @@ class AgentsName(SecuredResource):
             raise manager_exceptions.BadParametersError(
                 'Invalid agent state: `{0}`.'.format(state)
             )
+
+    def _get_amqp_manager(self):
+        return AMQPManager(
+            host=instance.amqp_management_host,
+            username=instance.amqp_username,
+            password=instance.amqp_password,
+            verify=instance.amqp_ca_path
+        )

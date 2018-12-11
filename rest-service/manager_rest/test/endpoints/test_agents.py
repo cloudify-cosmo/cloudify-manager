@@ -16,11 +16,11 @@
 
 from cloudify.models_states import AgentState
 from cloudify.cryptography_utils import encrypt
+from cloudify.utils import generate_user_password
 
 from manager_rest.test import base_test
 from manager_rest import manager_exceptions
 from manager_rest.test.attribute import attr
-from manager_rest.amqp_manager import AMQPManager
 from manager_rest.test.mocks import put_node_instance
 from manager_rest.utils import get_formatted_timestamp
 from manager_rest.storage.models import Agent, NodeInstance
@@ -164,7 +164,7 @@ class AgentsTest(base_test.BaseServerTestCase):
             visibility='tenant',
             state=AgentState.CREATING,
             rabbitmq_username='rabbitmq_user_{0}'.format(agent_name),
-            rabbitmq_password=encrypt(AMQPManager._generate_user_password()),
+            rabbitmq_password=encrypt(generate_user_password()),
             rabbitmq_exchange=agent_name,
             created_at=get_formatted_timestamp(),
             updated_at=get_formatted_timestamp()
