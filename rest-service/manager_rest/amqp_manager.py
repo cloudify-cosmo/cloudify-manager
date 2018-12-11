@@ -13,18 +13,16 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-import random
-import string
-import requests
-from urllib import quote
 from requests.exceptions import HTTPError
 
 from functools import wraps
 
-from manager_rest.storage.models import Tenant
-from manager_rest.storage import get_storage_manager
-
+from cloudify.utils import generate_user_password
 from cloudify.cryptography_utils import encrypt, decrypt
+from cloudify.rabbitmq_client import RabbitMQClient, USERNAME_PATTERN
+
+from manager_rest.storage import get_storage_manager
+from manager_rest.storage.models import Tenant, Agent
 
 
 def ignore_not_found(func):
@@ -45,68 +43,9 @@ def ignore_not_found(func):
 RABBITMQ_MANAGEMENT_PORT = 15671
 
 
-class RabbitMQClient(object):
-    def __init__(self, host, username, password, port=RABBITMQ_MANAGEMENT_PORT,
-                 scheme='https', **request_kwargs):
-        self._host = host
-        self._port = port
-        self._scheme = scheme
-        request_kwargs.setdefault('auth', (username, password))
-        self._request_kwargs = request_kwargs
-
-    @property
-    def base_url(self):
-        return '{0}://{1}:{2}'.format(self._scheme, self._host, self._port)
-
-    def _do_request(self, request_method, url, **kwargs):
-        request_kwargs = self._request_kwargs.copy()
-        request_kwargs.update(kwargs)
-        request_kwargs.setdefault('headers', {})\
-            .setdefault('Content-Type', 'application/json',)
-
-        url = '{0}/api/{1}'.format(self.base_url, url)
-        response = request_method(url, **request_kwargs)
-        response.raise_for_status()
-        return response
-
-    def get_vhost_names(self):
-        vhosts = self._do_request(requests.get, 'vhosts').json()
-        return [vhost['name'] for vhost in vhosts]
-
-    def create_vhost(self, vhost):
-        vhost = quote(vhost, '')
-        self._do_request(requests.put, 'vhosts/{0}'.format(vhost))
-
-    def delete_vhost(self, vhost):
-        vhost = quote(vhost, '')
-        self._do_request(requests.delete, 'vhosts/{0}'.format(vhost))
-
-    def get_users(self):
-        return self._do_request(requests.get, 'users').json()
-
-    def create_user(self, username, password, tags=''):
-        self._do_request(requests.put, 'users/{0}'.format(username),
-                         json={'password': password, 'tags': tags})
-
-    def delete_user(self, username):
-        self._do_request(requests.delete, 'users/{0}'.format(username))
-
-    def set_vhost_permissions(self, vhost, username, configure='', write='',
-                              read=''):
-        vhost = quote(vhost, '')
-        self._do_request(requests.put,
-                         'permissions/{0}/{1}'.format(vhost, username),
-                         json={
-                             'configure': configure,
-                             'write': write,
-                             'read': read
-                         })
-
-
 class AMQPManager(object):
 
     VHOST_NAME_PATTERN = 'rabbitmq_vhost_{0}'
-    USERNAME_PATTERN = 'rabbitmq_user_{0}'
 
     def __init__(self, host, username, password, **request_kwargs):
         self._client = RabbitMQClient(host, username, password,
@@ -120,19 +59,10 @@ class AMQPManager(object):
         :param tenant: An SQLAlchemy Tenant object
         :return: The updated tenant object
         """
+        username, encrypted_password = self._create_rabbitmq_user(tenant)
         vhost = tenant.rabbitmq_vhost or \
             self.VHOST_NAME_PATTERN.format(tenant.name)
-        username = tenant.rabbitmq_username or \
-            self.USERNAME_PATTERN.format(tenant.name)
-
-        # The password is being stored encrypted in the DB
-        new_password = AMQPManager._generate_user_password()
-        password = decrypt(tenant.rabbitmq_password) \
-            if tenant.rabbitmq_password else new_password
-        encrypted_password = tenant.rabbitmq_password or encrypt(new_password)
-
         self._client.create_vhost(vhost)
-        self._client.create_user(username, password)
         self._client.set_vhost_permissions(vhost, username, '.*', '.*', '.*')
 
         # Gives configure and write permissions to the specific exchanges of
@@ -148,20 +78,53 @@ class AMQPManager(object):
 
         return tenant
 
+    def create_agent_user(self, agent):
+        """
+        Create a new RabbitMQ user, and grant the user permissions
+        :param agent: An SQLAlchemy Agent object
+        :return: The updated agent object
+        """
+        username, encrypted_password = self._create_rabbitmq_user(agent)
+        self._set_agent_rabbitmq_user_permissions(username,
+                                                  agent.rabbitmq_exchange,
+                                                  agent.tenant.rabbitmq_vhost)
+        agent.rabbitmq_username = username
+        agent.rabbitmq_password = encrypted_password
+        return agent
+
     def sync_metadata(self):
         """Synchronize database tenants with rabbitmq metadata"""
 
         tenants = self._storage_manager.list(Tenant, get_all_results=True)
+        agents = self._storage_manager.list(Agent, get_all_results=True)
         self._clear_extra_vhosts(tenants)
-        self._clear_extra_users(tenants)
-        self._add_missing_vhosts_and_users(tenants)
+        self._clear_extra_users(tenants, agents)
+        self._add_missing_vhosts_and_users(tenants, agents)
 
-    def _add_missing_vhosts_and_users(self, tenants):
+    def _create_rabbitmq_user(self, resource):
+        username = resource.rabbitmq_username or \
+                   USERNAME_PATTERN.format(resource.name)
+
+        # The password is being stored encrypted in the DB
+        new_password = generate_user_password()
+        password = decrypt(resource.rabbitmq_password) \
+            if resource.rabbitmq_password else new_password
+        encrypted_password = resource.rabbitmq_password or \
+            encrypt(new_password)
+
+        self._client.create_user(username, password)
+        return username, encrypted_password
+
+    def _add_missing_vhosts_and_users(self, tenants, agents):
         """Create vhosts and users present in the database"""
 
         for tenant in tenants:
-            t = self.create_tenant_vhost_and_user(tenant)
-            self._storage_manager.update(t)
+            updated_tenant = self.create_tenant_vhost_and_user(tenant)
+            self._storage_manager.update(updated_tenant)
+
+        for agent in agents:
+            updated_agent = self.create_agent_user(agent)
+            self._storage_manager.update(updated_agent)
 
     def _clear_extra_vhosts(self, tenants):
         """Remove vhosts in rabbitmq not present in the database"""
@@ -180,38 +143,25 @@ class AMQPManager(object):
         for vhost in extra_vhosts:
             self._client.delete_vhost(vhost)
 
-    def _clear_extra_users(self, tenants):
+    def _clear_extra_users(self, tenants, agents):
         """Remove users in rabbitmq not present in the database"""
-
-        expected_usernames = set(
-            tenant.rabbitmq_username
-            for tenant in tenants
-            if tenant.rabbitmq_username  # Ignore None values
-        )
+        expected_usernames = self._get_rabbitmq_users(tenants).union(
+            self._get_rabbitmq_users(agents))
         current_usernames = set(
             user['name']
             for user in self._client.get_users()
-            if user['name'].startswith(self.USERNAME_PATTERN[:-3])
+            if user['name'].startswith(USERNAME_PATTERN[:-3])
         )
         extra_usernames = current_usernames - expected_usernames
         for username in extra_usernames:
             self._client.delete_user(username)
 
-    @staticmethod
-    def _generate_user_password(password_length=32):
-        """Generate random string to use as user password."""
-        system_random = random.SystemRandom()
-        allowed_characters = (
-            string.letters +
-            string.digits +
-            '-_'
+    def _get_rabbitmq_users(self, resources):
+        return set(
+            resource.rabbitmq_username
+            for resource in resources
+            if resource.rabbitmq_username  # Ignore None values
         )
-
-        password = ''.join(
-            system_random.choice(allowed_characters)
-            for _ in xrange(password_length)
-        )
-        return password
 
     @ignore_not_found
     def _delete_vhost(self, vhost):
@@ -225,7 +175,33 @@ class AMQPManager(object):
         """ Delete the vhost and user associated with a tenant name """
 
         vhost = self.VHOST_NAME_PATTERN.format(tenant_name)
-        username = self.USERNAME_PATTERN.format(tenant_name)
+        username = USERNAME_PATTERN.format(tenant_name)
 
         self._delete_vhost(vhost)
         self._delete_user(username)
+
+    def _set_agent_rabbitmq_user_permissions(self,
+                                             username,
+                                             exchange,
+                                             tenant_vhost):
+        # Gives the user permissions only to these resources in the tenant
+        # vhost:
+        # 1. The agent's exchange
+        # 2. The agent's queues (for receiving tasks and sending responses)
+        # 3. The exchanges of events, logs and monitoring
+        allowed_resources = '^(cloudify-(events|logs|monitoring)|' \
+                            '{exchange}($|_(operation|workflow|service|' \
+                            'response_.*))$)'.format(exchange=exchange)
+        self._client.set_vhost_permissions(tenant_vhost,
+                                           username,
+                                           configure=allowed_resources,
+                                           write=allowed_resources,
+                                           read=allowed_resources)
+
+        # Gives configure and write permissions to the specific exchanges of
+        # events, logs and monitoring in the root vhost
+        allowed_resources = '^cloudify-(events|logs|monitoring)$'
+        self._client.set_vhost_permissions('/',
+                                           username,
+                                           configure=allowed_resources,
+                                           write=allowed_resources)

@@ -568,10 +568,4 @@ class Agent(CreatedAtMixin, SQLResourceBase):
         self._set_parent(node_instance)
         self.node_instance = node_instance
 
-    def to_response(self, **kwargs):
-        agent_dict = super(Agent, self).to_response()
-        agent_dict.pop('rabbitmq_username')
-        agent_dict.pop('rabbitmq_password')
-        return agent_dict
-
 # endregion
