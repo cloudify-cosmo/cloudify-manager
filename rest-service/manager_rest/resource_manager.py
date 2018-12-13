@@ -85,8 +85,14 @@ class ResourceManager(object):
             raise manager_exceptions.InvalidExecutionUpdateStatus(
                 "Invalid relationship - can't change status from {0} to {1}"
                 .format(execution.status, status))
+        old_status = execution.status
         execution.status = status
         execution.error = error
+
+        # Add `started_at` to scheduled execution that just started
+        if (old_status in ExecutionState.SCHEDULED_STATE
+                and status == ExecutionState.STARTED):
+            execution.started_at = utils.get_formatted_timestamp()
 
         if status in ExecutionState.END_STATES:
             execution.ended_at = utils.get_formatted_timestamp()
