@@ -13,12 +13,14 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import math
+from datetime import datetime
 from flask_security import current_user
 
 from cloudify.cryptography_utils import decrypt
-from cloudify.amqp_client import(get_client,
-                                 SendHandler,
-                                 ScheduledExecutionHandler)
+from cloudify.amqp_client import (get_client,
+                                  SendHandler,
+                                  ScheduledExecutionHandler)
 
 from manager_rest import config, utils
 from manager_rest.storage import get_storage_manager, models
@@ -162,7 +164,7 @@ def _execute_task(execution_id,
                   execution_creator):
     context['rest_token'] = execution_creator.get_auth_token()
 
-def _send_task_to_dlx(message, routing_key='workflow'):
+def _send_task_to_dlx(message, message_ttl, routing_key='workflow'):
     """
     We use Rabbit's `Dead Letter Exchange` to achieve execution scheduling:
     1. Create a Dead Letter Exchange with the following parameters:
@@ -170,14 +172,26 @@ def _send_task_to_dlx(message, routing_key='workflow'):
             between now and the scheduled time.
         - `dead-letter-exchange`: The temporary exchange that is used to
             forward the task
-        - `dead-letter-routing-key`: The queue we want the task to be sent to
-            (in this case MGMTWORKER queue).
+        - `dead-letter-routing-key`: The queue we want the task to be
+             ultimately sent to (in this case MGMTWORKER queue).
     2. Send the execution to that DLX
     3. When ttl is passed the task will automatically be sent to the
         MGMTWORKER queue and will be executed normally.
     """
+    dlx_exchange = message['id']
+    dlx_routing_key = message['id'] + '_queue'
+
     client = _get_amqp_client()
-    send_handler = ScheduledExecutionHandler()
+    send_handler = ScheduledExecutionHandler(exchange=dlx_exchange,
+                                             exchange_type='direct',
+                                             routing_key=dlx_routing_key,
+                                             target_exchange=MGMTWORKER_QUEUE,
+                                             target_routing_key=routing_key,
+                                             ttl=message_ttl)
+    client.add_handler(send_handler)
+    with client:
+        send_handler.publish(message)
+
 
 def _execute_task(execution_id, execution_parameters,
                   context, scheduled_time=None):
@@ -197,8 +211,19 @@ def _execute_task(execution_id, execution_parameters,
         return
     _send_mgmtworker_task(message)
 
-def _get_time_to_live(scheduled_time):
 
+def _get_time_to_live(scheduled_time):
+    """
+    Rabbit's ttl is the time until message is moved to another queue.
+    Ttl should be an Integer and in miliseconds.
+    :param scheduled_time: The date and time this execution is scheduled for.
+    :return: time (in miliseconds) between `now` and `scheduled time`
+    """
+    now = datetime.utcnow()
+    delta = (scheduled_time-now).total_seconds()
+    delta = int(math.floor(delta))
+    delta_in_milisecs = delta * 1000
+    return delta_in_milisecs
 
 
 def cancel_execution(execution_id):

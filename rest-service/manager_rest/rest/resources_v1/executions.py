@@ -107,7 +107,7 @@ class Executions(SecuredResource):
         workflow_id = request_dict['workflow_id']
         parameters = request_dict.get('parameters', None)
         wait_after_fail = request_dict.get('wait_after_fail', 600)
-        scheduled_time = request_dict.get('scheduled_time', None)
+        scheduled_time = request_dict['scheduled_time']
         if scheduled_time:
             scheduled_time = parse_datetime(scheduled_time)
 
