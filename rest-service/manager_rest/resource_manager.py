@@ -254,23 +254,6 @@ class ResourceManager(object):
                 )
         return True
 
-    def _is_central_executor_plugin(self, plugin):
-        """Is the plugin using a central_deployment_agent executor?
-
-        Requires the caller to already make sure that the plugin
-        does have a yaml file.
-        """
-        with open(plugin.yaml_file_path()) as f:
-            plugin_yaml = yaml.safe_load(f)
-
-        plugins = plugin_yaml.get(constants.PLUGINS, {})
-        for plugin_spec in plugins.values():
-            if plugin_spec.get(constants.PLUGIN_EXECUTOR_KEY) == \
-                    constants.CENTRAL_DEPLOYMENT_AGENT:
-                return True
-
-        return False
-
     def install_plugin(self, plugin):
         """Install the plugin if required.
 
