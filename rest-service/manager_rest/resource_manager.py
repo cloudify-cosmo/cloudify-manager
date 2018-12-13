@@ -231,7 +231,7 @@ class ResourceManager(object):
         )
         return execution
 
-    def _is_valid_yaml_file(self, plugin):
+    def _validate_plugin_yaml(self, plugin):
         """Is the plugin YAML file valid?"""
 
         with open(plugin.yaml_file_path()) as f:
@@ -277,6 +277,9 @@ class ResourceManager(object):
         The plugin will be installed if the declared platform/distro
         is the same as the manager's.
         """
+        if plugin.yaml_file_path():
+            self._validate_plugin_yaml(plugin)
+
         if not utils.plugin_installable_on_current_platform(plugin):
             return
 
