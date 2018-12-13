@@ -187,14 +187,10 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                               e.error_code)
 
     def test_listing_executions_for_nonexistent_deployment(self):
-        try:
-            self.client.executions.list(deployment_id='doesnotexist')
-            self.fail()
-        except CloudifyClientError, e:
-            self.assertEqual(404, e.status_code)
-            self.assertEquals(
-                manager_exceptions.NotFoundError.NOT_FOUND_ERROR_CODE,
-                e.error_code)
+        result = self.client.executions.list(deployment_id='doesnotexist')
+        if not isinstance(result, list):
+            result = result.items
+        assert result == []
 
     def test_get_workflows_of_deployment(self):
         (blueprint_id, deployment_id, blueprint_response,
