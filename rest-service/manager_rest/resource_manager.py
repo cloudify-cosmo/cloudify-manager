@@ -541,7 +541,8 @@ class ResourceManager(object):
                 error='',
                 parameters=execution_parameters,
                 is_system_workflow=False,
-                is_dry_run=dry_run
+                is_dry_run=dry_run,
+                scheduled_for=scheduled_time
             )
 
             if deployment:
@@ -638,7 +639,7 @@ class ResourceManager(object):
             )
 
     @staticmethod
-    def _get_proper_status(should_queue, scheduled):
+    def _get_proper_status(should_queue, scheduled=None):
         if should_queue:
             return ExecutionState.QUEUED
 
@@ -646,7 +647,6 @@ class ResourceManager(object):
             return ExecutionState.SCHEDULED
 
         return ExecutionState.PENDING
-
 
     @staticmethod
     def _verify_workflow_in_deployment(wf_id, deployment, dep_id):
