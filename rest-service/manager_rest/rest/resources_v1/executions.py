@@ -74,12 +74,6 @@ class Executions(SecuredResource):
              Argument('include_system_workflows', type=boolean,
                       default=False)]
         )
-        if args.deployment_id:
-            get_storage_manager().get(
-                models.Deployment,
-                args.deployment_id,
-                include=['id']
-            )
         deployment_id_filter = ResourceManager.create_filters_dict(
             deployment_id=args.deployment_id)
         return get_resource_manager().list_executions(
