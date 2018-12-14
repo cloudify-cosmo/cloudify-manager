@@ -1,5 +1,7 @@
 %define _python_bytecompile_errors_terminate_build 0
+%define __jar_repack %{nil}
 %define PIP_INSTALL /opt/mgmtworker/env/bin/pip install -c "${RPM_SOURCE_DIR}/packaging/mgmtworker/constraints.txt"
+
 Name:           cloudify-management-worker
 Version:        %{CLOUDIFY_VERSION}
 Release:        %{CLOUDIFY_PACKAGE_RELEASE}%{?dist}

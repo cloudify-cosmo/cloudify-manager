@@ -1,4 +1,4 @@
-version: 2
+version: 2.1
 
 checkout:
   post:
@@ -141,47 +141,65 @@ jobs:
 
 
   build-rpms:
-    machine:
-      enabled: true
-
+    docker:
+      - image: rpmbuild/centos7
+    working_directory: ~/rpm
     steps:
       - checkout
-      - run: sudo apt-get install parallel
+      - run:
+          name: Set version environment variables
+          command: cat packaging/version_info >> $BASH_ENV
+      - run: sudo yum install rpmdevtools -y
+      - run: sudo chmod a+wx /opt
+      - build_rpm:
+          spec_file: cloudify-rest-service.spec
+      - build_rpm:
+          spec_file: cloudify-agents.spec
+      - build_rpm:
+          spec_file: cloudify-mgmtworker.spec
+      - build_rpm:
+          spec_file: cloudify-rabbitmq.spec
+      - build_rpm:
+          spec_file: cloudify-riemann.spec
+      - build_rpm:
+          spec_file: cloudify-manager-ip-setter.spec
       - run: |
-          builder="docker run --cap-add SYS_ADMIN --security-opt apparmor:unconfined --mount type=bind,source=$(pwd),target=/source cloudify3/mock-builder:0.1 python /source/packaging/build_rpm.py /source/packaging/"
-          parallel --results logs $builder{} ::: \
-              cloudify-rest-service.spec \
-              cloudify-manager-ip-setter.spec \
-              cloudify-mgmtworker.spec \
-              cloudify-agents.spec \
-              cloudify-rabbitmq.spec
-      - run: mkdir result
-      - run: mv packaging/*.rpm result
-
-      - store_artifacts:
-          path: logs
-          destination: logs
+          mkdir result
+          mv noarch/*.rpm result || true
+          mv x86_64/*.rpm result || true
       - store_artifacts:
           path: result
           destination: result
 
+commands:
+  build_rpm:
+    description: Build a single component rpm
+    parameters:
+      spec_file:
+        description: Name of the spec spec file
+        type: string
+    steps:
+      - run:
+          name: Installing build dependencies for << parameters.spec_file >>
+          command: sudo yum-builddep -y packaging/<< parameters.spec_file >>
+      - run:
+          name: Downloading sources for << parameters.spec_file >>
+          command: |
+            spectool \
+              -d "CLOUDIFY_VERSION ${CLOUDIFY_VERSION}" \
+              -d "CLOUDIFY_PACKAGE_RELEASE ${CLOUDIFY_PACKAGE_RELEASE}" \
+              -P packaging/<< parameters.spec_file >> \
+              -S -g
+      - run:
+          name: Building rpm from << parameters.spec_file >>
+          command: |
+            rpmbuild \
+              -D "CLOUDIFY_VERSION ${CLOUDIFY_VERSION}" \
+              -D "CLOUDIFY_PACKAGE_RELEASE ${CLOUDIFY_PACKAGE_RELEASE}" \
+              -bb packaging/<< parameters.spec_file >>
 
 workflows:
   version: 2
-
   build_and_test:
     jobs:
-      - flake8
       - build-rpms
-      - test_v1
-      - test_clientv2_endpoints
-      - test_clientv2_infrastructure
-      - test_clientv2_1_endpoints
-      - test_clientv2_1_infrastructure
-      - test_clientv3_endpoints
-      - test_clientv3_infrastructure
-      - test_clientv3_1_endpoints
-      - test_clientv3_1_infrastructure
-      - test_workflows
-      - test_premium
-      - test_amqp_postgres
