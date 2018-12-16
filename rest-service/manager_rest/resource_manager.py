@@ -231,7 +231,7 @@ class ResourceManager(object):
         )
         return execution
 
-    def _is_valid_yaml_file(self, plugin):
+    def _validate_plugin_yaml(self, plugin):
         """Is the plugin YAML file valid?"""
 
         with open(plugin.yaml_file_path()) as f:
@@ -254,41 +254,17 @@ class ResourceManager(object):
                 )
         return True
 
-    def _is_central_executor_plugin(self, plugin):
-        """Is the plugin using a central_deployment_agent executor?
-
-        Requires the caller to already make sure that the plugin
-        does have a yaml file.
-        """
-        with open(plugin.yaml_file_path()) as f:
-            plugin_yaml = yaml.safe_load(f)
-
-        plugins = plugin_yaml.get(constants.PLUGINS, {})
-        for plugin_spec in plugins.values():
-            if plugin_spec.get(constants.PLUGIN_EXECUTOR_KEY) == \
-                    constants.CENTRAL_DEPLOYMENT_AGENT:
-                return True
-
-        return False
-
     def install_plugin(self, plugin):
         """Install the plugin if required.
 
         The plugin will be installed if the declared platform/distro
         is the same as the manager's.
-        If the yaml file is provided, it is additionally checked that
-        the plugin's executor is central_deployment_agent.
         """
-        plugin_yaml_path = plugin.yaml_file_path()
-        if plugin_yaml_path:
-            if self._is_valid_yaml_file(plugin) and \
-                    not self._is_central_executor_plugin(plugin):
-                return
+        if plugin.yaml_file_path():
+            self._validate_plugin_yaml(plugin)
 
         if not utils.plugin_installable_on_current_platform(plugin):
-            raise manager_exceptions.PluginDistributionNotSupported(
-                'Plugin `{0}` is not supported for the manager platform '
-                'or distribution.'.format(plugin))
+            return
 
         self._execute_system_workflow(
             wf_id='install_plugin',

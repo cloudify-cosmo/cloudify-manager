@@ -18,6 +18,7 @@ import pytz
 from functools import wraps
 from collections import OrderedDict
 
+from werkzeug.exceptions import HTTPException
 from dateutil.parser import parse as parse_datetime
 from flask_restful import marshal
 from flask_restful.utils import unpack
@@ -100,6 +101,14 @@ def exceptions_handled(func):
                 # to handle them properly in the outer try/except block
                 raise manager_exceptions.BadParametersError(e.error_message)
         except manager_exceptions.ManagerException as e:
+            utils.abort_error(e, current_app.logger)
+        except HTTPException as e:
+            raise e
+        except Exception as e:
+            # Catching all unintended exception and adding them relevant
+            # data for handling them afterwards.
+            e.status_code = 500
+            e.error_code = manager_exceptions.INTERNAL_SERVER_ERROR_CODE
             utils.abort_error(e, current_app.logger)
     return wrapper
 

@@ -17,7 +17,6 @@
 from flask import request
 from flask_restful_swagger import swagger
 
-from manager_rest import manager_exceptions
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.rest import (
     resources_v1,
@@ -25,7 +24,6 @@ from manager_rest.rest import (
     rest_utils,
 )
 from manager_rest.storage import (
-    get_storage_manager,
     models,
 )
 from manager_rest.security.authorization import authorize
@@ -61,9 +59,6 @@ class Executions(resources_v1.Executions):
         """
         List executions
         """
-        deployment_id = request.args.get('deployment_id')
-        if deployment_id:
-            self._check_if_deployment_exists(deployment_id, all_tenants)
         is_include_system_workflows = rest_utils.verify_and_convert_bool(
             '_include_system_workflows',
             request.args.get('_include_system_workflows', 'false'))
@@ -80,16 +75,3 @@ class Executions(resources_v1.Executions):
             all_tenants=all_tenants,
             get_all_results=get_all_results
         )
-
-    def _check_if_deployment_exists(self, deployment_id, all_tenants):
-        deployments_list = get_storage_manager().list(
-            models.Deployment,
-            include=['id'],
-            filters={'id': deployment_id},
-            all_tenants=all_tenants
-        )
-        if not deployments_list:
-            raise manager_exceptions.NotFoundError(
-                'Requested `Deployment` with ID `{0}` was not found'
-                .format(deployment_id)
-            )

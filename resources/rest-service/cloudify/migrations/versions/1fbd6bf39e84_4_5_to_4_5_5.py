@@ -107,20 +107,9 @@ def upgrade():
         unique=False
     )
 
-    update_query = """UPDATE {0}
-                      SET visibility = CAST (CASE
-                          WHEN (private_resource is true) THEN {1}
-                          WHEN (private_resource is false) THEN {2}
-                      END AS visibility_states);"""
-
     # Remove the deprecated column private_resource from all the
-    # resources tables and update the visibility column accordingly
+    # resources tables
     for table_name in resource_tables:
-        op.execute(update_query.format(
-            table_name,
-            "'{}'".format(VisibilityState.PRIVATE),
-            "'{}'".format(VisibilityState.TENANT)
-        ))
         op.drop_column(table_name, 'private_resource')
 
 
