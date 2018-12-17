@@ -206,7 +206,7 @@ def _execute_task(execution_id, execution_parameters,
     }
     if scheduled_time:
         message_ttl = _get_time_to_live(scheduled_time)
-        message['dlx_id'] = context['task_id']
+        message['dlx_id'] = execution_id
         _send_task_to_dlx(message, message_ttl)
         return
     _send_mgmtworker_task(message)
