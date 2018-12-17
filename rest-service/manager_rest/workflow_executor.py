@@ -202,7 +202,8 @@ def _execute_task(execution_id, execution_parameters,
     message = {
         'cloudify_task': {'kwargs': execution_parameters},
         'id': execution_id,
-        'dlx_id': None
+        'dlx_id': None,
+        'execution_creator': current_user.id
     }
     if scheduled_time:
         message_ttl = _get_time_to_live(scheduled_time)
