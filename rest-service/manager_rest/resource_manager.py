@@ -560,7 +560,6 @@ class ResourceManager(object):
 
         if scheduled_time:
             self.sm.put(new_execution)
-            # Insert execution to Dead Letter Exchange
 
         # executing the user workflow
         workflow_plugins = blueprint.plan[

@@ -111,8 +111,6 @@ def execute_system_workflow(wf_id,
                          context=context, execution_creator=execution_creator)
 
 
-
-
 def _get_tenant_dict():
     tenant_dict = utils.current_tenant.to_dict()
     tenant_dict['rabbitmq_password'] = decrypt(
@@ -174,7 +172,6 @@ def _send_task_to_dlx(message, message_ttl, routing_key='workflow'):
         send_handler.publish(message)
 
 
-
 def _execute_task(execution_id, execution_parameters,
                   context, execution_creator, scheduled_time=None):
     context['rest_token'] = execution_creator.get_auth_token()
@@ -184,7 +181,8 @@ def _execute_task(execution_id, execution_parameters,
     message = {
         'cloudify_task': {'kwargs': execution_parameters},
         'id': execution_id,
-        'dlx_id': None
+        'dlx_id': None,
+        'execution_creator': current_user.id
     }
     if scheduled_time:
         message_ttl = _get_time_to_live(scheduled_time)
