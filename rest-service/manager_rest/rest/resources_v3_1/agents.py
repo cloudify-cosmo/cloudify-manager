@@ -78,7 +78,8 @@ class AgentsName(SecuredResource):
         """
         request_dict = get_json_and_verify_params({
             'node_instance_id': {'type': unicode},
-            'state': {'type': unicode}
+            'state': {'type': unicode},
+            'create_rabbitmq_user': {'type': bool}
         })
         validate_inputs({'name': name})
         state = request_dict.get('state')
@@ -95,8 +96,9 @@ class AgentsName(SecuredResource):
                                     "already exists".format(name))
             new_agent = get_storage_manager().get(models.Agent, name)
 
-        # Create rabbitmq user
-        self._get_amqp_manager().create_agent_user(new_agent)
+        if request_dict.get('create_rabbitmq_user'):
+            # Create rabbitmq user
+            self._get_amqp_manager().create_agent_user(new_agent)
         return response
 
     @rest_decorators.exceptions_handled
