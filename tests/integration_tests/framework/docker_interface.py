@@ -35,9 +35,14 @@ class DockerInterface(object):
     def docker_client(self):
         return self.get_docker_client()
 
-    @property
-    def docker_images(self):
-        return [image.tags for image in self.docker_client.images.list()]
+    def list_image_tags(self):
+        image_tags = []
+        for image in self.docker_client.images.list():
+            image_tags = image_tags + image.tags
+        return image_tags
+
+    def pull_image(self, **kwargs):
+        return self.docker_client.images.pull(**kwargs)
 
     def build_image(self, dockerfile_object, image_name):
         return self.docker_client.images.build(fileobj=dockerfile_object,

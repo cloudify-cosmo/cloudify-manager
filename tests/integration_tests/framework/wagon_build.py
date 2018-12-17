@@ -13,18 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from docker.errors import APIError as DockerAPIError
+
 from integration_tests.framework.docker_interface import DockerInterface
 from integration_tests.resources.dockerfiles import centos as dockerfile
 
 # This message is always the last message when a wagon build is finished.
 WAGON_BUILD_TIMEOUT = 600
-WAGON_BUILD_DOCKER_IMAGE_NAME = 'wagonbuilder:latest'
+WAGON_BUILD_DOCKER_REPO_name = 'cloudifyplatform'
+WAGON_BUILD_DOCKER_IMAGE_NAME = 'cloudify-centos-wagon-builder'
+WAGON_BUILD_DOCKER_TAG_NAME = 'latest'
 DOCKER_CONTAINER_BUILD_DIR = '/build'
 
 
 class WagonBuildError(RuntimeError):
     def __init__(self, errors):
-        super(WagonBuildError, self).__init__("Failed to build wagon.")
+        message = "Failed to build wagon: {0}".format(errors)
+        super(WagonBuildError, self).__init__(message)
         self.errors = errors
 
 
@@ -41,6 +46,28 @@ class WagonBuilderMixin(DockerInterface):
         the plugin wagon.
         """
         return WAGON_BUILD_DOCKER_IMAGE_NAME
+
+    @property
+    def docker_image_tag(self):
+        """The tag of the Docker image that is used to build
+        the plugin wagon.
+        """
+        return WAGON_BUILD_DOCKER_TAG_NAME
+
+    @property
+    def docker_image_name_with_tag(self):
+        return "%s:%s" % (self.docker_image_name, self.docker_image_tag)
+
+    @property
+    def docker_image_name_with_repo(self):
+        return "%s:%s" % (self.docker_repo_name, self.docker_image_name)
+
+    @property
+    def docker_repo_name(self):
+        """The repo of the Docker image that is used to build
+        the plugin wagon.
+        """
+        return WAGON_BUILD_DOCKER_REPO_name
 
     @property
     def plugin_root_directory(self):
@@ -65,21 +92,35 @@ class WagonBuilderMixin(DockerInterface):
             }
         }
 
-    @property
-    def wagon_builder_image_exists(self):
+    def check_if_has_image_locally(self):
         """Check if the docker image already exists."""
-        return self.docker_image_name in self.docker_images
+        if self.docker_image_name_with_tag not in self.list_image_tags():
+            return False
+        return True
 
-    def build_docker_image(self):
-        """Build the wagon builder docker image."""
-        return self.build_image(dockerfile, self.docker_image_name)
+    def get_docker_image(self):
+        try:
+            self.pull_image(
+                repository=self.docker_image_name_with_repo,
+                tag=self.docker_image_tag)
+        except DockerAPIError:
+            self.build_image(dockerfile, self.docker_image_name)
+        if not self.check_if_has_image_locally():
+            raise WagonBuildError('{0} not in {1}'.format(
+                self.docker_image_name_with_tag, self.list_image_tags()))
+
+    def prepare_docker_image(self):
+        if not self.check_if_has_image_locally():
+            self.get_docker_image()
 
     def build_wagon(self):
-        if not self.wagon_builder_image_exists:
-            self.build_docker_image()
-        container = self.run_container(self.docker_image_name,
-                                       volumes=self.docker_volume_mapping,
-                                       detach=True)
+        self.prepare_docker_image()
+        container = self.run_container(
+            self.docker_image_name,
+            volumes=self.docker_volume_mapping,
+            detach=True)
         response = container.wait(timeout=self.wagon_build_time_limit)
         if response['StatusCode'] != 0:
             raise WagonBuildError(response)
+        container.stop()
+        container.remove()
