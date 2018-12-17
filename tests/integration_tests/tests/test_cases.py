@@ -47,6 +47,8 @@ from integration_tests.framework.riemann import RIEMANN_CONFIGS_DIR
 from integration_tests.tests import utils as test_utils
 from integration_tests.framework.constants import (PLUGIN_STORAGE_DIR,
                                                    CLOUDIFY_USER)
+from integration_tests.framework.wagon_build import (WagonBuilderMixin,
+                                                     WagonBuildError)
 from integration_tests.tests.utils import (
     wait_for_deployment_creation_to_complete,
     wait_for_deployment_deletion_to_complete
@@ -628,3 +630,24 @@ class AgentTestWithPlugins(AgentTestCase):
         install_plugin_ex = [ex for ex in self.client.executions.list(
             include_system_workflows=True) if ex.workflow_id == wf_name][0]
         self.wait_for_execution_to_end(install_plugin_ex)
+
+
+class PluginsTest(AgentTestWithPlugins, WagonBuilderMixin):
+
+    @staticmethod
+    def get_wagon_path(plugin_path):
+        for filename in os.listdir(plugin_path):
+            if filename.endswith('.wgn'):
+                return os.path.join(plugin_path, filename)
+        raise WagonBuildError(
+            'No wagon file was found in the plugin build directory.')
+
+    @property
+    def plugin_root_directory(self):
+        """ Path to the plugin root directory."""
+        raise NotImplementedError('Implemented by plugin test class.')
+
+    def _create_test_wagon(self, plugin_path):
+        """Overrides the inherited class _create_test_wagon."""
+        self.build_wagon()
+        return self.get_wagon_path(plugin_path)
