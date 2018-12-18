@@ -33,5 +33,6 @@ setup(
         'sh==1.11',
         'awscli==1.11.14',
         'docl',
+        'docker==3.6.0'
     ]
 )
