@@ -14,9 +14,6 @@
 #  * limitations under the License.
 
 from manager_rest.rest import responses
-from flask_restful_swagger import swagger
-from manager_rest.rest import rest_decorators
-
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager
@@ -24,14 +21,9 @@ from manager_rest.rest.rest_decorators import exceptions_handled, marshal_with
 
 
 class UserTokens(SecuredResource):
-    @swagger.operation(
-        responseClass=responses.Tokens,
-        nickname="get auth token for a specified user",
-        notes="Generate authentication token for a specified user",
-    )
+
     @exceptions_handled
     @marshal_with(responses.Tokens)
-    @rest_decorators.exceptions_handled
     @authorize('user_token')
     def get(self, user_id):
         """
