@@ -175,10 +175,12 @@ class Agents(object):
         cloudify_agent['node_instance_id'] = node_instance_id
         cloudify_agent['version'] = cloudify_agent.get('version') or \
             str(self._manager_version)
+        cloudify_agent.pop('broker_user', None)
+        cloudify_agent.pop('broker_pass', None)
         install_method = cloudify_agent.get('install_method')
         if install_method and install_method != AGENT_INSTALL_METHOD_NONE:
             create_agent_record(cloudify_agent,
-                                state=AgentState.STARTED,
+                                state=AgentState.RESTORED,
                                 create_rabbitmq_user=False,
                                 client=client)
 

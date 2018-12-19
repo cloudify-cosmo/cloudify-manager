@@ -132,11 +132,11 @@ class SnapshotRestore(object):
                 self._restore_files_to_manager()
                 self._restore_db(postgres, schema_revision, stage_revision)
                 self._restore_hash_salt()
+                self._encrypt_secrets(postgres)
+                self._encrypt_rabbitmq_passwords(postgres)
                 self._possibly_update_encryption_key()
                 self._generate_new_rest_token()
                 self._restart_rest_service()
-                self._encrypt_secrets(postgres)
-                self._encrypt_rabbitmq_passwords(postgres)
                 self._restore_plugins(existing_plugins)
                 self._restore_influxdb()
                 self._restore_credentials(postgres)
@@ -543,7 +543,8 @@ class SnapshotRestore(object):
         ctx.logger.info('Encrypting the passwords of RabbitMQ vhosts')
         postgres.encrypt_values(self._encryption_key,
                                 'tenants',
-                                'rabbitmq_password')
+                                'rabbitmq_password',
+                                primary_key='id')
         ctx.logger.info('Successfully encrypted the passwords of RabbitMQ')
 
     def _restore_stage(self, postgres, tempdir, migration_version):
