@@ -474,6 +474,7 @@ class SnapshotRestore(object):
         self._restore_security_file()
         utils.restore_stage_files(self._tempdir, stage_restore_override)
         utils.restore_composer_files(self._tempdir)
+        utils.recreate_mgmtworker_token()
         ctx.logger.info('Successfully restored archive files')
 
     def _restore_security_file(self):
