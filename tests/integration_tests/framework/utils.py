@@ -123,6 +123,8 @@ def create_pika_connection():
         password='c10udify')
     return pika.BlockingConnection(
         pika.ConnectionParameters(host=get_manager_ip(),
+                                  port=5671,
+                                  ssl=True,
                                   credentials=credentials))
 
 
