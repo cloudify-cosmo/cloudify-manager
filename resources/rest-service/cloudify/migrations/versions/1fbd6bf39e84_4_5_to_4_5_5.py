@@ -114,45 +114,72 @@ def upgrade():
     for table_name in resource_tables:
         op.drop_column(table_name, 'private_resource')
 
-   op.create_table('tasks_graphs',
-    sa.Column('_storage_id', sa.Integer(), autoincrement=True, nullable=False),
-    sa.Column('id', sa.Text(), nullable=True),
-    sa.Column('visibility', sa.Enum('private', 'tenant', 'global', name='visibility_states'), nullable=True),
-    sa.Column('name', sa.Text(), nullable=True),
-    sa.Column('created_at', manager_rest.storage.models_base.UTCDateTime(), nullable=False),
-    sa.Column('_execution_fk', sa.Integer(), nullable=False),
-    sa.Column('_tenant_id', sa.Integer(), nullable=False),
-    sa.Column('_creator_id', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['_creator_id'], [u'users.id'], name=op.f('tasks_graphs__creator_id_fkey'), ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['_execution_fk'], [u'executions._storage_id'], name=op.f('tasks_graphs__execution_fk_fkey'), ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['_tenant_id'], [u'tenants.id'], name=op.f('tasks_graphs__tenant_id_fkey'), ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('_storage_id', name=op.f('tasks_graphs_pkey'))
+    op.create_table(
+        'tasks_graphs',
+        sa.Column('_storage_id', sa.Integer(),
+                  autoincrement=True, nullable=False),
+        sa.Column('id', sa.Text(), nullable=True),
+        sa.Column('visibility', sa.Enum('private', 'tenant', 'global',
+                  name='visibility_states'), nullable=True),
+        sa.Column('name', sa.Text(), nullable=True),
+        sa.Column('created_at', manager_rest.storage.models_base.UTCDateTime(),
+                  nullable=False),
+        sa.Column('_execution_fk', sa.Integer(), nullable=False),
+        sa.Column('_tenant_id', sa.Integer(), nullable=False),
+        sa.Column('_creator_id', sa.Integer(), nullable=False),
+        sa.ForeignKeyConstraint(['_creator_id'], [u'users.id'],
+                                name=op.f('tasks_graphs__creator_id_fkey'),
+                                ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(['_execution_fk'], [u'executions._storage_id'],
+                                name=op.f('tasks_graphs__execution_fk_fkey'),
+                                ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(['_tenant_id'], [u'tenants.id'],
+                                name=op.f('tasks_graphs__tenant_id_fkey'),
+                                ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint('_storage_id', name=op.f('tasks_graphs_pkey'))
     )
-    op.create_index(op.f('tasks_graphs__tenant_id_idx'), 'tasks_graphs', ['_tenant_id'], unique=False)
-    op.create_index(op.f('tasks_graphs_created_at_idx'), 'tasks_graphs', ['created_at'], unique=False)
-    op.create_index(op.f('tasks_graphs_id_idx'), 'tasks_graphs', ['id'], unique=False)
-    op.create_table('operations',
-    sa.Column('_storage_id', sa.Integer(), autoincrement=True, nullable=False),
-    sa.Column('id', sa.Text(), nullable=True),
-    sa.Column('visibility', sa.Enum('private', 'tenant', 'global', name='visibility_states'), nullable=True),
-    sa.Column('name', sa.Text(), nullable=True),
-    sa.Column('state', sa.Text(), nullable=False),
-    sa.Column('created_at', manager_rest.storage.models_base.UTCDateTime(), nullable=False),
-    sa.Column('dependencies', postgresql.ARRAY(sa.Text()), nullable=True),
-    sa.Column('type', sa.Text(), nullable=True),
-    sa.Column('parameters', manager_rest.storage.models_base.JSONString(), nullable=True),
-    sa.Column('_tasks_graph_fk', sa.Integer(), nullable=False),
-    sa.Column('_tenant_id', sa.Integer(), nullable=False),
-    sa.Column('_creator_id', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['_creator_id'], [u'users.id'], name=op.f('operations__creator_id_fkey'), ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['_tasks_graph_fk'], [u'tasks_graphs._storage_id'], name=op.f('operations__tasks_graph_fk_fkey'), ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['_tenant_id'], [u'tenants.id'], name=op.f('operations__tenant_id_fkey'), ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('_storage_id', name=op.f('operations_pkey'))
+    op.create_index(op.f('tasks_graphs__tenant_id_idx'), 'tasks_graphs',
+                    ['_tenant_id'], unique=False)
+    op.create_index(op.f('tasks_graphs_created_at_idx'), 'tasks_graphs',
+                    ['created_at'], unique=False)
+    op.create_index(op.f('tasks_graphs_id_idx'), 'tasks_graphs', ['id'],
+                    unique=False)
+    op.create_table(
+        'operations',
+        sa.Column('_storage_id', sa.Integer(), autoincrement=True,
+                  nullable=False),
+        sa.Column('id', sa.Text(), nullable=True),
+        sa.Column('visibility', sa.Enum('private', 'tenant', 'global',
+                  name='visibility_states'), nullable=True),
+        sa.Column('name', sa.Text(), nullable=True),
+        sa.Column('state', sa.Text(), nullable=False),
+        sa.Column('created_at', manager_rest.storage.models_base.UTCDateTime(),
+                  nullable=False),
+        sa.Column('dependencies', postgresql.ARRAY(sa.Text()), nullable=True),
+        sa.Column('type', sa.Text(), nullable=True),
+        sa.Column('parameters', manager_rest.storage.models_base.JSONString(),
+                  nullable=True),
+        sa.Column('_tasks_graph_fk', sa.Integer(), nullable=False),
+        sa.Column('_tenant_id', sa.Integer(), nullable=False),
+        sa.Column('_creator_id', sa.Integer(), nullable=False),
+        sa.ForeignKeyConstraint(['_creator_id'], [u'users.id'],
+                                name=op.f('operations__creator_id_fkey'),
+                                ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(['_tasks_graph_fk'],
+                                [u'tasks_graphs._storage_id'],
+                                name=op.f('operations__tasks_graph_fk_fkey'),
+                                ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(['_tenant_id'], [u'tenants.id'],
+                                name=op.f('operations__tenant_id_fkey'),
+                                ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint('_storage_id', name=op.f('operations_pkey'))
     )
-    op.create_index(op.f('operations__tenant_id_idx'), 'operations', ['_tenant_id'], unique=False)
-    op.create_index(op.f('operations_created_at_idx'), 'operations', ['created_at'], unique=False)
-    op.create_index(op.f('operations_id_idx'), 'operations', ['id'], unique=False)
-
+    op.create_index(op.f('operations__tenant_id_idx'), 'operations',
+                    ['_tenant_id'], unique=False)
+    op.create_index(op.f('operations_created_at_idx'), 'operations',
+                    ['created_at'], unique=False)
+    op.create_index(op.f('operations_id_idx'), 'operations', ['id'],
+                    unique=False)
 
 
 def downgrade():
@@ -161,8 +188,10 @@ def downgrade():
     op.drop_index(op.f('operations__tenant_id_idx'), table_name='operations')
     op.drop_table('operations')
     op.drop_index(op.f('tasks_graphs_id_idx'), table_name='tasks_graphs')
-    op.drop_index(op.f('tasks_graphs_created_at_idx'), table_name='tasks_graphs')
-    op.drop_index(op.f('tasks_graphs__tenant_id_idx'), table_name='tasks_graphs')
+    op.drop_index(op.f('tasks_graphs_created_at_idx'),
+                  table_name='tasks_graphs')
+    op.drop_index(op.f('tasks_graphs__tenant_id_idx'),
+                  table_name='tasks_graphs')
     op.drop_table('tasks_graphs')
 
     op.drop_column('executions', 'is_dry_run')
