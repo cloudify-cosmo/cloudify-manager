@@ -17,6 +17,7 @@ from requests.exceptions import HTTPError
 
 from functools import wraps
 
+from cloudify.models_states import AgentState
 from cloudify.utils import generate_user_password
 from cloudify.cryptography_utils import encrypt, decrypt
 from cloudify.rabbitmq_client import RabbitMQClient, USERNAME_PATTERN
@@ -123,8 +124,9 @@ class AMQPManager(object):
             self._storage_manager.update(updated_tenant)
 
         for agent in agents:
-            updated_agent = self.create_agent_user(agent)
-            self._storage_manager.update(updated_agent)
+            if agent.state != AgentState.RESTORED:
+                updated_agent = self.create_agent_user(agent)
+                self._storage_manager.update(updated_agent)
 
     def _clear_extra_vhosts(self, tenants):
         """Remove vhosts in rabbitmq not present in the database"""
