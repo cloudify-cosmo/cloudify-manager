@@ -375,17 +375,12 @@ class Postgres(object):
             }
         return details
 
-    def encrypt_values(self, encryption_key, table_name, column_name):
+    def encrypt_values(self, encryption_key, table_name, column_name,
+                       primary_key='_storage_id'):
         """Encrypt the values of one column in a table
         """
-        # try to work with _storage_id, if does not exists, try with id
-        key = '_storage_id'
         values = self.run_query("SELECT {0}, {1} FROM {2}".format(
-            key, column_name, table_name))
-        if values['all'] is None:
-            key = 'id'
-            values = self.run_query("SELECT {0}, {1} FROM {2}".format(
-                key, column_name, table_name))
+            primary_key, column_name, table_name))
 
         # There is no relevant data in the snapshot
         if len(values['all']) < 1:
@@ -396,11 +391,11 @@ class Postgres(object):
             encrypted_value = encrypt(bytes(value[1]), encryption_key)
             encrypted_values.append((value[0], encrypted_value))
 
-        update_query = """
-UPDATE {0}
-SET {1} = encrypted_values.value
-FROM (VALUES %s) AS encrypted_values ({2}, value)
-WHERE {0}.{2} = encrypted_values.{2}""".format(table_name, column_name, key)
+        update_query = """UPDATE {0}
+                          SET {1} = encrypted_values.value
+                          FROM (VALUES %s) AS encrypted_values ({2}, value)
+                          WHERE {0}.{2} = encrypted_values.{2}""" \
+            .format(table_name, column_name, primary_key)
         self.run_query(update_query, vars=encrypted_values, bulk_query=True)
 
     def _connect(self):
