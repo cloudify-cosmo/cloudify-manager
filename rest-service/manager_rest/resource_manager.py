@@ -412,7 +412,7 @@ class ResourceManager(object):
         # Validate there are no running executions for this deployment
         deplyment_id_filter = self.create_filters_dict(
             deployment_id=deployment_id,
-            status=ExecutionState.ACTIVE_STATES+ExecutionState.QUEUED_STATE
+            status=ExecutionState.ACTIVE_STATES + ExecutionState.QUEUED_STATE
         )
         executions = self.sm.list(
             models.Execution,
@@ -459,6 +459,37 @@ class ResourceManager(object):
         else:
             return self.sm.delete(deployment)
 
+    def resume_execution(self, execution_id):
+        execution = self.sm.list(
+            models.Execution, filters={'id': execution_id},
+            get_all_results=True)[0]
+        if execution.status in ExecutionState.END_STATES or \
+                execution.status in ExecutionState.QUEUED_STATE:
+            raise manager_exceptions.ConflictError(
+                'Cannot resume execution in state {0}'
+                .format(execution.status))
+        execution.status = ExecutionState.STARTED
+        self.sm.update(execution)
+
+        workflow_id = execution.workflow_id
+        deployment = execution.deployment
+        blueprint = deployment.blueprint
+        workflow_plugins = blueprint.plan[
+            constants.WORKFLOW_PLUGINS_TO_INSTALL]
+        workflow = deployment.workflows[workflow_id]
+
+        workflow_executor.execute_workflow(
+            workflow_id,
+            workflow,
+            workflow_plugins=workflow_plugins,
+            blueprint_id=deployment.blueprint_id,
+            deployment_id=deployment.id,
+            execution_id=execution_id,
+            execution_parameters=execution.parameters,
+            bypass_maintenance=False,
+            dry_run=False)
+        return execution
+
     def execute_workflow(self,
                          deployment_id,
                          workflow_id,
@@ -493,7 +524,7 @@ class ResourceManager(object):
                     workflow, workflow_id, parameters, allow_custom_parameters)
 
             execution_parameters = self._get_only_user_execution_parameters(
-                    execution_parameters)
+                execution_parameters)
 
             execution_id = str(uuid.uuid4())
 
@@ -663,7 +694,7 @@ class ResourceManager(object):
         """
 
         status = ExecutionState.ACTIVE_STATES if execution else \
-            ExecutionState.ACTIVE_STATES+ExecutionState.QUEUED_STATE
+            ExecutionState.ACTIVE_STATES + ExecutionState.QUEUED_STATE
         filters = {
             'status': status
         }
@@ -732,7 +763,7 @@ class ResourceManager(object):
             execution_id = str(uuid.uuid4())  # will also serve as the task id
             execution_parameters = execution_parameters or {}
             execution_parameters = self._get_only_user_execution_parameters(
-                    execution_parameters)
+                execution_parameters)
             # currently, deployment env creation/deletion are not set as
             # system workflows
             is_system_workflow = wf_id not in ('create_deployment_environment',
@@ -1316,6 +1347,54 @@ class ResourceManager(object):
         # For backwards compatibility - adding it to the response.
         instance_dict['resource_availability'] = resource_availability
         instance_dict['private_resource'] = private_resource
+
+    def create_operation(self, operation_id, name, dependencies,
+                         parameters, type, graph_id=None,
+                         graph_storage_id=None):
+        # allow passing graph_storage_id directly as an optimization, so that
+        # we don't need to query for the graph based on display id
+        if (graph_id and graph_storage_id) or \
+                (not graph_id and not graph_storage_id):
+            raise ValueError(
+                'Pass exactly one of graph_id and graph_storage_id')
+        if graph_id:
+            graph = self.sm.list(models.TasksGraph,
+                                 filters={'id': graph_id},
+                                 get_all_results=True,
+                                 all_tenants=True)[0]
+            graph_storage_id = graph._storage_id
+        operation = models.Operation(
+            id=operation_id,
+            name=name,
+            _tasks_graph_fk=graph_storage_id,
+            created_at=utils.get_formatted_timestamp(),
+            state='pending',
+            dependencies=dependencies,
+            parameters=parameters,
+            type=type,
+        )
+        self.sm.put(operation)
+        return operation
+
+    def create_tasks_graph(self, name, execution_id, operations=None):
+        execution = self.sm.list(models.Execution,
+                                 filters={'id': execution_id},
+                                 get_all_results=True,
+                                 all_tenants=True)[0]
+        graph = models.TasksGraph(
+            id=uuid.uuid4().hex,
+            name=name,
+            _execution_fk=execution._storage_id,
+            created_at=utils.get_formatted_timestamp(),
+            _tenant_id=execution._tenant_id,
+            _creator_id=execution._creator_id
+        )
+        self.sm.put(graph)
+        if operations:
+            for operation in operations:
+                operation['graph_storage_id'] = graph._storage_id
+                self.create_operation(**operation)
+        return graph
 
     def list_agents(self, deployment_id=None, node_ids=None,
                     node_instance_ids=None, install_method=None):
