@@ -157,8 +157,8 @@ def _send_task_to_dlx(message, message_ttl, routing_key='workflow'):
     3. When ttl is passed the task will automatically be sent to the
         MGMTWORKER queue and will be executed normally.
     """
-    dlx_exchange = message['id']
-    dlx_routing_key = message['id'] + '_queue'
+    dlx_exchange = message['dlx_id']
+    dlx_routing_key = message['dlx_id'] + '_queue'
 
     client = _get_amqp_client()
     send_handler = ScheduledExecutionHandler(exchange=dlx_exchange,

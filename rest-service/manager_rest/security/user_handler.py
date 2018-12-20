@@ -18,9 +18,10 @@ from itsdangerous import BadSignature, SignatureExpired
 
 from ..storage.idencoder import get_encoder
 
+from cloudify.constants import CLOUDIFY_API_AUTH_TOKEN_HEADER
+
 from manager_rest.storage.models import User
 from manager_rest.manager_exceptions import NotFoundError
-from manager_rest.utils import CLOUDIFY_API_AUTH_TOKEN_HEADER
 from manager_rest.storage import user_datastore, get_storage_manager
 
 

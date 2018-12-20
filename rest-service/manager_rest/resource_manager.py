@@ -90,7 +90,7 @@ class ResourceManager(object):
         execution.error = error
 
         # Add `started_at` to scheduled execution that just started
-        if (old_status in ExecutionState.SCHEDULED_STATE
+        if (old_status == ExecutionState.SCHEDULED
                 and status == ExecutionState.STARTED):
             execution.started_at = utils.get_formatted_timestamp()
 
@@ -560,15 +560,16 @@ class ResourceManager(object):
 
         if scheduled_time:
             self.sm.put(new_execution)
-
-        # executing the user workflow
-        workflow_plugins = blueprint.plan[
-            constants.WORKFLOW_PLUGINS_TO_INSTALL]
-        if not scheduled_time:
+        else:
             # This execution will start now (it's not scheduled for later)
             new_execution.status = ExecutionState.PENDING
             new_execution.started_at = utils.get_formatted_timestamp()
             self.sm.put(new_execution)
+
+        # executing the user workflow
+        workflow_plugins = blueprint.plan[
+            constants.WORKFLOW_PLUGINS_TO_INSTALL]
+
         workflow_executor.execute_workflow(
             workflow_id,
             workflow,
