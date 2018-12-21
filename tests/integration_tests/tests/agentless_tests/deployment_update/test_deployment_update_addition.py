@@ -559,7 +559,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         deployment = self.client.deployments.get(dep_update.deployment_id)
         self.assertDictContainsSubset(
             {'custom_output': {'description': None, 'value': 0}},
-                                      deployment.outputs)
+            deployment.outputs)
 
     @mark.skip
     def test_add_description(self):

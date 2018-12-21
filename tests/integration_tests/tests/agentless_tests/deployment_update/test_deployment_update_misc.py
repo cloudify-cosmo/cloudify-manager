@@ -38,7 +38,7 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
         deployment = self.client.deployments.get(deployment.id)
         self.assertDictContainsSubset(
             {'custom_output': {'description': None, 'value': 0}},
-                                      deployment.outputs)
+            deployment.outputs)
         self.assertNotIn('modified description', deployment.description)
 
         def update_deployment_wait_and_assert(dep,
@@ -58,8 +58,8 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
             # verify deployment output
             dep = self.client.deployments.get(dep_update.deployment_id)
             self.assertDictContainsSubset(
-                {'custom_output':
-                     {'description': None, 'value': expected_output_value}},
+                {'custom_output': {'description': None,
+                                   'value': expected_output_value}},
                 dep.outputs)
             # verify deployment description
             self.assertEquals('modified description' in dep.description,
@@ -90,7 +90,7 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
         deployment = self.client.deployments.get(deployment.id)
         self.assertDictContainsSubset(
             {'custom_output': {'description': None, 'value': '0.0.0.0'}},
-                                      deployment.outputs)
+            deployment.outputs)
 
         def update_deployment_wait_and_assert(dep,
                                               bp_path,
@@ -115,9 +115,8 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
             # verify deployment output definition
             dep = self.client.deployments.get(dep_update.deployment_id)
             self.assertDictEqual(
-                {'custom_output':
-                     {'description': None,
-                      'value': expected_output_definition}},
+                {'custom_output': {'description': None,
+                                   'value': expected_output_definition}},
                 dep.outputs)
 
         # modify once to create a DeploymentUpdate object with one
