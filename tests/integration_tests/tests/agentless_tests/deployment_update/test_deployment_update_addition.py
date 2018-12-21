@@ -557,7 +557,8 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         self._wait_for_successful_state(dep_update.id)
 
         deployment = self.client.deployments.get(dep_update.deployment_id)
-        self.assertDictContainsSubset({'custom_output': {'value': 0}},
+        self.assertDictContainsSubset(
+            {'custom_output': {'description': None, 'value': 0}},
                                       deployment.outputs)
 
     @mark.skip

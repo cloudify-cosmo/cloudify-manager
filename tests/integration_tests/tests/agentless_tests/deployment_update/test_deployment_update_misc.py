@@ -36,7 +36,8 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
         deployment, _ = self.deploy_application(base_bp_path)
         # assert initial deployment state
         deployment = self.client.deployments.get(deployment.id)
-        self.assertDictContainsSubset({'custom_output': {'value': 0}},
+        self.assertDictContainsSubset(
+            {'custom_output': {'description': None, 'value': 0}},
                                       deployment.outputs)
         self.assertNotIn('modified description', deployment.description)
 
@@ -57,7 +58,8 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
             # verify deployment output
             dep = self.client.deployments.get(dep_update.deployment_id)
             self.assertDictContainsSubset(
-                {'custom_output': {'value': expected_output_value}},
+                {'custom_output':
+                     {'description': None, 'value': expected_output_value}},
                 dep.outputs)
             # verify deployment description
             self.assertEquals('modified description' in dep.description,
@@ -86,7 +88,8 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
         deployment, _ = self.deploy_application(base_bp_path)
         # assert initial deployment state
         deployment = self.client.deployments.get(deployment.id)
-        self.assertDictContainsSubset({'custom_output': {'value': '0.0.0.0'}},
+        self.assertDictContainsSubset(
+            {'custom_output': {'description': None, 'value': '0.0.0.0'}},
                                       deployment.outputs)
 
         def update_deployment_wait_and_assert(dep,
@@ -112,7 +115,9 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
             # verify deployment output definition
             dep = self.client.deployments.get(dep_update.deployment_id)
             self.assertDictEqual(
-                {'custom_output': {'value': expected_output_definition}},
+                {'custom_output':
+                     {'description': None,
+                      'value': expected_output_definition}},
                 dep.outputs)
 
         # modify once to create a DeploymentUpdate object with one
@@ -239,13 +244,13 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
         # Checking that get_property works correctly
         outputs_to_check = {
             'output_prop1': {
-                'value': 'custom_input1'
+                'description': None, 'value': 'custom_input1'
             },
             'output_prop2': {
-                'value': 'custom_input2'
+                'description': None, 'value': 'custom_input2'
             },
             'output_prop3': {
-                'value': 'custom_input3'
+                'description': None, 'value': 'custom_input3'
             }
         }
         outputs = self.client.deployments.get(deployment.id).outputs

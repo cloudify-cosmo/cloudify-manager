@@ -349,7 +349,8 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
             self._deploy_and_get_modified_bp_path('modify_output')
 
         deployment = self.client.deployments.get(deployment.id)
-        self.assertDictContainsSubset({'custom_output': {'value': 0}},
+        self.assertDictContainsSubset(
+            {'custom_output': {'description': None, 'value': 0}},
                                       deployment.outputs)
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
@@ -362,7 +363,8 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         self._wait_for_successful_state(dep_update.id)
 
         deployment = self.client.deployments.get(dep_update.deployment_id)
-        self.assertDictContainsSubset({'custom_output': {'value': 1}},
+        self.assertDictContainsSubset(
+            {'custom_output': {'description': None, 'value': 1}},
                                       deployment.outputs)
 
     def test_modify_description(self):
