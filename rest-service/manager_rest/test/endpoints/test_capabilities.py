@@ -50,6 +50,12 @@ class CapabilitiesTestCase(base_test.BaseServerTestCase):
 
         self.assertEqual(capabilities['node_1_key'], 'default_value')
         self.assertEqual(capabilities['node_2_key'], 'override_value')
+        self.assertListEqual(
+            capabilities['node_1_key_nested'],
+            [{'nested': 'default_value'}])
+        self.assertListEqual(
+            capabilities['node_2_key_nested'],
+            [{'nested': 'override_value'}])
         self.assertDictEqual(
             capabilities['complex_capability'],
             self.complex_capability
@@ -63,12 +69,22 @@ class CapabilitiesTestCase(base_test.BaseServerTestCase):
 
         values_mapping = {
             'node1': {'get_capability': ['shared', 'node_1_key']},
-            'node2': {'get_capability': ['shared', 'node_2_key']}
+            'node2': {'get_capability': ['shared', 'node_2_key']},
+            'node1_nested':
+                {
+                    'get_capability':
+                        ['shared', 'node_1_key_nested', 0, 'nested']},
+            'node2_nested':
+                {
+                    'get_capability':
+                        ['shared', 'node_2_key_nested', 0, 'nested']}
         }
 
         evaluated_values_mapping = {
             'node1': 'default_value',
-            'node2': 'override_value'
+            'node2': 'override_value',
+            'node1_nested': 'default_value',
+            'node2_nested': 'override_value'
         }
 
         # Node properties are not evaluated by default, so we expect to see
@@ -78,6 +94,10 @@ class CapabilitiesTestCase(base_test.BaseServerTestCase):
             self.assertEqual(
                 node.properties['key'],
                 values_mapping[node.id]
+            )
+            self.assertEqual(
+                node.properties['key_nested'],
+                values_mapping[node.id + '_nested']
             )
 
         # We're passing evaluate_functions=True, so we expect to see the
@@ -91,12 +111,20 @@ class CapabilitiesTestCase(base_test.BaseServerTestCase):
                 node.properties['key'],
                 evaluated_values_mapping[node.id]
             )
+            self.assertEqual(
+                node.properties['key_nested'],
+                evaluated_values_mapping[node.id + '_nested']
+            )
 
         # Outputs are always evaluated, so it's safe to compare
         outputs = self.client.deployments.outputs.get(other_dep_id)['outputs']
         self.assertDictEqual(
             outputs['complex_output'],
             self.complex_capability
+        )
+        self.assertEqual(
+            outputs['complex_output_nested'],
+            self.complex_capability['level_1']['level_2']['level_3'][0]
         )
 
     def test_chain_get_capability(self):
@@ -138,7 +166,69 @@ class CapabilitiesTestCase(base_test.BaseServerTestCase):
         self.assertRaisesRegexp(
             CloudifyClientError,
             'Requested capability `wrong_capability` is not '
-            'declared in deployment `other_dep_id`',
+            'declared in deployment `shared`',
+            self.client.nodes.get,
+            deployment_id=other_dep_id,
+            node_id='node1',
+            evaluate_functions=True
+        )
+
+    def test_non_existent_nested_attr_of_capability(self):
+        deployment_id = 'shared'
+        other_dep_id = 'other_dep_id'
+        self._deploy(deployment_id, 'blueprint_with_capabilities.yaml')
+        self._deploy(
+            other_dep_id,
+            'blueprint_with_non_existent_nested_attr_of_capability.yaml')
+
+        # Trying to evaluate functions on the node's properties will trigger
+        # `get_capability` evaluation, which should fail
+        self.assertRaisesRegexp(
+            CloudifyClientError,
+            "Attribute 'random_stuff' doesn't exist in 'complex_capability' "
+            "in deployment 'shared'.",
+            self.client.nodes.get,
+            deployment_id=other_dep_id,
+            node_id='node1',
+            evaluate_functions=True
+        )
+
+    def test_non_existent_nested_index_of_capability(self):
+        deployment_id = 'shared'
+        other_dep_id = 'other_dep_id'
+        self._deploy(deployment_id, 'blueprint_with_capabilities.yaml')
+        self._deploy(
+            other_dep_id,
+            'blueprint_with_non_existent_nested_index_of_capability.yaml')
+
+        # Trying to evaluate functions on the node's properties will trigger
+        # `get_capability` evaluation, which should fail
+        self.assertRaisesRegexp(
+            CloudifyClientError,
+            "List size of 'complex_capability.level_1.level_2.level_3' is 2, "
+            "in deployment 'shared', but index 8 is retrieved.",
+            self.client.nodes.get,
+            deployment_id=other_dep_id,
+            node_id='node1',
+            evaluate_functions=True
+        )
+
+    def test_nested_capability_bad_index_type(self):
+        deployment_id = 'shared'
+        other_dep_id = 'other_dep_id'
+        self._deploy(deployment_id, 'blueprint_with_capabilities.yaml')
+        self._deploy(
+            other_dep_id,
+            'blueprint_with_nested_capability_bad_index_type.yaml')
+
+        # Trying to evaluate functions on the node's properties will trigger
+        # `get_capability` evaluation, which should fail
+        self.assertRaisesRegexp(
+            CloudifyClientError,
+            "Item in index '5' in the get_capability arguments list "
+            "'\\['shared', 'complex_capability', 'level_1', 'level_2', "
+            "'level_3', 'bad_index_type'\\]' is expected to be an int but "
+            "got str.",
             self.client.nodes.get,
             deployment_id=other_dep_id,
             node_id='node1',

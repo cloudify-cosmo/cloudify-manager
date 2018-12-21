@@ -83,6 +83,7 @@ def get_secret_method():
 def _get_methods(deployment_id, storage_manager):
     """Retrieve a dict of all the callbacks necessary for function evaluation
     """
+
     def get_node_instances(node_id=None):
         filters = dict(deployment_id=deployment_id)
         if node_id:
@@ -110,9 +111,10 @@ def _get_methods(deployment_id, storage_manager):
             raise FunctionsEvaluationError(
                 'Requested capability `{0}` is not declared '
                 'in deployment `{1}`'.format(
-                    element_id, deployment_id
+                    element_id, shared_dep_id
                 )
             )
+
         # We need to evaluate any potential intrinsic functions in the
         # capability's value in the context of the *shared* deployment,
         # instead of the current deployment, so we manually call the function
@@ -120,6 +122,16 @@ def _get_methods(deployment_id, storage_manager):
             payload=capability,
             deployment_id=shared_dep_id
         )
+
+        # If it's a nested property of the capability
+        if len(capability_path) > 2:
+            try:
+                capability = \
+                    functions.get_nested_attribute_value_of_capability(
+                        capability['value'],
+                        capability_path)
+            except parser_exceptions.FunctionEvaluationError as e:
+                raise FunctionsEvaluationError(str(e))
 
         return capability['value']
 

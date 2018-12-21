@@ -8,13 +8,8 @@ node_types:
     derived_from: cloudify.nodes.Root
     properties:
       key:
-        default: { get_capability: [ chain_1, chain_1_capability, nested, 0 ] }
+        default: { get_capability: [ shared, complex_capability, random_stuff ] }
 
 node_templates:
-  chain_2_node:
+  node1:
     type: test_type
-
-
-capabilities:
-  chain_2_capability:
-    value: { get_attribute: [ chain_2_node, key ]}

@@ -17,4 +17,6 @@ node_templates:
 
 capabilities:
   chain_1_capability:
-    value: { get_attribute: [ chain_1_node, key ]}
+    value:
+      nested:
+      - { get_attribute: [ chain_1_node, key ]}
