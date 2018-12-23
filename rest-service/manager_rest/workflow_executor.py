@@ -13,10 +13,14 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import math
+from datetime import datetime
 from flask_security import current_user
 
 from cloudify.cryptography_utils import decrypt
-from cloudify.amqp_client import get_client, SendHandler
+from cloudify.amqp_client import (get_client,
+                                  SendHandler,
+                                  ScheduledExecutionHandler)
 
 from manager_rest import config, utils
 from manager_rest.storage import get_storage_manager, models
@@ -33,7 +37,8 @@ def execute_workflow(name,
                      bypass_maintenance=None,
                      dry_run=False,
                      wait_after_fail=600,
-                     execution_creator=None):
+                     execution_creator=None,
+                     scheduled_time=None):
 
     execution_parameters = execution_parameters or {}
     task_name = workflow['operation']
@@ -70,34 +75,8 @@ def execute_workflow(name,
     }
     return _execute_task(execution_id=execution_id,
                          execution_parameters=execution_parameters,
-                         context=context, execution_creator=execution_creator)
-
-
-def _get_tenant_dict():
-    tenant_dict = utils.current_tenant.to_dict()
-    tenant_dict['rabbitmq_password'] = decrypt(
-        tenant_dict['rabbitmq_password']
-    )
-    for to_remove in ['id', 'users', 'groups']:
-        tenant_dict.pop(to_remove)
-    return tenant_dict
-
-
-def _send_mgmtworker_task(message, routing_key='workflow'):
-    """Send a message to the mgmtworker exchange"""
-    client = get_client(
-        amqp_host=config.instance.amqp_host,
-        amqp_user=config.instance.amqp_username,
-        amqp_pass=config.instance.amqp_password,
-        amqp_port=BROKER_SSL_PORT,
-        amqp_vhost='/',
-        ssl_enabled=True,
-        ssl_cert_path=config.instance.amqp_ca_path
-    )
-    send_handler = SendHandler(MGMTWORKER_QUEUE, routing_key=routing_key)
-    client.add_handler(send_handler)
-    with client:
-        send_handler.publish(message)
+                         context=context, execution_creator=execution_creator,
+                         scheduled_time=scheduled_time)
 
 
 def execute_system_workflow(wf_id,
@@ -132,10 +111,69 @@ def execute_system_workflow(wf_id,
                          context=context, execution_creator=execution_creator)
 
 
-def _execute_task(execution_id,
-                  execution_parameters,
-                  context,
-                  execution_creator):
+def _get_tenant_dict():
+    tenant_dict = utils.current_tenant.to_dict()
+    tenant_dict['rabbitmq_password'] = decrypt(
+        tenant_dict['rabbitmq_password']
+    )
+    for to_remove in ['id', 'users', 'groups']:
+        tenant_dict.pop(to_remove)
+    return tenant_dict
+
+
+def _get_amqp_client():
+    client = get_client(
+        amqp_host=config.instance.amqp_host,
+        amqp_user=config.instance.amqp_username,
+        amqp_pass=config.instance.amqp_password,
+        amqp_port=BROKER_SSL_PORT,
+        amqp_vhost='/',
+        ssl_enabled=True,
+        ssl_cert_path=config.instance.amqp_ca_path
+    )
+    return client
+
+
+def _send_mgmtworker_task(message, routing_key='workflow'):
+    """Send a message to the mgmtworker exchange"""
+    client = _get_amqp_client()
+    send_handler = SendHandler(MGMTWORKER_QUEUE, routing_key=routing_key)
+    client.add_handler(send_handler)
+    with client:
+        send_handler.publish(message)
+
+
+def _send_task_to_dlx(message, message_ttl, routing_key='workflow'):
+    """
+    We use Rabbit's `Dead Letter Exchange` to achieve execution scheduling:
+    1. Create a Dead Letter Exchange with the following parameters:
+        - `ttl` (time until message is moved to another queue): the delta
+            between now and the scheduled time.
+        - `dead-letter-exchange`: The temporary exchange that is used to
+            forward the task
+        - `dead-letter-routing-key`: The queue we want the task to be
+             ultimately sent to (in this case MGMTWORKER queue).
+    2. Send the execution to that DLX
+    3. When ttl is passed the task will automatically be sent to the
+        MGMTWORKER queue and will be executed normally.
+    """
+    dlx_exchange = message['dlx_id']
+    dlx_routing_key = message['dlx_id'] + '_queue'
+
+    client = _get_amqp_client()
+    send_handler = ScheduledExecutionHandler(exchange=dlx_exchange,
+                                             exchange_type='direct',
+                                             routing_key=dlx_routing_key,
+                                             target_exchange=MGMTWORKER_QUEUE,
+                                             target_routing_key=routing_key,
+                                             ttl=message_ttl)
+    client.add_handler(send_handler)
+    with client:
+        send_handler.publish(message)
+
+
+def _execute_task(execution_id, execution_parameters,
+                  context, execution_creator, scheduled_time=None):
     context['rest_token'] = execution_creator.get_auth_token()
     context['tenant'] = _get_tenant_dict()
     context['task_target'] = MGMTWORKER_QUEUE
@@ -143,9 +181,29 @@ def _execute_task(execution_id,
     message = {
         'cloudify_task': {'kwargs': execution_parameters},
         'id': execution_id,
+        'dlx_id': None,
+        'execution_creator': current_user.id
     }
-
+    if scheduled_time:
+        message_ttl = _get_time_to_live(scheduled_time)
+        message['dlx_id'] = execution_id
+        _send_task_to_dlx(message, message_ttl)
+        return
     _send_mgmtworker_task(message)
+
+
+def _get_time_to_live(scheduled_time):
+    """
+    Rabbit's ttl is the time until message is moved to another queue.
+    Ttl should be an Integer and in miliseconds.
+    :param scheduled_time: The date and time this execution is scheduled for.
+    :return: time (in miliseconds) between `now` and `scheduled time`
+    """
+    now = datetime.utcnow()
+    delta = (scheduled_time-now).total_seconds()
+    delta = int(math.floor(delta))
+    delta_in_milisecs = delta * 1000
+    return delta_in_milisecs
 
 
 def cancel_execution(execution_id):

@@ -41,7 +41,6 @@ from manager_rest import constants, config, manager_exceptions
 
 CLOUDIFY_AUTH_HEADER = 'Authorization'
 CLOUDIFY_AUTH_TOKEN_HEADER = 'Authentication-Token'
-CLOUDIFY_API_AUTH_TOKEN_HEADER = 'API-Authentication-Token'
 BASIC_AUTH_PREFIX = 'Basic '
 
 
