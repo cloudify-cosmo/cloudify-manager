@@ -404,7 +404,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         """
         second_blueprint_id = 'imported_blueprint'
         self.put_blueprint('mock_blueprint',
-                           'empty_blueprint.yaml', second_blueprint_id)
+                           'blueprint.yaml', second_blueprint_id)
 
         first_blueprint_id = 'first_imported_blueprint'
         self.put_blueprint('mock_blueprint',
