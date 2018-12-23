@@ -138,12 +138,11 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
         import_url = self._resolve_blueprint_url(import_url)
         main_blueprint = super(ResolverWithCatalogSupport, self).\
             fetch_import(import_url)
-        _, merged_blueprint = parser.resolve_blueprint_imports(
+        _, merged_blueprint = parser.parse_from_import_blueprint(
             dsl_string=main_blueprint,
             dsl_location=import_url,
             resources_base_path=config.instance.file_server_root,
-            resolver=self,
-            validate_version=False)
+            resolver=self)
         return merged_blueprint
 
     @staticmethod
