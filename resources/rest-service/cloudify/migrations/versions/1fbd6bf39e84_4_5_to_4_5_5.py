@@ -14,8 +14,8 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
-from manager_rest.storage.models_base import UTCDateTime
 from cloudify.models_states import AgentState, VisibilityState
+from manager_rest.storage.models_base import UTCDateTime, JSONString
 
 # revision identifiers, used by Alembic.
 revision = '1fbd6bf39e84'
@@ -122,8 +122,7 @@ def upgrade():
         sa.Column('id', sa.Text(), nullable=True),
         sa.Column('visibility', visibility_enum, nullable=True),
         sa.Column('name', sa.Text(), nullable=True),
-        sa.Column('created_at', manager_rest.storage.models_base.UTCDateTime(),
-                  nullable=False),
+        sa.Column('created_at', UTCDateTime(), nullable=False),
         sa.Column('_execution_fk', sa.Integer(), nullable=False),
         sa.Column('_tenant_id', sa.Integer(), nullable=False),
         sa.Column('_creator_id', sa.Integer(), nullable=False),
@@ -152,12 +151,10 @@ def upgrade():
         sa.Column('visibility', visibility_enum, nullable=True),
         sa.Column('name', sa.Text(), nullable=True),
         sa.Column('state', sa.Text(), nullable=False),
-        sa.Column('created_at', manager_rest.storage.models_base.UTCDateTime(),
-                  nullable=False),
+        sa.Column('created_at', UTCDateTime(), nullable=False),
         sa.Column('dependencies', postgresql.ARRAY(sa.Text()), nullable=True),
         sa.Column('type', sa.Text(), nullable=True),
-        sa.Column('parameters', manager_rest.storage.models_base.JSONString(),
-                  nullable=True),
+        sa.Column('parameters', JSONString(), nullable=True),
         sa.Column('_tasks_graph_fk', sa.Integer(), nullable=False),
         sa.Column('_tenant_id', sa.Integer(), nullable=False),
         sa.Column('_creator_id', sa.Integer(), nullable=False),
