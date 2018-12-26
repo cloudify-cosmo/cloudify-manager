@@ -15,10 +15,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 from cloudify.models_states import AgentState, VisibilityState
-
-# Adding this manually
-import manager_rest
-
+from manager_rest.storage.models_base import UTCDateTime, JSONString
 
 # revision identifiers, used by Alembic.
 revision = '1fbd6bf39e84'
@@ -38,7 +35,12 @@ def upgrade():
                                           sa.Boolean(),
                                           nullable=False,
                                           server_default='f'))
+    op.add_column('executions',
+                  sa.Column('scheduled_for', UTCDateTime(), nullable=True))
 
+    op.execute('COMMIT')
+    # Add new execution status
+    op.execute("alter type execution_status add value 'scheduled'")
     op.add_column(
         'deployments',
         sa.Column('capabilities', sa.PickleType(comparator=lambda *a: False))
@@ -54,7 +56,6 @@ def upgrade():
                                       create_type=False)
     agent_states_enum = postgresql.ENUM(*AgentState.STATES,
                                         name='agent_states')
-    utc_datetime = manager_rest.storage.models_base.UTCDateTime()
     op.create_table(
         'agents',
         sa.Column('_storage_id', sa.Integer(), nullable=False),
@@ -69,8 +70,8 @@ def upgrade():
         sa.Column('rabbitmq_username', sa.Text(), nullable=True),
         sa.Column('rabbitmq_password', sa.Text(), nullable=True),
         sa.Column('rabbitmq_exchange', sa.Text(), nullable=False),
-        sa.Column('created_at', utc_datetime, nullable=False),
-        sa.Column('updated_at', utc_datetime, nullable=True),
+        sa.Column('created_at', UTCDateTime(), nullable=False),
+        sa.Column('updated_at', UTCDateTime(), nullable=True),
         sa.Column('_node_instance_fk', sa.Integer(), nullable=False),
         sa.Column('_tenant_id', sa.Integer(), nullable=False),
         sa.Column('_creator_id', sa.Integer(), nullable=False),
@@ -121,8 +122,7 @@ def upgrade():
         sa.Column('id', sa.Text(), nullable=True),
         sa.Column('visibility', visibility_enum, nullable=True),
         sa.Column('name', sa.Text(), nullable=True),
-        sa.Column('created_at', manager_rest.storage.models_base.UTCDateTime(),
-                  nullable=False),
+        sa.Column('created_at', UTCDateTime(), nullable=False),
         sa.Column('_execution_fk', sa.Integer(), nullable=False),
         sa.Column('_tenant_id', sa.Integer(), nullable=False),
         sa.Column('_creator_id', sa.Integer(), nullable=False),
@@ -151,12 +151,10 @@ def upgrade():
         sa.Column('visibility', visibility_enum, nullable=True),
         sa.Column('name', sa.Text(), nullable=True),
         sa.Column('state', sa.Text(), nullable=False),
-        sa.Column('created_at', manager_rest.storage.models_base.UTCDateTime(),
-                  nullable=False),
+        sa.Column('created_at', UTCDateTime(), nullable=False),
         sa.Column('dependencies', postgresql.ARRAY(sa.Text()), nullable=True),
         sa.Column('type', sa.Text(), nullable=True),
-        sa.Column('parameters', manager_rest.storage.models_base.JSONString(),
-                  nullable=True),
+        sa.Column('parameters', JSONString(), nullable=True),
         sa.Column('_tasks_graph_fk', sa.Integer(), nullable=False),
         sa.Column('_tenant_id', sa.Integer(), nullable=False),
         sa.Column('_creator_id', sa.Integer(), nullable=False),
@@ -198,6 +196,7 @@ def downgrade():
     op.drop_column('events', 'target_id')
     op.drop_column('logs', 'source_id')
     op.drop_column('logs', 'target_id')
+    op.drop_column('executions', 'scheduled_for')
 
     # Remove the agents table
     op.drop_index(op.f('agents_id_idx'), table_name='agents')
@@ -212,3 +211,42 @@ def downgrade():
             table_name,
             sa.Column('private_resource', sa.Boolean(), nullable=True)
         )
+
+    # remove the 'scheduled' value of the execution status enum.
+    # Since we are downgrading, and in older versions the `schedule` option does
+    # not exist, we change it to `failed`.
+    op.execute("""
+      update executions
+      set status='failed'
+      where status='scheduled'
+      """)
+
+    # unfortunately postgres doesn't directly support removing enum values,
+    # so we create a new type with the correct enum values and swap
+    # out the old one
+    op.execute("alter type execution_status rename to execution_status_old")
+
+    # create the new type
+    execution_status = sa.Enum(
+        'terminated',
+        'failed',
+        'cancelled',
+        'pending',
+        'started',
+        'cancelling',
+        'force_cancelling',
+        'kill_cancelling',
+        'queued',
+        name='execution_status',
+    )
+    execution_status.create(op.get_bind())
+
+    # update executions to use the new type
+    op.alter_column(
+        'executions',
+        'status',
+        type_=execution_status,
+        postgresql_using='status::text::execution_status')
+
+    # remove the old type
+    op.execute("DROP TYPE execution_status_old;")

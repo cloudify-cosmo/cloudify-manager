@@ -34,3 +34,5 @@ PROVIDER_NAME = 'integration_tests'
 USER_ROLE = 'default'
 ADMIN_ROLE = 'sys_admin'
 USER_IN_TENANT_ROLE = 'user'
+
+SCHEDULED_TIME_FORMAT = '{year}{month}{day}{hour}{minute}+0000'

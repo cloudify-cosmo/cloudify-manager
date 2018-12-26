@@ -20,7 +20,9 @@ import time
 import tarfile
 from os import path
 from contextlib import contextmanager
+from datetime import datetime, timedelta
 
+from .constants import SCHEDULED_TIME_FORMAT
 from cloudify.utils import setup_logger
 from cloudify_rest_client.executions import Execution
 from integration_tests.framework import utils, docl
@@ -222,3 +224,16 @@ def run_postgresql_command(cmd):
 
 def delete_provider_context():
     run_postgresql_command('DELETE from provider_context')
+
+
+def generate_scheduled_for_date():
+
+    now = datetime.utcnow()
+    # Schedule the execution for 2 minutes in the future
+    scheduled_for = now + timedelta(minutes=2)
+    date = SCHEDULED_TIME_FORMAT.format(year=scheduled_for.strftime('%Y'),
+                                        month=scheduled_for.strftime('%m'),
+                                        day=scheduled_for.strftime('%d'),
+                                        hour=scheduled_for.strftime('%H'),
+                                        minute=scheduled_for.strftime('%M'))
+    return date

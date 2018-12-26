@@ -33,6 +33,7 @@ from manager_rest.rest.rest_utils import (
     get_args_and_verify_arguments,
     get_json_and_verify_params,
     verify_and_convert_bool,
+    parse_datetime
 )
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
@@ -106,6 +107,10 @@ class Executions(SecuredResource):
         workflow_id = request_dict['workflow_id']
         parameters = request_dict.get('parameters', None)
         wait_after_fail = request_dict.get('wait_after_fail', 600)
+        scheduled_time = request_dict.get('scheduled_time', None)
+
+        if scheduled_time:
+            scheduled_time = parse_datetime(scheduled_time)
 
         if parameters is not None and parameters.__class__ is not dict:
             raise manager_exceptions.BadParametersError(
@@ -117,7 +122,8 @@ class Executions(SecuredResource):
             deployment_id, workflow_id, parameters=parameters,
             allow_custom_parameters=allow_custom_parameters, force=force,
             dry_run=dry_run, bypass_maintenance=bypass_maintenance,
-            queue=queue, wait_after_fail=wait_after_fail)
+            queue=queue, wait_after_fail=wait_after_fail,
+            scheduled_time=scheduled_time)
         return execution, 201
 
 
