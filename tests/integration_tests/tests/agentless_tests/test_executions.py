@@ -823,18 +823,21 @@ class ExecutionsTest(AgentlessTestCase):
     def test_scheduled_execution(self):
         scheduled_time = generate_scheduled_for_date()
         dsl_path = resource('dsl/basic.yaml')
-        blueprint_id = 'blueprint_1'
-        deployment_id = 'deployment_1'
+        _id = uuid.uuid1()
+        blueprint_id = 'blueprint_{0}'.format(_id)
+        deployment_id = 'deployment_{0}'.format(_id)
+
         self.client.blueprints.upload(dsl_path, blueprint_id)
         self.client.deployments.create(blueprint_id, deployment_id,
                                        skip_plugins_validation=True)
         do_retries(verify_deployment_environment_creation_complete, 30,
                    deployment_id=deployment_id)
+
         execution = self.client.executions.start(deployment_id=deployment_id,
                                                  workflow_id='install',
                                                  schedule=scheduled_time)
         self.assertEquals('scheduled', execution.status)
         # The execution was scheduled for 2 minutes from now
-        time.sleep(115)
+        time.sleep(110)
         # Make sure execution was executed
         self.wait_for_execution_to_end(execution)
