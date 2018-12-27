@@ -501,12 +501,6 @@ class TestSnapshot(AgentlessTestCase):
             self.logger.error('Execution error: {0}'.format(execution.error))
         self.assertEqual(desired_execution_status, execution.status)
 
-        # Wait for the restart of cloudify-restservice to end.
-        # If the rest-security.conf file was changed the service is being
-        # restarted. As you can see in snapshot_restore.py when calling the
-        # function _add_restart_command.
-        time.sleep(5)
-
     def _upload_and_validate_snapshot(self,
                                       snapshot_path,
                                       snapshot_id,
@@ -520,7 +514,7 @@ class TestSnapshot(AgentlessTestCase):
         self.logger.info('Snapshot uploaded and validated')
 
     def _wait_for_restore_execution_to_end(
-            self, execution, rest_client, timeout_seconds=60):
+            self, execution, rest_client, timeout_seconds=70):
         """Can't use the `wait_for_execution_to_end` in the class because
          we need to be able to handle client errors
         """
