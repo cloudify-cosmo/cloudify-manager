@@ -17,16 +17,20 @@ import time
 import uuid
 
 from integration_tests import AgentlessTestCase
-from integration_tests.framework import postgresql
-from cloudify_rest_client.executions import Execution
 from integration_tests.framework.postgresql import run_query
-from cloudify_rest_client.exceptions import CloudifyClientError
+from integration_tests.framework.constants import ADMIN_TOKEN_SCRIPT
+from integration_tests.framework import (
+    postgresql,
+    docl)
 from integration_tests.tests.utils import (
     verify_deployment_environment_creation_complete,
     do_retries,
     get_resource as resource,
     upload_mock_plugin,
     generate_scheduled_for_date)
+
+from cloudify_rest_client.executions import Execution
+from cloudify_rest_client.exceptions import CloudifyClientError
 
 
 class ExecutionsTest(AgentlessTestCase):
@@ -821,6 +825,8 @@ class ExecutionsTest(AgentlessTestCase):
             self.assertEqual(instance['state'], 'uninitialized')
 
     def test_scheduled_execution(self):
+        create_api_token = 'sudo {0}'.format(ADMIN_TOKEN_SCRIPT)
+        docl.execute(create_api_token)
         scheduled_time = generate_scheduled_for_date()
         dsl_path = resource('dsl/basic.yaml')
         _id = uuid.uuid1()

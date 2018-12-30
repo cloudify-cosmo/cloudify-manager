@@ -31,3 +31,4 @@ CONFIG_FILE_LOCATION = '/opt/manager/cloudify-rest.conf'
 AUTHORIZATION_FILE_LOCATION = '/opt/manager/authorization.conf'
 
 CLOUDIFY_USER = 'cfyuser'
+ADMIN_TOKEN_SCRIPT = '/opt/cloudify/mgmtworker/create-admin-token.py'
