@@ -13,12 +13,15 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import uuid
+from datetime import datetime
 from itertools import dropwhile
 
 import mock
 
 from cloudify_rest_client import exceptions
 from cloudify.models_states import ExecutionState
+from cloudify.workflows import tasks as cloudify_tasks
 
 from manager_rest import utils
 from manager_rest.storage import models
@@ -767,3 +770,69 @@ class ExecutionsTestCase(BaseServerTestCase):
         self.assertEquals(get_execution['blueprint_id'], blueprint_id)
         self.assertEquals(get_execution['deployment_id'],
                           deployment_response['id'])
+
+    def _execution_resume_test(self, deployment, status):
+        execution = self.sm.put(models.Execution(
+            id=str(uuid.uuid4()),
+            _deployment_fk=deployment._storage_id,
+            created_at=datetime.now(),
+            is_system_workflow=False,
+            workflow_id='install',
+            status=status
+        ))
+        tasks_graph = self.sm.put(models.TasksGraph(
+            _execution_fk=execution._storage_id,
+            name='install',
+            created_at=datetime.now()
+        ))
+        operation = self.sm.put(models.Operation(
+            _tasks_graph_fk=tasks_graph._storage_id,
+            parameters={'current_retries': 20},
+            state=cloudify_tasks.TASK_FAILED,
+            created_at=datetime.now()
+        ))
+
+        self.client.executions.resume(execution.id, force=True)
+
+        operations = self.sm.list(models.Operation, get_all_results=True)
+        self.assertEqual(len(operations), 1)
+        operation = operations[0]
+        self.assertEqual(operation.state, cloudify_tasks.TASK_PENDING)
+        self.assertEqual(operation.parameters['current_retries'], 0)
+
+        execution = self.sm.get(models.Execution, execution.id)
+        self.assertEqual(execution.status, ExecutionState.PENDING)
+
+    def test_resume_force_failed(self):
+        """Force-resume resets operation state and restart count"""
+        _, deployment_id, _, _ = self.put_deployment(
+            self.DEPLOYMENT_ID, 'empty_blueprint.yaml')
+        deployment = self.sm.get(models.Deployment, deployment_id)
+        self._execution_resume_test(deployment, ExecutionState.FAILED)
+
+    def test_resume_force_cancelled(self):
+        """Force-resume resets operation state and restart count"""
+        _, deployment_id, _, _ = self.put_deployment(
+            self.DEPLOYMENT_ID, 'empty_blueprint.yaml')
+        deployment = self.sm.get(models.Deployment, deployment_id)
+        self._execution_resume_test(deployment, ExecutionState.FAILED)
+
+    def test_resume_failed_no_force(self):
+        """Cannot non-force-resume a failed execution"""
+        _, deployment_id, _, _ = self.put_deployment(
+            self.DEPLOYMENT_ID, 'empty_blueprint.yaml')
+
+        deployment = self.sm.get(models.Deployment, deployment_id)
+        execution = self.sm.put(models.Execution(
+            id='execution-1',
+            _deployment_fk=deployment._storage_id,
+            created_at=datetime.now(),
+            is_system_workflow=False,
+            workflow_id='install',
+            status=ExecutionState.FAILED
+        ))
+
+        with self.assertRaises(exceptions.CloudifyClientError) as cm:
+            self.client.executions.resume(execution.id)
+        self.assertEqual(cm.exception.status_code, 409)
+        self.assertIn('Cannot resume execution', str(cm.exception))
