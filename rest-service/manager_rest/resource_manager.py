@@ -475,12 +475,8 @@ class ResourceManager(object):
 
         :return: Whether to continue with running the execution
         """
-        if execution.status in (ExecutionState.FAILED,
-                                ExecutionState.CANCELLED):
-            execution.status = ExecutionState.PENDING
-            self.sm.update(execution, modified_attrs=('status',))
-        else:
-            return False
+        execution.status = ExecutionState.STARTED
+        self.sm.update(execution, modified_attrs=('status',))
 
         tasks_graphs = self.sm.list(models.TasksGraph,
                                     filters={'execution': execution},
@@ -500,15 +496,17 @@ class ResourceManager(object):
     def resume_execution(self, execution_id, force=False):
         execution = self.sm.get(models.Execution, execution_id)
         if force:
-            if not self._reset_failed_operations(execution):
-                return execution
+            if execution.status not in (ExecutionState.CANCELLED,
+                                        ExecutionState.FAILED):
+                raise manager_exceptions.ConflictError(
+                    'Cannot force-resume execution in state {0}'
+                    .format(execution.status))
+            self._reset_failed_operations(execution)
 
-        if execution.status in ExecutionState.END_STATES or \
-                execution.status in ExecutionState.QUEUED_STATE:
+        if execution.status != ExecutionState.STARTED:
             raise manager_exceptions.ConflictError(
                 'Cannot resume execution in state {0}'
                 .format(execution.status))
-        execution.status = ExecutionState.STARTED
         self.sm.update(execution)
 
         workflow_id = execution.workflow_id

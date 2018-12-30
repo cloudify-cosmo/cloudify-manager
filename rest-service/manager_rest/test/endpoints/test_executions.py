@@ -801,7 +801,10 @@ class ExecutionsTestCase(BaseServerTestCase):
         self.assertEqual(operation.parameters['current_retries'], 0)
 
         execution = self.sm.get(models.Execution, execution.id)
-        self.assertEqual(execution.status, ExecutionState.PENDING)
+        # started or terminated, it might have already finished by the time
+        # the test was done
+        self.assertIn(execution.status,
+                      (ExecutionState.STARTED, ExecutionState.TERMINATED))
 
     def test_resume_force_failed(self):
         """Force-resume resets operation state and restart count"""
@@ -836,3 +839,59 @@ class ExecutionsTestCase(BaseServerTestCase):
             self.client.executions.resume(execution.id)
         self.assertEqual(cm.exception.status_code, 409)
         self.assertIn('Cannot resume execution', str(cm.exception))
+
+    def test_resume_invalid_state(self):
+        """Resuming is allowed in the STARTED state"""
+        _, deployment_id, _, _ = self.put_deployment(
+            self.DEPLOYMENT_ID, 'empty_blueprint.yaml')
+
+        deployment = self.sm.get(models.Deployment, deployment_id)
+        execution = self.sm.put(models.Execution(
+            id='execution-1',
+            _deployment_fk=deployment._storage_id,
+            created_at=datetime.now(),
+            is_system_workflow=False,
+            workflow_id='install'
+        ))
+
+        for execution_status in [ExecutionState.PENDING,
+                                 ExecutionState.CANCELLING,
+                                 ExecutionState.FORCE_CANCELLING,
+                                 ExecutionState.TERMINATED,
+                                 ExecutionState.CANCELLED,
+                                 ExecutionState.FAILED]:
+            execution.status = execution_status
+            self.sm.update(execution, modified_attrs=('status',))
+
+            with self.assertRaises(exceptions.CloudifyClientError) as cm:
+                self.client.executions.resume(execution.id)
+            self.assertEqual(cm.exception.status_code, 409)
+            self.assertIn('Cannot resume execution', str(cm.exception))
+
+    def test_force_resume_invalid_state(self):
+        """Force-resuming is allowed in the FAILED, CANCELLED  states
+        """
+        _, deployment_id, _, _ = self.put_deployment(
+            self.DEPLOYMENT_ID, 'empty_blueprint.yaml')
+
+        deployment = self.sm.get(models.Deployment, deployment_id)
+        execution = self.sm.put(models.Execution(
+            id='execution-1',
+            _deployment_fk=deployment._storage_id,
+            created_at=datetime.now(),
+            is_system_workflow=False,
+            workflow_id='install'
+        ))
+
+        for execution_status in [ExecutionState.PENDING,
+                                 ExecutionState.CANCELLING,
+                                 ExecutionState.FORCE_CANCELLING,
+                                 ExecutionState.TERMINATED,
+                                 ExecutionState.STARTED]:
+            execution.status = execution_status
+            self.sm.update(execution, modified_attrs=('status',))
+
+            with self.assertRaises(exceptions.CloudifyClientError) as cm:
+                self.client.executions.resume(execution.id, force=True)
+            self.assertEqual(cm.exception.status_code, 409)
+            self.assertIn('Cannot force-resume execution', str(cm.exception))
