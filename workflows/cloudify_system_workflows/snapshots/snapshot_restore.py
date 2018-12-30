@@ -147,8 +147,8 @@ class SnapshotRestore(object):
             if self._restore_certificates:
                 self._restore_certificate()
 
-            self._trigger_post_restore_commands()
         finally:
+            self._trigger_post_restore_commands()
             ctx.logger.debug('Removing temp dir: {0}'.format(self._tempdir))
             shutil.rmtree(self._tempdir)
 
