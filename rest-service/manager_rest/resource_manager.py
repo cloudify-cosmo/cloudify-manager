@@ -499,14 +499,14 @@ class ResourceManager(object):
             if execution.status not in (ExecutionState.CANCELLED,
                                         ExecutionState.FAILED):
                 raise manager_exceptions.ConflictError(
-                    'Cannot force-resume execution in state {0}'
-                    .format(execution.status))
+                    'Cannot force-resume execution: `{0}` in state: `{1}`'
+                    .format(execution.id, execution.status))
             self._reset_failed_operations(execution)
 
         if execution.status != ExecutionState.STARTED:
             raise manager_exceptions.ConflictError(
-                'Cannot resume execution in state {0}'
-                .format(execution.status))
+                'Cannot resume execution: `{0}` in state: `{1}`'
+                .format(execution.id, execution.status))
         self.sm.update(execution)
 
         workflow_id = execution.workflow_id
