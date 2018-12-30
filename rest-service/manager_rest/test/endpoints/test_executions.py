@@ -818,7 +818,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         _, deployment_id, _, _ = self.put_deployment(
             self.DEPLOYMENT_ID, 'empty_blueprint.yaml')
         deployment = self.sm.get(models.Deployment, deployment_id)
-        self._execution_resume_test(deployment, ExecutionState.FAILED)
+        self._execution_resume_test(deployment, ExecutionState.CANCELLED)
 
     def test_resume_failed_no_force(self):
         """Cannot non-force-resume a failed execution"""
