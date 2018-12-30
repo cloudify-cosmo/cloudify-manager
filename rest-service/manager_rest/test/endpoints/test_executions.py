@@ -806,6 +806,8 @@ class ExecutionsTestCase(BaseServerTestCase):
         self.assertIn(execution.status,
                       (ExecutionState.STARTED, ExecutionState.TERMINATED))
 
+    @attr(client_min_version=3.1,
+          client_max_version=LATEST_API_VERSION)
     def test_resume_force_failed(self):
         """Force-resume resets operation state and restart count"""
         _, deployment_id, _, _ = self.put_deployment(
@@ -813,6 +815,8 @@ class ExecutionsTestCase(BaseServerTestCase):
         deployment = self.sm.get(models.Deployment, deployment_id)
         self._execution_resume_test(deployment, ExecutionState.FAILED)
 
+    @attr(client_min_version=3.1,
+          client_max_version=LATEST_API_VERSION)
     def test_resume_force_cancelled(self):
         """Force-resume resets operation state and restart count"""
         _, deployment_id, _, _ = self.put_deployment(
@@ -820,6 +824,8 @@ class ExecutionsTestCase(BaseServerTestCase):
         deployment = self.sm.get(models.Deployment, deployment_id)
         self._execution_resume_test(deployment, ExecutionState.CANCELLED)
 
+    @attr(client_min_version=3.1,
+          client_max_version=LATEST_API_VERSION)
     def test_resume_failed_no_force(self):
         """Cannot non-force-resume a failed execution"""
         _, deployment_id, _, _ = self.put_deployment(
@@ -840,6 +846,8 @@ class ExecutionsTestCase(BaseServerTestCase):
         self.assertEqual(cm.exception.status_code, 409)
         self.assertIn('Cannot resume execution', str(cm.exception))
 
+    @attr(client_min_version=3.1,
+          client_max_version=LATEST_API_VERSION)
     def test_resume_invalid_state(self):
         """Resuming is allowed in the STARTED state"""
         _, deployment_id, _, _ = self.put_deployment(
@@ -868,6 +876,8 @@ class ExecutionsTestCase(BaseServerTestCase):
             self.assertEqual(cm.exception.status_code, 409)
             self.assertIn('Cannot resume execution', str(cm.exception))
 
+    @attr(client_min_version=3.1,
+          client_max_version=LATEST_API_VERSION)
     def test_force_resume_invalid_state(self):
         """Force-resuming is allowed in the FAILED, CANCELLED  states
         """
