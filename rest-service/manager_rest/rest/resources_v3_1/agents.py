@@ -66,7 +66,8 @@ class AgentsName(SecuredResource):
         validate_inputs({'name': name})
         agent = get_storage_manager().get(models.Agent, name)
         agent_dict = agent.to_dict()
-        agent_dict['rabbitmq_password'] = decrypt(agent.rabbitmq_password)
+        if agent.rabbitmq_password:
+            agent_dict['rabbitmq_password'] = decrypt(agent.rabbitmq_password)
         return agent_dict
 
     @rest_decorators.exceptions_handled

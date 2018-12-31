@@ -14,9 +14,12 @@
 # limitations under the License.
 ############
 
+from mock import patch
+
 from cloudify.models_states import AgentState
 from cloudify.cryptography_utils import encrypt
 from cloudify.utils import generate_user_password
+from cloudify.rabbitmq_client import USERNAME_PATTERN
 
 from manager_rest.test import base_test
 from manager_rest import manager_exceptions
@@ -34,6 +37,12 @@ class AgentsTest(base_test.BaseServerTestCase):
         'install_method': 'remote',
         'version': '4.5.5',
         'rabbitmq_exchange': 'agent_1'
+    }
+
+    node_instance_data = {
+        'instance_id': 'node_instance_1',
+        'deployment_id': 'deployment_1',
+        'runtime_properties': {'key': 'value'}
     }
 
     def test_get_agent(self):
@@ -60,11 +69,9 @@ class AgentsTest(base_test.BaseServerTestCase):
                                 self.client.agents.get,
                                 'agent_1')
 
-    def test_create_agent(self):
-        put_node_instance(self.sm,
-                          instance_id='node_instance_1',
-                          deployment_id='deployment_1',
-                          runtime_properties={'key': 'value'})
+    @patch('manager_rest.amqp_manager.RabbitMQClient')
+    def test_create_agent(self, create_rabbitmq_user_mock):
+        put_node_instance(self.sm, **self.node_instance_data)
         self.client.agents.create('agent_1',
                                   'node_instance_1',
                                   **self.agent_data)
@@ -74,6 +81,24 @@ class AgentsTest(base_test.BaseServerTestCase):
         self.assertEqual(agent.visibility, 'tenant')
         self.assertEqual(agent.node_id, 'node_id')
         self.assertEqual(agent.creator.username, 'admin')
+        create_rabbitmq_user_mock.assert_called_once()
+        self.assertEqual(agent.rabbitmq_username,
+                         USERNAME_PATTERN.format('agent_1'))
+        self.assertIsNotNone(agent.rabbitmq_password)
+
+    @patch('manager_rest.amqp_manager.RabbitMQClient')
+    def test_create_agent_without_rabbitmq_user(self,
+                                                create_rabbitmq_user_mock):
+        put_node_instance(self.sm, **self.node_instance_data)
+        self.client.agents.create('agent_1',
+                                  'node_instance_1',
+                                  create_rabbitmq_user=False,
+                                  **self.agent_data)
+        create_rabbitmq_user_mock.assert_not_called()
+        agent = self.sm.get(Agent, 'agent_1')
+        self.assertEqual(agent.name, 'agent_1')
+        self.assertIsNone(agent.rabbitmq_username)
+        self.assertIsNone(agent.rabbitmq_password)
 
     def test_create_invalid_agent_name(self):
         error_message = '400: The `name` argument contains illegal characters'
@@ -82,6 +107,15 @@ class AgentsTest(base_test.BaseServerTestCase):
                                 self.client.agents.create,
                                 'agent@',
                                 'node_instance_1')
+
+    def test_create_invalid_state(self):
+        error_message = '400: Invalid agent state: `test_state`'
+        self.assertRaisesRegexp(CloudifyClientError,
+                                error_message,
+                                self.client.agents.create,
+                                'agent_1',
+                                'node_instance_1',
+                                'test_state')
 
     def test_create_agent_already_exists(self):
         self._get_or_create_node_instance()
