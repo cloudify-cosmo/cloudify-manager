@@ -525,7 +525,8 @@ class ResourceManager(object):
             execution_id=execution_id,
             execution_parameters=execution.parameters,
             bypass_maintenance=False,
-            dry_run=False)
+            dry_run=False,
+            execution_creator=execution.creator)
         return execution
 
     def execute_workflow(self,
