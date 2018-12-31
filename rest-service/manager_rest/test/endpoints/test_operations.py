@@ -53,14 +53,14 @@ class OperationsTestCase(base_test.BaseServerTestCase):
         is enough to create both the graph and the operations.
         """
         op1 = {
-            'operation_id': self.fake.uuid4(),
+            'id': self.fake.uuid4(),
             'name': 'op1',
             'dependencies': [],
             'parameters': {},
             'type': 'RemoteWorkflowTask'
         }
         op2 = {
-            'operation_id': self.fake.uuid4(),
+            'id': self.fake.uuid4(),
             'name': 'op2',
             'dependencies': [],
             'parameters': {},
@@ -72,4 +72,4 @@ class OperationsTestCase(base_test.BaseServerTestCase):
         self.assertEqual(len(ops), 2)
         self.assertEqual(
             {op['id'] for op in ops},
-            {op1['operation_id'], op2['operation_id']})
+            {op1['id'], op2['id']})

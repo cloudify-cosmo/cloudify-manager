@@ -525,7 +525,8 @@ class ResourceManager(object):
             execution_id=execution_id,
             execution_parameters=execution.parameters,
             bypass_maintenance=False,
-            dry_run=False)
+            dry_run=False,
+            execution_creator=execution.creator)
         return execution
 
     def execute_workflow(self,
@@ -1400,9 +1401,9 @@ class ResourceManager(object):
         instance_dict['resource_availability'] = resource_availability
         instance_dict['private_resource'] = private_resource
 
-    def create_operation(self, operation_id, name, dependencies,
+    def create_operation(self, id, name, dependencies,
                          parameters, type, graph_id=None,
-                         graph_storage_id=None):
+                         graph_storage_id=None, state='pending'):
         # allow passing graph_storage_id directly as an optimization, so that
         # we don't need to query for the graph based on display id
         if (graph_id and graph_storage_id) or \
@@ -1416,11 +1417,11 @@ class ResourceManager(object):
                                  all_tenants=True)[0]
             graph_storage_id = graph._storage_id
         operation = models.Operation(
-            id=operation_id,
+            id=id,
             name=name,
             _tasks_graph_fk=graph_storage_id,
             created_at=utils.get_formatted_timestamp(),
-            state='pending',
+            state=state,
             dependencies=dependencies,
             parameters=parameters,
             type=type,
