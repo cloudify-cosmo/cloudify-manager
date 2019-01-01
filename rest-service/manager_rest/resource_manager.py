@@ -25,6 +25,7 @@ from flask import current_app
 from flask_security import current_user
 
 from cloudify import constants as cloudify_constants, utils as cloudify_utils
+from cloudify.workflows import tasks as cloudify_tasks
 from cloudify.models_states import (SnapshotState,
                                     ExecutionState,
                                     VisibilityState,
@@ -466,16 +467,46 @@ class ResourceManager(object):
         else:
             return self.sm.delete(deployment)
 
-    def resume_execution(self, execution_id):
-        execution = self.sm.list(
-            models.Execution, filters={'id': execution_id},
-            get_all_results=True)[0]
-        if execution.status in ExecutionState.END_STATES or \
-                execution.status in ExecutionState.QUEUED_STATE:
-            raise manager_exceptions.ConflictError(
-                'Cannot resume execution in state {0}'
-                .format(execution.status))
+    def _reset_failed_operations(self, execution):
+        """Force-resume the execution: restart failed operations.
+
+        All operations that were failed are going to be retried,
+        the execution itself is going to be set to pending again.
+
+        :return: Whether to continue with running the execution
+        """
         execution.status = ExecutionState.STARTED
+        self.sm.update(execution, modified_attrs=('status',))
+
+        tasks_graphs = self.sm.list(models.TasksGraph,
+                                    filters={'execution': execution},
+                                    get_all_results=True)
+        for graph in tasks_graphs:
+            operations = self.sm.list(models.Operation,
+                                      filters={'tasks_graph': graph},
+                                      get_all_results=True)
+            for operation in operations:
+                if operation.state in (cloudify_tasks.TASK_RESCHEDULED,
+                                       cloudify_tasks.TASK_FAILED):
+                    operation.state = cloudify_tasks.TASK_PENDING
+                    operation.parameters['current_retries'] = 0
+                    self.sm.update(operation,
+                                   modified_attrs=('parameters', 'state'))
+
+    def resume_execution(self, execution_id, force=False):
+        execution = self.sm.get(models.Execution, execution_id)
+        if force:
+            if execution.status not in (ExecutionState.CANCELLED,
+                                        ExecutionState.FAILED):
+                raise manager_exceptions.ConflictError(
+                    'Cannot force-resume execution: `{0}` in state: `{1}`'
+                    .format(execution.id, execution.status))
+            self._reset_failed_operations(execution)
+
+        if execution.status != ExecutionState.STARTED:
+            raise manager_exceptions.ConflictError(
+                'Cannot resume execution: `{0}` in state: `{1}`'
+                .format(execution.id, execution.status))
         self.sm.update(execution)
 
         workflow_id = execution.workflow_id
@@ -494,7 +525,8 @@ class ResourceManager(object):
             execution_id=execution_id,
             execution_parameters=execution.parameters,
             bypass_maintenance=False,
-            dry_run=False)
+            dry_run=False,
+            execution_creator=execution.creator)
         return execution
 
     def execute_workflow(self,
@@ -1369,9 +1401,9 @@ class ResourceManager(object):
         instance_dict['resource_availability'] = resource_availability
         instance_dict['private_resource'] = private_resource
 
-    def create_operation(self, operation_id, name, dependencies,
+    def create_operation(self, id, name, dependencies,
                          parameters, type, graph_id=None,
-                         graph_storage_id=None):
+                         graph_storage_id=None, state='pending'):
         # allow passing graph_storage_id directly as an optimization, so that
         # we don't need to query for the graph based on display id
         if (graph_id and graph_storage_id) or \
@@ -1385,11 +1417,11 @@ class ResourceManager(object):
                                  all_tenants=True)[0]
             graph_storage_id = graph._storage_id
         operation = models.Operation(
-            id=operation_id,
+            id=id,
             name=name,
             _tasks_graph_fk=graph_storage_id,
             created_at=utils.get_formatted_timestamp(),
-            state='pending',
+            state=state,
             dependencies=dependencies,
             parameters=parameters,
             type=type,

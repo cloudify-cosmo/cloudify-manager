@@ -24,7 +24,7 @@ from integration_tests.framework import utils
 from integration_tests import AgentlessTestCase
 from integration_tests.framework import postgresql
 
-from cloudify.models_states import ExecutionState
+from cloudify.models_states import ExecutionState, AgentState
 from manager_rest.constants import DEFAULT_TENANT_NAME, DEFAULT_TENANT_ROLE
 
 from cloudify_rest_client.executions import Execution
@@ -331,6 +331,21 @@ class TestSnapshot(AgentlessTestCase):
         second_secret = self.client.secrets.get('sec2')
         assert second_secret.value == 'top_secret2'
         assert second_secret.is_hidden_value
+
+    def test_v_4_5_restore_snapshot_with_agents(self):
+        """
+        Validate the restore of agents
+        """
+        agents = self.client.agents.list()
+        assert len(agents) == 0
+        snapshot_path = self._get_snapshot('snap_4.5.0_with_agents.zip')
+        self._upload_and_restore_snapshot(snapshot_path)
+        agents = self.client.agents.list()
+        self.assertEqual(len(agents), 3)
+        first_agent = self.client.agents.get(agents[0].id)
+        self.assertEqual(first_agent.state, AgentState.RESTORED)
+        self.assertEqual(first_agent.rabbitmq_exchange, agents[0].id)
+        self.assertIsNone(first_agent.rabbitmq_username)
 
     def _test_secrets_restored(self, snapshot_name):
         snapshot_path = self._get_snapshot(snapshot_name)
