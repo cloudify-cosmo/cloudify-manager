@@ -13,7 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import pytz
 import copy
 import urllib
 import subprocess
@@ -252,14 +251,9 @@ def get_visibility_parameter(optional=False,
 
 def parse_datetime(datetime_str):
     """
-    :param datetime_str: A string representing date and time with timezone
-                         information.
-    :return: A datetime object, converted to UTC, with no timezone info.
+    :param datetime_str: A string representing date and time already converted
+                        to UTC
+    :return: A datetime object
     """
-    # Parse the string to datetime object
-    date_with_offset = dateutil.parser.parse(datetime_str)
-    # Convert the date to UTC
-    utc_date = date_with_offset.astimezone(pytz.utc)
-    # Date is in UTC, tzinfo is not necessary
-    date_with_no_tzinfo = utc_date.replace(tzinfo=None)
-    return date_with_no_tzinfo
+    date = dateutil.parser.parse(datetime_str)
+    return date
