@@ -895,11 +895,13 @@ class ResourceManager(object):
             force = True
         execution = self.sm.get(models.Execution, execution_id)
         # When a user cancels queued execution automatically use the kill flag
-        if execution.status == ExecutionState.QUEUED:
+        if execution.status in (ExecutionState.QUEUED,
+                                ExecutionState.SCHEDULED):
             kill = True
             force = True
         if execution.status not in (ExecutionState.PENDING,
-                                    ExecutionState.STARTED) and \
+                                    ExecutionState.STARTED,
+                                    ExecutionState.SCHEDULED) and \
                 (not force or execution.status != ExecutionState.CANCELLING)\
                 and not kill:
             raise manager_exceptions.IllegalActionError(
