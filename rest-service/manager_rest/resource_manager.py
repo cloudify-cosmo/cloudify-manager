@@ -899,7 +899,8 @@ class ResourceManager(object):
             kill = True
             force = True
         if execution.status not in (ExecutionState.PENDING,
-                                    ExecutionState.STARTED) and \
+                                    ExecutionState.STARTED,
+                                    ExecutionState.SCHEDULED) and \
                 (not force or execution.status != ExecutionState.CANCELLING)\
                 and not kill:
             raise manager_exceptions.IllegalActionError(
