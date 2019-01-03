@@ -51,6 +51,7 @@ from .es_snapshot import ElasticSearch
 from .credentials import restore as restore_credentials
 from .constants import (
     ADMIN_DUMP_FILE,
+    ADMIN_TOKEN_SCRIPT,
     ARCHIVE_CERT_DIR,
     CERT_DIR,
     HASH_SALT_FILENAME,
@@ -418,6 +419,9 @@ class SnapshotRestore(object):
         # We have to do this after the restore process or it'll break the
         # workflow execution updating and thus cause the workflow to fail
         self._post_restore_commands.append(command)
+        # recreate the admin REST token file
+        self._post_restore_commands.append(
+            'sudo {0}'.format(ADMIN_TOKEN_SCRIPT))
 
     def _get_admin_user_token(self):
         return self._load_admin_dump()['api_token_key']
@@ -474,7 +478,6 @@ class SnapshotRestore(object):
         self._restore_security_file()
         utils.restore_stage_files(self._tempdir, stage_restore_override)
         utils.restore_composer_files(self._tempdir)
-        utils.recreate_mgmtworker_token()
         ctx.logger.info('Successfully restored archive files')
 
     def _restore_security_file(self):

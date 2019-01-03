@@ -129,15 +129,6 @@ def copy_stage_files(archive_root):
             os.path.join(archive_root, 'stage', folder))
 
 
-def recreate_mgmtworker_token():
-    """Recreate the admin_token file.
-
-    After the databasea snapshot has been restored, recreate the token
-    file with the new hash.
-    """
-    sudo([snapshot_constants.ADMIN_TOKEN_SCRIPT])
-
-
 def restore_stage_files(archive_root, override=False):
     """Copy Cloudify Stage files from the snapshot archive to stage folder.
 
