@@ -421,7 +421,7 @@ class SnapshotRestore(object):
         self._post_restore_commands.append(command)
         # recreate the admin REST token file
         self._post_restore_commands.append(
-            ['sudo', ADMIN_TOKEN_SCRIPT])
+            'sudo {0}'.format(ADMIN_TOKEN_SCRIPT))
 
     def _get_admin_user_token(self):
         return self._load_admin_dump()['api_token_key']
