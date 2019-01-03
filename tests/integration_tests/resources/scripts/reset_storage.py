@@ -15,6 +15,7 @@
 
 import json
 import argparse
+import subprocess
 
 from manager_rest.storage import db, models
 
@@ -32,6 +33,7 @@ from manager_rest.storage.storage_utils import \
 # This is a hacky way to get to the migrations folder
 migrations_dir = '/opt/manager/resources/cloudify/migrations'
 PROVIDER_NAME = 'integration_tests'
+ADMIN_TOKEN_RESET_SCRIPT = '/opt/cloudify/mgmtworker/create-admin-token.py'
 
 
 def setup_amqp_manager():
@@ -103,6 +105,8 @@ def reset_storage(script_config):
 
     # Clear the connection
     close_session(app)
+
+    subprocess.check_call(['sudo', ADMIN_TOKEN_RESET_SCRIPT])
 
 
 if __name__ == '__main__':
