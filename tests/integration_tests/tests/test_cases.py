@@ -28,8 +28,9 @@ import unittest
 import sh
 from contextlib import contextmanager
 
-from pytest import mark
 import wagon
+from pytest import mark
+from retrying import retry
 
 import cloudify.utils
 import cloudify.logs
@@ -102,6 +103,15 @@ class BaseTestCase(unittest.TestCase):
         self.env.stop_dispatch_processes()
 
     def _save_manager_logs_after_test(self, purge=True):
+        self.logger.info("Attempting to save the manager's logs...")
+        try:
+            self._save_manager_logs_after_test_helper(purge)
+        except Exception as e:
+            self.logger.info(
+                "Unable to save logs due to exception: {}".format(str(e)))
+
+    @retry(stop_max_attempt_number=3, wait_fixed=5000)
+    def _save_manager_logs_after_test_helper(self, purge):
         self.logger.debug('_save_manager_logs_after_test started')
         logs_dir = os.environ.get('CFY_LOGS_PATH_REMOTE')
         self.logger.info("Cloudify remote log saving path found: [{}]. If "
@@ -119,7 +129,7 @@ class BaseTestCase(unittest.TestCase):
             return
 
         self.logger.info(
-            'Saving manager logs for test:  {0}'.format(test_path[-1]))
+            'Saving manager logs for test:  {0}...'.format(test_path[-1]))
         logs_dir = os.path.join(os.path.expanduser(logs_dir), *test_path)
         mkdirs(logs_dir)
         target = os.path.join(logs_dir, 'logs.tar.gz')
