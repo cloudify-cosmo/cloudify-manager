@@ -41,7 +41,7 @@ class TestMultiInstanceApplication(AgentlessTestCase):
 
     def test_deploy_multi_instance_many_different_hosts(self):
         dsl_path = resource('dsl/multi_instance_many_different_hosts.yaml')
-        deployment, _ = self.deploy_application(dsl_path, timeout_seconds=60)
+        deployment, _ = self.deploy_application(dsl_path, timeout_seconds=180)
         machines = set(self.get_plugin_data(
             plugin_name='cloudmock',
             deployment_id=deployment.id
@@ -57,6 +57,6 @@ class TestMultiInstanceApplication(AgentlessTestCase):
     def test_deploy_multi_large_scale(self):
         dsl_path = resource('dsl/multi_instance_large_scale.yaml')
         start = time.time()
-        deployment, _ = self.deploy_application(dsl_path, timeout_seconds=1200)
+        deployment, _ = self.deploy_application(dsl_path, timeout_seconds=3600)
         self.logger.info('All done! execution took {} seconds'
                          .format(time.time() - start))
