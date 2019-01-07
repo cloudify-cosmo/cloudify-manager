@@ -1,0 +1,21 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+    - cloudify/types/types.yaml
+    - plugins/dockercompute.yaml
+
+node_templates:
+  vm:
+    type: cloudify.nodes.docker.Compute
+    properties:
+      install_agent: true
+
+
+  webserver:
+    type: cloudify.nodes.WebServer
+    relationships:
+      - type: cloudify.relationships.contained_in
+        target: vm
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        configure: scripts/operations/simple_script.sh
