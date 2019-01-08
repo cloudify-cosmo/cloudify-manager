@@ -8,14 +8,14 @@ from cloudify.constants import COMPUTE_NODE_TYPE
 from manager_rest import utils
 from entity_context import get_entity_context
 from constants import ENTITY_TYPES, NODE_MOD_TYPES
+from manager_rest.storage import models, get_node
 from manager_rest.resource_manager import get_resource_manager
-from manager_rest.storage import get_storage_manager, models, get_node
 
 
 class StorageClient(object):
-    def __init__(self):
-        self.sm = get_storage_manager()
-        self.rm = get_resource_manager()
+    def __init__(self, sm):
+        self.sm = sm
+        self.rm = get_resource_manager(sm)
 
 
 class UpdateHandler(StorageClient):
@@ -426,19 +426,19 @@ class PluginHandler(ModifiableEntityHandlerBase):
 
 
 class DeploymentUpdateNodeHandler(UpdateHandler):
-    def __init__(self):
-        super(DeploymentUpdateNodeHandler, self).__init__()
+    def __init__(self, sm):
+        super(DeploymentUpdateNodeHandler, self).__init__(sm)
         self._supported_entity_types = {ENTITY_TYPES.NODE,
                                         ENTITY_TYPES.RELATIONSHIP,
                                         ENTITY_TYPES.OPERATION,
                                         ENTITY_TYPES.PROPERTY,
                                         ENTITY_TYPES.PLUGIN}
         self._entity_handlers = {
-            ENTITY_TYPES.NODE: NodeHandler(),
-            ENTITY_TYPES.RELATIONSHIP: RelationshipHandler(),
-            ENTITY_TYPES.OPERATION: OperationHandler(),
-            ENTITY_TYPES.PROPERTY: PropertyHandler(),
-            ENTITY_TYPES.PLUGIN: PluginHandler()
+            ENTITY_TYPES.NODE: NodeHandler(sm),
+            ENTITY_TYPES.RELATIONSHIP: RelationshipHandler(sm),
+            ENTITY_TYPES.OPERATION: OperationHandler(sm),
+            ENTITY_TYPES.PROPERTY: PropertyHandler(sm),
+            ENTITY_TYPES.PLUGIN: PluginHandler(sm)
         }
 
     def handle(self, dep_update):
@@ -507,8 +507,8 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
 
 
 class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
-    def __init__(self):
-        super(DeploymentUpdateNodeInstanceHandler, self).__init__()
+    def __init__(self, sm):
+        super(DeploymentUpdateNodeInstanceHandler, self).__init__(sm)
         self._handlers_mapper = {
             NODE_MOD_TYPES.ADDED_AND_RELATED:
                 self._handle_adding_node_instance,
@@ -736,12 +736,12 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
 
 
 class DeploymentUpdateDeploymentHandler(UpdateHandler):
-    def __init__(self):
-        super(DeploymentUpdateDeploymentHandler, self).__init__()
+    def __init__(self, sm):
+        super(DeploymentUpdateDeploymentHandler, self).__init__(sm)
         self._entity_handlers = {
-            ENTITY_TYPES.WORKFLOW: WorkflowHandler(),
-            ENTITY_TYPES.OUTPUT: OutputHandler(),
-            ENTITY_TYPES.DESCRIPTION: DescriptionHandler(),
+            ENTITY_TYPES.WORKFLOW: WorkflowHandler(sm),
+            ENTITY_TYPES.OUTPUT: OutputHandler(sm),
+            ENTITY_TYPES.DESCRIPTION: DescriptionHandler(sm),
         }
         self._supported_entity_types = {ENTITY_TYPES.WORKFLOW,
                                         ENTITY_TYPES.OUTPUT,

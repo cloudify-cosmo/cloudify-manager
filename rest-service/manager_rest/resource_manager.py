@@ -55,8 +55,8 @@ from . import manager_exceptions
 
 class ResourceManager(object):
 
-    def __init__(self):
-        self.sm = get_storage_manager()
+    def __init__(self, sm=None):
+        self.sm = sm or get_storage_manager()
         self.task_mapping = _create_task_mapping()
 
     def list_executions(self, include=None, is_include_system_workflows=False,
@@ -1991,11 +1991,14 @@ class ResourceManager(object):
 
 
 # What we need to access this manager in Flask
-def get_resource_manager():
+def get_resource_manager(sm=None):
     """
     Get the current app's resource manager, create if necessary
     """
-    return current_app.config.setdefault('resource_manager', ResourceManager())
+    if sm:
+        return ResourceManager(sm)
+    return current_app.config.setdefault('resource_manager',
+                                         ResourceManager())
 
 
 def _create_task_mapping():
