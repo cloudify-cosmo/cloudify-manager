@@ -40,7 +40,8 @@ from manager_rest.constants import (DEFAULT_TENANT_NAME,
                                     FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER)
 from manager_rest.dsl_functions import get_secret_method
 from manager_rest.utils import is_create_global_permitted, send_event
-from manager_rest.storage import (get_storage_manager,
+from manager_rest.storage import (db,
+                                  get_storage_manager,
                                   models,
                                   get_node,
                                   ListResult)
@@ -1446,9 +1447,16 @@ class ResourceManager(object):
         )
         self.sm.put(graph)
         if operations:
+            created_at = utils.get_formatted_timestamp()
             for operation in operations:
-                operation['graph_storage_id'] = graph._storage_id
-                self.create_operation(**operation)
+                op = models.Operation(
+                    tenant=utils.current_tenant,
+                    creator=current_user,
+                    _tasks_graph_fk=graph._storage_id,
+                    created_at=created_at,
+                    **operation)
+                db.session.add(op)
+            self.sm._safe_commit()
         return graph
 
     def list_agents(self, deployment_id=None, node_ids=None,
