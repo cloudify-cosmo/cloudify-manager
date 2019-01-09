@@ -570,8 +570,8 @@ class ResourceManager(object):
 
             execution_id = str(uuid.uuid4())
 
-        should_queue = self._check_for_executions(deployment_id, force,
-                                                  queue, execution)
+        should_queue = self.check_for_executions(deployment_id, force,
+                                                 queue, execution)
         if not execution:
             new_execution = models.Execution(
                 id=execution_id,
@@ -695,7 +695,7 @@ class ResourceManager(object):
                 'Workflow {0} does not exist in deployment {1}'.format(
                     wf_id, dep_id))
 
-    def _check_for_executions(self, deployment_id, force, queue, execution):
+    def check_for_executions(self, deployment_id, force, queue, execution):
         """
         :param deployment_id: The id of the deployment the workflow belongs to.
         :param force: If set, 2 executions under the same deployment can run
