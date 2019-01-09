@@ -1449,6 +1449,7 @@ class ResourceManager(object):
         if operations:
             created_at = utils.get_formatted_timestamp()
             for operation in operations:
+                operation.setdefault('state', 'pending')
                 op = models.Operation(
                     tenant=utils.current_tenant,
                     creator=current_user,
