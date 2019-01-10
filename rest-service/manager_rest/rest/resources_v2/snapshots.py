@@ -140,14 +140,13 @@ class SnapshotsId(SecuredResource):
             'queue',
             request_dict.get('queue', 'false')
         )
-        bypass_maintenance = is_bypass_maintenance_mode()
         execution = get_resource_manager().create_snapshot(
             snapshot_id,
             include_metrics,
             include_credentials,
             include_logs,
             include_events,
-            bypass_maintenance,
+            True,
             queue
         )
 
@@ -266,7 +265,6 @@ class SnapshotsIdRestore(SecuredResource):
             'recreate_deployments_envs',
             request_dict['recreate_deployments_envs']
         )
-        bypass_maintenance = is_bypass_maintenance_mode()
         force = rest_utils.verify_and_convert_bool(
             'force',
             request_dict['force']
@@ -295,7 +293,7 @@ class SnapshotsIdRestore(SecuredResource):
             snapshot_id,
             recreate_deployments_envs,
             force,
-            bypass_maintenance,
+            True,
             timeout,
             restore_certificates,
             no_reboot,
