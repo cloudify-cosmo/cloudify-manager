@@ -39,8 +39,8 @@ class EventsPrinter(threading.Thread):
     def run(self):
         """
         This function will consume logs and events directly from the
-        cloudify-logs and cloudify-events exchanges. (As opposed to the usual
-        means of fetching events using the REST api).
+        cloudify-logs and cloudify-events-topic exchanges. (As opposed to the
+        usual means of fetching events using the REST api).
 
         Note: This method is only used for events/logs printing.
         Tests that need to assert on event should use the REST client events
