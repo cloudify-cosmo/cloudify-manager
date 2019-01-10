@@ -27,7 +27,6 @@ from manager_rest.security.authorization import authorize
 from manager_rest.rest import rest_decorators, rest_utils
 from manager_rest.storage import get_storage_manager, models
 from manager_rest.resource_manager import get_resource_manager
-from manager_rest.maintenance import is_bypass_maintenance_mode
 from manager_rest.upload_manager import UploadedSnapshotsManager
 from manager_rest.constants import (FILE_SERVER_SNAPSHOTS_FOLDER,
                                     FILE_SERVER_RESOURCES_FOLDER)
