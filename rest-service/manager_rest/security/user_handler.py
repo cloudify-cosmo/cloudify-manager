@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import string
 from flask import current_app
 from itsdangerous import BadSignature, SignatureExpired
 
@@ -70,7 +71,9 @@ def extract_api_token(api_token):
 
 
 def get_user_from_auth(auth):
-    if not auth:
+    if not auth or not auth.username:
+        return None
+    if auth.username[0] not in string.ascii_letters:
         return None
     return user_datastore.get_user(auth.username)
 
