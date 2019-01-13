@@ -67,8 +67,10 @@ class AMQPManager(object):
         self._client.set_vhost_permissions(vhost, username, '.*', '.*', '.*')
 
         # Gives configure and write permissions to the specific exchanges of
-        # events, logs and monitoring
-        allowed_resources = '^cloudify-(events|logs|monitoring)$'
+        # events, logs and monitoring. The exchange cloudify-events-topic
+        # is the new events exchange and cloudify-events permissions are being
+        # kept for old agents upgrades.
+        allowed_resources = '^cloudify-(events-topic|events|logs|monitoring)$'
         self._client.set_vhost_permissions('/',
                                            username,
                                            configure=allowed_resources,
@@ -191,7 +193,7 @@ class AMQPManager(object):
         # 1. The agent's exchange
         # 2. The agent's queues (for receiving tasks and sending responses)
         # 3. The exchanges of events, logs and monitoring
-        allowed_resources = '^(cloudify-(events|logs|monitoring)|' \
+        allowed_resources = '^(cloudify-(events-topic|logs|monitoring)|' \
                             '{exchange}($|_(operation|workflow|service|' \
                             'response_.*))$)'.format(exchange=exchange)
         self._client.set_vhost_permissions(tenant_vhost,
@@ -202,7 +204,7 @@ class AMQPManager(object):
 
         # Gives configure and write permissions to the specific exchanges of
         # events, logs and monitoring in the root vhost
-        allowed_resources = '^cloudify-(events|logs|monitoring)$'
+        allowed_resources = '^cloudify-(events-topic|logs|monitoring)$'
         self._client.set_vhost_permissions('/',
                                            username,
                                            configure=allowed_resources,

@@ -13,7 +13,7 @@
       "arguments": {}
     },
     {
-      "name": "cloudify-events",
+      "name": "cloudify-events-topic",
       "vhost": "/",
       "type": "topic",
       "durable": true,
