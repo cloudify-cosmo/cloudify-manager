@@ -1,0 +1,24 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - cloudify/types/types.yaml
+  - plugins/cloudmock.yaml
+
+
+node_templates:
+  node1:
+    type: cloudify.nodes.Root
+    interfaces:
+      interface1:
+        op_resumable: cloudmock.cloudmock.tasks.resumable
+        op_nonresumable: cloudmock.cloudmock.tasks.nonresumable
+
+  node2:
+    type: cloudify.nodes.Root
+    interfaces:
+      interface1:
+        op_resumable: cloudmock.cloudmock.tasks.mark_instance
+        op_nonresumable: cloudmock.cloudmock.tasks.mark_instance
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: node1
