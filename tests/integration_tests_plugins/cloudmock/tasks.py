@@ -13,6 +13,8 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import os
+import time
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
 from cloudify import ctx
@@ -22,6 +24,30 @@ from integration_tests_plugins.utils import update_storage
 
 RUNNING = 'running'
 NOT_RUNNING = 'not_running'
+
+
+def _resumable_task_base(ctx, wait_message, target_file):
+    ctx.instance.runtime_properties['resumed'] = False
+    ctx.instance.update()
+    while not os.path.exists(target_file):
+        ctx.logger.info(wait_message)
+        time.sleep(1)
+    ctx.instance.runtime_properties['resumed'] = True
+
+
+@operation(resumable=True)
+def resumable(**kwargs):
+    _resumable_task_base(**kwargs)
+
+
+@operation(resumable=False)
+def nonresumable(**kwargs):
+    _resumable_task_base(**kwargs)
+
+
+@operation
+def mark_instance(ctx, **kwargs):
+    ctx.instance.runtime_properties['marked'] = True
 
 
 @operation
