@@ -47,14 +47,17 @@ class TestResumeMgmtworker(AgentlessTestCase):
                 break
             time.sleep(1)
 
-    def _restart_mgmtworker(self):
+    def _stop_mgmtworker(self):
         self.logger.info('Stopping mgmtworker')
         self.execute_on_manager('systemctl stop cloudify-mgmtworker')
 
-        self.logger.info('Restarting mgmtworker')
+    def _create_target_file(self):
         self.execute_on_manager('touch {0}'.format(self.target_file))
         self.addCleanup(self.execute_on_manager,
                         'rm -rf {0}'.format(self.target_file))
+
+    def _start_mgmtworker(self):
+        self.logger.info('Restarting mgmtworker')
         self.execute_on_manager('systemctl start cloudify-mgmtworker')
 
     def test_resumable_mgmtworker_op(self):
@@ -74,7 +77,10 @@ class TestResumeMgmtworker(AgentlessTestCase):
             'marked',
             self.client.node_instances.get(instance2.id).runtime_properties)
 
-        self._restart_mgmtworker()
+        self._stop_mgmtworker()
+        self._create_target_file()
+        self._start_mgmtworker()
+
         self.logger.info('Waiting for the execution to finish')
         while True:
             new_exec = self.client.executions.get(execution.id)
@@ -100,7 +106,10 @@ class TestResumeMgmtworker(AgentlessTestCase):
         execution = self._start_execution(dep, 'interface1.op_nonresumable')
         self._wait_for_log(execution)
 
-        self._restart_mgmtworker()
+        self._stop_mgmtworker()
+        self._create_target_file()
+        self._start_mgmtworker()
+
         self.logger.info('Waiting for the execution to fail')
         while True:
             new_exec = self.client.executions.get(execution.id)
