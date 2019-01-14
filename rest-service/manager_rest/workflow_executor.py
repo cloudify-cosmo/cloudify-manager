@@ -38,7 +38,8 @@ def execute_workflow(name,
                      dry_run=False,
                      wait_after_fail=600,
                      execution_creator=None,
-                     scheduled_time=None):
+                     scheduled_time=None,
+                     resume=False):
 
     execution_parameters = execution_parameters or {}
     task_name = workflow['operation']
@@ -65,6 +66,7 @@ def execute_workflow(name,
         'dry_run': dry_run,
         'is_system_workflow': False,
         'wait_after_fail': wait_after_fail,
+        'resume': resume,
         'plugin': {
             'name': plugin_name,
             'package_name': plugin.get('package_name'),
