@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2019 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2019 Cloudify Technologies Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -36,7 +36,5 @@ class ExecutionsCheck(SecuredResource):
         execution = sm.get(models.Execution, execution_id)
         deployment_id = execution.deployment.id
         rm = get_resource_manager()
-        # check_for_executions returns whether or not to queue an execution,
-        # we want the opposite (whether or not to run now)
         return not (rm.check_for_executions(deployment_id, force=False,
                                             queue=True, execution=execution))
