@@ -787,12 +787,7 @@ class ExecutionsTest(AgentlessTestCase):
             "Task started 'cloudmock.tasks.provision'",
             "Task succeeded 'cloudmock.tasks.provision (dry run)'",
             "Node instance created",
-            "Pre-configuring relationships",
-            "Relationships pre-configured",
-            "Configuring node instance",
-            "Node instance configured",
-            "Post-configuring relationships",
-            "Relationships post-configured",
+            "Configuring node instance: nothing to do",
             "Starting node instance",
             "Sending task 'cloudmock.tasks.start'",
             "Task started 'cloudmock.tasks.start'",
@@ -801,8 +796,6 @@ class ExecutionsTest(AgentlessTestCase):
             "Task started 'cloudmock.tasks.get_state'",
             "Task succeeded 'cloudmock.tasks.get_state (dry run)'",
             "Plugins installed",
-            "Establishing relationships",
-            "Relationships established",
             "Node instance started",
             "'install' workflow execution succeeded (dry run)"
         }
