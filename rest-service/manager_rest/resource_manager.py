@@ -510,6 +510,11 @@ class ResourceManager(object):
             raise manager_exceptions.ConflictError(
                 'Cannot force-resume execution: `{0}` in state: `{1}`'
                 .format(execution.id, execution.status))
+        elif execution.status != ExecutionState.STARTED:
+            # not force and not cancelled/failed/started - invalid:
+            raise manager_exceptions.ConflictError(
+                'Cannot resume execution: `{0}` in state: `{1}`'
+                .format(execution.id, execution.status))
 
         execution.status = ExecutionState.STARTED
         execution.ended_at = None
