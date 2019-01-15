@@ -843,9 +843,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         for execution_status in [ExecutionState.PENDING,
                                  ExecutionState.CANCELLING,
                                  ExecutionState.FORCE_CANCELLING,
-                                 ExecutionState.TERMINATED,
-                                 ExecutionState.CANCELLED,
-                                 ExecutionState.FAILED]:
+                                 ExecutionState.TERMINATED]:
             execution.status = execution_status
             self.sm.update(execution, modified_attrs=('status',))
 
