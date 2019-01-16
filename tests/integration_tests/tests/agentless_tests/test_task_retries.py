@@ -147,30 +147,19 @@ class TaskRetriesTest(AgentlessTestCase):
                     event_type_sort_order[e['event_type']],
                 ),
             )
-            self.assertTrue(len(retry_events), 12)
+            self.assertEqual([e['event_type'] for e in retry_events],
+                             ['sending_task', 'task_rescheduled'] * 3 +
+                             ['sending_task', 'task_succeeded'])
 
-            # We should have 4 groups of 3 events - sending_task, task_started
-            # and task rescheduled (in the last case it will be
-            # task_succeeded). Thus setting the range's step to 3
-            event_types = ['sending_task', 'task_started', 'task_rescheduled']
-            for start_index, event_type in enumerate(event_types):
-                events_by_event_type = retry_events[start_index:-1:3]
-                self.assertTrue(all(
-                    event['event_type'] == event_type
-                    for event in events_by_event_type))
-            self.assertEqual(retry_events[-1]['event_type'], 'task_succeeded')
-
-            for retry_attempt in xrange(1, 3):
-                retry_attempt_events = (
-                    retry_events[retry_attempt * 3:(retry_attempt + 1) * 3])
-                retry_msg = '[retry {0}/5]'.format(retry_attempt)
-                self.assertTrue(all(
-                    retry_task_event['message'].endswith(retry_msg)
-                    for retry_task_event in retry_attempt_events
-                ))
+            self.assertTrue(retry_events[2]['message'].endswith('[retry 1/5]'))
+            self.assertTrue(retry_events[3]['message'].endswith('[retry 1/5]'))
+            self.assertTrue(retry_events[4]['message'].endswith('[retry 2/5]'))
+            self.assertTrue(retry_events[5]['message'].endswith('[retry 2/5]'))
+            self.assertTrue(retry_events[6]['message'].endswith('[retry 3/5]'))
+            self.assertTrue(retry_events[7]['message'].endswith('[retry 3/5]'))
 
         # events are async so we may have to wait some
-        self.do_assertions(assertion, timeout=120)
+        self.do_assertions(assertion, timeout=10)
 
     def _test_retries_and_retry_interval_impl(self,
                                               blueprint,
@@ -197,4 +186,4 @@ class TaskRetriesTest(AgentlessTestCase):
         self.assertEqual(expected_retries + 1, len(invocations))
         for i in range(len(invocations) - 1):
             self.assertLessEqual(expected_interval,
-                                 invocations[i+1] - invocations[i])
+                                 invocations[i + 1] - invocations[i])

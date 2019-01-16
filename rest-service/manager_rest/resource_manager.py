@@ -527,6 +527,7 @@ class ResourceManager(object):
             execution_parameters=execution.parameters,
             bypass_maintenance=False,
             dry_run=False,
+            resume=True,
             execution_creator=execution.creator)
         return execution
 
