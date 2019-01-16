@@ -106,7 +106,6 @@ class ResourceManager(object):
 
     def start_queued_executions(self):
         queued_executions = self._get_queued_executions()
-
         for e in queued_executions:
             self.execute_queued_workflow(e)
             if e.is_system_workflow:  # To avoid starvation of system workflows
@@ -118,6 +117,7 @@ class ResourceManager(object):
         queued_executions = self.list_executions(
             is_include_system_workflows=True,
             filters=filters,
+            all_tenants=True,
             sort={'created_at': 'asc'}).items
 
         return queued_executions
@@ -531,6 +531,15 @@ class ResourceManager(object):
             execution_creator=execution.creator)
         return execution
 
+    @staticmethod
+    def _set_execution_tenant(tenant_name):
+        tenant = get_storage_manager().get(
+            models.Tenant,
+            tenant_name,
+            filters={'name': tenant_name}
+        )
+        utils.set_current_tenant(tenant)
+
     def execute_workflow(self,
                          deployment_id,
                          workflow_id,
@@ -544,7 +553,6 @@ class ResourceManager(object):
                          wait_after_fail=600,
                          execution_creator=None,
                          scheduled_time=None):
-
         execution_creator = execution_creator or current_user
         deployment = self.sm.get(models.Deployment, deployment_id)
         self._validate_permitted_to_execute_global_workflow(deployment)
@@ -570,8 +578,8 @@ class ResourceManager(object):
 
             execution_id = str(uuid.uuid4())
 
-        should_queue = self._check_for_executions(deployment_id, force,
-                                                  queue, execution)
+        should_queue = self.check_for_executions(deployment_id, force, queue,
+                                                 execution, scheduled_time)
         if not execution:
             new_execution = models.Execution(
                 id=execution_id,
@@ -587,7 +595,8 @@ class ResourceManager(object):
 
             if deployment:
                 new_execution.set_deployment(deployment)
-        if should_queue:
+        if should_queue and not scheduled_time:
+            # Scheduled executions are passed to rabbit, no need to break here
             self.sm.put(new_execution)
             self._workflow_queued(new_execution)
             return new_execution
@@ -617,7 +626,6 @@ class ResourceManager(object):
             dry_run=dry_run,
             wait_after_fail=wait_after_fail,
             scheduled_time=scheduled_time)
-
         return new_execution
 
     @staticmethod
@@ -645,6 +653,7 @@ class ResourceManager(object):
         and re-run it with the correct workflow executor.
         :param execution: an execution DB object
         """
+        current_tenant = utils.current_tenant
         deployment = execution.deployment
         deployment_id = None
         if deployment:
@@ -658,7 +667,7 @@ class ResourceManager(object):
         # That is, the user that created the execution (instead of
         # `current_user` which we usually use)
         execution_creator = execution.creator
-
+        self._set_execution_tenant(execution.tenant_name)
         if self._should_use_system_workflow_executor(execution):
             # Use `execute_system_workflow`
             self._execute_system_workflow(
@@ -677,14 +686,15 @@ class ResourceManager(object):
                 bypass_maintenance=None, dry_run=False, queue=True,
                 execution=execution, execution_creator=execution_creator
             )
+        utils.set_current_tenant(current_tenant)
 
     @staticmethod
     def _get_proper_status(should_queue, scheduled=None):
-        if should_queue:
-            return ExecutionState.QUEUED
-
-        elif scheduled:
+        if scheduled:
             return ExecutionState.SCHEDULED
+
+        elif should_queue:
+            return ExecutionState.QUEUED
 
         return ExecutionState.PENDING
 
@@ -695,7 +705,8 @@ class ResourceManager(object):
                 'Workflow {0} does not exist in deployment {1}'.format(
                     wf_id, dep_id))
 
-    def _check_for_executions(self, deployment_id, force, queue, execution):
+    def check_for_executions(self, deployment_id, force,
+                             queue, execution, schedule=None):
         """
         :param deployment_id: The id of the deployment the workflow belongs to.
         :param force: If set, 2 executions under the same deployment can run
@@ -704,14 +715,15 @@ class ResourceManager(object):
                 be queued (instead of raising an exception).
         :param execution: An execution DB object, if exists it means this
                 execution was de-queued.
-
+        :param schedule: Whether or not this execution is scheduled to run in
+                        the future
         If the `queue` flag is False and there are running executions an
         Exception will be raised
         """
         system_exec_running = self._check_for_active_system_wide_execution(
-            queue, execution)
+            queue, execution, schedule)
         execution_running = self._check_for_active_executions(
-            deployment_id, force, queue)
+            deployment_id, force, queue, schedule)
         return system_exec_running or execution_running
 
     def _check_for_any_active_executions(self, queue):
@@ -722,6 +734,7 @@ class ResourceManager(object):
             e.id
             for e in self.list_executions(is_include_system_workflows=True,
                                           filters=filters,
+                                          all_tenants=True,
                                           get_all_results=True).items
         ]
         should_queue = False
@@ -739,7 +752,8 @@ class ResourceManager(object):
                 .format(executions))
         return should_queue
 
-    def _check_for_active_system_wide_execution(self, queue, execution):
+    def _check_for_active_system_wide_execution(self, queue,
+                                                execution, scheduled):
         """
         If execution is passed (execution is de-queued) we only check for
         ACTIVE system executions.
@@ -756,11 +770,11 @@ class ResourceManager(object):
         should_queue = False
         for e in self.list_executions(is_include_system_workflows=True,
                                       filters=filters,
+                                      all_tenants=True,
                                       get_all_results=True).items:
-            # Execution can't currently run because system execution is
-            # running. since `queue` flag is on - we will queue the execution
-            #  and it will run when possible
-            if e.deployment_id is None and queue:
+            # When `queue` or `schedule` options are used no need to
+            # raise an exception (the execution will run later)
+            if e.deployment_id is None and (queue or scheduled):
                 should_queue = True
                 break
             elif e.deployment_id is None:
@@ -1752,7 +1766,8 @@ class ResourceManager(object):
                     constants.WORKFLOW_PLUGINS_TO_INSTALL],
             })
 
-    def _check_for_active_executions(self, deployment_id, force, queue):
+    def _check_for_active_executions(self, deployment_id, force,
+                                     queue, schedule):
 
         def _get_running_executions(deployment_id=None, include_system=True):
             deployment_id_filter = self.create_filters_dict(
@@ -1774,7 +1789,7 @@ class ResourceManager(object):
             # Execution can't currently run since other executions are running.
             # `queue` flag is on - we will queue the execution and it will
             # run when possible
-            if len(running) > 0 and queue:
+            if len(running) > 0 and (queue or schedule):
                 should_queue = True
                 return should_queue
             if len(running) > 0:
