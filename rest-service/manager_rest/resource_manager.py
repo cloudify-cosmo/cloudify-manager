@@ -1084,6 +1084,8 @@ class ResourceManager(object):
             raise manager_exceptions.UnknownDeploymentInputError(str(e))
         except parser_exceptions.InputEvaluationError as e:
             raise manager_exceptions.DeploymentInputEvaluationError(str(e))
+        except parser_exceptions.ConstraintException as e:
+            raise manager_exceptions.ConstraintError(str(e))
         except parser_exceptions.UnknownSecretError as e:
             raise manager_exceptions.UnknownDeploymentSecretError(str(e))
         except parser_exceptions.UnsupportedGetSecretError as e:

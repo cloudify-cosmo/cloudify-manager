@@ -428,6 +428,44 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                                     'http_web_server_port2': {'a': []}
                                 })
 
+    def test_input_with_default_value_and_constraints(self):
+        self.put_deployment(
+            blueprint_file_name='blueprint_with_inputs_and_constraints.yaml',
+            blueprint_id='b9700',
+            deployment_id=self.DEPLOYMENT_ID)
+        node = self.client.nodes.get(self.DEPLOYMENT_ID, 'http_web_server')
+        self.assertEqual('8080', node.properties['port'])
+
+    def test_input_with_constraints_and_value_provided(self):
+        self.put_deployment(
+            blueprint_file_name='blueprint_with_inputs_and_constraints.yaml',
+            blueprint_id='b9701',
+            deployment_id=self.DEPLOYMENT_ID,
+            inputs={'http_web_server_port': '9090'})
+        node = self.client.nodes.get(
+            self.DEPLOYMENT_ID, 'http_web_server')
+        self.assertEqual('9090', node.properties['port'])
+
+    def test_input_violates_constraint(self):
+        self.assertRaisesRegexp(
+            CloudifyClientError,
+            "Value .+ of input .+ violates constraint length.+\\.",
+            self.put_deployment,
+            blueprint_id='b9702',
+            blueprint_file_name='blueprint_with_inputs_and_constraints.yaml',
+            deployment_id=self.DEPLOYMENT_ID,
+            inputs={'http_web_server_port': '123'})
+
+    def test_input_violates_constraint_data_type(self):
+        self.assertRaisesRegexp(
+            CloudifyClientError,
+            "Value's length could not be computed. Value type is '.+int.+'\\.",
+            self.put_deployment,
+            blueprint_id='b9703',
+            blueprint_file_name='blueprint_with_inputs_and_constraints.yaml',
+            deployment_id=self.DEPLOYMENT_ID,
+            inputs={'http_web_server_port': 123})
+
     def test_outputs(self):
         id_ = 'i{0}'.format(uuid.uuid4())
         self.put_deployment(
