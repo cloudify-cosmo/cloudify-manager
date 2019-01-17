@@ -321,6 +321,18 @@ class DeploymentInputEvaluationError(ManagerException):
         )
 
 
+class ConstraintError(ManagerException):
+    ERROR_CODE = 'constraint_error'
+
+    def __init__(self, *args, **kwargs):
+        super(ConstraintError, self).__init__(
+            400,
+            ConstraintError.ERROR_CODE,
+            *args,
+            **kwargs
+        )
+
+
 class UnknownDeploymentSecretError(ManagerException):
     ERROR_CODE = 'unknown_deployment_secret_error'
 
