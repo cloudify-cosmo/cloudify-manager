@@ -22,7 +22,7 @@ from integration_tests.tests.utils import get_resource as resource
 class TestResumeMgmtworker(AgentTestCase):
     wait_message = 'hello1'
 
-    def _start_execution(self, deployment, operation):
+    def _start_execution(self, deployment, operation, wait_seconds=20):
         return self.execute_workflow(
             workflow_name='execute_operation',
             wait_for_execution=False,
@@ -30,7 +30,8 @@ class TestResumeMgmtworker(AgentTestCase):
             parameters={'operation': operation,
                         'run_by_dependency_order': True,
                         'operation_kwargs': {
-                            'wait_message': self.wait_message
+                            'wait_message': self.wait_message,
+                            'wait_seconds': wait_seconds
                         }})
 
     def _wait_for_log(self, execution, wait_message=None):
@@ -74,3 +75,28 @@ class TestResumeMgmtworker(AgentTestCase):
         self.wait_for_execution_to_end(execution)
         instance = self.client.node_instances.get(instance.id)[0]
         self.assertTrue(instance.runtime_properties['resumed'])
+
+    def test_resume_agent_op_finished(self):
+        # start a workflow
+        deployment_id = 'd{0}'.format(uuid.uuid4())
+        dsl_path = resource('dsl/resumable_agent.yaml')
+        deployment, execution_id = self.deploy_application(
+            dsl_path, deployment_id=deployment_id)
+        execution = self._start_execution(
+            deployment, 'interface1.op1', wait_seconds=10)
+
+        # wait until the agent starts executing operations
+        self._wait_for_log(execution)
+
+        self._stop_mgmtworker()
+        # wait for the agent to finish executing the operation
+        while True:
+            instance = self.client.node_instances.list(
+                node_id='agent_host', deployment_id=deployment.id)[0]
+            if instance.runtime_properties['resumed']:
+                break
+
+        self._start_mgmtworker()
+
+        # check that we resume waiting for the agent operation
+        self.wait_for_execution_to_end(execution)
