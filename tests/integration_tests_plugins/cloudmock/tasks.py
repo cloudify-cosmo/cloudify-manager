@@ -35,6 +35,16 @@ def _resumable_task_base(ctx, wait_message, target_file):
     ctx.instance.runtime_properties['resumed'] = True
 
 
+@operation
+def task_agent(ctx, wait_message, **kwargs):
+    ctx.instance.runtime_properties['resumed'] = False
+    ctx.instance.update()
+    ctx.logger.info(wait_message)
+    time.sleep(20)
+    ctx.logger.info(wait_message[::-1])
+    ctx.instance.runtime_properties['resumed'] = True
+
+
 @operation(resumable=True)
 def resumable(**kwargs):
     _resumable_task_base(**kwargs)
