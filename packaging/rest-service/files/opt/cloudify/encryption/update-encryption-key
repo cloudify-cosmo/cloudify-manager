@@ -36,6 +36,12 @@ def update_encryption_key(old_key, new_key, commit=False):
     failures = []
     rmq_failures = []
 
+    # Ensure the correct rest conf is used (for DB location and credentials)
+    if 'MANAGER_REST_CONFIG_PATH' not in os.environ:
+        os.environ['MANAGER_REST_CONFIG_PATH'] = (
+            "/opt/manager/cloudify-rest.conf"
+        )
+
     with setup_flask_app().app_context():
         sm = get_storage_manager()
         secrets = sm.list(models.Secret)
