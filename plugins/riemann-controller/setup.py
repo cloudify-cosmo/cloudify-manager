@@ -19,7 +19,7 @@ from setuptools import setup
 
 setup(
     name='cloudify-riemann-controller-plugin',
-    version='4.5.5.dev1',
+    version='4.5.5',
     author='Cloudify',
     author_email='cosmo-admin@cloudify.co',
     packages=['riemann_controller',
@@ -33,7 +33,7 @@ setup(
                 ' based on blueprint policies and starting '
                 ' a riemann core with generated configuration',
     install_requires=[
-        'cloudify-common==4.5.5.dev1',
+        'cloudify-common==4.5.5',
         'jinja2==2.10'
     ],
 )
