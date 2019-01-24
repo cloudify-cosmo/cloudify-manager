@@ -73,7 +73,7 @@ class TestResumeMgmtworker(AgentTestCase):
         # check that we resume waiting for the agent operation
         self._wait_for_log(execution, self.wait_message[::-1])
         self.wait_for_execution_to_end(execution)
-        instance = self.client.node_instances.get(instance.id)[0]
+        instance = self.client.node_instances.get(instance.id)
         self.assertTrue(instance.runtime_properties['resumed'])
 
     def test_resume_agent_op_finished(self):
