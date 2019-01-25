@@ -40,3 +40,22 @@ class NamespacedScriptsTest(AgentTestCase):
         agent_success_events = [event['message'] for event in events
                                 if agent_success_msg == event['message']]
         self.assertEqual(len(agent_success_events), 1)
+
+    def test_success_deploy_namespaced_blueprint_with_local_scripts(self):
+        deployment_id = 'dep'
+        dsl_path = resource(
+            'dsl/agent_tests/'
+            'blueprint_with_namespaced_local_blueprint_import.yaml')
+        _, execution_id = self.deploy_application(dsl_path,
+                                                  deployment_id=deployment_id)
+
+        events = self.client.events.list(execution_id=execution_id,
+                                         sort='timestamp')
+        script_success_msg = "Task succeeded 'script_runner.tasks.run'"
+        script_success_events = [event['message'] for event in events
+                                 if script_success_msg == event['message']]
+        self.assertEqual(len(script_success_events), 1)
+        agent_success_msg = 'Agent created'
+        agent_success_events = [event['message'] for event in events
+                                if agent_success_msg == event['message']]
+        self.assertEqual(len(agent_success_events), 1)
