@@ -16,7 +16,8 @@
 import os
 import glob
 from urlparse import parse_qs
-from distutils.version import LooseVersion
+from packaging.specifiers import SpecifierSet, InvalidSpecifier
+from packaging.version import parse as parse_version
 
 from dsl_parser import parser
 from dsl_parser.import_resolver.default_import_resolver import (
@@ -100,16 +101,57 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
 
     @staticmethod
     def _find_plugin(name, filters):
+        def _get_specifier_set(package_versions):
+            # Flat out the versions, in case one of them contains a few
+            # operators/specific versions
+            _versions = (v for vs in package_versions for v in vs.split(','))
+            specs = SpecifierSet()
+            for spec in _versions:
+                if not spec:
+                    raise InvalidSpecifier()
+                try:
+                    specs &= SpecifierSet(spec)
+                except InvalidSpecifier:
+                    # If the code below doesn't raise any exception then it's
+                    # the case where a version has been provided with no
+                    # operator to prefix it.
+                    specs &= SpecifierSet('==={}'.format(spec))
+            return specs
+
         filters['package_name'] = name
+        version_specified = 'package_version' in filters
+        versions = filters.pop('package_version', [])
+        if not version_specified:
+            specifier_set = SpecifierSet()
+        else:
+            try:
+                specifier_set = _get_specifier_set(versions)
+            except InvalidSpecifier:
+                raise InvalidPluginError('Specified version param {0} of the '
+                                         'plugin {1} are in an invalid form. '
+                                         'Please refer to the documentation '
+                                         'for valid forms of '
+                                         'versions'.format(versions, name))
         sm = get_storage_manager()
         plugins = sm.list(Plugin, filters=filters)
         if not plugins:
+            if version_specified:
+                filters['package_version'] = versions
             version_message = ' (query: {0})'.format(filters) \
                 if filters else ''
             raise InvalidPluginError(
                 'Plugin {0}{1} not found'.format(name, version_message))
-        return max(plugins,
-                   key=lambda plugin: LooseVersion(plugin.package_version))
+        plugin_versions = (
+            (i, parse_version(p.package_version))
+            for i, p in enumerate(plugins))
+        matching_versions = [(i, v)
+                             for i, v in plugin_versions if v in specifier_set]
+        if not matching_versions:
+            raise InvalidPluginError('No matching version was found for '
+                                     'plugin {0} and '
+                                     'version(s) {1}.'.format(name, versions))
+        max_item = max(matching_versions, key=lambda (i, v): v)
+        return plugins[max_item[0]]
 
     @staticmethod
     def _make_plugin_yaml_url(plugin):
