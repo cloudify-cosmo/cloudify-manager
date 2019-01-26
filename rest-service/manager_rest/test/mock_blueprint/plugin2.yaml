@@ -1,4 +1,4 @@
-# this_is_plugin_1
+# this_is_plugin_2
 plugins:
   cool:
     executor: central_deployment_agent

@@ -39,8 +39,12 @@ install_requires = [
     'psycopg2==2.7.4',
     'pytz==2018.4',
     'click==6.7',
+<<<<<<< HEAD
     'jsonschema==3.0.0',
     'SQLAlchemy==1.2.18'
+=======
+    'packaging==17.1'
+>>>>>>> 9db2072... CY-934 Make import plugin version field to comply with PEP440 (#1606)
 ]
 
 
