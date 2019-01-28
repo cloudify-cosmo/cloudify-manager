@@ -337,8 +337,7 @@ class BaseTestCase(unittest.TestCase):
     @staticmethod
     def deploy(dsl_path, blueprint_id=None, deployment_id=None,
                inputs=None, wait=True, client=None):
-        if not client:
-            client = test_utils.create_rest_client()
+        client = client or test_utils.create_rest_client()
         resource_id = uuid.uuid4()
         if not blueprint_id:
             blueprint_id = 'blueprint_{0}'.format(resource_id)
