@@ -32,6 +32,11 @@ PRIVATE_KEY_CONTAINER_PATH = '/etc/ssh/ssh_host_rsa_key'
 DOCKER_CONF_PATH = '/etc/cloudify/dockercompute/docker_conf.json'
 
 
+class SSHSetupExceededRetries(Exception):
+    """Exception for the case when SSH Setup exceeds retries."""
+    pass
+
+
 @operation
 def start(image=IMAGE, label=('marker=test',), install_agent=True, **_):
     container_id = _start_container(image=image, label=label)
@@ -139,15 +144,18 @@ def _remote_agent_setup(container_id):
     })
 
 
-def _wait_for_ssh_setup(container_id):
-    for _ in range(100):
+def _wait_for_ssh_setup(container_id, retry_number=100, retry_interval=0.1):
+    for _ in range(retry_number):
         try:
             return _docker_exec(container_id,
                                 'cat {0}'.format(PUBLIC_KEY_CONTAINER_PATH),
                                 quiet=True)
         except CommandExecutionException:
-            time.sleep(0.1)
-    raise
+            time.sleep(retry_interval)
+    raise SSHSetupExceededRetries(
+        "_wait_for_ssh_setup exceeded {retries} allowed retries "
+        "({interval} interval).".format(
+            retries=retry_number, interval=retry_interval))
 
 
 def _docker_exec(container_id, args, quiet=False):
