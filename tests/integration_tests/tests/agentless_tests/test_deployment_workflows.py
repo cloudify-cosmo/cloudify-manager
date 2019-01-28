@@ -21,7 +21,7 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 from integration_tests.tests.utils import (
-    verify_deployment_environment_creation_complete,
+    verify_deployment_env_created,
     wait_for_deployment_deletion_to_complete
     )
 from integration_tests.tests.utils import do_retries
@@ -58,7 +58,7 @@ class TestDeploymentWorkflows(AgentlessTestCase):
         self.client.blueprints.upload(dsl_path, blueprint_id)
         self.client.deployments.create(blueprint_id, deployment_id,
                                        skip_plugins_validation=True)
-        do_retries(verify_deployment_environment_creation_complete, 30,
+        do_retries(verify_deployment_env_created, 30,
                    deployment_id=deployment_id)
         execution = self.client.executions.start(deployment_id,
                                                  'custom_execute_operation')

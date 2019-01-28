@@ -26,7 +26,7 @@ from .constants import SCHEDULED_TIME_FORMAT
 from cloudify.utils import setup_logger
 from cloudify_rest_client.executions import Execution
 from integration_tests.framework import utils, docl
-
+from integration_tests.framework.constants import ADMIN_TOKEN_SCRIPT
 
 logger = setup_logger('testenv.utils')
 
@@ -80,13 +80,13 @@ def create_rest_client(**kwargs):
 
 def wait_for_deployment_creation_to_complete(
         deployment_id, timeout_seconds=60):
-    do_retries(func=verify_deployment_environment_creation_complete,
+    do_retries(func=verify_deployment_env_created,
                exception_class=Exception,
                timeout_seconds=timeout_seconds,
                deployment_id=deployment_id)
 
 
-def verify_deployment_environment_creation_complete(deployment_id):
+def verify_deployment_env_created(deployment_id):
     # a workaround for waiting for the deployment environment creation to
     # complete
     client = create_rest_client()
@@ -229,11 +229,27 @@ def delete_provider_context():
 def generate_scheduled_for_date():
 
     now = datetime.utcnow()
-    # Schedule the execution for 2 minutes in the future
-    scheduled_for = now + timedelta(minutes=2)
+    # Schedule the execution for 1 minute in the future
+    scheduled_for = now + timedelta(minutes=1)
     date = SCHEDULED_TIME_FORMAT.format(year=scheduled_for.strftime('%Y'),
                                         month=scheduled_for.strftime('%m'),
                                         day=scheduled_for.strftime('%d'),
                                         hour=scheduled_for.strftime('%H'),
                                         minute=scheduled_for.strftime('%M'))
     return date
+
+
+def create_api_token():
+    """ Create a new valid API token """
+    command = 'sudo {0}'.format(ADMIN_TOKEN_SCRIPT)
+    docl.execute(command)
+
+
+def create_tenants_and_add_users(client, num_of_tenants):
+    for i in range(num_of_tenants):
+        _id = '{0}'.format(i)
+        tenant_name = 'tenant_{0}'.format(_id)
+        username = 'user_{0}'.format(_id)
+        client.tenants.create(tenant_name)
+        client.users.create(username, 'password', role='default')
+        client.tenants.add_user(username, tenant_name, role='manager')
