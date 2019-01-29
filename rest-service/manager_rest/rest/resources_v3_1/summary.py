@@ -148,6 +148,7 @@ class SummarizeNodeInstances(BaseSummary):
 class SummarizeExecutions(BaseSummary):
     summary_fields = [
         'status',
+        'status_display',
         'blueprint_id',
         'deployment_id',
         'workflow_id',
