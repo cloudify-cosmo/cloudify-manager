@@ -209,6 +209,8 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
 
         return [Workflow(name=wf_name,
                          created_at=None,
+                         plugin=wf.get('plugin',''),
+                         operation=wf.get('operation',''),
                          parameters=wf.get('parameters', dict()))
                 for wf_name, wf in deployment_workflows.iteritems()]
 
