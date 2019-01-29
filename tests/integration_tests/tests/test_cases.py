@@ -339,11 +339,9 @@ class BaseTestCase(unittest.TestCase):
                inputs=None, wait=True, client=None):
         client = client or test_utils.create_rest_client()
         resource_id = uuid.uuid4()
-        if not blueprint_id:
-            blueprint_id = 'blueprint_{0}'.format(resource_id)
+        blueprint_id = blueprint_id or 'blueprint_{0}'.format(resource_id)
         blueprint = client.blueprints.upload(dsl_path, blueprint_id)
-        if not deployment_id:
-            deployment_id = 'deployment_{0}'.format(resource_id)
+        deployment_id = deployment_id or 'deployment_{0}'.format(resource_id)
         deployment = client.deployments.create(
                 blueprint.id,
                 deployment_id,
