@@ -247,9 +247,8 @@ def create_api_token():
 
 def create_tenants_and_add_users(client, num_of_tenants):
     for i in range(num_of_tenants):
-        _id = '{0}'.format(i)
-        tenant_name = 'tenant_{0}'.format(_id)
-        username = 'user_{0}'.format(_id)
+        tenant_name = 'tenant_{0}'.format(i)
+        username = 'user_{0}'.format(i)
         client.tenants.create(tenant_name)
         client.users.create(username, 'password', role='default')
         client.tenants.add_user(username, tenant_name, role='manager')
