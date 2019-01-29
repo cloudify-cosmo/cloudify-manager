@@ -36,6 +36,8 @@ class Workflow(object):
     resource_fields = {
         'name': fields.String,
         'created_at': fields.String,
+        'plugin': fields.String,
+        'operation': fields.String,
         'parameters': fields.Raw
     }
 
@@ -43,6 +45,8 @@ class Workflow(object):
         self.name = kwargs.get('name')
         self.created_at = kwargs.get('created_at')
         self.parameters = kwargs.get('parameters')
+        self.plugin = kwargs.get('plugin')
+        self.operation = kwargs.get('operation')
 
 
 @swagger.model
