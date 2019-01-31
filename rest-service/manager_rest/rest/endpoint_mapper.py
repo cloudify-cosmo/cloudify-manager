@@ -56,7 +56,6 @@ def setup_resources(api):
         'NodeInstances': 'node-instances',
         'NodeInstancesId': 'node-instances/<string:node_instance_id>',
         'Events': 'events',
-        'Search': 'search',
         'Status': 'status',
         'ProviderContext': 'provider/context',
         'Version': 'version',
