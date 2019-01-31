@@ -105,7 +105,7 @@ def create_dict(breadcrumbs, value=None):
         if not breadcrumbs:
             return value
     elif len(breadcrumbs) == 1:
-            return breadcrumbs[0]
+        return breadcrumbs[0]
     return {breadcrumbs[0]: create_dict(breadcrumbs[1:], value)}
 
 

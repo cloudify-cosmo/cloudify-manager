@@ -90,14 +90,14 @@ class NodeHandler(FrozenEntitiesHandlerBase):
 
 
 class ModifiableEntityHandlerBase(FrozenEntitiesHandlerBase):
-        def remove(self, ctx, current_entities):
-            raise NotImplementedError
+    def remove(self, ctx, current_entities):
+        raise NotImplementedError
 
-        def add(self, ctx, current_entities):
-            raise NotImplementedError
+    def add(self, ctx, current_entities):
+        raise NotImplementedError
 
-        def modify(self, ctx, current_entities):
-            raise NotImplementedError
+    def modify(self, ctx, current_entities):
+        raise NotImplementedError
 
 
 class RelationshipHandler(ModifiableEntityHandlerBase):
