@@ -335,20 +335,20 @@ class BaseTestCase(unittest.TestCase):
         return execution
 
     @staticmethod
-    def deploy(dsl_path, blueprint_id=None, deployment_id=None, inputs=None):
-        client = test_utils.create_rest_client()
-        if not blueprint_id:
-            blueprint_id = 'b{0}'.format(uuid.uuid4())
+    def deploy(dsl_path, blueprint_id=None, deployment_id=None,
+               inputs=None, wait=True, client=None):
+        client = client or test_utils.create_rest_client()
+        resource_id = uuid.uuid4()
+        blueprint_id = blueprint_id or 'blueprint_{0}'.format(resource_id)
         blueprint = client.blueprints.upload(dsl_path, blueprint_id)
-        if deployment_id is None:
-            deployment_id = 'd{0}'.format(uuid.uuid4())
+        deployment_id = deployment_id or 'deployment_{0}'.format(resource_id)
         deployment = client.deployments.create(
                 blueprint.id,
                 deployment_id,
                 inputs=inputs,
                 skip_plugins_validation=True)
-
-        wait_for_deployment_creation_to_complete(deployment_id=deployment_id)
+        if wait:
+            wait_for_deployment_creation_to_complete(deployment_id)
         return deployment
 
     @staticmethod
@@ -446,8 +446,9 @@ class BaseTestCase(unittest.TestCase):
         return node_instance['state'] == 'started'
 
     @staticmethod
-    def wait_for_execution_to_end(execution, timeout_seconds=240):
-        client = test_utils.create_rest_client()
+    def wait_for_execution_to_end(execution, timeout_seconds=240, client=None):
+        if not client:
+            client = test_utils.create_rest_client()
         deadline = time.time() + timeout_seconds
         while execution.status not in Execution.END_STATES:
             assert execution.ended_at is None
