@@ -44,7 +44,6 @@ from cloudify_system_workflows.deployment_environment import \
 from . import utils
 from .npm import Npm
 from .agents import Agents
-from .influxdb import InfluxDB
 from .postgres import Postgres
 from .networks import Networks
 from .es_snapshot import ElasticSearch
@@ -139,7 +138,6 @@ class SnapshotRestore(object):
                 self._generate_new_rest_token()
                 self._restart_rest_service()
                 self._restore_plugins(existing_plugins)
-                self._restore_influxdb()
                 self._restore_credentials(postgres)
                 self._restore_agents()
                 self._restore_amqp_vhosts_and_users()
@@ -781,11 +779,6 @@ class SnapshotRestore(object):
             plugin['distribution'] == dist,
             plugin['distribution_release'] == release
         ]))
-
-    def _restore_influxdb(self):
-        ctx.logger.info('Restoring InfluxDB metrics')
-        InfluxDB.restore(self._tempdir)
-        ctx.logger.info('Successfully restored InfluxDB metrics')
 
     def _restore_credentials(self, postgres):
         ctx.logger.info('Restoring credentials')

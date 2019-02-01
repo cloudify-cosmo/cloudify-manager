@@ -1,2 +1,0 @@
-cloudify-riemann-controller-plugin
-============================

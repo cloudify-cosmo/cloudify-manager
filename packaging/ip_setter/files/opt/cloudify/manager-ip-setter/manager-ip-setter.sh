@@ -7,23 +7,6 @@ function set_manager_ip() {
 
   echo "Setting manager IP to: ${ip}"
 
-  if [[ -d /opt/amqpinflux ]]; then
-    # If /opt/amqpinflux exists then we expect amqpinflux to be in use
-    echo "Updating cloudify-amqpinflux.."
-    /usr/bin/sed -i -e "s/AMQP_HOST=.*/AMQP_HOST="'"'"${ip}"'"'"/" /etc/sysconfig/cloudify-amqpinflux
-  else
-    echo "amqpinflux not installed."
-  fi
-
-  if [[ -d /opt/riemann ]]; then
-    # If /opt/riemann exists then we expect riemann to be in use
-    echo "Updating cloudify-riemann.."
-    /usr/bin/sed -i -e "s/RABBITMQ_HOST=.*/RABBITMQ_HOST="'"'"${ip}"'"'"/" /etc/sysconfig/cloudify-riemann
-    /usr/bin/sed -i -e "s/REST_HOST=.*/REST_HOST="'"'"${ip}"'"'"/" /etc/sysconfig/cloudify-riemann
-  else
-    echo "Riemann not installed."
-  fi
-
   echo "Updating cloudify-mgmtworker.."
   /usr/bin/sed -i -e "s/REST_HOST=.*/REST_HOST="'"'"${ip}"'"'"/" /etc/sysconfig/cloudify-mgmtworker
   /usr/bin/sed -i -e "s#MANAGER_FILE_SERVER_URL="'"'"https://.*:53333/resources"'"'"#MANAGER_FILE_SERVER_URL="'"'"https://${ip}:53333/resources"'"'"#" /etc/sysconfig/cloudify-mgmtworker

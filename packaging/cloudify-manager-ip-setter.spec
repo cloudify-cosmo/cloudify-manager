@@ -1,4 +1,3 @@
-%define _user riemann
 
 Name:           cloudify-manager-ip-setter
 Version:        %{CLOUDIFY_VERSION}

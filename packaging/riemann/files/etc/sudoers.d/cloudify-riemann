@@ -1,6 +1,0 @@
-Cmnd_Alias RIEMANN_ACTIVATION = /opt/manager/scripts/activate_riemann_policies.sh
-
-# Riemann's user should be able to run the activation script during
-# service initialization.
-riemann ALL=(cfyuser) NOPASSWD: RIEMANN_ACTIVATION
-Defaults!RIEMANN_ACTIVATION !requiretty

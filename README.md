@@ -7,7 +7,6 @@
 This repository contains the following Cloudify components:
 
 * Cloudify's manager REST service.
-* riemann-controller.
 * Cloudify system-workflows
 * Integration tests.
 
