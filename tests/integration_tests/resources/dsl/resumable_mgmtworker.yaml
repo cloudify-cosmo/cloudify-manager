@@ -12,6 +12,7 @@ node_templates:
       interface1:
         op_resumable: cloudmock.cloudmock.tasks.resumable
         op_nonresumable: cloudmock.cloudmock.tasks.nonresumable
+        op_failing: cloudmock.cloudmock.tasks.failing
 
   node2:
     type: cloudify.nodes.Root
@@ -19,6 +20,7 @@ node_templates:
       interface1:
         op_resumable: cloudmock.cloudmock.tasks.mark_instance
         op_nonresumable: cloudmock.cloudmock.tasks.mark_instance
+        op_failing: cloudmock.cloudmock.tasks.mark_instance
     relationships:
       - type: cloudify.relationships.depends_on
         target: node1
