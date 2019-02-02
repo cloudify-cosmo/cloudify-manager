@@ -25,7 +25,6 @@ import time
 import uuid
 import tempfile
 import unittest
-import sh
 from contextlib import contextmanager
 
 import wagon
