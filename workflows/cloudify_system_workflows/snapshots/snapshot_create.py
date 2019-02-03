@@ -26,7 +26,6 @@ from . import utils
 from . import constants
 from .agents import Agents
 from .networks import Networks
-from .influxdb import InfluxDB
 from .postgres import Postgres
 from .credentials import Credentials
 
@@ -63,7 +62,6 @@ class SnapshotCreate(object):
 
             self._dump_files()
             self._dump_postgres()
-            self._dump_influxdb()
             self._dump_networks()
             self._dump_credentials(manager_version)
             self._dump_metadata(metadata,
@@ -108,11 +106,6 @@ class SnapshotCreate(object):
                           self._include_events)
             postgres.dump_stage(self._tempdir)
             postgres.dump_composer(self._tempdir)
-
-    def _dump_influxdb(self):
-        ctx.logger.info('Dumping InfluxDB data')
-        if self._include_metrics:
-            InfluxDB.dump(self._tempdir)
 
     def _dump_credentials(self, manager_version):
         ctx.logger.info('Dumping credentials data')

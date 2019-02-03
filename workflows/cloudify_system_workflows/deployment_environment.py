@@ -26,13 +26,6 @@ from cloudify.workflows import workflow_context
 from cloudify.manager import get_rest_client
 
 
-def _should_create_policy_engine_core(policy_configuration):
-    """Examine the policy_configuration and decide to start a riemann core
-    """
-    return any(group.get('policies')
-               for group in policy_configuration['groups'].values())
-
-
 def _merge_deployment_and_workflow_plugins(deployment_plugins,
                                            workflow_plugins):
     added_plugins = set()
@@ -66,16 +59,6 @@ def generate_create_dep_tasks_graph(ctx,
             ctx.send_event('Installing deployment plugins'),
             ctx.execute_task('cloudify_agent.operations.install_plugins',
                              kwargs={'plugins': plugins_to_install}))
-
-    if _should_create_policy_engine_core(policy_configuration):
-        sequence.add(
-            ctx.send_event('Starting deployment policy engine core'),
-            ctx.execute_task('riemann_controller.tasks.create',
-                             kwargs=policy_configuration))
-    else:
-        sequence.add(
-            ctx.send_event('Skipping starting deployment policy engine '
-                           'core - no policies defined'))
 
     sequence.add(
         ctx.send_event('Creating deployment work directory'),
@@ -125,11 +108,6 @@ def delete(ctx,
                     'plugins': plugins_to_uninstall,
                     'delete_managed_plugins': False
                 }))
-
-    sequence.add(
-        ctx.send_event('Stopping deployment policy engine core '
-                       '(if applicable)'),
-        ctx.execute_task('riemann_controller.tasks.delete'))
 
     graph.execute()
     _delete_deployment_workdir(ctx)

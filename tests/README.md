@@ -43,7 +43,6 @@ This project runs tests on a Cloudify Manager container created by [`docl`](http
 3. The following cloudify-cosmo github repositories need to be cloned to
    some directory (`source_root`):
 
-       * `cloudify-amqp-influxdb`
        * `cloudify-common`
        * `cloudify-agent`
        * `cloudify-manager`

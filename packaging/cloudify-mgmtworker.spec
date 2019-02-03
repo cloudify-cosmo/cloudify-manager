@@ -23,7 +23,6 @@ Cloudify's Management worker
 virtualenv /opt/mgmtworker/env
 %{PIP_INSTALL} --upgrade pip setuptools
 %{PIP_INSTALL} -r "${RPM_SOURCE_DIR}/packaging/mgmtworker/requirements.txt"
-%{PIP_INSTALL} --upgrade "${RPM_SOURCE_DIR}/plugins/riemann-controller"
 %{PIP_INSTALL} --upgrade "${RPM_SOURCE_DIR}/workflows"
 
 
