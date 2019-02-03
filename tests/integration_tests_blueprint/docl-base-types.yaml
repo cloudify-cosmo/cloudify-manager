@@ -29,9 +29,6 @@ node_types:
           - package_name: cloudify-cli
             branch: { get_input: cloudify_cli_branch }
             org: { get_input: cloudify_cli_org }
-          - package_name: cloudify-amqp-influxdb
-            branch: { get_input: cloudify_amqp_influx_branch }
-            org: { get_input: cloudify_amqp_influx_org }
           - package_name: cloudify-agent
             branch: { get_input: cloudify_agent_branch }
             org: { get_input: cloudify_agent_org }
@@ -94,14 +91,6 @@ inputs:
     default: 'master'
 
   cloudify_cli_org:
-    type: string
-    default: 'cloudify-cosmo'
-
-  cloudify_amqp_influx_branch:
-    type: string
-    default: 'master'
-
-  cloudify_amqp_influx_org:
     type: string
     default: 'cloudify-cosmo'
 

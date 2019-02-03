@@ -82,13 +82,9 @@ class TestResumeMgmtworker(AgentlessTestCase):
         self._start_mgmtworker()
 
         self.logger.info('Waiting for the execution to finish')
-        while True:
-            new_exec = self.client.executions.get(execution.id)
-            if new_exec.status == 'started':
-                time.sleep(1)
-                continue
-            self.assertEqual(new_exec.status, 'terminated')
-            break
+        execution = self.wait_for_execution_to_end(execution)
+        self.assertEqual(execution.status, 'terminated')
+
         self.assertTrue(self.client.node_instances.get(instance.id)
                         .runtime_properties['resumed'])
         self.assertTrue(self.client.node_instances.get(instance2.id)
@@ -111,15 +107,103 @@ class TestResumeMgmtworker(AgentlessTestCase):
         self._start_mgmtworker()
 
         self.logger.info('Waiting for the execution to fail')
-        while True:
-            new_exec = self.client.executions.get(execution.id)
-            if new_exec.status == 'started':
-                time.sleep(1)
-                continue
-            self.assertEqual(new_exec.status, 'failed')
-            break
+        self.assertRaises(RuntimeError,
+                          self.wait_for_execution_to_end, execution)
+
         self.assertFalse(self.client.node_instances.get(instance.id)
                          .runtime_properties['resumed'])
         self.assertNotIn(
             'marked',
             self.client.node_instances.get(instance2.id).runtime_properties)
+
+    def test_resume_failed(self):
+        dep = self._create_deployment()
+        instance = self.client.node_instances.list(
+            deployment_id=dep.id, node_id='node1')[0]
+        instance2 = self.client.node_instances.list(
+            deployment_id=dep.id, node_id='node2')[0]
+        execution = self._start_execution(dep, 'interface1.op_failing')
+
+        self.logger.info('Waiting for the execution to fail')
+        self.assertRaises(RuntimeError,
+                          self.wait_for_execution_to_end, execution)
+
+        self._create_target_file()
+        self.client.executions.resume(execution.id, force=True)
+        execution = self.wait_for_execution_to_end(execution)
+        self.assertEqual(execution.status, 'terminated')
+
+        self.assertTrue(self.client.node_instances.get(instance.id)
+                        .runtime_properties['resumed'])
+        self.assertTrue(self.client.node_instances.get(instance2.id)
+                        .runtime_properties['marked'])
+
+    def test_resume_cancelled_resumable(self):
+        dep = self._create_deployment()
+        instance = self.client.node_instances.list(
+            deployment_id=dep.id, node_id='node1')[0]
+        instance2 = self.client.node_instances.list(
+            deployment_id=dep.id, node_id='node2')[0]
+        execution = self._start_execution(dep, 'interface1.op_resumable')
+        self._wait_for_log(execution)
+        self.client.executions.cancel(execution.id, kill=True)
+        self.logger.info('Waiting for the execution to fail')
+        execution = self.wait_for_execution_to_end(execution)
+        self.assertEqual(execution.status, 'cancelled')
+
+        self._create_target_file()
+        execution = self.client.executions.resume(execution.id)
+        execution = self.wait_for_execution_to_end(execution)
+        self.assertEqual(execution.status, 'terminated')
+
+        self.assertTrue(self.client.node_instances.get(instance.id)
+                        .runtime_properties['resumed'])
+        self.assertTrue(self.client.node_instances.get(instance2.id)
+                        .runtime_properties['marked'])
+
+    def test_resume_cancelled_nonresumable(self):
+        dep = self._create_deployment()
+        instance = self.client.node_instances.list(
+            deployment_id=dep.id, node_id='node1')[0]
+        instance2 = self.client.node_instances.list(
+            deployment_id=dep.id, node_id='node2')[0]
+        execution = self._start_execution(dep, 'interface1.op_nonresumable')
+        self._wait_for_log(execution)
+        self.client.executions.cancel(execution.id, kill=True)
+        self.logger.info('Waiting for the execution to fail')
+        execution = self.wait_for_execution_to_end(execution)
+        self.assertEqual(execution.status, 'cancelled')
+
+        self._create_target_file()
+        execution = self.client.executions.resume(execution.id)
+        self.assertRaises(RuntimeError,
+                          self.wait_for_execution_to_end, execution)
+
+        self.assertFalse(self.client.node_instances.get(instance.id)
+                         .runtime_properties['resumed'])
+        self.assertNotIn('marked',
+                         self.client.node_instances.get(instance2.id)
+                         .runtime_properties)
+
+    def test_force_resume_cancelled_nonresumable(self):
+        dep = self._create_deployment()
+        instance = self.client.node_instances.list(
+            deployment_id=dep.id, node_id='node1')[0]
+        instance2 = self.client.node_instances.list(
+            deployment_id=dep.id, node_id='node2')[0]
+        execution = self._start_execution(dep, 'interface1.op_nonresumable')
+        self._wait_for_log(execution)
+        self.client.executions.cancel(execution.id)
+        self.logger.info('Waiting for the execution to fail')
+        execution = self.wait_for_execution_to_end(execution)
+        self.assertEqual(execution.status, 'cancelled')
+
+        self._create_target_file()
+        execution = self.client.executions.resume(execution.id, force=True)
+        execution = self.wait_for_execution_to_end(execution)
+        self.assertEqual(execution.status, 'terminated')
+
+        self.assertTrue(self.client.node_instances.get(instance.id)
+                        .runtime_properties['resumed'])
+        self.assertTrue(self.client.node_instances.get(instance2.id)
+                        .runtime_properties['marked'])

@@ -25,7 +25,6 @@ import time
 import uuid
 import tempfile
 import unittest
-import sh
 from contextlib import contextmanager
 
 import wagon
@@ -44,7 +43,6 @@ from manager_rest.constants import CLOUDIFY_TENANT_HEADER
 from integration_tests.framework import utils, hello_world, docl, env
 from integration_tests.framework.flask_utils import reset_storage, \
     prepare_reset_storage_script
-from integration_tests.framework.riemann import RIEMANN_CONFIGS_DIR
 from integration_tests.tests import utils as test_utils
 from integration_tests.framework.constants import (PLUGIN_STORAGE_DIR,
                                                    CLOUDIFY_USER)
@@ -288,29 +286,6 @@ class BaseTestCase(unittest.TestCase):
                                      **kwargs)
 
     @staticmethod
-    def publish_riemann_event(deployment_id,
-                              node_name,
-                              node_id='',
-                              host='localhost',
-                              service='service',
-                              state='',
-                              metric=0,
-                              ttl=60):
-        event = {
-            'host': host,
-            'service': service,
-            'state': state,
-            'metric': metric,
-            'time': int(time.time()),
-            'node_name': node_name,
-            'node_id': node_id,
-            'ttl': ttl
-        }
-        queue = '{0}-riemann'.format(deployment_id)
-        routing_key = deployment_id
-        test_utils.publish_event(queue, routing_key, event)
-
-    @staticmethod
     def execute_workflow(workflow_name, deployment_id,
                          parameters=None,
                          timeout_seconds=240,
@@ -464,15 +439,6 @@ class BaseTestCase(unittest.TestCase):
                             execution.error,
                             execution.status))
         return execution
-
-    @staticmethod
-    def is_riemann_core_up(deployment_id):
-        core_indicator = os.path.join(RIEMANN_CONFIGS_DIR, deployment_id, 'ok')
-        try:
-            out = docl.read_file(core_indicator)
-            return out == 'ok'
-        except sh.ErrorReturnCode:
-            return False
 
     @contextmanager
     def client_using_tenant(self, client, tenant_name):

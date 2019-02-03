@@ -56,6 +56,13 @@ def nonresumable(**kwargs):
 
 
 @operation
+def failing(ctx, target_file, **kwargs):
+    if not os.path.exists(target_file):
+        raise ValueError('Error')
+    ctx.instance.runtime_properties['resumed'] = True
+
+
+@operation
 def mark_instance(ctx, **kwargs):
     ctx.instance.runtime_properties['marked'] = True
 
