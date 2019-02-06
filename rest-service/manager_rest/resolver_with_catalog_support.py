@@ -28,7 +28,8 @@ from manager_rest.storage import get_storage_manager
 from manager_rest.constants import (
     FILE_SERVER_PLUGINS_FOLDER,
     FILE_SERVER_BLUEPRINTS_FOLDER)
-from manager_rest.manager_exceptions import InvalidPluginError
+from manager_rest.manager_exceptions import (InvalidPluginError,
+                                             NotFoundError)
 from manager_rest.storage.models import (Plugin,
                                          Blueprint)
 
@@ -168,8 +169,16 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
         return 'file://{0}'.format(filename)
 
     def _resolve_blueprint_url(self, import_url):
-        main_blueprint = import_url.replace(BLUEPRINT_PREFIX, '', 1).strip()
-        blueprint = self._get_blueprint(main_blueprint)
+        blueprint_id = import_url.replace(BLUEPRINT_PREFIX, '', 1).strip()
+        try:
+            blueprint = self._get_blueprint(blueprint_id)
+        except NotFoundError:
+            raise NotFoundError(
+                'Requested blueprint import `{0}` was not found,'
+                'please first upload the blueprint with that id.'
+                .format(blueprint_id)
+            )
+
         return self._make_blueprint_url(blueprint)
 
     def _fetch_blueprint_import(self, import_url):
