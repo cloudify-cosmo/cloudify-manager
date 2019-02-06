@@ -14,7 +14,6 @@
 #  * limitations under the License.
 #
 
-from flask_restful_swagger import swagger
 from sqlalchemy import (
     asc,
     bindparam,
@@ -31,7 +30,6 @@ from manager_rest.rest.rest_decorators import (
     exceptions_handled,
     insecure_rest_method,
 )
-from manager_rest.rest.rest_utils import get_json_and_verify_params
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage.models_base import db
@@ -424,112 +422,17 @@ class Events(SecuredResource):
 
         return event
 
-    def _query_events(self):
-        """Query events using a SQL backend.
-
-        :returns:
-            Results using a format that resembles the one used by elasticsearch
-            (more information about the format in :meth:`.._map_event_to_dict`)
-        :rtype: dict(str)
-
-        """
-        request_dict = get_json_and_verify_params()
-
-        es_query = request_dict['query']['bool']
-
-        _include = None
-        # This is a trick based on the elasticsearch query pattern
-        # - when only a filter is used it's in a 'must' section
-        # - when multiple filters are used they're in a 'should' section
-        if 'should' in es_query:
-            filters = {'type': ['cloudify_event', 'cloudify_log']}
-        else:
-            filters = {'type': ['cloudify_event']}
-        filters['execution_id'] = [
-            es_query['must'][0]['match']['context.execution_id'],
-        ]
-        pagination = {
-            'size': request_dict.get('size', self.DEFAULT_SEARCH_SIZE),
-            'offset': request_dict['from'],
-        }
-        sort = {
-            field: value['order']
-            for es_sort in request_dict['sort']
-            for field, value in es_sort.items()
-        }
-        # TBD: Support range filters in API v1 if needed
-        range_filters = {}
-
-        params = {
-            'limit': pagination['size'],
-            'offset': pagination['offset'],
-        }
-
-        select_query, total = self._build_select_query(
-            filters, sort, range_filters, self.current_tenant.id
-        )
-
-        events = [
-            self._map_event_to_dict(_include, event)
-            for event in select_query.params(**params).all()
-        ]
-
-        results = {
-            'hits': {
-                'hits': [
-                    {'_source': event}
-                    for event in events
-                ],
-                'total': total,
-            },
-        }
-
-        return results
-
-    @swagger.operation(
-        nickname='events',
-        notes='Returns a list of events for the provided ElasticSearch query. '
-              'The response format is as ElasticSearch response format.',
-        parameters=[{'name': 'body',
-                     'description': 'ElasticSearch query.',
-                     'required': True,
-                     'allowMultiple': False,
-                     'dataType': 'string',
-                     'paramType': 'body'}],
-        consumes=['application/json']
-    )
     @exceptions_handled
     @authorize('event_list')
     @insecure_rest_method
     def get(self, **kwargs):
-        """List events using a SQL backend.
+        raise manager_exceptions.MethodNotAllowedError()
 
-        :returns: Events found in the SQL backend
-        :rtype: dict(str)
-
-        """
-        return self._query_events()
-
-    @swagger.operation(
-        nickname='events',
-        notes='Returns a list of events for the provided ElasticSearch query. '
-              'The response format is as ElasticSearch response format.',
-        parameters=[{'name': 'body',
-                     'description': 'ElasticSearch query.',
-                     'required': True,
-                     'allowMultiple': False,
-                     'dataType': 'string',
-                     'paramType': 'body'}],
-        consumes=['application/json']
-    )
     @exceptions_handled
     @authorize('event_list')
     @insecure_rest_method
     def post(self, **kwargs):
-        """
-        List events for the provided Elasticsearch query
-        """
-        return self._query_events()
+        raise manager_exceptions.MethodNotAllowedError()
 
     @property
     def current_tenant(self):
