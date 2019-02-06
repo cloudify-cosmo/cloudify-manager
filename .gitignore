@@ -52,6 +52,7 @@ riemann.log
 
 # vim
 *.swp
+.DS_Store
 
 # rpm/mock build stuff
 *.rendered.spec
