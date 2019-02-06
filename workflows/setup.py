@@ -29,7 +29,6 @@ setup(
     description='Various Cloudify Workflows',
     install_requires=[
         'cloudify-common==5.0.dev1',
-        'elasticsearch==1.6.0',
         'retrying==1.3.3',
         'psycopg2==2.7.4',
         'cryptography==2.1.4',

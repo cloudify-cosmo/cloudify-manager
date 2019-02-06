@@ -27,7 +27,6 @@ install_requires = [
     'requests>=2.7.0,<3.0.0',
     'gunicorn==18.0',
     'PyYAML==3.10',
-    'elasticsearch==1.6.0',
     'psutil==3.3.0',
     'jsonpickle==0.9.2',
     'wagon[venv]==0.6.3',
