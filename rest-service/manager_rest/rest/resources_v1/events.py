@@ -14,7 +14,6 @@
 #  * limitations under the License.
 #
 
-from flask_restful_swagger import swagger
 from sqlalchemy import (
     asc,
     bindparam,
@@ -31,7 +30,6 @@ from manager_rest.rest.rest_decorators import (
     exceptions_handled,
     insecure_rest_method,
 )
-from manager_rest.rest.rest_utils import get_json_and_verify_params
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage.models_base import db
@@ -423,7 +421,6 @@ class Events(SecuredResource):
             event = dicttoolz.keyfilter(lambda key: key in _include, event)
 
         return event
-
 
     @exceptions_handled
     @authorize('event_list')
