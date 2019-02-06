@@ -46,7 +46,6 @@ from .npm import Npm
 from .agents import Agents
 from .postgres import Postgres
 from .networks import Networks
-from .es_snapshot import ElasticSearch
 from .credentials import restore as restore_credentials
 from .constants import (
     ADMIN_DUMP_FILE,
@@ -461,9 +460,7 @@ class SnapshotRestore(object):
             self._tempdir,
             self._config,
             to_archive=False,
-            tenant_name=(
-                ctx.tenant_name if self._snapshot_version < V_4_0_0 else None
-            ),
+            tenant_name=None,
         )
         # Only restore stage files to their correct location
         # if this snapshot version is the same as the manager version
@@ -510,19 +507,12 @@ class SnapshotRestore(object):
         """
         ctx.logger.info('Restoring database')
         admin_user_update_command = 'echo No admin user to update.'
-        if self._snapshot_version >= V_4_0_0:
-            with utils.db_schema(schema_revision, config=self._config):
-                admin_user_update_command = postgres.restore(self._tempdir)
-            self._restore_stage(postgres, self._tempdir, stage_revision)
-            self._restore_composer(postgres, self._tempdir)
-        else:
-            if self._should_clean_old_db_for_3_x_snapshot():
-                postgres.clean_db()
 
-            ElasticSearch.restore_db_from_pre_4_version(
-                self._tempdir,
-                ctx.tenant_name,
-            )
+        with utils.db_schema(schema_revision, config=self._config):
+            admin_user_update_command = postgres.restore(self._tempdir)
+        self._restore_stage(postgres, self._tempdir, stage_revision)
+        self._restore_composer(postgres, self._tempdir)
+
         ctx.logger.info('Successfully restored database')
         # This is returned so that we can decide whether to restore the admin
         # user depending on whether we have the hash salt
@@ -550,7 +540,7 @@ class SnapshotRestore(object):
         ctx.logger.info('Successfully encrypted the passwords of RabbitMQ')
 
     def _restore_stage(self, postgres, tempdir, migration_version):
-        if not (self._snapshot_version > V_4_0_0 and self._premium_enabled):
+        if not self._premium_enabled:
             return
         ctx.logger.info('Restoring stage DB')
         self._npm.clear_db()
@@ -898,7 +888,9 @@ class SnapshotRestoreValidator(object):
         if self._snapshot_version >= V_4_0_0:
             self._validate_v_4_snapshot()
         else:
-            self._validate_v_3_snapshot()
+            raise NonRecoverableError(
+                'Restoring snapshot from version '
+                '{0} is not supported'.format(self._snapshot_version))
 
     def _validate_v_4_snapshot(self):
         if not self._is_user_bootstrap_admin:
@@ -910,10 +902,6 @@ class SnapshotRestoreValidator(object):
         self._assert_clean_db()
         if self._snapshot_version >= V_4_2_0:
             self._assert_manager_networks()
-
-    def _validate_v_3_snapshot(self):
-        # validate only for the snapshot's tenant
-        self._assert_clean_db(all_tenants=False)
 
     def _assert_clean_db(self, all_tenants=True):
         blueprints_list = self._client.blueprints.list(
