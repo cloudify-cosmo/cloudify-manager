@@ -38,7 +38,7 @@ class TestResourceListV1(BaseListTest):
 
     def test_insecure_endpoints_disabled_by_default(self):
         try:
-            self.client.executions.get(execution_id='111')
+            self.client.executions.list(deployment_id='111')
         except CloudifyClientError, e:
             self.assertEquals(405, e.status_code)
 
@@ -46,7 +46,7 @@ class TestResourceListV1(BaseListTest):
         from manager_rest.config import instance
         try:
             instance.insecure_endpoints_disabled = False
-            result = self.client.executions.get(execution_id='111')
+            result = self.client.executions.list(deployment_id='111')
         finally:
             # restore original value
             instance.insecure_endpoints_disabled = True
