@@ -53,7 +53,7 @@ class TestResourceListV1(BaseListTest):
 
         # Since there are not events in the test database
         # an empty result is returned
-        self.assertEqual(result, ([], 0))
+        self.assertEqual(result, [])
 
     def test_blueprints_list_no_params(self):
         response = self.client.blueprints.list()

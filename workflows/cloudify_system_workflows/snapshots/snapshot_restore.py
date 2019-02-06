@@ -885,7 +885,7 @@ class SnapshotRestoreValidator(object):
                 '[{0} > {1}]'.format(str(self._snapshot_version),
                                      str(self._manager_version)))
 
-        if self._snapshot_version > V_4_0_0:
+        if self._snapshot_version >= V_4_0_0:
             self._validate_v_4_snapshot()
         else:
             raise NonRecoverableError(
