@@ -33,6 +33,12 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         base_source_node_instance = base_node_instances['modified'][0]
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+
+        # an update preview should have no effect (many times)
+        for _ in range(5):
+            self.client.deployment_updates.update_with_existing_blueprint(
+                deployment.id, BLUEPRINT_ID, preview=True)
+
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)

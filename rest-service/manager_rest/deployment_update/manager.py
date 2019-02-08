@@ -33,8 +33,10 @@ from manager_rest import app_context, manager_exceptions
 from manager_rest.resource_manager import ResourceManager
 from manager_rest.deployment_update import step_extractor
 from manager_rest.deployment_update.utils import extract_ids
-from manager_rest.storage import get_storage_manager, models
 from manager_rest.deployment_update.validator import StepValidator
+from manager_rest.storage import (get_storage_manager,
+                                  models,
+                                  get_read_only_storage_manager)
 from manager_rest.deployment_update.constants import (
     STATES,
     ENTITY_TYPES,
@@ -50,12 +52,12 @@ from manager_rest.deployment_update.handlers import (
 
 class DeploymentUpdateManager(object):
 
-    def __init__(self):
-        self.sm = get_storage_manager()
-        self._node_handler = DeploymentUpdateNodeHandler()
-        self._node_instance_handler = DeploymentUpdateNodeInstanceHandler()
-        self._deployment_handler = DeploymentUpdateDeploymentHandler()
-        self._step_validator = StepValidator()
+    def __init__(self, sm):
+        self.sm = sm
+        self._node_handler = DeploymentUpdateNodeHandler(sm)
+        self._node_instance_handler = DeploymentUpdateNodeInstanceHandler(sm)
+        self._deployment_handler = DeploymentUpdateDeploymentHandler(sm)
+        self._step_validator = StepValidator(sm)
 
     def get_deployment_update(self, deployment_update_id):
         return self.sm.get(models.DeploymentUpdate, deployment_update_id)
@@ -78,7 +80,8 @@ class DeploymentUpdateManager(object):
                                 app_dir,
                                 app_blueprint,
                                 additional_inputs,
-                                new_blueprint_id=None):
+                                new_blueprint_id=None,
+                                preview=False):
         # enables reverting to original blueprint resources
         deployment = self.sm.get(models.Deployment, deployment_id)
         old_blueprint = deployment.blueprint
@@ -133,6 +136,7 @@ class DeploymentUpdateManager(object):
             created_at=utils.get_formatted_timestamp()
         )
         deployment_update.set_deployment(deployment)
+        deployment_update.preview = preview
         deployment_update.old_inputs = old_inputs
         deployment_update.new_inputs = new_inputs
         if new_blueprint_id:
@@ -143,7 +147,7 @@ class DeploymentUpdateManager(object):
         return deployment_update
 
     def create_deployment_update_step(self,
-                                      deployment_update_id,
+                                      deployment_update,
                                       action,
                                       entity_type,
                                       entity_id):
@@ -151,7 +155,6 @@ class DeploymentUpdateManager(object):
                                            action=action,
                                            entity_type=entity_type,
                                            entity_id=entity_id)
-        deployment_update = self.get_deployment_update(deployment_update_id)
         step.set_deployment_update(deployment_update)
         return self.sm.put(step)
 
@@ -172,7 +175,7 @@ class DeploymentUpdateManager(object):
                     unsupported_entity_ids)))
 
         for step in supported_steps:
-            self.create_deployment_update_step(deployment_update.id,
+            self.create_deployment_update_step(deployment_update,
                                                step.action,
                                                step.entity_type,
                                                step.entity_id)
@@ -222,6 +225,12 @@ class DeploymentUpdateManager(object):
         dep_update.modified_entity_ids = modified_entity_ids.to_dict(
             include_rel_order=True)
         self.sm.update(dep_update)
+
+        # If this is a preview, no need to run workflow and update DB
+        if dep_update.preview:
+            dep_update.state = STATES.PREVIEW
+            dep_update.id = None
+            return dep_update
 
         # Execute the default 'update' workflow or a custom workflow using
         # added and related instances. Any workflow executed should call
@@ -566,9 +575,16 @@ class DeploymentUpdateManager(object):
 
 
 # What we need to access this manager in Flask
-def get_deployment_updates_manager():
+def get_deployment_updates_manager(preview=False):
     """
     Get the current app's deployment updates manager, create if necessary
     """
-    return current_app.config.setdefault('deployment_updates_manager',
-                                         DeploymentUpdateManager())
+    if preview:
+        return current_app.config.setdefault(
+            'deployment_updates_preview_manager',
+            DeploymentUpdateManager(get_read_only_storage_manager())
+        )
+    return current_app.config.setdefault(
+        'deployment_updates_manager',
+        DeploymentUpdateManager(get_storage_manager())
+    )

@@ -23,7 +23,8 @@ DeploymentUpdateStates = namedtuple('DeploymentUpdateStates',
                                      'EXECUTING_WORKFLOW',
                                      'FINALIZING',
                                      'SUCCESSFUL',
-                                     'FAILED'])
+                                     'FAILED',
+                                     'PREVIEW'])
 
 DeploymentUpdateNodeModificationTypes = namedtuple(
     'DeploymentUpdateNodeModificationTypes',
@@ -59,7 +60,8 @@ STATES = DeploymentUpdateStates(SUCCESSFUL='successful',
                                 UPDATING='updating',
                                 FINALIZING='finalizing',
                                 EXECUTING_WORKFLOW='executing_workflow',
-                                FAILED='failed')
+                                FAILED='failed',
+                                PREVIEW='preview')
 
 NODE_MOD_TYPES = DeploymentUpdateNodeModificationTypes(
         ADDED_AND_RELATED='added_and_related',
