@@ -272,7 +272,7 @@ class StepExtractor(object):
         self.deployment_update_id = deployment_update.id
         self.deployment_update_manager = \
             manager_rest.deployment_update.manager.\
-            get_deployment_updates_manager()
+            get_deployment_updates_manager(deployment_update.preview)
         self.sm = self.deployment_update_manager.sm
         self.entity_id_builder = EntityIdBuilder()
         self.old_deployment_plan = None

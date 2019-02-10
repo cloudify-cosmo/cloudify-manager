@@ -14,7 +14,7 @@
 #  * limitations under the License.
 
 from manager_rest.deployment_update import utils
-from manager_rest.storage import get_storage_manager, models, get_node
+from manager_rest.storage import models, get_node
 from manager_rest.manager_exceptions import UnknownModificationStageError
 from manager_rest.deployment_update.constants import ENTITY_TYPES, ACTION_TYPES
 
@@ -28,8 +28,8 @@ NODE_ENTITY_LEN = 2
 
 
 class EntityValidatorBase(object):
-    def __init__(self):
-        self.sm = get_storage_manager()
+    def __init__(self, sm):
+        self.sm = sm
         self._validation_mapper = {
             ACTION_TYPES.ADD: self._validate_add,
             ACTION_TYPES.MODIFY: self._validate_modify,
@@ -282,15 +282,15 @@ class DescriptionValidator(EntityValidatorBase):
 
 
 class StepValidator(object):
-    def __init__(self):
+    def __init__(self, sm):
         self._validation_mapper = {
-            ENTITY_TYPES.NODE: NodeValidator(),
-            ENTITY_TYPES.RELATIONSHIP: RelationshipValidator(),
-            ENTITY_TYPES.PROPERTY: PropertyValidator(),
-            ENTITY_TYPES.OPERATION: OperationValidator(),
-            ENTITY_TYPES.WORKFLOW: WorkflowValidator(),
-            ENTITY_TYPES.OUTPUT: OutputValidator(),
-            ENTITY_TYPES.DESCRIPTION: DescriptionValidator()
+            ENTITY_TYPES.NODE: NodeValidator(sm),
+            ENTITY_TYPES.RELATIONSHIP: RelationshipValidator(sm),
+            ENTITY_TYPES.PROPERTY: PropertyValidator(sm),
+            ENTITY_TYPES.OPERATION: OperationValidator(sm),
+            ENTITY_TYPES.WORKFLOW: WorkflowValidator(sm),
+            ENTITY_TYPES.OUTPUT: OutputValidator(sm),
+            ENTITY_TYPES.DESCRIPTION: DescriptionValidator(sm)
         }
 
     def validate(self, dep_update, step):

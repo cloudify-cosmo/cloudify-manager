@@ -617,11 +617,29 @@ class SQLStorageManager(object):
         return instance
 
 
+class ReadOnlyStorageManager(SQLStorageManager):
+    def put(self, instance):
+        return instance
+
+    def delete(self, instance):
+        return instance
+
+    def update(self, instance, log=True, modified_attrs=()):
+        return instance
+
+
 def get_storage_manager():
     """Get the current Flask app's storage manager, create if necessary
     """
     return current_app.config.setdefault('storage_manager',
                                          SQLStorageManager())
+
+
+def get_read_only_storage_manager():
+    """Get the current Flask app's read only storage manager, create if
+    necessary"""
+    return current_app.config.setdefault('read_only_storage_manager',
+                                         ReadOnlyStorageManager())
 
 
 class ListResult(object):

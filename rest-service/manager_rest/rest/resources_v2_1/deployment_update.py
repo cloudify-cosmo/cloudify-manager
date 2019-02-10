@@ -85,8 +85,8 @@ class DeploymentUpdate(SecuredResource):
         """
         request_json = request.json
         manager, skip_install, skip_uninstall, skip_reinstall, workflow_id, \
-            ignore_failure, install_first = self._get_params_and_validate(
-                id, request_json)
+            ignore_failure, install_first, preview = \
+            self._get_params_and_validate(id, request_json)
         blueprint, inputs, reinstall_list = \
             self._get_and_validate_blueprint_and_inputs(id, request_json)
 
@@ -105,7 +105,8 @@ class DeploymentUpdate(SecuredResource):
                                                             deployment_dir,
                                                             file_name,
                                                             inputs,
-                                                            blueprint.id)
+                                                            blueprint.id,
+                                                            preview)
         manager.extract_steps_from_deployment_update(deployment_update)
         return manager.commit_deployment_update(deployment_update,
                                                 skip_install,
@@ -119,8 +120,10 @@ class DeploymentUpdate(SecuredResource):
     def _commit(self, deployment_id):
         request_json = request.args
         manager, skip_install, skip_uninstall, skip_reinstall, workflow_id, \
-            ignore_failure, install_first = self._get_params_and_validate(
-                deployment_id, request_json, preserve_old_behavior=True)
+            ignore_failure, install_first, preview = \
+            self._get_params_and_validate(deployment_id,
+                                          request_json,
+                                          preserve_old_behavior=True)
         deployment_update, _ = \
             UploadedBlueprintsDeploymentUpdateManager(). \
             receive_uploaded_data(deployment_id)
@@ -160,7 +163,6 @@ class DeploymentUpdate(SecuredResource):
     def _get_params_and_validate(deployment_id,
                                  request_json,
                                  preserve_old_behavior=False):
-        manager = get_deployment_updates_manager()
         skip_install = verify_and_convert_bool(
             'skip_install', request_json.get('skip_install', 'false'))
         skip_uninstall = verify_and_convert_bool(
@@ -175,7 +177,10 @@ class DeploymentUpdate(SecuredResource):
         install_first = verify_and_convert_bool(
             'install_first', request_json.get('install_first',
                                               preserve_old_behavior))
+        preview = not preserve_old_behavior and verify_and_convert_bool(
+            'preview', request_json.get('preview', 'false'))
         workflow_id = request_json.get('workflow_id', None)
+        manager = get_deployment_updates_manager(preview)
         manager.validate_no_active_updates_per_deployment(deployment_id,
                                                           force=force)
         return (manager,
@@ -184,7 +189,8 @@ class DeploymentUpdate(SecuredResource):
                 skip_reinstall,
                 workflow_id,
                 ignore_failure,
-                install_first)
+                install_first,
+                preview)
 
 
 class DeploymentUpdateId(SecuredResource):

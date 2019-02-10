@@ -62,6 +62,32 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
             else:
                 self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
 
+            # an update preview should have no effect
+            self.client.deployment_updates.update_with_existing_blueprint(
+                deployment.id, BLUEPRINT_ID, preview=True)
+
+            unmodified_nodes, unmodified_node_instances = \
+                self._map_node_and_node_instances(deployment.id, node_mapping)
+
+            # assert all unaffected nodes and node instances remained intact
+            self._assert_equal_entity_dicts(
+                base_nodes,
+                unmodified_nodes,
+                keys=['intact', 'added'],
+                excluded_items=['runtime_properties', 'plugins']
+            )
+
+            self._assert_equal_entity_dicts(
+                base_node_instances,
+                unmodified_node_instances,
+                keys=['intact', 'added'],
+                excluded_items=['runtime_properties']
+            )
+
+            # assert that node and node instance were not added to storage
+            self.assertEquals(0, len(unmodified_nodes['added']))
+            self.assertEquals(0, len(unmodified_node_instances['added']))
+
             dep_update = \
                 self.client.deployment_updates.update_with_existing_blueprint(
                     deployment.id, BLUEPRINT_ID)

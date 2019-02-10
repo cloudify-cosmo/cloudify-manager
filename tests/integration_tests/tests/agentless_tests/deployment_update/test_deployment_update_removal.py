@@ -47,6 +47,33 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
             self._map_node_and_node_instances(deployment.id, node_mapping)
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+
+        # an update preview should have no effect
+        self.client.deployment_updates.update_with_existing_blueprint(
+            deployment.id, BLUEPRINT_ID, preview=True)
+
+        unmodified_nodes, unmodified_node_instances = \
+            self._map_node_and_node_instances(deployment.id, node_mapping)
+
+        # assert all unaffected nodes and node instances remained intact
+        self._assert_equal_entity_dicts(
+            base_nodes,
+            unmodified_nodes,
+            keys=['remove_related', 'removed'],
+            excluded_items=['runtime_properties']
+        )
+
+        self._assert_equal_entity_dicts(
+            base_node_instances,
+            unmodified_node_instances,
+            keys=['remove_related', 'removed'],
+            excluded_items=['runtime_properties']
+        )
+
+        # assert that node and node instance were not removed from storage
+        self.assertEquals(1, len(unmodified_nodes['removed']))
+        self.assertEquals(1, len(unmodified_node_instances['removed']))
+
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)

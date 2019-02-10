@@ -364,6 +364,8 @@ class DeploymentUpdate(CreatedAtMixin, SQLResourceBase):
     _old_blueprint_fk = foreign_key(Blueprint._storage_id, nullable=True)
     _new_blueprint_fk = foreign_key(Blueprint._storage_id, nullable=True)
 
+    preview = False
+
     @declared_attr
     def execution(cls):
         return one_to_many_relationship(cls, Execution, cls._execution_fk)
