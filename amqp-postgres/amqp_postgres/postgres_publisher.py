@@ -125,7 +125,7 @@ def _strip_nul(text):
 
     There should likely be no NUL values in human-readable logs anyway.
     """
-    return text.replace('\x00', '?')
+    return text.replace('\x00', '<NUL>')
 
 
 class DBLogEventPublisher(object):
