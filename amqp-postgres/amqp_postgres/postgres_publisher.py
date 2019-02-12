@@ -120,6 +120,14 @@ EXECUTION_SELECT_QUERY = """
 """
 
 
+def _strip_nul(text):
+    """Remove NUL values from the text, so that it can be treated as text
+
+    There should likely be no NUL values in human-readable logs anyway.
+    """
+    return text.replace('\x00', '<NUL>')
+
+
 class DBLogEventPublisher(object):
     COMMIT_DELAY = 0.1  # seconds
 
@@ -189,7 +197,7 @@ class DBLogEventPublisher(object):
                     self._store(conn, items)
                 except psycopg2.OperationalError as e:
                     self.on_db_connection_error(e)
-                except psycopg2.IntegrityError:
+                except (psycopg2.IntegrityError, ValueError):
                     logger.exception('Error storing %d logs+events',
                                      len(items))
                     conn.rollback()
@@ -271,7 +279,7 @@ class DBLogEventPublisher(object):
                 conn.commit()
             except psycopg2.OperationalError as e:
                 self.on_db_connection_error(e)
-            except psycopg2.IntegrityError:
+            except (psycopg2.IntegrityError, ValueError):
                 logger.debug('Error storing %s: %s', exchange, item)
                 conn.rollback()
 
@@ -303,7 +311,7 @@ class DBLogEventPublisher(object):
                 'creator_id': execution['_creator_id'],
                 'logger': message['logger'],
                 'level': message['level'],
-                'message': message['message']['text'],
+                'message': _strip_nul(message['message']['text']),
                 'message_code': message.get('message_code'),
                 'operation': message['context'].get('operation'),
                 'node_id': message['context'].get('node_id'),
@@ -328,7 +336,7 @@ class DBLogEventPublisher(object):
                 'tenant_id': execution['_tenant_id'],
                 'creator_id': execution['_creator_id'],
                 'event_type': message['event_type'],
-                'message': message['message']['text'],
+                'message': _strip_nul(message['message']['text']),
                 'message_code': message.get('message_code'),
                 'operation': message['context'].get('operation'),
                 'node_id': message['context'].get('node_id'),
