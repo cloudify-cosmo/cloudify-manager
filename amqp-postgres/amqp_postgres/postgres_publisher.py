@@ -189,7 +189,7 @@ class DBLogEventPublisher(object):
                     self._store(conn, items)
                 except psycopg2.OperationalError as e:
                     self.on_db_connection_error(e)
-                except psycopg2.IntegrityError:
+                except (psycopg2.IntegrityError, ValueError):
                     logger.exception('Error storing %d logs+events',
                                      len(items))
                     conn.rollback()
@@ -271,7 +271,7 @@ class DBLogEventPublisher(object):
                 conn.commit()
             except psycopg2.OperationalError as e:
                 self.on_db_connection_error(e)
-            except psycopg2.IntegrityError:
+            except (psycopg2.IntegrityError, ValueError):
                 logger.debug('Error storing %s: %s', exchange, item)
                 conn.rollback()
 
