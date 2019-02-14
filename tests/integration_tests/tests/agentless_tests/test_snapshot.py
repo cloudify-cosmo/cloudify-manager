@@ -199,39 +199,6 @@ class TestSnapshot(AgentlessTestCase):
             num_of_events=12,
         )
 
-    def test_3_4_0_snapshot_with_deployment(self):
-        snapshot_path = self._get_snapshot('snap_3.4.0.zip')
-        self._upload_and_restore_snapshot(snapshot_path)
-        # Now make sure all the resources really exist in the DB
-        self._assert_3_4_0_snapshot_restored()
-
-    def _assert_3_4_0_snapshot_restored(self,
-                                        tenant_name=DEFAULT_TENANT_NAME):
-        self._assert_snapshot_restored(
-            blueprint_id='nodecellar',
-            deployment_id='nodecellar',
-            node_ids=['nodecellar', 'mongod', 'host', 'nodejs'],
-            node_instance_ids=[
-                'nodecellar_3e957',
-                'mongod_983b4',
-                'host_00747',
-                'nodejs_35992'
-            ],
-            num_of_workflows=7,
-            num_of_inputs=3,
-            num_of_outputs=1,
-            num_of_executions=7,
-            tenant_name=tenant_name
-        )
-
-    def test_3_3_1_snapshot_with_plugin(self):
-        snapshot_path = self._get_snapshot('snap_3.3.1_with_plugin.zip')
-        self._upload_and_restore_snapshot(snapshot_path)
-
-        # Now make sure all the resources really exist in the DB
-        self._assert_3_3_1_snapshot_restored()
-        self._assert_3_3_1_plugins_restored()
-
     def _assert_4_4_0_snapshot_restored_bad_plugin(
             self,
             tenant_name=DEFAULT_TENANT_NAME,
@@ -240,51 +207,6 @@ class TestSnapshot(AgentlessTestCase):
             tenant_name=tenant_name,
             number_of_deployments=number_of_deployments
         )
-
-    def _assert_3_3_1_snapshot_restored(self,
-                                        tenant_name=DEFAULT_TENANT_NAME):
-        self._assert_snapshot_restored(
-            blueprint_id='hello-world-app',
-            deployment_id='hello-world-app',
-            node_ids=['security_group', 'vm', 'http_web_server', 'virtual_ip'],
-            node_instance_ids=[
-                'http_web_server_6dc13',
-                'security_group_cc528',
-                'virtual_ip_56b22',
-                'vm_2d90e'
-            ],
-            num_of_workflows=6,
-            num_of_inputs=4,
-            num_of_outputs=1,
-            num_of_executions=1,
-            num_of_events=97,
-            tenant_name=tenant_name,
-        )
-
-    def test_restore_2_snapshots(self):
-        tenant_1_name = 'tenant_1'
-        tenant_2_name = 'tenant_2'
-        snapshot_1_id = 'snapshot_1'
-        snapshot_2_id = 'snapshot_2'
-        snapshot_1_path = self._get_snapshot('snap_3.4.0.zip')
-        snapshot_2_path = self._get_snapshot('snap_3.3.1_with_plugin.zip')
-        self.client.tenants.create(tenant_1_name)
-        self.client.tenants.create(tenant_2_name)
-        with self.client_using_tenant(self.client, tenant_1_name):
-            self._upload_and_restore_snapshot(
-                snapshot_1_path,
-                tenant_1_name,
-                snapshot_1_id,
-            )
-        with self.client_using_tenant(self.client, tenant_2_name):
-            self._upload_and_restore_snapshot(
-                snapshot_2_path,
-                tenant_2_name,
-                snapshot_2_id,
-            )
-
-        self._assert_3_4_0_snapshot_restored(tenant_1_name)
-        self._assert_3_3_1_snapshot_restored(tenant_2_name)
 
     def test_v_4_1_1_restore_snapshot_with_private_resource(self):
         """
@@ -417,17 +339,6 @@ class TestSnapshot(AgentlessTestCase):
                 self.client.nodes.get(deployment_id, node_id)
             for node_instance_id in node_instance_ids:
                 self.client.node_instances.get(node_instance_id)
-
-    def _assert_3_3_1_plugins_restored(self, tenant_name=DEFAULT_TENANT_NAME):
-        with self.client_using_tenant(self.client, tenant_name):
-            plugins = self.client.plugins.list()
-        self.assertEqual(len(plugins), 8)
-        package_names = [plugin.package_name for plugin in plugins]
-        package_name_counts = Counter(package_names)
-        self.assertEqual(package_name_counts['cloudify-openstack-plugin'], 1)
-        self.assertEqual(package_name_counts['cloudify-fabric-plugin'], 1)
-        self.assertEqual(package_name_counts['cloudify-script-plugin'], 1)
-        self.assertEqual(package_name_counts['cloudify-diamond-plugin'], 5)
 
     def _assert_4_4_0_plugins_restored_bad_plugin(
             self,
