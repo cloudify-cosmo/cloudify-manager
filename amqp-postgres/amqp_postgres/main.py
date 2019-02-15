@@ -59,7 +59,8 @@ def _create_connections(config):
 def main(args):
     logging.basicConfig(
         level=args.get('loglevel', 'INFO').upper(),
-        filename=args.get('logfile', DEFAULT_LOG_PATH))
+        filename=args.get('logfile', DEFAULT_LOG_PATH),
+        format="%(asctime)s %(message)s")
     with open(args['config']) as f:
         config = yaml.safe_load(f)
     amqp_client, db_publisher = _create_connections(config)
