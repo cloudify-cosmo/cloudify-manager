@@ -118,3 +118,16 @@ class OperationResponse(BaseResponse):
         'name': fields.String,
         'state': fields.String,
     }
+
+
+@swagger.model
+class License(BaseResponse):
+
+    resource_fields = {
+        'customer_id': fields.String,
+        'license_type': fields.String,
+        'expiration_date': fields.String,
+        'cloudify_version': fields.String,
+        'capabilities': fields.Raw,
+        'signature': fields.String,
+    }
