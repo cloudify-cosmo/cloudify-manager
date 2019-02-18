@@ -475,4 +475,15 @@ class UserTenantAssoc(SQLModelBase):
         ])
 
 
+class License(SQLModelBase):
+    __tablename__ = 'licenses'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    customer_id = db.Column(db.Text, unique=True)
+    license_type = db.Column(db.String(255))
+    expiration_date = db.Column(UTCDateTime)
+    cloudify_version = db.Column(db.Text)
+    capabilities = db.Column(db.PickleType)
+    signature = db.Column(db.LargeBinary)
+
+
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)
