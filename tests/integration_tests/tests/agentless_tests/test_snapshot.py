@@ -347,6 +347,19 @@ class TestSnapshot(AgentlessTestCase):
         self.assertEqual(first_agent.rabbitmq_exchange, agents[0].id)
         self.assertIsNone(first_agent.rabbitmq_username)
 
+    def test_v_4_5_restore_snapshot_with_without_imported_blueprints(self):
+        """
+        Validate deletion protection against imported blueprints is not applied
+        to blueprints from 4.5.0 version down.
+        """
+        snapshot_path = self._get_snapshot('snap_4.5.0_with_blueprint.zip')
+        # This snapshot only contain one blueprint.
+        self._upload_and_restore_snapshot(snapshot_path)
+        blueprints = self.client.blueprints.list(_include=['id'])
+        self.client.blueprints.delete(blueprints[0]['id'])
+        self.assertEqual(0,
+                         len(self.client.blueprints.list(_include=['id'])))
+
     def _test_secrets_restored(self, snapshot_name):
         snapshot_path = self._get_snapshot(snapshot_name)
         self._upload_and_restore_snapshot(snapshot_path)
