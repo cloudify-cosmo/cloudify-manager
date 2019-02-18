@@ -1,5 +1,5 @@
-git+https://github.com/cloudify-cosmo/cloudify-common@5.0.dev1#egg=cloudify-common==5.0.dev1
-git+https://github.com/cloudify-cosmo/cloudify-agent@5.0.dev1#egg=cloudify-agent[celery,kerberos]==5.0.dev1
+git+https://github.com/cloudify-cosmo/cloudify-common@4.6#egg=cloudify-common==4.6
+git+https://github.com/cloudify-cosmo/cloudify-agent@4.6#egg=cloudify-agent[celery,kerberos]==4.6
 
 # For dealing with the binary leftovers of psycopg2 in the 2.7.x version
 psycopg2==2.7.4 --no-binary psycopg2
