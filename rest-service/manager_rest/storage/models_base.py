@@ -133,6 +133,7 @@ class SQLModelBase(db.Model):
         'Boolean': flask_fields.Boolean,
         'ARRAY': flask_fields.Raw,
         'JSONString': flask_fields.Raw,
+        'LargeBinary': flask_fields.Raw
     }
 
     def to_dict(self, suppress_error=False):

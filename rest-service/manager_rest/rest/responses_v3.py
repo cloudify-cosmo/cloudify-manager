@@ -128,6 +128,5 @@ class License(BaseResponse):
         'license_type': fields.String,
         'expiration_date': fields.String,
         'cloudify_version': fields.String,
-        'capabilities': fields.Raw,
-        'signature': fields.String,
+        'capabilities': fields.Raw
     }

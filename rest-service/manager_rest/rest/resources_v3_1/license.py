@@ -19,8 +19,11 @@ from flask import request
 from manager_rest.rest import responses_v3
 from manager_rest.security.authorization import authorize
 from manager_rest.security import MissingPremiumFeatureResource
-from manager_rest.rest.rest_decorators import exceptions_handled, marshal_with
-
+from manager_rest.rest.rest_decorators import (
+    exceptions_handled,
+    marshal_with,
+    paginate
+)
 try:
     from cloudify_premium import SecuredLicenseResource
 except ImportError:
@@ -29,7 +32,7 @@ except ImportError:
 
 class License(SecuredLicenseResource):
     @exceptions_handled
-    # @marshal_with(responses_v3.License)
+    @marshal_with(responses_v3.License)
     @authorize('license')
     def put(self, license_handler):
         """
@@ -37,17 +40,14 @@ class License(SecuredLicenseResource):
         """
 
         full_license = request.data
-        license_handler.upload_license(full_license)
-
-        return True
+        return license_handler.upload_license(full_license)
 
     @exceptions_handled
     @marshal_with(responses_v3.License)
+    @paginate
     @authorize('license')
-    def get(self, license_handler):
+    def get(self, license_handler, pagination=None):
         """
         List registered Cloudfiy licenses.
         """
-
-        return license_handler.get_license()
-
+        return license_handler.list_license()
