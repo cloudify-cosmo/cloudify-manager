@@ -26,7 +26,8 @@ class NamespacedScriptsTest(AgentTestCase):
                                       entity_id='imported_scripts')
         deployment_id = 'd{0}'.format(uuid.uuid4())
         dsl_path = resource(
-            'dsl/agent_tests/blueprint_with_namespaced_blueprint_import.yaml')
+            'dsl/agent_tests/blueprints/'
+            'blueprint_with_namespaced_blueprint_import.yaml')
         _, execution_id = self.deploy_application(dsl_path,
                                                   deployment_id=deployment_id)
 
