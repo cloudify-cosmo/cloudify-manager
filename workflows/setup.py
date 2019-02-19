@@ -18,7 +18,7 @@ from setuptools import setup
 
 setup(
     name='cloudify-workflows',
-    version='5.0.dev1',
+    version='4.6',
     author='Cloudify',
     author_email='cosmo-admin@cloudify.co',
     packages=[
@@ -28,7 +28,7 @@ setup(
     license='LICENSE',
     description='Various Cloudify Workflows',
     install_requires=[
-        'cloudify-common==5.0.dev1',
+        'cloudify-common==4.6',
         'retrying==1.3.3',
         'psycopg2==2.7.4',
         'cryptography==2.1.4',
