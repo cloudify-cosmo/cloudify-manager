@@ -115,6 +115,6 @@ class SQLResourceBase(SQLModelBase):
         # get flushed to the DB, because it is still lacking data (the parent's
         # foreign key)
         with db.session.no_autoflush:
-            self.creator = parent_instance.creator
+            #self.creator = parent_instance.creator
             self.tenant = parent_instance.tenant
             self.visibility = parent_instance.visibility
