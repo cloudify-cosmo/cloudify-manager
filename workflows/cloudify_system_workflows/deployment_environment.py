@@ -1,5 +1,5 @@
 ########
-# Copyright (c) 2014 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,26 +21,12 @@ import errno
 from retrying import retry
 
 from cloudify.decorators import workflow
-from cloudify.workflows import tasks as workflow_tasks
 from cloudify.workflows import workflow_context
+from cloudify.workflows import tasks as workflow_tasks
 from cloudify.manager import get_rest_client
-
-
-def _merge_deployment_and_workflow_plugins(deployment_plugins,
-                                           workflow_plugins):
-    added_plugins = set()
-    result = []
-
-    def add_plugins(plugins):
-        for plugin in plugins:
-            if plugin['name'] in added_plugins:
-                continue
-            added_plugins.add(plugin['name'])
-            result.append(plugin)
-
-    for plugins in (deployment_plugins, workflow_plugins):
-        add_plugins(plugins)
-    return result
+from cloudify.utils import (add_plugins_to_install,
+                            add_plugins_to_uninstall,
+                            extract_and_merge_plugins)
 
 
 def generate_create_dep_tasks_graph(ctx,
@@ -50,15 +36,9 @@ def generate_create_dep_tasks_graph(ctx,
     graph = ctx.graph_mode()
     sequence = graph.sequence()
 
-    dep_plugins = [p for p in deployment_plugins_to_install if p['install']]
-    wf_plugins = [p for p in workflow_plugins_to_install if p['install']]
-    plugins_to_install = _merge_deployment_and_workflow_plugins(dep_plugins,
-                                                                wf_plugins)
-    if plugins_to_install:
-        sequence.add(
-            ctx.send_event('Installing deployment plugins'),
-            ctx.execute_task('cloudify_agent.operations.install_plugins',
-                             kwargs={'plugins': plugins_to_install}))
+    plugins_to_install = extract_and_merge_plugins(
+        deployment_plugins_to_install, workflow_plugins_to_install)
+    add_plugins_to_install(ctx, plugins_to_install, sequence)
 
     sequence.add(
         ctx.send_event('Creating deployment work directory'),
@@ -88,7 +68,7 @@ def delete(ctx,
            deployment_plugins_to_uninstall,
            workflow_plugins_to_uninstall,
            delete_logs,
-           **kwargs):
+           **_):
     graph = ctx.graph_mode()
     sequence = graph.sequence()
 
@@ -97,18 +77,11 @@ def delete(ctx,
             'Deleting deployment [{}] environment'.format(
                 ctx.deployment.id)))
 
-    dep_plugins = [p for p in deployment_plugins_to_uninstall if p['install']]
-    wf_plugins = [p for p in workflow_plugins_to_uninstall if p['install']]
-    plugins_to_uninstall = dep_plugins + wf_plugins
-    if plugins_to_uninstall:
-        sequence.add(
-            ctx.send_event('Uninstalling deployment plugins'),
-            ctx.execute_task(
-                task_name='cloudify_agent.operations.uninstall_plugins',
-                kwargs={
-                    'plugins': plugins_to_uninstall,
-                    'delete_managed_plugins': False
-                }))
+    plugins_to_uninstall = extract_and_merge_plugins(
+        deployment_plugins_to_uninstall,
+        workflow_plugins_to_uninstall,
+        with_repetition=True)
+    add_plugins_to_uninstall(ctx, plugins_to_uninstall, sequence)
 
     graph.execute()
     _delete_deployment_workdir(ctx)

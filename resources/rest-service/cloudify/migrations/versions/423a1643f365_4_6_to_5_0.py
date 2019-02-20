@@ -302,7 +302,19 @@ def upgrade():
         sa.PrimaryKeyConstraint('name', name=op.f('rabbitmq_brokers_pkey'))
     )
 
+    op.add_column('deployment_updates', sa.Column(
+        'central_plugins_to_install',
+        sa.PickleType()))
+    op.add_column('deployment_updates', sa.Column(
+        'central_plugins_to_uninstall',
+        sa.PickleType()))
+
+    op.add_column('blueprints',
+                  sa.Column(
+                      'is_hidden', sa.Boolean(), nullable=True, default=False))
+
     _create_sites_table()
+    _create_plugins_update_table()
 
 
 def downgrade():
@@ -311,7 +323,97 @@ def downgrade():
     op.drop_table('managers')
     op.drop_table('rabbitmq_brokers')
     op.drop_table('certificates')
+
+    op.add_column('deployment_updates', sa.Column(
+        'central_plugins_to_install',
+        sa.PickleType()))
+    op.add_column('deployment_updates', sa.Column(
+        'central_plugins_to_uninstall',
+        sa.PickleType()))
+
+    op.drop_column('blueprints', 'is_hidden')
+
     _drop_sites_table()
+    _drop_plugins_update_table()
+
+
+def _create_plugins_update_table():
+    visibility_enum = postgresql.ENUM(*VisibilityState.STATES,
+                                      name='visibility_states',
+                                      create_type=False)
+
+    op.create_table(
+        'plugins_updates',
+        sa.Column('_storage_id',
+                  sa.Integer(),
+                  autoincrement=True,
+                  nullable=False),
+        sa.Column('id', sa.Text(), nullable=True),
+        sa.Column('visibility',
+                  visibility_enum,
+                  nullable=True),
+        sa.Column('created_at', UTCDateTime(), nullable=False),
+        sa.Column('state', sa.Text(), nullable=True),
+        sa.Column('deployments_to_update',
+                  sa.PickleType(),
+                  nullable=True),
+        sa.Column('forced', sa.Boolean(), default=False),
+        sa.Column('_original_blueprint_fk',
+                  sa.Integer(),
+                  nullable=False),
+        sa.Column('_temp_blueprint_fk',
+                  sa.Integer(),
+                  nullable=True),
+        sa.Column('_execution_fk', sa.Integer(), nullable=True),
+        sa.Column('_tenant_id', sa.Integer(), nullable=False),
+        sa.Column('_creator_id', sa.Integer(), nullable=False),
+        sa.ForeignKeyConstraint(['_creator_id'],
+                                [u'users.id'],
+                                name=op.f('plugins_updates__creator_id_fkey'),
+                                ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(
+            ['_execution_fk'],
+            [u'executions._storage_id'],
+            name=op.f('plugins_updates__execution_fk_fkey'),
+            ondelete='SET NULL'),
+        sa.ForeignKeyConstraint(
+            ['_original_blueprint_fk'],
+            [u'blueprints._storage_id'],
+            name=op.f('plugins_updates__original_blueprint_fk_fkey'),
+            ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(
+            ['_temp_blueprint_fk'],
+            [u'blueprints._storage_id'],
+            name=op.f('plugins_updates__temp_blueprint_fk_fkey'),
+            ondelete='SET NULL'),
+        sa.ForeignKeyConstraint(['_tenant_id'],
+                                [u'tenants.id'],
+                                name=op.f('plugins_updates__tenant_id_fkey'),
+                                ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint('_storage_id',
+                                name=op.f('plugins_updates_pkey'))
+    )
+    op.create_index(op.f('plugins_updates__tenant_id_idx'),
+                    'plugins_updates',
+                    ['_tenant_id'],
+                    unique=False)
+    op.create_index(op.f('plugins_updates_created_at_idx'),
+                    'plugins_updates',
+                    ['created_at'],
+                    unique=False)
+    op.create_index(op.f('plugins_updates_id_idx'),
+                    'plugins_updates',
+                    ['id'],
+                    unique=False)
+
+
+def _drop_plugins_update_table():
+    op.drop_index(op.f('plugins_updates_id_idx'), table_name='plugins_updates')
+    op.drop_index(op.f('plugins_updates_created_at_idx'),
+                  table_name='plugins_updates')
+    op.drop_index(op.f('plugins_updates__tenant_id_idx'),
+                  table_name='plugins_updates')
+    op.drop_table('plugins_updates')
 
 
 def _create_sites_table():

@@ -1,5 +1,5 @@
 ########
-# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,11 +20,9 @@ import sys
 import shutil
 
 import cloudify.utils
-from cloudify.manager import get_rest_client
-from cloudify.manager import get_node_instance_ip
 from cloudify.decorators import operation
-from cloudify.exceptions import NonRecoverableError
-from cloudify.exceptions import RecoverableError
+from cloudify.manager import get_node_instance_ip, get_rest_client
+from cloudify.exceptions import RecoverableError, NonRecoverableError
 
 from integration_tests_plugins.utils import update_storage
 

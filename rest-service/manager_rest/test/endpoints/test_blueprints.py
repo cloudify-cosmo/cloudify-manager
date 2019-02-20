@@ -22,9 +22,11 @@ from manager_rest import archiving
 from manager_rest.test import base_test
 from manager_rest.storage import FileServer
 from manager_rest.test.attribute import attr
-from .test_utils import generate_progress_func
+from manager_rest.storage.resource_models import Blueprint
 
 from cloudify_rest_client import exceptions
+
+from .test_utils import generate_progress_func
 
 
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
@@ -449,3 +451,23 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
                           first_blueprint_id)
 
         self.client.blueprints.delete(first_blueprint_id, True)
+
+    @attr(client_min_version=2,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_not_listing_hidden_blueprints(self):
+        b0_id = 'b0'
+        b1_id = 'b1'
+        self.put_blueprint('mock_blueprint',
+                           'blueprint_with_inputs.yaml',
+                           b0_id)
+        self.put_blueprint('mock_blueprint',
+                           'blueprint_with_inputs.yaml',
+                           b1_id)
+
+        blueprint_b1 = self.sm.get(Blueprint, b1_id)
+        blueprint_b1.is_hidden = True
+        self.sm.update(blueprint_b1)
+
+        blueprints = self.client.blueprints.list()
+        self.assertEqual(1, len(blueprints))
+        self.assertEqual(b0_id, blueprints[0].id)

@@ -217,6 +217,18 @@ class UnsupportedChangeInDeploymentUpdate(ManagerException):
             .UNSUPPORTED_CHANGE_IN_DEPLOYMENT_UPDATE, *args, **kwargs)
 
 
+class PluginsUpdateError(ManagerException):
+    PLUGINS_UPDATE_FAILED = \
+        'plugins_update_failed'
+
+    def __init__(self, *args, **kwargs):
+        super(PluginsUpdateError, self).__init__(
+            400,
+            PluginsUpdateError.PLUGINS_UPDATE_FAILED,
+            *args,
+            **kwargs)
+
+
 class ExistingStartedDeploymentModificationError(ManagerException):
     EXISTING_STARTED_DEPLOYMENT_MODIFICATION_ERROR = \
         'existing_started_deployment_modification_error'

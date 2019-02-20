@@ -7889,6 +7889,15 @@
         }, 
         "update_id": {
           "default": ""
+        },
+        "central_plugins_to_install": {
+          "default": []
+        },
+        "central_plugins_to_uninstall": {
+          "default": []
+        },
+        "update_plugins": {
+          "default": true
         }
       }, 
       "plugin": "default_workflows"

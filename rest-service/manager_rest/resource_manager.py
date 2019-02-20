@@ -43,6 +43,7 @@ from manager_rest.utils import (send_event,
                                 is_create_global_permitted,
                                 validate_global_modification,
                                 validate_deployment_and_site_visibility)
+from manager_rest.plugins_update.constants import PLUGIN_UPDATE_WORKFLOW
 from manager_rest.storage import (db,
                                   get_storage_manager,
                                   models,
@@ -292,6 +293,23 @@ class ResourceManager(object):
             verify_no_executions=False,
             timeout=300)
 
+    def update_plugins(self, plugins_update):
+        """Executes the plugin update workflow.
+
+        :param plugins_update: a PluginUpdate object.
+        :return: execution ID.
+        """
+        return self._execute_system_workflow(
+            wf_id='update_plugin',
+            task_mapping=PLUGIN_UPDATE_WORKFLOW,
+            deployment=None,
+            execution_parameters={
+                'update_id': plugins_update.id,
+                'deployments_to_update': plugins_update.deployments_to_update,
+                'temp_blueprint_id': plugins_update.temp_blueprint_id
+            },
+            verify_no_executions=False)
+
     def remove_plugin(self, plugin_id, force):
         # Verify plugin exists and can be removed
         plugin = self.sm.get(models.Plugin, plugin_id)
@@ -347,18 +365,21 @@ class ResourceManager(object):
                           blueprint_id,
                           private_resource,
                           visibility):
-        dsl_location = os.path.join(
-            resources_base,
-            application_dir,
-            application_file_name
-        )
-        try:
-            plan = tasks.parse_dsl(dsl_location,
-                                   resources_base,
-                                   **app_context.get_parser_context())
-        except Exception, ex:
-            raise manager_exceptions.DslParseException(str(ex))
+        plan = self.parse_plan(
+            application_dir, application_file_name, resources_base)
 
+        return self.publish_blueprint_from_plan(application_file_name,
+                                                blueprint_id,
+                                                plan,
+                                                private_resource,
+                                                visibility)
+
+    def publish_blueprint_from_plan(self,
+                                    application_file_name,
+                                    blueprint_id,
+                                    plan,
+                                    private_resource,
+                                    visibility):
         now = utils.get_formatted_timestamp()
         visibility = self.get_resource_visibility(models.Blueprint,
                                                   blueprint_id,
@@ -375,7 +396,22 @@ class ResourceManager(object):
         )
         return self.sm.put(new_blueprint)
 
-    def _remove_folder(self, folder_name, blueprints_location):
+    @staticmethod
+    def parse_plan(application_dir, application_file_name, resources_base):
+        dsl_location = os.path.join(
+            resources_base,
+            application_dir,
+            application_file_name
+        )
+        try:
+            return tasks.parse_dsl(dsl_location,
+                                   resources_base,
+                                   **app_context.get_parser_context())
+        except Exception as ex:
+            raise manager_exceptions.DslParseException(str(ex))
+
+    @staticmethod
+    def _remove_folder(folder_name, blueprints_location):
         blueprint_folder = os.path.join(
             config.instance.file_server_root,
             blueprints_location,
@@ -383,7 +419,7 @@ class ResourceManager(object):
             folder_name.id)
         shutil.rmtree(blueprint_folder)
 
-    def delete_blueprint(self, blueprint_id, force):
+    def delete_blueprint(self, blueprint_id, force, remove_files=True):
         blueprint = self.sm.get(models.Blueprint, blueprint_id)
         validate_global_modification(blueprint)
 
@@ -405,14 +441,15 @@ class ResourceManager(object):
                 "Can't delete blueprint {0} - There exist "
                 "deployments for this blueprint; Deployments ids: {1}"
                 .format(blueprint_id,
-                        ','.join([dep.id for dep
-                                  in blueprint.deployments])))
-        # Delete blueprint resources from file server
-        self._remove_folder(folder_name=blueprint,
-                            blueprints_location=FILE_SERVER_BLUEPRINTS_FOLDER)
-        self._remove_folder(
-            folder_name=blueprint,
-            blueprints_location=FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER)
+                        ','.join(dep.id for dep in blueprint.deployments)))
+        if remove_files:
+            # Delete blueprint resources from file server
+            self._remove_folder(
+                folder_name=blueprint,
+                blueprints_location=FILE_SERVER_BLUEPRINTS_FOLDER)
+            self._remove_folder(
+                folder_name=blueprint,
+                blueprints_location=FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER)
 
         return self.sm.delete(blueprint)
 
@@ -848,21 +885,23 @@ class ResourceManager(object):
                          'delete_deployment_environment',
                          'uninstall_plugin')
 
-    def _execute_system_workflow(self, wf_id, task_mapping, deployment=None,
-                                 execution_parameters=None, timeout=0,
-                                 created_at=None, verify_no_executions=True,
+    def _execute_system_workflow(self,
+                                 wf_id,
+                                 task_mapping,
+                                 deployment=None,
+                                 execution_parameters=None,
+                                 created_at=None,
+                                 verify_no_executions=True,
                                  bypass_maintenance=None,
                                  update_execution_status=True,
                                  queue=False, execution=None,
-                                 execution_creator=None):
+                                 execution_creator=None,
+                                 **_):
         """
         :param deployment: deployment for workflow execution
         :param wf_id: workflow id
         :param task_mapping: mapping to the system workflow
         :param execution_parameters: parameters for the system workflow
-        :param timeout: 0 will return immediately; any positive value will
-         cause this method to wait for the given timeout for the task to
-         complete, and verify it finished successfully before returning
         :param created_at: creation time for the workflow execution object.
          if omitted, a value will be generated by this method.
         :param bypass_maintenance: allows running the workflow despite having
@@ -1990,8 +2029,7 @@ class ResourceManager(object):
 
         # Handle the old parameter
         if private_resource:
-            return VisibilityState.PRIVATE if private_resource else \
-                VisibilityState.TENANT
+            return VisibilityState.PRIVATE
 
         # Validate that global visibility is permitted
         if visibility == VisibilityState.GLOBAL:

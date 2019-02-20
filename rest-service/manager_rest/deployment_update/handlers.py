@@ -5,6 +5,10 @@ import utils as deployment_update_utils
 
 from cloudify.constants import COMPUTE_NODE_TYPE
 
+from dsl_parser.constants import (HOST_AGENT,
+                                  PLUGIN_INSTALL_KEY,
+                                  PLUGIN_EXECUTOR_KEY)
+
 from manager_rest import utils
 from entity_context import get_entity_context
 from constants import ENTITY_TYPES, NODE_MOD_TYPES
@@ -421,8 +425,9 @@ class PluginHandler(ModifiableEntityHandlerBase):
         # We only want to host agent plugins on Compute nodes.
         # Central deployment agent plugins are handled during plugin upload,
         # and non-compute nodes don't have plugins anyway
-        return COMPUTE_NODE_TYPE in node.type_hierarchy and \
-               plugin['install'] and plugin['executor'] == 'host_agent'
+        return COMPUTE_NODE_TYPE in node.type_hierarchy \
+               and plugin[PLUGIN_INSTALL_KEY] \
+               and plugin[PLUGIN_EXECUTOR_KEY] == HOST_AGENT
 
 
 class DeploymentUpdateNodeHandler(UpdateHandler):
