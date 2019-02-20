@@ -112,10 +112,15 @@ class BaseTestCase(unittest.TestCase):
     def _save_manager_logs_after_test_helper(self, purge):
         self.logger.debug('_save_manager_logs_after_test started')
         logs_dir = os.environ.get('CFY_LOGS_PATH_REMOTE')
-        self.logger.info("Cloudify remote log saving path found: [{}]. If "
-                         "you're running via itest-runner, make sure to set a "
-                         "local path as well with CFY_LOGS_PATH_LOCAL."
-                         .format(logs_dir))
+        if not logs_dir:
+            self.logger.info("No Cloudify remote log saving path found. You "
+                             "can set one up with the OS env "
+                             "var CFY_LOGS_PATH_REMOTE")
+        else:
+            self.logger.info("Cloudify remote log saving path found: [{0}]."
+                             .format(logs_dir))
+        self.logger.info("If you're running via itest-runner, make sure to "
+                         "set a local path as well with CFY_LOGS_PATH_LOCAL.")
         test_path = self.id().split('.')[-2:]
         if not logs_dir:
             self.logger.debug('not saving manager logs')
@@ -618,9 +623,13 @@ class AgentTestWithPlugins(AgentTestCase):
         self._wait_for_execution_by_wf_name('install_plugin')
 
     def _wait_for_execution_by_wf_name(self, wf_name):
-        install_plugin_ex = [ex for ex in self.client.executions.list(
-            include_system_workflows=True) if ex.workflow_id == wf_name][0]
-        self.wait_for_execution_to_end(install_plugin_ex)
+        install_plugin_execution = [
+            execution for execution in self.client.executions.list(
+                workflow_id=wf_name,
+                include_system_workflows=True,
+                sort={'created_at': 'desc'})
+            if execution.status not in Execution.END_STATES][0]
+        self.wait_for_execution_to_end(install_plugin_execution)
 
 
 class PluginsTest(AgentTestWithPlugins, WagonBuilderMixin):

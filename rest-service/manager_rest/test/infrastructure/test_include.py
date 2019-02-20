@@ -16,12 +16,12 @@
 import uuid
 
 import mock
-from manager_rest.test.attribute import attr
 
 from cloudify_rest_client.exceptions import NoSuchIncludeFieldError
 
 from manager_rest.test import base_test
 from manager_rest.storage import ListResult
+from manager_rest.test.attribute import attr
 from manager_rest.storage.models import Blueprint
 
 
@@ -38,8 +38,14 @@ class IncludeQueryParamTests(base_test.BaseServerTestCase):
     def test_include_propagation_to_model(self):
         self._test_include_propagation_to_model(
             [Blueprint],
-            dict(include=[u'id'], filters={}, pagination={}, sort={},
-                 all_tenants=False, substr_filters=None, get_all_results=False)
+            dict(
+                include=[u'id'],
+                filters={'is_hidden': False},
+                pagination={},
+                sort={},
+                all_tenants=False,
+                substr_filters=None,
+                get_all_results=False)
         )
 
     @attr(client_min_version=1, client_max_version=1)

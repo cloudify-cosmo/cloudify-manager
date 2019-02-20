@@ -1,5 +1,5 @@
 ########
-# Copyright (c) 2016 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,6 +21,8 @@ from flask import current_app
 from flask_security import current_user
 
 from cloudify.models_states import ExecutionState
+from cloudify.utils import extract_and_merge_plugins
+
 
 from dsl_parser import constants, tasks
 from dsl_parser import exceptions as parser_exceptions
@@ -188,7 +190,8 @@ class DeploymentUpdateManager(object):
                                  workflow_id=None,
                                  ignore_failure=False,
                                  install_first=False,
-                                 reinstall_list=None):
+                                 reinstall_list=None,
+                                 update_plugins=True):
         # Mark deployment update as committing
         dep_update.state = STATES.UPDATING
         self.sm.update(dep_update)
@@ -217,6 +220,10 @@ class DeploymentUpdateManager(object):
         depup_node_instances = self._node_instance_handler.handle(
             dep_update, node_instance_changes)
 
+        # Calculate which plugins to install and which to uninstall
+        central_plugins_to_install, central_plugins_to_uninstall = \
+            self._extract_plugins_changes(dep_update, update_plugins)
+
         # Saving the needed changes back to the storage manager for future use
         # (removing entities).
         dep_update.deployment_update_deployment = raw_updated_deployment
@@ -224,6 +231,8 @@ class DeploymentUpdateManager(object):
         dep_update.deployment_update_node_instances = depup_node_instances
         dep_update.modified_entity_ids = modified_entity_ids.to_dict(
             include_rel_order=True)
+        dep_update.central_plugins_to_install = central_plugins_to_install
+        dep_update.central_plugins_to_uninstall = central_plugins_to_uninstall
         self.sm.update(dep_update)
 
         # If this is a preview, no need to run workflow and update DB
@@ -236,8 +245,8 @@ class DeploymentUpdateManager(object):
         # added and related instances. Any workflow executed should call
         # finalize_update, since removing entities should be done after the
         # executions.
-        # The raw_node_instances are being used only for their ids, Thus
-        # They should really hold the finished version for the node instance.
+        # The raw_node_instances are being used only for their ids, thus
+        # they should really hold the finished version for the node instance.
         execution = self._execute_update_workflow(
             dep_update,
             depup_node_instances,
@@ -248,7 +257,10 @@ class DeploymentUpdateManager(object):
             workflow_id=workflow_id,
             ignore_failure=ignore_failure,
             install_first=install_first,
-            reinstall_list=reinstall_list
+            reinstall_list=reinstall_list,
+            central_plugins_to_install=central_plugins_to_install,
+            central_plugins_to_uninstall=central_plugins_to_uninstall,
+            update_plugins=update_plugins
         )
 
         # Update deployment attributes in the storage manager
@@ -436,7 +448,10 @@ class DeploymentUpdateManager(object):
                                  workflow_id=None,
                                  ignore_failure=False,
                                  install_first=False,
-                                 reinstall_list=None):
+                                 reinstall_list=None,
+                                 central_plugins_to_install=None,
+                                 central_plugins_to_uninstall=None,
+                                 update_plugins=True):
         """Executed the update workflow or a custom workflow
 
         :param dep_update: deployment update object
@@ -444,7 +459,21 @@ class DeploymentUpdateManager(object):
         add_node.modification instances
         :param modified_entity_ids: the entire add_node.modification entities
         list (by id)
-        :return: Execution object
+        :param skip_install: if to skip installation of node instances.
+        :param skip_uninstall: if to skip uninstallation of node instances.
+        :param skip_reinstall: if to skip reinstallation of node instances.
+        :param workflow_id: the update workflow id
+        :param ignore_failure: if to ignore failures.
+        :param install_first: if to install the node instances before
+        uninstalling them.
+        :param reinstall_list: list of node instances to reinstall.
+        :param central_plugins_to_install: plugins to install that have the
+        central_deployment_agent as the executor.
+        :param central_plugins_to_uninstall: plugins to uninstall that have the
+        central_deployment_agent as the executor.
+        :param update_plugins: whether or not to perform plugin updates.
+
+        :return: an Execution object.
         """
         added_instances = node_instances[NODE_MOD_TYPES.ADDED_AND_RELATED]
         extended_instances = \
@@ -492,11 +521,18 @@ class DeploymentUpdateManager(object):
                 extract_ids(removed_instances.get(NODE_MOD_TYPES.RELATED)),
 
             # Whether or not execute install/uninstall/reinstall,
-            # order of execution, and behavior in failure while uninstalling
+            # order of execution, behavior in failure while uninstalling, and
+            # whether or not to update the plugins.
             'skip_install': skip_install,
             'skip_uninstall': skip_uninstall,
             'ignore_failure': ignore_failure,
             'install_first': install_first,
+            'update_plugins': update_plugins,
+
+            # Plugins that are executed by the central deployment agent and
+            # need to be un/installed
+            'central_plugins_to_install': central_plugins_to_install,
+            'central_plugins_to_uninstall': central_plugins_to_uninstall,
 
             # List of node-instances to reinstall
             'node_instances_to_reinstall': reinstall_list
@@ -572,6 +608,63 @@ class DeploymentUpdateManager(object):
             execution_creator=current_user
         )
         return new_execution
+
+    def _extract_plugins_changes(self, dep_update, update_plugins):
+        """Extracts plugins that need to be installed or uninstalled.
+
+        :param dep_update: a DeploymentUpdate object.
+        :param update_plugins: whether to update the plugins or not.
+        :return: plugins that need installation and uninstallation (a tuple).
+        """
+
+        def get_plugins_to_install(plan, is_old_plan):
+            return extract_and_merge_plugins(
+                plan[constants.DEPLOYMENT_PLUGINS_TO_INSTALL],
+                plan[constants.WORKFLOW_PLUGINS_TO_INSTALL],
+                filter_func=is_centrally_deployed,
+                with_repetition=is_old_plan)
+
+        def is_centrally_deployed(plugin):
+            return (plugin[constants.PLUGIN_EXECUTOR_KEY]
+                    == constants.CENTRAL_DEPLOYMENT_AGENT)
+
+        def extend_list_from_dict(source_dict, filter_out_dict, target_list):
+            target_list.extend(
+                source_dict[k]
+                for k in source_dict if k not in filter_out_dict)
+
+        if not update_plugins:
+            return [], []
+
+        deployment = self.sm.get(models.Deployment, dep_update.deployment_id)
+        old_plan = deployment.blueprint.plan
+        new_plan = dep_update.deployment_plan
+        plugins_to_install_old = get_plugins_to_install(old_plan, True)
+        plugins_to_install_new = get_plugins_to_install(new_plan, False)
+        # Convert to plugin_name->plugin dict
+        new_plugins = {p[constants.PLUGIN_NAME_KEY]: p
+                       for p in plugins_to_install_new}
+        old_plugins = {p[constants.PLUGIN_NAME_KEY]: p
+                       for p in plugins_to_install_old}
+
+        central_plugins_to_install, central_plugins_to_uninstall = [], []
+        extend_list_from_dict(source_dict=new_plugins,
+                              filter_out_dict=old_plugins,
+                              target_list=central_plugins_to_install)
+        extend_list_from_dict(source_dict=old_plugins,
+                              filter_out_dict=new_plugins,
+                              target_list=central_plugins_to_uninstall)
+        # Deal with the intersection between the old and new plugins
+        intersection = (k for k in new_plugins if k in old_plugins)
+        for plugin_name in intersection:
+            old_plugin = old_plugins[plugin_name]
+            new_plugin = new_plugins[plugin_name]
+            if new_plugin == old_plugin:
+                continue
+            central_plugins_to_install.append(new_plugin)
+            central_plugins_to_uninstall.append(old_plugin)
+
+        return central_plugins_to_install, central_plugins_to_uninstall
 
 
 # What we need to access this manager in Flask

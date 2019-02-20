@@ -54,6 +54,9 @@ class Blueprints(resources_v1.Blueprints):
             '_get_all_results',
             request.args.get('_get_all_results', False)
         )
+        if not filters:
+            filters = {}
+        filters.setdefault('is_hidden', False)
         return get_storage_manager().list(
             models.Blueprint,
             include=_include,
@@ -62,8 +65,7 @@ class Blueprints(resources_v1.Blueprints):
             pagination=pagination,
             sort=sort,
             all_tenants=all_tenants,
-            get_all_results=get_all_results
-        )
+            get_all_results=get_all_results)
 
 
 class BlueprintsId(resources_v1.BlueprintsId):

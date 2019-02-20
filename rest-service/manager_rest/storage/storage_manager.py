@@ -269,8 +269,11 @@ class SQLStorageManager(object):
         joins = self._get_joins(model_class, all_columns)
 
         include, filters, substr_filters, sort = \
-            self._get_columns_from_field_names(
-                model_class, include, filters, substr_filters, sort)
+            self._get_columns_from_field_names(model_class,
+                                               include,
+                                               filters,
+                                               substr_filters,
+                                               sort)
         return include, filters, substr_filters, sort, joins
 
     def _get_query(self,
@@ -293,12 +296,18 @@ class SQLStorageManager(object):
         columns
         """
         include, filters, substr_filters, sort, joins = \
-            self._get_joins_and_converted_columns(
-                model_class, include, filters, substr_filters, sort)
+            self._get_joins_and_converted_columns(model_class,
+                                                  include,
+                                                  filters,
+                                                  substr_filters,
+                                                  sort)
 
         query = self._get_base_query(model_class, include, joins)
-        query = self._filter_query(
-            query, model_class, filters, substr_filters, all_tenants)
+        query = self._filter_query(query,
+                                   model_class,
+                                   filters,
+                                   substr_filters,
+                                   all_tenants)
         query = self._sort_query(query, model_class, sort)
         return query
 

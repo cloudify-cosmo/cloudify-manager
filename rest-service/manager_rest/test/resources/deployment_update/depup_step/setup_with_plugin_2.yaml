@@ -1,0 +1,51 @@
+tosca_definitions_version: 'cloudify_dsl_1_3'
+
+plugins:
+  should_skip_install:
+    executor: central_deployment_agent
+    source: .
+    package_version: "1"
+
+  should_skip_install_v2:
+    executor: central_deployment_agent
+    source: .
+    package_version: "2"
+
+  should_reinstall:
+    executor: central_deployment_agent
+    source: .
+    package_version: "2"
+
+  should_reinstall_v2:
+    executor: central_deployment_agent
+    source: .
+    package_version: "1"
+
+  should_install:
+    executor: central_deployment_agent
+    source: .
+
+#########################################################################
+# This part is added to make sure the plugins are installed/uninstalled #
+#########################################################################
+imports:
+  - cloudify/types/types.yaml
+
+node_templates:
+  site1:
+    type: cloudify.nodes.Compute
+    interfaces:
+      create:
+        implementation: should_skip_install.doesnt_matter
+      configure:
+        implementation: should_reinstall.doesnt_matter
+      start:
+        implementation: should_install.doesnt_matter
+
+  site2:
+    type: cloudify.nodes.Compute
+    interfaces:
+      configure:
+        implementation: should_skip_install_v2.doesnt_matter
+      start:
+        implementation: should_reinstall_v2.doesnt_matter

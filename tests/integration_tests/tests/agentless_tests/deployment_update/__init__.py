@@ -13,9 +13,10 @@
 #  * limitations under the License.
 
 import os
-import time
 
+from cloudify.utils import wait_for
 from cloudify.models_states import ExecutionState
+
 from manager_rest.deployment_update.constants import STATES
 
 from integration_tests import AgentlessTestCase
@@ -32,43 +33,26 @@ class TimeoutException(Exception):
 
 class DeploymentUpdateBase(AgentlessTestCase):
 
-    def _wait_for(self,
-                  callable_obj,
-                  callable_obj_key,
-                  value_attr,
-                  test_value,
-                  test_condition,
-                  msg='',
-                  timeout=900):
-        deadline = time.time() + timeout
-        while True:
-            if time.time() > deadline:
-                raise TimeoutException(msg)
-            value = callable_obj(callable_obj_key)
-            if test_condition(getattr(value, value_attr), test_value):
-                return value
-            time.sleep(3)
-
     def _wait_for_successful_state(self, depup_id):
         error_msg = 'deployment update {0} failed to commit'.format(depup_id)
-        return self._wait_for(self.client.deployment_updates.get,
-                              depup_id,
-                              'state',
-                              STATES.SUCCESSFUL,
-                              lambda x, y: x == y,
-                              error_msg)
+        return wait_for(self.client.deployment_updates.get,
+                        depup_id,
+                        'state',
+                        lambda x: x == STATES.SUCCESSFUL,
+                        TimeoutException,
+                        error_msg)
 
     def _wait_for_execution(self, execution, timeout=900):
         # Poll for execution status until execution ends
         error_msg = 'execution of operation {0} for deployment {1} timed out' \
             .format(execution.workflow_id, execution.deployment_id)
-        return self._wait_for(self.client.executions.get,
-                              execution.id,
-                              'status',
-                              ExecutionState.END_STATES,
-                              lambda x, y: x in y,
-                              error_msg,
-                              timeout)
+        return wait_for(self.client.executions.get,
+                        execution.id,
+                        'status',
+                        lambda x: x in ExecutionState.END_STATES,
+                        TimeoutException,
+                        error_msg,
+                        timeout)
 
     def _assert_relationship(self,
                              relationships,

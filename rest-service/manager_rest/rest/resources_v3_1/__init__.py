@@ -40,6 +40,9 @@ from .secrets import (                           # NOQA
 
 from .plugins import (                           # NOQA
     Plugins,
+    PluginsUpdate,
+    PluginsUpdates,
+    PluginsUpdateId,
     PluginsSetGlobal,
     PluginsSetVisibility,
 )

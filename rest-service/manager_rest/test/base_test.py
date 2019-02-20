@@ -166,6 +166,7 @@ class BaseServerTestCase(unittest.TestCase):
                         client.agents.api = mock_http_client
                         client.tasks_graphs.api = mock_http_client
                         client.operations.api = mock_http_client
+                        client.plugins_update.api = mock_http_client
                         client.sites.api = mock_http_client
 
         return client

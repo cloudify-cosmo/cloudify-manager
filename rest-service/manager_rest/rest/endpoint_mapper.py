@@ -64,6 +64,10 @@ def setup_resources(api):
         'Tokens': 'tokens',
         'Plugins': 'plugins',
         'PluginsId': 'plugins/<string:plugin_id>',
+        'PluginsUpdate':
+            'plugins-updates/<string:id>/update/<string:phase>',
+        'PluginsUpdateId': 'plugins-updates/<string:update_id>',
+        'PluginsUpdates': 'plugins-updates',
         'PluginsArchive': 'plugins/<string:plugin_id>/archive',
         'PluginsSetGlobal': 'plugins/<string:plugin_id>/set-global',
         'PluginsSetVisibility': 'plugins/<string:plugin_id>/set-visibility',

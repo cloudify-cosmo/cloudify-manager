@@ -46,4 +46,5 @@ from .resource_models import (Blueprint,
                               Agent,
                               Operation,
                               TasksGraph,
-                              Site)
+                              Site,
+                              PluginsUpdate)

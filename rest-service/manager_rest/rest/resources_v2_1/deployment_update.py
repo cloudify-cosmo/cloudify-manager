@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2015 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -85,15 +85,12 @@ class DeploymentUpdate(SecuredResource):
         """
         request_json = request.json
         manager, skip_install, skip_uninstall, skip_reinstall, workflow_id, \
-            ignore_failure, install_first, preview = \
-            self._get_params_and_validate(id, request_json)
+            ignore_failure, install_first, preview, update_plugins = \
+            self._parse_args(id, request_json)
         blueprint, inputs, reinstall_list = \
             self._get_and_validate_blueprint_and_inputs(id, request_json)
-
-        blueprint_dir_abs = join(config.instance.file_server_root,
-                                 FILE_SERVER_BLUEPRINTS_FOLDER,
-                                 blueprint.tenant_name,
-                                 blueprint.id)
+        blueprint_dir_abs = _get_plugin_update_blueprint_abs_path(
+            config.instance.file_server_root, blueprint)
         deployment_dir = join(FILE_SERVER_DEPLOYMENTS_FOLDER,
                               current_tenant.name,
                               id)
@@ -115,15 +112,15 @@ class DeploymentUpdate(SecuredResource):
                                                 workflow_id,
                                                 ignore_failure,
                                                 install_first,
-                                                reinstall_list)
+                                                reinstall_list,
+                                                update_plugins=update_plugins)
 
     def _commit(self, deployment_id):
         request_json = request.args
-        manager, skip_install, skip_uninstall, skip_reinstall, workflow_id, \
-            ignore_failure, install_first, preview = \
-            self._get_params_and_validate(deployment_id,
-                                          request_json,
-                                          preserve_old_behavior=True)
+        manager, skip_install, skip_uninstall, _, workflow_id, \
+            ignore_failure, install_first, _, update_plugins = \
+            self._parse_args(
+                deployment_id, request_json, using_post_request=True)
         deployment_update, _ = \
             UploadedBlueprintsDeploymentUpdateManager(). \
             receive_uploaded_data(deployment_id)
@@ -133,7 +130,8 @@ class DeploymentUpdate(SecuredResource):
                                                 skip_uninstall,
                                                 workflow_id,
                                                 ignore_failure,
-                                                install_first)
+                                                install_first,
+                                                update_plugins=update_plugins)
 
     @staticmethod
     def _get_and_validate_blueprint_and_inputs(deployment_id, request_json):
@@ -160,26 +158,32 @@ class DeploymentUpdate(SecuredResource):
         return blueprint, inputs, reinstall_list
 
     @staticmethod
-    def _get_params_and_validate(deployment_id,
-                                 request_json,
-                                 preserve_old_behavior=False):
+    def _parse_args(deployment_id, request_json, using_post_request=False):
         skip_install = verify_and_convert_bool(
-            'skip_install', request_json.get('skip_install', 'false'))
+            'skip_install',
+            request_json.get('skip_install', 'false'))
         skip_uninstall = verify_and_convert_bool(
-            'skip_uninstall', request_json.get('skip_uninstall', 'false'))
+            'skip_uninstall',
+            request_json.get('skip_uninstall', 'false'))
         skip_reinstall = verify_and_convert_bool(
-            'skip_reinstall', request_json.get('skip_reinstall',
-                                               preserve_old_behavior))
+            'skip_reinstall',
+            request_json.get('skip_reinstall', using_post_request))
         force = verify_and_convert_bool(
-            'force', request_json.get('force', 'false'))
+            'force',
+            request_json.get('force', 'false'))
         ignore_failure = verify_and_convert_bool(
-            'ignore_failure', request_json.get('ignore_failure', 'false'))
+            'ignore_failure',
+            request_json.get('ignore_failure', 'false'))
         install_first = verify_and_convert_bool(
-            'install_first', request_json.get('install_first',
-                                              preserve_old_behavior))
-        preview = not preserve_old_behavior and verify_and_convert_bool(
-            'preview', request_json.get('preview', 'false'))
+            'install_first',
+            request_json.get('install_first', using_post_request))
+        preview = not using_post_request and verify_and_convert_bool(
+            'preview',
+            request_json.get('preview', 'false'))
         workflow_id = request_json.get('workflow_id', None)
+        update_plugins = verify_and_convert_bool(
+            'update_plugins',
+            request_json.get('update_plugins', 'true'))
         manager = get_deployment_updates_manager(preview)
         manager.validate_no_active_updates_per_deployment(deployment_id,
                                                           force=force)
@@ -190,7 +194,8 @@ class DeploymentUpdate(SecuredResource):
                 workflow_id,
                 ignore_failure,
                 install_first,
-                preview)
+                preview,
+                update_plugins)
 
 
 class DeploymentUpdateId(SecuredResource):
@@ -244,3 +249,15 @@ class DeploymentUpdates(SecuredResource):
                 substr_filters=search
             )
         return deployment_updates
+
+
+def _get_plugin_update_blueprint_abs_path(server_root, blueprint):
+    def get_blueprint_abs_path(_blueprint):
+        return join(server_root,
+                    FILE_SERVER_BLUEPRINTS_FOLDER,
+                    _blueprint.tenant_name,
+                    _blueprint.id)
+    if not blueprint.temp_of_plugins_update:
+        return get_blueprint_abs_path(blueprint)
+    original_blueprint = blueprint.temp_of_plugins_update[0].blueprint
+    return get_blueprint_abs_path(original_blueprint)

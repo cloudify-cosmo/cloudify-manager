@@ -127,6 +127,7 @@ def _init_script_agent_setup(container_id, install_agent_script):
 
 def _remote_agent_setup(container_id):
     _wait_for_ssh_setup(container_id)
+    _docker_exec(container_id, 'mkdir -p /root/.ssh/')
     _docker_exec(container_id, 'cp {0} /root/.ssh/authorized_keys'.format(
         PUBLIC_KEY_CONTAINER_PATH))
     private_key = _docker_exec(container_id, 'cat {0}'.format(

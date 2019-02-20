@@ -1,17 +1,18 @@
-#########
-# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
+########
+# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#       http://www.apache.org/licenses/LICENSE-2.0
+#        http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
+#    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    * See the License for the specific language governing permissions and
+#    * limitations under the License.
+
 
 from os import path
 from datetime import datetime
@@ -66,6 +67,7 @@ class Blueprint(CreatedAtMixin, SQLResourceBase):
     plan = db.Column(db.PickleType, nullable=False)
     updated_at = db.Column(UTCDateTime)
     description = db.Column(db.Text)
+    is_hidden = db.Column(db.Boolean, default=False)
 
 
 class Snapshot(CreatedAtMixin, SQLResourceBase):
@@ -387,12 +389,58 @@ class Log(SQLResourceBase):
         self.execution = execution
 
 
+class PluginsUpdate(CreatedAtMixin, SQLResourceBase):
+    __tablename__ = 'plugins_updates'
+
+    state = db.Column(db.Text)
+    deployments_to_update = db.Column(db.PickleType)
+    forced = db.Column(db.Boolean, default=False)
+
+    _original_blueprint_fk = foreign_key(Blueprint._storage_id)
+    _temp_blueprint_fk = foreign_key(Blueprint._storage_id,
+                                     nullable=True,
+                                     ondelete='SET NULL')
+    _execution_fk = foreign_key(Execution._storage_id,
+                                nullable=True,
+                                ondelete='SET NULL')
+
+    @declared_attr
+    def execution(cls):
+        return one_to_many_relationship(cls, Execution, cls._execution_fk)
+
+    @declared_attr
+    def blueprint(cls):
+        return one_to_many_relationship(
+            cls,
+            Blueprint,
+            cls._original_blueprint_fk,
+            backreference='original_of_plugins_update')
+
+    @declared_attr
+    def temp_blueprint(cls):
+        return one_to_many_relationship(cls,
+                                        Blueprint,
+                                        cls._temp_blueprint_fk,
+                                        backreference='temp_of_plugins_update',
+                                        cascade=False)
+
+    blueprint_id = association_proxy('blueprint', 'id')
+    temp_blueprint_id = association_proxy('temp_blueprint', 'id')
+    execution_id = association_proxy('execution', 'id')
+
+    def set_blueprint(self, blueprint):
+        self._set_parent(blueprint)
+        self.blueprint = blueprint
+
+
 class DeploymentUpdate(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'deployment_updates'
 
     deployment_plan = db.Column(db.PickleType)
     deployment_update_node_instances = db.Column(db.PickleType)
     deployment_update_deployment = db.Column(db.PickleType)
+    central_plugins_to_uninstall = db.Column(db.PickleType)
+    central_plugins_to_install = db.Column(db.PickleType)
     deployment_update_nodes = db.Column(db.PickleType)
     modified_entity_ids = db.Column(db.PickleType)
     old_inputs = db.Column(db.PickleType)
