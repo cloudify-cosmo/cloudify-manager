@@ -781,11 +781,13 @@ class ExecutionsTestCase(BaseServerTestCase):
             status=status
         ))
         tasks_graph = self.sm.put(models.TasksGraph(
+            id=str(uuid.uuid4()),
             _execution_fk=execution._storage_id,
             name='install',
             created_at=datetime.now()
         ))
         operation = self.sm.put(models.Operation(
+            id=str(uuid.uuid4()),
             _tasks_graph_fk=tasks_graph._storage_id,
             parameters={'current_retries': 20},
             state=cloudify_tasks.TASK_FAILED,

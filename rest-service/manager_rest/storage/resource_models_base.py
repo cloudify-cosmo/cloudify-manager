@@ -56,7 +56,7 @@ class SQLResourceBase(SQLModelBase):
 
     # Some must-have columns for all resources
     _storage_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    id = db.Column(db.Text, index=True)
+    id = db.Column(db.Text, index=True, nullable=False)
     visibility = db.Column(
         db.Enum(*VisibilityState.STATES, name='visibility_states'),
         default=VisibilityState.TENANT
