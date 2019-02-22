@@ -59,7 +59,7 @@ def upgrade():
     op.create_table(
         'agents',
         sa.Column('_storage_id', sa.Integer(), nullable=False),
-        sa.Column('id', sa.Text(), nullable=False),
+        sa.Column('id', sa.Text(), nullable=True),
         sa.Column('name', sa.Text(), nullable=False),
         sa.Column('ip', sa.Text(), nullable=True),
         sa.Column('install_method', sa.Text(), nullable=False),

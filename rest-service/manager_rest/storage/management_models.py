@@ -273,7 +273,7 @@ class User(SQLModelBase, UserMixin):
     password = db.Column(db.String(255))
     api_token_key = db.Column(db.String(100))
     last_failed_login_at = db.Column(UTCDateTime)
-    failed_logins_counter = db.Column(db.Integer, default=0)
+    failed_logins_counter = db.Column(db.Integer, default=0, nullable=False)
 
     tenant_associations = db.relationship(
         'UserTenantAssoc',
