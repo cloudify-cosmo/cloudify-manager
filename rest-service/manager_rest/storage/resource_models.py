@@ -276,6 +276,8 @@ class Event(SQLResourceBase):
 
     __tablename__ = 'events'
 
+    # Remove the id field
+    id = None
     timestamp = db.Column(
         UTCDateTime,
         default=datetime.utcnow,
@@ -315,6 +317,8 @@ class Log(SQLResourceBase):
 
     __tablename__ = 'logs'
 
+    # Remove the id field
+    id = None
     timestamp = db.Column(
         UTCDateTime,
         default=datetime.utcnow,
