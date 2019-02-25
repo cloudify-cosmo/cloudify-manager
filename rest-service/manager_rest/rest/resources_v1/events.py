@@ -269,7 +269,11 @@ class Events(SecuredResource):
             )
             total = query.count()
             query = Events._apply_sort(query, sort)
-            query = Events._apply_sort(query, {'id': 'asc'})
+            if sort:
+                sort_direction = sort.itervalues().next()
+            else:
+                sort_direction = 'asc'
+            query = Events._apply_sort(query, {'id': sort_direction})
             query = (
                 query
                 .limit(bindparam('limit'))
