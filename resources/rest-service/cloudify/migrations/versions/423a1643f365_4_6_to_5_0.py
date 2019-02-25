@@ -23,7 +23,7 @@ depends_on = None
 resource_tables = ['blueprints', 'plugins', 'secrets', 'snapshots', 'nodes',
                    'executions', 'deployment_modifications', 'node_instances',
                    'deployments', 'deployment_updates', 'tasks_graphs',
-                   'deployment_update_steps', 'operations']
+                   'deployment_update_steps', 'operations', 'agents']
 
 
 def upgrade():
