@@ -537,15 +537,15 @@ class IncompatibleClusterArchitectureError(ManagerException):
 
 
 class InvalidCloudifyLicense(ManagerException):
+    """ Raised when the uploaded Cloudify license can't be verified.
+    This happens when the license has been tampered and the signature does not
+    match.
     """
-    Raised when the Cloudify license on the Manager has expired or doesn't
-    exist and a user is trying to perform a REST call.
-    """
-    ERROR_CODE = 'expired_or_invalid_cloudify_license'
+    ERROR_CODE = 'invalid_cloudify_license'
 
     def __init__(self, *args, **kwargs):
         super(InvalidCloudifyLicense, self).__init__(
-            403,
+            401,
             InvalidCloudifyLicense.ERROR_CODE,
             *args,
             **kwargs

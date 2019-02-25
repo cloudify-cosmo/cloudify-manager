@@ -33,7 +33,7 @@ from .relationships import (
     foreign_key,
     many_to_many_relationship,
 )
-from .models_base import db, SQLModelBase, UTCDateTime, CIColumn, JSONString
+from .models_base import db, SQLModelBase, UTCDateTime, CIColumn
 
 
 class ProviderContext(SQLModelBase):
@@ -479,8 +479,9 @@ class License(SQLModelBase):
     __tablename__ = 'licenses'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     customer_id = db.Column(db.Text, unique=True)
-    license_type = db.Column(db.String(255))
     expiration_date = db.Column(UTCDateTime)
+    license_edition = db.Column(db.String(255))
+    trial = db.Column(db.Boolean, nullable=False, default=False)
     cloudify_version = db.Column(db.Text)
     capabilities = db.Column(db.ARRAY(db.Text))
     signature = db.Column(db.LargeBinary)
