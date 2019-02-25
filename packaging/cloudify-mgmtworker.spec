@@ -23,8 +23,8 @@ Cloudify's Management worker
 virtualenv /opt/mgmtworker/env
 %{PIP_INSTALL} --upgrade pip setuptools
 %{PIP_INSTALL} -r "${RPM_SOURCE_DIR}/packaging/mgmtworker/requirements.txt"
+%{PIP_INSTALL} --upgrade "${RPM_SOURCE_DIR}/mgmtworker"
 %{PIP_INSTALL} --upgrade "${RPM_SOURCE_DIR}/workflows"
-
 
 # Install stubs of cloudify packages that were merged into cloudify-common
 STUBS=${RPM_SOURCE_DIR}/packaging/mgmtworker/stub_packages
