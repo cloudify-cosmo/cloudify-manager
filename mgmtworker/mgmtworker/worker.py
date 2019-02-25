@@ -32,7 +32,8 @@ from cloudify_agent.worker import (
     CloudifyOperationConsumer,
     CloudifyWorkflowConsumer,
     ServiceTaskConsumer,
-    HookConsumer
+    HookConsumer,
+    _setup_logger as _setup_cloudify_agent_logger
 )
 
 DEFAULT_MAX_WORKERS = 10
@@ -105,6 +106,7 @@ def main():
     args = parser.parse_args()
 
     _setup_logger()
+    _setup_cloudify_agent_logger('mgmtworker')
     _resume_stuck_executions()
 
     worker = make_amqp_worker(args)
