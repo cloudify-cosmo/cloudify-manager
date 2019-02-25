@@ -198,8 +198,8 @@ class DBLogEventPublisher(object):
                 except psycopg2.OperationalError as e:
                     self.on_db_connection_error(e)
                 except Exception:
-                    logger.exception('Error storing %d logs+events',
-                                     len(items))
+                    logger.info('Error storing %d logs+events in batch',
+                                len(items))
                     conn.rollback()
                     # in case the integrityError was caused by stale cache,
                     # clean it entirely before trying to insert without
