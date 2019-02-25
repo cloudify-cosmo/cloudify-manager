@@ -269,6 +269,12 @@ class Execution(CreatedAtMixin, SQLResourceBase):
         self._set_parent(deployment)
         self.deployment = deployment
 
+    @classproperty
+    def resource_fields(cls):
+        fields = super(Execution, cls).resource_fields
+        fields.pop('token')
+        return fields
+
 
 class Event(SQLResourceBase):
 

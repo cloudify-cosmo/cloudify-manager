@@ -13,9 +13,12 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import uuid
 import math
 from datetime import datetime
+
 from flask_security import current_user
+from flask_security.utils import hash_data
 
 from cloudify.cryptography_utils import decrypt
 from cloudify.amqp_client import (get_client,
@@ -67,6 +70,7 @@ def execute_workflow(name,
         'is_system_workflow': False,
         'wait_after_fail': wait_after_fail,
         'resume': resume,
+        'execution_token': generate_execution_token(execution_id),
         'plugin': {
             'name': plugin_name,
             'package_name': plugin.get('package_name'),
@@ -101,7 +105,8 @@ def execute_system_workflow(wf_id,
         'bypass_maintenance': bypass_maintenance,
         'dry_run': dry_run,
         'update_execution_status': update_execution_status,
-        'is_system_workflow': is_system_workflow
+        'is_system_workflow': is_system_workflow,
+        'execution_token': generate_execution_token(task_id),
     }
 
     if deployment:
@@ -111,6 +116,17 @@ def execute_system_workflow(wf_id,
     return _execute_task(execution_id=context['task_id'],
                          execution_parameters=execution_parameters,
                          context=context, execution_creator=execution_creator)
+
+
+def generate_execution_token(execution_id):
+    sm = get_storage_manager()
+    execution = sm.get(models.Execution, execution_id)
+    execution_token = uuid.uuid4().hex
+
+    # Store the token hashed in the DB
+    execution.token = hash_data(execution_token)
+    sm.update(execution)
+    return execution_token
 
 
 def _get_tenant_dict():
@@ -215,7 +231,8 @@ def cancel_execution(execution_id):
             'kwargs': {
                 'execution_id': execution_id,
                 'rest_token': current_user.get_auth_token(),
-                'tenant': _get_tenant_dict()
+                'tenant': _get_tenant_dict(),
+                'execution_token': generate_execution_token(execution_id)
             }
         }
     }

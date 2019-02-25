@@ -564,6 +564,21 @@ class SQLStorageManager(object):
         count = query.order_by(None).count()  # Fastest way to count
         return count
 
+    def full_access_list(self, model_class, filters=None):
+        """Return a list of `model_class` results, without considering the
+           user or the tenant
+
+        :param model_class: SQL DB table class
+        :param filters: An optional dictionary where keys are column names to
+                        filter by, and values are values applicable for those
+                        columns (or lists of such values)
+        :return: A (possibly empty) list of `model_class` results
+        """
+        query = model_class.query
+        if filters:
+            query = self._add_value_filter(query, filters)
+        return query.all()
+
     def put(self, instance):
         """Create a `model_class` instance from a serializable `model` object
 

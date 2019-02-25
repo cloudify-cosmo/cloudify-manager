@@ -18,17 +18,17 @@ from datetime import datetime
 from itertools import dropwhile
 
 import mock
+from flask_security.utils import hash_data
 
 from cloudify_rest_client import exceptions
 from cloudify.models_states import ExecutionState
 from cloudify.workflows import tasks as cloudify_tasks
+from cloudify.constants import CLOUDIFY_EXECUTION_TOKEN_HEADER
 
-from manager_rest import utils
 from manager_rest.storage import models
-from manager_rest import manager_exceptions
+from manager_rest import utils, manager_exceptions
 from manager_rest.test.attribute import attr
-from manager_rest.test.base_test import BaseServerTestCase
-from manager_rest.test.base_test import LATEST_API_VERSION
+from manager_rest.test.base_test import BaseServerTestCase, LATEST_API_VERSION
 
 
 @attr(client_min_version=1, client_max_version=LATEST_API_VERSION)
@@ -881,3 +881,95 @@ class ExecutionsTestCase(BaseServerTestCase):
                 self.client.executions.resume(execution.id, force=True)
             self.assertEqual(cm.exception.status_code, 409)
             self.assertIn('Cannot force-resume execution', str(cm.exception))
+
+    @attr(client_min_version=3.1, client_max_version=LATEST_API_VERSION)
+    def test_execution_token_invalid(self):
+        self._assert_invalid_execution_token()
+
+    @attr(client_min_version=3.1, client_max_version=LATEST_API_VERSION)
+    def test_execution_token_valid(self):
+        token = uuid.uuid4().hex
+        self._create_execution_and_update_token('deployment_1', token)
+        self._assert_valid_execution_token(token)
+
+    @attr(client_min_version=3.1, client_max_version=LATEST_API_VERSION)
+    def test_execution_token_sequence(self):
+        """ Verify the execution token authentication is not affected by
+            previous requests
+        """
+        self._assert_invalid_execution_token()
+        token = uuid.uuid4().hex
+        self._create_execution_and_update_token('deployment_1', token)
+        self._assert_valid_execution_token(token)
+        self._assert_invalid_execution_token()
+
+    @attr(client_min_version=3.1, client_max_version=LATEST_API_VERSION)
+    def test_execution_token_created_in_db(self):
+        _, deployment_id, _, _ = self.put_deployment(self.DEPLOYMENT_ID)
+        execution = self.client.executions.start(deployment_id, 'install')
+        db_execution = self.sm.get(models.Execution, execution.id)
+        self.assertIsNotNone(db_execution.token)
+        assert len(db_execution.token) > 10
+
+    @attr(client_min_version=3.1, client_max_version=LATEST_API_VERSION)
+    def test_execution_token_invalid_status(self):
+        _, deployment_id, _, _ = self.put_deployment(self.DEPLOYMENT_ID)
+        execution = self.client.executions.start(deployment_id, 'install')
+        token = uuid.uuid4().hex
+
+        # Update the token in the db
+        execution = self.sm.get(models.Execution, execution.id)
+        execution.token = hash_data(token)
+        self.sm.update(execution)
+
+        headers = {CLOUDIFY_EXECUTION_TOKEN_HEADER: token}
+        client = self.create_client(headers=headers)
+
+        # Authentication will fail because of the invalid status
+        self.assertRaisesRegexp(
+            exceptions.UserUnauthorizedError,
+            'Authentication failed, invalid Execution Token',
+            client.executions.list
+        )
+
+        # Update the status to an active one
+        self._modify_execution_status_in_database(execution,
+                                                  ExecutionState.STARTED)
+
+        # Authentication will succeed after updating the status
+        executions = client.executions.list()
+        assert len(executions) == 2
+
+    @attr(client_min_version=3.1, client_max_version=LATEST_API_VERSION)
+    def test_duplicate_execution_token(self):
+        token = uuid.uuid4().hex
+        self._create_execution_and_update_token('deployment_1', token)
+        self._assert_valid_execution_token(token)
+        self._create_execution_and_update_token('deployment_2', token)
+        self._assert_invalid_execution_token(token)
+
+    def _create_execution_and_update_token(self, deployment_id, token):
+        self.put_deployment(deployment_id, blueprint_id=deployment_id)
+        execution = self.client.executions.start(deployment_id, 'install')
+
+        # Update the token in the db
+        execution = self.sm.get(models.Execution, execution.id)
+        execution.token = hash_data(token)
+        execution.status = ExecutionState.STARTED
+        self.sm.update(execution)
+        return execution.id
+
+    def _assert_invalid_execution_token(self, token='test_token'):
+        headers = {CLOUDIFY_EXECUTION_TOKEN_HEADER: token}
+        client = self.create_client(headers=headers)
+        self.assertRaisesRegexp(
+            exceptions.UserUnauthorizedError,
+            'Authentication failed, invalid Execution Token',
+            client.blueprints.list
+        )
+
+    def _assert_valid_execution_token(self, token):
+        headers = {CLOUDIFY_EXECUTION_TOKEN_HEADER: token}
+        client = self.create_client(headers=headers)
+        executions = client.executions.list()
+        self.assertEquals(2, len(executions))

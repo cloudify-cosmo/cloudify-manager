@@ -24,6 +24,9 @@ from cloudify.constants import CLOUDIFY_API_AUTH_TOKEN_HEADER
 from manager_rest.storage.models import User
 from manager_rest.manager_exceptions import NotFoundError
 from manager_rest.storage import user_datastore, get_storage_manager
+from manager_rest.execution_token import (set_current_execution,
+                                          get_current_execution_by_token,
+                                          get_execution_token_from_request)
 
 
 ENCODED_ID_LENGTH = 5
@@ -43,6 +46,11 @@ def user_loader(request):
     """
     if request.authorization:
         return get_user_from_auth(request.authorization)
+    execution_token = get_execution_token_from_request(request)
+    if execution_token:
+        execution = get_current_execution_by_token(execution_token)
+        set_current_execution(execution)  # Sets the request current execution
+        return execution.creator if execution else None
     token = get_token_from_request(request)
     if token:
         _, _, user, _, _ = get_token_status(token)
