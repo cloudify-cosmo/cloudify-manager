@@ -43,7 +43,7 @@ jobs:
     steps:
       - checkout
       - run: pip install --user flake8
-      - run: python -m flake8 workflows/ rest-service/ tests/ amqp-postgres/
+      - run: python -m flake8 workflows/ rest-service/ tests/ amqp-postgres/ cloudify_types/
 
   test_v1:
     <<: *tox_defaults
@@ -94,6 +94,12 @@ jobs:
     <<: *tox_defaults
     environment:
       TOX_CONFIG: ./workflows
+      DO_ENV: py27
+
+  test_cloudify_types:
+    <<: *tox_defaults
+    environment:
+      TOX_CONFIG: ./cloudify_types
       DO_ENV: py27
 
   test_amqp_postgres:
@@ -226,3 +232,4 @@ workflows:
       - test_workflows
       - test_premium
       - test_amqp_postgres
+      - test_cloudify_types

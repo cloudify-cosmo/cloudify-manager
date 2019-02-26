@@ -14,6 +14,7 @@
 #  * limitations under the License.
 
 import uuid
+
 from integration_tests import AgentTestCase
 from integration_tests.tests.utils import get_resource as resource
 
