@@ -50,5 +50,16 @@ FILE_SERVER_PLUGINS_FOLDER = 'plugins'
 FILE_SERVER_AUTHENTICATORS_FOLDER = 'authenticators'
 
 BROKER_SSL_PORT = 5671
-
 SECURITY_FILE_LOCATION = '/opt/manager/rest-security.conf'
+
+LOCAL_ADDRESS = '127.0.0.1'
+ALLOWED_ENDPOINTS = ['maintenance',
+                     'snapshots',
+                     'status',
+                     'version',
+                     'license']
+CLOUDIFY_AUTH_HEADER = 'Authorization'
+CLOUDIFY_AUTH_TOKEN_HEADER = 'Authentication-Token'
+BASIC_AUTH_PREFIX = 'Basic '
+MODELS_TO_PERMISSIONS = {'NodeInstance': 'node_instance'}
+FORBIDDEN_METHODS = ['POST', 'PATCH', 'PUT']

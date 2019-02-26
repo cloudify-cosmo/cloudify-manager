@@ -22,7 +22,8 @@ from .management_models import (User,
                                 Tenant,
                                 UserTenantAssoc,
                                 user_datastore,
-                                ProviderContext)
+                                ProviderContext,
+                                License)
 
 from .resource_models import (Blueprint,
                               Snapshot,

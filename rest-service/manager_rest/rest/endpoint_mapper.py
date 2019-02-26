@@ -110,7 +110,8 @@ def setup_resources(api):
         'OperationsId': 'operations/<string:operation_id>',
         'TasksGraphs': 'tasks_graphs',
         'TasksGraphsId': 'tasks_graphs/<string:tasks_graph_id>',
-        'ExecutionsCheck': 'executions/<execution_id>/should-start'
+        'ExecutionsCheck': 'executions/<execution_id>/should-start',
+        'License': 'license'
     }
 
     # Set version endpoint as a non versioned endpoint

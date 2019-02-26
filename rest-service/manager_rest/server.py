@@ -34,6 +34,7 @@ from manager_rest.app_logging import setup_logger, log_request, log_response
 
 if premium_enabled:
     from cloudify_premium import configure_auth
+    from cloudify_premium import LicenseHandler
 
 SQL_DIALECT = 'postgresql'
 
@@ -72,8 +73,8 @@ class CloudifyFlaskApp(Flask):
 
         self.before_request(log_request)
         self.before_request(maintenance_mode_handler)
+        self.before_request(LicenseHandler.check_license_expiration_date)
         self.after_request(log_response)
-
         self._set_exception_handlers()
         self._set_sql_alchemy()
         self._set_flask_security()
