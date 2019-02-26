@@ -253,6 +253,9 @@ class SelectEventsBaseTest(TestCase):
             for _ in xrange(self.EVENT_COUNT)
         ]
         sorted_events = sorted(events, key=lambda event: event.timestamp)
+        for i in range(len(sorted_events)):
+            sorted_events[i]._storage_id = i
+            sorted_events[i].id = str(i)
         session.add_all(sorted_events)
         session.commit()
 
