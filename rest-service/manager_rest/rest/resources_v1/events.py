@@ -269,6 +269,11 @@ class Events(SecuredResource):
             )
             total = query.count()
             query = Events._apply_sort(query, sort)
+            if sort:
+                sort_direction = sort.itervalues().next()
+            else:
+                sort_direction = 'asc'
+            query = Events._apply_sort(query, {'_storage_id': sort_direction})
             query = (
                 query
                 .limit(bindparam('limit'))
@@ -301,7 +306,7 @@ class Events(SecuredResource):
         :rtype: :class:`sqlalchemy.orm.query.Query`
 
         """
-        def select_column(column_name):
+        def select_column(column_name, label=None):
             """Select column from model by name.
 
             If column is not present in the model, then select `NULL` value
@@ -313,13 +318,16 @@ class Events(SecuredResource):
             :rtype: :class:``
 
             """
+            if not label:
+                label = column_name
             if hasattr(model, column_name):
-                return getattr(model, column_name).label(column_name)
-            return literal_column('NULL').label(column_name)
+                return getattr(model, column_name).label(label)
+            return literal_column('NULL').label(label)
 
         query = (
             db.session.query(
                 select_column('id'),
+                select_column('_storage_id'),
                 select_column('timestamp'),
                 select_column('reported_timestamp'),
                 Blueprint.id.label('blueprint_id'),
