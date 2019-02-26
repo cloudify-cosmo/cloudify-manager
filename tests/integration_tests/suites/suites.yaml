@@ -36,7 +36,6 @@ rest:
 manager:
   - agent_tests/test_manager_maintenance_mode.py
   - agentless_tests/test_download_blueprint.py
-  - agentless_tests/test_elasticsearch.py
   - agentless_tests/test_get_instance_ip.py
   - agentless_tests/test_operation_mapping.py
   - agentless_tests/test_provider_context.py
