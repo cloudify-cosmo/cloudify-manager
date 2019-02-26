@@ -532,10 +532,10 @@ class TenantNotProvided(ForbiddenError):
 
 class IncompatibleClusterArchitectureError(ManagerException):
     """
-    Raise when a cluster node with architecture X is trying to join a cluster
+    Raised when a cluster node with architecture X is trying to join a cluster
     with architecture Y
 
-    I.E - Master is all-in-one and slave has an external database
+    i.e: Master is all-in-one and slave has an external database
     """
     ERROR_CODE = 'incompatible_cluster_architecture'
 
@@ -543,6 +543,22 @@ class IncompatibleClusterArchitectureError(ManagerException):
         super(IncompatibleClusterArchitectureError, self).__init__(
             400,
             IncompatibleClusterArchitectureError.ERROR_CODE,
+            *args,
+            **kwargs
+        )
+
+
+class InvalidCloudifyLicense(ManagerException):
+    """ Raised when the uploaded Cloudify license can't be verified.
+    This happens when the license has been tampered and the signature does not
+    match.
+    """
+    ERROR_CODE = 'invalid_cloudify_license'
+
+    def __init__(self, *args, **kwargs):
+        super(InvalidCloudifyLicense, self).__init__(
+            401,
+            InvalidCloudifyLicense.ERROR_CODE,
             *args,
             **kwargs
         )
