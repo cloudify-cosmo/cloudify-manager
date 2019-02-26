@@ -273,7 +273,7 @@ class Events(SecuredResource):
                 sort_direction = sort.itervalues().next()
             else:
                 sort_direction = 'asc'
-            query = Events._apply_sort(query, {'id': sort_direction})
+            query = Events._apply_sort(query, {'_storage_id': sort_direction})
             query = (
                 query
                 .limit(bindparam('limit'))
@@ -326,7 +326,8 @@ class Events(SecuredResource):
 
         query = (
             db.session.query(
-                select_column('_storage_id', label='id'),
+                select_column('id'),
+                select_column('_storage_id'),
                 select_column('timestamp'),
                 select_column('reported_timestamp'),
                 Blueprint.id.label('blueprint_id'),
