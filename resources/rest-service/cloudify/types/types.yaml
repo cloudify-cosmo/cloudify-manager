@@ -355,6 +355,84 @@ node_types:
         description: >
           Links to Cloudify packages to be installed on the manager
 
+  cloudify.nodes.DeploymentProxy:
+    derived_from: cloudify.nodes.Root
+    properties:
+      resource_config:
+        type: cloudify.datatypes.DeploymentProxy
+        default: {}
+      client:
+        description: >
+          Client configuration, if empty will be reused manager client:
+            host: Host of Cloudify's management machine.
+            port: Port of REST API service on management machine.
+            protocol: Protocol of REST API service on management machine,
+                      defaults to http.
+            api_version: version of REST API service on management machine.
+            headers: Headers to be added to request.
+            query_params: Query parameters to be added to the request.
+            cert: Path to a copy of the server's self-signed certificate.
+            trust_all: if `False`, the server's certificate
+                       (self-signed or not) will be verified.
+            username: Cloudify User username.
+            password: Cloudify User password.
+            token: Cloudify User token.
+            tenant: Cloudify Tenant name.
+        default: {}
+      plugins:
+        description: >
+          Optional, list of plugins for upload.
+            wagon_path: Url for plugin wagon file.
+            plugin_yaml_path: Url for plugin yaml file.
+        default: []
+      secrets:
+        description: >
+          Optional, dictionary of secrets for set before run deployments.
+        default: {}
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          implementation: cfy_util.cloudify_deployment_proxy.tasks.upload_blueprint
+        configure:
+          implementation: cfy_util.cloudify_deployment_proxy.tasks.create_deployment
+        start:
+          implementation: cfy_util.cloudify_deployment_proxy.tasks.execute_start
+          inputs:
+            workflow_id:
+              type: string
+              default: install
+            timeout:
+              type: integer
+              description: How long (in seconds) to wait for execution to finish before timing out
+              default: 1800
+            interval:
+              type: integer
+              description: Polling interval (seconds)
+              default: 10
+        stop:
+          implementation: cfy_util.cloudify_deployment_proxy.tasks.execute_start
+          inputs:
+            workflow_id:
+              default: uninstall
+            resource_config:
+              default:
+                blueprint: { get_property: [ SELF, resource_config, blueprint ] }
+                deployment: { get_property: [ SELF, resource_config, deployment ] }
+                reexecute: { get_property: [ SELF, resource_config, reexecute ] }
+                executions_start_args:
+                  allow_custom_parameters: true
+                  parameters:
+                    ignore_failure: true
+        delete:
+          implementation: cfy_util.cloudify_deployment_proxy.tasks.delete_deployment
+
+  cloudify.nodes.NodeInstanceProxy:
+    derived_from: cloudify.nodes.DeploymentProxy
+    properties:
+      resource_config:
+        type: cloudify.datatypes.NodeInstanceProxy
+        default: {}
+
 ##################################################################################
 # Base relationship definitions
 ##################################################################################
@@ -724,6 +802,104 @@ data_types:
         description: >
           Optional additional low level configuration details. (type: dictionary)
         required: false
+
+  cloudify.datatypes.Blueprint:
+    properties:
+      external_resource:
+        description: >
+          Use external resource.
+        default: false
+      id:
+        description: >
+          This is the blueprint that the deployment node is a proxy to.
+        required: false
+      main_file_name:
+        description: >
+          The application blueprint filename. If the blueprint consists many
+          imported files this is the main blueprint.
+        default: blueprint.yaml
+      blueprint_archive:
+        description: >
+          The URL of a .zip to upload to the manager.
+          (Can be skipped if external_resource == True)
+        default: ""
+        required: true
+
+  cloudify.datatypes.Deployment:
+    properties:
+      external_resource:
+        description: >
+          Use external resource.
+        default: false
+      id:
+        description: >
+          This is the deployment that the node is a proxy to.
+        required: false
+      inputs:
+        description: >
+          The inputs to the deployment.
+        default: {}
+      outputs:
+        description: >
+          A dictionary of "{ key: value, key: value }".
+          Get "key" the deployment.
+          Set "value" runtime property to the value of the output.
+        required: false
+      logs:
+        description: >
+          Logs redirect settings, by default {redirect: true}
+        required: false
+
+  cloudify.datatypes.Node:
+    properties:
+      id:
+        type: string
+
+  cloudify.datatypes.NodeInstance:
+    properties:
+      node:
+        type: cloudify.datatypes.Node
+        required: false
+      id:
+        type: string
+        required: false
+
+  cloudify.datatypes.DeploymentProxy:
+    properties:
+      blueprint:
+        type: cloudify.datatypes.Blueprint
+        required: true
+      deployment:
+        type: cloudify.datatypes.Deployment
+        required: true
+      executions_start_args:
+        default: {}
+        description: >
+          Optional parems for executions
+      reexecute:
+        default: false
+        description: >
+          Reexecte workflows, on external deployment
+
+  cloudify.datatypes.NodeInstanceProxy:
+    properties:
+      blueprint:
+        type: cloudify.datatypes.Blueprint
+        required: true
+      deployment:
+        type: cloudify.datatypes.Deployment
+        required: true
+      executions_start_args:
+        default: {}
+        description: >
+          Optional params for executions
+      reexecute:
+        default: false
+        description: >
+          Reexecte workflows, on external deployment
+      node_instance:
+        type: cloudify.datatypes.NodeInstance
+
 
 ##################################################################################
 # Base artifact definitions
