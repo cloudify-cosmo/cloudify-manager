@@ -392,11 +392,11 @@ node_types:
     interfaces:
       cloudify.interfaces.lifecycle:
         create:
-          implementation: cfy_util.cloudify_deployment_proxy.tasks.upload_blueprint
+          implementation: cfy_extensions.cloudify_types.component.upload_blueprint
         configure:
-          implementation: cfy_util.cloudify_deployment_proxy.tasks.create_deployment
+          implementation: cfy_extensions.cloudify_types.component.create_deployment
         start:
-          implementation: cfy_util.cloudify_deployment_proxy.tasks.execute_start
+          implementation: cfy_extensions.cloudify_types.component.execute_start
           inputs:
             workflow_id:
               type: string
@@ -410,7 +410,7 @@ node_types:
               description: Polling interval (seconds)
               default: 10
         stop:
-          implementation: cfy_util.cloudify_deployment_proxy.tasks.execute_start
+          implementation: cfy_extensions.cloudify_types.component.execute_start
           inputs:
             workflow_id:
               default: uninstall
@@ -424,7 +424,7 @@ node_types:
                   parameters:
                     ignore_failure: true
         delete:
-          implementation: cfy_util.cloudify_deployment_proxy.tasks.delete_deployment
+          implementation: cfy_extensions.cloudify_types.component.delete_deployment
 
   cloudify.nodes.NodeInstanceProxy:
     derived_from: cloudify.nodes.DeploymentProxy
