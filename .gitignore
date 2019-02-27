@@ -30,6 +30,7 @@ pip-log.txt
 
 # Unit test / coverage reports
 .coverage
+coverage.xml
 .tox
 .cache
 .pytest_cache
