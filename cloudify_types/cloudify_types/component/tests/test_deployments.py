@@ -1,4 +1,4 @@
-# Copyright (c) 2017-2018 Cloudify Platform Ltd. All rights reserved
+# Copyright (c) 2017-2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,15 +16,11 @@ import mock
 
 from cloudify.state import current_ctx
 from cloudify.exceptions import NonRecoverableError
-from cloudify_rest_client.exceptions import CloudifyClientError
 
 from .client_mock import MockCloudifyRestClient
-from .base import DeploymentProxyTestBase
-from ..tasks import create_deployment, delete_deployment
-from cloudify_types.component import DeploymentProxyBase
-
-REST_CLIENT_EXCEPTION = \
-    mock.MagicMock(side_effect=CloudifyClientError('Mistake'))
+from ..component_operations import create_deployment, delete_deployment
+from cloudify_types.component.component import DeploymentProxyBase
+from .base_test_suite import DeploymentProxyTestBase, REST_CLIENT_EXCEPTION
 
 
 class TestDeployment(DeploymentProxyTestBase):
@@ -95,12 +91,12 @@ class TestDeployment(DeploymentProxyTestBase):
             cfy_mock_client.plugins.upload = mock.Mock(return_value=plugin)
             mock_client.return_value = cfy_mock_client
             with mock.patch(
-                'cloudify_types.component.get_local_path',
+                'cloudify_types.component.component.get_local_path',
                 get_local_path
             ):
                 zip_files = mock.Mock(return_value="_zip")
                 with mock.patch(
-                    'cloudify_types.component.zip_files',
+                    'cloudify_types.component.component.zip_files',
                     zip_files
                 ):
                     # empty plugins
@@ -115,7 +111,8 @@ class TestDeployment(DeploymentProxyTestBase):
                             'wagon_path': '_wagon_path',
                             'plugin_yaml_path': '_plugin_yaml_path'}}})
                     os_mock = mock.Mock()
-                    with mock.patch('cloudify_types.component.os', os_mock):
+                    with mock.patch('cloudify_types.component.component.os',
+                                    os_mock):
                         deployment._upload_plugins()
                     zip_files.assert_called_with(["some_path", "some_path"])
                     get_local_path.assert_has_calls([
@@ -129,12 +126,12 @@ class TestDeployment(DeploymentProxyTestBase):
             get_local_path = mock.Mock(return_value="some_path")
             zip_files = mock.Mock(return_value="_zip")
             with mock.patch(
-                'cloudify_types.component.get_local_path',
+                'cloudify_types.component.component.get_local_path',
                 get_local_path
             ):
                 zip_files = mock.Mock(return_value="_zip")
                 with mock.patch(
-                    'cloudify_types.component.zip_files',
+                    'cloudify_types.component.component.zip_files',
                     zip_files
                 ):
                     # list of plugins
@@ -142,7 +139,8 @@ class TestDeployment(DeploymentProxyTestBase):
                             'wagon_path': '_wagon_path',
                             'plugin_yaml_path': '_plugin_yaml_path'}]})
                     os_mock = mock.Mock()
-                    with mock.patch('cloudify_types.component.os', os_mock):
+                    with mock.patch('cloudify_types.component.component.os',
+                                    os_mock):
                         deployment._upload_plugins()
                     zip_files.assert_called_with(["some_path", "some_path"])
                     get_local_path.assert_has_calls([
