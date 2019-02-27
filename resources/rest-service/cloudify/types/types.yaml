@@ -24,9 +24,6 @@ node_types:
         start: {}
         stop: {}
         delete: {}
-      cloudify.interfaces.validation:
-        creation: {}
-        deletion: {}
       cloudify.interfaces.monitoring:
         start: {}
         stop: {}
