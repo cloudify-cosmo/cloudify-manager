@@ -47,6 +47,10 @@ def check_allowed_endpoint():
     return False
 
 
+def is_sanity_mode():
+    return os.path.isfile(constants.SANITY_MODE_FILE_PATH)
+
+
 def is_internal_request():
     remote_addr = _get_remote_addr()
     http_hosts = [_get_host(), constants.LOCAL_ADDRESS]
