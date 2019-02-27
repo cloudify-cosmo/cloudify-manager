@@ -1,4 +1,4 @@
-# Copyright (c) 2017-2018 Cloudify Platform Ltd. All rights reserved
+# Copyright (c) 2017-2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@ import tempfile
 import os
 
 from cloudify.state import current_ctx
-from .base import DeploymentProxyTestBase
+from .base_test_suite import DeploymentProxyTestBase
 import cloudify_types.component.utils as utils
 
 

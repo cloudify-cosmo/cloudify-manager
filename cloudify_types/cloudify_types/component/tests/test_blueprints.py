@@ -16,15 +16,11 @@ import mock
 
 from cloudify.state import current_ctx
 from cloudify.exceptions import NonRecoverableError
-from cloudify_rest_client.exceptions import CloudifyClientError
 
 from .client_mock import MockCloudifyRestClient
-from .base import DeploymentProxyTestBase
-from ..tasks import upload_blueprint
+from ..component_operations import upload_blueprint
 from ..constants import EXTERNAL_RESOURCE
-
-REST_CLIENT_EXCEPTION = \
-    mock.MagicMock(side_effect=CloudifyClientError('Mistake'))
+from .base_test_suite import DeploymentProxyTestBase, REST_CLIENT_EXCEPTION
 
 
 class TestBlueprint(DeploymentProxyTestBase):

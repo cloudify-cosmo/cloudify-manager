@@ -1,4 +1,4 @@
-# Copyright (c) 2017-2018 Cloudify Platform Ltd. All rights reserved
+# Copyright (c) 2017-2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,12 +19,9 @@ from cloudify.exceptions import NonRecoverableError
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from .client_mock import MockCloudifyRestClient
-from .base import DeploymentProxyTestBase
-from ..tasks import execute_start
+from ..component_operations import execute_start
 from ..constants import EXTERNAL_RESOURCE, NIP_TYPE, DEP_TYPE
-
-REST_CLIENT_EXCEPTION = \
-    mock.MagicMock(side_effect=CloudifyClientError('Mistake'))
+from .base_test_suite import DeploymentProxyTestBase, REST_CLIENT_EXCEPTION
 
 
 class TestExecute(DeploymentProxyTestBase):
@@ -157,7 +154,7 @@ class TestExecute(DeploymentProxyTestBase):
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             mock_client.return_value = MockCloudifyRestClient()
             poll_with_timeout_test = \
-                'cloudify_types.component.DeploymentProxyBase.' \
+                'cloudify_types.component.component.DeploymentProxyBase.' \
                 'verify_execution_successful'
             with mock.patch(poll_with_timeout_test) as poll:
                 poll.return_value = False
@@ -230,11 +227,11 @@ class TestExecute(DeploymentProxyTestBase):
             mock.MagicMock(side_effect=CloudifyClientError('Mistake'))
 
         poll_with_timeout_test = \
-            'cloudify_types.component.DeploymentProxyBase.' \
+            'cloudify_types.component.component.DeploymentProxyBase.' \
             'verify_execution_successful'
 
         with mock.patch(
-            'cloudify_types.component.CloudifyClient'
+            'cloudify_types.component.component.CloudifyClient'
         ) as mock_local_client:
             mock_local_client.return_value = cfy_mock_client
 
