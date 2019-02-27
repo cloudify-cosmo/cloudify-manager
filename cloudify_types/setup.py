@@ -22,7 +22,8 @@ setup(
     author='Cloudify',
     author_email='cosmo-admin@cloudify.co',
     packages=[
-        'cloudify_types'
+        'cloudify_types',
+        'cloudify_types.component'
     ],
     license='LICENSE',
     description='Various special Cloudify types implementation.',
