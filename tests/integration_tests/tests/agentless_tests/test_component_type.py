@@ -37,3 +37,9 @@ class ComponentTypeTest(AgentlessTestCase):
     def test_component_creation_with_blueprint_package(self):
         # install and uninstall
         pass
+
+    def test_component_creation_with_not_existing_blueprint_id(self):
+        pass
+
+    def test_component_creation_with_not_existing_blueprint_package(self):
+        pass
