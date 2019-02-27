@@ -27,6 +27,7 @@ setup(
     license='LICENSE',
     description='Various special Cloudify types implementation.',
     install_requires=[
-        'cloudify-common==5.0.dev1'
+        'cloudify-common==5.0.dev1',
+        'requests==2.21.0'
     ]
 )
