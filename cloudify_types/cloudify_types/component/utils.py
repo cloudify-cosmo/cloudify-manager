@@ -23,9 +23,8 @@ from urlparse import urlparse
 import requests
 
 from cloudify import ctx
-from cloudify.exceptions import NonRecoverableError
-from cloudify.exceptions import OperationRetry
 from cloudify.utils import exception_to_error_cause
+from cloudify.exceptions import NonRecoverableError, OperationRetry
 
 
 def generate_traceback_exception():

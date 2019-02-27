@@ -18,6 +18,7 @@ from os import getenv
 from cloudify import ctx
 from cloudify.exceptions import NonRecoverableError
 from cloudify_rest_client.exceptions import CloudifyClientError
+
 from .constants import POLLING_INTERVAL
 
 

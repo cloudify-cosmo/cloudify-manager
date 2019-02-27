@@ -14,8 +14,7 @@
 
 from cloudify.decorators import operation
 
-
-from . import utils
+import utils
 from .component import DeploymentProxyBase
 
 

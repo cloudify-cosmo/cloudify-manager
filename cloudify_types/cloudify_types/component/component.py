@@ -17,12 +17,11 @@ import time
 import os
 from urlparse import urlparse
 
-from cloudify import ctx
-from cloudify import manager
+from cloudify import manager, ctx
 from cloudify.exceptions import NonRecoverableError
+from cloudify.utils import exception_to_error_cause
 from cloudify_rest_client.client import CloudifyClient
 from cloudify_rest_client.exceptions import CloudifyClientError
-from cloudify.utils import exception_to_error_cause
 
 from .constants import (
     EXECUTIONS_TIMEOUT,
