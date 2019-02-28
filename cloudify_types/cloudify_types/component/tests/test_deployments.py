@@ -19,11 +19,11 @@ from cloudify.exceptions import NonRecoverableError
 
 from .client_mock import MockCloudifyRestClient
 from ..component_operations import create_deployment, delete_deployment
-from cloudify_types.component.component import DeploymentProxyBase
-from .base_test_suite import DeploymentProxyTestBase, REST_CLIENT_EXCEPTION
+from cloudify_types.component.component import Component
+from .base_test_suite import ComponentTestBase, REST_CLIENT_EXCEPTION
 
 
-class TestDeployment(DeploymentProxyTestBase):
+class TestDeployment(ComponentTestBase):
 
     sleep_mock = None
 
@@ -100,13 +100,13 @@ class TestDeployment(DeploymentProxyTestBase):
                     zip_files
                 ):
                     # empty plugins
-                    deployment = DeploymentProxyBase({'plugins': []})
+                    deployment = Component({'plugins': []})
                     deployment._upload_plugins()
                     zip_files.assert_not_called()
                     get_local_path.assert_not_called()
 
                     # dist of plugins
-                    deployment = DeploymentProxyBase({'plugins': {
+                    deployment = Component({'plugins': {
                         'base_plugin': {
                             'wagon_path': '_wagon_path',
                             'plugin_yaml_path': '_plugin_yaml_path'}}})
@@ -135,7 +135,7 @@ class TestDeployment(DeploymentProxyTestBase):
                     zip_files
                 ):
                     # list of plugins
-                    deployment = DeploymentProxyBase({'plugins': [{
+                    deployment = Component({'plugins': [{
                             'wagon_path': '_wagon_path',
                             'plugin_yaml_path': '_plugin_yaml_path'}]})
                     os_mock = mock.Mock()
@@ -152,14 +152,14 @@ class TestDeployment(DeploymentProxyTestBase):
                         mock.call('_zip')])
 
             # raise error if wrong plugins list
-            deployment = DeploymentProxyBase({'plugins': True})
+            deployment = Component({'plugins': True})
             error = self.assertRaises(NonRecoverableError,
                                       deployment._upload_plugins)
             self.assertIn('Wrong type in plugins: True',
                           error.message)
 
             # raise error if wrong wagon/yaml values
-            deployment = DeploymentProxyBase({'plugins': [{
+            deployment = Component({'plugins': [{
                 'wagon_path': '',
                 'plugin_yaml_path': ''}]})
             error = self.assertRaises(NonRecoverableError,
