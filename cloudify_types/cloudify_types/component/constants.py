@@ -28,6 +28,4 @@ DEP_DELETE = 'delete'
 EXEC_START = 'start'
 EXEC_LIST = 'list'
 
-NIP = 'NodeInstanceProxy'
-NIP_TYPE = 'cloudify.nodes.NodeInstanceProxy'
-DEP_TYPE = 'cloudify.nodes.DeploymentProxy'
+DEP_TYPE = 'cloudify.nodes.Component'

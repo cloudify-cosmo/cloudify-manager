@@ -17,12 +17,13 @@ import testtools
 
 from cloudify.state import current_ctx
 from cloudify.mocks import MockCloudifyContext
+
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 REST_CLIENT_EXCEPTION = \
     mock.MagicMock(side_effect=CloudifyClientError('Mistake'))
 
-DEPLOYMENT_PROXY_PROPS = {
+COMPONENT_PROPS = {
     'resource_config': {
         'blueprint': {
             'id': '',
@@ -39,19 +40,17 @@ DEPLOYMENT_PROXY_PROPS = {
     }
 }
 
-DEPLOYMENT_PROXY_TYPE = 'cloudify.nodes.DeploymentProxy'
 
-
-class DeploymentProxyTestBase(testtools.TestCase):
+class ComponentTestBase(testtools.TestCase):
 
     def tearDown(self):
         current_ctx.clear()
-        super(DeploymentProxyTestBase, self).tearDown()
+        super(ComponentTestBase, self).tearDown()
 
     def get_mock_ctx(self,
                      test_name,
-                     test_properties=DEPLOYMENT_PROXY_PROPS,
-                     node_type=DEPLOYMENT_PROXY_TYPE,
+                     test_properties=COMPONENT_PROPS,
+                     node_type='cloudify.nodes.Component',
                      retry_number=0):
 
         test_node_id = test_name

@@ -20,11 +20,11 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 
 from .client_mock import MockCloudifyRestClient
 from ..component_operations import execute_start
-from ..constants import EXTERNAL_RESOURCE, NIP_TYPE, DEP_TYPE
-from .base_test_suite import DeploymentProxyTestBase, REST_CLIENT_EXCEPTION
+from ..constants import EXTERNAL_RESOURCE, DEP_TYPE
+from .base_test_suite import ComponentTestBase, REST_CLIENT_EXCEPTION
 
 
-class TestExecute(DeploymentProxyTestBase):
+class TestExecute(ComponentTestBase):
 
     sleep_mock = None
 
@@ -154,34 +154,10 @@ class TestExecute(DeploymentProxyTestBase):
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             mock_client.return_value = MockCloudifyRestClient()
             poll_with_timeout_test = \
-                'cloudify_types.component.component.DeploymentProxyBase.' \
+                'cloudify_types.component.component.Component.' \
                 'verify_execution_successful'
             with mock.patch(poll_with_timeout_test) as poll:
                 poll.return_value = False
-                output = execute_start(operation='execute_workflow',
-                                       deployment_id=test_name,
-                                       workflow_id='install',
-                                       timeout=.001)
-                self.assertTrue(output)
-        del _ctx, mock_client
-
-    def test_execute_start_succeeds_node_instance_proxy(self):
-        # Tests that execute start succeeds
-
-        test_name = 'test_execute_start_succeeds_node_instance_proxy'
-        _ctx = self.get_mock_ctx(test_name, node_type=NIP_TYPE)
-        current_ctx.set(_ctx)
-        # _ctx.node.type = NIP_TYPE
-        ni = {}
-        _ctx.node.properties['resource_config']['node_instance'] = ni
-        _ctx.instance.runtime_properties['deployment'] = {}
-
-        with mock.patch('cloudify.manager.get_rest_client') as mock_client:
-            mock_client.return_value = MockCloudifyRestClient()
-            poll_with_timeout_test = \
-                'cloudify_types.component.polling.poll_with_timeout'
-            with mock.patch(poll_with_timeout_test) as poll:
-                poll.return_value = True
                 output = execute_start(operation='execute_workflow',
                                        deployment_id=test_name,
                                        workflow_id='install',
@@ -227,7 +203,7 @@ class TestExecute(DeploymentProxyTestBase):
             mock.MagicMock(side_effect=CloudifyClientError('Mistake'))
 
         poll_with_timeout_test = \
-            'cloudify_types.component.component.DeploymentProxyBase.' \
+            'cloudify_types.component.component.Component.' \
             'verify_execution_successful'
 
         with mock.patch(
@@ -245,27 +221,3 @@ class TestExecute(DeploymentProxyTestBase):
                                   client={'host': 'localhost'},
                                   timeout=.001)
         del _ctx
-
-    def test_execute_start_succeeds_node_instance_proxy_matches(self):
-        # Tests that execute start succeeds
-
-        test_name = 'test_execute_start_succeeds_node_instance_proxy'
-        _ctx = self.get_mock_ctx(test_name, node_type=NIP_TYPE)
-        current_ctx.set(_ctx)
-        # _ctx.node.type = NIP_TYPE
-        ni = {'id': test_name}
-        _ctx.node.properties['resource_config']['node_instance'] = ni
-        _ctx.instance.runtime_properties['deployment'] = {}
-
-        with mock.patch('cloudify.manager.get_rest_client') as mock_client:
-            mock_client.return_value = MockCloudifyRestClient()
-            poll_with_timeout_test = \
-                'cloudify_types.component.polling.poll_with_timeout'
-            with mock.patch(poll_with_timeout_test) as poll:
-                poll.return_value = True
-                output = execute_start(operation='execute_workflow',
-                                       deployment_id=test_name,
-                                       workflow_id='install',
-                                       timeout=.001)
-                self.assertTrue(output)
-        del _ctx, mock_client

@@ -10,7 +10,8 @@ node_templates:
     properties:
       resource_config:
         blueprint:
-          external_resource: true
           id: basic
+          blueprint_archive: https://s3-eu-west-1.amazonaws.com/cloudify-tests-files/blueprints/component-blueprint.zip
+          main_file_name: blueprint.yaml
         deployment:
           id: component

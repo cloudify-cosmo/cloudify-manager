@@ -17,13 +17,14 @@ import mock
 from cloudify.state import current_ctx
 from cloudify.exceptions import NonRecoverableError
 
+
+from ..constants import EXTERNAL_RESOURCE
 from .client_mock import MockCloudifyRestClient
 from ..component_operations import upload_blueprint
-from ..constants import EXTERNAL_RESOURCE
-from .base_test_suite import DeploymentProxyTestBase, REST_CLIENT_EXCEPTION
+from .base_test_suite import ComponentTestBase, REST_CLIENT_EXCEPTION
 
 
-class TestBlueprint(DeploymentProxyTestBase):
+class TestBlueprint(ComponentTestBase):
 
     def setUp(self):
         super(TestBlueprint, self).setUp()
