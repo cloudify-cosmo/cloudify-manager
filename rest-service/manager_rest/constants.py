@@ -37,7 +37,6 @@ BOOTSTRAP_ADMIN_ID = 0
 DEFAULT_TENANT_ID = 0
 
 REST_SERVICE_NAME = 'cloudify-restservice'
-MGMTWORKER_QUEUE = 'cloudify.management'
 
 FILE_SERVER_RESOURCES_FOLDER = '/resources'
 FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
@@ -48,7 +47,5 @@ FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER = 'uploaded-blueprints'
 FILE_SERVER_SNAPSHOTS_FOLDER = 'snapshots'
 FILE_SERVER_PLUGINS_FOLDER = 'plugins'
 FILE_SERVER_AUTHENTICATORS_FOLDER = 'authenticators'
-
-BROKER_SSL_PORT = 5671
 
 SECURITY_FILE_LOCATION = '/opt/manager/rest-security.conf'

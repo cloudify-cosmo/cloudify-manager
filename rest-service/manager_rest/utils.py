@@ -36,6 +36,7 @@ from flask_security import current_user
 
 from cloudify import logs
 from cloudify.amqp_client import create_events_publisher
+from cloudify.constants import BROKER_PORT_SSL
 from manager_rest import constants, config, manager_exceptions
 
 
@@ -275,7 +276,7 @@ def send_event(event, message_type):
         amqp_host=config.instance.amqp_host,
         amqp_user=config.instance.amqp_username,
         amqp_pass=config.instance.amqp_password,
-        amqp_port=constants.BROKER_SSL_PORT,
+        amqp_port=BROKER_PORT_SSL,
         amqp_vhost='/',
         ssl_enabled=True,
         ssl_cert_path=config.instance.amqp_ca_path

@@ -14,7 +14,8 @@ EnvironmentFile=/etc/sysconfig/cloudify-mgmtworker
 ExecStart=/opt/mgmtworker/env/bin/python -m mgmtworker.worker \
     --queue "cloudify.management" \
     --max-workers ${MAX_WORKERS} \
-    --hooks-queue "cloudify-hooks"
+    --hooks-queue "cloudify-hooks" \
+    --cluster-service-queue ${CLUSTER_SERVICE_QUEUE}
 
 [Install]
 WantedBy=multi-user.target
