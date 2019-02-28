@@ -11,8 +11,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from component.component_operations import upload_blueprint  # NOQA
-from component.component_operations import delete_deployment  # NOQA
-from component.component_operations import create_deployment  # NOQA
-from component.component_operations import execute_start  # NOQA
