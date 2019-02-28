@@ -47,7 +47,9 @@ class ManagerConfig(SecuredResource):
             Argument('scope', type=unicode, required=False)
         ])
         if args.get('scope'):
-            return sm.list(models.Config, filters={'scope': args['scope']})
+            return sm.list(models.Config, filters={
+                'scope': lambda column: column.contains([args['scope']])
+            })
         else:
             return sm.list(models.Config)
 
