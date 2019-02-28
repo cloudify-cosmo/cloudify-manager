@@ -65,7 +65,7 @@ class ManagerConfigId(SecuredResource):
 
     @exceptions_handled
     @marshal_with(models.Config)
-    @authorize('manager_config_get')
+    @authorize('manager_config_put')
     def put(self, name):
         """Update a config value.
 
