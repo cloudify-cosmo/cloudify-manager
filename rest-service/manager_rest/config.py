@@ -108,7 +108,10 @@ class Config(object):
     def load_from_db(self):
         from manager_rest.storage import models, get_storage_manager
         sm = get_storage_manager()
-        for conf_value in sm.list(models.Config, filters={'scope': 'rest'}):
+        stored_config = sm.list(models.Config, filters={
+            'scope': lambda column: column.contains(['rest'])
+        })
+        for conf_value in stored_config:
             setattr(self, conf_value.name, conf_value.value)
 
     def to_dict(self):
