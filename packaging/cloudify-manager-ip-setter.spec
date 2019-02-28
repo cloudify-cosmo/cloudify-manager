@@ -25,10 +25,6 @@ cp -R ${RPM_SOURCE_DIR}/packaging/ip_setter/files/* %{buildroot}
 
 
 %files
-
 /etc/sudoers.d/cloudify-manager-ip-setter
-
-/opt/cloudify/manager-ip-setter/manager-ip-setter.sh
-/opt/cloudify/manager-ip-setter/update-provider-context.py
-
+/opt/cloudify/manager-ip-setter/
 /usr/lib/systemd/system/cloudify-manager-ip-setter.service

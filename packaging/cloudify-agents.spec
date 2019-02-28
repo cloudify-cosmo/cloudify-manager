@@ -1,5 +1,12 @@
 %define _agents_dir /opt/manager/resources/packages/agents
 
+# disable inspecting the files, because it's slow and gets us nothing
+%define __find_provides %{nil}
+%define __find_requires %{nil}
+%define _use_internal_dependency_generator 0
+%define _source_payload w0.gzdio
+%define _binary_payload w0.gzdio
+
 Name:           cloudify-agents
 Version:        %{CLOUDIFY_VERSION}
 Release:        %{CLOUDIFY_PACKAGE_RELEASE}%{?dist}
