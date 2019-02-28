@@ -11,7 +11,7 @@ Group=cfyuser
 WorkingDirectory=/opt/mgmtworker/work
 EnvironmentFile=/etc/sysconfig/cloudify-mgmtworker
 
-ExecStart=/opt/mgmtworker/env/bin/python -m cloudify_agent.worker \
+ExecStart=/opt/mgmtworker/env/bin/python -m mgmtworker.worker \
     --queue "cloudify.management" \
     --max-workers ${MAX_WORKERS} \
     --hooks-queue "cloudify-hooks"
