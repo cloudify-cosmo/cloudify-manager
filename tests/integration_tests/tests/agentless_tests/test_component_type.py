@@ -15,13 +15,16 @@
 
 import uuid
 
+from cloudify_rest_client.exceptions import CloudifyClientError
+
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 
 
 class ComponentTypeTest(AgentlessTestCase):
     def test_component_creation_with_blueprint_id(self):
-        # install and uninstall
+        component_name = 'component'
+
         basic_blueprint_path = \
             resource('dsl/basic.yaml')
         self.client.blueprints.upload(basic_blueprint_path,
@@ -30,9 +33,9 @@ class ComponentTypeTest(AgentlessTestCase):
         dsl_path = resource(
             'dsl/component_with_blueprint_id.yaml')
         self.deploy_application(dsl_path, deployment_id=deployment_id)
-        self.assertTrue(self.client.deployments.get('basic'))
+        self.assertTrue(self.client.deployments.get(component_name))
         self.undeploy_application(deployment_id)
-        self.assertFalse(self.client.deployments.get('basic'))
+        self.assertRaises(CloudifyClientError, self.client.deployments.get, component_name)
 
     def test_component_creation_with_blueprint_package(self):
         # install and uninstall
