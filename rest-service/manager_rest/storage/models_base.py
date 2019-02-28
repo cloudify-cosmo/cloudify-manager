@@ -212,7 +212,7 @@ class SQLModelBase(db.Model):
         """A helper method that allows classes to override if in order to
         change the default string representation
         """
-        return OrderedDict({'id': self.id})
+        return OrderedDict({self.unique_id(): getattr(self, self.unique_id())})
 
     @classmethod
     def unique_id(cls):

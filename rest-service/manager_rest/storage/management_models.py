@@ -21,6 +21,7 @@ from collections import (
 from datetime import timedelta, datetime
 from dateutil import parser as date_parser
 
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
 from flask_security import SQLAlchemyUserDatastore, UserMixin, RoleMixin
@@ -32,8 +33,9 @@ from .idencoder import get_encoder
 from .relationships import (
     foreign_key,
     many_to_many_relationship,
+    one_to_many_relationship
 )
-from .models_base import db, SQLModelBase, UTCDateTime, CIColumn
+from .models_base import db, SQLModelBase, UTCDateTime, CIColumn, JSONString
 
 
 class ProviderContext(SQLModelBase):
@@ -394,7 +396,7 @@ class User(SQLModelBase, UserMixin):
             tenant: {
                 role: sorted(list(self.group_tenants[tenant][role]))
                 for role in self.group_tenants[tenant]
-                }
+            }
             for tenant in self.group_tenants
         }
 
@@ -484,6 +486,31 @@ class License(SQLModelBase):
     cloudify_version = db.Column(db.Text)
     capabilities = db.Column(db.ARRAY(db.Text))
     signature = db.Column(db.LargeBinary)
+
+
+class Config(SQLModelBase):
+    __tablename__ = 'config'
+
+    name = db.Column(db.Text, primary_key=True)
+    value = db.Column(JSONString, nullable=False)
+    schema = db.Column(JSONString, nullable=True)
+    is_editable = db.Column(db.Boolean, default=True)
+    updated_at = db.Column(UTCDateTime)
+    scope = db.Column(postgresql.ARRAY(db.Text))
+
+    @declared_attr
+    def _updater_id(cls):
+        return foreign_key(User.id)
+
+    @declared_attr
+    def updated_by(cls):
+        return one_to_many_relationship(cls, User, cls._updater_id, 'id')
+
+    updater_name = association_proxy('updated_by', 'username')
+
+    @classmethod
+    def unique_id(cls):
+        return 'name'
 
 
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)
