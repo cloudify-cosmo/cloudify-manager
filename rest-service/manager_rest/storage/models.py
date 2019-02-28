@@ -23,7 +23,8 @@ from .management_models import (User,
                                 UserTenantAssoc,
                                 user_datastore,
                                 ProviderContext,
-                                License)
+                                License,
+                                Config)
 
 from .resource_models import (Blueprint,
                               Snapshot,

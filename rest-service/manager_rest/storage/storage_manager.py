@@ -101,7 +101,8 @@ class SQLStorageManager(object):
         :param query: Base SQL query
         :param filters: An optional dictionary where keys are column names to
         filter by, and values are values applicable for those columns (or lists
-        of such values)
+        of such values). Each value can also be a callable which returns
+        a SQLAlchemy filter
         :return: An SQLAlchemy AppenderQuery object
         """
         query = self._add_tenant_filter(query, model_class, all_tenants)
@@ -113,7 +114,9 @@ class SQLStorageManager(object):
     def _add_value_filter(self, query, filters):
         for column, value in filters.iteritems():
             column, value = self._update_case_insensitive(column, value)
-            if isinstance(value, (list, tuple)):
+            if callable(value):
+                query = query.filter(value(column))
+            elif isinstance(value, (list, tuple)):
                 query = query.filter(column.in_(value))
             else:
                 query = query.filter(column == value)
