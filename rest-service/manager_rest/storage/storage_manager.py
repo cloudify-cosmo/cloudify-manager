@@ -115,6 +115,10 @@ class SQLStorageManager(object):
             column, value = self._update_case_insensitive(column, value)
             if isinstance(value, (list, tuple)):
                 query = query.filter(column.in_(value))
+            elif isinstance(column.type, db.ARRAY):
+                # value must be wrapped in a list. This does indeed check
+                # that the array column contains the value.
+                query = query.filter(column.contains([value]))
             else:
                 query = query.filter(column == value)
         return query
