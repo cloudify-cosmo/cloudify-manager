@@ -37,10 +37,7 @@ from .constants import (
     DEP_DELETE,
     EXEC_START,
     EXEC_LIST,
-    NIP,
-    NIP_TYPE,
-    DEP_TYPE,
-)
+    DEP_TYPE)
 from .polling import (
     any_bp_by_id,
     any_dep_by_id,
@@ -56,7 +53,7 @@ from .utils import (
 )
 
 
-class DeploymentProxyBase(object):
+class Component(object):
 
     def __init__(self, operation_inputs):
         """
@@ -118,9 +115,6 @@ class DeploymentProxyBase(object):
         self.deployment_outputs = self.deployment.get('outputs', {})
         self.deployment_logs = self.deployment.get('logs', {})
 
-        # Node-instance-related properties
-        self.node_instance_proxy = self.config.get('node_instance')
-
         # Execution-related properties
         self.workflow_id = \
             operation_inputs.get('workflow_id',
@@ -147,7 +141,6 @@ class DeploymentProxyBase(object):
                                _client,
                                _client_attr,
                                _client_args):
-
         _generic_client = \
             getattr(self.client, _client)
 
@@ -163,7 +156,6 @@ class DeploymentProxyBase(object):
             return response
 
     def upload_blueprint(self):
-
         if 'blueprint' not in ctx.instance.runtime_properties.keys():
             ctx.instance.runtime_properties['blueprint'] = dict()
 
@@ -372,7 +364,6 @@ class DeploymentProxyBase(object):
                 del ctx.instance.runtime_properties[property_name]
 
     def delete_deployment(self):
-
         client_args = dict(deployment_id=self.deployment_id)
 
         poll_result = True
@@ -430,7 +421,6 @@ class DeploymentProxyBase(object):
         return poll_result
 
     def execute_workflow(self):
-
         if 'executions' not in ctx.instance.runtime_properties.keys():
             ctx.instance.runtime_properties['executions'] = dict()
 
@@ -449,10 +439,8 @@ class DeploymentProxyBase(object):
                 'The deployment is not ready for execution.')
 
         # we must to run some execution
-        if (
-            self.deployment.get(EXTERNAL_RESOURCE) and self.reexecute
-        ) or not self.deployment.get(EXTERNAL_RESOURCE):
-
+        if ((self.deployment.get(EXTERNAL_RESOURCE) and self.reexecute)
+                or not self.deployment.get(EXTERNAL_RESOURCE)):
             execution_args = self.config.get('executions_start_args', {})
             client_args = \
                 dict(deployment_id=self.deployment_id,
@@ -472,47 +460,23 @@ class DeploymentProxyBase(object):
             ctx.logger.debug('Polling execution succeeded')
 
         type_hierarchy = ctx.node.type_hierarchy
-        if NIP_TYPE in type_hierarchy:
-            ctx.logger.info('Start post execute node proxy')
-            return self.post_execute_node_instance_proxy()
 
-        elif DEP_TYPE in type_hierarchy:
-            ctx.logger.info('Start post execute deployment proxy')
-            return self.post_execute_deployment_proxy()
+        if DEP_TYPE in type_hierarchy:
+            ctx.logger.info('Start post execute component')
+            return self.post_execute_component()
 
         raise NonRecoverableError(
             'Unsupported node type provided {0}'.format(ctx.node.type))
 
-    def post_execute_node_instance_proxy(self):
-
-        node_instance_id = self.node_instance_proxy.get('id')
-        node_instance_proxy = \
-            ctx.instance.runtime_properties.get(NIP, dict())
-        client_args = \
-            dict(deployment_id=self.deployment_id,
-                 node_id=self.node_instance_proxy.get('node', {}).get('id'))
-        node_instances = \
-            self.dp_get_client_response('node_instances', 'list', client_args)
-        ctx.logger.debug(
-            'Received these node instances: {0}'.format(node_instances))
-        for node_instance in node_instances:
-            if node_instance_id and \
-                    node_instance_id != node_instance.get('id'):
-                continue
-            node_instance_proxy[node_instance.get('id')] = \
-                node_instance.get('runtime_properties')
-        ctx.instance.runtime_properties[NIP] = node_instance_proxy
-        return True
-
-    def post_execute_deployment_proxy(self):
+    def post_execute_component(self):
         runtime_prop = ctx.instance.runtime_properties['deployment']
         ctx.logger.debug(
-            'Runtime  deployment properties {0}'.format(runtime_prop))
+            'Runtime deployment properties {0}'.format(runtime_prop))
 
         if 'outputs' \
                 not in ctx.instance.runtime_properties['deployment'].keys():
             update_attributes('deployment', 'outputs', dict())
-            ctx.logger.debug('No deployment proxy outputs exist.')
+            ctx.logger.debug('No component outputs exist.')
 
         try:
             ctx.logger.debug('Deployment Id is {0}'.format(self.deployment_id))

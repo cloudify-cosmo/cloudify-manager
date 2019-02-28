@@ -12,15 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import tempfile
 import os
+import tempfile
 
 from cloudify.state import current_ctx
-from .base_test_suite import DeploymentProxyTestBase
+
+from .base_test_suite import ComponentTestBase
 import cloudify_types.component.utils as utils
 
 
-class TestUtils(DeploymentProxyTestBase):
+class TestUtils(ComponentTestBase):
 
     def test_zip_files(self):
         _ctx = self.get_mock_ctx(__name__)
