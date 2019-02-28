@@ -512,5 +512,8 @@ class Config(SQLModelBase):
     def unique_id(cls):
         return 'name'
 
+    def _get_identifier_dict(self):
+        return {'name': self.name}
+
 
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)
