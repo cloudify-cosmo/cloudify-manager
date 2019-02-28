@@ -905,6 +905,9 @@ data_types:
 # Base artifact definitions
 ##################################################################################
 plugins:
+  cfy_extensions:
+    executor: central_deployment_agent
+    install: false
 
   agent:
     executor: central_deployment_agent
