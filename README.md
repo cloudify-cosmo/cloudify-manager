@@ -1,3 +1,4 @@
+force rebuild
 # Cloudify Manager
 
 [![Circle CI](https://circleci.com/gh/cloudify-cosmo/cloudify-manager/tree/master.svg?style=shield)](https://circleci.com/gh/cloudify-cosmo/cloudify-manager/tree/master)
