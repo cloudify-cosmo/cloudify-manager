@@ -15,7 +15,10 @@
 
 from .manager import SSLConfig                   # NOQA
 
-from .manager_config import ManagerConfig        # NOQA
+from .manager_config import (                    # NOQA
+    ManagerConfig,
+    ManagerConfigId
+)
 
 from .secrets import (                           # NOQA
     SecretsKey,

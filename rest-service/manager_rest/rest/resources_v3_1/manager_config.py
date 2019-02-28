@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2016 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,70 +12,84 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-from cloudify.exceptions import CommandExecutionException
-from flask import request, current_app
 
-from manager_rest import config
-from manager_rest.rest import rest_decorators
+from datetime import datetime
+
+import jsonschema
+from flask_security import current_user
+from flask_restful.reqparse import Argument
+
+from manager_rest.manager_exceptions import ConflictError
+from manager_rest.rest import rest_utils
+from manager_rest.rest.rest_decorators import (
+    exceptions_handled,
+    marshal_with,
+    paginate
+)
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
+from manager_rest.storage import get_storage_manager, models
 
 
 class ManagerConfig(SecuredResource):
-    @rest_decorators.exceptions_handled
+    @exceptions_handled
+    @marshal_with(models.Config)
+    @paginate
     @authorize('manager_config_get')
-    def get(self):
-        """
-        Get the Manager config
-        """
-        request_args = request.args.to_dict(flat=False)
-        current_app.logger.info('Retrieving roles config. filter: {0}'.
-                                format(request_args))
-        result = dict()
-        filter_by = request_args.get('filter', [])
-        for key in filter_by:
-            if key == 'authorization':
-                result['authorization'] = self._authorization_config()
-        if not filter_by:
-            current_app.logger.debug('Retrieving roles without a filter')
-            result['authorization'] = self._authorization_config()
-        return result
+    def get(self, pagination=None):
+        """Get the Manager config, optionally filtered to a scope.
 
-    @staticmethod
-    def _authorization_config():
-        cfy_config = config.instance
-        authorization = {
-            'roles': cfy_config.authorization_roles,
-            'permissions': cfy_config.authorization_permissions
-        }
-        return authorization
+        Scope can be eg. "rest" or "mgmtworker", for filtering out the
+        settings only for a single Manager component.
+        """
+        sm = get_storage_manager()
+        args = rest_utils.get_args_and_verify_arguments([
+            Argument('scope', type=unicode, required=False)
+        ])
+        if args.get('scope'):
+            return sm.list(models.Config, filters={'scope': args['scope']})
+        else:
+            return sm.list(models.Config)
 
 
-class ManagerRestConfig(SecuredResource):
-    @rest_decorators.exceptions_handled
-    @authorize('manager_rest_config_get')
-    def get(self):
+class ManagerConfigId(SecuredResource):
+    @exceptions_handled
+    @marshal_with(models.Config)
+    @authorize('manager_config_get')
+    def get(self, name):
+        """Get a single config value"""
+        sm = get_storage_manager()
+        return sm.get(models.Config, None, filters={'name': name})
+
+    @exceptions_handled
+    @marshal_with(models.Config)
+    @authorize('manager_config_get')
+    def put(self, name):
+        """Update a config value.
+
+        Settings which have is_editable set to False, can only be edited
+        when passing the force flag.
+        If a schema is specified for the given setting, the new value
+        must validate.
         """
-        Get the Manager's REST configuration
-        :return: Manager's REST configuration data
-        """
-        request_args = request.args.to_dict(flat=False)
-        current_app.logger.info('Retrieving Manager REST config. filter: {0}'.
-                                format(request_args))
-        result = dict()
-        filter_by = request_args.get('filter', [])
-        for key in filter_by:
+        sm = get_storage_manager()
+        data = rest_utils.get_json_and_verify_params({
+            'value': {},
+            'force': {'type': bool, 'optional': True}
+        })
+        value = data['value']
+        force = data.get('force', False)
+
+        inst = sm.get(models.Config, None, filters={'name': name})
+        if not inst.is_editable and not force:
+            raise ConflictError('{0} is not editable'.format(name))
+        if inst.schema:
             try:
-                result[key] = config.instance.to_dict()[key]
-            except KeyError as ke:
-                current_app.logger.error(
-                    'KeyError thrown: {0}'.format(str(ke)))
-                raise CommandExecutionException(command='manager.config.get',
-                                                error=str(ke),
-                                                code=400,
-                                                output=None)
-        if not filter_by:
-            current_app.logger.debug('Retrieving Manager REST config without a'
-                                     ' filter')
-            result = config.instance.to_dict()
-        return result
+                jsonschema.validate(value, inst.schema)
+            except jsonschema.ValidationError as e:
+                raise ConflictError(e.args[0])
+        inst.value = value
+        inst.updated_at = datetime.now()
+        inst.updated_by = current_user
+        sm.update(inst)
+        return inst
