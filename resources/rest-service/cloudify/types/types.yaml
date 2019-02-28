@@ -355,11 +355,11 @@ node_types:
         description: >
           Links to Cloudify packages to be installed on the manager
 
-  cloudify.nodes.DeploymentProxy:
+  cloudify.nodes.Component:
     derived_from: cloudify.nodes.Root
     properties:
       resource_config:
-        type: cloudify.datatypes.DeploymentProxy
+        type: cloudify.datatypes.Component
         default: {}
       client:
         description: >
@@ -387,7 +387,7 @@ node_types:
         default: []
       secrets:
         description: >
-          Optional, dictionary of secrets for set before run deployments.
+          Optional, dictionary of secrets for set before run components.
         default: {}
     interfaces:
       cloudify.interfaces.lifecycle:
@@ -403,11 +403,11 @@ node_types:
               default: install
             timeout:
               type: integer
-              description: How long (in seconds) to wait for execution to finish before timing out
+              description: How long (in seconds) to wait for execution to finish before timing out.
               default: 1800
             interval:
               type: integer
-              description: Polling interval (seconds)
+              description: Polling interval (seconds).
               default: 10
         stop:
           implementation: cfy_extensions.cloudify_types.component.execute_start
@@ -425,13 +425,6 @@ node_types:
                     ignore_failure: true
         delete:
           implementation: cfy_extensions.cloudify_types.component.delete_deployment
-
-  cloudify.nodes.NodeInstanceProxy:
-    derived_from: cloudify.nodes.DeploymentProxy
-    properties:
-      resource_config:
-        type: cloudify.datatypes.NodeInstanceProxy
-        default: {}
 
 ##################################################################################
 # Base relationship definitions
@@ -811,7 +804,7 @@ data_types:
         default: false
       id:
         description: >
-          This is the blueprint that the deployment node is a proxy to.
+          This is the blueprint id that the component's node is connected to.
         required: false
       main_file_name:
         description: >
@@ -833,7 +826,7 @@ data_types:
         default: false
       id:
         description: >
-          This is the deployment that the node is a proxy to.
+          This is the deployment id that the component's node is connected to.
         required: false
       inputs:
         description: >
@@ -850,21 +843,7 @@ data_types:
           Logs redirect settings, by default {redirect: true}
         required: false
 
-  cloudify.datatypes.Node:
-    properties:
-      id:
-        type: string
-
-  cloudify.datatypes.NodeInstance:
-    properties:
-      node:
-        type: cloudify.datatypes.Node
-        required: false
-      id:
-        type: string
-        required: false
-
-  cloudify.datatypes.DeploymentProxy:
+  cloudify.datatypes.Component:
     properties:
       blueprint:
         type: cloudify.datatypes.Blueprint
@@ -875,31 +854,11 @@ data_types:
       executions_start_args:
         default: {}
         description: >
-          Optional parems for executions
+          Optional params for executions.
       reexecute:
         default: false
         description: >
-          Reexecte workflows, on external deployment
-
-  cloudify.datatypes.NodeInstanceProxy:
-    properties:
-      blueprint:
-        type: cloudify.datatypes.Blueprint
-        required: true
-      deployment:
-        type: cloudify.datatypes.Deployment
-        required: true
-      executions_start_args:
-        default: {}
-        description: >
-          Optional params for executions
-      reexecute:
-        default: false
-        description: >
-          Reexecte workflows, on external deployment
-      node_instance:
-        type: cloudify.datatypes.NodeInstance
-
+          Re-execute workflows on component.
 
 ##################################################################################
 # Base artifact definitions

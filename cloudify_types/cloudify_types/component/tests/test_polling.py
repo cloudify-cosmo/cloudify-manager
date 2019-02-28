@@ -18,7 +18,7 @@ from cloudify.state import current_ctx
 from cloudify.exceptions import NonRecoverableError
 from cloudify_rest_client.exceptions import CloudifyClientError
 
-from .base_test_suite import DeploymentProxyTestBase
+from .base_test_suite import ComponentTestBase
 from .client_mock import MockCloudifyRestClient
 from ..polling import (
     any_bp_by_id,
@@ -32,7 +32,7 @@ from ..polling import (
     poll_workflow_after_execute)
 
 
-class TestPolling(DeploymentProxyTestBase):
+class TestPolling(ComponentTestBase):
 
     sleep_mock = None
 
