@@ -62,6 +62,10 @@ class CloudifyFlaskApp(Flask):
         super(CloudifyFlaskApp, self).__init__(__name__)
         if load_config:
             config.instance.load_configuration()
+        self._set_sql_alchemy()
+        if load_config:
+            with self.app_context():
+                config.instance.load_from_db()
 
         # These two need to be called after the configuration was loaded
         setup_logger(self.logger)
@@ -75,7 +79,6 @@ class CloudifyFlaskApp(Flask):
         self.after_request(log_response)
 
         self._set_exception_handlers()
-        self._set_sql_alchemy()
         self._set_flask_security()
 
         with self.app_context():

@@ -105,6 +105,12 @@ class Config(object):
                     "Ignoring unknown key '{0}' in configuration file "
                     "'{1}'".format(key, filename))
 
+    def load_from_db(self):
+        from manager_rest.storage import models, get_storage_manager
+        sm = get_storage_manager()
+        for conf_value in sm.list(models.Config):
+            setattr(self, conf_value.name, conf_value.value)
+
     def to_dict(self):
         config_dict = vars(self)
         insecure_keys = {
