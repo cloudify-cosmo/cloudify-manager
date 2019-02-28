@@ -1,6 +1,8 @@
+%define _manager_env /opt/manager/env
+
 %define dbus_glib_version 0.100
 %define dbus_version 1.6
-
+%define __jar_repack %{nil}
 %global __requires_exclude LIBDBUS_1_3
 
 Name:           cloudify-rest-service
@@ -32,25 +34,23 @@ Cloudify's REST Service.
 
 %build
 
-virtualenv /opt/manager/env
+virtualenv %_manager_env
 
-export REST_SERVICE_BUILD=True  # TODO: remove this hack from setup.py
-
-/opt/manager/env/bin/pip install --upgrade pip setuptools
-/opt/manager/env/bin/pip install -r "${RPM_SOURCE_DIR}/rest-service/dev-requirements.txt"
-/opt/manager/env/bin/pip install "${RPM_SOURCE_DIR}/rest-service"[dbus]
-/opt/manager/env/bin/pip install "${RPM_SOURCE_DIR}/amqp-postgres"
+%_manager_env/bin/pip install --upgrade pip setuptools
+%_manager_env/bin/pip install -r "${RPM_SOURCE_DIR}/rest-service/dev-requirements.txt"
+%_manager_env/bin/pip install "${RPM_SOURCE_DIR}/rest-service"[dbus]
+%_manager_env/bin/pip install "${RPM_SOURCE_DIR}/amqp-postgres"
 
 # Jinja2 includes 2 files which will only be imported if async is available,
 # but rpmbuild's brp-python-bytecompile falls over when it finds them. Here
 # we remove them.
-rm -f /opt/manager/env/lib/python2.7/site-packages/jinja2/async*.py
+rm -f %_manager_env/lib/python2.7/site-packages/jinja2/async*.py
 
 
 %install
 
 mkdir -p %{buildroot}/opt/manager
-mv /opt/manager/env %{buildroot}/opt/manager
+mv %_manager_env %{buildroot}/opt/manager
 
 mkdir -p %{buildroot}/opt/manager/resources/
 cp -R "${RPM_SOURCE_DIR}/resources/rest-service/cloudify/" "%{buildroot}/opt/manager/resources/"
@@ -96,7 +96,6 @@ getent passwd cfyuser >/dev/null || useradd -r -g cfyuser -d /etc/cloudify -s /s
 /etc/logrotate.d/cloudify-amqp-postgres
 /etc/sudoers.d/cloudify-restservice
 /opt/restservice
-/opt/manager/scripts/set-manager-ssl.py*
 /usr/lib/systemd/system/cloudify-restservice.service
 /usr/lib/systemd/system/cloudify-amqp-postgres.service
 
