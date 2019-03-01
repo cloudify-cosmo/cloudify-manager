@@ -40,9 +40,9 @@ def update_provider_context(args):
                     raise ValueError('Cannot change network {0} address'
                                      .format(network_name))
                 else:
-                    agent_dict['networks'][network_name] = address
+                    agent_dict['networks'][network_name]['manager'] = address
         agent_dict['broker_ip'] = args.manager_ip
-        agent_dict['networks']['default'] = args.manager_ip
+        agent_dict['networks']['default']['manager'] = args.manager_ip
         flag_modified(ctx, 'context')
         sm.update(ctx)
 
