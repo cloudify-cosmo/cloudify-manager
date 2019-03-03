@@ -394,6 +394,12 @@ class BaseServerTestCase(unittest.TestCase):
             'lF88UP5SJKluylJIkPDYrw5UMKOgv9w8TikS0Ds8m2UmM'
             'SzFe0qMRa0EcTgHst6LjmF_tZbq_gi_VArepMsrmw=='
         )
+
+        test_config.amqp_host = 'localhost'
+        test_config.amqp_username = 'guest'
+        test_config.amqp_password = 'guest'
+        test_config.amqp_ca_path = None
+        test_config.amqp_management_host = 'localhost'
         return test_config
 
     @staticmethod
