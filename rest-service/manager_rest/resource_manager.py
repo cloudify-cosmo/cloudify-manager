@@ -145,8 +145,6 @@ class ResourceManager(object):
         config_instance = config.instance
         return {
             'file_server_root': config_instance.file_server_root,
-            'db_address': config_instance.db_address,
-            'db_port': config_instance.db_port,
             'created_status': SnapshotState.CREATED,
             'failed_status': SnapshotState.FAILED,
             'postgresql_bin_path': config_instance.postgresql_bin_path,

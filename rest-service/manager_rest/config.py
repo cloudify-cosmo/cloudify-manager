@@ -25,67 +25,108 @@ CONFIG_TYPES = [
     ('MANAGER_REST_AUTHORIZATION_CONFIG_PATH', 'authorization')
 ]
 SKIP_RESET_WRITE = ['authorization']
+NOT_SET = object()
+
+
+class Setting(object):
+    def __init__(self, name, default=NOT_SET, from_db=True):
+        self._name = name
+        self._value = default
+        self._from_db = from_db
+
+    def __get__(self, instance, owner):
+        if self._value is NOT_SET:
+            if self._from_db:
+                instance.load_from_db()
+            else:
+                raise AttributeError('Setting {0} is not set'
+                                     .format(self._name))
+        return self._value
+
+    def __set__(self, instance, value):
+        self._value = value
+
+    def __delete__(self, instance):
+        self._value = NOT_SET
 
 
 class Config(object):
+    public_ip = Setting('public_ip')
 
-    def __init__(self):
-        self.public_ip = None
-        self.db_address = 'localhost'
-        self.db_port = 9200
-        self.postgresql_db_name = None
-        self.postgresql_host = None
-        self.postgresql_username = None
-        self.postgresql_password = None
-        self.postgresql_bin_path = None
-        self.postgresql_ssl_enabled = False
-        self.postgresql_ssl_cert_path = ''
-        self.postgresql_ssl_key_path = ''
-        self.postgresql_connection_options = {
-            'connect_timeout': 10
-        }
-        self.ca_cert_path = ''
-        self.amqp_host = 'localhost'
-        self.amqp_management_host = 'localhost'
-        self.amqp_username = 'guest'
-        self.amqp_password = 'guest'
-        self.amqp_ca_path = ''
-        self.ldap_server = None
-        self.ldap_username = None
-        self.ldap_password = None
-        self.ldap_domain = None
-        self.ldap_is_active_directory = True
-        self.ldap_dn_extra = {}
-        self.ldap_timeout = 5.0
-        self.file_server_root = None
-        self.file_server_url = None
-        self.maintenance_folder = None
-        self.rest_service_log_level = None
-        self.rest_service_log_path = None
-        self.rest_service_log_file_size_MB = None
-        self.rest_service_log_files_backup_count = None
-        self.test_mode = False
-        self.insecure_endpoints_disabled = True
-        self.default_page_size = 1000
-        self.min_available_memory_mb = None
+    # database settings
+    postgresql_db_name = Setting('postgresql_db_name', from_db=False)
+    postgresql_host = Setting('postgresql_host', from_db=False)
+    postgresql_username = Setting('postgresql_username', from_db=False)
+    postgresql_password = Setting('postgresql_password', from_db=False)
+    postgresql_bin_path = Setting('postgresql_bin_path', from_db=False)
+    postgresql_ssl_enabled = Setting('postgresql_ssl_enabled',
+                                     default=False, from_db=False)
+    postgresql_ssl_cert_path = Setting('postgresql_ssl_cert_path',
+                                       from_db=False)
+    postgresql_ssl_key_path = Setting('postgresql_ssl_key_path', from_db=False)
+    postgresql_connection_options = Setting('postgresql_connection_options',
+                                            default={'connect_timeout': 10},
+                                            from_db=False)
 
-        self.security_hash_salt = None
-        self.security_secret_key = None
-        self.security_encoding_alphabet = None
-        self.security_encoding_block_size = None
-        self.security_encoding_min_length = None
-        self.security_encryption_key = None
+    ca_cert_path = Setting('ca_cert_path')
 
-        self.authorization_roles = None
-        self.authorization_permissions = None
+    # rabbitmq settings
+    amqp_host = Setting('amqp_host', from_db=False)
+    amqp_management_host = Setting('amqp_management_host', from_db=False)
+    amqp_username = Setting('amqp_username', from_db=False)
+    amqp_password = Setting('amqp_password', from_db=False)
+    amqp_ca_path = Setting('amqp_ca_path', from_db=False)
 
-        self.failed_logins_before_account_lock = 4
-        self.account_lock_period = -1
+    # LDAP settings
+    ldap_server = Setting('ldap_server')
+    ldap_username = Setting('ldap_username')
+    ldap_password = Setting('ldap_password')
+    ldap_domain = Setting('ldap_domain')
+    ldap_is_active_directory = Setting('ldap_is_active_directory')
+    ldap_dn_extra = Setting('ldap_dn_extra')
+    ldap_timeout = Setting('ldap_timeout')
 
-        # max number of threads that will be used in a `restore snapshot` wf
-        self.snapshot_restore_threads = 15
+    file_server_root = Setting('file_server_root')
+    file_server_url = Setting('file_server_url')
 
-        self.warnings = []
+    maintenance_folder = Setting('maintenance_folder')
+    rest_service_log_level = Setting('rest_service_log_level')
+    rest_service_log_path = Setting('rest_service_log_path')
+
+    rest_service_log_file_size_MB = Setting('rest_service_log_file_size_MB')
+    rest_service_log_files_backup_count = Setting(
+        'rest_service_log_files_backup_count')
+
+    test_mode = Setting('test_mode', default=False)
+
+    insecure_endpoints_disabled = Setting('insecure_endpoints_disabled')
+    default_page_size = Setting('default_page_size', default=1000)
+    min_available_memory_mb = Setting('min_available_memory_mb')
+
+    # security settings
+    security_hash_salt = Setting('security_hash_salt', from_db=False)
+    security_secret_key = Setting('security_secret_key', from_db=False)
+    security_encoding_alphabet = Setting('security_encoding_alphabet',
+                                         from_db=False)
+    security_encoding_block_size = Setting('security_encoding_block_size',
+                                           from_db=False)
+    security_encoding_min_length = Setting('security_encoding_min_length',
+                                           from_db=False)
+    security_encryption_key = Setting('security_encryption_key', from_db=False)
+
+    authorization_roles = Setting('authorization_roles',
+                                  from_db=False, default=None)
+    authorization_permissions = Setting('authorization_permissions',
+                                        from_db=False, default=None)
+
+    failed_logins_before_account_lock = Setting(
+        'failed_logins_before_account_lock')
+    account_lock_period = Setting('account_lock_period')
+
+    # max number of threads that will be used in a `restore snapshot` wf
+    snapshot_restore_threads = Setting('snapshot_restore_threads', default=15)
+
+    warnings = Setting('warnings', default=[])
 
     def load_configuration(self):
         for env_var_name, namespace in CONFIG_TYPES:
@@ -107,6 +148,7 @@ class Config(object):
 
     def load_from_db(self):
         from manager_rest.storage import models, get_storage_manager
+        self.min_available_memory_mb = 0
         sm = get_storage_manager()
         stored_config = sm.list(models.Config, filters={
             'scope': lambda column: column.contains(['rest'])
