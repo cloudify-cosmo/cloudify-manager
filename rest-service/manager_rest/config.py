@@ -58,7 +58,8 @@ class Config(object):
     postgresql_host = Setting('postgresql_host', from_db=False)
     postgresql_username = Setting('postgresql_username', from_db=False)
     postgresql_password = Setting('postgresql_password', from_db=False)
-    postgresql_bin_path = Setting('postgresql_bin_path', from_db=False)
+    postgresql_bin_path = Setting('postgresql_bin_path', default=None,
+                                  from_db=False)
     postgresql_ssl_enabled = Setting('postgresql_ssl_enabled',
                                      default=False, from_db=False)
     postgresql_ssl_cert_path = Setting('postgresql_ssl_cert_path',
