@@ -97,6 +97,7 @@ def setup_resources(api):
         'SecretsSetVisibility': 'secrets/<string:key>/set-visibility',
         'ManagerConfig': 'config',
         'ManagerConfigId': 'config/<string:name>',
+        'Managers': 'managers',
         'Agents': 'agents',
         'AgentsName': 'agents/<string:name>',
         'SummarizeDeployments': 'summary/deployments',

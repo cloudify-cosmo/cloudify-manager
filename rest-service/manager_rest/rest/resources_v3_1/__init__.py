@@ -13,7 +13,10 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from .manager import SSLConfig                   # NOQA
+from .manager import (                           # NOQA
+    SSLConfig,
+    Managers
+)
 
 from .manager_config import (                    # NOQA
     ManagerConfig,

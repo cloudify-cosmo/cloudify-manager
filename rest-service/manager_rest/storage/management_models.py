@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -514,6 +514,26 @@ class Config(SQLModelBase):
 
     def _get_identifier_dict(self):
         return {'name': self.name}
+
+
+class Manager(SQLModelBase):
+    __tablename__ = 'managers'
+
+    hostname = db.Column(db.Text, primary_key=True)
+    private_ip = db.Column(db.Text, unique=True, nullable=False)
+    public_ip = db.Column(db.Text, unique=True, nullable=False)
+    version = db.Column(db.Text, nullable=False)
+    edition = db.Column(db.Text, nullable=False)
+    distribution = db.Column(db.Text, nullable=False)
+    distro_release = db.Column(db.Text, nullable=False)
+    fs_sync_api_key = db.Column(db.Text, nullable=False)
+
+    @classmethod
+    def unique_id(cls):
+        return 'hostname'
+
+    def _get_identifier_dict(self):
+        return {'hostname': self.hostname}
 
 
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)

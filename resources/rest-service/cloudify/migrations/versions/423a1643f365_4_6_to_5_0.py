@@ -202,7 +202,21 @@ def upgrade():
     ])
     session.commit()
 
+    op.create_table(
+        'managers',
+        sa.Column('hostname', sa.Text(), nullable=False),
+        sa.Column('private_ip', sa.Text(), unique=True, nullable=False),
+        sa.Column('public_ip', sa.Text(), unique=True, nullable=False),
+        sa.Column('version', sa.Text(), nullable=False),
+        sa.Column('edition', sa.Text(), nullable=False),
+        sa.Column('distribution', sa.Text(), nullable=False),
+        sa.Column('distro_release', sa.Text(), nullable=False),
+        sa.Column('fs_sync_api_key', sa.Text(), nullable=False),
+        sa.PrimaryKeyConstraint('hostname', name=op.f('managers_pkey'))
+    )
+
 
 def downgrade():
     op.drop_column('executions', 'token')
     op.drop_table('config')
+    op.drop_table('managers')

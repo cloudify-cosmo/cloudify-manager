@@ -24,7 +24,8 @@ from .management_models import (User,
                                 user_datastore,
                                 ProviderContext,
                                 License,
-                                Config)
+                                Config,
+                                Manager)
 
 from .resource_models import (Blueprint,
                               Snapshot,
