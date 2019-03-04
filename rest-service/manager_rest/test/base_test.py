@@ -30,6 +30,7 @@ import sqlalchemy.exc
 import yaml
 import wagon
 
+from flask_migrate import Migrate, upgrade
 from mock import MagicMock, patch
 from flask.testing import FlaskClient
 
@@ -58,6 +59,11 @@ from .mocks import (
     mock_execute_task
 )
 
+
+MIGRATION_DIR = os.path.normpath(os.path.join(
+    os.path.dirname(__file__), '..', '..', '..', 'resources', 'rest-service',
+    'cloudify', 'migrations'
+))
 
 FILE_SERVER_PORT = 53229
 LATEST_API_VERSION = 3.1  # to be used by max_client_version test attribute
@@ -286,8 +292,9 @@ class BaseServerTestCase(unittest.TestCase):
 
     @staticmethod
     def _handle_default_db_config():
+        Migrate(app=server.app, db=server.db)
         try:
-            server.db.create_all()
+            upgrade(directory=MIGRATION_DIR)
         except sqlalchemy.exc.OperationalError:
             logger = logging.getLogger()
             logger.error("Could not connect to the database - is a "
@@ -366,6 +373,8 @@ class BaseServerTestCase(unittest.TestCase):
     @classmethod
     def create_configuration(cls):
         test_config = config.Config()
+        test_config.can_load_from_db = False
+
         test_config.test_mode = True
         test_config.postgresql_db_name = 'cloudify_db'
         test_config.postgresql_host = 'localhost'
@@ -394,6 +403,12 @@ class BaseServerTestCase(unittest.TestCase):
             'lF88UP5SJKluylJIkPDYrw5UMKOgv9w8TikS0Ds8m2UmM'
             'SzFe0qMRa0EcTgHst6LjmF_tZbq_gi_VArepMsrmw=='
         )
+
+        test_config.amqp_host = 'localhost'
+        test_config.amqp_username = 'guest'
+        test_config.amqp_password = 'guest'
+        test_config.amqp_ca_path = None
+        test_config.amqp_management_host = 'localhost'
         return test_config
 
     @staticmethod
