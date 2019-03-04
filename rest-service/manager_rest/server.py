@@ -70,12 +70,12 @@ class CloudifyFlaskApp(Flask):
             setup_logger(self.logger)
         if premium_enabled and config.instance.file_server_root:
             self.external_auth = configure_auth(self.logger)
+            self.before_request(LicenseHandler.check_license_expiration_date)
         else:
             self.external_auth = None
 
         self.before_request(log_request)
         self.before_request(maintenance_mode_handler)
-        self.before_request(LicenseHandler.check_license_expiration_date)
         self.after_request(log_response)
         self._set_exception_handlers()
         self._set_flask_security()

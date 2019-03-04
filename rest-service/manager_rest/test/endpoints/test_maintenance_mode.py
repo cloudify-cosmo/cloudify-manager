@@ -93,9 +93,9 @@ class MaintenanceModeTest(BaseServerTestCase):
     def test_internal_request_denial_in_maintenance_mode(self):
         self._activate_maintenance_mode()
 
-        with patch('manager_rest.maintenance._get_remote_addr',
+        with patch('manager_rest.utils._get_remote_addr',
                    new=self._get_remote_addr):
-            with patch('manager_rest.maintenance._get_host',
+            with patch('manager_rest.utils._get_host',
                        new=self._get_host):
                 self.assertRaises(exceptions.MaintenanceModeActiveError,
                                   self.client.blueprints.list)
@@ -105,9 +105,9 @@ class MaintenanceModeTest(BaseServerTestCase):
 
         internal_request_bypass_maintenance_client = self.create_client(
                 headers={'X-BYPASS-MAINTENANCE': 'true'})
-        with patch('manager_rest.maintenance._get_remote_addr',
+        with patch('manager_rest.utils._get_remote_addr',
                    new=self._get_remote_addr):
-            with patch('manager_rest.maintenance._get_host',
+            with patch('manager_rest.utils._get_host',
                        new=self._get_host):
                 internal_request_bypass_maintenance_client.blueprints.list()
 
@@ -116,7 +116,7 @@ class MaintenanceModeTest(BaseServerTestCase):
 
         internal_request_client = self.create_client(
                 headers={'X-BYPASS-MAINTENANCE': 'true'})
-        with patch('manager_rest.maintenance._get_remote_addr',
+        with patch('manager_rest.utils._get_remote_addr',
                    new=self._get_remote_addr):
             self.assertRaises(exceptions.MaintenanceModeActiveError,
                               internal_request_client.blueprints.list)
