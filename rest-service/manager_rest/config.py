@@ -50,6 +50,7 @@ class Setting(object):
 
 
 class Config(object):
+    # whether or not the config can be implicitly loaded from db on first use
     can_load_from_db = True
 
     public_ip = Setting('public_ip')
@@ -156,6 +157,9 @@ class Config(object):
         })
         for conf_value in stored_config:
             setattr(self, conf_value.name, conf_value.value)
+
+        # disallow implicit loading
+        self.can_load_from_db = False
 
     def to_dict(self):
         config_dict = vars(self)
