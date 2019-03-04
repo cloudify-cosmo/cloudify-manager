@@ -36,7 +36,7 @@ class Setting(object):
 
     def __get__(self, instance, owner):
         if self._value is NOT_SET:
-            if self._from_db:
+            if self._from_db and instance.can_load_from_db:
                 instance.load_from_db()
             else:
                 raise AttributeError('Setting {0} is not set'
@@ -51,6 +51,8 @@ class Setting(object):
 
 
 class Config(object):
+    can_load_from_db = True
+
     public_ip = Setting('public_ip')
 
     # database settings
@@ -102,7 +104,7 @@ class Config(object):
 
     insecure_endpoints_disabled = Setting('insecure_endpoints_disabled')
     default_page_size = Setting('default_page_size', default=1000)
-    min_available_memory_mb = Setting('min_available_memory_mb')
+    min_available_memory_mb = Setting('min_available_memory_mb', default=0)
 
     # security settings
     security_hash_salt = Setting('security_hash_salt', from_db=False)
@@ -121,7 +123,7 @@ class Config(object):
                                         from_db=False, default=None)
 
     failed_logins_before_account_lock = Setting(
-        'failed_logins_before_account_lock')
+        'failed_logins_before_account_lock', default=4)
     account_lock_period = Setting('account_lock_period')
 
     # max number of threads that will be used in a `restore snapshot` wf
@@ -149,7 +151,6 @@ class Config(object):
 
     def load_from_db(self):
         from manager_rest.storage import models, get_storage_manager
-        self.min_available_memory_mb = 0
         sm = get_storage_manager()
         stored_config = sm.list(models.Config, filters={
             'scope': lambda column: column.contains(['rest'])
