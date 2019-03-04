@@ -97,7 +97,7 @@ def reset_storage(script_config):
     amqp_manager.remove_tenant_vhost_and_user(DEFAULT_TENANT_NAME)
 
     # Rebuild the DB
-    safe_drop_all(keep_tables=['roles'])
+    safe_drop_all(keep_tables=['roles', 'config'])
     upgrade(directory=migrations_dir)
 
     # Add default tenant, admin user and provider context
