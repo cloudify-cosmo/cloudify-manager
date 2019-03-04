@@ -40,7 +40,7 @@ class Config(Base):
     scope = sa.Column(postgresql.ARRAY(sa.Text))
     _updater_id = sa.Column(
         sa.Integer,
-        sa.ForeignKey(User.id, ondelete='CASCADE'),
+        sa.ForeignKey(User.id, ondelete='SET NULL'),
         nullable=True,
         index=False,
         primary_key=False,
