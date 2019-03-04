@@ -39,8 +39,7 @@ class Setting(object):
             if self._from_db and instance.can_load_from_db:
                 instance.load_from_db()
             else:
-                raise AttributeError('Setting {0} is not set'
-                                     .format(self._name))
+                self._value = None
         return self._value
 
     def __set__(self, instance, value):
