@@ -19,7 +19,6 @@ import jsonschema
 from flask_security import current_user
 from flask_restful.reqparse import Argument
 
-
 from manager_rest.manager_exceptions import ConflictError
 from manager_rest.rest import rest_utils
 from manager_rest.rest.rest_decorators import (
