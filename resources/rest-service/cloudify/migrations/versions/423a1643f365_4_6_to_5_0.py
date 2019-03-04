@@ -75,7 +75,7 @@ def upgrade():
         Config(
             name='ldap_server',
             value=None,
-            scope='rest',
+            scope=['rest'],
             schema={'type': 'string'},
             is_editable=True
         ),
