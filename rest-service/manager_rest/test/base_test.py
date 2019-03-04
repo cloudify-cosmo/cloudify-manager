@@ -55,7 +55,8 @@ from .mocks import (
     MockHTTPClient,
     CLIENT_API_VERSION,
     build_query_string,
-    mock_execute_task
+    mock_execute_task,
+    mock_license,
 )
 
 
@@ -317,6 +318,10 @@ class BaseServerTestCase(unittest.TestCase):
                 'gAAAAABb9p7U_Lnlmg7vyijjoxovyg215ThYi-VCTCzVYa1p-vpzi31WGko' \
                 'KD_hK1mQyKgjRss_Nz-3m-cgHpZChnVT4bxZIjnOnL6sF8RtozvlRoGHtnF' \
                 'G6jxqQDeEf5Heos0ia4Q5H  '
+
+            # In order for the REST to work we put a mock Cloudify license
+            # in the DB
+            mock_license()
         finally:
             os.remove(temp_auth_file)
 
