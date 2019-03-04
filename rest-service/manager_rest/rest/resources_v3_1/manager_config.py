@@ -23,9 +23,9 @@ from manager_rest.manager_exceptions import ConflictError
 from manager_rest.rest import rest_utils
 from manager_rest.rest.rest_decorators import (
     exceptions_handled,
-    marshal_with,
-    paginate
+    marshal_with
 )
+from manager_rest import config
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import get_storage_manager, models
@@ -33,25 +33,44 @@ from manager_rest.storage import get_storage_manager, models
 
 class ManagerConfig(SecuredResource):
     @exceptions_handled
-    @marshal_with(models.Config)
-    @paginate
     @authorize('manager_config_get')
-    def get(self, pagination=None):
+    def get(self):
         """Get the Manager config, optionally filtered to a scope.
 
         Scope can be eg. "rest" or "mgmtworker", for filtering out the
         settings only for a single Manager component.
         """
-        sm = get_storage_manager()
         args = rest_utils.get_args_and_verify_arguments([
             Argument('scope', type=unicode, required=False)
         ])
-        if args.get('scope'):
-            return sm.list(models.Config, filters={
-                'scope': lambda column: column.contains([args['scope']])
-            })
+        scope = args.get('scope')
+        result = {'metadata': {}}
+        if scope:
+            result['items'] = self._get_items(scope)
         else:
-            return sm.list(models.Config)
+            result['items'] = self._get_items()
+
+        if not scope or scope == 'authorization':
+            result['authorization'] = self._authorization_config
+        return result
+
+    def _get_items(self, scope=None):
+        sm = get_storage_manager()
+        if scope:
+            filters = {
+                'scope': lambda column: column.contains([scope])
+            }
+        else:
+            filters = None
+        return [item.to_dict() for item in
+                sm.list(models.Config, filters=filters).items]
+
+    @property
+    def _authorization_config(self):
+        return {
+            'roles': config.instance.authorization_roles,
+            'permissions': config.instance.authorization_permissions
+        }
 
 
 class ManagerConfigId(SecuredResource):
