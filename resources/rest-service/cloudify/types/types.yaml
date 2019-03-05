@@ -394,7 +394,7 @@ node_types:
         create:
           implementation: cfy_extensions.cloudify_types.component.upload_blueprint
         configure:
-          implementation: cfy_extensions.cloudify_types.component.create_deployment
+          implementation: cfy_extensions.cloudify_types.component.create
         start:
           implementation: cfy_extensions.cloudify_types.component.execute_start
           inputs:
@@ -424,7 +424,7 @@ node_types:
                   parameters:
                     ignore_failure: true
         delete:
-          implementation: cfy_extensions.cloudify_types.component.delete_deployment
+          implementation: cfy_extensions.cloudify_types.component.delete
 
 ##################################################################################
 # Base relationship definitions

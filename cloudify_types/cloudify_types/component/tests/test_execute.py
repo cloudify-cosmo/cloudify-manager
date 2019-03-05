@@ -21,7 +21,9 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 from ..constants import EXTERNAL_RESOURCE
 from .client_mock import MockCloudifyRestClient
 from ..component_operations import execute_start
-from .base_test_suite import ComponentTestBase, REST_CLIENT_EXCEPTION
+from .base_test_suite import (ComponentTestBase,
+                              REST_CLIENT_EXCEPTION,
+                              MOCK_TIMEOUT)
 
 
 class TestExecute(ComponentTestBase):
@@ -65,7 +67,7 @@ class TestExecute(ComponentTestBase):
                                           execute_start,
                                           deployment_id='dep_name',
                                           workflow_id='install',
-                                          timeout=.001)
+                                          timeout=MOCK_TIMEOUT)
                 self.assertIn(
                     'Execution timeout',
                     error.message)
@@ -80,7 +82,7 @@ class TestExecute(ComponentTestBase):
                 output = execute_start(operation='execute_workflow',
                                        deployment_id='dep_name',
                                        workflow_id='install',
-                                       timeout=.001)
+                                       timeout=MOCK_TIMEOUT)
                 self.assertTrue(output)
 
     def test_execute_deployment_not_ready(self):
@@ -115,7 +117,7 @@ class TestExecute(ComponentTestBase):
             output = execute_start(operation='execute_workflow',
                                    deployment_id=test_name,
                                    workflow_id='install',
-                                   timeout=.001)
+                                   timeout=MOCK_TIMEOUT)
             self.assertIsNone(output)
 
     def test_execute_start_succeeds_not_finished(self):
@@ -129,7 +131,7 @@ class TestExecute(ComponentTestBase):
                 output = execute_start(operation='execute_workflow',
                                        deployment_id='dep_name',
                                        workflow_id='install',
-                                       timeout=.001)
+                                       timeout=MOCK_TIMEOUT)
                 self.assertTrue(output)
 
     def test_execute_start_succeeds_not_existing_node_type(self):
@@ -148,7 +150,7 @@ class TestExecute(ComponentTestBase):
                                   operation='execute_workflow',
                                   deployment_id='dep_name',
                                   workflow_id='install',
-                                  timeout=.001)
+                                  timeout=MOCK_TIMEOUT)
 
     def test_post_execute_client_error(self):
         cfy_mock_client = MockCloudifyRestClient()
@@ -172,4 +174,4 @@ class TestExecute(ComponentTestBase):
                                   deployment_id='dep_name',
                                   workflow_id='install',
                                   client={'host': 'localhost'},
-                                  timeout=.001)
+                                  timeout=MOCK_TIMEOUT)

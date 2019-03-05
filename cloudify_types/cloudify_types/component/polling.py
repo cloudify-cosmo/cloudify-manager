@@ -85,7 +85,7 @@ def poll_with_timeout(pollster,
     return False
 
 
-def dep_logs_redirect(_client, execution_id):
+def redirect_logs(_client, execution_id):
     COUNT_EVENTS = "received_events"
 
     if not ctx.instance.runtime_properties.get(COUNT_EVENTS):
@@ -149,112 +149,107 @@ def dep_logs_redirect(_client, execution_id):
     ctx.instance.runtime_properties[COUNT_EVENTS][execution_id] = last_event
 
 
-def dep_system_workflows_finished(_client, _check_all_in_deployment=False):
-
-    _offset = int(getenv('_PAGINATION_OFFSET', 0))
-    _size = int(getenv('_PAGINATION_SIZE', 1000))
+def is_system_workflows_finished(_client, _check_all_in_deployment=False):
+    offset = int(getenv('_PAGINATION_OFFSET', 0))
+    size = int(getenv('_PAGINATION_SIZE', 1000))
 
     while True:
-
         try:
-            _execs = _client.executions.list(
+            executions = _client.executions.list(
                 include_system_workflows=True,
-                _offset=_offset,
-                _size=_size)
+                _offset=offset,
+                _size=size)
         except CloudifyClientError as ex:
             raise NonRecoverableError(
                 'Executions list failed {0}.'.format(str(ex)))
 
-        for _exec in _execs:
-
-            if _exec.get('is_system_workflow'):
-                if _exec.get('status') not in ('terminated', 'failed',
-                                               'cancelled'):
+        for execution in executions:
+            if execution.get('is_system_workflow'):
+                if execution.get('status') not in ('terminated', 'failed',
+                                                   'cancelled'):
                     return False
 
             if _check_all_in_deployment:
-                if _check_all_in_deployment == _exec.get('deployment_id'):
-                    if _exec.get('status') not in ('terminated', 'failed',
-                                                   'cancelled'):
+                if _check_all_in_deployment == execution.get('deployment_id'):
+                    if execution.get('status') not in ('terminated', 'failed',
+                                                       'cancelled'):
                         return False
 
-        if _execs.metadata.pagination.total <= \
-                _execs.metadata.pagination.offset:
+        if executions.metadata.pagination.total <= \
+                executions.metadata.pagination.offset:
             break
 
-        _offset = _offset + _size
+        offset = offset + size
 
     return True
 
 
-def dep_workflow_in_state_pollster(_client,
-                                   _dep_id,
-                                   _state,
-                                   _workflow_id=None,
-                                   _log_redirect=False,
-                                   _execution_id=None):
+def dep_workflow_in_state_pollster(client,
+                                   dep_id,
+                                   state,
+                                   log_redirect=False,
+                                   execution_id=None):
 
     exec_get_fields = \
-        ['status', 'workflow_id', 'created_at', 'id']
+        ['status', 'workflow_id', 'created_at', 'ended_at', 'id']
 
     try:
-        _exec = \
-            _client.executions.get(execution_id=_execution_id,
-                                   _include=exec_get_fields)
-
+        execution = \
+            client.executions.get(execution_id=execution_id,
+                                  _include=exec_get_fields)
         ctx.logger.debug(
-            'The exec get response form {0} is {1}'.format(_dep_id, _exec))
+            'The exec get response form {0} is {1}'.format(dep_id,
+                                                           execution))
 
     except CloudifyClientError as ex:
         raise NonRecoverableError(
             'Executions get failed {0}.'.format(str(ex)))
 
-    if _log_redirect and _exec.get('id'):
+    execution_id = execution.get('id')
+    if log_redirect and execution_id:
         ctx.logger.debug(
-            '_exec info for _log_redirect is {0}'.format(_exec))
-        dep_logs_redirect(_client, _exec.get('id'))
+            '_exec info for _log_redirect is {0}'.format(execution))
+        redirect_logs(client, execution_id)
 
-    if _exec.get('status') == _state:
+    execution_status = execution.get('status')
+    if execution_status == state:
         ctx.logger.debug(
             'The status for _exec info id'
-            ' {0} is {1}'.format(_execution_id, _state))
+            ' {0} is {1}'.format(execution_id, state))
 
         return True
-    elif _exec.get('status') == 'failed':
+    elif execution_status == 'failed':
         raise NonRecoverableError(
-            'Execution {0} failed.'.format(str(_exec)))
+            'Execution {0} failed.'.format(str(execution)))
 
     return False
 
 
-def poll_workflow_after_execute(_timeout,
-                                _interval,
-                                _client,
-                                _dep_id,
-                                _state,
+def poll_workflow_after_execute(timeout,
+                                interval,
+                                client,
+                                dep_id,
+                                state,
                                 _workflow_id,
-                                _execution_id,
-                                _log_redirect=False):
-
+                                execution_id,
+                                log_redirect=False):
     pollster_args = {
-        '_client': _client,
-        '_dep_id': _dep_id,
-        '_state': _state,
-        '_workflow_id': _workflow_id,
-        '_log_redirect': _log_redirect,
-        '_execution_id': _execution_id,
+        'client': client,
+        'dep_id': dep_id,
+        'state': state,
+        'log_redirect': log_redirect,
+        'execution_id': execution_id,
     }
 
     ctx.logger.debug('Polling: {0}'.format(pollster_args))
 
-    success = \
-        poll_with_timeout(
-            dep_workflow_in_state_pollster,
-            timeout=_timeout,
-            interval=_interval,
-            pollster_args=pollster_args)
+    success = poll_with_timeout(
+        dep_workflow_in_state_pollster,
+        timeout=timeout,
+        interval=interval,
+        pollster_args=pollster_args)
 
     if not success:
         raise NonRecoverableError(
-            'Execution timeout: {0} seconds.'.format(_timeout))
+            'Execution timeout: {0} seconds.'.format(timeout))
     return True
