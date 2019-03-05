@@ -16,12 +16,23 @@
 from subprocess import check_call
 
 from flask import request
+from flask_restful.reqparse import Argument
 
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
+from manager_rest.storage import (
+    get_storage_manager,
+    models
+)
 
 from .. import rest_utils
-from ..rest_decorators import exceptions_handled
+from ..rest_decorators import (
+    exceptions_handled,
+    marshal_with,
+    paginate
+)
+
+
 try:
     from cloudify_premium.ha import cluster_status, options
 except ImportError:
@@ -77,3 +88,98 @@ class SSLConfig(SecuredResource):
         cluster_opts = cluster_status.cluster_options
         cluster_opts[options.CLUSTER_SSL_ENABLED] = state
         cluster_status.cluster_options = cluster_opts
+
+
+class Managers(SecuredResource):
+    @exceptions_handled
+    @marshal_with(models.Manager)
+    @paginate
+    @authorize('manager_get')
+    def get(self, pagination=None, _include=None):
+        """
+        Get the list of managers in the database
+        :param hostname: optional hostname to return only a specific manager
+        """
+        args = rest_utils.get_args_and_verify_arguments([
+            Argument('hostname', type=unicode, required=False)
+        ])
+        hostname = args.get('hostname')
+        if hostname:
+            return get_storage_manager().list(
+                models.Manager,
+                None,
+                filters={'hostname': hostname}
+            )
+        return get_storage_manager().list(
+            models.Manager,
+            include=_include
+        )
+
+    @exceptions_handled
+    @authorize('manager_add')
+    @marshal_with(models.Manager)
+    def post(self):
+        """
+        Create a new manager
+        """
+        _manager = rest_utils.get_json_and_verify_params({
+            'hostname': {'type': unicode},
+            'private_ip': {'type': unicode},
+            'public_ip': {'type': unicode},
+            'version': {'type': unicode},
+            'edition': {'type': unicode},
+            'distribution': {'type': unicode},
+            'distro_release': {'type': unicode},
+            'fs_sync_node_id': {'type': unicode, 'optional': True}
+        })
+        new_manager = models.Manager(
+            hostname=_manager['hostname'],
+            private_ip=_manager['private_ip'],
+            public_ip=_manager['public_ip'],
+            version=_manager['version'],
+            edition=_manager['edition'],
+            distribution=_manager['distribution'],
+            distro_release=_manager['distro_release'],
+            fs_sync_node_id=_manager.get('fs_sync_node_id', '')
+        )
+        return get_storage_manager().put(new_manager)
+
+    @exceptions_handled
+    @authorize('manager_update_fs_sync_node_id')
+    @marshal_with(models.Manager)
+    def put(self):
+        """
+        Update a manager's FS sync node ID required by syncthing
+        """
+        _manager = rest_utils.get_json_and_verify_params({
+            'hostname': {'type': unicode},
+            'fs_sync_node_id': {'type': unicode}
+        })
+        sm = get_storage_manager()
+        manager_to_update = sm.get(
+            models.Manager,
+            None,
+            filters={'hostname': _manager['hostname']}
+        )
+        manager_to_update.fs_sync_node_id = _manager['fs_sync_node_id']
+        return sm.update(manager_to_update)
+
+    @exceptions_handled
+    @authorize('manager_delete')
+    @marshal_with(models.Manager)
+    def delete(self):
+        """
+        Delete a manager from the database
+        """
+        _manager = rest_utils.get_json_and_verify_params({
+            'hostname': {'type': unicode}
+        })
+        sm = get_storage_manager()
+        manager_to_delete = sm.get(
+            models.Manager,
+            None,
+            filters={'hostname': _manager['hostname']}
+        )
+
+        # TODO: send message on service-queue
+        return sm.delete(manager_to_delete)
