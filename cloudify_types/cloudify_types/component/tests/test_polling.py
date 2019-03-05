@@ -25,9 +25,9 @@ from ..polling import (
     all_deps_by_id,
     resource_by_id,
     poll_with_timeout,
-    dep_logs_redirect,
+    redirect_logs,
     dep_workflow_in_state_pollster,
-    dep_system_workflows_finished,
+    is_system_workflows_finished,
     poll_workflow_after_execute)
 
 
@@ -122,8 +122,8 @@ class TestPolling(ComponentTestBase):
             self.assertIn('failed', output.message)
 
     def test_poll_with_timeout_timeout(self):
-        mock_timeout = .001
-        mock_interval = .001
+        mock_timeout = .0001
+        mock_interval = .0001
 
         mock_pollster = mock.MagicMock
         output = \
@@ -134,8 +134,8 @@ class TestPolling(ComponentTestBase):
         self.assertFalse(output)
 
     def test_poll_with_timeout_expected(self):
-        mock_timeout = .001
-        mock_interval = .001
+        mock_timeout = .0001
+        mock_interval = .0001
 
         def mock_return(*args, **kwargs):
             del args, kwargs
@@ -165,7 +165,7 @@ class TestPolling(ComponentTestBase):
             cfy_mock_client.executions.list = mock_return
             mock_client.return_value = cfy_mock_client
             output = \
-                dep_system_workflows_finished(
+                is_system_workflows_finished(
                     cfy_mock_client)
             self.assertFalse(output)
 
@@ -184,7 +184,7 @@ class TestPolling(ComponentTestBase):
             cfy_mock_client.executions.list = mock_return
             mock_client.return_value = cfy_mock_client
             output = \
-                dep_system_workflows_finished(
+                is_system_workflows_finished(
                     cfy_mock_client)
             self.assertTrue(output)
 
@@ -203,7 +203,7 @@ class TestPolling(ComponentTestBase):
             output = \
                 self.assertRaises(
                     NonRecoverableError,
-                    dep_system_workflows_finished,
+                    is_system_workflows_finished,
                     cfy_mock_client)
             self.assertIn('failed', output.message)
 
@@ -218,8 +218,7 @@ class TestPolling(ComponentTestBase):
                 dep_workflow_in_state_pollster(
                     cfy_mock_client,
                     'test',
-                    'terminated',
-                    0)
+                    'terminated')
             self.assertFalse(output)
 
     def test_dep_workflow_in_state_pollster_matching_executions(self):
@@ -241,8 +240,7 @@ class TestPolling(ComponentTestBase):
                     cfy_mock_client,
                     deployment_id,
                     'terminated',
-                    0,
-                    _execution_id='_exec_id')
+                    execution_id='_exec_id')
             self.assertTrue(output)
 
     def test_dep_workflow_in_state_pollster_matching_executions_logs(self):
@@ -267,7 +265,6 @@ class TestPolling(ComponentTestBase):
                     cfy_mock_client,
                     deployment_id,
                     'terminated',
-                    0,
                     True)
             self.assertTrue(output)
 
@@ -288,9 +285,8 @@ class TestPolling(ComponentTestBase):
                 dep_workflow_in_state_pollster(
                     cfy_mock_client,
                     'dep_name',
-                    _state='terminated',
-                    _workflow_id='workflow_id1',
-                    _execution_id='_exec_id')
+                    state='terminated',
+                    execution_id='_exec_id')
             self.assertTrue(output)
 
     def test_dep_workflow_in_state_pollster_raises(self):
@@ -312,8 +308,7 @@ class TestPolling(ComponentTestBase):
                     dep_workflow_in_state_pollster,
                     cfy_mock_client,
                     deployment_id,
-                    'terminated',
-                    0)
+                    'terminated')
             self.assertIn('failed', output.message)
 
     def test_poll_workflow_after_execute_failed(self):
@@ -357,7 +352,7 @@ class TestPolling(ComponentTestBase):
             "logger": "22e710c6-18b8-4e96-b8a3-2104b81c5bfc"
         }])
 
-        dep_logs_redirect(cfy_mock_client, 'some_execution_id')
+        redirect_logs(cfy_mock_client, 'some_execution_id')
         self._ctx.logger.log.assert_called_with(
             40,
             '2017-03-22T11:41:59.169Z [vm_ke9e2d.create] Successfully '
@@ -384,7 +379,7 @@ class TestPolling(ComponentTestBase):
             "execution_id": "19ce78d6-babc-4a18-ba8e-74b853f2b387"
         }])
 
-        dep_logs_redirect(cfy_mock_client, 'some_execution_id')
+        redirect_logs(cfy_mock_client, 'some_execution_id')
         self._ctx.logger.log.assert_called_with(
             20,
             "2017-03-22T11:42:00.083Z [vm_ke9e2d.create] Task succeeded "
@@ -395,7 +390,7 @@ class TestPolling(ComponentTestBase):
 
         cfy_mock_client.events._set([], False)
 
-        dep_logs_redirect(cfy_mock_client, 'some_execution_id')
+        redirect_logs(cfy_mock_client, 'some_execution_id')
         self._ctx.logger.log.assert_called_with(
             20,
             "Returned nothing, let's get logs next time.")

@@ -13,6 +13,6 @@
 # limitations under the License.
 
 from .component_operations import upload_blueprint  # NOQA
-from .component_operations import delete_deployment  # NOQA
-from .component_operations import create_deployment  # NOQA
+from .component_operations import delete  # NOQA
+from .component_operations import create  # NOQA
 from .component_operations import execute_start  # NOQA
