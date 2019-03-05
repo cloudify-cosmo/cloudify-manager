@@ -15,39 +15,38 @@
 import os
 import tempfile
 
-from cloudify.state import current_ctx
-
 from .base_test_suite import ComponentTestBase
 import cloudify_types.component.utils as utils
 
 
 class TestUtils(ComponentTestBase):
 
-    def test_zip_files(self):
-        _ctx = self.get_mock_ctx(__name__)
-        current_ctx.set(_ctx)
+    @staticmethod
+    def generate_temp_file():
         fd, destination = tempfile.mkstemp()
         os.close(fd)
-        zip_file = utils.zip_files([destination])
+        return destination
+
+    @staticmethod
+    def cleaning_up_files(files_paths):
+        for path in files_paths:
+            os.remove(path)
+
+    def test_zip_files(self):
+        test_file = self.generate_temp_file()
+        zip_file = utils.zip_files([test_file])
         self.assertTrue(zip_file)
-        os.remove(zip_file)
-        os.remove(destination)
+        self.cleaning_up_files([zip_file, test_file])
 
     def test_get_local_path_local(self):
-        _ctx = self.get_mock_ctx(__name__)
-        current_ctx.set(_ctx)
-        fd, destination = tempfile.mkstemp()
-        os.close(fd)
-        copy_file = utils.get_local_path(destination, create_temp=True)
+        test_file = self.generate_temp_file()
+        copy_file = utils.get_local_path(test_file, create_temp=True)
         self.assertTrue(copy_file)
-        os.remove(copy_file)
-        os.remove(destination)
+        self.cleaning_up_files([copy_file, test_file])
 
     def test_get_local_path_https(self):
-        _ctx = self.get_mock_ctx(__name__)
-        current_ctx.set(_ctx)
         copy_file = utils.get_local_path(
             "http://www.getcloudify.org/spec/cloudify/4.5/types.yaml",
             create_temp=True)
         self.assertTrue(copy_file)
-        os.remove(copy_file)
+        self.cleaning_up_files([copy_file])

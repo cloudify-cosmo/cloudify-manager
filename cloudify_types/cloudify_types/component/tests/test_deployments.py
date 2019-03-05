@@ -14,7 +14,6 @@
 
 import mock
 
-from cloudify.state import current_ctx
 from cloudify.exceptions import NonRecoverableError
 
 from .client_mock import MockCloudifyRestClient
@@ -24,8 +23,6 @@ from .base_test_suite import ComponentTestBase, REST_CLIENT_EXCEPTION
 
 
 class TestDeployment(ComponentTestBase):
-
-    sleep_mock = None
 
     def setUp(self):
         super(TestDeployment, self).setUp()
@@ -47,40 +44,28 @@ class TestDeployment(ComponentTestBase):
         self.offset_patch.return_value = 1
 
     def tearDown(self):
-        if self.sleep_mock:
-            self.sleep_mock.stop()
-            self.sleep_mock = None
+        self.sleep_mock.stop()
         self.offset_patch.stop()
         self.total_patch.stop()
         super(TestDeployment, self).tearDown()
 
     def test_delete_deployment_rest_client_error(self):
-
-        test_name = 'test_delete_deployment_rest_client_error'
-        _ctx = self.get_mock_ctx(test_name)
-        current_ctx.set(_ctx)
-
-        _ctx.instance.runtime_properties['deployment'] = {}
-        _ctx.instance.runtime_properties['deployment']['id'] = test_name
-        # Tests that deployments delete fails on rest client error
+        deployment_name = 'dep_name'
+        self._ctx.instance.runtime_properties['deployment'] = {}
+        self._ctx.instance.runtime_properties['deployment']['id'] =\
+            deployment_name
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             cfy_mock_client = MockCloudifyRestClient()
             cfy_mock_client.deployments.delete = REST_CLIENT_EXCEPTION
             mock_client.return_value = cfy_mock_client
             error = self.assertRaises(NonRecoverableError,
                                       delete_deployment,
-                                      deployment_id=test_name,
+                                      deployment_id=deployment_name,
                                       timeout=.01)
             self.assertIn('action delete failed',
                           error.message)
 
     def test_upload_plugins(self):
-        # Tests that deployments upload plugins
-
-        test_name = 'test_delete_deployment_success'
-        _ctx = self.get_mock_ctx(test_name)
-        current_ctx.set(_ctx)
-
         get_local_path = mock.Mock(return_value="some_path")
 
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
@@ -124,7 +109,7 @@ class TestDeployment(ComponentTestBase):
                         mock.call('_zip')])
 
             get_local_path = mock.Mock(return_value="some_path")
-            zip_files = mock.Mock(return_value="_zip")
+
             with mock.patch(
                 'cloudify_types.component.component.get_local_path',
                 get_local_path
@@ -168,16 +153,10 @@ class TestDeployment(ComponentTestBase):
                           "and plugin_yaml_path: ''", error.message)
 
     def test_delete_deployment_success(self):
-        # Tests that deployments delete succeeds
-
-        test_name = 'test_delete_deployment_success'
-        _ctx = self.get_mock_ctx(test_name)
-        current_ctx.set(_ctx)
-
-        _ctx.instance.runtime_properties['deployment'] = {}
-        _ctx.instance.runtime_properties['deployment']['id'] = test_name
-        _ctx.instance.runtime_properties['secrets'] = {'a': 'b'}
-        _ctx.instance.runtime_properties['plugins'] = ['plugin_id']
+        self._ctx.instance.runtime_properties['deployment'] = {}
+        self._ctx.instance.runtime_properties['deployment']['id'] = 'dep_name'
+        self._ctx.instance.runtime_properties['secrets'] = {'a': 'b'}
+        self._ctx.instance.runtime_properties['plugins'] = ['plugin_id']
 
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             cfy_mock_client = MockCloudifyRestClient()
@@ -200,17 +179,10 @@ class TestDeployment(ComponentTestBase):
                 plugin_id='plugin_id')
 
     def test_delete_deployment_any_dep_by_id(self):
-        # Tests that deployments runs any_dep_by_id
-        test_name = 'test_delete_deployment_any_dep_by_id'
-        _ctx = self.get_mock_ctx(test_name)
-        current_ctx.set(_ctx)
-
-        _ctx.instance.runtime_properties['deployment'] = {}
-        _ctx.instance.runtime_properties['deployment']['id'] = test_name
+        self._ctx.instance.runtime_properties['deployment'] = {}
+        self._ctx.instance.runtime_properties['deployment']['id'] = 'dep_name'
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             mock_client.return_value = MockCloudifyRestClient()
-            _ctx.instance.runtime_properties['deployment'] = {}
-            _ctx.instance.runtime_properties['deployment']['id'] = test_name
             output = delete_deployment(
                 operation='delete_deployment',
                 deployment_id='test_deployments_delete',
@@ -218,14 +190,9 @@ class TestDeployment(ComponentTestBase):
             self.assertTrue(output)
 
     def test_create_deployment_rest_client_error(self):
-        # Tests that deployments create fails on rest client error
-
-        test_name = 'test_create_deployment_rest_client_error'
-        _ctx = self.get_mock_ctx(test_name)
-        current_ctx.set(_ctx)
-        _ctx.instance.runtime_properties['deployment'] = {}
-        _ctx.instance.runtime_properties['deployment']['id'] = test_name
-        _ctx.instance.runtime_properties['deployment']['outputs'] = {}
+        self._ctx.instance.runtime_properties['deployment'] = {}
+        self._ctx.instance.runtime_properties['deployment']['id'] = 'dep_name'
+        self._ctx.instance.runtime_properties['deployment']['outputs'] = {}
 
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             cfy_mock_client = MockCloudifyRestClient()
@@ -240,14 +207,9 @@ class TestDeployment(ComponentTestBase):
                           error.message)
 
     def test_create_deployment_timeout(self):
-        # Tests that deployments create fails on timeout
-
-        test_name = 'test_create_deployment_timeout'
-        _ctx = self.get_mock_ctx(test_name)
-        current_ctx.set(_ctx)
-        _ctx.instance.runtime_properties['deployment'] = {}
-        _ctx.instance.runtime_properties['deployment']['id'] = test_name
-        _ctx.instance.runtime_properties['deployment']['outputs'] = {}
+        self._ctx.instance.runtime_properties['deployment'] = {}
+        self._ctx.instance.runtime_properties['deployment']['id'] = 'dep_name'
+        self._ctx.instance.runtime_properties['deployment']['outputs'] = {}
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             cfy_mock_client = MockCloudifyRestClient()
             list_response = cfy_mock_client.executions.list()
@@ -276,13 +238,7 @@ class TestDeployment(ComponentTestBase):
                 self.assertIn('Execution timeout', error.message)
 
     def test_create_deployment_success(self):
-        # Tests that create deployment succeeds
-
-        test_name = 'test_create_deployment_success'
-        _ctx = self.get_mock_ctx(test_name)
-        current_ctx.set(_ctx)
-
-        _ctx.node.properties['secrets'] = {'a': 'b'}
+        self._ctx.node.properties['secrets'] = {'a': 'b'}
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             cfy_mock_client = MockCloudifyRestClient()
             list_response = cfy_mock_client.executions.list()
@@ -317,6 +273,8 @@ class TestDeployment(ComponentTestBase):
 
         test_name = 'test_create_deployment_exists'
         _ctx = self.get_mock_ctx(test_name)
+        from cloudify.state import current_ctx
+
         current_ctx.set(_ctx)
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             cfy_mock_client = MockCloudifyRestClient()

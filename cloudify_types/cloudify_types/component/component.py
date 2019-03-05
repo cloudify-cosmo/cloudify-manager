@@ -37,7 +37,7 @@ from .constants import (
     DEP_DELETE,
     EXEC_START,
     EXEC_LIST,
-    DEP_TYPE)
+    NODE_TYPE)
 from .polling import (
     any_bp_by_id,
     any_dep_by_id,
@@ -461,7 +461,7 @@ class Component(object):
 
         type_hierarchy = ctx.node.type_hierarchy
 
-        if DEP_TYPE in type_hierarchy:
+        if NODE_TYPE in type_hierarchy:
             ctx.logger.info('Start post execute component')
             return self.post_execute_component()
 

@@ -18,56 +18,43 @@ from cloudify.state import current_ctx
 from cloudify.exceptions import NonRecoverableError
 from cloudify_rest_client.exceptions import CloudifyClientError
 
+from ..constants import EXTERNAL_RESOURCE
 from .client_mock import MockCloudifyRestClient
 from ..component_operations import execute_start
-from ..constants import EXTERNAL_RESOURCE, DEP_TYPE
 from .base_test_suite import ComponentTestBase, REST_CLIENT_EXCEPTION
 
 
 class TestExecute(ComponentTestBase):
 
-    sleep_mock = None
+    @classmethod
+    def setUpClass(cls):
+        super(TestExecute, cls).setUpClass()
+        mock_sleep = mock.MagicMock()
+        cls.sleep_mock = mock.patch('time.sleep', mock_sleep)
+        cls.sleep_mock.start()
 
     def setUp(self):
         super(TestExecute, self).setUp()
-        mock_sleep = mock.MagicMock()
-        self.sleep_mock = mock.patch('time.sleep', mock_sleep)
-        self.sleep_mock.start()
+        self._ctx.instance.runtime_properties['deployment'] = {}
 
-    def tearDown(self):
-        if self.sleep_mock:
-            self.sleep_mock.stop()
-            self.sleep_mock = None
-        super(TestExecute, self).tearDown()
+    @classmethod
+    def tearDownClass(cls):
+        cls.sleep_mock.stop()
+        super(TestExecute, cls).tearDownClass()
 
     def test_execute_start_rest_client_error(self):
-        # Tests that execute start fails on rest client error
-
-        test_name = 'test_execute_start_rest_client_error'
-        _ctx = self.get_mock_ctx(test_name)
-        current_ctx.set(_ctx)
-        _ctx.instance.runtime_properties['deployment'] = {}
-
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             cfy_mock_client = MockCloudifyRestClient()
             cfy_mock_client.executions.start = REST_CLIENT_EXCEPTION
             mock_client.return_value = cfy_mock_client
             error = self.assertRaises(NonRecoverableError,
                                       execute_start,
-                                      deployment_id=test_name,
+                                      deployment_id='dep_name',
                                       workflow_id='install')
             self.assertIn('action start failed',
                           error.message)
-        del _ctx, mock_client
 
     def test_execute_start_timeout(self):
-        # Tests that execute start fails on timeout
-
-        test_name = 'test_execute_start_timeout'
-        _ctx = self.get_mock_ctx(test_name)
-        current_ctx.set(_ctx)
-        _ctx.instance.runtime_properties['deployment'] = {}
-
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             mock_client.return_value = MockCloudifyRestClient()
             poll_with_timeout_test = \
@@ -76,22 +63,14 @@ class TestExecute(ComponentTestBase):
                 poll.return_value = False
                 error = self.assertRaises(NonRecoverableError,
                                           execute_start,
-                                          deployment_id=test_name,
+                                          deployment_id='dep_name',
                                           workflow_id='install',
                                           timeout=.001)
                 self.assertIn(
                     'Execution timeout',
                     error.message)
-        del _ctx, mock_client
 
     def test_execute_start_succeeds(self):
-        # Tests that execute start succeeds
-
-        test_name = 'test_execute_start_succeeds'
-        _ctx = self.get_mock_ctx(test_name)
-        current_ctx.set(_ctx)
-        _ctx.instance.runtime_properties['deployment'] = {}
-
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             mock_client.return_value = MockCloudifyRestClient()
             poll_with_timeout_test = \
@@ -99,18 +78,16 @@ class TestExecute(ComponentTestBase):
             with mock.patch(poll_with_timeout_test) as poll:
                 poll.return_value = True
                 output = execute_start(operation='execute_workflow',
-                                       deployment_id=test_name,
+                                       deployment_id='dep_name',
                                        workflow_id='install',
                                        timeout=.001)
                 self.assertTrue(output)
-        del _ctx, mock_client
 
     def test_execute_deployment_not_ready(self):
-        # Tests that execute start succeeds
-
         test_name = 'test_execute_deployment_not_ready'
         _ctx = self.get_mock_ctx(test_name)
         current_ctx.set(_ctx)
+
         _ctx.instance.runtime_properties['deployment'] = {}
         _ctx.instance.runtime_properties['resource_config'] = {
             'deployment': {
@@ -133,7 +110,6 @@ class TestExecute(ComponentTestBase):
                 return list_response
 
             cfy_mock_client.executions.list = mock_return
-
             mock_client.return_value = cfy_mock_client
 
             output = execute_start(operation='execute_workflow',
@@ -141,16 +117,8 @@ class TestExecute(ComponentTestBase):
                                    workflow_id='install',
                                    timeout=.001)
             self.assertIsNone(output)
-        del _ctx, mock_client
 
     def test_execute_start_succeeds_not_finished(self):
-        # Tests that execute start succeeds
-
-        test_name = 'test_execute_start_succeeds_not_finished'
-        _ctx = self.get_mock_ctx(test_name)
-        current_ctx.set(_ctx)
-        _ctx.instance.runtime_properties['deployment'] = {}
-
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             mock_client.return_value = MockCloudifyRestClient()
             poll_with_timeout_test = \
@@ -159,20 +127,14 @@ class TestExecute(ComponentTestBase):
             with mock.patch(poll_with_timeout_test) as poll:
                 poll.return_value = False
                 output = execute_start(operation='execute_workflow',
-                                       deployment_id=test_name,
+                                       deployment_id='dep_name',
                                        workflow_id='install',
                                        timeout=.001)
                 self.assertTrue(output)
-        del _ctx, mock_client
 
-    def test_execute_start_succeeds_weird_node_type(self):
-        # Tests that execute start succeeds
-
-        test_name = 'test_execute_start_succeeds_weird_node_type'
-        _ctx = self.get_mock_ctx(test_name, node_type='node.weird')
-        current_ctx.set(_ctx)
-        # _ctx.node.type = 'cloudify.nodes.WeirdNodeType'
-        _ctx.instance.runtime_properties['deployment'] = {}
+    def test_execute_start_succeeds_not_existing_node_type(self):
+        self._ctx = self.get_mock_ctx('test', node_type='node.weird')
+        current_ctx.set(self._ctx)
 
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             mock_client.return_value = MockCloudifyRestClient()
@@ -184,21 +146,12 @@ class TestExecute(ComponentTestBase):
                 self.assertRaises(NonRecoverableError,
                                   execute_start,
                                   operation='execute_workflow',
-                                  deployment_id=test_name,
+                                  deployment_id='dep_name',
                                   workflow_id='install',
                                   timeout=.001)
-        del _ctx, mock_client
 
     def test_post_execute_client_error(self):
-        # Tests that execute client error ignored
-
-        test_name = 'test_post_execute_client_error'
-        _ctx = self.get_mock_ctx(test_name, node_type=DEP_TYPE)
-        current_ctx.set(_ctx)
-        _ctx.instance.runtime_properties['deployment'] = dict()
-
         cfy_mock_client = MockCloudifyRestClient()
-
         cfy_mock_client.deployments.outputs.get = \
             mock.MagicMock(side_effect=CloudifyClientError('Mistake'))
 
@@ -216,8 +169,7 @@ class TestExecute(ComponentTestBase):
                 self.assertRaises(NonRecoverableError,
                                   execute_start,
                                   operation='execute_workflow',
-                                  deployment_id=test_name,
+                                  deployment_id='dep_name',
                                   workflow_id='install',
                                   client={'host': 'localhost'},
                                   timeout=.001)
-        del _ctx

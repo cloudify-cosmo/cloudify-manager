@@ -28,4 +28,4 @@ DEP_DELETE = 'delete'
 EXEC_START = 'start'
 EXEC_LIST = 'list'
 
-DEP_TYPE = 'cloudify.nodes.Component'
+NODE_TYPE = 'cloudify.nodes.Component'
