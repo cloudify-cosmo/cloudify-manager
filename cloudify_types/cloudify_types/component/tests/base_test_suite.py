@@ -42,6 +42,8 @@ COMPONENT_PROPS = {
     }
 }
 
+MOCK_TIMEOUT = .0001
+
 
 class ComponentTestBase(testtools.TestCase):
     def setUp(self):

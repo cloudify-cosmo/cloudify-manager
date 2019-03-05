@@ -26,13 +26,13 @@ def upload_blueprint(operation, **_):
 
 @operation
 @utils.proxy_operation('create_deployment')
-def create_deployment(operation, **_):
+def create(operation, **_):
     return getattr(Component(_), operation)()
 
 
 @operation
 @utils.proxy_operation('delete_deployment')
-def delete_deployment(operation, **_):
+def delete(operation, **_):
     return getattr(Component(_), operation)()
 
 

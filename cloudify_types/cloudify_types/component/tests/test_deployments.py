@@ -14,12 +14,15 @@
 
 import mock
 
+from cloudify.state import current_ctx
 from cloudify.exceptions import NonRecoverableError
 
 from .client_mock import MockCloudifyRestClient
-from ..component_operations import create_deployment, delete_deployment
+from ..component_operations import create, delete
 from cloudify_types.component.component import Component
-from .base_test_suite import ComponentTestBase, REST_CLIENT_EXCEPTION
+from .base_test_suite import (ComponentTestBase,
+                              REST_CLIENT_EXCEPTION,
+                              MOCK_TIMEOUT)
 
 
 class TestDeployment(ComponentTestBase):
@@ -59,9 +62,9 @@ class TestDeployment(ComponentTestBase):
             cfy_mock_client.deployments.delete = REST_CLIENT_EXCEPTION
             mock_client.return_value = cfy_mock_client
             error = self.assertRaises(NonRecoverableError,
-                                      delete_deployment,
+                                      delete,
                                       deployment_id=deployment_name,
-                                      timeout=.01)
+                                      timeout=MOCK_TIMEOUT)
             self.assertIn('action delete failed',
                           error.message)
 
@@ -84,21 +87,15 @@ class TestDeployment(ComponentTestBase):
                     'cloudify_types.component.component.zip_files',
                     zip_files
                 ):
-                    # empty plugins
-                    deployment = Component({'plugins': []})
-                    deployment._upload_plugins()
-                    zip_files.assert_not_called()
-                    get_local_path.assert_not_called()
-
                     # dist of plugins
-                    deployment = Component({'plugins': {
+                    component = Component({'plugins': {
                         'base_plugin': {
                             'wagon_path': '_wagon_path',
                             'plugin_yaml_path': '_plugin_yaml_path'}}})
                     os_mock = mock.Mock()
                     with mock.patch('cloudify_types.component.component.os',
                                     os_mock):
-                        deployment._upload_plugins()
+                        component._upload_plugins()
                     zip_files.assert_called_with(["some_path", "some_path"])
                     get_local_path.assert_has_calls([
                         mock.call('_wagon_path', create_temp=True),
@@ -108,47 +105,35 @@ class TestDeployment(ComponentTestBase):
                         mock.call('some_path'),
                         mock.call('_zip')])
 
-            get_local_path = mock.Mock(return_value="some_path")
+    def test_upload_empty_plugins(self):
+        get_local_path = mock.Mock(return_value="some_path")
 
+        with mock.patch('cloudify.manager.get_rest_client'):
+            zip_files = mock.Mock(return_value="_zip")
             with mock.patch(
-                'cloudify_types.component.component.get_local_path',
-                get_local_path
+                'cloudify_types.component.component.zip_files',
+                zip_files
             ):
-                zip_files = mock.Mock(return_value="_zip")
-                with mock.patch(
-                    'cloudify_types.component.component.zip_files',
-                    zip_files
-                ):
-                    # list of plugins
-                    deployment = Component({'plugins': [{
-                            'wagon_path': '_wagon_path',
-                            'plugin_yaml_path': '_plugin_yaml_path'}]})
-                    os_mock = mock.Mock()
-                    with mock.patch('cloudify_types.component.component.os',
-                                    os_mock):
-                        deployment._upload_plugins()
-                    zip_files.assert_called_with(["some_path", "some_path"])
-                    get_local_path.assert_has_calls([
-                        mock.call('_wagon_path', create_temp=True),
-                        mock.call('_plugin_yaml_path', create_temp=True)])
-                    os_mock.remove.assert_has_calls([
-                        mock.call('some_path'),
-                        mock.call('some_path'),
-                        mock.call('_zip')])
+                # empty plugins
+                component = Component({'plugins': {}})
+                component._upload_plugins()
+                zip_files.assert_not_called()
+                get_local_path.assert_not_called()
 
-            # raise error if wrong plugins list
-            deployment = Component({'plugins': True})
+    def test_upload_plugins_with_wrong_format(self):
+        with mock.patch('cloudify.manager.get_rest_client'):
+            component = Component({'plugins': True})
             error = self.assertRaises(NonRecoverableError,
-                                      deployment._upload_plugins)
+                                      component._upload_plugins)
             self.assertIn('Wrong type in plugins: True',
                           error.message)
 
-            # raise error if wrong wagon/yaml values
-            deployment = Component({'plugins': [{
-                'wagon_path': '',
-                'plugin_yaml_path': ''}]})
+            component = Component({'plugins': {
+                'base_plugin': {
+                    'wagon_path': '',
+                    'plugin_yaml_path': ''}}})
             error = self.assertRaises(NonRecoverableError,
-                                      deployment._upload_plugins)
+                                      component._upload_plugins)
             self.assertIn("You should provide both values wagon_path: '' "
                           "and plugin_yaml_path: ''", error.message)
 
@@ -168,10 +153,10 @@ class TestDeployment(ComponentTestBase):
                 'cloudify_types.component.polling.poll_with_timeout'
             with mock.patch(poll_with_timeout_test) as poll:
                 poll.return_value = True
-                output = delete_deployment(
+                output = delete(
                     operation='delete_deployment',
                     deployment_id='test_deployments_delete',
-                    timeout=.001)
+                    timeout=MOCK_TIMEOUT)
                 self.assertTrue(output)
 
             cfy_mock_client.secrets.delete.assert_called_with(key='a')
@@ -183,10 +168,10 @@ class TestDeployment(ComponentTestBase):
         self._ctx.instance.runtime_properties['deployment']['id'] = 'dep_name'
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             mock_client.return_value = MockCloudifyRestClient()
-            output = delete_deployment(
+            output = delete(
                 operation='delete_deployment',
                 deployment_id='test_deployments_delete',
-                timeout=.01)
+                timeout=MOCK_TIMEOUT)
             self.assertTrue(output)
 
     def test_create_deployment_rest_client_error(self):
@@ -199,10 +184,10 @@ class TestDeployment(ComponentTestBase):
             cfy_mock_client.deployments.create = REST_CLIENT_EXCEPTION
             mock_client.return_value = cfy_mock_client
             error = self.assertRaises(NonRecoverableError,
-                                      create_deployment,
+                                      create,
                                       deployment_id='test_deployments_create',
                                       blueprint_id='test_deployments_create',
-                                      timeout=.01)
+                                      timeout=MOCK_TIMEOUT)
             self.assertIn('action create failed',
                           error.message)
 
@@ -231,9 +216,10 @@ class TestDeployment(ComponentTestBase):
             with mock.patch(poll_with_timeout_test) as poll:
                 poll.return_value = False
                 error = self.assertRaises(
-                    NonRecoverableError, create_deployment,
+                    NonRecoverableError, create,
                     deployment_id='test_create_deployment_timeout',
-                    blueprint_id='test', timeout=.01)
+                    blueprint_id='test',
+                    timeout=MOCK_TIMEOUT)
 
                 self.assertIn('Execution timeout', error.message)
 
@@ -261,19 +247,16 @@ class TestDeployment(ComponentTestBase):
             with mock.patch(poll_with_timeout_test) as poll:
                 poll.return_value = True
 
-                output = create_deployment(operation='create_deployment',
-                                           timeout=.01)
+                output = create(operation='create_deployment',
+                                timeout=MOCK_TIMEOUT)
                 self.assertTrue(output)
 
             cfy_mock_client.secrets.create.assert_called_with(key='a',
                                                               value='b')
 
     def test_create_deployment_exists(self):
-        # Tests that create deployment exists
-
         test_name = 'test_create_deployment_exists'
         _ctx = self.get_mock_ctx(test_name)
-        from cloudify.state import current_ctx
 
         current_ctx.set(_ctx)
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
@@ -287,6 +270,6 @@ class TestDeployment(ComponentTestBase):
 
             cfy_mock_client.deployments.list = mock_return
             mock_client.return_value = cfy_mock_client
-            output = create_deployment(operation='create_deployment',
-                                       timeout=.01)
+            output = create(operation='create_deployment',
+                            timeout=MOCK_TIMEOUT)
             self.assertFalse(output)

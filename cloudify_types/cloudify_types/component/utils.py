@@ -33,17 +33,7 @@ def generate_traceback_exception():
     return response
 
 
-def get_desired_value(key,
-                      args,
-                      instance_attr,
-                      node_prop):
-
-    return (args.get(key) or
-            instance_attr.get(key) or
-            node_prop.get(key))
-
-
-def update_attributes(_type, _key, _value):
+def update_runtime_properties(_type, _key, _value):
     ctx.instance.runtime_properties[_type][_key] = _value
 
 
@@ -156,13 +146,14 @@ def zip(source, destination, include_folder=True):
                     else source
                 zip_file.write(
                     file_path, os.path.relpath(file_path, source_dir))
+    ctx.logger.debug('Successful zip archive creation')
     return destination
 
 
-def zip_files(files):
+def zip_files(files_paths):
     source_folder = tempfile.mkdtemp()
     destination_zip = source_folder + '.zip'
-    for path in files:
+    for path in files_paths:
         copy(path, source_folder)
     zip(source_folder, destination_zip, include_folder=False)
     shutil.rmtree(source_folder)

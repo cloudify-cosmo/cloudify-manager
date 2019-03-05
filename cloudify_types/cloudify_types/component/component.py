@@ -43,17 +43,24 @@ from .polling import (
     any_dep_by_id,
     poll_with_timeout,
     poll_workflow_after_execute,
-    dep_system_workflows_finished
+    is_system_workflows_finished
 )
 from .utils import (
-    get_desired_value,
-    update_attributes,
+    update_runtime_properties,
     get_local_path,
     zip_files
 )
 
 
 class Component(object):
+
+    @staticmethod
+    def get_desired_operation_input(key,
+                                    args):
+
+        return (args.get(key) or
+                ctx.instance.runtime_properties.get(key) or
+                ctx.node.properties.get(key))
 
     def __init__(self, operation_inputs):
         """
@@ -71,36 +78,20 @@ class Component(object):
             str(operation_inputs.pop('pagination_size', 1000))
 
         # cloudify client
-        self.client_config = get_desired_value(
-            'client', operation_inputs,
-            ctx.instance.runtime_properties,
-            ctx.node.properties
-        )
+        self.client_config = self.get_desired_operation_input(
+            'client', operation_inputs)
 
         if self.client_config:
             self.client = CloudifyClient(**self.client_config)
         else:
             self.client = manager.get_rest_client()
 
-        # plugins
-        self.plugins = get_desired_value(
-            'plugins', operation_inputs,
-            ctx.instance.runtime_properties,
-            ctx.node.properties
-        )
-
-        # secrets
-        self.secrets = get_desired_value(
-            'secrets', operation_inputs,
-            ctx.instance.runtime_properties,
-            ctx.node.properties
-        )
-
-        # resource_config
-        self.config = get_desired_value(
-            'resource_config', operation_inputs,
-            ctx.instance.runtime_properties,
-            ctx.node.properties)
+        self.plugins = self.get_desired_operation_input(
+            'plugins', operation_inputs)
+        self.secrets = self.get_desired_operation_input(
+            'secrets', operation_inputs)
+        self.config = self.get_desired_operation_input(
+            'resource_config', operation_inputs)
 
         # Blueprint-related properties
         self.blueprint = self.config.get('blueprint', {})
@@ -159,25 +150,25 @@ class Component(object):
         if 'blueprint' not in ctx.instance.runtime_properties.keys():
             ctx.instance.runtime_properties['blueprint'] = dict()
 
-        update_attributes('blueprint', 'id', self.blueprint_id)
-        update_attributes(
+        update_runtime_properties('blueprint', 'id', self.blueprint_id)
+        update_runtime_properties(
             'blueprint', 'blueprint_archive', self.blueprint_archive)
-        update_attributes(
+        update_runtime_properties(
             'blueprint', 'application_file_name', self.blueprint_file_name)
 
-        blueprint_is = any_bp_by_id(self.client, self.blueprint_id)
+        blueprint_exists = any_bp_by_id(self.client, self.blueprint_id)
 
-        if self.blueprint.get(EXTERNAL_RESOURCE) and not blueprint_is:
+        if self.blueprint.get(EXTERNAL_RESOURCE) and not blueprint_exists:
             raise NonRecoverableError(
                 'Blueprint ID {0} does not exist, '
                 'but {1} is {2}.'.format(
                     self.blueprint_id,
                     EXTERNAL_RESOURCE,
                     self.blueprint.get(EXTERNAL_RESOURCE)))
-        elif self.blueprint.get(EXTERNAL_RESOURCE) and blueprint_is:
+        elif self.blueprint.get(EXTERNAL_RESOURCE) and blueprint_exists:
             ctx.logger.info("Used external blueprint.")
             return False
-        elif blueprint_is:
+        elif blueprint_exists:
             ctx.logger.warn(
                 'Blueprint ID {0} exists, '
                 'but {1} is {2}. Will use.'.format(
@@ -209,90 +200,91 @@ class Component(object):
                                            client_args)
 
     def _upload_plugins(self):
-        # plugins
-        if self.plugins:
-            if 'plugins' not in ctx.instance.runtime_properties.keys():
-                ctx.instance.runtime_properties['plugins'] = []
+        if not self.plugins:
+            return
 
-            if isinstance(self.plugins, list):
-                plugins_list = self.plugins
-            elif isinstance(self.plugins, dict):
-                plugins_list = self.plugins.values()
-            else:
-                raise NonRecoverableError(
-                    'Wrong type in plugins: {}'.format(repr(self.plugins)))
-            for plugin in plugins_list:
-                ctx.logger.info('Creating plugin zip archive..')
-                wagon_path = None
-                yaml_path = None
-                zip_path = None
-                try:
-                    if (
-                        not plugin.get('wagon_path') or
-                        not plugin.get('plugin_yaml_path')
-                    ):
-                        raise NonRecoverableError(
-                            'You should provide both values wagon_path: {}'
-                            ' and plugin_yaml_path: {}'
-                            .format(repr(plugin.get('wagon_path')),
-                                    repr(plugin.get('plugin_yaml_path'))))
-                    wagon_path = get_local_path(plugin['wagon_path'],
-                                                create_temp=True)
-                    yaml_path = get_local_path(plugin['plugin_yaml_path'],
-                                               create_temp=True)
-                    zip_path = zip_files([wagon_path, yaml_path])
-                    # upload plugin
-                    plugin = self.dp_get_client_response(
-                        'plugins', PLUGIN_UPLOAD, {'plugin_path': zip_path})
-                    ctx.instance.runtime_properties['plugins'].append(
-                        plugin.id)
-                    ctx.logger.info('Uploaded {}'.format(repr(plugin.id)))
-                finally:
-                    if wagon_path:
-                        os.remove(wagon_path)
-                    if yaml_path:
-                        os.remove(yaml_path)
-                    if zip_path:
-                        os.remove(zip_path)
+        if 'plugins' not in ctx.instance.runtime_properties.keys():
+            ctx.instance.runtime_properties['plugins'] = []
+
+        if isinstance(self.plugins, dict):
+            plugins_list = self.plugins.values()
+        else:
+            raise NonRecoverableError(
+                'Wrong type in plugins: {}'.format(repr(self.plugins)))
+
+        for plugin in plugins_list:
+            ctx.logger.info('Creating plugin zip archive..')
+            wagon_path = None
+            yaml_path = None
+            zip_path = None
+            try:
+                if (
+                    not plugin.get('wagon_path') or
+                    not plugin.get('plugin_yaml_path')
+                ):
+                    raise NonRecoverableError(
+                        'You should provide both values wagon_path: {}'
+                        ' and plugin_yaml_path: {}'
+                        .format(repr(plugin.get('wagon_path')),
+                                repr(plugin.get('plugin_yaml_path'))))
+                wagon_path = get_local_path(plugin['wagon_path'],
+                                            create_temp=True)
+                yaml_path = get_local_path(plugin['plugin_yaml_path'],
+                                           create_temp=True)
+                zip_path = zip_files([wagon_path, yaml_path])
+
+                # upload plugin
+                plugin = self.dp_get_client_response(
+                    'plugins', PLUGIN_UPLOAD, {'plugin_path': zip_path})
+                ctx.instance.runtime_properties['plugins'].append(
+                    plugin.id)
+                ctx.logger.info('Uploaded {}'.format(repr(plugin.id)))
+            finally:
+                if wagon_path:
+                    os.remove(wagon_path)
+                if yaml_path:
+                    os.remove(yaml_path)
+                if zip_path:
+                    os.remove(zip_path)
 
     def _set_secrets(self):
-        # secrets set
-        if self.secrets:
-            for secret_name in self.secrets:
-                self.dp_get_client_response('secrets', SECRETS_CREATE, {
-                    'key': secret_name,
-                    'value': self.secrets[secret_name],
-                })
-                ctx.logger.info('Created secret {}'.format(repr(secret_name)))
+        if not self.secrets:
+            return
+
+        for secret_name in self.secrets:
+            self.dp_get_client_response('secrets', SECRETS_CREATE, {
+                'key': secret_name,
+                'value': self.secrets[secret_name],
+            })
+            ctx.logger.info('Created secret {}'.format(repr(secret_name)))
 
     def create_deployment(self):
-
         self._set_secrets()
         self._upload_plugins()
 
-        client_args = \
-            dict(blueprint_id=self.blueprint_id,
-                 deployment_id=self.deployment_id,
-                 inputs=self.deployment_inputs)
+        client_args = {
+            'blueprint_id': self.blueprint_id,
+            'deployment_id': self.deployment_id,
+            'inputs': self.deployment_inputs}
 
         if 'deployment' not in ctx.instance.runtime_properties.keys():
             ctx.instance.runtime_properties['deployment'] = dict()
 
-        update_attributes('deployment', 'id', self.deployment_id)
+        update_runtime_properties('deployment', 'id', self.deployment_id)
 
-        deployment_is = any_dep_by_id(self.client, self.deployment_id)
+        deployment_exists = any_dep_by_id(self.client, self.deployment_id)
 
-        if self.deployment.get(EXTERNAL_RESOURCE) and deployment_is:
+        if self.deployment.get(EXTERNAL_RESOURCE) and deployment_exists:
             ctx.logger.info("Used external deployment.")
             return False
-        elif self.deployment.get(EXTERNAL_RESOURCE) and not deployment_is:
+        elif self.deployment.get(EXTERNAL_RESOURCE) and not deployment_exists:
             raise NonRecoverableError(
                 'Deployment ID {0} does not exist, '
                 'but {1} is {2}.'.format(
                     self.deployment_id,
                     EXTERNAL_RESOURCE,
                     self.deployment.get(EXTERNAL_RESOURCE)))
-        elif deployment_is:
+        elif deployment_exists:
             ctx.logger.warn(
                 'Deployment ID {0} exists, '
                 'but {1} is {2}. Will use.'.format(
@@ -309,25 +301,21 @@ class Component(object):
         # ``execution_id`` of current deployment ``self.deployment_id``
 
         # Prepare executions list fields
-        exec_list_fields = \
-            ['status', 'workflow_id', 'created_at', 'id', 'deployment_id']
+        execution_list_fields = ['workflow_id', 'id']
 
         # Call list executions for the current deployment
-        _execs = self.dp_get_client_response(
+        executions = self.dp_get_client_response(
             'executions', EXEC_LIST,
             {
                 'deployment_id': self.deployment_id,
-                '_include': exec_list_fields
+                '_include': execution_list_fields
             }
         )
 
         # Retrieve the ``execution_id`` associated with the current deployment
-        for _exec in _execs:
-            if _exec.get('workflow_id') == 'create_deployment_environment':
-                self.execution_id = _exec.get('id')
-                ctx.logger.info("Found execution_id {0} for deployment_id {1}"
-                                .format(_exec.get('id'), self.deployment_id))
-                break
+        self.execution_id = [execution.get('id') for execution in executions
+                             if (execution.get('workflow_id') ==
+                                 'create_deployment_environment')]
 
         # If the ``execution_id`` cannot be found raise error
         if not self.execution_id:
@@ -335,12 +323,14 @@ class Component(object):
                 'No execution id Found for deployment'
                 ' {0}'.format(self.deployment_id)
             )
-
+        ctx.logger.info("Found execution_id {0} for deployment_id {1}"
+                        .format(self.execution_id,
+                                self.deployment_id))
         return self.verify_execution_successful()
 
     def _delete_plugins(self):
-        # remove uploaded plugins
         plugins = ctx.instance.runtime_properties.get('plugins', [])
+
         for plugin_id in plugins:
             self.dp_get_client_response('plugins', PLUGIN_DELETE, {
                 'plugin_id': plugin_id
@@ -348,16 +338,17 @@ class Component(object):
             ctx.logger.info('Removed plugin {}'.format(repr(plugin_id)))
 
     def _delete_secrets(self):
-        # secrets delete
-        if self.secrets:
-            for secret_name in self.secrets:
-                self.dp_get_client_response('secrets', SECRETS_DELETE, {
-                    'key': secret_name,
-                })
-                ctx.logger.info('Removed secret {}'.format(repr(secret_name)))
+        if not self.secrets:
+            return
 
-    def _delete_properties(self):
-        # remove properties
+        for secret_name in self.secrets:
+            self.dp_get_client_response('secrets', SECRETS_DELETE, {
+                'key': secret_name,
+            })
+            ctx.logger.info('Removed secret {}'.format(repr(secret_name)))
+
+    @staticmethod
+    def _delete_properties():
         for property_name in ['deployment', 'executions', 'blueprint',
                               'plugins']:
             if property_name in ctx.instance.runtime_properties:
@@ -369,23 +360,26 @@ class Component(object):
         poll_result = True
 
         if not self.deployment.get(EXTERNAL_RESOURCE):
-
-            ctx.logger.info("Wait for stop deployment related executions.")
+            ctx.logger.info("Wait for stop component's deployment "
+                            "related executions.")
 
             pollster_args = \
                 dict(_client=self.client,
                      _check_all_in_deployment=self.deployment_id)
 
             poll_with_timeout(
-                dep_system_workflows_finished,
+                is_system_workflows_finished,
                 timeout=self.timeout,
                 pollster_args=pollster_args,
                 expected_result=True)
 
-            ctx.logger.info("Delete deployment {0}".format(self.deployment_id))
-            self.dp_get_client_response('deployments', DEP_DELETE, client_args)
+            ctx.logger.info("Delete component's deployment "
+                            "{0}".format(self.deployment_id))
+            self.dp_get_client_response('deployments',
+                                        DEP_DELETE,
+                                        client_args)
 
-            ctx.logger.info("Wait for deployment delete.")
+            ctx.logger.info("Wait for component's deployment delete.")
 
             pollster_args = \
                 dict(_client=self.client,
@@ -403,13 +397,13 @@ class Component(object):
         pollster_args = \
             dict(_client=self.client)
         poll_with_timeout(
-            dep_system_workflows_finished,
+            is_system_workflows_finished,
             timeout=self.timeout,
             pollster_args=pollster_args,
             expected_result=True)
 
         if not self.blueprint.get(EXTERNAL_RESOURCE):
-            ctx.logger.info("Delete blueprint {0}."
+            ctx.logger.info("Delete component's blueprint {0}."
                             .format(self.blueprint_id))
             client_args = dict(blueprint_id=self.blueprint_id)
             self.dp_get_client_response('blueprints', BP_DELETE, client_args)
@@ -421,17 +415,22 @@ class Component(object):
         return poll_result
 
     def execute_workflow(self):
+        if NODE_TYPE not in ctx.node.type_hierarchy:
+            raise NonRecoverableError(
+                'Unsupported node type provided {0}'.format(ctx.node.type))
+
         if 'executions' not in ctx.instance.runtime_properties.keys():
             ctx.instance.runtime_properties['executions'] = dict()
 
-        update_attributes('executions', 'workflow_id', self.workflow_id)
+        update_runtime_properties(
+            'executions', 'workflow_id', self.workflow_id)
 
         # Wait for the deployment to finish any executions
         pollster_args = \
             dict(_client=self.client,
                  _check_all_in_deployment=self.deployment_id)
 
-        if not poll_with_timeout(dep_system_workflows_finished,
+        if not poll_with_timeout(is_system_workflows_finished,
                                  timeout=self.timeout,
                                  pollster_args=pollster_args,
                                  expected_result=True):
@@ -459,14 +458,11 @@ class Component(object):
 
             ctx.logger.debug('Polling execution succeeded')
 
-        type_hierarchy = ctx.node.type_hierarchy
+        ctx.logger.info('Start post execute component')
+        self.post_execute_component()
+        ctx.logger.info('End post execute component')
 
-        if NODE_TYPE in type_hierarchy:
-            ctx.logger.info('Start post execute component')
-            return self.post_execute_component()
-
-        raise NonRecoverableError(
-            'Unsupported node type provided {0}'.format(ctx.node.type))
+        return True
 
     def post_execute_component(self):
         runtime_prop = ctx.instance.runtime_properties['deployment']
@@ -475,7 +471,7 @@ class Component(object):
 
         if 'outputs' \
                 not in ctx.instance.runtime_properties['deployment'].keys():
-            update_attributes('deployment', 'outputs', dict())
+            update_runtime_properties('deployment', 'outputs', dict())
             ctx.logger.debug('No component outputs exist.')
 
         try:
@@ -497,7 +493,6 @@ class Component(object):
                 ctx.instance.runtime_properties[
                     'deployment']['outputs'][val] = \
                     dep_outputs.get(key, '')
-        return True
 
     def verify_execution_successful(self):
         return poll_workflow_after_execute(
@@ -508,4 +503,4 @@ class Component(object):
             self.workflow_state,
             self.workflow_id,
             self.execution_id,
-            _log_redirect=self.deployment_logs.get('redirect', True))
+            log_redirect=self.deployment_logs.get('redirect', True))
