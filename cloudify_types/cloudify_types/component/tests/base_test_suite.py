@@ -20,6 +20,8 @@ from cloudify.mocks import MockCloudifyContext
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 
+from ..constants import NODE_TYPE
+
 REST_CLIENT_EXCEPTION = \
     mock.MagicMock(side_effect=CloudifyClientError('Mistake'))
 
@@ -42,15 +44,20 @@ COMPONENT_PROPS = {
 
 
 class ComponentTestBase(testtools.TestCase):
+    def setUp(self):
+        super(ComponentTestBase, self).setUp()
+        self._ctx = self.get_mock_ctx('test')
+        self._ctx.logger.log = mock.MagicMock(return_value=None)
+        current_ctx.set(self._ctx)
 
     def tearDown(self):
         current_ctx.clear()
         super(ComponentTestBase, self).tearDown()
 
-    def get_mock_ctx(self,
-                     test_name,
+    @staticmethod
+    def get_mock_ctx(test_name,
                      test_properties=COMPONENT_PROPS,
-                     node_type='cloudify.nodes.Component',
+                     node_type=NODE_TYPE,
                      retry_number=0):
 
         test_node_id = test_name

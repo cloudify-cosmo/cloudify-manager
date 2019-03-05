@@ -30,25 +30,21 @@ class TestBlueprint(ComponentTestBase):
         super(TestBlueprint, self).setUp()
         self.resource_config = dict()
         self.resource_config['resource_config'] = {}
+        self.archive = 'sample_file.zip'
+
+        self._ctx._resources = {self.archive: 'Sample Blueprint'}
+        current_ctx.set(self._ctx)
 
     def test_upload_blueprint_rest_client_error(self):
-        # Tests that upload blueprint fails on rest client error
-
-        test_name = 'test_upload_blueprint_rest_client_error'
-        archive = 'sample_file.zip'
-        _ctx = self.get_mock_ctx(test_name)
-        _ctx._resources = {'sample_file.zip': 'Sample Blueprint'}
-        current_ctx.set(_ctx)
-
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             cfy_mock_client = MockCloudifyRestClient()
             cfy_mock_client.blueprints._upload = REST_CLIENT_EXCEPTION
             mock_client.return_value = cfy_mock_client
 
-            blueprint_params = {}
+            blueprint_params = dict()
             blueprint_params['blueprint'] = {}
-            blueprint_params['blueprint']['blueprint_id'] = test_name
-            blueprint_params['blueprint']['blueprint_archive'] = archive
+            blueprint_params['blueprint']['blueprint_id'] = 'blu_name'
+            blueprint_params['blueprint']['blueprint_archive'] = self.archive
             self.resource_config['resource_config'] = blueprint_params
 
             error = self.assertRaises(NonRecoverableError,
@@ -59,23 +55,16 @@ class TestBlueprint(ComponentTestBase):
             self.assertIn('_upload failed', error.message)
 
     def test_upload_blueprint_exists(self):
-        # Test that if the blueprint ID exists
-
-        test_name = 'test_upload_blueprint_exists'
-        archive = 'sample_file.zip'
-        _ctx = self.get_mock_ctx(test_name)
-        _ctx._resources = {'sample_file.zip': 'Sample Blueprint'}
-        current_ctx.set(_ctx)
-
+        blueprint_id = 'blu_name'
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             cfy_mock_client = MockCloudifyRestClient()
             list_response = cfy_mock_client.blueprints.list()
-            list_response[0]['id'] = test_name
+            list_response[0]['id'] = blueprint_id
 
-            blueprint_params = {}
+            blueprint_params = dict()
             blueprint_params['blueprint'] = {}
-            blueprint_params['blueprint']['blueprint_id'] = test_name
-            blueprint_params['blueprint']['blueprint_archive'] = archive
+            blueprint_params['blueprint']['id'] = blueprint_id
+            blueprint_params['blueprint']['blueprint_archive'] = self.archive
             blueprint_params['blueprint'][EXTERNAL_RESOURCE] = True
             self.resource_config['resource_config'] = blueprint_params
 
@@ -90,21 +79,13 @@ class TestBlueprint(ComponentTestBase):
             self.assertFalse(output)
 
     def test_upload_blueprint_success(self):
-        # Test that upload blueprint succeeds
-
-        test_name = 'test_upload_blueprint_success'
-        archive = 'sample_file.zip'
-        _ctx = self.get_mock_ctx(test_name)
-        _ctx._resources = {'sample_file.zip': 'Sample Blueprint'}
-        current_ctx.set(_ctx)
-
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             mock_client.return_value = MockCloudifyRestClient()
 
-            blueprint_params = {}
+            blueprint_params = dict()
             blueprint_params['blueprint'] = {}
-            blueprint_params['blueprint']['blueprint_id'] = test_name
-            blueprint_params['blueprint']['blueprint_archive'] = archive
+            blueprint_params['blueprint']['id'] = 'blu_name'
+            blueprint_params['blueprint']['blueprint_archive'] = self.archive
             self.resource_config['resource_config'] = blueprint_params
 
             output = upload_blueprint(operation='upload_blueprint',
@@ -112,23 +93,16 @@ class TestBlueprint(ComponentTestBase):
             self.assertTrue(output)
 
     def test_upload_blueprint_use_external(self):
-        # Test that upload blueprint succeeds
-
-        test_name = 'test_upload_blueprint_success'
-        archive = 'sample_file.zip'
-        _ctx = self.get_mock_ctx(test_name)
-        _ctx._resources = {'sample_file.zip': 'Sample Blueprint'}
-        current_ctx.set(_ctx)
-
+        blueprint_id = 'blu_name'
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             cfy_mock_client = MockCloudifyRestClient()
             list_response = cfy_mock_client.blueprints.list()
-            list_response[0]['id'] = test_name
+            list_response[0]['id'] = blueprint_id
 
-            blueprint_params = {}
+            blueprint_params = dict()
             blueprint_params['blueprint'] = {}
-            blueprint_params['blueprint']['blueprint_id'] = test_name
-            blueprint_params['blueprint']['blueprint_archive'] = archive
+            blueprint_params['blueprint']['id'] = blueprint_id
+            blueprint_params['blueprint']['blueprint_archive'] = self.archive
             blueprint_params['blueprint'][EXTERNAL_RESOURCE] = True
             self.resource_config['resource_config'] = blueprint_params
 
