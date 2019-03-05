@@ -130,7 +130,7 @@ class Managers(SecuredResource):
             'edition': {'type': unicode},
             'distribution': {'type': unicode},
             'distro_release': {'type': unicode},
-            'fs_sync_api_key': {'type': unicode}
+            'fs_sync_node_id': {'type': unicode, 'optional': True}
         })
         new_manager = models.Manager(
             hostname=_manager['hostname'],
@@ -140,9 +140,29 @@ class Managers(SecuredResource):
             edition=_manager['edition'],
             distribution=_manager['distribution'],
             distro_release=_manager['distro_release'],
-            fs_sync_api_key=_manager['fs_sync_api_key']
+            fs_sync_node_id=_manager.get('fs_sync_node_id', '')
         )
         return get_storage_manager().put(new_manager)
+
+    @exceptions_handled
+    @authorize('manager_update_fs_sync_node_id')
+    @marshal_with(models.Manager)
+    def put(self):
+        """
+        Update a manager's FS sync node ID required by syncthing
+        """
+        _manager = rest_utils.get_json_and_verify_params({
+            'hostname': {'type': unicode},
+            'fs_sync_node_id': {'type': unicode}
+        })
+        sm = get_storage_manager()
+        manager_to_update = sm.get(
+            models.Manager,
+            None,
+            filters={'hostname': _manager['hostname']}
+        )
+        manager_to_update.fs_sync_node_id = _manager['fs_sync_node_id']
+        return sm.update(manager_to_update)
 
     @exceptions_handled
     @authorize('manager_delete')

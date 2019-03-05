@@ -519,21 +519,15 @@ class Config(SQLModelBase):
 class Manager(SQLModelBase):
     __tablename__ = 'managers'
 
-    hostname = db.Column(db.Text, primary_key=True)
+    id = db.Column(db.Integer, autoincrement=True, primary_key=True)
+    hostname = db.Column(db.Text, unique=True, nullable=False)
     private_ip = db.Column(db.Text, unique=True, nullable=False)
     public_ip = db.Column(db.Text, unique=True, nullable=False)
     version = db.Column(db.Text, nullable=False)
     edition = db.Column(db.Text, nullable=False)
     distribution = db.Column(db.Text, nullable=False)
     distro_release = db.Column(db.Text, nullable=False)
-    fs_sync_api_key = db.Column(db.Text, nullable=False)
-
-    @classmethod
-    def unique_id(cls):
-        return 'hostname'
-
-    def _get_identifier_dict(self):
-        return {'hostname': self.hostname}
+    fs_sync_node_id = db.Column(db.Text, nullable=True)
 
 
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)

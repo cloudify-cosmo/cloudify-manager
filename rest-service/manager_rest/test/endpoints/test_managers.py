@@ -29,7 +29,9 @@ _manager1 = {
     'edition': 'premium',
     'distribution': 'centos',
     'distro_release': 'Core',
-    'fs_sync_api_key': 'AFENkmnjkhaFWQOFHIQO$&*@$f56372'
+    'fs_sync_node_id':
+        'P56IOI7-MZJNU2Y-IQGDREY-DM2MGTI-'
+        'MGL3BXN-PQ6W5BM-TBBZ4TJ-XZWICQ2'
 }
 _manager2 = {
     'hostname': 'manager2.test.domain',
@@ -38,8 +40,7 @@ _manager2 = {
     'version': '5.0.dev1',
     'edition': 'premium',
     'distribution': 'centos',
-    'distro_release': 'Core',
-    'fs_sync_api_key': 'BGENkmnjkhaFWQOFHIQO$&*@$f56372'
+    'distro_release': 'Core'
 }
 
 
@@ -85,6 +86,8 @@ class ManagersTableTestCase(base_test.BaseServerTestCase):
 
     def test_get_specific_manager(self):
         result = self.client.manager.get_managers('manager2.test.domain')
+        del result.items[0]['id']               # value unknown
+        del result.items[0]['fs_sync_node_id']  # value is None
         self.assertEqual(_manager2, result.items[0])
 
     def test_get_nonexisting_manager(self):
@@ -100,9 +103,12 @@ class ManagersTableTestCase(base_test.BaseServerTestCase):
             'edition': 'premium',
             'distribution': 'centos',
             'distro_release': 'Core',
-            'fs_sync_api_key': 'CGENkmnjkhaFWQOFHIQO$&*@$f56372'
+            'fs_sync_node_id':
+                'I56IOI7-MZJNU2Y-IQGDREY-DM2MGTI-'
+                'MGL3BXN-PQ6W5BM-TBBZ4TJ-XZWICQ2'
         }
         result = self.client.manager.add_manager(**new_manager)
+        del result['id']
         self.assertEqual(result, new_manager)
 
     def test_add_same_manager_twice(self):
@@ -114,7 +120,9 @@ class ManagersTableTestCase(base_test.BaseServerTestCase):
             'edition': 'premium',
             'distribution': 'centos',
             'distro_release': 'Core',
-            'fs_sync_api_key': 'BGENkmnjkhaFWQOFHIQO$&*@$f56372'
+            'fs_sync_node_id':
+                'G56IOI7-MZJNU2Y-IQGDREY-DM2MGTI-'
+                'MGL3BXN-PQ6W5BM-TBBZ4TJ-XZWICQ2'
         }
         with self.assertRaises(CloudifyClientError) as error:
             self.client.manager.add_manager(**new_manager)
@@ -152,6 +160,8 @@ class ManagersTableTestCase(base_test.BaseServerTestCase):
 
     def test_remove_manager(self):
         result = self.client.manager.remove_manager('manager2.test.domain')
+        del result['id']               # value unknown
+        del result['fs_sync_node_id']  # value is None
         self.assertEqual(result, _manager2)
 
     def test_remove_nonexisting_manager(self):
@@ -159,3 +169,13 @@ class ManagersTableTestCase(base_test.BaseServerTestCase):
         with self.assertRaises(CloudifyClientError) as error:
             self.client.manager.remove_manager(new_manager)
         self.assertEqual(error.exception.status_code, 404)
+
+    def test_update_manager(self):
+        new_fs_sync_node_id = \
+            'G56IOI7-MZJNU2Y-IQGDREY-DM2MGTI-MGL3BXN-PQ6W5BM-TBBZ4TJ-XZWICQ2'
+        result = self.client.manager.update_manager(_manager2['hostname'],
+                                                    new_fs_sync_node_id)
+        expected_new_manager = _manager2.copy()
+        expected_new_manager['fs_sync_node_id'] = new_fs_sync_node_id
+        del result['id']
+        self.assertEqual(result, expected_new_manager)
