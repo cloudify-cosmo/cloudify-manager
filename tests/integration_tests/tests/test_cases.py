@@ -495,6 +495,7 @@ class AgentlessTestCase(BaseTestCase):
         super(AgentlessTestCase, self).setUp()
         self._setup_running_manager_attributes()
         reset_storage()
+        docl.upload_mock_license()
         self._reset_file_system()
         self.addCleanup(self._save_manager_logs_after_test)
 
