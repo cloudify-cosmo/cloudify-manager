@@ -492,6 +492,7 @@ class AgentlessTestCase(BaseTestCase):
         prepare_reset_storage_script()
 
     def setUp(self):
+        
         super(AgentlessTestCase, self).setUp()
         self._setup_running_manager_attributes()
         reset_storage()
