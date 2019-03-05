@@ -39,7 +39,8 @@ install_requires = [
     'pytz==2018.4',
     'click==6.7',
     'packaging==17.1',
-    'jsonschema==3.0.0'
+    'jsonschema==3.0.0',
+    'SQLAlchemy==1.2.18'
 ]
 
 
