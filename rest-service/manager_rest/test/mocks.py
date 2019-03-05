@@ -27,7 +27,8 @@ from manager_rest.storage import get_storage_manager, models, get_node
 from manager_rest.storage.models import (Node,
                                          Blueprint,
                                          Deployment,
-                                         NodeInstance)
+                                         NodeInstance,
+                                         License)
 
 try:
     from cloudify_rest_client.client import \
@@ -257,3 +258,15 @@ def _get_or_create_node(storage_manager, node_id, deployment):
         )
         node.deployment = deployment
         return storage_manager.put(node)
+
+
+def upload_mock_cloudify_license(storage_manager):
+    license = License(
+        customer_id='mock_customer',
+        expiration_date=datetime.now(),
+        license_edition='Spire',
+        cloudify_version='4.6',
+        capabilities='mock-capabilities',
+
+    )
+    storage_manager.put(license)
