@@ -15,6 +15,7 @@
 
 import os
 import yaml
+import atexit
 
 from json import dump
 
@@ -157,6 +158,16 @@ class Config(object):
         })
         for conf_value in stored_config:
             setattr(self, conf_value.name, conf_value.value)
+
+        stored_brokers = sm.list(models.RabbitMQBroker)
+        for broker in stored_brokers:
+            # currently, there's going to be only one rabbitmq
+            self.amqp_host = broker.host
+            self.amqp_management_host = broker.management_host
+            self.amqp_username = broker.username
+            self.amqp_password = broker.password
+            self.amqp_ca_path = broker.write_ca_cert()
+            atexit.register(os.unlink, self.amqp_ca_path)
 
         # disallow implicit loading
         self.can_load_from_db = False

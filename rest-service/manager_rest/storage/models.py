@@ -25,7 +25,9 @@ from .management_models import (User,
                                 ProviderContext,
                                 License,
                                 Config,
-                                Manager)
+                                Manager,
+                                RabbitMQBroker,
+                                Certificate)
 
 from .resource_models import (Blueprint,
                               Snapshot,

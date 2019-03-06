@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import tempfile
 from uuid import uuid4
 from collections import (
     OrderedDict,
@@ -27,7 +28,10 @@ from sqlalchemy.ext.associationproxy import association_proxy
 from flask_security import SQLAlchemyUserDatastore, UserMixin, RoleMixin
 
 from manager_rest import config
-from manager_rest.constants import BOOTSTRAP_ADMIN_ID, DEFAULT_TENANT_ID
+from manager_rest.constants import (
+    BOOTSTRAP_ADMIN_ID,
+    DEFAULT_TENANT_ID,
+)
 
 from .idencoder import get_encoder
 from .relationships import (
@@ -528,6 +532,65 @@ class Manager(SQLModelBase):
     distribution = db.Column(db.Text, nullable=False)
     distro_release = db.Column(db.Text, nullable=False)
     fs_sync_node_id = db.Column(db.Text, nullable=True)
+
+
+class Certificate(SQLModelBase):
+    __tablename__ = 'certificates'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.Text, nullable=False)
+    value = db.Column(db.Text, nullable=False)
+    updated_at = db.Column(UTCDateTime)
+
+    @declared_attr
+    def _updater_id(cls):
+        return foreign_key(User.id)
+
+    @declared_attr
+    def updated_by(cls):
+        return one_to_many_relationship(cls, User, cls._updater_id, 'id')
+
+    updater_name = association_proxy('updated_by', 'username')
+
+
+class RabbitMQBroker(SQLModelBase):
+    __tablename__ = 'rabbitmq_brokers'
+
+    name = db.Column(db.Text, primary_key=True)
+    host = db.Column(db.Text, nullable=False)
+    management_host = db.Column(db.Text, nullable=True)
+    port = db.Column(db.Integer, nullable=True)
+    username = db.Column(db.Text, nullable=True)
+    password = db.Column(db.Text, nullable=True)
+
+    # additional params, as **kwargs to creating the connection
+    params = db.Column(JSONString, nullable=True)
+
+    @declared_attr
+    def _ca_cert_id(cls):
+        return foreign_key(Certificate.id)
+
+    @declared_attr
+    def ca_cert(cls):
+        return one_to_many_relationship(
+            cls, Certificate, cls._ca_cert_id, 'id')
+
+    ca_cert_content = association_proxy('ca_cert', 'value')
+
+    @classmethod
+    def unique_id(cls):
+        return 'name'
+
+    def write_ca_cert(self):
+        if not self.ca_cert_content:
+            return
+
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            f.write(self.ca_cert_content)
+        return f.name
+
+    def _get_identifier_dict(self):
+        return {'name': self.name}
 
 
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)
