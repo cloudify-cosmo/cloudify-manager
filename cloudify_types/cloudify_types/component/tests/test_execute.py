@@ -154,8 +154,8 @@ class TestExecute(ComponentTestBase):
 
     def test_post_execute_client_error(self):
         cfy_mock_client = MockCloudifyRestClient()
-        cfy_mock_client.deployments.outputs.get = \
-            mock.MagicMock(side_effect=CloudifyClientError('Mistake'))
+        cfy_mock_client.deployments.outputs.get = mock.MagicMock(
+            side_effect=CloudifyClientError('Mistake'))
 
         poll_with_timeout_test = \
             'cloudify_types.component.component.Component.' \

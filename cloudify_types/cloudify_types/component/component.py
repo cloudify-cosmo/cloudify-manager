@@ -107,17 +107,14 @@ class Component(object):
         self.deployment_logs = self.deployment.get('logs', {})
 
         # Execution-related properties
-        self.workflow_id = \
-            operation_inputs.get('workflow_id',
-                                 'create_deployment_environment')
-        self.workflow_state = \
-            operation_inputs.get(
-                'workflow_state',
-                'terminated')
-        self.reexecute = \
-            self.config.get('reexecute') \
-            or ctx.instance.runtime_properties.get('reexecute') \
-            or False
+        self.workflow_id = operation_inputs.get(
+            'workflow_id',
+            'create_deployment_environment')
+        self.workflow_state = operation_inputs.get('workflow_state',
+                                                   'terminated')
+
+        self.reexecute = (self.config.get('reexecute')
+                          or ctx.instance.runtime_properties.get('reexecute'))
 
         # Polling-related properties
         self.interval = operation_inputs.get('interval', POLLING_INTERVAL)
@@ -187,13 +184,12 @@ class Component(object):
         # Check if the ``blueprint_archive`` is not a URL then we need to
         # download it and pass the binaries to the client_args
         if not(parse_url.netloc and parse_url.scheme):
-            self.blueprint_archive = \
-                ctx.download_resource(self.blueprint_archive)
+            self.blueprint_archive = ctx.download_resource(
+                self.blueprint_archive)
 
-        client_args = \
-            dict(blueprint_id=self.blueprint_id,
-                 archive_location=self.blueprint_archive,
-                 application_file_name=self.blueprint_file_name)
+        client_args = dict(blueprint_id=self.blueprint_id,
+                           archive_location=self.blueprint_archive,
+                           application_file_name=self.blueprint_file_name)
 
         return self.dp_get_client_response('blueprints',
                                            BP_UPLOAD,
@@ -427,10 +423,9 @@ class Component(object):
         if ((self.deployment.get(EXTERNAL_RESOURCE) and self.reexecute)
                 or not self.deployment.get(EXTERNAL_RESOURCE)):
             execution_args = self.config.get('executions_start_args', {})
-            client_args = \
-                dict(deployment_id=self.deployment_id,
-                     workflow_id=self.workflow_id,
-                     **execution_args)
+            client_args = dict(deployment_id=self.deployment_id,
+                               workflow_id=self.workflow_id,
+                               **execution_args)
             response = self.dp_get_client_response('executions',
                                                    EXEC_START, client_args)
 
@@ -477,8 +472,7 @@ class Component(object):
             ctx.logger.debug('Deployment outputs: {0}'.format(dep_outputs))
             for key, val in self.deployment_outputs.items():
                 ctx.instance.runtime_properties[
-                    'deployment']['outputs'][val] = \
-                    dep_outputs.get(key, '')
+                    'deployment']['outputs'][val] = dep_outputs.get(key, '')
 
     def verify_execution_successful(self):
         return poll_workflow_after_execute(
@@ -487,6 +481,5 @@ class Component(object):
             self.client,
             self.deployment_id,
             self.workflow_state,
-            self.workflow_id,
             self.execution_id,
             log_redirect=self.deployment_logs.get('redirect', True))
