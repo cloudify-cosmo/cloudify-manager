@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .component_operations import upload_blueprint  # NOQA
-from .component_operations import delete  # NOQA
-from .component_operations import create  # NOQA
-from .component_operations import execute_start  # NOQA
+from .operations import upload_blueprint  # NOQA
+from .operations import delete  # NOQA
+from .operations import create  # NOQA
+from .operations import execute_start  # NOQA

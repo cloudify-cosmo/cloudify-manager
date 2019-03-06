@@ -44,7 +44,7 @@ from .polling import (
     poll_workflow_after_execute,
     is_system_workflows_finished
 )
-from .utils import (
+from cloudify_types.utils import (
     update_runtime_properties,
     get_local_path,
     zip_files

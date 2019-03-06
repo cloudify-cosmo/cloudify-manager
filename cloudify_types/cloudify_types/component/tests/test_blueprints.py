@@ -20,7 +20,7 @@ from cloudify.exceptions import NonRecoverableError
 
 from ..constants import EXTERNAL_RESOURCE
 from .client_mock import MockCloudifyRestClient
-from ..component_operations import upload_blueprint
+from ..operations import upload_blueprint
 from .base_test_suite import ComponentTestBase, REST_CLIENT_EXCEPTION
 
 
