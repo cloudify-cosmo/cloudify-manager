@@ -91,6 +91,12 @@ jobs:
       TOX_CONFIG: ./workflows
       DO_ENV: py27
 
+  test_cloudify_types:
+    <<: *tox_defaults
+    environment:
+      TOX_CONFIG: ./cloudify_types
+      DO_ENV: py27
+
   test_amqp_postgres:
     docker:
       - image: circleci/python:2.7
@@ -215,3 +221,4 @@ workflows:
       - test_workflows
       - test_premium
       - test_amqp_postgres
+      - test_cloudify_types
