@@ -40,8 +40,8 @@ from cloudify.amqp_client import create_events_publisher
 from manager_rest import constants, config, manager_exceptions
 
 
-def check_allowed_endpoint():
-    for endpoint in constants.ALLOWED_ENDPOINTS:
+def check_allowed_endpoint(allowed_endpoints):
+    for endpoint in allowed_endpoints:
         if endpoint in request.endpoint:
             return True
     return False
