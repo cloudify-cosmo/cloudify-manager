@@ -41,8 +41,8 @@ from cloudify.constants import BROKER_PORT_SSL
 from manager_rest import constants, config, manager_exceptions
 
 
-def check_allowed_endpoint():
-    for endpoint in constants.ALLOWED_ENDPOINTS:
+def check_allowed_endpoint(allowed_endpoints):
+    for endpoint in allowed_endpoints:
         if endpoint in request.endpoint:
             return True
     return False

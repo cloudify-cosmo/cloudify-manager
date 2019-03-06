@@ -30,7 +30,8 @@ from manager_rest.constants import (FORBIDDEN_METHODS,
                                     MAINTENANCE_MODE_STATUS_FILE,
                                     MAINTENANCE_MODE_ACTIVATING,
                                     MAINTENANCE_MODE_ACTIVE_ERROR_CODE,
-                                    MAINTENANCE_MODE_ACTIVATING_ERROR_CODE)
+                                    MAINTENANCE_MODE_ACTIVATING_ERROR_CODE,
+                                    ALLOWED_MAINTENANCE_ENDPOINTS)
 
 
 def get_maintenance_file_path():
@@ -89,7 +90,7 @@ def maintenance_mode_handler():
                        state=state,
                        request_endpoint=request_endpoint)
 
-        if utils.check_allowed_endpoint():
+        if utils.check_allowed_endpoint(ALLOWED_MAINTENANCE_ENDPOINTS):
             return
 
         if state['status'] == MAINTENANCE_MODE_ACTIVATED:
