@@ -13,7 +13,9 @@ function set_manager_ip() {
 
   echo "Updating cloudify-manager (rest-service).."
   /usr/bin/sed -i -e "s#amqp_host: '.*'#amqp_host: '${ip}'#" /opt/manager/cloudify-rest.conf
-  /usr/bin/sed -i -e "s#file_server_url: 'https://[^:]*:\(.*\)#file_server_url: 'https://${ip}:\1#" /opt/manager/cloudify-rest.conf
+
+  echo "Updating IPs stored in the database..."
+  sudo -upostgres psql cloudify_db -c "update config set value=regexp_replace(value, 'https://[^:]+:(.*)', 'https://${ip}:\1', 'g') where name='file_server_url'"
 
   echo "Updating broker_ip in provider context.."
   /opt/manager/env/bin/python /opt/cloudify/manager-ip-setter/update-provider-context.py ${ip}
