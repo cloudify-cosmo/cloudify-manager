@@ -22,11 +22,10 @@ from .client_mock import MockCloudifyRestClient
 from ..polling import (
     any_bp_by_id,
     any_dep_by_id,
-    all_deps_by_id,
     resource_by_id,
     poll_with_timeout,
     redirect_logs,
-    dep_workflow_in_state_pollster,
+    is_component_workflow_at_state,
     is_system_workflows_finished,
     poll_workflow_after_execute)
 
@@ -77,29 +76,6 @@ class TestPolling(ComponentTestBase):
             cfy_mock_client.deployments.list = mock_return
             mock_client.return_value = cfy_mock_client
             output = any_dep_by_id(cfy_mock_client, blueprint_name)
-            self.assertTrue(output)
-
-    def test_all_deps_by_id_no_deployment(self):
-        with mock.patch('cloudify.manager.get_rest_client') as mock_client:
-            cfy_mock_client = MockCloudifyRestClient()
-            mock_client.return_value = cfy_mock_client
-            output = all_deps_by_id(mock_client, 'dep_name')
-            self.assertFalse(output)
-
-    def test_all_deps_by_id_with_deployment(self):
-        blueprint_name = 'test'
-        with mock.patch('cloudify.manager.get_rest_client') as mock_client:
-            cfy_mock_client = MockCloudifyRestClient()
-            list_response = cfy_mock_client.deployments.list()
-            list_response[0]['id'] = blueprint_name
-
-            def mock_return(*args, **kwargs):
-                del args, kwargs
-                return list_response
-
-            cfy_mock_client.deployments.list = mock_return
-            mock_client.return_value = cfy_mock_client
-            output = all_deps_by_id(cfy_mock_client, blueprint_name)
             self.assertTrue(output)
 
     def test_resource_by_id_client_error(self):
@@ -204,7 +180,7 @@ class TestPolling(ComponentTestBase):
             list_response[0]['id'] = 'test'
 
             mock_client.return_value = cfy_mock_client
-            output = dep_workflow_in_state_pollster(cfy_mock_client,
+            output = is_component_workflow_at_state(cfy_mock_client,
                                                     'test',
                                                     'terminated')
             self.assertFalse(output)
@@ -223,7 +199,7 @@ class TestPolling(ComponentTestBase):
 
             cfy_mock_client.executions.get = mock_return
             mock_client.return_value = cfy_mock_client
-            output = dep_workflow_in_state_pollster(cfy_mock_client,
+            output = is_component_workflow_at_state(cfy_mock_client,
                                                     deployment_id,
                                                     'terminated',
                                                     execution_id='_exec_id')
@@ -246,7 +222,7 @@ class TestPolling(ComponentTestBase):
 
             cfy_mock_client.executions.get = mock_return
             mock_client.return_value = cfy_mock_client
-            output = dep_workflow_in_state_pollster(cfy_mock_client,
+            output = is_component_workflow_at_state(cfy_mock_client,
                                                     deployment_id,
                                                     'terminated',
                                                     True)
@@ -265,7 +241,7 @@ class TestPolling(ComponentTestBase):
 
             cfy_mock_client.executions.get = mock_return
             mock_client.return_value = cfy_mock_client
-            output = dep_workflow_in_state_pollster(cfy_mock_client,
+            output = is_component_workflow_at_state(cfy_mock_client,
                                                     'dep_name',
                                                     state='terminated',
                                                     execution_id='_exec_id')
@@ -285,7 +261,7 @@ class TestPolling(ComponentTestBase):
             cfy_mock_client.executions.get = mock_return
             mock_client.return_value = cfy_mock_client
             output = self.assertRaises(NonRecoverableError,
-                                       dep_workflow_in_state_pollster,
+                                       is_component_workflow_at_state,
                                        cfy_mock_client,
                                        deployment_id,
                                        'terminated')

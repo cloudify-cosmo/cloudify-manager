@@ -27,5 +27,3 @@ DEP_CREATE = 'create'
 DEP_DELETE = 'delete'
 EXEC_START = 'start'
 EXEC_LIST = 'list'
-
-NODE_TYPE = 'cloudify.nodes.Component'
