@@ -36,8 +36,7 @@ from .constants import (
     DEP_CREATE,
     DEP_DELETE,
     EXEC_START,
-    EXEC_LIST,
-    NODE_TYPE)
+    EXEC_LIST)
 from .polling import (
     any_bp_by_id,
     any_dep_by_id,
@@ -55,9 +54,11 @@ from .utils import (
 class Component(object):
 
     @staticmethod
-    def get_desired_operation_input(key,
-                                    args):
-
+    def _get_desired_operation_input(key,
+                                     args):
+        """ Resolving a key's value from kwargs or
+        runtime properties, node properties in the order of priority.
+        """
         return (args.get(key) or
                 ctx.instance.runtime_properties.get(key) or
                 ctx.node.properties.get(key))
@@ -78,7 +79,7 @@ class Component(object):
             str(operation_inputs.pop('pagination_size', 1000))
 
         # cloudify client
-        self.client_config = self.get_desired_operation_input(
+        self.client_config = self._get_desired_operation_input(
             'client', operation_inputs)
 
         if self.client_config:
@@ -86,11 +87,11 @@ class Component(object):
         else:
             self.client = manager.get_rest_client()
 
-        self.plugins = self.get_desired_operation_input(
+        self.plugins = self._get_desired_operation_input(
             'plugins', operation_inputs)
-        self.secrets = self.get_desired_operation_input(
+        self.secrets = self._get_desired_operation_input(
             'secrets', operation_inputs)
-        self.config = self.get_desired_operation_input(
+        self.config = self._get_desired_operation_input(
             'resource_config', operation_inputs)
 
         # Blueprint-related properties
@@ -143,8 +144,15 @@ class Component(object):
         else:
             return response
 
+    @staticmethod
+    def _is_valid_url(candidate):
+        assert isinstance(candidate, str)
+
+        parse_url = urlparse(candidate)
+        return not (parse_url.netloc and parse_url.scheme)
+
     def upload_blueprint(self):
-        if 'blueprint' not in ctx.instance.runtime_properties.keys():
+        if 'blueprint' not in ctx.instance.runtime_properties:
             ctx.instance.runtime_properties['blueprint'] = dict()
 
         update_runtime_properties('blueprint', 'id', self.blueprint_id)
@@ -178,12 +186,9 @@ class Component(object):
                 'No blueprint_archive supplied, '
                 'but {0} is False'.format(EXTERNAL_RESOURCE))
 
-        # Parse the blueprint_archive in order to get url parts
-        parse_url = urlparse(self.blueprint_archive)
-
         # Check if the ``blueprint_archive`` is not a URL then we need to
         # download it and pass the binaries to the client_args
-        if not(parse_url.netloc and parse_url.scheme):
+        if self._is_valid_url(self.blueprint_archive):
             self.blueprint_archive = ctx.download_resource(
                 self.blueprint_archive)
 
@@ -199,7 +204,7 @@ class Component(object):
         if not self.plugins:
             return
 
-        if 'plugins' not in ctx.instance.runtime_properties.keys():
+        if 'plugins' not in ctx.instance.runtime_properties:
             ctx.instance.runtime_properties['plugins'] = []
 
         if isinstance(self.plugins, dict):
@@ -263,7 +268,7 @@ class Component(object):
             'deployment_id': self.deployment_id,
             'inputs': self.deployment_inputs}
 
-        if 'deployment' not in ctx.instance.runtime_properties.keys():
+        if 'deployment' not in ctx.instance.runtime_properties:
             ctx.instance.runtime_properties['deployment'] = dict()
 
         update_runtime_properties('deployment', 'id', self.deployment_id)
@@ -400,13 +405,10 @@ class Component(object):
         return poll_result
 
     def execute_workflow(self):
-        if NODE_TYPE not in ctx.node.type_hierarchy:
-            raise NonRecoverableError(
-                'Unsupported node type provided {0}'.format(ctx.node.type))
-
-        if 'executions' not in ctx.instance.runtime_properties.keys():
+        if 'executions' not in ctx.instance.runtime_properties:
             ctx.instance.runtime_properties['executions'] = dict()
 
+        # Updating runtime properties with where we are in the deployment flow
         update_runtime_properties(
             'executions', 'workflow_id', self.workflow_id)
 
@@ -451,7 +453,7 @@ class Component(object):
             'Runtime deployment properties {0}'.format(runtime_prop))
 
         if 'outputs' \
-                not in ctx.instance.runtime_properties['deployment'].keys():
+                not in ctx.instance.runtime_properties['deployment']:
             update_runtime_properties('deployment', 'outputs', dict())
             ctx.logger.debug('No component outputs exist.')
 

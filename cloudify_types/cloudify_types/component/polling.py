@@ -36,18 +36,6 @@ def any_resource_by_id(_client, _resource_id, _resource_type):
     return any(resource_by_id(_client, _resource_id, _resource_type))
 
 
-def all_deps_by_id(_client, _dep_id):
-    resource_type = 'deployments'
-    return all_resource_by_id(_client, _dep_id, resource_type)
-
-
-def all_resource_by_id(_client, _resource_id, _resource_type):
-    output = resource_by_id(_client, _resource_id, _resource_type)
-    if not output:
-        return False
-    return all(output)
-
-
 def resource_by_id(_client, _id, _type):
     _resources_client = getattr(_client, _type)
     try:
@@ -102,9 +90,10 @@ def redirect_logs(_client, execution_id):
                 'Event {0} for execution_id {1}'.format(event, execution_id))
             instance_prompt = event.get('node_instance_id', "")
             if instance_prompt:
-                if event.get('operation'):
+                event_operation = event.get('operation')
+                if event_operation:
                     instance_prompt += (
-                        "." + event.get('operation').split('.')[-1]
+                        "." + event_operation.split('.')[-1]
                     )
 
             if instance_prompt:
@@ -146,7 +135,11 @@ def redirect_logs(_client, execution_id):
     ctx.instance.runtime_properties[count_events][execution_id] = last_event
 
 
-def is_system_workflows_finished(client, check_all_in_deployment=False):
+def _is_execution_ended(execution_status):
+    return execution_status not in ('terminated', 'failed', 'cancelled')
+
+
+def is_system_workflows_finished(client, target_deployment_id=None):
     offset = int(getenv('_PAGINATION_OFFSET', 0))
     size = int(getenv('_PAGINATION_SIZE', 1000))
 
@@ -161,16 +154,12 @@ def is_system_workflows_finished(client, check_all_in_deployment=False):
                 'Executions list failed {0}.'.format(str(ex)))
 
         for execution in executions:
-            if execution.get('is_system_workflow'):
-                if execution.get('status') not in ('terminated', 'failed',
-                                                   'cancelled'):
+            execution_status = execution.get('status')
+            if (execution.get('is_system_workflow') or
+                    (target_deployment_id and
+                     target_deployment_id == execution.get('deployment_id'))):
+                if _is_execution_ended(execution_status):
                     return False
-
-            if check_all_in_deployment:
-                if check_all_in_deployment == execution.get('deployment_id'):
-                    if execution.get('status') not in ('terminated', 'failed',
-                                                       'cancelled'):
-                        return False
 
         if executions.metadata.pagination.total <= \
                 executions.metadata.pagination.offset:
@@ -181,7 +170,7 @@ def is_system_workflows_finished(client, check_all_in_deployment=False):
     return True
 
 
-def dep_workflow_in_state_pollster(client,
+def is_component_workflow_at_state(client,
                                    dep_id,
                                    state,
                                    log_redirect=False,
@@ -194,8 +183,8 @@ def dep_workflow_in_state_pollster(client,
         execution = client.executions.get(execution_id=execution_id,
                                           _include=exec_get_fields)
         ctx.logger.debug(
-            'The exec get response form {0} is {1}'.format(dep_id,
-                                                           execution))
+            'The execution get response form {0} is {1}'.format(dep_id,
+                                                                execution))
 
     except CloudifyClientError as ex:
         raise NonRecoverableError(
@@ -204,13 +193,13 @@ def dep_workflow_in_state_pollster(client,
     execution_id = execution.get('id')
     if log_redirect and execution_id:
         ctx.logger.debug(
-            '_exec info for _log_redirect is {0}'.format(execution))
+            'execution info for _log_redirect is {0}'.format(execution))
         redirect_logs(client, execution_id)
 
     execution_status = execution.get('status')
     if execution_status == state:
         ctx.logger.debug(
-            'The status for _exec info id'
+            'The status for execution info id'
             ' {0} is {1}'.format(execution_id, state))
 
         return True
@@ -238,7 +227,7 @@ def poll_workflow_after_execute(timeout,
 
     ctx.logger.debug('Polling: {0}'.format(pollster_args))
     result = poll_with_timeout(
-        lambda: dep_workflow_in_state_pollster(**pollster_args),
+        lambda: is_component_workflow_at_state(**pollster_args),
         timeout=timeout,
         interval=interval)
 
