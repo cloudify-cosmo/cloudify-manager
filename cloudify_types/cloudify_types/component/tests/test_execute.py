@@ -20,7 +20,7 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 
 from ..constants import EXTERNAL_RESOURCE
 from .client_mock import MockCloudifyRestClient
-from ..component_operations import execute_start
+from ..operations import execute_start
 from .base_test_suite import (ComponentTestBase,
                               REST_CLIENT_EXCEPTION,
                               MOCK_TIMEOUT)

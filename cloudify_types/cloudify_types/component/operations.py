@@ -14,7 +14,7 @@
 
 from cloudify.decorators import operation
 
-import utils
+from cloudify_types import utils
 from .component import Component
 
 

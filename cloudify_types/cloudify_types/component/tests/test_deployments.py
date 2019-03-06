@@ -18,7 +18,7 @@ from cloudify.state import current_ctx
 from cloudify.exceptions import NonRecoverableError
 
 from .client_mock import MockCloudifyRestClient
-from ..component_operations import create, delete
+from ..operations import create, delete
 from cloudify_types.component.component import Component
 from .base_test_suite import (ComponentTestBase,
                               REST_CLIENT_EXCEPTION,
