@@ -61,11 +61,10 @@ class MockDeploymentsClient(BaseMockClient):
         self.outputs = MockDeploymentsOutputsClient()
 
     def create(self, *args, **_):
-        _return_value = \
-            {
-                'id': 'test',
-                'created_at': datetime.datetime.now()
-            }
+        _return_value = {
+            'id': 'test',
+            'created_at': datetime.datetime.now()
+        }
         del args
         return MagicMock(_return_value)
 
@@ -76,11 +75,10 @@ class MockDeploymentsClient(BaseMockClient):
 class MockExecutionsClient(BaseMockClient):
 
     def start(self, *args, **_):
-        _return_value = \
-            {
-                'id': 'test',
-                'created_at': datetime.datetime.now()
-            }
+        _return_value = {
+            'id': 'test',
+            'created_at': datetime.datetime.now()
+        }
         del args
         return MagicMock(_return_value)
 

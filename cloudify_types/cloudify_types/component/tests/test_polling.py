@@ -112,13 +112,12 @@ class TestPolling(ComponentTestBase):
             cfy_mock_client = MockCloudifyRestClient()
             cfy_mock_client.deployments.list = mock_return
             mock_client.return_value = mock_return
-            output = \
-                self.assertRaises(
-                    NonRecoverableError,
-                    resource_by_id,
-                    cfy_mock_client,
-                    'dep_name',
-                    'deployments')
+            output = self.assertRaises(
+                NonRecoverableError,
+                resource_by_id,
+                cfy_mock_client,
+                'dep_name',
+                'deployments')
             self.assertIn('failed', output.message)
 
     def test_poll_with_timeout_timeout(self):
@@ -126,11 +125,9 @@ class TestPolling(ComponentTestBase):
         mock_interval = .0001
 
         mock_pollster = mock.MagicMock
-        output = \
-            poll_with_timeout(
-                mock_pollster,
-                mock_timeout,
-                mock_interval)
+        output = poll_with_timeout(mock_pollster,
+                                   mock_timeout,
+                                   mock_interval)
         self.assertFalse(output)
 
     def test_poll_with_timeout_expected(self):
@@ -141,12 +138,11 @@ class TestPolling(ComponentTestBase):
             del args, kwargs
             return True
 
-        output = \
-            poll_with_timeout(
-                lambda: mock_return(),
-                mock_timeout,
-                mock_interval,
-                True)
+        output = poll_with_timeout(
+            lambda: mock_return(),
+            mock_timeout,
+            mock_interval,
+            True)
         self.assertTrue(output)
 
     def test_dep_system_workflows_finished_no_executions(self):
@@ -163,9 +159,8 @@ class TestPolling(ComponentTestBase):
 
             cfy_mock_client.executions.list = mock_return
             mock_client.return_value = cfy_mock_client
-            output = \
-                is_system_workflows_finished(
-                    cfy_mock_client)
+            output = is_system_workflows_finished(
+                cfy_mock_client)
             self.assertFalse(output)
 
     def test_dep_system_workflows_finished_matching_executions(self):
@@ -182,9 +177,7 @@ class TestPolling(ComponentTestBase):
 
             cfy_mock_client.executions.list = mock_return
             mock_client.return_value = cfy_mock_client
-            output = \
-                is_system_workflows_finished(
-                    cfy_mock_client)
+            output = is_system_workflows_finished(cfy_mock_client)
             self.assertTrue(output)
 
     def test_dep_system_workflows_finished_raises(self):
@@ -199,11 +192,9 @@ class TestPolling(ComponentTestBase):
 
             cfy_mock_client.executions.list = mock_return
             mock_client.return_value = cfy_mock_client
-            output = \
-                self.assertRaises(
-                    NonRecoverableError,
-                    is_system_workflows_finished,
-                    cfy_mock_client)
+            output = self.assertRaises(NonRecoverableError,
+                                       is_system_workflows_finished,
+                                       cfy_mock_client)
             self.assertIn('failed', output.message)
 
     def test_dep_workflow_in_state_pollster_no_executions(self):
@@ -213,11 +204,9 @@ class TestPolling(ComponentTestBase):
             list_response[0]['id'] = 'test'
 
             mock_client.return_value = cfy_mock_client
-            output = \
-                dep_workflow_in_state_pollster(
-                    cfy_mock_client,
-                    'test',
-                    'terminated')
+            output = dep_workflow_in_state_pollster(cfy_mock_client,
+                                                    'test',
+                                                    'terminated')
             self.assertFalse(output)
 
     def test_dep_workflow_in_state_pollster_matching_executions(self):
@@ -234,12 +223,10 @@ class TestPolling(ComponentTestBase):
 
             cfy_mock_client.executions.get = mock_return
             mock_client.return_value = cfy_mock_client
-            output = \
-                dep_workflow_in_state_pollster(
-                    cfy_mock_client,
-                    deployment_id,
-                    'terminated',
-                    execution_id='_exec_id')
+            output = dep_workflow_in_state_pollster(cfy_mock_client,
+                                                    deployment_id,
+                                                    'terminated',
+                                                    execution_id='_exec_id')
             self.assertTrue(output)
 
     def test_dep_workflow_in_state_pollster_matching_executions_logs(self):
@@ -259,12 +246,10 @@ class TestPolling(ComponentTestBase):
 
             cfy_mock_client.executions.get = mock_return
             mock_client.return_value = cfy_mock_client
-            output = \
-                dep_workflow_in_state_pollster(
-                    cfy_mock_client,
-                    deployment_id,
-                    'terminated',
-                    True)
+            output = dep_workflow_in_state_pollster(cfy_mock_client,
+                                                    deployment_id,
+                                                    'terminated',
+                                                    True)
             self.assertTrue(output)
 
     def test_dep_workflow_in_state_pollster_matching_state(self):
@@ -280,12 +265,10 @@ class TestPolling(ComponentTestBase):
 
             cfy_mock_client.executions.get = mock_return
             mock_client.return_value = cfy_mock_client
-            output = \
-                dep_workflow_in_state_pollster(
-                    cfy_mock_client,
-                    'dep_name',
-                    state='terminated',
-                    execution_id='_exec_id')
+            output = dep_workflow_in_state_pollster(cfy_mock_client,
+                                                    'dep_name',
+                                                    state='terminated',
+                                                    execution_id='_exec_id')
             self.assertTrue(output)
 
     def test_dep_workflow_in_state_pollster_raises(self):
@@ -301,13 +284,11 @@ class TestPolling(ComponentTestBase):
 
             cfy_mock_client.executions.get = mock_return
             mock_client.return_value = cfy_mock_client
-            output = \
-                self.assertRaises(
-                    NonRecoverableError,
-                    dep_workflow_in_state_pollster,
-                    cfy_mock_client,
-                    deployment_id,
-                    'terminated')
+            output = self.assertRaises(NonRecoverableError,
+                                       dep_workflow_in_state_pollster,
+                                       cfy_mock_client,
+                                       deployment_id,
+                                       'terminated')
             self.assertIn('failed', output.message)
 
     def test_poll_workflow_after_execute_failed(self):
@@ -315,11 +296,9 @@ class TestPolling(ComponentTestBase):
                 'cloudify_types.component.polling.poll_with_timeout') \
                 as mocked_fn:
             mocked_fn.return_value = False
-            output = \
-                self.assertRaises(
-                    NonRecoverableError,
-                    poll_workflow_after_execute,
-                    None, None, None, None, None, None, None)
+            output = self.assertRaises(NonRecoverableError,
+                                       poll_workflow_after_execute,
+                                       None, None, None, None, None, None)
             self.assertIn('Execution timeout', output.message)
 
     def test_poll_workflow_after_execute_success(self):
@@ -327,9 +306,8 @@ class TestPolling(ComponentTestBase):
                 'cloudify_types.component.polling.poll_with_timeout') \
                 as mocked_fn:
             mocked_fn.return_value = True
-            output = \
-                poll_workflow_after_execute(
-                    None, None, None, None, None, None,  None)
+            output = poll_workflow_after_execute(
+                None, None, None, None, None, None)
             self.assertTrue(output)
 
     def test_dep_logs_redirect_predefined_level(self):
