@@ -83,16 +83,16 @@ def poll_with_timeout(pollster,
 
 
 def redirect_logs(_client, execution_id):
-    COUNT_EVENTS = "received_events"
+    count_events = "received_events"
+    event_pagination_step = 100
 
-    if not ctx.instance.runtime_properties.get(COUNT_EVENTS):
-        ctx.instance.runtime_properties[COUNT_EVENTS] = {}
+    if not ctx.instance.runtime_properties.get(count_events):
+        ctx.instance.runtime_properties[count_events] = {}
 
-    last_event = int(ctx.instance.runtime_properties[COUNT_EVENTS].get(
-        execution_id, 0
-    ))
+    last_event = int(ctx.instance.runtime_properties[count_events].get(
+        execution_id, 0))
 
-    full_count = last_event + 100
+    full_count = last_event + event_pagination_step
 
     while full_count > last_event:
         events, full_count = _client.events.get(execution_id, last_event,
@@ -137,13 +137,13 @@ def redirect_logs(_client, execution_id):
         last_event += len(events)
         # returned infinite count
         if full_count < 0:
-            full_count = last_event + 100
+            full_count = last_event + event_pagination_step
         # returned nothing, let's do it next time
         if len(events) == 0:
             ctx.logger.log(20, "Returned nothing, let's get logs next time.")
             break
 
-    ctx.instance.runtime_properties[COUNT_EVENTS][execution_id] = last_event
+    ctx.instance.runtime_properties[count_events][execution_id] = last_event
 
 
 def is_system_workflows_finished(client, check_all_in_deployment=False):
@@ -191,9 +191,8 @@ def dep_workflow_in_state_pollster(client,
         ['status', 'workflow_id', 'created_at', 'ended_at', 'id']
 
     try:
-        execution = \
-            client.executions.get(execution_id=execution_id,
-                                  _include=exec_get_fields)
+        execution = client.executions.get(execution_id=execution_id,
+                                          _include=exec_get_fields)
         ctx.logger.debug(
             'The exec get response form {0} is {1}'.format(dep_id,
                                                            execution))
@@ -227,7 +226,6 @@ def poll_workflow_after_execute(timeout,
                                 client,
                                 dep_id,
                                 state,
-                                _workflow_id,
                                 execution_id,
                                 log_redirect=False):
     pollster_args = {
