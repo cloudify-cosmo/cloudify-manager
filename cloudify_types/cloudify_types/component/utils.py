@@ -70,8 +70,7 @@ def proxy_operation(operation):
 
 
 def download_file(url, destination=None, keep_name=False):
-    """Download file.
-
+    """
     :param url: Location of the file to download
     :type url: str
     :param destination:
@@ -80,7 +79,6 @@ def download_file(url, destination=None, keep_name=False):
     :type destination: str | None
     :returns: Location where the file was saved
     :rtype: str
-
     """
 
     if not destination:
@@ -135,7 +133,7 @@ def get_local_path(source, destination=None, create_temp=False):
             'using one of the allowed schemes: {0}'.format(allowed_schemes))
 
 
-def zip(source, destination, include_folder=True):
+def _zipping(source, destination, include_folder=True):
     ctx.logger.debug('Creating zip archive: {0}...'.format(destination))
     with zipfile.ZipFile(destination, 'w') as zip_file:
         for root, _, files in os.walk(source):
@@ -154,6 +152,6 @@ def zip_files(files_paths):
     destination_zip = source_folder + '.zip'
     for path in files_paths:
         copy(path, source_folder)
-    zip(source_folder, destination_zip, include_folder=False)
+    _zipping(source_folder, destination_zip, include_folder=False)
     shutil.rmtree(source_folder)
     return destination_zip
