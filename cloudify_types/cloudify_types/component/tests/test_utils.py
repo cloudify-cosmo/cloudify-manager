@@ -15,8 +15,8 @@
 import os
 import tempfile
 
+from cloudify_types import utils
 from .base_test_suite import ComponentTestBase
-import cloudify_types.component.utils as utils
 
 
 class TestUtils(ComponentTestBase):
