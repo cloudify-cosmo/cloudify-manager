@@ -82,7 +82,6 @@ def download_file(url, destination=None, keep_name=False):
     :rtype: str
 
     """
-    CHUNK_SIZE = 1024
 
     if not destination:
         if keep_name:
@@ -107,7 +106,7 @@ def download_file(url, destination=None, keep_name=False):
 
     try:
         with open(destination, 'wb') as destination_file:
-            for chunk in response.iter_content(CHUNK_SIZE):
+            for chunk in response.iter_content(None):
                 destination_file.write(chunk)
     except IOError as ex:
         raise NonRecoverableError(
