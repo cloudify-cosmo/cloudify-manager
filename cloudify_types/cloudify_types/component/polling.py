@@ -83,8 +83,10 @@ def redirect_logs(_client, execution_id):
     full_count = last_event + event_pagination_step
 
     while full_count > last_event:
-        events, full_count = _client.events.get(execution_id, last_event,
-                                                250, True)
+        events, full_count = _client.events.get(execution_id,
+                                                last_event,
+                                                event_pagination_step,
+                                                True)
         for event in events:
             ctx.logger.debug(
                 'Event {0} for execution_id {1}'.format(event, execution_id))
