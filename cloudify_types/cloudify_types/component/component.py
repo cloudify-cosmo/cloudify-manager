@@ -363,14 +363,11 @@ class Component(object):
             ctx.logger.info("Wait for stop component's deployment "
                             "related executions.")
 
-            pollster_args = \
-                dict(_client=self.client,
-                     _check_all_in_deployment=self.deployment_id)
-
             poll_with_timeout(
-                is_system_workflows_finished,
+                lambda:
+                is_system_workflows_finished(self.client,
+                                             self.deployment_id),
                 timeout=self.timeout,
-                pollster_args=pollster_args,
                 expected_result=True)
 
             ctx.logger.info("Delete component's deployment "
@@ -380,26 +377,18 @@ class Component(object):
                                         client_args)
 
             ctx.logger.info("Wait for component's deployment delete.")
-
-            pollster_args = \
-                dict(_client=self.client,
-                     _dep_id=self.deployment_id)
-
             poll_result = poll_with_timeout(
-                any_dep_by_id,
+                lambda: any_dep_by_id(self.client, self.deployment_id),
                 timeout=self.timeout,
-                pollster_args=pollster_args,
                 expected_result=False)
 
         ctx.logger.info("Little wait internal cleanup services.")
         time.sleep(POLLING_INTERVAL)
         ctx.logger.info("Wait for stop all system workflows.")
-        pollster_args = \
-            dict(_client=self.client)
+
         poll_with_timeout(
-            is_system_workflows_finished,
+            lambda: is_system_workflows_finished(self.client),
             timeout=self.timeout,
-            pollster_args=pollster_args,
             expected_result=True)
 
         if not self.blueprint.get(EXTERNAL_RESOURCE):
@@ -426,13 +415,10 @@ class Component(object):
             'executions', 'workflow_id', self.workflow_id)
 
         # Wait for the deployment to finish any executions
-        pollster_args = \
-            dict(_client=self.client,
-                 _check_all_in_deployment=self.deployment_id)
-
-        if not poll_with_timeout(is_system_workflows_finished,
+        if not poll_with_timeout(lambda:
+                                 is_system_workflows_finished(
+                                     self.client, self.deployment_id),
                                  timeout=self.timeout,
-                                 pollster_args=pollster_args,
                                  expected_result=True):
             return ctx.operation.retry(
                 'The deployment is not ready for execution.')

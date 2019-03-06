@@ -62,10 +62,7 @@ def resource_by_id(_client, _id, _type):
 def poll_with_timeout(pollster,
                       timeout,
                       interval=POLLING_INTERVAL,
-                      pollster_args=None,
                       expected_result=True):
-
-    pollster_args = pollster_args or dict()
     # Check if timeout value is -1 that allows infinite timeout
     # If timeout value is not -1 then it is a finite timeout
     timeout = float('infinity') if timeout == -1 else timeout
@@ -74,7 +71,7 @@ def poll_with_timeout(pollster,
     ctx.logger.debug('Timeout value is {}'.format(timeout))
 
     while time.time() <= current_time + timeout:
-        if pollster(**pollster_args) != expected_result:
+        if pollster() != expected_result:
             ctx.logger.debug('Polling...')
             time.sleep(interval)
         else:
@@ -149,13 +146,13 @@ def redirect_logs(_client, execution_id):
     ctx.instance.runtime_properties[COUNT_EVENTS][execution_id] = last_event
 
 
-def is_system_workflows_finished(_client, _check_all_in_deployment=False):
+def is_system_workflows_finished(client, check_all_in_deployment=False):
     offset = int(getenv('_PAGINATION_OFFSET', 0))
     size = int(getenv('_PAGINATION_SIZE', 1000))
 
     while True:
         try:
-            executions = _client.executions.list(
+            executions = client.executions.list(
                 include_system_workflows=True,
                 _offset=offset,
                 _size=size)
@@ -169,8 +166,8 @@ def is_system_workflows_finished(_client, _check_all_in_deployment=False):
                                                    'cancelled'):
                     return False
 
-            if _check_all_in_deployment:
-                if _check_all_in_deployment == execution.get('deployment_id'):
+            if check_all_in_deployment:
+                if check_all_in_deployment == execution.get('deployment_id'):
                     if execution.get('status') not in ('terminated', 'failed',
                                                        'cancelled'):
                         return False
@@ -242,14 +239,12 @@ def poll_workflow_after_execute(timeout,
     }
 
     ctx.logger.debug('Polling: {0}'.format(pollster_args))
-
-    success = poll_with_timeout(
-        dep_workflow_in_state_pollster,
+    result = poll_with_timeout(
+        lambda: dep_workflow_in_state_pollster(**pollster_args),
         timeout=timeout,
-        interval=interval,
-        pollster_args=pollster_args)
+        interval=interval)
 
-    if not success:
+    if not result:
         raise NonRecoverableError(
             'Execution timeout: {0} seconds.'.format(timeout))
     return True
