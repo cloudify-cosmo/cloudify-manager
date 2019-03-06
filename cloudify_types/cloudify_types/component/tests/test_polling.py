@@ -143,10 +143,9 @@ class TestPolling(ComponentTestBase):
 
         output = \
             poll_with_timeout(
-                mock_return,
+                lambda: mock_return(),
                 mock_timeout,
                 mock_interval,
-                {},
                 True)
         self.assertTrue(output)
 
