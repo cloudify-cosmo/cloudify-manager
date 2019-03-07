@@ -144,7 +144,7 @@ def is_system_workflows_finished(client, target_deployment_id=None):
                 _size=size)
         except CloudifyClientError as ex:
             raise NonRecoverableError(
-                'Executions list failed {0}.'.format(str(ex)))
+                'Executions list failed {0}.'.format(ex))
 
         for execution in executions:
             execution_status = execution.get('status')
@@ -181,7 +181,7 @@ def is_component_workflow_at_state(client,
 
     except CloudifyClientError as ex:
         raise NonRecoverableError(
-            'Executions get failed {0}.'.format(str(ex)))
+            'Executions get failed {0}.'.format(ex))
 
     execution_id = execution.get('id')
     if log_redirect and execution_id:
