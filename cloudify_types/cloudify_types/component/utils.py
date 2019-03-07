@@ -17,6 +17,7 @@ import sys
 import shutil
 import zipfile
 import tempfile
+import functools
 from shutil import copy
 from urlparse import urlparse
 
@@ -25,6 +26,8 @@ import requests
 from cloudify import ctx
 from cloudify.utils import exception_to_error_cause
 from cloudify.exceptions import NonRecoverableError, OperationRetry
+
+from cloudify_rest_client.exceptions import CloudifyClientError
 
 
 def generate_traceback_exception():
@@ -155,3 +158,16 @@ def zip_files(files_paths):
     _zipping(source_folder, destination_zip, include_folder=False)
     shutil.rmtree(source_folder)
     return destination_zip
+
+
+def handle_client_exception(error_msg):
+    def exception_decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except CloudifyClientError as ex:
+                raise NonRecoverableError(
+                    '{0}, due to {1}.'.format(error_msg, str(ex)))
+        return wrapper
+    return exception_decorator

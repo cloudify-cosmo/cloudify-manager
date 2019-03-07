@@ -38,8 +38,8 @@ from .constants import (
     EXEC_START,
     EXEC_LIST)
 from .polling import (
-    any_bp_by_id,
-    any_dep_by_id,
+    blueprint_id_exists,
+    deployment_id_exists,
     poll_with_timeout,
     poll_workflow_after_execute,
     is_system_workflows_finished
@@ -161,7 +161,7 @@ class Component(object):
         update_runtime_properties(
             'blueprint', 'application_file_name', self.blueprint_file_name)
 
-        blueprint_exists = any_bp_by_id(self.client, self.blueprint_id)
+        blueprint_exists = blueprint_id_exists(self.client, self.blueprint_id)
 
         if self.blueprint.get(EXTERNAL_RESOURCE) and not blueprint_exists:
             raise NonRecoverableError(
@@ -273,19 +273,19 @@ class Component(object):
 
         update_runtime_properties('deployment', 'id', self.deployment_id)
 
-        deployment_exists = any_dep_by_id(self.client, self.deployment_id)
+        dep_exists = deployment_id_exists(self.client, self.deployment_id)
 
-        if self.deployment.get(EXTERNAL_RESOURCE) and deployment_exists:
+        if self.deployment.get(EXTERNAL_RESOURCE) and dep_exists:
             ctx.logger.info("Used external deployment.")
             return False
-        elif self.deployment.get(EXTERNAL_RESOURCE) and not deployment_exists:
+        elif self.deployment.get(EXTERNAL_RESOURCE) and not dep_exists:
             raise NonRecoverableError(
                 'Deployment ID {0} does not exist, '
                 'but {1} is {2}.'.format(
                     self.deployment_id,
                     EXTERNAL_RESOURCE,
                     self.deployment.get(EXTERNAL_RESOURCE)))
-        elif deployment_exists:
+        elif dep_exists:
             ctx.logger.warn(
                 'Deployment ID {0} exists, '
                 'but {1} is {2}. Will use.'.format(
@@ -379,7 +379,7 @@ class Component(object):
 
             ctx.logger.info("Wait for component's deployment delete.")
             poll_result = poll_with_timeout(
-                lambda: any_dep_by_id(self.client, self.deployment_id),
+                lambda: deployment_id_exists(self.client, self.deployment_id),
                 timeout=self.timeout,
                 expected_result=False)
 
