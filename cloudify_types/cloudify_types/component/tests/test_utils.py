@@ -15,7 +15,7 @@
 import os
 import tempfile
 
-from cloudify_types import utils
+from cloudify_types.component import utils
 from .base_test_suite import ComponentTestBase
 
 
