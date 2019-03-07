@@ -20,31 +20,23 @@ from cloudify.exceptions import NonRecoverableError
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from .constants import POLLING_INTERVAL
+from .utils import handle_client_exception
 
 
-def any_bp_by_id(_client, _bp_id):
-    resource_type = 'blueprints'
-    return any_resource_by_id(_client, _bp_id, resource_type)
+def _is_find_by_key(key, value, items):
+    return any([item for item in items if item[key] == value])
 
 
-def any_dep_by_id(_client, _dep_id):
-    resource_type = 'deployments'
-    return any_resource_by_id(_client, _dep_id, resource_type)
+@handle_client_exception('Blueprint was not found')
+def blueprint_id_exists(client, blueprint_id):
+    blueprints_ids = client.blueprints.list(_include=['id'])
+    return _is_find_by_key('id', blueprint_id, blueprints_ids)
 
 
-def any_resource_by_id(_client, _resource_id, _resource_type):
-    return any(resource_by_id(_client, _resource_id, _resource_type))
-
-
-def resource_by_id(_client, _id, _type):
-    _resources_client = getattr(_client, _type)
-    try:
-        _resources = _resources_client.list(_include=['id'])
-    except CloudifyClientError as ex:
-        raise NonRecoverableError(
-            '{0} list failed {1}.'.format(_type, str(ex)))
-    else:
-        return [str(_r['id']) == _id for _r in _resources]
+@handle_client_exception('Deployment was not found')
+def deployment_id_exists(client, deployment_id):
+    deployments_ids = client.deployments.list(_include=['id'])
+    return _is_find_by_key('id', deployment_id, deployments_ids)
 
 
 def poll_with_timeout(pollster,
@@ -129,7 +121,6 @@ def redirect_logs(_client, execution_id):
         # returned infinite count
         if full_count < 0:
             full_count = last_event + event_pagination_step
-        # returned nothing, let's do it next time
         if len(events) == 0:
             ctx.logger.log(20, "Returned nothing, let's get logs next time.")
             break

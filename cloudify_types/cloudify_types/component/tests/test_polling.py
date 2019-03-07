@@ -20,9 +20,8 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 from .base_test_suite import ComponentTestBase
 from .client_mock import MockCloudifyRestClient
 from ..polling import (
-    any_bp_by_id,
-    any_dep_by_id,
-    resource_by_id,
+    blueprint_id_exists,
+    deployment_id_exists,
     poll_with_timeout,
     redirect_logs,
     is_component_workflow_at_state,
@@ -32,14 +31,14 @@ from ..polling import (
 
 class TestPolling(ComponentTestBase):
 
-    def test_any_bp_by_id_no_blueprint(self):
+    def test_blueprint_id_exists_no_blueprint(self):
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             cfy_mock_client = MockCloudifyRestClient()
             mock_client.return_value = cfy_mock_client
-            output = any_bp_by_id(mock_client, 'blu_name')
+            output = blueprint_id_exists(mock_client, 'blu_name')
             self.assertFalse(output)
 
-    def test_any_bp_by_id_with_blueprint(self):
+    def test_blueprint_id_exists_with_existing_blueprint(self):
         blueprint_name = 'blu_name'
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             cfy_mock_client = MockCloudifyRestClient()
@@ -52,17 +51,17 @@ class TestPolling(ComponentTestBase):
 
             cfy_mock_client.blueprints.list = mock_return
             mock_client.return_value = cfy_mock_client
-            output = any_bp_by_id(cfy_mock_client, blueprint_name)
+            output = blueprint_id_exists(cfy_mock_client, blueprint_name)
             self.assertTrue(output)
 
-    def test_any_dep_by_id_no_deployment(self):
+    def test_deployment_id_exists_no_deployment(self):
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             cfy_mock_client = MockCloudifyRestClient()
             mock_client.return_value = cfy_mock_client
-            output = any_dep_by_id(mock_client, 'dep_name')
+            output = deployment_id_exists(mock_client, 'dep_name')
             self.assertFalse(output)
 
-    def test_any_dep_by_id_with_deployment(self):
+    def test_deployment_id_exists_with_existing_deployment(self):
         blueprint_name = 'test'
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             cfy_mock_client = MockCloudifyRestClient()
@@ -75,10 +74,27 @@ class TestPolling(ComponentTestBase):
 
             cfy_mock_client.deployments.list = mock_return
             mock_client.return_value = cfy_mock_client
-            output = any_dep_by_id(cfy_mock_client, blueprint_name)
+            output = deployment_id_exists(cfy_mock_client, blueprint_name)
             self.assertTrue(output)
 
-    def test_resource_by_id_client_error(self):
+    def test_find_blueprint_handle_client_error(self):
+
+        def mock_return(*args, **kwargs):
+            del args, kwargs
+            raise CloudifyClientError('Mistake')
+
+        with mock.patch('cloudify.manager.get_rest_client') as mock_client:
+            cfy_mock_client = MockCloudifyRestClient()
+            cfy_mock_client.blueprints.list = mock_return
+            mock_client.return_value = mock_return
+            output = self.assertRaises(
+                NonRecoverableError,
+                blueprint_id_exists,
+                cfy_mock_client,
+                'blu_name')
+            self.assertIn('Blueprint was not found', str(output))
+
+    def test_find_deployment_handle_client_error(self):
 
         def mock_return(*args, **kwargs):
             del args, kwargs
@@ -90,11 +106,10 @@ class TestPolling(ComponentTestBase):
             mock_client.return_value = mock_return
             output = self.assertRaises(
                 NonRecoverableError,
-                resource_by_id,
+                deployment_id_exists,
                 cfy_mock_client,
-                'dep_name',
-                'deployments')
-            self.assertIn('failed', output.message)
+                'dep_name')
+            self.assertIn('Deployment was not found', str(output))
 
     def test_poll_with_timeout_timeout(self):
         mock_timeout = .0001

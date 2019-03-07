@@ -155,7 +155,7 @@ class TestDeployment(ComponentTestBase):
                 poll.return_value = True
                 output = delete(
                     operation='delete_deployment',
-                    deployment_id='test_deployments_delete',
+                    deployment_id='dep_name',
                     timeout=MOCK_TIMEOUT)
                 self.assertTrue(output)
 
