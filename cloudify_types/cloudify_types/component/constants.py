@@ -16,14 +16,3 @@ DEPLOYMENTS_TIMEOUT = 120
 EXECUTIONS_TIMEOUT = 1800
 POLLING_INTERVAL = 10
 EXTERNAL_RESOURCE = 'external_resource'
-
-PLUGIN_UPLOAD = 'upload'
-PLUGIN_DELETE = 'delete'
-SECRETS_CREATE = 'create'
-SECRETS_DELETE = 'delete'
-BP_UPLOAD = '_upload'
-BP_DELETE = 'delete'
-DEP_CREATE = 'create'
-DEP_DELETE = 'delete'
-EXEC_START = 'start'
-EXEC_LIST = 'list'
