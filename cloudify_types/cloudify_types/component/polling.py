@@ -64,21 +64,18 @@ def poll_with_timeout(pollster,
 
 def redirect_logs(_client, execution_id):
     count_events = "received_events"
-    event_pagination_step = 100
 
     if not ctx.instance.runtime_properties.get(count_events):
         ctx.instance.runtime_properties[count_events] = {}
 
     last_event = int(ctx.instance.runtime_properties[count_events].get(
         execution_id, 0))
+    full_count = -1
 
-    full_count = last_event + event_pagination_step
-
-    while full_count > last_event:
+    while full_count != last_event:
         events, full_count = _client.events.get(execution_id,
                                                 last_event,
-                                                event_pagination_step,
-                                                True)
+                                                include_logs=True)
         for event in events:
             ctx.logger.debug(
                 'Event {0} for execution_id {1}'.format(event, execution_id))
@@ -118,9 +115,7 @@ def redirect_logs(_client, execution_id):
                 ctx.logger.log(20, message)
 
         last_event += len(events)
-        # returned infinite count
-        if full_count < 0:
-            full_count = last_event + event_pagination_step
+
         if len(events) == 0:
             ctx.logger.log(20, "Returned nothing, let's get logs next time.")
             break
@@ -154,8 +149,8 @@ def is_system_workflows_finished(client, target_deployment_id=None):
                 if _is_execution_ended(execution_status):
                     return False
 
-        if executions.metadata.pagination.total <= \
-                executions.metadata.pagination.offset:
+        if (executions.metadata.pagination.total <=
+                executions.metadata.pagination.offset):
             break
 
         offset = offset + size
