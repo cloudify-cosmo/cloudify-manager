@@ -25,13 +25,11 @@ class ComponentTypeTest(AgentlessTestCase):
     component_name = 'component'
 
     def test_component_creation_with_blueprint_id(self):
-        basic_blueprint_path = \
-            resource('dsl/basic.yaml')
+        basic_blueprint_path = resource('dsl/basic.yaml')
         self.client.blueprints.upload(basic_blueprint_path,
                                       entity_id='basic')
         deployment_id = 'd{0}'.format(uuid.uuid4())
-        dsl_path = resource(
-            'dsl/component_with_blueprint_id.yaml')
+        dsl_path = resource('dsl/component_with_blueprint_id.yaml')
         self.deploy_application(dsl_path, deployment_id=deployment_id)
         self.assertTrue(self.client.deployments.get(self.component_name))
         self.undeploy_application(deployment_id, is_delete_deployment=True)
@@ -44,8 +42,7 @@ class ComponentTypeTest(AgentlessTestCase):
 
     def test_component_creation_with_blueprint_package(self):
         deployment_id = 'd{0}'.format(uuid.uuid4())
-        dsl_path = resource(
-            'dsl/component_with_blueprint_package.yaml')
+        dsl_path = resource('dsl/component_with_blueprint_package.yaml')
         self.deploy_application(dsl_path,
                                 deployment_id=deployment_id)
         self.assertTrue(self.client.deployments.get(self.component_name))
@@ -58,13 +55,11 @@ class ComponentTypeTest(AgentlessTestCase):
                           self.component_name)
 
     def test_component_creation_with_secrets_and_plugins(self):
-        basic_blueprint_path = \
-            resource('dsl/basic.yaml')
+        basic_blueprint_path = resource('dsl/basic.yaml')
         self.client.blueprints.upload(basic_blueprint_path,
                                       entity_id='basic')
         deployment_id = 'd{0}'.format(uuid.uuid4())
-        dsl_path = resource(
-            'dsl/component_with_plugins_and_secrets.yaml')
+        dsl_path = resource('dsl/component_with_plugins_and_secrets.yaml')
         self.deploy_application(dsl_path, deployment_id=deployment_id)
         self.assertTrue(self.client.deployments.get(self.component_name))
         self.assertEqual(self.client.secrets.get('secret1')['value'], 'test')
@@ -80,13 +75,15 @@ class ComponentTypeTest(AgentlessTestCase):
                           self.client.deployments.get,
                           deployment_id)
 
+    def test_logs_redirect_option(self):
+        pass
+
 
 class ComponentTypeFailuresTest(AgentlessTestCase):
 
     def test_component_creation_with_not_existing_blueprint_id(self):
         deployment_id = 'd{0}'.format(uuid.uuid4())
-        dsl_path = resource(
-            'dsl/component_with_blueprint_id.yaml')
+        dsl_path = resource('dsl/component_with_blueprint_id.yaml')
         self.assertRaises(RuntimeError,
                           self.deploy_application,
                           dsl_path,
@@ -100,3 +97,117 @@ class ComponentTypeFailuresTest(AgentlessTestCase):
                           self.deploy_application,
                           dsl_path,
                           deployment_id=deployment_id)
+
+
+class ComponentScale(AgentlessTestCase):
+    component_name = 'component'
+
+    def test_given_deployment_name_with_auto_suffix_inc_option(self):
+        basic_blueprint_path = resource('dsl/basic.yaml')
+        self.client.blueprints.upload(basic_blueprint_path,
+                                      entity_id='basic')
+        deployment_id = 'd{0}'.format(uuid.uuid4())
+        main_blueprint = """
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - cloudify/types/types.yaml
+
+node_templates:
+
+  component_node:
+    type: cloudify.nodes.Component
+    properties:
+      resource_config:
+        blueprint:
+          external_resource: true
+          id: basic
+        deployment:
+          id: component
+          auto_suffix_inc: true
+    capabilities:
+        scalable:
+            properties:
+                default_instances: 2
+"""
+        blueprint_path = self.make_yaml_file(main_blueprint)
+        self.deploy_application(blueprint_path, deployment_id=deployment_id)
+        deployments = self.client.deployments.list()
+        self.assertEqual(len(deployments), 3)
+        self.undeploy_application(deployment_id, is_delete_deployment=True)
+        deployments = self.client.deployments.list()
+        self.assertEqual(len(deployments), 0)
+
+    def test_auto_suffix_inc_option_with_deployment_name_collision(self):
+        basic_blueprint_path = resource('dsl/basic.yaml')
+        self.client.blueprints.upload(basic_blueprint_path,
+                                      entity_id='basic')
+
+        # Creating collision with main blueprint's components
+        self.deploy_application(basic_blueprint_path,
+                                deployment_id='{}-1'.
+                                format(self.component_name))
+
+        deployment_id = 'd{0}'.format(uuid.uuid4())
+        main_blueprint = """
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - cloudify/types/types.yaml
+
+node_templates:
+
+  component_node:
+    type: cloudify.nodes.Component
+    properties:
+      resource_config:
+        blueprint:
+          external_resource: true
+          id: basic
+        deployment:
+          id: component
+          auto_suffix_inc: true
+    capabilities:
+        scalable:
+            properties:
+                default_instances: 2
+"""
+        blueprint_path = self.make_yaml_file(main_blueprint)
+        self.deploy_application(blueprint_path, deployment_id=deployment_id)
+        deployments = self.client.deployments.list()
+        self.assertEqual(len(deployments), 4)
+        self.undeploy_application(deployment_id, is_delete_deployment=True)
+        deployments = self.client.deployments.list()
+        self.assertEqual(len(deployments), 0)
+
+    def test_given_deployment_name_with_no_auto_suffix_inc_option(self):
+        basic_blueprint_path = resource('dsl/basic.yaml')
+        self.client.blueprints.upload(basic_blueprint_path,
+                                      entity_id='basic')
+        deployment_id = 'd{0}'.format(uuid.uuid4())
+        main_blueprint = """
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - cloudify/types/types.yaml
+
+node_templates:
+
+  component_node:
+    type: cloudify.nodes.Component
+    properties:
+      resource_config:
+        blueprint:
+          external_resource: true
+          id: basic
+        deployment:
+          id: component
+    capabilities:
+        scalable:
+            properties:
+                default_instances: 2
+"""
+        blueprint_path = self.make_yaml_file(main_blueprint)
+        self.deploy_application(blueprint_path, deployment_id=deployment_id)
+        deployments = self.client.deployments.list()
+        self.assertEqual(len(deployments), 0)

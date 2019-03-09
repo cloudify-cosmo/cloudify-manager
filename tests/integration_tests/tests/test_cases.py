@@ -449,6 +449,21 @@ class BaseTestCase(unittest.TestCase):
         finally:
             client._client.headers[CLOUDIFY_TENANT_HEADER] = curr_tenant
 
+    def make_file_with_name(self, content, filename, base_dir=None):
+        base_dir = (os.path.join(self._temp_dir, base_dir)
+                    if base_dir else self.workdir)
+        filename_path = os.path.join(base_dir, filename)
+        if not os.path.exists(base_dir):
+            os.makedirs(base_dir)
+        with open(filename_path, 'w') as f:
+            f.write(content)
+        return filename_path
+
+    def make_yaml_file(self, content):
+        filename = 'tempfile{0}.yaml'.format(uuid.uuid4())
+        filename_path = self.make_file_with_name(content, filename)
+        return filename_path
+
 
 class AgentlessTestCase(BaseTestCase):
     environment_type = env.AgentlessTestEnvironment
