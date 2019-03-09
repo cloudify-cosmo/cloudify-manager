@@ -842,6 +842,10 @@ data_types:
         description: >
           Logs redirect settings, by default {redirect: true}
         required: false
+      auto_suffix_inc:
+        description: >
+          Optional, will add a suffix to the given deployment id in the form of a running index.
+        required: false
 
   cloudify.datatypes.Component:
     properties:
