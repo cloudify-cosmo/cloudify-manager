@@ -804,7 +804,7 @@ data_types:
         default: false
       id:
         description: >
-          This is the blueprint id that the component's node is connected to.
+          This is the blueprint ID that the component's node is connected to.
         required: false
       main_file_name:
         description: >
@@ -826,7 +826,7 @@ data_types:
         default: false
       id:
         description: >
-          This is the deployment id that the component's node is connected to.
+          This is the deployment ID that the component's node is connected to.
         required: false
       inputs:
         description: >
@@ -841,6 +841,10 @@ data_types:
       logs:
         description: >
           Logs redirect settings, by default {redirect: true}
+        required: false
+      auto_inc_suffix:
+        description: >
+          Optional, will add a suffix to the given deployment ID in the form of an auto incremented index.
         required: false
 
   cloudify.datatypes.Component:

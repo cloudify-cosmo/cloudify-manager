@@ -52,7 +52,7 @@ class TestBlueprint(ComponentTestBase):
                                       operation='upload_blueprint',
                                       **self.resource_config)
 
-            self.assertIn('_upload failed', error.message)
+            self.assertIn('action "_upload" failed', error.message)
 
     def test_upload_blueprint_exists(self):
         blueprint_id = 'blu_name'
