@@ -52,7 +52,7 @@ class TestExecute(ComponentTestBase):
                                       execute_start,
                                       deployment_id='dep_name',
                                       workflow_id='install')
-            self.assertIn('action start failed',
+            self.assertIn('action "start" failed',
                           error.message)
 
     def test_execute_start_timeout(self):
@@ -121,9 +121,8 @@ class TestExecute(ComponentTestBase):
         cfy_mock_client.deployments.outputs.get = mock.MagicMock(
             side_effect=CloudifyClientError('Mistake'))
 
-        poll_with_timeout_test = \
-            'cloudify_types.component.component.Component.' \
-            'verify_execution_successful'
+        poll_with_timeout_test = ('cloudify_types.component.component.'
+                                  'Component.verify_execution_successful')
 
         with mock.patch(
             'cloudify_types.component.component.CloudifyClient'
