@@ -301,7 +301,7 @@ class TestPolling(ComponentTestBase):
                 None, None, None, None, None, None)
             self.assertTrue(output)
 
-    def test_dep_logs_redirect_predefined_level(self):
+    def test_component_logs_redirect_predefined_level(self):
         cfy_mock_client = MockCloudifyRestClient()
 
         cfy_mock_client.events._set([{
@@ -326,7 +326,7 @@ class TestPolling(ComponentTestBase):
             '2017-03-22T11:41:59.169Z [vm_ke9e2d.create] Successfully '
             'configured cfy-agent')
 
-    def test_dep_logs_redirect_unknown_level(self):
+    def test_component_logs_redirect_unknown_level(self):
         cfy_mock_client = MockCloudifyRestClient()
 
         cfy_mock_client.events._set([{
@@ -353,10 +353,10 @@ class TestPolling(ComponentTestBase):
             "2017-03-22T11:42:00.083Z [vm_ke9e2d.create] Task succeeded "
             "'cloudify_agent.installer.operations.create'")
 
-    def test_dep_logs_empty_infinity(self):
+    def test_component_logs_empty_infinity(self):
         cfy_mock_client = MockCloudifyRestClient()
 
-        cfy_mock_client.events._set([], False)
+        cfy_mock_client.events._set([])
 
         redirect_logs(cfy_mock_client, 'some_execution_id')
         self._ctx.logger.log.assert_called_with(
