@@ -22,7 +22,7 @@ from cloudify_rest_client.responses import ListResponse
 class BaseMockClient(object):
 
     @property
-    def list_mock(self):
+    def mock_object(self):
         return {
             'id': MagicMock,
             'workflow_id': MagicMock,
@@ -32,7 +32,7 @@ class BaseMockClient(object):
 
     def base_list_return(self, *args, **_):
         del args
-        return ListResponse([self.list_mock], metadata={})
+        return ListResponse([self.mock_object], metadata={})
 
     def list(self, *args, **kwargs):
         return self.base_list_return(args, kwargs)
@@ -99,15 +99,14 @@ class MockNodeInstancesClient(BaseMockClient):
 class MockEventsClient(BaseMockClient):
 
     list_events = []
-    count = -1
 
-    def _set(self, list_events, full_count=True):
+    def _set(self, list_events):
         self.list_events = list_events
-        if full_count:
-            self.count = len(self.list_events)
 
-    def get(self, *args, **_):
-        return self.list_events, self.count
+    def list(self, *args, **_):
+        return ListResponse(self.list_events,
+                            metadata={"pagination":
+                                      {"total": len(self.list_events)}})
 
 
 class MockCloudifyRestClient(object):
