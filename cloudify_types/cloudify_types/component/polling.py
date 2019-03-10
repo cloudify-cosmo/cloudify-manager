@@ -23,20 +23,20 @@ from .constants import POLLING_INTERVAL
 from .utils import handle_client_exception
 
 
-def _is_find_by_key(key, value, items):
+def _is_key_found(key, value, items):
     return any([item for item in items if item[key] == value])
 
 
 @handle_client_exception('Blueprint was not found')
 def blueprint_id_exists(client, blueprint_id):
     blueprints_ids = client.blueprints.list(_include=['id'])
-    return _is_find_by_key('id', blueprint_id, blueprints_ids)
+    return _is_key_found('id', blueprint_id, blueprints_ids)
 
 
 @handle_client_exception('Deployment was not found')
 def deployment_id_exists(client, deployment_id):
     deployments_ids = client.deployments.list(_include=['id'])
-    return _is_find_by_key('id', deployment_id, deployments_ids)
+    return _is_key_found('id', deployment_id, deployments_ids)
 
 
 def poll_with_timeout(pollster,
@@ -171,8 +171,8 @@ def is_component_workflow_at_state(client,
         execution = client.executions.get(execution_id=execution_id,
                                           _include=exec_get_fields)
         ctx.logger.debug(
-            'The execution get response form {0} is {1}'.format(dep_id,
-                                                                execution))
+            'The execution got response for {0} is {1}'.format(dep_id,
+                                                               execution))
 
     except CloudifyClientError as ex:
         raise NonRecoverableError(
@@ -181,7 +181,7 @@ def is_component_workflow_at_state(client,
     execution_id = execution.get('id')
     if log_redirect and execution_id:
         ctx.logger.debug(
-            'execution info for _log_redirect is {0}'.format(execution))
+            'execution info for log_redirect is {0}'.format(execution))
         redirect_logs(client, execution_id)
 
     execution_status = execution.get('status')
