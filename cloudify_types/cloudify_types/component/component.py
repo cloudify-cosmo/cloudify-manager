@@ -258,23 +258,11 @@ class Component(object):
 
         dep_exists = deployment_id_exists(self.client, self.deployment_id)
 
-        if self.deployment.get(EXTERNAL_RESOURCE) and dep_exists:
-            ctx.logger.info("Used external deployment.")
-            return False
-        elif self.deployment.get(EXTERNAL_RESOURCE) and not dep_exists:
-            raise NonRecoverableError(
-                'Deployment ID {0} does not exist, '
-                'but {1} is {2}.'.format(
-                    self.deployment_id,
-                    EXTERNAL_RESOURCE,
-                    self.deployment.get(EXTERNAL_RESOURCE)))
-        elif dep_exists:
-            ctx.logger.warn(
-                'Deployment ID {0} exists, '
-                'but {1} is {2}. Will use.'.format(
-                    self.blueprint_id,
-                    EXTERNAL_RESOURCE,
-                    self.blueprint.get(EXTERNAL_RESOURCE)))
+        if dep_exists:
+            ctx.logger.error(
+                'Component\'s deployment ID {} already exists, '
+                'please verify the chosen name.'.format(
+                    self.blueprint_id))
             return False
 
         ctx.logger.info("Create deployment {0}."
@@ -342,32 +330,28 @@ class Component(object):
                 del ctx.instance.runtime_properties[property_name]
 
     def delete_deployment(self):
-        client_args = dict(deployment_id=self.deployment_id)
+        delete_component_args = dict(deployment_id=self.deployment_id)
 
-        poll_result = True
+        ctx.logger.info("Wait for component's stop deployment operation "
+                        "related executions.")
+        poll_with_timeout(
+            lambda:
+            is_all_executions_finished(self.client,
+                                       self.deployment_id),
+            timeout=self.timeout,
+            expected_result=True)
 
-        if not self.deployment.get(EXTERNAL_RESOURCE):
-            ctx.logger.info("Wait for component's stop deployment operation "
-                            "related executions.")
+        ctx.logger.info("Delete component's deployment "
+                        "{0}".format(self.deployment_id))
+        self.http_client_wrapper('deployments',
+                                 'delete',
+                                 delete_component_args)
 
-            poll_with_timeout(
-                lambda:
-                is_all_executions_finished(self.client,
-                                           self.deployment_id),
-                timeout=self.timeout,
-                expected_result=True)
-
-            ctx.logger.info("Delete component's deployment "
-                            "{0}".format(self.deployment_id))
-            self.http_client_wrapper('deployments',
-                                     'delete',
-                                     client_args)
-
-            ctx.logger.info("Wait for component's deployment delete.")
-            poll_result = poll_with_timeout(
-                lambda: deployment_id_exists(self.client, self.deployment_id),
-                timeout=self.timeout,
-                expected_result=False)
+        ctx.logger.info("Wait for component's deployment delete.")
+        poll_result = poll_with_timeout(
+            lambda: deployment_id_exists(self.client, self.deployment_id),
+            timeout=self.timeout,
+            expected_result=False)
 
         ctx.logger.info("Little wait internal cleanup services.")
         time.sleep(POLLING_INTERVAL)
@@ -381,8 +365,10 @@ class Component(object):
         if not self.blueprint.get(EXTERNAL_RESOURCE):
             ctx.logger.info("Delete component's blueprint {0}."
                             .format(self.blueprint_id))
-            client_args = dict(blueprint_id=self.blueprint_id)
-            self.http_client_wrapper('blueprints', 'delete', client_args)
+            delete_component_args = dict(blueprint_id=self.blueprint_id)
+            self.http_client_wrapper('blueprints',
+                                     'delete',
+                                     delete_component_args)
 
         self._delete_plugins()
         self._delete_secrets()
@@ -407,23 +393,22 @@ class Component(object):
             return ctx.operation.retry(
                 'The deployment is not ready for execution.')
 
-        if not self.deployment.get(EXTERNAL_RESOURCE):
-            execution_args = self.config.get('executions_start_args', {})
-            client_args = dict(deployment_id=self.deployment_id,
-                               workflow_id=self.workflow_id,
-                               **execution_args)
-            response = self.http_client_wrapper('executions',
-                                                'start', client_args)
+        execution_args = self.config.get('executions_start_args', {})
+        client_args = dict(deployment_id=self.deployment_id,
+                           workflow_id=self.workflow_id,
+                           **execution_args)
+        response = self.http_client_wrapper('executions',
+                                            'start', client_args)
 
-            # Set the execution_id for the last execution process created
-            self.execution_id = response['id']
-            ctx.logger.debug('Executions start response: {0}'.format(response))
+        # Set the execution_id for the last execution process created
+        self.execution_id = response['id']
+        ctx.logger.debug('Executions start response: {0}'.format(response))
 
-            # Poll for execution success.
-            if not self.verify_execution_successful():
-                ctx.logger.error('Deployment error.')
+        # Poll for execution success.
+        if not self.verify_execution_successful():
+            ctx.logger.error('Deployment error.')
 
-            ctx.logger.debug('Polling execution succeeded')
+        ctx.logger.debug('Polling execution succeeded')
 
         ctx.logger.info('Start post execute component')
         self.post_execute_component()
