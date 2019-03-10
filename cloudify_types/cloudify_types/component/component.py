@@ -98,9 +98,6 @@ class Component(object):
         self.workflow_state = operation_inputs.get('workflow_state',
                                                    'terminated')
 
-        self.reexecute = (self.config.get('reexecute')
-                          or ctx.instance.runtime_properties.get('reexecute'))
-
         # Polling-related properties
         self.interval = operation_inputs.get('interval', POLLING_INTERVAL)
         self.state = operation_inputs.get('state', 'terminated')
@@ -410,9 +407,7 @@ class Component(object):
             return ctx.operation.retry(
                 'The deployment is not ready for execution.')
 
-        # we must to run some execution
-        if ((self.deployment.get(EXTERNAL_RESOURCE) and self.reexecute)
-                or not self.deployment.get(EXTERNAL_RESOURCE)):
+        if not self.deployment.get(EXTERNAL_RESOURCE):
             execution_args = self.config.get('executions_start_args', {})
             client_args = dict(deployment_id=self.deployment_id,
                                workflow_id=self.workflow_id,
