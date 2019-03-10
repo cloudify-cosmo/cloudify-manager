@@ -62,7 +62,19 @@ def poll_with_timeout(pollster,
     return False
 
 
-def redirect_logs(_client, execution_id):
+def _fetch_events(client, execution_id, last_event):
+    # Events fetch size is according to http client default
+    response = client.events.list(execution_id=execution_id,
+                                  _offset=last_event,
+                                  _size=1000,
+                                  include_logs=True)
+    events = response.items
+    full_count = response.metadata.pagination.total
+
+    return events, full_count
+
+
+def redirect_logs(client, execution_id):
     count_events = "received_events"
 
     if not ctx.instance.runtime_properties.get(count_events):
@@ -73,9 +85,8 @@ def redirect_logs(_client, execution_id):
     full_count = -1
 
     while full_count != last_event:
-        events, full_count = _client.events.get(execution_id,
-                                                last_event,
-                                                include_logs=True)
+        events, full_count = _fetch_events(client, execution_id, last_event)
+
         for event in events:
             ctx.logger.debug(
                 'Event {0} for execution_id {1}'.format(event, execution_id))
@@ -164,12 +175,12 @@ def is_component_workflow_at_state(client,
                                    log_redirect=False,
                                    execution_id=None):
 
-    exec_get_fields = \
-        ['status', 'workflow_id', 'created_at', 'ended_at', 'id']
+    execution_get_args = ['status', 'workflow_id',
+                          'created_at', 'ended_at', 'id']
 
     try:
         execution = client.executions.get(execution_id=execution_id,
-                                          _include=exec_get_fields)
+                                          _include=execution_get_args)
         ctx.logger.debug(
             'The execution got response for {0} is {1}'.format(dep_id,
                                                                execution))
