@@ -85,41 +85,6 @@ class TestExecute(ComponentTestBase):
                                        timeout=MOCK_TIMEOUT)
                 self.assertTrue(output)
 
-    def test_execute_deployment_not_ready(self):
-        test_name = 'test_execute_deployment_not_ready'
-        _ctx = self.get_mock_ctx(test_name)
-        current_ctx.set(_ctx)
-
-        _ctx.instance.runtime_properties['deployment'] = {}
-        _ctx.instance.runtime_properties['resource_config'] = {
-            'deployment': {
-                EXTERNAL_RESOURCE: True
-            }
-        }
-        _ctx.instance.runtime_properties['reexecute'] = True
-
-        with mock.patch('cloudify.manager.get_rest_client') as mock_client:
-            cfy_mock_client = MockCloudifyRestClient()
-
-            list_response = cfy_mock_client.deployments.list()
-            list_response[0]['id'] = test_name
-            list_response[0]['is_system_workflow'] = False
-            list_response[0]['status'] = 'started'
-            list_response[0]['deployment_id'] = test_name
-
-            def mock_return(*args, **kwargs):
-                del args, kwargs
-                return list_response
-
-            cfy_mock_client.executions.list = mock_return
-            mock_client.return_value = cfy_mock_client
-
-            output = execute_start(operation='execute_workflow',
-                                   deployment_id=test_name,
-                                   workflow_id='install',
-                                   timeout=MOCK_TIMEOUT)
-            self.assertIsNone(output)
-
     def test_execute_start_succeeds_not_finished(self):
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             mock_client.return_value = MockCloudifyRestClient()
