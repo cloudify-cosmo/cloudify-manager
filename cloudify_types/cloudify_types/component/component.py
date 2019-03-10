@@ -140,8 +140,6 @@ class Component(object):
 
     @staticmethod
     def _is_valid_url(candidate):
-        assert isinstance(candidate, str)
-
         parse_url = urlparse(candidate)
         return not (parse_url.netloc and parse_url.scheme)
 
