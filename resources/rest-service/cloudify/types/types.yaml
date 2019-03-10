@@ -422,7 +422,7 @@ node_types:
                 executions_start_args:
                   allow_custom_parameters: true
                   parameters:
-                    ignore_failure: true
+                    ignore_failure: false
         delete:
           implementation: cfy_extensions.cloudify_types.component.delete
 
