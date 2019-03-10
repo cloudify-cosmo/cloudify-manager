@@ -318,6 +318,9 @@ class Component(object):
                 'No execution id Found for deployment'
                 ' {0}'.format(self.deployment_id)
             )
+
+        # If a match was found there can only be one, so we will extract it.
+        self.execution_id = self.execution_id[0]
         ctx.logger.info("Found execution_id {0} for deployment_id {1}"
                         .format(self.execution_id,
                                 self.deployment_id))
