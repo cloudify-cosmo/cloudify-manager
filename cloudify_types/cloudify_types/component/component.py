@@ -96,6 +96,8 @@ class Component(object):
         self.deployment_inputs = self.deployment.get('inputs', {})
         self.deployment_outputs = self.deployment.get('outputs', {})
         self.deployment_logs = self.deployment.get('logs', {})
+        self.deployment_auto_suffix = self.deployment.get('auto_inc_suffix',
+                                                          False)
 
         # Execution-related properties
         self.workflow_id = operation_inputs.get(
