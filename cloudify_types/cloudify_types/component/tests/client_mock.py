@@ -104,9 +104,11 @@ class MockEventsClient(BaseMockClient):
         self.list_events = list_events
 
     def list(self, *args, **_):
-        return ListResponse(self.list_events,
-                            metadata={"pagination":
-                                      {"total": len(self.list_events)}})
+        response = ListResponse(self.list_events,
+                                metadata={"pagination":
+                                          {"total": len(self.list_events)}})
+        self.list_events = []
+        return response
 
 
 class MockCloudifyRestClient(object):

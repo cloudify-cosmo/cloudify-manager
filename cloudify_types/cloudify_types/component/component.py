@@ -62,12 +62,6 @@ class Component(object):
         full_operation_name = ctx.operation.name
         self.operation_name = full_operation_name.split('.').pop()
 
-        # These should not make their way into the Operation inputs.
-        os.environ['_PAGINATION_OFFSET'] = \
-            str(operation_inputs.pop('pagination_offset', 0))
-        os.environ['_PAGINATION_SIZE'] = \
-            str(operation_inputs.pop('pagination_size', 1000))
-
         # cloudify client
         self.client_config = self._get_desired_operation_input(
             'client', operation_inputs)
