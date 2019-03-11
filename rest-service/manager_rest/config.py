@@ -71,7 +71,7 @@ class Config(object):
                                             default={'connect_timeout': 10},
                                             from_db=False)
 
-    ca_cert_path = Setting('ca_cert_path')
+    ca_cert_path = Setting('ca_cert_path', from_db=False)
 
     # rabbitmq settings
     amqp_host = Setting('amqp_host', from_db=False)
