@@ -11,6 +11,11 @@ checkout:
 
 
 defaults:
+  - &only_master
+    filters:
+      branches:
+        only:
+          - master
   - &tox_defaults
     docker:
       - image: circleci/python:2.7
@@ -198,18 +203,24 @@ commands:
 
 workflows:
   version: 2
-
   build_and_test:
     jobs:
       - flake8
       - build-rpms
-      - test_v1
-      - test_clientv2_endpoints
-      - test_clientv2_infrastructure
-      - test_clientv2_1_endpoints
-      - test_clientv2_1_infrastructure
-      - test_clientv3_endpoints
-      - test_clientv3_infrastructure
+      - test_v1:
+          <<: *only_master
+      - test_clientv2_endpoints:
+          <<: *only_master
+      - test_clientv2_infrastructure:
+          <<: *only_master
+      - test_clientv2_1_endpoints:
+          <<: *only_master
+      - test_clientv2_1_infrastructure:
+          <<: *only_master
+      - test_clientv3_endpoints:
+          <<: *only_master
+      - test_clientv3_infrastructure:
+          <<: *only_master
       - test_clientv3_1_endpoints
       - test_clientv3_1_infrastructure
       - test_workflows
