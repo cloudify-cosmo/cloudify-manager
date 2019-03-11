@@ -13,14 +13,13 @@
 # limitations under the License.
 
 import time
-from os import getenv
 
 from cloudify import ctx
 from cloudify.exceptions import NonRecoverableError
 from cloudify_rest_client.exceptions import CloudifyClientError
 
-from .constants import POLLING_INTERVAL
 from .utils import handle_client_exception
+from .constants import POLLING_INTERVAL, PAGINATION_SIZE
 
 
 def _is_key_found(key, value, items):
@@ -63,10 +62,10 @@ def poll_with_timeout(pollster,
 
 
 def _fetch_events(client, execution_id, last_event):
-    # Events fetch size is according to http client default
     response = client.events.list(execution_id=execution_id,
                                   _offset=last_event,
-                                  _size=1000,
+                                  _size=PAGINATION_SIZE,
+                                  _sort='timestamp',
                                   include_logs=True)
     events = response.items
     full_count = response.metadata.pagination.total
@@ -139,15 +138,14 @@ def _is_execution_ended(execution_status):
 
 
 def is_system_workflows_finished(client, target_deployment_id=None):
-    offset = int(getenv('_PAGINATION_OFFSET', 0))
-    size = int(getenv('_PAGINATION_SIZE', 1000))
+    offset = 0
 
     while True:
         try:
             executions = client.executions.list(
                 include_system_workflows=True,
                 _offset=offset,
-                _size=size)
+                _size=PAGINATION_SIZE)
         except CloudifyClientError as ex:
             raise NonRecoverableError(
                 'Executions list failed {0}.'.format(ex))
@@ -164,7 +162,7 @@ def is_system_workflows_finished(client, target_deployment_id=None):
                 executions.metadata.pagination.offset):
             break
 
-        offset = offset + size
+        offset = offset + len(executions)
 
     return True
 
