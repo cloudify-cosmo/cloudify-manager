@@ -38,7 +38,8 @@ defaults:
 
 jobs:
   flake8:
-    <<: *tox_defaults
+    docker:
+      - image: circleci/python:2.7
 
     steps:
       - checkout
