@@ -32,7 +32,7 @@ from .polling import (
     deployment_id_exists,
     poll_with_timeout,
     poll_workflow_after_execute,
-    is_system_workflows_finished
+    is_all_executions_finished
 )
 from cloudify_types.component.utils import (
     update_runtime_properties,
@@ -350,13 +350,13 @@ class Component(object):
         poll_result = True
 
         if not self.deployment.get(EXTERNAL_RESOURCE):
-            ctx.logger.info("Wait for stop component's deployment "
+            ctx.logger.info("Wait for component's stop deployment operation "
                             "related executions.")
 
             poll_with_timeout(
                 lambda:
-                is_system_workflows_finished(self.client,
-                                             self.deployment_id),
+                is_all_executions_finished(self.client,
+                                           self.deployment_id),
                 timeout=self.timeout,
                 expected_result=True)
 
@@ -377,7 +377,7 @@ class Component(object):
         ctx.logger.info("Wait for stop all system workflows.")
 
         poll_with_timeout(
-            lambda: is_system_workflows_finished(self.client),
+            lambda: is_all_executions_finished(self.client),
             timeout=self.timeout,
             expected_result=True)
 
@@ -403,7 +403,7 @@ class Component(object):
 
         # Wait for the deployment to finish any executions
         if not poll_with_timeout(lambda:
-                                 is_system_workflows_finished(
+                                 is_all_executions_finished(
                                      self.client, self.deployment_id),
                                  timeout=self.timeout,
                                  expected_result=True):

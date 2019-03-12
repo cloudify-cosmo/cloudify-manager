@@ -25,7 +25,7 @@ from ..polling import (
     poll_with_timeout,
     redirect_logs,
     is_component_workflow_at_state,
-    is_system_workflows_finished,
+    is_all_executions_finished,
     poll_workflow_after_execute)
 
 
@@ -150,7 +150,7 @@ class TestPolling(ComponentTestBase):
 
             cfy_mock_client.executions.list = mock_return
             mock_client.return_value = cfy_mock_client
-            output = is_system_workflows_finished(
+            output = is_all_executions_finished(
                 cfy_mock_client)
             self.assertFalse(output)
 
@@ -168,7 +168,7 @@ class TestPolling(ComponentTestBase):
 
             cfy_mock_client.executions.list = mock_return
             mock_client.return_value = cfy_mock_client
-            output = is_system_workflows_finished(cfy_mock_client)
+            output = is_all_executions_finished(cfy_mock_client)
             self.assertTrue(output)
 
     def test_dep_system_workflows_finished_raises(self):
@@ -184,7 +184,7 @@ class TestPolling(ComponentTestBase):
             cfy_mock_client.executions.list = mock_return
             mock_client.return_value = cfy_mock_client
             output = self.assertRaises(NonRecoverableError,
-                                       is_system_workflows_finished,
+                                       is_all_executions_finished,
                                        cfy_mock_client)
             self.assertIn('failed', output.message)
 
