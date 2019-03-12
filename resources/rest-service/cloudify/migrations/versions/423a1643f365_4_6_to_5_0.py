@@ -198,7 +198,35 @@ def upgrade():
             scope=['mgmtworker'],
             schema={'type': 'number', 'minimum': 1},
             is_editable=True
-        )
+        ),
+        Config(
+            name='broker_port',
+            value=5671,
+            scope=['agent'],
+            schema={'type': 'number', 'minimum': 1, 'maximum': 65535},
+            is_editable=True
+        ),
+        Config(
+            name='min_workers',
+            value=2,
+            scope=['agent'],
+            schema={'type': 'number', 'minimum': 1},
+            is_editable=True
+        ),
+        Config(
+            name='max_workers',
+            value=5,
+            scope=['agent'],
+            schema={'type': 'number', 'minimum': 1},
+            is_editable=True
+        ),
+        Config(
+            name='heartbeat',
+            value=30,
+            scope=['agent'],
+            schema={'type': 'number', 'minimum': 0},
+            is_editable=True
+        ),
     ])
     session.commit()
 
