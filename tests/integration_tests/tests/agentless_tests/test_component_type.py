@@ -124,7 +124,7 @@ node_templates:
           id: basic
         deployment:
           id: component
-          auto_suffix_inc: true
+          auto_inc_suffix: true
     capabilities:
         scalable:
             properties:
@@ -166,7 +166,7 @@ node_templates:
           id: basic
         deployment:
           id: component
-          auto_suffix_inc: true
+          auto_inc_suffix: true
     capabilities:
         scalable:
             properties:
