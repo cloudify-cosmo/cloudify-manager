@@ -208,6 +208,9 @@ node_templates:
                 default_instances: 2
 """
         blueprint_path = self.make_yaml_file(main_blueprint)
-        self.deploy_application(blueprint_path, deployment_id=deployment_id)
+        self.assertRaises(RuntimeError,
+                          self.deploy_application,
+                          blueprint_path,
+                          deployment_id=deployment_id)
         deployments = self.client.deployments.list()
         self.assertEqual(len(deployments), 0)
