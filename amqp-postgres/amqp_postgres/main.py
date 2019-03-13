@@ -14,12 +14,12 @@
 # limitations under the License.
 ############
 
-import yaml
 import Queue
 import logging
 import argparse
 
 from cloudify.amqp_client import get_client
+from manager_rest import config
 
 from .amqp_consumer import AMQPLogsEventsConsumer, AckingAMQPConnection
 from .postgres_publisher import DBLogEventPublisher
@@ -32,21 +32,21 @@ DEFAULT_LOG_PATH = '/var/log/cloudify/amqp-postgres/amqp_postgres.log'
 CONFIG_PATH = '/opt/manager/cloudify-rest.conf'
 
 
-def _create_connections(config):
+def _create_connections():
     acks_queue = Queue.Queue()
-    port = BROKER_PORT_SSL if config['amqp_ca_path'] else BROKER_PORT_NO_SSL
+    cfy_config = config.instance
     amqp_client = get_client(
-        amqp_host=config['amqp_host'],
-        amqp_user=config['amqp_username'],
-        amqp_pass=config['amqp_password'],
+        amqp_host=cfy_config.amqp_host,
+        amqp_user=cfy_config.amqp_username,
+        amqp_pass=cfy_config.amqp_password,
         amqp_vhost='/',
-        amqp_port=port,
-        ssl_enabled=bool(config['amqp_ca_path']),
-        ssl_cert_path=config['amqp_ca_path'],
+        amqp_port=BROKER_PORT_SSL,
+        ssl_enabled=True,
+        ssl_cert_path=cfy_config.amqp_ca_path,
         cls=AckingAMQPConnection
     )
     amqp_client.acks_queue = acks_queue
-    db_publisher = DBLogEventPublisher(config, amqp_client)
+    db_publisher = DBLogEventPublisher(config.instance, amqp_client)
     amqp_consumer = AMQPLogsEventsConsumer(
         message_processor=db_publisher.process
     )
@@ -61,9 +61,9 @@ def main(args):
         level=args.get('loglevel', 'INFO').upper(),
         filename=args.get('logfile', DEFAULT_LOG_PATH),
         format="%(asctime)s %(message)s")
-    with open(args['config']) as f:
-        config = yaml.safe_load(f)
-    amqp_client, db_publisher = _create_connections(config)
+    config.instance.load_from_file(args['config'])
+    config.instance.load_from_db()
+    amqp_client, db_publisher = _create_connections()
 
     logger.info('Starting consuming...')
     amqp_client.consume()
