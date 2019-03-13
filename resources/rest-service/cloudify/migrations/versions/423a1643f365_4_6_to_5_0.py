@@ -243,9 +243,43 @@ def upgrade():
         sa.Column('fs_sync_node_id', sa.Text(), nullable=True),
         sa.PrimaryKeyConstraint('id', name=op.f('managers_pkey'))
     )
+    op.create_table(
+        'certificates',
+        sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column('name', sa.Text(), unique=True, nullable=False),
+        sa.Column('value', sa.Text(), unique=False, nullable=False),
+        sa.Column('updated_at', UTCDateTime(), nullable=True),
+        sa.Column('_updater_id', sa.Integer(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ['_updater_id'],
+            [u'users.id'],
+            ondelete='SET NULL'
+        ),
+        sa.PrimaryKeyConstraint('id', name=op.f('certificates_pkey'))
+    )
+    op.create_table(
+        'rabbitmq_brokers',
+        sa.Column('name', sa.Text(), nullable=False),
+        sa.Column('host', sa.Text(), nullable=False),
+        sa.Column('management_host', sa.Text(), nullable=True),
+        sa.Column('port', sa.Integer()),
+        sa.Column('username', sa.Text(), nullable=True),
+        sa.Column('password', sa.Text(), nullable=True),
+        sa.Column('params', JSONString(), nullable=True),
+        sa.Column('_ca_cert_id', sa.Integer(), nullable=False),
+
+        sa.ForeignKeyConstraint(
+            ['_ca_cert_id'],
+            [u'certificates.id'],
+            ondelete='CASCADE'
+        ),
+        sa.PrimaryKeyConstraint('name', name=op.f('rabbitmq_brokers_pkey'))
+    )
 
 
 def downgrade():
     op.drop_column('executions', 'token')
     op.drop_table('config')
     op.drop_table('managers')
+    op.drop_table('certificates')
+    op.drop_table('rabbitmq_brokers')
