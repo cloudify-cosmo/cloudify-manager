@@ -75,9 +75,6 @@ class ComponentTypeTest(AgentlessTestCase):
                           self.client.deployments.get,
                           deployment_id)
 
-    def test_logs_redirect_option(self):
-        pass
-
 
 class ComponentTypeFailuresTest(AgentlessTestCase):
 
@@ -99,7 +96,7 @@ class ComponentTypeFailuresTest(AgentlessTestCase):
                           deployment_id=deployment_id)
 
 
-class ComponentScale(AgentlessTestCase):
+class ComponentScaleCreation(AgentlessTestCase):
     component_name = 'component'
 
     def test_given_deployment_name_with_auto_suffix_inc_option(self):
@@ -124,7 +121,7 @@ node_templates:
           id: basic
         deployment:
           id: component
-          auto_suffix_inc: true
+          auto_inc_suffix: true
     capabilities:
         scalable:
             properties:
@@ -166,7 +163,7 @@ node_templates:
           id: basic
         deployment:
           id: component
-          auto_suffix_inc: true
+          auto_inc_suffix: true
     capabilities:
         scalable:
             properties:
@@ -178,7 +175,7 @@ node_templates:
         self.assertEqual(len(deployments), 4)
         self.undeploy_application(deployment_id, is_delete_deployment=True)
         deployments = self.client.deployments.list()
-        self.assertEqual(len(deployments), 0)
+        self.assertEqual(len(deployments), 1)
 
     def test_given_deployment_name_with_no_auto_suffix_inc_option(self):
         basic_blueprint_path = resource('dsl/basic.yaml')
@@ -208,6 +205,13 @@ node_templates:
                 default_instances: 2
 """
         blueprint_path = self.make_yaml_file(main_blueprint)
-        self.deploy_application(blueprint_path, deployment_id=deployment_id)
+        self.assertRaises(RuntimeError,
+                          self.deploy_application,
+                          blueprint_path,
+                          deployment_id=deployment_id)
+        # Verifying the deployment had failed in the middle
         deployments = self.client.deployments.list()
-        self.assertEqual(len(deployments), 0)
+        self.assertEqual(len(deployments), 2)
+        executions = self.client.executions.list(_include=['id', 'status'])
+        for execution in executions:
+            self.assertEqual(execution.status, 'failed')
