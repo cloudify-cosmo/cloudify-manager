@@ -178,7 +178,7 @@ node_templates:
         self.assertEqual(len(deployments), 4)
         self.undeploy_application(deployment_id, is_delete_deployment=True)
         deployments = self.client.deployments.list()
-        self.assertEqual(len(deployments), 0)
+        self.assertEqual(len(deployments), 1)
 
     def test_given_deployment_name_with_no_auto_suffix_inc_option(self):
         basic_blueprint_path = resource('dsl/basic.yaml')
@@ -212,6 +212,8 @@ node_templates:
                           self.deploy_application,
                           blueprint_path,
                           deployment_id=deployment_id)
-        deployments = self.client.deployments.list()
         # Verifying the deployment had failed in the middle
+        deployments = self.client.deployments.list()
         self.assertEqual(len(deployments), 2)
+        executions = self.client.executions.list(_include=['id', 'status'])
+        print (str(executions))

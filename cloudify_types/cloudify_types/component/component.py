@@ -62,7 +62,7 @@ class Component(object):
         full_operation_name = ctx.operation.name
         self.operation_name = full_operation_name.split('.').pop()
 
-        # cloudify client
+        # Cloudify client setup
         self.client_config = self._get_desired_operation_input(
             'client', operation_inputs)
 
@@ -85,8 +85,10 @@ class Component(object):
         self.blueprint_archive = self.blueprint.get('blueprint_archive')
 
         # Deployment-related properties
+        runtime_deployment_id = ctx.instance.runtime_properties.get('deployment', {}).get('id')
+
         self.deployment = self.config.get('deployment', {})
-        self.deployment_id = self.deployment.get('id') or ctx.instance.id
+        self.deployment_id = runtime_deployment_id or self.deployment.get('id') or ctx.instance.id
         self.deployment_inputs = self.deployment.get('inputs', {})
         self.deployment_outputs = self.deployment.get('outputs', {})
         self.deployment_logs = self.deployment.get('logs', {})
@@ -128,8 +130,8 @@ class Component(object):
             return option_client(**request_args)
         except CloudifyClientError as ex:
             raise NonRecoverableError(
-                'Client action {0} failed: {1}.'.format(request_action,
-                                                        ex))
+                'Client action \"{0}\" failed: {1}.'.format(request_action,
+                                                            ex))
 
     @staticmethod
     def _is_valid_url(candidate):
@@ -182,7 +184,7 @@ class Component(object):
                            application_file_name=self.blueprint_file_name)
 
         return self._http_client_wrapper('blueprints',
-                                        '_upload',
+                                         '_upload',
                                          client_args)
 
     def _upload_plugins(self):
@@ -249,22 +251,17 @@ class Component(object):
         dep_exists = True
         while dep_exists:
             suffix_index = ctx.instance.runtime_properties['deployment'].get(
-                'current_suffix_index', 0)
-            deployment_id = '{}-{}'.format(deployment_id, suffix_index)
+                'current_suffix_index', 1)
+            inc_id = '{}-{}'.format(deployment_id, suffix_index)
             update_runtime_properties('deployment',
                                       'current_suffix_index',
                                       suffix_index + 1)
-            dep_exists = deployment_id_exists(client, deployment_id)
-        return deployment_id
+            dep_exists = deployment_id_exists(client, inc_id)
+        return inc_id
 
     def create_deployment(self):
         self._set_secrets()
         self._upload_plugins()
-
-        client_args = {
-            'blueprint_id': self.blueprint_id,
-            'deployment_id': self.deployment_id,
-            'inputs': self.deployment_inputs}
 
         if 'deployment' not in ctx.instance.runtime_properties:
             ctx.instance.runtime_properties['deployment'] = dict()
@@ -272,18 +269,25 @@ class Component(object):
         if self.deployment_auto_suffix:
             self.deployment_id = self._generate_suffix_deployment_id(
                 self.client, self.deployment_id)
-        else:
-            if deployment_id_exists(self.client, self.deployment_id):
-                ctx.logger.error(
-                    'Component\'s deployment ID {} already exists, '
-                    'please verify the chosen name.'.format(
-                        self.blueprint_id))
-                return False
+        elif deployment_id_exists(self.client, self.deployment_id):
+            ctx.logger.error(
+                'Component\'s deployment ID {} already exists, '
+                'please verify the chosen name.'.format(
+                    self.blueprint_id))
+            return False
 
         update_runtime_properties('deployment', 'id', self.deployment_id)
-        ctx.logger.info("Create deployment {0}."
+        ctx.logger.info("Create \"{0}\" component deployment."
                         .format(self.deployment_id))
-        self._http_client_wrapper('deployments', 'create', client_args)
+
+        self._http_client_wrapper('deployments',
+                                  'create',
+                                  {
+                                      'blueprint_id': self.blueprint_id,
+                                      'deployment_id': self.deployment_id,
+                                      'inputs': self.deployment_inputs
+                                  }
+                                  )
 
         # In order to set the ``self.execution_id`` need to get the
         # ``execution_id`` of current deployment ``self.deployment_id``
@@ -360,7 +364,7 @@ class Component(object):
         ctx.logger.info("Delete component's \"{}\" deployment"
                         .format(self.deployment_id))
         self._http_client_wrapper('deployments',
-                                 'delete',
+                                  'delete',
                                   delete_component_args)
 
         ctx.logger.info("Wait for component's deployment delete.")
@@ -383,7 +387,7 @@ class Component(object):
                             .format(self.blueprint_id))
             delete_component_args = dict(blueprint_id=self.blueprint_id)
             self._http_client_wrapper('blueprints',
-                                     'delete',
+                                      'delete',
                                       delete_component_args)
 
         self._delete_plugins()
@@ -407,14 +411,20 @@ class Component(object):
                                  timeout=self.timeout,
                                  expected_result=True):
             return ctx.operation.retry(
-                'The deployment is not ready for execution.')
+                'The \"{}\" deployment is not ready for execution.'.format(
+                    self.deployment_id))
 
         execution_args = self.config.get('executions_start_args', {})
-        client_args = dict(deployment_id=self.deployment_id,
-                           workflow_id=self.workflow_id,
-                           **execution_args)
+
+        ctx.logger.info('Starting execution for \"{0}\" deployment'.format(self.deployment_id))
         response = self._http_client_wrapper('executions',
-                                            'start', client_args)
+                                             'start',
+                                             dict(
+                                                 deployment_id=
+                                                 self.deployment_id,
+                                                 workflow_id=self.workflow_id,
+                                                 **execution_args
+                                             ))
 
         # Set the execution_id for the last execution process created
         self.execution_id = response['id']
