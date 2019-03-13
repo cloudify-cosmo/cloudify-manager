@@ -153,7 +153,7 @@ node_templates:
 tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
-  - cloudify/types/types.yaml
+  - https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/CY-1119/resources/rest-service/cloudify/types/types.yaml
 
 node_templates:
 
