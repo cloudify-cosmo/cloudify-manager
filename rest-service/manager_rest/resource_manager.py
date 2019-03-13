@@ -538,7 +538,15 @@ class ResourceManager(object):
             dry_run=False,
             resume=True,
             execution_creator=execution.creator)
-        return execution
+
+        # Dealing with the inner Component-s deployments
+        resume_status = True
+        comp_executions = self._find_all_execution_id_of_components(execution.deployment_id)
+        for exec_id in comp_executions:
+            resume_status = resume_status and self.resume_execution(exec_id, force)
+
+        final_cancel_result = execution and resume_status
+        return final_cancel_result
 
     @staticmethod
     def _set_execution_tenant(tenant_name):
@@ -898,7 +906,7 @@ class ResourceManager(object):
 
         component_node_type = 'cloudify.nodes.Component'
         components_id = [node.id for node in
-                            self.sm.list(models.Node,
+                         self.sm.list(models.Node,
                                          include=['type_hierarchy',
                                                   'id'],
                                          filters=deployment_id_filter,
@@ -984,7 +992,15 @@ class ResourceManager(object):
         execution.error = ''
         if kill:
             workflow_executor.cancel_execution(execution_id)
-        return self.sm.update(execution)
+
+        # Dealing with the inner Component-s deployments
+        cancel_status = True
+        comp_executions = self._find_all_execution_id_of_components(execution.deployment_id)
+        for exec_id in comp_executions:
+            cancel_status = cancel_status and self.cancel_execution(exec_id, force, kill)
+        final_cancel_result = self.sm.update(execution) and comp_executions
+
+        return final_cancel_result
 
     @staticmethod
     def prepare_deployment_for_storage(deployment_id, deployment_plan):
