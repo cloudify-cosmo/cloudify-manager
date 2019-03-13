@@ -14,6 +14,7 @@
 # limitations under the License.
 ############
 
+import mock
 from uuid import uuid4
 from time import sleep
 from dateutil import parser as date_parser
@@ -38,19 +39,12 @@ EVENT_MESSAGE = 'event'
 class TestAMQPPostgres(BaseServerTestCase):
     def setUp(self):
         super(TestAMQPPostgres, self).setUp()
-        config = self.server_configuration
-        config_keys = [
-            'postgresql_{0}'.format(n)
-            for n in ['host', 'db_name', 'username', 'password']
-        ] + [
-            'amqp_{0}'.format(n)
-            for n in ['host', 'username', 'password', 'ca_path']
-        ]
-        amqp_client, _ = _create_connections(
-            {k: getattr(config, k) for k in config_keys})
-        amqp_client.consume_in_thread()
-        self.addCleanup(amqp_client.close)
-        self.events_publisher = create_events_publisher()
+        with mock.patch('amqp_postgres.main.config.instance',
+                        self.server_configuration):
+            amqp_client, _ = _create_connections()
+            amqp_client.consume_in_thread()
+            self.addCleanup(amqp_client.close)
+            self.events_publisher = create_events_publisher()
 
     def publish_messages(self, messages):
         for message, message_type in messages:

@@ -35,13 +35,14 @@ CONFIG_PATH = '/opt/manager/cloudify-rest.conf'
 def _create_connections():
     acks_queue = Queue.Queue()
     cfy_config = config.instance
+    port = BROKER_PORT_SSL if cfy_config.amqp_ca_path else BROKER_PORT_NO_SSL
     amqp_client = get_client(
         amqp_host=cfy_config.amqp_host,
         amqp_user=cfy_config.amqp_username,
         amqp_pass=cfy_config.amqp_password,
         amqp_vhost='/',
-        amqp_port=BROKER_PORT_SSL,
-        ssl_enabled=True,
+        amqp_port=port,
+        ssl_enabled=bool(cfy_config.amqp_ca_path),
         ssl_cert_path=cfy_config.amqp_ca_path,
         cls=AckingAMQPConnection
     )
