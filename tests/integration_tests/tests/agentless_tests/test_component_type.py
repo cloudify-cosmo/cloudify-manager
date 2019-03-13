@@ -213,4 +213,5 @@ node_templates:
                           blueprint_path,
                           deployment_id=deployment_id)
         deployments = self.client.deployments.list()
-        self.assertEqual(len(deployments), 0)
+        # Verifying the deployment had failed in the middle
+        self.assertEqual(len(deployments), 2)
