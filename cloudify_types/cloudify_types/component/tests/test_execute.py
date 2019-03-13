@@ -52,7 +52,7 @@ class TestExecute(ComponentTestBase):
                                       execute_start,
                                       deployment_id='dep_name',
                                       workflow_id='install')
-            self.assertIn('action start failed',
+            self.assertIn('action \"start\" failed',
                           error.message)
 
     def test_execute_start_timeout(self):
