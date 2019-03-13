@@ -892,6 +892,42 @@ class ResourceManager(object):
 
         return execution
 
+    def _find_all_execution_id_of_components(self, deployment_id):
+        deployment_id_filter = self.create_filters_dict(
+            deployment_id=deployment_id)
+
+        component_node_type = 'cloudify.nodes.Component'
+        components_id = [node.id for node in
+                            self.sm.list(models.Node,
+                                         include=['type_hierarchy',
+                                                  'id'],
+                                         filters=deployment_id_filter,
+                                         get_all_results=True)
+                            if component_node_type in node.type_hierarchy]
+        components_runtime_props = []
+        for component in components_id:
+            runtime_properties = self.sm.list(
+                models.NodeInstance,
+                filters={'deployment_id': deployment_id,
+                         'node_id': component.id},
+                get_all_results=True,
+                include=['runtime_properties',
+                         'id']
+            ).items[0]
+            components_runtime_props.append(runtime_properties)
+
+        for props in components_runtime_props:
+            component_dep_id = props['deployment']['id']
+            deployment_id_filter = self.create_filters_dict(
+                deployment_id=component_dep_id)
+            executions = [execution.id for execution
+                          in self.sm.list(models.Execution,
+                                          include=['id'],
+                                          filters=deployment_id_filter,
+                                          get_all_results=True)]
+            return executions
+        return []
+
     def cancel_execution(self, execution_id, force=False, kill=False):
         """
         Cancel an execution by its id
