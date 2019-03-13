@@ -35,8 +35,6 @@ from manager_rest.app_logging import setup_logger, log_request, log_response
 if premium_enabled:
     from cloudify_premium import configure_auth
 
-SQL_DIALECT = 'postgresql'
-
 
 app_errors = Blueprint('app_errors', __name__)
 
@@ -109,32 +107,7 @@ class CloudifyFlaskApp(Flask):
         Set SQLAlchemy specific configurations, init the db object and create
         the tables if necessary
         """
-        cfy_config = config.instance
-
-        params = {}
-        params.update(config.instance.postgresql_connection_options)
-        if cfy_config.postgresql_ssl_enabled:
-            params.update({
-                'sslmode': 'verify-full',
-                'sslcert': config.instance.postgresql_ssl_cert_path,
-                'sslkey': config.instance.postgresql_ssl_key_path,
-                'sslrootcert': config.instance.ca_cert_path
-            })
-
-        db_uri = '{0}://{1}:{2}@{3}/{4}'.format(
-            SQL_DIALECT,
-            cfy_config.postgresql_username,
-            cfy_config.postgresql_password,
-            cfy_config.postgresql_host,
-            cfy_config.postgresql_db_name
-        )
-        if any(params.values()):
-            query = '&'.join('{0}={1}'.format(key, value)
-                             for key, value in params.items()
-                             if value)
-            db_uri = '{0}?{1}'.format(db_uri, query)
-
-        self.config['SQLALCHEMY_DATABASE_URI'] = db_uri
+        self.config['SQLALCHEMY_DATABASE_URI'] = config.instance.db_url
         self.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
         db.init_app(self)  # Prepare the app for use with flask-sqlalchemy
 

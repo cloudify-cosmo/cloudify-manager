@@ -167,13 +167,13 @@ class DBLogEventPublisher(object):
         self._batch.put((message, exchange, tag))
 
     def connect(self):
-        host, _, port = self.config['postgresql_host'].partition(':')
+        host, _, port = self.config.postgresql_host.partition(':')
         return psycopg2.connect(
-            dbname=self.config['postgresql_db_name'],
+            dbname=self.config.postgresql_db_name,
             host=host,
             port=port or 5432,
-            user=self.config['postgresql_username'],
-            password=self.config['postgresql_password'],
+            user=self.config.postgresql_username,
+            password=self.config.postgresql_password,
             cursor_factory=DictCursor
         )
 
