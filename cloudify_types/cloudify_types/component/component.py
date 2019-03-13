@@ -244,6 +244,19 @@ class Component(object):
             })
             ctx.logger.info('Created secret {}'.format(repr(secret_name)))
 
+    @staticmethod
+    def _generate_suffix_deployment_id(client, deployment_id):
+        dep_exists = True
+        while dep_exists:
+            suffix_index = ctx.instance.runtime_properties['deployment'].get(
+                'current_suffix_index', 0)
+            deployment_id = '{}-{}'.format(deployment_id, suffix_index)
+            update_runtime_properties('deployment',
+                                      'current_suffix_index',
+                                      suffix_index + 1)
+            dep_exists = deployment_id_exists(client, deployment_id)
+        return deployment_id
+
     def create_deployment(self):
         self._set_secrets()
         self._upload_plugins()
@@ -256,17 +269,18 @@ class Component(object):
         if 'deployment' not in ctx.instance.runtime_properties:
             ctx.instance.runtime_properties['deployment'] = dict()
 
+        if self.deployment_auto_suffix:
+            self.deployment_id = self._generate_suffix_deployment_id(
+                self.client, self.deployment_id)
+        else:
+            if deployment_id_exists(self.client, self.deployment_id):
+                ctx.logger.error(
+                    'Component\'s deployment ID {} already exists, '
+                    'please verify the chosen name.'.format(
+                        self.blueprint_id))
+                return False
+
         update_runtime_properties('deployment', 'id', self.deployment_id)
-
-        dep_exists = deployment_id_exists(self.client, self.deployment_id)
-
-        if dep_exists:
-            ctx.logger.error(
-                'Component\'s deployment ID {} already exists, '
-                'please verify the chosen name.'.format(
-                    self.blueprint_id))
-            return False
-
         ctx.logger.info("Create deployment {0}."
                         .format(self.deployment_id))
         self.http_client_wrapper('deployments', 'create', client_args)
@@ -343,8 +357,8 @@ class Component(object):
             timeout=self.timeout,
             expected_result=True)
 
-        ctx.logger.info("Delete component's deployment "
-                        "{0}".format(self.deployment_id))
+        ctx.logger.info("Delete component's \"{}\" deployment"
+                        .format(self.deployment_id))
         self.http_client_wrapper('deployments',
                                  'delete',
                                  delete_component_args)
