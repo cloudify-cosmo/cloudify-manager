@@ -538,6 +538,13 @@ class ResourceManager(object):
             dry_run=False,
             resume=True,
             execution_creator=execution.creator)
+
+        # Dealing with the inner Component-s deployments
+        components_executions = self._find_all_components_executions(
+            execution.deployment_id)
+        for exec_id in components_executions:
+            self.resume_execution(exec_id, force)
+
         return execution
 
     @staticmethod
@@ -892,6 +899,66 @@ class ResourceManager(object):
 
         return execution
 
+    def _retrieve_components_from_deployment(self, deployment_id_filter):
+        return [node.id for node in
+                self.sm.list(models.Node,
+                             include=['type_hierarchy', 'id'],
+                             filters=deployment_id_filter,
+                             get_all_results=True)
+                if 'cloudify.nodes.Component' in node.type_hierarchy]
+
+    def _retrieve_all_components_dep_ids(self, components_ids, deployment_id):
+        components_deployment_ids = []
+        for component in components_ids:
+            node_instance_filter = self.create_filters_dict(
+                deployment_id=deployment_id, node_id=component)
+
+            node_instance = self.sm.list(
+                models.NodeInstance,
+                filters=node_instance_filter,
+                get_all_results=True,
+                include=['runtime_properties',
+                         'id']
+            ).items[0]
+
+            component_deployment_props = node_instance.runtime_properties.get(
+                'deployment', {})
+
+            # This runtime property is set when a Component node is starting
+            # install workflow.
+            component_deployment_id = component_deployment_props.get(
+                'id', None)
+            if component_deployment_id:
+                components_deployment_ids.append(component_deployment_id)
+        return components_deployment_ids
+
+    def _retrieve_all_component_executions(self, components_deployment_ids):
+        executions = []
+        for deployment_id in components_deployment_ids:
+            deployment_id_filter = self.create_filters_dict(
+                deployment_id=deployment_id)
+
+            # Getting the last execution associated with the Component's
+            # deployment, which is the only one running now.
+            executions.append([execution.id for execution
+                               in self.sm.list(models.Execution,
+                                               include=['id'],
+                                               sort={'created_at': 'desc'},
+                                               filters=deployment_id_filter,
+                                               get_all_results=True)][0])
+        return executions
+
+    def _find_all_components_executions(self, deployment_id):
+        deployment_id_filter = self.create_filters_dict(
+            deployment_id=deployment_id)
+
+        components_ids = self._retrieve_components_from_deployment(
+            deployment_id_filter)
+        components_deployment_ids = self._retrieve_all_components_dep_ids(
+            components_ids, deployment_id)
+        return self._retrieve_all_component_executions(
+            components_deployment_ids)
+
     def cancel_execution(self, execution_id, force=False, kill=False):
         """
         Cancel an execution by its id
@@ -903,6 +970,8 @@ class ResourceManager(object):
         termination of the executed workflow. This is valid for all
         workflows, regardless of whether they provide support for graceful
         termination or not.
+        If kill is used, this method means that the process executing the
+        workflow is forcefully stopped, even if it is stuck or unresponsive.
 
         Note that in either case, the execution is not yet cancelled upon
         returning from the method. Instead, it'll be in a 'cancelling' or
@@ -914,6 +983,7 @@ class ResourceManager(object):
 
         :param execution_id: The execution id
         :param force: A boolean describing whether to force cancellation
+        :param kill: A boolean describing whether to kill cancellation
         :return: The updated execution object
         :rtype: models.Execution
         :raises manager_exceptions.IllegalActionError
@@ -932,7 +1002,7 @@ class ResourceManager(object):
                 (not force or execution.status != ExecutionState.CANCELLING)\
                 and not kill:
             raise manager_exceptions.IllegalActionError(
-                "Can't {0}cancel execution {1} because it's in status {2}"
+                "Can't {0} cancel execution {1} because it's in status {2}"
                 .format(
                     'kill-' if kill else 'force-' if force else '',
                     execution_id,
@@ -948,6 +1018,13 @@ class ResourceManager(object):
         execution.error = ''
         if kill:
             workflow_executor.cancel_execution(execution_id)
+
+        # Dealing with the inner Component-s deployments
+        components_executions = self._find_all_components_executions(
+            execution.deployment_id)
+        for exec_id in components_executions:
+            self.cancel_execution(exec_id, force, kill)
+
         return self.sm.update(execution)
 
     @staticmethod
