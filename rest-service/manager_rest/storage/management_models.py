@@ -486,5 +486,17 @@ class License(SQLModelBase):
     capabilities = db.Column(db.ARRAY(db.Text))
     signature = db.Column(db.LargeBinary)
 
+    @property
+    def expired(self):
+        now = datetime.utcnow()
+        expiration_date = datetime.strptime(self.expiration_date,
+                                            '%Y-%m-%dT%H:%M:%S.%fZ')
+        return expiration_date < now
+
+    def to_response(self, get_data=False):
+        user_dict = super(License, self).to_response()
+        user_dict['expired'] = self.expired
+        return user_dict
+
 
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)
