@@ -27,6 +27,7 @@ CONFIG_TYPES = [
 ]
 SKIP_RESET_WRITE = ['authorization']
 NOT_SET = object()
+SQL_DIALECT = 'postgresql'
 
 
 class Setting(object):
@@ -151,15 +152,19 @@ class Config(object):
                     "'{1}'".format(key, filename))
 
     def load_from_db(self):
-        from manager_rest.storage import models, get_storage_manager
-        sm = get_storage_manager()
-        stored_config = sm.list(models.Config, filters={
-            'scope': lambda column: column.contains(['rest'])
-        })
+        from manager_rest.storage import models
+        from sqlalchemy import create_engine, orm
+        engine = create_engine(self.db_url)
+        session = orm.Session(bind=engine)
+        stored_config = (
+            session.query(models.Config)
+            .filter(models.Config.scope.contains(['rest']))
+            .all()
+        )
         for conf_value in stored_config:
             setattr(self, conf_value.name, conf_value.value)
 
-        stored_brokers = sm.list(models.RabbitMQBroker)
+        stored_brokers = session.query(models.RabbitMQBroker).all()
         for broker in stored_brokers:
             # currently, there's going to be only one rabbitmq
             self.amqp_host = broker.host
@@ -169,8 +174,36 @@ class Config(object):
             self.amqp_ca_path = broker.write_ca_cert()
             atexit.register(os.unlink, self.amqp_ca_path)
 
+        engine.dispose()
+
         # disallow implicit loading
         self.can_load_from_db = False
+
+    @property
+    def db_url(self):
+        params = {}
+        params.update(self.postgresql_connection_options)
+        if self.postgresql_ssl_enabled:
+            params.update({
+                'sslmode': 'verify-full',
+                'sslcert': self.postgresql_ssl_cert_path,
+                'sslkey': self.postgresql_ssl_key_path,
+                'sslrootcert': self.ca_cert_path
+            })
+
+        db_url = '{0}://{1}:{2}@{3}/{4}'.format(
+            SQL_DIALECT,
+            self.postgresql_username,
+            self.postgresql_password,
+            self.postgresql_host,
+            self.postgresql_db_name
+        )
+        if any(params.values()):
+            query = '&'.join('{0}={1}'.format(key, value)
+                             for key, value in params.items()
+                             if value)
+            db_url = '{0}?{1}'.format(db_url, query)
+        return db_url
 
     def to_dict(self):
         config_dict = vars(self)
