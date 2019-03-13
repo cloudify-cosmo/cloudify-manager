@@ -33,7 +33,10 @@ import cloudify_rest_client.exceptions
 import cloudify.utils
 
 from integration_tests.framework import utils, constants
-from integration_tests.framework.constants import INSERT_MOCK_LICENSE_QUERY
+from integration_tests.framework.constants import (
+    INSERT_MOCK_LICENSE_QUERY,
+    DELETE_CLOUDIFY_LICENSE_QUERY
+)
 
 # All container specific docl commands that are executed with no explicit
 # container id will be executed on the default_container_id which is set
@@ -144,6 +147,11 @@ def run_manager(label=None, tag=None):
 def upload_mock_license():
     execute(('sudo -u postgres psql cloudify_db '
              '-c "{0}"'.format(INSERT_MOCK_LICENSE_QUERY)))
+
+
+def remove_license():
+    execute(('sudo -u postgres psql cloudify_db '
+             '-c "{0}"'.format(DELETE_CLOUDIFY_LICENSE_QUERY)))
 
 
 def clean(label=None):
