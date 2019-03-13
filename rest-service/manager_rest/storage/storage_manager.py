@@ -459,9 +459,13 @@ class SQLStorageManager(object):
         result = query.first()
 
         if not result:
+            if filters:
+                filters_message = ' (filters: {0})'.format(filters)
+            else:
+                filters_message = ''
             raise manager_exceptions.NotFoundError(
-                'Requested `{0}` with ID `{1}` was not found'
-                .format(model_class.__name__, element_id)
+                'Requested `{0}` with ID `{1}` was not found{2}'
+                .format(model_class.__name__, element_id, filters_message)
             )
         current_app.logger.debug('Returning {0}'.format(result))
         return result
