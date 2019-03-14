@@ -129,10 +129,10 @@ node_templates:
 """
         blueprint_path = self.make_yaml_file(main_blueprint)
         self.deploy_application(blueprint_path, deployment_id=deployment_id)
-        deployments = self.client.deployments.list()
+        deployments = self.client.deployments.list(_include=['id'])
         self.assertEqual(len(deployments), 3)
         self.undeploy_application(deployment_id, is_delete_deployment=True)
-        deployments = self.client.deployments.list()
+        deployments = self.client.deployments.list(_include=['id'])
         self.assertEqual(len(deployments), 0)
 
     def test_auto_suffix_inc_option_with_deployment_name_collision(self):
@@ -171,10 +171,10 @@ node_templates:
 """
         blueprint_path = self.make_yaml_file(main_blueprint)
         self.deploy_application(blueprint_path, deployment_id=deployment_id)
-        deployments = self.client.deployments.list()
+        deployments = self.client.deployments.list(_include=['id'])
         self.assertEqual(len(deployments), 4)
         self.undeploy_application(deployment_id, is_delete_deployment=True)
-        deployments = self.client.deployments.list()
+        deployments = self.client.deployments.list(_include=['id'])
         self.assertEqual(len(deployments), 1)
 
     def test_given_deployment_name_with_no_auto_suffix_inc_option(self):
@@ -209,9 +209,12 @@ node_templates:
                           self.deploy_application,
                           blueprint_path,
                           deployment_id=deployment_id)
-        # Verifying the deployment had failed in the middle
-        deployments = self.client.deployments.list()
+        deployments = self.client.deployments.list(_include=['id'])
         self.assertEqual(len(deployments), 2)
-        executions = self.client.executions.list(_include=['id', 'status'])
-        for execution in executions:
-            self.assertEqual(execution.status, 'failed')
+        executions = self.client.executions.list(_include=['id', 'status', 'workflow_id'])
+        install_executions = [execution for execution in executions
+                              if execution.workflow_id == 'install']
+
+        # Verifying that the second component had failed in install
+        self.assertEqual(install_executions[0].status, 'terminated')
+        self.assertEqual(install_executions[1].status, 'failed')
