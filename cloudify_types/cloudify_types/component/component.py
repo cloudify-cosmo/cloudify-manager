@@ -85,10 +85,14 @@ class Component(object):
         self.blueprint_archive = self.blueprint.get('blueprint_archive')
 
         # Deployment-related properties
-        runtime_deployment_id = ctx.instance.runtime_properties.get('deployment', {}).get('id')
+        runtime_deployment_prop = ctx.instance.runtime_properties.get(
+            'deployment', {})
+        runtime_deployment_id = runtime_deployment_prop.get('id')
 
         self.deployment = self.config.get('deployment', {})
-        self.deployment_id = runtime_deployment_id or self.deployment.get('id') or ctx.instance.id
+        self.deployment_id = (runtime_deployment_id or
+                              self.deployment.get('id') or
+                              ctx.instance.id)
         self.deployment_inputs = self.deployment.get('inputs', {})
         self.deployment_outputs = self.deployment.get('outputs', {})
         self.deployment_logs = self.deployment.get('logs', {})
@@ -416,15 +420,16 @@ class Component(object):
 
         execution_args = self.config.get('executions_start_args', {})
 
-        ctx.logger.info('Starting execution for \"{0}\" deployment'.format(self.deployment_id))
-        response = self._http_client_wrapper('executions',
-                                             'start',
-                                             dict(
-                                                 deployment_id=
-                                                 self.deployment_id,
-                                                 workflow_id=self.workflow_id,
-                                                 **execution_args
-                                             ))
+        ctx.logger.info('Starting execution for \"{}\" deployment'.format(
+            self.deployment_id))
+        response = self._http_client_wrapper(
+            'executions',
+            'start',
+            dict(
+                deployment_id=self.deployment_id,
+                workflow_id=self.workflow_id,
+                **execution_args
+            ))
 
         # Set the execution_id for the last execution process created
         self.execution_id = response['id']

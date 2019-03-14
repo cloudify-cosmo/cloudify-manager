@@ -99,7 +99,7 @@ class ComponentTypeFailuresTest(AgentlessTestCase):
                           deployment_id=deployment_id)
 
 
-class ComponentScale(AgentlessTestCase):
+class ComponentScaleCreation(AgentlessTestCase):
     component_name = 'component'
 
     def test_given_deployment_name_with_auto_suffix_inc_option(self):
@@ -216,4 +216,5 @@ node_templates:
         deployments = self.client.deployments.list()
         self.assertEqual(len(deployments), 2)
         executions = self.client.executions.list(_include=['id', 'status'])
-        print (str(executions))
+        for execution in executions:
+            self.assertEqual(execution.status, 'failed')
