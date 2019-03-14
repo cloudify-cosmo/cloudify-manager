@@ -832,12 +832,6 @@ data_types:
         description: >
           The inputs to the deployment.
         default: {}
-      outputs:
-        description: >
-          A dictionary of "{ key: value, key: value }".
-          Get "key" the deployment.
-          Set "value" runtime property to the value of the output.
-        required: false
       logs:
         description: >
           Logs redirect settings, by default {redirect: true}
