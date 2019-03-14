@@ -75,9 +75,6 @@ class ComponentTypeTest(AgentlessTestCase):
                           self.client.deployments.get,
                           deployment_id)
 
-    def test_logs_redirect_option(self):
-        pass
-
 
 class ComponentTypeFailuresTest(AgentlessTestCase):
 

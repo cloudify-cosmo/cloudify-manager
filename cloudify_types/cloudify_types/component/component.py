@@ -253,15 +253,18 @@ class Component(object):
     @staticmethod
     def _generate_suffix_deployment_id(client, deployment_id):
         dep_exists = True
+        suffix_index = ctx.instance.runtime_properties['deployment'].get(
+            'current_suffix_index', 0)
+
         while dep_exists:
-            suffix_index = ctx.instance.runtime_properties['deployment'].get(
-                'current_suffix_index', 1)
-            inc_id = '{}-{}'.format(deployment_id, suffix_index)
-            update_runtime_properties('deployment',
-                                      'current_suffix_index',
-                                      suffix_index + 1)
-            dep_exists = deployment_id_exists(client, inc_id)
-        return inc_id
+            suffix_index += 1
+            inc_deployment_id = '{}-{}'.format(deployment_id, suffix_index)
+            dep_exists = deployment_id_exists(client, inc_deployment_id)
+
+        update_runtime_properties('deployment',
+                                  'current_suffix_index',
+                                  suffix_index)
+        return inc_deployment_id
 
     def create_deployment(self):
         self._set_secrets()
@@ -281,7 +284,7 @@ class Component(object):
             return False
 
         update_runtime_properties('deployment', 'id', self.deployment_id)
-        ctx.logger.info("Create \"{0}\" component deployment."
+        ctx.logger.info("Creating \"{0}\" component deployment."
                         .format(self.deployment_id))
 
         self._http_client_wrapper('deployments',
@@ -322,7 +325,7 @@ class Component(object):
 
         # If a match was found there can only be one, so we will extract it.
         self.execution_id = self.execution_id[0]
-        ctx.logger.info("Found execution_id {0} for deployment_id {1}"
+        ctx.logger.info("Found execution id {0} for deployment id {1}"
                         .format(self.execution_id,
                                 self.deployment_id))
         return self.verify_execution_successful()

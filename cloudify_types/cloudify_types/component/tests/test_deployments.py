@@ -65,7 +65,7 @@ class TestDeployment(ComponentTestBase):
                                       delete,
                                       deployment_id=deployment_name,
                                       timeout=MOCK_TIMEOUT)
-            self.assertIn('action delete failed',
+            self.assertIn('action \"delete\" failed',
                           error.message)
 
     def test_upload_plugins(self):
@@ -188,7 +188,7 @@ class TestDeployment(ComponentTestBase):
                                       deployment_id='test_deployments_create',
                                       blueprint_id='test_deployments_create',
                                       timeout=MOCK_TIMEOUT)
-            self.assertIn('action create failed',
+            self.assertIn('action \"create\" failed',
                           error.message)
 
     def test_create_deployment_timeout(self):
