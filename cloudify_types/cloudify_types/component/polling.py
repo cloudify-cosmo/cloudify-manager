@@ -29,20 +29,30 @@ PREDEFINED_LOG_LEVELS = {
 }
 
 
-def _is_key_found(key, value, items):
-    return any([item for item in items if item[key] == value])
-
-
-@handle_client_exception('Blueprint was not found')
+@handle_client_exception('Blueprint search failed')
 def blueprint_id_exists(client, blueprint_id):
-    blueprints_ids = client.blueprints.list(_include=['id'])
-    return _is_key_found('id', blueprint_id, blueprints_ids)
+    """
+    Searching for blueprint_id in all blueprints in order to differentiate
+    not finding the blueprint then other kinds of errors, like server
+    failure.
+    """
+    blueprint_id_filter = {'id': blueprint_id}
+    blueprint = client.blueprints.list(_include=['id'],
+                                       **blueprint_id_filter)
+    return True if blueprint else False
 
 
-@handle_client_exception('Deployment was not found')
+@handle_client_exception('Deployment search failed')
 def deployment_id_exists(client, deployment_id):
-    deployments_ids = client.deployments.list(_include=['id'])
-    return _is_key_found('id', deployment_id, deployments_ids)
+    """
+    Searching for deployment_id in all deployments in order to differentiate
+    not finding the deployment then other kinds of errors, like server
+    failure.
+    """
+    deployment_id_filter = {'id': deployment_id}
+    deployment = client.deployments.list(_include=['id'],
+                                         **deployment_id_filter)
+    return True if deployment else False
 
 
 def poll_with_timeout(pollster,
@@ -54,7 +64,7 @@ def poll_with_timeout(pollster,
     timeout = float('infinity') if timeout == -1 else timeout
     current_time = time.time()
 
-    ctx.logger.debug('Timeout value is {}'.format(timeout))
+    ctx.logger.debug('Pooling with timeout {0} seconds'.format(timeout))
 
     while time.time() <= current_time + timeout:
         if pollster() != expected_result:
@@ -115,7 +125,7 @@ def redirect_logs(client, execution_id):
             )
             message = message.encode('utf-8')
 
-            ctx.logger.debug(
+            ctx.logger.info(
                 'Message {0} for Event {1} for execution_id {1}'.format(
                     message, event))
 
@@ -173,21 +183,21 @@ def is_all_executions_finished(client, deployment_id=None):
     return True
 
 
-@handle_client_exception('Verifying component\' workflow state had failed')
-def is_component_workflow_at_state(client,
-                                   dep_id,
-                                   state,
-                                   log_redirect=False,
-                                   execution_id=None):
+@handle_client_exception('Checking component\'s latest execution had failed')
+def is_component_execution_at_state(client,
+                                    dep_id,
+                                    state,
+                                    log_redirect=False,
+                                    execution_id=None):
 
     execution_get_args = ['status', 'workflow_id',
                           'created_at', 'ended_at', 'id']
 
     execution = client.executions.get(execution_id=execution_id,
                                       _include=execution_get_args)
-    ctx.logger.debug(
-        'The execution got response for {0} is {1}'.format(dep_id,
-                                                           execution))
+    ctx.logger.info(
+        'The execution of "{0}" component is {1}'.format(dep_id,
+                                                         execution))
 
     execution_id = execution.get('id')
     if log_redirect and execution_id:
@@ -198,7 +208,7 @@ def is_component_workflow_at_state(client,
     execution_status = execution.get('status')
     if execution_status == state:
         ctx.logger.debug(
-            'The status for execution info id'
+            'The status for execution info of'
             ' {0} is {1}'.format(execution_id, state))
 
         return True
@@ -207,30 +217,3 @@ def is_component_workflow_at_state(client,
             'Execution {0} failed.'.format(str(execution)))
 
     return False
-
-
-def poll_workflow_after_execute(timeout,
-                                interval,
-                                client,
-                                dep_id,
-                                state,
-                                execution_id,
-                                log_redirect=False):
-    pollster_args = {
-        'client': client,
-        'dep_id': dep_id,
-        'state': state,
-        'log_redirect': log_redirect,
-        'execution_id': execution_id,
-    }
-
-    ctx.logger.debug('Polling: {0}'.format(pollster_args))
-    result = poll_with_timeout(
-        lambda: is_component_workflow_at_state(**pollster_args),
-        timeout=timeout,
-        interval=interval)
-
-    if not result:
-        raise NonRecoverableError(
-            'Execution timeout: {0} seconds.'.format(timeout))
-    return True

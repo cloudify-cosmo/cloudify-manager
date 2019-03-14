@@ -12,14 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
 import time
 import os
 from urlparse import urlparse
 
 from cloudify import manager, ctx
 from cloudify.exceptions import NonRecoverableError
-from cloudify.utils import exception_to_error_cause
 from cloudify_rest_client.client import CloudifyClient
 from cloudify_rest_client.exceptions import CloudifyClientError
 
@@ -31,7 +29,7 @@ from .polling import (
     blueprint_id_exists,
     deployment_id_exists,
     poll_with_timeout,
-    poll_workflow_after_execute,
+    is_component_execution_at_state,
     is_all_executions_finished
 )
 from cloudify_types.component.utils import (
@@ -94,7 +92,6 @@ class Component(object):
                               self.deployment.get('id') or
                               ctx.instance.id)
         self.deployment_inputs = self.deployment.get('inputs', {})
-        self.deployment_outputs = self.deployment.get('outputs', {})
         self.deployment_logs = self.deployment.get('logs', {})
         self.deployment_auto_suffix = self.deployment.get('auto_inc_suffix',
                                                           False)
@@ -110,10 +107,6 @@ class Component(object):
         self.interval = operation_inputs.get('interval', POLLING_INTERVAL)
         self.state = operation_inputs.get('state', 'terminated')
         self.timeout = operation_inputs.get('timeout', EXECUTIONS_TIMEOUT)
-
-        # This ``execution_id`` will be set once execute workflow done
-        # successfully
-        self.execution_id = None
 
     def _http_client_wrapper(self,
                              option,
@@ -156,7 +149,7 @@ class Component(object):
 
         if self.blueprint.get(EXTERNAL_RESOURCE) and not blueprint_exists:
             raise NonRecoverableError(
-                'Blueprint ID {0} does not exist, '
+                'Blueprint ID \"{0}\" does not exist, '
                 'but {1} is {2}.'.format(
                     self.blueprint_id,
                     EXTERNAL_RESOURCE,
@@ -199,21 +192,19 @@ class Component(object):
             ctx.instance.runtime_properties['plugins'] = []
 
         if isinstance(self.plugins, dict):
-            plugins_list = self.plugins.values()
+            plugins = self.plugins.values()
         else:
             raise NonRecoverableError(
                 'Wrong type in plugins: {}'.format(repr(self.plugins)))
 
-        for plugin in plugins_list:
+        for plugin in plugins:
             ctx.logger.info('Creating plugin zip archive..')
             wagon_path = None
             yaml_path = None
             zip_path = None
             try:
-                if (
-                    not plugin.get('wagon_path') or
-                    not plugin.get('plugin_yaml_path')
-                ):
+                if (not plugin.get('wagon_path') or
+                        not plugin.get('plugin_yaml_path')):
                     raise NonRecoverableError(
                         'You should provide both values wagon_path: {}'
                         ' and plugin_yaml_path: {}'
@@ -293,9 +284,6 @@ class Component(object):
             'inputs': self.deployment_inputs
         })
 
-        # In order to set the ``self.execution_id`` need to get the
-        # ``execution_id`` of current deployment ``self.deployment_id``
-
         # Prepare executions list fields
         execution_list_fields = ['workflow_id', 'id']
 
@@ -306,23 +294,23 @@ class Component(object):
         })
 
         # Retrieve the ``execution_id`` associated with the current deployment
-        self.execution_id = [execution.get('id') for execution in executions
-                             if (execution.get('workflow_id') ==
-                                 'create_deployment_environment')]
+        execution_id = [execution.get('id') for execution in executions
+                        if (execution.get('workflow_id') ==
+                            'create_deployment_environment')]
 
         # If the ``execution_id`` cannot be found raise error
-        if not self.execution_id:
+        if not execution_id:
             raise NonRecoverableError(
-                'No execution id Found for deployment'
-                ' {0}'.format(self.deployment_id)
+                'No execution Found for component \"{}\"'
+                ' deployment'.format(self.deployment_id)
             )
 
         # If a match was found there can only be one, so we will extract it.
-        self.execution_id = self.execution_id[0]
+        execution_id = execution_id[0]
         ctx.logger.info("Found execution id {0} for deployment id {1}"
-                        .format(self.execution_id,
+                        .format(execution_id,
                                 self.deployment_id))
-        return self.verify_execution_successful()
+        return self.verify_execution_successful(execution_id)
 
     def _delete_plugins(self):
         plugins = ctx.instance.runtime_properties.get('plugins', [])
@@ -344,15 +332,13 @@ class Component(object):
             ctx.logger.info('Removed secret {}'.format(repr(secret_name)))
 
     @staticmethod
-    def _delete_properties():
+    def _delete_runtime_properties():
         for property_name in ['deployment', 'executions', 'blueprint',
-                              'plugins']:
+                              'plugins', 'secrets']:
             if property_name in ctx.instance.runtime_properties:
                 del ctx.instance.runtime_properties[property_name]
 
     def delete_deployment(self):
-        delete_component_args = dict(deployment_id=self.deployment_id)
-
         ctx.logger.info("Wait for component's stop deployment operation "
                         "related executions.")
         poll_with_timeout(
@@ -366,7 +352,7 @@ class Component(object):
                         .format(self.deployment_id))
         self._http_client_wrapper('deployments',
                                   'delete',
-                                  delete_component_args)
+                                  dict(deployment_id=self.deployment_id))
 
         ctx.logger.info("Wait for component's deployment delete.")
         poll_result = poll_with_timeout(
@@ -386,14 +372,13 @@ class Component(object):
         if not self.blueprint.get(EXTERNAL_RESOURCE):
             ctx.logger.info("Delete component's blueprint {0}."
                             .format(self.blueprint_id))
-            delete_component_args = dict(blueprint_id=self.blueprint_id)
             self._http_client_wrapper('blueprints',
                                       'delete',
-                                      delete_component_args)
+                                      dict(blueprint_id=self.blueprint_id))
 
         self._delete_plugins()
         self._delete_secrets()
-        self._delete_properties()
+        self._delete_runtime_properties()
 
         return poll_result
 
@@ -419,7 +404,7 @@ class Component(object):
 
         ctx.logger.info('Starting execution for "{0}" deployment'.format(
             self.deployment_id))
-        response = self._http_client_wrapper(
+        execution = self._http_client_wrapper(
             'executions', 'start',
             dict(
                  deployment_id=self.deployment_id,
@@ -427,57 +412,39 @@ class Component(object):
                  **execution_args
              ))
 
-        # Set the execution_id for the last execution process created
-        self.execution_id = response['id']
-        ctx.logger.debug('Executions start response: {0}'.format(response))
+        ctx.logger.debug('Execution start response: {0}'.format(execution))
 
-        # Poll for execution success.
-        if not self.verify_execution_successful():
-            ctx.logger.error('Deployment error.')
+        execution_id = execution['id']
+        if not self.verify_execution_successful(execution_id):
+            ctx.logger.error('Execution {0} failed for "{1}" '
+                             'deployment'.format(execution_id,
+                                                 self.deployment_id))
 
-        ctx.logger.debug('Polling execution succeeded')
-
-        ctx.logger.info('Start post execute component')
-        self.post_execute_component()
-        ctx.logger.info('End post execute component')
+        ctx.logger.info('Execution succeeded for "{0}" deployment'.format(
+            self.deployment_id))
 
         return True
 
-    def post_execute_component(self):
-        runtime_prop = ctx.instance.runtime_properties['deployment']
-        ctx.logger.debug(
-            'Runtime deployment properties {0}'.format(runtime_prop))
+    def verify_execution_successful(self,
+                                    execution_id):
+        log_redirect = self.deployment_logs.get('redirect', True)
+        pollster_args = {
+            'client': self.client,
+            'dep_id': self.deployment_id,
+            'state': self.workflow_state,
+            'log_redirect': log_redirect,
+            'execution_id': execution_id,
+        }
 
-        if 'outputs' \
-                not in ctx.instance.runtime_properties['deployment']:
-            update_runtime_properties('deployment', 'outputs', dict())
-            ctx.logger.debug('No component outputs exist.')
+        ctx.logger.debug('Polling execution state with: {0}'.format(
+            pollster_args))
+        result = poll_with_timeout(
+            lambda: is_component_execution_at_state(**pollster_args),
+            timeout=self.timeout,
+            interval=self.interval)
 
-        try:
-            ctx.logger.debug('Deployment Id is {0}'.format(self.deployment_id))
-            response = self.client.deployments.outputs.get(self.deployment_id)
-            ctx.logger.debug(
-                'Deployment outputs response {0}'.format(response))
-
-        except CloudifyClientError as ex:
-            _, _, tb = sys.exc_info()
+        if not result:
             raise NonRecoverableError(
-                'Failed to query deployment outputs: {0}'
-                ''.format(self.deployment_id),
-                causes=[exception_to_error_cause(ex, tb)])
-        else:
-            dep_outputs = response.get('outputs')
-            ctx.logger.debug('Deployment outputs: {0}'.format(dep_outputs))
-            for key, val in self.deployment_outputs.items():
-                ctx.instance.runtime_properties[
-                    'deployment']['outputs'][val] = dep_outputs.get(key, '')
-
-    def verify_execution_successful(self):
-        return poll_workflow_after_execute(
-            self.timeout,
-            self.interval,
-            self.client,
-            self.deployment_id,
-            self.workflow_state,
-            self.execution_id,
-            log_redirect=self.deployment_logs.get('redirect', True))
+                'Execution timed out after: {0} seconds.'.format(
+                    self.timeout))
+        return True

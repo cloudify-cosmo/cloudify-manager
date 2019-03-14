@@ -20,70 +20,51 @@ from cloudify_rest_client.responses import ListResponse
 
 
 class BaseMockClient(object):
+    existing_objects = []
 
-    @property
-    def mock_object(self):
-        return {
-            'id': MagicMock,
-            'workflow_id': MagicMock,
-            'workflow_state': MagicMock,
-            'status': MagicMock
-        }
+    def set_existing_objects(self, existing_objects):
+        self.existing_objects = existing_objects
 
-    def base_list_return(self, *args, **_):
-        del args
-        return ListResponse([self.mock_object], metadata={})
-
-    def list(self, *args, **kwargs):
-        return self.base_list_return(args, kwargs)
-
-
-class MockBlueprintsClient(BaseMockClient):
-
-    def _upload(self, *args, **_):
-        del args
-        return MagicMock(return_value={'id': 'test'})
+    def list(self, *_, **__):
+        response = ListResponse(self.existing_objects,
+                                metadata={
+                                    "pagination":
+                                        {"total": len(self.existing_objects),
+                                         "offset": len(self.existing_objects)
+                                         }
+                                })
+        return response
 
     def delete(self, *_, **__):
         return None
 
 
-class MockDeploymentsOutputsClient(BaseMockClient):
+class MockBlueprintsClient(BaseMockClient):
 
-    def get(self, *args, **_):
-        del args
-        return MagicMock(return_value={'outputs': {}})
+    def _upload(self, *_, **__):
+        return MagicMock(return_value={'id': 'test'})
 
 
 class MockDeploymentsClient(BaseMockClient):
 
-    def __init__(self):
-        self.outputs = MockDeploymentsOutputsClient()
-
-    def create(self, *args, **_):
+    def create(self, *_, **__):
         _return_value = {
             'id': 'test',
             'created_at': datetime.datetime.now()
         }
-        del args
         return MagicMock(_return_value)
-
-    def delete(self, *args, **_):
-        return
 
 
 class MockExecutionsClient(BaseMockClient):
 
-    def start(self, *args, **_):
+    def start(self, *_, **__):
         _return_value = {
             'id': 'test',
             'created_at': datetime.datetime.now()
         }
-        del args
         return MagicMock(_return_value)
 
-    def get(self, *args, **_):
-        del args
+    def get(self, *_, **__):
         return {
             'id': MagicMock,
             'deployment_id': MagicMock,
@@ -92,23 +73,8 @@ class MockExecutionsClient(BaseMockClient):
         }
 
 
-class MockNodeInstancesClient(BaseMockClient):
-    pass
-
-
 class MockEventsClient(BaseMockClient):
-
-    list_events = []
-
-    def _set(self, list_events):
-        self.list_events = list_events
-
-    def list(self, *args, **_):
-        response = ListResponse(self.list_events,
-                                metadata={"pagination":
-                                          {"total": len(self.list_events)}})
-        self.list_events = []
-        return response
+    pass
 
 
 class MockCloudifyRestClient(object):
@@ -117,7 +83,6 @@ class MockCloudifyRestClient(object):
         self.blueprints = MockBlueprintsClient()
         self.deployments = MockDeploymentsClient()
         self.executions = MockExecutionsClient()
-        self.node_instances = MockNodeInstancesClient()
         self.events = MockEventsClient()
         self.secrets = MagicMock()
         self.plugins = MagicMock()

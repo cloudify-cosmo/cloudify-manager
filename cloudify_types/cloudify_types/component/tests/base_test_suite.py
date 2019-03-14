@@ -20,6 +20,8 @@ from cloudify.mocks import MockCloudifyContext
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 
+from .client_mock import MockCloudifyRestClient
+
 REST_CLIENT_EXCEPTION = \
     mock.MagicMock(side_effect=CloudifyClientError('Mistake'))
 
@@ -32,10 +34,7 @@ COMPONENT_PROPS = {
         },
         'deployment': {
             'id': '',
-            'inputs': {},
-            'outputs': {
-                'output1': 'output2'
-            }
+            'inputs': {}
         }
     }
 }
@@ -44,11 +43,13 @@ MOCK_TIMEOUT = .0001
 
 
 class ComponentTestBase(testtools.TestCase):
+
     def setUp(self):
         super(ComponentTestBase, self).setUp()
         self._ctx = self.get_mock_ctx('test')
         self._ctx.logger.log = mock.MagicMock(return_value=None)
         current_ctx.set(self._ctx)
+        self.cfy_mock_client = MockCloudifyRestClient()
 
     def tearDown(self):
         current_ctx.clear()
@@ -57,7 +58,6 @@ class ComponentTestBase(testtools.TestCase):
     @staticmethod
     def get_mock_ctx(test_name,
                      test_properties=COMPONENT_PROPS,
-                     node_type='cloudify.nodes.Component',
                      retry_number=0):
 
         test_node_id = test_name
@@ -74,10 +74,5 @@ class ComponentTestBase(testtools.TestCase):
         )
 
         ctx.operation._operation_context = {'name': 'some.test'}
-        ctx.node.type_hierarchy = ['cloudify.nodes.Root', node_type]
-        try:
-            ctx.node.type = node_type
-        except AttributeError:
-            ctx.logger.error('Failed to set node type attribute.')
 
         return ctx
