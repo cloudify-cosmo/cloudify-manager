@@ -1,4 +1,4 @@
-# Copyright (c) 2017-2018 Cloudify Platform Ltd. All rights reserved
+# Copyright (c) 2017-2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -92,7 +92,25 @@ class TestBlueprint(ComponentTestBase):
                                       **self.resource_config)
             self.assertTrue(output)
 
-    def test_upload_blueprint_use_external(self):
+    def test_upload_blueprint_fail_missing_archive(self):
+        with mock.patch('cloudify.manager.get_rest_client') as mock_client:
+            mock_client.return_value = MockCloudifyRestClient()
+
+            blueprint_params = dict()
+            blueprint_params['blueprint'] = {}
+            blueprint_params['blueprint']['id'] = 'blu_name'
+            self.resource_config['resource_config'] = blueprint_params
+
+            error = self.assertRaises(NonRecoverableError,
+                                      upload_blueprint,
+                                      operation='upload_blueprint',
+                                      **self.resource_config)
+
+            self.assertIn('No blueprint_archive supplied, but '
+                          'external_resource is False',
+                          error.message)
+
+    def test_not_uploading_blueprint_when_using_external(self):
         blueprint_id = 'blu_name'
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             cfy_mock_client = MockCloudifyRestClient()
@@ -115,3 +133,54 @@ class TestBlueprint(ComponentTestBase):
             output = upload_blueprint(operation='upload_blueprint',
                                       **self.resource_config)
             self.assertFalse(output)
+
+    def test_fail_uploading_existing_blueprint_id_when_using_external(self):
+        blueprint_id = 'blu_name'
+        with mock.patch('cloudify.manager.get_rest_client') as mock_client:
+            cfy_mock_client = MockCloudifyRestClient()
+            list_response = cfy_mock_client.blueprints.list()
+            list_response[0]['id'] = blueprint_id
+
+            blueprint_params = dict()
+            blueprint_params['blueprint'] = {}
+            blueprint_params['blueprint']['id'] = blueprint_id
+            blueprint_params['blueprint']['blueprint_archive'] = self.archive
+            blueprint_params['blueprint'][EXTERNAL_RESOURCE] = False
+            self.resource_config['resource_config'] = blueprint_params
+
+            def mock_return(*args, **kwargs):
+                del args, kwargs
+                return list_response
+
+            cfy_mock_client.blueprints.list = mock_return
+            mock_client.return_value = cfy_mock_client
+            output = upload_blueprint(operation='upload_blueprint',
+                                      **self.resource_config)
+            self.assertFalse(output)
+
+    def test_upload_blueprint_use_not_existing_external(self):
+        with mock.patch('cloudify.manager.get_rest_client') as mock_client:
+            cfy_mock_client = MockCloudifyRestClient()
+            list_response = cfy_mock_client.blueprints.list()
+            list_response[0]['id'] = 'blu_name'
+
+            blueprint_params = dict()
+            blueprint_params['blueprint'] = {}
+            blueprint_params['blueprint']['id'] = 'test'
+            blueprint_params['blueprint'][EXTERNAL_RESOURCE] = True
+            self.resource_config['resource_config'] = blueprint_params
+
+            def mock_return(*args, **kwargs):
+                del args, kwargs
+                return list_response
+
+            cfy_mock_client.blueprints.list = mock_return
+            mock_client.return_value = cfy_mock_client
+
+            error = self.assertRaises(NonRecoverableError,
+                                      upload_blueprint,
+                                      operation='upload_blueprint',
+                                      **self.resource_config)
+
+            self.assertIn('Blueprint ID \"{0}\" does not exist'.format('test'),
+                          error.message)
