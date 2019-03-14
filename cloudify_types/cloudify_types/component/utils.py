@@ -103,7 +103,7 @@ def download_file(url, destination=None, keep_name=False):
 
     final_url = response.url
     if final_url != url:
-        ctx.logger.debug('Redirected to {0}'.format(final_url))
+        ctx.logger.info('Redirected to {0}'.format(final_url))
 
     try:
         with open(destination, 'wb') as destination_file:

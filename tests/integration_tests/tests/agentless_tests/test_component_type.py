@@ -105,9 +105,7 @@ class ComponentScaleCreation(AgentlessTestCase):
     component_name = 'component'
 
     def test_given_deployment_name_with_auto_inc_suffix_option(self):
-        basic_blueprint_path = resource('dsl/'
-                                        ''
-                                        '.yaml')
+        basic_blueprint_path = resource('dsl/basic.yaml')
         self.client.blueprints.upload(basic_blueprint_path,
                                       entity_id='basic')
         deployment_id = 'd{0}'.format(uuid.uuid4())
@@ -248,13 +246,19 @@ class ComponentCascadingCancel(AgentlessTestCase):
             raise RuntimeError("sleep node instance was expected to go"
                                " into 'creating' status")
 
-    def _verify_cancel_install_execution(self, execution, force, kill_cancel):
+    def _verify_cancel_install_execution(self,
+                                         execution,
+                                         force,
+                                         kill_cancel,
+                                         verify_intermediate_state=True):
         expected_status = Execution.CANCELLING
         if force:
             expected_status = Execution.FORCE_CANCELLING
         elif kill_cancel:
             expected_status = Execution.KILL_CANCELLING
-        self.assertEquals(expected_status, execution.status)
+
+        if verify_intermediate_state:
+            self.assertEquals(expected_status, execution.status)
 
         executions = self.client.executions.list(workflow_id='install')
         for execution in executions:
@@ -264,11 +268,13 @@ class ComponentCascadingCancel(AgentlessTestCase):
         executions = self.client.executions.list(workflow_id='install')
         for execution in executions:
             self.assertEquals(Execution.CANCELLED, execution.status)
+        return executions
 
     def _execute_and_cancel_execution(self,
                                       force=False,
                                       kill_cancel=False,
-                                      wait_for_component=True):
+                                      wait_for_component=True,
+                                      verify_intermediate_state=True):
         # component's blueprint
         sleep_blueprint = resource('dsl/sleep_node.yaml')
         self.client.blueprints.upload(sleep_blueprint, entity_id='basic')
@@ -292,12 +298,15 @@ class ComponentCascadingCancel(AgentlessTestCase):
         execution = self.client.executions.cancel(execution.id,
                                                   force,
                                                   kill=kill_cancel)
-
-        self._verify_cancel_install_execution(execution, force, kill_cancel)
+        self._verify_cancel_install_execution(execution,
+                                              force,
+                                              kill_cancel,
+                                              verify_intermediate_state)
 
         return execution
 
-    def _resume_and_verify_executions_end(self, main_execution):
+    def _resume_and_verify_executions_end(
+            self, main_execution, expected_number_executions):
         main_execution = self.client.executions.resume(main_execution.id,
                                                        force=True)
         main_execution = self.wait_for_execution_to_end(main_execution)
@@ -309,6 +318,8 @@ class ComponentCascadingCancel(AgentlessTestCase):
         executions = self.client.executions.list(workflow_id='install')
         for execution in executions:
             self.assertEquals(Execution.TERMINATED, execution.status)
+
+        self.assertEqual(expected_number_executions, len(executions))
 
     def test_basic_cascading_cancel(self):
         self._execute_and_cancel_execution()
@@ -323,17 +334,26 @@ class ComponentCascadingCancel(AgentlessTestCase):
         """
         main_execution = self._execute_and_cancel_execution(
             wait_for_component=False)
-        self._resume_and_verify_executions_end(main_execution)
+        self._resume_and_verify_executions_end(main_execution, 2)
 
     def test_basic_cascading_force_cancel(self):
         self._execute_and_cancel_execution(force=True)
 
     def test_basic_cascading_kill_cancel(self):
-        self._execute_and_cancel_execution(kill_cancel=True)
+        """
+        This only checks for the final stage of the cancellation,
+        in order to avoid race conditions in catching the intermediate
+        stage of kill_canceling.
+        """
+        self._execute_and_cancel_execution(kill_cancel=True,
+                                           verify_intermediate_state=False)
+        executions = self.client.executions.list(workflow_id='install')
+        for execution in executions:
+            self.assertEquals(Execution.CANCELLED, execution.status)
 
     def test_three_level_cascading_cancel(self):
-        dsl_path = resource('dsl/sleep_node.yaml')
-        self.client.blueprints.upload(dsl_path, entity_id='sleep')
+        sleep = resource('dsl/sleep_node.yaml')
+        self.client.blueprints.upload(sleep, entity_id='sleep')
 
         layer_1 = """
 tosca_definitions_version: cloudify_dsl_1_3
@@ -387,7 +407,11 @@ node_templates:
         main_execution = self.client.executions.start(deployment_id, 'install')
         self._wait_for_component_install(deployment_id='component')
         main_execution = self.client.executions.cancel(main_execution.id)
-        self._verify_cancel_install_execution(main_execution, False, False)
+        executions = self._verify_cancel_install_execution(main_execution,
+                                                           False,
+                                                           False)
+        # The number of executions depends when the cancel occurred
+        self.assertLessEqual(len(executions), 3)
 
     def test_three_level_cascading_cancel_and_resume(self):
         """
@@ -449,4 +473,4 @@ node_templates:
         main_execution = self.client.executions.start(deployment_id, 'install')
         main_execution = self.client.executions.cancel(main_execution.id)
         self._verify_cancel_install_execution(main_execution, False, False)
-        self._resume_and_verify_executions_end(main_execution)
+        self._resume_and_verify_executions_end(main_execution, 3)
