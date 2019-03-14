@@ -34,14 +34,15 @@ from manager_rest.storage.storage_utils import \
 migrations_dir = '/opt/manager/resources/cloudify/migrations'
 PROVIDER_NAME = 'integration_tests'
 ADMIN_TOKEN_RESET_SCRIPT = '/opt/cloudify/mgmtworker/create-admin-token.py'
+DEFAULT_CA_CERT = "/etc/cloudify/ssl/cloudify_internal_ca_cert.pem"
 
 
 def setup_amqp_manager():
     amqp_manager = AMQPManager(
-        host=config.instance.amqp_management_host,
-        username=config.instance.amqp_username,
-        password=config.instance.amqp_password,
-        verify=config.instance.amqp_ca_path
+        host=config.instance.amqp_management_host or "localhost",
+        username=config.instance.amqp_username or "cloudify",
+        password=config.instance.amqp_password or "c10udify",
+        verify=config.instance.amqp_ca_path or DEFAULT_CA_CERT,
     )
     return amqp_manager
 
