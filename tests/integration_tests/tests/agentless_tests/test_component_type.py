@@ -211,10 +211,14 @@ node_templates:
                           deployment_id=deployment_id)
         deployments = self.client.deployments.list(_include=['id'])
         self.assertEqual(len(deployments), 2)
-        executions = self.client.executions.list(_include=['id', 'status', 'workflow_id'])
+        executions = self.client.executions.list(is_descending=True,
+                                                 _include=
+                                                 ['id',
+                                                  'status',
+                                                  'workflow_id'])
         install_executions = [execution for execution in executions
                               if execution.workflow_id == 'install']
 
         # Verifying that the second component had failed in install
-        self.assertEqual(install_executions[0].status, 'terminated')
-        self.assertEqual(install_executions[1].status, 'failed')
+        self.assertEqual(install_executions[0].status, 'failed')
+        self.assertEqual(install_executions[1].status, 'terminated')
