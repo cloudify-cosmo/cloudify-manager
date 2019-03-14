@@ -48,17 +48,7 @@ class MockBlueprintsClient(BaseMockClient):
         return None
 
 
-class MockDeploymentsOutputsClient(BaseMockClient):
-
-    def get(self, *args, **_):
-        del args
-        return MagicMock(return_value={'outputs': {}})
-
-
 class MockDeploymentsClient(BaseMockClient):
-
-    def __init__(self):
-        self.outputs = MockDeploymentsOutputsClient()
 
     def create(self, *args, **_):
         _return_value = {
@@ -92,10 +82,6 @@ class MockExecutionsClient(BaseMockClient):
         }
 
 
-class MockNodeInstancesClient(BaseMockClient):
-    pass
-
-
 class MockEventsClient(BaseMockClient):
 
     list_events = []
@@ -117,7 +103,6 @@ class MockCloudifyRestClient(object):
         self.blueprints = MockBlueprintsClient()
         self.deployments = MockDeploymentsClient()
         self.executions = MockExecutionsClient()
-        self.node_instances = MockNodeInstancesClient()
         self.events = MockEventsClient()
         self.secrets = MagicMock()
         self.plugins = MagicMock()
