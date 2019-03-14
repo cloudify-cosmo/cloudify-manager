@@ -294,11 +294,76 @@ class ComponentCascadingCancel(AgentlessTestCase):
 
 
 class ComponentCascadingResume(AgentlessTestCase):
+    def _create_deployment(self):
+        dsl_path = resource("dsl/resumable_mgmtworker.yaml")
+        return self.deploy(dsl_path)
+
+    def _start_execution(self, deployment, operation):
+        return self.execute_workflow(
+            workflow_name='execute_operation',
+            wait_for_execution=False,
+            deployment_id=deployment.id,
+            parameters={'operation': operation,
+                        'run_by_dependency_order': True,
+                        'operation_kwargs': {
+                            'wait_message': self.wait_message,
+                            'target_file': self.target_file
+                        }})
+
+    def _wait_for_log(self, execution):
+        self.logger.info('Waiting for operation to start')
+        while True:
+            logs = self.client.events.list(
+                execution_id=execution.id, include_logs=True)
+            if any(self.wait_message == log['message'] for log in logs):
+                break
+            time.sleep(1)
+
     def test_basic_cascading_resume(self):
-        pass
+        dep = self._create_deployment()
+        instance = self.client.node_instances.list(
+            deployment_id=dep.id, node_id='node1')[0]
+        instance2 = self.client.node_instances.list(
+            deployment_id=dep.id, node_id='node2')[0]
+        execution = self._start_execution(dep, 'interface1.op_resumable')
+        self._wait_for_log(execution)
+        self.client.executions.cancel(execution.id, kill=True)
+        self.logger.info('Waiting for the execution to fail')
+        execution = self.wait_for_execution_to_end(execution)
+        self.assertEqual(execution.status, 'cancelled')
+
+        self._create_target_file()
+        execution = self.client.executions.resume(execution.id)
+        execution = self.wait_for_execution_to_end(execution)
+        self.assertEqual(execution.status, 'terminated')
+
+        self.assertTrue(self.client.node_instances.get(instance.id)
+                        .runtime_properties['resumed'])
+        self.assertTrue(self.client.node_instances.get(instance2.id)
+                        .runtime_properties['marked'])
 
     def test_basic_cascading_force_resume(self):
-        pass
+        dep = self._create_deployment()
+        instance = self.client.node_instances.list(
+            deployment_id=dep.id, node_id='node1')[0]
+        instance2 = self.client.node_instances.list(
+            deployment_id=dep.id, node_id='node2')[0]
+        execution = self._start_execution(dep, 'interface1.op_nonresumable')
+        self._wait_for_log(execution)
+        self.client.executions.cancel(execution.id)
+        self.logger.info('Waiting for the execution to fail')
+        execution = self.wait_for_execution_to_end(execution)
+        self.assertEqual(execution.status, 'cancelled')
+
+        self._create_target_file()
+        execution = self.client.executions.resume(execution.id, force=True)
+        execution = self.wait_for_execution_to_end(execution)
+        self.assertEqual(execution.status, 'terminated')
+
+        self.assertTrue(self.client.node_instances.get(instance.id)
+                        .runtime_properties['resumed'])
+        self.assertTrue(self.client.node_instances.get(instance2.id)
+                        .runtime_properties['marked'])
 
     def test_three_level_cascading_resume(self):
         pass
