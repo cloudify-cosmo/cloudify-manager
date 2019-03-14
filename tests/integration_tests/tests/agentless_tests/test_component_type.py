@@ -221,3 +221,27 @@ node_templates:
         # Verifying that the second component had failed in install
         self.assertEqual(install_executions[0].status, 'failed')
         self.assertEqual(install_executions[1].status, 'terminated')
+
+class ComponentCascadingCancel(AgentlessTestCase):
+    def test_basic_cascading_cancel(self):
+        pass
+
+    def test_basic_cascading_force_cancel(self):
+        pass
+
+    def test_basic_cascading_kill_cancel(self):
+        pass
+
+    def test_three_level_cascading_cancel(self):
+        pass
+
+
+class ComponentCascadingResume(AgentlessTestCase):
+    def test_basic_cascading_resume(self):
+        pass
+
+    def test_basic_cascading_force_resume(self):
+        pass
+
+    def test_three_level_cascading_resume(self):
+        pass
