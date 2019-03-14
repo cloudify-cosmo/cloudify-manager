@@ -12,14 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
 import time
 import os
 from urlparse import urlparse
 
 from cloudify import manager, ctx
 from cloudify.exceptions import NonRecoverableError
-from cloudify.utils import exception_to_error_cause
 from cloudify_rest_client.client import CloudifyClient
 from cloudify_rest_client.exceptions import CloudifyClientError
 
@@ -437,42 +435,10 @@ class Component(object):
         if not self.verify_execution_successful():
             ctx.logger.error('Deployment error.')
 
-        ctx.logger.debug('Polling execution succeeded')
-
-        ctx.logger.info('Start post execute component')
-        self.post_execute_component()
-        ctx.logger.info('End post execute component')
+        ctx.logger.info('Execution succeeded for \"{}\" deployment'.format(
+            self.deployment_id))
 
         return True
-
-    def post_execute_component(self):
-        runtime_prop = ctx.instance.runtime_properties['deployment']
-        ctx.logger.debug(
-            'Runtime deployment properties {0}'.format(runtime_prop))
-
-        if 'outputs' \
-                not in ctx.instance.runtime_properties['deployment']:
-            update_runtime_properties('deployment', 'outputs', dict())
-            ctx.logger.debug('No component outputs exist.')
-
-        try:
-            ctx.logger.debug('Deployment Id is {0}'.format(self.deployment_id))
-            response = self.client.deployments.outputs.get(self.deployment_id)
-            ctx.logger.debug(
-                'Deployment outputs response {0}'.format(response))
-
-        except CloudifyClientError as ex:
-            _, _, tb = sys.exc_info()
-            raise NonRecoverableError(
-                'Failed to query deployment outputs: {0}'
-                ''.format(self.deployment_id),
-                causes=[exception_to_error_cause(ex, tb)])
-        else:
-            dep_outputs = response.get('outputs')
-            ctx.logger.debug('Deployment outputs: {0}'.format(dep_outputs))
-            for key, val in self.deployment_outputs.items():
-                ctx.instance.runtime_properties[
-                    'deployment']['outputs'][val] = dep_outputs.get(key, '')
 
     def verify_execution_successful(self):
         return poll_workflow_after_execute(
