@@ -154,7 +154,7 @@ class Component(object):
 
         if self.blueprint.get(EXTERNAL_RESOURCE) and not blueprint_exists:
             raise NonRecoverableError(
-                'Blueprint ID {0} does not exist, '
+                'Blueprint ID \"{0}\" does not exist, '
                 'but {1} is {2}.'.format(
                     self.blueprint_id,
                     EXTERNAL_RESOURCE,
@@ -164,7 +164,7 @@ class Component(object):
             return False
         elif blueprint_exists:
             ctx.logger.warn(
-                'Blueprint ID {0} exists, '
+                'Blueprint ID \"{0}\" exists, '
                 'but {1} is {2}. Will use.'.format(
                     self.blueprint_id,
                     EXTERNAL_RESOURCE,
@@ -197,21 +197,19 @@ class Component(object):
             ctx.instance.runtime_properties['plugins'] = []
 
         if isinstance(self.plugins, dict):
-            plugins_list = self.plugins.values()
+            plugins = self.plugins.values()
         else:
             raise NonRecoverableError(
                 'Wrong type in plugins: {}'.format(repr(self.plugins)))
 
-        for plugin in plugins_list:
+        for plugin in plugins:
             ctx.logger.info('Creating plugin zip archive..')
             wagon_path = None
             yaml_path = None
             zip_path = None
             try:
-                if (
-                    not plugin.get('wagon_path') or
-                    not plugin.get('plugin_yaml_path')
-                ):
+                if (not plugin.get('wagon_path') or
+                        not plugin.get('plugin_yaml_path')):
                     raise NonRecoverableError(
                         'You should provide both values wagon_path: {}'
                         ' and plugin_yaml_path: {}'
@@ -317,8 +315,8 @@ class Component(object):
         # If the ``execution_id`` cannot be found raise error
         if not self.execution_id:
             raise NonRecoverableError(
-                'No execution id Found for deployment'
-                ' {0}'.format(self.deployment_id)
+                'No execution Found for component \"{}\"'
+                ' deployment'.format(self.deployment_id)
             )
 
         # If a match was found there can only be one, so we will extract it.
@@ -355,8 +353,6 @@ class Component(object):
                 del ctx.instance.runtime_properties[property_name]
 
     def delete_deployment(self):
-        delete_component_args = dict(deployment_id=self.deployment_id)
-
         ctx.logger.info("Wait for component's stop deployment operation "
                         "related executions.")
         poll_with_timeout(
@@ -370,7 +366,7 @@ class Component(object):
                         .format(self.deployment_id))
         self._http_client_wrapper('deployments',
                                   'delete',
-                                  delete_component_args)
+                                  dict(deployment_id=self.deployment_id))
 
         ctx.logger.info("Wait for component's deployment delete.")
         poll_result = poll_with_timeout(
@@ -390,10 +386,9 @@ class Component(object):
         if not self.blueprint.get(EXTERNAL_RESOURCE):
             ctx.logger.info("Delete component's blueprint {0}."
                             .format(self.blueprint_id))
-            delete_component_args = dict(blueprint_id=self.blueprint_id)
             self._http_client_wrapper('blueprints',
                                       'delete',
-                                      delete_component_args)
+                                      dict(blueprint_id=self.blueprint_id))
 
         self._delete_plugins()
         self._delete_secrets()
