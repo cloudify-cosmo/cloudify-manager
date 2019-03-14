@@ -14,11 +14,16 @@
 # limitations under the License.
 
 import uuid
+import time
 
+from cloudify_rest_client.executions import Execution
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from integration_tests import AgentlessTestCase
-from integration_tests.tests.utils import get_resource as resource
+from integration_tests.tests.utils import (
+    verify_deployment_env_created,
+    do_retries,
+    get_resource as resource)
 
 
 class ComponentTypeTest(AgentlessTestCase):
@@ -223,14 +228,66 @@ node_templates:
         self.assertEqual(install_executions[1].status, 'terminated')
 
 class ComponentCascadingCancel(AgentlessTestCase):
+    def _execute_and_cancel_execution(self,
+                                      workflow_id,
+                                      force=False,
+                                      wait_for_termination=True,
+                                      is_wait_for_asleep_node=True,
+                                      workflow_params=None,
+                                      kill_cancel=False):
+        dsl_path = resource('dsl/sleep_workflows.yaml')
+        self.client.blueprints.upload(dsl_path, entity_id='basic')
+
+        dsl_path = resource(
+            'dsl/component_with_blueprint_id.yaml')
+        test_id = uuid.uuid1()
+        blueprint_id = 'blueprint_{0}'.format(test_id)
+        deployment_id = 'deployment_{0}'.format(test_id)
+        self.client.blueprints.upload(dsl_path, blueprint_id)
+        self.client.deployments.create(blueprint_id, deployment_id,
+                                       skip_plugins_validation=True)
+        do_retries(verify_deployment_env_created,
+                   30,
+                   deployment_id=deployment_id)
+        execution = self.client.executions.start(
+            deployment_id, workflow_id, parameters=workflow_params)
+
+        node_inst_id = self.client.node_instances.list(
+            deployment_id=deployment_id)[0].id
+
+        if is_wait_for_asleep_node:
+            for retry in range(30):
+                if self.client.node_instances.get(
+                        node_inst_id).state == 'asleep':
+                    break
+                time.sleep(1)
+            else:
+                raise RuntimeError("Execution was expected to go"
+                                   " into 'sleeping' status")
+
+        execution = self.client.executions.cancel(execution.id, force, kill=kill_cancel)
+        expected_status = Execution.FORCE_CANCELLING if force else \
+            Execution.CANCELLING
+        self.assertEquals(expected_status, execution.status)
+        if wait_for_termination:
+            self.wait_for_execution_to_end(execution)
+            execution = self.client.executions.get(execution.id)
+        return execution, deployment_id
+
     def test_basic_cascading_cancel(self):
-        pass
+        execution, deployment_id = self._execute_and_cancel_execution(
+            'sleep_with_cancel_support')
+        self.assertEquals(Execution.CANCELLED, execution.status)
 
     def test_basic_cascading_force_cancel(self):
-        pass
+        execution, deployment_id = self._execute_and_cancel_execution(
+            'sleep', True)
+        self.assertEquals(Execution.CANCELLED, execution.status)
 
     def test_basic_cascading_kill_cancel(self):
-        pass
+        execution, deployment_id = self._execute_and_cancel_execution(
+            'sleep', True, kill_cancel=True)
+        self.assertEquals(Execution.CANCELLED, execution.status)
 
     def test_three_level_cascading_cancel(self):
         pass
