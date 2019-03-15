@@ -183,3 +183,14 @@ class Managers(SecuredResource):
 
         # TODO: send message on service-queue
         return sm.delete(manager_to_delete)
+
+
+class RabbitMQBrokers(SecuredResource):
+    @exceptions_handled
+    @marshal_with(models.RabbitMQBroker)
+    @paginate
+    @authorize('broker_get')
+    def get(self, pagination=None):
+        return get_storage_manager().list(
+            models.RabbitMQBroker,
+        )

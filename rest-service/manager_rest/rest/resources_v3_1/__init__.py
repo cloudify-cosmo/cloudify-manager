@@ -15,7 +15,8 @@
 
 from .manager import (                           # NOQA
     SSLConfig,
-    Managers
+    Managers,
+    RabbitMQBrokers
 )
 
 from .manager_config import (                    # NOQA
