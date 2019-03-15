@@ -220,5 +220,5 @@ node_templates:
                               if execution.workflow_id == 'install']
 
         # Verifying that the second component had failed in install
-        self.assertEqual(install_executions[1].status, 'terminated')
         self.assertEqual(install_executions[0].status, 'failed')
+        self.assertEqual(install_executions[1].status, 'terminated')
