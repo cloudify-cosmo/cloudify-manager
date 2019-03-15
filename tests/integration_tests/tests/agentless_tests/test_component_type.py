@@ -212,10 +212,9 @@ node_templates:
         deployments = self.client.deployments.list(_include=['id'])
         self.assertEqual(len(deployments), 2)
         executions = self.client.executions.list(is_descending=True,
-                                                 _include=
-                                                 ['id',
-                                                  'status',
-                                                  'workflow_id'])
+                                                 _include=['id',
+                                                           'status',
+                                                           'workflow_id'])
         install_executions = [execution for execution in executions
                               if execution.workflow_id == 'install']
 
