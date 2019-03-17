@@ -174,6 +174,7 @@ class Config(object):
             self.amqp_ca_path = broker.write_ca_cert()
             atexit.register(os.unlink, self.amqp_ca_path)
 
+        session.close()
         engine.dispose()
 
         # disallow implicit loading
