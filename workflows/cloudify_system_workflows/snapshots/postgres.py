@@ -39,7 +39,8 @@ class Postgres(object):
     _POSTGRES_DUMP_FILENAME = 'pg_data'
     _STAGE_DB_NAME = 'stage'
     _COMPOSER_DB_NAME = 'composer'
-    _TABLES_TO_KEEP = ['alembic_version', 'provider_context', 'roles']
+    _TABLES_TO_KEEP = ['alembic_version', 'provider_context', 'roles',
+                       'licenses']
     _TABLES_TO_EXCLUDE_ON_DUMP = _TABLES_TO_KEEP + ['snapshots']
     _TABLES_TO_RESTORE = ['users', 'tenants']
     _STAGE_TABLES_TO_EXCLUDE = ['"SequelizeMeta"']

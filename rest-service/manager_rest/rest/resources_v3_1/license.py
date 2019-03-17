@@ -33,7 +33,7 @@ except ImportError:
 class License(SecuredLicenseResource):
     @exceptions_handled
     @marshal_with(responses_v3.License)
-    @authorize('license')
+    @authorize('license_upload')
     def put(self, license_handler):
         """
         Upload a new Cloudify license to the Manager.
@@ -45,7 +45,7 @@ class License(SecuredLicenseResource):
     @exceptions_handled
     @marshal_with(responses_v3.License)
     @paginate
-    @authorize('license')
+    @authorize('license_list')
     def get(self, license_handler, pagination=None):
         """
         List registered Cloudfiy licenses.
