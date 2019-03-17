@@ -39,6 +39,9 @@ class Postgres(object):
     _POSTGRES_DUMP_FILENAME = 'pg_data'
     _STAGE_DB_NAME = 'stage'
     _COMPOSER_DB_NAME = 'composer'
+    _TABLES_TO_KEEP = ['alembic_version', 'provider_context', 'roles',
+                       'licenses']
+    _TABLES_TO_EXCLUDE_ON_DUMP = _TABLES_TO_KEEP + ['snapshots']
     _TABLES_TO_KEEP = ['alembic_version', 'provider_context', 'roles']
     _CONFIG_TABLES = ['config', 'rabbitmq_brokers', 'certificates']
     _TABLES_TO_EXCLUDE_ON_DUMP = _TABLES_TO_KEEP + ['snapshots'] + \
@@ -70,6 +73,9 @@ class Postgres(object):
         # Add to the beginning of the dump queries that recreate the schema
         clear_tables_queries = self._get_clear_tables_queries()
         dump_file = self._prepend_dump(dump_file, clear_tables_queries)
+
+        # Add the current execution
+        self._append_dump(dump_file, self._get_execution_restore_query())
 
         # Don't change admin user during the restore or the workflow will
         # fail to correctly execute (the admin user update query reverts it

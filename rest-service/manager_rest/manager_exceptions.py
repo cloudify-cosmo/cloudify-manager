@@ -553,12 +553,24 @@ class InvalidCloudifyLicense(ManagerException):
     This happens when the license has been tampered and the signature does not
     match.
     """
-    ERROR_CODE = 'invalid_cloudify_license'
+    ERROR_CODE = 'unverified_cloudify_license'
 
     def __init__(self, *args, **kwargs):
         super(InvalidCloudifyLicense, self).__init__(
-            401,
+            400,
             InvalidCloudifyLicense.ERROR_CODE,
+            *args,
+            **kwargs
+        )
+
+
+class InvalidYamlFormat(ManagerException):
+    ERROR_CODE = 'invalid_yaml_format'
+
+    def __init__(self, *args, **kwargs):
+        super(InvalidYamlFormat, self).__init__(
+            400,
+            InvalidYamlFormat.ERROR_CODE,
             *args,
             **kwargs
         )
