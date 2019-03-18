@@ -18,7 +18,6 @@ import uuid
 
 from integration_tests import AgentlessTestCase
 from integration_tests.framework.postgresql import run_query
-
 from integration_tests.framework import (
     postgresql,
     utils)
@@ -31,7 +30,7 @@ from integration_tests.tests.utils import (
     create_api_token,
     create_tenants_and_add_users)
 
-from cloudify_rest_client.executions import Execution
+from cloudify.models_states import ExecutionState as Execution
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 

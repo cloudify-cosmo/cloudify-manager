@@ -31,8 +31,8 @@ from base64 import urlsafe_b64encode
 import wagon
 from flask import g
 from flask_restful import abort
-from flask_security import current_user
 from werkzeug.local import LocalProxy
+from flask_security import current_user
 
 from cloudify import logs
 from cloudify.amqp_client import create_events_publisher

@@ -19,9 +19,13 @@ from collections import namedtuple
 from flask import current_app, Response
 from flask_security.utils import verify_password, verify_hash
 
+from cloudify.models_states import ExecutionState
+
 from . import user_handler
 from manager_rest.storage import user_datastore
 from manager_rest.app_logging import raise_unauthorized_user_error
+from manager_rest.execution_token import (current_execution,
+                                          get_execution_token_from_request)
 
 
 Authorization = namedtuple('Authorization', 'username password')
@@ -80,11 +84,14 @@ class Authentication(object):
         auth = request.authorization
         token = user_handler.get_token_from_request(request)
         api_token = user_handler.get_api_token_from_request(request)
-        self.token_based_auth = token or api_token
+        execution_token = get_execution_token_from_request(request)
+        self.token_based_auth = token or api_token or execution_token
         if auth:  # Basic authentication (User + Password)
             user = user_handler.get_user_from_auth(auth)
             self._check_if_user_is_locked(user, auth)
             user = self._authenticate_password(user, auth)
+        elif execution_token:  # Execution Token authentication
+            user = self._authenticate_execution_token()
         elif token:  # Token authentication
             user = self._authenticate_token(token)
         elif api_token:  # API token authentication
@@ -165,6 +172,39 @@ class Authentication(object):
             )
 
         return user
+
+    def _authenticate_execution_token(self):
+        """Make sure the token passed exists and valid (by verifying the
+           current_execution). Valid token is connected to an active execution
+
+        :return: A user object
+        """
+        self.logger.debug('Authenticating execution token')
+        error_msg = 'Authentication failed, invalid Execution Token'
+        if not current_execution:
+            self.logger.debug('{0}. Exactly one execution should match this '
+                              'token'.format(error_msg))
+            raise_unauthorized_user_error(error_msg)
+
+        if current_execution.status not in ExecutionState.ACTIVE_STATES:
+            # Valid if it is a scheduled execution that is just started to run
+            if self._is_valid_scheduled_execution():
+                return current_execution.creator
+
+            # Not an active execution
+            self.logger.debug('{0}. The execution is not active'
+                              .format(error_msg))
+            raise_unauthorized_user_error(error_msg)
+        return current_execution.creator
+
+    def _is_valid_scheduled_execution(self):
+        if current_execution.status == ExecutionState.SCHEDULED:
+            current_time = datetime.utcnow()
+            scheduled_for = datetime.strptime(current_execution.scheduled_for,
+                                              '%Y-%m-%dT%H:%M:%S.%fZ')
+            # The scheduled execution just started to run
+            return abs((current_time - scheduled_for).total_seconds()) < 60
+        return False
 
 
 authenticator = Authentication()

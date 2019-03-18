@@ -507,9 +507,12 @@ class SnapshotRestore(object):
         """
         ctx.logger.info('Restoring database')
         admin_user_update_command = 'echo No admin user to update.'
+        postgres.init_current_execution_data()
 
         with utils.db_schema(schema_revision, config=self._config):
             admin_user_update_command = postgres.restore(self._tempdir)
+
+        postgres.restore_current_execution()
         self._restore_stage(postgres, self._tempdir, stage_revision)
         self._restore_composer(postgres, self._tempdir)
 

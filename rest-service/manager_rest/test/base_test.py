@@ -37,6 +37,7 @@ from flask.testing import FlaskClient
 from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.exceptions import CloudifyClientError
 
+from cloudify.constants import CLOUDIFY_EXECUTION_TOKEN_HEADER
 from cloudify.models_states import ExecutionState, VisibilityState
 
 from manager_rest import server
@@ -98,8 +99,9 @@ class TestClient(FlaskClient):
         kwargs = kwargs or {}
         admin = get_admin_user()
         kwargs['headers'] = kwargs.get('headers') or {}
-        kwargs['headers'].update(utils.create_auth_header(
-            username=admin['username'], password=admin['password']))
+        if CLOUDIFY_EXECUTION_TOKEN_HEADER not in kwargs['headers']:
+            kwargs['headers'].update(utils.create_auth_header(
+                username=admin['username'], password=admin['password']))
         kwargs['headers'][constants.CLOUDIFY_TENANT_HEADER] = \
             constants.DEFAULT_TENANT_NAME
         return super(TestClient, self).open(*args, **kwargs)

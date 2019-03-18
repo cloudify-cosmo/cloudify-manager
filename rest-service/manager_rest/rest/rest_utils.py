@@ -22,10 +22,8 @@ from datetime import datetime
 from string import ascii_letters
 from contextlib import contextmanager
 
-from flask import current_app
-from flask import request, make_response
-from flask_restful.reqparse import Argument
-from flask_restful.reqparse import RequestParser
+from flask import request, make_response, current_app
+from flask_restful.reqparse import Argument, RequestParser
 
 from cloudify.models_states import VisibilityState
 

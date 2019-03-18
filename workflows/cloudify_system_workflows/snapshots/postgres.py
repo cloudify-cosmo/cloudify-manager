@@ -54,6 +54,8 @@ class Postgres(object):
         self._username = config.postgresql_username
         self._password = config.postgresql_password
         self._connection = None
+        self.current_execution_date = None
+        self.hashed_execution_token = None
         if ':' in self._host:
             self._host, self._port = self._host.split(':')
             ctx.logger.debug('Updating Postgres config: host: {0}, port: {1}'
@@ -66,9 +68,6 @@ class Postgres(object):
         # Add to the beginning of the dump queries that recreate the schema
         clear_tables_queries = self._get_clear_tables_queries()
         dump_file = self._prepend_dump(dump_file, clear_tables_queries)
-
-        # Add the current execution
-        self._append_dump(dump_file, self._get_execution_restore_query())
 
         # Don't change admin user during the restore or the workflow will
         # fail to correctly execute (the admin user update query reverts it
@@ -184,13 +183,26 @@ class Postgres(object):
         """Return a query that creates an execution to the DB with the ID (and
         other data) from the snapshot restore execution
         """
-        record_creation_date = self._get_restore_execution_date()
         return "INSERT INTO executions (id, created_at, " \
                "is_system_workflow, " \
-               "status, workflow_id, _tenant_id, _creator_id) " \
-               "VALUES ('{0}', '{1}', 't', " \
-               "'started', 'restore_snapshot', 0, 0);"\
-            .format(ctx.execution_id, record_creation_date)
+               "status, workflow_id, _tenant_id, _creator_id, token) " \
+               "VALUES ('{0}', '{1}', 't', 'started', 'restore_snapshot', " \
+               "0, 0, '{2}');".format(ctx.execution_id,
+                                      self.current_execution_date,
+                                      self.hashed_execution_token)
+
+    def restore_current_execution(self):
+        self.run_query(self._get_execution_restore_query())
+
+    def init_current_execution_data(self):
+        response = self.run_query("SELECT created_at, token "
+                                  "FROM executions "
+                                  "WHERE id='{0}'".format(ctx.execution_id))
+        if not response:
+            raise NonRecoverableError('Illegal state - missing execution date '
+                                      'for current execution')
+        self.current_execution_date = response['all'][0][0]
+        self.hashed_execution_token = response['all'][0][1]
 
     def clean_db(self):
         """Run a series of queries that recreate the schema and restore the
@@ -198,6 +210,8 @@ class Postgres(object):
         """
         queries = self._get_clear_tables_queries(preserve_defaults=True)
         queries.append(self._get_admin_user_update_query())
+        if not self.current_execution_date:
+            self.init_current_execution_data()
         queries.append(self._get_execution_restore_query())
         # Make the admin user actually has the admin role
         queries.append("INSERT INTO users_roles (user_id, role_id)"
@@ -457,12 +471,3 @@ class Postgres(object):
             raise NonRecoverableError('Illegal state - '
                                       'missing admin user in db')
         return response['all'][0]
-
-    def _get_restore_execution_date(self):
-        response = self.run_query("SELECT created_at "
-                                  "FROM executions "
-                                  "WHERE id='{0}'".format(ctx.execution_id))
-        if not response:
-            raise NonRecoverableError('Illegal state - missing execution date '
-                                      'for current execution')
-        return response['all'][0][0]
