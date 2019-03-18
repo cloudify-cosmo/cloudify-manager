@@ -281,5 +281,5 @@ def downgrade():
     op.drop_column('executions', 'token')
     op.drop_table('config')
     op.drop_table('managers')
-    op.drop_table('certificates')
     op.drop_table('rabbitmq_brokers')
+    op.drop_table('certificates')
