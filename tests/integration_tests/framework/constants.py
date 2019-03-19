@@ -38,5 +38,3 @@ INSERT_MOCK_LICENSE_QUERY = "INSERT INTO licenses(customer_id, " \
                             " cloudify_version, capabilities, signature)" \
                             " VALUES('mock_customer', '2050-01-01', 'Spire'," \
                             " false, '4.6', '{mock}', 'mock_signature');"
-
-DELETE_CLOUDIFY_LICENSE_QUERY = "DELETE FROM licenses"

@@ -1,5 +1,21 @@
-from integration_tests.framework import docl
+########
+# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+#    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    * See the License for the specific language governing permissions and
+#    * limitations under the License.
+
+
 from integration_tests import AgentlessTestCase
+from integration_tests.framework import postgresql
 from integration_tests.tests.utils import get_resource
 from cloudify_rest_client.exceptions import (
     MissingCloudifyLicense,
@@ -12,7 +28,7 @@ class TestLicense(AgentlessTestCase):
 
     def setUp(self):
         super(TestLicense, self).setUp()
-        docl.remove_license()
+        postgresql.run_query("DELETE FROM licenses")
 
     def test_error_when_no_license_on_manager(self):
         """
@@ -35,15 +51,6 @@ class TestLicense(AgentlessTestCase):
         self.client.snapshots.list()
         self.client.manager.get_status()
         self.client.maintenance_mode.status()
-
-    def _upload_license(self, license):
-        license_path = get_resource('licenses/{0}'.format(license))
-        self.client.license.upload(license_path)
-
-    def _verify_license(self, expired, trial):
-        license = self.client.license.list().items[0]
-        self.assertEqual(license['expired'], expired)
-        self.assertEqual(license['trial'], trial)
 
     def test_upload_valid_paying_license(self):
         self._upload_license('test_valid_paying_license.yaml')
@@ -104,3 +111,12 @@ class TestLicense(AgentlessTestCase):
         except CloudifyClientError as e:
             self.assertIn('This license could not be verified', e.message)
         self.client.blueprints.list()
+
+    def _upload_license(self, license):
+        license_path = get_resource('licenses/{0}'.format(license))
+        self.client.license.upload(license_path)
+
+    def _verify_license(self, expired, trial):
+        license = self.client.license.list().items[0]
+        self.assertEqual(license['expired'], expired)
+        self.assertEqual(license['trial'], trial)
