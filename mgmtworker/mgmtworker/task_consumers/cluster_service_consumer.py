@@ -18,6 +18,8 @@ import logging
 
 from cloudify.constants import CLUSTER_SERVICE_EXCHANGE_NAME
 from cloudify.amqp_client import TaskConsumer
+from cloudify.manager import get_rest_client
+from cloudify.utils import get_admin_api_token
 try:
     from cloudify_premium.ha import syncthing
 except ImportError:
@@ -60,9 +62,17 @@ class ClusterServiceConsumer(TaskConsumer):
     def manager_added(self):
         logger.info('A manager has been added to the cluster, updating '
                     'Syncthing')
-        syncthing.update_devices()
+        syncthing.update_devices(
+            rest_client=get_rest_client(
+                tenant='default_tenant',
+                api_token=get_admin_api_token()
+            ))
 
     def manager_removed(self):
         logger.info('A manager has been removed from the cluster, updating '
                     'Syncthing')
-        syncthing.update_devices()
+        syncthing.update_devices(
+            rest_client=get_rest_client(
+                tenant='default_tenant',
+                api_token=get_admin_api_token()
+            ))

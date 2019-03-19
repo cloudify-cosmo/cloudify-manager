@@ -150,9 +150,9 @@ class Managers(SecuredResource):
             fs_sync_node_id=_manager.get('fs_sync_node_id', '')
         )
         result = get_storage_manager().put(new_manager)
-        if _manager['hostname'] == result['hostname']:
+        if _manager['hostname'] == result.hostname:
             current_app.logger.info('Manager added successfully')
-            add_manager(result['hostname'])  # Adding manager to cluster
+            add_manager(result.hostname)  # Adding manager to cluster
         return result
 
     @exceptions_handled
@@ -193,7 +193,7 @@ class Managers(SecuredResource):
         )
 
         result = sm.delete(manager_to_delete)
-        if _manager['hostname'] == result['hostname']:
+        if _manager['hostname'] == result.hostname:
             current_app.logger.info('Manager deleted successfully')
             remove_manager()  # Removing manager from cluster
         return result

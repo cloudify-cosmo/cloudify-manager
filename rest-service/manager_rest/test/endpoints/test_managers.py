@@ -21,27 +21,26 @@ from manager_rest.manager_exceptions import NotFoundError
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 
-_manager1 = {
-    'hostname': 'manager1.test.domain',
-    'private_ip': '172.17.0.1',
-    'public_ip': '192.168.0.1',
-    'version': '5.0.dev1',
-    'edition': 'premium',
-    'distribution': 'centos',
-    'distro_release': 'Core',
-    'fs_sync_node_id':
-        'P56IOI7-MZJNU2Y-IQGDREY-DM2MGTI-'
-        'MGL3BXN-PQ6W5BM-TBBZ4TJ-XZWICQ2'
-}
-_manager2 = {
-    'hostname': 'manager2.test.domain',
-    'private_ip': '172.17.0.2',
-    'public_ip': '192.168.0.2',
-    'version': '5.0.dev1',
-    'edition': 'premium',
-    'distribution': 'centos',
-    'distro_release': 'Core'
-}
+_manager1 = dict(
+    hostname='manager1.test.domain',
+    private_ip='172.17.0.1',
+    public_ip='192.168.0.1',
+    version='5.0.dev1',
+    edition='premium',
+    distribution='centos',
+    distro_release='Core',
+    fs_sync_node_id='P56IOI7-MZJNU2Y-IQGDREY-DM2MGTI-'
+                    'MGL3BXN-PQ6W5BM-TBBZ4TJ-XZWICQ2'
+)
+_manager2 = dict(
+    hostname='manager2.test.domain',
+    private_ip='172.17.0.2',
+    public_ip='192.168.0.2',
+    version='5.0.dev1',
+    edition='premium',
+    distribution='centos',
+    distro_release='Core'
+)
 
 
 @attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
@@ -95,35 +94,33 @@ class ManagersTableTestCase(base_test.BaseServerTestCase):
         self.assertEqual(len(result.items), 0)
 
     def test_add_manager(self):
-        new_manager = {
-            'hostname': 'manager3.test.domain',
-            'private_ip': '172.17.0.3',
-            'public_ip': '192.168.0.3',
-            'version': '5.0.dev1',
-            'edition': 'premium',
-            'distribution': 'centos',
-            'distro_release': 'Core',
-            'fs_sync_node_id':
-                'I56IOI7-MZJNU2Y-IQGDREY-DM2MGTI-'
-                'MGL3BXN-PQ6W5BM-TBBZ4TJ-XZWICQ2'
-        }
+        new_manager = dict(
+            hostname='manager3.test.domain',
+            private_ip='172.17.0.3',
+            public_ip='192.168.0.3',
+            version='5.0.dev1',
+            edition='premium',
+            distribution='centos',
+            distro_release='Core',
+            fs_sync_node_id='I56IOI7-MZJNU2Y-IQGDREY-DM2MGTI-'
+                            'MGL3BXN-PQ6W5BM-TBBZ4TJ-XZWICQ2'
+        )
         result = self.client.manager.add_manager(**new_manager)
         del result['id']
         self.assertEqual(result, new_manager)
 
     def test_add_same_manager_twice(self):
-        new_manager = {
-            'hostname': 'manager2.test.domain',
-            'private_ip': '172.17.0.2',
-            'public_ip': '192.168.0.2',
-            'version': '5.0.dev1',
-            'edition': 'premium',
-            'distribution': 'centos',
-            'distro_release': 'Core',
-            'fs_sync_node_id':
-                'G56IOI7-MZJNU2Y-IQGDREY-DM2MGTI-'
-                'MGL3BXN-PQ6W5BM-TBBZ4TJ-XZWICQ2'
-        }
+        new_manager = dict(
+            hostname='manager2.test.domain',
+            private_ip='172.17.0.2',
+            public_ip='192.168.0.2',
+            version='5.0.dev1',
+            edition='premium',
+            distribution='centos',
+            distro_release='Core',
+            fs_sync_node_id='G56IOI7-MZJNU2Y-IQGDREY-DM2MGTI-'
+                            'MGL3BXN-PQ6W5BM-TBBZ4TJ-XZWICQ2'
+        )
         with self.assertRaises(CloudifyClientError) as error:
             self.client.manager.add_manager(**new_manager)
         self.assertEqual(error.exception.status_code, 409)
