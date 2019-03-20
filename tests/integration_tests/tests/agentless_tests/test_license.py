@@ -13,6 +13,7 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+from datetime import datetime, timedelta
 
 from integration_tests import AgentlessTestCase
 from integration_tests.framework import postgresql
@@ -110,6 +111,52 @@ class TestLicense(AgentlessTestCase):
             self._upload_license('test_tampered_paying_license.yaml')
         except CloudifyClientError as e:
             self.assertIn('This license could not be verified', e.message)
+        self.client.blueprints.list()
+
+    def test_valid_for_30_days_license(self):
+        """
+        Instead of a specific expiration date this license is valid for 30 days
+        from Manager installation date.
+        """
+        self._upload_license('test_30_days_license.yaml')
+        license = self.client.license.list().items[0]
+        self._verify_license(expired=False, trial=True)
+        expected_date = datetime.utcnow() + timedelta(days=30)
+        expiration_date = datetime.strptime(license['expiration_date'],
+                                            '%Y-%m-%dT%H:%M:%S.%fZ')
+        self.assertLessEqual(expiration_date, expected_date)
+        self.client.blueprints.list()
+
+    def test_license_valid_for_all_version(self):
+        """
+        Cloudify licenses with empty `version` value are valid for all
+        Cloudify versions.
+        """
+        self._upload_license('test_no_version_license.yaml')
+        license = self.client.license.list().items[0]
+        self._verify_license(expired=False, trial=True)
+        self.assertIsNone(license['cloudify_version'])
+        self.client.blueprints.list()
+
+    def test_error_when_uploading_license_with_old_version(self):
+        """
+        Try (and fail) to upload a Cloudify license that is valid for
+        Cloudify 4.5.5
+        """
+        try:
+            self._upload_license('test_version_4_5_5_license.yaml')
+        except CloudifyClientError as e:
+            self.assertIn('This license could not be verified', e.message)
+
+    def test_license_with_no_expiration_date(self):
+        """
+        Cloudify licenses with empty `expiration_date` value are valid
+        for good.
+        """
+        self._upload_license('test_no_expiration_date_license.yaml')
+        license = self.client.license.list().items[0]
+        self._verify_license(expired=False, trial=True)
+        self.assertIsNone(license['expiration_date'])
         self.client.blueprints.list()
 
     def _upload_license(self, license):

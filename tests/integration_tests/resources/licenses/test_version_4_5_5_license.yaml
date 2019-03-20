@@ -1,0 +1,15 @@
+license:
+  capabilities:
+  - Mock1
+  - Mock2
+  cloudify_version: 4.5.5
+  customer_id: CloudifyMock
+  expiration_date: 11/24/2030
+  license_edition: Spire
+  trial: true
+signature: !!binary |
+  r579i4e4HkIOC+GbC885k3D9pvmbnW8Iq7COfqIIbHyc+/Dhxah4iEJ2FFyqNu88TuNHJkezuzn6
+  SgUezEPOTgWrRMMVLKiL8KDxKZv7DQ7xLsdr13VXux2dSjcOg8f51iaKTHTlFPwIl7nMNZ6ujzS4
+  DUZ+1hfVnX0GnkOtlNXPKS9wJA3TItFI3nvns2LEhLcMonBteQT4KNdkTEtNxO11zI3Uw6WqbRbe
+  yPX1764HyAlVigMq+S86YNhJ2TVZqCCBF1v2bfilMeONZHwMI4vtEOWO957LnZ0DnPug1UUaQYAQ
+  MVX24EEtVRVUCbltOaCHDcI24LamRa4oOLBoxg==

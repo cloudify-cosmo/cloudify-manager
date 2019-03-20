@@ -488,6 +488,8 @@ class License(SQLModelBase):
 
     @property
     def expired(self):
+        if self.expiration_date is None:
+            return False
         now = datetime.utcnow()
         expiration_date = datetime.strptime(self.expiration_date,
                                             '%Y-%m-%dT%H:%M:%S.%fZ')

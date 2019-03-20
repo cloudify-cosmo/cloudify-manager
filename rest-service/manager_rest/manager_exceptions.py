@@ -537,9 +537,12 @@ class IncompatibleClusterArchitectureError(ManagerException):
 
 
 class InvalidCloudifyLicense(ManagerException):
-    """ Raised when the uploaded Cloudify license can't be verified.
-    This happens when the license has been tampered and the signature does not
-    match.
+    """
+    Raised when the uploaded Cloudify license can't be verified.
+    This can happen when:
+    1. The license has been tampered and the signature does not
+       match.
+    2. The license version is older than the Manager`s version.
     """
     ERROR_CODE = 'unverified_cloudify_license'
 
