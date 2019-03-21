@@ -35,6 +35,7 @@ import cloudify.utils
 from integration_tests.framework import utils, constants
 from integration_tests.framework.constants import INSERT_MOCK_LICENSE_QUERY
 
+
 # All container specific docl commands that are executed with no explicit
 # container id will be executed on the default_container_id which is set
 # after the manager container is started on run_manager()
