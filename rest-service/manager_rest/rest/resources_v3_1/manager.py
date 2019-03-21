@@ -152,7 +152,7 @@ class Managers(SecuredResource):
         result = get_storage_manager().put(new_manager)
         if _manager['hostname'] == result.hostname:
             current_app.logger.info('Manager added successfully')
-            add_manager(result.hostname)  # Adding manager to cluster
+            add_manager()  # Adding manager to cluster
         return result
 
     @exceptions_handled
