@@ -33,7 +33,8 @@ from manager_rest.manager_exceptions import INTERNAL_SERVER_ERROR_CODE
 from manager_rest.app_logging import setup_logger, log_request, log_response
 
 if premium_enabled:
-    from cloudify_premium import configure_auth
+    from cloudify_premium.authentication.extended_auth_handler \
+        import configure_auth
 
 
 app_errors = Blueprint('app_errors', __name__)

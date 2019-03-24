@@ -31,8 +31,8 @@ from cloudify_rest_client.exceptions import InvalidExecutionUpdateStatus
 
 from cloudify_agent.worker import (
     ProcessRegistry,
-    CloudifyOperationConsumer,
-    ServiceTaskConsumer
+    ServiceTaskConsumer,
+    CloudifyOperationConsumer
 )
 from .task_consumers.cluster_service_consumer import ClusterServiceConsumer
 from cloudify_agent import worker as agent_worker

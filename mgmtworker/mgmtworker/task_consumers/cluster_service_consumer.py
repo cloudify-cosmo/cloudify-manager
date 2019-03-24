@@ -21,9 +21,9 @@ from cloudify.amqp_client import TaskConsumer
 from cloudify.manager import get_rest_client
 from cloudify.utils import get_admin_api_token
 try:
-    from cloudify_premium.ha import syncthing
+    from cloudify_premium import syncthing_utils
 except ImportError:
-    update_devices = None
+    syncthing_utils = None
 
 logger = logging.getLogger('mgmtworker')
 
@@ -62,7 +62,7 @@ class ClusterServiceConsumer(TaskConsumer):
     def manager_added(self):
         logger.info('A manager has been added to the cluster, updating '
                     'Syncthing')
-        syncthing.update_devices(
+        syncthing_utils.mgmtworker_update_devices(
             rest_client=get_rest_client(
                 tenant='default_tenant',
                 api_token=get_admin_api_token()
@@ -71,7 +71,7 @@ class ClusterServiceConsumer(TaskConsumer):
     def manager_removed(self):
         logger.info('A manager has been removed from the cluster, updating '
                     'Syncthing')
-        syncthing.update_devices(
+        syncthing_utils.mgmtworker_update_devices(
             rest_client=get_rest_client(
                 tenant='default_tenant',
                 api_token=get_admin_api_token()

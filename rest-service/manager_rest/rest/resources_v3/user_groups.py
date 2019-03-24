@@ -28,8 +28,9 @@ from .. import rest_decorators, rest_utils
 from ..responses_v3 import BaseResponse
 
 try:
-    from cloudify_premium import (GroupResponse,
-                                  SecuredMultiTenancyResource)
+    from cloudify_premium.multi_tenancy.responses import GroupResponse
+    from cloudify_premium.multi_tenancy.secured_tenant_resource \
+        import SecuredMultiTenancyResource
 except ImportError:
     GroupResponse = BaseResponse
     SecuredMultiTenancyResource = MissingPremiumFeatureResource

@@ -150,9 +150,10 @@ class Managers(SecuredResource):
             fs_sync_node_id=_manager.get('fs_sync_node_id', '')
         )
         result = get_storage_manager().put(new_manager)
-        if _manager['hostname'] == result.hostname:
-            current_app.logger.info('Manager added successfully')
-            add_manager()  # Adding manager to cluster
+        current_app.logger.info('Manager added successfully')
+        if _manager.get('fs_sync_node_id'):
+            managers_list = get_storage_manager().list(models.Manager)
+            add_manager(managers_list)
         return result
 
     @exceptions_handled
@@ -164,7 +165,8 @@ class Managers(SecuredResource):
         """
         _manager = rest_utils.get_json_and_verify_params({
             'hostname': {'type': unicode},
-            'fs_sync_node_id': {'type': unicode}
+            'fs_sync_node_id': {'type': unicode},
+            'bootstrap_cluster': {'type': bool}
         })
         sm = get_storage_manager()
         manager_to_update = sm.get(
@@ -173,7 +175,14 @@ class Managers(SecuredResource):
             filters={'hostname': _manager['hostname']}
         )
         manager_to_update.fs_sync_node_id = _manager['fs_sync_node_id']
-        return sm.update(manager_to_update)
+        result = sm.update(manager_to_update)
+
+        current_app.logger.info('Manager updated successfully, sending message'
+                                ' on service-queue')
+        if not _manager['bootstrap_cluster']:
+            managers_list = get_storage_manager().list(models.Manager)
+            add_manager(managers_list)
+        return result
 
     @exceptions_handled
     @authorize('manager_delete')
@@ -195,7 +204,8 @@ class Managers(SecuredResource):
         result = sm.delete(manager_to_delete)
         if _manager['hostname'] == result.hostname:
             current_app.logger.info('Manager deleted successfully')
-            remove_manager()  # Removing manager from cluster
+            managers_list = get_storage_manager().list(models.Manager)
+            remove_manager(managers_list)  # Removing manager from cluster
         return result
 
 

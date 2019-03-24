@@ -26,7 +26,8 @@ from .. import rest_decorators, rest_utils
 from ..responses_v3 import UserResponse
 
 try:
-    from cloudify_premium import SecuredMultiTenancyResource
+    from cloudify_premium.multi_tenancy.secured_tenant_resource \
+        import SecuredMultiTenancyResource
 except ImportError:
     SecuredMultiTenancyResource = MissingPremiumFeatureResource
 
