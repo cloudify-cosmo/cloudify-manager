@@ -146,7 +146,8 @@ class TestLicense(AgentlessTestCase):
         try:
             self._upload_license('test_version_4_5_5_license.yaml')
         except CloudifyClientError as e:
-            self.assertIn('This license could not be verified', e.message)
+            self.assertIn('This license is valid for Cloudify Managers '
+                          'with versions', e.message)
 
     def test_license_with_no_expiration_date(self):
         """
