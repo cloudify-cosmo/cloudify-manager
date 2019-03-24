@@ -449,3 +449,18 @@ def read_scaling_groups(ctx, **kwargs):
     node_instance.execute_operation(
         'test.operation',
         kwargs={'scaling_groups': ctx.deployment.scaling_groups})
+
+
+@workflow
+def do_nothing(ctx, **kwargs):
+    pass
+
+
+@workflow
+def non_recoverable(ctx, **_):
+    raise NonRecoverableError('FAIL')
+
+
+@workflow
+def simple_sleep(ctx, **kwargs):
+    time.sleep(30)

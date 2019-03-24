@@ -643,6 +643,25 @@ class ResourceManager(object):
             dry_run=dry_run,
             wait_after_fail=wait_after_fail,
             scheduled_time=scheduled_time)
+
+        is_cascading_workflow = workflow.get('is_cascading', False)
+        if is_cascading_workflow:
+            components_dep_ids = self._find_all_components_deployment_id(
+                deployment_id)
+
+            for component_dep_id in components_dep_ids:
+                self.execute_workflow(component_dep_id,
+                                      workflow_id,
+                                      parameters,
+                                      allow_custom_parameters,
+                                      force,
+                                      bypass_maintenance,
+                                      dry_run,
+                                      queue,
+                                      execution,
+                                      wait_after_fail,
+                                      execution_creator,
+                                      scheduled_time)
         return new_execution
 
     @staticmethod
@@ -948,14 +967,17 @@ class ResourceManager(object):
                                                get_all_results=True)][0])
         return executions
 
-    def _find_all_components_executions(self, deployment_id):
+    def _find_all_components_deployment_id(self, deployment_id):
         deployment_id_filter = self.create_filters_dict(
             deployment_id=deployment_id)
-
-        components_ids = self._retrieve_components_from_deployment(
+        components_node_ids = self._retrieve_components_from_deployment(
             deployment_id_filter)
-        components_deployment_ids = self._retrieve_all_components_dep_ids(
-            components_ids, deployment_id)
+        return self._retrieve_all_components_dep_ids(components_node_ids,
+                                                     deployment_id)
+
+    def _find_all_components_executions(self, deployment_id):
+        components_deployment_ids = self._find_all_components_deployment_id(
+            deployment_id)
         return self._retrieve_all_component_executions(
             components_deployment_ids)
 
