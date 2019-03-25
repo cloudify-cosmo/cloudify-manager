@@ -18,6 +18,7 @@ from cloudify.utils import ManagerVersion
 
 HASH_SALT_FILENAME = 'hash_salt.json'
 ADMIN_DUMP_FILE = 'admin_account.json'
+LICENSE_DUMP_FILE = 'license.json'
 METADATA_FILENAME = 'metadata.json'
 M_VERSION = 'snapshot_version'
 M_SCHEMA_REVISION = 'schema_revision'
