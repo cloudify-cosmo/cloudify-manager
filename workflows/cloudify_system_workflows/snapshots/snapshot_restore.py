@@ -511,6 +511,7 @@ class SnapshotRestore(object):
 
         """
         ctx.logger.info('Restoring database')
+        postgres.dump_license_to_file(self._tempdir)
         admin_user_update_command = 'echo No admin user to update.'
         if self._snapshot_version >= V_4_0_0:
             with utils.db_schema(schema_revision, config=self._config):
@@ -525,6 +526,8 @@ class SnapshotRestore(object):
                 self._tempdir,
                 ctx.tenant_name,
             )
+
+        postgres.restore_license_from_dump(self._tempdir)
         ctx.logger.info('Successfully restored database')
         # This is returned so that we can decide whether to restore the admin
         # user depending on whether we have the hash salt
