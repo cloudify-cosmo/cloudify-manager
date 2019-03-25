@@ -505,6 +505,7 @@ class SnapshotRestore(object):
 
         """
         ctx.logger.info('Restoring database')
+        postgres.dump_license_to_file(self._tempdir)
         admin_user_update_command = 'echo No admin user to update.'
         postgres.init_current_execution_data()
 
