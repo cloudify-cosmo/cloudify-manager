@@ -67,13 +67,13 @@ class TestLicense(AgentlessTestCase):
         try:
             self._upload_license('test_tampered_trial_license.yaml')
         except CloudifyClientError as e:
-            self.assertIn('This license could not be verified', e.message)
+            self.assertIn('The license could not be verified', e.message)
 
     def test_error_when_uploading_tampered_paying_license(self):
         try:
             self._upload_license('test_tampered_paying_license.yaml')
         except CloudifyClientError as e:
-            self.assertIn('This license could not be verified', e.message)
+            self.assertIn('The license could not be verified', e.message)
 
     def test_error_when_using_expired_trial_license(self):
         self._upload_license('test_expired_trial_license.yaml')
@@ -110,18 +110,18 @@ class TestLicense(AgentlessTestCase):
         try:
             self._upload_license('test_tampered_paying_license.yaml')
         except CloudifyClientError as e:
-            self.assertIn('This license could not be verified', e.message)
+            self.assertIn('The license could not be verified', e.message)
         self.client.blueprints.list()
 
-    def test_valid_for_30_days_license(self):
+    def test_valid_for_60_days_license(self):
         """
-        Instead of a specific expiration date this license is valid for 30 days
+        Instead of a specific expiration date this license is valid for 60 days
         from Manager installation date.
         """
-        self._upload_license('test_30_days_license.yaml')
+        self._upload_license('test_60_days_license.yaml')
         license = self.client.license.list().items[0]
         self._verify_license(expired=False, trial=True)
-        expected_date = datetime.utcnow() + timedelta(days=30)
+        expected_date = datetime.utcnow() + timedelta(days=60)
         expiration_date = datetime.strptime(license['expiration_date'],
                                             '%Y-%m-%dT%H:%M:%S.%fZ')
         self.assertLessEqual(expiration_date, expected_date)
