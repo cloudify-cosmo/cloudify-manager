@@ -201,7 +201,7 @@ hooks:
         new_config = """
 hooks:
   - event_type: workflow_started
-    implementation: cloudify.tests.mocks.mock_module.mock_hook_function
+    implementation: cloudify.test_utils.mocks.mock_module.mock_hook_function
     inputs:
       input1: input1_test
       input2: input2_test
@@ -221,19 +221,19 @@ hooks:
         new_config = """
 hooks:
   - event_type: workflow_started
-    implementation: cloudify.tests.mocks.mock_module.mock_hook_function
+    implementation: cloudify.test_utils.mocks.mock_module.mock_hook_function
     inputs:
       input1: input1_workflow_started
       input2: input2_workflow_started
     description: test hook
   - event_type: workflow_succeeded
-    implementation: cloudify.tests.mocks.mock_module.mock_hook_function
+    implementation: cloudify.test_utils.mocks.mock_module.mock_hook_function
     inputs:
       input1: input1_workflow_succeeded
       input2: input2_workflow_succeeded
     description: test hook
   - event_type: workflow_failed
-    implementation: cloudify.tests.mocks.mock_module.mock_hook_function
+    implementation: cloudify.test_utils.mocks.mock_module.mock_hook_function
     inputs:
       input1: input1_workflow_failed
       input2: input2_workflow_failed
