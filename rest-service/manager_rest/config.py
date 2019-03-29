@@ -133,10 +133,12 @@ class Config(object):
 
     warnings = Setting('warnings', default=[])
 
-    def load_configuration(self):
+    def load_configuration(self, from_db=True):
         for env_var_name, namespace in CONFIG_TYPES:
             if env_var_name in os.environ:
                 self.load_from_file(os.environ[env_var_name], namespace)
+        if from_db:
+            self.load_from_db()
 
     def load_from_file(self, filename, namespace=''):
         with open(filename) as f:
