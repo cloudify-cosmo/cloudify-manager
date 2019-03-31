@@ -30,14 +30,14 @@ from contextlib import contextmanager
 
 import sh
 import pika
-import wagon
 
 import constants
 
 from cloudify.utils import setup_logger
-from cloudify_cli import env as cli_env
 from cloudify_rest_client import CloudifyClient
 from manager_rest.utils import create_auth_header
+
+from cloudify_cli import env as cli_env
 from cloudify_cli.constants import CLOUDIFY_BASE_DIRECTORY_NAME
 
 
@@ -162,22 +162,7 @@ class TimeoutException(Exception):
         return self.message
 
 
-def _create_mock_wagon(package_name, package_version):
-    module_src = tempfile.mkdtemp(
-        prefix='plugin-{0}-'.format(package_name))
-    try:
-        with open(os.path.join(module_src, 'setup.py'), 'w') as f:
-            f.write('from setuptools import setup\n')
-            f.write('setup(name="{0}", version={1})'.format(
-                package_name, package_version))
-        result = wagon.create(
-            module_src,
-            archive_destination_dir=tempfile.gettempdir(),
-            force=True
-        )
-    finally:
-        shutil.rmtree(module_src)
-    return result
+# create_mock_wagon moved to <tests/utils.py>
 
 
 @contextmanager

@@ -49,3 +49,10 @@ def delete(ctx, **kwargs):
         data[ctx.instance.id]['delete'] = data[
             ctx.instance.id].get('delete', {})
         data[ctx.instance.id]['delete'] = {'target': ctx.task_target}
+
+
+@operation
+def hook_task(context, **kwargs):
+    with open('/tmp/hook_task.txt', 'a') as f:
+        f.write("In hook_task, context: {0} kwargs: {1}"
+                .format(context, kwargs))
