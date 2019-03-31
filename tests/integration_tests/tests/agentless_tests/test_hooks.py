@@ -192,7 +192,8 @@ hooks:
       input2: input2_test
     description: test hook
 """
-        upload_mock_plugin('target-aware-mock', '1.0', 'plugins/target-aware-mock')
+        upload_mock_plugin('target-aware-mock', '1.0',
+                           'plugins/target-aware-mock')
 
         self._update_hooks_config(new_config)
         self._start_a_workflow()

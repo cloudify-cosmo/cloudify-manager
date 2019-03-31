@@ -45,13 +45,10 @@ def upload_mock_plugin(package_name, package_version, plugin_path='plugins'):
             package_name,
             package_version,
             )
-    yaml_path = get_resource(plugin_path+"/plugin.yaml")     # path relative to resources folder
+    # path relative to resources folder
+    yaml_path = get_resource(plugin_path+"/plugin.yaml")
     with utils.zip_files([temp_file_path, yaml_path]) as zip_path:
         response = client.plugins.upload(zip_path)
-
-    # remote breaking point
-    # import pydevd
-    # pydevd.settrace('0.0.0.0', port=53100, stdoutToServer=True, stderrToServer=True, suspend=True)
 
     os.remove(temp_file_path)
     return response
