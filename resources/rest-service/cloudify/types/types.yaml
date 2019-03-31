@@ -19,11 +19,15 @@ node_types:
   cloudify.nodes.Root:
     interfaces:
       cloudify.interfaces.lifecycle:
+        precreate: {}
         create: {}
         configure: {}
         start: {}
+        poststart: {}
+        prestop: {}
         stop: {}
         delete: {}
+        postdelete: {}
       cloudify.interfaces.validation:
         creation: {}
         deletion: {}
