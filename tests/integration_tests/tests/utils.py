@@ -53,28 +53,29 @@ def upload_mock_plugin(package_name, package_version, plugin_path='plugins'):
 
 def _create_mock_wagon(package_name, package_version):
     module_src = tempfile.mkdtemp(prefix='plugin-{0}-'.format(package_name))
-    setup_py_path = get_resource(path.join('plugins',
-                                           package_name,
-                                           'setup.py'))
-    if os.path.isfile(setup_py_path):
-        return wagon.create(
-            get_resource(path.join('plugins', package_name)),
-            archive_destination_dir=tempfile.gettempdir(),
-            force=True,
-        )
     try:
-        with open(path.join(module_src, 'setup.py'), 'w') as f:
-            f.write('from setuptools import setup\n')
-            f.write('setup(name="{0}", version={1})'.format(
-                package_name, package_version))
-        result = wagon.create(
-            module_src,
-            archive_destination_dir=tempfile.gettempdir(),
-            force=True,
-        )
-    finally:
-        shutil.rmtree(module_src)
-    return result
+        # check whether setup.py exists in plugins path
+        get_resource(path.join('plugins', package_name, 'setup.py'))
+    except RuntimeError:
+        try:
+            with open(path.join(module_src, 'setup.py'), 'w') as f:
+                f.write('from setuptools import setup\n')
+                f.write('setup(name="{0}", version={1})'.format(
+                    package_name, package_version))
+            result = wagon.create(
+                module_src,
+                archive_destination_dir=tempfile.gettempdir(),
+                force=True,
+            )
+        finally:
+            shutil.rmtree(module_src)
+        return result
+
+    return wagon.create(
+        get_resource(path.join('plugins', package_name)),
+        archive_destination_dir=tempfile.gettempdir(),
+        force=True,
+    )
 
 
 def publish_event(queue, routing_key, event):
