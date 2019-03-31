@@ -40,7 +40,9 @@ class Postgres(object):
     _STAGE_DB_NAME = 'stage'
     _COMPOSER_DB_NAME = 'composer'
     _TABLES_TO_KEEP = ['alembic_version', 'provider_context', 'roles']
-    _TABLES_TO_EXCLUDE_ON_DUMP = _TABLES_TO_KEEP + ['snapshots']
+    _CONFIG_TABLES = ['config', 'rabbitmq_brokers', 'certificates']
+    _TABLES_TO_EXCLUDE_ON_DUMP = _TABLES_TO_KEEP + ['snapshots'] + \
+        _CONFIG_TABLES
     _TABLES_TO_RESTORE = ['users', 'tenants']
     _STAGE_TABLES_TO_EXCLUDE = ['"SequelizeMeta"']
     _COMPOSER_TABLES_TO_EXCLUDE = ['"SequelizeMeta"']
@@ -190,6 +192,31 @@ class Postgres(object):
                "0, 0, '{2}');".format(ctx.execution_id,
                                       self.current_execution_date,
                                       self.hashed_execution_token)
+
+    def dump_config_tables(self, tempdir):
+        pg_dump_bin = os.path.join(self._bin_dir, 'pg_dump')
+        path = os.path.join(tempdir, 'config.dump')
+        command = [pg_dump_bin,
+                   '-a',
+                   '--host', self._host,
+                   '--port', self._port,
+                   '-U', self._username,
+                   self._db_name,
+                   '-f', path]
+
+        for table in self._CONFIG_TABLES:
+            command += ['-t', table]
+
+        run_shell(command)
+        return path
+
+    def restore_config_tables(self, config_path):
+        command = self.get_psql_command(self._db_name)
+        command.extend([
+            '-c', 'delete from config;'
+        ])
+        run_shell(command)
+        self._restore_dump(config_path, self._db_name)
 
     def restore_current_execution(self):
         self.run_query(self._get_execution_restore_query())
