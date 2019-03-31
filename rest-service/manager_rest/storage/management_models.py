@@ -485,11 +485,26 @@ class License(SQLModelBase):
     __tablename__ = 'licenses'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     customer_id = db.Column(db.Text, unique=True)
-    license_type = db.Column(db.String(255))
     expiration_date = db.Column(UTCDateTime)
+    license_edition = db.Column(db.String(255))
+    trial = db.Column(db.Boolean, nullable=False, default=False)
     cloudify_version = db.Column(db.Text)
     capabilities = db.Column(db.ARRAY(db.Text))
     signature = db.Column(db.LargeBinary)
+
+    @property
+    def expired(self):
+        if self.expiration_date is None:
+            return False
+        now = datetime.utcnow()
+        expiration_date = datetime.strptime(self.expiration_date,
+                                            '%Y-%m-%dT%H:%M:%S.%fZ')
+        return expiration_date < now
+
+    def to_response(self, get_data=False):
+        user_dict = super(License, self).to_response()
+        user_dict['expired'] = self.expired
+        return user_dict
 
 
 class Config(SQLModelBase):
