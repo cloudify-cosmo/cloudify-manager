@@ -61,14 +61,8 @@ hooks:
 """
         self._update_hooks_config(new_config)
         self._start_a_workflow()
-        workflow_started_msg = "received `workflow_started` event and the " \
-                               "hook implementation is: `package.module.task`"
         invalid_implementation_msg = "No module named package.module"
-        workflow_succeeded_msg = "received `workflow_succeeded` event but " \
-                                 "didn't find a compatible hook"
-        self._assert_messages_in_log([workflow_started_msg,
-                                      invalid_implementation_msg,
-                                      workflow_succeeded_msg])
+        self._assert_messages_in_log([invalid_implementation_msg])
 
     def test_invalid_implementation_task(self):
         new_config = """
@@ -82,14 +76,8 @@ hooks:
 """
         self._update_hooks_config(new_config)
         self._start_a_workflow()
-        workflow_started_msg = "received `workflow_started` event and the " \
-                               "hook implementation is: `cloudmock.tasks.test`"
         invalid_task_msg = "cloudmock.tasks has no function named \\'test\\'"
-        workflow_succeeded_msg = "received `workflow_succeeded` event but " \
-                                 "didn't find a compatible hook"
-        self._assert_messages_in_log([workflow_started_msg,
-                                      invalid_task_msg,
-                                      workflow_succeeded_msg])
+        self._assert_messages_in_log([invalid_task_msg])
 
     def test_missing_implementation(self):
         new_config = """
@@ -185,7 +173,7 @@ test_hook:
         new_config = """
 hooks:
   - event_type: workflow_started
-    implementation: target-aware-mock.tasks.hook_task
+    implementation: target-aware-mock.target_aware_mock.tasks.hook_task
     inputs:
       input1: input1_test
       input2: input2_test
@@ -272,7 +260,7 @@ hooks:
         docl.copy_file_from_manager(log_path, tmp_log_path)
         with open(tmp_log_path) as f:
             data = f.readlines()
-        last_log_lines = str(data[-10:])
+        last_log_lines = str(data[-20:])
         for message in messages:
             assert message in last_log_lines
 
