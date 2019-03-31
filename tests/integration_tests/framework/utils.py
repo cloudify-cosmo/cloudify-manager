@@ -162,9 +162,6 @@ class TimeoutException(Exception):
         return self.message
 
 
-# create_mock_wagon moved to <tests/utils.py>
-
-
 @contextmanager
 def zip_files(files):
     source_folder = tempfile.mkdtemp()

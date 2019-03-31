@@ -41,12 +41,9 @@ def get_cfy():
 
 def upload_mock_plugin(package_name, package_version, plugin_path='plugins'):
     client = create_rest_client()
-    temp_file_path = _create_mock_wagon(
-            package_name,
-            package_version,
-            )
+    temp_file_path = _create_mock_wagon(package_name, package_version)
     # path relative to resources folder
-    yaml_path = get_resource(plugin_path+"/plugin.yaml")
+    yaml_path = get_resource(path.join(plugin_path, 'plugin.yaml'))
     with utils.zip_files([temp_file_path, yaml_path]) as zip_path:
         response = client.plugins.upload(zip_path)
 
@@ -54,31 +51,30 @@ def upload_mock_plugin(package_name, package_version, plugin_path='plugins'):
     return response
 
 
-# moved here from <framework/utils.py>
 def _create_mock_wagon(package_name, package_version):
-    module_src = tempfile.mkdtemp(
-        prefix='plugin-{0}-'.format(package_name))
-
-    setup_py_path = get_resource("plugins/" + package_name + "/setup.py")
+    module_src = tempfile.mkdtemp(prefix='plugin-{0}-'.format(package_name))
+    setup_py_path = get_resource(path.join('plugins',
+                                           package_name,
+                                           'setup.py'))
     if os.path.isfile(setup_py_path):
         return wagon.create(
-            get_resource("plugins/" + package_name),
+            get_resource(path.join('plugins', package_name)),
             archive_destination_dir=tempfile.gettempdir(),
+            force=True,
         )
-    else:
-        try:
-
-            with open(os.path.join(module_src, 'setup.py'), 'w') as f:
-                f.write('from setuptools import setup\n')
-                f.write('setup(name="{0}", version={1})'.format(
-                    package_name, package_version))
-            result = wagon.create(
-                module_src,
-                archive_destination_dir=tempfile.gettempdir(),
-            )
-        finally:
-            shutil.rmtree(module_src)
-        return result
+    try:
+        with open(path.join(module_src, 'setup.py'), 'w') as f:
+            f.write('from setuptools import setup\n')
+            f.write('setup(name="{0}", version={1})'.format(
+                package_name, package_version))
+        result = wagon.create(
+            module_src,
+            archive_destination_dir=tempfile.gettempdir(),
+            force=True,
+        )
+    finally:
+        shutil.rmtree(module_src)
+    return result
 
 
 def publish_event(queue, routing_key, event):

@@ -22,7 +22,6 @@ from integration_tests.tests import utils
 from integration_tests.framework import docl
 from integration_tests import AgentlessTestCase
 
-# new import
 from integration_tests.tests.utils import upload_mock_plugin
 
 
@@ -192,13 +191,13 @@ hooks:
       input2: input2_test
     description: test hook
 """
-        upload_mock_plugin('target-aware-mock', '1.0',
+        upload_mock_plugin('target-aware-mock',
+                           '1.0',
                            'plugins/target-aware-mock')
 
         self._update_hooks_config(new_config)
         self._start_a_workflow()
         event_type_msg = "workflow_started"
-
         workflow_id_msg = "create_deployment_environment"
         input1_msg = "input1_test"
         messages = [event_type_msg, workflow_id_msg, input1_msg]
