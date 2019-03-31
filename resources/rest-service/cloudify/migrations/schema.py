@@ -22,8 +22,7 @@ import sys
 
 import flask_migrate
 
-from manager_rest import config
-from manager_rest.flask_utils import setup_flask_app
+from manager_rest import config, server, storage
 
 
 LOGGER = logging.getLogger(__name__)
@@ -35,11 +34,12 @@ def main():
     args = parse_arguments(sys.argv[1:])
     setup_config(args)
     configure_logging(args['log_level'])
-
-    setup_flask_app(manager_ip=args['postgresql_host'])
-
-    func = args['func']
-    func(args)
+    config.instance.can_load_from_db = False
+    app = server.CloudifyFlaskApp(load_config=False)
+    with app.app_context():
+        flask_migrate.Migrate(app=app, db=storage.db)
+        func = args['func']
+        func(args)
 
 
 def downgrade(args):
