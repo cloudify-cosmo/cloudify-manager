@@ -509,9 +509,10 @@ class SnapshotRestore(object):
         admin_user_update_command = 'echo No admin user to update.'
         postgres.init_current_execution_data()
 
+        config_dump_path = postgres.dump_config_tables(self._tempdir)
         with utils.db_schema(schema_revision, config=self._config):
             admin_user_update_command = postgres.restore(self._tempdir)
-
+        postgres.restore_config_tables(config_dump_path)
         postgres.restore_current_execution()
         self._restore_stage(postgres, self._tempdir, stage_revision)
         self._restore_composer(postgres, self._tempdir)
