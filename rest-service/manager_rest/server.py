@@ -62,8 +62,9 @@ class CloudifyFlaskApp(Flask):
             config.instance.load_configuration()
         self._set_sql_alchemy()
         # These two need to be called after the configuration was loaded
-        setup_logger(self.logger)
-        if premium_enabled:
+        if config.instance.rest_service_log_path:
+            setup_logger(self.logger)
+        if premium_enabled and config.instance.file_server_root:
             self.external_auth = configure_auth(self.logger)
         else:
             self.external_auth = None
