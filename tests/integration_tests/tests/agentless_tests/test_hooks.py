@@ -22,6 +22,8 @@ from integration_tests.tests import utils
 from integration_tests.framework import docl
 from integration_tests import AgentlessTestCase
 
+from integration_tests.tests.utils import upload_mock_plugin
+
 
 class TestHooks(AgentlessTestCase):
     HOOKS_CONFIG_PATH = '/opt/mgmtworker/config/hooks.conf'
@@ -183,12 +185,16 @@ test_hook:
         new_config = """
 hooks:
   - event_type: workflow_started
-    implementation: cloudmock.tasks.hook_task
+    implementation: target-aware-mock.tasks.hook_task
     inputs:
       input1: input1_test
       input2: input2_test
     description: test hook
 """
+        upload_mock_plugin('target-aware-mock',
+                           '1.0',
+                           'plugins/target-aware-mock')
+
         self._update_hooks_config(new_config)
         self._start_a_workflow()
         event_type_msg = "workflow_started"

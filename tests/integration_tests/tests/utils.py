@@ -17,7 +17,11 @@ import os
 import sh
 import json
 import time
+import wagon
+import shutil
 import tarfile
+import tempfile
+
 from os import path
 from contextlib import contextmanager
 from datetime import datetime, timedelta
@@ -35,16 +39,43 @@ def get_cfy():
     return utils.get_cfy()
 
 
-def upload_mock_plugin(package_name, package_version):
+def upload_mock_plugin(package_name, package_version, plugin_path='plugins'):
     client = create_rest_client()
-    temp_file_path = utils._create_mock_wagon(
-            package_name,
-            package_version)
-    yaml_path = get_resource('plugins/plugin.yaml')
+    temp_file_path = _create_mock_wagon(package_name, package_version)
+    # path relative to resources folder
+    yaml_path = get_resource(path.join(plugin_path, 'plugin.yaml'))
     with utils.zip_files([temp_file_path, yaml_path]) as zip_path:
         response = client.plugins.upload(zip_path)
+
     os.remove(temp_file_path)
     return response
+
+
+def _create_mock_wagon(package_name, package_version):
+    module_src = tempfile.mkdtemp(prefix='plugin-{0}-'.format(package_name))
+    try:
+        # check whether setup.py exists in plugins path
+        get_resource(path.join('plugins', package_name, 'setup.py'))
+    except RuntimeError:
+        try:
+            with open(path.join(module_src, 'setup.py'), 'w') as f:
+                f.write('from setuptools import setup\n')
+                f.write('setup(name="{0}", version={1})'.format(
+                    package_name, package_version))
+            result = wagon.create(
+                module_src,
+                archive_destination_dir=tempfile.gettempdir(),
+                force=True,
+            )
+        finally:
+            shutil.rmtree(module_src)
+        return result
+
+    return wagon.create(
+        get_resource(path.join('plugins', package_name)),
+        archive_destination_dir=tempfile.gettempdir(),
+        force=True,
+    )
 
 
 def publish_event(queue, routing_key, event):
