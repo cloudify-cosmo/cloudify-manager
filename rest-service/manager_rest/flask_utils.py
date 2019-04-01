@@ -79,7 +79,9 @@ def _get_postgres_db_uri(manager_ip, driver):
 def get_postgres_conf(manager_ip='localhost'):
     """Return a namedtuple with info used to connect to cloudify's PG DB
     """
-    manager_config.load_configuration()
+    # can't load from db yet - we're just loading the settings to connect to
+    # the db at all
+    manager_config.load_configuration(from_db=False)
     conf = namedtuple('PGConf', 'host username password db_name')
     return conf(
         host=manager_config.postgresql_host or manager_ip,
