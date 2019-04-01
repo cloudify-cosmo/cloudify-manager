@@ -180,8 +180,7 @@ hooks:
     description: test hook
 """
         upload_mock_plugin('target-aware-mock',
-                           '1.0',
-                           'plugins/target-aware-mock')
+                           '1.0',)
 
         self._update_hooks_config(new_config)
         self._start_a_workflow()
@@ -190,6 +189,44 @@ hooks:
         input1_msg = "input1_test"
         messages = [event_type_msg, workflow_id_msg, input1_msg]
         self._assert_messages_in_log(messages, log_path=self.PLUGIN_LOG_PATH)
+
+    def test_different_plugin_versions(self):
+        new_config = """
+    hooks:
+      - event_type: workflow_started
+        implementation: target-aware-mock.target_aware_mock.tasks.hook_task
+        inputs:
+          input1: input1_test
+          input2: input2_test
+        description: test hook
+    """
+        old_version = '1.0'
+        new_version = '1.33'
+
+        # Upload the new one before the old, on purpose
+        upload_mock_plugin('target-aware-mock-v1_33', new_version)
+        upload_mock_plugin('target-aware-mock', old_version)
+
+        self._update_hooks_config(new_config)
+        self._start_a_workflow()
+        event_type_msg = "workflow_started"
+        workflow_id_msg = "create_deployment_environment"
+        input1_msg = "input1_test"
+
+        # Verify that the hook task calls the newest version of the plugin
+        newest_version_msg = "version 1.33"
+        messages = [event_type_msg,
+                    workflow_id_msg,
+                    input1_msg,
+                    newest_version_msg]
+        self._assert_messages_in_log(messages,
+                                     log_path=self.PLUGIN_LOG_PATH)
+
+        # Verify that both versions of the plugin are installed on manager
+        versions = [plugin['package_version'] for plugin in
+                    self.client.plugins.list(
+                    package_name='target-aware-mock').items]
+        assert (old_version in versions) and (new_version in versions)
 
     def test_implementation_function(self):
         new_config = """

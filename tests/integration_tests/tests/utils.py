@@ -39,11 +39,19 @@ def get_cfy():
     return utils.get_cfy()
 
 
-def upload_mock_plugin(package_name, package_version, plugin_path='plugins'):
+def upload_mock_plugin(package_name, package_version):
     client = create_rest_client()
     temp_file_path = _create_mock_wagon(package_name, package_version)
-    # path relative to resources folder
-    yaml_path = get_resource(path.join(plugin_path, 'plugin.yaml'))
+
+    try:
+        # Path relative to resources folder
+        yaml_path = get_resource(path.join('plugins',
+                                           package_name,
+                                           'plugin.yaml'))
+    except RuntimeError:
+        # Default to the script-plugin if package-name has no plugin.yaml
+        yaml_path = get_resource('plugins/plugin.yaml')
+
     with utils.zip_files([temp_file_path, yaml_path]) as zip_path:
         response = client.plugins.upload(zip_path)
 
@@ -54,7 +62,7 @@ def upload_mock_plugin(package_name, package_version, plugin_path='plugins'):
 def _create_mock_wagon(package_name, package_version):
     module_src = tempfile.mkdtemp(prefix='plugin-{0}-'.format(package_name))
     try:
-        # check whether setup.py exists in plugins path
+        # Check whether setup.py exists in plugins path
         get_resource(path.join('plugins', package_name, 'setup.py'))
     except RuntimeError:
         try:
@@ -118,7 +126,7 @@ def wait_for_deployment_creation_to_complete(
 
 
 def verify_deployment_env_created(deployment_id):
-    # a workaround for waiting for the deployment environment creation to
+    # A workaround for waiting for the deployment environment creation to
     # complete
     client = create_rest_client()
     execs = client.executions.list(deployment_id=deployment_id)

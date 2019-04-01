@@ -54,5 +54,5 @@ def delete(ctx, **kwargs):
 @operation
 def hook_task(context, **kwargs):
     with open('/tmp/hook_task.txt', 'a') as f:
-        f.write("In hook_task, context: {0} kwargs: {1}"
+        f.write("In hook_task of version 1.0, context: {0} kwargs: {1}"
                 .format(context, kwargs))
