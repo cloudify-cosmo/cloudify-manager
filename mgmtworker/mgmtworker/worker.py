@@ -92,7 +92,9 @@ def make_amqp_worker(args):
     ]
 
     if args.hooks_queue:
-        handlers.append(HookConsumer(args.hooks_queue))
+        handlers.append(HookConsumer(args.hooks_queue,
+                                     registry=operation_registry,
+                                     max_workers=args.max_workers))
 
     return AMQPConnection(handlers=handlers, connect_timeout=None)
 
