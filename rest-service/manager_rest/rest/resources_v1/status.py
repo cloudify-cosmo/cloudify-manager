@@ -72,6 +72,15 @@ class Status(SecuredResource):
                 for job in jobs:
                     if job['display_name'] == 'PostgreSQL':
                         job['instances'][0]['state'] = 'remote'
+
+            # Check for remote RabbitMQ
+            # TODO: Both this and the Postgres check should actually check
+            # status in some way (e.g. 'select 1' for postgres)
+            if not config.instance.amqp_host.startswith(('localhost',
+                                                         '127.0.0.1')):
+                for job in jobs:
+                    if job['display_name'] == 'RabbitMQ':
+                        job['instances'][0]['state'] = 'remote'
         else:
             jobs = ['undefined']
 
