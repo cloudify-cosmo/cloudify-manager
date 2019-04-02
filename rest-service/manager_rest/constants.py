@@ -60,6 +60,7 @@ ALLOWED_MAINTENANCE_ENDPOINTS = ['maintenance',
                                  'license']
 ALLOWED_LICENSE_ENDPOINTS = ALLOWED_MAINTENANCE_ENDPOINTS + ['tokens',
                                                              'config',
+                                                             'cluster',
                                                              'tenants']
 CLOUDIFY_AUTH_HEADER = 'Authorization'
 CLOUDIFY_AUTH_TOKEN_HEADER = 'Authentication-Token'
