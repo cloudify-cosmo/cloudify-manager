@@ -1,3 +1,4 @@
+from manager_rest import config
 from manager_rest.storage import idencoder
 
 import argparse
@@ -12,6 +13,7 @@ if __name__ == '__main__':
     config_env_var = 'MANAGER_REST_SECURITY_CONFIG_PATH'
     if config_env_var not in os.environ:
         os.environ[config_env_var] = '/opt/manager/rest-security.conf'
+    config.instance.load_configuration(from_db=False)
 
     # Not using click because the rest service doesn't have click in community
     parser = argparse.ArgumentParser(
