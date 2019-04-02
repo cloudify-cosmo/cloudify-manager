@@ -547,6 +547,7 @@ class Manager(SQLModelBase):
     distribution = db.Column(db.Text, nullable=False)
     distro_release = db.Column(db.Text, nullable=False)
     fs_sync_node_id = db.Column(db.Text, nullable=True)
+    networks = db.Column(JSONString)
 
 
 class Certificate(SQLModelBase):
@@ -580,6 +581,7 @@ class RabbitMQBroker(SQLModelBase):
 
     # additional params, as **kwargs to creating the connection
     params = db.Column(JSONString, nullable=True)
+    networks = db.Column(JSONString)
 
     @declared_attr
     def _ca_cert_id(cls):

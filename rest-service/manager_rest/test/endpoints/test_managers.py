@@ -31,8 +31,13 @@ _manager1 = {
     'edition': 'premium',
     'distribution': 'centos',
     'distro_release': 'Core',
-    'fs_sync_node_id': 'P56IOI7-MZJNU2Y-IQGDREY-DM2MGTI-'
-                       'MGL3BXN-PQ6W5BM-TBBZ4TJ-XZWICQ2'
+    'fs_sync_node_id':
+        'P56IOI7-MZJNU2Y-IQGDREY-DM2MGTI-'
+        'MGL3BXN-PQ6W5BM-TBBZ4TJ-XZWICQ2',
+    'networks': {
+        'default': '192.0.2.1',
+        'network2': '192.0.2.2'
+    }
 }
 _manager2 = {
     'hostname': 'manager2.test.domain',
@@ -41,7 +46,10 @@ _manager2 = {
     'version': '5.0.dev1',
     'edition': 'premium',
     'distribution': 'centos',
-    'distro_release': 'Core'
+    'distro_release': 'Core',
+    'networks': {
+        'default': '192.0.2.3'
+    }
 }
 
 
@@ -105,7 +113,11 @@ class ManagersTableTestCase(base_test.BaseServerTestCase):
             'distribution': 'centos',
             'distro_release': 'Core',
             'fs_sync_node_id': 'I56IOI7-MZJNU2Y-IQGDREY-DM2MGTI-'
-                               'MGL3BXN-PQ6W5BM-TBBZ4TJ-XZWICQ2'
+                               'MGL3BXN-PQ6W5BM-TBBZ4TJ-XZWICQ2',
+            'networks': {
+                'default': '192.0.2.1',
+                'network2': '192.0.2.2'
+            }
         }
         with mock.patch('manager_rest.rest.resources_v3_1.manager.'
                         'add_manager') as add_manager:
