@@ -34,6 +34,7 @@ from cloudify_agent.worker import (
     CloudifyOperationConsumer,
     ServiceTaskConsumer
 )
+from cloudify_agent import worker as agent_worker
 
 from .hooks import HookConsumer
 
@@ -207,6 +208,7 @@ def main():
     args = parser.parse_args()
 
     setup_agent_logger('mgmtworker')
+    agent_worker.logger = logger
 
     worker = make_amqp_worker(args)
     worker.consume()
