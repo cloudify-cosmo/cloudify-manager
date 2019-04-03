@@ -291,6 +291,25 @@ class TestSnapshot(AgentlessTestCase):
         self.assertEqual(0,
                          len(self.client.blueprints.list(_include=['id'])))
 
+    def test_v_4_5_5_restore_snapshot_with_executions(self):
+        """
+        Validate the restore of executions
+        """
+        snapshot_path = self._get_snapshot('snap_4.5.5_with_executions.zip')
+        self._upload_and_restore_snapshot(snapshot_path)
+        result = postgresql.run_query("SELECT workflow_id, token "
+                                      "FROM executions;")
+
+        # The executions from the snapshot don't have a token
+        for execution in result['all'][:3]:
+            self.assertIsNone(execution[1])
+
+        # The execution of the restore snapshot has a token
+        token_4 = result['all'][5][1]
+        self.assertIsNotNone(token_4)
+        self.assertGreater(len(token_4), 10)
+        self.assertEqual(result['all'][5][0], 'restore_snapshot')
+
     def _test_secrets_restored(self, snapshot_name):
         snapshot_path = self._get_snapshot(snapshot_name)
         self._upload_and_restore_snapshot(snapshot_path)
