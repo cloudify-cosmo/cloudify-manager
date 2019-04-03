@@ -249,7 +249,7 @@ def upgrade():
         sa.Column('name', sa.Text(), unique=True, nullable=False),
         sa.Column('value', sa.Text(), unique=False, nullable=False),
         sa.Column('updated_at', UTCDateTime(), nullable=True),
-        sa.Column('_updater_id', sa.Integer(), nullable=False),
+        sa.Column('_updater_id', sa.Integer(), nullable=True),
         sa.ForeignKeyConstraint(
             ['_updater_id'],
             [u'users.id'],
