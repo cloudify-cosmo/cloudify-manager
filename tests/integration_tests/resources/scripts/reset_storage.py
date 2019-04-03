@@ -92,13 +92,15 @@ def close_session(app):
 
 def reset_storage(script_config):
     app = setup_flask_app()
+    config.instance.load_configuration()
     amqp_manager = setup_amqp_manager()
 
     # Clear the old RabbitMQ resources
     amqp_manager.remove_tenant_vhost_and_user(DEFAULT_TENANT_NAME)
 
     # Rebuild the DB
-    safe_drop_all(keep_tables=['roles', 'config'])
+    safe_drop_all(keep_tables=['roles', 'config', 'rabbitmq_brokers',
+                               'certificates'])
     upgrade(directory=migrations_dir)
 
     # Add default tenant, admin user and provider context
