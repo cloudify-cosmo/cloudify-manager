@@ -559,7 +559,7 @@ class Certificate(SQLModelBase):
 
     @declared_attr
     def _updater_id(cls):
-        return foreign_key(User.id)
+        return foreign_key(User.id, nullable=True)
 
     @declared_attr
     def updated_by(cls):
