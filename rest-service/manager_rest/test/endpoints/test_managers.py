@@ -13,6 +13,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import mock
+
 from manager_rest.test import base_test
 from manager_rest.test.attribute import attr
 from manager_rest.storage import models
@@ -29,9 +31,8 @@ _manager1 = {
     'edition': 'premium',
     'distribution': 'centos',
     'distro_release': 'Core',
-    'fs_sync_node_id':
-        'P56IOI7-MZJNU2Y-IQGDREY-DM2MGTI-'
-        'MGL3BXN-PQ6W5BM-TBBZ4TJ-XZWICQ2'
+    'fs_sync_node_id': 'P56IOI7-MZJNU2Y-IQGDREY-DM2MGTI-'
+                       'MGL3BXN-PQ6W5BM-TBBZ4TJ-XZWICQ2'
 }
 _manager2 = {
     'hostname': 'manager2.test.domain',
@@ -103,13 +104,15 @@ class ManagersTableTestCase(base_test.BaseServerTestCase):
             'edition': 'premium',
             'distribution': 'centos',
             'distro_release': 'Core',
-            'fs_sync_node_id':
-                'I56IOI7-MZJNU2Y-IQGDREY-DM2MGTI-'
-                'MGL3BXN-PQ6W5BM-TBBZ4TJ-XZWICQ2'
+            'fs_sync_node_id': 'I56IOI7-MZJNU2Y-IQGDREY-DM2MGTI-'
+                               'MGL3BXN-PQ6W5BM-TBBZ4TJ-XZWICQ2'
         }
-        result = self.client.manager.add_manager(**new_manager)
-        del result['id']
-        self.assertEqual(result, new_manager)
+        with mock.patch('manager_rest.rest.resources_v3_1.manager.'
+                        'add_manager') as add_manager:
+            add_manager.return_value = None
+            result = self.client.manager.add_manager(**new_manager)
+            del result['id']
+            self.assertEqual(result, new_manager)
 
     def test_add_same_manager_twice(self):
         new_manager = {
@@ -120,9 +123,8 @@ class ManagersTableTestCase(base_test.BaseServerTestCase):
             'edition': 'premium',
             'distribution': 'centos',
             'distro_release': 'Core',
-            'fs_sync_node_id':
-                'G56IOI7-MZJNU2Y-IQGDREY-DM2MGTI-'
-                'MGL3BXN-PQ6W5BM-TBBZ4TJ-XZWICQ2'
+            'fs_sync_node_id': 'G56IOI7-MZJNU2Y-IQGDREY-DM2MGTI-'
+                               'MGL3BXN-PQ6W5BM-TBBZ4TJ-XZWICQ2'
         }
         with self.assertRaises(CloudifyClientError) as error:
             self.client.manager.add_manager(**new_manager)
@@ -159,10 +161,13 @@ class ManagersTableTestCase(base_test.BaseServerTestCase):
         self.assertEqual(error.exception.status_code, 409)
 
     def test_remove_manager(self):
-        result = self.client.manager.remove_manager('manager2.test.domain')
-        del result['id']               # value unknown
-        del result['fs_sync_node_id']  # value is None
-        self.assertEqual(result, _manager2)
+        with mock.patch('manager_rest.rest.resources_v3_1.manager.'
+                        'remove_manager') as remove_manager:
+            remove_manager.return_value = None
+            result = self.client.manager.remove_manager('manager2.test.domain')
+            del result['id']               # value unknown
+            del result['fs_sync_node_id']  # value is None
+            self.assertEqual(result, _manager2)
 
     def test_remove_nonexisting_manager(self):
         new_manager = 'manager3.test.domain'
@@ -174,7 +179,8 @@ class ManagersTableTestCase(base_test.BaseServerTestCase):
         new_fs_sync_node_id = \
             'G56IOI7-MZJNU2Y-IQGDREY-DM2MGTI-MGL3BXN-PQ6W5BM-TBBZ4TJ-XZWICQ2'
         result = self.client.manager.update_manager(_manager2['hostname'],
-                                                    new_fs_sync_node_id)
+                                                    new_fs_sync_node_id,
+                                                    bootstrap_cluster=True)
         expected_new_manager = _manager2.copy()
         expected_new_manager['fs_sync_node_id'] = new_fs_sync_node_id
         del result['id']

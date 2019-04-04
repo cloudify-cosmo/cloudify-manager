@@ -31,9 +31,10 @@ from cloudify_rest_client.exceptions import InvalidExecutionUpdateStatus
 
 from cloudify_agent.worker import (
     ProcessRegistry,
-    CloudifyOperationConsumer,
-    ServiceTaskConsumer
+    ServiceTaskConsumer,
+    CloudifyOperationConsumer
 )
+from .task_consumers.cluster_service_consumer import ClusterServiceConsumer
 from cloudify_agent import worker as agent_worker
 
 from .hooks import HookConsumer
@@ -189,6 +190,7 @@ def make_amqp_worker(args):
         MgmtworkerServiceTaskConsumer(args.name, args.queue, args.max_workers,
                                       operation_registry=operation_registry,
                                       workflow_registry=workflow_registry),
+        ClusterServiceConsumer(args.cluster_service_queue, args.max_workers)
     ]
 
     if args.hooks_queue:
@@ -205,6 +207,7 @@ def main():
     parser.add_argument('--max-workers', default=DEFAULT_MAX_WORKERS, type=int)
     parser.add_argument('--name')
     parser.add_argument('--hooks-queue')
+    parser.add_argument('--cluster-service-queue')
     args = parser.parse_args()
 
     setup_agent_logger('mgmtworker')

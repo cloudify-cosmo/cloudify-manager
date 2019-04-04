@@ -15,7 +15,7 @@
 
 from subprocess import check_call
 
-from flask import request
+from flask import request, current_app
 from flask_restful.reqparse import Argument
 
 from manager_rest.security import SecuredResource
@@ -34,9 +34,16 @@ from ..rest_decorators import (
 
 
 try:
-    from cloudify_premium.ha import cluster_status, options
+    from cloudify_premium.ha import (
+        cluster_status,
+        options,
+        add_manager,
+        remove_manager
+    )
+
 except ImportError:
-    cluster_status, options = None, None
+    cluster_status, options, add_manager, remove_manager = \
+        None, None, None, None
 
 
 DEFAULT_CONF_PATH = '/etc/nginx/conf.d/cloudify.conf'
@@ -142,7 +149,12 @@ class Managers(SecuredResource):
             distro_release=_manager['distro_release'],
             fs_sync_node_id=_manager.get('fs_sync_node_id', '')
         )
-        return get_storage_manager().put(new_manager)
+        result = get_storage_manager().put(new_manager)
+        current_app.logger.info('Manager added successfully')
+        if _manager.get('fs_sync_node_id'):
+            managers_list = get_storage_manager().list(models.Manager)
+            add_manager(managers_list)
+        return result
 
     @exceptions_handled
     @authorize('manager_update_fs_sync_node_id')
@@ -153,7 +165,8 @@ class Managers(SecuredResource):
         """
         _manager = rest_utils.get_json_and_verify_params({
             'hostname': {'type': unicode},
-            'fs_sync_node_id': {'type': unicode}
+            'fs_sync_node_id': {'type': unicode},
+            'bootstrap_cluster': {'type': bool}
         })
         sm = get_storage_manager()
         manager_to_update = sm.get(
@@ -162,7 +175,14 @@ class Managers(SecuredResource):
             filters={'hostname': _manager['hostname']}
         )
         manager_to_update.fs_sync_node_id = _manager['fs_sync_node_id']
-        return sm.update(manager_to_update)
+        result = sm.update(manager_to_update)
+
+        current_app.logger.info('Manager updated successfully, sending message'
+                                ' on service-queue')
+        if not _manager['bootstrap_cluster']:
+            managers_list = get_storage_manager().list(models.Manager)
+            add_manager(managers_list)
+        return result
 
     @exceptions_handled
     @authorize('manager_delete')
@@ -181,8 +201,12 @@ class Managers(SecuredResource):
             filters={'hostname': _manager['hostname']}
         )
 
-        # TODO: send message on service-queue
-        return sm.delete(manager_to_delete)
+        result = sm.delete(manager_to_delete)
+        if _manager['hostname'] == result.hostname:
+            current_app.logger.info('Manager deleted successfully')
+            managers_list = get_storage_manager().list(models.Manager)
+            remove_manager(managers_list)  # Removing manager from cluster
+        return result
 
 
 class RabbitMQBrokers(SecuredResource):

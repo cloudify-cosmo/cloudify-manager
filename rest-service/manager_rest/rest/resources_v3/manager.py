@@ -36,7 +36,7 @@ from ...security.authentication import authenticator
 from ..responses_v3 import BaseResponse, ResourceID
 
 try:
-    from cloudify_premium import LdapResponse
+    from cloudify_premium.multi_tenancy.responses import LdapResponse
 except ImportError:
     LdapResponse = BaseResponse
 

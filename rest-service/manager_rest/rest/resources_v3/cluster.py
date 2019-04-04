@@ -20,9 +20,9 @@ from .. import rest_decorators, rest_utils
 from ..responses_v3 import BaseResponse
 
 try:
-    from cloudify_premium import (ClusterResourceBase,
-                                  ClusterState,
-                                  ClusterNode)
+    from cloudify_premium.ha.web import (ClusterResourceBase,
+                                         ClusterState,
+                                         ClusterNode)
 except ImportError:
     ClusterNode, ClusterState = (BaseResponse, ) * 2
     ClusterResourceBase = MissingPremiumFeatureResource

@@ -36,6 +36,8 @@ STUBS=${RPM_SOURCE_DIR}/packaging/mgmtworker/stub_packages
 %{PIP_INSTALL} --upgrade ${STUBS}/cloudify-dsl-parser/
 %{PIP_INSTALL} --upgrade ${STUBS}/cloudify-script-plugin/
 
+%{PIP_INSTALL} --upgrade kerberos==1.3.0
+
 %install
 mkdir -p %{buildroot}/opt/mgmtworker
 mv /opt/mgmtworker/env %{buildroot}/opt/mgmtworker

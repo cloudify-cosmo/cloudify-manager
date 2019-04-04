@@ -25,9 +25,13 @@ from cloudify.amqp_client import (get_client,
                                   SendHandler,
                                   ScheduledExecutionHandler)
 
+from cloudify.constants import (
+    MGMTWORKER_QUEUE,
+    BROKER_PORT_SSL
+)
+
 from manager_rest import config, utils
 from manager_rest.storage import get_storage_manager, models
-from manager_rest.constants import MGMTWORKER_QUEUE, BROKER_SSL_PORT
 
 
 def execute_workflow(name,
@@ -144,7 +148,7 @@ def _get_amqp_client():
         amqp_host=config.instance.amqp_host,
         amqp_user=config.instance.amqp_username,
         amqp_pass=config.instance.amqp_password,
-        amqp_port=BROKER_SSL_PORT,
+        amqp_port=BROKER_PORT_SSL,
         amqp_vhost='/',
         ssl_enabled=True,
         ssl_cert_path=config.instance.amqp_ca_path
@@ -152,10 +156,11 @@ def _get_amqp_client():
     return client
 
 
-def _send_mgmtworker_task(message, routing_key='workflow'):
+def _send_mgmtworker_task(message, exchange=MGMTWORKER_QUEUE,
+                          routing_key='workflow'):
     """Send a message to the mgmtworker exchange"""
     client = _get_amqp_client()
-    send_handler = SendHandler(MGMTWORKER_QUEUE, routing_key=routing_key)
+    send_handler = SendHandler(exchange, routing_key=routing_key)
     client.add_handler(send_handler)
     with client:
         send_handler.publish(message)
