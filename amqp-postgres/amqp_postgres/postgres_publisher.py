@@ -21,6 +21,7 @@ from time import time
 from threading import Thread, Lock
 
 import psycopg2
+import psycopg2.errorcodes
 from psycopg2.extras import execute_values, DictCursor
 from collections import OrderedDict
 from cloudify.constants import EVENTS_EXCHANGE_NAME, LOGS_EXCHANGE_NAME
