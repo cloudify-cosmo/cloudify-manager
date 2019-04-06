@@ -456,6 +456,19 @@ relationships:
   cloudify.relationships.contained_in:
     derived_from: cloudify.relationships.depends_on
 
+  #####################################################
+  # This relationship will create a dependency of that
+  # node's lifecycle to a specific operation in the
+  # lifecycle of the specified target node.
+  #####################################################
+  cloudify.relationships.depends_on_lifecycle_operation:
+    derived_from: cloudify.relationships.depends_on
+    properties:
+      operation:
+        description: The target's lifecycle operation name.
+        type: string
+        default: precreate
+
   cloudify.relationships.file_system_depends_on_volume:
     derived_from: cloudify.relationships.depends_on
     source_interfaces:
