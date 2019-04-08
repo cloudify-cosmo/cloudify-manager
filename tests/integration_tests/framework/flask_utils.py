@@ -59,6 +59,11 @@ def prepare_reset_storage_script():
         os.unlink(f.name)
 
 
+def prepare_set_ldap_script():
+    reset_script = get_resource('scripts/set_ldap.py')
+    copy_file_to_manager(reset_script, '/tmp/set_ldap.py')
+
+
 def setup_flask_app():
     global security_config
     if not security_config:
@@ -79,6 +84,13 @@ def reset_storage():
     # localhost-only APIs (rabbitmq management api)
     execute("/opt/manager/env/bin/python {script_path} --config {config_path}"
             .format(script_path=SCRIPT_PATH, config_path=CONFIG_PATH))
+
+
+def set_ldap(config_data):
+    logger.info('Setting LDAP configuration')
+    execute("/opt/manager/env/bin/python {script_path} --config {config_data}"
+            .format(script_path='/tmp/set_ldap.py',
+                    config_data='\"'+str(config_data)+'\"'))
 
 
 def close_session(app):

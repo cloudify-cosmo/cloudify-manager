@@ -123,8 +123,7 @@ class LdapAuthentication(SecuredResource):
             import LdapAuthentication
 
         # update current configuration
-        for key, value in ldap_config.iteritems():
-            setattr(config.instance, key, value)
+        config.instance.update_db(ldap_config)
 
         # assert LDAP configuration is valid (if credential supplied).
         if ldap_config['ldap_username']:
@@ -139,8 +138,6 @@ class LdapAuthentication(SecuredResource):
                 raise BadParametersError(
                     'Failed setting LDAP authenticator: Invalid parameters '
                     'provided.')
-
-        config.reset(config.instance, write=True)
 
         # Restart the rest service so that each the LDAP configuration
         # be loaded to all flask processes.
