@@ -49,9 +49,7 @@ class TestLicense(AgentlessTestCase):
         self.client.tokens.get()
         self.client.tenants.list()
         self.client.license.list()
-        self.client.snapshots.list()
         self.client.manager.get_status()
-        self.client.maintenance_mode.status()
 
     def test_upload_valid_paying_license(self):
         self._upload_license('test_valid_paying_license.yaml')
