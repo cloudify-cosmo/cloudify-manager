@@ -15,7 +15,7 @@
 
 from manager_rest.test.attribute import attr
 
-from manager_rest.rest.resources_v1.version import get_version_data
+from manager_rest.version import get_version_data
 from manager_rest.test.security_utils import get_admin_user
 from manager_rest.constants import CLOUDIFY_TENANT_HEADER, DEFAULT_TENANT_NAME
 from manager_rest.test.base_test import BaseServerTestCase, LATEST_API_VERSION
