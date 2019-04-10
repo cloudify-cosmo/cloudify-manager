@@ -166,8 +166,6 @@ jobs:
       - build_rpm:
           spec_file: cloudify-rest-service.spec
       - build_rpm:
-          spec_file: cloudify-agents.spec
-      - build_rpm:
           spec_file: cloudify-mgmtworker.spec
       - build_rpm:
           spec_file: cloudify-rabbitmq.spec

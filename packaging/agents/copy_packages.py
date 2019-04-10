@@ -11,7 +11,7 @@ def splitext(filename):
     # not using os.path.splitext as it would return .gz instead of .tar.gz
     for ext in ".tar.gz", ".exe":
         if filename.endswith(ext):
-            return ext
+            return filename[:-len(ext)], ext
     raise WrongExtension(
             "Unknown agent format for {0}. "
             "Must be either tar.gz or exe".format(filename))
@@ -25,7 +25,7 @@ def normalize_names(directory, target_dir):
     previous_targets = set()
     for fn in os.listdir(directory):
         try:
-            extension = splitext(fn)
+            fn, extension = splitext(fn)
         except WrongExtension:
             # Ignore files with extensions we don't like
             continue
