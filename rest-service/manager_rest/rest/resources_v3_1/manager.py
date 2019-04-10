@@ -137,7 +137,8 @@ class Managers(SecuredResource):
             'edition': {'type': unicode},
             'distribution': {'type': unicode},
             'distro_release': {'type': unicode},
-            'fs_sync_node_id': {'type': unicode, 'optional': True}
+            'fs_sync_node_id': {'type': unicode, 'optional': True},
+            'networks': {'type': dict, 'optional': True}
         })
         new_manager = models.Manager(
             hostname=_manager['hostname'],
@@ -147,7 +148,8 @@ class Managers(SecuredResource):
             edition=_manager['edition'],
             distribution=_manager['distribution'],
             distro_release=_manager['distro_release'],
-            fs_sync_node_id=_manager.get('fs_sync_node_id', '')
+            fs_sync_node_id=_manager.get('fs_sync_node_id', ''),
+            networks=_manager.get('networks')
         )
         result = get_storage_manager().put(new_manager)
         current_app.logger.info('Manager added successfully')

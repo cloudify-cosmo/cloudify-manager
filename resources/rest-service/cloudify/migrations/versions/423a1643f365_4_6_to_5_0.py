@@ -241,6 +241,7 @@ def upgrade():
         sa.Column('distribution', sa.Text(), nullable=False),
         sa.Column('distro_release', sa.Text(), nullable=False),
         sa.Column('fs_sync_node_id', sa.Text(), nullable=True),
+        sa.Column('networks', JSONString(), nullable=True),
         sa.PrimaryKeyConstraint('id', name=op.f('managers_pkey'))
     )
     op.create_table(
@@ -266,6 +267,7 @@ def upgrade():
         sa.Column('username', sa.Text(), nullable=True),
         sa.Column('password', sa.Text(), nullable=True),
         sa.Column('params', JSONString(), nullable=True),
+        sa.Column('networks', JSONString(), nullable=True),
         sa.Column('_ca_cert_id', sa.Integer(), nullable=False),
 
         sa.ForeignKeyConstraint(
