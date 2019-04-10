@@ -29,7 +29,7 @@ def normalize_names(directory, target_dir):
         except WrongExtension:
             # Ignore files with extensions we don't like
             continue
-        source = os.path.join(directory, fn)
+        source = os.path.join(directory, fn + extension)
         target = os.path.join(target_dir, normalize_agent_name(fn) + extension)
         print('copying {} to {}'.format(source, target))
         if target in previous_targets:
