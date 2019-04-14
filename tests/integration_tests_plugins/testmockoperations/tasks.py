@@ -497,3 +497,8 @@ def increment_counter(ctx, **_):
         return latest_props
 
     ctx.instance.update(on_conflict=acquire_runtime_props)
+
+
+@operation
+def write_pid_to_runtime_properties(ctx, **_):
+    ctx.instance.runtime_properties['pid'] = str(os.getpid())
