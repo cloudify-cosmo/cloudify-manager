@@ -17,7 +17,7 @@
 from flask_restful_swagger import swagger
 
 from manager_rest import config
-from manager_rest.rest import responses, rest_utils
+from manager_rest.rest import responses
 from manager_rest.rest.rest_decorators import (
     exceptions_handled,
     marshal_with,
@@ -40,11 +40,6 @@ BASE_SERVICES = {
 OPTIONAL_SERVICES = {
     'cloudify-stage.service': 'Cloudify Console',
     'cloudify-composer.service': 'Cloudify Composer',
-}
-CLUSTER_SERVICES = {
-    'cloudify-postgresql.service': 'PostgreSQL',
-    'cloudify-consul.service': 'Consul',
-    'cloudify-syncthing.service': 'Syncthing',
 }
 
 
@@ -111,12 +106,4 @@ class Status(SecuredResource):
         services.update(BASE_SERVICES)
         services.update(OPTIONAL_SERVICES)
 
-        if rest_utils.is_clustered():
-            # clustered postgresql service is named differently -
-            # the old service is not used in a clustered manager,
-            # so we can ignore its status
-            del services['postgresql-9.5.service']
-
-            # services that are only running in a clustered manager
-            services.update(CLUSTER_SERVICES)
         return services

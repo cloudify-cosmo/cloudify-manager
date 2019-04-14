@@ -30,11 +30,6 @@ from cloudify.models_states import VisibilityState
 from manager_rest import manager_exceptions, config
 from manager_rest.constants import REST_SERVICE_NAME
 
-try:
-    from cloudify_premium.ha import node_status
-except ImportError:
-    node_status = {'initialized': False}
-
 
 states_except_private = copy.deepcopy(VisibilityState.STATES)
 states_except_private.remove('private')
@@ -175,10 +170,6 @@ def validate_and_decode_password(password):
         )
 
     return password
-
-
-def is_clustered():
-    return node_status.get('initialized')
 
 
 def verify_role(role_name, is_system_role=False):
