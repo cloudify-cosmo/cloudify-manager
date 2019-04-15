@@ -519,7 +519,7 @@ class Config(SQLModelBase):
 
     @declared_attr
     def _updater_id(cls):
-        return foreign_key(User.id)
+        return foreign_key(User.id, nullable=True, ondelete='SET NULL')
 
     @declared_attr
     def updated_by(cls):
@@ -554,13 +554,13 @@ class Certificate(SQLModelBase):
     __tablename__ = 'certificates'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    name = db.Column(db.Text, nullable=False)
+    name = db.Column(db.Text, nullable=False, unique=True)
     value = db.Column(db.Text, nullable=False)
     updated_at = db.Column(UTCDateTime)
 
     @declared_attr
     def _updater_id(cls):
-        return foreign_key(User.id, nullable=True)
+        return foreign_key(User.id, nullable=True, ondelete='SET NULL')
 
     @declared_attr
     def updated_by(cls):

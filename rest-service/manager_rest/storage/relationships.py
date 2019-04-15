@@ -19,16 +19,19 @@ from .models_base import db
 def foreign_key(foreign_key_column,
                 nullable=False,
                 index=False,
-                primary_key=False):
+                primary_key=False,
+                ondelete='CASCADE'):
     """Return a ForeignKey object with the relevant
 
     :param foreign_key_column: Unique id column in the parent table
     :param nullable: Should the column be allowed to remain empty
     :param index: Should the column be indexed
     :param primary_key: Mark column as a primary key column
+    :param ondelete: If a record in the parent table is deleted, the ondelete
+        action will affect the corresponding records in the child table
     """
     return db.Column(
-        db.ForeignKey(foreign_key_column, ondelete='CASCADE'),
+        db.ForeignKey(foreign_key_column, ondelete=ondelete),
         nullable=nullable,
         index=index,
         primary_key=primary_key,
