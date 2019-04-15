@@ -41,11 +41,10 @@ from cloudify_rest_client.executions import Execution
 from cloudify_system_workflows.deployment_environment import \
     generate_create_dep_tasks_graph
 
-from . import utils
+from . import networks, utils
 from .npm import Npm
 from .agents import Agents
 from .postgres import Postgres
-from .networks import Networks
 from .credentials import restore as restore_credentials
 from .constants import (
     ADMIN_DUMP_FILE,
@@ -926,20 +925,13 @@ class SnapshotRestoreValidator(object):
                 )
 
     def _assert_manager_networks(self):
-        net = Networks()
-        current_networks = net.get_networks_from_provider_context(self._client)
-        old_networks = Networks.get_networks_from_snapshot(self._tempdir)
-        active_networks = old_networks['active_networks']
-
-        # Get all the networks with live agents that don't appear in the
-        # provider context
-        missing_networks = [
-            n for n in active_networks if n not in current_networks
-        ]
+        current_networks = networks.get_current_networks(self._client)
+        active_networks = networks.get_active_networks(self._client)
+        missing_networks = active_networks - current_networks
         if missing_networks:
             raise NonRecoverableError(
-                'Networks `{0}` do not appear in the provider context, '
+                'Networks `{0}` do not exist on the current manager, '
                 'but have live agents connected to them. Upgrade is not '
                 'allowed!\nAll the above networks need to be set during '
-                'bootstrap'.format(missing_networks)
+                'manager install'.format(', '.join(missing_networks))
             )
