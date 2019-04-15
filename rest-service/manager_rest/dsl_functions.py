@@ -65,6 +65,9 @@ def evaluate_deployment_capabilities(deployment_id):
     deployment = sm.get(Deployment, deployment_id, include=['capabilities'])
     methods = _get_methods(deployment_id, sm)
 
+    if not deployment.capabilities:
+        return
+
     try:
         return functions.evaluate_capabilities(
             capabilities=deployment.capabilities,
