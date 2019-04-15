@@ -13,12 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from .cluster import (          # NOQA
-    Cluster,
-    ClusterNodes,
-    ClusterNodesId
-)
-
 from .events import Events      # NOQA
 
 from .manager import (          # NOQA

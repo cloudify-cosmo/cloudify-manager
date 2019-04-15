@@ -35,15 +35,11 @@ from ..rest_decorators import (
 
 try:
     from cloudify_premium.ha import (
-        cluster_status,
-        options,
         add_manager,
         remove_manager
     )
-
 except ImportError:
-    cluster_status, options, add_manager, remove_manager = \
-        None, None, None, None
+    add_manager, remove_manager = None, None
 
 
 DEFAULT_CONF_PATH = '/etc/nginx/conf.d/cloudify.conf'
@@ -64,8 +60,6 @@ class SSLConfig(SecuredResource):
         status = 'enabled' if state else 'disabled'
         if state == SSLConfig._is_enabled():
             return 'SSL is already {0} on the manager'.format(status)
-        if rest_utils.is_clustered():
-            self._cluster_set_ssl_state(state)
         else:
             self._set_ssl_state(state)
         return 'SSL is now {0} on the manager'.format(status)
@@ -89,13 +83,6 @@ class SSLConfig(SecuredResource):
         check_call(['sudo', '/opt/manager/scripts/set-manager-ssl.py',
                     flag])
 
-    @staticmethod
-    def _cluster_set_ssl_state(state):
-        # mutation isn't enough, need to set it for it to be saved
-        cluster_opts = cluster_status.cluster_options
-        cluster_opts[options.CLUSTER_SSL_ENABLED] = state
-        cluster_status.cluster_options = cluster_opts
-
 
 class Managers(SecuredResource):
     @exceptions_handled
@@ -106,6 +93,7 @@ class Managers(SecuredResource):
         """
         Get the list of managers in the database
         :param hostname: optional hostname to return only a specific manager
+        :param _include: optional, what columns to include in the response
         """
         args = rest_utils.get_args_and_verify_arguments([
             Argument('hostname', type=unicode, required=False)
