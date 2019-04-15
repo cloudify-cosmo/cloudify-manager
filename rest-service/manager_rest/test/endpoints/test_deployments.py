@@ -459,7 +459,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
     def test_input_violates_constraint_data_type(self):
         self.assertRaisesRegexp(
             CloudifyClientError,
-            "Value's length could not be computed. Value type is '.+int.+'\\.",
+            "Value's length could not be computed. Value type is 'int'\\.",
             self.put_deployment,
             blueprint_id='b9703',
             blueprint_file_name='blueprint_with_inputs_and_constraints.yaml',
