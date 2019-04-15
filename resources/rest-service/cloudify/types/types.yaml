@@ -797,6 +797,22 @@ data_types:
         description: >
           Optional additional low level configuration details. (type: dictionary)
         required: false
+      executable_temp_path:
+        description: >
+          Directory to use for temporary executable files. This is useful for installations where the
+          default temporary directory (`/tmp`) is mounted with `noexec`.
+        type: string
+        required: false
+      log_max_bytes:
+        description: >
+          Maximum number of bytes in the agent's log file, before it is rolled over.
+        type: integer
+        required: false
+      log_max_history:
+        description: >
+          Maximum number of historical log files to keep.
+        type: integer
+        required: false
 
   cloudify.datatypes.Blueprint:
     properties:
