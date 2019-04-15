@@ -160,6 +160,14 @@ class Secret(CreatedAtMixin, SQLResourceBase):
 # region Derived Resources
 
 
+class Site(CreatedAtMixin, SQLResourceBase):
+    __tablename__ = 'sites'
+
+    name = db.Column(db.Text, nullable=False)
+    latitude = db.Column(db.Float, nullable=True)
+    longitude = db.Column(db.Float, nullable=True)
+
+
 class Deployment(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'deployments'
 
@@ -182,12 +190,21 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
     workflows = db.Column(db.PickleType(comparator=lambda *a: False))
 
     _blueprint_fk = foreign_key(Blueprint._storage_id)
+    _site_fk = foreign_key(Site._storage_id,
+                           nullable=True,
+                           ondelete='SET NULL')
 
     @declared_attr
     def blueprint(cls):
         return one_to_many_relationship(cls, Blueprint, cls._blueprint_fk)
 
     blueprint_id = association_proxy('blueprint', 'id')
+
+    @declared_attr
+    def site(cls):
+        return one_to_many_relationship(cls, Site, cls._site_fk)
+
+    site_name = association_proxy('site', 'name')
 
     @classproperty
     def response_fields(cls):
