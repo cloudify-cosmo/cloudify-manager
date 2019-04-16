@@ -145,7 +145,8 @@ def restore_stage_files(archive_root, override=False):
     # copy only the stage-related parts and give the stage user read access
     # to those
     stage_tempdir = '{0}_stage'.format(archive_root)
-    shutil.copytree(stage_archive, stage_tempdir)
+    shutil.copytree(stage_archive, stage_tempdir,
+                    ignore=shutil.ignore_patterns('.stfolder'))
     run(['/bin/chmod', 'a+r', '-R', stage_tempdir])
     try:
         restore_command = [snapshot_constants.STAGE_RESTORE_SCRIPT,
