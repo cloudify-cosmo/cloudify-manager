@@ -4,6 +4,7 @@
 
 - Add token field to executions
 - Add config table
+- Add sites table
 
 Revision ID: 423a1643f365
 Revises: 9516df019579
@@ -14,10 +15,12 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import orm
 from sqlalchemy.dialects import postgresql
-from manager_rest.storage.models import User
-from manager_rest.storage.models_base import JSONString, UTCDateTime
 from sqlalchemy.ext.declarative import declarative_base
 
+from manager_rest.storage.models import User
+from manager_rest.storage.models_base import JSONString, UTCDateTime
+
+from cloudify.models_states import VisibilityState
 
 # revision identifiers, used by Alembic.
 revision = '423a1643f365'
@@ -278,6 +281,8 @@ def upgrade():
         sa.PrimaryKeyConstraint('name', name=op.f('rabbitmq_brokers_pkey'))
     )
 
+    _create_sites_table()
+
 
 def downgrade():
     op.drop_column('executions', 'token')
@@ -285,3 +290,71 @@ def downgrade():
     op.drop_table('managers')
     op.drop_table('rabbitmq_brokers')
     op.drop_table('certificates')
+    _drop_sites_table()
+
+
+def _create_sites_table():
+    visibility_enum = postgresql.ENUM(*VisibilityState.STATES,
+                                      name='visibility_states',
+                                      create_type=False)
+
+    op.create_table(
+        'sites',
+        sa.Column('_storage_id', sa.Integer(), autoincrement=True,
+                  nullable=False),
+        sa.Column('id', sa.Text(), nullable=True),
+        sa.Column('visibility', visibility_enum, nullable=True),
+        sa.Column('created_at', UTCDateTime(), nullable=False),
+        sa.Column('name', sa.Text(), nullable=False),
+        sa.Column('latitude', sa.Float(), nullable=True),
+        sa.Column('longitude', sa.Float(), nullable=True),
+        sa.Column('_tenant_id', sa.Integer(), nullable=False),
+        sa.Column('_creator_id', sa.Integer(), nullable=False),
+
+        sa.ForeignKeyConstraint(['_creator_id'],
+                                ['users.id'],
+                                name=op.f('sites__creator_id_fkey'),
+                                ondelete='CASCADE'),
+
+        sa.ForeignKeyConstraint(['_tenant_id'],
+                                ['tenants.id'],
+                                name=op.f('sites__tenant_id_fkey'),
+                                ondelete='CASCADE'),
+
+        sa.PrimaryKeyConstraint('_storage_id', name=op.f('sites_pkey'))
+    )
+
+    op.create_index(op.f('sites__tenant_id_idx'),
+                    'sites',
+                    ['_tenant_id'],
+                    unique=False)
+    op.create_index(op.f('sites_created_at_idx'),
+                    'sites',
+                    ['created_at'],
+                    unique=False)
+    op.create_index(op.f('sites_id_idx'),
+                    'sites',
+                    ['id'],
+                    unique=False)
+
+    # Add sites FK to deployments table
+    op.add_column('deployments', sa.Column('_site_fk',
+                                           sa.Integer(),
+                                           nullable=True))
+    op.create_foreign_key(op.f('deployments__site_fk_fkey'),
+                          'deployments',
+                          'sites',
+                          ['_site_fk'],
+                          ['_storage_id'],
+                          ondelete='SET NULL')
+
+
+def _drop_sites_table():
+    op.drop_constraint(op.f('deployments__site_fk_fkey'),
+                       'deployments',
+                       type_='foreignkey')
+    op.drop_column('deployments', '_site_fk')
+    op.drop_index(op.f('sites_id_idx'), table_name='sites')
+    op.drop_index(op.f('sites_created_at_idx'), table_name='sites')
+    op.drop_index(op.f('sites__tenant_id_idx'), table_name='sites')
+    op.drop_table('sites')
