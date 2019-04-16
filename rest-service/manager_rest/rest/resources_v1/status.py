@@ -14,7 +14,11 @@
 #  * limitations under the License.
 #
 
+from flask import current_app
 from flask_restful_swagger import swagger
+
+from cloudify.amqp_client import get_client
+from cloudify.constants import BROKER_PORT_SSL
 
 from manager_rest import config
 from manager_rest.rest import responses
@@ -68,14 +72,10 @@ class Status(SecuredResource):
                     if job['display_name'] == 'PostgreSQL':
                         job['instances'][0]['state'] = 'remote'
 
-            # Check for remote RabbitMQ
-            # TODO: Both this and the Postgres check should actually check
-            # status in some way (e.g. 'select 1' for postgres)
-            if not config.instance.amqp_host.startswith(('localhost',
-                                                         '127.0.0.1')):
-                for job in jobs:
-                    if job['display_name'] == 'RabbitMQ':
-                        job['instances'][0]['state'] = 'remote'
+            broker_state = 'running' if broker_is_healthy() else 'failed'
+            for job in jobs:
+                if job['display_name'] == 'RabbitMQ':
+                    job['instances'][0]['state'] = broker_state
         else:
             jobs = ['undefined']
 
@@ -107,3 +107,27 @@ class Status(SecuredResource):
         services.update(OPTIONAL_SERVICES)
 
         return services
+
+
+def broker_is_healthy():
+    client = get_client(
+        amqp_host=config.instance.amqp_host,
+        amqp_user=config.instance.amqp_username,
+        amqp_pass=config.instance.amqp_password,
+        amqp_port=BROKER_PORT_SSL,
+        amqp_vhost='/',
+        ssl_enabled=True,
+        ssl_cert_path=config.instance.amqp_ca_path,
+        connect_timeout=3,
+    )
+    try:
+        with client:
+            return True
+    except Exception as err:
+        current_app.logger.error(
+            'Broker check failed with {err_type}: {err_msg}'.format(
+                err_type=type(err),
+                err_msg=str(err),
+            )
+        )
+        return False
