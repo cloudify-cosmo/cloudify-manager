@@ -87,10 +87,9 @@ class SecretsKey(SecuredResource):
         except ConflictError:
             secret = sm.get(models.Secret, key)
             if secret and update_if_exists:
-                get_resource_manager().validate_modification_permitted(secret)
                 secret.value = value
                 secret.updated_at = timestamp
-                return sm.update(secret)
+                return sm.update(secret, validate_global=True)
             raise
 
     @rest_decorators.exceptions_handled
@@ -110,7 +109,7 @@ class SecretsKey(SecuredResource):
         self._update_visibility(secret)
         self._update_value(secret)
         secret.updated_at = utils.get_formatted_timestamp()
-        return get_storage_manager().update(secret)
+        return get_storage_manager().update(secret, validate_global=True)
 
     @rest_decorators.exceptions_handled
     @authorize('secret_delete')
@@ -123,14 +122,13 @@ class SecretsKey(SecuredResource):
         storage_manager = get_storage_manager()
         secret = storage_manager.get(models.Secret, key)
         self._validate_secret_modification_permitted(secret)
-        return storage_manager.delete(secret)
+        return storage_manager.delete(secret, validate_global=True)
 
     def _is_hidden_value_permitted(self, secret):
         return is_administrator(secret.tenant) or \
                secret.created_by == current_user.username
 
     def _validate_secret_modification_permitted(self, secret):
-        get_resource_manager().validate_modification_permitted(secret)
         if secret.is_hidden_value and \
                 not self._is_hidden_value_permitted(secret):
             raise ForbiddenError(

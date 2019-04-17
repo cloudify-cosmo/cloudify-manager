@@ -85,11 +85,9 @@ class SecretsKey(resources_v3.SecretsKey):
         except ConflictError:
             secret = sm.get(models.Secret, key)
             if secret and secret_params['update_if_exists']:
-                get_resource_manager().validate_modification_permitted(
-                    secret)
                 secret.value = encrypted_value
                 secret.updated_at = timestamp
-                return sm.update(secret)
+                return sm.update(secret, validate_global=True)
             raise
 
     def _get_secret_params(self, key):

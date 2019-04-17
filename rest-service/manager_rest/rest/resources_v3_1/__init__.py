@@ -13,6 +13,12 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from .license import License                     # NOQA
+from .tokens import UserTokens                   # NOQA
+from .sites import Sites, SitesName              # NOQA
+from .agents import Agents, AgentsName           # NOQA
+from .executions import ExecutionsCheck          # NOQA
+
 from .manager import (                           # NOQA
     SSLConfig,
     Managers,
@@ -48,8 +54,6 @@ from .blueprints import (                        # NOQA
     BlueprintsSetVisibility
 )
 
-from .agents import Agents, AgentsName           # NOQA
-
 from .summary import (                           # NOQA
     SummarizeDeployments,
     SummarizeNodes,
@@ -65,9 +69,3 @@ from .operations import (                        # NOQA
     TasksGraphs,
     TasksGraphsId
 )
-
-from .tokens import UserTokens                    # NOQA
-
-from .executions import ExecutionsCheck           # NOQA
-
-from .license import License                      # NOQA

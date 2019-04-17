@@ -39,7 +39,9 @@ from manager_rest.constants import (DEFAULT_TENANT_NAME,
                                     FILE_SERVER_BLUEPRINTS_FOLDER,
                                     FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER)
 from manager_rest.dsl_functions import get_secret_method
-from manager_rest.utils import is_create_global_permitted, send_event
+from manager_rest.utils import (send_event,
+                                is_create_global_permitted,
+                                validate_global_modification)
 from manager_rest.storage import (db,
                                   get_storage_manager,
                                   models,
@@ -288,7 +290,7 @@ class ResourceManager(object):
     def remove_plugin(self, plugin_id, force):
         # Verify plugin exists and can be removed
         plugin = self.sm.get(models.Plugin, plugin_id)
-        self.validate_modification_permitted(plugin)
+        validate_global_modification(plugin)
 
         # Uninstall (if applicable)
         if utils.plugin_installable_on_current_platform(plugin):
@@ -378,7 +380,7 @@ class ResourceManager(object):
 
     def delete_blueprint(self, blueprint_id, force):
         blueprint = self.sm.get(models.Blueprint, blueprint_id)
-        self.validate_modification_permitted(blueprint)
+        validate_global_modification(blueprint)
 
         if not force:
             imported_blueprints_list = [b.plan.get(
@@ -2059,14 +2061,6 @@ class ResourceManager(object):
                     current_user.username, deployment.id
                 )
             )
-
-    def validate_modification_permitted(self, resource):
-        # A global resource can't be modify from outside its tenant
-        if resource.visibility == VisibilityState.GLOBAL and \
-           resource.tenant_name != self.sm.current_tenant.name:
-            raise manager_exceptions.IllegalActionError(
-                "Can't modify the global resource `{0}` from outside its "
-                "tenant `{1}`".format(resource.id, resource.tenant_name))
 
     @staticmethod
     def _any_running_executions(executions):

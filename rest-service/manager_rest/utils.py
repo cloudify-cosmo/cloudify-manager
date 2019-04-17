@@ -36,8 +36,10 @@ from werkzeug.local import LocalProxy
 from flask_security import current_user
 
 from cloudify import logs
-from cloudify.amqp_client import create_events_publisher
 from cloudify.constants import BROKER_PORT_SSL
+from cloudify.models_states import VisibilityState
+from cloudify.amqp_client import create_events_publisher
+
 from manager_rest import constants, config, manager_exceptions
 
 
@@ -247,6 +249,15 @@ def can_execute_global_workflow(tenant):
             current_user.id == constants.BOOTSTRAP_ADMIN_ID or
             current_user.has_role_in(tenant, execute_global_roles)
     )
+
+
+def validate_global_modification(resource):
+    # A global resource can't be modify from outside its tenant
+    if resource.visibility == VisibilityState.GLOBAL and \
+       resource.tenant_name != current_tenant.name:
+        raise manager_exceptions.IllegalActionError(
+            "Can't modify the global resource `{0}` from outside its "
+            "tenant `{1}`".format(resource.id, resource.tenant_name))
 
 
 @LocalProxy
