@@ -464,11 +464,3 @@ def non_recoverable(ctx, **_):
 @workflow
 def simple_sleep(ctx, **kwargs):
     time.sleep(30)
-
-
-@workflow
-def write_process_id(ctx):
-    node_instance = get_instance(ctx)
-    node_instance.execute_operation('test_interface.write_pid')
-    node_instance.execute_operation('test_interface.sleep',
-                                    kwargs={'sleep': '10'})

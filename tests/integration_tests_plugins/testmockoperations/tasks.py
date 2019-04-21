@@ -67,7 +67,7 @@ def del_property(ctx, **kwargs):
     property_name = ctx.node.properties['property_name']
     ctx.logger.info('Deleting property [{0}] for node: {1}'
                     .format(property_name, ctx.instance.id))
-    del(ctx.instance.runtime_properties[property_name])
+    del (ctx.instance.runtime_properties[property_name])
 
 
 @operation
@@ -342,8 +342,8 @@ def append_node_state(ctx, **kwargs):
 
 @operation
 def sleep(ctx, **kwargs):
-    sleep_time = ctx.node.properties['sleep'] if 'sleep' in\
-        ctx.node.properties else kwargs['sleep']
+    sleep_time = (ctx.node.properties['sleep']
+                  if 'sleep' in ctx.node.properties else kwargs['sleep'])
     time.sleep(int(sleep_time))
 
 
@@ -500,5 +500,7 @@ def increment_counter(ctx, **_):
 
 
 @operation
-def write_pid_to_runtime_properties(ctx, **_):
-    ctx.instance.runtime_properties['pid'] = str(os.getpid())
+def write_pid_to_file_and_sleep(ctx, **kwargs):
+    with open('/tmp/pid.txt', 'w') as f:
+        f.write(str(os.getpid()))
+    sleep(ctx, **kwargs)

@@ -13,15 +13,17 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-import os
 import time
 import uuid
+
+from sh import ErrorReturnCode
 
 from integration_tests import AgentlessTestCase
 from integration_tests.framework.postgresql import run_query
 from integration_tests.framework import (
     postgresql,
-    utils)
+    utils,
+    docl)
 from integration_tests.tests.utils import (
     verify_deployment_env_created,
     do_retries,
@@ -30,6 +32,7 @@ from integration_tests.tests.utils import (
     generate_scheduled_for_date,
     create_api_token,
     create_tenants_and_add_users)
+
 
 from cloudify.models_states import ExecutionState as Execution
 from cloudify_rest_client.exceptions import CloudifyClientError
@@ -609,20 +612,22 @@ class ExecutionsTest(AgentlessTestCase):
         Tests the kill execution option by asserting the execution pid doesn't
         exist.
         """
-        execution, node_inst_id, _ = self._execute_from_resource(
-            workflow_id='write_process_id', workflow_params=None,
-            resource_file='dsl/write_pid_workflow.yaml')
-        # waiting for the pid to be written to the runtime_properties
-        while ('pid' not in self.client.node_instances.
-                get(node_inst_id).runtime_properties):
-            time.sleep(0.5)
-        pid = self.client.node_instances.get(node_inst_id).runtime_properties[
-            'pid']
-        execution = self.client.executions.cancel(execution.id, force=True,
-                                                  kill=True)
+        dsl_path = resource('dsl/write_pid_node.yaml')
+        dep = self.deploy(dsl_path, wait=False, client=self.client)
+        do_retries(verify_deployment_env_created, 30, deployment_id=dep.id)
+        execution = self.client.executions.start(deployment_id=dep.id,
+                                                 workflow_id='install')
+        pid = do_retries(docl.read_file, file_path='/tmp/pid.txt')
+        path = '/proc/{}/status'.format(pid)
+        execution = self.client.executions.cancel(execution.id,
+                                                  force=True, kill=True)
         self.assertEquals(Execution.KILL_CANCELLING, execution.status)
-        # assert the execution process is really killed
-        self.assertFalse(os.path.exists('/proc/{}'.format(pid)))
+        # If the process is still running docl.read_file will raise an error.
+        # We use do_retries to give the kill cancel operation time to kill
+        # the process.
+        do_retries(self.assertRaises, excClass=ErrorReturnCode,
+                   callableObj=docl.read_file,
+                   file_path=path)
 
     def test_legacy_cancel_execution(self):
         # this tests cancellation of an execution where the workflow
@@ -677,9 +682,9 @@ class ExecutionsTest(AgentlessTestCase):
             self.assertEquals(2, len(deployments_executions))
             self.assertIn(execution_id, [deployments_executions[0].id,
                                          deployments_executions[1].id])
-            install_execution = \
-                deployments_executions[0] if execution_id == \
-                deployments_executions[0].id else deployments_executions[1]
+            install_execution = deployments_executions[0]\
+                if (execution_id == deployments_executions[0].id) \
+                else deployments_executions[1]
             self.assertEquals(Execution.TERMINATED, install_execution.status)
             self.assertIsNotNone(install_execution.created_at)
             self.assertIsNotNone(install_execution.ended_at)
@@ -766,8 +771,8 @@ class ExecutionsTest(AgentlessTestCase):
             time.sleep(1)
         else:
             raise RuntimeError('Expected instance state is: {}, '
-                               'but the actual state is: {}'.format(
-                                expected_state, instance_state))
+                               'but the actual state is: {}'
+                               .format(expected_state, instance_state))
 
     def _execute_from_resource(self, workflow_id, workflow_params=None,
                                resource_file=None):
