@@ -16,11 +16,14 @@
 import time
 import uuid
 
+from sh import ErrorReturnCode
+
 from integration_tests import AgentlessTestCase
 from integration_tests.framework.postgresql import run_query
 from integration_tests.framework import (
     postgresql,
-    utils)
+    utils,
+    docl)
 from integration_tests.tests.utils import (
     verify_deployment_env_created,
     do_retries,
@@ -29,6 +32,7 @@ from integration_tests.tests.utils import (
     generate_scheduled_for_date,
     create_api_token,
     create_tenants_and_add_users)
+
 
 from cloudify.models_states import ExecutionState as Execution
 from cloudify_rest_client.exceptions import CloudifyClientError
@@ -603,6 +607,28 @@ class ExecutionsTest(AgentlessTestCase):
 
         self._assert_execution_cancelled(execution, deployment_id)
 
+    def test_execute_and_kill_execution(self):
+        """
+        Tests the kill execution option by asserting the execution pid doesn't
+        exist.
+        """
+        dsl_path = resource('dsl/write_pid_node.yaml')
+        dep = self.deploy(dsl_path, wait=False, client=self.client)
+        do_retries(verify_deployment_env_created, 30, deployment_id=dep.id)
+        execution = self.client.executions.start(deployment_id=dep.id,
+                                                 workflow_id='install')
+        pid = do_retries(docl.read_file, file_path='/tmp/pid.txt')
+        path = '/proc/{}/status'.format(pid)
+        execution = self.client.executions.cancel(execution.id,
+                                                  force=True, kill=True)
+        self.assertEquals(Execution.KILL_CANCELLING, execution.status)
+        # If the process is still running docl.read_file will raise an error.
+        # We use do_retries to give the kill cancel operation time to kill
+        # the process.
+        do_retries(self.assertRaises, excClass=ErrorReturnCode,
+                   callableObj=docl.read_file,
+                   file_path=path)
+
     def test_legacy_cancel_execution(self):
         # this tests cancellation of an execution where the workflow
         # announces the cancel occurred by returning a value rather than by
@@ -626,21 +652,21 @@ class ExecutionsTest(AgentlessTestCase):
         dsl_path = resource("dsl/basic.yaml")
         deployment, execution_id = self.deploy_application(dsl_path)
         self.wait_for_execution_to_end(
-                self.client.executions.get(execution_id))
+            self.client.executions.get(execution_id))
         deployment, execution_id = self.deploy_application(dsl_path)
         self.wait_for_execution_to_end(
-                self.client.executions.get(execution_id))
+            self.client.executions.get(execution_id))
         deployments_executions = self.client.executions.list(sort='created_at')
-        for i in range(len(deployments_executions)-1):
+        for i in range(len(deployments_executions) - 1):
             self.assertTrue(deployments_executions[i]['created_at'] <
-                            deployments_executions[i+1]['created_at'],
+                            deployments_executions[i + 1]['created_at'],
                             'execution list not sorted correctly')
         deployments_executions = self.client.executions.list(
-                sort='created_at',
-                is_descending=True)
-        for i in range(len(deployments_executions)-1):
+            sort='created_at',
+            is_descending=True)
+        for i in range(len(deployments_executions) - 1):
             self.assertTrue(deployments_executions[i]['created_at'] >
-                            deployments_executions[i+1]['created_at'],
+                            deployments_executions[i + 1]['created_at'],
                             'execution list not sorted correctly')
 
     def test_get_deployments_executions_with_status(self):
@@ -656,9 +682,9 @@ class ExecutionsTest(AgentlessTestCase):
             self.assertEquals(2, len(deployments_executions))
             self.assertIn(execution_id, [deployments_executions[0].id,
                                          deployments_executions[1].id])
-            install_execution = \
-                deployments_executions[0] if execution_id == \
-                deployments_executions[0].id else deployments_executions[1]
+            install_execution = deployments_executions[0]\
+                if (execution_id == deployments_executions[0].id) \
+                else deployments_executions[1]
             self.assertEquals(Execution.TERMINATED, install_execution.status)
             self.assertIsNotNone(install_execution.created_at)
             self.assertIsNotNone(install_execution.ended_at)
@@ -737,11 +763,20 @@ class ExecutionsTest(AgentlessTestCase):
         self.assertEquals(Execution.TERMINATED, execution.status)
         self.assertEquals('', execution.error)
 
-    def _execute_and_cancel_execution(self, workflow_id, force=False,
-                                      wait_for_termination=True,
-                                      is_wait_for_asleep_node=True,
-                                      workflow_params=None):
-        dsl_path = resource('dsl/sleep_workflows.yaml')
+    def _check_node_instance_state(self, expected_state, node_inst_id):
+        for retry in range(30):
+            instance_state = self.client.node_instances.get(node_inst_id).state
+            if instance_state == expected_state:
+                break
+            time.sleep(1)
+        else:
+            raise RuntimeError('Expected instance state is: {}, '
+                               'but the actual state is: {}'
+                               .format(expected_state, instance_state))
+
+    def _execute_from_resource(self, workflow_id, workflow_params=None,
+                               resource_file=None):
+        dsl_path = resource(resource_file)
         _id = uuid.uuid1()
         blueprint_id = 'blueprint_{0}'.format(_id)
         deployment_id = 'deployment_{0}'.format(_id)
@@ -752,23 +787,24 @@ class ExecutionsTest(AgentlessTestCase):
                    deployment_id=deployment_id)
         execution = self.client.executions.start(
             deployment_id, workflow_id, parameters=workflow_params)
-
         node_inst_id = self.client.node_instances.list(
             deployment_id=deployment_id)[0].id
 
+        return execution, node_inst_id, deployment_id
+
+    def _execute_and_cancel_execution(self, workflow_id, force=False,
+                                      wait_for_termination=True,
+                                      is_wait_for_asleep_node=True,
+                                      workflow_params=None):
+
+        execution, node_inst_id, deployment_id = self._execute_from_resource(
+            workflow_id, workflow_params, 'dsl/sleep_workflows.yaml')
         if is_wait_for_asleep_node:
-            for retry in range(30):
-                if self.client.node_instances.get(
-                        node_inst_id).state == 'asleep':
-                    break
-                time.sleep(1)
-            else:
-                raise RuntimeError("Execution was expected to go"
-                                   " into 'sleeping' status")
+            self._check_node_instance_state('asleep', node_inst_id)
 
         execution = self.client.executions.cancel(execution.id, force)
-        expected_status = Execution.FORCE_CANCELLING if force else \
-            Execution.CANCELLING
+        expected_status = (Execution.FORCE_CANCELLING if force else
+                           Execution.CANCELLING)
         self.assertEquals(expected_status, execution.status)
         if wait_for_termination:
             self.wait_for_execution_to_end(execution)
