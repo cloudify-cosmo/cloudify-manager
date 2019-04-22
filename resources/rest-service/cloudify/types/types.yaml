@@ -816,6 +816,12 @@ data_types:
           default temporary directory (`/tmp`) is mounted with `noexec`.
         type: string
         required: false
+      log_level:
+        description: >
+          The logging level for the agent. Can be one of the following values: critical, error, warning,
+          info, debug
+        type: string
+        required: false
       log_max_bytes:
         description: >
           Maximum number of bytes in the agent's log file, before it is rolled over.

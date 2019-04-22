@@ -31,6 +31,8 @@ depends_on = None
 
 Base = declarative_base()
 
+LOG_LEVELS_ENUM = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
+
 
 class Config(Base):
     __tablename__ = 'config'
@@ -71,8 +73,7 @@ def upgrade():
             name='rest_service_log_level',
             value='INFO',
             scope=['rest'],
-            schema={'type': 'string', 'enum': ['DEBUG', 'INFO', 'WARNING',
-                                               'ERROR', 'CRITICAL']},
+            schema={'type': 'string', 'enum': LOG_LEVELS_ENUM},
             is_editable=True
         ),
         Config(
@@ -230,6 +231,12 @@ def upgrade():
             schema={'type': 'number', 'minimum': 0},
             is_editable=True
         ),
+        Config(
+            name='log_level',
+            value='info',
+            scope=['agent'],
+            schema={'type': 'string', 'enum': LOG_LEVELS_ENUM}
+        )
     ])
     session.commit()
 
