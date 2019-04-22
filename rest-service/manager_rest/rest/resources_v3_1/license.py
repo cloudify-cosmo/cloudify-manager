@@ -25,7 +25,8 @@ from manager_rest.rest.rest_decorators import (
     paginate
 )
 try:
-    from cloudify_premium import SecuredLicenseResource
+    from cloudify_premium.license.secured_license_resource import (
+        SecuredLicenseResource)
 except ImportError:
     SecuredLicenseResource = MissingPremiumFeatureResource
 

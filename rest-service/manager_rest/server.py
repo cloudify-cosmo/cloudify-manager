@@ -35,7 +35,7 @@ from manager_rest.app_logging import setup_logger, log_request, log_response
 if premium_enabled:
     from cloudify_premium.authentication.extended_auth_handler \
         import configure_auth
-    from cloudify_premium import LicenseHandler
+    from cloudify_premium.license.license import LicenseHandler
 
 SQL_DIALECT = 'postgresql'
 
