@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -157,10 +157,11 @@ def _get_amqp_client():
 
 
 def _send_mgmtworker_task(message, exchange=MGMTWORKER_QUEUE,
-                          routing_key='workflow'):
+                          exchange_type='direct', routing_key='workflow'):
     """Send a message to the mgmtworker exchange"""
     client = _get_amqp_client()
-    send_handler = SendHandler(exchange, routing_key=routing_key)
+    send_handler = SendHandler(exchange, exchange_type,
+                               routing_key=routing_key)
     client.add_handler(send_handler)
     with client:
         send_handler.publish(message)
