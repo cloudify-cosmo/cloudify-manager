@@ -40,7 +40,7 @@ class Config(Base):
     schema = sa.Column(JSONString(), nullable=True)
     is_editable = sa.Column(sa.Boolean, default=True)
     updated_at = sa.Column(UTCDateTime())
-    scope = sa.Column(postgresql.ARRAY(sa.Text))
+    scope = sa.Column(postgresql.ARRAY(sa.Text), primary_key=True)
     _updater_id = sa.Column(
         sa.Integer,
         sa.ForeignKey(User.id, ondelete='SET NULL'),

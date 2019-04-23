@@ -515,7 +515,7 @@ class Config(SQLModelBase):
     schema = db.Column(JSONString, nullable=True)
     is_editable = db.Column(db.Boolean, default=True)
     updated_at = db.Column(UTCDateTime)
-    scope = db.Column(postgresql.ARRAY(db.Text))
+    scope = db.Column(postgresql.ARRAY(db.Text), primary_key=True)
 
     @declared_attr
     def _updater_id(cls):
