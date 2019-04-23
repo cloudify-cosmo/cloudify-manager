@@ -164,7 +164,7 @@ class Config(object):
         session = orm.Session(bind=engine)
         stored_config = (
             session.query(models.Config)
-            .filter(models.Config.scope.contains(['rest']))
+            .filter(models.Config.scope == 'rest')
             .all()
         )
         for conf_value in stored_config:
