@@ -194,7 +194,7 @@ class Config(object):
         from manager_rest.storage import models
         from sqlalchemy import create_engine, orm
 
-        names = [key for key, val in config_dict.items() if val]
+        names = config_dict.keys()
         engine = create_engine(self.db_url)
         session = orm.Session(bind=engine)
         stored_configs = (session.query(models.Config)

@@ -143,7 +143,7 @@ def timeout(seconds=60):
             if process.is_alive():
                 process.terminate()
                 raise TimeoutException(
-                    'test timeout exceeded [timeout={0}'.format(seconds))
+                    'test timeout exceeded [timeout={0}]'.format(seconds))
         return wraps(func)(wrapper)
     return decorator
 

@@ -176,8 +176,8 @@ class LdapAuthentication(SecuredResource):
             'ldap_dn_extra': {}
         })
         # Not allowing empty username or password
-        ldap_config['ldap_username'] = ldap_config.get('ldap_username') or None
-        ldap_config['ldap_password'] = ldap_config.get('ldap_password') or None
+        ldap_config['ldap_username'] = ldap_config.get('ldap_username', '')
+        ldap_config['ldap_password'] = ldap_config.get('ldap_password', '')
         ldap_config['ldap_is_active_directory'] = \
             rest_utils.verify_and_convert_bool(
                 'ldap_is_active_directory',
