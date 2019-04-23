@@ -22,7 +22,6 @@ from collections import (
 from datetime import timedelta, datetime
 from dateutil import parser as date_parser
 
-from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
 from flask_security import SQLAlchemyUserDatastore, UserMixin, RoleMixin
@@ -515,7 +514,7 @@ class Config(SQLModelBase):
     schema = db.Column(JSONString, nullable=True)
     is_editable = db.Column(db.Boolean, default=True)
     updated_at = db.Column(UTCDateTime)
-    scope = db.Column(postgresql.ARRAY(db.Text), primary_key=True)
+    scope = db.Column(db.Text, primary_key=True)
 
     @declared_attr
     def _updater_id(cls):

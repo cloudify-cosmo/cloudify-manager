@@ -40,7 +40,7 @@ class Config(Base):
     schema = sa.Column(JSONString(), nullable=True)
     is_editable = sa.Column(sa.Boolean, default=True)
     updated_at = sa.Column(UTCDateTime())
-    scope = sa.Column(postgresql.ARRAY(sa.Text), primary_key=True)
+    scope = sa.Column(sa.Text, primary_key=True)
     _updater_id = sa.Column(
         sa.Integer,
         sa.ForeignKey(User.id, ondelete='SET NULL'),
@@ -63,14 +63,14 @@ def upgrade():
         Config(
             name='rest_service_log_path',
             value='/var/log/cloudify/rest/cloudify-rest-service.log',
-            scope=['rest'],
+            scope='rest',
             schema=None,
             is_editable=False
         ),
         Config(
             name='rest_service_log_level',
             value='INFO',
-            scope=['rest'],
+            scope='rest',
             schema={'type': 'string', 'enum': ['DEBUG', 'INFO', 'WARNING',
                                                'ERROR', 'CRITICAL']},
             is_editable=True
@@ -78,112 +78,112 @@ def upgrade():
         Config(
             name='ldap_server',
             value=None,
-            scope=['rest'],
+            scope='rest',
             schema={'type': 'string'},
             is_editable=True
         ),
         Config(
             name='ldap_username',
             value=None,
-            scope=['rest'],
+            scope='rest',
             schema={'type': 'string'},
             is_editable=True
         ),
         Config(
             name='ldap_password',
             value=None,
-            scope=['rest'],
+            scope='rest',
             schema={'type': 'string'},
             is_editable=True
         ),
         Config(
             name='ldap_domain',
             value=None,
-            scope=['rest'],
+            scope='rest',
             schema={'type': 'string'},
             is_editable=True
         ),
         Config(
             name='ldap_is_active_directory',
             value=None,
-            scope=['rest'],
+            scope='rest',
             schema={'type': 'boolean'},
             is_editable=True
         ),
         Config(
             name='ldap_dn_extra',
             value=None,
-            scope=['rest'],
+            scope='rest',
             schema=None,
             is_editable=True
         ),
         Config(
             name='ldap_timeout',
             value=5.0,
-            scope=['rest'],
+            scope='rest',
             schema={'type': 'number'},
             is_editable=True
         ),
         Config(
             name='file_server_root',
             value='/opt/manager/resources',
-            scope=['rest'],
+            scope='rest',
             schema=None,
             is_editable=False
         ),
         Config(
             name='file_server_url',
             value='http://127.0.0.1:53333/resources',
-            scope=['rest'],
+            scope='rest',
             schema=None,
             is_editable=False
         ),
         Config(
             name='insecure_endpoints_disabled',
             value=True,
-            scope=['rest'],
+            scope='rest',
             schema={'type': 'boolean'},
             is_editable=False
         ),
         Config(
             name='maintenance_folder',
             value='/opt/manager/maintenance',
-            scope=['rest'],
+            scope='rest',
             schema=None,
             is_editable=False
         ),
         Config(
             name='min_available_memory_mb',
             value=100,
-            scope=['rest'],
+            scope='rest',
             schema={'type': 'number', 'minimum': 0},
             is_editable=True
         ),
         Config(
             name='failed_logins_before_account_lock',
             value=4,
-            scope=['rest'],
+            scope='rest',
             schema={'type': 'number', 'minimum': 1},
             is_editable=True
         ),
         Config(
             name='account_lock_period',
             value=-1,
-            scope=['rest'],
+            scope='rest',
             schema={'type': 'number', 'minimum': -1},
             is_editable=True
         ),
         Config(
             name='public_ip',
             value=None,
-            scope=['rest'],
+            scope='rest',
             schema=None,
             is_editable=False
         ),
         Config(
             name='default_page_size',
             value=1000,
-            scope=['rest'],
+            scope='rest',
             schema={'type': 'number', 'minimum': 1},
             is_editable=True
         ),
@@ -191,42 +191,42 @@ def upgrade():
         Config(
             name='mgmtworker_max_workers',
             value=5,
-            scope=['mgmtworker'],
+            scope='mgmtworker',
             schema={'type': 'number', 'minimum': 1},
             is_editable=True
         ),
         Config(
             name='mgmtworker_min_workers',
             value=2,
-            scope=['mgmtworker'],
+            scope='mgmtworker',
             schema={'type': 'number', 'minimum': 1},
             is_editable=True
         ),
         Config(
             name='broker_port',
             value=5671,
-            scope=['agent'],
+            scope='agent',
             schema={'type': 'number', 'minimum': 1, 'maximum': 65535},
             is_editable=True
         ),
         Config(
             name='min_workers',
             value=2,
-            scope=['agent'],
+            scope='agent',
             schema={'type': 'number', 'minimum': 1},
             is_editable=True
         ),
         Config(
             name='max_workers',
             value=5,
-            scope=['agent'],
+            scope='agent',
             schema={'type': 'number', 'minimum': 1},
             is_editable=True
         ),
         Config(
             name='heartbeat',
             value=30,
-            scope=['agent'],
+            scope='agent',
             schema={'type': 'number', 'minimum': 0},
             is_editable=True
         ),
