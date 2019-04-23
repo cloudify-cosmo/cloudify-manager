@@ -241,20 +241,6 @@ def upgrade():
     session.commit()
 
     op.create_table(
-        'managers',
-        sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
-        sa.Column('hostname', sa.Text(), unique=True, nullable=False),
-        sa.Column('private_ip', sa.Text(), unique=True, nullable=False),
-        sa.Column('public_ip', sa.Text(), unique=True, nullable=False),
-        sa.Column('version', sa.Text(), nullable=False),
-        sa.Column('edition', sa.Text(), nullable=False),
-        sa.Column('distribution', sa.Text(), nullable=False),
-        sa.Column('distro_release', sa.Text(), nullable=False),
-        sa.Column('fs_sync_node_id', sa.Text(), nullable=True),
-        sa.Column('networks', JSONString(), nullable=True),
-        sa.PrimaryKeyConstraint('id', name=op.f('managers_pkey'))
-    )
-    op.create_table(
         'certificates',
         sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
         sa.Column('name', sa.Text(), unique=True, nullable=False),
@@ -267,6 +253,27 @@ def upgrade():
             ondelete='SET NULL'
         ),
         sa.PrimaryKeyConstraint('id', name=op.f('certificates_pkey'))
+    )
+    op.create_table(
+        'managers',
+        sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column('hostname', sa.Text(), unique=True, nullable=False),
+        sa.Column('private_ip', sa.Text(), unique=True, nullable=False),
+        sa.Column('public_ip', sa.Text(), unique=True, nullable=False),
+        sa.Column('version', sa.Text(), nullable=False),
+        sa.Column('edition', sa.Text(), nullable=False),
+        sa.Column('distribution', sa.Text(), nullable=False),
+        sa.Column('distro_release', sa.Text(), nullable=False),
+        sa.Column('fs_sync_node_id', sa.Text(), nullable=True),
+        sa.Column('networks', JSONString(), nullable=True),
+        sa.Column('_ca_cert_id', sa.Integer(), nullable=False),
+
+        sa.ForeignKeyConstraint(
+            ['_ca_cert_id'],
+            [u'certificates.id'],
+            ondelete='CASCADE'
+        ),
+        sa.PrimaryKeyConstraint('id', name=op.f('managers_pkey'))
     )
     op.create_table(
         'rabbitmq_brokers',

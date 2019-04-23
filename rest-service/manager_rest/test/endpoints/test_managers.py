@@ -37,7 +37,8 @@ _manager1 = {
     'networks': {
         'default': '192.0.2.1',
         'network2': '192.0.2.2'
-    }
+    },
+    'ca_cert_content': 'CERT CONTENT'
 }
 _manager2 = {
     'hostname': 'manager2.test.domain',
@@ -49,7 +50,8 @@ _manager2 = {
     'distro_release': 'Core',
     'networks': {
         'default': '192.0.2.3'
-    }
+    },
+    'ca_cert_content': 'CERT CONTENT2'
 }
 
 
@@ -63,13 +65,19 @@ class ManagersTableTestCase(base_test.BaseServerTestCase):
         self._remove_managers()
         super(ManagersTableTestCase, self).tearDown()
 
-    def _add_managers(self, manager1=None, manager2=None):
-        if manager1:
-            _manager1.update(manager1)
-        if manager2:
-            _manager2.update(manager2)
-        self.sm.put(models.Manager(**_manager1))
-        self.sm.put(models.Manager(**_manager2))
+    def _add_managers(self):
+        manager1 = _manager1.copy()
+        manager2 = _manager2.copy()
+        cert1 = self.sm.put(models.Certificate(
+            name='{0}-ca'.format(manager1['hostname']),
+            value=manager1.pop('ca_cert_content')
+        ))
+        cert2 = self.sm.put(models.Certificate(
+            name='{0}-ca'.format(_manager2['hostname']),
+            value=manager2.pop('ca_cert_content')
+        ))
+        self.sm.put(models.Manager(ca_cert=cert1, **manager1))
+        self.sm.put(models.Manager(ca_cert=cert2, **manager2))
 
     def _remove_managers(self):
         try:
@@ -117,11 +125,11 @@ class ManagersTableTestCase(base_test.BaseServerTestCase):
             'networks': {
                 'default': '192.0.2.1',
                 'network2': '192.0.2.2'
-            }
+            },
+            'ca_cert_content': 'CERT CONTENT'
         }
         with mock.patch('manager_rest.rest.resources_v3_1.manager.'
-                        'add_manager') as add_manager:
-            add_manager.return_value = None
+                        'add_manager', return_value=None):
             result = self.client.manager.add_manager(**new_manager)
             del result['id']
             self.assertEqual(result, new_manager)
@@ -136,7 +144,8 @@ class ManagersTableTestCase(base_test.BaseServerTestCase):
             'distribution': 'centos',
             'distro_release': 'Core',
             'fs_sync_node_id': 'G56IOI7-MZJNU2Y-IQGDREY-DM2MGTI-'
-                               'MGL3BXN-PQ6W5BM-TBBZ4TJ-XZWICQ2'
+                               'MGL3BXN-PQ6W5BM-TBBZ4TJ-XZWICQ2',
+            'ca_cert_content': 'CERT CONTENT'
         }
         with self.assertRaises(CloudifyClientError) as error:
             self.client.manager.add_manager(**new_manager)
@@ -174,8 +183,7 @@ class ManagersTableTestCase(base_test.BaseServerTestCase):
 
     def test_remove_manager(self):
         with mock.patch('manager_rest.rest.resources_v3_1.manager.'
-                        'remove_manager') as remove_manager:
-            remove_manager.return_value = None
+                        'remove_manager', return_value=None):
             result = self.client.manager.remove_manager('manager2.test.domain')
             del result['id']               # value unknown
             del result['fs_sync_node_id']  # value is None
