@@ -47,10 +47,6 @@ class ClusterServiceConsumer(TaskConsumer):
         }
 
     def handle_task(self, full_task):
-        import sys
-        sys.path.append('/tmp/pydevd-pycharm.egg')
-        import pydevd_pycharm
-        pydevd_pycharm.settrace('172.17.0.1', port=53200, stdoutToServer=True, stderrToServer=True)
         task = full_task['cluster_service_task']
         task_name = task['task_name']
         kwargs = task['kwargs']
