@@ -459,7 +459,7 @@ class SQLStorageManager(object):
         result = query.first()
 
         if not result:
-            if filters:
+            if filters and set(filters.keys()) != {'id'}:
                 filters_message = ' (filters: {0})'.format(filters)
             else:
                 filters_message = ''
