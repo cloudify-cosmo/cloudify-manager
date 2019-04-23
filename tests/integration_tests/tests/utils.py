@@ -18,6 +18,7 @@ import sh
 import json
 import time
 import wagon
+import socket
 import shutil
 import tarfile
 import tempfile
@@ -291,3 +292,14 @@ def create_tenants_and_add_users(client, num_of_tenants):
         client.tenants.create(tenant_name)
         client.users.create(username, 'password', role='default')
         client.tenants.add_user(username, tenant_name, role='manager')
+
+
+def wait_for_rest(obj, timeout_sec):
+    end = time.time() + timeout_sec
+    while not time.time() > end:
+        docker_host = obj.get_docker_host()
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        p_open = sock.connect_ex((docker_host, 80)) == 0
+        if p_open:
+            return True
+    return False

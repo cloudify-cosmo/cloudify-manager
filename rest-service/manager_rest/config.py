@@ -16,9 +16,13 @@
 import os
 import yaml
 import atexit
+import jsonschema
 
 from json import dump
+from datetime import datetime
+from flask_security import current_user
 
+from manager_rest.manager_exceptions import ConflictError
 
 CONFIG_TYPES = [
     ('MANAGER_REST_CONFIG_PATH', ''),
@@ -181,6 +185,40 @@ class Config(object):
 
         # disallow implicit loading
         self.can_load_from_db = False
+
+    def update_db(self, config_dict):
+        """
+        Update the config table in the DB with values passed in the
+        config dictionary parameter
+        """
+        from manager_rest.storage import models
+        from sqlalchemy import create_engine, orm
+
+        names = [key for key, val in config_dict.items() if val]
+        engine = create_engine(self.db_url)
+        session = orm.Session(bind=engine)
+        stored_configs = (session.query(models.Config)
+                          .filter(models.Config.name.in_(names))
+                          .all())
+        config_mappings = []
+        for entry in stored_configs:
+            if not entry.is_editable:
+                raise ConflictError('{0} is not editable'.format(entry.name))
+            if entry.schema:
+                try:
+                    jsonschema.validate(config_dict[entry.name], entry.schema)
+                except jsonschema.ValidationError as e:
+                    raise ConflictError(e.args[0])
+            config_mappings.append({
+                'name': entry.name,
+                'value': config_dict[entry.name],
+                'updated_at': datetime.now(),
+                '_updater_id': current_user.id,
+            })
+        session.bulk_update_mappings(models.Config, config_mappings)
+        session.commit()
+        session.close()
+        engine.dispose()
 
     @property
     def db_url(self):

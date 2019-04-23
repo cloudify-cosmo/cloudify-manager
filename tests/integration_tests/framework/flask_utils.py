@@ -14,8 +14,8 @@
 # limitations under the License.
 
 import os
-import json
 import yaml
+import json
 import logging
 import tempfile
 
@@ -81,6 +81,14 @@ def reset_storage():
             .format(script_path=SCRIPT_PATH, config_path=CONFIG_PATH))
 
 
+def set_ldap(config_data):
+    logger.info('Setting LDAP configuration')
+    _prepare_set_ldap_script()
+    execute("/opt/manager/env/bin/python {script_path} --config '{cfg_data}'"
+            .format(script_path='/tmp/set_ldap.py',
+                    cfg_data=json.dumps(config_data)))
+
+
 def close_session(app):
     db.session.remove()
     db.get_engine(app).dispose()
@@ -99,3 +107,8 @@ def load_user(app, username=None):
     # And then load the admin as the currently active user
     app.extensions['security'].login_manager.reload_user(user)
     return user
+
+
+def _prepare_set_ldap_script():
+    set_ldap_script = get_resource('scripts/set_ldap.py')
+    copy_file_to_manager(set_ldap_script, '/tmp/set_ldap.py')
