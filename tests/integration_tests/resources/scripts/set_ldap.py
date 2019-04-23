@@ -1,5 +1,5 @@
 ########
-# Copyright (c) 2018 Cloudify Platform Ltd. All rights reserved
+# Copyright (c) 2013-2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 #    * limitations under the License.
 
 import os
-import ast
+import json
 import time
 import socket
 import argparse
@@ -23,20 +23,22 @@ from manager_rest import config
 from manager_rest.flask_utils import setup_flask_app, set_admin_current_user
 
 
+CONFIG_FILE_LOCATION = '/opt/manager/cloudify-rest.conf'
+
+
 def set_ldap(config_dict):
     app = setup_flask_app()
-    # mock current user, and reload rest configuration
+    # Mock current user, and reload rest configuration
     set_admin_current_user(app)
-    config.instance.load_from_file("/opt/manager/cloudify-rest.conf")
+    config.instance.load_from_file(CONFIG_FILE_LOCATION)
 
     # Update the config table on manager DB to include LDAP configurations
     config.instance.update_db(config_dict)
 
     # Restart the rest service to load the new LDAP configuration
-    os.system('systemctl stop cloudify-restservice')
-    os.system('systemctl start cloudify-restservice')
+    os.system('systemctl restart cloudify-restservice')
 
-    # wait for rest service to reload, up to 5 seconds
+    # Wait for rest service to reload, up to 5 seconds
     end = time.time() + 5
     while not time.time() > end:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -49,5 +51,5 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config')
     args = parser.parse_args()
-    config_dict = ast.literal_eval(args.config)
+    config_dict = json.loads(args.config)
     set_ldap(config_dict)

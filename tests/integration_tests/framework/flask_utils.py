@@ -14,8 +14,8 @@
 # limitations under the License.
 
 import os
-import json
 import yaml
+import json
 import logging
 import tempfile
 
@@ -59,11 +59,6 @@ def prepare_reset_storage_script():
         os.unlink(f.name)
 
 
-def prepare_set_ldap_script():
-    reset_script = get_resource('scripts/set_ldap.py')
-    copy_file_to_manager(reset_script, '/tmp/set_ldap.py')
-
-
 def setup_flask_app():
     global security_config
     if not security_config:
@@ -88,9 +83,10 @@ def reset_storage():
 
 def set_ldap(config_data):
     logger.info('Setting LDAP configuration')
-    execute("/opt/manager/env/bin/python {script_path} --config {config_data}"
+    _prepare_set_ldap_script()
+    execute("/opt/manager/env/bin/python {script_path} --config '{cfg_data}'"
             .format(script_path='/tmp/set_ldap.py',
-                    config_data='\"'+str(config_data)+'\"'))
+                    cfg_data=json.dumps(config_data)))
 
 
 def close_session(app):
@@ -111,3 +107,8 @@ def load_user(app, username=None):
     # And then load the admin as the currently active user
     app.extensions['security'].login_manager.reload_user(user)
     return user
+
+
+def _prepare_set_ldap_script():
+    set_ldap_script = get_resource('scripts/set_ldap.py')
+    copy_file_to_manager(set_ldap_script, '/tmp/set_ldap.py')

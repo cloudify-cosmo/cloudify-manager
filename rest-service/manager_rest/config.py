@@ -197,30 +197,28 @@ class Config(object):
         names = [key for key, val in config_dict.items() if val]
         engine = create_engine(self.db_url)
         session = orm.Session(bind=engine)
-        query = (session.query(models.Config)
-                 .filter(models.Config.name.in_(names))
-                 .all()
-                 )
-        user_mappings = []
-        for item in query:
-            if not item.is_editable:
-                raise ConflictError('{0} is not editable'.format(item.name))
-            if item.schema:
+        stored_configs = (session.query(models.Config)
+                          .filter(models.Config.name.in_(names))
+                          .all())
+        config_mappings = []
+        for entry in stored_configs:
+            if not entry.is_editable:
+                raise ConflictError('{0} is not editable'.format(entry.name))
+            if entry.schema:
                 try:
-                    jsonschema.validate(config_dict[item.name], item.schema)
+                    jsonschema.validate(config_dict[entry.name], entry.schema)
                 except jsonschema.ValidationError as e:
                     raise ConflictError(e.args[0])
-            user_mappings.append({
-                'name': item.name,
-                'value': config_dict[item.name],
+            config_mappings.append({
+                'name': entry.name,
+                'value': config_dict[entry.name],
                 'updated_at': datetime.now(),
                 '_updater_id': current_user.id,
             })
-        session.bulk_update_mappings(models.Config, user_mappings)
+        session.bulk_update_mappings(models.Config, config_mappings)
         session.commit()
         session.close()
         engine.dispose()
-        return query
 
     @property
     def db_url(self):
