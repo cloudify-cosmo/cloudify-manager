@@ -28,7 +28,7 @@ class ManagerConfigTestCase(base_test.BaseServerTestCase):
             'name': 'x',
             'value': 5,
             '_updater_id': current_user.id,
-            'scope': ['rest']
+            'scope': 'rest'
         }
         config.update(kwargs)
         self.sm.put(models.Config(**config))
@@ -42,7 +42,7 @@ class ManagerConfigTestCase(base_test.BaseServerTestCase):
             'value': 5,
             'updater_name': current_user.username,
             'is_editable': True,
-            'scope': ['rest']
+            'scope': 'rest'
         }
         actual = {k: result[0][k] for k in expected}
         self.assertEqual(actual, expected)
@@ -54,8 +54,8 @@ class ManagerConfigTestCase(base_test.BaseServerTestCase):
         self.assertEqual(result.value, 5)
 
     def test_get_by_scope(self):
-        self._put_config(scope=['rest'])
-        self._put_config(name='y', value=6, scope=['mgmtworker'])
+        self._put_config(scope='rest')
+        self._put_config(name='y', value=6, scope='mgmtworker')
         result = self.client.manager.get_config(scope='mgmtworker')
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0].name, 'y')

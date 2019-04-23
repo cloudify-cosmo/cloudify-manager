@@ -57,9 +57,7 @@ class ManagerConfig(SecuredResource):
     def _get_items(self, scope=None):
         sm = get_storage_manager()
         if scope:
-            filters = {
-                'scope': lambda column: column.contains([scope])
-            }
+            filters = {'scope': scope}
         else:
             filters = None
         return [item.to_dict() for item in
