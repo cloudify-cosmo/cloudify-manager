@@ -108,7 +108,8 @@ def setup_resources(api):
         'TasksGraphs': 'tasks_graphs',
         'TasksGraphsId': 'tasks_graphs/<string:tasks_graph_id>',
         'ExecutionsCheck': 'executions/<execution_id>/should-start',
-        'RabbitMQBrokers': 'brokers'
+        'RabbitMQBrokers': 'brokers',
+        'License': 'license'
     }
 
     # Set version endpoint as a non versioned endpoint

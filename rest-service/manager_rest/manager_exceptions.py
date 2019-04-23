@@ -532,10 +532,10 @@ class TenantNotProvided(ForbiddenError):
 
 class IncompatibleClusterArchitectureError(ManagerException):
     """
-    Raise when a cluster node with architecture X is trying to join a cluster
+    Raised when a cluster node with architecture X is trying to join a cluster
     with architecture Y
 
-    I.E - Master is all-in-one and slave has an external database
+    i.e: Master is all-in-one and slave has an external database
     """
     ERROR_CODE = 'incompatible_cluster_architecture'
 
@@ -543,6 +543,37 @@ class IncompatibleClusterArchitectureError(ManagerException):
         super(IncompatibleClusterArchitectureError, self).__init__(
             400,
             IncompatibleClusterArchitectureError.ERROR_CODE,
+            *args,
+            **kwargs
+        )
+
+
+class InvalidCloudifyLicense(ManagerException):
+    """
+    Raised when the uploaded Cloudify license can't be verified.
+    This can happen when:
+    1. The license has been tampered and the signature does not
+       match.
+    2. The license version is older than the Manager`s version.
+    """
+    ERROR_CODE = 'unverified_cloudify_license'
+
+    def __init__(self, *args, **kwargs):
+        super(InvalidCloudifyLicense, self).__init__(
+            400,
+            InvalidCloudifyLicense.ERROR_CODE,
+            *args,
+            **kwargs
+        )
+
+
+class InvalidYamlFormat(ManagerException):
+    ERROR_CODE = 'invalid_yaml_format'
+
+    def __init__(self, *args, **kwargs):
+        super(InvalidYamlFormat, self).__init__(
+            400,
+            InvalidYamlFormat.ERROR_CODE,
             *args,
             **kwargs
         )

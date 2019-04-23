@@ -17,11 +17,11 @@ import os
 from base64 import urlsafe_b64encode
 
 from manager_rest.test.attribute import attr
-from manager_rest.constants import CLOUDIFY_TENANT_HEADER
 from manager_rest.test.base_test import LATEST_API_VERSION
 from manager_rest.maintenance import get_maintenance_file_path
-from manager_rest.utils import BASIC_AUTH_PREFIX, CLOUDIFY_AUTH_HEADER
-
+from manager_rest.constants import (CLOUDIFY_TENANT_HEADER,
+                                    BASIC_AUTH_PREFIX,
+                                    CLOUDIFY_AUTH_HEADER)
 from .test_base import SecurityTestBase
 from ..security_utils import ADMIN_ROLE, USER_ROLE
 

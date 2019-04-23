@@ -52,12 +52,14 @@ from manager_rest.storage.storage_utils import \
 from manager_rest.constants import (CLOUDIFY_TENANT_HEADER,
                                     DEFAULT_TENANT_NAME,
                                     FILE_SERVER_BLUEPRINTS_FOLDER)
+from manager_rest import premium_enabled
 
 from .mocks import (
     MockHTTPClient,
     CLIENT_API_VERSION,
     build_query_string,
-    mock_execute_task
+    mock_execute_task,
+    upload_mock_cloudify_license
 )
 
 
@@ -326,6 +328,11 @@ class BaseServerTestCase(unittest.TestCase):
                 'gAAAAABb9p7U_Lnlmg7vyijjoxovyg215ThYi-VCTCzVYa1p-vpzi31WGko' \
                 'KD_hK1mQyKgjRss_Nz-3m-cgHpZChnVT4bxZIjnOnL6sF8RtozvlRoGHtnF' \
                 'G6jxqQDeEf5Heos0ia4Q5H  '
+
+            if premium_enabled:
+                # License is required only when working with Cloudify Premium
+                upload_mock_cloudify_license(get_storage_manager())
+
         finally:
             os.remove(temp_auth_file)
 

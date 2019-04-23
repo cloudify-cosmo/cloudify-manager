@@ -23,7 +23,7 @@ from cloudify.workflows import ctx
 from cloudify.cryptography_utils import encrypt
 from cloudify.exceptions import NonRecoverableError
 
-from .constants import ADMIN_DUMP_FILE
+from .constants import ADMIN_DUMP_FILE, LICENSE_DUMP_FILE
 from .utils import run as run_shell
 
 POSTGRESQL_DEFAULT_PORT = 5432
@@ -39,7 +39,9 @@ class Postgres(object):
     _POSTGRES_DUMP_FILENAME = 'pg_data'
     _STAGE_DB_NAME = 'stage'
     _COMPOSER_DB_NAME = 'composer'
-    _TABLES_TO_KEEP = ['alembic_version', 'provider_context', 'roles']
+    _TABLES_TO_KEEP = ['alembic_version', 'provider_context', 'roles',
+                       'licenses']
+    _TABLES_TO_EXCLUDE_ON_DUMP = _TABLES_TO_KEEP + ['snapshots']
     _CONFIG_TABLES = ['config', 'rabbitmq_brokers', 'certificates']
     _TABLES_TO_EXCLUDE_ON_DUMP = _TABLES_TO_KEEP + ['snapshots'] + \
         _CONFIG_TABLES
@@ -63,13 +65,16 @@ class Postgres(object):
             ctx.logger.debug('Updating Postgres config: host: {0}, port: {1}'
                              .format(self._host, self._port))
 
-    def restore(self, tempdir):
+    def restore(self, tempdir, license=None):
         ctx.logger.info('Restoring DB from postgres dump')
         dump_file = os.path.join(tempdir, self._POSTGRES_DUMP_FILENAME)
 
         # Add to the beginning of the dump queries that recreate the schema
         clear_tables_queries = self._get_clear_tables_queries()
         dump_file = self._prepend_dump(dump_file, clear_tables_queries)
+
+        # Add the current execution
+        self._append_dump(dump_file, self._get_execution_restore_query())
 
         # Don't change admin user during the restore or the workflow will
         # fail to correctly execute (the admin user update query reverts it
@@ -269,7 +274,8 @@ class Postgres(object):
                    self._db_name]
         run_shell(command)
 
-    def _dump_to_file(self, destination_path, db_name, exclude_tables=None):
+    def _dump_to_file(self, destination_path, db_name, exclude_tables=None,
+                      table=None):
         ctx.logger.debug('Creating db dump file: {0}, excluding: {1}'.
                          format(destination_path, exclude_tables))
         flags = []
@@ -286,6 +292,8 @@ class Postgres(object):
                    '-U', self._username,
                    db_name,
                    '-f', destination_path]
+        if table:
+            command += ['--table', table]
         command.extend(flags)
         run_shell(command)
 
@@ -318,7 +326,7 @@ class Postgres(object):
             db_name,
         ]
 
-    def _restore_dump(self, dump_file, db_name):
+    def _restore_dump(self, dump_file, db_name, table=None):
         """Execute `psql` to restore an SQL dump into the DB
         """
         ctx.logger.debug('Restoring db dump file: {0}'.format(dump_file))
@@ -327,6 +335,8 @@ class Postgres(object):
             '--single-transaction',
             '-f', dump_file
         ])
+        if table:
+            command += ['--table', table]
         run_shell(command)
 
     @staticmethod
@@ -498,3 +508,11 @@ class Postgres(object):
             raise NonRecoverableError('Illegal state - '
                                       'missing admin user in db')
         return response['all'][0]
+
+    def dump_license_to_file(self, tmp_dir):
+        destination = os.path.join(tmp_dir, LICENSE_DUMP_FILE)
+        self._dump_to_file(destination, self._db_name, table='licenses')
+
+    def restore_license_from_dump(self, tmp_dir):
+        dump_file = os.path.join(tmp_dir, LICENSE_DUMP_FILE)
+        self._restore_dump(dump_file, self._db_name, table='licenses')

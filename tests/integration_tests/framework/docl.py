@@ -33,6 +33,8 @@ import cloudify_rest_client.exceptions
 import cloudify.utils
 
 from integration_tests.framework import utils, constants
+from integration_tests.framework.constants import INSERT_MOCK_LICENSE_QUERY
+
 
 # All container specific docl commands that are executed with no explicit
 # container id will be executed on the default_container_id which is set
@@ -133,10 +135,16 @@ def run_manager(label=None, tag=None):
             container_details = yaml.safe_load(f2)
     _set_container_id_and_ip(container_details)
     utils.update_profile_context()
+    upload_mock_license()
     _wait_for_services()
     logger.info(
         'Container start took {0} seconds'.format(time.time() - start))
     return container_details
+
+
+def upload_mock_license():
+    execute(('sudo -u postgres psql cloudify_db '
+             '-c "{0}"'.format(INSERT_MOCK_LICENSE_QUERY)))
 
 
 def clean(label=None):

@@ -25,19 +25,13 @@ from cloudify.models_states import ExecutionState
 from manager_rest import config
 from manager_rest import utils
 from manager_rest.resource_manager import get_resource_manager
-from manager_rest.constants import (MAINTENANCE_MODE_ACTIVATED,
+from manager_rest.constants import (FORBIDDEN_METHODS,
+                                    MAINTENANCE_MODE_ACTIVATED,
                                     MAINTENANCE_MODE_STATUS_FILE,
                                     MAINTENANCE_MODE_ACTIVATING,
                                     MAINTENANCE_MODE_ACTIVE_ERROR_CODE,
-                                    MAINTENANCE_MODE_ACTIVATING_ERROR_CODE)
-
-
-FORBIDDEN_METHODS = ['POST', 'PATCH', 'PUT']
-ALLOWED_ENDPOINTS = ['maintenance',
-                     'snapshots',
-                     'status',
-                     'version']
-LOCAL_ADDRESS = '127.0.0.1'
+                                    MAINTENANCE_MODE_ACTIVATING_ERROR_CODE,
+                                    ALLOWED_MAINTENANCE_ENDPOINTS)
 
 
 def get_maintenance_file_path():
@@ -67,7 +61,7 @@ def maintenance_mode_handler():
         return
 
     # enabling internal requests
-    if _is_internal_request() and is_bypass_maintenance_mode():
+    if utils.is_internal_request() and is_bypass_maintenance_mode():
         return
 
     # Removing v*/ from the endpoint
@@ -96,7 +90,7 @@ def maintenance_mode_handler():
                        state=state,
                        request_endpoint=request_endpoint)
 
-        if _check_allowed_endpoint(request_endpoint):
+        if utils.check_allowed_endpoint(ALLOWED_MAINTENANCE_ENDPOINTS):
             return
 
         if state['status'] == MAINTENANCE_MODE_ACTIVATED:
@@ -132,13 +126,6 @@ def _return_maintenance_error(status):
     return _activating_maintenance_mode_error()
 
 
-def _check_allowed_endpoint(request_endpoint):
-    for endpoint in ALLOWED_ENDPOINTS:
-        if request_endpoint.startswith(endpoint):
-            return True
-    return False
-
-
 def get_running_executions():
     executions = get_resource_manager().list_executions(
         is_include_system_workflows=True,
@@ -158,22 +145,8 @@ def get_running_executions():
     return running_executions
 
 
-def _is_internal_request():
-    remote_addr = _get_remote_addr()
-    http_hosts = [_get_host(), LOCAL_ADDRESS]
-    return all([remote_addr, http_hosts, remote_addr in http_hosts])
-
-
 def is_bypass_maintenance_mode():
     return utils.is_bypass_maintenance_mode(request)
-
-
-def _get_remote_addr():
-    return request.remote_addr
-
-
-def _get_host():
-    return request.host
 
 
 def _create_maintenance_error(error_code):

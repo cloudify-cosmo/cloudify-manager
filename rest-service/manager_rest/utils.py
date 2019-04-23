@@ -30,6 +30,7 @@ from base64 import urlsafe_b64encode
 
 import wagon
 from flask import g
+from flask import request
 from flask_restful import abort
 from werkzeug.local import LocalProxy
 from flask_security import current_user
@@ -40,12 +41,29 @@ from cloudify.constants import BROKER_PORT_SSL
 from manager_rest import constants, config, manager_exceptions
 
 
-CLOUDIFY_AUTH_HEADER = 'Authorization'
-CLOUDIFY_AUTH_TOKEN_HEADER = 'Authentication-Token'
-BASIC_AUTH_PREFIX = 'Basic '
+def check_allowed_endpoint(allowed_endpoints):
+    for endpoint in allowed_endpoints:
+        if endpoint in request.endpoint:
+            return True
+    return False
 
 
-MODELS_TO_PERMISSIONS = {'NodeInstance': 'node_instance'}
+def is_sanity_mode():
+    return os.path.isfile(constants.SANITY_MODE_FILE_PATH)
+
+
+def is_internal_request():
+    remote_addr = _get_remote_addr()
+    http_hosts = [_get_host(), constants.LOCAL_ADDRESS]
+    return all([remote_addr, http_hosts, remote_addr in http_hosts])
+
+
+def _get_host():
+    return request.host
+
+
+def _get_remote_addr():
+    return request.remote_addr
 
 
 def copy_resources(file_server_root, resources_path=None):
@@ -174,10 +192,11 @@ def create_auth_header(username=None, password=None, token=None, tenant=None):
     headers = {}
     if username and password:
         credentials = '{0}:{1}'.format(username, password)
-        headers = {CLOUDIFY_AUTH_HEADER:
-                   BASIC_AUTH_PREFIX + urlsafe_b64encode(credentials)}
+        headers = {constants.CLOUDIFY_AUTH_HEADER:
+                   constants.BASIC_AUTH_PREFIX + urlsafe_b64encode(credentials)
+                   }
     elif token:
-        headers = {CLOUDIFY_AUTH_TOKEN_HEADER: token}
+        headers = {constants.CLOUDIFY_AUTH_TOKEN_HEADER: token}
     if tenant:
         headers[constants.CLOUDIFY_TENANT_HEADER] = tenant
     return headers
@@ -196,8 +215,8 @@ def tenant_specific_authorization(tenant, resource_name, action='list'):
     Return true if the user is permitted to perform a certain action in a
     in a given tenant on a given resource (for filtering purpose).
     """
-    resource_name = MODELS_TO_PERMISSIONS.get(resource_name,
-                                              resource_name.lower())
+    resource_name = constants.MODELS_TO_PERMISSIONS.get(resource_name,
+                                                        resource_name.lower())
     permission_name = '{0}_{1}'.format(resource_name, action)
     return current_user.has_role_in(
         tenant, config.instance.authorization_permissions[permission_name])

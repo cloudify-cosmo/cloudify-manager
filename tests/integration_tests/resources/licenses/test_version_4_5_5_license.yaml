@@ -1,0 +1,15 @@
+license:
+  capabilities:
+  - cap1
+  - cap2
+  cloudify_version: 4.5.5
+  customer_id: MockCustomer
+  expiration_date: 11/24/2030
+  license_edition: Spire
+  trial: false
+signature: !!binary |
+  dDP8LYbfcE7QEI5EepglD4zACuhTlf4Rx3x0HpKbj26dkOX4ZqCiStHP6gvNB28Z7WW8Fjsjz5+r
+  AxJGpP4pNflVyJt5JaQjoC8o2G1cJxb+Ub0x7eeTwyFGpUYVmoLIIpgkL3ocwnDiqCBAMG+X6YHq
+  AGcDc3z4nyoMW/+xNSsfTx8jq8bJkICdsV6G0romkw6UU66XnI6+U0VnA6IxqyyYon8nnhDN+hN7
+  EhS0ySEm/i3xH1iCTkHJakcjMRsiy32ZPEcF+veoPTW3AEtQ2kDqOiaaFyZiVOwc5MKDc3u5ov88
+  QFTgWcxdXW/s5Ln+Lu5A156A1avI53FwtX+s1Q==
