@@ -13,13 +13,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from datetime import datetime
-
-import jsonschema
-from flask_security import current_user
 from flask_restful.reqparse import Argument
 
-from manager_rest.manager_exceptions import ConflictError
 from manager_rest.rest import rest_utils
 from manager_rest.rest.rest_decorators import (
     exceptions_handled,
@@ -91,24 +86,14 @@ class ManagerConfigId(SecuredResource):
         If a schema is specified for the given setting, the new value
         must validate.
         """
-        sm = get_storage_manager()
         data = rest_utils.get_json_and_verify_params({
             'value': {},
             'force': {'type': bool, 'optional': True}
         })
         value = data['value']
         force = data.get('force', False)
+        config.instance.update_db({name: value}, force)
 
-        inst = sm.get(models.Config, None, filters={'name': name})
-        if not inst.is_editable and not force:
-            raise ConflictError('{0} is not editable'.format(name))
-        if inst.schema:
-            try:
-                jsonschema.validate(value, inst.schema)
-            except jsonschema.ValidationError as e:
-                raise ConflictError(e.args[0])
-        inst.value = value
-        inst.updated_at = datetime.now()
-        inst.updated_by = current_user
-        sm.update(inst)
-        return inst
+        # Get updated entry for return value
+        sm = get_storage_manager()
+        return sm.get(models.Config, None, filters={'name': name})
