@@ -1,15 +1,15 @@
 license:
   capabilities:
-  - Mock1
-  - Mock2
-  cloudify_version: '4.6'
-  customer_id: CloudifyMock
+  - cap1
+  - cap2
+  cloudify_version: '9.0'
+  customer_id: MockCustomer
   expiration_date: 11/24/2030
   license_edition: Spire
   trial: true
 signature: !!binary |
-  P2zh+cU1xGfwmbG9J3BG3nPq1EyFQ96jhTm+cQZ2JJICAW/8NkQxsFdeIOTEdgYq0IjqCZ1W3VPf
-  2cvYRyPx62WxE+JyX1D8JgLAP638hAhWs3Tbh7aj3FIEFeNGbIB2JO95uaOejni5Qm2n9xJkDdEp
-  fug71wu0sCiW1evXKOX3lrfM8J9xnFOd2vnwlCr2jEbCG6HDstHln1RJB1UdiDIB7UDHjN/+sIHJ
-  nfm3fcn7eEoqAbQADuQMxDXQjcdxJfqvsXxkC2Afdv+c/0BKHlKrZCw4Z+b1fqkWlKVCTHBchC3K
-  YdsXfijw7pOkk50GnjhdgucuIqslbThMz/pd8g==
+  ncTRldsYQZ5IwKzvTxTIWFy2PgwpBoZKo+XLKKlSn7cZPLg9PW++3Q80sFJGXYWq3QsfkujRheKI
+  vI7FXVedPL3oztubehH3oUv7uHGZD/hjE+QwtT1kpMl5sEUMe7j52XkTPnXLeZFqAuVXM7h5DzbH
+  mEJB4trA6BrYZivoVmgZUjlWUOTM5aoEKvbqeQUoZbvVpp5VfZX5qu5JLhL1yssFbxT2Z5JN4Tyd
+  ya5neytCVqfLf4Mmn4fiGHLYDnAjxSjeAyQazoDygsyLQtIX3DtRs1ZR+k1KCp6RvlxiqvkyX9Aw
+  ZXo+RQVv3yIgkim7EjmdhdUZrlQTtu1iaHxJuA==
