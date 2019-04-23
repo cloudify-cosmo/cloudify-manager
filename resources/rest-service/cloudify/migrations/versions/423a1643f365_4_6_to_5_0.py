@@ -189,14 +189,14 @@ def upgrade():
         ),
 
         Config(
-            name='mgmtworker_max_workers',
+            name='max_workers',
             value=5,
             scope='mgmtworker',
             schema={'type': 'number', 'minimum': 1},
             is_editable=True
         ),
         Config(
-            name='mgmtworker_min_workers',
+            name='min_workers',
             value=2,
             scope='mgmtworker',
             schema={'type': 'number', 'minimum': 1},
