@@ -13,7 +13,10 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import tempfile
 from datetime import datetime, timedelta
+
+import requests
 
 from integration_tests import AgentlessTestCase
 from integration_tests.framework import postgresql
@@ -23,6 +26,9 @@ from cloudify_rest_client.exceptions import (
     ExpiredCloudifyLicense,
     CloudifyClientError
 )
+
+LICENSE_ENGINE_URL = 'https://us-central1-omer-tenant.cloudfunctions' \
+                     '.net/LicenseEngineHubSpot'
 
 
 class TestLicense(AgentlessTestCase):
@@ -157,6 +163,35 @@ class TestLicense(AgentlessTestCase):
         self._verify_license(expired=False, trial=True)
         self.assertIsNone(license['expiration_date'])
         self.client.blueprints.list()
+
+    def test_gcp_license_engine(self):
+        """
+        Send request to the GCP license engine and make sure the license
+        received is indeed valid.
+        """
+        json_data = {'vid': 5464472,
+                     'properties':
+                         {'email': {'value': 'awesome@gre.at'}}}
+
+        response = requests.post(url=LICENSE_ENGINE_URL, json=json_data)
+
+        with tempfile.NamedTemporaryFile() as license_file:
+            license_file.write(response.text)
+            license_file.flush()
+            self.client.license.upload(license_file.name)
+
+        self._verify_license(expired=False, trial=True)
+        license = self.client.license.list().items[0]
+        customer_id = self._get_customer_id(json_data)
+        self.assertEqual(license['customer_id'], customer_id)
+        self.client.blueprints.list()
+
+    @staticmethod
+    def _get_customer_id(json_data):
+        vid = str(json_data['vid'])
+        email = json_data['properties']['email']['value']
+        domain = email.split('@')[1] + '-'
+        return 'TRL-' + domain + vid
 
     def _upload_license(self, license):
         license_path = get_resource('licenses/{0}'.format(license))
