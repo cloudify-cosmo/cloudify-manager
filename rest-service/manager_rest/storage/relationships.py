@@ -43,7 +43,8 @@ def one_to_many_relationship(child_class,
                              foreign_key_column,
                              parent_class_primary_key='_storage_id',
                              backreference=None,
-                             cascade='all'):
+                             cascade='all',
+                             **relationship_kwargs):
     """Return a one-to-many SQL relationship object
     Meant to be used from inside the *child* object
 
@@ -61,11 +62,13 @@ def one_to_many_relationship(child_class,
         primaryjoin=lambda: parent_primary_key == foreign_key_column,
         # The following line makes sure that when the *parent* is
         # deleted, all its connected children are deleted as well
-        backref=db.backref(backreference, cascade=cascade)
+        backref=db.backref(backreference, cascade=cascade),
+        **relationship_kwargs
     )
 
 
-def many_to_many_relationship(current_class, other_class, table_prefix=None):
+def many_to_many_relationship(current_class, other_class, table_prefix=None,
+                              **relationship_kwargs):
     """Return a many-to-many SQL relationship object
 
     Notes:
@@ -111,7 +114,8 @@ def many_to_many_relationship(current_class, other_class, table_prefix=None):
     return db.relationship(
         other_class,
         secondary=secondary_table,
-        backref=db.backref(backref_name)
+        backref=db.backref(backref_name),
+        **relationship_kwargs
     )
 
 
