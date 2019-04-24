@@ -76,5 +76,5 @@ def get_current_networks(client):
     for manager in client.manager.get_managers():
         manager_networks.update(manager.networks or {})
     for broker in client.manager.get_brokers():
-        broker_networks.update(manager.networks or {})
+        broker_networks.update(broker.networks or {})
     return manager_networks & broker_networks
