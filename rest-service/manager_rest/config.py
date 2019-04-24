@@ -186,7 +186,7 @@ class Config(object):
         # disallow implicit loading
         self.can_load_from_db = False
 
-    def update_db(self, config_dict):
+    def update_db(self, config_dict, force=False):
         """
         Update the config table in the DB with values passed in the
         config dictionary parameter
@@ -202,7 +202,7 @@ class Config(object):
                           .all())
         config_mappings = []
         for entry in stored_configs:
-            if not entry.is_editable:
+            if not entry.is_editable and not force:
                 raise ConflictError('{0} is not editable'.format(entry.name))
             if entry.schema:
                 try:
@@ -211,6 +211,7 @@ class Config(object):
                     raise ConflictError(e.args[0])
             config_mappings.append({
                 'name': entry.name,
+                'scope': entry.scope,
                 'value': config_dict[entry.name],
                 'updated_at': datetime.now(),
                 '_updater_id': current_user.id,
