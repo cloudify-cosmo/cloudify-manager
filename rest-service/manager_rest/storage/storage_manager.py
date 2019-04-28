@@ -26,7 +26,9 @@ from cloudify.models_states import VisibilityState
 
 from manager_rest.storage.models_base import db
 from manager_rest import manager_exceptions, config, utils
-from manager_rest.utils import all_tenants_authorization, is_administrator
+from manager_rest.utils import (is_administrator,
+                                all_tenants_authorization,
+                                validate_global_modification)
 
 try:
     from psycopg2 import DatabaseError as Psycopg2DBError
@@ -597,16 +599,19 @@ class SQLStorageManager(object):
         self._validate_unique_resource_id_per_tenant(instance)
         return instance
 
-    def delete(self, instance):
+    def delete(self, instance, validate_global=False):
         """Delete the passed instance
         """
+        if instance.is_resource and validate_global:
+            validate_global_modification(instance)
         current_app.logger.debug('Delete {0}'.format(instance))
         self._load_relationships(instance)
         db.session.delete(instance)
         self._safe_commit()
         return instance
 
-    def update(self, instance, log=True, modified_attrs=()):
+    def update(self, instance, log=True, modified_attrs=(),
+               validate_global=False):
         """Add `instance` to the DB session, and attempt to commit
 
         :param instance: Instance to be updated in the DB
@@ -617,11 +622,16 @@ class SQLStorageManager(object):
                                properties dict that have been modified).
                                If DB updates aren't happening but no errors
                                are reported then you probably need this.
+        :param validate_global: Verify that modification of this global
+                                resource is permitted
         :return: The updated instance
         """
+        if instance.is_resource and validate_global:
+            validate_global_modification(instance)
         if log:
             current_app.logger.debug('Update {0}'.format(instance))
         db.session.add(instance)
+        self._validate_unique_resource_id_per_tenant(instance)
         for attr in modified_attrs:
             flag_modified(instance, attr)
         self._safe_commit()

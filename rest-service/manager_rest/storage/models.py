@@ -45,4 +45,5 @@ from .resource_models import (Blueprint,
                               Secret,
                               Agent,
                               Operation,
-                              TasksGraph)
+                              TasksGraph,
+                              Site)
