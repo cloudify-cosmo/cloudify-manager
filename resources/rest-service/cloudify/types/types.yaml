@@ -29,6 +29,9 @@ node_types:
         delete: {}
         postdelete: {}
       cloudify.interfaces.validation:
+        create: {}
+        delete: {}
+        # Deprecated - should not be implemented.
         creation: {}
         deletion: {}
       cloudify.interfaces.monitoring:
