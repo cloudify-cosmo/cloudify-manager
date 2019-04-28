@@ -51,9 +51,8 @@ FILE_SERVER_AUTHENTICATORS_FOLDER = 'authenticators'
 SECURITY_FILE_LOCATION = '/opt/manager/rest-security.conf'
 
 LOCAL_ADDRESS = '127.0.0.1'
-ALLOWED_ENDPOINTS = ['status', 'version', 'license']
-ALLOWED_MAINTENANCE_ENDPOINTS = ALLOWED_ENDPOINTS + ['maintenance',
-                                                     'snapshots']
+ALLOWED_ENDPOINTS = ['status', 'version', 'license', 'maintenance']
+ALLOWED_MAINTENANCE_ENDPOINTS = ALLOWED_ENDPOINTS + ['snapshots']
 ALLOWED_LICENSE_ENDPOINTS = ALLOWED_ENDPOINTS + ['tokens', 'config', 'cluster',
                                                  'tenants']
 CLOUDIFY_AUTH_HEADER = 'Authorization'
