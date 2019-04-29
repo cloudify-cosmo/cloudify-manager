@@ -193,7 +193,7 @@ class BaseServerTestCase(unittest.TestCase):
         self._handle_default_db_config()
         self.initialize_provider_context()
         self._setup_current_user()
-        self.addCleanup(self._drop_db)
+        self.addCleanup(self._drop_db, keep_tables=['config'])
 
     @staticmethod
     def _drop_db(keep_tables=None):
