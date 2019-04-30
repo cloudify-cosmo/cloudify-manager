@@ -534,21 +534,6 @@ class Config(SQLModelBase):
         return {'name': self.name}
 
 
-class Manager(SQLModelBase):
-    __tablename__ = 'managers'
-
-    id = db.Column(db.Integer, autoincrement=True, primary_key=True)
-    hostname = db.Column(db.Text, unique=True, nullable=False)
-    private_ip = db.Column(db.Text, unique=True, nullable=False)
-    public_ip = db.Column(db.Text, unique=True, nullable=False)
-    version = db.Column(db.Text, nullable=False)
-    edition = db.Column(db.Text, nullable=False)
-    distribution = db.Column(db.Text, nullable=False)
-    distro_release = db.Column(db.Text, nullable=False)
-    fs_sync_node_id = db.Column(db.Text, nullable=True)
-    networks = db.Column(JSONString)
-
-
 class Certificate(SQLModelBase):
     __tablename__ = 'certificates'
 
@@ -568,7 +553,49 @@ class Certificate(SQLModelBase):
     updater_name = association_proxy('updated_by', 'username')
 
 
-class RabbitMQBroker(SQLModelBase):
+class _WithCACert(object):
+    """A mixin for objects containing a CA cert.
+
+    When connecting to this object, use the stored CA cert to verify
+    the connection.
+    """
+    @declared_attr
+    def _ca_cert_id(cls):
+        return foreign_key(Certificate.id)
+
+    @declared_attr
+    def ca_cert(cls):
+        return one_to_many_relationship(
+            cls, Certificate, cls._ca_cert_id, 'id',
+            lazy='joined')
+
+    ca_cert_content = association_proxy('ca_cert', 'value')
+
+    def write_ca_cert(self):
+        if not self.ca_cert_content:
+            return
+
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            f.write(self.ca_cert_content)
+        return f.name
+
+
+class Manager(_WithCACert, SQLModelBase):
+    __tablename__ = 'managers'
+
+    id = db.Column(db.Integer, autoincrement=True, primary_key=True)
+    hostname = db.Column(db.Text, unique=True, nullable=False)
+    private_ip = db.Column(db.Text, unique=True, nullable=False)
+    public_ip = db.Column(db.Text, unique=True, nullable=False)
+    version = db.Column(db.Text, nullable=False)
+    edition = db.Column(db.Text, nullable=False)
+    distribution = db.Column(db.Text, nullable=False)
+    distro_release = db.Column(db.Text, nullable=False)
+    fs_sync_node_id = db.Column(db.Text, nullable=True)
+    networks = db.Column(JSONString)
+
+
+class RabbitMQBroker(_WithCACert, SQLModelBase):
     __tablename__ = 'rabbitmq_brokers'
 
     name = db.Column(db.Text, primary_key=True)
@@ -582,28 +609,9 @@ class RabbitMQBroker(SQLModelBase):
     params = db.Column(JSONString, nullable=True)
     networks = db.Column(JSONString)
 
-    @declared_attr
-    def _ca_cert_id(cls):
-        return foreign_key(Certificate.id)
-
-    @declared_attr
-    def ca_cert(cls):
-        return one_to_many_relationship(
-            cls, Certificate, cls._ca_cert_id, 'id')
-
-    ca_cert_content = association_proxy('ca_cert', 'value')
-
     @classmethod
     def unique_id(cls):
         return 'name'
-
-    def write_ca_cert(self):
-        if not self.ca_cert_content:
-            return
-
-        with tempfile.NamedTemporaryFile(delete=False) as f:
-            f.write(self.ca_cert_content)
-        return f.name
 
     def _get_identifier_dict(self):
         return {'name': self.name}

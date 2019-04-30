@@ -125,9 +125,15 @@ class Managers(SecuredResource):
             'edition': {'type': unicode},
             'distribution': {'type': unicode},
             'distro_release': {'type': unicode},
+            'ca_cert_content': {'type': unicode},
             'fs_sync_node_id': {'type': unicode, 'optional': True},
             'networks': {'type': dict, 'optional': True}
         })
+        sm = get_storage_manager()
+        new_cert = sm.put(models.Certificate(
+            name='{0}-ca'.format(_manager['hostname']),
+            value=_manager['ca_cert_content']
+        ))
         new_manager = models.Manager(
             hostname=_manager['hostname'],
             private_ip=_manager['private_ip'],
@@ -137,9 +143,10 @@ class Managers(SecuredResource):
             distribution=_manager['distribution'],
             distro_release=_manager['distro_release'],
             fs_sync_node_id=_manager.get('fs_sync_node_id', ''),
-            networks=_manager.get('networks')
+            networks=_manager.get('networks'),
+            ca_cert=new_cert
         )
-        result = get_storage_manager().put(new_manager)
+        result = sm.put(new_manager)
         current_app.logger.info('Manager added successfully')
         if _manager.get('fs_sync_node_id'):
             managers_list = get_storage_manager().list(models.Manager)
