@@ -120,7 +120,7 @@ class SitesName(SecuredResource):
         if not (latitude and longitude):
             raise manager_exceptions.BadParametersError(
                 "Invalid latitude `{0}` or longitude `{1}`. "
-                "They both should have value or neither"
+                "Must supply either both latitude and longitude or neither."
                 .format(latitude, longitude)
             )
 

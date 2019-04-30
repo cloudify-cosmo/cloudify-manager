@@ -128,8 +128,9 @@ class SitesTestCase(base_test.BaseServerTestCase):
                                 'test_site')
 
     def test_create_site_invalid_coordinates(self):
-        error_msg = "400: Invalid latitude `34.787274` or longitude `None`. " \
-                    "They both should have value or neither"
+        error_msg = "400: Invalid latitude `34.787274` or longitude " \
+                    "`None`. Must supply either both latitude and longitude " \
+                    "or neither."
         self.assertRaisesRegexp(CloudifyClientError,
                                 error_msg,
                                 self.client.sites.create,
@@ -218,8 +219,9 @@ class SitesTestCase(base_test.BaseServerTestCase):
                                 visibility=VisibilityState.PRIVATE)
 
     def test_update_site_invalid_coordinates(self):
-        error_msg = "400: Invalid latitude `34.787274` or longitude `None`. " \
-                    "They both should have value or neither"
+        error_msg = "400: Invalid latitude `34.787274` or longitude " \
+                    "`None`. Must supply either both latitude and longitude " \
+                    "or neither."
         self.assertRaisesRegexp(CloudifyClientError,
                                 error_msg,
                                 self.client.sites.update,
