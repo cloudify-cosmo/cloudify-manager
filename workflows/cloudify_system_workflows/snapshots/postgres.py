@@ -328,6 +328,7 @@ class Postgres(object):
         ctx.logger.debug('Restoring db dump file: {0}'.format(dump_file))
         command = self.get_psql_command(db_name)
         command.extend([
+            '-v', 'ON_ERROR_STOP=1',
             '--single-transaction',
             '-f', dump_file
         ])
