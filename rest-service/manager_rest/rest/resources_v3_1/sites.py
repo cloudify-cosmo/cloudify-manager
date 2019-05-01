@@ -100,36 +100,47 @@ class SitesName(SecuredResource):
             valid_values=VisibilityState.STATES,
         )
         request_dict = get_json_and_verify_params({
-            'latitude': {'type': float, 'optional': True},
-            'longitude': {'type': float, 'optional': True},
+            'location': {'type': unicode, 'optional': True},
             'new_name': {'type': unicode, 'optional': True}
         })
         request_dict['visibility'] = visibility
-        self._validate_lat_and_long(request_dict)
+        self._validate_location(request_dict)
         return request_dict
 
-    def _validate_lat_and_long(self, request_dict):
-        latitude = request_dict.get('latitude')
-        longitude = request_dict.get('longitude')
-
-        # Optional params
-        if not latitude and not longitude:
+    def _validate_location(self, request_dict):
+        location = request_dict.get('location')
+        if not location:
             return
 
-        # Valid only as a pair
-        if not (latitude and longitude):
+        # The location format is : "latitude,longitude"
+        latitude, _, longitude = location.partition(',')
+
+        # There is no comma separator
+        if latitude == location:
             raise manager_exceptions.BadParametersError(
-                "Invalid latitude `{0}` or longitude `{1}`. "
-                "Must supply either both latitude and longitude or neither."
-                .format(latitude, longitude)
+                'Invalid location `{0}`, the format is expected to be '
+                '"latitude,longitude" such as "32.071072,34.787274"'
+                .format(location)
             )
 
-        if not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
+        try:
+            latitude = float(latitude)
+            longitude = float(longitude)
+        except ValueError:
             raise manager_exceptions.BadParametersError(
-                "Invalid latitude `{0}` or longitude `{1}`. The latitude "
-                "must be a number between -90 and 90 and the longitude "
-                "between -180 and 180".format(latitude, longitude)
+                "Invalid location `{0}`, the latitude and longitude are "
+                "expected to be of type float".format(location)
             )
+
+        if not (-90.0 <= latitude <= 90.0 and -180.0 <= longitude <= 180.0):
+            raise manager_exceptions.BadParametersError(
+                "Invalid location `{0}`. The latitude must be a number "
+                "between -90 and 90 and the longitude between -180 and 180"
+                .format(location)
+            )
+
+        request_dict['latitude'] = latitude
+        request_dict['longitude'] = longitude
 
 
 class Sites(SecuredResource):

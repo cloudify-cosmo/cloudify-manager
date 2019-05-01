@@ -39,13 +39,39 @@ class SitesTestCase(base_test.BaseServerTestCase):
         for i in range(1, sites_number + 1):
             self._put_site('test_site_{}'.format(i))
 
+    def _test_invalid_location(self, sites_command):
+        error_msg = '400: Invalid location `34.787274`, the format is ' \
+                    'expected to be "latitude,longitude" such as ' \
+                    '"32.071072,34.787274"'
+        self.assertRaisesRegexp(CloudifyClientError,
+                                error_msg,
+                                sites_command,
+                                'test_site',
+                                location='34.787274')
+
+        error_msg = '400: Invalid location `lat,long`, the latitude and ' \
+                    'longitude are expected to be of type float'
+        self.assertRaisesRegexp(CloudifyClientError,
+                                error_msg,
+                                sites_command,
+                                'test_site',
+                                location='lat,long')
+
+        error_msg = '400: Invalid location `200,32.071072`. The latitude ' \
+                    'must be a number between -90 and 90 and the longitude ' \
+                    'between -180 and 180'
+        self.assertRaisesRegexp(CloudifyClientError,
+                                error_msg,
+                                sites_command,
+                                'test_site',
+                                location='200,32.071072')
+
     def test_get_site(self):
         self._put_site()
         result = self.client.sites.get('test_site')
         expected = {
             'name': 'test_site',
-            'latitude': 42,
-            'longitude': 43,
+            'location': '42.0,43.0',
             'visibility': VisibilityState.TENANT
         }
         actual = {k: result[k] for k in expected}
@@ -98,24 +124,20 @@ class SitesTestCase(base_test.BaseServerTestCase):
         sites = self.client.sites.list(_include=['name'])
         self.assertEqual(sites[0].name, 'test_site')
         self.assertIsNone(sites[0].visibility)
-        self.assertIsNone(sites[0].longitude)
+        self.assertIsNone(sites[0].location)
 
     def test_create_site(self):
-        self.client.sites.create('test_site',
-                                 latitude=34.787274,
-                                 longitude=32.071072)
+        self.client.sites.create('test_site', location='34.787274,32.071072')
         site = self.client.sites.get('test_site')
         self.assertEqual(site.name, 'test_site')
-        self.assertEqual(site.latitude, 34.787274)
-        self.assertEqual(site.longitude, 32.071072)
+        self.assertEqual(site.location, '34.787274,32.071072')
         self.assertEqual(site.visibility, VisibilityState.TENANT)
 
-    def test_create_site_none_coordinates(self):
+    def test_create_site_none_location(self):
         self.client.sites.create('test_site')
         site = self.client.sites.get('test_site')
         self.assertEqual(site.name, 'test_site')
-        self.assertIsNone(site.latitude)
-        self.assertIsNone(site.longitude)
+        self.assertIsNone(site.location)
         self.assertEqual(site.visibility, VisibilityState.TENANT)
 
     def test_create_site_already_exists(self):
@@ -127,33 +149,8 @@ class SitesTestCase(base_test.BaseServerTestCase):
                                 self.client.sites.create,
                                 'test_site')
 
-    def test_create_site_invalid_coordinates(self):
-        error_msg = "400: Invalid latitude `34.787274` or longitude " \
-                    "`None`. Must supply either both latitude and longitude " \
-                    "or neither."
-        self.assertRaisesRegexp(CloudifyClientError,
-                                error_msg,
-                                self.client.sites.create,
-                                'test_site',
-                                latitude=34.787274)
-
-        error_msg = "400: latitude parameter is expected to be of type " \
-                    "float but is of type int"
-        self.assertRaisesRegexp(CloudifyClientError,
-                                error_msg,
-                                self.client.sites.create,
-                                'test_site',
-                                latitude=200)
-
-        error_msg = "400: Invalid latitude `200.0` or longitude " \
-                    "`32.071072`. The latitude must be a number between " \
-                    "-90 and 90 and the longitude between -180 and 180"
-        self.assertRaisesRegexp(CloudifyClientError,
-                                error_msg,
-                                self.client.sites.create,
-                                'test_site',
-                                latitude=200.0,
-                                longitude=32.071072)
+    def test_create_site_invalid_location(self):
+        self._test_invalid_location(self.client.sites.create)
 
     def test_create_site_invalid_visibility(self):
         error_msg = "400: Invalid visibility: `test`"
@@ -173,14 +170,12 @@ class SitesTestCase(base_test.BaseServerTestCase):
     def test_update_site(self):
         self._put_site()
         self.client.sites.update('test_site',
-                                 latitude=50.0,
-                                 longitude=50.0,
+                                 location="50.0,50.0",
                                  visibility=VisibilityState.GLOBAL,
                                  new_name='new_site')
         site = self.client.sites.get('new_site')
         self.assertEqual(site.name, 'new_site')
-        self.assertEqual(site.latitude, 50.0)
-        self.assertEqual(site.longitude, 50.0)
+        self.assertEqual(site.location, '50.0,50.0')
         self.assertEqual(site.visibility, VisibilityState.GLOBAL)
 
     def test_update_site_invalid_name(self):
@@ -218,33 +213,8 @@ class SitesTestCase(base_test.BaseServerTestCase):
                                 'test_site',
                                 visibility=VisibilityState.PRIVATE)
 
-    def test_update_site_invalid_coordinates(self):
-        error_msg = "400: Invalid latitude `34.787274` or longitude " \
-                    "`None`. Must supply either both latitude and longitude " \
-                    "or neither."
-        self.assertRaisesRegexp(CloudifyClientError,
-                                error_msg,
-                                self.client.sites.update,
-                                'test_site',
-                                latitude=34.787274)
-
-        error_msg = "400: latitude parameter is expected to be of type " \
-                    "float but is of type int"
-        self.assertRaisesRegexp(CloudifyClientError,
-                                error_msg,
-                                self.client.sites.update,
-                                'test_site',
-                                latitude=200)
-
-        error_msg = "400: Invalid latitude `200.0` or longitude " \
-                    "`32.071072`. The latitude must be a number between " \
-                    "-90 and 90 and the longitude between -180 and 180"
-        self.assertRaisesRegexp(CloudifyClientError,
-                                error_msg,
-                                self.client.sites.update,
-                                'test_site',
-                                latitude=200.0,
-                                longitude=32.071072)
+    def test_update_site_invalid_location(self):
+        self._test_invalid_location(self.client.sites.update)
 
     def test_delete_site(self):
         self._put_site()
