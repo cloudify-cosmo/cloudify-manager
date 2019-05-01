@@ -73,9 +73,6 @@ class Postgres(object):
         clear_tables_queries = self._get_clear_tables_queries()
         dump_file = self._prepend_dump(dump_file, clear_tables_queries)
 
-        # Add the current execution
-        self._append_dump(dump_file, self._get_execution_restore_query())
-
         # Don't change admin user during the restore or the workflow will
         # fail to correctly execute (the admin user update query reverts it
         # to the one from before the restore)
