@@ -46,7 +46,7 @@ def _get_active_node_instances(client, compute_nodes):
     return active_node_instances
 
 
-def get_active_networks(self, client):
+def get_active_networks(client):
     active_networks = set()
     compute_nodes = _get_compute_nodes(client)
     active_node_instances = _get_active_node_instances(
