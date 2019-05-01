@@ -516,7 +516,7 @@ class SnapshotRestore(object):
         postgres.restore_current_execution()
         self._restore_stage(postgres, self._tempdir, stage_revision)
         self._restore_composer(postgres, self._tempdir)
-
+        postgres.restore_license_from_dump(self._tempdir)
         ctx.logger.info('Successfully restored database')
         # This is returned so that we can decide whether to restore the admin
         # user depending on whether we have the hash salt
