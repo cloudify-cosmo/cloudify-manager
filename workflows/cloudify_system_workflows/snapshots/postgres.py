@@ -42,7 +42,7 @@ class Postgres(object):
     _TABLES_TO_KEEP = ['alembic_version', 'provider_context', 'roles',
                        'licenses']
     _TABLES_TO_EXCLUDE_ON_DUMP = _TABLES_TO_KEEP + ['snapshots']
-    _CONFIG_TABLES = ['config', 'rabbitmq_brokers', 'certificates']
+    _CONFIG_TABLES = ['config', 'rabbitmq_brokers', 'certificates', 'managers']
     _TABLES_TO_EXCLUDE_ON_DUMP = _TABLES_TO_KEEP + ['snapshots'] + \
         _CONFIG_TABLES
     _TABLES_TO_RESTORE = ['users', 'tenants']
@@ -216,12 +216,11 @@ class Postgres(object):
         return path
 
     def restore_config_tables(self, config_path):
-        command = self.get_psql_command(self._db_name)
-        command.extend([
-            '-c', 'delete from config;'
+        new_dump_file = self._prepend_dump(config_path, [
+            'delete from {0};'.format(table)
+            for table in self._CONFIG_TABLES
         ])
-        run_shell(command)
-        self._restore_dump(config_path, self._db_name)
+        self._restore_dump(new_dump_file, self._db_name)
 
     def restore_current_execution(self):
         self.run_query(self._get_execution_restore_query())
