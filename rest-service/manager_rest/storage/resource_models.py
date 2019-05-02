@@ -155,10 +155,6 @@ class Secret(CreatedAtMixin, SQLResourceBase):
         fields['key'] = fields.pop('id')
         return fields
 
-# endregion
-
-# region Derived Resources
-
 
 class Site(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'sites'
@@ -166,6 +162,28 @@ class Site(CreatedAtMixin, SQLResourceBase):
     name = db.Column(db.Text, nullable=False)
     latitude = db.Column(db.Float, nullable=True)
     longitude = db.Column(db.Float, nullable=True)
+
+    _extra_fields = {
+        'location': flask_fields.String
+    }
+
+    @property
+    def location(self):
+        if not (self.latitude and self.longitude):
+            return None
+        return "{0},{1}".format(self.latitude, self.longitude)
+
+    @classproperty
+    def response_fields(cls):
+        fields = super(Site, cls).response_fields
+        fields.pop('latitude')
+        fields.pop('longitude')
+        fields.pop('id')
+        return fields
+
+# endregion
+
+# region Derived Resources
 
 
 class Deployment(CreatedAtMixin, SQLResourceBase):
@@ -635,3 +653,5 @@ class Operation(SQLResourceBase):
     @declared_attr
     def tasks_graph(cls):
         return one_to_many_relationship(cls, TasksGraph, cls._tasks_graph_fk)
+
+# endregion
