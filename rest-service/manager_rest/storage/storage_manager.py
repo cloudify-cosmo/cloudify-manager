@@ -382,7 +382,8 @@ class SQLStorageManager(object):
             return
 
         query = self._get_unique_resource_id_query(instance.__class__,
-                                                   instance.id)
+                                                   instance.id,
+                                                   instance.tenant)
         results = query.all()
 
         # There should be only one instance with this id on this tenant or
@@ -399,16 +400,16 @@ class SQLStorageManager(object):
                 )
             )
 
-    def _get_unique_resource_id_query(self, model_class, resource_id):
+    def _get_unique_resource_id_query(self, model_class, resource_id,
+                                      tenant):
         """
         Query for all the resources with the same id of the given instance,
-        if it's in the current tenant, or if it's a global resource
+        if it's in the given tenant, or if it's a global resource
         """
         query = model_class.query
         query = query.filter(model_class.id == resource_id)
-        tenant_id = self.current_tenant.id if self.current_tenant else ''
         unique_resource_filter = sql_or(
-            model_class._tenant_id == tenant_id,
+            model_class.tenant == tenant,
             model_class.visibility == VisibilityState.GLOBAL
         )
         query = query.filter(unique_resource_filter)
