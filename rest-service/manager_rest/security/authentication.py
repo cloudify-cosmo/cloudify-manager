@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2013-2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,9 +21,10 @@ from flask_security.utils import verify_password, verify_hash
 
 from cloudify.models_states import ExecutionState
 
-from . import user_handler
+from manager_rest.security import user_handler
 from manager_rest.storage import user_datastore
 from manager_rest.app_logging import raise_unauthorized_user_error
+from manager_rest.security.hash_request_cache import HashVerifyRequestCache
 from manager_rest.execution_token import (current_execution,
                                           get_execution_token_from_request)
 
@@ -34,6 +35,7 @@ Authorization = namedtuple('Authorization', 'username password')
 class Authentication(object):
     def __init__(self):
         self.token_based_auth = False
+        self.token_verified_cache = HashVerifyRequestCache()
 
     @property
     def logger(self):
@@ -147,6 +149,17 @@ class Authentication(object):
             )
         return user
 
+    def _verify_token(self, token, user):
+        if not self.token_verified_cache.get_verify_hash_result(token,
+                                                                user.id):
+            if not verify_hash(compare_data=user.password, hashed_data=token):
+                raise_unauthorized_user_error(
+                    'Authentication failed for {0}'.format(user)
+                )
+            else:
+                self.token_verified_cache.cache_verify_hash_result(token,
+                                                                   user.id)
+
     def _authenticate_token(self, token):
         """Make sure that the token passed exists, is valid, is not expired,
         and that the user contained within it exists in the DB
@@ -166,10 +179,8 @@ class Authentication(object):
             )
         elif not user:
             raise_unauthorized_user_error('No authentication info provided')
-        elif not verify_hash(compare_data=user.password, hashed_data=data[1]):
-            raise_unauthorized_user_error(
-                'Authentication failed for {0}'.format(user)
-            )
+        else:
+            self._verify_token(token=data[1], user=user)
 
         return user
 

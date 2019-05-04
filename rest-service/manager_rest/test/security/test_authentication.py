@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2015 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2015-2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -118,3 +118,13 @@ class AuthenticationTests(SecurityTestBase):
             self.client._client.headers.pop(CLOUDIFY_TENANT_HEADER, None)
             token = self.client.tokens.get()
         self._assert_user_authorized(token=token.value)
+
+    def test_sequential_authorized_user_calls(self):
+        with self.use_secured_client(username='alice',
+                                     password='alice_password'):
+            self.client._client.headers.pop(CLOUDIFY_TENANT_HEADER, None)
+            token = self.client.tokens.get()
+
+        with self.use_secured_client(token=token.value):
+            self.client.deployments.list()
+            self.client.deployments.list()

@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2013-2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,7 +30,9 @@ from manager_rest.maintenance import maintenance_mode_handler
 from manager_rest.rest.endpoint_mapper import setup_resources
 from manager_rest.flask_utils import set_flask_security_config
 from manager_rest.manager_exceptions import INTERNAL_SERVER_ERROR_CODE
-from manager_rest.app_logging import setup_logger, log_request, log_response
+from manager_rest.app_logging import (setup_logger,
+                                      log_request,
+                                      log_response)
 
 if premium_enabled:
     from cloudify_premium.authentication.extended_auth_handler \
