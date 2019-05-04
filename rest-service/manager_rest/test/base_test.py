@@ -280,6 +280,7 @@ class BaseServerTestCase(unittest.TestCase):
         """
         security = server.app.extensions['security']
         security.password_hash = 'plaintext'
+        security.hashing_schemes = ['plaintext']
         record = security.pwd_context._config._records[('plaintext', None)]
         security.pwd_context._config._records[(None, None)] = record
 
