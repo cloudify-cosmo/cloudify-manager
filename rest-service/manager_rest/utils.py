@@ -314,3 +314,18 @@ def send_event(event, message_type):
 
     events_publisher.publish_message(event, message_type)
     events_publisher.close()
+
+
+def is_visibility_wider(first, second):
+    states = VisibilityState.STATES
+    return states.index(first) > states.index(second)
+
+
+def validate_deployment_and_site_visibility(deployment, site):
+    if is_visibility_wider(deployment.visibility, site.visibility):
+        raise manager_exceptions.IllegalActionError(
+            "The visibility of deployment `{0}`: `{1}` can't be wider than "
+            "the visibility of it's site `{2}`: `{3}`"
+            .format(deployment.id, deployment.visibility, site.name,
+                    site.visibility)
+        )

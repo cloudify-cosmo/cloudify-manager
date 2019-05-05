@@ -41,7 +41,8 @@ from manager_rest.constants import (DEFAULT_TENANT_NAME,
 from manager_rest.dsl_functions import get_secret_method
 from manager_rest.utils import (send_event,
                                 is_create_global_permitted,
-                                validate_global_modification)
+                                validate_global_modification,
+                                validate_deployment_and_site_visibility)
 from manager_rest.storage import (db,
                                   get_storage_manager,
                                   models,
@@ -1173,9 +1174,12 @@ class ResourceManager(object):
                           visibility,
                           inputs=None,
                           bypass_maintenance=None,
-                          skip_plugins_validation=False):
+                          skip_plugins_validation=False,
+                          site_name=None):
         blueprint = self.sm.get(models.Blueprint, blueprint_id)
         plan = blueprint.plan
+        site = self.sm.get(models.Site, site_name) if site_name else None
+
         try:
             deployment_plan = tasks.prepare_deployment_plan(
                 plan, get_secret_method(), inputs)
@@ -1222,6 +1226,11 @@ class ResourceManager(object):
         )
         new_deployment.blueprint = blueprint
         new_deployment.visibility = visibility
+
+        if site:
+            validate_deployment_and_site_visibility(new_deployment, site)
+            new_deployment.site = site
+
         self.sm.put(new_deployment)
 
         self._create_deployment_nodes(deployment_id, deployment_plan)
@@ -1977,15 +1986,10 @@ class ResourceManager(object):
 
         return visibility or VisibilityState.TENANT
 
-    @staticmethod
-    def _is_visibility_wider(first, second):
-        states = VisibilityState.STATES
-        return states.index(first) > states.index(second)
-
     def set_deployment_visibility(self, deployment_id, visibility):
         deployment = self.sm.get(models.Deployment, deployment_id)
         blueprint = deployment.blueprint
-        if self._is_visibility_wider(visibility, blueprint.visibility):
+        if utils.is_visibility_wider(visibility, blueprint.visibility):
             raise manager_exceptions.IllegalActionError(
                 "The visibility of deployment `{0}` can't be wider than "
                 "the visibility of its blueprint `{1}`. Current "
@@ -2007,7 +2011,7 @@ class ResourceManager(object):
 
     def validate_visibility_value(self, model_class, resource, new_visibility):
         current_visibility = resource.visibility
-        if self._is_visibility_wider(current_visibility, new_visibility):
+        if utils.is_visibility_wider(current_visibility, new_visibility):
             raise manager_exceptions.IllegalActionError(
                 "Can't set the visibility of `{0}` to {1} because it "
                 "already has wider visibility".format(resource.id,

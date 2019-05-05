@@ -18,6 +18,8 @@ import os
 import uuid
 import exceptions
 
+from cloudify.models_states import VisibilityState
+
 from manager_rest.test import base_test
 from manager_rest.test.attribute import attr
 from manager_rest import manager_exceptions
@@ -36,6 +38,7 @@ TEST_PACKAGE_VERSION = '1.2'
 class DeploymentsTestCase(base_test.BaseServerTestCase):
 
     DEPLOYMENT_ID = 'deployment'
+    SITE_NAME = 'test_site'
 
     def test_get_empty(self):
         result = self.client.deployments.list()
@@ -651,13 +654,219 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
-    def test_creation_success_when_install_plugin_is_False(self):
+    def test_creation_success_when_install_plugin_is_false(self):
         id_ = 'i{0}'.format(uuid.uuid4())
         self.put_deployment(
              blueprint_file_name='deployment_with_'
-                                 'install_plugin_False.yaml',
+                                 'install_plugin_false.yaml',
              blueprint_id=id_,
              deployment_id=id_)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_creation_success_without_site(self):
+        self._put_deployment_without_site()
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_creation_success_with_site(self):
+        self.client.sites.create(self.SITE_NAME)
+        resource_id = 'i{0}'.format(uuid.uuid4())
+        self.put_deployment(blueprint_file_name='blueprint.yaml',
+                            blueprint_id=resource_id,
+                            deployment_id=resource_id,
+                            site_name=self.SITE_NAME)
+        deployment = self.client.deployments.get(resource_id)
+        self.assertEqual(deployment.site_name, self.SITE_NAME)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_creation_success_with_different_site_visibility(self):
+        self.client.sites.create(self.SITE_NAME,
+                                 visibility=VisibilityState.GLOBAL)
+        resource_id = 'i{0}'.format(uuid.uuid4())
+        self.put_deployment(blueprint_file_name='blueprint.yaml',
+                            blueprint_id=resource_id,
+                            deployment_id=resource_id,
+                            site_name=self.SITE_NAME)
+        deployment = self.client.deployments.get(resource_id)
+        self.assertEqual(deployment.site_name, self.SITE_NAME)
+        self.assertEqual(deployment.visibility, VisibilityState.TENANT)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_creation_failure_invalid_site_visibility(self):
+        self.client.sites.create(self.SITE_NAME,
+                                 visibility=VisibilityState.PRIVATE)
+        resource_id = 'i{0}'.format(uuid.uuid4())
+        error_msg = "400: The visibility of deployment `{0}`: `tenant` " \
+                    "can't be wider than the visibility of it's site " \
+                    "`{1}`: `private`".format(resource_id, self.SITE_NAME)
+        self.assertRaisesRegexp(CloudifyClientError,
+                                error_msg,
+                                self.put_deployment,
+                                blueprint_file_name='blueprint.yaml',
+                                blueprint_id=resource_id,
+                                deployment_id=resource_id,
+                                site_name=self.SITE_NAME)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_creation_failure_invalid_site(self):
+        error_msg = '404: Requested `Site` with ID `test_site` was not found'
+        self.assertRaisesRegexp(CloudifyClientError,
+                                error_msg,
+                                self.put_deployment,
+                                blueprint_file_name='blueprint.yaml',
+                                blueprint_id='i{0}'.format(uuid.uuid4()),
+                                deployment_id='i{0}'.format(uuid.uuid4()),
+                                site_name=self.SITE_NAME)
+
+        error_msg = '400: The `site_name` argument contains illegal ' \
+                    'characters.'
+        self.assertRaisesRegexp(CloudifyClientError,
+                                error_msg,
+                                self.put_deployment,
+                                blueprint_file_name='blueprint.yaml',
+                                blueprint_id='i{0}'.format(uuid.uuid4()),
+                                deployment_id='i{0}'.format(uuid.uuid4()),
+                                site_name=':invalid_site')
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_set_site_deployment_created_without_site(self):
+        resource_id = self._put_deployment_without_site()
+        self.client.sites.create(self.SITE_NAME)
+        self.client.deployments.set_site(resource_id, site_name=self.SITE_NAME)
+        deployment = self.client.deployments.get(resource_id)
+        self.assertEqual(deployment.site_name, self.SITE_NAME)
+
+        # Setting a site after a previous one was set
+        new_site_name = 'new_site'
+        self.client.sites.create(new_site_name, location="34.0,32.0")
+        self.client.deployments.set_site(resource_id, site_name=new_site_name)
+        deployment = self.client.deployments.get(resource_id)
+        self.assertEqual(deployment.site_name, new_site_name)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_set_site_deployment_created_with_site(self):
+        self.client.sites.create(self.SITE_NAME)
+        resource_id = 'i{0}'.format(uuid.uuid4())
+        self.put_deployment(blueprint_file_name='blueprint.yaml',
+                            blueprint_id=resource_id,
+                            deployment_id=resource_id,
+                            site_name=self.SITE_NAME)
+        deployment = self.client.deployments.get(resource_id)
+        self.assertEqual(deployment.site_name, self.SITE_NAME)
+
+        # Setting a site after the deployment was created with a site
+        new_site_name = 'new_site'
+        self.client.sites.create(new_site_name, location="34.0,32.0")
+        self.client.deployments.set_site(resource_id, site_name=new_site_name)
+        deployment = self.client.deployments.get(resource_id)
+        self.assertEqual(deployment.site_name, new_site_name)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_set_site_different_visibility(self):
+        self.client.sites.create(self.SITE_NAME,
+                                 visibility=VisibilityState.GLOBAL)
+        resource_id = self._put_deployment_without_site()
+        deployment = self.client.deployments.get(resource_id)
+        self.assertEqual(deployment.visibility, VisibilityState.TENANT)
+        self.client.deployments.set_site(resource_id, site_name=self.SITE_NAME)
+        deployment = self.client.deployments.get(resource_id)
+        self.assertEqual(deployment.site_name, self.SITE_NAME)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_set_site_invalid_deployment_visibility(self):
+        resource_id = self._put_deployment_without_site()
+        self.client.sites.create(self.SITE_NAME,
+                                 visibility=VisibilityState.PRIVATE)
+        error_msg = "400: The visibility of deployment `{0}`: `tenant` " \
+                    "can't be wider than the visibility of it's site " \
+                    "`{1}`: `private`".format(resource_id, self.SITE_NAME)
+        self.assertRaisesRegexp(CloudifyClientError,
+                                error_msg,
+                                self.client.deployments.set_site,
+                                resource_id,
+                                site_name=self.SITE_NAME)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_set_site_invalid_deployment(self):
+        error_msg = '404: Requested `Deployment` with ID `no_deployment` ' \
+                    'was not found'
+        self.assertRaisesRegexp(CloudifyClientError,
+                                error_msg,
+                                self.client.deployments.set_site,
+                                'no_deployment',
+                                site_name=self.SITE_NAME)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_set_site_invalid_site(self):
+        resource_id = self._put_deployment_without_site()
+        error_msg = '404: Requested `Site` with ID `{0}` was not ' \
+                    'found'.format(self.SITE_NAME)
+        self.assertRaisesRegexp(CloudifyClientError,
+                                error_msg,
+                                self.client.deployments.set_site,
+                                resource_id,
+                                site_name=self.SITE_NAME)
+
+        error_msg = '400: The `site_name` argument contains illegal ' \
+                    'characters.'
+        self.assertRaisesRegexp(CloudifyClientError,
+                                error_msg,
+                                self.client.deployments.set_site,
+                                deployment_id='i{0}'.format(uuid.uuid4()),
+                                site_name=':invalid_site')
+
+    def test_set_site_bad_parameters(self):
+        resource_id = self._put_deployment_without_site()
+        error_msg = '400: Must provide either a `site_name` of a valid site ' \
+                    'or `detach_site` with true value for detaching the ' \
+                    'current site of the given deployment'
+        self.assertRaisesRegexp(CloudifyClientError,
+                                error_msg,
+                                self.client.deployments.set_site,
+                                deployment_id=resource_id)
+        self.client.sites.create(self.SITE_NAME)
+        self.assertRaisesRegexp(CloudifyClientError,
+                                error_msg,
+                                self.client.deployments.set_site,
+                                deployment_id=resource_id,
+                                site_name=self.SITE_NAME,
+                                detach_site=True)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_set_site_detach_existing_site(self):
+        self.client.sites.create(self.SITE_NAME)
+        resource_id = 'i{0}'.format(uuid.uuid4())
+        self.put_deployment(blueprint_file_name='blueprint.yaml',
+                            blueprint_id=resource_id,
+                            deployment_id=resource_id,
+                            site_name=self.SITE_NAME)
+        deployment = self.client.deployments.get(resource_id)
+        self.assertEqual(deployment.site_name, self.SITE_NAME)
+
+        # Detaching the site when the deployment is assigned with one
+        self.client.deployments.set_site(resource_id, detach_site=True)
+        deployment = self.client.deployments.get(resource_id)
+        self.assertIsNone(deployment.site_name)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_set_site_detach_none_site(self):
+        # Detaching the site when the deployment is not assigned with one
+        resource_id = self._put_deployment_without_site()
+        self.client.deployments.set_site(resource_id, detach_site=True)
+        deployment = self.client.deployments.get(resource_id)
+        self.assertIsNone(deployment.site_name)
 
     def _delete_deployment(self, deployment_id, ignore_live_nodes=False):
 
@@ -669,3 +878,12 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             '/deployments/{0}'.format(deployment_id), params=params)
 
         return Deployment(response)
+
+    def _put_deployment_without_site(self):
+        resource_id = 'i{0}'.format(uuid.uuid4())
+        self.put_deployment(blueprint_file_name='blueprint.yaml',
+                            blueprint_id=resource_id,
+                            deployment_id=resource_id)
+        deployment = self.client.deployments.get(resource_id)
+        self.assertIsNone(deployment.site_name)
+        return resource_id

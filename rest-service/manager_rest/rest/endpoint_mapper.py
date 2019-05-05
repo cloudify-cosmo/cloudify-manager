@@ -39,6 +39,7 @@ def setup_resources(api):
         'ExecutionsId': 'executions/<string:execution_id>',
         'Deployments': 'deployments',
         'DeploymentsId': 'deployments/<string:deployment_id>',
+        'DeploymentsSetSite': 'deployments/<string:deployment_id>/set-site',
         'DeploymentsIdOutputs': 'deployments/<string:deployment_id>/outputs',
         'DeploymentsIdCapabilities':
             'deployments/<string:deployment_id>/capabilities',

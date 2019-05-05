@@ -601,12 +601,13 @@ class BaseServerTestCase(unittest.TestCase):
                        blueprint_id='blueprint',
                        inputs=None,
                        blueprint_dir='mock_blueprint',
-                       skip_plugins_validation=None):
+                       skip_plugins_validation=None,
+                       site_name=None):
         blueprint_response = self.put_blueprint(blueprint_dir,
                                                 blueprint_file_name,
                                                 blueprint_id)
         blueprint_id = blueprint_response['id']
-        create_deployment_kwargs = {'inputs': inputs}
+        create_deployment_kwargs = {'inputs': inputs, 'site_name': site_name}
         if skip_plugins_validation is not None:
             create_deployment_kwargs['skip_plugins_validation'] =\
                 skip_plugins_validation
