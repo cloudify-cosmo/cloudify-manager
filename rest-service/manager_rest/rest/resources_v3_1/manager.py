@@ -18,6 +18,7 @@ from subprocess import check_call
 from flask import request, current_app
 from flask_restful.reqparse import Argument
 
+from manager_rest import manager_exceptions
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import (
@@ -125,15 +126,12 @@ class Managers(SecuredResource):
             'edition': {'type': unicode},
             'distribution': {'type': unicode},
             'distro_release': {'type': unicode},
-            'ca_cert_content': {'type': unicode},
+            'ca_cert_content': {'type': unicode, 'optional': True},
             'fs_sync_node_id': {'type': unicode, 'optional': True},
             'networks': {'type': dict, 'optional': True}
         })
         sm = get_storage_manager()
-        new_cert = sm.put(models.Certificate(
-            name='{0}-ca'.format(_manager['hostname']),
-            value=_manager['ca_cert_content']
-        ))
+        ca_cert_id = self._get_ca_cert_id(sm, _manager)
         new_manager = models.Manager(
             hostname=_manager['hostname'],
             private_ip=_manager['private_ip'],
@@ -144,7 +142,7 @@ class Managers(SecuredResource):
             distro_release=_manager['distro_release'],
             fs_sync_node_id=_manager.get('fs_sync_node_id', ''),
             networks=_manager.get('networks'),
-            ca_cert=new_cert
+            _ca_cert_id=ca_cert_id
         )
         result = sm.put(new_manager)
         current_app.logger.info('Manager added successfully')
@@ -204,6 +202,25 @@ class Managers(SecuredResource):
             managers_list = get_storage_manager().list(models.Manager)
             remove_manager(managers_list)  # Removing manager from cluster
         return result
+
+    def _get_ca_cert_id(self, sm, _manager):
+        ca_cert_content = _manager.get('ca_cert_content')
+        if ca_cert_content:
+            ca_cert = sm.put(models.Certificate(
+                name='{0}-ca'.format(_manager['hostname']),
+                value=ca_cert_content
+            ))
+            return ca_cert.id
+        else:
+            # if CA content is not given, use the one used by other managers
+            # (this means exactly one CA must be used by other managers)
+            existing_managers_certs = {m._ca_cert_id
+                                       for m in sm.list(models.Manager)}
+            if len(existing_managers_certs) != 1:
+                raise manager_exceptions.ConflictError(
+                    'ca_cert_content not given, but {0} existing CA '
+                    'certs found'.format(len(existing_managers_certs)))
+            return existing_managers_certs.pop()
 
 
 class RabbitMQBrokers(SecuredResource):
