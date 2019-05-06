@@ -117,6 +117,7 @@ class HookConsumer(CloudifyOperationConsumer):
             no_ctx_kwarg=True,
             task_target=self.queue,
             tenant_name=tenant_name,
+            rest_token=hook_context.get('rest_token'),
             plugin=self._get_plugin(tenant_name, implementation)
         )
 
