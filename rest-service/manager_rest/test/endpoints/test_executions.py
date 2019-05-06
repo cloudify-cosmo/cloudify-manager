@@ -14,11 +14,11 @@
 #  * limitations under the License.
 
 import uuid
+import hashlib
 from datetime import datetime
 from itertools import dropwhile
 
 import mock
-from flask_security.utils import hash_data
 
 from cloudify_rest_client import exceptions
 from cloudify.models_states import ExecutionState
@@ -919,7 +919,7 @@ class ExecutionsTestCase(BaseServerTestCase):
 
         # Update the token in the db
         execution = self.sm.get(models.Execution, execution.id)
-        execution.token = hash_data(token)
+        execution.token = hashlib.sha256(token).hexdigest()
         self.sm.update(execution)
 
         headers = {CLOUDIFY_EXECUTION_TOKEN_HEADER: token}
@@ -954,7 +954,7 @@ class ExecutionsTestCase(BaseServerTestCase):
 
         # Update the token in the db
         execution = self.sm.get(models.Execution, execution.id)
-        execution.token = hash_data(token)
+        execution.token = hashlib.sha256(token).hexdigest()
         execution.status = ExecutionState.STARTED
         self.sm.update(execution)
         return execution.id

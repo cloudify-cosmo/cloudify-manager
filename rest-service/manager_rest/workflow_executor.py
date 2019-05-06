@@ -15,10 +15,10 @@
 
 import uuid
 import math
+import hashlib
 from datetime import datetime
 
 from flask_security import current_user
-from flask_security.utils import hash_data
 
 from cloudify.cryptography_utils import decrypt
 from cloudify.amqp_client import (get_client,
@@ -128,7 +128,7 @@ def generate_execution_token(execution_id):
     execution_token = uuid.uuid4().hex
 
     # Store the token hashed in the DB
-    execution.token = hash_data(execution_token)
+    execution.token = hashlib.sha256(execution_token).hexdigest()
     sm.update(execution)
     return execution_token
 
