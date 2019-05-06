@@ -283,6 +283,9 @@ class BaseServerTestCase(unittest.TestCase):
         security.hashing_schemes = ['plaintext']
         record = security.pwd_context._config._records[('plaintext', None)]
         security.pwd_context._config._records[(None, None)] = record
+        security.hashing_context._config._records[(None, None)] = record
+        security.hashing_context._config._records[('plaintext', None)] = record
+        security.hashing_context._config.schemes = ('plaintext',)
 
     @classmethod
     def _handle_flask_app_and_db(cls):
