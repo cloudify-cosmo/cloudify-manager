@@ -24,6 +24,7 @@ import platform
 import tempfile
 import threading
 import subprocess
+import re
 from contextlib import closing
 
 import wagon
@@ -122,6 +123,7 @@ class SnapshotRestore(object):
                 M_STAGE_SCHEMA_REVISION,
                 None,
             )
+            stage_revision = re.sub(r".*\n", '', stage_revision)
             self._validate_snapshot()
 
             existing_plugins = self._get_existing_plugin_names()
