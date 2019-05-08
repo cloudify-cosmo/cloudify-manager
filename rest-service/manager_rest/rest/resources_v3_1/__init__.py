@@ -44,6 +44,7 @@ from .plugins import (                           # NOQA
 
 from .deployments import (                       # NOQA
     DeploymentsId,
+    DeploymentsSetSite,
     DeploymentsSetVisibility,
     DeploymentsIdCapabilities
 )
