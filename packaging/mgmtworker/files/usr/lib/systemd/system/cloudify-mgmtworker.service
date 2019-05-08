@@ -10,6 +10,7 @@ User=cfyuser
 Group=cfyuser
 WorkingDirectory=/opt/mgmtworker/work
 EnvironmentFile=/etc/sysconfig/cloudify-mgmtworker
+RestartSec=2
 
 ExecStart=/opt/mgmtworker/env/bin/python -m mgmtworker.worker \
     --queue "cloudify.management" \
