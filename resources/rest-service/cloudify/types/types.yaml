@@ -424,6 +424,23 @@ node_types:
         delete:
           implementation: cfy_extensions.cloudify_types.component.delete
 
+  cloudify.nodes.SharedResource:
+    derived_from: cloudify.nodes.Root
+    properties:
+      resource_config:
+        type: cloudify.datatypes.SharedResource
+        default: {}
+      client:
+        description: >
+          Client configuration, if empty Cloudify manager client will be used.
+        type: cloudify.datatypes.RemoteCloudifyManagerClient
+        default: {}
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          implementation: cfy_extensions.cloudify_types.shared_resource.connect_deployment
+
+
 ##################################################################################
 # Base relationship definitions
 ##################################################################################
@@ -854,7 +871,7 @@ data_types:
         default: ""
         required: true
 
-  cloudify.datatypes.Deployment:
+  cloudify.datatypes.ComponentDeployment:
     properties:
       id:
         description: >
@@ -883,7 +900,7 @@ data_types:
         type: cloudify.datatypes.Blueprint
         required: true
       deployment:
-        type: cloudify.datatypes.Deployment
+        type: cloudify.datatypes.ComponentDeployment
         required: true
       executions_start_args:
         description: >
@@ -953,6 +970,20 @@ data_types:
           Cloudify user accessible tenant name.
         type: string
         required: false
+
+  cloudify.datatypes.SharedResourceDeployment:
+    properties:
+      id:
+        description: >
+          This is the deployment ID that the SharedResource node is connected to.
+        type: string
+        required: true
+
+  cloudify.datatypes.SharedResource:
+    properties:
+      deployment:
+        type: cloudify.datatypes.SharedResourceDeployment
+        required: true
 
 ##################################################################################
 # Base artifact definitions

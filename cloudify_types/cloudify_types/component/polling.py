@@ -17,7 +17,8 @@ import time
 from cloudify import ctx
 from cloudify.exceptions import NonRecoverableError
 
-from .utils import handle_client_exception
+from cloudify_types.utils import handle_client_exception, get_deployment_by_id
+
 from .constants import POLLING_INTERVAL, PAGINATION_SIZE
 
 PREDEFINED_LOG_LEVELS = {
@@ -42,16 +43,8 @@ def blueprint_id_exists(client, blueprint_id):
     return True if blueprint else False
 
 
-@handle_client_exception('Deployment search failed')
 def deployment_id_exists(client, deployment_id):
-    """
-    Searching for deployment_id in all deployments in order to differentiate
-    not finding the deployment then other kinds of errors, like server
-    failure.
-    """
-    deployment_id_filter = {'id': deployment_id}
-    deployment = client.deployments.list(_include=['id'],
-                                         **deployment_id_filter)
+    deployment = get_deployment_by_id(client, deployment_id)
     return True if deployment else False
 
 
