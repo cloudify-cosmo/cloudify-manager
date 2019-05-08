@@ -1,4 +1,4 @@
-# Copyright (c) 2017-2019 Cloudify Platform Ltd. All rights reserved
+# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,28 +16,10 @@ from cloudify.decorators import operation
 
 from cloudify_types.utils import proxy_operation
 
-from .component import Component
+from .shared_resource import SharedResource
 
 
 @operation
-@proxy_operation('upload_blueprint')
-def upload_blueprint(operation, **_):
-    return getattr(Component(_), operation)()
-
-
-@operation
-@proxy_operation('create_deployment')
-def create(operation, **_):
-    return getattr(Component(_), operation)()
-
-
-@operation
-@proxy_operation('delete_deployment')
-def delete(operation, **_):
-    return getattr(Component(_), operation)()
-
-
-@operation
-@proxy_operation('execute_workflow')
-def execute_start(operation, **_):
-    return getattr(Component(_), operation)()
+@proxy_operation('validate_deployment')
+def connect_deployment(operation, **_):
+    return getattr(SharedResource(_), operation)()

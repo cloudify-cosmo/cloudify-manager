@@ -13,63 +13,20 @@
 # limitations under the License.
 
 import os
-import sys
 import shutil
 import zipfile
 import tempfile
-import functools
 from shutil import copy
 from urlparse import urlparse
 
 import requests
 
 from cloudify import ctx
-from cloudify.utils import exception_to_error_cause
-from cloudify.exceptions import NonRecoverableError, OperationRetry
-
-from cloudify_rest_client.exceptions import CloudifyClientError
-
-
-def generate_traceback_exception():
-    _, exc_value, exc_traceback = sys.exc_info()
-    response = exception_to_error_cause(exc_value, exc_traceback)
-    return response
+from cloudify.exceptions import NonRecoverableError
 
 
 def update_runtime_properties(_type, _key, _value):
     ctx.instance.runtime_properties[_type][_key] = _value
-
-
-def proxy_operation(operation):
-    def decorator(task, **kwargs):
-        def wrapper(**kwargs):
-            try:
-                kwargs['operation'] = operation
-                return task(**kwargs)
-            except OperationRetry:
-                response = generate_traceback_exception()
-
-                ctx.logger.error(
-                    'Error traceback {0} with message {1}'.format(
-                        response['traceback'], response['message']))
-
-                raise OperationRetry(
-                    'Error: {0} while trying to run proxy task {1}'
-                    ''.format(response['message'], operation))
-
-            except Exception:
-                response = generate_traceback_exception()
-
-                ctx.logger.error(
-                    'Error traceback {0} with message {1}'.format(
-                        response['traceback'], response['message']))
-
-                raise NonRecoverableError(
-                    'Error: {0} while trying to run proxy task {1}'
-                    ''.format(response['message'], operation))
-
-        return wrapper
-    return decorator
 
 
 def download_file(url, destination=None, keep_name=False):
@@ -158,16 +115,3 @@ def zip_files(files_paths):
     _zipping(source_folder, destination_zip, include_folder=False)
     shutil.rmtree(source_folder)
     return destination_zip
-
-
-def handle_client_exception(error_msg):
-    def exception_decorator(func):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            try:
-                return func(*args, **kwargs)
-            except CloudifyClientError as ex:
-                raise NonRecoverableError(
-                    '{0}, due to {1}.'.format(error_msg, str(ex)))
-        return wrapper
-    return exception_decorator

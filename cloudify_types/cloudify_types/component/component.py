@@ -327,7 +327,7 @@ class Component(object):
 
     @staticmethod
     def _delete_runtime_properties():
-        for property_name in ['deployment', 'executions', 'blueprint',
+        for property_name in ['deployment', 'blueprint',
                               'plugins', 'secrets']:
             if property_name in ctx.instance.runtime_properties:
                 del ctx.instance.runtime_properties[property_name]
@@ -377,13 +377,6 @@ class Component(object):
         return poll_result
 
     def execute_workflow(self):
-        if 'executions' not in ctx.instance.runtime_properties:
-            ctx.instance.runtime_properties['executions'] = dict()
-
-        # Updating runtime properties with where we are in the deployment flow
-        update_runtime_properties(
-            'executions', 'workflow_id', self.workflow_id)
-
         # Wait for the deployment to finish any executions
         if not poll_with_timeout(lambda:
                                  is_all_executions_finished(
