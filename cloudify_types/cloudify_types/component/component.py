@@ -262,11 +262,10 @@ class Component(object):
             self.deployment_id = self._generate_suffix_deployment_id(
                 self.client, self.deployment_id)
         elif deployment_id_exists(self.client, self.deployment_id):
-            ctx.logger.error(
-                'Component\'s deployment ID {0} already exists, '
+            raise NonRecoverableError(
+                'Component\'s deployment ID "{0}" already exists, '
                 'please verify the chosen name.'.format(
                     self.blueprint_id))
-            return False
 
         update_runtime_properties('deployment', 'id', self.deployment_id)
         ctx.logger.info('Creating "{0}" component deployment.'
@@ -295,13 +294,13 @@ class Component(object):
         # If the ``execution_id`` cannot be found raise error
         if not execution_id:
             raise NonRecoverableError(
-                'No execution Found for component \"{}\"'
+                'No execution Found for component "{}"'
                 ' deployment'.format(self.deployment_id)
             )
 
         # If a match was found there can only be one, so we will extract it.
         execution_id = execution_id[0]
-        ctx.logger.info("Found execution id {0} for deployment id {1}"
+        ctx.logger.info('Found execution id "{0}" for deployment id "{1}"'
                         .format(execution_id,
                                 self.deployment_id))
         return self.verify_execution_successful(execution_id)
@@ -313,7 +312,7 @@ class Component(object):
             self._http_client_wrapper('plugins', 'delete', {
                 'plugin_id': plugin_id
             })
-            ctx.logger.info('Removed plugin {}'.format(repr(plugin_id)))
+            ctx.logger.info('Removed plugin "{}".'.format(repr(plugin_id)))
 
     def _delete_secrets(self):
         if not self.secrets:
@@ -323,7 +322,7 @@ class Component(object):
             self._http_client_wrapper('secrets', 'delete', {
                 'key': secret_name,
             })
-            ctx.logger.info('Removed secret {}'.format(repr(secret_name)))
+            ctx.logger.info('Removed secret "{}"'.format(repr(secret_name)))
 
     @staticmethod
     def _delete_runtime_properties():
@@ -348,7 +347,7 @@ class Component(object):
                                   'delete',
                                   dict(deployment_id=self.deployment_id))
 
-        ctx.logger.info("Wait for component's deployment delete.")
+        ctx.logger.info("Waiting for component's deployment delete.")
         poll_result = poll_with_timeout(
             lambda: deployment_id_exists(self.client, self.deployment_id),
             timeout=self.timeout,
@@ -364,7 +363,7 @@ class Component(object):
             expected_result=True)
 
         if not self.blueprint.get(EXTERNAL_RESOURCE):
-            ctx.logger.info("Delete component's blueprint {0}."
+            ctx.logger.info('Delete component\'s blueprint "{0}".'
                             .format(self.blueprint_id))
             self._http_client_wrapper('blueprints',
                                       'delete',
@@ -399,7 +398,7 @@ class Component(object):
                  **execution_args
              ))
 
-        ctx.logger.debug('Execution start response: {0}'.format(execution))
+        ctx.logger.debug('Execution start response: "{0}".'.format(execution))
 
         execution_id = execution['id']
         if not self.verify_execution_successful(execution_id):

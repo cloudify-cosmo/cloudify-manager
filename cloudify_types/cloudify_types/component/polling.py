@@ -189,20 +189,20 @@ def is_component_execution_at_state(client,
     execution = client.executions.get(execution_id=execution_id,
                                       _include=execution_get_args)
     ctx.logger.info(
-        'The execution of "{0}" component is {1}'.format(dep_id,
-                                                         execution))
+        'The execution of "{0}" component is {1}.'.format(dep_id,
+                                                          execution))
 
     execution_id = execution.get('id')
     if log_redirect and execution_id:
         ctx.logger.debug(
-            'Execution info with log_redirect is {0}'.format(execution))
+            'Execution info with log_redirect is {0}.'.format(execution))
         redirect_logs(client, execution_id)
 
     execution_status = execution.get('status')
     if execution_status == state:
         ctx.logger.debug(
-            'The status for execution info of'
-            ' {0} is {1}'.format(execution_id, state))
+            'The status for execution'
+            ' "{0}" is {1}.'.format(execution_id, state))
 
         return True
     elif execution_status == 'failed':

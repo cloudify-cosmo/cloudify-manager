@@ -169,9 +169,10 @@ class TestDeployment(TestDeploymentBase):
             self.cfy_mock_client.deployments.set_existing_objects([
                 {'id': 'dep'}])
             mock_client.return_value = self.cfy_mock_client
-            output = create(operation='create_deployment',
-                            timeout=MOCK_TIMEOUT)
-            self.assertFalse(output)
+            self.assertRaises(NonRecoverableError,
+                              create,
+                              operation='create_deployment',
+                              timeout=MOCK_TIMEOUT)
 
 
 class TestComponentPlugins(TestDeploymentBase):
