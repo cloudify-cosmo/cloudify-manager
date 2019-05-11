@@ -323,14 +323,35 @@ workflows:
             resource('dsl/plugins/mock_workflows.yaml'),
             entity_id='mock_workflows')
 
-    def test_basic_cascading_workflow(self):
+    def test_default_workflow_cascading_flag(self):
         basic_blueprint_path = self.make_yaml_file(
             self.component_blueprint_with_nothing_workflow)
         self.client.blueprints.upload(basic_blueprint_path,
                                       entity_id='workflow')
 
         deployment_id = 'd{0}'.format(uuid.uuid4())
-        main_blueprint = self.generate_root_blueprint_with_component()
+        main_blueprint = """
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+    - cloudify/types/types.yaml
+    - workflow--blueprint:mock_workflows
+
+node_templates:
+    component_node:
+      type: cloudify.nodes.Component
+      properties:
+        resource_config:
+          blueprint:
+            external_resource: true
+            id: {0}
+          deployment:
+            id: {1}
+
+workflows:
+    nothing_workflow:
+        mapping: workflow--mock_workflows.mock_workflows.workflows.do_nothing
+"""
         main_blueprint_path = self.make_yaml_file(main_blueprint)
         self.deploy_application(main_blueprint_path,
                                 deployment_id=deployment_id)
@@ -379,7 +400,7 @@ workflows:
             self.assertEquals(Execution.TERMINATED, execution.status)
         self.assertEqual(len(executions), 3)
 
-    def test_not_cascading_workflow_acts_normal(self):
+    def test_not_cascading_workflow_not_to_cascade(self):
         basic_blueprint_path = self.make_yaml_file(
             self.component_blueprint_with_nothing_workflow)
         self.client.blueprints.upload(basic_blueprint_path,
@@ -407,6 +428,7 @@ node_templates:
 workflows:
     other_nothing_workflow:
         mapping: workflow--mock_workflows.mock_workflows.workflows.do_nothing
+        is_cascading: false
 """
         main_blueprint_path = self.make_yaml_file(main_blueprint)
         self.deploy_application(main_blueprint_path,
