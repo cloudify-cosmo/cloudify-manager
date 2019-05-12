@@ -16,9 +16,8 @@
 from flask import request
 
 from cloudify.models_states import VisibilityState
-from cloudify.cryptography_utils import (generate_key_using_password, decrypt,
-                                         encrypt)
-
+from cloudify.cryptography_utils import (encrypt, generate_key_using_password,
+                                         decrypt)
 from manager_rest import utils
 from manager_rest.security import SecuredResource
 from manager_rest.manager_exceptions import ConflictError
@@ -28,6 +27,7 @@ from manager_rest.resource_manager import get_resource_manager
 from manager_rest.rest import (rest_decorators,
                                resources_v3,
                                rest_utils)
+
 
 class SecretsSetGlobal(SecuredResource):
 
@@ -143,6 +143,9 @@ class SecretsExport(SecuredResource):
             all_tenants=all_tenants,
             get_all_results=get_all_results
         )
+        return self._create_secrets_list(secrets_list_raw, password)
+
+    def _create_secrets_list(self, secrets_list_raw, password):
         secrets_list = []
         sk = SecretsKey()
         for item in secrets_list_raw.items:
@@ -156,17 +159,10 @@ class SecretsExport(SecuredResource):
                           'crypto': 'not_encrypted'}
             secrets_list.append(new_secret)
         if password:
-            key = generate_key_using_password(password)
-            for secret in secrets_list:
-                secret['value'] = encrypt(secret['value'], key)
-                secret['crypto'] = 'encrypted'
+            self._encrypt_values(secrets_list, password)
 
-        return secrets_list
-
-
-
-
-
-
-
-
+    def _encrypt_values(self, secrets_list, password):
+        key = generate_key_using_password(password)
+        for secret in secrets_list:
+            secret['value'] = encrypt(secret['value'], key)
+            secret['crypto'] = 'encrypted'
