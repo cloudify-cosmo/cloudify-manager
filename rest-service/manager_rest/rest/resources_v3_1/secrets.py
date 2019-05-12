@@ -13,10 +13,15 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from cloudify.cryptography_utils import encrypt
+from flask import request
+
 from cloudify.models_states import VisibilityState
+from cloudify.cryptography_utils import (generate_key_using_password, decrypt,
+                                         encrypt)
 
 from manager_rest import utils
+from manager_rest.rest.rest_utils import create_export_secrets_list, \
+    encrypt_values
 from manager_rest.security import SecuredResource
 from manager_rest.manager_exceptions import ConflictError
 from manager_rest.security.authorization import authorize
@@ -25,7 +30,6 @@ from manager_rest.resource_manager import get_resource_manager
 from manager_rest.rest import (rest_decorators,
                                resources_v3,
                                rest_utils)
-
 
 class SecretsSetGlobal(SecuredResource):
 
@@ -120,3 +124,39 @@ class SecretsKey(resources_v3.SecretsKey):
             'is_hidden_value': is_hidden_value
         }
         return secret_params
+
+
+class SecretsExport(SecuredResource):
+    @rest_decorators.exceptions_handled
+    @authorize('secret_create')
+    @rest_decorators.create_filters(models.Secret)
+    @rest_decorators.all_tenants
+    @rest_decorators.search('id')
+    def get(self, filters=None, all_tenants=None, search=None):
+        password = request.args.get('_password')
+        # checks if _get_all_results was given as a parameter,
+        # if not returns false
+        get_all_results = rest_utils.verify_and_convert_bool(
+            '_get_all_results',
+            request.args.get('_get_all_results', False)
+        )
+        secrets_list_raw = get_storage_manager().list(
+            models.Secret,
+            filters=filters,
+            substr_filters=search,
+            all_tenants=all_tenants,
+            get_all_results=get_all_results
+        )
+
+        secrets_list = create_export_secrets_list(secrets_list_raw)
+        if password:
+            secrets_list = encrypt_values(secrets_list, password)
+        return secrets_list
+
+
+
+
+
+
+
+

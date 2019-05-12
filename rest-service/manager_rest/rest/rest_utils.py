@@ -26,10 +26,12 @@ from flask import request, make_response, current_app
 from flask_restful.reqparse import Argument, RequestParser
 
 from cloudify.models_states import VisibilityState
+from cloudify.cryptography_utils import (generate_key_using_password, decrypt,
+                                         encrypt)
 
 from manager_rest import manager_exceptions, config
 from manager_rest.constants import REST_SERVICE_NAME
-
+from manager_rest.rest.resources_v3 import SecretsKey
 
 states_except_private = copy.deepcopy(VisibilityState.STATES)
 states_except_private.remove('private')
@@ -268,3 +270,27 @@ def parse_datetime(datetime_str):
             ' (Jan-01-18 10:30pm EST)'.format(datetime_str))
 
     return utc_date
+
+
+def create_export_secrets_list(secrets_list_raw):
+    secrets_list = []
+    sk = SecretsKey()
+    for item in secrets_list_raw.items:
+        if item.is_hidden_value and not \
+                sk.is_hidden_value_permitted(item):
+            continue
+        new_secret = {'key': item.key, 'value': decrypt(item.value),
+                      'visibility': item.visibility,
+                      'tenant_name': item.tenant_name,
+                      'is_hidden_value': item.is_hidden_value,
+                      'crypto': 'not_encrypted'}
+        secrets_list.append(new_secret)
+    return secrets_list
+
+
+def encrypt_values(secrets_list, password):
+    key = generate_key_using_password(password)
+    for secret in secrets_list:
+        secret['value'] = encrypt(secret['value'], key)
+        secret['crypto'] = 'encrypted'
+    return secrets_list

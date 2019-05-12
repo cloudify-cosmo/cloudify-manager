@@ -33,7 +33,8 @@ from .manager_config import (                    # NOQA
 from .secrets import (                           # NOQA
     SecretsKey,
     SecretsSetGlobal,
-    SecretsSetVisibility
+    SecretsSetVisibility,
+    SecretsExport
 )
 
 from .plugins import (                           # NOQA
