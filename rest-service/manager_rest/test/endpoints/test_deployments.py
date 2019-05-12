@@ -825,6 +825,8 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                                 deployment_id='i{0}'.format(uuid.uuid4()),
                                 site_name=':invalid_site')
 
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
     def test_set_site_bad_parameters(self):
         resource_id = self._put_deployment_without_site()
         error_msg = '400: Must provide either a `site_name` of a valid site ' \
