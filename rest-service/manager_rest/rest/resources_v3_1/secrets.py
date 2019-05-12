@@ -20,8 +20,6 @@ from cloudify.cryptography_utils import (generate_key_using_password, decrypt,
                                          encrypt)
 
 from manager_rest import utils
-from manager_rest.rest.rest_utils import create_export_secrets_list, \
-    encrypt_values
 from manager_rest.security import SecuredResource
 from manager_rest.manager_exceptions import ConflictError
 from manager_rest.security.authorization import authorize
@@ -134,8 +132,6 @@ class SecretsExport(SecuredResource):
     @rest_decorators.search('id')
     def get(self, filters=None, all_tenants=None, search=None):
         password = request.args.get('_password')
-        # checks if _get_all_results was given as a parameter,
-        # if not returns false
         get_all_results = rest_utils.verify_and_convert_bool(
             '_get_all_results',
             request.args.get('_get_all_results', False)
@@ -147,10 +143,24 @@ class SecretsExport(SecuredResource):
             all_tenants=all_tenants,
             get_all_results=get_all_results
         )
-
-        secrets_list = create_export_secrets_list(secrets_list_raw)
+        secrets_list = []
+        sk = SecretsKey()
+        for item in secrets_list_raw.items:
+            if item.is_hidden_value and not \
+                    sk.is_hidden_value_permitted(item):
+                continue
+            new_secret = {'key': item.key, 'value': decrypt(item.value),
+                          'visibility': item.visibility,
+                          'tenant_name': item.tenant_name,
+                          'is_hidden_value': item.is_hidden_value,
+                          'crypto': 'not_encrypted'}
+            secrets_list.append(new_secret)
         if password:
-            secrets_list = encrypt_values(secrets_list, password)
+            key = generate_key_using_password(password)
+            for secret in secrets_list:
+                secret['value'] = encrypt(secret['value'], key)
+                secret['crypto'] = 'encrypted'
+
         return secrets_list
 
 
