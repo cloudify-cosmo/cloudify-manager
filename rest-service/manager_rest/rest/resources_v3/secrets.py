@@ -22,7 +22,6 @@ from cloudify.cryptography_utils import encrypt, decrypt
 from ... import utils
 from .. import rest_decorators, rest_utils
 from ..responses_v3 import SecretsListResponse
-from manager_rest.utils import is_administrator
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager
@@ -44,7 +43,7 @@ class SecretsKey(SecuredResource):
         secret = get_storage_manager().get(models.Secret, key)
         secret_dict = secret.to_dict()
         if secret_dict['is_hidden_value'] and not \
-                self.is_hidden_value_permitted(secret):
+                rest_utils.is_hidden_value_permitted(secret):
             # Hide the value of the secret
             secret_dict['value'] = ''
         else:
@@ -124,13 +123,9 @@ class SecretsKey(SecuredResource):
         self._validate_secret_modification_permitted(secret)
         return storage_manager.delete(secret, validate_global=True)
 
-    def is_hidden_value_permitted(self, secret):
-        return is_administrator(secret.tenant) or \
-               secret.created_by == current_user.username
-
     def _validate_secret_modification_permitted(self, secret):
         if secret.is_hidden_value and \
-                not self.is_hidden_value_permitted(secret):
+                not rest_utils.is_hidden_value_permitted(secret):
             raise ForbiddenError(
                 'User `{0}` is not permitted to modify the hidden value '
                 'secret `{1}`'.format(current_user.username, secret.key)
@@ -146,7 +141,7 @@ class SecretsKey(SecuredResource):
         )
         # Only the creator of the secret and the admins can change a secret
         # to be hidden value
-        if not self.is_hidden_value_permitted(secret):
+        if not rest_utils.is_hidden_value_permitted(secret):
             raise ForbiddenError(
                 'User `{0}` is not permitted to modify the secret `{1}` '
                 'to be hidden value'.format(current_user.username, secret.key)

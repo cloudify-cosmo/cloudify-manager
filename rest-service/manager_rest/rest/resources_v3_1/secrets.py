@@ -16,8 +16,9 @@
 from flask import request
 
 from cloudify.models_states import VisibilityState
-from cloudify.cryptography_utils import (encrypt, generate_key_using_password,
-                                         decrypt)
+from cloudify.cryptography_utils import (encrypt,
+                                         decrypt,
+                                         generate_key_using_password)
 from manager_rest import utils
 from manager_rest.security import SecuredResource
 from manager_rest.manager_exceptions import ConflictError
@@ -132,36 +133,34 @@ class SecretsExport(SecuredResource):
     @rest_decorators.search('id')
     def get(self, filters=None, all_tenants=None, search=None):
         password = request.args.get('_password')
-        get_all_results = rest_utils.verify_and_convert_bool(
-            '_get_all_results',
-            request.args.get('_get_all_results', False)
-        )
-        secrets_list_raw = get_storage_manager().list(
+        secrets = get_storage_manager().list(
             models.Secret,
             filters=filters,
             substr_filters=search,
             all_tenants=all_tenants,
-            get_all_results=get_all_results
+            get_all_results=True
         )
-        return self._create_secrets_list(secrets_list_raw, password)
+        return self._create_export_response(secrets, password)
 
-    def _create_secrets_list(self, secrets_list_raw, password):
+    def _create_export_response(self, secrets, password):
         secrets_list = []
-        sk = SecretsKey()
-        for item in secrets_list_raw.items:
-            if item.is_hidden_value and not \
-                    sk.is_hidden_value_permitted(item):
+        for secret in secrets.items:
+            if secret.is_hidden_value and not \
+                    rest_utils.is_hidden_value_permitted(secret):
                 continue
-            new_secret = {'key': item.key, 'value': decrypt(item.value),
-                          'visibility': item.visibility,
-                          'tenant_name': item.tenant_name,
-                          'is_hidden_value': item.is_hidden_value,
+            new_secret = {'key': secret.key,
+                          'value': decrypt(secret.value),
+                          'visibility': secret.visibility,
+                          'tenant_name': secret.tenant_name,
+                          'is_hidden_value': secret.is_hidden_value,
                           'crypto': 'not_encrypted'}
             secrets_list.append(new_secret)
         if password:
             self._encrypt_values(secrets_list, password)
+        return secrets_list
 
-    def _encrypt_values(self, secrets_list, password):
+    @staticmethod
+    def _encrypt_values(secrets_list, password):
         key = generate_key_using_password(password)
         for secret in secrets_list:
             secret['value'] = encrypt(secret['value'], key)
