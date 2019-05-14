@@ -470,7 +470,6 @@ relationships:
       operation:
         description: The target's lifecycle operation name.
         type: string
-        default: precreate
 
   cloudify.relationships.file_system_depends_on_volume:
     derived_from: cloudify.relationships.depends_on
@@ -840,21 +839,25 @@ data_types:
     properties:
       external_resource:
         description: >
-          Use external resource.
+          Use external blueprint resource.
+        type: boolean
         default: false
       id:
         description: >
           This is the blueprint ID that the component's node is connected to.
+        type: boolean
         required: false
       main_file_name:
         description: >
           The application blueprint filename. If the blueprint consists many
           imported files this is the main blueprint.
+        type: string
         default: blueprint.yaml
       blueprint_archive:
         description: >
-          The URL of a .zip to upload to the manager.
-          (Can be skipped if external_resource == True)
+          The URL of a .zip to upload to the manager
+          (Will be skipped if external_resource == True).
+        type: string
         default: ""
         required: true
 
@@ -862,19 +865,23 @@ data_types:
     properties:
       id:
         description: >
-          This is the deployment ID that the component's node is connected to.
+          This is the deployment ID that the Component's node is connected to.
+        type: string
         required: false
       inputs:
         description: >
           The inputs to the deployment.
+        type: dict
         default: {}
       logs:
         description: >
           Logs redirect settings, by default {redirect: true}
+        type: boolean
         required: false
       auto_inc_suffix:
         description: >
           Optional, will add a suffix to the given deployment ID in the form of an auto incremented index.
+        type: boolean
         required: false
 
   cloudify.datatypes.Component:
@@ -886,9 +893,10 @@ data_types:
         type: cloudify.datatypes.Deployment
         required: true
       executions_start_args:
-        default: {}
         description: >
-          Optional params for executions.
+          Optional params for Component executions.
+        type: dict
+        default: {}
 
 ##################################################################################
 # Base artifact definitions
