@@ -14,6 +14,7 @@
 #  * limitations under the License.
 
 from flask_login import current_user
+from manager_rest import manager_exceptions
 from manager_rest.test import base_test
 from manager_rest.storage import models
 from manager_rest.test.attribute import attr
@@ -104,3 +105,30 @@ class ManagerConfigTestCase(base_test.BaseServerTestCase):
     def test_put_config_noneditable_force(self):
         self._put_config(is_editable=False)
         self.client.manager.put_config('x', 6, force=True)
+
+    def test_get_ambiguous_name(self):
+        self._put_config(name='x', scope='rest', value=5)
+        self._put_config(name='x', scope='agent', value=6)
+        with self.assertRaises(CloudifyClientError) as cm:
+            self.client.manager.get_config(name='x')
+        self.assertEqual(
+            cm.exception.error_code,
+            manager_exceptions.AmbiguousName.AMBIGUOUS_NAME_CODE)
+        self.assertIn('Expected 1 value, but found 2', str(cm.exception))
+
+        result = self.client.manager.get_config(name='rest.x')
+        self.assertEqual(result.value, 5)
+        result = self.client.manager.get_config(name='agent.x')
+        self.assertEqual(result.value, 6)
+
+    def test_update_ambiguous_name(self):
+        self._put_config(name='x', scope='rest', value=5)
+        self._put_config(name='x', scope='agent', value=6)
+        with self.assertRaises(CloudifyClientError):
+            self.client.manager.put_config('x', 7)
+        self.client.manager.put_config('agent.x', 7)
+
+        self.assertEqual(
+            self.client.manager.get_config(name='rest.x').value, 5)
+        self.assertEqual(
+            self.client.manager.get_config(name='agent.x').value, 7)
