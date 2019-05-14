@@ -195,7 +195,8 @@ class Component(object):
             plugins = self.plugins.values()
         else:
             raise NonRecoverableError(
-                'Wrong type in plugins: {}'.format(repr(self.plugins)))
+                'Wrong type in Component\'s plugins: "{}", should be of '
+                'dict type.'.format(repr(self.plugins)))
 
         for plugin in plugins:
             ctx.logger.info('Creating plugin zip archive..')

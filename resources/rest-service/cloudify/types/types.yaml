@@ -370,31 +370,20 @@ node_types:
         default: {}
       client:
         description: >
-          Client configuration, if empty will be reused manager client:
-            host: Host of Cloudify's management machine.
-            port: Port of REST API service on management machine.
-            protocol: Protocol of REST API service on management machine,
-                      defaults to http.
-            api_version: version of REST API service on management machine.
-            headers: Headers to be added to request.
-            query_params: Query parameters to be added to the request.
-            cert: Path to a copy of the server's self-signed certificate.
-            trust_all: if `False`, the server's certificate
-                       (self-signed or not) will be verified.
-            username: Cloudify User username.
-            password: Cloudify User password.
-            token: Cloudify User token.
-            tenant: Cloudify Tenant name.
+          Client configuration, if empty will be reused manager client.
+        type: cloudify.datatypes.RemoteCloudifyManagerClient
         default: {}
       plugins:
         description: >
           Optional, list of plugins for upload.
             wagon_path: Url for plugin wagon file.
             plugin_yaml_path: Url for plugin yaml file.
-        default: []
+        type: dict
+        default: {}
       secrets:
         description: >
           Optional, dictionary of secrets for set before run components.
+        type: dict
         default: {}
     interfaces:
       cloudify.interfaces.lifecycle:
@@ -409,12 +398,12 @@ node_types:
               type: string
               default: install
             timeout:
-              type: integer
               description: How long (in seconds) to wait for execution to finish before timing out.
+              type: integer
               default: 1800
             interval:
-              type: integer
               description: Polling interval (seconds).
+              type: integer
               default: 10
         stop:
           implementation: cfy_extensions.cloudify_types.component.execute_start
@@ -897,6 +886,69 @@ data_types:
           Optional params for Component executions.
         type: dict
         default: {}
+
+  cloudify.datatypes.RemoteCloudifyManagerClient:
+    properties:
+      host:
+        description: >
+          Host of Cloudify's manager machine.
+        type: string
+        required: false
+      port:
+        description: >
+          Port of REST API service on management machine.
+        type: integer
+        required: false
+      protocol:
+        description: >
+          Protocol of REST API service on management machine, defaults to http.
+        type: string
+        required: false
+      api_version:
+        description: >
+          Version of REST API service on management machine.
+        type: string
+        required: false
+      headers:
+        description: >
+          Headers to be added to request.
+        type: dict
+        required: false
+      query_params:
+        description: >
+          Query parameters to be added to the request.
+        type: dict
+        required: false
+      cert:
+        description: >
+          Path on the Cloudify manager to a copy of the other Cloudify manager's certificate.
+        type: string
+        required: false
+      trust_all:
+        description: >
+          If False, the server's certificate (self-signed or not) will be verified.
+        type: boolean
+        required: false
+      username:
+        description: >
+          Cloudify user username.
+        type: string
+        required: false
+      password:
+        description: >
+          Cloudify user password.
+        type: string
+        required: false
+      token:
+        description: >
+          Cloudify user token.
+        type: string
+        required: false
+      tenant:
+        description: >
+          Cloudify user accessible tenant name.
+        type: string
+        required: false
 
 ##################################################################################
 # Base artifact definitions

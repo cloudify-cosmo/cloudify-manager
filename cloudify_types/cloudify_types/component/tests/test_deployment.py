@@ -232,8 +232,8 @@ class TestComponentPlugins(TestDeploymentBase):
             component = Component({'plugins': True})
             error = self.assertRaises(NonRecoverableError,
                                       component._upload_plugins)
-            self.assertIn('Wrong type in plugins: True',
-                          error.message)
+            self.assertEqual('Wrong type in Component\'s plugins: "True", '
+                             'should be of dict type.', error.message)
 
             component = Component({'plugins': {
                 'base_plugin': {
