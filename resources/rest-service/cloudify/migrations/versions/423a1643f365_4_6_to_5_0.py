@@ -126,6 +126,13 @@ def upgrade():
             is_editable=True
         ),
         Config(
+            name='ldap_nested_levels',
+            value=1,
+            scope='rest',
+            schema={'type': 'number', 'minimum': 1},
+            is_editable=True
+        ),
+        Config(
             name='file_server_root',
             value='/opt/manager/resources',
             scope='rest',
