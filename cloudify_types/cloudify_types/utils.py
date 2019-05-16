@@ -79,7 +79,5 @@ def get_deployment_by_id(client, deployment_id):
     not finding the deployment then other kinds of errors, like server
     failure.
     """
-    deployment_id_filter = {'id': deployment_id}
-    deployments = client.deployments.list(_include=['id'],
-                                          **deployment_id_filter)
+    deployments = client.deployments.list(_include=['id'], id=deployment_id)
     return deployments[0] if deployments else None

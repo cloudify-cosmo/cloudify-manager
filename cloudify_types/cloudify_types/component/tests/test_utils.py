@@ -15,6 +15,9 @@
 import os
 import tempfile
 
+from cloudify.exceptions import NonRecoverableError
+from cloudify_rest_client.exceptions import CloudifyClientError
+
 from cloudify_types.component import utils
 from .base_test_suite import ComponentTestBase
 
@@ -50,3 +53,50 @@ class TestUtils(ComponentTestBase):
             create_temp=True)
         self.assertTrue(copy_file)
         self.cleaning_up_files([copy_file])
+
+    def test_blueprint_id_exists_no_blueprint(self):
+        output = utils.blueprint_id_exists(self.cfy_mock_client, 'blu_name')
+        self.assertFalse(output)
+
+    def test_blueprint_id_exists_with_existing_blueprint(self):
+        blueprint_name = 'blu_name'
+        self.cfy_mock_client.blueprints.set_existing_objects([1])
+
+        output = utils.blueprint_id_exists(self.cfy_mock_client,
+                                           blueprint_name)
+        self.assertTrue(output)
+
+    def test_deployment_id_exists_no_deployment(self):
+        output = utils.deployment_id_exists(self.cfy_mock_client, 'dep_name')
+        self.assertFalse(output)
+
+    def test_deployment_id_exists_with_existing_deployment(self):
+        self.cfy_mock_client.deployments.set_existing_objects([1])
+        self.assertTrue(utils.deployment_id_exists(self.cfy_mock_client,
+                                                   'test'))
+
+    def test_find_blueprint_handle_client_error(self):
+
+        def mock_return(*_, **__):
+            raise CloudifyClientError('Mistake')
+
+        self.cfy_mock_client.blueprints.list = mock_return
+        output = self.assertRaises(
+            NonRecoverableError,
+            utils.blueprint_id_exists,
+            self.cfy_mock_client,
+            'blu_name')
+        self.assertIn('Blueprint search failed', str(output))
+
+    def test_find_deployment_handle_client_error(self):
+
+        def mock_return(*_, **__):
+            raise CloudifyClientError('Mistake')
+
+        self.cfy_mock_client.deployments.list = mock_return
+        output = self.assertRaises(
+            NonRecoverableError,
+            utils.deployment_id_exists,
+            self.cfy_mock_client,
+            'dep_name')
+        self.assertIn('Deployment search failed', str(output))

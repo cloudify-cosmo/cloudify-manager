@@ -19,60 +19,13 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 
 from .base_test_suite import ComponentTestBase
 from ..polling import (
-    blueprint_id_exists,
-    deployment_id_exists,
     poll_with_timeout,
     redirect_logs,
-    is_component_execution_at_state,
+    is_deployment_execution_at_state,
     is_all_executions_finished)
 
 
 class TestPolling(ComponentTestBase):
-
-    def test_blueprint_id_exists_no_blueprint(self):
-        output = blueprint_id_exists(self.cfy_mock_client, 'blu_name')
-        self.assertFalse(output)
-
-    def test_blueprint_id_exists_with_existing_blueprint(self):
-        blueprint_name = 'blu_name'
-        self.cfy_mock_client.blueprints.set_existing_objects([1])
-
-        output = blueprint_id_exists(self.cfy_mock_client, blueprint_name)
-        self.assertTrue(output)
-
-    def test_deployment_id_exists_no_deployment(self):
-        output = deployment_id_exists(self.cfy_mock_client, 'dep_name')
-        self.assertFalse(output)
-
-    def test_deployment_id_exists_with_existing_deployment(self):
-        self.cfy_mock_client.deployments.set_existing_objects([1])
-        self.assertTrue(deployment_id_exists(self.cfy_mock_client, 'test'))
-
-    def test_find_blueprint_handle_client_error(self):
-
-        def mock_return(*_, **__):
-            raise CloudifyClientError('Mistake')
-
-        self.cfy_mock_client.blueprints.list = mock_return
-        output = self.assertRaises(
-            NonRecoverableError,
-            blueprint_id_exists,
-            self.cfy_mock_client,
-            'blu_name')
-        self.assertIn('Blueprint search failed', str(output))
-
-    def test_find_deployment_handle_client_error(self):
-
-        def mock_return(*_, **__):
-            raise CloudifyClientError('Mistake')
-
-        self.cfy_mock_client.deployments.list = mock_return
-        output = self.assertRaises(
-            NonRecoverableError,
-            deployment_id_exists,
-            self.cfy_mock_client,
-            'dep_name')
-        self.assertIn('Deployment search failed', str(output))
 
     def test_poll_with_timeout_timeout(self):
         mock_timeout = .0001
@@ -128,10 +81,19 @@ class TestPolling(ComponentTestBase):
                                    self.cfy_mock_client)
         self.assertIn('failed', output.message)
 
+    def test_dep_workflow_in_state_pollster_no_execution_given(self):
+        self.assertRaises(NonRecoverableError,
+                          is_deployment_execution_at_state,
+                          self.cfy_mock_client,
+                          'test',
+                          'terminated',
+                          None)
+
     def test_dep_workflow_in_state_pollster_no_executions(self):
-        self.assertFalse(is_component_execution_at_state(self.cfy_mock_client,
-                                                         'test',
-                                                         'terminated'))
+        self.assertFalse(is_deployment_execution_at_state(self.cfy_mock_client,
+                                                          'test',
+                                                          'terminated',
+                                                          'exe_id'))
 
     def test_dep_workflow_in_state_pollster_matching_executions(self):
         deployment_id = 'dep_name'
@@ -143,10 +105,10 @@ class TestPolling(ComponentTestBase):
             return response
 
         self.cfy_mock_client.executions.get = mock_return
-        output = is_component_execution_at_state(self.cfy_mock_client,
-                                                 deployment_id,
-                                                 'terminated',
-                                                 execution_id='_exec_id')
+        output = is_deployment_execution_at_state(self.cfy_mock_client,
+                                                  deployment_id,
+                                                  'terminated',
+                                                  execution_id='_exec_id')
         self.assertTrue(output)
 
     def test_dep_workflow_in_state_pollster_matching_executions_logs(self):
@@ -159,10 +121,11 @@ class TestPolling(ComponentTestBase):
             return response
 
         self.cfy_mock_client.executions.get = mock_return
-        output = is_component_execution_at_state(self.cfy_mock_client,
-                                                 deployment_id,
-                                                 'terminated',
-                                                 True)
+        output = is_deployment_execution_at_state(self.cfy_mock_client,
+                                                  deployment_id,
+                                                  'terminated',
+                                                  'exe_id',
+                                                  True)
         self.assertTrue(output)
 
     def test_dep_workflow_in_state_pollster_matching_state(self):
@@ -174,10 +137,10 @@ class TestPolling(ComponentTestBase):
             return response
 
         self.cfy_mock_client.executions.get = mock_return
-        output = is_component_execution_at_state(self.cfy_mock_client,
-                                                 'dep_name',
-                                                 state='terminated',
-                                                 execution_id='_exec_id')
+        output = is_deployment_execution_at_state(self.cfy_mock_client,
+                                                  'dep_name',
+                                                  state='terminated',
+                                                  execution_id='_exec_id')
         self.assertTrue(output)
 
     def test_dep_workflow_in_state_pollster_raises(self):
@@ -187,10 +150,11 @@ class TestPolling(ComponentTestBase):
 
         self.cfy_mock_client.executions.get = mock_return
         output = self.assertRaises(NonRecoverableError,
-                                   is_component_execution_at_state,
+                                   is_deployment_execution_at_state,
                                    self.cfy_mock_client,
                                    'dep_name',
-                                   'terminated')
+                                   'terminated',
+                                   'exe_id')
         self.assertIn('failed', output.message)
 
     def test_component_logs_redirect_predefined_level(self):

@@ -24,6 +24,8 @@ import requests
 from cloudify import ctx
 from cloudify.exceptions import NonRecoverableError
 
+from cloudify_types.utils import handle_client_exception, get_deployment_by_id
+
 
 def update_runtime_properties(_type, _key, _value):
     ctx.instance.runtime_properties[_type][_key] = _value
@@ -115,3 +117,19 @@ def zip_files(files_paths):
     _zipping(source_folder, destination_zip, include_folder=False)
     shutil.rmtree(source_folder)
     return destination_zip
+
+
+@handle_client_exception('Blueprint search failed')
+def blueprint_id_exists(client, blueprint_id):
+    """
+    Searching for blueprint_id in all blueprints in order to differentiate
+    not finding the blueprint then other kinds of errors, like server
+    failure.
+    """
+    blueprint = client.blueprints.list(_include=['id'], id=blueprint_id)
+    return True if blueprint else False
+
+
+def deployment_id_exists(client, deployment_id):
+    deployment = get_deployment_by_id(client, deployment_id)
+    return True if deployment else False

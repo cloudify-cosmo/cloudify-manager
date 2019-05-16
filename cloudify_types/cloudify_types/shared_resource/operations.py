@@ -17,9 +17,23 @@ from cloudify.decorators import operation
 from cloudify_types.utils import proxy_operation
 
 from .shared_resource import SharedResource
+from .constants import WORKFLOW_EXECUTION_TIMEOUT
+from .execute_shared_resource_workflow import execute_shared_resource_workflow
 
 
 @operation
 @proxy_operation('validate_deployment')
 def connect_deployment(operation, **_):
     return getattr(SharedResource(_), operation)()
+
+
+@operation
+def execute_workflow(workflow_id,
+                     parameters,
+                     timeout=WORKFLOW_EXECUTION_TIMEOUT,
+                     redirect_logs=True,
+                     **_):
+    return execute_shared_resource_workflow(workflow_id,
+                                            parameters,
+                                            timeout,
+                                            redirect_logs)

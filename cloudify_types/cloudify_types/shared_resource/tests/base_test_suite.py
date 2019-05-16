@@ -12,61 +12,54 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import mock
 import testtools
 
 from cloudify.state import current_ctx
 from cloudify.mocks import MockCloudifyContext
 
-from cloudify_rest_client.exceptions import CloudifyClientError
+from cloudify_types.component.tests.client_mock import MockCloudifyRestClient
 
-from .client_mock import MockCloudifyRestClient
+from ..constants import SHARED_RESOURCE_TYPE
 
-REST_CLIENT_EXCEPTION = \
-    mock.MagicMock(side_effect=CloudifyClientError('Mistake'))
 
-COMPONENT_PROPS = {
+NODE_PROPS = {
     'resource_config': {
-        'blueprint': {
-            'id': '',
-            'blueprint_archive': 'URL',
-            'main_file_name': 'blueprint.yaml'
-        },
         'deployment': {
-            'id': '',
+            'id': 'test',
             'inputs': {}
         }
     }
 }
 
-MOCK_TIMEOUT = .0001
 
+class TestSharedResourceBase(testtools.TestCase):
 
-class ComponentTestBase(testtools.TestCase):
-
-    def setUp(self, context_data=COMPONENT_PROPS):
-        super(ComponentTestBase, self).setUp()
-        self._ctx = self.get_mock_ctx('test', COMPONENT_PROPS)
-        self._ctx.logger.log = mock.MagicMock(return_value=None)
+    def setUp(self):
+        super(TestSharedResourceBase, self).setUp()
+        self._ctx = self.get_mock_ctx('test', SHARED_RESOURCE_TYPE)
         current_ctx.set(self._ctx)
         self.cfy_mock_client = MockCloudifyRestClient()
 
     def tearDown(self):
         current_ctx.clear()
-        super(ComponentTestBase, self).tearDown()
+        super(TestSharedResourceBase, self).tearDown()
 
     @staticmethod
     def get_mock_ctx(test_name,
-                     context,
-                     retry_number=0):
+                     mock_node_type,
+                     retry_number=0,
+                     node_props=NODE_PROPS):
         operation = {
             'retry_number': retry_number
         }
+
         ctx = MockCloudifyContext(
             node_id=test_name,
+            node_name=test_name,
+            node_type=mock_node_type,
             deployment_id=test_name,
             operation=operation,
-            properties=context
+            properties=node_props
         )
         ctx.operation._operation_context = {'name': 'some.test'}
 

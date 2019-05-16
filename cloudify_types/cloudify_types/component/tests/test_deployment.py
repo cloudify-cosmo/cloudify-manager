@@ -132,7 +132,7 @@ class TestDeployment(TestDeploymentBase):
             mock_client.return_value = self.cfy_mock_client
 
             poll_with_timeout_test = \
-                'cloudify_types.component.component.poll_with_timeout'
+                'cloudify_types.component.polling.poll_with_timeout'
             with mock.patch(poll_with_timeout_test) as poll:
                 poll.return_value = True
 
@@ -264,7 +264,7 @@ class TestComponentSecrets(TestDeploymentBase):
             mock_client.return_value = self.cfy_mock_client
 
             poll_with_timeout_test = \
-                'cloudify_types.component.component.poll_with_timeout'
+                'cloudify_types.component.polling.poll_with_timeout'
             with mock.patch(poll_with_timeout_test) as poll:
                 poll.return_value = True
 
