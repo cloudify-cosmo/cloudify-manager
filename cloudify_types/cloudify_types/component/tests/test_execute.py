@@ -70,24 +70,18 @@ class TestExecute(ComponentTestBase):
     def test_execute_start_timeout(self):
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             mock_client.return_value = self.cfy_mock_client
-            poll_with_timeout_test = \
-                'cloudify_types.component.polling.poll_with_timeout'
-            with mock.patch(poll_with_timeout_test) as poll:
-                poll.return_value = False
-                error = self.assertRaises(NonRecoverableError,
-                                          execute_start,
-                                          deployment_id='dep_name',
-                                          workflow_id='install',
-                                          timeout=MOCK_TIMEOUT)
-                self.assertIn(
-                    'Execution timed out',
-                    error.message)
+            error = self.assertRaises(NonRecoverableError,
+                                      execute_start,
+                                      deployment_id='dep_name',
+                                      workflow_id='install',
+                                      timeout=MOCK_TIMEOUT)
+            self.assertIn('Execution timed out', error.message)
 
     def test_execute_start_succeeds(self):
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             mock_client.return_value = self.cfy_mock_client
             poll_with_timeout_test = \
-                'cloudify_types.component.component.poll_with_timeout'
+                'cloudify_types.component.polling.poll_with_timeout'
             with mock.patch(poll_with_timeout_test) as poll:
                 poll.return_value = True
                 output = execute_start(operation='execute_workflow',

@@ -481,6 +481,88 @@ relationships:
         description: The target's lifecycle operation name.
         type: string
 
+  cloudify.relationships.depends_on_shared_resource:
+    derived_from: cloudify.relationships.depends_on
+    target_interfaces:
+      cloudify.interfaces.relationship_lifecycle:
+        establish:
+          implementation: cfy_extensions.cloudify_types.shared_resource.execute_workflow
+          inputs:
+            workflow_id:
+              description: >
+                The workflow id that will be run in the SharedResource's deployment as
+                implementation defined there.
+              type: string
+            parameters:
+              description: >
+                Optional, inputs for running the workflow.
+              type: dict
+              default: {}
+            timeout:
+              description: >
+                Timeout in seconds for running the specified workflow om the deployment.
+              type: integer
+              default: 10
+        unlink:
+          implementation: cfy_extensions.cloudify_types.shared_resource.execute_workflow
+          inputs:
+            workflow_id:
+              description: >
+                The workflow id that will be run in the SharedResource's deployment as
+                implementation defined there.
+              type: string
+            parameters:
+              description: >
+                Optional, inputs for running the workflow.
+              type: dict
+              default: {}
+            timeout:
+              description: >
+                Timeout in seconds for running the specified workflow om the deployment.
+              type: integer
+              default: 10
+
+  cloudify.relationships.connected_to_shared_resource:
+    derived_from: cloudify.relationships.connected_to
+    target_interfaces:
+      cloudify.interfaces.relationship_lifecycle:
+        establish:
+          implementation: cfy_extensions.cloudify_types.shared_resource.execute_workflow
+          inputs:
+            workflow_id:
+              description: >
+                The workflow id that will be run in the SharedResource's deployment as
+                implementation defined there.
+              type: string
+            parameters:
+              description: >
+                Optional, inputs for running the workflow.
+              type: dict
+              default: {}
+            timeout:
+              description: >
+                Timeout in seconds for running the specified workflow om the deployment.
+              type: integer
+              default: 10
+        unlink:
+          implementation: cfy_extensions.cloudify_types.shared_resource.execute_workflow
+          inputs:
+            workflow_id:
+              description: >
+                The workflow id that will be run in the SharedResource deployment as
+                defined there.
+              type: string
+            parameters:
+              description: >
+                Optional, Inputs for running the workflow.
+              type: dict
+              default: {}
+            timeout:
+              description: >
+                Timeout in seconds for running the specified workflow om the deployment.
+              type: integer
+              default: 10
+
   cloudify.relationships.file_system_depends_on_volume:
     derived_from: cloudify.relationships.depends_on
     source_interfaces:

@@ -17,9 +17,9 @@ import time
 from cloudify import ctx
 from cloudify.exceptions import NonRecoverableError
 
-from cloudify_types.utils import handle_client_exception, get_deployment_by_id
+from cloudify_types.utils import handle_client_exception
 
-from .constants import POLLING_INTERVAL, PAGINATION_SIZE
+from .constants import POLLING_INTERVAL, PAGINATION_SIZE, EXECUTIONS_TIMEOUT
 
 PREDEFINED_LOG_LEVELS = {
     'critical': 50,
@@ -28,24 +28,6 @@ PREDEFINED_LOG_LEVELS = {
     'info': 20,
     'debug': 10
 }
-
-
-@handle_client_exception('Blueprint search failed')
-def blueprint_id_exists(client, blueprint_id):
-    """
-    Searching for blueprint_id in all blueprints in order to differentiate
-    not finding the blueprint then other kinds of errors, like server
-    failure.
-    """
-    blueprint_id_filter = {'id': blueprint_id}
-    blueprint = client.blueprints.list(_include=['id'],
-                                       **blueprint_id_filter)
-    return True if blueprint else False
-
-
-def deployment_id_exists(client, deployment_id):
-    deployment = get_deployment_by_id(client, deployment_id)
-    return True if deployment else False
 
 
 def poll_with_timeout(pollster,
@@ -83,14 +65,19 @@ def _fetch_events(client, execution_id, last_event):
     return events, full_count
 
 
-@handle_client_exception('Redirecting logs from the component failed')
-def redirect_logs(client, execution_id):
+def _get_ctx(instance_ctx):
+    return instance_ctx if instance_ctx else ctx.instance
+
+
+@handle_client_exception('Redirecting logs from the deployment failed')
+def redirect_logs(client, execution_id, instance_ctx=None):
+    instance_ctx = _get_ctx(instance_ctx)
     count_events = "received_events"
 
-    if not ctx.instance.runtime_properties.get(count_events):
-        ctx.instance.runtime_properties[count_events] = {}
+    if not instance_ctx.runtime_properties.get(count_events):
+        instance_ctx.runtime_properties[count_events] = {}
 
-    last_event = int(ctx.instance.runtime_properties[count_events].get(
+    last_event = int(instance_ctx.runtime_properties[count_events].get(
         execution_id, 0))
     full_count = -1
 
@@ -134,7 +121,7 @@ def redirect_logs(client, execution_id):
             ctx.logger.log(20, "Returned nothing, let's get logs next time.")
             break
 
-    ctx.instance.runtime_properties[count_events][execution_id] = last_event
+    instance_ctx.runtime_properties[count_events][execution_id] = last_event
 
 
 def _is_execution_not_ended(execution_status):
@@ -176,12 +163,20 @@ def is_all_executions_finished(client, deployment_id=None):
     return True
 
 
-@handle_client_exception('Checking component\'s latest execution had failed')
-def is_component_execution_at_state(client,
-                                    dep_id,
-                                    state,
-                                    log_redirect=False,
-                                    execution_id=None):
+@handle_client_exception('Checking deployment\'s latest execution state '
+                         'had failed')
+def is_deployment_execution_at_state(client,
+                                     dep_id,
+                                     state,
+                                     execution_id,
+                                     log_redirect=False,
+                                     instance_ctx=None):
+    instance_ctx = _get_ctx(instance_ctx)
+
+    if not execution_id:
+        raise NonRecoverableError(
+            'Execution id was not found for "{0}" deployment.'.format(
+                dep_id))
 
     execution_get_args = ['status', 'workflow_id',
                           'created_at', 'ended_at', 'id']
@@ -189,14 +184,14 @@ def is_component_execution_at_state(client,
     execution = client.executions.get(execution_id=execution_id,
                                       _include=execution_get_args)
     ctx.logger.info(
-        'The execution of "{0}" component is {1}.'.format(dep_id,
-                                                          execution))
+        'Execution "{0}" of component "{1}" state is {2}'.format(execution_id,
+                                                                 dep_id,
+                                                                 execution))
 
-    execution_id = execution.get('id')
-    if log_redirect and execution_id:
+    if log_redirect:
         ctx.logger.debug(
-            'Execution info with log_redirect is {0}.'.format(execution))
-        redirect_logs(client, execution_id)
+            'Execution info with log_redirect is {0}'.format(execution))
+        redirect_logs(client, execution_id, instance_ctx)
 
     execution_status = execution.get('status')
     if execution_status == state:
@@ -210,3 +205,35 @@ def is_component_execution_at_state(client,
             'Execution {0} failed.'.format(str(execution)))
 
     return False
+
+
+def verify_execution_state(client,
+                           execution_id,
+                           deployment_id,
+                           redirect_log,
+                           workflow_state,
+                           timeout=EXECUTIONS_TIMEOUT,
+                           interval=POLLING_INTERVAL,
+                           instance_ctx=None):
+    instance_ctx = _get_ctx(instance_ctx)
+
+    pollster_args = {
+        'client': client,
+        'dep_id': deployment_id,
+        'state': workflow_state,
+        'log_redirect': redirect_log,
+        'execution_id': execution_id,
+        'instance_ctx': instance_ctx
+    }
+
+    ctx.logger.debug('Polling execution state with: {0}'.format(
+        pollster_args))
+    result = poll_with_timeout(
+        lambda: is_deployment_execution_at_state(**pollster_args),
+        timeout=timeout,
+        interval=interval)
+
+    if not result:
+        raise NonRecoverableError(
+            'Execution timed out after: {0} seconds.'.format(timeout))
+    return True

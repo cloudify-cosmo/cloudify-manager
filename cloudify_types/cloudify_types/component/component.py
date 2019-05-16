@@ -21,18 +21,19 @@ from cloudify.exceptions import NonRecoverableError
 from cloudify_rest_client.client import CloudifyClient
 from cloudify_rest_client.exceptions import CloudifyClientError
 
+
 from .constants import (
     EXECUTIONS_TIMEOUT,
     POLLING_INTERVAL,
     EXTERNAL_RESOURCE)
 from .polling import (
+    poll_with_timeout,
+    is_all_executions_finished,
+    verify_execution_state
+)
+from .utils import (
     blueprint_id_exists,
     deployment_id_exists,
-    poll_with_timeout,
-    is_component_execution_at_state,
-    is_all_executions_finished
-)
-from cloudify_types.component.utils import (
     update_runtime_properties,
     get_local_path,
     zip_files
@@ -414,23 +415,10 @@ class Component(object):
     def verify_execution_successful(self,
                                     execution_id):
         log_redirect = self.deployment_logs.get('redirect', True)
-        pollster_args = {
-            'client': self.client,
-            'dep_id': self.deployment_id,
-            'state': self.workflow_state,
-            'log_redirect': log_redirect,
-            'execution_id': execution_id,
-        }
-
-        ctx.logger.debug('Polling execution state with: {0}'.format(
-            pollster_args))
-        result = poll_with_timeout(
-            lambda: is_component_execution_at_state(**pollster_args),
-            timeout=self.timeout,
-            interval=self.interval)
-
-        if not result:
-            raise NonRecoverableError(
-                'Execution timed out after: {0} seconds.'.format(
-                    self.timeout))
-        return True
+        return verify_execution_state(self.client,
+                                      execution_id,
+                                      self.deployment_id,
+                                      log_redirect,
+                                      self.workflow_state,
+                                      self.timeout,
+                                      self.interval)

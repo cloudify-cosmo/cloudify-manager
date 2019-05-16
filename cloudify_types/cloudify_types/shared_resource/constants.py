@@ -12,5 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .operations import connect_deployment  # NOQA
-from .operations import execute_workflow  # NOQA
+SHARED_RESOURCE_TYPE = 'cloudify.nodes.SharedResource'
+
+WORKFLOW_EXECUTION_TIMEOUT = 1800
