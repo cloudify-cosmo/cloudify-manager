@@ -22,7 +22,11 @@ from json import dump
 from datetime import datetime
 from flask_security import current_user
 
-from manager_rest.manager_exceptions import ConflictError
+from manager_rest.manager_exceptions import (
+    ConflictError,
+    AmbiguousName,
+    NotFoundError
+)
 
 CONFIG_TYPES = [
     ('MANAGER_REST_CONFIG_PATH', ''),
@@ -194,14 +198,13 @@ class Config(object):
         from manager_rest.storage import models
         from sqlalchemy import create_engine, orm
 
-        names = config_dict.keys()
         engine = create_engine(self.db_url)
         session = orm.Session(bind=engine)
-        stored_configs = (session.query(models.Config)
-                          .filter(models.Config.name.in_(names))
-                          .all())
+        stored_configs = session.query(models.Config).all()
+
         config_mappings = []
-        for entry in stored_configs:
+        for name, value in config_dict.items():
+            entry = self._find_entry(stored_configs, name)
             if not entry.is_editable and not force:
                 raise ConflictError('{0} is not editable'.format(entry.name))
             if entry.schema:
@@ -212,7 +215,7 @@ class Config(object):
             config_mappings.append({
                 'name': entry.name,
                 'scope': entry.scope,
-                'value': config_dict[entry.name],
+                'value': value,
                 'updated_at': datetime.now(),
                 '_updater_id': current_user.id,
             })
@@ -220,6 +223,25 @@ class Config(object):
         session.commit()
         session.close()
         engine.dispose()
+
+    def _find_entry(self, entries, name):
+        """In entries, find one that matches the name.
+
+        Name can be prefixed with scope, in the format of "scope.name".
+        There must be only one matching entry.
+        """
+        scope, _, name = name.rpartition('.')
+        matching_entries = [
+            entry for entry in entries
+            if entry.name == name and
+            (not scope or entry.scope == scope)]
+        if not matching_entries:
+            raise NotFoundError(name)
+        if len(matching_entries) != 1:
+            raise AmbiguousName(
+                'Expected 1 value, but found {0}'
+                .format(len(matching_entries)))
+        return matching_entries[0]
 
     @property
     def db_url(self):

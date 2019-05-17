@@ -20,7 +20,7 @@ from manager_rest.rest.rest_decorators import (
     exceptions_handled,
     marshal_with
 )
-from manager_rest import config
+from manager_rest import config, manager_exceptions
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import get_storage_manager, models
@@ -71,9 +71,13 @@ class ManagerConfigId(SecuredResource):
     @marshal_with(models.Config)
     @authorize('manager_config_get')
     def get(self, name):
-        """Get a single config value"""
-        sm = get_storage_manager()
-        return sm.get(models.Config, None, filters={'name': name})
+        """Get a single config value
+
+        Name can be prefixed with scope, in the format of "name.scope".
+        If the name by itself is ambiguous (because it exists for multiple
+        scopes), then it MUST be prefixed with the scope.
+        """
+        return self._get_config(name)
 
     @exceptions_handled
     @marshal_with(models.Config)
@@ -85,6 +89,7 @@ class ManagerConfigId(SecuredResource):
         when passing the force flag.
         If a schema is specified for the given setting, the new value
         must validate.
+        Names can be prefixed with scope, using the same semantics as GET.
         """
         data = rest_utils.get_json_and_verify_params({
             'value': {},
@@ -94,6 +99,18 @@ class ManagerConfigId(SecuredResource):
         force = data.get('force', False)
         config.instance.update_db({name: value}, force)
 
-        # Get updated entry for return value
+        return self._get_config(name)
+
+    def _get_config(self, name):
         sm = get_storage_manager()
-        return sm.get(models.Config, None, filters={'name': name})
+        scope, _, name = name.rpartition('.')
+        filters = {'name': name}
+        if scope:
+            filters['scope'] = scope
+        results = sm.list(models.Config, None, filters=filters)
+        if not results:
+            raise manager_exceptions.NotFoundError(name)
+        elif len(results) > 1:
+            raise manager_exceptions.AmbiguousName(
+                'Expected 1 value, but found {0}'.format(len(results)))
+        return results[0]

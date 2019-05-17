@@ -50,6 +50,14 @@ class ConflictError(ManagerException):
             409, ConflictError.CONFLICT_ERROR_CODE, *args, **kwargs)
 
 
+class AmbiguousName(ManagerException):
+    AMBIGUOUS_NAME_CODE = 'ambiguous_name'
+
+    def __init__(self, *args, **kwargs):
+        super(AmbiguousName, self).__init__(
+            409, AmbiguousName.AMBIGUOUS_NAME_CODE, *args, **kwargs)
+
+
 class SQLStorageException(ManagerException):
     STORAGE_ERROR_CODE = 'storage_error'
 
