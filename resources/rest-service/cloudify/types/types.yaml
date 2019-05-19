@@ -370,19 +370,23 @@ node_types:
         default: {}
       client:
         description: >
-          Client configuration, if empty will be reused manager client.
+          Client configuration, if empty Cloudify manager client will be used.
         type: cloudify.datatypes.RemoteCloudifyManagerClient
         default: {}
       plugins:
         description: >
-          Optional, list of plugins for upload.
-            wagon_path: Url for plugin wagon file.
-            plugin_yaml_path: Url for plugin yaml file.
+          Optional, dictionary of plugins for upload,
+          which each plugin in format of:
+            plugin-name:
+              wagon_path: Url for plugin wagon file,
+              plugin_yaml_path: Url for plugin yaml file
         type: dict
         default: {}
       secrets:
         description: >
-          Optional, dictionary of secrets for set before run components.
+          Optional, dictionary of secrets for set before run components,
+          which each secret in format of:
+            secret-name: value
         type: dict
         default: {}
     interfaces:
