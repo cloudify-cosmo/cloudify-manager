@@ -227,23 +227,6 @@ class TestComponentPlugins(TestDeploymentBase):
                 zip_files.assert_not_called()
                 get_local_path.assert_not_called()
 
-    def test_upload_plugins_with_wrong_format(self):
-        with mock.patch('cloudify.manager.get_rest_client'):
-            component = Component({'plugins': True})
-            error = self.assertRaises(NonRecoverableError,
-                                      component._upload_plugins)
-            self.assertIn('Wrong type in plugins: True',
-                          error.message)
-
-            component = Component({'plugins': {
-                'base_plugin': {
-                    'wagon_path': '',
-                    'plugin_yaml_path': ''}}})
-            error = self.assertRaises(NonRecoverableError,
-                                      component._upload_plugins)
-            self.assertIn("You should provide both values wagon_path: '' "
-                          "and plugin_yaml_path: ''", error.message)
-
     def test_delete_deployment_success_with_plugins(self):
         self._ctx.instance.runtime_properties['deployment']['id'] = 'dep_name'
         self._ctx.instance.runtime_properties['plugins'] = {'plugin_id'}

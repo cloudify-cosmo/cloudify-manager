@@ -191,13 +191,7 @@ class Component(object):
         if 'plugins' not in ctx.instance.runtime_properties:
             ctx.instance.runtime_properties['plugins'] = []
 
-        if isinstance(self.plugins, dict):
-            plugins = self.plugins.values()
-        else:
-            raise NonRecoverableError(
-                'Wrong type in plugins: {}'.format(repr(self.plugins)))
-
-        for plugin in plugins:
+        for plugin in self.plugins.values():
             ctx.logger.info('Creating plugin zip archive..')
             wagon_path = None
             yaml_path = None

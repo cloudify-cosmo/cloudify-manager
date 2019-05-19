@@ -370,31 +370,24 @@ node_types:
         default: {}
       client:
         description: >
-          Client configuration, if empty will be reused manager client:
-            host: Host of Cloudify's management machine.
-            port: Port of REST API service on management machine.
-            protocol: Protocol of REST API service on management machine,
-                      defaults to http.
-            api_version: version of REST API service on management machine.
-            headers: Headers to be added to request.
-            query_params: Query parameters to be added to the request.
-            cert: Path to a copy of the server's self-signed certificate.
-            trust_all: if `False`, the server's certificate
-                       (self-signed or not) will be verified.
-            username: Cloudify User username.
-            password: Cloudify User password.
-            token: Cloudify User token.
-            tenant: Cloudify Tenant name.
+          Client configuration, if empty Cloudify manager client will be used.
+        type: cloudify.datatypes.RemoteCloudifyManagerClient
         default: {}
       plugins:
         description: >
-          Optional, list of plugins for upload.
-            wagon_path: Url for plugin wagon file.
-            plugin_yaml_path: Url for plugin yaml file.
-        default: []
+          Optional, dictionary of plugins for upload,
+          which each plugin in format of:
+            plugin-name:
+              wagon_path: Url for plugin wagon file,
+              plugin_yaml_path: Url for plugin yaml file
+        type: dict
+        default: {}
       secrets:
         description: >
-          Optional, dictionary of secrets for set before run components.
+          Optional, dictionary of secrets for set before run components,
+          which each secret in format of:
+            secret-name: value
+        type: dict
         default: {}
     interfaces:
       cloudify.interfaces.lifecycle:
@@ -409,12 +402,12 @@ node_types:
               type: string
               default: install
             timeout:
-              type: integer
               description: How long (in seconds) to wait for execution to finish before timing out.
+              type: integer
               default: 1800
             interval:
-              type: integer
               description: Polling interval (seconds).
+              type: integer
               default: 10
         stop:
           implementation: cfy_extensions.cloudify_types.component.execute_start
@@ -470,7 +463,6 @@ relationships:
       operation:
         description: The target's lifecycle operation name.
         type: string
-        default: precreate
 
   cloudify.relationships.file_system_depends_on_volume:
     derived_from: cloudify.relationships.depends_on
@@ -840,21 +832,25 @@ data_types:
     properties:
       external_resource:
         description: >
-          Use external resource.
+          Use external blueprint resource.
+        type: boolean
         default: false
       id:
         description: >
           This is the blueprint ID that the component's node is connected to.
+        type: boolean
         required: false
       main_file_name:
         description: >
           The application blueprint filename. If the blueprint consists many
           imported files this is the main blueprint.
+        type: string
         default: blueprint.yaml
       blueprint_archive:
         description: >
-          The URL of a .zip to upload to the manager.
-          (Can be skipped if external_resource == True)
+          The URL of a .zip to upload to the manager
+          (Will be skipped if external_resource == True).
+        type: string
         default: ""
         required: true
 
@@ -862,19 +858,23 @@ data_types:
     properties:
       id:
         description: >
-          This is the deployment ID that the component's node is connected to.
+          This is the deployment ID that the Component's node is connected to.
+        type: string
         required: false
       inputs:
         description: >
           The inputs to the deployment.
+        type: dict
         default: {}
       logs:
         description: >
           Logs redirect settings, by default {redirect: true}
+        type: boolean
         required: false
       auto_inc_suffix:
         description: >
           Optional, will add a suffix to the given deployment ID in the form of an auto incremented index.
+        type: boolean
         required: false
 
   cloudify.datatypes.Component:
@@ -886,9 +886,73 @@ data_types:
         type: cloudify.datatypes.Deployment
         required: true
       executions_start_args:
-        default: {}
         description: >
-          Optional params for executions.
+          Optional params for Component executions.
+        type: dict
+        default: {}
+
+  cloudify.datatypes.RemoteCloudifyManagerClient:
+    properties:
+      host:
+        description: >
+          Host of Cloudify's manager machine.
+        type: string
+        required: false
+      port:
+        description: >
+          Port of REST API service on management machine.
+        type: integer
+        required: false
+      protocol:
+        description: >
+          Protocol of REST API service on management machine, defaults to http.
+        type: string
+        required: false
+      api_version:
+        description: >
+          Version of REST API service on management machine.
+        type: string
+        required: false
+      headers:
+        description: >
+          Headers to be added to request.
+        type: dict
+        required: false
+      query_params:
+        description: >
+          Query parameters to be added to the request.
+        type: dict
+        required: false
+      cert:
+        description: >
+          Path on the Cloudify manager to a copy of the other Cloudify manager's certificate.
+        type: string
+        required: false
+      trust_all:
+        description: >
+          If False, the server's certificate (self-signed or not) will be verified.
+        type: boolean
+        required: false
+      username:
+        description: >
+          Cloudify user username.
+        type: string
+        required: false
+      password:
+        description: >
+          Cloudify user password.
+        type: string
+        required: false
+      token:
+        description: >
+          Cloudify user token.
+        type: string
+        required: false
+      tenant:
+        description: >
+          Cloudify user accessible tenant name.
+        type: string
+        required: false
 
 ##################################################################################
 # Base artifact definitions
