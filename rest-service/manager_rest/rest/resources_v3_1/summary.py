@@ -90,6 +90,7 @@ class SummarizeDeployments(BaseSummary):
         'blueprint_id',
         'tenant_name',
         'visibility',
+        'site_name',
     ]
     auth_req = 'deployment_list'
     model = models.Deployment
