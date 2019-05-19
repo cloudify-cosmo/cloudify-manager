@@ -564,11 +564,15 @@ class SQLStorageManager(object):
 
         return ListResult(items=results, metadata={'pagination': pagination})
 
-    def count(self, model_class, filters=None):
+    def count(self, model_class, filters=None, distinct_by=None):
         query = model_class.query
         if filters:
             query = self._add_value_filter(query, filters)
-        count = query.order_by(None).count()  # Fastest way to count
+        if distinct_by:
+            query = query.filter(distinct_by != "").distinct(distinct_by)
+            count = query.order_by(None).count()
+        else:
+            count = query.order_by(None).count()   # Fastest way to count
         return count
 
     def full_access_list(self, model_class, filters=None):
