@@ -21,7 +21,7 @@ function set_manager_ip() {
   /opt/manager/env/bin/python /opt/cloudify/manager-ip-setter/update-provider-context.py ${ip}
 
   echo "Creating internal SSL certificates.."
-  cfy_manager create-internal-certs --manager-ip ${ip}
+  cfy_manager create-internal-certs --manager-hostname $(hostname -s)
 
   echo "Done!"
 
