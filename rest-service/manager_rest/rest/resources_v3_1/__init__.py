@@ -34,7 +34,7 @@ from .secrets import (                           # NOQA
     SecretsKey,
     SecretsExport,
     SecretsSetGlobal,
-    SecretsSetVisibility,
+    SecretsSetVisibility
 )
 
 from .plugins import (                           # NOQA
