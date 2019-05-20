@@ -20,6 +20,10 @@ function set_manager_ip() {
   echo "Updating broker_ip in provider context.."
   /opt/manager/env/bin/python /opt/cloudify/manager-ip-setter/update-provider-context.py ${ip}
 
+  echo "Updating networks in certificate metadata..."
+  /usr/bin/sed -ri "s/"'"'"broker_addresses"'"'"[^]]+]/"'"'"broker_addresses"'"'": \\["'"'"${ip}"'"'"]/" /etc/cloudify/ssl/certificate_metadata
+  /usr/bin/sed -ri "s/"'"'"manager_addresses"'"'"[^]]+]/"'"'"manager_addresses"'"'": \\["'"'"${ip}"'"'"]/" /etc/cloudify/ssl/certificate_metadata
+
   echo "Creating internal SSL certificates.."
   cfy_manager create-internal-certs --manager-hostname $(hostname -s)
 
