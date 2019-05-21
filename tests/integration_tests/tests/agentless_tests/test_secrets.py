@@ -13,10 +13,12 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+from integration_tests.framework import utils
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 from cloudify_rest_client.exceptions import (CloudifyClientError,
-                                             UnknownDeploymentSecretError)
+                                             UnknownDeploymentSecretError,
+                                             ForbiddenError)
 
 
 class SecretsTest(AgentlessTestCase):
@@ -62,3 +64,16 @@ class SecretsTest(AgentlessTestCase):
         # Manage to create deployment after creating the secret
         self.client.secrets.create('port', '8080')
         deployment, _ = self.deploy_application(dsl_path)
+
+    def test_secret_export_not_authorized(self):
+        self.client.secrets.create('key', 'value')
+        self.client.users.create('user', 'password', 'default')
+        self.client.tenants.add_user('user', 'default_tenant', 'viewer')
+        viewer_client = utils.create_rest_client(username='user',
+                                                 password='password',
+                                                 tenant='default_tenant')
+        self.assertRaisesRegexp(ForbiddenError,
+                                '403: User `user` is not permitted to perform'
+                                ' the action secret_export in the tenant '
+                                '`default_tenant`',
+                                viewer_client.secrets.export)
