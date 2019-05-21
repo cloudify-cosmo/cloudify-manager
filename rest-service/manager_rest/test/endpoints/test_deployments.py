@@ -751,14 +751,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
     def test_set_site_deployment_created_with_site(self):
-        self.client.sites.create(self.SITE_NAME)
-        resource_id = 'i{0}'.format(uuid.uuid4())
-        self.put_deployment(blueprint_file_name='blueprint.yaml',
-                            blueprint_id=resource_id,
-                            deployment_id=resource_id,
-                            site_name=self.SITE_NAME)
-        deployment = self.client.deployments.get(resource_id)
-        self.assertEqual(deployment.site_name, self.SITE_NAME)
+        resource_id = self._put_deployment_with_site()
 
         # Setting a site after the deployment was created with a site
         new_site_name = 'new_site'
@@ -847,14 +840,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
     def test_set_site_detach_existing_site(self):
-        self.client.sites.create(self.SITE_NAME)
-        resource_id = 'i{0}'.format(uuid.uuid4())
-        self.put_deployment(blueprint_file_name='blueprint.yaml',
-                            blueprint_id=resource_id,
-                            deployment_id=resource_id,
-                            site_name=self.SITE_NAME)
-        deployment = self.client.deployments.get(resource_id)
-        self.assertEqual(deployment.site_name, self.SITE_NAME)
+        resource_id = self._put_deployment_with_site()
 
         # Detaching the site when the deployment is assigned with one
         self.client.deployments.set_site(resource_id, detach_site=True)
@@ -869,6 +855,37 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         self.client.deployments.set_site(resource_id, detach_site=True)
         deployment = self.client.deployments.get(resource_id)
         self.assertIsNone(deployment.site_name)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_delete_site_of_deployment(self):
+        resource_id = self._put_deployment_with_site()
+
+        # Delete a site that is attached to the deployment
+        self.client.sites.delete(self.SITE_NAME)
+        deployment = self.client.deployments.get(resource_id)
+        self.assertIsNone(deployment.site_name)
+        error_msg = '404: Requested `Site` with ID `test_site` was not found'
+        self.assertRaisesRegexp(CloudifyClientError,
+                                error_msg,
+                                self.client.sites.get,
+                                self.SITE_NAME)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_delete_deployment_attached_to_site(self):
+        resource_id = self._put_deployment_with_site()
+
+        # Delete a deployment that is attached to a site
+        self.client.deployments.delete(resource_id, delete_db_mode=True)
+        site = self.client.sites.get(self.SITE_NAME)
+        self.assertEqual(site.name, self.SITE_NAME)
+        error_msg = '404: Requested `Deployment` with ID `{}` ' \
+                    'was not found'.format(resource_id)
+        self.assertRaisesRegexp(CloudifyClientError,
+                                error_msg,
+                                self.client.deployments.get,
+                                resource_id)
 
     def _delete_deployment(self, deployment_id, ignore_live_nodes=False):
 
@@ -888,4 +905,15 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                             deployment_id=resource_id)
         deployment = self.client.deployments.get(resource_id)
         self.assertIsNone(deployment.site_name)
+        return resource_id
+
+    def _put_deployment_with_site(self):
+        self.client.sites.create(self.SITE_NAME)
+        resource_id = 'i{0}'.format(uuid.uuid4())
+        self.put_deployment(blueprint_file_name='blueprint.yaml',
+                            blueprint_id=resource_id,
+                            deployment_id=resource_id,
+                            site_name=self.SITE_NAME)
+        deployment = self.client.deployments.get(resource_id)
+        self.assertEqual(deployment.site_name, self.SITE_NAME)
         return resource_id

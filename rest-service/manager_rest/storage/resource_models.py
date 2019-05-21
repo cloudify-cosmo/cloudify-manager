@@ -220,7 +220,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
 
     @declared_attr
     def site(cls):
-        return one_to_many_relationship(cls, Site, cls._site_fk)
+        return one_to_many_relationship(cls, Site, cls._site_fk, cascade=False)
 
     site_name = association_proxy('site', 'name')
 
