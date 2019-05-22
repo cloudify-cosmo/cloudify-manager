@@ -14,6 +14,7 @@
 #  * limitations under the License.
 
 import mock
+import unittest
 
 from manager_rest.test import base_test
 from manager_rest.test.attribute import attr
@@ -22,6 +23,10 @@ from manager_rest.storage import models
 from manager_rest.manager_exceptions import NotFoundError
 from cloudify_rest_client.exceptions import CloudifyClientError
 
+try:
+    import cloudify_premium
+except ImportError:
+    cloudify_premium = None
 
 _manager1 = {
     'hostname': 'manager1.test.domain',
@@ -31,9 +36,10 @@ _manager1 = {
     'edition': 'premium',
     'distribution': 'centos',
     'distro_release': 'Core',
-    'fs_sync_node_id':
+    'fs_sync_node_id': (
         'P56IOI7-MZJNU2Y-IQGDREY-DM2MGTI-'
-        'MGL3BXN-PQ6W5BM-TBBZ4TJ-XZWICQ2',
+        'MGL3BXN-PQ6W5BM-TBBZ4TJ-XZWICQ2'
+    ),
     'networks': {
         'default': '192.0.2.1',
         'network2': '192.0.2.2'
@@ -56,6 +62,8 @@ _manager2 = {
 
 
 @attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
+@unittest.skipIf(not cloudify_premium,
+                 reason='Endpoint not supported on community.')
 class ManagersTableTestCase(base_test.BaseServerTestCase):
     def setUp(self):
         super(ManagersTableTestCase, self).setUp()

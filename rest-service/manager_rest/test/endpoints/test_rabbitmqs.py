@@ -13,13 +13,22 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import unittest
+
 from manager_rest.test import base_test
 from manager_rest.test.attribute import attr
 from manager_rest.storage import models
 from flask_login import current_user
 
+try:
+    import cloudify_premium
+except ImportError:
+    cloudify_premium = None
+
 
 @attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
+@unittest.skipIf(not cloudify_premium,
+                 reason='Endpoint not supported on community.')
 class RabbitMQBrokersTest(base_test.BaseServerTestCase):
     def setUp(self):
         super(RabbitMQBrokersTest, self).setUp()
