@@ -229,6 +229,60 @@ class RabbitMQBrokers(SecuredResource):
     @paginate
     @authorize('broker_get')
     def get(self, pagination=None):
+        """List brokers from the database."""
         return get_storage_manager().list(
             models.RabbitMQBroker,
         )
+
+    @exceptions_handled
+    @authorize('broker_add')
+    @marshal_with(models.RabbitMQBroker)
+    def post(self):
+        """Add a broker to the database."""
+        _broker = rest_utils.get_json_and_verify_params({
+            'name': {'type': unicode},
+            'address': {'type': unicode},
+            'port': {'type': int, 'optional': True},
+            'networks': {'type': dict, 'optional': True},
+        })
+        sm = get_storage_manager()
+
+        # Get the first broker in the list to get the ca_cert and credentials
+        first_broker = sm.list(models.RabbitMQBroker, None, None).items[0]
+
+        if not _broker.get('networks'):
+            _broker['networks'] = {'default': _broker['address']}
+
+        new_broker = models.RabbitMQBroker(
+            name=_broker['name'],
+            host=_broker['address'],
+            management_host=_broker['address'],
+            port=_broker.get('port'),
+            networks=_broker['networks'],
+            username=first_broker.username,
+            password=first_broker.password,
+            ca_cert=first_broker.ca_cert,
+        )
+        result = sm.put(new_broker)
+        current_app.logger.info('Broker added successfully')
+        return result
+
+    @exceptions_handled
+    @authorize('broker_delete')
+    @marshal_with(models.RabbitMQBroker)
+    def delete(self):
+        """Delete a broker from the database."""
+        _broker = rest_utils.get_json_and_verify_params({
+            'name': {'type': unicode}
+        })
+        sm = get_storage_manager()
+        broker_to_delete = sm.get(
+            models.RabbitMQBroker,
+            None,
+            filters={'name': _broker['name']}
+        )
+
+        result = sm.delete(broker_to_delete)
+        if _broker['name'] == result.name:
+            current_app.logger.info('Broker deleted successfully')
+        return result
