@@ -13,39 +13,58 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import json
 from subprocess import check_call
 
 from flask import request, current_app
 from flask_restful.reqparse import Argument
 
 from manager_rest import manager_exceptions
-from manager_rest.security import SecuredResource
+from manager_rest.security import (
+    MissingPremiumFeatureResource,
+    SecuredResource,
+)
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import (
     get_storage_manager,
-    models
+    models,
 )
 
 from .. import rest_utils
 from ..rest_decorators import (
     exceptions_handled,
     marshal_with,
-    paginate
+    paginate,
 )
 
 
 try:
     from cloudify_premium.ha import (
         add_manager,
-        remove_manager
+        remove_manager,
     )
+    from cloudify_premium.ha.agents import update_agents
+    ManagementResource = SecuredResource
 except ImportError:
     add_manager, remove_manager = None, None
+    update_agents = None
+    ManagementResource = MissingPremiumFeatureResource
 
 
 DEFAULT_CONF_PATH = '/etc/nginx/conf.d/cloudify.conf'
 HTTP_PATH = '/etc/nginx/conf.d/http-external-rest-server.cloudify'
 HTTPS_PATH = '/etc/nginx/conf.d/https-external-rest-server.cloudify'
+
+
+def check_private_address_is_in_networks(address, networks):
+    if address not in networks.values():
+        raise manager_exceptions.BadParametersError(
+            'Supplied address {address} was not found in networks: '
+            '{networks}'.format(
+                address=address,
+                networks=json.dumps(networks),
+            )
+        )
 
 
 class SSLConfig(SecuredResource):
@@ -85,7 +104,7 @@ class SSLConfig(SecuredResource):
                     flag])
 
 
-class Managers(SecuredResource):
+class Managers(ManagementResource):
     @exceptions_handled
     @marshal_with(models.Manager)
     @paginate
@@ -118,7 +137,7 @@ class Managers(SecuredResource):
         """
         Create a new manager
         """
-        _manager = rest_utils.get_json_and_verify_params({
+        manager = rest_utils.get_json_and_verify_params({
             'hostname': {'type': unicode},
             'private_ip': {'type': unicode},
             'public_ip': {'type': unicode},
@@ -130,25 +149,32 @@ class Managers(SecuredResource):
             'fs_sync_node_id': {'type': unicode, 'optional': True},
             'networks': {'type': dict, 'optional': True}
         })
+
+        check_private_address_is_in_networks(
+            manager['private_ip'],
+            manager['networks'],
+        )
+
         sm = get_storage_manager()
-        ca_cert_id = self._get_ca_cert_id(sm, _manager)
+        ca_cert_id = self._get_ca_cert_id(sm, manager)
         new_manager = models.Manager(
-            hostname=_manager['hostname'],
-            private_ip=_manager['private_ip'],
-            public_ip=_manager['public_ip'],
-            version=_manager['version'],
-            edition=_manager['edition'],
-            distribution=_manager['distribution'],
-            distro_release=_manager['distro_release'],
-            fs_sync_node_id=_manager.get('fs_sync_node_id', ''),
-            networks=_manager.get('networks'),
-            _ca_cert_id=ca_cert_id
+            hostname=manager['hostname'],
+            private_ip=manager['private_ip'],
+            public_ip=manager['public_ip'],
+            version=manager['version'],
+            edition=manager['edition'],
+            distribution=manager['distribution'],
+            distro_release=manager['distro_release'],
+            fs_sync_node_id=manager.get('fs_sync_node_id', ''),
+            networks=manager.get('networks'),
+            _ca_cert_id=ca_cert_id,
         )
         result = sm.put(new_manager)
         current_app.logger.info('Manager added successfully')
-        if _manager.get('fs_sync_node_id'):
+        if manager.get('fs_sync_node_id'):
             managers_list = get_storage_manager().list(models.Manager)
             add_manager(managers_list)
+        update_agents(sm)
         return result
 
     @exceptions_handled
@@ -158,7 +184,7 @@ class Managers(SecuredResource):
         """
         Update a manager's FS sync node ID required by syncthing
         """
-        _manager = rest_utils.get_json_and_verify_params({
+        manager = rest_utils.get_json_and_verify_params({
             'hostname': {'type': unicode},
             'fs_sync_node_id': {'type': unicode},
             'bootstrap_cluster': {'type': bool}
@@ -167,14 +193,14 @@ class Managers(SecuredResource):
         manager_to_update = sm.get(
             models.Manager,
             None,
-            filters={'hostname': _manager['hostname']}
+            filters={'hostname': manager['hostname']}
         )
-        manager_to_update.fs_sync_node_id = _manager['fs_sync_node_id']
+        manager_to_update.fs_sync_node_id = manager['fs_sync_node_id']
         result = sm.update(manager_to_update)
 
         current_app.logger.info('Manager updated successfully, sending message'
                                 ' on service-queue')
-        if not _manager['bootstrap_cluster']:
+        if not manager['bootstrap_cluster']:
             managers_list = get_storage_manager().list(models.Manager)
             add_manager(managers_list)
         return result
@@ -186,28 +212,28 @@ class Managers(SecuredResource):
         """
         Delete a manager from the database
         """
-        _manager = rest_utils.get_json_and_verify_params({
+        manager = rest_utils.get_json_and_verify_params({
             'hostname': {'type': unicode}
         })
         sm = get_storage_manager()
         manager_to_delete = sm.get(
             models.Manager,
             None,
-            filters={'hostname': _manager['hostname']}
+            filters={'hostname': manager['hostname']}
         )
 
         result = sm.delete(manager_to_delete)
-        if _manager['hostname'] == result.hostname:
-            current_app.logger.info('Manager deleted successfully')
-            managers_list = get_storage_manager().list(models.Manager)
-            remove_manager(managers_list)  # Removing manager from cluster
+        current_app.logger.info('Manager deleted successfully')
+        managers_list = get_storage_manager().list(models.Manager)
+        remove_manager(managers_list)  # Removing manager from cluster
+        update_agents(sm)
         return result
 
-    def _get_ca_cert_id(self, sm, _manager):
-        ca_cert_content = _manager.get('ca_cert_content')
+    def _get_ca_cert_id(self, sm, manager):
+        ca_cert_content = manager.get('ca_cert_content')
         if ca_cert_content:
             ca_cert = sm.put(models.Certificate(
-                name='{0}-ca'.format(_manager['hostname']),
+                name='{0}-ca'.format(manager['hostname']),
                 value=ca_cert_content
             ))
             return ca_cert.id
@@ -223,7 +249,7 @@ class Managers(SecuredResource):
             return existing_managers_certs.pop()
 
 
-class RabbitMQBrokers(SecuredResource):
+class RabbitMQBrokers(ManagementResource):
     @exceptions_handled
     @marshal_with(models.RabbitMQBroker)
     @paginate
@@ -239,7 +265,7 @@ class RabbitMQBrokers(SecuredResource):
     @marshal_with(models.RabbitMQBroker)
     def post(self):
         """Add a broker to the database."""
-        _broker = rest_utils.get_json_and_verify_params({
+        broker = rest_utils.get_json_and_verify_params({
             'name': {'type': unicode},
             'address': {'type': unicode},
             'port': {'type': int, 'optional': True},
@@ -248,23 +274,29 @@ class RabbitMQBrokers(SecuredResource):
         sm = get_storage_manager()
 
         # Get the first broker in the list to get the ca_cert and credentials
-        first_broker = sm.list(models.RabbitMQBroker, None, None).items[0]
+        first_broker = sm.list(models.RabbitMQBroker).items[0]
 
-        if not _broker.get('networks'):
-            _broker['networks'] = {'default': _broker['address']}
+        if broker.get('networks'):
+            check_private_address_is_in_networks(
+                broker['address'],
+                broker['networks'],
+            )
+        else:
+            broker['networks'] = {'default': broker['address']}
 
         new_broker = models.RabbitMQBroker(
-            name=_broker['name'],
-            host=_broker['address'],
-            management_host=_broker['address'],
-            port=_broker.get('port'),
-            networks=_broker['networks'],
+            name=broker['name'],
+            host=broker['address'],
+            management_host=broker['address'],
+            port=broker.get('port'),
+            networks=broker['networks'],
             username=first_broker.username,
             password=first_broker.password,
-            ca_cert=first_broker.ca_cert,
+            _ca_cert_id=first_broker._ca_cert_id,
         )
         result = sm.put(new_broker)
         current_app.logger.info('Broker added successfully')
+        update_agents(sm)
         return result
 
     @exceptions_handled
@@ -272,17 +304,17 @@ class RabbitMQBrokers(SecuredResource):
     @marshal_with(models.RabbitMQBroker)
     def delete(self):
         """Delete a broker from the database."""
-        _broker = rest_utils.get_json_and_verify_params({
+        broker = rest_utils.get_json_and_verify_params({
             'name': {'type': unicode}
         })
         sm = get_storage_manager()
         broker_to_delete = sm.get(
             models.RabbitMQBroker,
             None,
-            filters={'name': _broker['name']}
+            filters={'name': broker['name']}
         )
 
         result = sm.delete(broker_to_delete)
-        if _broker['name'] == result.name:
-            current_app.logger.info('Broker deleted successfully')
+        current_app.logger.info('Broker deleted successfully')
+        update_agents(sm)
         return result
