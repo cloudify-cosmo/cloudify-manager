@@ -67,7 +67,7 @@ class SitesName(SecuredResource):
         """
         request_dict = self._validate_site_params(name)
         storage_manager = get_storage_manager()
-        self._validate_new_name(request_dict, storage_manager)
+        self._validate_new_name(request_dict, storage_manager, name)
         site = storage_manager.get(models.Site, name)
         site.name = request_dict.get('new_name', site.name)
         site.id = request_dict.get('new_name', site.id)
@@ -144,9 +144,9 @@ class SitesName(SecuredResource):
         request_dict['latitude'] = latitude
         request_dict['longitude'] = longitude
 
-    def _validate_new_name(self, request_dict, storage_manager):
+    def _validate_new_name(self, request_dict, storage_manager, current_name):
         new_name = request_dict.get('new_name')
-        if not new_name:
+        if not new_name or current_name == new_name:
             return
 
         validate_inputs({'new_name': new_name})

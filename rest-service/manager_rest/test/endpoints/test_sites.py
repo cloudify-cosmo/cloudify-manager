@@ -213,6 +213,12 @@ class SitesTestCase(base_test.BaseServerTestCase):
         self.assertEqual(site.name, 'test_site')
         self.assertIsNone(site.location)
 
+    def test_update_site_same_name(self):
+        self._put_site()
+        self.client.sites.update('test_site', new_name='test_site')
+        site = self.client.sites.get('test_site')
+        self.assertEqual(site.name, 'test_site')
+
     def test_update_site_invalid_name(self):
         self._put_site()
         error_msg = "400: The `new_name` argument contains illegal characters."
