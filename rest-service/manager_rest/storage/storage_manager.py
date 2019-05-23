@@ -454,7 +454,8 @@ class SQLStorageManager(object):
         current_app.logger.debug(
             'Get `{0}` with ID `{1}`'.format(model_class.__name__, element_id)
         )
-        filters = filters or {'id': element_id}
+        primary_key_column = model_class.unique_id()
+        filters = filters or {primary_key_column: element_id}
         query = self._get_query(model_class, include, filters,
                                 all_tenants=all_tenants)
         if locking:
@@ -462,7 +463,7 @@ class SQLStorageManager(object):
         result = query.first()
 
         if not result:
-            if filters and set(filters.keys()) != {'id'}:
+            if filters and set(filters.keys()) != {primary_key_column}:
                 filters_message = ' (filters: {0})'.format(filters)
             else:
                 filters_message = ''
