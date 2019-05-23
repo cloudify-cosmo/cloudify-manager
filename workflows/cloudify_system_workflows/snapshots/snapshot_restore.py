@@ -123,7 +123,7 @@ class SnapshotRestore(object):
                 M_STAGE_SCHEMA_REVISION,
                 None,
             )
-            if (self._premium_enabled):
+            if self._premium_enabled:
                 stage_revision = re.sub(r".*\n", '', stage_revision)
             self._validate_snapshot()
 
