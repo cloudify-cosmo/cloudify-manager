@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from urllib import urlencode
 from collections import namedtuple
 
 from flask import Flask
@@ -51,8 +52,7 @@ def setup_flask_app(manager_ip='localhost',
 
 
 def _get_postgres_db_uri(manager_ip, driver):
-    """Get a valid SQLA DB URI
-    """
+    """Get a valid SQLA DB URI"""
     dialect = 'postgresql+{0}'.format(driver) if driver else 'postgres'
     conf = get_postgres_conf(manager_ip)
     conn_string = '{dialect}://{username}:{password}@{host}/{db_name}'.format(
@@ -63,16 +63,17 @@ def _get_postgres_db_uri(manager_ip, driver):
         db_name=conf.db_name
     )
     if config.instance.postgresql_ssl_enabled:
-        conn_string += \
-            '?sslmode={sslmode}&' \
-            'sslcert={sslcert}&' \
-            'sslkey={sslkey}&' \
-            'sslrootcert={sslrootcert}'.format(
-                sslmode='verify-full',
-                sslcert=config.instance.postgresql_ssl_cert_path,
-                sslkey=config.instance.postgresql_ssl_key_path,
-                sslrootcert=config.instance.ca_cert_path
-            )
+        params = {
+            'sslmode': 'verify-ca',
+            'sslrootcert': config.instance.postgresql_ca_cert_path
+        }
+        if config.instance.postgresql_ssl_client_verification:
+            params.update({
+                'sslcert': config.instance.postgresql_ssl_cert_path,
+                'sslkey': config.instance.postgresql_ssl_key_path,
+                'sslmode': 'verify-full'
+            })
+        conn_string += '?{0}'.format(urlencode(params))
     return conn_string
 
 

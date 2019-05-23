@@ -74,9 +74,13 @@ class Config(object):
                                   from_db=False)
     postgresql_ssl_enabled = Setting('postgresql_ssl_enabled',
                                      default=False, from_db=False)
+    postgresql_ssl_client_verification = \
+        Setting('postgresql_ssl_client_verification', default=False,
+                from_db=False)
     postgresql_ssl_cert_path = Setting('postgresql_ssl_cert_path',
                                        from_db=False)
     postgresql_ssl_key_path = Setting('postgresql_ssl_key_path', from_db=False)
+    postgresql_ca_cert_path = Setting('postgresql_ca_cert_path', from_db=False)
     postgresql_connection_options = Setting('postgresql_connection_options',
                                             default={'connect_timeout': 10},
                                             from_db=False)
@@ -248,11 +252,16 @@ class Config(object):
         params = {}
         params.update(self.postgresql_connection_options)
         if self.postgresql_ssl_enabled:
+            ssl_mode = 'verify-ca'
+            if self.postgresql_ssl_client_verification:
+                ssl_mode = 'verify-full'
+                params.update({
+                    'sslcert': self.postgresql_ssl_cert_path,
+                    'sslkey': self.postgresql_ssl_key_path,
+                })
             params.update({
-                'sslmode': 'verify-full',
-                'sslcert': self.postgresql_ssl_cert_path,
-                'sslkey': self.postgresql_ssl_key_path,
-                'sslrootcert': self.ca_cert_path
+                'sslmode': ssl_mode,
+                'sslrootcert': self.postgresql_ca_cert_path
             })
 
         db_url = '{0}://{1}:{2}@{3}/{4}'.format(
