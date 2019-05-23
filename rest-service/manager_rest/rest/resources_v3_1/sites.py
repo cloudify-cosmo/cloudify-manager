@@ -66,9 +66,8 @@ class SitesName(SecuredResource):
         Update an existing site
         """
         request_dict = self._validate_site_params(name)
-        if request_dict.get('new_name'):
-            validate_inputs({'new_name': request_dict['new_name']})
         storage_manager = get_storage_manager()
+        self._validate_new_name(request_dict, storage_manager)
         site = storage_manager.get(models.Site, name)
         site.name = request_dict.get('new_name', site.name)
         site.id = request_dict.get('new_name', site.id)
@@ -110,6 +109,9 @@ class SitesName(SecuredResource):
     def _validate_location(self, request_dict):
         location = request_dict.get('location')
         if not location:
+            if location == '':
+                request_dict['latitude'] = None
+                request_dict['longitude'] = None
             return
 
         # The location format is : "latitude,longitude"
@@ -141,6 +143,18 @@ class SitesName(SecuredResource):
 
         request_dict['latitude'] = latitude
         request_dict['longitude'] = longitude
+
+    def _validate_new_name(self, request_dict, storage_manager):
+        new_name = request_dict.get('new_name')
+        if not new_name:
+            return
+
+        validate_inputs({'new_name': new_name})
+        if storage_manager.exists(models.Site, new_name):
+            raise manager_exceptions.ConflictError(
+                'Invalid new name `{0}`, it already exists on {1} or '
+                'with global visibility'.format(new_name, utils.current_tenant)
+            )
 
 
 class Sites(SecuredResource):

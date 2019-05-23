@@ -169,7 +169,7 @@ class Site(CreatedAtMixin, SQLResourceBase):
 
     @property
     def location(self):
-        if not (self.latitude and self.longitude):
+        if (self.latitude is None) or (self.longitude is None):
             return None
         return "{0},{1}".format(self.latitude, self.longitude)
 
