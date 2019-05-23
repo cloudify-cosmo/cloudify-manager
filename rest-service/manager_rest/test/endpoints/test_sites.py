@@ -66,6 +66,15 @@ class SitesTestCase(base_test.BaseServerTestCase):
                                 'test_site',
                                 location='200,32.071072')
 
+        error_msg = '400: Invalid location `32.071072,200`. The latitude ' \
+                    'must be a number between -90 and 90 and the longitude ' \
+                    'between -180 and 180'
+        self.assertRaisesRegexp(CloudifyClientError,
+                                error_msg,
+                                sites_command,
+                                'test_site',
+                                location='32.071072,200')
+
     def test_get_site(self):
         self._put_site()
         result = self.client.sites.get('test_site')
@@ -133,6 +142,25 @@ class SitesTestCase(base_test.BaseServerTestCase):
         self.assertEqual(site.location, '34.787274,32.071072')
         self.assertEqual(site.visibility, VisibilityState.TENANT)
 
+    def test_create_site_edge_location(self):
+        self.client.sites.create('test_site_1', location='0,0')
+        site = self.client.sites.get('test_site_1')
+        self.assertEqual(site.location, '0.0,0.0')
+
+        self.client.sites.create('test_site_2', location='-0,-0')
+        site = self.client.sites.get('test_site_2')
+        self.assertEqual(site.location, '0.0,0.0')
+
+        self.client.sites.create('test_site_3',
+                                 location='89.999999,179.999999')
+        site = self.client.sites.get('test_site_3')
+        self.assertEqual(site.location, '89.999999,179.999999')
+
+        self.client.sites.create('test_site_4',
+                                 location='-89.999999,-179.999999')
+        site = self.client.sites.get('test_site_4')
+        self.assertEqual(site.location, '-89.999999,-179.999999')
+
     def test_create_site_none_location(self):
         self.client.sites.create('test_site')
         site = self.client.sites.get('test_site')
@@ -178,6 +206,13 @@ class SitesTestCase(base_test.BaseServerTestCase):
         self.assertEqual(site.location, '50.0,50.0')
         self.assertEqual(site.visibility, VisibilityState.GLOBAL)
 
+    def test_update_site_empty_location(self):
+        self._put_site()
+        self.client.sites.update('test_site', location="")
+        site = self.client.sites.get('test_site')
+        self.assertEqual(site.name, 'test_site')
+        self.assertIsNone(site.location)
+
     def test_update_site_invalid_name(self):
         self._put_site()
         error_msg = "400: The `new_name` argument contains illegal characters."
@@ -188,13 +223,18 @@ class SitesTestCase(base_test.BaseServerTestCase):
                                 new_name='site:')
 
         self._put_site('test_site_1')
-        error_msg = "409: <Site id=`test_site_1` tenant=`default_tenant`> " \
-                    "already exists"
+        error_msg = "409: Invalid new name `test_site_1`, it already " \
+                    "exists on <Tenant name=`default_tenant`> or with " \
+                    "global visibility"
         self.assertRaisesRegexp(CloudifyClientError,
                                 error_msg,
                                 self.client.sites.update,
                                 'test_site',
                                 new_name='test_site_1')
+
+        # Makes sure it didn't update the site
+        site = self.client.sites.get('test_site')
+        self.assertEqual(site.name, 'test_site')
 
     def test_update_site_invalid_visibility(self):
         error_msg = "400: Invalid visibility: `test`"

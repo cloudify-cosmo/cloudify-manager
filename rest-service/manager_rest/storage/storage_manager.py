@@ -575,6 +575,15 @@ class SQLStorageManager(object):
             count = query.order_by(None).count()   # Fastest way to count
         return count
 
+    def exists(self, model_class, element_id, filters=None, all_tenants=None):
+        """Check if a record exists
+        """
+        filters = filters or {'id': element_id}
+        query = self._get_query(model_class,
+                                filters=filters,
+                                all_tenants=all_tenants)
+        return True if query.first() else False
+
     def full_access_list(self, model_class, filters=None):
         """Return a list of `model_class` results, without considering the
            user or the tenant
