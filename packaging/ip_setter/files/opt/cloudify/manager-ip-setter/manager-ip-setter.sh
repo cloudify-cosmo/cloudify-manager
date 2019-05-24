@@ -17,8 +17,8 @@ function set_manager_ip() {
   echo "Updating IPs stored in the database..."
   sudo -upostgres psql cloudify_db -c "update config set value=regexp_replace(value, 'https://[^:]+:(.*)', 'https://${ip}:\1', 'g') where name='file_server_url'"
 
-  echo "Updating broker_ip in provider context.."
-  /opt/manager/env/bin/python /opt/cloudify/manager-ip-setter/update-provider-context.py ${ip}
+  echo "Updating broker_ip in db..."
+  /opt/manager/env/bin/python /opt/cloudify/manager-ip-setter/update-db.py ${ip}
 
   echo "Updating networks in certificate metadata..."
   /usr/bin/sed -ri "s/"'"'"broker_addresses"'"'"[^]]+]/"'"'"broker_addresses"'"'": \\["'"'"${ip}"'"'"]/" /etc/cloudify/ssl/certificate_metadata
