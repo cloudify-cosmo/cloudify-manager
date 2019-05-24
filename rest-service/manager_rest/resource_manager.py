@@ -477,6 +477,8 @@ class ResourceManager(object):
 
         All operations that were failed are going to be retried,
         the execution itself is going to be set to pending again.
+        Operations that were retried by another operation, will
+        not be reset.
 
         :return: Whether to continue with running the execution
         """
@@ -490,7 +492,13 @@ class ResourceManager(object):
             operations = self.sm.list(models.Operation,
                                       filters={'tasks_graph': graph},
                                       get_all_results=True)
+            retried_operations = set(
+                op.parameters['retried_task']
+                for op in operations
+                if op.parameters.get('retried_task'))
             for operation in operations:
+                if operation.id in retried_operations:
+                    continue
                 if operation.state in from_states:
                     operation.state = cloudify_tasks.TASK_PENDING
                     operation.parameters['current_retries'] = 0
