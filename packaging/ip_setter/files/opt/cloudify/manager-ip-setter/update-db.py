@@ -25,10 +25,13 @@ def update_provider_context(args):
     with setup_flask_app().app_context():
         sm = get_storage_manager()
         for manager in sm.list(models.Manager):
+            manager.private_ip = args.manager_ip
+            manager.public_ip = args.manager_ip
             manager.networks['default'] = args.manager_ip
             flag_modified(manager, 'networks')
             sm.update(manager)
         for broker in sm.list(models.RabbitMQBroker):
+            broker.host = args.manager_ip
             broker.networks['default'] = args.manager_ip
             flag_modified(broker, 'networks')
             sm.update(broker)
