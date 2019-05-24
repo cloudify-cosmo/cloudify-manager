@@ -370,13 +370,14 @@ node_types:
         default: {}
       client:
         description: >
-          Client configuration, if empty Cloudify manager client will be used.
+          Cloudify HTTP client configuration,
+          if empty the current Cloudify manager client will be used.
         type: cloudify.datatypes.RemoteCloudifyManagerClient
         default: {}
       plugins:
         description: >
-          Optional, dictionary of plugins for upload,
-          which each plugin in format of:
+          Optional, dictionary of plugins to upload,
+          which each plugin is in format of:
             plugin-name:
               wagon_path: Url for plugin wagon file,
               plugin_yaml_path: Url for plugin yaml file
@@ -384,8 +385,8 @@ node_types:
         default: {}
       secrets:
         description: >
-          Optional, dictionary of secrets for set before run components,
-          which each secret in format of:
+          Optional, dictionary of secrets to set before deploying Components,
+          which each secret is in format of:
             secret-name: value
         type: dict
         default: {}
@@ -420,7 +421,6 @@ node_types:
                 deployment: { get_property: [ SELF, resource_config, deployment ] }
                 executions_start_args:
                   allow_custom_parameters: true
-
         delete:
           implementation: cfy_extensions.cloudify_types.component.delete
 
@@ -837,8 +837,8 @@ data_types:
         default: false
       id:
         description: >
-          This is the blueprint ID that the component's node is connected to.
-        type: boolean
+          This is the blueprint ID that the Component's node is connected to.
+        type: string
         required: false
       main_file_name:
         description: >
@@ -868,7 +868,7 @@ data_types:
         default: {}
       logs:
         description: >
-          Logs redirect settings, by default {redirect: true}
+          This is a flag for logs and events redirect from the deployment, by default true.
         type: boolean
         required: false
       auto_inc_suffix:
@@ -900,7 +900,7 @@ data_types:
         required: false
       port:
         description: >
-          Port of REST API service on management machine.
+          Port of REST API service on Cloudify's management machine.
         type: integer
         required: false
       protocol:
@@ -910,17 +910,17 @@ data_types:
         required: false
       api_version:
         description: >
-          Version of REST API service on management machine.
+          Version of Cloudify REST API service.
         type: string
         required: false
       headers:
         description: >
-          Headers to be added to request.
+          Headers to be added to HTTP requests.
         type: dict
         required: false
       query_params:
         description: >
-          Query parameters to be added to the request.
+          Query parameters to be added to the HTTP request.
         type: dict
         required: false
       cert:
