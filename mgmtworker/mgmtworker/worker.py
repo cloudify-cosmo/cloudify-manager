@@ -16,7 +16,6 @@
 
 import os
 import json
-import atexit
 import logging
 import argparse
 import tempfile
@@ -214,7 +213,6 @@ def prepare_broker_config():
         f.write('\n'.join(broker.ca_cert_content
                 for broker in brokers
                 if broker.ca_cert_content))
-    atexit.register(os.unlink, f.name)
     config = {
         'broker_ssl_enabled': True,
         'broker_cert_path': f.name,
@@ -223,9 +221,11 @@ def prepare_broker_config():
         'broker_vhost': '/',
         'broker_management_hostname': brokers[0].management_host,
     }
-    with open(broker_config.get_config_path(), 'w') as f:
+    config_path = broker_config.get_config_path()
+    with open(config_path, 'w') as f:
         json.dump(config, f)
     broker_config.load_broker_config()
+    return (config_path, f.name)
 
 
 def main():
@@ -240,10 +240,13 @@ def main():
     setup_agent_logger('mgmtworker')
     agent_worker.logger = logger
 
-    prepare_broker_config()
-    worker = make_amqp_worker(args)
-    worker.consume()
-
+    config_files = prepare_broker_config()
+    try:
+        worker = make_amqp_worker(args)
+        worker.consume()
+    finally:
+        for f in config_files:
+            os.unlink(f)
 
 if __name__ == '__main__':
     main()
