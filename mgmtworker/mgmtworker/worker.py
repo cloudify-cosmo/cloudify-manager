@@ -211,9 +211,9 @@ def prepare_broker_config():
     brokers = client.manager.get_brokers().items
     with tempfile.NamedTemporaryFile(
             delete=False, prefix='mgmtworker-broker-cert-') as f:
-        f.write('\n'.join(broker.ca_cert_content)
+        f.write('\n'.join(broker.ca_cert_content
                 for broker in brokers
-                if broker.ca_cert_content)
+                if broker.ca_cert_content))
     atexit.register(os.unlink, f.name)
     config = {
         'broker_ssl_enabled': True,
