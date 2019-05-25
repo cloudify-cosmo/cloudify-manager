@@ -28,6 +28,7 @@ from manager_rest.security.authorization import authorize
 from manager_rest.storage import (
     get_storage_manager,
     models,
+    is_user_action_allowed
 )
 
 from .. import rest_utils
@@ -256,9 +257,12 @@ class RabbitMQBrokers(ManagementResource):
     @authorize('broker_get')
     def get(self, pagination=None):
         """List brokers from the database."""
-        return get_storage_manager().list(
-            models.RabbitMQBroker,
-        )
+        brokers = get_storage_manager().list(models.RabbitMQBroker)
+        if not is_user_action_allowed('broker_credentials'):
+            for broker in brokers:
+                broker.username = None
+                broker.password = None
+        return brokers
 
     @exceptions_handled
     @authorize('broker_add')
