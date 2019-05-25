@@ -24,11 +24,13 @@ from manager_rest.security import (
     MissingPremiumFeatureResource,
     SecuredResource,
 )
-from manager_rest.security.authorization import authorize
+from manager_rest.security.authorization import (
+    authorize,
+    is_user_action_allowed
+)
 from manager_rest.storage import (
     get_storage_manager,
-    models,
-    is_user_action_allowed
+    models
 )
 
 from .. import rest_utils
