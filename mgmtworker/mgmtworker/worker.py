@@ -207,7 +207,7 @@ def make_amqp_worker(args):
 
 def prepare_broker_config():
     client = get_rest_client(
-        tenant='default_tenant', token=get_admin_api_token())
+        tenant='default_tenant', api_token=get_admin_api_token())
     brokers = client.manager.get_brokers().items
     with tempfile.NamedTemporaryFile(
             delete=False, prefix='mgmtworker-broker-cert-') as f:

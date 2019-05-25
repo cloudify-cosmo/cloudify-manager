@@ -21,8 +21,8 @@ from flask_restful.reqparse import Argument
 
 from manager_rest import manager_exceptions
 from manager_rest.security import (
-    MissingPremiumFeatureResource,
     SecuredResource,
+    premium_only
 )
 from manager_rest.security.authorization import (
     authorize,
@@ -47,11 +47,8 @@ try:
         remove_manager,
     )
     from cloudify_premium.ha.agents import update_agents
-    ManagementResource = SecuredResource
 except ImportError:
-    add_manager, remove_manager = None, None
-    update_agents = None
-    ManagementResource = MissingPremiumFeatureResource
+    add_manager, remove_manager, update_agents = None, None, None
 
 
 DEFAULT_CONF_PATH = '/etc/nginx/conf.d/cloudify.conf'
@@ -107,7 +104,7 @@ class SSLConfig(SecuredResource):
                     flag])
 
 
-class Managers(ManagementResource):
+class Managers(SecuredResource):
     @exceptions_handled
     @marshal_with(models.Manager)
     @paginate
@@ -136,6 +133,7 @@ class Managers(ManagementResource):
     @exceptions_handled
     @authorize('manager_add')
     @marshal_with(models.Manager)
+    @premium_only
     def post(self):
         """
         Create a new manager
@@ -183,6 +181,7 @@ class Managers(ManagementResource):
     @exceptions_handled
     @authorize('manager_update_fs_sync_node_id')
     @marshal_with(models.Manager)
+    @premium_only
     def put(self):
         """
         Update a manager's FS sync node ID required by syncthing
@@ -211,6 +210,7 @@ class Managers(ManagementResource):
     @exceptions_handled
     @authorize('manager_delete')
     @marshal_with(models.Manager)
+    @premium_only
     def delete(self):
         """
         Delete a manager from the database
@@ -252,7 +252,7 @@ class Managers(ManagementResource):
             return existing_managers_certs.pop()
 
 
-class RabbitMQBrokers(ManagementResource):
+class RabbitMQBrokers(SecuredResource):
     @exceptions_handled
     @marshal_with(models.RabbitMQBroker)
     @paginate
@@ -269,6 +269,7 @@ class RabbitMQBrokers(ManagementResource):
     @exceptions_handled
     @authorize('broker_add')
     @marshal_with(models.RabbitMQBroker)
+    @premium_only
     def post(self):
         """Add a broker to the database."""
         broker = rest_utils.get_json_and_verify_params({
@@ -308,6 +309,7 @@ class RabbitMQBrokers(ManagementResource):
     @exceptions_handled
     @authorize('broker_delete')
     @marshal_with(models.RabbitMQBroker)
+    @premium_only
     def delete(self):
         """Delete a broker from the database."""
         broker = rest_utils.get_json_and_verify_params({
