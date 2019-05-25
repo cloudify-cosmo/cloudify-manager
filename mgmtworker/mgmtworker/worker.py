@@ -18,7 +18,6 @@ import os
 import json
 import logging
 import argparse
-import tempfile
 
 from cloudify import broker_config, dispatch
 from cloudify.logs import setup_agent_logger
@@ -208,24 +207,22 @@ def prepare_broker_config():
     client = get_rest_client(
         tenant='default_tenant', api_token=get_admin_api_token())
     brokers = client.manager.get_brokers().items
-    with tempfile.NamedTemporaryFile(
-            delete=False, prefix='mgmtworker-broker-cert-') as f:
-        f.write('\n'.join(broker.ca_cert_content
-                for broker in brokers
+    config_path = broker_config.get_config_path()
+    cert_path = os.path.join(os.path.dirname(config_path), 'broker_cert.pem')
+    with open(cert_path, 'w') as f:
+        f.write('\n'.join(broker.ca_cert_content for broker in brokers
                 if broker.ca_cert_content))
     config = {
         'broker_ssl_enabled': True,
-        'broker_cert_path': f.name,
+        'broker_cert_path': cert_path,
         'broker_username': brokers[0].username,
         'broker_password': brokers[0].password,
         'broker_vhost': '/',
         'broker_management_hostname': brokers[0].management_host,
     }
-    config_path = broker_config.get_config_path()
     with open(config_path, 'w') as f:
         json.dump(config, f)
     broker_config.load_broker_config()
-    return (config_path, f.name)
 
 
 def main():
@@ -240,13 +237,9 @@ def main():
     setup_agent_logger('mgmtworker')
     agent_worker.logger = logger
 
-    config_files = prepare_broker_config()
-    try:
-        worker = make_amqp_worker(args)
-        worker.consume()
-    finally:
-        for f in config_files:
-            os.unlink(f)
+    prepare_broker_config()
+    worker = make_amqp_worker(args)
+    worker.consume()
 
 if __name__ == '__main__':
     main()
