@@ -150,11 +150,12 @@ class DeploymentsId(SecuredResource):
         """
         Delete deployment by id
         """
-
         args = get_args_and_verify_arguments(
             [Argument('ignore_live_nodes', type=boolean,
                       default=False),
              Argument('delete_db_mode', type=boolean,
+                      default=False),
+             Argument('delete_logs', type=boolean,
                       default=False)]
         )
 
@@ -163,7 +164,8 @@ class DeploymentsId(SecuredResource):
             deployment_id,
             bypass_maintenance,
             args.ignore_live_nodes,
-            args.delete_db_mode)
+            args.delete_db_mode,
+            args.delete_logs)
 
         if args.delete_db_mode:
             # Delete deployment resources from file server

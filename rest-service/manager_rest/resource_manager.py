@@ -416,7 +416,8 @@ class ResourceManager(object):
                           deployment_id,
                           bypass_maintenance=None,
                           ignore_live_nodes=False,
-                          delete_db_mode=False):
+                          delete_db_mode=False,
+                          delete_logs=False):
         # Verify deployment exists.
         deployment = self.sm.get(models.Deployment, deployment_id)
 
@@ -462,7 +463,8 @@ class ResourceManager(object):
         # Start delete_deployment_env workflow
         if not delete_db_mode:
             self._delete_deployment_environment(deployment,
-                                                bypass_maintenance)
+                                                bypass_maintenance,
+                                                delete_logs)
             return self.sm.get(models.Deployment, deployment_id)
 
         # Delete deployment data  DB (should only happen AFTER the workflow
@@ -1869,7 +1871,8 @@ class ResourceManager(object):
 
     def _delete_deployment_environment(self,
                                        deployment,
-                                       bypass_maintenance):
+                                       bypass_maintenance,
+                                       delete_logs):
         blueprint = self.sm.get(models.Blueprint, deployment.blueprint_id)
         wf_id = 'delete_deployment_environment'
         deployment_env_deletion_task_name = \
@@ -1887,6 +1890,7 @@ class ResourceManager(object):
                     constants.DEPLOYMENT_PLUGINS_TO_INSTALL],
                 'workflow_plugins_to_uninstall': blueprint.plan[
                     constants.WORKFLOW_PLUGINS_TO_INSTALL],
+                'delete_logs': delete_logs
             })
 
     def _check_for_active_executions(self, deployment_id, force,
