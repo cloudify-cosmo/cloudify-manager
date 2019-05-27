@@ -57,6 +57,7 @@ from manager_rest.rest.rest_utils import get_args_and_verify_arguments
 
 _PRIVATE_RESOURCE = 'private_resource'
 _VISIBILITY = 'visibility'
+INSTALLING_PREFIX = 'installing-'
 
 
 class UploadedDataManager(object):
@@ -659,8 +660,25 @@ class UploadedPluginsManager(UploadedDataManager):
                     '{version}'.format(archive_name=new_plugin.archive_name,
                                        package_name=new_plugin.package_name,
                                        version=new_plugin.package_version))
+            if self._is_plugin_installing(new_plugin, plugin):
+                raise manager_exceptions.ConflictError(
+                    'a plugin archive by the name of {archive_name} for '
+                    'package with name {package_name} and version {version} '
+                    'is currently being installed'.format(
+                        archive_name=new_plugin.archive_name,
+                        package_name=new_plugin.package_name,
+                        version=new_plugin.package_version))
+        new_plugin.archive_name = INSTALLING_PREFIX + new_plugin.archive_name
         sm.put(new_plugin)
         return new_plugin, new_plugin.archive_name
+
+    @staticmethod
+    def _is_plugin_installing(new_plugin, plugin):
+        """
+        Plugins that are currently being installed have an `installing` prefix.
+        """
+        return (plugin.archive_name == INSTALLING_PREFIX +
+                new_plugin.archive_name)
 
     def _is_wagon_file(self, file_path):
         try:

@@ -42,8 +42,10 @@ from manager_rest.upload_manager import (
     UploadedCaravanManager,
 )
 from manager_rest.utils import create_filter_params_list_description
-from manager_rest.constants import (FILE_SERVER_RESOURCES_FOLDER,
-                                    FILE_SERVER_PLUGINS_FOLDER)
+from manager_rest.constants import (INSTALLING_PREFIX,
+                                    FILE_SERVER_PLUGINS_FOLDER,
+                                    FILE_SERVER_RESOURCES_FOLDER
+                                    )
 
 
 class Plugins(SecuredResource):
@@ -174,8 +176,11 @@ class PluginsArchive(SecuredResource):
         """
         # Verify plugin exists.
         plugin = get_storage_manager().get(models.Plugin, plugin_id)
-
-        archive_name = plugin.archive_name
+        # While installing a plugin we add an `installing` prefix to the
+        # archive_name, since the archive is saved without this prefix we
+        # remove it before searching for the archive in the file system.
+        archive_name = (plugin.archive_name[11:] if INSTALLING_PREFIX
+                        in plugin.archive_name else plugin.archive_name)
         # attempting to find the archive file on the file system
         local_path = utils.get_plugin_archive_path(plugin_id, archive_name)
         if not os.path.isfile(local_path):
