@@ -212,6 +212,8 @@ def prepare_broker_config():
     with open(cert_path, 'w') as f:
         f.write('\n'.join(broker.ca_cert_content for broker in brokers
                 if broker.ca_cert_content))
+    broker_addrs = [broker.networks.get('default') for broker in brokers
+                    if broker.networks.get('default')]
     config = {
         'broker_ssl_enabled': True,
         'broker_cert_path': cert_path,
@@ -219,6 +221,7 @@ def prepare_broker_config():
         'broker_password': brokers[0].password,
         'broker_vhost': '/',
         'broker_management_hostname': brokers[0].management_host,
+        'broker_hostname': broker_addrs
     }
     with open(config_path, 'w') as f:
         json.dump(config, f)
