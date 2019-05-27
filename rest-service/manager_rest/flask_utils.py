@@ -73,7 +73,7 @@ def _get_postgres_db_uri(manager_ip, driver):
                 'sslkey': config.instance.postgresql_ssl_key_path,
                 'sslmode': 'verify-full'
             })
-        conn_string += '?{0}'.format(urlencode(params))
+        conn_string += '?{0}'.format(urlencode(params).replace('%', '%%'))
     return conn_string
 
 
