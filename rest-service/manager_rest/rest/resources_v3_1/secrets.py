@@ -132,7 +132,7 @@ class SecretsExport(SecuredResource):
     @rest_decorators.all_tenants
     @rest_decorators.search('id')
     def get(self, filters=None, all_tenants=None, search=None):
-        password = request.args.get('_password')
+        passphrase = request.args.get('_passphrase')
         secrets = get_storage_manager().list(
             models.Secret,
             filters=filters,
@@ -140,7 +140,7 @@ class SecretsExport(SecuredResource):
             all_tenants=all_tenants,
             get_all_results=True
         )
-        return self._create_export_response(secrets, password)
+        return self._create_export_response(secrets, passphrase)
 
     def _create_export_response(self, secrets, password):
         secrets_list = []
@@ -153,7 +153,7 @@ class SecretsExport(SecuredResource):
                           'visibility': secret.visibility,
                           'tenant_name': secret.tenant_name,
                           'is_hidden_value': secret.is_hidden_value,
-                          'crypto': 'not_encrypted'}
+                          'encrypted': 'False'}
             secrets_list.append(new_secret)
         if password:
             self._encrypt_values(secrets_list, password)
@@ -164,4 +164,4 @@ class SecretsExport(SecuredResource):
         key = generate_key_using_password(password)
         for secret in secrets_list:
             secret['value'] = encrypt(secret['value'], key)
-            secret['crypto'] = 'encrypted'
+            secret['encrypted'] = 'True'
