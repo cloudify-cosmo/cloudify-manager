@@ -13,7 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from urllib import urlencode
 from collections import namedtuple
 
 from flask import Flask
@@ -63,17 +62,23 @@ def _get_postgres_db_uri(manager_ip, driver):
         db_name=conf.db_name
     )
     if config.instance.postgresql_ssl_enabled:
-        params = {
-            'sslmode': 'verify-ca',
-            'sslrootcert': config.instance.postgresql_ca_cert_path
-        }
+        params = {}
+        ssl_mode = 'verify-ca'
         if config.instance.postgresql_ssl_client_verification:
+            ssl_mode = 'verify-full'
             params.update({
                 'sslcert': config.instance.postgresql_ssl_cert_path,
                 'sslkey': config.instance.postgresql_ssl_key_path,
-                'sslmode': 'verify-full'
             })
-        conn_string += '?{0}'.format(urlencode(params).replace('%', '%%'))
+        params.update({
+            'sslmode': ssl_mode,
+            'sslrootcert': config.instance.postgresql_ca_cert_path
+        })
+        if any(params.values()):
+            query = '&'.join('{0}={1}'.format(key, value)
+                             for key, value in params.items()
+                             if value)
+            conn_string = '{0}?{1}'.format(conn_string, query)
     return conn_string
 
 
