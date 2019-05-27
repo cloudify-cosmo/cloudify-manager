@@ -14,5 +14,8 @@
 #  * limitations under the License.
 
 # Setting NOQA to avoid flake errors - these are convenience imports
-from .secured_resource import SecuredResource                   # NOQA
-from .secured_resource import MissingPremiumFeatureResource     # NOQA
+from .secured_resource import (  # NOQA
+    SecuredResource,
+    MissingPremiumFeatureResource,
+    premium_only
+)

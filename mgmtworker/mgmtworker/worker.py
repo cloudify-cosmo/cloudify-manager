@@ -14,10 +14,12 @@
 # limitations under the License.
 ############
 
-import argparse
+import os
+import json
 import logging
+import argparse
 
-from cloudify import dispatch
+from cloudify import broker_config, dispatch
 from cloudify.logs import setup_agent_logger
 from cloudify.utils import get_admin_api_token
 from cloudify.constants import MGMTWORKER_QUEUE
@@ -201,6 +203,28 @@ def make_amqp_worker(args):
     return AMQPConnection(handlers=handlers, connect_timeout=None)
 
 
+def prepare_broker_config():
+    client = get_rest_client(
+        tenant='default_tenant', api_token=get_admin_api_token())
+    brokers = client.manager.get_brokers().items
+    config_path = broker_config.get_config_path()
+    cert_path = os.path.join(os.path.dirname(config_path), 'broker_cert.pem')
+    with open(cert_path, 'w') as f:
+        f.write('\n'.join(broker.ca_cert_content for broker in brokers
+                if broker.ca_cert_content))
+    config = {
+        'broker_ssl_enabled': True,
+        'broker_cert_path': cert_path,
+        'broker_username': brokers[0].username,
+        'broker_password': brokers[0].password,
+        'broker_vhost': '/',
+        'broker_management_hostname': brokers[0].management_host,
+    }
+    with open(config_path, 'w') as f:
+        json.dump(config, f)
+    broker_config.load_broker_config()
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--queue')
@@ -213,9 +237,9 @@ def main():
     setup_agent_logger('mgmtworker')
     agent_worker.logger = logger
 
+    prepare_broker_config()
     worker = make_amqp_worker(args)
     worker.consume()
-
 
 if __name__ == '__main__':
     main()

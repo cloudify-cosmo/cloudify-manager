@@ -20,6 +20,7 @@ from flask_restful.utils import unpack
 from werkzeug.exceptions import HTTPException
 from flask import request, current_app, Response, jsonify
 
+from manager_rest import premium_enabled
 from manager_rest.utils import abort_error
 from manager_rest.manager_exceptions import MissingPremiumPackage
 
@@ -85,6 +86,18 @@ def missing_premium_feature_abort(func):
             hide_server_message=True
         )
     return abort
+
+
+if premium_enabled:
+    def premium_only(f):
+        """A noop in place of a "missing premium" error.
+
+        If this is on a premium-enabled manager, the premium_only decorator
+        will do nothing.
+        """
+        return f
+else:
+    premium_only = missing_premium_feature_abort
 
 
 class SecuredResource(Resource):
