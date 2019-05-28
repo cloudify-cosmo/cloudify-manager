@@ -45,6 +45,20 @@ def task_agent(ctx, wait_message, **kwargs):
     ctx.instance.runtime_properties['resumed'] = True
 
 
+@operation
+def retrying_task(ctx, **kwargs):
+    count = ctx.instance.runtime_properties.get('count', 0)
+
+    ctx.instance.runtime_properties['count'] = count + 1
+    ctx.instance.update()
+
+    count = ctx.instance.runtime_properties['count']
+    if count == 1:
+        return ctx.operation.retry()
+    elif count == 2:
+        raise NonRecoverableError('Error')
+
+
 @operation(resumable=True)
 def resumable(**kwargs):
     _resumable_task_base(**kwargs)

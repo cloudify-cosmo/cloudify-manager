@@ -14,13 +14,33 @@
 #    * limitations under the License.
 
 import time
+from contextlib import contextmanager
+
+
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
+from integration_tests.tests.constants import PROVIDER_NAME
 
 
 class TestResumeMgmtworker(AgentlessTestCase):
     wait_message = 'WAITING FOR FILE'
     target_file = '/tmp/continue_test'
+
+    @contextmanager
+    def _set_retries(self, retries, retry_interval=0):
+        context = self.client.manager.get_context()['context']
+        original_workflows = context['cloudify']['workflows'].copy()
+        context['cloudify']['workflows'].update({
+            'task_retries': retries,
+            'subgraph_retries': retries,
+            'task_retry_interval': retry_interval
+        })
+        self.client.manager.update_context(PROVIDER_NAME, context)
+        try:
+            yield
+        finally:
+            context['cloudify']['workflows'] = original_workflows
+            self.client.manager.update_context(PROVIDER_NAME, context)
 
     def _create_deployment(self):
         dsl_path = resource("dsl/resumable_mgmtworker.yaml")
@@ -135,6 +155,42 @@ class TestResumeMgmtworker(AgentlessTestCase):
 
         self.assertTrue(self.client.node_instances.get(instance.id)
                         .runtime_properties['resumed'])
+        self.assertTrue(self.client.node_instances.get(instance2.id)
+                        .runtime_properties['marked'])
+
+    def test_resume_no_duplicates(self):
+        """Check that retried tasks aren't duplicated after a resume.
+
+        Run a workflow that, for node instance 1, retries the operation
+        once and then fails.
+        Resume the workflow with reset-operations (force) and check that
+        the operation was ran only once after the resume.
+        """
+        dep = self._create_deployment()
+        instance = self.client.node_instances.list(
+            deployment_id=dep.id, node_id='node1')[0]
+        instance2 = self.client.node_instances.list(
+            deployment_id=dep.id, node_id='node2')[0]
+        with self._set_retries(5):
+            execution = self._start_execution(dep, 'interface1.op_retrying')
+
+            self.logger.info('Waiting for the execution to fail')
+            self.assertRaises(RuntimeError,
+                              self.wait_for_execution_to_end, execution)
+
+        self.assertNotIn(
+            'marked',
+            self.client.node_instances.get(instance2.id).runtime_properties)
+        self.assertEqual(self.client.node_instances.get(instance.id)
+                         .runtime_properties['count'], 2)
+
+        self.client.executions.resume(execution.id, force=True)
+        execution = self.wait_for_execution_to_end(execution)
+        self.assertEqual(execution.status, 'terminated')
+
+        # if it is 4, that means the task ran twice after resume
+        self.assertEqual(self.client.node_instances.get(instance.id)
+                         .runtime_properties['count'], 3)
         self.assertTrue(self.client.node_instances.get(instance2.id)
                         .runtime_properties['marked'])
 

@@ -13,6 +13,7 @@ node_templates:
         op_resumable: cloudmock.cloudmock.tasks.resumable
         op_nonresumable: cloudmock.cloudmock.tasks.nonresumable
         op_failing: cloudmock.cloudmock.tasks.failing
+        op_retrying: cloudmock.cloudmock.tasks.retrying_task
 
   node2:
     type: cloudify.nodes.Root
@@ -21,6 +22,7 @@ node_templates:
         op_resumable: cloudmock.cloudmock.tasks.mark_instance
         op_nonresumable: cloudmock.cloudmock.tasks.mark_instance
         op_failing: cloudmock.cloudmock.tasks.mark_instance
+        op_retrying: cloudmock.cloudmock.tasks.mark_instance
     relationships:
       - type: cloudify.relationships.depends_on
         target: node1
