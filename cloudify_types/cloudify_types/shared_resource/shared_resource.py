@@ -48,6 +48,15 @@ class SharedResource(object):
         self.deployment = self.config.get('deployment', '')
         self.deployment_id = self.deployment.get('id', '')
 
+    def _mark_verified_shared_resource_node(self):
+        """
+        Used to mark SharedResource node that is valid after verification
+        that the deployment exists, which will be used be users like
+        the UI.
+        """
+        ctx.instance.runtime_properties['deployment'] = {
+            'id': self.deployment_id}
+
     def validate_deployment(self):
         ctx.logger.info('Validating "{0}" SharedResource\'s deployment '
                         'existing.'.format(self.deployment_id))
@@ -57,5 +66,5 @@ class SharedResource(object):
                 'SharedResource\'s deployment ID "{0}" does not exists, '
                 'please verify the given ID.'.format(
                     self.deployment_id))
-
+        self._mark_verified_shared_resource_node()
         return True
