@@ -23,7 +23,8 @@ setup(
     author_email='cosmo-admin@cloudify.co',
     packages=[
         'cloudify_types',
-        'cloudify_types.component'
+        'cloudify_types.component',
+        'cloudify_types.shared_resource'
     ],
     license='LICENSE',
     description='Various special Cloudify types implementation.',
