@@ -80,7 +80,7 @@ class SitesTestCase(base_test.BaseServerTestCase):
         result = self.client.sites.get('test_site')
         expected = {
             'name': 'test_site',
-            'location': '42.0,43.0',
+            'location': '42.0, 43.0',
             'visibility': VisibilityState.TENANT
         }
         actual = {k: result[k] for k in expected}
@@ -139,27 +139,33 @@ class SitesTestCase(base_test.BaseServerTestCase):
         self.client.sites.create('test_site', location='34.787274,32.071072')
         site = self.client.sites.get('test_site')
         self.assertEqual(site.name, 'test_site')
-        self.assertEqual(site.location, '34.787274,32.071072')
+        self.assertEqual(site.location, '34.787274, 32.071072')
         self.assertEqual(site.visibility, VisibilityState.TENANT)
 
     def test_create_site_edge_location(self):
         self.client.sites.create('test_site_1', location='0,0')
         site = self.client.sites.get('test_site_1')
-        self.assertEqual(site.location, '0.0,0.0')
+        self.assertEqual(site.location, '0.0, 0.0')
 
         self.client.sites.create('test_site_2', location='-0,-0')
         site = self.client.sites.get('test_site_2')
-        self.assertEqual(site.location, '0.0,0.0')
+        self.assertEqual(site.location, '0.0, 0.0')
 
         self.client.sites.create('test_site_3',
                                  location='89.999999,179.999999')
         site = self.client.sites.get('test_site_3')
-        self.assertEqual(site.location, '89.999999,179.999999')
+        self.assertEqual(site.location, '89.999999, 179.999999')
 
         self.client.sites.create('test_site_4',
                                  location='-89.999999,-179.999999')
         site = self.client.sites.get('test_site_4')
-        self.assertEqual(site.location, '-89.999999,-179.999999')
+        self.assertEqual(site.location, '-89.999999, -179.999999')
+
+        # Location with space
+        self.client.sites.create('test_site_5',
+                                 location='32.166369, 34.810893')
+        site = self.client.sites.get('test_site_5')
+        self.assertEqual(site.location, '32.166369, 34.810893')
 
     def test_create_site_none_location(self):
         self.client.sites.create('test_site')
@@ -203,7 +209,7 @@ class SitesTestCase(base_test.BaseServerTestCase):
                                  new_name='new_site')
         site = self.client.sites.get('new_site')
         self.assertEqual(site.name, 'new_site')
-        self.assertEqual(site.location, '50.0,50.0')
+        self.assertEqual(site.location, '50.0, 50.0')
         self.assertEqual(site.visibility, VisibilityState.GLOBAL)
 
     def test_update_site_empty_location(self):

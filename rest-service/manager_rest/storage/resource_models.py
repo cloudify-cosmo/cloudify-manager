@@ -171,13 +171,11 @@ class Site(CreatedAtMixin, SQLResourceBase):
     def location(self):
         if (self.latitude is None) or (self.longitude is None):
             return None
-        return "{0},{1}".format(self.latitude, self.longitude)
+        return "{0}, {1}".format(self.latitude, self.longitude)
 
     @classproperty
     def response_fields(cls):
         fields = super(Site, cls).response_fields
-        fields.pop('latitude')
-        fields.pop('longitude')
         fields.pop('id')
         return fields
 
