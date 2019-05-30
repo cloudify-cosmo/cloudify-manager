@@ -22,37 +22,39 @@ from .executions import ExecutionsCheck          # NOQA
 from .manager import (                           # NOQA
     SSLConfig,
     Managers,
-    RabbitMQBrokers
+    ManagersId,
+    RabbitMQBrokers,
+    RabbitMQBrokersId,
 )
 
 from .manager_config import (                    # NOQA
     ManagerConfig,
-    ManagerConfigId
+    ManagerConfigId,
 )
 
 from .secrets import (                           # NOQA
     SecretsKey,
     SecretsSetGlobal,
-    SecretsSetVisibility
+    SecretsSetVisibility,
 )
 
 from .plugins import (                           # NOQA
     Plugins,
     PluginsSetGlobal,
-    PluginsSetVisibility
+    PluginsSetVisibility,
 )
 
 from .deployments import (                       # NOQA
     DeploymentsId,
     DeploymentsSetSite,
     DeploymentsSetVisibility,
-    DeploymentsIdCapabilities
+    DeploymentsIdCapabilities,
 )
 
 from .blueprints import (                        # NOQA
     BlueprintsId,
     BlueprintsSetGlobal,
-    BlueprintsSetVisibility
+    BlueprintsSetVisibility,
 )
 
 from .summary import (                           # NOQA
@@ -61,12 +63,12 @@ from .summary import (                           # NOQA
     SummarizeNodeInstances,
     SummarizeExecutions,
     SummarizeBlueprints,
-    SummarizeNodeInstances
+    SummarizeNodeInstances,
 )
 
 from .operations import (                        # NOQA
     Operations,
     OperationsId,
     TasksGraphs,
-    TasksGraphsId
+    TasksGraphsId,
 )

@@ -131,7 +131,7 @@ class Managers(SecuredResource):
         )
 
     @exceptions_handled
-    @authorize('manager_add')
+    @authorize('manager_manage')
     @marshal_with(models.Manager)
     @premium_only
     def post(self):
@@ -178,60 +178,6 @@ class Managers(SecuredResource):
         update_agents(sm)
         return result
 
-    @exceptions_handled
-    @authorize('manager_update_fs_sync_node_id')
-    @marshal_with(models.Manager)
-    @premium_only
-    def put(self):
-        """
-        Update a manager's FS sync node ID required by syncthing
-        """
-        manager = rest_utils.get_json_and_verify_params({
-            'hostname': {'type': unicode},
-            'fs_sync_node_id': {'type': unicode},
-            'bootstrap_cluster': {'type': bool}
-        })
-        sm = get_storage_manager()
-        manager_to_update = sm.get(
-            models.Manager,
-            None,
-            filters={'hostname': manager['hostname']}
-        )
-        manager_to_update.fs_sync_node_id = manager['fs_sync_node_id']
-        result = sm.update(manager_to_update)
-
-        current_app.logger.info('Manager updated successfully, sending message'
-                                ' on service-queue')
-        if not manager['bootstrap_cluster']:
-            managers_list = get_storage_manager().list(models.Manager)
-            add_manager(managers_list)
-        return result
-
-    @exceptions_handled
-    @authorize('manager_delete')
-    @marshal_with(models.Manager)
-    @premium_only
-    def delete(self):
-        """
-        Delete a manager from the database
-        """
-        manager = rest_utils.get_json_and_verify_params({
-            'hostname': {'type': unicode}
-        })
-        sm = get_storage_manager()
-        manager_to_delete = sm.get(
-            models.Manager,
-            None,
-            filters={'hostname': manager['hostname']}
-        )
-
-        result = sm.delete(manager_to_delete)
-        current_app.logger.info('Manager deleted successfully')
-        managers_list = get_storage_manager().list(models.Manager)
-        remove_manager(managers_list)  # Removing manager from cluster
-        update_agents(sm)
-        return result
-
     def _get_ca_cert_id(self, sm, manager):
         ca_cert_content = manager.get('ca_cert_content')
         if ca_cert_content:
@@ -252,6 +198,58 @@ class Managers(SecuredResource):
             return existing_managers_certs.pop()
 
 
+class ManagersId(SecuredResource):
+    @exceptions_handled
+    @authorize('manager_manage')
+    @marshal_with(models.Manager)
+    @premium_only
+    def put(self, name):
+        """
+        Update a manager's FS sync node ID required by syncthing
+        """
+        manager = rest_utils.get_json_and_verify_params({
+            'fs_sync_node_id': {'type': unicode},
+            'bootstrap_cluster': {'type': bool}
+        })
+        sm = get_storage_manager()
+        manager_to_update = sm.get(
+            models.Manager,
+            None,
+            filters={'hostname': name}
+        )
+        manager_to_update.fs_sync_node_id = manager['fs_sync_node_id']
+        result = sm.update(manager_to_update)
+
+        current_app.logger.info('Manager updated successfully, sending message'
+                                ' on service-queue')
+        if not manager['bootstrap_cluster']:
+            managers_list = get_storage_manager().list(models.Manager)
+            add_manager(managers_list)
+        return result
+
+    @exceptions_handled
+    @authorize('manager_manage')
+    @marshal_with(models.Manager)
+    @premium_only
+    def delete(self, name):
+        """
+        Delete a manager from the database
+        """
+        sm = get_storage_manager()
+        manager_to_delete = sm.get(
+            models.Manager,
+            None,
+            filters={'hostname': name}
+        )
+
+        result = sm.delete(manager_to_delete)
+        current_app.logger.info('Manager deleted successfully')
+        managers_list = get_storage_manager().list(models.Manager)
+        remove_manager(managers_list)  # Removing manager from cluster
+        update_agents(sm)
+        return result
+
+
 class RabbitMQBrokers(SecuredResource):
     @exceptions_handled
     @marshal_with(models.RabbitMQBroker)
@@ -267,7 +265,7 @@ class RabbitMQBrokers(SecuredResource):
         return brokers
 
     @exceptions_handled
-    @authorize('broker_add')
+    @authorize('broker_manage')
     @marshal_with(models.RabbitMQBroker)
     @premium_only
     def post(self):
@@ -306,20 +304,48 @@ class RabbitMQBrokers(SecuredResource):
         update_agents(sm)
         return result
 
+
+class RabbitMQBrokersId(SecuredResource):
     @exceptions_handled
-    @authorize('broker_delete')
+    @authorize('broker_manage')
+    @marshal_with(models.Manager)
+    @premium_only
+    def put(self, name):
+        """Update a broker's networks.
+
+        :param name: Name of broker to update.
+        :return: Updated broker details.
+        """
+        broker_update = rest_utils.get_json_and_verify_params({
+            'networks': {'type': dict},
+        })
+        sm = get_storage_manager()
+        broker_to_update = sm.get(
+            models.RabbitMQBroker,
+            None,
+            filters={'name': name}
+        )
+        broker_networks = broker_to_update.networks
+        broker_networks.update(broker_update['networks'])
+        broker_to_update.networks = broker_networks
+        result = sm.update(broker_to_update, modified_attrs=('networks',))
+
+        current_app.logger.info('Broker {name} updated successfully'.format(
+                                name=name))
+        update_agents(sm)
+        return result
+
+    @exceptions_handled
+    @authorize('broker_manage')
     @marshal_with(models.RabbitMQBroker)
     @premium_only
-    def delete(self):
+    def delete(self, name):
         """Delete a broker from the database."""
-        broker = rest_utils.get_json_and_verify_params({
-            'name': {'type': unicode}
-        })
         sm = get_storage_manager()
         broker_to_delete = sm.get(
             models.RabbitMQBroker,
             None,
-            filters={'name': broker['name']}
+            filters={'name': name}
         )
 
         result = sm.delete(broker_to_delete)
