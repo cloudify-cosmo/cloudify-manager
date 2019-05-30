@@ -244,5 +244,6 @@ def main():
     worker = make_amqp_worker(args)
     worker.consume()
 
+
 if __name__ == '__main__':
     main()
