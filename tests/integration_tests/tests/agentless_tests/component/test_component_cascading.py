@@ -351,8 +351,9 @@ node_templates:
 workflows:
     nothing_workflow:
         mapping: workflow--mock_workflows.mock_workflows.workflows.do_nothing
-"""
+""".format('workflow', deployment_id)
         main_blueprint_path = self.make_yaml_file(main_blueprint)
+
         self.deploy_application(main_blueprint_path,
                                 deployment_id=deployment_id)
 
@@ -471,6 +472,7 @@ node_templates:
 workflows:
     nothing_workflow:
         mapping: workflow--mock_workflows.mock_workflows.workflows.do_nothing
+        is_cascading: false
 """
         layer_2_path = self.make_yaml_file(layer_2)
         self.client.blueprints.upload(layer_2_path,
