@@ -96,6 +96,7 @@ def setup_resources(api):
         'ManagerConfig': 'config',
         'ManagerConfigId': 'config/<string:name>',
         'Managers': 'managers',
+        'ManagersId': 'managers/<string:name>',
         'Agents': 'agents',
         'AgentsName': 'agents/<string:name>',
         'SummarizeDeployments': 'summary/deployments',
@@ -110,6 +111,7 @@ def setup_resources(api):
         'TasksGraphsId': 'tasks_graphs/<string:tasks_graph_id>',
         'ExecutionsCheck': 'executions/<execution_id>/should-start',
         'RabbitMQBrokers': 'brokers',
+        'RabbitMQBrokersId': 'brokers/<string:name>',
         'License': 'license',
         'Sites': 'sites',
         'SitesName': 'sites/<string:name>'
