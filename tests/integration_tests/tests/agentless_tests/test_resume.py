@@ -16,6 +16,8 @@
 import time
 from contextlib import contextmanager
 
+from cloudify.workflows import tasks
+from cloudify_rest_client.executions import Execution
 
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
@@ -46,17 +48,22 @@ class TestResumeMgmtworker(AgentlessTestCase):
         dsl_path = resource("dsl/resumable_mgmtworker.yaml")
         return self.deploy(dsl_path)
 
-    def _start_execution(self, deployment, operation):
+    def _start_execution(self, deployment, operation, node_ids=None):
+        parameters = {
+            'operation': operation,
+            'run_by_dependency_order': True,
+            'operation_kwargs': {
+                'wait_message': self.wait_message,
+                'target_file': self.target_file
+            }
+        }
+        if node_ids:
+            parameters['node_ids'] = node_ids
         return self.execute_workflow(
             workflow_name='execute_operation',
             wait_for_execution=False,
             deployment_id=deployment.id,
-            parameters={'operation': operation,
-                        'run_by_dependency_order': True,
-                        'operation_kwargs': {
-                            'wait_message': self.wait_message,
-                            'target_file': self.target_file
-                        }})
+            parameters=parameters)
 
     def _wait_for_log(self, execution):
         self.logger.info('Waiting for operation to start')
@@ -66,6 +73,15 @@ class TestResumeMgmtworker(AgentlessTestCase):
             if any(self.wait_message == log['message'] for log in logs):
                 break
             time.sleep(1)
+
+    def _find_remote_operation(self, graph_id):
+        """Find the only remote operation in the given graph"""
+        remote_operations = [
+            op for op in self.client.operations.list(graph_id)
+            if op.type == 'RemoteWorkflowTask'
+        ]
+        self.assertEqual(len(remote_operations), 1)
+        return remote_operations[0]
 
     def _stop_mgmtworker(self):
         self.logger.info('Stopping mgmtworker')
@@ -79,6 +95,33 @@ class TestResumeMgmtworker(AgentlessTestCase):
     def _start_mgmtworker(self):
         self.logger.info('Restarting mgmtworker')
         self.execute_on_manager('systemctl start cloudify-mgmtworker')
+
+    def test_cancel_updates_operation(self):
+        """When a workflow is cancelled, the operations that are actually
+        finish are still updated to 'succeeded'."""
+        dep = self._create_deployment()
+        execution = self._start_execution(
+            dep, 'interface1.op_resumable', node_ids=['node1'])
+        self._wait_for_log(execution)
+        self.client.executions.cancel(execution.id)
+        execution = self.wait_for_execution_to_end(execution)
+        self.assertEqual(execution.status, Execution.CANCELLED)
+
+        graphs = self.client.tasks_graphs.list(
+            execution.id, name='execute_operation')
+        self.assertEqual(len(graphs), 1)
+
+        # check that the task is started
+        task = self._find_remote_operation(graphs[0].id)
+        self.assertEqual(task.state, tasks.TASK_STARTED)
+
+        self._create_target_file()
+
+        # and now wait for the task to finish. It polls every 1 second, so
+        # allow a 3 seconds wait.
+        time.sleep(3)
+        task = self._find_remote_operation(graphs[0].id)
+        self.assertEqual(task.state, tasks.TASK_SUCCEEDED)
 
     def test_resumable_mgmtworker_op(self):
         # start a workflow, stop mgmtworker, restart mgmtworker, check that
