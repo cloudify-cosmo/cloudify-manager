@@ -69,7 +69,7 @@ class SQLStorageManager(object):
             # If all columns should be returned, query directly from the model
             query = model_class.query
 
-        query = query.join(*joins)
+        query = query.outerjoin(*joins)
         return query
 
     @staticmethod
