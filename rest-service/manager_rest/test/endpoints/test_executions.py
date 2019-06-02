@@ -498,7 +498,8 @@ class ExecutionsTestCase(BaseServerTestCase):
         resource_path = '/executions/{0}'.format(execution['id'])
         expected_error = manager_exceptions.InvalidExecutionUpdateStatus()
         expected_message = (
-            "Invalid relationship - can't change status from {0} to {1}")
+            'Invalid relationship - can\'t change status from {0} to {1}'
+            ' for "{2}" execution while running "{3}" workflow.')
 
         force_cancelling_invalid_future_statuses = (
             ExecutionState.ACTIVE_STATES + [ExecutionState.TERMINATED])
@@ -523,7 +524,10 @@ class ExecutionsTestCase(BaseServerTestCase):
             self.assertEqual(
                 expected_error.error_code, response.json['error_code'])
             self.assertEqual(
-                expected_message.format(last_status, next_status),
+                expected_message.format(last_status,
+                                        next_status,
+                                        execution['id'],
+                                        execution['workflow_id']),
                 response.json['message'])
 
         for last_status, status_list in invalid_status_map.iteritems():
@@ -534,7 +538,8 @@ class ExecutionsTestCase(BaseServerTestCase):
     def test_bad_update_execution_status_client_exception(self):
         execution = self.test_get_execution_by_id()
         expected_message = (
-            "Invalid relationship - can't change status from {0} to {1}")
+            'Invalid relationship - can\'t change status from {0} to {1}'
+            ' for "{2}" execution while running "{3}" workflow.')
         last_status = ExecutionState.TERMINATED
         next_status = ExecutionState.STARTED
         self._modify_execution_status_in_database(
@@ -554,7 +559,10 @@ class ExecutionsTestCase(BaseServerTestCase):
                 exceptions.InvalidExecutionUpdateStatus.ERROR_CODE,
                 exc.error_code)
             self.assertIn(
-                expected_message.format(last_status, next_status),
+                expected_message.format(last_status,
+                                        next_status,
+                                        execution['id'],
+                                        execution['workflow_id']),
                 str(exc))
 
     def test_update_execution_status(self):

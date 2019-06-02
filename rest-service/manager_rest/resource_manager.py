@@ -88,8 +88,12 @@ class ResourceManager(object):
         execution = self.sm.get(models.Execution, execution_id)
         if not self._validate_execution_update(execution.status, status):
             raise manager_exceptions.InvalidExecutionUpdateStatus(
-                "Invalid relationship - can't change status from {0} to {1}"
-                .format(execution.status, status))
+                'Invalid relationship - can\'t change status from {0} to {1}'
+                ' for "{2}" execution while running "{3}" workflow.'
+                .format(execution.status,
+                        status,
+                        execution.id,
+                        execution.workflow_id))
         old_status = execution.status
         execution.status = status
         execution.error = error
