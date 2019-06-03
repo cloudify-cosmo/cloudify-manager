@@ -409,7 +409,8 @@ class BaseTestCase(unittest.TestCase):
                           validate=False):
         client = test_utils.create_rest_client()
         result = client.deployments.delete(deployment_id,
-                                           ignore_live_nodes=ignore_live_nodes)
+                                           ignore_live_nodes=ignore_live_nodes,
+                                           with_logs=True)
         if validate:
             wait_for_deployment_deletion_to_complete(deployment_id)
         return result
