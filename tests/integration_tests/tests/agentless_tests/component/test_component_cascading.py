@@ -344,14 +344,14 @@ node_templates:
         resource_config:
           blueprint:
             external_resource: true
-            id: {0}
+            id: workflow
           deployment:
-            id: {1}
+            id: test
 
 workflows:
     nothing_workflow:
         mapping: workflow--mock_workflows.mock_workflows.workflows.do_nothing
-""".format('workflow', deployment_id)
+"""
         main_blueprint_path = self.make_yaml_file(main_blueprint)
 
         self.deploy_application(main_blueprint_path,
