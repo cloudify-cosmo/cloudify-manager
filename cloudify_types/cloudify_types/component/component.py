@@ -265,7 +265,7 @@ class Component(object):
             raise NonRecoverableError(
                 'Component\'s deployment ID "{0}" already exists, '
                 'please verify the chosen name.'.format(
-                    self.blueprint_id))
+                    self.deployment_id))
 
         update_runtime_properties('deployment', 'id', self.deployment_id)
         ctx.logger.info('Creating "{0}" component deployment.'
