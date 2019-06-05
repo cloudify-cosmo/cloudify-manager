@@ -939,13 +939,25 @@ class SnapshotRestoreValidator(object):
                 )
 
     def _assert_manager_networks(self):
-        current_networks = networks.get_current_networks(self._client)
-        active_networks = networks.get_active_networks(self._client)
-        missing_networks = active_networks - current_networks
-        if missing_networks:
-            raise NonRecoverableError(
-                'Networks `{0}` do not exist on the current manager, '
-                'but have live agents connected to them. Upgrade is not '
-                'allowed!\nAll the above networks need to be set during '
-                'manager install'.format(', '.join(missing_networks))
-            )
+        used_networks = networks.get_networks_from_snapshot(self._tempdir)
+        manager_networks, broker_networks = \
+            networks.get_current_networks(self._client)
+        missing_manager_networks = used_networks - manager_networks
+        missing_broker_networks = used_networks - broker_networks
+        missing_networks = missing_manager_networks | missing_broker_networks
+
+        if not missing_networks:
+            return
+
+        msg = ('Snapshot networks: `{0}` are used by agents, but are '
+               'missing from '
+               .format(', '.join(missing_networks)))
+        parts = []
+        if missing_manager_networks:
+            parts.append('the manager (manager networks: `{0}`)'
+                         .format(', '.join(manager_networks)))
+        if missing_broker_networks:
+            parts.append('the broker (broker networks: `{0}`)'
+                         .format(', '.join(broker_networks)))
+        msg += ' and '.join(parts)
+        raise NonRecoverableError(msg)

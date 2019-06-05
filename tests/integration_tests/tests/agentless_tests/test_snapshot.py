@@ -74,8 +74,8 @@ class TestSnapshot(AgentlessTestCase):
         self.client.snapshots.upload(snapshot, self.SNAPSHOT_ID)
         self._try_restore_snapshot(
             snapshot_id=self.SNAPSHOT_ID,
-            error_msg="Networks `[u\'new_network\']` do not appear "
-                      "in the provider context",
+            error_msg="Snapshot networks: `new_network` are used by agents, "
+                      "but are missing"
         )
 
     def _try_restore_snapshot(self,

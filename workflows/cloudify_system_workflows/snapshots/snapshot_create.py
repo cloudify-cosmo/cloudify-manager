@@ -22,8 +22,7 @@ from cloudify.workflows import ctx
 from cloudify.manager import get_rest_client
 from cloudify.constants import FILE_SERVER_SNAPSHOTS_FOLDER
 
-from . import utils
-from . import constants
+from . import constants, networks, utils
 from .agents import Agents
 from .postgres import Postgres
 from .credentials import Credentials
@@ -61,6 +60,7 @@ class SnapshotCreate(object):
 
             self._dump_files()
             self._dump_postgres()
+            self._dump_networks()
             self._dump_credentials(manager_version)
             self._dump_metadata(metadata,
                                 manager_version,
@@ -85,6 +85,10 @@ class SnapshotCreate(object):
             status=status,
             error=error
         )
+
+    def _dump_networks(self):
+        ctx.logger.info('Dumping network data')
+        networks.dump_networks(self._tempdir, self._client)
 
     def _dump_files(self):
         ctx.logger.info('Dumping files to the archive from the manager')
