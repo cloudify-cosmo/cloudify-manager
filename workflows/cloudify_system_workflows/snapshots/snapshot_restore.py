@@ -119,11 +119,8 @@ class SnapshotRestore(object):
                 M_SCHEMA_REVISION,
                 self.SCHEMA_REVISION_4_0,
             )
-            stage_revision = metadata.get(
-                M_STAGE_SCHEMA_REVISION,
-                None,
-            )
-            if self._premium_enabled:
+            stage_revision = metadata.get(M_STAGE_SCHEMA_REVISION) or ''
+            if stage_revision and self._premium_enabled:
                 stage_revision = re.sub(r".*\n", '', stage_revision)
             self._validate_snapshot()
 
