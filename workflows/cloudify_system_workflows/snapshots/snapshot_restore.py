@@ -514,7 +514,13 @@ class SnapshotRestore(object):
             admin_user_update_command = postgres.restore(self._tempdir)
         postgres.restore_config_tables(config_dump_path)
         postgres.restore_current_execution()
-        self._restore_stage(postgres, self._tempdir, stage_revision)
+        try:
+            self._restore_stage(postgres, self._tempdir, stage_revision)
+        except Exception as e:
+            if self._snapshot_version < V_4_3_0:
+                ctx.logger.warning('Could not restore stage ({0})'.format(e))
+            else:
+                raise
         self._restore_composer(postgres, self._tempdir)
         if not self._license_exists(postgres):
             postgres.restore_license_from_dump(self._tempdir)
@@ -554,8 +560,10 @@ class SnapshotRestore(object):
         ctx.logger.info('Restoring stage DB')
         self._npm.clear_db()
         self._npm.downgrade_stage_db(migration_version)
-        postgres.restore_stage(tempdir)
-        self._npm.upgrade_stage_db()
+        try:
+            postgres.restore_stage(tempdir)
+        finally:
+            self._npm.upgrade_stage_db()
         ctx.logger.debug('Stage DB restored')
 
     def _restore_composer(self, postgres, tempdir):
