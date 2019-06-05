@@ -481,7 +481,7 @@ class TestSnapshot(AgentlessTestCase):
         self.logger.info('Snapshot uploaded and validated')
 
     def _wait_for_restore_execution_to_end(
-            self, execution, rest_client, timeout_seconds=70):
+            self, execution, rest_client, timeout_seconds=120):
         """Can't use the `wait_for_execution_to_end` in the class because
          we need to be able to handle client errors
         """
