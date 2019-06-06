@@ -123,7 +123,7 @@ def init(expose=None, resources=None):
 def run_manager(label=None, tag=None):
     start = time.time()
     label = label or []
-    args = ['--mount']
+    args = ['--mount', '--mount-docker']
     if tag:
         args += ['--tag', tag]
     for l in label:
