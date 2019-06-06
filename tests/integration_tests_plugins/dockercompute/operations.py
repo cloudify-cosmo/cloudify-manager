@@ -150,7 +150,7 @@ def _wait_for_ssh_setup(container_id, retry_number=100, retry_interval=0.1):
     for _ in range(retry_number):
         try:
             return _docker_exec(container_id,
-                                'cat {0}'.format(PUBLIC_KEY_CONTAINER_PATH),
+                                ['cat', PUBLIC_KEY_CONTAINER_PATH],
                                 quiet=True)
         except CommandExecutionException:
             time.sleep(retry_interval)
