@@ -74,8 +74,8 @@ class TestSnapshot(AgentlessTestCase):
         self.client.snapshots.upload(snapshot, self.SNAPSHOT_ID)
         self._try_restore_snapshot(
             snapshot_id=self.SNAPSHOT_ID,
-            error_msg="Networks `[u\'new_network\']` do not appear "
-                      "in the provider context",
+            error_msg="Snapshot networks: `new_network` are used by agents, "
+                      "but are missing"
         )
 
     def _try_restore_snapshot(self,
@@ -481,7 +481,7 @@ class TestSnapshot(AgentlessTestCase):
         self.logger.info('Snapshot uploaded and validated')
 
     def _wait_for_restore_execution_to_end(
-            self, execution, rest_client, timeout_seconds=70):
+            self, execution, rest_client, timeout_seconds=120):
         """Can't use the `wait_for_execution_to_end` in the class because
          we need to be able to handle client errors
         """

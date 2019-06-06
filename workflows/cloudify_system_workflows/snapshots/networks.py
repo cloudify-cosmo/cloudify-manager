@@ -18,6 +18,16 @@ from os.path import join
 
 from .utils import is_compute
 
+NETWORKS_FILE = 'networks.json'
+
+
+def dump_networks(tempdir, client):
+    output = {
+        'active_networks': list(get_active_networks(client))
+    }
+    with open(join(tempdir, NETWORKS_FILE), 'w') as f:
+        json.dump(output, f)
+
 
 def _get_compute_nodes(client):
     """ Return a set of the IDs of all the compute nodes """
@@ -65,9 +75,9 @@ def get_active_networks(client):
 
 
 def get_networks_from_snapshot(tempdir):
-    networks_dump_path = join(tempdir, 'networks.json')
-    with open(networks_dump_path, 'r') as f:
-        return json.load(f)
+    networks_dump_path = join(tempdir, NETWORKS_FILE)
+    with open(networks_dump_path) as f:
+        return set(json.load(f)['active_networks'])
 
 
 def get_current_networks(client):
@@ -77,4 +87,4 @@ def get_current_networks(client):
         manager_networks.update(manager.networks or {})
     for broker in client.manager.get_brokers():
         broker_networks.update(broker.networks or {})
-    return manager_networks & broker_networks
+    return manager_networks, broker_networks
