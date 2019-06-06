@@ -70,11 +70,10 @@ def _install_agent_from_download_link(**_):
         ctx.logger.info('Download link: {0}'.format(download_link))
         _docker_exec(
             container_id,
-            'curl -L -o agent_installer.sh {0} --insecure'.format(
-                download_link
-            ))
-        _docker_exec(container_id, 'chmod +x agent_installer.sh')
-        _docker_exec(container_id, './agent_installer.sh')
+            ['curl', '-L', '-o', 'agent_installer.sh', download_link,
+             '--insecure'])
+        _docker_exec(container_id, ['chmod', '+x', 'agent_installer.sh'])
+        _docker_exec(container_id, ['./agent_installer.sh'])
 
 
 def _start_container(image, label):
@@ -85,14 +84,14 @@ def _start_container(image, label):
     for l in label:
         args += ['--label', l]
     args.append(image)
-    container_id = _docker('run', ' '.join(args))
+    container_id = _docker('run', args)
     ctx.instance.runtime_properties['container_id'] = container_id
     return container_id
 
 
 def _delete_container(container_id):
     try:
-        _docker('rm', '-f {0}'.format(container_id))
+        _docker('rm', ['-f', container_id])
     except CommandExecutionException as e:
         ctx.logger.warn('Failed removing container {0}: '.format(e))
 
@@ -102,8 +101,8 @@ def _extract_container_ip(container_id):
     # in this case
     container_ip = _docker(
         'inspect',
-        "-f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' " +
-        container_id)
+        ['-f', '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}',
+         container_id])
     ctx.instance.runtime_properties['ip'] = container_ip
 
 
@@ -113,13 +112,14 @@ def _init_script_agent_setup(container_id, install_agent_script):
         f.write(install_agent_script)
         f.flush()
         try:
-            _docker('cp', '{0} {1}:{2}'.format(
+            _docker('cp', [
                 f.name,
-                container_id,
-                container_install_agent_script_path))
-            _docker_exec(container_id, 'chmod +x {0}'.format(
-                container_install_agent_script_path))
-            _docker_exec(container_id, container_install_agent_script_path)
+                '{0}:{1}'.format(container_id,
+                                 container_install_agent_script_path)
+            ])
+            _docker_exec(container_id,
+                         ['chmod', '+x', container_install_agent_script_path])
+            _docker_exec(container_id, [container_install_agent_script_path])
         except BaseException as e:
             tpe, value, tb = sys.exc_info()
             raise NonRecoverableError, NonRecoverableError(str(e)), tb
@@ -127,10 +127,12 @@ def _init_script_agent_setup(container_id, install_agent_script):
 
 def _remote_agent_setup(container_id):
     _wait_for_ssh_setup(container_id)
-    _docker_exec(container_id, 'cp {0} /root/.ssh/authorized_keys'.format(
-        PUBLIC_KEY_CONTAINER_PATH))
-    private_key = _docker_exec(container_id, 'cat {0}'.format(
-        PRIVATE_KEY_CONTAINER_PATH))
+    _docker_exec(
+        container_id,
+        ['cp', PUBLIC_KEY_CONTAINER_PATH, '/root/.ssh/authorized_keys'])
+    private_key = _docker_exec(
+        container_id,
+        ['cat', PRIVATE_KEY_CONTAINER_PATH])
     key_path = _key_path()
     with open(key_path, 'w') as f:
         f.write(private_key)
