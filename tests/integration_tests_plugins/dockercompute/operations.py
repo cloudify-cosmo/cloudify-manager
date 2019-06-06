@@ -159,13 +159,17 @@ def _wait_for_ssh_setup(container_id, retry_number=100, retry_interval=0.1):
 
 
 def _docker_exec(container_id, args, quiet=False):
-    return _docker('exec', '{0} {1}'.format(container_id, args), quiet=quiet)
+    return _docker('exec', [container_id] + args, quiet=quiet)
 
 
 def _docker(subcommand, args, quiet=False):
-    return _run('docker -H {0} {1} {2}'.format(_docker_conf()['docker_host'],
-                                               subcommand, args),
-                quiet=quiet)
+    command = ['docker']
+    docker_host = _docker_conf()['docker_host']
+    if docker_host:
+        command += ['-H', docker_host]
+    command.append(subcommand)
+    command += args
+    return _run(command, quiet=quiet)
 
 
 def _run(command, quiet=False):
