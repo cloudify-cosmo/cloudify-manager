@@ -58,6 +58,9 @@ ALLOWED_LICENSE_ENDPOINTS = ALLOWED_ENDPOINTS + ['tokens', 'config', 'cluster',
 CLOUDIFY_AUTH_HEADER = 'Authorization'
 CLOUDIFY_AUTH_TOKEN_HEADER = 'Authentication-Token'
 BASIC_AUTH_PREFIX = 'Basic '
-MODELS_TO_PERMISSIONS = {'NodeInstance': 'node_instance'}
+MODELS_TO_PERMISSIONS = {
+    'NodeInstance': 'node_instance',
+    'TasksGraph': 'operations'
+}
 FORBIDDEN_METHODS = ['POST', 'PATCH', 'PUT']
 SANITY_MODE_FILE_PATH = '/opt/manager/sanity_mode'

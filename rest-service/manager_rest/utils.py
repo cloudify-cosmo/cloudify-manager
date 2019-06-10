@@ -219,9 +219,14 @@ def tenant_specific_authorization(tenant, resource_name, action='list'):
     """
     resource_name = constants.MODELS_TO_PERMISSIONS.get(resource_name,
                                                         resource_name.lower())
-    permission_name = '{0}_{1}'.format(resource_name, action)
-    return current_user.has_role_in(
-        tenant, config.instance.authorization_permissions[permission_name])
+    try:
+        permission_name = '{0}_{1}'.format(resource_name, action)
+        permission_roles = \
+            config.instance.authorization_permissions[permission_name]
+    except KeyError:
+        permission_roles = \
+            config.instance.authorization_permissions[resource_name.lower()]
+    return current_user.has_role_in(tenant, permission_roles)
 
 
 def is_administrator(tenant):
