@@ -20,7 +20,10 @@ from cloudify.workflows import tasks
 from cloudify_rest_client.executions import Execution
 
 from integration_tests import AgentlessTestCase
-from integration_tests.tests.utils import get_resource as resource
+from integration_tests.tests.utils import (
+    get_resource as resource,
+    create_rest_client
+)
 from integration_tests.tests.constants import PROVIDER_NAME
 
 
@@ -44,11 +47,12 @@ class TestResumeMgmtworker(AgentlessTestCase):
             context['cloudify']['workflows'] = original_workflows
             self.client.manager.update_context(PROVIDER_NAME, context)
 
-    def _create_deployment(self):
+    def _create_deployment(self, client=None):
         dsl_path = resource("dsl/resumable_mgmtworker.yaml")
-        return self.deploy(dsl_path)
+        return self.deploy(dsl_path, client=None)
 
-    def _start_execution(self, deployment, operation, node_ids=None):
+    def _start_execution(self, deployment, operation, node_ids=None,
+                         client=None):
         parameters = {
             'operation': operation,
             'run_by_dependency_order': True,
@@ -63,12 +67,14 @@ class TestResumeMgmtworker(AgentlessTestCase):
             workflow_name='execute_operation',
             wait_for_execution=False,
             deployment_id=deployment.id,
-            parameters=parameters)
+            parameters=parameters,
+            client=client)
 
-    def _wait_for_log(self, execution):
+    def _wait_for_log(self, execution, client=None):
+        client = client or self.client
         self.logger.info('Waiting for operation to start')
         while True:
-            logs = self.client.events.list(
+            logs = client.events.list(
                 execution_id=execution.id, include_logs=True)
             if any(self.wait_message == log['message'] for log in logs):
                 break
@@ -202,6 +208,23 @@ class TestResumeMgmtworker(AgentlessTestCase):
                         .runtime_properties['marked'])
 
     def test_resume_no_duplicates(self):
+        self._resume_no_duplicates_test(self.client)
+
+    def _create_user(self, username, password, tenant, role='user'):
+        self.client.users.create(username, password, role='default')
+        self.client.tenants.add_user(username, tenant, role)
+
+    def test_resume_retried_user(self):
+        # like test_resume_cancelled_resumable, but with a non-admin user
+        username = 'test-user'
+        password = 'test-password'
+        self._create_user(username, password, 'default_tenant')
+        user_client = create_rest_client(
+            username=username, password=password, tenant='default_tenant'
+        )
+        self._resume_no_duplicates_test(user_client)
+
+    def _resume_no_duplicates_test(self, client):
         """Check that retried tasks aren't duplicated after a resume.
 
         Run a workflow that, for node instance 1, retries the operation
@@ -209,32 +232,34 @@ class TestResumeMgmtworker(AgentlessTestCase):
         Resume the workflow with reset-operations (force) and check that
         the operation was ran only once after the resume.
         """
-        dep = self._create_deployment()
-        instance = self.client.node_instances.list(
+        dep = self._create_deployment(client)
+        instance = client.node_instances.list(
             deployment_id=dep.id, node_id='node1')[0]
-        instance2 = self.client.node_instances.list(
+        instance2 = client.node_instances.list(
             deployment_id=dep.id, node_id='node2')[0]
         with self._set_retries(5):
-            execution = self._start_execution(dep, 'interface1.op_retrying')
+            execution = self._start_execution(
+                dep, 'interface1.op_retrying', client=client)
 
             self.logger.info('Waiting for the execution to fail')
-            self.assertRaises(RuntimeError,
-                              self.wait_for_execution_to_end, execution)
+            self.assertRaises(
+                RuntimeError, self.wait_for_execution_to_end,
+                execution, client=client)
 
         self.assertNotIn(
             'marked',
-            self.client.node_instances.get(instance2.id).runtime_properties)
-        self.assertEqual(self.client.node_instances.get(instance.id)
+            client.node_instances.get(instance2.id).runtime_properties)
+        self.assertEqual(client.node_instances.get(instance.id)
                          .runtime_properties['count'], 2)
 
-        self.client.executions.resume(execution.id, force=True)
-        execution = self.wait_for_execution_to_end(execution)
+        client.executions.resume(execution.id, force=True)
+        execution = self.wait_for_execution_to_end(execution, client=client)
         self.assertEqual(execution.status, 'terminated')
 
         # if it is 4, that means the task ran twice after resume
-        self.assertEqual(self.client.node_instances.get(instance.id)
+        self.assertEqual(client.node_instances.get(instance.id)
                          .runtime_properties['count'], 3)
-        self.assertTrue(self.client.node_instances.get(instance2.id)
+        self.assertTrue(client.node_instances.get(instance2.id)
                         .runtime_properties['marked'])
 
     def test_resume_cancelled_resumable(self):
