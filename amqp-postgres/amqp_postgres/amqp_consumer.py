@@ -48,8 +48,7 @@ class AMQPLogsEventsConsumer(object):
         # This is here because AMQPConnection expects it
         self.routing_key = ''
 
-    def register(self, connection):
-        channel = connection.channel()
+    def register(self, connection, channel):
         channel.confirm_delivery()
         channel.queue_declare(queue=self.queue,
                               durable=True,
@@ -64,7 +63,6 @@ class AMQPLogsEventsConsumer(object):
                                      'topic',
                                      routing_key='events.#')
         channel.basic_consume(self.process, self.queue)
-#        channel.basic_recover(requeue=True)
 
     def process(self, channel, method, properties, body):
         try:
