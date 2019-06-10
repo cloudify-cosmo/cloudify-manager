@@ -209,7 +209,7 @@ commands:
 workflows:
   version: 2
   build_and_test:
-    jobs:
+    jobs: &build_jobs
       - flake8
       - build-rpms
       - test_v1:
@@ -232,3 +232,12 @@ workflows:
       - test_premium
       - test_amqp_postgres
       - test_cloudify_types
+  nightly:
+    triggers:
+      - schedule:
+          cron: "0 0 * * *"
+          filters:
+            branches:
+              only:
+                - master
+    jobs: *build_jobs
