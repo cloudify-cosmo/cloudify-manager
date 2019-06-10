@@ -292,21 +292,18 @@ class BaseTestCase(unittest.TestCase):
                          wait_for_execution=True,
                          force=False,
                          queue=False,
+                         client=None,
                          **kwargs):
-        """
-        A blocking method which runs the requested workflow
-        """
-        client = test_utils.create_rest_client()
-
+        """A blocking method which runs the requested workflow"""
+        client = client or test_utils.create_rest_client()
         execution = client.executions.start(deployment_id, workflow_name,
                                             parameters=parameters or {},
                                             force=force, queue=queue, **kwargs)
-
         if wait_for_execution:
             BaseTestCase.wait_for_execution_to_end(
-                    execution,
-                    timeout_seconds=timeout_seconds)
-
+                execution,
+                client=client,
+                timeout_seconds=timeout_seconds)
         return execution
 
     @staticmethod
