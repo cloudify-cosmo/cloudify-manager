@@ -31,6 +31,18 @@ from cloudify.models_states import VisibilityState
 from manager_rest.utils import is_administrator
 from manager_rest import manager_exceptions, config
 from manager_rest.constants import REST_SERVICE_NAME
+from manager_rest.security import (MissingPremiumFeatureResource,
+                                   SecuredResource)
+
+try:
+    from cloudify_premium.multi_tenancy.secured_tenant_resource \
+        import SecuredMultiTenancyResource
+    TenantsListResource = SecuredMultiTenancyResource
+except ImportError:
+    SecuredMultiTenancyResource = MissingPremiumFeatureResource
+
+    # In community edition tenants list should work without multi-tenancy
+    TenantsListResource = SecuredResource
 
 
 states_except_private = copy.deepcopy(VisibilityState.STATES)
@@ -275,3 +287,12 @@ def parse_datetime(datetime_str):
 def is_hidden_value_permitted(secret):
     return is_administrator(secret.tenant) or \
            secret.created_by == current_user.username
+
+
+def verify_dict_params(elements_dict, params):
+    missing_attributes = []
+    for attr in params:
+        if attr not in elements_dict:
+            missing_attributes.append(attr)
+    return missing_attributes
+

@@ -95,6 +95,7 @@ def setup_resources(api):
         'SSLConfig': 'ssl',
         'Secrets': 'secrets',
         'SecretsExport': 'secrets/share/export',
+        'SecretsImport': 'secrets/share/import',
         'SecretsKey': 'secrets/<string:key>',
         'SecretsSetGlobal': 'secrets/<string:key>/set-global',
         'SecretsSetVisibility': 'secrets/<string:key>/set-visibility',
