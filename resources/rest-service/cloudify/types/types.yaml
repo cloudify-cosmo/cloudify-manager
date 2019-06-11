@@ -424,6 +424,9 @@ node_types:
         delete:
           implementation: cfy_extensions.cloudify_types.component.delete
 
+  cloudify.nodes.ServiceComponent:
+    derived_from: cloudify.nodes.Root
+
   cloudify.nodes.SharedResource:
     derived_from: cloudify.nodes.Root
     properties:
