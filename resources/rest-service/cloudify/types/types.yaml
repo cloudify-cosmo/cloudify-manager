@@ -376,7 +376,7 @@ node_types:
         default: {}
       plugins:
         description: >
-          Optional, dictionary of plugins to upload,
+          Dictionary of plugins to upload,
           which each plugin is in format of:
             plugin-name:
               wagon_path: Url for plugin wagon file,
@@ -385,7 +385,7 @@ node_types:
         default: {}
       secrets:
         description: >
-          Optional, dictionary of secrets to set before deploying Components,
+          Dictionary of secrets to set before deploying Components,
           which each secret is in format of:
             secret-name: value
         type: dict
@@ -498,12 +498,12 @@ relationships:
               type: string
             parameters:
               description: >
-                Optional, inputs for running the workflow.
+                Inputs for running the workflow in the format of key-value dictionary.
               type: dict
               default: {}
             timeout:
               description: >
-                Timeout in seconds for running the specified workflow om the deployment.
+                Timeout in seconds for running the specified workflow on the deployment.
               type: integer
               default: 10
         unlink:
@@ -516,12 +516,12 @@ relationships:
               type: string
             parameters:
               description: >
-                Optional, inputs for running the workflow.
+                Inputs for running the workflow in the format of key-value dictionary.
               type: dict
               default: {}
             timeout:
               description: >
-                Timeout in seconds for running the specified workflow om the deployment.
+                Timeout in seconds for running the specified workflow on the deployment.
               type: integer
               default: 10
 
@@ -539,12 +539,12 @@ relationships:
               type: string
             parameters:
               description: >
-                Optional, inputs for running the workflow.
+                Inputs for running the workflow in the format of key-value dictionary.
               type: dict
               default: {}
             timeout:
               description: >
-                Timeout in seconds for running the specified workflow om the deployment.
+                Timeout in seconds for running the specified workflow on the deployment.
               type: integer
               default: 10
         unlink:
@@ -557,12 +557,12 @@ relationships:
               type: string
             parameters:
               description: >
-                Optional, Inputs for running the workflow.
+                Inputs for running the workflow in the format of key-value dictionary.
               type: dict
               default: {}
             timeout:
               description: >
-                Timeout in seconds for running the specified workflow om the deployment.
+                Timeout in seconds for running the specified workflow on the deployment.
               type: integer
               default: 10
 
