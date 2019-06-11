@@ -327,8 +327,7 @@ class Component(object):
 
     @staticmethod
     def _delete_runtime_properties():
-        for property_name in ['deployment', 'blueprint',
-                              'plugins', 'secrets']:
+        for property_name in ['deployment', 'blueprint', 'plugins']:
             if property_name in ctx.instance.runtime_properties:
                 del ctx.instance.runtime_properties[property_name]
 
