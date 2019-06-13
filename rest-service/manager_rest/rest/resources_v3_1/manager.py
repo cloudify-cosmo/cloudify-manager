@@ -151,6 +151,8 @@ class Managers(SecuredResource):
             'networks': {'type': dict, 'optional': True}
         })
 
+        if not manager.get('networks'):
+            manager['networks'] = {'default': manager['private_ip']}
         check_private_address_is_in_networks(
             manager['private_ip'],
             manager['networks'],
