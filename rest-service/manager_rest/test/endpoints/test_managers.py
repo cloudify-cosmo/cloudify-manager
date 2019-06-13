@@ -15,6 +15,7 @@
 
 import mock
 import unittest
+from contextlib import contextmanager
 
 from manager_rest.test import base_test
 from manager_rest.test.attribute import attr
@@ -74,6 +75,24 @@ class ManagersTableTestCase(base_test.BaseServerTestCase):
     def tearDown(self):
         self._remove_managers()
         super(ManagersTableTestCase, self).tearDown()
+
+    @contextmanager
+    def _premium_mocks(self):
+        mocks = [
+            mock.patch('manager_rest.rest.resources_v3_1.manager.'
+                       'add_manager', return_value=None),
+            mock.patch('manager_rest.rest.resources_v3_1.manager.'
+                       'remove_manager', return_value=None),
+            mock.patch('manager_rest.rest.resources_v3_1.manager.'
+                       'update_agents', return_value=None),
+        ]
+        for m in mocks:
+            m.start()
+        try:
+            yield mocks
+        finally:
+            for m in mocks:
+                m.stop()
 
     def _add_managers(self):
         manager1 = _manager1.copy()
@@ -138,8 +157,7 @@ class ManagersTableTestCase(base_test.BaseServerTestCase):
             },
             'ca_cert_content': 'CERT CONTENT'
         }
-        with mock.patch('manager_rest.rest.resources_v3_1.manager.'
-                        'add_manager', return_value=None):
+        with self._premium_mocks():
             result = self.client.manager.add_manager(**new_manager)
             del result['id']
             self.assertEqual(result, new_manager)
@@ -198,8 +216,7 @@ class ManagersTableTestCase(base_test.BaseServerTestCase):
         self.assertEqual(error.exception.status_code, 409)
 
     def test_remove_manager(self):
-        with mock.patch('manager_rest.rest.resources_v3_1.manager.'
-                        'remove_manager', return_value=None):
+        with self._premium_mocks():
             result = self.client.manager.remove_manager('manager2.test.domain')
             del result['id']               # value unknown
             del result['fs_sync_node_id']  # value is None
