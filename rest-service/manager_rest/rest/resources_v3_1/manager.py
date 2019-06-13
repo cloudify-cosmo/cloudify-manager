@@ -151,6 +151,8 @@ class Managers(SecuredResource):
             'networks': {'type': dict, 'optional': True}
         })
 
+        if not manager.get('networks'):
+            manager['networks'] = {'default': manager['private_ip']}
         check_private_address_is_in_networks(
             manager['private_ip'],
             manager['networks'],
@@ -172,10 +174,10 @@ class Managers(SecuredResource):
         )
         result = sm.put(new_manager)
         current_app.logger.info('Manager added successfully')
-        if manager.get('fs_sync_node_id'):
+        if add_manager and manager.get('fs_sync_node_id') and update_agents:
             managers_list = get_storage_manager().list(models.Manager)
             add_manager(managers_list)
-        update_agents(sm)
+            update_agents(sm)
         return result
 
     def _get_ca_cert_id(self, sm, manager):
@@ -222,7 +224,7 @@ class ManagersId(SecuredResource):
 
         current_app.logger.info('Manager updated successfully, sending message'
                                 ' on service-queue')
-        if not manager['bootstrap_cluster']:
+        if add_manager and not manager['bootstrap_cluster']:
             managers_list = get_storage_manager().list(models.Manager)
             add_manager(managers_list)
         return result
@@ -245,8 +247,9 @@ class ManagersId(SecuredResource):
         result = sm.delete(manager_to_delete)
         current_app.logger.info('Manager deleted successfully')
         managers_list = get_storage_manager().list(models.Manager)
-        remove_manager(managers_list)  # Removing manager from cluster
-        update_agents(sm)
+        if remove_manager and update_agents:
+            remove_manager(managers_list)  # Removing manager from cluster
+            update_agents(sm)
         return result
 
 
@@ -301,7 +304,8 @@ class RabbitMQBrokers(SecuredResource):
         )
         result = sm.put(new_broker)
         current_app.logger.info('Broker added successfully')
-        update_agents(sm)
+        if update_agents:
+            update_agents(sm)
         return result
 
 
@@ -332,7 +336,8 @@ class RabbitMQBrokersId(SecuredResource):
 
         current_app.logger.info('Broker {name} updated successfully'.format(
                                 name=name))
-        update_agents(sm)
+        if update_agents:
+            update_agents(sm)
         return result
 
     @exceptions_handled
@@ -350,5 +355,6 @@ class RabbitMQBrokersId(SecuredResource):
 
         result = sm.delete(broker_to_delete)
         current_app.logger.info('Broker deleted successfully')
-        update_agents(sm)
+        if update_agents:
+            update_agents(sm)
         return result
