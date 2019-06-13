@@ -9,7 +9,6 @@ checkout:
         git checkout -qf FETCH_HEAD
       fi
 
-
 defaults:
   - &only_master
     filters:
@@ -139,14 +138,8 @@ jobs:
       - checkout
       - run: sudo apt-get install libldap-dev libsasl2-dev
       - run: pip install --user tox
-      - run:
-          name: Avoid hosts unknown for github
-          command: mkdir -p ~/.ssh && echo -e "Host github.com\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
+      - clone_premium
 
-      - run: git clone git@github.com:cloudify-cosmo/cloudify-premium.git ~/cloudify-premium
-      - run: |
-          cd ~/cloudify-premium
-          git fetch --depth 1 origin "${CIRCLE_BRANCH}" && git checkout "${CIRCLE_BRANCH}" || echo no matching branch found, using master
       # Replace the cloudify-manager URL in dev-requirements.txt with the local path to this checkout
       - run: sed -i "s:^.*cloudify-manager.*\(rest-service\)$:-e ${HOME}/project/\1/:" ~/cloudify-premium/dev-requirements.txt
       - run: python -m tox -c ~/cloudify-premium/tox.ini
@@ -180,6 +173,27 @@ jobs:
           destination: result
 
 commands:
+  clone_premium:
+    description: Clone cloudify-premium to ~/cloudify-premium
+    steps:
+      - run:
+          name: Avoid hosts unknown for github
+          command: mkdir -p ~/.ssh && echo -e "Host github.com\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
+      - run:
+          name: git clone premium
+          command: |
+            set -eux
+            function clone {
+              branch=$1
+              git clone \
+                --branch "$1" \
+                --single-branch \
+                --depth 1 \
+                git@github.com:cloudify-cosmo/cloudify-premium.git \
+                ~/cloudify-premium
+            }
+            clone "${CIRCLE_BRANCH}" || clone master
+
   build_rpm:
     description: Build a single component rpm
     parameters:
