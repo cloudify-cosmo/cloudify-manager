@@ -174,10 +174,9 @@ class Managers(SecuredResource):
         )
         result = sm.put(new_manager)
         current_app.logger.info('Manager added successfully')
-        if add_manager and manager.get('fs_sync_node_id'):
+        if add_manager and manager.get('fs_sync_node_id') and update_agents:
             managers_list = get_storage_manager().list(models.Manager)
             add_manager(managers_list)
-        if update_agents:
             update_agents(sm)
         return result
 
