@@ -144,9 +144,9 @@ class DeploymentsSetSite(SecuredResource):
 
 
 def _get_site_name(request_dict):
-    site_name = request_dict.get('site_name')
-    if site_name:
-        rest_utils.validate_inputs(
-            {'site_name': request_dict['site_name']}
-        )
+    if 'site_name' not in request_dict:
+        return None
+
+    site_name = request_dict['site_name']
+    rest_utils.validate_inputs({'site_name': site_name})
     return site_name
