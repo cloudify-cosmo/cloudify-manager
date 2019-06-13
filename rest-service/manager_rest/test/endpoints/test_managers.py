@@ -42,7 +42,8 @@ _manager1 = {
     ),
     'networks': {
         'default': '192.0.2.1',
-        'network2': '192.0.2.2'
+        'network2': '192.0.2.2',
+        'private': '172.17.0.1'
     },
     'ca_cert_content': 'CERT CONTENT'
 }
@@ -55,7 +56,8 @@ _manager2 = {
     'distribution': 'centos',
     'distro_release': 'Core',
     'networks': {
-        'default': '192.0.2.3'
+        'default': '192.0.2.3',
+        'private': '172.17.0.2'
     },
     'ca_cert_content': 'CERT CONTENT2'
 }
@@ -131,7 +133,7 @@ class ManagersTableTestCase(base_test.BaseServerTestCase):
             'fs_sync_node_id': 'I56IOI7-MZJNU2Y-IQGDREY-DM2MGTI-'
                                'MGL3BXN-PQ6W5BM-TBBZ4TJ-XZWICQ2',
             'networks': {
-                'default': '192.0.2.1',
+                'default': '172.17.0.3',
                 'network2': '192.0.2.2'
             },
             'ca_cert_content': 'CERT CONTENT'
@@ -163,7 +165,10 @@ class ManagersTableTestCase(base_test.BaseServerTestCase):
         new_manager = _manager2.copy()
         new_manager.update({
             'private_ip': '172.17.0.3',
-            'public_ip': '192.168.0.3'
+            'public_ip': '192.168.0.3',
+            'networks': {
+                'default': '172.17.0.3'
+            }
         })
         with self.assertRaises(CloudifyClientError) as error:
             self.client.manager.add_manager(**new_manager)
@@ -183,7 +188,10 @@ class ManagersTableTestCase(base_test.BaseServerTestCase):
         new_manager = _manager2.copy()
         new_manager.update({
             'hostname': 'manager3.test.domain',
-            'private_ip': '172.17.0.3'
+            'private_ip': '172.17.0.3',
+            'networks': {
+                'default': '172.17.0.3'
+            }
         })
         with self.assertRaises(CloudifyClientError) as error:
             self.client.manager.add_manager(**new_manager)
