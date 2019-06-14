@@ -13,58 +13,33 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import json
 from subprocess import check_call
 
-from flask import request, current_app
+from flask import request
 from flask_restful.reqparse import Argument
 
-from manager_rest import manager_exceptions
-from manager_rest.security import (
-    SecuredResource,
-    premium_only
-)
+from manager_rest.security import SecuredResource, premium_only
+from manager_rest.rest import rest_utils
+from manager_rest.storage import get_storage_manager, models
 from manager_rest.security.authorization import (
     authorize,
     is_user_action_allowed
 )
-from manager_rest.storage import (
-    get_storage_manager,
-    models
-)
-
-from .. import rest_utils
-from ..rest_decorators import (
+from manager_rest.rest.rest_decorators import (
     exceptions_handled,
     marshal_with,
-    paginate,
+    paginate
 )
 
-
 try:
-    from cloudify_premium.ha import (
-        add_manager,
-        remove_manager,
-    )
-    from cloudify_premium.ha.agents import update_agents
+    from cloudify_premium import manager as manager_premium
 except ImportError:
-    add_manager, remove_manager, update_agents = None, None, None
+    manager_premium = None
 
 
 DEFAULT_CONF_PATH = '/etc/nginx/conf.d/cloudify.conf'
 HTTP_PATH = '/etc/nginx/conf.d/http-external-rest-server.cloudify'
 HTTPS_PATH = '/etc/nginx/conf.d/https-external-rest-server.cloudify'
-
-
-def check_private_address_is_in_networks(address, networks):
-    if address not in networks.values():
-        raise manager_exceptions.BadParametersError(
-            'Supplied address {address} was not found in networks: '
-            '{networks}'.format(
-                address=address,
-                networks=json.dumps(networks),
-            )
-        )
 
 
 class SSLConfig(SecuredResource):
@@ -104,7 +79,74 @@ class SSLConfig(SecuredResource):
                     flag])
 
 
-class Managers(SecuredResource):
+# community base classes for the managers and brokers endpoints:
+# the http verbs that are implemented in premium, are made to throw a
+# "premium-only" exception here, so they throw that in community instead of
+# a 404. The method body should never be executed, because the @premium_only
+# decorator should prevent it.
+class _CommunityManagersBase(SecuredResource):
+    @exceptions_handled
+    @authorize('manager_manage')
+    @marshal_with(models.Manager)
+    @premium_only
+    def post(self):
+        raise NotImplementedError('Premium implementation only')
+
+
+class _CommunityManagersId(SecuredResource):
+    @exceptions_handled
+    @authorize('manager_manage')
+    @marshal_with(models.Manager)
+    @premium_only
+    def put(self):
+        raise NotImplementedError('Premium implementation only')
+
+    @exceptions_handled
+    @authorize('manager_manage')
+    @marshal_with(models.Manager)
+    @premium_only
+    def delete(self):
+        raise NotImplementedError('Premium implementation only')
+
+
+class _CommunityBrokersBase(SecuredResource):
+    @exceptions_handled
+    @authorize('broker_manage')
+    @marshal_with(models.RabbitMQBroker)
+    @premium_only
+    def post(self):
+        raise NotImplementedError('Premium implementation only')
+
+
+class _CommunityBrokersId(SecuredResource):
+    @exceptions_handled
+    @authorize('broker_manage')
+    @marshal_with(models.Manager)
+    @premium_only
+    def put(self):
+        raise NotImplementedError('Premium implementation only')
+
+    @exceptions_handled
+    @authorize('broker_manage')
+    @marshal_with(models.Manager)
+    @premium_only
+    def delete(self):
+        raise NotImplementedError('Premium implementation only')
+
+
+if manager_premium:
+    managers_base = manager_premium.ManagersBase
+    brokers_base = manager_premium.RabbitMQBrokersBase
+    ManagersId = manager_premium.ManagersId
+    RabbitMQBrokersId = manager_premium.RabbitMQBrokersId
+else:
+    managers_base = _CommunityManagersBase
+    brokers_base = _CommunityBrokersBase
+    ManagersId = _CommunityManagersId
+    RabbitMQBrokersId = _CommunityBrokersId
+
+
+class Managers(managers_base):
     @exceptions_handled
     @marshal_with(models.Manager)
     @paginate
@@ -130,130 +172,8 @@ class Managers(SecuredResource):
             include=_include
         )
 
-    @exceptions_handled
-    @authorize('manager_manage')
-    @marshal_with(models.Manager)
-    @premium_only
-    def post(self):
-        """
-        Create a new manager
-        """
-        manager = rest_utils.get_json_and_verify_params({
-            'hostname': {'type': unicode},
-            'private_ip': {'type': unicode},
-            'public_ip': {'type': unicode},
-            'version': {'type': unicode},
-            'edition': {'type': unicode},
-            'distribution': {'type': unicode},
-            'distro_release': {'type': unicode},
-            'ca_cert_content': {'type': unicode, 'optional': True},
-            'fs_sync_node_id': {'type': unicode, 'optional': True},
-            'networks': {'type': dict, 'optional': True}
-        })
 
-        if not manager.get('networks'):
-            manager['networks'] = {'default': manager['private_ip']}
-        check_private_address_is_in_networks(
-            manager['private_ip'],
-            manager['networks'],
-        )
-
-        sm = get_storage_manager()
-        ca_cert_id = self._get_ca_cert_id(sm, manager)
-        new_manager = models.Manager(
-            hostname=manager['hostname'],
-            private_ip=manager['private_ip'],
-            public_ip=manager['public_ip'],
-            version=manager['version'],
-            edition=manager['edition'],
-            distribution=manager['distribution'],
-            distro_release=manager['distro_release'],
-            fs_sync_node_id=manager.get('fs_sync_node_id', ''),
-            networks=manager.get('networks'),
-            _ca_cert_id=ca_cert_id,
-        )
-        result = sm.put(new_manager)
-        current_app.logger.info('Manager added successfully')
-        if add_manager and manager.get('fs_sync_node_id') and update_agents:
-            managers_list = get_storage_manager().list(models.Manager)
-            add_manager(managers_list)
-            update_agents(sm)
-        return result
-
-    def _get_ca_cert_id(self, sm, manager):
-        ca_cert_content = manager.get('ca_cert_content')
-        if ca_cert_content:
-            ca_cert = sm.put(models.Certificate(
-                name='{0}-ca'.format(manager['hostname']),
-                value=ca_cert_content
-            ))
-            return ca_cert.id
-        else:
-            # if CA content is not given, use the one used by other managers
-            # (this means exactly one CA must be used by other managers)
-            existing_managers_certs = {m._ca_cert_id
-                                       for m in sm.list(models.Manager)}
-            if len(existing_managers_certs) != 1:
-                raise manager_exceptions.ConflictError(
-                    'ca_cert_content not given, but {0} existing CA '
-                    'certs found'.format(len(existing_managers_certs)))
-            return existing_managers_certs.pop()
-
-
-class ManagersId(SecuredResource):
-    @exceptions_handled
-    @authorize('manager_manage')
-    @marshal_with(models.Manager)
-    @premium_only
-    def put(self, name):
-        """
-        Update a manager's FS sync node ID required by syncthing
-        """
-        manager = rest_utils.get_json_and_verify_params({
-            'fs_sync_node_id': {'type': unicode},
-            'bootstrap_cluster': {'type': bool}
-        })
-        sm = get_storage_manager()
-        manager_to_update = sm.get(
-            models.Manager,
-            None,
-            filters={'hostname': name}
-        )
-        manager_to_update.fs_sync_node_id = manager['fs_sync_node_id']
-        result = sm.update(manager_to_update)
-
-        current_app.logger.info('Manager updated successfully, sending message'
-                                ' on service-queue')
-        if add_manager and not manager['bootstrap_cluster']:
-            managers_list = get_storage_manager().list(models.Manager)
-            add_manager(managers_list)
-        return result
-
-    @exceptions_handled
-    @authorize('manager_manage')
-    @marshal_with(models.Manager)
-    @premium_only
-    def delete(self, name):
-        """
-        Delete a manager from the database
-        """
-        sm = get_storage_manager()
-        manager_to_delete = sm.get(
-            models.Manager,
-            None,
-            filters={'hostname': name}
-        )
-
-        result = sm.delete(manager_to_delete)
-        current_app.logger.info('Manager deleted successfully')
-        managers_list = get_storage_manager().list(models.Manager)
-        if remove_manager and update_agents:
-            remove_manager(managers_list)  # Removing manager from cluster
-            update_agents(sm)
-        return result
-
-
-class RabbitMQBrokers(SecuredResource):
+class RabbitMQBrokers(brokers_base):
     @exceptions_handled
     @marshal_with(models.RabbitMQBroker)
     @paginate
@@ -266,95 +186,3 @@ class RabbitMQBrokers(SecuredResource):
                 broker.username = None
                 broker.password = None
         return brokers
-
-    @exceptions_handled
-    @authorize('broker_manage')
-    @marshal_with(models.RabbitMQBroker)
-    @premium_only
-    def post(self):
-        """Add a broker to the database."""
-        broker = rest_utils.get_json_and_verify_params({
-            'name': {'type': unicode},
-            'address': {'type': unicode},
-            'port': {'type': int, 'optional': True},
-            'networks': {'type': dict, 'optional': True},
-        })
-        sm = get_storage_manager()
-
-        # Get the first broker in the list to get the ca_cert and credentials
-        first_broker = sm.list(models.RabbitMQBroker).items[0]
-
-        if broker.get('networks'):
-            check_private_address_is_in_networks(
-                broker['address'],
-                broker['networks'],
-            )
-        else:
-            broker['networks'] = {'default': broker['address']}
-
-        new_broker = models.RabbitMQBroker(
-            name=broker['name'],
-            host=broker['address'],
-            management_host=broker['address'],
-            port=broker.get('port'),
-            networks=broker['networks'],
-            username=first_broker.username,
-            password=first_broker.password,
-            _ca_cert_id=first_broker._ca_cert_id,
-        )
-        result = sm.put(new_broker)
-        current_app.logger.info('Broker added successfully')
-        if update_agents:
-            update_agents(sm)
-        return result
-
-
-class RabbitMQBrokersId(SecuredResource):
-    @exceptions_handled
-    @authorize('broker_manage')
-    @marshal_with(models.Manager)
-    @premium_only
-    def put(self, name):
-        """Update a broker's networks.
-
-        :param name: Name of broker to update.
-        :return: Updated broker details.
-        """
-        broker_update = rest_utils.get_json_and_verify_params({
-            'networks': {'type': dict},
-        })
-        sm = get_storage_manager()
-        broker_to_update = sm.get(
-            models.RabbitMQBroker,
-            None,
-            filters={'name': name}
-        )
-        broker_networks = broker_to_update.networks
-        broker_networks.update(broker_update['networks'])
-        broker_to_update.networks = broker_networks
-        result = sm.update(broker_to_update, modified_attrs=('networks',))
-
-        current_app.logger.info('Broker {name} updated successfully'.format(
-                                name=name))
-        if update_agents:
-            update_agents(sm)
-        return result
-
-    @exceptions_handled
-    @authorize('broker_manage')
-    @marshal_with(models.RabbitMQBroker)
-    @premium_only
-    def delete(self, name):
-        """Delete a broker from the database."""
-        sm = get_storage_manager()
-        broker_to_delete = sm.get(
-            models.RabbitMQBroker,
-            None,
-            filters={'name': name}
-        )
-
-        result = sm.delete(broker_to_delete)
-        current_app.logger.info('Broker deleted successfully')
-        if update_agents:
-            update_agents(sm)
-        return result
