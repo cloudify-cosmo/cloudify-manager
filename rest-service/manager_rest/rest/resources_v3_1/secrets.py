@@ -159,7 +159,7 @@ class SecretsImport(SecuredResource):
         request_dict = rest_utils.get_json_and_verify_params({
             'secrets_list': {'type': list, 'optional': False},
             'tenant_map_dict': {'type': dict, 'optional': True},
-            'passphrase': {'type': str, 'optional': True},
+            'passphrase': {'type': unicode, 'optional': True},
             'override_collisions': {'type': bool, 'optional': False}
         })
         return request_dict
