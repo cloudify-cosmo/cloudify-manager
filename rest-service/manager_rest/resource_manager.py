@@ -24,6 +24,7 @@ from StringIO import StringIO
 from flask import current_app
 from flask_security import current_user
 
+from cloudify.cryptography_utils import encrypt
 from cloudify.workflows import tasks as cloudify_tasks
 from cloudify.plugins.install_utils import INSTALLING_PREFIX
 from cloudify import constants as cloudify_constants, utils as cloudify_utils
@@ -36,10 +37,12 @@ from dsl_parser import constants, tasks
 from dsl_parser import exceptions as parser_exceptions
 
 from manager_rest import premium_enabled
+from manager_rest.rest import rest_utils
 from manager_rest.constants import (DEFAULT_TENANT_NAME,
                                     FILE_SERVER_BLUEPRINTS_FOLDER,
                                     FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER)
 from manager_rest.dsl_functions import get_secret_method
+from manager_rest.manager_exceptions import ConflictError
 from manager_rest.utils import (send_event,
                                 is_create_global_permitted,
                                 validate_global_modification,
@@ -2180,3 +2183,93 @@ def _create_task_mapping():
             'cloudify_system_workflows.deployment_environment.delete'
     }
     return mapping
+
+
+def create_secret(key=None, imported_secret=None):
+    secret_params = imported_secret if imported_secret \
+        else _get_secret_params(key)
+    secret_key = secret_params['key'] if imported_secret else key
+    encrypted_value = encrypt(secret_params['value'])
+    sm = get_storage_manager()
+    timestamp = utils.get_formatted_timestamp()
+    secret_tenant = sm.get(models.Tenant, secret_params['tenant_name'],
+                           filters={'name': secret_params['tenant_name']}) \
+        if imported_secret else utils.current_tenant
+    new_secret = models.Secret(
+        id=secret_key,
+        value=encrypted_value,
+        created_at=timestamp,
+        updated_at=timestamp,
+        visibility=secret_params['visibility'],
+        is_hidden_value=secret_params['is_hidden_value'],
+        tenant=secret_tenant
+    )
+    try:
+        created_secret = sm.put(new_secret)
+        return ('created', '') if imported_secret else created_secret
+    except ConflictError:
+        update_if_exists = secret_params['update_if_exists']
+        return _update_secret(encrypted_value, timestamp, sm, key,
+                              update_if_exists, imported_secret)
+
+
+def _get_secret_params(key):
+    rest_utils.validate_inputs({'key': key})
+    request_dict = rest_utils.get_json_and_verify_params({
+        'value': {'type': unicode}
+    })
+    update_if_exists = rest_utils.verify_and_convert_bool(
+        'update_if_exists',
+        request_dict.get('update_if_exists', False),
+    )
+    is_hidden_value = rest_utils.verify_and_convert_bool(
+        'is_hidden_value',
+        request_dict.get('is_hidden_value', False),
+    )
+    visibility_param = rest_utils.get_visibility_parameter(
+        optional=True,
+        valid_values=VisibilityState.STATES,
+    )
+    visibility = get_resource_manager().get_resource_visibility(
+        models.Secret,
+        key,
+        visibility_param
+    )
+
+    secret_params = {
+        'value': request_dict['value'],
+        'update_if_exists': update_if_exists,
+        'visibility': visibility,
+        'is_hidden_value': is_hidden_value
+    }
+    return secret_params
+
+
+def _update_secret(encrypted_value, timestamp, sm, key, update_if_exists,
+                   imported_secret):
+    existing_secret = sm.get(models.Secret, imported_secret['key'],
+                             filters={'id': imported_secret['key'],
+                                      'tenant_name': imported_secret[
+                                          'tenant_name']}, all_tenants=True) \
+        if imported_secret else sm.get(models.Secret, key)
+    if existing_secret and update_if_exists:
+        existing_secret.value = encrypted_value
+        existing_secret.updated_at = timestamp
+        if imported_secret:
+            existing_secret.is_hidden_value = imported_secret[
+                'is_hidden_value']
+            existing_secret.visibility = imported_secret['visibility']
+        updated_secret = sm.update(existing_secret, validate_global=True)
+        return ('overridden', imported_secret['tenant_name']) if \
+            imported_secret else updated_secret
+    if imported_secret:
+        return 'collision', imported_secret['tenant_name']
+    else:
+        raise
+
+
+def add_to_dict_values(dictionary, key, value):
+    if key in dictionary:
+        dictionary[key].append(value)
+        return
+    dictionary[key] = [value]

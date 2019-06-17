@@ -295,4 +295,3 @@ def verify_dict_params(elements_dict, params):
         if attr not in elements_dict:
             missing_attributes.append(attr)
     return missing_attributes
-
