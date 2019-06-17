@@ -20,16 +20,15 @@ from cloudify.models_states import VisibilityState
 from cloudify.cryptography_utils import (encrypt,
                                          decrypt,
                                          generate_key_using_password)
+
 from manager_rest import manager_exceptions
-from manager_rest.security import (SecuredResource, authorization)
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.resource_manager import (create_secret,
                                            add_to_dict_values,
                                            get_resource_manager)
-from manager_rest.rest import (rest_decorators,
-                               resources_v3,
-                               rest_utils)
+from manager_rest.security import SecuredResource, authorization
+from manager_rest.rest import rest_decorators, resources_v3, rest_utils
 
 
 class SecretsSetGlobal(SecuredResource):

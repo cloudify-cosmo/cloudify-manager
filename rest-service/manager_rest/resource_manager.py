@@ -36,8 +36,8 @@ from cloudify.models_states import (SnapshotState,
 from dsl_parser import constants, tasks
 from dsl_parser import exceptions as parser_exceptions
 
-from manager_rest import premium_enabled
 from manager_rest.rest import rest_utils
+from manager_rest import premium_enabled
 from manager_rest.constants import (DEFAULT_TENANT_NAME,
                                     FILE_SERVER_BLUEPRINTS_FOLDER,
                                     FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER)

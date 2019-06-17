@@ -22,8 +22,8 @@ from datetime import datetime
 from string import ascii_letters
 from contextlib import contextmanager
 
-from flask import request, make_response, current_app
 from flask_security import current_user
+from flask import request, make_response, current_app
 from flask_restful.reqparse import Argument, RequestParser
 
 from cloudify.models_states import VisibilityState
@@ -31,18 +31,6 @@ from cloudify.models_states import VisibilityState
 from manager_rest.utils import is_administrator
 from manager_rest import manager_exceptions, config
 from manager_rest.constants import REST_SERVICE_NAME
-from manager_rest.security import (MissingPremiumFeatureResource,
-                                   SecuredResource)
-
-try:
-    from cloudify_premium.multi_tenancy.secured_tenant_resource \
-        import SecuredMultiTenancyResource
-    TenantsListResource = SecuredMultiTenancyResource
-except ImportError:
-    SecuredMultiTenancyResource = MissingPremiumFeatureResource
-
-    # In community edition tenants list should work without multi-tenancy
-    TenantsListResource = SecuredResource
 
 
 states_except_private = copy.deepcopy(VisibilityState.STATES)
