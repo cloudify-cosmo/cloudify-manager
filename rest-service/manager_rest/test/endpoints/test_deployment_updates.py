@@ -33,8 +33,24 @@ from manager_rest.deployment_update.constants import STATES
 from manager_rest.test.utils import get_resource as resource
 
 
+class DeploymentUpdatesBase(base_test.BaseServerTestCase):
+    def _update(self,
+                deployment_id,
+                blueprint_name,
+                **kwargs):
+        blueprint_path = resource(os.path.join('deployment_update',
+                                               'depup_step'))
+        blueprint_id = 'b-{0}'.format(uuid.uuid4())
+        self.put_blueprint(blueprint_path, blueprint_name, blueprint_id)
+        kwargs['blueprint_id'] = blueprint_id
+        return self.put(
+            '/deployment-updates/{0}/update/initiate'.format(deployment_id),
+            data=kwargs
+        )
+
+
 @attr(client_min_version=2.1, client_max_version=base_test.LATEST_API_VERSION)
-class DeploymentUpdatesTestCase(base_test.BaseServerTestCase):
+class DeploymentUpdatesTestCase(DeploymentUpdatesBase):
 
     execution_parameters = {
         'added_instance_ids',
@@ -123,103 +139,6 @@ class DeploymentUpdatesTestCase(base_test.BaseServerTestCase):
         for param in self.execution_parameters:
             self.assertEquals(1 if param in changed_params else 0,
                               len(execution.parameters[param]))
-
-    def test_plugin_installation_updates_plugins_by_default(self):
-        def assert_all_not_in(plugin_names, plugins_set):
-            for plugin_name in plugin_names:
-                self.assertNotIn(plugin_name, plugins_set)
-
-        def assert_all_in(plugin_names, plugins_set):
-            for plugin_name in plugin_names:
-                self.assertIn(plugin_name, plugins_set)
-
-        deployment_id = 'dep'
-        changed_params = ['update_plugins',
-                          'central_plugins_to_install',
-                          'central_plugins_to_uninstall']
-
-        self._deploy_base(deployment_id, 'setup_with_plugin_1.yaml',
-                          skip_plugins_validation=True)
-
-        self._update(deployment_id, 'setup_with_plugin_2.yaml')
-        dep_update = \
-            self.client.deployment_updates.list(deployment_id=deployment_id)[0]
-
-        execution = self.client.executions.get(dep_update.execution_id)
-        for changed_param in changed_params:
-            self.assertIn(changed_param, execution.parameters)
-
-        self.assertTrue((execution.parameters['update_plugins']))
-        central_plugins_to_install = {
-            p[constants.PLUGIN_NAME_KEY]: p
-            for p in execution.parameters[
-                'central_plugins_to_install']}
-        central_plugins_to_uninstall = {
-            p[constants.PLUGIN_NAME_KEY]: p
-            for p in execution.parameters['central_plugins_to_uninstall']}
-        should_uninstall = {'should_reinstall',
-                            'should_reinstall_v2',
-                            'should_uninstall'}
-        should_install = {'should_reinstall',
-                          'should_reinstall_v2',
-                          'should_install'}
-        should_skip = ['should_skip_install', 'should_skip_install_v2']
-
-        assert_all_in(should_uninstall, central_plugins_to_uninstall)
-        assert_all_not_in(
-            should_uninstall.difference(should_install),
-            central_plugins_to_install)
-
-        assert_all_in(should_install, central_plugins_to_install)
-        assert_all_not_in(
-            should_install.difference(should_uninstall),
-            central_plugins_to_uninstall)
-
-        assert_all_not_in(should_skip, central_plugins_to_uninstall)
-        assert_all_not_in(should_skip, central_plugins_to_install)
-
-        self.assertEqual(
-            "1",
-            central_plugins_to_uninstall['should_reinstall'][
-                constants.PLUGIN_PACKAGE_VERSION])
-        self.assertEqual(
-            "2",
-            central_plugins_to_uninstall['should_reinstall_v2'][
-                constants.PLUGIN_PACKAGE_VERSION])
-        self.assertEqual(
-            "2",
-            central_plugins_to_install['should_reinstall'][
-                constants.PLUGIN_PACKAGE_VERSION])
-        self.assertEqual(
-            "1",
-            central_plugins_to_install['should_reinstall_v2'][
-                constants.PLUGIN_PACKAGE_VERSION])
-
-    def test_plugin_updates_in_execution_is_disabled(self):
-        deployment_id = 'dep'
-        changed_params = ['update_plugins',
-                          # Plugins to install and uninstall should be empty
-                          # when update_plugins is False
-                          'central_plugins_to_install',
-                          'central_plugins_to_uninstall']
-
-        self._deploy_base(deployment_id, 'setup_with_plugin_1.yaml',
-                          skip_plugins_validation=True)
-
-        self._update(
-            deployment_id, 'setup_with_plugin_2.yaml', update_plugins=False)
-        dep_update = \
-            self.client.deployment_updates.list(deployment_id=deployment_id)[0]
-
-        execution = self.client.executions.get(dep_update.execution_id)
-        for changed_param in changed_params:
-            self.assertIn(changed_param, execution.parameters)
-
-        self.assertFalse(execution.parameters['update_plugins'])
-        self.assertListEqual(
-            execution.parameters['central_plugins_to_install'], [])
-        self.assertListEqual(
-            execution.parameters['central_plugins_to_uninstall'], [])
 
     def test_add_relationship(self):
         deployment_id = 'dep'
@@ -372,30 +291,14 @@ class DeploymentUpdatesTestCase(base_test.BaseServerTestCase):
     def _deploy_base(self,
                      deployment_id,
                      blueprint_name,
-                     inputs=None,
-                     skip_plugins_validation=False):
+                     inputs=None):
         blueprint_path = os.path.join('resources',
                                       'deployment_update',
                                       'depup_step')
         self.put_deployment(deployment_id,
                             inputs=inputs,
                             blueprint_file_name=blueprint_name,
-                            blueprint_dir=blueprint_path,
-                            skip_plugins_validation=skip_plugins_validation)
-
-    def _update(self,
-                deployment_id,
-                blueprint_name,
-                **kwargs):
-        blueprint_path = resource(os.path.join('deployment_update',
-                                               'depup_step'))
-        blueprint_id = 'b-{0}'.format(uuid.uuid4())
-        self.put_blueprint(blueprint_path, blueprint_name, blueprint_id)
-        kwargs['blueprint_id'] = blueprint_id
-        return self.put(
-            '/deployment-updates/{0}/update/initiate'.format(deployment_id),
-            data=kwargs
-        )
+                            blueprint_dir=blueprint_path)
 
     def test_storage_serialization_and_response(self):
         blueprint = self._add_blueprint()
@@ -498,9 +401,9 @@ class DeploymentUpdatesStepAndStageTestCase(base_test.BaseServerTestCase):
                 self.assertEqual(e.error_code,
                                  'unknown_modification_stage_error')
                 self.assertIn(
-                        "Entity type {0} with entity id {1}:"
-                        .format(step['entity_type'], step['entity_id']),
-                        e.message)
+                    "Entity type {0} with entity id {1}:"
+                    .format(step['entity_type'], step['entity_id']),
+                    e.message)
                 break
             self.fail("entity id {0} of entity type {1} shouldn't be valid"
                       .format(step['entity_id'], step['entity_type']))
@@ -532,3 +435,118 @@ class DeploymentUpdatesStepAndStageTestCase(base_test.BaseServerTestCase):
                                 self.client.deployment_updates.step,
                                 deployment_update_id,
                                 **step)
+
+
+@attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
+class DeploymentUpdatesFromSourceTestCase(DeploymentUpdatesBase):
+
+    def _deploy_base(self,
+                     deployment_id,
+                     blueprint_name,
+                     inputs=None,
+                     skip_plugins_validation=False):
+        blueprint_path = os.path.join('resources',
+                                      'deployment_update',
+                                      'depup_step')
+        self.put_deployment(deployment_id,
+                            inputs=inputs,
+                            blueprint_file_name=blueprint_name,
+                            blueprint_dir=blueprint_path,
+                            skip_plugins_validation=skip_plugins_validation)
+
+    def test_plugin_installation_updates_plugins_by_default(self):
+        def assert_all_not_in(plugin_names, plugins_set):
+            for plugin_name in plugin_names:
+                self.assertNotIn(plugin_name, plugins_set)
+
+        def assert_all_in(plugin_names, plugins_set):
+            for plugin_name in plugin_names:
+                self.assertIn(plugin_name, plugins_set)
+
+        deployment_id = 'dep'
+        changed_params = ['update_plugins',
+                          'central_plugins_to_install',
+                          'central_plugins_to_uninstall']
+
+        self._deploy_base(deployment_id, 'setup_with_plugin_1.yaml',
+                          skip_plugins_validation=True)
+
+        self._update(deployment_id, 'setup_with_plugin_2.yaml')
+        dep_update = \
+            self.client.deployment_updates.list(deployment_id=deployment_id)[0]
+
+        execution = self.client.executions.get(dep_update.execution_id)
+        for changed_param in changed_params:
+            self.assertIn(changed_param, execution.parameters)
+
+        self.assertTrue((execution.parameters['update_plugins']))
+        central_plugins_to_install = {
+            p[constants.PLUGIN_NAME_KEY]: p
+            for p in execution.parameters[
+                'central_plugins_to_install']}
+        central_plugins_to_uninstall = {
+            p[constants.PLUGIN_NAME_KEY]: p
+            for p in execution.parameters['central_plugins_to_uninstall']}
+        should_uninstall = {'should_reinstall',
+                            'should_reinstall_v2',
+                            'should_uninstall'}
+        should_install = {'should_reinstall',
+                          'should_reinstall_v2',
+                          'should_install'}
+        should_skip = ['should_skip_install', 'should_skip_install_v2']
+
+        assert_all_in(should_uninstall, central_plugins_to_uninstall)
+        assert_all_not_in(
+            should_uninstall.difference(should_install),
+            central_plugins_to_install)
+
+        assert_all_in(should_install, central_plugins_to_install)
+        assert_all_not_in(
+            should_install.difference(should_uninstall),
+            central_plugins_to_uninstall)
+
+        assert_all_not_in(should_skip, central_plugins_to_uninstall)
+        assert_all_not_in(should_skip, central_plugins_to_install)
+
+        self.assertEqual(
+            "1",
+            central_plugins_to_uninstall['should_reinstall'][
+                constants.PLUGIN_PACKAGE_VERSION])
+        self.assertEqual(
+            "2",
+            central_plugins_to_uninstall['should_reinstall_v2'][
+                constants.PLUGIN_PACKAGE_VERSION])
+        self.assertEqual(
+            "2",
+            central_plugins_to_install['should_reinstall'][
+                constants.PLUGIN_PACKAGE_VERSION])
+        self.assertEqual(
+            "1",
+            central_plugins_to_install['should_reinstall_v2'][
+                constants.PLUGIN_PACKAGE_VERSION])
+
+    def test_plugin_updates_in_execution_is_disabled(self):
+        deployment_id = 'dep'
+        changed_params = ['update_plugins',
+                          # Plugins to install and uninstall should be empty
+                          # when update_plugins is False
+                          'central_plugins_to_install',
+                          'central_plugins_to_uninstall']
+
+        self._deploy_base(deployment_id, 'setup_with_plugin_1.yaml',
+                          skip_plugins_validation=True)
+
+        self._update(
+            deployment_id, 'setup_with_plugin_2.yaml', update_plugins=False)
+        dep_update = \
+            self.client.deployment_updates.list(deployment_id=deployment_id)[0]
+
+        execution = self.client.executions.get(dep_update.execution_id)
+        for changed_param in changed_params:
+            self.assertIn(changed_param, execution.parameters)
+
+        self.assertFalse(execution.parameters['update_plugins'])
+        self.assertListEqual(
+            execution.parameters['central_plugins_to_install'], [])
+        self.assertListEqual(
+            execution.parameters['central_plugins_to_uninstall'], [])
