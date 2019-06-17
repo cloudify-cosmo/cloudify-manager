@@ -33,6 +33,8 @@ from flask_restful.reqparse import Argument
 from flask_restful.inputs import boolean
 
 from cloudify.models_states import SnapshotState
+from cloudify.plugins.install_utils import (INSTALLING_PREFIX,
+                                            is_plugin_installing)
 
 from manager_rest.constants import (FILE_SERVER_PLUGINS_FOLDER,
                                     FILE_SERVER_SNAPSHOTS_FOLDER,
@@ -659,6 +661,16 @@ class UploadedPluginsManager(UploadedDataManager):
                     '{version}'.format(archive_name=new_plugin.archive_name,
                                        package_name=new_plugin.package_name,
                                        version=new_plugin.package_version))
+            if is_plugin_installing(new_plugin, plugin):
+                raise manager_exceptions.ConflictError(
+                    'a plugin archive by the name of {archive_name} for '
+                    'package with name {package_name} and version {version} '
+                    'is currently being installed'.format(
+                        archive_name=new_plugin.archive_name,
+                        package_name=new_plugin.package_name,
+                        version=new_plugin.package_version))
+        new_plugin.archive_name = '{0}{1}'.format(INSTALLING_PREFIX,
+                                                  new_plugin.archive_name)
         sm.put(new_plugin)
         return new_plugin, new_plugin.archive_name
 

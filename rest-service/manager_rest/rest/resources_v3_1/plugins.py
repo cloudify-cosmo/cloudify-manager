@@ -18,6 +18,7 @@ from flask_restful_swagger import swagger
 from flask_restful.reqparse import Argument
 
 from cloudify.models_states import VisibilityState
+from cloudify.plugins.install_utils import remove_status_prefix
 
 from manager_rest.security import SecuredResource
 from manager_rest.plugins_update.constants import PHASES
@@ -25,8 +26,11 @@ from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.utils import create_filter_params_list_description
-from manager_rest.rest import rest_utils, resources_v2, rest_decorators
 from manager_rest.plugins_update.manager import get_plugins_updates_manager
+from manager_rest.rest import (resources_v2,
+                               resources_v2_1,
+                               rest_decorators,
+                               rest_utils)
 
 
 class PluginsSetGlobal(SecuredResource):
@@ -68,6 +72,7 @@ class Plugins(resources_v2.Plugins):
         """
         Upload a plugin
         """
+
         visibility = rest_utils.get_visibility_parameter(
             optional=True,
             is_argument=True,
@@ -158,3 +163,22 @@ class PluginsUpdates(SecuredResource):
                 substr_filters=search
             )
         return plugins_update
+
+
+class PluginsId(resources_v2_1.PluginsId):
+
+    @rest_decorators.exceptions_handled
+    @authorize('plugin_upload')
+    @rest_decorators.marshal_with(models.Plugin)
+    def put(self, plugin_id, **kwargs):
+        """
+        For internal use - updates the plugin's installation status.'
+        This method is called from the PluginInstaller after the plugin
+        installation has ended.
+        """
+
+        sm = get_storage_manager()
+        plugin = sm.get(models.Plugin, plugin_id)
+        plugin = remove_status_prefix(plugin)
+        if plugin:
+            return sm.update(plugin)

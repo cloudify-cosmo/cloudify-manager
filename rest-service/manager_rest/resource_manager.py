@@ -24,8 +24,9 @@ from StringIO import StringIO
 from flask import current_app
 from flask_security import current_user
 
-from cloudify import constants as cloudify_constants, utils as cloudify_utils
 from cloudify.workflows import tasks as cloudify_tasks
+from cloudify.plugins.install_utils import INSTALLING_PREFIX
+from cloudify import constants as cloudify_constants, utils as cloudify_utils
 from cloudify.models_states import (SnapshotState,
                                     ExecutionState,
                                     VisibilityState,
@@ -2093,9 +2094,11 @@ class ResourceManager(object):
                 'resource'.format(current_user.username))
 
         if model_class == models.Plugin:
+            archive_name = plugin_info['archive_name']
             unique_filter = {
                 model_class.package_name: plugin_info['package_name'],
-                model_class.archive_name: plugin_info['archive_name']
+                model_class.archive_name: [archive_name, '{0}{1}'.format(
+                    INSTALLING_PREFIX, archive_name)]
             }
         else:
             unique_filter = {model_class.id: resource_id}
