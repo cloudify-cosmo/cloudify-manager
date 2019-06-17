@@ -34,6 +34,8 @@ from .manager_config import (                    # NOQA
 
 from .secrets import (                           # NOQA
     SecretsKey,
+    SecretsExport,
+    SecretsImport,
     SecretsSetGlobal,
     SecretsSetVisibility,
 )

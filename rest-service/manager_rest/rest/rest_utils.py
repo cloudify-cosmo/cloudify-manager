@@ -22,11 +22,13 @@ from datetime import datetime
 from string import ascii_letters
 from contextlib import contextmanager
 
+from flask_security import current_user
 from flask import request, make_response, current_app
 from flask_restful.reqparse import Argument, RequestParser
 
 from cloudify.models_states import VisibilityState
 
+from manager_rest.utils import is_administrator
 from manager_rest import manager_exceptions, config
 from manager_rest.constants import REST_SERVICE_NAME
 
@@ -268,3 +270,16 @@ def parse_datetime(datetime_str):
             ' (Jan-01-18 10:30pm EST)'.format(datetime_str))
 
     return utc_date
+
+
+def is_hidden_value_permitted(secret):
+    return is_administrator(secret.tenant) or \
+           secret.created_by == current_user.username
+
+
+def verify_dict_params(elements_dict, params):
+    missing_attributes = []
+    for attr in params:
+        if attr not in elements_dict:
+            missing_attributes.append(attr)
+    return missing_attributes
