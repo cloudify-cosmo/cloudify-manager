@@ -1,1 +1,1 @@
-git+https://github.com/cloudify-cosmo/cloudify-common@CY-1219-import-export-secrets-updated#egg=cloudify-common==CY-1219-import-export-secrets-updated
+git+https://github.com/cloudify-cosmo/cloudify-common@master#egg=cloudify-common==master
