@@ -598,10 +598,13 @@ relationships:
 ##################################################################################
 workflows:
 
-  install: default_workflows.cloudify.plugins.workflows.install
+  install:
+    mapping: default_workflows.cloudify.plugins.workflows.install
+    is_cascading: false
 
   update:
     mapping: default_workflows.cloudify.plugins.workflows.update
+    is_cascading: false
     parameters:
       update_id:
         default: ''
@@ -657,6 +660,7 @@ workflows:
 
   uninstall:
     mapping: default_workflows.cloudify.plugins.workflows.uninstall
+    is_cascading: false
     parameters:
       ignore_failure:
         default: false
@@ -664,6 +668,7 @@ workflows:
 
   start:
     mapping: default_workflows.cloudify.plugins.workflows.start
+    is_cascading: false
     parameters:
       operation_parms:
         default: {}
@@ -678,6 +683,7 @@ workflows:
 
   stop:
     mapping: default_workflows.cloudify.plugins.workflows.stop
+    is_cascading: false
     parameters:
       operation_parms:
         default: {}
@@ -692,6 +698,7 @@ workflows:
 
   restart:
     mapping: default_workflows.cloudify.plugins.workflows.restart
+    is_cascading: false
     parameters:
       stop_parms:
         default: {}
@@ -725,6 +732,7 @@ workflows:
 
   heal:
     mapping: default_workflows.cloudify.plugins.workflows.auto_heal_reinstall_node_subgraph
+    is_cascading: false
     parameters:
       node_instance_id:
         description: Which node instance has failed
@@ -737,6 +745,7 @@ workflows:
 
   scale:
     mapping: default_workflows.cloudify.plugins.workflows.scale_entity
+    is_cascading: false
     parameters:
       scalable_entity_name:
         description: >
