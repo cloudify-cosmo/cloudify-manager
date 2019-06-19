@@ -243,6 +243,24 @@ def upgrade():
             value='info',
             scope='agent',
             schema={'type': 'string', 'enum': LOG_LEVELS_ENUM}
+        ),
+        Config(
+            name='task_retries',
+            value=60,
+            scope='workflow',
+            schema={'type': 'number', 'minimum': -1},
+        ),
+        Config(
+            name='task_retry_interval',
+            value=15,
+            scope='workflow',
+            schema={'type': 'number', 'minimum': 0},
+        ),
+        Config(
+            name='subgraph_retries',
+            value=0,
+            scope='workflow',
+            schema={'type': 'number', 'minimum': -1},
         )
     ])
     session.commit()
