@@ -669,10 +669,11 @@ class UploadedPluginsManager(UploadedDataManager):
                         archive_name=new_plugin.archive_name,
                         package_name=new_plugin.package_name,
                         version=new_plugin.package_version))
+        dest_path = new_plugin.archive_name
         new_plugin.archive_name = '{0}{1}'.format(INSTALLING_PREFIX,
                                                   new_plugin.archive_name)
         sm.put(new_plugin)
-        return new_plugin, new_plugin.archive_name
+        return new_plugin, dest_path
 
     def _is_wagon_file(self, file_path):
         try:
