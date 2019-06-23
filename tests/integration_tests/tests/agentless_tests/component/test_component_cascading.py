@@ -387,7 +387,8 @@ workflows:
             'layer_2', 'component')
         main_blueprint_path = self.make_yaml_file(main_blueprint)
         self.deploy_application(main_blueprint_path,
-                                deployment_id=deployment_id)
+                                deployment_id=deployment_id,
+                                timeout_seconds=120)
 
         self.client.executions.start(deployment_id, 'nothing_workflow')
         executions = self.client.executions.list(
@@ -483,7 +484,8 @@ workflows:
             'layer_2', 'component')
         main_blueprint_path = self.make_yaml_file(main_blueprint)
         self.deploy_application(main_blueprint_path,
-                                deployment_id=deployment_id)
+                                deployment_id=deployment_id,
+                                timeout_seconds=120)
 
         self.client.executions.start(deployment_id, 'nothing_workflow')
         executions = self.client.executions.list(
