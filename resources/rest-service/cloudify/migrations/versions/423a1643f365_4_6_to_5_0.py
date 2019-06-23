@@ -324,12 +324,8 @@ def downgrade():
     op.drop_table('rabbitmq_brokers')
     op.drop_table('certificates')
 
-    op.add_column('deployment_updates', sa.Column(
-        'central_plugins_to_install',
-        sa.PickleType()))
-    op.add_column('deployment_updates', sa.Column(
-        'central_plugins_to_uninstall',
-        sa.PickleType()))
+    op.drop_column('deployment_updates', 'central_plugins_to_install')
+    op.drop_column('deployment_updates', 'central_plugins_to_uninstall')
 
     op.drop_column('blueprints', 'is_hidden')
 
