@@ -20,7 +20,7 @@ from integration_tests.tests.utils import get_resource as resource
 
 
 class TaskRetriesTest(AgentlessTestCase):
-    def test_subgraph_retries_provider_config_config(self):
+    def test_subgraph_retries_config(self):
         self.client.manager.put_config('task_retries', 0)
         self.client.manager.put_config('task_retry_interval', 0)
         self.client.manager.put_config('subgraph_retries', 2)
