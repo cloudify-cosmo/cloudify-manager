@@ -19,7 +19,6 @@ from cloudify_rest_client.executions import Execution
 
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
-from integration_tests.tests import utils as test_utils
 
 
 class WorkflowsAPITest(AgentlessTestCase):
@@ -30,12 +29,8 @@ class WorkflowsAPITest(AgentlessTestCase):
         self.configure(retries=2, interval=1)
 
     def configure(self, retries, interval):
-        test_utils.delete_provider_context()
-        context = {'cloudify': {'workflows': {
-            'task_retries': retries,
-            'task_retry_interval': interval
-        }}}
-        self.client.manager.create_context(self._testMethodName, context)
+        self.client.manager.put_config('task_retries', retries)
+        self.client.manager.put_config('task_retry_interval', interval)
 
     def test_simple(self):
         parameters = {
