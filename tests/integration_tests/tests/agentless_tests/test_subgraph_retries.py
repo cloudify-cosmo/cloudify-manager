@@ -17,23 +17,14 @@ import uuid
 
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
-from integration_tests.tests import utils as test_utils
 
 
 class TaskRetriesTest(AgentlessTestCase):
-
-    def setUp(self):
-        super(TaskRetriesTest, self).setUp()
-        test_utils.delete_provider_context()
-
-    def test_subgraph_retries_provider_config_config(self):
-        context = {'cloudify': {'workflows': {
-            'task_retries': 0,
-            'task_retry_interval': 0,
-            'subgraph_retries': 2
-        }}}
+    def test_subgraph_retries_config(self):
+        self.client.manager.put_config('task_retries', 0)
+        self.client.manager.put_config('task_retry_interval', 0)
+        self.client.manager.put_config('subgraph_retries', 2)
         deployment_id = 'd{0}'.format(uuid.uuid4())
-        self.client.manager.create_context(self._testMethodName, context)
         self.deploy_application(
             resource('dsl/workflow_subgraph_retries.yaml'),
             deployment_id=deployment_id)

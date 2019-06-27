@@ -17,7 +17,6 @@ import uuid
 
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
-from integration_tests.tests import utils as test_utils
 
 INFINITY = -1
 
@@ -26,15 +25,11 @@ class TaskRetriesTest(AgentlessTestCase):
 
     def setUp(self):
         super(TaskRetriesTest, self).setUp()
-        test_utils.delete_provider_context()
         self.events = []
 
     def configure(self, retries, retry_interval):
-        context = {'cloudify': {'workflows': {
-            'task_retries': retries,
-            'task_retry_interval': retry_interval
-        }}}
-        self.client.manager.create_context(self._testMethodName, context)
+        self.client.manager.put_config('task_retries', retries)
+        self.client.manager.put_config('task_retry_interval', retry_interval)
 
     def test_retries_and_retry_interval(self):
         self._test_retries_and_retry_interval_impl(
