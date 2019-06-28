@@ -102,11 +102,6 @@ class _HelloWorld(object):
                 blueprint_file)
             shutil.copy(
                 test_utils.get_resource(
-                    'dsl/agent_tests/plugins/diamond.yaml'
-                ),
-                os.path.join(blueprint_dir, 'diamond.yaml'))
-            shutil.copy(
-                test_utils.get_resource(
                     'dsl/agent_tests/plugins/dockercompute.yaml'
                 ),
                 os.path.join(blueprint_dir, 'dockercompute.yaml'))
