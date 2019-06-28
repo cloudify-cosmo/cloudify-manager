@@ -1,4 +1,0 @@
-plugins:
-    diamond:
-        executor: host_agent
-        install: false

@@ -2,34 +2,11 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
   - cloudify/types/types.yaml
-  - diamond.yaml
   - dockercompute.yaml
 
 node_templates:
   vm:
     type: cloudify.nodes.docker.Compute
-    interfaces:
-      cloudify.interfaces.monitoring_agent:
-        install:
-          implementation: diamond.diamond_agent.tasks.install
-          inputs:
-            diamond_config:
-              interval: 1
-        start: diamond.diamond_agent.tasks.start
-        stop: diamond.diamond_agent.tasks.stop
-        uninstall: diamond.diamond_agent.tasks.uninstall
-      cloudify.interfaces.monitoring:
-        start:
-          implementation: diamond.diamond_agent.tasks.add_collectors
-          inputs:
-            collectors_config:
-              CPUCollector: {}
-              MemoryCollector: {}
-              LoadAverageCollector: {}
-              DiskUsageCollector:
-                config:
-                  devices: x?vd[a-z]+[0-9]*$
-              NetworkCollector: {}
 
   http_web_server:
     type: cloudify.nodes.WebServer
