@@ -15,11 +15,6 @@
 
 PROVIDER_CONTEXT = {
     'cloudify': {
-        'workflows': {
-            'task_retries': 0,
-            'task_retry_interval': 0,
-            'subgraph_retries': 0
-        },
         'cloudify_agent':
             {
                 'broker_ip': '',
@@ -28,6 +23,13 @@ PROVIDER_CONTEXT = {
                 'networks': {}
             },
     }
+}
+MANAGER_CONFIG = {
+    'workflow': {
+        'task_retries': 0,
+        'task_retry_interval': 0,
+        'subgraph_retries': 0
+    },
 }
 PROVIDER_NAME = 'integration_tests'
 

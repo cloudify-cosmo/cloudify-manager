@@ -80,7 +80,15 @@ def _add_defaults(app, amqp_manager, script_config):
         amqp_manager=amqp_manager,
         authorization_file_path=script_config['config']['authorization']
     )
-
+    for scope, configs in script_config['manager_config'].items():
+        for name, value in configs.items():
+            item = (
+                db.session.query(models.Config)
+                .filter_by(scope=scope, name=name).one()
+            )
+            item.value = value
+            db.session.add(item)
+    db.session.commit()
     app.config[CURRENT_TENANT_CONFIG] = default_tenant
     return default_tenant
 
