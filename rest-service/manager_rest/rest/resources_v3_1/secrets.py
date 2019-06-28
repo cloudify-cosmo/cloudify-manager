@@ -76,7 +76,7 @@ class SecretsKey(resources_v3.SecretsKey):
 
 class SecretsExport(SecuredResource):
     @rest_decorators.exceptions_handled
-    @authorize('secret_create')
+    @authorize('secret_export')
     @rest_decorators.create_filters(models.Secret)
     @rest_decorators.all_tenants
     @rest_decorators.search('id')
@@ -118,7 +118,7 @@ class SecretsExport(SecuredResource):
 
 class SecretsImport(SecuredResource):
     @rest_decorators.exceptions_handled
-    @authorize('secret_create')
+    @authorize('secret_import')
     def post(self):
         response = {}
         colliding_secrets = {}
