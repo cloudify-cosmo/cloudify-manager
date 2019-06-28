@@ -24,7 +24,6 @@ from integration_tests.tests.utils import (
     get_resource as resource,
     create_rest_client
 )
-from integration_tests.tests.constants import PROVIDER_NAME
 
 
 class TestResumeMgmtworker(AgentlessTestCase):
@@ -33,19 +32,18 @@ class TestResumeMgmtworker(AgentlessTestCase):
 
     @contextmanager
     def _set_retries(self, retries, retry_interval=0):
-        context = self.client.manager.get_context()['context']
-        original_workflows = context['cloudify']['workflows'].copy()
-        context['cloudify']['workflows'].update({
-            'task_retries': retries,
-            'subgraph_retries': retries,
-            'task_retry_interval': retry_interval
-        })
-        self.client.manager.update_context(PROVIDER_NAME, context)
+        original_config = {
+            c.name: c.value for c in
+            self.client.manager.get_config('task_retries', scope='workflow')
+        }
+        self.client.manager.put_config('task_retries', retries)
+        self.client.manager.put_config('subgraph_retries', retries)
+        self.client.manager.put_config('task_retry_interval', retry_interval)
         try:
             yield
         finally:
-            context['cloudify']['workflows'] = original_workflows
-            self.client.manager.update_context(PROVIDER_NAME, context)
+            for name, value in original_config.items():
+                self.client.manager.put_config(name, value)
 
     def _create_deployment(self, client=None):
         dsl_path = resource("dsl/resumable_mgmtworker.yaml")
