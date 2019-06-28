@@ -28,7 +28,7 @@ from manager_rest.flask_utils import setup_flask_app as _setup_flask_app
 from integration_tests.framework import constants, utils
 from integration_tests.framework.docl import execute, copy_file_to_manager, \
     read_file as read_manager_file
-from integration_tests.tests.constants import PROVIDER_CONTEXT
+from integration_tests.tests.constants import PROVIDER_CONTEXT, MANAGER_CONFIG
 from integration_tests.tests.utils import get_resource
 
 
@@ -51,7 +51,8 @@ def prepare_reset_storage_script():
             'ip': utils.get_manager_ip(),
             'username': utils.get_manager_username(),
             'password': utils.get_manager_password(),
-            'provider_context': PROVIDER_CONTEXT
+            'provider_context': PROVIDER_CONTEXT,
+            'manager_config': MANAGER_CONFIG
         }, f)
     try:
         copy_file_to_manager(f.name, CONFIG_PATH)
