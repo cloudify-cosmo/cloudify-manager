@@ -1030,17 +1030,17 @@ data_types:
         required: false
       port:
         description: >
-          Port of REST API service on Cloudify's management machine.
+          The port of REST API service on Cloudify's management machine.
         type: integer
         required: false
       protocol:
         description: >
-          Protocol of REST API service on management machine, defaults to http.
+          The protocol of REST API service on management machine, defaults to http.
         type: string
         required: false
       api_version:
         description: >
-          Version of Cloudify REST API service.
+          The version of Cloudify REST API service.
         type: string
         required: false
       headers:
@@ -1055,7 +1055,7 @@ data_types:
         required: false
       cert:
         description: >
-          Path on the Cloudify manager to a copy of the other Cloudify manager's certificate.
+          Path on the Cloudify manager to a copy of the target Cloudify manager's certificate.
         type: string
         required: false
       trust_all:
