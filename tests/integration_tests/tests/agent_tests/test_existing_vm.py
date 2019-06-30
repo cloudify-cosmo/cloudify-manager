@@ -89,6 +89,7 @@ class HostPluginTest(BaseExistingVMTest):
         yaml_path = resource(plugin_yaml)
         with utils.zip_files([wagon_path, yaml_path]) as zip_path:
             self.client.plugins.upload(zip_path)
+            self._wait_for_execution_by_wf_name('install_plugin')
         self._test_host_plugin_requires_old_package(
             join(self.BLUEPRINTS, 'wagon_plugin_blueprint.yaml')
         )
