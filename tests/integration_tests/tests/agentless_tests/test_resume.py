@@ -34,7 +34,7 @@ class TestResumeMgmtworker(AgentlessTestCase):
     def _set_retries(self, retries, retry_interval=0):
         original_config = {
             c.name: c.value for c in
-            self.client.manager.get_config('task_retries', scope='workflow')
+            self.client.manager.get_config(scope='workflow')
         }
         self.client.manager.put_config('task_retries', retries)
         self.client.manager.put_config('subgraph_retries', retries)
