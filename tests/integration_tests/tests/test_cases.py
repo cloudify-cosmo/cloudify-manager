@@ -467,6 +467,12 @@ class BaseTestCase(unittest.TestCase):
         filename_path = self.make_file_with_name(content, filename)
         return filename_path
 
+    def wait_for_all_executions_to_end(self):
+        executions = self.client.executions.list(include_system_workflows=True)
+        for execution in executions:
+            if execution['status'] not in Execution.END_STATES:
+                self.wait_for_execution_to_end(execution)
+
 
 class AgentlessTestCase(BaseTestCase):
     environment_type = env.AgentlessTestEnvironment

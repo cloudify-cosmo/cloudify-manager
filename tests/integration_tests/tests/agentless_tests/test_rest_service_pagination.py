@@ -14,14 +14,14 @@
 #    * limitations under the License.
 
 import os
-import tempfile
 import shutil
+import tempfile
 from functools import partial
 
 import wagon
 
-from integration_tests import AgentlessTestCase
 from integration_tests.framework import utils
+from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 
 MAX_RESULT_FOR_TESTING = 9
@@ -101,6 +101,7 @@ class TestRestServiceListPagination(AgentlessTestCase):
         self._test_pagination(self.client.plugins.list)
 
     def _test_pagination(self, list_func, total=10):
+        self.wait_for_all_executions_to_end()
         all_results = list_func(_sort=['id'],
                                 _offset=0,
                                 _size=MAX_RESULT_FOR_TESTING).items
