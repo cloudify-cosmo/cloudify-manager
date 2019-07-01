@@ -328,8 +328,10 @@ def upgrade():
         sa.PickleType()))
 
     op.add_column('blueprints',
-                  sa.Column(
-                      'is_hidden', sa.Boolean(), nullable=True, default=False))
+                  sa.Column('is_hidden',
+                            sa.Boolean(),
+                            nullable=False,
+                            server_default='f'))
 
     _create_sites_table()
     _create_plugins_update_table()
