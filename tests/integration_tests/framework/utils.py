@@ -144,6 +144,8 @@ def timeout(seconds=60):
                 process.terminate()
                 raise TimeoutException(
                     'test timeout exceeded [timeout={0}]'.format(seconds))
+            if process.exitcode != 0:
+                raise RuntimeError('{} ended with exception'.format(func))
         return wraps(func)(wrapper)
     return decorator
 
