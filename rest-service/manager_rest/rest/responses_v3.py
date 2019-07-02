@@ -98,7 +98,8 @@ class AgentResponse(BaseResponse):
         'system': fields.String,
         'version': fields.String,
         'node': fields.String,
-        'deployment': fields.String
+        'deployment': fields.String,
+        'tenant_name': fields.String
     }
 
 

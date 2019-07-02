@@ -271,7 +271,8 @@ class TestSnapshot(AgentlessTestCase):
         assert len(agents) == 0
         snapshot_path = self._get_snapshot('snap_4.5.0_with_agents.zip')
         self._upload_and_restore_snapshot(snapshot_path)
-        agents = self.client.agents.list()
+        states = [AgentState.STARTED, AgentState.RESTORED]
+        agents = self.client.agents.list(state=states)
         self.assertEqual(len(agents), 3)
         first_agent = self.client.agents.get(agents[0].id)
         self.assertEqual(first_agent.state, AgentState.RESTORED)

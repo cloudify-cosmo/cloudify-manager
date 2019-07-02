@@ -13,8 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from flask import current_app
-from flask_restful.reqparse import Argument
+from flask import current_app, request
 
 from cloudify.models_states import AgentState
 from cloudify.cryptography_utils import encrypt, decrypt
@@ -27,32 +26,37 @@ from manager_rest import utils, manager_exceptions
 from manager_rest.rest.responses_v3 import AgentResponse
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager
-from manager_rest.resource_manager import get_resource_manager
 from manager_rest.rest.rest_utils import (validate_inputs,
-                                          get_json_and_verify_params,
-                                          get_args_and_verify_arguments)
+                                          verify_and_convert_bool,
+                                          get_json_and_verify_params)
 
 
 class Agents(SecuredResource):
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(AgentResponse)
+    @rest_decorators.create_filters(models.Agent)
     @rest_decorators.paginate
+    @rest_decorators.sortable(models.Agent)
+    @rest_decorators.all_tenants
+    @rest_decorators.search('name')
     @authorize('agent_list')
-    def get(self, pagination=None):
-        args = get_args_and_verify_arguments([
-            Argument('deployment_id', required=False),
-            Argument('node_ids', required=False, action='append'),
-            Argument('node_instance_ids', required=False,
-                     action='append'),
-            Argument('install_methods', required=False,
-                     action='append'),
+    def get(self, _include=None, filters=None, pagination=None, sort=None,
+            all_tenants=None, search=None):
 
-        ])
-        return get_resource_manager().list_agents(
-            deployment_id=args.get('deployment_id'),
-            node_ids=args.get('node_ids'),
-            node_instance_ids=args.get('node_instance_ids'),
-            install_method=args.get('install_methods'))
+        get_all_results = verify_and_convert_bool(
+            '_get_all_results',
+            request.args.get('_get_all_results', False)
+        )
+        return get_storage_manager().list(
+            models.Agent,
+            include=_include,
+            filters=filters,
+            substr_filters=search,
+            pagination=pagination,
+            sort=sort,
+            all_tenants=all_tenants,
+            get_all_results=get_all_results
+        )
 
 
 class AgentsName(SecuredResource):
