@@ -228,6 +228,9 @@ class Config(object):
         session.close()
         engine.dispose()
 
+        for name, value in config_dict.items():
+            setattr(self, name, value)
+
     def _find_entry(self, entries, name):
         """In entries, find one that matches the name.
 
