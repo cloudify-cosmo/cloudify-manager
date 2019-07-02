@@ -61,6 +61,11 @@ class Agents(object):
             for deployment in tenant_deployments:
                 result[tenant_name][deployment.id] = \
                     self._get_deployment_result(tenant_client, deployment.id)
+
+        import pydevd
+        pydevd.settrace('192.168.8.102', port=53100, stdoutToServer=True,
+                        stderrToServer=True, suspend=True)
+
         self._dump_result_to_file(tempdir, result)
 
     def _dump_result_to_file(self, tempdir, result):
