@@ -303,3 +303,12 @@ def wait_for_rest(obj, timeout_sec):
         if p_open:
             return True
     return False
+
+
+def assert_messages_in_log(workdir, messages, log_path):
+    tmp_log_path = os.path.join(workdir, 'test_log')
+    docl.copy_file_from_manager(log_path, tmp_log_path)
+    with open(tmp_log_path) as f:
+        data = f.readlines()
+    for message in messages:
+        assert message in str(data)
