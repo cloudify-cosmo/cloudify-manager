@@ -24,7 +24,8 @@ from cloudify.models_states import ExecutionState
 
 from dsl_parser.constants import (PLUGIN_NAME_KEY,
                                   WORKFLOW_PLUGINS_TO_INSTALL,
-                                  DEPLOYMENT_PLUGINS_TO_INSTALL)
+                                  DEPLOYMENT_PLUGINS_TO_INSTALL,
+                                  HOST_AGENT_PLUGINS_TO_INSTALL)
 
 from manager_rest.test import base_test
 from manager_rest.test.attribute import attr
@@ -34,7 +35,7 @@ from manager_rest.plugins_update.constants import STATES
 from manager_rest.manager_exceptions import NotFoundError
 from manager_rest.storage import get_storage_manager, models
 from manager_rest.plugins_update.manager import \
-        _did_plugins_to_install_change as plugins_change_detector
+        _did_plugins_to_install_change as plugins_to_install_change_detector
 
 
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
@@ -179,12 +180,13 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
     def test_raises_when_no_plugin_change_detected(self):
         self.plugin_change_patcher.stop()
         self.plugin_change_patched = False
-        self.put_file(*self.put_blueprint_args(blueprint_id='hello_world'))
+        self.put_file(*self.put_blueprint_args(
+            blueprint_id='host_agent_blueprint'))
         with self.assertRaisesRegexp(
                 CloudifyClientError,
-                'No new plugins changes have been detected when re-parsed '
-                'blueprint hello_world, aborting update.'):
-            self.client.plugins_update.update_plugins('hello_world')
+                'Found no plugins to update for "host_agent_blueprint" '
+                'blueprint, aborting plugins update'):
+            self.client.plugins_update.update_plugins('host_agent_blueprint')
 
     def test_finalize_raises_plugins_update_with_not_compatible_state(self):
         self.put_file(*self.put_blueprint_args(blueprint_id='hello_world'))
@@ -249,10 +251,13 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
             self._sm.get(models.Blueprint, plugins_update.temp_blueprint_id)
 
 
-class PluginsUpdateManagerTest(unittest.TestCase):
+@attr(client_min_version=3.1,
+      client_max_version=base_test.LATEST_API_VERSION)
+class PluginsToInstallUpdateTest(unittest.TestCase):
 
-    def test_plugins_change_detects_no_change_empty_plan(self):
+    def test_detects_no_addition_identical_plan(self):
         temp_plan = {
+            HOST_AGENT_PLUGINS_TO_INSTALL: [],
             DEPLOYMENT_PLUGINS_TO_INSTALL: [{PLUGIN_NAME_KEY: ''}],
             WORKFLOW_PLUGINS_TO_INSTALL: [{PLUGIN_NAME_KEY: 'asd'}]
         }
@@ -260,10 +265,11 @@ class PluginsUpdateManagerTest(unittest.TestCase):
             DEPLOYMENT_PLUGINS_TO_INSTALL: [{PLUGIN_NAME_KEY: ''}],
             WORKFLOW_PLUGINS_TO_INSTALL: [{PLUGIN_NAME_KEY: 'asd'}]
         }
-        self.assertFalse(plugins_change_detector(temp_plan, plan))
+        self.assertFalse(plugins_to_install_change_detector(temp_plan, plan))
 
-    def test_plugins_change_detects_no_change_reduced_deployment_plugins(self):
+    def test_detects_no_addition_reduced_deployment_plugins(self):
         temp_plan = {
+            HOST_AGENT_PLUGINS_TO_INSTALL: [],
             DEPLOYMENT_PLUGINS_TO_INSTALL: [],
             WORKFLOW_PLUGINS_TO_INSTALL: [{PLUGIN_NAME_KEY: 'asd'}]
         }
@@ -271,10 +277,11 @@ class PluginsUpdateManagerTest(unittest.TestCase):
             DEPLOYMENT_PLUGINS_TO_INSTALL: [{PLUGIN_NAME_KEY: ''}],
             WORKFLOW_PLUGINS_TO_INSTALL: [{PLUGIN_NAME_KEY: 'asd'}]
         }
-        self.assertFalse(plugins_change_detector(temp_plan, plan))
+        self.assertFalse(plugins_to_install_change_detector(temp_plan, plan))
 
-    def test_plugins_change_detects_no_change_reduced_workflow_plugins(self):
+    def test_detects_no_addition_reduced_workflow_plugins(self):
         temp_plan = {
+            HOST_AGENT_PLUGINS_TO_INSTALL: [],
             DEPLOYMENT_PLUGINS_TO_INSTALL: [{PLUGIN_NAME_KEY: ''}],
             WORKFLOW_PLUGINS_TO_INSTALL: []
         }
@@ -282,10 +289,24 @@ class PluginsUpdateManagerTest(unittest.TestCase):
             DEPLOYMENT_PLUGINS_TO_INSTALL: [{PLUGIN_NAME_KEY: ''}],
             WORKFLOW_PLUGINS_TO_INSTALL: [{PLUGIN_NAME_KEY: 'asd'}]
         }
-        self.assertFalse(plugins_change_detector(temp_plan, plan))
+        self.assertFalse(plugins_to_install_change_detector(temp_plan, plan))
 
-    def test_plugins_change_detects_change_in_deployment_plugins(self):
+    def test_detects_no_addition_reduced_host_agent_plugins(self):
         temp_plan = {
+            DEPLOYMENT_PLUGINS_TO_INSTALL: [{PLUGIN_NAME_KEY: ''}],
+            HOST_AGENT_PLUGINS_TO_INSTALL: [],
+            WORKFLOW_PLUGINS_TO_INSTALL: []
+        }
+        plan = {
+            DEPLOYMENT_PLUGINS_TO_INSTALL: [{PLUGIN_NAME_KEY: ''}],
+            HOST_AGENT_PLUGINS_TO_INSTALL: [{PLUGIN_NAME_KEY: 'asd'}],
+            WORKFLOW_PLUGINS_TO_INSTALL: []
+        }
+        self.assertFalse(plugins_to_install_change_detector(temp_plan, plan))
+
+    def test_detects_addition_in_deployment_plugins(self):
+        temp_plan = {
+            HOST_AGENT_PLUGINS_TO_INSTALL: [],
             DEPLOYMENT_PLUGINS_TO_INSTALL: [{PLUGIN_NAME_KEY: '', '': ''}],
             WORKFLOW_PLUGINS_TO_INSTALL: [{PLUGIN_NAME_KEY: 'asd'}]
         }
@@ -293,9 +314,10 @@ class PluginsUpdateManagerTest(unittest.TestCase):
             DEPLOYMENT_PLUGINS_TO_INSTALL: [{PLUGIN_NAME_KEY: ''}],
             WORKFLOW_PLUGINS_TO_INSTALL: [{PLUGIN_NAME_KEY: 'asd'}]
         }
-        self.assertTrue(plugins_change_detector(temp_plan, plan))
+        self.assertTrue(plugins_to_install_change_detector(temp_plan, plan))
 
         temp_plan = {
+            HOST_AGENT_PLUGINS_TO_INSTALL: [],
             DEPLOYMENT_PLUGINS_TO_INSTALL: [{PLUGIN_NAME_KEY: ''}],
             WORKFLOW_PLUGINS_TO_INSTALL: [{PLUGIN_NAME_KEY: 'asd'}]
         }
@@ -303,10 +325,11 @@ class PluginsUpdateManagerTest(unittest.TestCase):
             DEPLOYMENT_PLUGINS_TO_INSTALL: [],
             WORKFLOW_PLUGINS_TO_INSTALL: [{PLUGIN_NAME_KEY: 'asd'}]
         }
-        self.assertTrue(plugins_change_detector(temp_plan, plan))
+        self.assertTrue(plugins_to_install_change_detector(temp_plan, plan))
 
-    def test_plugins_change_detects_change_in_workflow_plugins(self):
+    def test_detects_addition_in_workflow_plugins(self):
         temp_plan = {
+            HOST_AGENT_PLUGINS_TO_INSTALL: [],
             DEPLOYMENT_PLUGINS_TO_INSTALL: [{PLUGIN_NAME_KEY: ''}],
             WORKFLOW_PLUGINS_TO_INSTALL: [{PLUGIN_NAME_KEY: 'asd', '': ''}]
         }
@@ -314,9 +337,10 @@ class PluginsUpdateManagerTest(unittest.TestCase):
             DEPLOYMENT_PLUGINS_TO_INSTALL: [{PLUGIN_NAME_KEY: ''}],
             WORKFLOW_PLUGINS_TO_INSTALL: [{PLUGIN_NAME_KEY: 'asd'}]
         }
-        self.assertTrue(plugins_change_detector(temp_plan, plan))
+        self.assertTrue(plugins_to_install_change_detector(temp_plan, plan))
 
         temp_plan = {
+            HOST_AGENT_PLUGINS_TO_INSTALL: [],
             DEPLOYMENT_PLUGINS_TO_INSTALL: [{PLUGIN_NAME_KEY: ''}],
             WORKFLOW_PLUGINS_TO_INSTALL: [{PLUGIN_NAME_KEY: 'asd'}]
         }
@@ -324,4 +348,29 @@ class PluginsUpdateManagerTest(unittest.TestCase):
             DEPLOYMENT_PLUGINS_TO_INSTALL: [],
             WORKFLOW_PLUGINS_TO_INSTALL: []
         }
-        self.assertTrue(plugins_change_detector(temp_plan, plan))
+        self.assertTrue(plugins_to_install_change_detector(temp_plan, plan))
+
+    def test_detects_addition_in_host_agent_plugins(self):
+        temp_plan = {
+            HOST_AGENT_PLUGINS_TO_INSTALL: [{PLUGIN_NAME_KEY: '', '': ''}],
+            DEPLOYMENT_PLUGINS_TO_INSTALL: [],
+            WORKFLOW_PLUGINS_TO_INSTALL: [{PLUGIN_NAME_KEY: 'asd'}]
+        }
+        plan = {
+            HOST_AGENT_PLUGINS_TO_INSTALL: [{PLUGIN_NAME_KEY: ''}],
+            DEPLOYMENT_PLUGINS_TO_INSTALL: [],
+            WORKFLOW_PLUGINS_TO_INSTALL: [{PLUGIN_NAME_KEY: 'asd'}]
+        }
+        self.assertTrue(plugins_to_install_change_detector(temp_plan, plan))
+
+        temp_plan = {
+            HOST_AGENT_PLUGINS_TO_INSTALL: [{PLUGIN_NAME_KEY: ''}],
+            DEPLOYMENT_PLUGINS_TO_INSTALL: [],
+            WORKFLOW_PLUGINS_TO_INSTALL: [{PLUGIN_NAME_KEY: 'asd'}]
+        }
+        plan = {
+            HOST_AGENT_PLUGINS_TO_INSTALL: [],
+            DEPLOYMENT_PLUGINS_TO_INSTALL: [],
+            WORKFLOW_PLUGINS_TO_INSTALL: [{PLUGIN_NAME_KEY: 'asd'}]
+        }
+        self.assertTrue(plugins_to_install_change_detector(temp_plan, plan))

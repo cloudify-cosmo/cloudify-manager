@@ -22,7 +22,8 @@ from cloudify.models_states import ExecutionState
 
 from dsl_parser.constants import (PLUGIN_NAME_KEY,
                                   WORKFLOW_PLUGINS_TO_INSTALL,
-                                  DEPLOYMENT_PLUGINS_TO_INSTALL)
+                                  DEPLOYMENT_PLUGINS_TO_INSTALL,
+                                  HOST_AGENT_PLUGINS_TO_INSTALL)
 
 from manager_rest import config, utils
 from manager_rest.storage import get_storage_manager, models
@@ -221,18 +222,30 @@ class PluginsUpdateManager(object):
                                        config.instance.file_server_root)
         plan = blueprint.plan
         if not _did_plugins_to_install_change(temp_plan, plan):
-            raise PluginsUpdateError("No new plugins changes have been "
-                                     "detected when re-parsed blueprint {0}, "
-                                     "aborting update.".format(blueprint.id))
+            raise PluginsUpdateError(
+                'Found no plugins to update for "{0}" '
+                'blueprint, aborting plugins update.'.format(
+                    blueprint.id))
         return plan
 
 
 def _did_plugins_to_install_change(temp_plan, plan):
-    temp_plugins = temp_plan[DEPLOYMENT_PLUGINS_TO_INSTALL] + \
-                   temp_plan[WORKFLOW_PLUGINS_TO_INSTALL]
-    plugins = plan[DEPLOYMENT_PLUGINS_TO_INSTALL] + plan[
-        WORKFLOW_PLUGINS_TO_INSTALL]
-    name_to_plugin = {p[PLUGIN_NAME_KEY]: p for p in plugins}
+    # Maintaining backward comparability for older blueprints
+    if not plan.get(HOST_AGENT_PLUGINS_TO_INSTALL):
+        plan[HOST_AGENT_PLUGINS_TO_INSTALL] = \
+            utils.extract_host_agent_plugins_from_plan(plan)
+
+    return any(
+        _did_executor_plugins_to_install_change(temp_plan, plan, executor)
+        for executor in [DEPLOYMENT_PLUGINS_TO_INSTALL,
+                         WORKFLOW_PLUGINS_TO_INSTALL,
+                         HOST_AGENT_PLUGINS_TO_INSTALL])
+
+
+def _did_executor_plugins_to_install_change(temp_plan, plan, plugins_executor):
+    temp_plugins = temp_plan[plugins_executor]
+    current_plugins = plan[plugins_executor]
+    name_to_plugin = {p[PLUGIN_NAME_KEY]: p for p in current_plugins}
     return any(plugin for plugin in temp_plugins
                if plugin != name_to_plugin.get(plugin[PLUGIN_NAME_KEY], None))
 

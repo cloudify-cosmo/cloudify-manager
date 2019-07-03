@@ -46,7 +46,8 @@ from manager_rest.manager_exceptions import ConflictError
 from manager_rest.utils import (send_event,
                                 is_create_global_permitted,
                                 validate_global_modification,
-                                validate_deployment_and_site_visibility)
+                                validate_deployment_and_site_visibility,
+                                extract_host_agent_plugins_from_plan)
 from manager_rest.plugins_update.constants import PLUGIN_UPDATE_WORKFLOW
 from manager_rest.storage import (db,
                                   get_storage_manager,
@@ -326,7 +327,8 @@ class ResourceManager(object):
                     d.blueprint_id for d in
                     self.sm.list(models.Deployment, include=['blueprint_id'])))
                 plugins = [b.plan[constants.WORKFLOW_PLUGINS_TO_INSTALL] +
-                           b.plan[constants.DEPLOYMENT_PLUGINS_TO_INSTALL]
+                           b.plan[constants.DEPLOYMENT_PLUGINS_TO_INSTALL] +
+                           extract_host_agent_plugins_from_plan(b.plan)
                            for b in
                            self.sm.list(models.Blueprint,
                                         include=['plan'],
@@ -336,8 +338,11 @@ class ResourceManager(object):
                               for sublist in plugins for p in sublist)
                 if (plugin.package_name, plugin.package_version) in plugins:
                     raise manager_exceptions.PluginInUseError(
-                        'Plugin {} is currently in use. You can "force" '
-                        'plugin removal.'.format(plugin.id))
+                        'Plugin "{0}" is currently in use in blueprints: {1}.'
+                        'You can "force" plugin removal if needed.'.format(
+                            plugin.id,
+                            ', '.join(blueprint
+                                      for blueprint in used_blueprints)))
             self._execute_system_workflow(
                 wf_id='uninstall_plugin',
                 task_mapping='cloudify_system_workflows.plugins.uninstall',
@@ -1258,15 +1263,17 @@ class ResourceManager(object):
         #  validate plugins exists on manager when
         #  skip_plugins_validation is False
         if not skip_plugins_validation:
-            plugins_list = deployment_plan.get('deployment_plugins_to_install',
-                                               [])
+            plugins_list = deployment_plan.get(
+                constants.DEPLOYMENT_PLUGINS_TO_INSTALL, [])
             # validate that all central-deployment plugins are installed
             for plugin in plugins_list:
                 self.validate_plugin_is_installed(plugin)
+
             # validate that all host_agent plugins are installed
-            for node in deployment_plan.get('nodes', []):
-                for plugin in node.get('plugins_to_install', []):
-                    self.validate_plugin_is_installed(plugin)
+            host_agent_plugins = extract_host_agent_plugins_from_plan(
+                deployment_plan)
+            for plugin in host_agent_plugins:
+                self.validate_plugin_is_installed(plugin)
         visibility = self.get_resource_visibility(models.Deployment,
                                                   deployment_id,
                                                   visibility,

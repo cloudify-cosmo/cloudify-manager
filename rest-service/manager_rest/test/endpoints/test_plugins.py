@@ -156,9 +156,23 @@ class PluginsTest(BaseServerTestCase):
 
     @attr(client_min_version=2.1,
           client_max_version=base_test.LATEST_API_VERSION)
-    def test_delete_force(self):
+    def test_delete_force_with_cda_plugin(self):
         self.upload_plugin(TEST_PACKAGE_NAME, TEST_PACKAGE_VERSION)
         self.put_deployment(blueprint_file_name='uses_script_plugin.yaml')
+        plugin = self.client.plugins.list().items[0]
+        with self.assertRaises(exceptions.PluginInUseError):
+            self.client.plugins.delete(plugin.id)
+        self.assertEqual(1, len(self.client.plugins.list()))
+        self.client.plugins.delete(plugin_id=plugin.id, force=True)
+        self.assertEqual(0, len(self.client.plugins.list()))
+
+    @attr(client_min_version=2.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_delete_force_with_host_agent_plugin(self):
+        self.upload_plugin(TEST_PACKAGE_NAME,
+                           TEST_PACKAGE_VERSION,
+                           'mock_blueprint/host_agent_plugin.yaml')
+        self.put_deployment(blueprint_file_name='host_agent_blueprint.yaml')
         plugin = self.client.plugins.list().items[0]
         with self.assertRaises(exceptions.PluginInUseError):
             self.client.plugins.delete(plugin.id)
