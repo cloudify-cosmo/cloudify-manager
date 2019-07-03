@@ -1,0 +1,25 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+    - cloudify/types/types.yaml
+
+node_types:
+  type: {}
+
+node_templates:
+  node:
+    type: type
+    interfaces:
+      interface:
+        op: plugin.operation
+    relationships:
+      - type: cloudify.relationships.contained_in
+        target: vm
+  vm:
+    type: cloudify.nodes.Compute
+
+plugins:
+  plugin:
+    executor: host_agent
+    package_name: cloudify-script-plugin
+    package_version: '1.2'

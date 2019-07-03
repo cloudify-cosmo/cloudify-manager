@@ -96,6 +96,32 @@ class TestPluginUpdate(AgentTestWithPlugins):
         self._execute_workflows()
         self._assert_on_values(self.versions[1])
 
+    @uploads_mock_plugins
+    def test_host_agent_plugin_update(self):
+        self.setup_deployment_id = 'd{0}'.format(uuid.uuid4())
+        self.setup_node_id = 'node'
+        self.plugin_name = 'version-aware-plugin'
+        self.base_name = 'host_agent'
+        self.base_blueprint_id = 'b{0}'.format(uuid.uuid4())
+        self.mod_name = 'host_agent_mod'
+        self.mod_blueprint_id = 'b{0}'.format(uuid.uuid4())
+
+        # Upload V1.0 and V2.0 plugins
+        self.upload_mock_plugin(self.plugin_name)
+        self._upload_v_2_plugin()
+
+        self._upload_blueprints_and_deploy_base()
+
+        # Execute base (V 1.0) workflows
+        self.execute_workflow('test_host_op', self.setup_deployment_id)
+        self._assert_host_values(self.versions[0])
+
+        self._perform_update()
+
+        # Execute mod (V 2.0) workflows
+        self.execute_workflow('test_host_op', self.setup_deployment_id)
+        self._assert_host_values(self.versions[1])
+
     @setup_for_sourced_plugins
     def test_sourced_plugin_updates(self):
         self._upload_blueprints_and_deploy_base()

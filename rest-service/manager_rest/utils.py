@@ -35,6 +35,8 @@ from flask_restful import abort
 from werkzeug.local import LocalProxy
 from flask_security import current_user
 
+from dsl_parser.constants import HOST_AGENT_PLUGINS_TO_INSTALL
+
 from cloudify import logs
 from cloudify.constants import BROKER_PORT_SSL
 from cloudify.models_states import VisibilityState
@@ -334,3 +336,14 @@ def validate_deployment_and_site_visibility(deployment, site):
             .format(deployment.id, deployment.visibility, site.name,
                     site.visibility)
         )
+
+
+def extract_host_agent_plugins_from_plan(plan):
+    host_agent_plugins_to_install = plan.get(
+        HOST_AGENT_PLUGINS_TO_INSTALL, [])
+
+    if not host_agent_plugins_to_install:
+        for node in plan.get('nodes', []):
+            for plugin in node.get('plugins_to_install', []):
+                host_agent_plugins_to_install.append(plugin)
+    return host_agent_plugins_to_install

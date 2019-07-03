@@ -1,0 +1,18 @@
+tosca_definitions_version: 'cloudify_dsl_1_3'
+
+imports:
+  - cloudify/types/types.yaml
+  - plugins/dockercompute.yaml
+  - plugin:version-aware-plugin?version=2.0
+
+node_templates:
+  node:
+    type: cloudify.nodes.docker.Compute
+    properties:
+      install_agent: true
+    interfaces:
+      test_host:
+        host_op: host.version_aware_plugin.tasks.host_op
+
+workflows:
+  test_host_op: host.version_aware_plugin.tasks.run_host_op
