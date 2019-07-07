@@ -23,7 +23,6 @@ from cloudify.models_states import AgentState
 from cloudify.utils import get_broker_ssl_cert_path
 from cloudify.agent_utils import create_agent_record
 from cloudify.constants import AGENT_INSTALL_METHOD_NONE
-from manager_rest.storage import get_storage_manager, models
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 
@@ -38,7 +37,6 @@ class Agents(object):
         with open(get_broker_ssl_cert_path(), 'r') as f:
             self._broker_ssl_cert = f.read()
         self._manager_version = None
-        self.sm = get_storage_manager()
 
     def restore(self, tempdir, version):
         with open(os.path.join(tempdir, self._AGENTS_FILE)) as agents_file:
@@ -51,30 +49,23 @@ class Agents(object):
             self._insert_agents_data(agents[tenant_name], tenant_name)
 
     def dump(self, tempdir, manager_version):
-
-        agents = self.sm.get(models.Agent)
-        node_instances = self.sm.get(models.NodeInstance)
-
-        raise CloudifyClientError
-
-        # self._manager_version = manager_version
-        # result = {}
-        # for tenant_name in get_tenants_list():
-        #     result[tenant_name] = {}
-        #     tenant_client = get_rest_client(tenant_name)
-        #     tenant_deployments = tenant_client.deployments.list(
-        #         _include=['id'],
-        #         _get_all_results=True
-        #     )
-        #     for deployment in tenant_deployments:
-        #         result[tenant_name][deployment.id] = \
-        #             self._get_deployment_result(tenant_client, deployment.id)
-        #
-        # import pydevd
-        # pydevd.settrace('192.168.8.102', port=53100, stdoutToServer=True,
-        #                 stderrToServer=True, suspend=True)
-        #
-        # self._dump_result_to_file(tempdir, result)
+        self._manager_version = manager_version
+        node_instances = []
+        for tenant_name in get_tenants_list():
+            client = get_rest_client(tenant_name)
+            agents = client.agents.list()
+            agent_ids = [item['id'] for item in agents.items]
+            node_instances.extend(client.node_instances.list(id=agent_ids))
+        result = {}
+        for inst in node_instances:
+            result.setdefault(inst['tenant_name'], {})
+            tenant = result[inst['tenant_name']]
+            tenant.setdefault(inst['deployment_id'], {})
+            deployment = tenant[inst['deployment_id']]
+            deployment.setdefault(inst['node_id'], {})
+            node = deployment[inst['node_id']]
+            node[inst['id']] = self._get_node_instance_result(inst)
+        self._dump_result_to_file(tempdir, result)
 
     def _dump_result_to_file(self, tempdir, result):
         agents_file_path = os.path.join(tempdir, self._AGENTS_FILE)
