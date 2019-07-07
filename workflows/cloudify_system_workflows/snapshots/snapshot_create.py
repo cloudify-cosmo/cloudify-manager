@@ -47,16 +47,6 @@ class SnapshotCreate(object):
         self._client = get_rest_client()
 
     def create(self):
-
-        with open('/tmp/abc.txt','wb') as f:
-            f.write("Creating snapshot")
-
-        raise Exception
-
-        import pydevd
-        pydevd.settrace('192.168.8.102', port=53100, stdoutToServer=True,
-                        stderrToServer=True, suspend=True)
-
         self._tempdir = tempfile.mkdtemp('-snapshot-data')
         metadata = dict()
         try:
@@ -146,12 +136,6 @@ class SnapshotCreate(object):
             json.dump(metadata, f)
 
     def _dump_agents(self, manager_version):
-        raise Exception
-
-        import pydevd
-        pydevd.settrace('192.168.8.102', port=53100, stdoutToServer=True,
-                        stderrToServer=True, suspend=True)
-
         ctx.logger.info('Dumping agents data')
         Agents().dump(self._tempdir, manager_version)
 
