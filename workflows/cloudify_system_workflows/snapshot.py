@@ -22,6 +22,9 @@ from .snapshots.snapshot_restore import SnapshotRestore
 
 @workflow(system_wide=True)
 def create(snapshot_id, config, **kwargs):
+    with open('/tmp/abc.txt', 'wb') as f:
+        f.write("Creating snapshot")
+
     ctx.logger.info('Creating snapshot `{0}`'.format(snapshot_id))
 
     include_metrics = kwargs.get('include_metrics', False)
