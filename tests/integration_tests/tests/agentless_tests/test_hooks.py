@@ -14,14 +14,15 @@
 #    * limitations under the License.
 
 import os
-import yaml
 import uuid
 import tempfile
+
+import yaml
+from retrying import retry
 
 from integration_tests.tests import utils
 from integration_tests.framework import docl
 from integration_tests import AgentlessTestCase
-
 from integration_tests.tests.utils import upload_mock_plugin
 
 
@@ -292,6 +293,7 @@ hooks:
         utils.wait_for_deployment_creation_to_complete(deployment_id)
         return deployment_id
 
+    @retry(wait_fixed=1000, stop_max_attempt_number=3)
     def _assert_messages_in_log(self, messages, log_path=LOG_PATH):
         tmp_log_path = os.path.join(self.workdir, 'test_log')
         docl.copy_file_from_manager(log_path, tmp_log_path)
