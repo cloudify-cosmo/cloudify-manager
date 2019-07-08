@@ -27,7 +27,6 @@ from flask_security import current_user
 from cloudify.cryptography_utils import encrypt
 from cloudify.workflows import tasks as cloudify_tasks
 from cloudify.plugins.install_utils import INSTALLING_PREFIX
-from cloudify import constants as cloudify_constants, utils as cloudify_utils
 from cloudify.models_states import (SnapshotState,
                                     ExecutionState,
                                     VisibilityState,
