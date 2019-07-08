@@ -262,17 +262,78 @@ class TestComponentSecrets(TestDeploymentBase):
             self.cfy_mock_client.secrets.create = mock.Mock()
             mock_client.return_value = self.cfy_mock_client
 
-            poll_with_timeout_test = \
-                'cloudify_types.component.polling.poll_with_timeout'
-            with mock.patch(poll_with_timeout_test) as poll:
-                poll.return_value = True
+            fetching_secret = \
+                'cloudify_types.component.component.get_secret_by_name'
+            with mock.patch(fetching_secret) as fetching_secret_func:
+                fetching_secret_func.return_value = None
 
-                output = create(operation='create_deployment',
-                                timeout=MOCK_TIMEOUT)
-                self.assertTrue(output)
+                poll_with_timeout_test = \
+                    'cloudify_types.component.polling.poll_with_timeout'
+                with mock.patch(poll_with_timeout_test) as poll:
+                    poll.return_value = True
+
+                    output = create(operation='create_deployment',
+                                    timeout=MOCK_TIMEOUT)
+                    self.assertTrue(output)
 
             self.cfy_mock_client.secrets.create.assert_called_with(key='a',
                                                                    value='b')
+
+    def test_create_deployment_with_existing_identical_secrets(self):
+        self._ctx.node.properties['secrets'] = {'a': 'b'}
+        with mock.patch('cloudify.manager.get_rest_client') as mock_client:
+            self.cfy_mock_client.executions.set_existing_objects(
+                [{
+                    'id': 'exec_id',
+                    'workflow_id': 'create_deployment_environment',
+                    'deployment_id': 'dep'
+                }])
+
+            self.cfy_mock_client.secrets.create = mock.Mock()
+            mock_client.return_value = self.cfy_mock_client
+
+            fetching_secret = \
+                'cloudify_types.component.component.get_secret_by_name'
+            with mock.patch(fetching_secret) as fetching_secret_func:
+                fetching_secret_func.return_value = 'b'
+
+                self.assertRaises(
+                    NonRecoverableError,
+                    create,
+                    operation='create_deployment',
+                    timeout=MOCK_TIMEOUT)
+
+            assert not self.cfy_mock_client.secrets.create.called
+
+    def test_create_deployment_with_non_identical_existing_secrets(self):
+        self._ctx.node.properties['secrets'] = {'a': 'b'}
+        with mock.patch('cloudify.manager.get_rest_client') as mock_client:
+            self.cfy_mock_client.executions.set_existing_objects(
+                [{
+                    'id': 'exec_id',
+                    'workflow_id': 'create_deployment_environment',
+                    'deployment_id': 'dep'
+                }])
+
+            self.cfy_mock_client.secrets.create = mock.Mock()
+            mock_client.return_value = self.cfy_mock_client
+
+            fetching_secret = \
+                'cloudify_types.component.component.get_secret_by_name'
+            with mock.patch(fetching_secret) as fetching_secret_func:
+                fetching_secret_func.return_value = 'not_the_same'
+
+                error = self.assertRaises(
+                    NonRecoverableError,
+                    create,
+                    operation='create_deployment',
+                    timeout=MOCK_TIMEOUT)
+
+                self.assertIn('Tried to upload a secret "a" which conflicts '
+                              'with existing one, please verify '
+                              'secrets input...', error.message)
+
+            assert not self.cfy_mock_client.secrets.create.called
 
     def test_delete_deployment_success_with_secrets(self):
         self._ctx.instance.runtime_properties['deployment']['id'] = 'dep_name'

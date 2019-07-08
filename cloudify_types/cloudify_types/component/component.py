@@ -36,7 +36,8 @@ from .utils import (
     deployment_id_exists,
     update_runtime_properties,
     get_local_path,
-    zip_files
+    zip_files,
+    get_secret_by_name
 )
 
 
@@ -230,6 +231,20 @@ class Component(object):
             return
 
         for secret_name in self.secrets:
+            existing_secret_value = get_secret_by_name(self.client,
+                                                       secret_name)
+            if existing_secret_value:
+                if self.secrets[secret_name] == existing_secret_value:
+                    ctx.logger.info('Not creating secret "{0}" because it is '
+                                    'already exists with same value...'.format(
+                                     secret_name))
+                    continue
+                else:
+                    raise NonRecoverableError('Tried to upload a secret "{0}"'
+                                              ' which conflicts with existing '
+                                              'one, please verify secrets'
+                                              ' input...'.format(secret_name))
+
             self._http_client_wrapper('secrets', 'create', {
                 'key': secret_name,
                 'value': self.secrets[secret_name],

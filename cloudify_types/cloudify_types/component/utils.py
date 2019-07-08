@@ -133,3 +133,14 @@ def blueprint_id_exists(client, blueprint_id):
 def deployment_id_exists(client, deployment_id):
     deployment = get_deployment_by_id(client, deployment_id)
     return True if deployment else False
+
+
+@handle_client_exception('Fetching secret failed')
+def get_secret_by_name(client, secret_id):
+    """
+    Searching for deployment_id in all deployments in order to differentiate
+    not finding the deployment then other kinds of errors, like server
+    failure.
+    """
+    secrets = client.secrets.list(_include=['id'], id=secret_id)
+    return secrets[0] if secrets else None
