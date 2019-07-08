@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import mock
+from collections import namedtuple
 
 from cloudify.exceptions import NonRecoverableError
 
@@ -249,6 +250,8 @@ class TestComponentPlugins(TestDeploymentBase):
 
 
 class TestComponentSecrets(TestDeploymentBase):
+    Secret = namedtuple('Secret', ['value', 'key'])
+
     def test_create_deployment_success_with_secrets(self):
         self._ctx.node.properties['secrets'] = {'a': 'b'}
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
@@ -262,19 +265,14 @@ class TestComponentSecrets(TestDeploymentBase):
             self.cfy_mock_client.secrets.create = mock.Mock()
             mock_client.return_value = self.cfy_mock_client
 
-            fetching_secret = \
-                'cloudify_types.component.component.get_secret_by_name'
-            with mock.patch(fetching_secret) as fetching_secret_func:
-                fetching_secret_func.return_value = None
+            poll_with_timeout_test = \
+                'cloudify_types.component.polling.poll_with_timeout'
+            with mock.patch(poll_with_timeout_test) as poll:
+                poll.return_value = True
 
-                poll_with_timeout_test = \
-                    'cloudify_types.component.polling.poll_with_timeout'
-                with mock.patch(poll_with_timeout_test) as poll:
-                    poll.return_value = True
-
-                    output = create(operation='create_deployment',
-                                    timeout=MOCK_TIMEOUT)
-                    self.assertTrue(output)
+                output = create(operation='create_deployment',
+                                timeout=MOCK_TIMEOUT)
+                self.assertTrue(output)
 
             self.cfy_mock_client.secrets.create.assert_called_with(key='a',
                                                                    value='b')
@@ -290,18 +288,19 @@ class TestComponentSecrets(TestDeploymentBase):
                 }])
 
             self.cfy_mock_client.secrets.create = mock.Mock()
+            self.cfy_mock_client.secrets.set_existing_objects([
+                self.Secret(key='a', value='b')
+            ])
             mock_client.return_value = self.cfy_mock_client
 
-            fetching_secret = \
-                'cloudify_types.component.component.get_secret_by_name'
-            with mock.patch(fetching_secret) as fetching_secret_func:
-                fetching_secret_func.return_value = 'b'
+            poll_with_timeout_test = \
+                'cloudify_types.component.polling.poll_with_timeout'
+            with mock.patch(poll_with_timeout_test) as poll:
+                poll.return_value = True
 
-                self.assertRaises(
-                    NonRecoverableError,
-                    create,
-                    operation='create_deployment',
-                    timeout=MOCK_TIMEOUT)
+                output = create(operation='create_deployment',
+                                timeout=MOCK_TIMEOUT)
+                self.assertTrue(output)
 
             assert not self.cfy_mock_client.secrets.create.called
 
@@ -316,22 +315,19 @@ class TestComponentSecrets(TestDeploymentBase):
                 }])
 
             self.cfy_mock_client.secrets.create = mock.Mock()
+            self.cfy_mock_client.secrets.set_existing_objects([
+                self.Secret(key='a', value='not_the_same')
+            ])
             mock_client.return_value = self.cfy_mock_client
 
-            fetching_secret = \
-                'cloudify_types.component.component.get_secret_by_name'
-            with mock.patch(fetching_secret) as fetching_secret_func:
-                fetching_secret_func.return_value = 'not_the_same'
+            error = self.assertRaises(
+                NonRecoverableError,
+                create,
+                operation='create_deployment',
+                timeout=MOCK_TIMEOUT)
 
-                error = self.assertRaises(
-                    NonRecoverableError,
-                    create,
-                    operation='create_deployment',
-                    timeout=MOCK_TIMEOUT)
-
-                self.assertIn('Tried to upload a secret "a" which conflicts '
-                              'with existing one, please verify '
-                              'secrets input...', error.message)
+            self.assertIn('Secret "a" already exists, not updating...',
+                          error.message)
 
             assert not self.cfy_mock_client.secrets.create.called
 
@@ -340,6 +336,7 @@ class TestComponentSecrets(TestDeploymentBase):
         self._ctx.instance.runtime_properties['secrets'] = {'a': 'b'}
 
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
+            self.cfy_mock_client.secrets.delete = mock.Mock()
             mock_client.return_value = self.cfy_mock_client
 
             poll_with_timeout_test = \

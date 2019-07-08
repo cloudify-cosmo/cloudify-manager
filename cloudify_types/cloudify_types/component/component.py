@@ -113,7 +113,7 @@ class Component(object):
     def _http_client_wrapper(self,
                              option,
                              request_action,
-                             request_args):
+                             request_args={}):
         """
         wrapper for http client requests with CloudifyClientError custom
         handling.
@@ -226,25 +226,30 @@ class Component(object):
                 if zip_path:
                     os.remove(zip_path)
 
+    def _verify_secrets_clash(self):
+        existing_secrets = {secret.key: secret.value
+                            for secret in
+                            self._http_client_wrapper('secrets', 'list')}
+
+        duplicate_secrets = set(self.secrets).intersection(set(existing_secrets))
+
+        if duplicate_secrets:
+            for secret_name in duplicate_secrets:
+                if existing_secrets[secret_name] != self.secrets[secret_name]:
+                    raise NonRecoverableError('Secret "{0}" already exists, '
+                                              'not updating...'.format(
+                                                ', '.join(duplicate_secrets)))
+                else:
+                    # No need to create it twice
+                    self.secrets.pop(secret_name)
+
     def _set_secrets(self):
         if not self.secrets:
             return
 
-        for secret_name in self.secrets:
-            existing_secret_value = get_secret_by_name(self.client,
-                                                       secret_name)
-            if existing_secret_value:
-                if self.secrets[secret_name] == existing_secret_value:
-                    ctx.logger.info('Not creating secret "{0}" because it is '
-                                    'already exists with same value...'.format(
-                                     secret_name))
-                    continue
-                else:
-                    raise NonRecoverableError('Tried to upload a secret "{0}"'
-                                              ' which conflicts with existing '
-                                              'one, please verify secrets'
-                                              ' input...'.format(secret_name))
+        self._verify_secrets_clash()
 
+        for secret_name in self.secrets:
             self._http_client_wrapper('secrets', 'create', {
                 'key': secret_name,
                 'value': self.secrets[secret_name],
