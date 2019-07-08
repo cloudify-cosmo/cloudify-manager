@@ -232,7 +232,7 @@ class Component(object):
         for secret_name in self.secrets:
             self._http_client_wrapper('secrets', 'create', {
                 'key': secret_name,
-                'value': self.secrets[secret_name],
+                'value': u'{0}'.format(self.secrets[secret_name]),
             })
             ctx.logger.info('Created secret {}'.format(repr(secret_name)))
 
