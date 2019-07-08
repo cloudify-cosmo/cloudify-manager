@@ -1663,7 +1663,8 @@ class ResourceManager(object):
         return graph
 
     def list_agents(self, deployment_id=None, node_ids=None,
-                    node_instance_ids=None, install_method=None):
+                    node_instance_ids=None, install_method=None,
+                    all_tenants=False):
 
         filters = {'state': 'started'}
         if deployment_id is not None:
@@ -1677,6 +1678,7 @@ class ResourceManager(object):
 
         agents_raw = self.sm.list(models.Agent,
                                   filters=filters,
+                                  all_tenants=all_tenants,
                                   get_all_results=True)
         agents = [dict(id=agent.id,
                        host_id=agent.node_instance_id,

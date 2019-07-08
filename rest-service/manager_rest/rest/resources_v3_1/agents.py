@@ -42,17 +42,16 @@ class Agents(SecuredResource):
         args = get_args_and_verify_arguments([
             Argument('deployment_id', required=False),
             Argument('node_ids', required=False, action='append'),
-            Argument('node_instance_ids', required=False,
-                     action='append'),
-            Argument('install_methods', required=False,
-                     action='append'),
-
+            Argument('node_instance_ids', required=False, action='append'),
+            Argument('install_methods', required=False, action='append'),
+            Argument('all_tenants', required=False,  action='append')
         ])
         return get_resource_manager().list_agents(
             deployment_id=args.get('deployment_id'),
             node_ids=args.get('node_ids'),
             node_instance_ids=args.get('node_instance_ids'),
-            install_method=args.get('install_methods'))
+            install_method=args.get('install_methods'),
+            all_tenants=args.get('all_tenants'))
 
 
 class AgentsName(SecuredResource):
