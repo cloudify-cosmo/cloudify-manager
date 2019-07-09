@@ -13,6 +13,3 @@ node_templates:
     interfaces:
       test_host:
         host_op: host.version_aware_plugin.tasks.host_op
-
-workflows:
-  test_host_op: host.version_aware_plugin.tasks.run_host_op
