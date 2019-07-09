@@ -21,7 +21,6 @@ from cloudify.exceptions import NonRecoverableError
 from cloudify_rest_client.client import CloudifyClient
 from cloudify_rest_client.exceptions import CloudifyClientError
 
-
 from .constants import (
     EXECUTIONS_TIMEOUT,
     POLLING_INTERVAL,
