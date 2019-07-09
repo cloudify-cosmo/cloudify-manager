@@ -19,6 +19,8 @@ import shutil
 
 from functools import wraps
 
+from cloudify_rest_client.exceptions import CloudifyClientError
+
 from integration_tests import AgentTestWithPlugins, BaseTestCase
 from integration_tests.tests.utils import \
     (get_resource as resource,
@@ -174,6 +176,10 @@ class TestPluginUpdate(AgentTestWithPlugins):
         # Execute mod (V 2.0) host op
         self._execute_workflows()
         self._assert_host_values(self.versions[1])
+
+        self.assertRaisesRegexp(CloudifyClientError,
+                                '.*Found no plugins to update for.*',
+                                self._perform_plugins_update)
 
     @setup_for_plugins_update
     def test_many_deployments_are_updates(self):
