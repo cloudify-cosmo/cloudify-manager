@@ -58,6 +58,7 @@ class TestDeployment(TestDeploymentBase):
 
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             mock_client.return_value = self.cfy_mock_client
+            self.cfy_mock_client.secrets.delete = mock.Mock()
 
             poll_with_timeout_test = \
                 'cloudify_types.component.polling.poll_with_timeout'
@@ -277,7 +278,7 @@ class TestComponentSecrets(TestDeploymentBase):
             self.cfy_mock_client.secrets.create.assert_called_with(key='a',
                                                                    value='b')
 
-    def test_create_deployment_with_existing_identical_secrets(self):
+    def test_create_deployment_with_existing_secrets(self):
         self._ctx.node.properties['secrets'] = {'a': 'b'}
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             self.cfy_mock_client.executions.set_existing_objects(
@@ -293,40 +294,13 @@ class TestComponentSecrets(TestDeploymentBase):
             ])
             mock_client.return_value = self.cfy_mock_client
 
-            poll_with_timeout_test = \
-                'cloudify_types.component.polling.poll_with_timeout'
-            with mock.patch(poll_with_timeout_test) as poll:
-                poll.return_value = True
-
-                output = create(operation='create_deployment',
-                                timeout=MOCK_TIMEOUT)
-                self.assertTrue(output)
-
-            assert not self.cfy_mock_client.secrets.create.called
-
-    def test_create_deployment_with_non_identical_existing_secrets(self):
-        self._ctx.node.properties['secrets'] = {'a': 'b'}
-        with mock.patch('cloudify.manager.get_rest_client') as mock_client:
-            self.cfy_mock_client.executions.set_existing_objects(
-                [{
-                    'id': 'exec_id',
-                    'workflow_id': 'create_deployment_environment',
-                    'deployment_id': 'dep'
-                }])
-
-            self.cfy_mock_client.secrets.create = mock.Mock()
-            self.cfy_mock_client.secrets.set_existing_objects([
-                self.Secret(key='a', value='not_the_same')
-            ])
-            mock_client.return_value = self.cfy_mock_client
-
             error = self.assertRaises(
                 NonRecoverableError,
                 create,
                 operation='create_deployment',
                 timeout=MOCK_TIMEOUT)
 
-            self.assertIn('Secret "a" already exists, not updating...',
+            self.assertIn('The secrets: { a } already exist, not updating...',
                           error.message)
 
             assert not self.cfy_mock_client.secrets.create.called

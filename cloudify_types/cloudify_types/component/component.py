@@ -36,8 +36,7 @@ from .utils import (
     deployment_id_exists,
     update_runtime_properties,
     get_local_path,
-    zip_files,
-    get_secret_by_name
+    zip_files
 )
 
 
@@ -231,17 +230,12 @@ class Component(object):
                             for secret in
                             self._http_client_wrapper('secrets', 'list')}
 
-        duplicate_secrets = set(self.secrets).intersection(set(existing_secrets))
+        duplicate_secrets = set(self.secrets).intersection(existing_secrets)
 
         if duplicate_secrets:
-            for secret_name in duplicate_secrets:
-                if existing_secrets[secret_name] != self.secrets[secret_name]:
-                    raise NonRecoverableError('Secret "{0}" already exists, '
-                                              'not updating...'.format(
-                                                ', '.join(duplicate_secrets)))
-                else:
-                    # No need to create it twice
-                    self.secrets.pop(secret_name)
+            raise NonRecoverableError('The secrets: {{ {0} }} already exist, '
+                                      'not updating...'.format(
+                                        ', '.join(duplicate_secrets)))
 
     def _set_secrets(self):
         if not self.secrets:
