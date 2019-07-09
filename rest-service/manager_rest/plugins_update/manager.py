@@ -226,7 +226,7 @@ class PluginsUpdateManager(object):
                 'Found no plugins to update for "{0}" '
                 'blueprint, aborting plugins update.'.format(
                     blueprint.id))
-        return plan
+        return temp_plan
 
 
 def _did_plugins_to_install_change(temp_plan, plan):
