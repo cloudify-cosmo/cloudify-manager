@@ -100,6 +100,15 @@ class TestPluginUpdate(AgentTestWithPlugins):
 
     @uploads_mock_plugins
     def test_host_agent_plugin_update(self):
+        def execute_host_op():
+            execution = self.client.executions.start(
+                self.setup_deployment_id,
+                'execute_operation',
+                parameters={
+                    'operation': 'test_host.host_op',
+                    'node_ids': ['node']
+                })
+            self.wait_for_execution_to_end(execution)
         self.setup_deployment_id = 'd{0}'.format(uuid.uuid4())
         self.setup_node_id = 'node'
         self.plugin_name = 'version-aware-plugin'
@@ -115,13 +124,13 @@ class TestPluginUpdate(AgentTestWithPlugins):
         self._upload_blueprints_and_deploy_base()
 
         # Execute base (V 1.0) workflows
-        self.execute_workflow('test_host_op', self.setup_deployment_id)
+        execute_host_op()
         self._assert_host_values(self.versions[0])
 
         self._perform_update()
 
         # Execute mod (V 2.0) workflows
-        self.execute_workflow('test_host_op', self.setup_deployment_id)
+        execute_host_op()
         self._assert_host_values(self.versions[1])
 
     @setup_for_sourced_plugins
