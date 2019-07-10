@@ -147,6 +147,16 @@ class DBLogEventPublisher(object):
     def _reset_cache(self):
         self._executions_cache = LimitedSizeDict(100)
 
+    def _sanitize_cache(self):
+        """Drop None executions from the cache.
+
+        This is to be run after every batch of items, so that the cached
+        result that "the execution doesn't exist" can be dropped, because
+        the execution might well exist on the next batch.
+        """
+        for key, execution in list(self._executions_cache.items()):
+            if execution is None:
+                self._executions_cache.pop(key)
 
     def start(self):
         self.error_exit = None
@@ -211,6 +221,7 @@ class DBLogEventPublisher(object):
                     self._store_nobatch(conn, items)
                 items = []
                 self._last_commit = time()
+                self._sanitize_cache()
 
     def _get_execution(self, conn, execution_id):
         if execution_id not in self._executions_cache:
