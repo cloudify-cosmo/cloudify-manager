@@ -119,7 +119,8 @@ class DeploymentUpdatesTestCase(DeploymentUpdatesBase):
 
         self._update(deployment_id, 'two_nodes.yaml')
         dep_update = \
-            self.client.deployment_updates.list(deployment_id=deployment_id)[0]
+            self.client.deployment_updates.list(deployment_id=deployment_id,
+                                                _include=['execution_id'])[0]
         execution = self.client.executions.get(dep_update.execution_id)
         for param in self.execution_parameters:
             self.assertEquals(1 if param in changed_params else 0,
@@ -256,7 +257,8 @@ class DeploymentUpdatesTestCase(DeploymentUpdatesBase):
         # the first update should be with failed state
         # because the execution had terminated but the deployment update
         # object wasn't in an end state
-        first_update = self.client.deployment_updates.get(first_update_id)
+        first_update = self.client.deployment_updates.get(first_update_id,
+                                                          _include=['state'])
         self.assertEquals(STATES.FAILED, first_update.state)
 
     def test_one_active_update_per_dep_force_flag_real_active_executions(self):
