@@ -25,7 +25,7 @@ import tempfile
 import threading
 import subprocess
 import re
-from contextlib import closing
+from contextlib import closing, contextmanager
 
 import wagon
 from cloudify.workflows import ctx
@@ -128,7 +128,8 @@ class SnapshotRestore(object):
 
             with Postgres(self._config) as postgres:
                 self._restore_files_to_manager()
-                self._restore_db(postgres, schema_revision, stage_revision)
+                with self._pause_amqppostgres():
+                    self._restore_db(postgres, schema_revision, stage_revision)
                 self._restore_hash_salt()
                 self._encrypt_secrets(postgres)
                 self._encrypt_rabbitmq_passwords(postgres)
@@ -148,6 +149,22 @@ class SnapshotRestore(object):
             self._trigger_post_restore_commands()
             ctx.logger.debug('Removing temp dir: {0}'.format(self._tempdir))
             shutil.rmtree(self._tempdir)
+
+    @contextmanager
+    def _pause_amqppostgres(self):
+        """Stop cloudify-amqp-postgres for the duration of this context"""
+        # While the snapshot is being restored, the database is downgraded
+        # and upgraded back, and the snapshot execution itself might not
+        # be in the database during that time.
+        # If we try to insert logs during that time, they won't be stored,
+        # because they can't have a FK to a non-existent execution.
+        # Pause amqp-postgres so that all the logs are only stored after
+        # the database has finished restoring
+        utils.run('sudo systemctl stop cloudify-amqp-postgres')
+        try:
+            yield
+        finally:
+            utils.run('sudo systemctl start cloudify-amqp-postgres')
 
     def _generate_new_rest_token(self):
         """
