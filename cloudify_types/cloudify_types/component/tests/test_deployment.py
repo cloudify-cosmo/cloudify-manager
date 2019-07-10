@@ -18,7 +18,7 @@ from collections import namedtuple
 from cloudify.exceptions import NonRecoverableError
 
 from ..operations import create, delete
-from cloudify_types.component.component import Component
+from cloudify_types.component.component import Component, CloudifyClientError
 from .base_test_suite import (ComponentTestBase,
                               REST_CLIENT_EXCEPTION,
                               MOCK_TIMEOUT)
@@ -245,6 +245,57 @@ class TestComponentPlugins(TestDeploymentBase):
                     deployment_id='dep_name',
                     timeout=MOCK_TIMEOUT)
                 self.assertTrue(output)
+
+            self.cfy_mock_client.plugins.delete.assert_called_with(
+                plugin_id='plugin_id')
+
+    def test_delete_deployment_success_with_used_by_others_plugins(self):
+        self._ctx.instance.runtime_properties['deployment']['id'] = 'dep_name'
+        self._ctx.instance.runtime_properties['plugins'] = {'plugin_id'}
+
+        with mock.patch('cloudify.manager.get_rest_client') as mock_client:
+            self.cfy_mock_client.plugins.delete = mock.MagicMock(
+                side_effect=CloudifyClientError(
+                    'Plugin "plugin_id" is currently in use in blueprints: '
+                    '... You can "force" plugin removal if needed'))
+            mock_client.return_value = self.cfy_mock_client
+
+            poll_with_timeout_test = \
+                'cloudify_types.component.component.poll_with_timeout'
+            with mock.patch(poll_with_timeout_test) as poll:
+                poll.return_value = True
+                output = delete(
+                    operation='delete_deployment',
+                    deployment_id='dep_name',
+                    timeout=MOCK_TIMEOUT)
+                self.assertTrue(output)
+
+            self.cfy_mock_client.plugins.delete.assert_called_with(
+                plugin_id='plugin_id')
+
+    def test_delete_deployment_failure_with_failed_removal_of_plugins(self):
+        self._ctx.instance.runtime_properties['deployment']['id'] = 'dep_name'
+        self._ctx.instance.runtime_properties['plugins'] = {'plugin_id'}
+
+        with mock.patch('cloudify.manager.get_rest_client') as mock_client:
+            self.cfy_mock_client.plugins.delete = mock.MagicMock(
+                side_effect=CloudifyClientError('Failed plugin uninstall'))
+            mock_client.return_value = self.cfy_mock_client
+
+            poll_with_timeout_test = \
+                'cloudify_types.component.component.poll_with_timeout'
+            with mock.patch(poll_with_timeout_test) as poll:
+                poll.return_value = True
+
+                error = self.assertRaises(
+                    NonRecoverableError,
+                    delete,
+                    operation='delete_deployment',
+                    deployment_id='dep_name',
+                    timeout=MOCK_TIMEOUT)
+
+                self.assertIn('Failed to remove plugin "plugin_id"....',
+                              error.message)
 
             self.cfy_mock_client.plugins.delete.assert_called_with(
                 plugin_id='plugin_id')
