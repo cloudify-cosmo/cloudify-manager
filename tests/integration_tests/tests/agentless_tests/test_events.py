@@ -158,6 +158,11 @@ class EventsTest(AgentlessTestCase):
         self.undeploy_application(
             self.deployment_id, is_delete_deployment=True)
         execution = self.client.snapshots.restore(snapshot_id, force=True)
+
+        # give the database some time to downgrade/upgrade before running
+        # requests to avoid the deadlock described in CY-1455
+        time.sleep(10)
+
         self._wait_for_events_to_update_in_DB(
             execution, RESTORE_SNAPSHOT_SUCCESS_MSG)
 
