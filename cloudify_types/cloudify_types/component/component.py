@@ -232,9 +232,10 @@ class Component(object):
         duplicate_secrets = set(self.secrets).intersection(existing_secrets)
 
         if duplicate_secrets:
-            raise NonRecoverableError('The secrets: {{ {0} }} already exist, '
+            raise NonRecoverableError('The secrets: {0} already exist, '
                                       'not updating...'.format(
-                                        ', '.join(duplicate_secrets)))
+                                        '"' + '", "'.join(duplicate_secrets)
+                                        + '"'))
 
     def _set_secrets(self):
         if not self.secrets:
@@ -319,14 +320,23 @@ class Component(object):
                                 self.deployment_id))
         return self.verify_execution_successful(execution_id)
 
+    def _try_to_remove_plugin(self, plugin_id):
+        try:
+            self.client.plugins.delete(plugin_id=plugin_id)
+        except CloudifyClientError as ex:
+            if 'currently in use in blueprints' in ex.message:
+                ctx.logger.warn('Could not remove plugin "{0}", it '
+                                'is currently in use...'.format(plugin_id))
+            else:
+                raise NonRecoverableError('Failed to remove plugin '
+                                          '"{0}"....'.format(plugin_id))
+
     def _delete_plugins(self):
         plugins = ctx.instance.runtime_properties.get('plugins', [])
 
         for plugin_id in plugins:
-            self._http_client_wrapper('plugins', 'delete', {
-                'plugin_id': plugin_id
-            })
-            ctx.logger.info('Removed plugin "{}".'.format(repr(plugin_id)))
+            self._try_to_remove_plugin(plugin_id)
+            ctx.logger.info('Removed plugin "{0}".'.format(plugin_id))
 
     def _delete_secrets(self):
         if not self.secrets:
