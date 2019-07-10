@@ -300,7 +300,7 @@ class TestComponentSecrets(TestDeploymentBase):
                 operation='create_deployment',
                 timeout=MOCK_TIMEOUT)
 
-            self.assertIn('The secrets: { a } already exist, not updating...',
+            self.assertIn('The secrets: "a" already exist, not updating...',
                           error.message)
 
             assert not self.cfy_mock_client.secrets.create.called

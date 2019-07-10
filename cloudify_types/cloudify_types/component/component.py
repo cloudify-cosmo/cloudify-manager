@@ -232,9 +232,9 @@ class Component(object):
         duplicate_secrets = set(self.secrets).intersection(existing_secrets)
 
         if duplicate_secrets:
-            raise NonRecoverableError('The secrets: {{ {0} }} already exist, '
+            raise NonRecoverableError('The secrets: {0} already exist, '
                                       'not updating...'.format(
-                                        ', '.join(duplicate_secrets)))
+                                        '"' + '", "'.join(duplicate_secrets) + '"'))
 
     def _set_secrets(self):
         if not self.secrets:
