@@ -324,7 +324,7 @@ class Component(object):
         try:
             self.client.plugins.delete(plugin_id=plugin_id)
         except CloudifyClientError as ex:
-            if 'You can "force" plugin removal if needed' in ex.message:
+            if 'currently in use in blueprints' in ex.message:
                 ctx.logger.warn('Could not remove plugin "{0}", it '
                                 'is currently in use...'.format(plugin_id))
             else:
