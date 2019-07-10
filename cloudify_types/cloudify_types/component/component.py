@@ -234,7 +234,8 @@ class Component(object):
         if duplicate_secrets:
             raise NonRecoverableError('The secrets: {0} already exist, '
                                       'not updating...'.format(
-                                        '"' + '", "'.join(duplicate_secrets) + '"'))
+                                        '"' + '", "'.join(duplicate_secrets)
+                                        + '"'))
 
     def _set_secrets(self):
         if not self.secrets:
@@ -324,9 +325,11 @@ class Component(object):
             self.client.plugins.delete(plugin_id=plugin_id)
         except CloudifyClientError as ex:
             if 'You can "force" plugin removal if needed' in ex.message:
-                ctx.logger.warn('Could not remove plugin "{0}", it is currently in use...'.format(plugin_id))
+                ctx.logger.warn('Could not remove plugin "{0}", it '
+                                'is currently in use...'.format(plugin_id))
             else:
-                raise NonRecoverableError('Failed to remove plugin "{0}"....'.format(plugin_id))
+                raise NonRecoverableError('Failed to remove plugin '
+                                          '"{0}"....'.format(plugin_id))
 
     def _delete_plugins(self):
         plugins = ctx.instance.runtime_properties.get('plugins', [])
