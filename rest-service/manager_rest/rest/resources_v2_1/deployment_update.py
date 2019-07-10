@@ -209,10 +209,11 @@ class DeploymentUpdateId(SecuredResource):
     @rest_decorators.exceptions_handled
     @authorize('deployment_update_get')
     @rest_decorators.marshal_with(models.DeploymentUpdate)
-    def get(self, update_id):
+    def get(self, update_id, _include=None):
         """Get a deployment update by id"""
         return get_deployment_updates_manager().get_deployment_update(
-            update_id)
+            update_id,
+            include=_include)
 
 
 class DeploymentUpdates(SecuredResource):

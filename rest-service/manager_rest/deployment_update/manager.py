@@ -61,8 +61,9 @@ class DeploymentUpdateManager(object):
         self._deployment_handler = DeploymentUpdateDeploymentHandler(sm)
         self._step_validator = StepValidator(sm)
 
-    def get_deployment_update(self, deployment_update_id):
-        return self.sm.get(models.DeploymentUpdate, deployment_update_id)
+    def get_deployment_update(self, deployment_update_id, include=None):
+        return self.sm.get(
+            models.DeploymentUpdate, deployment_update_id, include=include)
 
     def list_deployment_updates(self,
                                 include=None,
