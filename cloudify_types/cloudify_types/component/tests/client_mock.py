@@ -77,6 +77,10 @@ class MockEventsClient(BaseMockClient):
     pass
 
 
+class MockSecretsClient(BaseMockClient):
+    pass
+
+
 class MockCloudifyRestClient(object):
 
     def __init__(self):
@@ -84,5 +88,5 @@ class MockCloudifyRestClient(object):
         self.deployments = MockDeploymentsClient()
         self.executions = MockExecutionsClient()
         self.events = MockEventsClient()
-        self.secrets = MagicMock()
+        self.secrets = MockSecretsClient()
         self.plugins = MagicMock()

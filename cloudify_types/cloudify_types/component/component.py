@@ -21,7 +21,6 @@ from cloudify.exceptions import NonRecoverableError
 from cloudify_rest_client.client import CloudifyClient
 from cloudify_rest_client.exceptions import CloudifyClientError
 
-
 from .constants import (
     EXECUTIONS_TIMEOUT,
     POLLING_INTERVAL,
@@ -112,7 +111,7 @@ class Component(object):
     def _http_client_wrapper(self,
                              option,
                              request_action,
-                             request_args):
+                             request_args={}):
         """
         wrapper for http client requests with CloudifyClientError custom
         handling.
@@ -225,9 +224,23 @@ class Component(object):
                 if zip_path:
                     os.remove(zip_path)
 
+    def _verify_secrets_clash(self):
+        existing_secrets = {secret.key: secret.value
+                            for secret in
+                            self._http_client_wrapper('secrets', 'list')}
+
+        duplicate_secrets = set(self.secrets).intersection(existing_secrets)
+
+        if duplicate_secrets:
+            raise NonRecoverableError('The secrets: {{ {0} }} already exist, '
+                                      'not updating...'.format(
+                                        ', '.join(duplicate_secrets)))
+
     def _set_secrets(self):
         if not self.secrets:
             return
+
+        self._verify_secrets_clash()
 
         for secret_name in self.secrets:
             self._http_client_wrapper('secrets', 'create', {
