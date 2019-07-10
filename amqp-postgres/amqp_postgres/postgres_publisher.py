@@ -145,7 +145,8 @@ class DBLogEventPublisher(object):
         self.error_exit = None
 
     def _reset_cache(self):
-        self._executions_cache = LimitedSizeDict(10000)
+        self._executions_cache = LimitedSizeDict(100)
+
 
     def start(self):
         self.error_exit = None
