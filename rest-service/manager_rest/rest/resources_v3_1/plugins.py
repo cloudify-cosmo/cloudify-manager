@@ -124,9 +124,10 @@ class PluginsUpdateId(SecuredResource):
     @rest_decorators.exceptions_handled
     @authorize('plugins_update_get')
     @rest_decorators.marshal_with(models.PluginsUpdate)
-    def get(self, update_id):
+    def get(self, update_id, _include=None):
         """Get a plugins update by id"""
-        return get_storage_manager().get(models.PluginsUpdate, update_id)
+        return get_storage_manager().get(
+            models.PluginsUpdate, update_id, include=_include)
 
 
 class PluginsUpdates(SecuredResource):

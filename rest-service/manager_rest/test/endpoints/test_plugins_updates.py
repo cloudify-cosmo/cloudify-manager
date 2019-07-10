@@ -68,7 +68,7 @@ class PluginsUpdatesTest(PluginsUpdatesBaseTest):
         plugins_update2 = self.client.plugins_update.update_plugins(
             'hello_world', force=True)
         plugins_update_set = set(p.id for p in self.client.plugins_update
-                                 .list().items)
+                                 .list(_include=['id']).items)
         self.assertEqual(2, len(plugins_update_set))
         self.assertIn(plugins_update1.id, plugins_update_set)
         self.assertFalse(plugins_update1.forced)
@@ -98,7 +98,7 @@ class PluginsUpdateIdTest(PluginsUpdatesBaseTest):
         plugins_update = self.client.plugins_update.update_plugins(
             'hello_world')
         response_plugins_update = self.client.plugins_update.get(
-            plugins_update.id)
+            plugins_update.id, _include=['id'])
         self.assertEqual(plugins_update.id, response_plugins_update.id)
 
 
