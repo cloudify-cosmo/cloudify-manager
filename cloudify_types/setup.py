@@ -30,6 +30,7 @@ setup(
     description='Various special Cloudify types implementation.',
     install_requires=[
         'cloudify-common==5.0.0',
-        'requests==2.21.0'
+        'requests==2.21.0',
+        'PyYAML==3.10'
     ]
 )

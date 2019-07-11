@@ -35,7 +35,8 @@ from .utils import (
     deployment_id_exists,
     update_runtime_properties,
     get_local_path,
-    zip_files
+    zip_files,
+    should_upload_plugin
 )
 
 
@@ -191,9 +192,10 @@ class Component(object):
             return
 
         ctx.instance.runtime_properties['plugins'] = []
+        existing_plugins = self._http_client_wrapper(
+                    'plugins', 'list')
 
-        for plugin in self.plugins.values():
-            ctx.logger.info('Creating plugin zip archive..')
+        for plugin_name, plugin in self.plugins.iteritems():
             wagon_path = None
             yaml_path = None
             zip_path = None
@@ -209,6 +211,11 @@ class Component(object):
                                             create_temp=True)
                 yaml_path = get_local_path(plugin['plugin_yaml_path'],
                                            create_temp=True)
+                if not should_upload_plugin(yaml_path, existing_plugins):
+                    ctx.logger.warn('Plugin "{0}" was already uploaded...'.format(plugin_name))
+                    continue
+
+                ctx.logger.info('Creating plugin "{0}" zip archive...'.format(plugin_name))
                 zip_path = zip_files([wagon_path, yaml_path])
 
                 # upload plugin
