@@ -54,9 +54,6 @@ class Agents(object):
         client = get_rest_client()
         agents = client.agents.list(all_tenants=True)
         agent_ids = [item['id'] for item in agents.items]
-
-        
-
         # for tenant_name in get_tenants_list():
         #     client = get_rest_client(tenant_name)
         #     agents = client.agents.list()
