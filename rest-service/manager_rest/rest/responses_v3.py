@@ -92,13 +92,13 @@ class TenantDetailsResponse(BaseResponse):
 class AgentResponse(BaseResponse):
     resource_fields = {
         'id': fields.String,
-        'host_id': fields.String,
         'ip': fields.String,
         'install_method': fields.String,
         'system': fields.String,
         'version': fields.String,
-        'node': fields.String,
-        'deployment': fields.String
+        'node_id': fields.String,
+        'deployment_id': fields.String,
+        'tenant_name': fields.String
     }
 
 
