@@ -37,21 +37,21 @@ class Agents(SecuredResource):
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(AgentResponse)
     @rest_decorators.paginate
+    @rest_decorators.all_tenants
     @authorize('agent_list')
-    def get(self, pagination=None):
+    def get(self, pagination=None, all_tenants=None):
         args = get_args_and_verify_arguments([
             Argument('deployment_id', required=False),
             Argument('node_ids', required=False, action='append'),
             Argument('node_instance_ids', required=False, action='append'),
             Argument('install_methods', required=False, action='append'),
-            Argument('all_tenants', required=False)
         ])
         return get_resource_manager().list_agents(
             deployment_id=args.get('deployment_id'),
             node_ids=args.get('node_ids'),
             node_instance_ids=args.get('node_instance_ids'),
             install_method=args.get('install_methods'),
-            all_tenants=args.get('all_tenants'))
+            all_tenants=all_tenants)
 
 
 class AgentsName(SecuredResource):

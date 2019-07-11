@@ -14,7 +14,9 @@
 # limitations under the License.
 
 from integration_tests import AgentTestCase
-from integration_tests.tests.utils import get_resource as resource
+from integration_tests.tests.utils import (get_resource as resource,
+                                           create_rest_client)
+
 
 class TestListAgents(AgentTestCase):
 
@@ -34,12 +36,42 @@ class TestListAgents(AgentTestCase):
 
     def test_list_agents_not_started(self):
         deployment1, _ = self.deploy_application(resource(
-            "dsl/agent_tests/with_agent.yaml"), deployment_id='d3')
+            "dsl/agent_tests/with_agent.yaml"), deployment_id='ns1')
         deployment2 = self.deploy(resource("dsl/agent_tests/with_agent.yaml"),
-                                  deployment_id='d4')
+                                  deployment_id='ns2')
 
         agent_list = self.client.agents.list()
         self.assertEqual(agent_list.metadata['pagination']['total'], 1)
         self.assertEqual(len(agent_list.items), 1)
         self.undeploy_application(deployment1.id)
         self.delete_deployment(deployment2.id, validate=True)
+
+    def test_list_agents_all_tenants(self):
+        self.client.tenants.create('mike')
+        mike_client = create_rest_client(tenant='mike')
+        deployment1, _ = self.deploy_application(resource(
+            "dsl/agent_tests/with_agent.yaml"), deployment_id='at1')
+        deployment2 = self.deploy(resource("dsl/agent_tests/with_agent.yaml"),
+                                  deployment_id='at2', client=mike_client)
+        execution2 = mike_client.executions.start(deployment2.id, 'install')
+        self.wait_for_execution_to_end(execution2, client=mike_client)
+
+        # all_tenants is false by default
+        agent_list = self.client.agents.list()
+        self.assertEqual(agent_list.metadata['pagination']['total'], 1)
+        self.assertEqual(agent_list.items[0]['deployment'], 'at1')
+        self.assertEqual(len(agent_list.items), 1)
+
+        # all_tenants is true
+        agent_list = self.client.agents.list(all_tenants=True)
+        self.assertEqual(agent_list.metadata['pagination']['total'], 2)
+        self.assertEqual(agent_list.items[0]['deployment'], 'at1')
+        self.assertEqual(agent_list.items[1]['deployment'], 'at2')
+        self.assertEqual(len(agent_list.items), 2)
+
+        self.undeploy_application(deployment1.id)
+        uninstall2 = mike_client.executions.start(deployment2.id, 'uninstall')
+        self.wait_for_execution_to_end(uninstall2, client=mike_client)
+        self.delete_deployment(deployment2.id,
+                               validate=True,
+                               client=mike_client)

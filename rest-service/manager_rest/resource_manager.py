@@ -1664,7 +1664,6 @@ class ResourceManager(object):
     def list_agents(self, deployment_id=None, node_ids=None,
                     node_instance_ids=None, install_method=None,
                     all_tenants=False):
-
         filters = {'state': 'started'}
         if deployment_id is not None:
             filters['deployment_id'] = deployment_id
@@ -1674,11 +1673,9 @@ class ResourceManager(object):
             filters['node_instance_id'] = node_instance_ids
         if install_method is not None:
             filters['install_method'] = install_method
-
         agents_raw = self.sm.list(models.Agent,
                                   filters=filters,
-                                  all_tenants=all_tenants,
-                                  get_all_results=True)
+                                  all_tenants=all_tenants)
         agents = [dict(id=agent.id,
                        host_id=agent.node_instance_id,
                        ip=agent.ip,

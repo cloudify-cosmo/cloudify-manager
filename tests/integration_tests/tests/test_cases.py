@@ -325,7 +325,8 @@ class BaseTestCase(unittest.TestCase):
                 inputs=inputs,
                 skip_plugins_validation=True)
         if wait:
-            wait_for_deployment_creation_to_complete(deployment_id)
+            wait_for_deployment_creation_to_complete(deployment_id,
+                                                     client=client)
         return deployment
 
     @staticmethod
@@ -408,13 +409,15 @@ class BaseTestCase(unittest.TestCase):
     @staticmethod
     def delete_deployment(deployment_id,
                           ignore_live_nodes=False,
-                          validate=False):
-        client = test_utils.create_rest_client()
+                          validate=False,
+                          client=None):
+        client = client or test_utils.create_rest_client()
         result = client.deployments.delete(deployment_id,
                                            ignore_live_nodes=ignore_live_nodes,
                                            with_logs=True)
         if validate:
-            wait_for_deployment_deletion_to_complete(deployment_id)
+            wait_for_deployment_deletion_to_complete(deployment_id,
+                                                     client=client)
         return result
 
     @staticmethod
