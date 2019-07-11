@@ -51,11 +51,17 @@ class Agents(object):
     def dump(self, tempdir, manager_version):
         self._manager_version = manager_version
         node_instances = []
-        for tenant_name in get_tenants_list():
-            client = get_rest_client(tenant_name)
-            agents = client.agents.list()
-            agent_ids = [item['id'] for item in agents.items]
-            node_instances.extend(client.node_instances.list(id=agent_ids))
+        client = get_rest_client()
+        agents = client.agents.list(all_tenants=True)
+        agent_ids = [item['id'] for item in agents.items]
+
+        
+
+        # for tenant_name in get_tenants_list():
+        #     client = get_rest_client(tenant_name)
+        #     agents = client.agents.list()
+        #     agent_ids = [item['id'] for item in agents.items]
+        #     node_instances.extend(client.node_instances.list(id=agent_ids))
         result = {}
         for inst in node_instances:
             result.setdefault(inst['tenant_name'], {})
