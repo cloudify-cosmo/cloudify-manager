@@ -31,7 +31,6 @@ class TestDeploymentBase(ComponentTestBase):
         self.sleep_mock = mock.patch('time.sleep', mock.MagicMock())
         self.sleep_mock.start()
         self._ctx.instance.runtime_properties['deployment'] = {}
-        self._ctx.instance.runtime_properties['plugins'] = []
 
     def tearDown(self):
         self.sleep_mock.stop()

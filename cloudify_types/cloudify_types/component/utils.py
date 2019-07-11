@@ -142,11 +142,13 @@ def should_upload_plugin(plugin_yaml_path, existing_plugins):
         plugins = plugin_yaml.get('plugins')
         for _, plugin_info in plugins.iteritems():
             package_name = plugin_info.get('package_name')
-            package_version = plugin_info.get('package_version')
+            package_version = str(plugin_info.get('package_version'))
+            distribution = plugin_info.get('distribution')
             identical_plugins = [
                 plugin.id for plugin in existing_plugins
                 if plugin.package_name == package_name and
-                plugin.package_version == package_version]
+                plugin.package_version == package_version and
+                plugin.distribution == distribution]
             if identical_plugins:
                 return False
     return True

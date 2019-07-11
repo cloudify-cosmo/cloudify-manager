@@ -187,7 +187,7 @@ class Component(object):
 
     def _upload_plugins(self):
         if (not self.plugins or
-                'plugins' not in ctx.instance.runtime_properties):
+                'plugins' in ctx.instance.runtime_properties):
             # No plugins to install or already uploaded them.
             return
 
