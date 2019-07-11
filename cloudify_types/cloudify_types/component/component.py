@@ -185,11 +185,12 @@ class Component(object):
                                          client_args)
 
     def _upload_plugins(self):
-        if not self.plugins:
+        if (not self.plugins or
+                'plugins' not in ctx.instance.runtime_properties):
+            # No plugins to install or already uploaded them.
             return
 
-        if 'plugins' not in ctx.instance.runtime_properties:
-            ctx.instance.runtime_properties['plugins'] = []
+        ctx.instance.runtime_properties['plugins'] = []
 
         for plugin in self.plugins.values():
             ctx.logger.info('Creating plugin zip archive..')
