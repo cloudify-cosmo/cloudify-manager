@@ -35,7 +35,8 @@ from .utils import (
     deployment_id_exists,
     update_runtime_properties,
     get_local_path,
-    zip_files
+    zip_files,
+    should_upload_plugin
 )
 
 
@@ -185,14 +186,16 @@ class Component(object):
                                          client_args)
 
     def _upload_plugins(self):
-        if not self.plugins:
+        if (not self.plugins or
+                'plugins' in ctx.instance.runtime_properties):
+            # No plugins to install or already uploaded them.
             return
 
-        if 'plugins' not in ctx.instance.runtime_properties:
-            ctx.instance.runtime_properties['plugins'] = []
+        ctx.instance.runtime_properties['plugins'] = []
+        existing_plugins = self._http_client_wrapper(
+                    'plugins', 'list')
 
-        for plugin in self.plugins.values():
-            ctx.logger.info('Creating plugin zip archive..')
+        for plugin_name, plugin in self.plugins.items():
             wagon_path = None
             yaml_path = None
             zip_path = None
@@ -208,6 +211,13 @@ class Component(object):
                                             create_temp=True)
                 yaml_path = get_local_path(plugin['plugin_yaml_path'],
                                            create_temp=True)
+                if not should_upload_plugin(yaml_path, existing_plugins):
+                    ctx.logger.warn('Plugin "{0}" was already '
+                                    'uploaded...'.format(plugin_name))
+                    continue
+
+                ctx.logger.info('Creating plugin "{0}" zip '
+                                'archive...'.format(plugin_name))
                 zip_path = zip_files([wagon_path, yaml_path])
 
                 # upload plugin

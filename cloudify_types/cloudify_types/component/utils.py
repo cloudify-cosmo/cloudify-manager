@@ -19,6 +19,7 @@ import tempfile
 from shutil import copy
 from urlparse import urlparse
 
+import yaml
 import requests
 
 from cloudify import ctx
@@ -133,3 +134,20 @@ def blueprint_id_exists(client, blueprint_id):
 def deployment_id_exists(client, deployment_id):
     deployment = get_deployment_by_id(client, deployment_id)
     return True if deployment else False
+
+
+def should_upload_plugin(plugin_yaml_path, existing_plugins):
+    with open(plugin_yaml_path, 'r') as plugin_yaml_file:
+        plugin_yaml = yaml.safe_load(plugin_yaml_file)
+    plugins = plugin_yaml.get('plugins')
+    for _, plugin_info in plugins.items():
+        package_name = plugin_info.get('package_name')
+        package_version = str(plugin_info.get('package_version'))
+        distribution = plugin_info.get('distribution')
+
+        for plugin in existing_plugins:
+            if (plugin.package_name == package_name and
+                    plugin.package_version == package_version and
+                    plugin.distribution == distribution):
+                return False
+    return True
