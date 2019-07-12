@@ -462,6 +462,7 @@ class TestSnapshot(AgentlessTestCase):
         execution = rest_client.snapshots.restore(
             snapshot_id,
             ignore_plugin_failure=ignore_plugin_failure)
+        time.sleep(10)
         execution = self._wait_for_restore_execution_to_end(
             execution, rest_client)
         if execution.status == error_execution_status:
