@@ -212,10 +212,12 @@ class Component(object):
                 yaml_path = get_local_path(plugin['plugin_yaml_path'],
                                            create_temp=True)
                 if not should_upload_plugin(yaml_path, existing_plugins):
-                    ctx.logger.warn('Plugin "{0}" was already uploaded...'.format(plugin_name))
+                    ctx.logger.warn('Plugin "{0}" was already '
+                                    'uploaded...'.format(plugin_name))
                     continue
 
-                ctx.logger.info('Creating plugin "{0}" zip archive...'.format(plugin_name))
+                ctx.logger.info('Creating plugin "{0}" zip '
+                                'archive...'.format(plugin_name))
                 zip_path = zip_files([wagon_path, yaml_path])
 
                 # upload plugin

@@ -192,7 +192,7 @@ class TestComponentPlugins(TestDeploymentBase):
                 get_local_path
             ):
                 with mock.patch(
-                        'cloudify_types.component.component.should_upload_plugin'
+                    'cloudify_types.component.component.should_upload_plugin'
                 ) as should_upload_plugin:
                     should_upload_plugin.return_value = True
                     zip_files = mock.Mock(return_value="_zip")
@@ -206,10 +206,12 @@ class TestComponentPlugins(TestDeploymentBase):
                                 'wagon_path': '_wagon_path',
                                 'plugin_yaml_path': '_plugin_yaml_path'}}})
                         os_mock = mock.Mock()
-                        with mock.patch('cloudify_types.component.component.os',
-                                        os_mock):
+                        with mock.patch(
+                                'cloudify_types.component.component.os',
+                                os_mock):
                             component._upload_plugins()
-                        zip_files.assert_called_with(["some_path", "some_path"])
+                        zip_files.assert_called_with(["some_path",
+                                                      "some_path"])
                         get_local_path.assert_has_calls([
                             mock.call('_wagon_path', create_temp=True),
                             mock.call('_plugin_yaml_path', create_temp=True)])
@@ -233,7 +235,7 @@ class TestComponentPlugins(TestDeploymentBase):
                 get_local_path
             ):
                 with mock.patch(
-                        'cloudify_types.component.component.should_upload_plugin'
+                    'cloudify_types.component.component.should_upload_plugin'
                 ) as should_upload_plugin:
                     should_upload_plugin.return_value = False
                     component = Component({'plugins': {
