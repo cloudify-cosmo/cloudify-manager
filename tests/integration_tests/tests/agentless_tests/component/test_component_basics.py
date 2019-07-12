@@ -121,9 +121,9 @@ node_templates:
         blueprint_path = self.make_yaml_file(main_blueprint)
         self.deploy_application(blueprint_path, deployment_id=deployment_id)
         plugins_list = self.client.plugins.list()
+        self.assertEqual(len(plugins_list), 1)
         self.assertTrue(plugins_list[0]['package_name'],
                         self.TEST_PACKAGE_NAME)
-        self.assertEqual(len(self.client.plugins.list()), 1)
         self.undeploy_application(deployment_id, is_delete_deployment=True)
         self.assertEqual(len(self.client.plugins.list()), 1)
         self.client.plugins.delete(mock_id)
@@ -152,7 +152,7 @@ node_templates:
         self.assertTrue(plugins_list[1]['package_version'],
                         self.TEST_PACKAGE_NAME)
         self.undeploy_application(deployment_id)
-        self.assertEqual(1, len(self.client.plugins.list()))
+        self.assertEqual(len(self.client.plugins.list()), 1)
         self.client.plugins.delete(mock_id)
 
 

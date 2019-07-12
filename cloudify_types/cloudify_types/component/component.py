@@ -195,7 +195,7 @@ class Component(object):
         existing_plugins = self._http_client_wrapper(
                     'plugins', 'list')
 
-        for plugin_name, plugin in self.plugins.iteritems():
+        for plugin_name, plugin in self.plugins.items():
             wagon_path = None
             yaml_path = None
             zip_path = None

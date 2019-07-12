@@ -138,17 +138,16 @@ def deployment_id_exists(client, deployment_id):
 
 def should_upload_plugin(plugin_yaml_path, existing_plugins):
     with open(plugin_yaml_path, 'r') as plugin_yaml_file:
-        plugin_yaml = yaml.load(plugin_yaml_file)
-        plugins = plugin_yaml.get('plugins')
-        for _, plugin_info in plugins.iteritems():
-            package_name = plugin_info.get('package_name')
-            package_version = str(plugin_info.get('package_version'))
-            distribution = plugin_info.get('distribution')
-            identical_plugins = [
-                plugin.id for plugin in existing_plugins
-                if plugin.package_name == package_name and
-                plugin.package_version == package_version and
-                plugin.distribution == distribution]
-            if identical_plugins:
+        plugin_yaml = yaml.safe_load(plugin_yaml_file)
+    plugins = plugin_yaml.get('plugins')
+    for _, plugin_info in plugins.items():
+        package_name = plugin_info.get('package_name')
+        package_version = str(plugin_info.get('package_version'))
+        distribution = plugin_info.get('distribution')
+
+        for plugin in existing_plugins:
+            if (plugin.package_name == package_name and
+                    plugin.package_version == package_version and
+                    plugin.distribution == distribution):
                 return False
     return True

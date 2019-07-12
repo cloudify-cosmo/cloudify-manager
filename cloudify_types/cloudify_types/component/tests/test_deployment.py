@@ -50,7 +50,7 @@ class TestDeployment(TestDeploymentBase):
                                       deployment_id=deployment_name,
                                       timeout=MOCK_TIMEOUT)
             self.assertIn('action "delete" failed',
-                          error.message)
+                          str(error))
 
     def test_delete_deployment_success(self):
         self._ctx.instance.runtime_properties['deployment']['id'] = 'dep_name'
@@ -95,7 +95,7 @@ class TestDeployment(TestDeploymentBase):
                                       blueprint_id='test_deployments_create',
                                       timeout=MOCK_TIMEOUT)
             self.assertIn('action "create" failed',
-                          error.message)
+                          str(error))
 
     def test_create_deployment_timeout(self):
         self._ctx.instance.runtime_properties['deployment']['id'] = 'dep_name'
@@ -119,7 +119,7 @@ class TestDeployment(TestDeploymentBase):
                     blueprint_id='test',
                     timeout=MOCK_TIMEOUT)
 
-                self.assertIn('Execution timed out', error.message)
+                self.assertIn('Execution timed out', str(error))
 
     def test_create_deployment_success(self):
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
@@ -162,7 +162,7 @@ class TestDeployment(TestDeploymentBase):
                     timeout=MOCK_TIMEOUT)
 
                 self.assertIn('No execution Found for component'
-                              ' "test" deployment', error.message)
+                              ' "test" deployment', str(error))
 
     def test_create_deployment_exists(self):
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
@@ -177,9 +177,9 @@ class TestDeployment(TestDeploymentBase):
 
 class TestComponentPlugins(TestDeploymentBase):
 
-    def test_upload_plugins(self):
-        get_local_path = mock.Mock(return_value="some_path")
-
+    @mock.patch('cloudify_types.component.component.should_upload_plugin',
+                return_value=True)
+    def test_upload_plugins(self, _):
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             plugin = mock.Mock()
             plugin.id = "CustomPlugin"
@@ -189,36 +189,29 @@ class TestComponentPlugins(TestDeploymentBase):
             mock_client.return_value = self.cfy_mock_client
             with mock.patch(
                 'cloudify_types.component.component.get_local_path',
-                get_local_path
-            ):
+                return_value='some_path'
+            ) as get_local_path:
                 with mock.patch(
-                    'cloudify_types.component.component.should_upload_plugin'
-                ) as should_upload_plugin:
-                    should_upload_plugin.return_value = True
-                    zip_files = mock.Mock(return_value="_zip")
+                    'cloudify_types.component.component.zip_files',
+                    return_value="_zip"
+                )as zip_files:
+                    component = Component({'plugins': {
+                        'base_plugin': {
+                            'wagon_path': '_wagon_path',
+                            'plugin_yaml_path': '_plugin_yaml_path'}}})
                     with mock.patch(
-                        'cloudify_types.component.component.zip_files',
-                        zip_files
-                    ):
-                        # dist of plugins
-                        component = Component({'plugins': {
-                            'base_plugin': {
-                                'wagon_path': '_wagon_path',
-                                'plugin_yaml_path': '_plugin_yaml_path'}}})
-                        os_mock = mock.Mock()
-                        with mock.patch(
-                                'cloudify_types.component.component.os',
-                                os_mock):
-                            component._upload_plugins()
-                        zip_files.assert_called_with(["some_path",
-                                                      "some_path"])
-                        get_local_path.assert_has_calls([
-                            mock.call('_wagon_path', create_temp=True),
-                            mock.call('_plugin_yaml_path', create_temp=True)])
-                        os_mock.remove.assert_has_calls([
-                            mock.call('some_path'),
-                            mock.call('some_path'),
-                            mock.call('_zip')])
+                            'cloudify_types.component.component.os')\
+                            as os_mock:
+                        component._upload_plugins()
+                    zip_files.assert_called_with(["some_path",
+                                                  "some_path"])
+                    get_local_path.assert_has_calls([
+                        mock.call('_wagon_path', create_temp=True),
+                        mock.call('_plugin_yaml_path', create_temp=True)])
+                    os_mock.remove.assert_has_calls([
+                        mock.call('some_path'),
+                        mock.call('some_path'),
+                        mock.call('_zip')])
 
     def test_upload_empty_plugins(self):
         get_local_path = mock.Mock(return_value="some_path")
@@ -358,8 +351,7 @@ class TestComponentSecrets(TestDeploymentBase):
                 timeout=MOCK_TIMEOUT)
 
             self.assertIn('The secrets: "a" already exist, not updating...',
-                          error.message)
-
+                          str(error))
             assert not self.cfy_mock_client.secrets.create.called
 
     def test_delete_deployment_success_with_secrets(self):
