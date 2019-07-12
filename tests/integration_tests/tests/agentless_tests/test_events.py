@@ -16,7 +16,7 @@
 import uuid
 import time
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from requests.exceptions import ConnectionError
 from integration_tests import AgentlessTestCase
 from integration_tests.framework.postgresql import run_query
@@ -244,7 +244,9 @@ class EventsAlternativeTimezoneTest(EventsTest):
 
         self.start_timestamp = datetime.utcnow().isoformat()
         super(EventsAlternativeTimezoneTest, self).setUp()
-        self.stop_timestamp = datetime.utcnow().isoformat()
+        # log storing is async, add a few seconds to allow for that
+        self.stop_timestamp = \
+            (datetime.utcnow() + timedelta(seconds=3)).isoformat()
 
     def test_timestamp_in_utc(self):
         """Make sure events timestamp field is in UTC."""

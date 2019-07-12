@@ -15,7 +15,7 @@
 
 import uuid
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from integration_tests import AgentTestWithPlugins
 from integration_tests.framework.postgresql import run_query
@@ -67,7 +67,9 @@ class TimezoneTest(AgentTestWithPlugins):
 
         start_timestamp = '{}Z'.format(datetime.utcnow().isoformat()[:-3])
         self.deploy_application(dsl_path, deployment_id=deployment_id)
-        stop_timestamp = '{}Z'.format(datetime.utcnow().isoformat()[:-3])
+        # log storing is async, add a few seconds to allow for that
+        stop_timestamp = '{}Z'.format(
+            (datetime.utcnow() + timedelta(seconds=3)).isoformat()[:-3])
 
         logs = self.client.events.list(
             include_logs=True,
