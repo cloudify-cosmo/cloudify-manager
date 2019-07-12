@@ -220,41 +220,6 @@ class TestComponentPlugins(TestDeploymentBase):
                             mock.call('some_path'),
                             mock.call('_zip')])
 
-    def test_not_uploading_existing_plugins(self):
-        get_local_path = mock.Mock(return_value="some_path")
-
-        with mock.patch('cloudify.manager.get_rest_client') as mock_client:
-            plugin = mock.Mock()
-            plugin.id = "CustomPlugin"
-            self.cfy_mock_client.plugins.upload = mock.Mock(
-                return_value=plugin)
-
-            mock_client.return_value = self.cfy_mock_client
-            with mock.patch(
-                'cloudify_types.component.component.get_local_path',
-                get_local_path
-            ):
-                with mock.patch(
-                    'cloudify_types.component.component.should_upload_plugin'
-                ) as should_upload_plugin:
-                    should_upload_plugin.return_value = False
-                    component = Component({'plugins': {
-                        'base_plugin': {
-                            'wagon_path': '_wagon_path',
-                            'plugin_yaml_path': '_plugin_yaml_path'}}})
-
-                    os_mock = mock.Mock()
-                    with mock.patch('cloudify_types.component.component.os',
-                                    os_mock):
-                        component._upload_plugins()
-                    get_local_path.assert_has_calls([
-                        mock.call('_wagon_path', create_temp=True),
-                        mock.call('_plugin_yaml_path', create_temp=True)])
-                    os_mock.remove.assert_has_calls([
-                        mock.call('some_path'),
-                        mock.call('some_path')])
-                    assert not self.cfy_mock_client.plugins.create.called
-
     def test_upload_empty_plugins(self):
         get_local_path = mock.Mock(return_value="some_path")
 
