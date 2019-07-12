@@ -21,7 +21,7 @@ from requests.exceptions import ConnectionError
 from integration_tests import AgentlessTestCase
 from integration_tests.framework.postgresql import run_query
 from integration_tests.tests.utils import get_resource as resource
-from integration_tests.framework import utils
+from integration_tests.framework import docl, utils
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from manager_rest.flask_utils import get_postgres_conf
@@ -231,6 +231,10 @@ class EventsAlternativeTimezoneTest(EventsTest):
             "ALTER USER {} SET TIME ZONE '{}'"
             .format(postgres_conf.username, cls.TIMEZONE)
         )
+        # restart all users of the db so that they get a new session which
+        # uses the just-set timezone
+        docl.execute(
+            "systemctl restart cloudify-amqp-postgres cloudify-restservice")
 
     def setUp(self):
         """Update postgres timezone and create a deployment."""

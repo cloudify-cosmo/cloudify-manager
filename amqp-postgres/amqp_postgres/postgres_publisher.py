@@ -50,12 +50,8 @@ EVENT_INSERT_QUERY = """
     VALUES %s
 """
 
-# we use now() and not 'AT UTC'
-# to align with insertions from storage manager
-# that uses UTC in the insert, but DB is changing
-# according to timezone in postgres.conf
 EVENT_VALUES_TEMPLATE = """(
-        now(),
+        now() at time zone 'utc',
         CAST (%(timestamp)s AS TIMESTAMP),
         %(execution_id)s,
         %(tenant_id)s,
@@ -90,9 +86,9 @@ LOG_INSERT_QUERY = """
         target_id)
     VALUES %s
 """
-# see comment above regarding now()
+
 LOG_VALUES_TEMPLATE = """(
-        now(),
+        now() at time zone 'utc',
         CAST (%(timestamp)s AS TIMESTAMP),
         %(execution_id)s,
         %(tenant_id)s,
