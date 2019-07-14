@@ -51,8 +51,7 @@ from manager_rest.plugins_update.constants import PLUGIN_UPDATE_WORKFLOW
 from manager_rest.storage import (db,
                                   get_storage_manager,
                                   models,
-                                  get_node,
-                                  ListResult)
+                                  get_node)
 
 from . import utils
 from . import config
@@ -1660,28 +1659,6 @@ class ResourceManager(object):
                 db.session.add(op)
             self.sm._safe_commit()
         return graph
-
-    def list_agents(self, deployment_id=None, node_ids=None,
-                    node_instance_ids=None, install_method=None,
-                    all_tenants=False):
-        filters = {}
-        if deployment_id is not None:
-            filters['deployment_id'] = deployment_id
-        if node_ids is not None:
-            filters['node_id'] = node_ids
-        if node_instance_ids is not None:
-            filters['node_instance_id'] = node_instance_ids
-        if install_method is not None:
-            filters['install_method'] = install_method
-        agents = list(self.sm.list(models.Agent,
-                                   filters=filters,
-                                   all_tenants=all_tenants))
-
-        import pydevd
-        pydevd.settrace('192.168.9.100', port=53100, stdoutToServer=True,
-                        stderrToServer=True, suspend=True)
-
-        return [ag for ag in agents if ag.node_instance.state == 'started']
 
     @staticmethod
     def _try_convert_from_str(string, target_type):

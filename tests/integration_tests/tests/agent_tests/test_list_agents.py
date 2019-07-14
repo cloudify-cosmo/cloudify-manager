@@ -21,8 +21,8 @@ from integration_tests.tests.utils import (get_resource as resource,
 
 def _is_community():
     try:
-        from cloudify_premium.multi_tenancy.secured_tenant_resource \
-            import SecuredMultiTenancyResource
+        from cloudify_premium.multi_tenancy.secured_tenant_resource import ( # noqa
+            SecuredMultiTenancyResource)
         return False
     except ImportError:
         return True

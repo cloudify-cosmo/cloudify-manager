@@ -27,7 +27,6 @@ from manager_rest import utils, manager_exceptions
 from manager_rest.rest.responses_v3 import AgentResponse
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager
-from manager_rest.resource_manager import get_resource_manager
 from manager_rest.rest.rest_utils import (validate_inputs,
                                           get_json_and_verify_params,
                                           get_args_and_verify_arguments)
@@ -45,13 +44,23 @@ class Agents(SecuredResource):
             Argument('node_ids', required=False, action='append'),
             Argument('node_instance_ids', required=False, action='append'),
             Argument('install_methods', required=False, action='append'),
+            Argument('states', required=False, action='append'),
         ])
-        return get_resource_manager().list_agents(
-            deployment_id=args.get('deployment_id'),
-            node_ids=args.get('node_ids'),
-            node_instance_ids=args.get('node_instance_ids'),
-            install_method=args.get('install_methods'),
-            all_tenants=all_tenants)
+        filters = {
+            'deployment_id': args.get('deployment_id'),
+            'node_id': args.get('node_ids'),
+            'node_instance_id': args.get('node_instance_ids'),
+            'install_method': args.get('install_methods'),
+            'state': args.get('states')
+        }
+        filters = dict((k, v) for k, v in filters.iteritems() if v is not None)
+        return get_storage_manager().list(
+            models.Agent,
+            filters=filters,
+            pagination=pagination,
+            all_tenants=all_tenants,
+            get_all_results=True
+        )
 
 
 class AgentsName(SecuredResource):
