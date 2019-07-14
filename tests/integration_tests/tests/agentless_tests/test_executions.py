@@ -982,15 +982,15 @@ class ExecutionsTest(AgentlessTestCase):
         dep_id = dep.id
         do_retries(verify_deployment_env_created, 30, deployment_id=dep_id)
 
+        # Create snapshot and keep it's status 'started'
+        snapshot = self._create_snapshot_and_modify_execution_status(
+            Execution.STARTED)
+
         scheduled_time = generate_scheduled_for_date()
         execution = self.client.executions.start(deployment_id=dep_id,
                                                  workflow_id='install',
                                                  schedule=scheduled_time)
         self._assert_execution_status(execution.id, Execution.SCHEDULED)
-
-        # Create snapshot and keep it's status 'started'
-        snapshot = self._create_snapshot_and_modify_execution_status(
-            Execution.STARTED)
 
         time.sleep(62)  # Wait for exec to 'wake up'
         self._assert_execution_status(execution.id, Execution.QUEUED)
