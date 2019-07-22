@@ -516,6 +516,15 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         self.assertIn("More than one node instance found for node",
                       outputs['outputs']['ip_address'])
 
+    def test_no_outputs(self):
+        id_ = 'i{0}'.format(uuid.uuid4())
+        self.put_deployment(
+            blueprint_file_name='blueprint.yaml',
+            blueprint_id=id_,
+            deployment_id=id_)
+        outputs = self.client.deployments.outputs.get(id_)
+        self.assertEqual(outputs['outputs'], {})
+
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
     def test_creation_failure_when_plugin_not_found_central_deployment(self):

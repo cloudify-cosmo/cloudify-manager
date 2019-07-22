@@ -25,7 +25,8 @@ from manager_rest.storage import get_node as get_storage_node
 from manager_rest.storage.models import NodeInstance, Deployment, Secret
 from manager_rest.manager_exceptions import (
     FunctionsEvaluationError,
-    DeploymentOutputsEvaluationError
+    DeploymentOutputsEvaluationError,
+    DeploymentCapabilitiesEvaluationError
 )
 
 SecretType = namedtuple('Secret', 'key value')
@@ -51,6 +52,9 @@ def evaluate_deployment_outputs(deployment_id):
     deployment = sm.get(Deployment, deployment_id, include=['outputs'])
     methods = _get_methods(deployment_id, sm)
 
+    if not deployment.outputs:
+        return {}
+
     try:
         return functions.evaluate_outputs(
             outputs_def=deployment.outputs,
@@ -66,7 +70,7 @@ def evaluate_deployment_capabilities(deployment_id):
     methods = _get_methods(deployment_id, sm)
 
     if not deployment.capabilities:
-        return
+        return {}
 
     try:
         return functions.evaluate_capabilities(
@@ -74,7 +78,7 @@ def evaluate_deployment_capabilities(deployment_id):
             **methods
             )
     except parser_exceptions.FunctionEvaluationError, e:
-        raise DeploymentOutputsEvaluationError(str(e))
+        raise DeploymentCapabilitiesEvaluationError(str(e))
 
 
 def get_secret_method():
