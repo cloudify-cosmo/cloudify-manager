@@ -45,10 +45,16 @@ class TestPluginsUpdate(unittest.TestCase):
     def _update_with_existing_blueprint_mock(deployment_id, *_, **__):
         return PropertyMock(execution_id=deployment_id)
 
-    def test_stops_updating_when_one_update_fails(self):
-        def returns_failed_execution_only_if_is_stop_at(execution_id):
-            if execution_id == fail_at_id:
-                return PropertyMock(status=test_params['curr_exec_status'])
+    def test_plugins_update_stops_when_one_deployment_update_fails(self):
+        def get_execution_mock(execution_id):
+            """
+            :return: a mock of an execution object where its status is
+            TERMINATED if the execution shouldn't fail, and FAILED/CANCELLED
+            if it should.
+            """
+            if execution_id == failed_execution_id:
+                return PropertyMock(
+                    status=execution_status['curr_exec_status'])
             return PropertyMock(status=ExecutionState.TERMINATED)
 
         def _assert_update_func_raises():
@@ -56,14 +62,14 @@ class TestPluginsUpdate(unittest.TestCase):
                     RuntimeError,
                     "Deployment update of deployment {0} with execution ID {0}"
                     " failed, stopped this plugins update "
-                    "\\(id='my_update_id'\\)\\.".format(fail_at_id)):
+                    "\\(id='my_update_id'\\)\\.".format(failed_execution_id)):
                 update_func(MagicMock(), 'my_update_id', None, dep_ids)
             should_call_these = [call(deployment_id=i,
                                       blueprint_id=None,
                                       skip_install=True,
                                       skip_uninstall=True,
                                       skip_reinstall=True)
-                                 for i in range(fail_at_id)]
+                                 for i in range(failed_execution_id)]
             self.deployment_update_mock.assert_has_calls(should_call_these)
 
             should_not_call_these = [call(deployment_id=i,
@@ -72,19 +78,19 @@ class TestPluginsUpdate(unittest.TestCase):
                                           skip_uninstall=True,
                                           skip_reinstall=True)
                                      for i in range(
-                    fail_at_id + 1, len(dep_ids))]
+                    failed_execution_id + 1, len(dep_ids))]
             for _call in self.deployment_update_mock.mock_calls:
                 self.assertNotIn(_call, should_not_call_these)
 
-        test_params = {'curr_exec_status': ExecutionState.FAILED}
+        execution_status = {'curr_exec_status': ExecutionState.FAILED}
 
         dep_ids = list(range(5))
-        fail_at_id = 3
+        failed_execution_id = 3
         self.mock_rest_client.executions.get \
-            .side_effect = returns_failed_execution_only_if_is_stop_at
+            .side_effect = get_execution_mock
 
         _assert_update_func_raises()
-        test_params['curr_exec_status'] = ExecutionState.CANCELLED
+        execution_status['curr_exec_status'] = ExecutionState.CANCELLED
         _assert_update_func_raises()
 
     def test_doesnt_stop_updating(self):
