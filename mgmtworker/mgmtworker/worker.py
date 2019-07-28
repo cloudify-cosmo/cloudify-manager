@@ -69,7 +69,7 @@ class CloudifyWorkflowConsumer(CloudifyOperationConsumer):
         If a task contains a `dead-letter-exchange` (dlx_id) information it
         means it was scheduled
         """
-        return True if full_task.get('dlx_id') else False
+        return full_task.get('dlx_id')
 
     def handle_scheduled_execution(self, execution_id):
         # This is a scheduled task. It was sent to mgmtworker queue from a
@@ -80,12 +80,15 @@ class CloudifyWorkflowConsumer(CloudifyOperationConsumer):
     @staticmethod
     def can_scheduled_execution_start(execution_id, tenant):
         """
-        This method checks whether or not a scheduled execution can currently
-        start running. If it can't - it changes the executions status to
-        QUEUED (so that it will automatically start running when possible)
+        This method checks if a scheduled execution can currently start. If it
+        wasn't cancelled but can't currently start - it changes the executions
+        status to QUEUED (so it will automatically start when possible).
         """
         api_token = get_admin_api_token()
         tenant_client = get_rest_client(tenant=tenant, api_token=api_token)
+        execution = tenant_client.executions.get(execution_id)
+        if execution['status'] == ExecutionState.CANCELLED:
+            return False
         if tenant_client.executions.should_start(execution_id):
             return True
 
