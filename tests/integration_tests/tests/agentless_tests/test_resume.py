@@ -359,3 +359,41 @@ class TestResumeMgmtworker(AgentlessTestCase):
                         .runtime_properties['resumed'])
         self.assertTrue(self.client.node_instances.get(instance2.id)
                         .runtime_properties['marked'])
+
+    def test_resume_restart_workflow(self):
+        """Test that the restart builtin workflow can be resumed.
+
+        We'll test resuming at both the "stop" stage and the "start" stage.
+        If an operation doesn't run when we expect it to, then the
+        wait_for_log will timeout - the fact that it doesn't, is essentially
+        the assert in this test.
+        """
+        dep = self._create_deployment()
+        execution = self.execute_workflow(
+            workflow_name='restart',
+            wait_for_execution=False,
+            parameters={'node_ids': ['node1']},  # no need for both
+            deployment_id=dep.id)
+
+        # wait for the 'stop' operation to begin, and cancel
+        self._wait_for_log(
+            execution, message='cloudify.interfaces.lifecycle.stop')
+        self.client.executions.cancel(execution.id)
+        self.wait_for_execution_to_end(execution)
+
+        # now allow stop to finish, and resume...
+        self._unlock_operation('cloudify.interfaces.lifecycle.stop')
+        self.client.executions.resume(execution.id)
+
+        # ..,and wait for the start operation to begin, then cancel again
+        self._wait_for_log(
+            execution, message='cloudify.interfaces.lifecycle.start')
+        self.client.executions.cancel(execution.id)
+        self.wait_for_execution_to_end(execution)
+
+        # resume again and check that the execution finishes
+        self._unlock_operation('cloudify.interfaces.lifecycle.start')
+        self.client.executions.resume(execution.id)
+
+        execution = self.wait_for_execution_to_end(execution)
+        self.assertEqual(execution.status, 'terminated')
