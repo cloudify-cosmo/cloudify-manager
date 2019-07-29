@@ -18,6 +18,7 @@ from contextlib import contextmanager
 
 from cloudify.workflows import tasks
 from cloudify_rest_client.executions import Execution
+from cloudify_rest_client.exceptions import CloudifyClientError
 
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import (
@@ -27,9 +28,6 @@ from integration_tests.tests.utils import (
 
 
 class TestResumeMgmtworker(AgentlessTestCase):
-    wait_message = 'WAITING FOR FILE'
-    target_file = '/tmp/continue_test'
-
     @contextmanager
     def _set_retries(self, retries, retry_interval=0):
         original_config = {
@@ -55,8 +53,6 @@ class TestResumeMgmtworker(AgentlessTestCase):
             'operation': operation,
             'run_by_dependency_order': True,
             'operation_kwargs': {
-                'wait_message': self.wait_message,
-                'target_file': self.target_file
             }
         }
         if node_ids:
@@ -68,15 +64,21 @@ class TestResumeMgmtworker(AgentlessTestCase):
             parameters=parameters,
             client=client)
 
-    def _wait_for_log(self, execution, client=None):
+    def _wait_for_log(self, execution, message='WAITING',
+                      client=None, timeout=30):
+        # this message needs to be the same as what is sent in the task,
+        # in the cloudmock plugin
         client = client or self.client
         self.logger.info('Waiting for operation to start')
-        while True:
+        deadline = time.time() + timeout
+        while time.time() < deadline:
             logs = client.events.list(
                 execution_id=execution.id, include_logs=True)
-            if any(self.wait_message == log['message'] for log in logs):
-                break
+            if any(message in log['message'] for log in logs):
+                return
             time.sleep(1)
+        raise RuntimeError('Log not received in {0} seconds: {1}'
+                           .format(timeout, message))
 
     def _find_remote_operation(self, graph_id):
         """Find the only remote operation in the given graph"""
@@ -91,10 +93,38 @@ class TestResumeMgmtworker(AgentlessTestCase):
         self.logger.info('Stopping mgmtworker')
         self.execute_on_manager('systemctl stop cloudify-mgmtworker')
 
-    def _create_target_file(self):
-        self.execute_on_manager('touch {0}'.format(self.target_file))
-        self.addCleanup(self.execute_on_manager,
-                        'rm -rf {0}'.format(self.target_file))
+    def _unlock_operation(self, operation_name, node_ids=None, client=None):
+        """Allow an operation to run.
+
+        Add the operation name to runtime properties - operations (inside
+        of cloudmock/tasks.py) check that to see if they're allowed to
+        run.
+        This is because the tests want to control when does an operation
+        run and when does it finish, without relying on sleeping.
+        """
+        node_ids = node_ids or ['node1', 'node2']
+        client = client or self.client
+        for node_id in node_ids:
+            node_instances = client.node_instances.list(node_id=node_id)
+            for node_instance in node_instances:
+                while True:
+                    # retry in case the operation also updates runtime props
+                    properties = node_instance.runtime_properties
+                    unlock = properties.setdefault('unlock', [])
+                    if operation_name not in unlock:
+                        unlock.append(operation_name)
+                    try:
+                        client.node_instances.update(
+                            node_instance.id,
+                            runtime_properties=properties,
+                            version=node_instance.version)
+                    except CloudifyClientError as e:
+                        if e.status_code != 409:
+                            raise
+                        node_instance = client.node_instances.get(
+                            node_instance.id)
+                    else:
+                        break
 
     def _start_mgmtworker(self):
         self.logger.info('Restarting mgmtworker')
@@ -112,14 +142,14 @@ class TestResumeMgmtworker(AgentlessTestCase):
         self.assertEqual(execution.status, Execution.CANCELLED)
 
         graphs = self.client.tasks_graphs.list(
-            execution.id, name='execute_operation')
+            execution.id, name='execute_operation_interface1.op_resumable')
         self.assertEqual(len(graphs), 1)
 
         # check that the task is started
         task = self._find_remote_operation(graphs[0].id)
         self.assertEqual(task.state, tasks.TASK_STARTED)
 
-        self._create_target_file()
+        self._unlock_operation('interface1.op_resumable', node_ids=['node1'])
 
         # and now wait for the task to finish. It polls every 1 second, so
         # allow a 3 seconds wait.
@@ -145,7 +175,7 @@ class TestResumeMgmtworker(AgentlessTestCase):
             self.client.node_instances.get(instance2.id).runtime_properties)
 
         self._stop_mgmtworker()
-        self._create_target_file()
+        self._unlock_operation('interface1.op_resumable')
         self._start_mgmtworker()
 
         self.logger.info('Waiting for the execution to finish')
@@ -170,7 +200,7 @@ class TestResumeMgmtworker(AgentlessTestCase):
         self._wait_for_log(execution)
 
         self._stop_mgmtworker()
-        self._create_target_file()
+        self._unlock_operation('interface1.op_nonresumable')
         self._start_mgmtworker()
 
         self.logger.info('Waiting for the execution to fail')
@@ -195,7 +225,7 @@ class TestResumeMgmtworker(AgentlessTestCase):
         self.assertRaises(RuntimeError,
                           self.wait_for_execution_to_end, execution)
 
-        self._create_target_file()
+        self._unlock_operation('interface1.op_failing')
         self.client.executions.resume(execution.id, force=True)
         execution = self.wait_for_execution_to_end(execution)
         self.assertEqual(execution.status, 'terminated')
@@ -273,7 +303,7 @@ class TestResumeMgmtworker(AgentlessTestCase):
         execution = self.wait_for_execution_to_end(execution)
         self.assertEqual(execution.status, 'cancelled')
 
-        self._create_target_file()
+        self._unlock_operation('interface1.op_resumable')
         execution = self.client.executions.resume(execution.id)
         execution = self.wait_for_execution_to_end(execution)
         self.assertEqual(execution.status, 'terminated')
@@ -296,7 +326,7 @@ class TestResumeMgmtworker(AgentlessTestCase):
         execution = self.wait_for_execution_to_end(execution)
         self.assertEqual(execution.status, 'cancelled')
 
-        self._create_target_file()
+        self._unlock_operation('interface1.op_nonresumable')
         execution = self.client.executions.resume(execution.id)
         self.assertRaises(RuntimeError,
                           self.wait_for_execution_to_end, execution)
@@ -320,7 +350,7 @@ class TestResumeMgmtworker(AgentlessTestCase):
         execution = self.wait_for_execution_to_end(execution)
         self.assertEqual(execution.status, 'cancelled')
 
-        self._create_target_file()
+        self._unlock_operation('interface1.op_nonresumable')
         execution = self.client.executions.resume(execution.id, force=True)
         execution = self.wait_for_execution_to_end(execution)
         self.assertEqual(execution.status, 'terminated')

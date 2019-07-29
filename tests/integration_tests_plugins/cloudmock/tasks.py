@@ -13,7 +13,6 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-import os
 import time
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
@@ -26,13 +25,35 @@ RUNNING = 'running'
 NOT_RUNNING = 'not_running'
 
 
-def _resumable_task_base(ctx, wait_message, target_file):
+def _merge_handler(prev_props, next_props):
+    """On conflict in updating runtime-props, take the newer ones, but
+    make sure that 'resumed' is true of either was true"""
+    if 'resumed' in prev_props or 'resumed' in next_props:
+        next_props['resumed'] = (prev_props.get('resumed', False) or
+                                 next_props.get('resumed', False))
+    return next_props
+
+
+def _is_unlocked():
+    """IS the current operation allowed to continue?
+
+    The operations are unlocked from within the test code (see test_resume.py),
+    to simulate long-running operations and be able to control when are
+    cancel/resume commands executed. (otherwise we'd have to rely on sleeps)
+    """
+    return ctx.operation.name in \
+        ctx.instance.runtime_properties.get('unlock', [])
+
+
+def _resumable_task_base(ctx):
     ctx.instance.runtime_properties['resumed'] = False
-    ctx.instance.update()
-    while not os.path.exists(target_file):
-        ctx.logger.info(wait_message)
+    ctx.instance.update(_merge_handler)
+    while not _is_unlocked():
+        ctx.instance.refresh()
+        ctx.logger.info('{0} WAITING'.format(ctx.operation.name))
         time.sleep(1)
     ctx.instance.runtime_properties['resumed'] = True
+    ctx.instance.update(_merge_handler)
 
 
 @operation
@@ -70,8 +91,8 @@ def nonresumable(**kwargs):
 
 
 @operation
-def failing(ctx, target_file, **kwargs):
-    if not os.path.exists(target_file):
+def failing(ctx, **kwargs):
+    if not _is_unlocked():
         raise ValueError('Error')
     ctx.instance.runtime_properties['resumed'] = True
 

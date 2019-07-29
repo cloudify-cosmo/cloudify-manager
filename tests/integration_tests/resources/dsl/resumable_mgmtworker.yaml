@@ -9,6 +9,10 @@ node_templates:
   node1:
     type: cloudify.nodes.Root
     interfaces:
+      cloudify.interfaces.lifecycle:
+        # start and stop are only for test_restart
+        start: cloudmock.cloudmock.tasks.resumable
+        stop: cloudmock.cloudmock.tasks.resumable
       interface1:
         op_resumable: cloudmock.cloudmock.tasks.resumable
         op_nonresumable: cloudmock.cloudmock.tasks.nonresumable
