@@ -64,22 +64,6 @@ class TestResumeMgmtworker(AgentlessTestCase):
             parameters=parameters,
             client=client)
 
-    def _wait_for_log(self, execution, message='WAITING',
-                      client=None, timeout=30):
-        # this message needs to be the same as what is sent in the task,
-        # in the cloudmock plugin
-        client = client or self.client
-        self.logger.info('Waiting for operation to start')
-        deadline = time.time() + timeout
-        while time.time() < deadline:
-            logs = client.events.list(
-                execution_id=execution.id, include_logs=True)
-            if any(message in log['message'] for log in logs):
-                return
-            time.sleep(1)
-        raise RuntimeError('Log not received in {0} seconds: {1}'
-                           .format(timeout, message))
-
     def _find_remote_operation(self, graph_id):
         """Find the only remote operation in the given graph"""
         remote_operations = [
@@ -136,7 +120,7 @@ class TestResumeMgmtworker(AgentlessTestCase):
         dep = self._create_deployment()
         execution = self._start_execution(
             dep, 'interface1.op_resumable', node_ids=['node1'])
-        self._wait_for_log(execution)
+        self.wait_for_event(execution, 'WAITING')
         self.client.executions.cancel(execution.id)
         execution = self.wait_for_execution_to_end(execution)
         self.assertEqual(execution.status, Execution.CANCELLED)
@@ -166,7 +150,7 @@ class TestResumeMgmtworker(AgentlessTestCase):
         instance2 = self.client.node_instances.list(
             deployment_id=dep.id, node_id='node2')[0]
         execution = self._start_execution(dep, 'interface1.op_resumable')
-        self._wait_for_log(execution)
+        self.wait_for_event(execution, 'WAITING')
 
         self.assertFalse(self.client.node_instances.get(instance.id)
                          .runtime_properties['resumed'])
@@ -197,7 +181,7 @@ class TestResumeMgmtworker(AgentlessTestCase):
         instance2 = self.client.node_instances.list(
             deployment_id=dep.id, node_id='node2')[0]
         execution = self._start_execution(dep, 'interface1.op_nonresumable')
-        self._wait_for_log(execution)
+        self.wait_for_event(execution, 'WAITING')
 
         self._stop_mgmtworker()
         self._unlock_operation('interface1.op_nonresumable')
@@ -297,7 +281,7 @@ class TestResumeMgmtworker(AgentlessTestCase):
         instance2 = self.client.node_instances.list(
             deployment_id=dep.id, node_id='node2')[0]
         execution = self._start_execution(dep, 'interface1.op_resumable')
-        self._wait_for_log(execution)
+        self.wait_for_event(execution, 'WAITING')
         self.client.executions.cancel(execution.id, kill=True)
         self.logger.info('Waiting for the execution to fail')
         execution = self.wait_for_execution_to_end(execution)
@@ -320,7 +304,7 @@ class TestResumeMgmtworker(AgentlessTestCase):
         instance2 = self.client.node_instances.list(
             deployment_id=dep.id, node_id='node2')[0]
         execution = self._start_execution(dep, 'interface1.op_nonresumable')
-        self._wait_for_log(execution)
+        self.wait_for_event(execution, 'WAITING')
         self.client.executions.cancel(execution.id, kill=True)
         self.logger.info('Waiting for the execution to fail')
         execution = self.wait_for_execution_to_end(execution)
@@ -344,7 +328,7 @@ class TestResumeMgmtworker(AgentlessTestCase):
         instance2 = self.client.node_instances.list(
             deployment_id=dep.id, node_id='node2')[0]
         execution = self._start_execution(dep, 'interface1.op_nonresumable')
-        self._wait_for_log(execution)
+        self.wait_for_event(execution, 'WAITING')
         self.client.executions.cancel(execution.id)
         self.logger.info('Waiting for the execution to fail')
         execution = self.wait_for_execution_to_end(execution)
@@ -365,7 +349,7 @@ class TestResumeMgmtworker(AgentlessTestCase):
 
         We'll test resuming at both the "stop" stage and the "start" stage.
         If an operation doesn't run when we expect it to, then the
-        wait_for_log will timeout - the fact that it doesn't, is essentially
+        wait_for_event will timeout - the fact that it doesn't, is essentially
         the assert in this test.
         """
         dep = self._create_deployment()
@@ -376,8 +360,7 @@ class TestResumeMgmtworker(AgentlessTestCase):
             deployment_id=dep.id)
 
         # wait for the 'stop' operation to begin, and cancel
-        self._wait_for_log(
-            execution, message='cloudify.interfaces.lifecycle.stop')
+        self.wait_for_event(execution, 'cloudify.interfaces.lifecycle.stop')
         self.client.executions.cancel(execution.id)
         self.wait_for_execution_to_end(execution)
 
@@ -386,8 +369,7 @@ class TestResumeMgmtworker(AgentlessTestCase):
         self.client.executions.resume(execution.id)
 
         # ..,and wait for the start operation to begin, then cancel again
-        self._wait_for_log(
-            execution, message='cloudify.interfaces.lifecycle.start')
+        self.wait_for_event(execution, 'cloudify.interfaces.lifecycle.stop')
         self.client.executions.cancel(execution.id)
         self.wait_for_execution_to_end(execution)
 
