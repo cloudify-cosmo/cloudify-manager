@@ -15,14 +15,11 @@
 
 import uuid
 import time
-import json
 from datetime import datetime, timedelta
-from requests.exceptions import ConnectionError
+from integration_tests.framework import docl
 from integration_tests import AgentlessTestCase
 from integration_tests.framework.postgresql import run_query
 from integration_tests.tests.utils import get_resource as resource
-from integration_tests.framework import docl, utils
-from cloudify_rest_client.exceptions import CloudifyClientError
 
 from manager_rest.flask_utils import get_postgres_conf
 
@@ -151,8 +148,7 @@ class EventsTest(AgentlessTestCase):
         # Make sure 'snapshots create' events appear
         snapshot_id = 's{0}'.format(uuid.uuid4())
         execution = self.client.snapshots.create(snapshot_id, False, False)
-        self._wait_for_events_to_update_in_DB(
-            execution, CREATE_SNAPSHOT_SUCCESS_MSG)
+        self.wait_for_event(execution, CREATE_SNAPSHOT_SUCCESS_MSG)
 
         # Make sure 'snapshots restore' events appear
         self.undeploy_application(
@@ -163,8 +159,7 @@ class EventsTest(AgentlessTestCase):
         # requests to avoid the deadlock described in CY-1455
         time.sleep(10)
 
-        self._wait_for_events_to_update_in_DB(
-            execution, RESTORE_SNAPSHOT_SUCCESS_MSG)
+        self.wait_for_event(execution, RESTORE_SNAPSHOT_SUCCESS_MSG)
 
     def _events_list(self, **kwargs):
         if 'deployment_id' not in kwargs:
@@ -183,32 +178,6 @@ class EventsTest(AgentlessTestCase):
         dsl_path = resource('dsl/basic_event_and_log.yaml')
         test_deployment, _ = self.deploy_application(dsl_path)
         return test_deployment.id
-
-    def _wait_for_events_to_update_in_DB(
-            self, execution, message, timeout_seconds=60):
-        """ It might take longer for events to show up in the DB than it takes
-        for Execution status to return, this method waits until a specific
-        event is listed in the DB, and will fail in case of a time out.
-        """
-
-        deadline = time.time() + timeout_seconds
-        all_events = []
-        while message not in [e['message'] for e in all_events]:
-            time.sleep(0.5)
-            if time.time() > deadline:
-                raise utils.TimeoutException(
-                    'Execution timed out: \n{0}'.format(
-                        json.dumps(execution, indent=2)
-                    )
-                )
-            # This might fail due to the fact that we're changing the DB in
-            # real time - it's OK. When restoring a snapshot we also restart
-            # the rest service and nginx, which might lead to intermittent
-            # connection errors. Just try again
-            try:
-                all_events = self.client.events.list(include_logs=True)
-            except (CloudifyClientError, ConnectionError):
-                pass
 
 
 class EventsAlternativeTimezoneTest(EventsTest):

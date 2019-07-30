@@ -30,6 +30,7 @@ from contextlib import contextmanager
 import wagon
 from pytest import mark
 from retrying import retry
+from requests.exceptions import ConnectionError
 
 import cloudify.utils
 import cloudify.logs
@@ -54,6 +55,7 @@ from integration_tests.tests.utils import (
 )
 
 from cloudify_rest_client.executions import Execution
+from cloudify_rest_client.exceptions import CloudifyClientError
 
 
 class BaseTestCase(unittest.TestCase):
@@ -472,6 +474,41 @@ class BaseTestCase(unittest.TestCase):
         for execution in executions:
             if execution['status'] not in Execution.END_STATES:
                 self.wait_for_execution_to_end(execution)
+
+    def wait_for_event(self, execution, message, timeout_seconds=60,
+                       allow_connection_error=True, client=None):
+        """ Wait until a specific event is listed in the DB.
+
+        Events are stored asynchronously, so we might need to wait for
+        an event to be stored in the database.
+
+        :param execution: Check events for this execution
+        :param message: Wait for an event with this message
+        :param timeout_seconds: How long to keep polling
+        :param allow_connection_error: Catch the exception if a connection
+            error happens when polling for events. This is useful for tests
+            that also change the db in the meantime (snapshots)
+        :param client: The restclient to use
+        """
+        client = client or self.client
+        deadline = time.time() + timeout_seconds
+        all_events = []
+        while message not in [e['message'] for e in all_events]:
+            time.sleep(0.5)
+            if time.time() > deadline:
+                raise utils.TimeoutException(
+                    'Execution timed out when waiting for message {0}: \n{1}'
+                    .format(message, json.dumps(execution, indent=2))
+                )
+            # This might fail due to the fact that we're changing the DB in
+            # real time - it's OK. When restoring a snapshot we also restart
+            # the rest service and nginx, which might lead to intermittent
+            # connection errors. Just try again
+            try:
+                all_events = client.events.list(include_logs=True)
+            except (CloudifyClientError, ConnectionError):
+                if not allow_connection_error:
+                    raise
 
 
 class AgentlessTestCase(BaseTestCase):

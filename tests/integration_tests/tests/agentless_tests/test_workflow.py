@@ -14,6 +14,8 @@
 #    * limitations under the License.
 
 import os
+import re
+import time
 import uuid
 import shutil
 import tarfile
@@ -56,6 +58,29 @@ class BasicWorkflowsTest(AgentlessTestCase):
 
         outputs = self.client.deployments.outputs.get(deployment.id).outputs
         self.assertEquals(outputs['ip_address'], '')
+
+    def test_restart_workflow(self):
+        """Check that the restart workflow runs stop, and then start"""
+        dsl_path = get_resource('dsl/basic.yaml')
+        blueprint_id = self.id()
+        deployment, _ = self.deploy_application(
+            dsl_path,
+            blueprint_id=blueprint_id,
+            timeout_seconds=15
+        )
+        execution = self.execute_workflow('restart', deployment.id)
+        # event storing is async, allow some time for them to be stored
+        time.sleep(2)
+        events = self.client.events.list(
+            execution_id=execution.id, include_logs=True)
+
+        # check that the expected logs exist - and that they're
+        # in the correct order
+        seen_logs = [event['message'] for event in events
+                     if re.match('stopping|starting', event['message'])]
+        self.assertEqual(len(seen_logs), 2)
+        self.assertIn('stopping machine', seen_logs[0])
+        self.assertIn('starting machine', seen_logs[1])
 
     def test_dependencies_order_with_two_nodes(self):
         dsl_path = get_resource("dsl/dependencies_order_with_two_nodes.yaml")

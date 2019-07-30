@@ -14,7 +14,6 @@
 #    * limitations under the License.
 
 import uuid
-import time
 from integration_tests import AgentTestCase
 from integration_tests.tests.utils import get_resource as resource
 
@@ -34,16 +33,6 @@ class TestResumeMgmtworker(AgentTestCase):
                             'wait_seconds': wait_seconds
                         }})
 
-    def _wait_for_log(self, execution, wait_message=None):
-        if wait_message is None:
-            wait_message = self.wait_message
-        while True:
-            logs = self.client.events.list(
-                execution_id=execution.id, include_logs=True)
-            if any(self.wait_message == log['message'] for log in logs):
-                break
-            time.sleep(1)
-
     def _stop_mgmtworker(self):
         self.logger.info('Stopping mgmtworker')
         self.execute_on_manager('systemctl stop cloudify-mgmtworker')
@@ -61,7 +50,7 @@ class TestResumeMgmtworker(AgentTestCase):
         execution = self._start_execution(deployment, 'interface1.op1')
 
         # wait until the agent starts executing operations
-        self._wait_for_log(execution)
+        self.wait_for_event(execution, self.wait_message)
         instance = self.client.node_instances.list(
             node_id='agent_host', deployment_id=deployment.id)[0]
         self.assertFalse(instance.runtime_properties['resumed'])
@@ -71,7 +60,7 @@ class TestResumeMgmtworker(AgentTestCase):
         self._start_mgmtworker()
 
         # check that we resume waiting for the agent operation
-        self._wait_for_log(execution, self.wait_message[::-1])
+        self.wait_for_event(execution, self.wait_message[::-1])
         self.wait_for_execution_to_end(execution)
         instance = self.client.node_instances.get(instance.id)
         self.assertTrue(instance.runtime_properties['resumed'])
@@ -86,7 +75,7 @@ class TestResumeMgmtworker(AgentTestCase):
             deployment, 'interface1.op1', wait_seconds=10)
 
         # wait until the agent starts executing operations
-        self._wait_for_log(execution)
+        self.wait_for_event(execution, self.wait_message)
 
         self._stop_mgmtworker()
         # wait for the agent to finish executing the operation
