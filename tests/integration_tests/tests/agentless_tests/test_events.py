@@ -16,10 +16,10 @@
 import uuid
 import time
 from datetime import datetime, timedelta
+from integration_tests.framework import docl
 from integration_tests import AgentlessTestCase
 from integration_tests.framework.postgresql import run_query
 from integration_tests.tests.utils import get_resource as resource
-from integration_tests.framework import docl
 
 from manager_rest.flask_utils import get_postgres_conf
 
