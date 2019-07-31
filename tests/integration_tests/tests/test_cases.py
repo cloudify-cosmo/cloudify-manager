@@ -493,7 +493,7 @@ class BaseTestCase(unittest.TestCase):
         client = client or self.client
         deadline = time.time() + timeout_seconds
         all_events = []
-        while message not in [e['message'] for e in all_events]:
+        while not any(message in e['message'] for e in all_events):
             time.sleep(0.5)
             if time.time() > deadline:
                 raise utils.TimeoutException(
