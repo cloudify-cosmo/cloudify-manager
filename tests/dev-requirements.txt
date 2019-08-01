@@ -1,5 +1,5 @@
 https://github.com/cloudify-cosmo/cloudify-common/archive/CY-1219-import-fixes.zip
-https://github.com/cloudify-cosmo/cloudify-cli/archive/master.zip
+https://github.com/cloudify-cosmo/cloudify-cli/archive/CY-1219-import-fixes.zip
 https://github.com/cloudify-cosmo/cloudify-diamond-plugin/archive/master.zip
 https://github.com/cloudify-cosmo/cloudify-agent/archive/master.zip
 
