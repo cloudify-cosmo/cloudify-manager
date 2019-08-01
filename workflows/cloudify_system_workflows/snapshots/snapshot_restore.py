@@ -125,7 +125,6 @@ class SnapshotRestore(object):
             self._validate_snapshot()
 
             existing_plugins = self._get_existing_plugin_names()
-
             with Postgres(self._config) as postgres:
                 self._restore_files_to_manager()
                 with self._pause_amqppostgres():

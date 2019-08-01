@@ -17,6 +17,7 @@
 import os
 import shutil
 
+from flask_restful import Resource
 from flask_restful_swagger import swagger
 
 from cloudify.models_states import SnapshotState
@@ -29,7 +30,8 @@ from manager_rest.storage import get_storage_manager, models
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.upload_manager import UploadedSnapshotsManager
 from manager_rest.constants import (FILE_SERVER_SNAPSHOTS_FOLDER,
-                                    FILE_SERVER_RESOURCES_FOLDER)
+                                    FILE_SERVER_RESOURCES_FOLDER,
+                                    TEMP_SNAPSHOT_FOLDER_SUFFIX)
 
 
 def _get_snapshot_path(snapshot_id):
@@ -278,3 +280,23 @@ class SnapshotsIdRestore(SecuredResource):
             ignore_plugin_failure
         )
         return execution, 200
+
+
+class SnapshotsStatus(Resource):
+    """
+    Note that this class is 'Resource' and not 'SecuredResource' since we
+    want it to work during the entire time of snapshot restore, even when
+    authentication is not possible.
+    """
+    def get(self):
+        """"
+        While a snapshot is restored a temp file called
+        `<unique-str>-snapshot-data` is created on the Manager. If the file
+        does not exists it means there is no snapshot restore running.
+        """
+        for filename in os.listdir('/tmp'):
+            if TEMP_SNAPSHOT_FOLDER_SUFFIX in filename:
+                return {'status': 'Snapshot restore in progress...\nThis may '
+                                  'take a while, depending on the snapshot '
+                                  'size.'}
+        return {'status': 'No `restore_snapshot` workflow currently running.'}

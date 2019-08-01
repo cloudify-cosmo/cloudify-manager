@@ -47,6 +47,8 @@ FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER = 'uploaded-blueprints'
 FILE_SERVER_SNAPSHOTS_FOLDER = 'snapshots'
 FILE_SERVER_PLUGINS_FOLDER = 'plugins'
 FILE_SERVER_AUTHENTICATORS_FOLDER = 'authenticators'
+TEMP_SNAPSHOT_FOLDER_SUFFIX = 'snapshot-data'
+
 
 SECURITY_FILE_LOCATION = '/opt/manager/rest-security.conf'
 

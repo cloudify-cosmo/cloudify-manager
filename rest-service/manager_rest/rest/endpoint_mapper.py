@@ -35,6 +35,7 @@ def setup_resources(api):
         'SnapshotsId': 'snapshots/<string:snapshot_id>',
         'SnapshotsIdArchive': 'snapshots/<string:snapshot_id>/archive',
         'SnapshotsIdRestore': 'snapshots/<string:snapshot_id>/restore',
+        'SnapshotsStatus': 'snapshot-status',
         'Executions': 'executions',
         'ExecutionsId': 'executions/<string:execution_id>',
         'Deployments': 'deployments',
