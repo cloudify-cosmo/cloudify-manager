@@ -22,7 +22,7 @@ BuildRequires: dbus-devel >= %{dbus_version}
 BuildRequires: dbus-glib-devel >= %{dbus_glib_version}
 BuildRequires: python-devel
 
-Requires:       python >= 2.7, postgresql-libs, nginx >= 1.12, sudo, dbus >= 1.6
+Requires:       python >= 2.7, postgresql-libs, sudo, dbus >= 1.6
 Requires(pre):  shadow-utils
 
 Source0:  http://www.getcloudify.org/spec/diamond-plugin/1.3.17/plugin.yaml
