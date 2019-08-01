@@ -2191,12 +2191,11 @@ def _create_task_mapping():
 
 
 def create_secret(key, secret, tenant):
-    encrypted_value = encrypt(secret['value'])
     sm = get_storage_manager()
     timestamp = utils.get_formatted_timestamp()
     new_secret = models.Secret(
         id=key,
-        value=encrypted_value,
+        value=encrypt(secret['value']),
         created_at=timestamp,
         updated_at=timestamp,
         visibility=secret['visibility'],

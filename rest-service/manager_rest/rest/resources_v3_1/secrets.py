@@ -200,6 +200,7 @@ class SecretsImport(SecuredResource):
         for i, secret in enumerate(secrets_list):
             secret_errors = {}
             missing_fields = []
+            self._is_missing_field(secret, 'key', missing_fields)
             self._validate_is_hidden_field(secret, missing_fields,
                                            secret_errors)
             self._validate_visibility_field(secret, missing_fields,
@@ -265,13 +266,13 @@ class SecretsImport(SecuredResource):
         Asserts 'encrypted' field is boolean, and decrypts the secrets' value
         when encrypted == True
         """
-        if (self._is_missing_field(secret, 'encrypted', missing_fields) or
-                self._is_missing_field(secret, 'value', missing_fields)):
+        invalid_value = self._is_missing_field(secret, 'value', missing_fields)
+        if self._is_missing_field(secret, 'encrypted', missing_fields):
             return
         is_encrypted = self._validate_boolean(secret, 'encrypted')
         if is_encrypted is None:
             secret_errors['encrypted'] = 'Not boolean'
-        elif is_encrypted:
+        elif is_encrypted and not invalid_value:
             self._decrypt_value(secret, encryption_key, secret_errors)
 
     @staticmethod
@@ -301,9 +302,9 @@ class SecretsImport(SecuredResource):
 
     @staticmethod
     def _is_missing_field(secret, field, missing_fields):
-        value = secret[field] if field in secret.keys() else None
-        if (field not in secret.keys() or value is None or
-                (isinstance(value, unicode) and not value.strip())):
+        value = secret[field] if field in secret else None
+        empty_string = isinstance(value, unicode) and not value.strip()
+        if value is None or empty_string:
             missing_fields.append(field)
             return True
         return False
