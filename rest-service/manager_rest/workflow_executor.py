@@ -20,7 +20,6 @@ from datetime import datetime
 
 from flask_security import current_user
 
-from cloudify.cryptography_utils import decrypt
 from cloudify.amqp_client import (get_client,
                                   SendHandler,
                                   ScheduledExecutionHandler)
@@ -134,13 +133,7 @@ def generate_execution_token(execution_id):
 
 
 def _get_tenant_dict():
-    tenant_dict = utils.current_tenant.to_dict()
-    tenant_dict['rabbitmq_password'] = decrypt(
-        tenant_dict['rabbitmq_password']
-    )
-    for to_remove in ['id', 'users', 'groups']:
-        tenant_dict.pop(to_remove)
-    return tenant_dict
+    return {'name': utils.current_tenant.name}
 
 
 def _get_amqp_client():
@@ -224,7 +217,7 @@ def _get_time_to_live(scheduled_time):
     :return: time (in miliseconds) between `now` and `scheduled time`
     """
     now = datetime.utcnow()
-    delta = (scheduled_time-now).total_seconds()
+    delta = (scheduled_time - now).total_seconds()
     delta = int(math.floor(delta))
     delta_in_milisecs = delta * 1000
     return delta_in_milisecs
