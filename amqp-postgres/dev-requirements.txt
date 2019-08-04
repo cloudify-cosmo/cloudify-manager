@@ -1,2 +1,2 @@
-git+https://github.com/cloudify-cosmo/cloudify-common@CY-1219-import-fixes
+git+https://github.com/cloudify-cosmo/cloudify-common@master
 -e ../rest-service
