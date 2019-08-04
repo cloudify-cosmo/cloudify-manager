@@ -275,11 +275,3 @@ def parse_datetime(datetime_str):
 def is_hidden_value_permitted(secret):
     return is_administrator(secret.tenant) or \
            secret.created_by == current_user.username
-
-
-def verify_dict_params(elements_dict, params):
-    missing_attributes = []
-    for attr in params:
-        if attr not in elements_dict:
-            missing_attributes.append(attr)
-    return missing_attributes

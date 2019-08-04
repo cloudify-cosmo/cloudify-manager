@@ -89,7 +89,8 @@ auth_dict = {
         'broker_credentials': ['sys_admin', 'manager'],
         'execution_list': permitted_roles,
         'deployment_list': permitted_roles,
-        'blueprint_list': permitted_roles
+        'blueprint_list': permitted_roles,
+        'secret_create': ['sys_admin', 'manager', 'user']
     }
 }
 
