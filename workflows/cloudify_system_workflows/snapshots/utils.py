@@ -35,15 +35,8 @@ SCHEMA_SCRIPT = '/opt/manager/resources/cloudify/migrations/schema.py'
 
 
 class DictToAttributes(dict):
-    def __init__(self, dictionary=None):
-        super(DictToAttributes, self).__init__()
-        if dictionary is None:
-            pass
-        elif isinstance(dictionary, dict):
-            for key in dictionary:
-                self.__setitem__(key, dictionary[key])
-        else:
-            raise TypeError('expected dict')
+    def __init__(self, dictionary):
+        super(DictToAttributes, self).__init__(dictionary)
 
     def __getattr__(self, key):
         return super(DictToAttributes, self).__getitem__(key)
