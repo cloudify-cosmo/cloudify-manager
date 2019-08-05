@@ -645,6 +645,17 @@ class Agent(CreatedAtMixin, SQLResourceBase):
 
     _node_instance_fk = foreign_key(NodeInstance._storage_id)
 
+    # The following fields for backwards compatibility with the REST API:
+    # agents.list() pre-dated the Agents table in the DB
+    _extra_fields = {
+        'host_id': flask_fields.String,
+        'node': flask_fields.String,
+        'deployment': flask_fields.String,
+        'node_ids': flask_fields.String,
+        'node_instance_ids': flask_fields.String,
+        'install_methods': flask_fields.String
+    }
+
     @declared_attr
     def node_instance(cls):
         # When upgrading an agent we want to save both the old and new agents
@@ -656,6 +667,19 @@ class Agent(CreatedAtMixin, SQLResourceBase):
     node_instance_id = association_proxy('node_instance', 'id')
     node_id = association_proxy('node_instance', 'node_id')
     deployment_id = association_proxy('node_instance', 'deployment_id')
+
+    node = node_id
+    deployment = deployment_id
+    node_ids = node_id
+    node_instance_ids = node_instance_id
+
+    @property
+    def host_id(self):
+        return self.node_instance_id
+
+    @hybrid_property
+    def install_methods(self):
+        return self.install_method
 
     def set_node_instance(self, node_instance):
         self._set_parent(node_instance)

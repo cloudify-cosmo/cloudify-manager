@@ -182,21 +182,84 @@ class AgentsTest(base_test.BaseServerTestCase):
         self.assertEqual(node_instance.id, 'node_instance_1')
         self.assertEqual(node_instance.deployment_id, 'deployment_1')
 
+    def test_list_agents(self):
+        self.put_agent()
+        self.put_agent(agent_name='agent_2', state=AgentState.CREATING)
+        self.assertEqual(len(self.client.agents.list().items), 1)
+        self.client.agents.update('agent_2', AgentState.STARTED)
+        self.assertEqual(len(self.client.agents.list().items), 2)
+
+    def test_list_agents_sort_byname(self):
+        self.put_agent(agent_name='price')
+        self.put_agent(agent_name='smith')
+        self.put_agent(agent_name='kevin')
+        agent_list = self.client.agents.list(sort='name')
+        self.assertEqual([agent['id'] for agent in agent_list],
+                         ['kevin', 'price', 'smith'])
+
+    def test_list_agents_include(self):
+        self.put_agent()
+        agent_list = self.client.agents.list(_include=['id', 'ip'])
+        self.assertEqual(agent_list.items,
+                         [{'ip': '127.0.0.1', 'id': 'agent_1'}])
+
+    def test_list_agents_search(self):
+        self.put_agent(agent_name='kevin')
+        self.put_agent(agent_name='smith')
+        agent_list = self.client.agents.list(_search='s')
+        self.assertEqual(len(agent_list.items), 1)
+        self.assertEqual(agent_list.items[0]['id'], 'smith')
+
+    def test_list_agents_api_compatibility(self):
+        """
+        Testing filter fields for backwards compatibility with the REST API
+        """
+        self.put_agent(agent_name='agent_1', instance_id='inst_1')
+        self.put_agent(agent_name='agent_2',
+                       instance_id='inst_2',
+                       install_method='local')
+        self.put_agent(agent_name='agent_3', instance_id='inst_3')
+        agent_list = self.client.agents.list(node_instance_ids=['inst_1',
+                                                                'inst_2'])
+        self.assertEqual(len(agent_list.items), 2)
+        self.assertEqual([agent['id'] for agent in agent_list],
+                         ['agent_1', 'agent_2'])
+
+        agent_list = self.client.agents.list(install_methods=['remote'])
+        self.assertEqual(len(agent_list.items), 2)
+        self.assertEqual([agent['id'] for agent in agent_list],
+                         ['agent_1', 'agent_3'])
+        agent_list = self.client.agents.list(node_ids=['node_id'])
+        self.assertEqual(len(agent_list.items), 3)
+        agent_list = self.client.agents.list(node_ids=['nonsuch_id'])
+        self.assertEqual(len(agent_list.items), 0)
+
+    def test_list_agents_filters(self):
+        """ Testing filter fields based on the Agent resource model """
+        self.put_agent(agent_name='agent_1')
+        self.assertEqual(len(self.client.agents.list(system='centos core')), 1)
+        self.assertEqual(len(self.client.agents.list(version='4.5.5')), 1)
+        self.assertEqual(len(self.client.agents.list(version='5.0')), 0)
+        self.assertEqual(len(self.client.agents.list(node_id='node_id')), 1)
+        self.assertEqual(len(self.client.agents.list(node_instance_id='a')), 0)
+
     def put_agent(self,
                   agent_name='agent_1',
                   instance_id='node_instance_1',
-                  deployment_id='deployment_1'):
+                  deployment_id='deployment_1',
+                  install_method='remote',
+                  state=AgentState.STARTED):
         node_instance = self._get_or_create_node_instance(instance_id,
                                                           deployment_id)
         agent = Agent(
             id=agent_name,
             name=agent_name,
             ip='127.0.0.1',
-            install_method='remote',
+            install_method=install_method,
             system='centos core',
             version='4.5.5',
             visibility='tenant',
-            state=AgentState.CREATING,
+            state=state,
             rabbitmq_username='rabbitmq_user_{0}'.format(agent_name),
             rabbitmq_password=encrypt(generate_user_password()),
             rabbitmq_exchange=agent_name,

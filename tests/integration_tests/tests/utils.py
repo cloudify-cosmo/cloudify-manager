@@ -119,17 +119,17 @@ def create_rest_client(**kwargs):
 
 
 def wait_for_deployment_creation_to_complete(
-        deployment_id, timeout_seconds=60):
+        deployment_id, timeout_seconds=60, client=None):
     do_retries(func=verify_deployment_env_created,
                exception_class=Exception,
                timeout_seconds=timeout_seconds,
-               deployment_id=deployment_id)
+               deployment_id=deployment_id, client=client)
 
 
-def verify_deployment_env_created(deployment_id):
+def verify_deployment_env_created(deployment_id, client=None):
     # A workaround for waiting for the deployment environment creation to
     # complete
-    client = create_rest_client()
+    client = client or create_rest_client()
     execs = client.executions.list(deployment_id=deployment_id)
     if not execs \
             or execs[0].status != Execution.TERMINATED \
@@ -145,14 +145,15 @@ def verify_deployment_env_created(deployment_id):
 
 
 def wait_for_deployment_deletion_to_complete(
-        deployment_id, timeout_seconds=60):
+        deployment_id, timeout_seconds=60, client=None):
     do_retries(func=verify_deployment_delete_complete,
                timeout_seconds=timeout_seconds,
-               deployment_id=deployment_id)
+               deployment_id=deployment_id,
+               client=client)
 
 
-def verify_deployment_delete_complete(deployment_id):
-    client = create_rest_client()
+def verify_deployment_delete_complete(deployment_id, client=None):
+    client = client or create_rest_client()
     deployment = client.deployments.list(id=deployment_id)
     if deployment:
         raise RuntimeError('Deployment with id {0} was not deleted yet.'
