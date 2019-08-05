@@ -234,3 +234,9 @@ class CapabilitiesTestCase(base_test.BaseServerTestCase):
             node_id='node1',
             evaluate_functions=True
         )
+
+    def test_no_capabilities(self):
+        deployment_id = 'deployment'
+        self._deploy(deployment_id, 'blueprint.yaml')
+        capabilities = self.client.deployments.capabilities.get('deployment')
+        self.assertEqual(capabilities['capabilities'], {})
