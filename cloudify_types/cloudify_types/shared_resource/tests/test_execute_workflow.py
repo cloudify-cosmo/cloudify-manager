@@ -75,17 +75,16 @@ class TestExecuteWorkflow(TestSharedResourceBase):
         self.total_patch.stop()
         super(TestExecuteWorkflow, self).tearDown()
 
+
+    @mock.patch('cloudify_types.component.polling.poll_with_timeout',
+            return_value=True)
     def test_basic_run(self):
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             self.cfy_mock_client.deployments.capabilities.get = \
                 mock.MagicMock(return_value={'capabilities': {}})
             mock_client.return_value = self.cfy_mock_client
-            poll_with_timeout_test = \
-                'cloudify_types.component.polling.poll_with_timeout'
-            with mock.patch(poll_with_timeout_test) as poll:
-                poll.return_value = True
-                execute_workflow('test',
-                                 parameters={})
+            execute_workflow('test',
+                             parameters={})
 
     def test_failed_run_on_non_shared_resource_node(self):
         self._ctx = self.get_mock_ctx('test', 'not_shared_resource')
@@ -95,66 +94,49 @@ class TestExecuteWorkflow(TestSharedResourceBase):
                           'test',
                           parameters={})
 
-    def test_failure_after_execution_failed(self):
-        with mock.patch('cloudify.manager.get_rest_client') as mock_client:
-            mock_client.return_value = self.cfy_mock_client
-            poll_with_timeout_test = \
-                'cloudify_types.component.polling.poll_with_timeout'
-            with mock.patch(poll_with_timeout_test) as poll:
-                poll.return_value = True
-                verify_execution_state_patch = (
-                    'cloudify_types.shared_resource.'
-                    'execute_shared_resource_workflow.verify_execution_state')
-                with mock.patch(verify_execution_state_patch) as verify:
-                    verify.return_value = False
-                    self.assertRaises(NonRecoverableError, execute_workflow,
-                                      'test',
-                                      parameters={}
-                                      )
+    @mock.patch('cloudify_types.shared_resource.'
+                'execute_shared_resource_workflow.verify_execution_state',
+                return_value=False)
+    @mock.patch('cloudify_types.component.polling.poll_with_timeout',
+                return_value=True)
+    def test_failure_after_execution_failed(self, *_):
+        self.assertRaises(NonRecoverableError,
+                          execute_workflow,
+                          'test',
+                          parameters={})
 
-    def test_retrying_after_waiting_all_executions_timed_out(self):
-        with mock.patch('cloudify.manager.get_rest_client') as mock_client:
-            mock_client.return_value = self.cfy_mock_client
-            poll_with_timeout_test = (
-                'cloudify_types.shared_resource.'
-                'execute_shared_resource_workflow.poll_with_timeout')
-            with mock.patch(poll_with_timeout_test) as poll:
-                poll.return_value = False
-                result = execute_workflow('test',
-                                          parameters={})
-                self.assertEqual(result, 'RETRIED')
+    @mock.patch('cloudify_types.shared_resource.'
+                'execute_shared_resource_workflow.poll_with_timeout',
+                return_value=False)
+    def test_retrying_after_waiting_all_executions_timed_out(self, _):
+        result = execute_workflow('test', parameters={})
+        self.assertEqual(result, 'RETRIED')
 
-    def test_cloudify_configuration_used(self):
+    @mock.patch('cloudify_types.shared_resource.'
+                'execute_shared_resource_workflow.verify_execution_state',
+                return_value=True)
+    @mock.patch('cloudify_types.shared_resource.'
+                'execute_shared_resource_workflow.poll_with_timeout',
+                return_value=True)
+    @mock.patch('cloudify_types.shared_resource.'
+                'execute_shared_resource_workflow.CloudifyClient')
+    def test_cloudify_configuration_used(self, mock_client, *_):
         shared_resources_with_client = copy.deepcopy(NODE_PROPS)
         shared_resources_with_client['client'] = {'test': 1}
         self._ctx = self.get_mock_ctx('test',
                                       SHARED_RESOURCE_TYPE,
                                       node_props=shared_resources_with_client)
         current_ctx.set(self._ctx)
-
-        with mock.patch('cloudify_types.shared_resource.'
-                        'execute_shared_resource_workflow.'
-                        'CloudifyClient') as mock_client:
-            self.cfy_mock_client.deployments.capabilities.get = \
-                mock.MagicMock(return_value={
-                    CAPABILITIES:
-                        {'test': 1}
-                })
-            mock_client.return_value = self.cfy_mock_client
-            poll_with_timeout_test = (
-                'cloudify_types.shared_resource.'
-                'execute_shared_resource_workflow.poll_with_timeout')
-            with mock.patch(poll_with_timeout_test) as poll:
-                poll.return_value = True
-                verify_execution_state_patch = (
-                    'cloudify_types.shared_resource.'
-                    'execute_shared_resource_workflow.verify_execution_state')
-                with mock.patch(verify_execution_state_patch) as verify:
-                    verify.return_value = True
-                    execute_workflow('test',
-                                     parameters={})
-                    self.assertEqual(mock_client.called, True)
-                    self.assertEqual(
-                        {'test': 1},
-                        (self._ctx.target.instance.runtime_properties
-                            [CAPABILITIES]))
+        self.cfy_mock_client.deployments.capabilities.get = \
+            mock.MagicMock(return_value={
+                CAPABILITIES:
+                    {'test': 1}
+            })
+        mock_client.return_value = self.cfy_mock_client
+        execute_workflow('test',
+                         parameters={})
+        self.assertEqual(mock_client.called, True)
+        self.assertEqual(
+            {'test': 1},
+            (self._ctx.target.instance.runtime_properties
+                [CAPABILITIES]))

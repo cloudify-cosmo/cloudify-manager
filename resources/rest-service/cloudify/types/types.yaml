@@ -442,6 +442,8 @@ node_types:
       cloudify.interfaces.lifecycle:
         create:
           implementation: cfy_extensions.cloudify_types.shared_resource.connect_deployment
+        delete:
+          implementation: cfy_extensions.cloudify_types.shared_resource.disconnect_deployment
 
 
 ##################################################################################

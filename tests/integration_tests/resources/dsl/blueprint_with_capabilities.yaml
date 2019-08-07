@@ -1,0 +1,8 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - cloudify/types/types.yaml
+
+capabilities:
+  capability1:
+    value: capability1_value

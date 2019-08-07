@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from cloudify import manager, ctx
+from cloudify.constants import SHARED_RESOURCE
 from cloudify.exceptions import NonRecoverableError
 from cloudify_rest_client.client import CloudifyClient
 
@@ -49,6 +50,12 @@ class SharedResource(object):
 
         self.deployment = self.config.get('deployment', '')
         self.deployment_id = self.deployment.get('id', '')
+        self._inter_deployment_dependency = {
+            'dependency_creator': '{0}.{1}'.format(SHARED_RESOURCE,
+                                                   ctx.instance.id),
+            'source_deployment': ctx.deployment.id,
+            'target_deployment': self.deployment_id
+        }
 
     def _mark_verified_shared_resource_node(self):
         """
@@ -60,14 +67,33 @@ class SharedResource(object):
             'id': self.deployment_id}
 
     def validate_deployment(self):
-        ctx.logger.info('Validating "{0}" SharedResource\'s deployment '
-                        'existing.'.format(self.deployment_id))
+        ctx.logger.info('Validating that "{0}" SharedResource\'s deployment '
+                        'exists...'.format(self.deployment_id))
         deployment = get_deployment_by_id(self.client, self.deployment_id)
         if not deployment:
             raise NonRecoverableError(
-                'SharedResource\'s deployment ID "{0}" does not exists, '
+                'SharedResource\'s deployment ID "{0}" does not exist, '
                 'please verify the given ID.'.format(
                     self.deployment_id))
         self._mark_verified_shared_resource_node()
         populate_runtime_with_wf_results(self.client, self.deployment_id)
+        self.client.inter_deployment_dependencies.create(
+            **self._inter_deployment_dependency)
+        return True
+
+    def remove_inter_deployment_dependency(self):
+        runtime_deployment_prop = ctx.instance.runtime_properties.get(
+            'deployment', {})
+        runtime_deployment_id = runtime_deployment_prop.get('id')
+        target_deployment = runtime_deployment_id or self.deployment_id
+        ctx.logger.info('Removing inter-deployment dependency between this '
+                        'deployment ("{0}") and "{1}" SharedResource\'s '
+                        'deployment...'
+                        ''.format(ctx.deployment.id,
+                                  target_deployment))
+        self._inter_deployment_dependency['target_deployment'] = \
+            target_deployment
+        self.client.inter_deployment_dependencies.delete(
+            doesnt_exist_ok=True,
+            **self._inter_deployment_dependency)
         return True

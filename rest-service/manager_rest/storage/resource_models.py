@@ -17,8 +17,9 @@
 from os import path
 from datetime import datetime
 
-from sqlalchemy import case
 from flask_restful import fields as flask_fields
+
+from sqlalchemy import case, UniqueConstraint
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy import func, select, table, column
 from sqlalchemy.ext.declarative import declared_attr
@@ -469,6 +470,8 @@ class DeploymentUpdate(CreatedAtMixin, SQLResourceBase):
     new_inputs = db.Column(db.PickleType)
     state = db.Column(db.Text)
     runtime_only_evaluation = db.Column(db.Boolean, default=False)
+    keep_old_deployment_dependencies = db.Column(
+        db.Boolean, nullable=False, default=False)
 
     _execution_fk = foreign_key(Execution._storage_id, nullable=True)
     _deployment_fk = foreign_key(Deployment._storage_id)
@@ -790,4 +793,39 @@ class Operation(SQLResourceBase):
     def tasks_graph(cls):
         return one_to_many_relationship(cls, TasksGraph, cls._tasks_graph_fk)
 
+
+class InterDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
+    __tablename__ = 'inter_deployment_dependencies'
+
+    dependency_creator = db.Column(db.Text, nullable=False)
+    _source_deployment = foreign_key(Deployment._storage_id)
+    _target_deployment = foreign_key(Deployment._storage_id,
+                                     nullable=True,
+                                     ondelete='SET NULL')
+    __table_args__ = (
+        UniqueConstraint(
+            'dependency_creator',
+            '_source_deployment',
+            '_tenant_id',
+            name='inter_deployment_uc'),
+    )
+
+    @declared_attr
+    def source_deployment(cls):
+        return one_to_many_relationship(
+            cls,
+            Deployment,
+            cls._source_deployment,
+            backreference='source_of_dependency_in')
+
+    @declared_attr
+    def target_deployment(cls):
+        return one_to_many_relationship(
+            cls,
+            Deployment,
+            cls._target_deployment,
+            backreference='target_of_dependency_in')
+
+    source_deployment_id = association_proxy('source_deployment', 'id')
+    target_deployment_id = association_proxy('target_deployment', 'id')
 # endregion
