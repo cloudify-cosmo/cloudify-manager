@@ -26,11 +26,7 @@ CREDENTIALS_PERMISSION = 'tenant_rabbitmq_credentials'
 
 @attr(client_min_version=3, client_max_version=base_test.LATEST_API_VERSION)
 @patch('manager_rest.security.secured_resource.premium_enabled', False)
-class TenantsTestCase(base_test.BaseServerTestCase):
-    """Tests for the community-only tenants endpoint.
-
-    Multitenancy endpoints are implemented and tested in cloudify-premium.
-    """
+class TenantsCommunityTestCase(base_test.BaseServerTestCase):
     def test_list_tenants(self):
         """Listing tenants is allowed on community."""
         result = self.client.tenants.list()
