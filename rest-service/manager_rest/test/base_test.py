@@ -332,6 +332,10 @@ class BaseServerTestCase(unittest.TestCase):
                 amqp_manager=MagicMock(),
                 authorization_file_path=temp_auth_file
             )
+            default_tenant.rabbitmq_username = \
+                'rabbitmq_username_default_tenant'
+            default_tenant.rabbitmq_vhost = \
+                'rabbitmq_vhost_defualt_tenant'
             default_tenant.rabbitmq_password = \
                 'gAAAAABb9p7U_Lnlmg7vyijjoxovyg215ThYi-VCTCzVYa1p-vpzi31WGko' \
                 'KD_hK1mQyKgjRss_Nz-3m-cgHpZChnVT4bxZIjnOnL6sF8RtozvlRoGHtnF' \
