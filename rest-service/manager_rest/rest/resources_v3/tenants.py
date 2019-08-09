@@ -20,10 +20,14 @@ from manager_rest.manager_exceptions import BadParametersError
 from manager_rest.storage import get_storage_manager, models
 from manager_rest.security.authorization import authorize
 from manager_rest.security import (MissingPremiumFeatureResource,
-                                   SecuredResource)
-
+                                   SecuredResource,
+                                   allow_on_community,
+                                   is_user_action_allowed,
+                                   missing_premium_feature_abort)
 from .. import rest_decorators, rest_utils
 from ..responses_v3 import TenantResponse, TenantDetailsResponse
+
+from cloudify.cryptography_utils import decrypt
 
 try:
     from cloudify_premium.multi_tenancy.secured_tenant_resource \
@@ -95,12 +99,30 @@ class TenantsId(SecuredMultiTenancyResource):
     @rest_decorators.exceptions_handled
     @authorize('tenant_get', get_tenant_from='param')
     @rest_decorators.marshal_with(TenantDetailsResponse)
-    def get(self, tenant_name, multi_tenancy):
+    @allow_on_community
+    def get(self, tenant_name, multi_tenancy=None):
+        """Get details for a single tenant
+
+        On community, only getting the default tenant is allowed.
         """
-        Get details for a single tenant
-        """
-        rest_utils.validate_inputs({'tenant_name': tenant_name})
-        return multi_tenancy.get_tenant(tenant_name)
+        if multi_tenancy:
+            rest_utils.validate_inputs({'tenant_name': tenant_name})
+            return multi_tenancy.get_tenant(tenant_name)
+        else:
+            if tenant_name != constants.DEFAULT_TENANT_NAME:
+                missing_premium_feature_abort()
+            tenant = get_storage_manager().get(
+                models.Tenant,
+                None,
+                filters={'name': tenant_name})
+            if is_user_action_allowed(
+                    'tenant_rabbitmq_credentials', tenant_name):
+                tenant.rabbitmq_password = decrypt(tenant.rabbitmq_password)
+            else:
+                tenant.rabbitmq_username = None
+                tenant.rabbitmq_password = None
+                tenant.rabbitmq_vhost = None
+            return tenant
 
     @rest_decorators.exceptions_handled
     @authorize('tenant_delete')

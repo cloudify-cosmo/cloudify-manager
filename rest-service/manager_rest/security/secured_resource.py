@@ -74,17 +74,29 @@ def authenticate(func):
     return wrapper
 
 
-def missing_premium_feature_abort(func):
+def missing_premium_feature_abort():
+    """Throw a nicely formatted "premium only" error"""
+    abort_error(
+        error=MissingPremiumPackage(
+            'This feature exists only in the premium edition of Cloudify.'
+            '\nPlease contact sales for additional info.'
+        ),
+        logger=current_app.logger,
+        hide_server_message=True
+    )
+
+
+def _abort_on_premium_missing(func):
+    """Mark a method as requiring premium.
+
+    Not for direct use, use MissingPremiumFeatureResource instead.
+    """
+    if getattr(func, 'allow_on_community', False):
+        return func
+
     @wraps(func)
     def abort(*args, **kwargs):
-        abort_error(
-            error=MissingPremiumPackage(
-                'This feature exists only in the premium edition of Cloudify.'
-                '\nPlease contact sales for additional info.'
-            ),
-            logger=current_app.logger,
-            hide_server_message=True
-        )
+        missing_premium_feature_abort()
     return abort
 
 
@@ -97,7 +109,17 @@ if premium_enabled:
         """
         return f
 else:
-    premium_only = missing_premium_feature_abort
+    premium_only = _abort_on_premium_missing
+
+
+def allow_on_community(func):
+    """Mark a method to be allowed on community.
+
+    This is only useful in combination with MissingPremiumFeatureResource,
+    where one specific method should be exempt from the premium check.
+    """
+    func.allow_on_community = True
+    return func
 
 
 class SecuredResource(Resource):
@@ -105,4 +127,4 @@ class SecuredResource(Resource):
 
 
 class MissingPremiumFeatureResource(Resource):
-    method_decorators = [missing_premium_feature_abort]
+    method_decorators = [_abort_on_premium_missing]
