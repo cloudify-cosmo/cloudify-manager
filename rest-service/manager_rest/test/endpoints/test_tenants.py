@@ -14,12 +14,15 @@
 #  * limitations under the License.
 
 from mock import patch
+
 from manager_rest import constants, config
-from manager_rest.test import base_test
 from manager_rest.storage import models
-from manager_rest.test.attribute import attr
 
 from cloudify_rest_client.exceptions import CloudifyClientError
+
+from manager_rest.test import base_test
+from manager_rest.test.attribute import attr
+
 
 CREDENTIALS_PERMISSION = 'tenant_rabbitmq_credentials'
 
