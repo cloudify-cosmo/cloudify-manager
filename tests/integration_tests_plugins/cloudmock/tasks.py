@@ -57,12 +57,12 @@ def _resumable_task_base(ctx):
 
 
 @operation
-def task_agent(ctx, wait_message, **kwargs):
+def task_agent(ctx, **kwargs):
     ctx.instance.runtime_properties['resumed'] = False
     ctx.instance.update()
-    ctx.logger.info(wait_message)
+    ctx.logger.info('BEFORE SLEEP')
     time.sleep(20)
-    ctx.logger.info(wait_message[::-1])
+    ctx.logger.info('AFTER SLEEP')
     ctx.instance.runtime_properties['resumed'] = True
 
 
