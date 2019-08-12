@@ -508,7 +508,8 @@ class BaseTestCase(unittest.TestCase):
             # the rest service and nginx, which might lead to intermittent
             # connection errors. Just try again
             try:
-                all_events = client.events.list(include_logs=True)
+                all_events = client.events.list(
+                    execution_id=execution.id, include_logs=True)
             except (CloudifyClientError, ConnectionError):
                 if not allow_connection_error:
                     raise
