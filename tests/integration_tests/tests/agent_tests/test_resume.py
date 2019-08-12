@@ -18,9 +18,13 @@ from integration_tests import AgentTestCase
 from integration_tests.tests.utils import get_resource as resource
 
 
-class TestResumeMgmtworker(AgentTestCase):
-    wait_message = 'hello1'
+# log messages that are emitted by cloudmock.tasks.task_agent. We're waiting
+# on those to know when to stop services in the tests.
+BEFORE_MESSAGE = 'BEFORE SLEEP'
+AFTER_MESSAGE = 'AFTER SLEEP'
 
+
+class TestResumeMgmtworker(AgentTestCase):
     def _start_execution(self, deployment, operation, wait_seconds=20):
         return self.execute_workflow(
             workflow_name='execute_operation',
@@ -29,7 +33,6 @@ class TestResumeMgmtworker(AgentTestCase):
             parameters={'operation': operation,
                         'run_by_dependency_order': True,
                         'operation_kwargs': {
-                            'wait_message': self.wait_message,
                             'wait_seconds': wait_seconds
                         }})
 
@@ -50,7 +53,7 @@ class TestResumeMgmtworker(AgentTestCase):
         execution = self._start_execution(deployment, 'interface1.op1')
 
         # wait until the agent starts executing operations
-        self.wait_for_event(execution, self.wait_message)
+        self.wait_for_event(execution, BEFORE_MESSAGE)
         instance = self.client.node_instances.list(
             node_id='agent_host', deployment_id=deployment.id)[0]
         self.assertFalse(instance.runtime_properties['resumed'])
@@ -60,7 +63,7 @@ class TestResumeMgmtworker(AgentTestCase):
         self._start_mgmtworker()
 
         # check that we resume waiting for the agent operation
-        self.wait_for_event(execution, self.wait_message[::-1])
+        self.wait_for_event(execution, AFTER_MESSAGE)
         self.wait_for_execution_to_end(execution)
         instance = self.client.node_instances.get(instance.id)
         self.assertTrue(instance.runtime_properties['resumed'])
@@ -75,7 +78,7 @@ class TestResumeMgmtworker(AgentTestCase):
             deployment, 'interface1.op1', wait_seconds=10)
 
         # wait until the agent starts executing operations
-        self.wait_for_event(execution, self.wait_message)
+        self.wait_for_event(execution, BEFORE_MESSAGE)
 
         self._stop_mgmtworker()
         # wait for the agent to finish executing the operation
