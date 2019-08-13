@@ -255,9 +255,9 @@ def run(command, ignore_failures=False, redirect_output_path=None, cwd=None):
     proc.aggr_stdout, proc.aggr_stderr = proc.communicate()
     if proc and proc.returncode != 0:
         if not ignore_failures:
-            msg = 'Failed running command: {0} ({1}).'.format(
-                command_str, proc.aggr_stderr)
-            raise RuntimeError(msg)
+            raise RuntimeError(
+                'Failed running command: {0}\nstdout: {1}\nstderr: {2}'
+                .format(command_str, proc.aggr_stdout, proc.aggr_stderr))
     return proc
 
 
