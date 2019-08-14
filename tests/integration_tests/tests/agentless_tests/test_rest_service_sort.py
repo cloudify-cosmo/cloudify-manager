@@ -84,6 +84,7 @@ class TestRestServiceListSort(AgentlessTestCase):
             yaml_path = resource('plugins/plugin.yaml')
             with utils.zip_files([wagon_path, yaml_path]) as zip_path:
                 self.client.plugins.upload(zip_path)
+                self._wait_for_execution_by_wf_name('install_plugin')
             shutil.rmtree(tmpdir)
         self._test_sort('plugins', 'id')
 
