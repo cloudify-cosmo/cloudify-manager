@@ -93,11 +93,15 @@ class TestRestServiceListPagination(AgentlessTestCase):
                 f.write('from setuptools import setup\n')
                 f.write('setup(name="cloudify-script-plugin", version={0})'
                         .format(i))
-            wagon_path = wagon.create(tmpdir, archive_destination_dir=tmpdir)
+            wagon_path = wagon.create(
+                tmpdir, archive_destination_dir=tmpdir,
+                # mark the wagon as windows-only, so that the manager doesn't
+                # attempt to install it - which would be irrelevant for this
+                # test, but add additional flakyness and runtime
+                wheel_args=['--build-option', '--plat-name=win'])
             yaml_path = resource('plugins/plugin.yaml')
             with utils.zip_files([wagon_path, yaml_path]) as zip_path:
                 self.client.plugins.upload(zip_path)
-            self._wait_for_execution_by_wf_name('install_plugin')
             shutil.rmtree(tmpdir)
         self._test_pagination(self.client.plugins.list)
 
