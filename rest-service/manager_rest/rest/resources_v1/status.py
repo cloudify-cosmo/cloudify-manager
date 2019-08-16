@@ -69,12 +69,13 @@ class Status(SecuredResource):
             if not config.instance.postgresql_host.startswith(('localhost',
                                                                '127.0.0.1')):
                 for job in jobs:
-                    if job['display_name'] == 'PostgreSQL':
+                    if job['display_name'] == 'PostgreSQL' \
+                            and job['instances']:
                         job['instances'][0]['state'] = 'remote'
 
             broker_state = 'running' if broker_is_healthy() else 'failed'
             for job in jobs:
-                if job['display_name'] == 'RabbitMQ':
+                if job['display_name'] == 'RabbitMQ' and job['instances']:
                     job['instances'][0]['state'] = broker_state
         else:
             jobs = ['undefined']
