@@ -38,19 +38,48 @@ class TestDeploymentBase(ComponentTestBase):
 
 
 class TestDeployment(TestDeploymentBase):
-    def test_delete_deployment_rest_client_error(self):
+    def test_delete_deployment_delete_deployment_failed(self):
         deployment_name = 'dep_name'
         self._ctx.instance.runtime_properties['deployment']['id'] =\
             deployment_name
-        with mock.patch('cloudify.manager.get_rest_client') as mock_client:
-            self.cfy_mock_client.deployments.delete = REST_CLIENT_EXCEPTION
-            mock_client.return_value = self.cfy_mock_client
-            error = self.assertRaises(NonRecoverableError,
-                                      delete,
-                                      deployment_id=deployment_name,
-                                      timeout=MOCK_TIMEOUT)
-            self.assertIn('action "delete" failed',
-                          str(error))
+
+        deployment_id_exists = 'cloudify_types.component.component' \
+                               '.deployment_id_exists'
+        with mock.patch(deployment_id_exists) as exists:
+            exists.return_value = True
+
+            with mock.patch('cloudify.manager.get_rest_client') as mock_client:
+                self.cfy_mock_client.deployments.delete = REST_CLIENT_EXCEPTION
+                mock_client.return_value = self.cfy_mock_client
+                error = self.assertRaises(NonRecoverableError,
+                                          delete,
+                                          deployment_id=deployment_name,
+                                          timeout=MOCK_TIMEOUT)
+                self.assertIn('action "delete" failed',
+                              str(error))
+
+    def test_delete_deployment_delete_not_existing_deployment(self):
+        deployment_name = 'dep_name'
+        self._ctx.instance.runtime_properties['deployment']['id'] =\
+            deployment_name
+
+        deployment_id_exists = 'cloudify_types.component.component' \
+                               '.deployment_id_exists'
+        with mock.patch(deployment_id_exists) as exists:
+            exists.return_value = False
+
+            with mock.patch('cloudify.manager.get_rest_client') as mock_client:
+                mock_client.return_value = self.cfy_mock_client
+
+                poll_with_timeout_test = \
+                    'cloudify_types.component.polling.poll_with_timeout'
+                with mock.patch(poll_with_timeout_test) as poll:
+                    poll.return_value = True
+                    output = delete(
+                        operation='delete_deployment',
+                        deployment_id='dep_name',
+                        timeout=MOCK_TIMEOUT)
+                    self.assertTrue(output)
 
     def test_delete_deployment_success(self):
         self._ctx.instance.runtime_properties['deployment']['id'] = 'dep_name'

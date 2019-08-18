@@ -376,20 +376,28 @@ class Component(object):
 
         ctx.logger.info('Delete component\'s "{0}" deployment'
                         .format(self.deployment_id))
-        self._http_client_wrapper('deployments',
-                                  'delete',
-                                  dict(deployment_id=self.deployment_id))
 
-        ctx.logger.info("Waiting for component's deployment delete.")
-        poll_result = poll_with_timeout(
-            lambda: deployment_id_exists(self.client, self.deployment_id),
-            timeout=self.timeout,
-            expected_result=False)
+        poll_result = True
+        if not deployment_id_exists(self.client, self.deployment_id):
+            # Could happen in case that deployment failed to install
+            ctx.logger.warn('Didn\'t find component\'s "{0}" deployment,'
+                            'so nothing to do and moving on.'
+                            .format(self.deployment_id))
+        else:
+            self._http_client_wrapper('deployments',
+                                      'delete',
+                                      dict(deployment_id=self.deployment_id))
 
-        ctx.logger.info("Little wait internal cleanup services.")
+            ctx.logger.info("Waiting for component's deployment delete.")
+            poll_result = poll_with_timeout(
+                lambda: deployment_id_exists(self.client, self.deployment_id),
+                timeout=self.timeout,
+                expected_result=False)
+
+        ctx.logger.debug("Internal services cleanup.")
         time.sleep(POLLING_INTERVAL)
-        ctx.logger.info("Wait for stop all system workflows.")
 
+        ctx.logger.debug("Waiting for all system workflows to stop/finish.")
         poll_with_timeout(
             lambda: is_all_executions_finished(self.client),
             timeout=self.timeout,
