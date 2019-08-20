@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
 import time
+import logging
 
 from cloudify import ctx
 from cloudify.exceptions import NonRecoverableError
@@ -102,7 +102,7 @@ def redirect_logs(client, execution_id, instance_ctx=None):
             # If the event dict had a 'level' key, then the value is
             # a string. In that case, convert it to uppercase and get
             # the matching Python logging constant.
-            if isinstance(level, basestring):
+            if level:
                 level = logging.getLevelName(level.upper())
 
             # In the (very) odd case that the level is still not an int
