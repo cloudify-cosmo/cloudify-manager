@@ -303,6 +303,7 @@ class Execution(CreatedAtMixin, SQLResourceBase):
     def set_deployment(self, deployment):
         self._set_parent(deployment)
         self.deployment = deployment
+        self.blueprint_id = deployment.blueprint_id
 
     @classproperty
     def resource_fields(cls):

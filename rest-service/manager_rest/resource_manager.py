@@ -952,9 +952,7 @@ class ResourceManager(object):
                 workflow_id=wf_id,
                 error='',
                 parameters=execution_parameters,
-                is_system_workflow=is_system_workflow,
-                blueprint_id=deployment.blueprint_id
-            )
+                is_system_workflow=is_system_workflow)
 
             if deployment:
                 execution.set_deployment(deployment)
