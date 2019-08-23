@@ -666,7 +666,8 @@ class ResourceManager(object):
                 parameters=execution_parameters,
                 is_system_workflow=False,
                 is_dry_run=dry_run,
-                scheduled_for=scheduled_time
+                scheduled_for=scheduled_time,
+                blueprint_id=deployment.blueprint_id
             )
 
             if deployment:
