@@ -72,10 +72,10 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
             deployment, remodification_bp_path, 2, True, 'second')
 
         executions = self.client.executions.list(is_descending=False)
-        self.assertEqual('start', executions[0]['blueprint_id'])
-        self.assertEqual('start', executions[1]['blueprint_id'])
-        self.assertEqual('first', executions[2]['blueprint_id'])
-        self.assertEqual('second', executions[3]['blueprint_id'])
+        self.assertEqual('start', executions[0].blueprint_id)
+        self.assertEqual('start', executions[1].blueprint_id)
+        self.assertEqual('first', executions[2].blueprint_id)
+        self.assertEqual('second', executions[3].blueprint_id)
 
     def test_modify_deployment_update_schema(self):
         # this test verifies that storage (elasticsearch) can deal with
