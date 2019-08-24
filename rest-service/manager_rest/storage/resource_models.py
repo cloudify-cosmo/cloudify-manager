@@ -300,10 +300,12 @@ class Execution(CreatedAtMixin, SQLResourceBase):
         id_dict['status'] = self.status
         return id_dict
 
-    def set_deployment(self, deployment):
+    def set_deployment(self, deployment, blueprint_id=None):
         self._set_parent(deployment)
         self.deployment = deployment
-        self.blueprint_id = deployment.blueprint_id
+        current_blueprint_id = (blueprint_id if blueprint_id else
+                                deployment.blueprint_id)
+        self.blueprint_id = current_blueprint_id
 
     @classproperty
     def resource_fields(cls):

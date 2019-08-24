@@ -588,11 +588,11 @@ class DeploymentUpdateManager(object):
             error='',
             parameters=ResourceManager._get_only_user_execution_parameters(
                 execution_parameters),
-            is_system_workflow=False,
-            blueprint_id=deployment.blueprint_id
+            is_system_workflow=False
         )
         if deployment:
-            new_execution.set_deployment(deployment)
+            new_execution.set_deployment(deployment,
+                                         deployment_update.new_blueprint_id)
             deployment_update.execution = new_execution
         self.sm.put(new_execution)
 
