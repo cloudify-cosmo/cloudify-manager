@@ -669,8 +669,7 @@ class ResourceManager(object):
                 scheduled_for=scheduled_time
             )
 
-            if deployment:
-                new_execution.set_deployment(deployment)
+            new_execution.set_deployment(deployment)
         if should_queue and not scheduled_time:
             # Scheduled executions are passed to rabbit, no need to break here
             self.sm.put(new_execution)

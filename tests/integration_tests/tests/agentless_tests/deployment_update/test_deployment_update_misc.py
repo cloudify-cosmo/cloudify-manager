@@ -33,7 +33,8 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
             'update_deployment_twice',
             'deployment_updated_twice_remodification.yaml')
 
-        deployment, _ = self.deploy_application(base_bp_path)
+        deployment, _ = self.deploy_application(base_bp_path,
+                                                blueprint_id='start')
         # assert initial deployment state
         deployment = self.client.deployments.get(deployment.id)
         self.assertDictContainsSubset({'custom_output': {'value': 0}},
@@ -43,8 +44,8 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
         def update_deployment_wait_and_assert(dep,
                                               bp_path,
                                               expected_output_value,
-                                              is_description_modified):
-            blueprint_id = 'b{0}'.format(uuid4())
+                                              is_description_modified,
+                                              blueprint_id):
             self.client.blueprints.upload(bp_path, blueprint_id)
             dep_update = \
                 self.client.deployment_updates.update_with_existing_blueprint(
@@ -65,10 +66,16 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
 
         # modify output and verify
         update_deployment_wait_and_assert(
-            deployment, modification_bp_path, 1, False)
+            deployment, modification_bp_path, 1, False, 'first')
         # modify output again and modify description
         update_deployment_wait_and_assert(
-            deployment, remodification_bp_path, 2, True)
+            deployment, remodification_bp_path, 2, True, 'second')
+
+        executions = self.client.executions.list(is_descending=False)
+        self.assertEqual('start', executions[0].blueprint_id)
+        self.assertEqual('start', executions[1].blueprint_id)
+        self.assertEqual('first', executions[2].blueprint_id)
+        self.assertEqual('second', executions[3].blueprint_id)
 
     def test_modify_deployment_update_schema(self):
         # this test verifies that storage (elasticsearch) can deal with

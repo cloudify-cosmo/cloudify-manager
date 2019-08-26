@@ -100,7 +100,9 @@ class ExecutionsTestCase(BaseServerTestCase):
             created_at=utils.get_formatted_timestamp(),
             error='',
             parameters=dict(),
-            is_system_workflow=True)
+            is_system_workflow=True,
+            blueprint_id=blueprint_id
+        )
         deployment = self.sm.get(models.Deployment, deployment_id)
         system_wf_execution.deployment = deployment
         self.sm.put(system_wf_execution)
@@ -786,7 +788,8 @@ class ExecutionsTestCase(BaseServerTestCase):
             created_at=datetime.now(),
             is_system_workflow=False,
             workflow_id='install',
-            status=status
+            status=status,
+            blueprint_id=deployment.blueprint_id
         ))
         tasks_graph = self.sm.put(models.TasksGraph(
             _execution_fk=execution._storage_id,
@@ -845,7 +848,8 @@ class ExecutionsTestCase(BaseServerTestCase):
             _deployment_fk=deployment._storage_id,
             created_at=datetime.now(),
             is_system_workflow=False,
-            workflow_id='install'
+            workflow_id='install',
+            blueprint_id=deployment.blueprint_id
         ))
 
         for execution_status in [ExecutionState.PENDING,
@@ -874,7 +878,8 @@ class ExecutionsTestCase(BaseServerTestCase):
             _deployment_fk=deployment._storage_id,
             created_at=datetime.now(),
             is_system_workflow=False,
-            workflow_id='install'
+            workflow_id='install',
+            blueprint_id=deployment.blueprint_id
         ))
 
         for execution_status in [ExecutionState.PENDING,

@@ -37,10 +37,11 @@ class DeploymentUpdatesBase(base_test.BaseServerTestCase):
     def _update(self,
                 deployment_id,
                 blueprint_name,
+                blueprint_id=None,
                 **kwargs):
         blueprint_path = resource(os.path.join('deployment_update',
                                                'depup_step'))
-        blueprint_id = 'b-{0}'.format(uuid.uuid4())
+        blueprint_id = blueprint_id or 'b-{0}'.format(uuid.uuid4())
         self.put_blueprint(blueprint_path, blueprint_name, blueprint_id)
         kwargs['blueprint_id'] = blueprint_id
         return self.put(
@@ -115,16 +116,22 @@ class DeploymentUpdatesTestCase(DeploymentUpdatesBase):
     def test_add_node_and_relationship(self):
         deployment_id = 'dep'
         changed_params = ['added_instance_ids', 'added_target_instances_ids']
-        self._deploy_base(deployment_id, 'one_node.yaml')
+        self._deploy_base(deployment_id,
+                          'one_node.yaml')
 
-        self._update(deployment_id, 'two_nodes.yaml')
+        self._update(deployment_id, 'two_nodes.yaml', 'first')
         dep_update = \
             self.client.deployment_updates.list(deployment_id=deployment_id,
                                                 _include=['execution_id'])[0]
         execution = self.client.executions.get(dep_update.execution_id)
+
         for param in self.execution_parameters:
             self.assertEquals(1 if param in changed_params else 0,
                               len(execution.parameters[param]))
+
+        executions = self.client.executions.list()
+        self.assertEqual('first', executions[1].blueprint_id)
+        self.assertEqual('blueprint', executions[0].blueprint_id)
 
     def test_remove_node_and_relationship(self):
         deployment_id = 'dep'
@@ -293,6 +300,7 @@ class DeploymentUpdatesTestCase(DeploymentUpdatesBase):
     def _deploy_base(self,
                      deployment_id,
                      blueprint_name,
+                     blueprint_id='blueprint',
                      inputs=None):
         blueprint_path = os.path.join('resources',
                                       'deployment_update',
@@ -300,7 +308,8 @@ class DeploymentUpdatesTestCase(DeploymentUpdatesBase):
         self.put_deployment(deployment_id,
                             inputs=inputs,
                             blueprint_file_name=blueprint_name,
-                            blueprint_dir=blueprint_path)
+                            blueprint_dir=blueprint_path,
+                            blueprint_id=blueprint_id)
 
     def test_storage_serialization_and_response(self):
         blueprint = self._add_blueprint()
@@ -440,7 +449,7 @@ class DeploymentUpdatesStepAndStageTestCase(base_test.BaseServerTestCase):
 
 
 @attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
-class DeploymentUpdatesFromSourceTestCase(DeploymentUpdatesBase):
+class DeploymentUpdatesSourcePluginsTestCase(DeploymentUpdatesBase):
 
     def _deploy_base(self,
                      deployment_id,

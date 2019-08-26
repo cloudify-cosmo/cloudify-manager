@@ -806,7 +806,9 @@ class BaseServerTestCase(unittest.TestCase):
             created_at=utils.get_formatted_timestamp(),
             error='',
             parameters=dict(),
-            is_system_workflow=False)
+            is_system_workflow=False,
+            blueprint_id=deployment.blueprint_id
+        )
         execution.deployment = deployment
         return self.sm.put(execution)
 

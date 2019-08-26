@@ -279,7 +279,7 @@ class Execution(CreatedAtMixin, SQLResourceBase):
         return one_to_many_relationship(cls, Deployment, cls._deployment_fk)
 
     deployment_id = association_proxy('deployment', 'id')
-    blueprint_id = association_proxy('deployment', 'blueprint_id')
+    blueprint_id = db.Column(db.Text, nullable=True)
 
     @hybrid_property
     def status_display(self):
@@ -300,9 +300,11 @@ class Execution(CreatedAtMixin, SQLResourceBase):
         id_dict['status'] = self.status
         return id_dict
 
-    def set_deployment(self, deployment):
+    def set_deployment(self, deployment, blueprint_id=None):
         self._set_parent(deployment)
         self.deployment = deployment
+        current_blueprint_id = blueprint_id or deployment.blueprint_id
+        self.blueprint_id = current_blueprint_id
 
     @classproperty
     def resource_fields(cls):
