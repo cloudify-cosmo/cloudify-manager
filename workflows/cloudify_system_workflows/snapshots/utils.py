@@ -352,8 +352,10 @@ def db_schema(revision, config=None):
 
     """
     db_schema_downgrade(revision, config=config)
-    yield
-    db_schema_upgrade(config=config)
+    try:
+        yield
+    finally:
+        db_schema_upgrade(config=config)
 
 
 def db_schema_downgrade(revision='-1', config=None):
