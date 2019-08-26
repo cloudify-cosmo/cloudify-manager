@@ -130,8 +130,8 @@ class DeploymentUpdatesTestCase(DeploymentUpdatesBase):
                               len(execution.parameters[param]))
 
         executions = self.client.executions.list()
-        self.assertEqual('first', executions[1].blueprint_id)
-        self.assertEqual('blueprint', executions[0].blueprint_id)
+        self.assertEqual('first', executions[1]['blueprint_id'])
+        self.assertEqual('blueprint', executions[0]['blueprint_id'])
 
     def test_remove_node_and_relationship(self):
         deployment_id = 'dep'
