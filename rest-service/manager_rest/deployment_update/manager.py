@@ -119,7 +119,7 @@ class DeploymentUpdateManager(object):
         # applying intrinsic functions
         try:
             prepared_plan = tasks.prepare_deployment_plan(plan,
-                                                          get_secret_method(),
+                                                          get_secret_method,
                                                           inputs=new_inputs)
         except parser_exceptions.MissingRequiredInputError, e:
             raise manager_exceptions.MissingRequiredDeploymentInputError(

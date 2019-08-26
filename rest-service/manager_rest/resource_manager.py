@@ -1248,7 +1248,7 @@ class ResourceManager(object):
 
         try:
             deployment_plan = tasks.prepare_deployment_plan(
-                plan, get_secret_method(), inputs)
+                plan, get_secret_method, inputs)
         except parser_exceptions.MissingRequiredInputError as e:
             raise manager_exceptions.MissingRequiredDeploymentInputError(
                 str(e))
