@@ -36,13 +36,10 @@ def evaluate_intrinsic_functions(payload, deployment_id, context=None):
     context = context or {}
     sm = get_storage_manager()
     sm.get(Deployment, deployment_id, include=['id'])
-    methods = _get_methods(deployment_id, sm)
+    storage = FunctionEvaluationStorage(deployment_id, sm)
 
     try:
-        return functions.evaluate_functions(
-            payload=payload,
-            context=context,
-            **methods)
+        return functions.evaluate_functions(payload, context, storage)
     except parser_exceptions.FunctionEvaluationError as e:
         raise FunctionsEvaluationError(str(e))
 
@@ -50,68 +47,75 @@ def evaluate_intrinsic_functions(payload, deployment_id, context=None):
 def evaluate_deployment_outputs(deployment_id):
     sm = get_storage_manager()
     deployment = sm.get(Deployment, deployment_id, include=['outputs'])
-    methods = _get_methods(deployment_id, sm)
+    storage = FunctionEvaluationStorage(deployment_id, sm)
 
     if not deployment.outputs:
         return {}
 
     try:
-        return functions.evaluate_outputs(
-            outputs_def=deployment.outputs,
-            **methods
-            )
-    except parser_exceptions.FunctionEvaluationError, e:
+        return functions.evaluate_outputs(deployment.outputs, storage)
+    except parser_exceptions.FunctionEvaluationError as e:
         raise DeploymentOutputsEvaluationError(str(e))
 
 
 def evaluate_deployment_capabilities(deployment_id):
     sm = get_storage_manager()
     deployment = sm.get(Deployment, deployment_id, include=['capabilities'])
-    methods = _get_methods(deployment_id, sm)
+    storage = FunctionEvaluationStorage(deployment_id, sm)
 
     if not deployment.capabilities:
         return {}
 
     try:
         return functions.evaluate_capabilities(
-            capabilities=deployment.capabilities,
-            **methods
-            )
+            deployment.capabilities, storage)
     except parser_exceptions.FunctionEvaluationError as e:
         raise DeploymentCapabilitiesEvaluationError(str(e))
 
 
-def get_secret_method():
+def get_secret_method(secret_key):
     sm = get_storage_manager()
-    methods = _get_methods(None, sm)
-    return methods['get_secret_method']
+    secret = sm.get(Secret, secret_key)
+    decrypted_value = cryptography_utils.decrypt(secret.value)
+    return SecretType(secret_key, decrypted_value)
 
 
-def _get_methods(deployment_id, storage_manager):
-    """Retrieve a dict of all the callbacks necessary for function evaluation
+class FunctionEvaluationStorage(object):
+    """DB-backed storage for use when evaluating intrinsic functions.
+
+    This has to be passed to dsl-parser's functions that evaluate intrinsic
+    functions.
     """
+    def __init__(self, deployment_id, storage_manager):
+        self.sm = storage_manager
+        self._deployment_id = deployment_id
 
-    def get_node_instances(node_id=None):
-        filters = dict(deployment_id=deployment_id)
+    def get_node_instances(self, node_id=None):
+        filters = dict(deployment_id=self._deployment_id)
         if node_id:
             filters['node_id'] = node_id
-        return storage_manager.list(NodeInstance, filters=filters).items
+        return self.sm.list(NodeInstance, filters=filters).items
 
-    def get_node_instance(node_instance_id):
-        return storage_manager.get(NodeInstance, node_instance_id)
+    def get_node_instance(self, node_instance_id):
+        return self.sm.get(NodeInstance, node_instance_id)
 
-    def get_node(node_id):
-        return get_storage_node(deployment_id, node_id)
+    def get_input(self, input_name):
+        deployment = self.sm.get(Deployment, self._deployment_id)
+        return deployment.inputs[input_name]
 
-    def get_secret(secret_key):
-        secret = storage_manager.get(Secret, secret_key)
+    def get_node(self, node_id):
+        node = get_storage_node(self._deployment_id, node_id)
+        return node
+
+    def get_secret(self, secret_key):
+        secret = self.sm.get(Secret, secret_key)
         decrypted_value = cryptography_utils.decrypt(secret.value)
         return SecretType(secret_key, decrypted_value)
 
-    def get_capability(capability_path):
+    def get_capability(self, capability_path):
         shared_dep_id, element_id = capability_path[0], capability_path[1]
 
-        deployment = storage_manager.get(Deployment, shared_dep_id)
+        deployment = self.sm.get(Deployment, shared_dep_id)
         capability = deployment.capabilities.get(element_id)
 
         if not capability:
@@ -141,11 +145,3 @@ def _get_methods(deployment_id, storage_manager):
                 raise FunctionsEvaluationError(str(e))
 
         return capability['value']
-
-    return dict(
-        get_node_instances_method=get_node_instances,
-        get_node_instance_method=get_node_instance,
-        get_node_method=get_node,
-        get_secret_method=get_secret,
-        get_capability_method=get_capability
-    )
