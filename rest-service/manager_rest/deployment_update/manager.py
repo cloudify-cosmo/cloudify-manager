@@ -590,10 +590,9 @@ class DeploymentUpdateManager(object):
                 execution_parameters),
             is_system_workflow=False
         )
-        if deployment:
-            new_execution.set_deployment(deployment,
-                                         deployment_update.new_blueprint_id)
-            deployment_update.execution = new_execution
+        new_execution.set_deployment(deployment,
+                                     deployment_update.new_blueprint_id)
+        deployment_update.execution = new_execution
         self.sm.put(new_execution)
 
         # executing the user workflow

@@ -41,8 +41,7 @@ class DeploymentUpdatesBase(base_test.BaseServerTestCase):
                 **kwargs):
         blueprint_path = resource(os.path.join('deployment_update',
                                                'depup_step'))
-        blueprint_id = (blueprint_id if blueprint_id else
-                        'b-{0}'.format(uuid.uuid4()))
+        blueprint_id = blueprint_id or 'b-{0}'.format(uuid.uuid4())
         self.put_blueprint(blueprint_path, blueprint_name, blueprint_id)
         kwargs['blueprint_id'] = blueprint_id
         return self.put(

@@ -303,8 +303,7 @@ class Execution(CreatedAtMixin, SQLResourceBase):
     def set_deployment(self, deployment, blueprint_id=None):
         self._set_parent(deployment)
         self.deployment = deployment
-        current_blueprint_id = (blueprint_id if blueprint_id else
-                                deployment.blueprint_id)
+        current_blueprint_id = blueprint_id or deployment.blueprint_id
         self.blueprint_id = current_blueprint_id
 
     @classproperty
