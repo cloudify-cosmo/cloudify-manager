@@ -752,6 +752,16 @@ class UploadedCaravanManager(UploadedPluginsManager):
         def __init__(self, caravan_path):
             self._caravan_path = caravan_path
             self._tempdir = tempfile.mkdtemp()
+            self._cvn_dir = None
+            self._metadata = None
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            remove(self._tempdir)
+
+        def init_metadata(self):
             self._cvn_dir = self._extract(self._caravan_path, self._tempdir)
             self._metadata = self._get_metadata(self._cvn_dir)
 
@@ -809,10 +819,13 @@ class UploadedCaravanManager(UploadedPluginsManager):
                     resource_target_path,
                     self._get_data_url_key(),
                     self._get_kind())
-            plugins = self._prepare_and_process_doc(
-                file_server_root,
-                resource_target_path,
-                **kwargs)
+            with self.Caravan(resource_target_path) as caravan_instance:
+                caravan_instance.init_metadata()
+                plugins = self._prepare_and_process_doc(
+                    file_server_root,
+                    resource_target_path,
+                    caravan_instance=caravan_instance,
+                    **kwargs)
             docs = []
             for doc, plugin_dir in plugins:
                 self._move_archive_to_uploaded_dir(
@@ -831,7 +844,7 @@ class UploadedCaravanManager(UploadedPluginsManager):
                                  archive_target_path,
                                  **kwargs):
         plugins = []
-        caravan_ = self.Caravan(archive_target_path)
+        caravan_ = kwargs['caravan_instance']
         for wgn_path, _ in caravan_:
             files_dir = os.path.dirname(wgn_path)
             archive_path = shutil.make_archive(

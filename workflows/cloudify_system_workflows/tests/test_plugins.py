@@ -19,7 +19,53 @@ from mock import patch, MagicMock, PropertyMock, call
 
 from cloudify.models_states import ExecutionState
 
-from cloudify_system_workflows.plugins import update as update_func
+from cloudify_system_workflows.plugins import (update as update_func,
+                                               install as install_func,
+                                               uninstall as uninstall_func)
+
+
+class TestPlugins(unittest.TestCase):
+    def setUp(self):
+        operate_on_plugin_patcher = patch(
+            'cloudify_system_workflows.plugins._operate_on_plugin')
+        self.mock_operate_on_plugin = operate_on_plugin_patcher.start()
+        self.mock_operate_on_plugin.side_effect = lambda *_: _
+        self.addCleanup(operate_on_plugin_patcher.stop)
+        rest_client_patcher = patch(
+            'cloudify_system_workflows.plugins.get_rest_client')
+        self.mock_rest_client = MagicMock()
+        rest_client_patcher.start().return_value = self.mock_rest_client
+        self.addCleanup(rest_client_patcher.stop)
+
+    def test_uninstall_returns_execution_result(self):
+        return_value = list(uninstall_func(None, {}, ignores_this=None))
+        desired_call_args = [None, {}, 'uninstall']
+        self.mock_operate_on_plugin.assert_called_once_with(*desired_call_args)
+        self.assertListEqual(desired_call_args, return_value)
+
+    def test_install_returns_execution_result(self):
+        return_value = list(install_func(None, {}, ignores_this=None))
+        desired_call_args = [None, {}, 'install']
+        self.mock_operate_on_plugin.assert_called_once_with(*desired_call_args)
+        self.assertListEqual(desired_call_args, return_value)
+
+    def test_install_deletes_plugin_upon_failure(self):
+        class _Exception(Exception):
+            pass
+
+        def raise_custom_exception(*_):
+            raise _Exception()
+
+        plugin = {'id': 'some_id'}
+        self.mock_operate_on_plugin.side_effect = raise_custom_exception
+        mock_ctx = MagicMock()
+        with self.assertRaises(_Exception):
+            install_func(mock_ctx, plugin, ignores_this=None)
+        desired_operate_on_call_args = [mock_ctx, plugin, 'install']
+        self.mock_operate_on_plugin.assert_called_once_with(
+            *desired_operate_on_call_args)
+        self.mock_rest_client.plugins.delete.assert_called_once_with(
+            plugin_id=plugin['id'], force=True)
 
 
 class TestPluginsUpdate(unittest.TestCase):

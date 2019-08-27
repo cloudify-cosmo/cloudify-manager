@@ -40,9 +40,12 @@ def get_cfy():
     return utils.get_cfy()
 
 
-def upload_mock_plugin(package_name, package_version):
+def upload_mock_plugin(package_name, package_version, corrupt_plugin=False):
     client = create_rest_client()
     temp_file_path = _create_mock_wagon(package_name, package_version)
+
+    if corrupt_plugin:
+        _corrupt_plugin(temp_file_path, package_name)
 
     try:
         # Path relative to resources folder
@@ -58,6 +61,14 @@ def upload_mock_plugin(package_name, package_version):
 
     os.remove(temp_file_path)
     return response
+
+
+def _corrupt_plugin(wagon_archive, package_name):
+    temp_dir = tempfile.mkdtemp()
+    utils.unzip(wagon_archive, temp_dir)
+    shutil.rmtree(os.path.join(temp_dir, package_name, 'wheels'))
+    utils.create_zip(os.path.join(temp_dir, '.'), wagon_archive)
+    shutil.rmtree(temp_dir)
 
 
 def _create_mock_wagon(package_name, package_version):

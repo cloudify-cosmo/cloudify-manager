@@ -286,6 +286,7 @@ class ResourceManager(object):
             task_mapping='cloudify_system_workflows.plugins.install',
             execution_parameters={
                 'plugin': {
+                    'id': plugin.id,
                     'name': plugin.package_name,
                     'package_name': plugin.package_name,
                     'package_version': plugin.package_version

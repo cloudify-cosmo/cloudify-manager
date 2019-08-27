@@ -541,6 +541,22 @@ class AgentlessTestCase(BaseTestCase):
         self.clear_directory('/opt/manager/resources/blueprints')
         self.clear_directory('/opt/manager/resources/uploaded-blueprints')
 
+    def _get_latest_execution(self, workflow_id):
+        execution_list = self.client.executions.list(
+            include_system_workflows=True,
+            sort='created_at',
+            is_descending=True,
+            workflow_id=workflow_id).items
+        self.assertGreater(
+            len(execution_list),
+            0,
+            msg='Expected to find at least one execution with '
+                'workflow_id `{workflow_id}`, but found: '
+                '{execution_list}'.format(
+                workflow_id=workflow_id, execution_list=execution_list)
+        )
+        return execution_list[0]
+
 
 class BaseAgentTestCase(BaseTestCase):
     environment_type = env.AgentTestEnvironment
