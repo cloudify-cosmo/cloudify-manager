@@ -56,7 +56,7 @@ LOCAL_ADDRESS = '127.0.0.1'
 ALLOWED_ENDPOINTS = ['status', 'version', 'license', 'maintenance']
 ALLOWED_MAINTENANCE_ENDPOINTS = ALLOWED_ENDPOINTS + ['snapshots']
 ALLOWED_LICENSE_ENDPOINTS = ALLOWED_ENDPOINTS + ['tokens', 'config', 'cluster',
-                                                 'tenants']
+                                                 'tenants', 'brokers']
 CLOUDIFY_AUTH_HEADER = 'Authorization'
 CLOUDIFY_AUTH_TOKEN_HEADER = 'Authentication-Token'
 BASIC_AUTH_PREFIX = 'Basic '
