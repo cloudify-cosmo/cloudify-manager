@@ -55,8 +55,9 @@ SECURITY_FILE_LOCATION = '/opt/manager/rest-security.conf'
 LOCAL_ADDRESS = '127.0.0.1'
 ALLOWED_ENDPOINTS = ['status', 'version', 'license', 'maintenance']
 ALLOWED_MAINTENANCE_ENDPOINTS = ALLOWED_ENDPOINTS + ['snapshots']
-ALLOWED_LICENSE_ENDPOINTS = ALLOWED_ENDPOINTS + ['tokens', 'config', 'cluster',
-                                                 'tenants', 'brokers']
+ALLOWED_LICENSE_ENDPOINTS = ALLOWED_ENDPOINTS + [
+    'tokens', 'config', 'cluster', 'tenants', 'brokers', 'managers'
+]
 CLOUDIFY_AUTH_HEADER = 'Authorization'
 CLOUDIFY_AUTH_TOKEN_HEADER = 'Authentication-Token'
 BASIC_AUTH_PREFIX = 'Basic '
