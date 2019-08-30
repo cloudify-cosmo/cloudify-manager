@@ -193,7 +193,9 @@ class DeploymentUpdateManager(object):
 
         # Retrieve previous_nodes
         previous_nodes = [node.to_dict() for node in self.sm.list(
-            models.Node, filters={'deployment_id': dep_update.deployment_id})]
+            models.Node, filters={'deployment_id': dep_update.deployment_id},
+            get_all_results=True
+        )]
 
         # Update the nodes on the storage
         modified_entity_ids, depup_nodes = self._node_handler.handle(
@@ -306,7 +308,8 @@ class DeploymentUpdateManager(object):
         # By this point the node_instances aren't updated yet
         previous_node_instances = [instance.to_dict() for instance in
                                    self.sm.list(models.NodeInstance,
-                                                filters=deployment_id_filter)]
+                                                filters=deployment_id_filter,
+                                                get_all_results=True)]
 
         # extract all the None relationships from the deployment update nodes
         # in order to use in the extract changes
@@ -348,7 +351,8 @@ class DeploymentUpdateManager(object):
         and are not about to be installed or uninstalled in this update"""
         node_instances = self.sm.list(
             models.NodeInstance,
-            filters={'deployment_id': dep_update.deployment_id}
+            filters={'deployment_id': dep_update.deployment_id},
+            get_all_results=True
         )
         node_instances_ids = [n.id for n in node_instances]
         add_conflict = [n for n in reinstall if n in add]
@@ -399,7 +403,8 @@ class DeploymentUpdateManager(object):
                 node_instances = self.sm.list(
                     models.NodeInstance,
                     filters={'deployment_id': dep_update.deployment_id,
-                             'node_id': modified[1]}
+                             'node_id': modified[1]},
+                    get_all_results=True
                 )
 
                 # add instances ids to the reinstall list, if they are not in

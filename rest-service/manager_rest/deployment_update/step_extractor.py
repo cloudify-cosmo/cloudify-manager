@@ -149,7 +149,8 @@ class DeploymentPlan(dict):
 
         # get the nodes from the storage
         nodes = sm.list(models.Node,
-                        filters={'deployment_id': [deployment_id]})
+                        filters={'deployment_id': [deployment_id]},
+                        get_all_results=True)
         nodes = {node.id: node.to_dict() for node in nodes}
         return cls(deployment.to_dict(),
                    nodes,

@@ -450,7 +450,8 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         """
         current_nodes = self.sm.list(
             models.Node,
-            filters={'deployment_id': dep_update.deployment_id}
+            filters={'deployment_id': dep_update.deployment_id},
+            get_all_results=True
         )
         nodes_dict = {node.id: deepcopy(node.to_dict())
                       for node in current_nodes}
@@ -710,7 +711,8 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
             node_instance_id = self.sm.list(
                 models.NodeInstance,
                 filters={'deployment_id': deployment_id,
-                         'node_id': node_id}
+                         'node_id': node_id},
+                get_all_results=True
             ).items[0].id
             node_instance = self.sm.get(models.NodeInstance,
                                         node_instance_id,

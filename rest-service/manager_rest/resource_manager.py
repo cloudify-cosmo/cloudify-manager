@@ -165,7 +165,8 @@ class ResourceManager(object):
                          bypass_maintenance,
                          timeout,
                          restore_certificates,
-                         no_reboot):
+                         no_reboot,
+                         ignore_plugin_installation_failure):
         # Throws error if no snapshot found
         snapshot = self.sm.get(models.Snapshot, snapshot_id)
         if snapshot.status == SnapshotState.FAILED:
@@ -184,6 +185,8 @@ class ResourceManager(object):
                 'timeout': timeout,
                 'restore_certificates': restore_certificates,
                 'no_reboot': no_reboot,
+                'ignore_plugin_installation_failure':
+                    ignore_plugin_installation_failure,
                 'premium_enabled': premium_enabled,
                 'user_is_bootstrap_admin': current_user.is_bootstrap_admin
             },
@@ -393,7 +396,8 @@ class ResourceManager(object):
                 deployment_id=deployment_id)
             node_instances = self.sm.list(
                 models.NodeInstance,
-                filters=deplyment_id_filter
+                filters=deplyment_id_filter,
+                get_all_results=True
             )
             # validate either all nodes for this deployment are still
             # uninitialized or have been deleted
@@ -836,10 +840,12 @@ class ResourceManager(object):
                     .format(active_modifications))
 
         nodes = [node.to_dict() for node
-                 in self.sm.list(models.Node, filters=deployment_id_filter)]
+                 in self.sm.list(models.Node, filters=deployment_id_filter,
+                                 get_all_results=True)]
         node_instances = [instance.to_dict() for instance
                           in self.sm.list(models.NodeInstance,
-                          filters=deployment_id_filter)]
+                          filters=deployment_id_filter,
+                          get_all_results=True)]
         node_instances_modification = tasks.modify_deployment(
             nodes=nodes,
             previous_nodes=nodes,
@@ -849,7 +855,9 @@ class ResourceManager(object):
 
         node_instances_modification['before_modification'] = [
             instance.to_dict() for instance in
-            self.sm.list(models.NodeInstance, filters=deployment_id_filter)]
+            self.sm.list(models.NodeInstance,
+                         filters=deployment_id_filter,
+                         get_all_results=True)]
 
         now = utils.get_formatted_timestamp()
         modification_id = str(uuid.uuid4())
@@ -990,7 +998,8 @@ class ResourceManager(object):
             deployment_id=modification.deployment_id)
         node_instances = self.sm.list(
             models.NodeInstance,
-            filters=deployment_id_filter
+            filters=deployment_id_filter,
+            get_all_results=True
         )
         modified_instances = deepcopy(modification.node_instances)
         modified_instances['before_rollback'] = [
@@ -1003,7 +1012,8 @@ class ResourceManager(object):
             node.id: node for node in self.sm.list(
                 models.Node,
                 filters=deployment_id_filter,
-                include=['id', 'number_of_instances'])
+                include=['id', 'number_of_instances'],
+                get_all_results=True)
         }
 
         scaling_groups = deepcopy(deployment.scaling_groups)

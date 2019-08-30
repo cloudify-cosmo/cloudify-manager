@@ -122,7 +122,9 @@ def main(original_string, secret_name):
                 fabric_changed = fix_fabric_env(inputs,
                                                 original_string,
                                                 secret_name)
-                changed = changed or key_changed or fabric_changed
+                if key_changed or fabric_changed:
+                    ops[op]['has_intrinsic_functions'] = True
+                    changed = True
             props = node.properties
             new_changed = replace_ssh_keys(props,
                                            original_string,
