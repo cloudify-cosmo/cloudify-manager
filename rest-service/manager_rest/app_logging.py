@@ -5,7 +5,6 @@ from flask import current_app, request
 from logging.handlers import WatchedFileHandler
 
 from manager_rest import config
-from manager_rest.utils import abort_error
 from manager_rest.manager_exceptions import UnauthorizedError
 
 
@@ -85,11 +84,7 @@ def raise_unauthorized_user_error(extra_info=None):
     error = 'User unauthorized'
     if extra_info:
         error += ': {0}'.format(extra_info)
-    abort_error(
-        UnauthorizedError(error),
-        current_app.logger,
-        hide_server_message=True
-    )
+    raise UnauthorizedError(error)
 
 
 def _headers_pretty_print(headers):
