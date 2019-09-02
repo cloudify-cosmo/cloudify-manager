@@ -14,16 +14,17 @@
 #  * limitations under the License.
 
 import StringIO
-import functools
 import traceback
 import os
 import yaml
+from contextlib import contextmanager
 
 from flask_restful import Api
-from flask import Flask, jsonify, Blueprint
+from flask import Flask, jsonify, Blueprint, current_app
 from flask_security import Security
+from werkzeug.exceptions import InternalServerError
 
-from manager_rest import config, premium_enabled
+from manager_rest import config, premium_enabled, manager_exceptions
 from manager_rest.storage import db, user_datastore
 from manager_rest.security.user_handler import user_loader
 from manager_rest.maintenance import maintenance_mode_handler
@@ -45,19 +46,26 @@ SQL_DIALECT = 'postgresql'
 app_errors = Blueprint('app_errors', __name__)
 
 
-@app_errors.app_errorhandler(500)
+@app_errors.app_errorhandler(manager_exceptions.ManagerException)
+def manager_exception(error):
+    current_app.logger.error(error)
+    return jsonify(
+        message=str(error),
+        error_code=error.error_code
+    ), error.status_code
+
+
+@app_errors.app_errorhandler(InternalServerError)
 def internal_error(e):
     s_traceback = StringIO.StringIO()
     traceback.print_exc(file=s_traceback)
 
-    response = jsonify(
-        {"message":
-         "Internal error occurred in manager REST server - {0}: {1}"
-         .format(type(e).__name__, str(e)),
-         "error_code": INTERNAL_SERVER_ERROR_CODE,
-         "server_traceback": s_traceback.getvalue()})
-    response.status_code = 500
-    return response
+    return jsonify(
+        message="Internal error occurred in manager REST server - {0}: {1}"
+                .format(type(e).__name__, e),
+        error_code=INTERNAL_SERVER_ERROR_CODE,
+        server_traceback=s_traceback.getvalue()
+    ), 500
 
 
 class CloudifyFlaskApp(Flask):
@@ -79,7 +87,6 @@ class CloudifyFlaskApp(Flask):
         self.before_request(log_request)
         self.before_request(maintenance_mode_handler)
         self.after_request(log_response)
-        self._set_exception_handlers()
         self._set_flask_security()
 
         with self.app_context():
@@ -89,7 +96,8 @@ class CloudifyFlaskApp(Flask):
                     user_datastore.find_or_create_role(name=role['name'])
                 user_datastore.commit()
 
-        setup_resources(Api(self))
+        with self._prevent_flask_restful_error_handling():
+            setup_resources(Api(self))
         self.register_blueprint(app_errors)
 
     def _set_flask_security(self):
@@ -114,36 +122,20 @@ class CloudifyFlaskApp(Flask):
         self.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
         db.init_app(self)  # Prepare the app for use with flask-sqlalchemy
 
-    def _set_exception_handlers(self):
-        """Set custom exception handlers for the Flask app
+    @contextmanager
+    def _prevent_flask_restful_error_handling(self):
+        """Add flask-restful under this, to avoid installing its errorhandlers
+
+        Flask-restful's errorhandlers are both not flexible enough, and too
+        complex. We want to simply use flask's error handling mechanism,
+        so this will make sure that flask-restful's are overridden with the
+        default ones.
         """
-        # saving flask's original error handlers
-        flask_handle_exception = self.handle_exception
-        flask_handle_user_exception = self.handle_user_exception
-
-        # saving flask-restful's error handlers
-        flask_restful_handle_exception = self.handle_exception
-        flask_restful_handle_user_exception = self.handle_user_exception
-
-        # setting it so that <500 codes use flask-restful's error handlers,
-        # while 500+ codes use original flask's error handlers (for which we
-        # register an error handler on somewhere else in this module)
-        def handle_exception(flask_method, flask_restful_method, e):
-            code = getattr(e, 'code', 500)
-            if code >= 500:
-                return flask_method(e)
-            else:
-                return flask_restful_method(e)
-
-        self.handle_exception = functools.partial(
-            handle_exception,
-            flask_handle_exception,
-            flask_restful_handle_exception)
-        self.handle_user_exception = functools.partial(
-            handle_exception,
-            flask_handle_user_exception,
-            flask_restful_handle_user_exception)
-        self.config['ERROR_404_HELP'] = False
+        orig_handle_exc = self.handle_exception
+        orig_handle_user_exc = self.handle_user_exception
+        yield
+        self.handle_exception = orig_handle_exc
+        self.handle_user_exception = orig_handle_user_exc
 
 
 def reset_app(configuration=None):
