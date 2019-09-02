@@ -16,14 +16,16 @@
 from flask import request
 
 from manager_rest import constants
-from manager_rest.manager_exceptions import BadParametersError
+from manager_rest.manager_exceptions import (
+    BadParametersError,
+    MissingPremiumPackage
+)
 from manager_rest.storage import get_storage_manager, models
 from manager_rest.security.authorization import authorize
 from manager_rest.security import (MissingPremiumFeatureResource,
                                    SecuredResource,
                                    allow_on_community,
-                                   is_user_action_allowed,
-                                   missing_premium_feature_abort)
+                                   is_user_action_allowed)
 from .. import rest_decorators, rest_utils
 from ..responses_v3 import TenantResponse, TenantDetailsResponse
 
@@ -107,7 +109,7 @@ class TenantsId(SecuredMultiTenancyResource):
             return multi_tenancy.get_tenant(tenant_name)
         else:
             if tenant_name != constants.DEFAULT_TENANT_NAME:
-                missing_premium_feature_abort()
+                raise MissingPremiumPackage()
             tenant = get_storage_manager().get(
                 models.Tenant,
                 None,
