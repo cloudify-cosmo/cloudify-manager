@@ -47,7 +47,6 @@ class Events(resources_v1.Events):
         nickname="list events",
         notes='Returns a list of events for optionally provided filters'
     )
-    @rest_decorators.exceptions_handled
     @authorize('event_list')
     @rest_decorators.marshal_events
     @rest_decorators.create_filters()
@@ -118,7 +117,6 @@ class Events(resources_v1.Events):
         }
         return ListResult(results, metadata)
 
-    @rest_decorators.exceptions_handled
     def post(self):
         raise manager_exceptions.MethodNotAllowedError()
 
@@ -127,7 +125,6 @@ class Events(resources_v1.Events):
         nickname="delete events",
         notes='Deletes events according to a passed Deployment ID'
     )
-    @rest_decorators.exceptions_handled
     @authorize('event_delete')
     @rest_decorators.marshal_events
     @rest_decorators.create_filters()

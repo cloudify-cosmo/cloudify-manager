@@ -37,7 +37,6 @@ class Blueprints(resources_v1.Blueprints):
             'blueprints'
         )
     )
-    @rest_decorators.exceptions_handled
     @authorize('blueprint_list', allow_all_tenants=True)
     @rest_decorators.marshal_with(models.Blueprint)
     @rest_decorators.create_filters(models.Blueprint)
@@ -75,7 +74,6 @@ class BlueprintsId(resources_v1.BlueprintsId):
         nickname="getById",
         notes="Returns a blueprint by its id."
     )
-    @rest_decorators.exceptions_handled
     @authorize('blueprint_get')
     @rest_decorators.marshal_with(models.Blueprint)
     def get(self, blueprint_id, _include=None, **kwargs):
@@ -122,7 +120,6 @@ class BlueprintsId(resources_v1.BlueprintsId):
         ]
 
     )
-    @rest_decorators.exceptions_handled
     @authorize('blueprint_upload')
     @rest_decorators.marshal_with(models.Blueprint)
     def put(self, blueprint_id, **kwargs):
@@ -138,7 +135,6 @@ class BlueprintsId(resources_v1.BlueprintsId):
         nickname="deleteById",
         notes="deletes a blueprint by its id."
     )
-    @rest_decorators.exceptions_handled
     @authorize('blueprint_delete')
     @rest_decorators.marshal_with(models.Blueprint)
     def delete(self, blueprint_id, **kwargs):

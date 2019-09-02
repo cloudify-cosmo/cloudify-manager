@@ -20,10 +20,7 @@ from manager_rest.rest import (
     requests_schema,
     responses,
 )
-from manager_rest.rest.rest_decorators import (
-    exceptions_handled,
-    marshal_with,
-)
+from manager_rest.rest.rest_decorators import marshal_with
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.dsl_functions import evaluate_intrinsic_functions
@@ -46,7 +43,6 @@ class EvaluateFunctions(SecuredResource):
             "application/json"
         ]
     )
-    @exceptions_handled
     @authorize('functions_evaluate')
     @marshal_with(responses.EvaluatedFunctions)
     def post(self, **kwargs):

@@ -34,7 +34,6 @@ from ..responses_v2_1 import MaintenanceMode as MaintenanceModeResponse
 
 
 class MaintenanceMode(SecuredResource):
-    @rest_decorators.exceptions_handled
     @authorize('maintenance_mode_get')
     @rest_decorators.marshal_with(MaintenanceModeResponse)
     def get(self, **_):
@@ -57,7 +56,6 @@ class MaintenanceMode(SecuredResource):
 
 
 class MaintenanceModeAction(SecuredResource):
-    @rest_decorators.exceptions_handled
     @authorize('maintenance_mode_set')
     @rest_decorators.marshal_with(MaintenanceModeResponse)
     def post(self, maintenance_action, **_):

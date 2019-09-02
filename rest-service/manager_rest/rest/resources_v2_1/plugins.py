@@ -33,7 +33,6 @@ class PluginsId(resources_v2.PluginsId):
         nickname="deleteById",
         notes="deletes a plugin according to its ID."
     )
-    @rest_decorators.exceptions_handled
     @authorize('plugin_delete')
     @rest_decorators.marshal_with(models.Plugin)
     def delete(self, plugin_id, **kwargs):

@@ -22,7 +22,6 @@ from ..resources_v2 import Nodes as v2_Nodes
 
 
 class Nodes(v2_Nodes):
-    @rest_decorators.exceptions_handled
     @authorize('node_list')
     @rest_decorators.evaluate_functions
     def get(self, evaluate_functions=False, *args, **kwargs):
@@ -37,7 +36,6 @@ class Nodes(v2_Nodes):
 
 
 class NodeInstancesId(v1_NodeInstancesId):
-    @rest_decorators.exceptions_handled
     @authorize('node_instance_get')
     @rest_decorators.evaluate_functions
     def get(self, evaluate_functions=False, *args, **kwargs):

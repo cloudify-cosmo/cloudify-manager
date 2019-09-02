@@ -17,7 +17,6 @@ from flask_restful.reqparse import Argument
 
 from manager_rest.rest import rest_utils
 from manager_rest.rest.rest_decorators import (
-    exceptions_handled,
     marshal_with
 )
 from manager_rest import config, manager_exceptions
@@ -27,7 +26,6 @@ from manager_rest.storage import get_storage_manager, models
 
 
 class ManagerConfig(SecuredResource):
-    @exceptions_handled
     @authorize('manager_config_get')
     def get(self):
         """Get the Manager config, optionally filtered to a scope.
@@ -67,7 +65,6 @@ class ManagerConfig(SecuredResource):
 
 
 class ManagerConfigId(SecuredResource):
-    @exceptions_handled
     @marshal_with(models.Config)
     @authorize('manager_config_get')
     def get(self, name):
@@ -79,7 +76,6 @@ class ManagerConfigId(SecuredResource):
         """
         return self._get_config(name)
 
-    @exceptions_handled
     @marshal_with(models.Config)
     @authorize('manager_config_put')
     def put(self, name):

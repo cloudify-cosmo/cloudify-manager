@@ -97,7 +97,6 @@ class FileServerAuth(SecuredResource):
             return False
         return blueprint.visibility == VisibilityState.GLOBAL
 
-    @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(ResourceID)
     def get(self, **_):
         """
@@ -113,7 +112,6 @@ class FileServerAuth(SecuredResource):
 
 
 class LdapAuthentication(SecuredResource):
-    @rest_decorators.exceptions_handled
     @authorize('ldap_set')
     @rest_decorators.marshal_with(LdapResponse)
     def post(self):
@@ -146,7 +144,6 @@ class LdapAuthentication(SecuredResource):
         ldap_config.pop('ldap_password')
         return ldap_config
 
-    @rest_decorators.exceptions_handled
     @authorize('ldap_status_get')
     def get(self):
         return 'enabled' if config.instance.ldap_server else 'disabled'

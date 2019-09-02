@@ -22,10 +22,7 @@ from flask_restful_swagger import swagger
 
 from manager_rest import manager_exceptions
 from manager_rest.resource_manager import ResourceManager
-from manager_rest.rest.rest_decorators import (
-    exceptions_handled,
-    marshal_with,
-)
+from manager_rest.rest.rest_decorators import marshal_with
 from manager_rest.rest.rest_utils import (
     get_args_and_verify_arguments,
     get_json_and_verify_params,
@@ -52,7 +49,6 @@ class Nodes(SecuredResource):
                      'dataType': 'string',
                      'paramType': 'query'}]
     )
-    @exceptions_handled
     @authorize('node_list')
     @marshal_with(models.Node)
     def get(self, _include=None, **kwargs):
@@ -102,7 +98,6 @@ class NodeInstances(SecuredResource):
                      'dataType': 'string',
                      'paramType': 'query'}]
     )
-    @exceptions_handled
     @authorize('node_instance_list')
     @marshal_with(models.NodeInstance)
     def get(self, _include=None, **kwargs):
@@ -146,7 +141,6 @@ class NodeInstancesId(SecuredResource):
                      'defaultValue': True,
                      'paramType': 'query'}]
     )
-    @exceptions_handled
     @authorize('node_instance_get')
     @marshal_with(models.NodeInstance)
     def get(self, node_instance_id, _include=None, **kwargs):
@@ -197,7 +191,6 @@ class NodeInstancesId(SecuredResource):
                      'paramType': 'body'}],
         consumes=["application/json"]
     )
-    @exceptions_handled
     @authorize('node_instance_update')
     @marshal_with(models.NodeInstance)
     def patch(self, node_instance_id, **kwargs):

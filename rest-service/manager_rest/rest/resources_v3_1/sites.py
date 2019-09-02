@@ -30,7 +30,6 @@ from manager_rest.rest.rest_utils import (validate_inputs,
 
 
 class SitesName(SecuredResource):
-    @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(models.Site)
     @authorize('site_get')
     def get(self, name):
@@ -40,7 +39,6 @@ class SitesName(SecuredResource):
         validate_inputs({'name': name})
         return get_storage_manager().get(models.Site, name)
 
-    @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(models.Site)
     @authorize('site_create')
     def put(self, name):
@@ -58,7 +56,6 @@ class SitesName(SecuredResource):
         new_site.created_at = utils.get_formatted_timestamp()
         return get_storage_manager().put(new_site)
 
-    @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(models.Site)
     @authorize('site_update')
     def post(self, name):
@@ -81,7 +78,6 @@ class SitesName(SecuredResource):
             site.visibility = visibility
         return storage_manager.update(site, validate_global=True)
 
-    @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(models.Site)
     @authorize('site_delete')
     def delete(self, name):
@@ -158,7 +154,6 @@ class SitesName(SecuredResource):
 
 
 class Sites(SecuredResource):
-    @rest_decorators.exceptions_handled
     @authorize('site_list')
     @rest_decorators.marshal_with(models.Site)
     @rest_decorators.create_filters(models.Site)

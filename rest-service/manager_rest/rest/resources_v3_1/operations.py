@@ -19,7 +19,6 @@ from manager_rest.rest.rest_utils import (
     get_json_and_verify_params,
 )
 from manager_rest.rest.rest_decorators import (
-    exceptions_handled,
     marshal_with,
     paginate
 )
@@ -33,7 +32,6 @@ from manager_rest.security import SecuredResource
 
 
 class Operations(SecuredResource):
-    @exceptions_handled
     @authorize('operations')
     @marshal_with(models.Operation)
     @paginate
@@ -53,7 +51,6 @@ class Operations(SecuredResource):
 
 
 class OperationsId(SecuredResource):
-    @exceptions_handled
     @authorize('operations')
     @marshal_with(models.Operation)
     def put(self, operation_id, **kwargs):
@@ -74,7 +71,6 @@ class OperationsId(SecuredResource):
         )
         return operation, 201
 
-    @exceptions_handled
     @authorize('operations')
     @marshal_with(models.Operation)
     def patch(self, operation_id, **kwargs):
@@ -86,7 +82,6 @@ class OperationsId(SecuredResource):
         instance.state = request_dict.get('state', instance.state)
         return sm.update(instance)
 
-    @exceptions_handled
     @authorize('operations')
     @marshal_with(models.Operation)
     def delete(self, operation_id, **kwargs):
@@ -97,7 +92,6 @@ class OperationsId(SecuredResource):
 
 
 class TasksGraphs(SecuredResource):
-    @exceptions_handled
     @authorize('operations')
     @marshal_with(models.TasksGraph)
     @paginate
@@ -118,7 +112,6 @@ class TasksGraphs(SecuredResource):
 
 
 class TasksGraphsId(SecuredResource):
-    @exceptions_handled
     @authorize('operations')
     @marshal_with(models.TasksGraph)
     def post(self, **kwargs):
@@ -134,7 +127,6 @@ class TasksGraphsId(SecuredResource):
         )
         return tasks_graph, 201
 
-    @exceptions_handled
     @authorize('operations')
     @marshal_with(models.TasksGraph)
     def patch(self, tasks_graph_id, **kwargs):

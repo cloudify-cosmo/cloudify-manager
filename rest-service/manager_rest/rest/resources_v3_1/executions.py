@@ -14,7 +14,6 @@
 #  * limitations under the License.
 #
 
-from manager_rest.rest import rest_decorators
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.resource_manager import get_resource_manager
@@ -23,7 +22,6 @@ from manager_rest.storage import (models,
 
 
 class ExecutionsCheck(SecuredResource):
-    @rest_decorators.exceptions_handled
     @authorize('execution_should_start')
     def get(self, execution_id):
         """

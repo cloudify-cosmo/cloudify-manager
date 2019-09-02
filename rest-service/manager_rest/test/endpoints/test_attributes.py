@@ -102,6 +102,8 @@ class AttributesTestCase(base_test.BaseServerTestCase):
             self.client.evaluate.functions(self.id_, {}, payload)
             self.fail()
         except FunctionsEvaluationError as e:
+            self.assertEqual(e.status_code, 400)
+            self.assertEqual(e.error_code, 'functions_evaluation_error')
             self.assertIn('TARGET is missing', e.message)
 
     def test_ambiguous_multi_instance(self):

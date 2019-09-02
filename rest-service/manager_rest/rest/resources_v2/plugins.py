@@ -60,7 +60,6 @@ class Plugins(SecuredResource):
             'plugins'
         )
     )
-    @rest_decorators.exceptions_handled
     @authorize('plugin_list', allow_all_tenants=True)
     @rest_decorators.marshal_with(models.Plugin)
     @rest_decorators.create_filters(models.Plugin)
@@ -109,7 +108,6 @@ class Plugins(SecuredResource):
                      'paramType': 'body'}],
         consumes=["application/octet-stream"]
     )
-    @rest_decorators.exceptions_handled
     @authorize('plugin_upload')
     @rest_decorators.marshal_with(models.Plugin)
     def post(self, **kwargs):
@@ -169,7 +167,6 @@ class PluginsArchive(SecuredResource):
         nickname="downloadPlugin",
         notes="download a plugin archive according to the plugin ID. "
     )
-    @rest_decorators.exceptions_handled
     @authorize('plugin_download')
     def get(self, plugin_id, **kwargs):
         """
@@ -209,7 +206,6 @@ class PluginsId(SecuredResource):
         nickname="getById",
         notes="Returns a plugin according to its ID."
     )
-    @rest_decorators.exceptions_handled
     @authorize('plugin_get')
     @rest_decorators.marshal_with(models.Plugin)
     def get(self, plugin_id, _include=None, **kwargs):
@@ -227,7 +223,6 @@ class PluginsId(SecuredResource):
         nickname="deleteById",
         notes="deletes a plugin according to its ID."
     )
-    @rest_decorators.exceptions_handled
     @authorize('plugin_delete')
     @rest_decorators.marshal_with(models.Plugin)
     def delete(self, plugin_id, **kwargs):

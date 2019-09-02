@@ -37,7 +37,6 @@ except ImportError:
 
 
 class UserGroups(SecuredMultiTenancyResource):
-    @rest_decorators.exceptions_handled
     @authorize('user_group_list')
     @rest_decorators.marshal_with(GroupResponse)
     @rest_decorators.create_filters(models.Group)
@@ -57,7 +56,6 @@ class UserGroups(SecuredMultiTenancyResource):
             search
         )
 
-    @rest_decorators.exceptions_handled
     @authorize('user_group_create')
     @rest_decorators.marshal_with(GroupResponse)
     def post(self, multi_tenancy):
@@ -82,7 +80,6 @@ class UserGroups(SecuredMultiTenancyResource):
 
 class UserGroupsId(SecuredMultiTenancyResource):
 
-    @rest_decorators.exceptions_handled
     @authorize('user_group_update')
     @rest_decorators.marshal_with(GroupResponse)
     def post(self, group_name, multi_tenancy):
@@ -96,7 +93,6 @@ class UserGroupsId(SecuredMultiTenancyResource):
         rest_utils.verify_role(role_name, is_system_role=True)
         return multi_tenancy.set_group_role(group_name, role_name)
 
-    @rest_decorators.exceptions_handled
     @authorize('user_group_get')
     @rest_decorators.marshal_with(GroupResponse)
     def get(self, group_name, multi_tenancy):
@@ -106,7 +102,6 @@ class UserGroupsId(SecuredMultiTenancyResource):
         rest_utils.validate_inputs({'group_name': group_name})
         return multi_tenancy.get_group(group_name)
 
-    @rest_decorators.exceptions_handled
     @authorize('user_group_delete')
     @rest_decorators.marshal_with(GroupResponse)
     def delete(self, group_name, multi_tenancy):
@@ -118,7 +113,6 @@ class UserGroupsId(SecuredMultiTenancyResource):
 
 
 class UserGroupsUsers(SecuredMultiTenancyResource):
-    @rest_decorators.exceptions_handled
     @authorize('user_group_add_user')
     @rest_decorators.marshal_with(GroupResponse)
     @rest_decorators.no_external_authenticator('add user to group')
@@ -140,7 +134,6 @@ class UserGroupsUsers(SecuredMultiTenancyResource):
             request_dict['group_name']
         )
 
-    @rest_decorators.exceptions_handled
     @authorize('user_group_remove_user')
     @rest_decorators.marshal_with(GroupResponse)
     @rest_decorators.no_external_authenticator('remove user from group')

@@ -43,7 +43,7 @@ def evaluate_intrinsic_functions(payload, deployment_id, context=None):
             payload=payload,
             context=context,
             **methods)
-    except parser_exceptions.FunctionEvaluationError, e:
+    except parser_exceptions.FunctionEvaluationError as e:
         raise FunctionsEvaluationError(str(e))
 
 
@@ -77,7 +77,7 @@ def evaluate_deployment_capabilities(deployment_id):
             capabilities=deployment.capabilities,
             **methods
             )
-    except parser_exceptions.FunctionEvaluationError, e:
+    except parser_exceptions.FunctionEvaluationError as e:
         raise DeploymentCapabilitiesEvaluationError(str(e))
 
 

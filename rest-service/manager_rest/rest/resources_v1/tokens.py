@@ -20,10 +20,7 @@ from flask_security import current_user
 from manager_rest.rest import responses
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
-from manager_rest.rest.rest_decorators import (
-    exceptions_handled,
-    marshal_with,
-)
+from manager_rest.rest.rest_decorators import marshal_with
 
 
 class Tokens(SecuredResource):
@@ -33,7 +30,6 @@ class Tokens(SecuredResource):
         nickname="get auth token for the request user",
         notes="Generate authentication token for the request user",
     )
-    @exceptions_handled
     @authorize('token_get')
     @marshal_with(responses.Tokens)
     def get(self, **kwargs):
@@ -49,7 +45,6 @@ class Tokens(SecuredResource):
         nickname="get auth token for the request user",
         notes="Generate authentication token for the request user",
     )
-    @exceptions_handled
     @authorize('token_get')
     @marshal_with(responses.Tokens)
     def post(self, **kwargs):
