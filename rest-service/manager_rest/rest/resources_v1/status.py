@@ -22,8 +22,8 @@ from cloudify.constants import BROKER_PORT_SSL
 
 from manager_rest import config
 from manager_rest.rest import responses
+from manager_rest.security import SecuredResource
 from manager_rest.rest.rest_decorators import marshal_with
-from manager_rest.security import SecuredResourceReadonlyMode
 from manager_rest.security.authorization import authorize
 try:
     from manager_rest.systemddbus import get_services
@@ -44,7 +44,7 @@ OPTIONAL_SERVICES = {
 }
 
 
-class Status(SecuredResourceReadonlyMode):
+class Status(SecuredResource):
 
     @swagger.operation(
         responseClass=responses.Status,
@@ -56,10 +56,12 @@ class Status(SecuredResourceReadonlyMode):
     def get(self, **kwargs):
         """Get the status of running system services"""
         if get_services:
-            jobs = get_services(self._get_systemd_manager_services())
+            services = get_systemd_manager_services(BASE_SERVICES,
+                                                    OPTIONAL_SERVICES)
+            jobs = get_services(services)
             jobs = [
                 job for job in jobs
-                if self._should_be_in_services_output(job)
+                if should_be_in_services_output(job, OPTIONAL_SERVICES)
             ]
             # If PostgreSQL is not local, print it as 'remote'
             if not config.instance.postgresql_host.startswith(('localhost',
@@ -78,32 +80,33 @@ class Status(SecuredResourceReadonlyMode):
 
         return {'status': 'running', 'services': jobs}
 
-    def _should_be_in_services_output(self, job):
-        if job['unit_id'] not in OPTIONAL_SERVICES:
+
+def should_be_in_services_output(job, optional_services):
+    if job['unit_id'] not in optional_services:
+        return True
+
+    if job['instances']:
+        # We have some details of the systemd job...
+        if job['instances'][0]['LoadState'] != 'not-found':
+            # And since its LoadState wasn't not-found, it should be
+            # installed and working
             return True
 
-        if job['instances']:
-            # We have some details of the systemd job...
-            if job['instances'][0]['LoadState'] != 'not-found':
-                # And since its LoadState wasn't not-found, it should be
-                # installed and working
-                return True
+    # If we reach here then the service is optional and not installed
+    return False
 
-        # If we reach here then the service is optional and not installed
-        return False
 
-    def _get_systemd_manager_services(self):
-        """Services the status of which we keep track of.
+def get_systemd_manager_services(base_services, optional_services):
+    """Services the status of which we keep track of.
+    :return: a dict of {service_name: label}
+    """
+    services = {}
 
-        :return: a dict of {service_name: label}
-        """
-        services = {}
+    # Use updates to avoid mutating the 'constant'
+    services.update(base_services)
+    services.update(optional_services)
 
-        # Use updates to avoid mutating the 'constant'
-        services.update(BASE_SERVICES)
-        services.update(OPTIONAL_SERVICES)
-
-        return services
+    return services
 
 
 def broker_is_healthy():

@@ -18,7 +18,6 @@ import copy
 import urllib
 import subprocess
 import dateutil.parser
-from datetime import datetime
 from string import ascii_letters
 from contextlib import contextmanager
 
@@ -242,7 +241,7 @@ def get_visibility_parameter(optional=False,
     return visibility
 
 
-def parse_datetime(datetime_str):
+def parse_datetime_string(datetime_str):
     """
     :param datetime_str: A string representing date and time with timezone
                          information.
@@ -250,6 +249,7 @@ def parse_datetime(datetime_str):
     """
     # Parse the string to datetime object
     date_with_offset = dateutil.parser.parse(datetime_str)
+
     # Convert the date to UTC
     try:
         utc_date = date_with_offset.astimezone(pytz.utc)
@@ -259,17 +259,9 @@ def parse_datetime(datetime_str):
             ' valid date. \nExpected format: YYYYMMDDHHMM+HHMM or'
             ' YYYYMMDDHHMM-HHMM i.e: 201801012230-0500'
             ' (Jan-01-18 10:30pm EST)'.format(datetime_str))
-    # Date is in UTC, tzinfo is not necessary
-    utc_date = utc_date.replace(tzinfo=None)
-    now = datetime.utcnow()
-    if utc_date <= now:
-        raise manager_exceptions.BadParametersError(
-            'Date `{0}` has already passed, please provide'
-            ' valid date. \nExpected format: YYYYMMDDHHMM+HHMM or'
-            ' YYYYMMDDHHMM-HHMM i.e: 201801012230-0500'
-            ' (Jan-01-18 10:30pm EST)'.format(datetime_str))
 
-    return utc_date
+    # Date is in UTC, tzinfo is not necessary
+    return utc_date.replace(tzinfo=None)
 
 
 def is_hidden_value_permitted(secret):
