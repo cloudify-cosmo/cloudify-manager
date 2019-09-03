@@ -23,10 +23,8 @@ from cloudify.models_states import AgentState
 from cloudify.utils import get_broker_ssl_cert_path
 from cloudify.agent_utils import create_agent_record
 from cloudify.constants import AGENT_INSTALL_METHOD_NONE
-
 from cloudify_rest_client.exceptions import CloudifyClientError
 
-from .utils import is_compute, get_tenants_list
 from .constants import V_4_1_0, V_4_4_0, V_4_5_5
 
 
@@ -51,46 +49,28 @@ class Agents(object):
     def dump(self, tempdir, manager_version):
         self._manager_version = manager_version
         result = {}
-        for tenant_name in get_tenants_list():
-            result[tenant_name] = {}
-            tenant_client = get_rest_client(tenant_name)
-            tenant_deployments = tenant_client.deployments.list(
-                _include=['id'],
-                _get_all_results=True
-            )
-            for deployment in tenant_deployments:
-                result[tenant_name][deployment.id] = \
-                    self._get_deployment_result(tenant_client, deployment.id)
+        client = get_rest_client()
+        agents = client.agents.list(_all_tenants=True)
+        agent_ids = [agent.id for agent in agents.items]
+        node_instances = client.node_instances.list(id=agent_ids,
+                                                    _all_tenants=True)
+        for instance in node_instances:
+            self._add_node_instance_to_result(instance, result)
         self._dump_result_to_file(tempdir, result)
+
+    def _add_node_instance_to_result(self, instance, result):
+        result.setdefault(instance['tenant_name'], {})
+        tenant = result[instance['tenant_name']]
+        tenant.setdefault(instance['deployment_id'], {})
+        deployment = tenant[instance['deployment_id']]
+        deployment.setdefault(instance['node_id'], {})
+        node = deployment[instance['node_id']]
+        node[instance['id']] = self._get_node_instance_result(instance)
 
     def _dump_result_to_file(self, tempdir, result):
         agents_file_path = os.path.join(tempdir, self._AGENTS_FILE)
         with open(agents_file_path, 'w') as out:
             out.write(json.dumps(result))
-
-    def _get_deployment_result(self, client, deployment_id):
-        deployment_result = {}
-        nodes_list = client.nodes.list(deployment_id=deployment_id,
-                                       _include=['id', 'type_hierarchy'],
-                                       _get_all_results=True)
-        for node in nodes_list:
-            if is_compute(node):
-                deployment_result[node.id] = self._get_node_result(
-                    client, deployment_id, node.id)
-        return deployment_result
-
-    def _get_node_result(self, client, deployment_id, node_id):
-        node_result = {}
-        for node_instance in client.node_instances.list(
-                deployment_id=deployment_id, node_name=node_id):
-            # Only patch agent config for nodes that have been initialized;
-            # uninitialized nodes don't have an agent config yet in their
-            # runtime properties
-            if node_instance.state == 'uninitialized':
-                continue
-            node_result[node_instance.id] = self._get_node_instance_result(
-                node_instance)
-        return node_result
 
     def _get_node_instance_result(self, node_instance):
         """
