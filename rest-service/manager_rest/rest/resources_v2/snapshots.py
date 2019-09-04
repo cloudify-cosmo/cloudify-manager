@@ -49,7 +49,6 @@ class Snapshots(SecuredResource):
         nickname='list',
         notes='Returns a list of existing snapshots.'
     )
-    @rest_decorators.exceptions_handled
     @authorize('snapshot_list', allow_all_tenants=True)
     @rest_decorators.marshal_with(models.Snapshot)
     @rest_decorators.create_filters(models.Snapshot)
@@ -77,7 +76,6 @@ class SnapshotsId(SecuredResource):
         nickname='getById',
         notes='Returns a snapshot by its id.'
     )
-    @rest_decorators.exceptions_handled
     @authorize('snapshot_get')
     @rest_decorators.marshal_with(models.Snapshot)
     def get(self, snapshot_id, _include=None, **kwargs):
@@ -95,7 +93,6 @@ class SnapshotsId(SecuredResource):
             "application/json"
         ]
     )
-    @rest_decorators.exceptions_handled
     @authorize('snapshot_create')
     @rest_decorators.marshal_with(models.Execution)
     def put(self, snapshot_id):
@@ -138,7 +135,6 @@ class SnapshotsId(SecuredResource):
         nickname='deleteSnapshot',
         notes='Delete existing snapshot.'
     )
-    @rest_decorators.exceptions_handled
     @authorize('snapshot_delete')
     @rest_decorators.marshal_with(models.Snapshot)
     def delete(self, snapshot_id):
@@ -149,7 +145,6 @@ class SnapshotsId(SecuredResource):
         shutil.rmtree(path, ignore_errors=True)
         return snapshot, 200
 
-    @rest_decorators.exceptions_handled
     @authorize('snapshot_status_update')
     def patch(self, snapshot_id):
         """Update snapshot status by id
@@ -189,7 +184,6 @@ class SnapshotsIdArchive(SecuredResource):
             "application/octet-stream"
         ]
     )
-    @rest_decorators.exceptions_handled
     @authorize('snapshot_upload')
     @rest_decorators.marshal_with(models.Snapshot)
     def put(self, snapshot_id):
@@ -199,7 +193,6 @@ class SnapshotsIdArchive(SecuredResource):
         nickname='downloadSnapshot',
         notes='Downloads snapshot as an archive.'
     )
-    @rest_decorators.exceptions_handled
     @authorize('snapshot_download')
     def get(self, snapshot_id):
         snap = get_storage_manager().get(models.Snapshot, snapshot_id)
@@ -234,7 +227,6 @@ class SnapshotsIdRestore(SecuredResource):
         nickname='restoreSnapshot',
         notes='Restore existing snapshot.'
     )
-    @rest_decorators.exceptions_handled
     @authorize('snapshot_restore')
     @rest_decorators.marshal_with(models.Snapshot)
     def post(self, snapshot_id):

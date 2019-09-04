@@ -32,7 +32,6 @@ from manager_rest.rest.rest_utils import get_args_and_verify_arguments
 
 class BlueprintsSetGlobal(SecuredResource):
 
-    @rest_decorators.exceptions_handled
     @authorize('resource_set_global')
     @rest_decorators.marshal_with(models.Blueprint)
     def patch(self, blueprint_id):
@@ -48,7 +47,6 @@ class BlueprintsSetGlobal(SecuredResource):
 
 class BlueprintsSetVisibility(SecuredResource):
 
-    @rest_decorators.exceptions_handled
     @authorize('resource_set_visibility')
     @rest_decorators.marshal_with(models.Blueprint)
     def patch(self, blueprint_id):
@@ -62,7 +60,6 @@ class BlueprintsSetVisibility(SecuredResource):
 
 
 class BlueprintsId(resources_v2.BlueprintsId):
-    @rest_decorators.exceptions_handled
     @authorize('blueprint_upload')
     @rest_decorators.marshal_with(models.Blueprint)
     def put(self, blueprint_id, **kwargs):
@@ -84,7 +81,6 @@ class BlueprintsId(resources_v2.BlueprintsId):
         nickname="deleteById",
         notes="deletes a blueprint by its id."
     )
-    @rest_decorators.exceptions_handled
     @authorize('blueprint_delete')
     @rest_decorators.marshal_with(models.Blueprint)
     def delete(self, blueprint_id, **kwargs):

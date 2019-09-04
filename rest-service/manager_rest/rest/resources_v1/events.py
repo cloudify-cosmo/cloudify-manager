@@ -26,10 +26,7 @@ from toolz import dicttoolz
 from cloudify.models_states import VisibilityState
 
 from manager_rest import manager_exceptions, utils
-from manager_rest.rest.rest_decorators import (
-    exceptions_handled,
-    insecure_rest_method,
-)
+from manager_rest.rest.rest_decorators import insecure_rest_method
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage.models_base import db
@@ -430,13 +427,11 @@ class Events(SecuredResource):
 
         return event
 
-    @exceptions_handled
     @authorize('event_list')
     @insecure_rest_method
     def get(self, **kwargs):
         raise manager_exceptions.MethodNotAllowedError()
 
-    @exceptions_handled
     @authorize('event_list')
     @insecure_rest_method
     def post(self, **kwargs):

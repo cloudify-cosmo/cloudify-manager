@@ -14,16 +14,13 @@
 #  * limitations under the License.
 
 import os
-import sys
 import glob
 import json
 import errno
 import shutil
 import zipfile
-import StringIO
 import tempfile
 import platform
-import traceback
 from datetime import datetime
 from os import path, makedirs
 from base64 import urlsafe_b64encode
@@ -31,7 +28,6 @@ from base64 import urlsafe_b64encode
 import wagon
 from flask import g
 from flask import request
-from flask_restful import abort
 from werkzeug.local import LocalProxy
 from flask_security import current_user
 
@@ -81,21 +77,6 @@ def copy_resources(file_server_root, resources_path=None):
                                    'cloudify')
     shutil.copytree(cloudify_resources, path.join(file_server_root,
                                                   'cloudify'))
-
-
-def abort_error(error, logger, hide_server_message=False):
-    logger.info('{0}: {1}'.format(type(error).__name__, str(error)))
-    s_traceback = StringIO.StringIO()
-    if hide_server_message:
-        exc_type, exc_value, exc_traceback = sys.exc_info()
-        traceback.print_tb(exc_traceback, file=s_traceback)
-    else:
-        traceback.print_exc(file=s_traceback)
-
-    abort(error.status_code,
-          message=str(error),
-          error_code=error.error_code,
-          server_traceback=s_traceback.getvalue())
 
 
 def mkdirs(folder_path):

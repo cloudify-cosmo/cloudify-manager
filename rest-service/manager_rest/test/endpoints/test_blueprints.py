@@ -55,12 +55,6 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
                                 'path',
                                 '0')
 
-    def test_server_traceback_on_error(self):
-        try:
-            self.client.blueprints.get('15')
-        except exceptions.CloudifyClientError as e:
-            self.assertIsNotNone(e.server_traceback)
-
     def test_post_and_then_search(self):
         post_blueprints_response = self.put_file(
             *self.put_blueprint_args(blueprint_id='hello_world')).json

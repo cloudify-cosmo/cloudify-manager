@@ -26,10 +26,7 @@ from manager_rest.rest import (
     requests_schema,
     responses,
 )
-from manager_rest.rest.rest_decorators import (
-    exceptions_handled,
-    marshal_with,
-)
+from manager_rest.rest.rest_decorators import marshal_with
 from manager_rest.rest.rest_utils import (
     get_args_and_verify_arguments,
     get_json_and_verify_params,
@@ -49,7 +46,6 @@ class ProviderContext(SecuredResource):
         nickname="getContext",
         notes="Get the provider context"
     )
-    @exceptions_handled
     @authorize('provider_context_get')
     @marshal_with(models.ProviderContext)
     def get(self, **kwargs):
@@ -75,7 +71,6 @@ class ProviderContext(SecuredResource):
             "application/json"
         ]
     )
-    @exceptions_handled
     @authorize('provider_context_create')
     @marshal_with(responses.ProviderContextPostStatus)
     def post(self, **kwargs):

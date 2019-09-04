@@ -25,10 +25,7 @@ from manager_rest.resource_manager import (
     get_resource_manager,
 )
 from manager_rest.rest import requests_schema
-from manager_rest.rest.rest_decorators import (
-    exceptions_handled,
-    marshal_with,
-)
+from manager_rest.rest.rest_decorators import marshal_with
 from manager_rest.rest.rest_utils import (
     get_args_and_verify_arguments,
     get_json_and_verify_params,
@@ -65,7 +62,6 @@ class Executions(SecuredResource):
                      'defaultValue': False,
                      'paramType': 'query'}]
     )
-    @exceptions_handled
     @authorize('execution_list')
     @marshal_with(models.Execution)
     def get(self, _include=None, **kwargs):
@@ -82,7 +78,6 @@ class Executions(SecuredResource):
             include=_include,
             filters=deployment_id_filter).items
 
-    @exceptions_handled
     @authorize('execution_start')
     @marshal_with(models.Execution)
     def post(self, **kwargs):
@@ -134,7 +129,6 @@ class ExecutionsId(SecuredResource):
         nickname="getById",
         notes="Returns the execution state by its id.",
     )
-    @exceptions_handled
     @authorize('execution_get')
     @marshal_with(models.Execution)
     def get(self, execution_id, _include=None, **kwargs):
@@ -164,7 +158,6 @@ class ExecutionsId(SecuredResource):
             "application/json"
         ]
     )
-    @exceptions_handled
     @authorize('execution_cancel')
     @marshal_with(models.Execution)
     def post(self, execution_id, **kwargs):
@@ -210,7 +203,6 @@ class ExecutionsId(SecuredResource):
             "application/json"
         ]
     )
-    @exceptions_handled
     @authorize('execution_status_update')
     @marshal_with(models.Execution)
     def patch(self, execution_id, **kwargs):

@@ -32,7 +32,6 @@ from manager_rest.manager_exceptions import (ConflictError,
 
 
 class SecretsKey(SecuredResource):
-    @rest_decorators.exceptions_handled
     @authorize('secret_get')
     @rest_decorators.marshal_with(models.Secret)
     def get(self, key):
@@ -51,7 +50,6 @@ class SecretsKey(SecuredResource):
             secret_dict['value'] = decrypt(secret.value)
         return secret_dict
 
-    @rest_decorators.exceptions_handled
     @authorize('secret_create')
     @rest_decorators.marshal_with(models.Secret)
     def put(self, key, **kwargs):
@@ -91,7 +89,6 @@ class SecretsKey(SecuredResource):
                 return sm.update(secret, validate_global=True)
             raise
 
-    @rest_decorators.exceptions_handled
     @authorize('secret_update')
     @rest_decorators.marshal_with(models.Secret)
     def patch(self, key):
@@ -110,7 +107,6 @@ class SecretsKey(SecuredResource):
         secret.updated_at = utils.get_formatted_timestamp()
         return get_storage_manager().update(secret, validate_global=True)
 
-    @rest_decorators.exceptions_handled
     @authorize('secret_delete')
     @rest_decorators.marshal_with(models.Secret)
     def delete(self, key):
@@ -171,7 +167,6 @@ class SecretsKey(SecuredResource):
 
 
 class Secrets(SecuredResource):
-    @rest_decorators.exceptions_handled
     @authorize('secret_list')
     @rest_decorators.marshal_with(SecretsListResponse)
     @rest_decorators.create_filters(models.Secret)

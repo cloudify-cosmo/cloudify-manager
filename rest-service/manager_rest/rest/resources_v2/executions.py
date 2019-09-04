@@ -47,7 +47,6 @@ class Executions(resources_v1.Executions):
              'paramType': 'query'}
         ]
     )
-    @rest_decorators.exceptions_handled
     @authorize('execution_list', allow_all_tenants=True)
     @rest_decorators.marshal_with(models.Execution)
     @rest_decorators.create_filters(models.Execution)

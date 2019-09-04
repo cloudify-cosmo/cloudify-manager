@@ -48,7 +48,6 @@ class DeploymentsId(resources_v1.DeploymentsId):
     def get_skip_plugin_validation_flag(self, request_dict):
         return request_dict.get('skip_plugins_validation', False)
 
-    @rest_decorators.exceptions_handled
     @authorize('deployment_create')
     @rest_decorators.marshal_with(models.Deployment)
     def put(self, deployment_id, **kwargs):
@@ -83,7 +82,6 @@ class DeploymentsId(resources_v1.DeploymentsId):
 
 class DeploymentsSetVisibility(SecuredResource):
 
-    @rest_decorators.exceptions_handled
     @authorize('deployment_set_visibility')
     @rest_decorators.marshal_with(models.Deployment)
     def patch(self, deployment_id):
@@ -104,7 +102,6 @@ class DeploymentsIdCapabilities(SecuredResource):
         nickname="get",
         notes="Gets a specific deployment's capabilities."
     )
-    @rest_decorators.exceptions_handled
     @authorize('deployment_capabilities')
     @rest_decorators.marshal_with(responses_v3.DeploymentCapabilities)
     def get(self, deployment_id, **kwargs):
@@ -115,7 +112,6 @@ class DeploymentsIdCapabilities(SecuredResource):
 
 class DeploymentsSetSite(SecuredResource):
 
-    @rest_decorators.exceptions_handled
     @authorize('deployment_set_site')
     @rest_decorators.marshal_with(models.Deployment)
     def post(self, deployment_id):

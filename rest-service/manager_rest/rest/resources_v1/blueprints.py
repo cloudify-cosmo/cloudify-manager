@@ -25,8 +25,7 @@ from manager_rest.resource_manager import get_resource_manager
 from manager_rest.upload_manager import UploadedBlueprintsManager
 from manager_rest.storage import (get_storage_manager,
                                   models)
-from manager_rest.rest.rest_decorators import (exceptions_handled,
-                                               marshal_with)
+from manager_rest.rest.rest_decorators import marshal_with
 from manager_rest.rest.rest_utils import (make_streaming_response,
                                           validate_inputs)
 from manager_rest.constants import (SUPPORTED_ARCHIVE_TYPES,
@@ -40,7 +39,6 @@ class BlueprintsIdArchive(SecuredResource):
         nickname="getArchive",
         notes="Downloads blueprint as an archive."
     )
-    @exceptions_handled
     @authorize('blueprint_download')
     def get(self, blueprint_id, **kwargs):
         """
@@ -86,7 +84,6 @@ class Blueprints(SecuredResource):
         nickname="list",
         notes="Returns a list of uploaded blueprints."
     )
-    @exceptions_handled
     @authorize('blueprint_list')
     @marshal_with(models.Blueprint)
     def get(self, _include=None, **kwargs):
@@ -105,7 +102,6 @@ class BlueprintsId(SecuredResource):
         nickname="getById",
         notes="Returns a blueprint by its id."
     )
-    @exceptions_handled
     @authorize('blueprint_get')
     @marshal_with(models.Blueprint)
     def get(self, blueprint_id, _include=None, **kwargs):
@@ -152,7 +148,6 @@ class BlueprintsId(SecuredResource):
             "application/octet-stream"
         ]
     )
-    @exceptions_handled
     @authorize('blueprint_upload')
     @marshal_with(models.Blueprint)
     def put(self, blueprint_id, **kwargs):
@@ -167,7 +162,6 @@ class BlueprintsId(SecuredResource):
         nickname="deleteById",
         notes="deletes a blueprint by its id."
     )
-    @exceptions_handled
     @authorize('blueprint_delete')
     @marshal_with(models.Blueprint)
     def delete(self, blueprint_id, **kwargs):

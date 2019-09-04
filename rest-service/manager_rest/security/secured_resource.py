@@ -18,10 +18,9 @@ from functools import wraps
 from flask_restful import Resource
 from flask_restful.utils import unpack
 from werkzeug.exceptions import HTTPException
-from flask import request, current_app, Response, jsonify
+from flask import request, Response, jsonify
 
 from manager_rest import premium_enabled
-from manager_rest.utils import abort_error
 from manager_rest.manager_exceptions import MissingPremiumPackage
 
 from .authentication import authenticator
@@ -74,18 +73,6 @@ def authenticate(func):
     return wrapper
 
 
-def missing_premium_feature_abort():
-    """Throw a nicely formatted "premium only" error"""
-    abort_error(
-        error=MissingPremiumPackage(
-            'This feature exists only in the premium edition of Cloudify.'
-            '\nPlease contact sales for additional info.'
-        ),
-        logger=current_app.logger,
-        hide_server_message=True
-    )
-
-
 def _abort_on_premium_missing(func):
     """Mark a method as requiring premium.
 
@@ -96,7 +83,7 @@ def _abort_on_premium_missing(func):
 
     @wraps(func)
     def abort(*args, **kwargs):
-        missing_premium_feature_abort()
+        raise MissingPremiumPackage()
     return abort
 
 

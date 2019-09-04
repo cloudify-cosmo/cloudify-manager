@@ -18,7 +18,6 @@ from .secured_resource import (  # NOQA
     SecuredResource,
     MissingPremiumFeatureResource,
     premium_only,
-    allow_on_community,
-    missing_premium_feature_abort
+    allow_on_community
 )
 from .authorization import is_user_action_allowed  # NOQA

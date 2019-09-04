@@ -97,7 +97,6 @@ class SummarizeDeployments(BaseSummary):
 
     @authorize(auth_req, allow_all_tenants=True)
     @marshal_summary('deployments')
-    @rest_decorators.exceptions_handled
     @rest_decorators.all_tenants
     @rest_decorators.create_filters(models.Deployment)
     @rest_decorators.paginate
@@ -116,7 +115,6 @@ class SummarizeNodes(BaseSummary):
 
     @authorize(auth_req, allow_all_tenants=True)
     @marshal_summary('nodes')
-    @rest_decorators.exceptions_handled
     @rest_decorators.create_filters(models.Node)
     @rest_decorators.paginate
     @rest_decorators.all_tenants
@@ -138,7 +136,6 @@ class SummarizeNodeInstances(BaseSummary):
 
     @authorize(auth_req, allow_all_tenants=True)
     @marshal_summary('node_instances')
-    @rest_decorators.exceptions_handled
     @rest_decorators.create_filters(models.NodeInstance)
     @rest_decorators.paginate
     @rest_decorators.all_tenants
@@ -161,7 +158,6 @@ class SummarizeExecutions(BaseSummary):
 
     @authorize(auth_req, allow_all_tenants=True)
     @marshal_summary('executions')
-    @rest_decorators.exceptions_handled
     @rest_decorators.create_filters(models.Execution)
     @rest_decorators.paginate
     @rest_decorators.all_tenants
@@ -179,7 +175,6 @@ class SummarizeBlueprints(BaseSummary):
 
     @authorize(auth_req, allow_all_tenants=True)
     @marshal_summary('blueprints')
-    @rest_decorators.exceptions_handled
     @rest_decorators.all_tenants
     @rest_decorators.create_filters(models.Blueprint)
     @rest_decorators.paginate

@@ -22,10 +22,7 @@ from cloudify.constants import BROKER_PORT_SSL
 
 from manager_rest import config
 from manager_rest.rest import responses
-from manager_rest.rest.rest_decorators import (
-    exceptions_handled,
-    marshal_with,
-)
+from manager_rest.rest.rest_decorators import marshal_with
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 try:
@@ -54,7 +51,6 @@ class Status(SecuredResource):
         nickname="status",
         notes="Returns state of running system services"
     )
-    @exceptions_handled
     @authorize('status_get')
     @marshal_with(responses.Status)
     def get(self, **kwargs):

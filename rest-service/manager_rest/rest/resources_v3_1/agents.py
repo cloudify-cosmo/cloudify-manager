@@ -32,7 +32,6 @@ from manager_rest.rest.rest_utils import (validate_inputs,
 
 
 class Agents(SecuredResource):
-    @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(AgentResponse)
     @rest_decorators.create_filters(models.Agent)
     @rest_decorators.paginate
@@ -60,7 +59,6 @@ class Agents(SecuredResource):
 
 
 class AgentsName(SecuredResource):
-    @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(models.Agent)
     @authorize('agent_get')
     def get(self, name):
@@ -74,7 +72,6 @@ class AgentsName(SecuredResource):
             agent_dict['rabbitmq_password'] = decrypt(agent.rabbitmq_password)
         return agent_dict
 
-    @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(models.Agent)
     @authorize('agent_create')
     def put(self, name):
@@ -106,7 +103,6 @@ class AgentsName(SecuredResource):
             self._get_amqp_manager().create_agent_user(new_agent)
         return response
 
-    @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(models.Agent)
     @authorize('agent_update')
     def patch(self, name):

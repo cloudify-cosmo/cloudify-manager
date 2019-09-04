@@ -35,7 +35,6 @@ from manager_rest.rest import (resources_v2,
 
 class PluginsSetGlobal(SecuredResource):
 
-    @rest_decorators.exceptions_handled
     @authorize('resource_set_global')
     @rest_decorators.marshal_with(models.Plugin)
     def patch(self, plugin_id):
@@ -51,7 +50,6 @@ class PluginsSetGlobal(SecuredResource):
 
 class PluginsSetVisibility(SecuredResource):
 
-    @rest_decorators.exceptions_handled
     @authorize('resource_set_visibility')
     @rest_decorators.marshal_with(models.Plugin)
     def patch(self, plugin_id):
@@ -65,7 +63,6 @@ class PluginsSetVisibility(SecuredResource):
 
 
 class Plugins(resources_v2.Plugins):
-    @rest_decorators.exceptions_handled
     @authorize('plugin_upload')
     @rest_decorators.marshal_with(models.Plugin)
     def post(self, **kwargs):
@@ -84,7 +81,6 @@ class Plugins(resources_v2.Plugins):
 
 class PluginsUpdate(SecuredResource):
 
-    @rest_decorators.exceptions_handled
     @authorize('plugins_update_create')
     @rest_decorators.marshal_with(models.PluginsUpdate)
     def post(self, id, phase):
@@ -121,7 +117,6 @@ class PluginsUpdateId(SecuredResource):
         parameters=create_filter_params_list_description(
             models.PluginsUpdate.response_fields, 'plugins update')
     )
-    @rest_decorators.exceptions_handled
     @authorize('plugins_update_get')
     @rest_decorators.marshal_with(models.PluginsUpdate)
     def get(self, update_id, _include=None):
@@ -140,7 +135,6 @@ class PluginsUpdates(SecuredResource):
             'plugins updates'
         )
     )
-    @rest_decorators.exceptions_handled
     @authorize('plugins_update_list')
     @rest_decorators.marshal_with(models.PluginsUpdate)
     @rest_decorators.create_filters(models.PluginsUpdate)
@@ -168,7 +162,6 @@ class PluginsUpdates(SecuredResource):
 
 class PluginsId(resources_v2_1.PluginsId):
 
-    @rest_decorators.exceptions_handled
     @authorize('plugin_upload')
     @rest_decorators.marshal_with(models.Plugin)
     def put(self, plugin_id, **kwargs):

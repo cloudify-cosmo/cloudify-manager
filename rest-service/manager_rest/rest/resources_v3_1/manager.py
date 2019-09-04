@@ -26,7 +26,6 @@ from manager_rest.security.authorization import (
     is_user_action_allowed
 )
 from manager_rest.rest.rest_decorators import (
-    exceptions_handled,
     marshal_with,
     paginate
 )
@@ -43,7 +42,6 @@ HTTPS_PATH = '/etc/nginx/conf.d/https-external-rest-server.cloudify'
 
 
 class SSLConfig(SecuredResource):
-    @exceptions_handled
     @authorize('ssl_set')
     def post(self):
         """
@@ -59,7 +57,6 @@ class SSLConfig(SecuredResource):
             self._set_ssl_state(state)
         return 'SSL is now {0} on the manager'.format(status)
 
-    @exceptions_handled
     @authorize('ssl_get')
     def get(self):
         """
@@ -85,7 +82,6 @@ class SSLConfig(SecuredResource):
 # a 404. The method body should never be executed, because the @premium_only
 # decorator should prevent it.
 class _CommunityManagersBase(SecuredResource):
-    @exceptions_handled
     @authorize('manager_manage')
     @marshal_with(models.Manager)
     @premium_only
@@ -94,14 +90,12 @@ class _CommunityManagersBase(SecuredResource):
 
 
 class _CommunityManagersId(SecuredResource):
-    @exceptions_handled
     @authorize('manager_manage')
     @marshal_with(models.Manager)
     @premium_only
     def put(self):
         raise NotImplementedError('Premium implementation only')
 
-    @exceptions_handled
     @authorize('manager_manage')
     @marshal_with(models.Manager)
     @premium_only
@@ -110,7 +104,6 @@ class _CommunityManagersId(SecuredResource):
 
 
 class _CommunityBrokersBase(SecuredResource):
-    @exceptions_handled
     @authorize('broker_manage')
     @marshal_with(models.RabbitMQBroker)
     @premium_only
@@ -119,14 +112,12 @@ class _CommunityBrokersBase(SecuredResource):
 
 
 class _CommunityBrokersId(SecuredResource):
-    @exceptions_handled
     @authorize('broker_manage')
     @marshal_with(models.Manager)
     @premium_only
     def put(self):
         raise NotImplementedError('Premium implementation only')
 
-    @exceptions_handled
     @authorize('broker_manage')
     @marshal_with(models.Manager)
     @premium_only
@@ -147,7 +138,6 @@ else:
 
 
 class Managers(managers_base):
-    @exceptions_handled
     @marshal_with(models.Manager)
     @paginate
     @authorize('manager_get')
@@ -174,7 +164,6 @@ class Managers(managers_base):
 
 
 class RabbitMQBrokers(brokers_base):
-    @exceptions_handled
     @marshal_with(models.RabbitMQBroker)
     @paginate
     @authorize('broker_get')

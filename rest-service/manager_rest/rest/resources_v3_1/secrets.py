@@ -38,7 +38,6 @@ from manager_rest.rest import rest_decorators, resources_v3, rest_utils
 
 class SecretsSetGlobal(SecuredResource):
 
-    @rest_decorators.exceptions_handled
     @authorize('resource_set_global')
     @rest_decorators.marshal_with(models.Secret)
     def patch(self, key):
@@ -54,7 +53,6 @@ class SecretsSetGlobal(SecuredResource):
 
 class SecretsSetVisibility(SecuredResource):
 
-    @rest_decorators.exceptions_handled
     @authorize('secret_update')
     @rest_decorators.marshal_with(models.Secret)
     def patch(self, key):
@@ -68,7 +66,6 @@ class SecretsSetVisibility(SecuredResource):
 
 
 class SecretsKey(resources_v3.SecretsKey):
-    @rest_decorators.exceptions_handled
     @authorize('secret_create')
     @rest_decorators.marshal_with(models.Secret)
     def put(self, key, **kwargs):
@@ -119,7 +116,6 @@ class SecretsKey(resources_v3.SecretsKey):
 
 
 class SecretsExport(SecuredResource):
-    @rest_decorators.exceptions_handled
     @authorize('secret_export')
     @rest_decorators.create_filters(models.Secret)
     @rest_decorators.all_tenants
@@ -161,7 +157,6 @@ class SecretsExport(SecuredResource):
 
 
 class SecretsImport(SecuredResource):
-    @rest_decorators.exceptions_handled
     @authorize('secret_import')
     def post(self):
         response = {}

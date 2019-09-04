@@ -18,11 +18,10 @@ import pytz
 from functools import wraps
 from collections import OrderedDict
 
-from werkzeug.exceptions import HTTPException
 from dateutil.parser import parse as parse_datetime
 from flask_restful import marshal
 from flask_restful.utils import unpack
-from flask import request, current_app
+from flask import request
 from sqlalchemy.util._collections import _LW as sql_alchemy_collection
 from toolz import (
     dicttoolz,
@@ -41,7 +40,7 @@ from voluptuous import (
     Schema,
 )
 from ..security.authentication import authenticator
-from manager_rest import utils, config, manager_exceptions
+from manager_rest import config, manager_exceptions
 from manager_rest.storage.models_base import SQLModelBase
 from manager_rest.rest.rest_utils import (verify_and_convert_bool,
                                           request_use_all_tenants)
@@ -87,29 +86,6 @@ def insecure_rest_method(func):
         if config.instance.insecure_endpoints_disabled:
             raise manager_exceptions.MethodNotAllowedError()
         return func(*args, **kwargs)
-    return wrapper
-
-
-def exceptions_handled(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        try:
-            try:
-                return func(*args, **kwargs)
-            except Invalid as e:
-                # Re-raise voluptuous validation errors
-                # to handle them properly in the outer try/except block
-                raise manager_exceptions.BadParametersError(e.error_message)
-        except manager_exceptions.ManagerException as e:
-            utils.abort_error(e, current_app.logger)
-        except HTTPException as e:
-            raise e
-        except Exception as e:
-            # Catching all unintended exception and adding them relevant
-            # data for handling them afterwards.
-            e.status_code = 500
-            e.error_code = manager_exceptions.INTERNAL_SERVER_ERROR_CODE
-            utils.abort_error(e, current_app.logger)
     return wrapper
 
 

@@ -33,7 +33,6 @@ except ImportError:
 
 
 class User(SecuredResource):
-    @rest_decorators.exceptions_handled
     @authorize('user_get_self')
     @rest_decorators.marshal_with(UserResponse)
     def get(self):
@@ -44,7 +43,6 @@ class User(SecuredResource):
 
 
 class Users(SecuredMultiTenancyResource):
-    @rest_decorators.exceptions_handled
     @authorize('user_list')
     @rest_decorators.marshal_with(UserResponse)
     @rest_decorators.create_filters(models.User)
@@ -64,7 +62,6 @@ class Users(SecuredMultiTenancyResource):
             search
         )
 
-    @rest_decorators.exceptions_handled
     @authorize('user_create')
     @rest_decorators.marshal_with(UserResponse)
     @rest_decorators.no_external_authenticator('create user')
@@ -101,7 +98,6 @@ class Users(SecuredMultiTenancyResource):
 
 
 class UsersId(SecuredMultiTenancyResource):
-    @rest_decorators.exceptions_handled
     @authorize('user_update')
     @rest_decorators.marshal_with(UserResponse)
     def post(self, username, multi_tenancy):
@@ -122,7 +118,6 @@ class UsersId(SecuredMultiTenancyResource):
         else:
             raise BadParametersError('Neither `password` nor `role` provided')
 
-    @rest_decorators.exceptions_handled
     @authorize('user_get')
     @rest_decorators.marshal_with(UserResponse)
     def get(self, username, multi_tenancy):
@@ -132,7 +127,6 @@ class UsersId(SecuredMultiTenancyResource):
         rest_utils.validate_inputs({'username': username})
         return multi_tenancy.get_user(username)
 
-    @rest_decorators.exceptions_handled
     @authorize('user_delete')
     @rest_decorators.marshal_with(UserResponse)
     @rest_decorators.no_external_authenticator('delete user')
@@ -145,7 +139,6 @@ class UsersId(SecuredMultiTenancyResource):
 
 
 class UsersActive(SecuredMultiTenancyResource):
-    @rest_decorators.exceptions_handled
     @authorize('user_set_activated')
     @rest_decorators.marshal_with(UserResponse)
     def post(self, username, multi_tenancy):
@@ -160,7 +153,6 @@ class UsersActive(SecuredMultiTenancyResource):
 
 
 class UsersUnlock(SecuredMultiTenancyResource):
-    @rest_decorators.exceptions_handled
     @authorize('user_unlock')
     @rest_decorators.marshal_with(UserResponse)
     def post(self, username, multi_tenancy):

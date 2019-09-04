@@ -16,14 +16,16 @@
 from flask import request
 
 from manager_rest import constants
-from manager_rest.manager_exceptions import BadParametersError
+from manager_rest.manager_exceptions import (
+    BadParametersError,
+    MissingPremiumPackage
+)
 from manager_rest.storage import get_storage_manager, models
 from manager_rest.security.authorization import authorize
 from manager_rest.security import (MissingPremiumFeatureResource,
                                    SecuredResource,
                                    allow_on_community,
-                                   is_user_action_allowed,
-                                   missing_premium_feature_abort)
+                                   is_user_action_allowed)
 from .. import rest_decorators, rest_utils
 from ..responses_v3 import TenantResponse, TenantDetailsResponse
 
@@ -41,7 +43,6 @@ except ImportError:
 
 
 class Tenants(TenantsListResource):
-    @rest_decorators.exceptions_handled
     @authorize('tenant_list')
     @rest_decorators.marshal_with(TenantResponse)
     @rest_decorators.create_filters(models.Tenant)
@@ -79,7 +80,6 @@ class Tenants(TenantsListResource):
 
 
 class TenantsId(SecuredMultiTenancyResource):
-    @rest_decorators.exceptions_handled
     @authorize('tenant_create')
     @rest_decorators.marshal_with(TenantDetailsResponse)
     def post(self, tenant_name, multi_tenancy):
@@ -96,7 +96,6 @@ class TenantsId(SecuredMultiTenancyResource):
             )
         return multi_tenancy.create_tenant(tenant_name)
 
-    @rest_decorators.exceptions_handled
     @authorize('tenant_get', get_tenant_from='param')
     @rest_decorators.marshal_with(TenantDetailsResponse)
     @allow_on_community
@@ -110,7 +109,7 @@ class TenantsId(SecuredMultiTenancyResource):
             return multi_tenancy.get_tenant(tenant_name)
         else:
             if tenant_name != constants.DEFAULT_TENANT_NAME:
-                missing_premium_feature_abort()
+                raise MissingPremiumPackage()
             tenant = get_storage_manager().get(
                 models.Tenant,
                 None,
@@ -124,7 +123,6 @@ class TenantsId(SecuredMultiTenancyResource):
                 tenant.rabbitmq_vhost = None
             return tenant
 
-    @rest_decorators.exceptions_handled
     @authorize('tenant_delete')
     @rest_decorators.marshal_with(TenantDetailsResponse)
     def delete(self, tenant_name, multi_tenancy):
@@ -136,7 +134,6 @@ class TenantsId(SecuredMultiTenancyResource):
 
 
 class TenantUsers(SecuredMultiTenancyResource):
-    @rest_decorators.exceptions_handled
     @authorize('tenant_add_user', get_tenant_from='data')
     @rest_decorators.marshal_with(TenantResponse)
     @rest_decorators.no_external_authenticator('add user to tenant')
@@ -170,7 +167,6 @@ class TenantUsers(SecuredMultiTenancyResource):
             role_name,
         )
 
-    @rest_decorators.exceptions_handled
     @authorize('tenant_update_user', get_tenant_from='data')
     @rest_decorators.marshal_with(TenantResponse)
     @rest_decorators.no_external_authenticator('update user in tenant')
@@ -198,7 +194,6 @@ class TenantUsers(SecuredMultiTenancyResource):
             role_name,
         )
 
-    @rest_decorators.exceptions_handled
     @authorize('tenant_remove_user', get_tenant_from='data')
     @rest_decorators.marshal_with(TenantResponse)
     @rest_decorators.no_external_authenticator('remove user from tenant')
@@ -216,7 +211,6 @@ class TenantUsers(SecuredMultiTenancyResource):
 
 
 class TenantGroups(SecuredMultiTenancyResource):
-    @rest_decorators.exceptions_handled
     @authorize('tenant_add_group', get_tenant_from='data')
     @rest_decorators.marshal_with(TenantResponse)
     def put(self, multi_tenancy):
@@ -248,7 +242,6 @@ class TenantGroups(SecuredMultiTenancyResource):
             role_name,
         )
 
-    @rest_decorators.exceptions_handled
     @authorize('tenant_update_group', get_tenant_from='data')
     @rest_decorators.marshal_with(TenantResponse)
     def patch(self, multi_tenancy):
@@ -275,7 +268,6 @@ class TenantGroups(SecuredMultiTenancyResource):
             role_name,
         )
 
-    @rest_decorators.exceptions_handled
     @authorize('tenant_remove_group', get_tenant_from='data')
     @rest_decorators.marshal_with(TenantResponse)
     def delete(self, multi_tenancy):

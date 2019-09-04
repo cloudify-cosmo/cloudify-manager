@@ -37,9 +37,11 @@ class MissingPremiumPackage(ManagerException):
     MISSING_PREMIUM_ERROR_CODE = 'missing_premium_package_error'
 
     def __init__(self, *args, **kwargs):
+        message = ('This feature exists only in the premium edition of '
+                   'Cloudify.\nPlease contact sales for additional info.')
         super(MissingPremiumPackage, self).__init__(
             404, MissingPremiumPackage.MISSING_PREMIUM_ERROR_CODE,
-            *args, **kwargs)
+            message, *args, **kwargs)
 
 
 class ConflictError(ManagerException):

@@ -42,7 +42,6 @@ class Deployments(resources_v1.Deployments):
             'deployments'
         )
     )
-    @rest_decorators.exceptions_handled
     @authorize('deployment_list', allow_all_tenants=True)
     @rest_decorators.marshal_with(models.Deployment)
     @rest_decorators.create_filters(models.Deployment)
@@ -97,7 +96,6 @@ class DeploymentModifications(resources_v1.DeploymentModifications):
             'deployment modifications'
         )
     )
-    @rest_decorators.exceptions_handled
     @authorize('deployment_modification_list')
     @rest_decorators.marshal_with(models.DeploymentModification)
     @rest_decorators.create_filters(models.DeploymentModification)

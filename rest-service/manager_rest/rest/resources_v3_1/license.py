@@ -20,7 +20,6 @@ from manager_rest.rest import responses_v3
 from manager_rest.security.authorization import authorize
 from manager_rest.security import MissingPremiumFeatureResource
 from manager_rest.rest.rest_decorators import (
-    exceptions_handled,
     marshal_with,
     paginate
 )
@@ -32,7 +31,6 @@ except ImportError:
 
 
 class License(SecuredLicenseResource):
-    @exceptions_handled
     @marshal_with(responses_v3.License)
     @authorize('license_upload')
     def put(self, license_handler):
@@ -43,7 +41,6 @@ class License(SecuredLicenseResource):
         full_license = request.data
         return license_handler.upload_license(full_license)
 
-    @exceptions_handled
     @marshal_with(responses_v3.License)
     @paginate
     @authorize('license_list')

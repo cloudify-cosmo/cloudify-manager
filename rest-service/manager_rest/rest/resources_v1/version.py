@@ -20,10 +20,7 @@ from manager_rest import version
 from manager_rest.rest import responses
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
-from manager_rest.rest.rest_decorators import (
-    exceptions_handled,
-    marshal_with,
-)
+from manager_rest.rest.rest_decorators import marshal_with
 
 
 class Version(SecuredResource):
@@ -33,7 +30,6 @@ class Version(SecuredResource):
         nickname="version",
         notes="Returns version information for this rest service"
     )
-    @exceptions_handled
     @authorize('version_get')
     @marshal_with(responses.Version)
     def get(self, **kwargs):

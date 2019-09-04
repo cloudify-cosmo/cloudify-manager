@@ -38,7 +38,6 @@ from ..rest_utils import verify_and_convert_bool
 
 
 class DeploymentUpdate(SecuredResource):
-    @rest_decorators.exceptions_handled
     @authorize('deployment_update_create')
     @rest_decorators.marshal_with(models.DeploymentUpdate)
     def post(self, id, phase):
@@ -68,7 +67,6 @@ class DeploymentUpdate(SecuredResource):
         elif phase == PHASES.FINAL:
             return get_deployment_updates_manager().finalize_commit(id)
 
-    @rest_decorators.exceptions_handled
     @authorize('deployment_update_create')
     @rest_decorators.marshal_with(models.DeploymentUpdate)
     def put(self, id, phase):
@@ -206,7 +204,6 @@ class DeploymentUpdateId(SecuredResource):
             parameters=create_filter_params_list_description(
                 models.DeploymentUpdate.response_fields, 'deployment update')
     )
-    @rest_decorators.exceptions_handled
     @authorize('deployment_update_get')
     @rest_decorators.marshal_with(models.DeploymentUpdate)
     def get(self, update_id, _include=None):
@@ -226,7 +223,6 @@ class DeploymentUpdates(SecuredResource):
                     'deployment updates'
             )
     )
-    @rest_decorators.exceptions_handled
     @authorize('deployment_update_list')
     @rest_decorators.marshal_with(models.DeploymentUpdate)
     @rest_decorators.create_filters(models.DeploymentUpdate)
