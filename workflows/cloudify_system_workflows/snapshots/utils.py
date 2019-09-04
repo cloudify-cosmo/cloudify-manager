@@ -223,14 +223,14 @@ def copy(source, destination):
     sudo(['cp', '-rp', source, destination])
 
 
-def sudo(command, user=None, ignore_failures=False):
+def sudo(command, user=None, ignore_failures=False, cwd=None):
     if isinstance(command, str):
         command = shlex.split(command)
     if user is not None:
         command = ['sudo', '-u', user] + command
     else:
         command.insert(0, 'sudo')
-    return run(command=command, ignore_failures=ignore_failures)
+    return run(command=command, ignore_failures=ignore_failures, cwd=cwd)
 
 
 def run(command, ignore_failures=False, redirect_output_path=None, cwd=None):
