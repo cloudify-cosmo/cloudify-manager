@@ -16,37 +16,35 @@
 import os
 
 from cloudify.workflows import ctx
-from .utils import run as run_shell
+from .utils import sudo
 
 NPM_BIN = os.path.join('/opt', 'nodejs', 'bin', 'npm')
 
 
-class Npm(object):
+def run(command, *args):
+    npm_command = [NPM_BIN, 'run', command]
+    npm_command.extend(args)
+    sudo(
+        npm_command,
+        cwd='/opt/cloudify-stage/backend',
+        user='stage_user',
+    )
 
-    def __init__(self):
-        pass
 
-    @staticmethod
-    def run(command, *args):
-        npm_command = [NPM_BIN, 'run', command]
-        npm_command.extend(args)
-        run_shell(npm_command, cwd='/opt/cloudify-stage/backend')
+def clear_db():
+    """ Clear the Stage DB """
+    ctx.logger.info('Clearing Stage DB')
+    run('db-migrate-clear')
 
-    @staticmethod
-    def clear_db():
-        """ Clear the Stage DB """
-        ctx.logger.info('Clearing Stage DB')
-        Npm.run('db-migrate-clear')
 
-    @staticmethod
-    def downgrade_stage_db(migration_version):
-        """ Downgrade db schema, based on metadata from the snapshot """
-        ctx.logger.info('Downgrading Stage DB to revision: {0}'
-                        .format(migration_version))
-        Npm.run('db-migrate-down-to', migration_version)
+def downgrade_stage_db(migration_version):
+    """ Downgrade db schema, based on metadata from the snapshot """
+    ctx.logger.info('Downgrading Stage DB to revision: {0}'
+                    .format(migration_version))
+    run('db-migrate-down-to', migration_version)
 
-    @staticmethod
-    def upgrade_stage_db():
-        """  Runs the migration up to latest revision """
-        ctx.logger.info('Upgrading Stage DB')
-        Npm.run('db-migrate')
+
+def upgrade_stage_db():
+    """  Runs the migration up to latest revision """
+    ctx.logger.info('Upgrading Stage DB')
+    run('db-migrate')

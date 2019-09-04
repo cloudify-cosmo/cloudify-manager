@@ -34,7 +34,7 @@ from cloudify.state import current_workflow_ctx
 from cloudify.exceptions import NonRecoverableError
 from cloudify.constants import (
     FILE_SERVER_SNAPSHOTS_FOLDER,
-    NEW_TOKEN_FILE_NAME
+    NEW_TOKEN_FILE_NAME,
 )
 from cloudify.utils import ManagerVersion, get_local_rest_certificate
 
@@ -43,15 +43,17 @@ from cloudify_system_workflows.deployment_environment import \
     generate_create_dep_tasks_graph
 
 from . import networks, utils
-from .npm import Npm
+from cloudify_system_workflows.snapshots import npm
 from .agents import Agents
 from .postgres import Postgres
 from .credentials import restore as restore_credentials
 from .constants import (
     ADMIN_DUMP_FILE,
     ADMIN_TOKEN_SCRIPT,
+    ALLOW_DB_CLIENT_CERTS_SCRIPT,
     ARCHIVE_CERT_DIR,
     CERT_DIR,
+    DENY_DB_CLIENT_CERTS_SCRIPT,
     HASH_SALT_FILENAME,
     INTERNAL_CA_CERT_FILENAME,
     INTERNAL_CA_KEY_FILENAME,
@@ -86,7 +88,6 @@ class SnapshotRestore(object):
                  restore_certificates,
                  no_reboot,
                  ignore_plugin_failure):
-        self._npm = Npm()
         self._config = utils.DictToAttributes(config)
         self._snapshot_id = snapshot_id
         self._force = force
@@ -126,7 +127,9 @@ class SnapshotRestore(object):
 
             existing_plugins = self._get_existing_plugin_names()
             with Postgres(self._config) as postgres:
+                utils.sudo(ALLOW_DB_CLIENT_CERTS_SCRIPT)
                 self._restore_files_to_manager()
+                utils.sudo(DENY_DB_CLIENT_CERTS_SCRIPT)
                 with self._pause_amqppostgres():
                     self._restore_db(postgres, schema_revision, stage_revision)
                 self._restore_hash_salt()
@@ -574,12 +577,12 @@ class SnapshotRestore(object):
         if not self._premium_enabled:
             return
         ctx.logger.info('Restoring stage DB')
-        self._npm.clear_db()
-        self._npm.downgrade_stage_db(migration_version)
+        npm.clear_db()
+        npm.downgrade_stage_db(migration_version)
         try:
             postgres.restore_stage(tempdir)
         finally:
-            self._npm.upgrade_stage_db()
+            npm.upgrade_stage_db()
         ctx.logger.debug('Stage DB restored')
 
     def _restore_composer(self, postgres, tempdir):
