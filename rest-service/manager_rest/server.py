@@ -51,7 +51,10 @@ def manager_exception(error):
     current_app.logger.error(error)
     return jsonify(
         message=str(error),
-        error_code=error.error_code
+        error_code=error.error_code,
+        # useless, but v1 and v2 api clients require server_traceback
+        # remove this after dropping v1 and v2 api clients
+        server_traceback=None
     ), error.status_code
 
 
