@@ -16,8 +16,6 @@
 import os
 from base64 import urlsafe_b64encode
 
-from flask_security import current_user
-
 from manager_rest.test.attribute import attr
 from manager_rest.storage import management_models
 from manager_rest.test.base_test import LATEST_API_VERSION
@@ -36,7 +34,7 @@ class AuthenticationTests(SecurityTestBase):
 
     def test_secured_client(self):
         alice = self.sm.list(management_models.User,
-                                  filters={'username': 'alice'})
+                             filters={'username': 'alice'})
         self.assertEqual(len(alice), 1)
         login_time = alice[0].last_login_at
         self.assertEqual(login_time, None)
