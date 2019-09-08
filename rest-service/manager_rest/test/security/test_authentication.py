@@ -16,7 +16,10 @@
 import os
 from base64 import urlsafe_b64encode
 
+from flask_security import current_user
+
 from manager_rest.test.attribute import attr
+from manager_rest.storage import management_models
 from manager_rest.test.base_test import LATEST_API_VERSION
 from manager_rest.maintenance import get_maintenance_file_path
 from manager_rest.constants import (CLOUDIFY_TENANT_HEADER,
@@ -32,8 +35,18 @@ FAILED_LOGINS_NUMBER = 6
 class AuthenticationTests(SecurityTestBase):
 
     def test_secured_client(self):
+        alice = self.sm.list(management_models.User,
+                                  filters={'username': 'alice'})
+        self.assertEqual(len(alice), 1)
+        login_time = alice[0].last_login_at
+        self.assertEqual(login_time, None)
         self._assert_user_authorized(username='alice',
                                      password='alice_password')
+        alice = self.sm.list(management_models.User,
+                             filters={'username': 'alice'})
+        self.assertEqual(len(alice), 1)
+        login_time = alice[0].last_login_at
+        self.assertNotEqual(login_time, None)
 
     def test_wrong_credentials(self):
         self._assert_user_unauthorized(username='alice',

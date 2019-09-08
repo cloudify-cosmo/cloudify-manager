@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2014 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2014-2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,18 +13,21 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from manager_rest.test.attribute import attr
+from flask_security import current_user
+
 
 from manager_rest.test import base_test
+from manager_rest.test.attribute import attr
+from manager_rest.storage import management_models
 
 
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
 class StatusTestCase(base_test.BaseServerTestCase):
 
-    def test_get_empty(self):
-        result = self.get('/status')
-        self.assertEqual(result.json['status'], 'running')
-
-    def test_get_services(self):
-        result = self.get('/status')
-        self.assertEqual(type(result.json['services']), list)
+    def test_get_status(self):
+        result = self.client.manager.get_status()
+        self.assertEqual(result['status'], 'running')
+        self.assertEqual(type(result['services']), list)
+        login_time_before = self.sm.get(management_models.User,
+                                        current_user.id).last_login_at
+        self.assertEqual(login_time_before, None)
