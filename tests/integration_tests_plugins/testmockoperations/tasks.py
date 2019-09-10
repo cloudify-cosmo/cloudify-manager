@@ -502,3 +502,33 @@ def write_pid_to_file_and_sleep(ctx, **kwargs):
     with open('/tmp/pid.txt', 'w') as f:
         f.write(str(os.getpid()))
     sleep(ctx, **kwargs)
+
+
+@operation
+def store_in_runtime_props(ctx, arg_value):
+    ctx.instance.runtime_properties['arg_value'] = arg_value
+    ctx.instance.runtime_properties['prop1_value'] = \
+        ctx.node.properties.get('prop1')
+    ctx.instance.runtime_properties['prop2_value'] = \
+        ctx.node.properties.get('prop2')
+
+
+@operation
+def store_relationship_in_runtime_props(
+        ctx, input_value=None, prop_value=None, prefix=''):
+    if input_value:
+        ctx.source.instance.runtime_properties[prefix + 'input_value'] = \
+            input_value
+        ctx.target.instance.runtime_properties[prefix + 'input_value'] = \
+            input_value
+    if prop_value:
+        ctx.source.instance.runtime_properties[prefix + 'prop_value'] = \
+            prop_value
+        ctx.target.instance.runtime_properties[prefix + 'prop_value'] = \
+            prop_value
+
+
+@operation
+def maybe_fail(ctx, should_fail=False):
+    if should_fail:
+        raise NonRecoverableError('Operation failed!')
