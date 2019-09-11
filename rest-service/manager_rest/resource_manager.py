@@ -1146,16 +1146,25 @@ class ResourceManager(object):
         nodes = []
         for raw_node in raw_nodes:
             scalable = raw_node['capabilities']['scalable']['properties']
+            host_id = raw_node.get('host_id')
+            current_n_inst = scalable['current_instances']
+            planned_n_inst = scalable['current_instances']
+            default_n_inst = scalable['default_instances']
+            for _, group in deployment_plan['scaling_groups'].items():
+                if {raw_node['name'], host_id} & set(group['members']):
+                    current_n_inst *= group['properties']['current_instances']
+                    planned_n_inst *= group['properties']['planned_instances']
+                    default_n_inst *= group['properties']['default_instances']
             nodes.append(models.Node(
                 id=raw_node['name'],
                 type=raw_node['type'],
                 type_hierarchy=raw_node['type_hierarchy'],
-                number_of_instances=scalable['current_instances'],
-                planned_number_of_instances=scalable['current_instances'],
-                deploy_number_of_instances=scalable['default_instances'],
+                number_of_instances=current_n_inst,
+                planned_number_of_instances=planned_n_inst,
+                deploy_number_of_instances=default_n_inst,
                 min_number_of_instances=scalable['min_instances'],
                 max_number_of_instances=scalable['max_instances'],
-                host_id=raw_node['host_id'] if 'host_id' in raw_node else None,
+                host_id=host_id,
                 properties=raw_node['properties'],
                 operations=raw_node['operations'],
                 plugins=raw_node['plugins'],
