@@ -32,23 +32,31 @@ FAILED_LOGINS_NUMBER = 6
 @attr(client_min_version=1, client_max_version=LATEST_API_VERSION)
 class AuthenticationTests(SecurityTestBase):
 
-    def test_secured_client(self):
+    def _fetch_alice(self):
         alice = self.sm.list(management_models.User,
                              filters={'username': 'alice'})
         self.assertEqual(len(alice), 1)
-        login_time = alice[0].last_login_at
-        self.assertEqual(login_time, None)
+        return alice[0]
+
+    def test_secured_client(self):
+        login_time = self._fetch_alice().last_login_at
+        self.assertIsNone(login_time)
         self._assert_user_authorized(username='alice',
                                      password='alice_password')
-        alice = self.sm.list(management_models.User,
-                             filters={'username': 'alice'})
-        self.assertEqual(len(alice), 1)
-        login_time = alice[0].last_login_at
-        self.assertNotEqual(login_time, None)
+        login_time = self._fetch_alice().last_login_at
+        self.assertIsNotNone(login_time)
 
     def test_wrong_credentials(self):
+        alice = self._fetch_alice()
+        self.assertIsNone(alice.last_failed_login_at)
+        self.assertIsNone(alice.last_login_at)
+        self.assertEqual(alice.failed_logins_counter, 0)
         self._assert_user_unauthorized(username='alice',
                                        password='wrong_password')
+        alice = self._fetch_alice()
+        self.assertIsNone(alice.last_login_at)
+        self.assertIsNotNone(alice.last_failed_login_at)
+        self.assertEqual(alice.failed_logins_counter, 1)
 
     def test_invalid_three_part_header(self):
         credentials = 'alice:alice_password:extra'

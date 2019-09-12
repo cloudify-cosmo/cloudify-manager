@@ -23,7 +23,7 @@ from cloudify.constants import BROKER_PORT_SSL
 from manager_rest import config
 from manager_rest.rest import responses
 from manager_rest.rest.rest_decorators import marshal_with
-from manager_rest.security import SecuredResourceWithoutWrite
+from manager_rest.security import SecuredResourceReadonlyMode
 from manager_rest.security.authorization import authorize
 try:
     from manager_rest.systemddbus import get_services
@@ -44,7 +44,7 @@ OPTIONAL_SERVICES = {
 }
 
 
-class Status(SecuredResourceWithoutWrite):
+class Status(SecuredResourceReadonlyMode):
 
     @swagger.operation(
         responseClass=responses.Status,

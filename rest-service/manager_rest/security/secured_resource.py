@@ -117,7 +117,13 @@ class SecuredResource(Resource):
     method_decorators = [authenticate]
 
 
-class SecuredResourceWithoutWrite(Resource):
+class SecuredResourceReadonlyMode(Resource):
+    """
+    In case of readonly access to the DB with write access for the failed
+    counter login mechanism, only this kind of secured resource will allow
+    access to the endpoints needed in that scenario by not writing to a
+    readonly column.
+    """
     method_decorators = [authenticate_without_write]
 
 
