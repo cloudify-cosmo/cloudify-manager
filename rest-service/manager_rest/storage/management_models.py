@@ -262,6 +262,10 @@ class GroupTenantAssoc(SQLModelBase):
             ('role', self.role.name),
         ])
 
+    @classmethod
+    def unique_id(cls):
+        return 'group_id'
+
 
 class User(SQLModelBase, UserMixin):
     __tablename__ = 'users'
@@ -478,6 +482,10 @@ class UserTenantAssoc(SQLModelBase):
             ('tenant', self.tenant.name),
             ('role', self.role.name),
         ])
+
+    @classmethod
+    def unique_id(cls):
+        return 'user_id'
 
 
 class License(SQLModelBase):
