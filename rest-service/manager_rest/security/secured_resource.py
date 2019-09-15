@@ -73,7 +73,7 @@ def authenticate(func, readonly=False):
     return wrapper
 
 
-def authenticate_without_write(func):
+def authenticate_readonly_mode(func):
     return authenticate(func, True)
 
 
@@ -124,7 +124,7 @@ class SecuredResourceReadonlyMode(Resource):
     access to the endpoints needed in that scenario by not writing to a
     readonly column.
     """
-    method_decorators = [authenticate_without_write]
+    method_decorators = [authenticate_readonly_mode]
 
 
 class MissingPremiumFeatureResource(Resource):

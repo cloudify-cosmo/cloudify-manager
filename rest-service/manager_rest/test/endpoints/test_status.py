@@ -25,13 +25,13 @@ from manager_rest.storage import management_models
 class StatusTestCase(base_test.BaseServerTestCase):
 
     def test_get_status(self):
-        self._assert_last_logic_time_value(None)
+        self._assert_last_login_time_value(None)
         result = self.client.manager.get_status()
         self.assertEqual(result['status'], 'running')
         self.assertEqual(type(result['services']), list)
-        self._assert_last_logic_time_value(None)
+        self._assert_last_login_time_value(None)
 
-    def _assert_last_logic_time_value(self, value):
+    def _assert_last_login_time_value(self, value):
         login_time_before = self.sm.get(management_models.User,
                                         current_user.id).last_login_at
         self.assertEqual(login_time_before, value)
