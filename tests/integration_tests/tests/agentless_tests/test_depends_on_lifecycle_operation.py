@@ -80,14 +80,14 @@ node_templates:
                 operations_id[op.id]['dependencies'] = op.dependencies
                 operations_id[op.id]['info'] = op.info
 
-                task_kwargs = op.parameters.get('task_kwargs', {})
-                if task_kwargs.get('cloudify_context', None):
-                    node_task = op.parameters['task_kwargs']
-                    cloudify_context = node_task['cloudify_context']
-                    op_name = cloudify_context['operation']['name']
-                    node_name = cloudify_context['node_name']
-                    operations_info[(op_name,
-                                     node_name)] = op.containing_subgraph
+                try:
+                    cloudify_context = op.parameters['task_kwargs'][
+                        'kwargs']['__clooudify_context']
+                except KeyError:
+                    continue
+                op_name = cloudify_context['operation']['name']
+                node_name = cloudify_context['node_name']
+                operations_info[(op_name, node_name)] = op.containing_subgraph
 
         # Doest not matter from what operation the node's main subgraph id
         # will be taken from.
