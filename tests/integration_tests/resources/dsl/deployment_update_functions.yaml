@@ -1,0 +1,68 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+    - cloudify/types/types.yaml
+    - plugins/testmockoperations.yaml
+
+node_types:
+    type1:
+        derived_from: cloudify.nodes.Root
+        properties:
+            prop1: {}
+            prop2: {}
+
+inputs:
+    fail_create:
+        default: false
+        type: boolean
+    input1:
+        {}
+
+node_templates:
+    node1:
+        type: type1
+        properties:
+            prop1: {get_input: input1}
+            prop2: 'aaa'
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                create:
+                    implementation: testmockoperations.testmockoperations.tasks.maybe_fail
+                    inputs:
+                        should_fail: {get_input: fail_create}
+                configure:
+                    implementation: testmockoperations.testmockoperations.tasks.store_in_runtime_props
+                    inputs:
+                        arg_value: {get_input: input1}
+    node2:
+        type: type1
+        properties:
+            prop1: {get_input: input1}
+            prop2: 'aaa'
+        relationships:
+            - type: cloudify.relationships.depends_on
+              target: node1
+              source_interfaces:
+                cloudify.interfaces.relationship_lifecycle:
+                    preconfigure:
+                        implementation: testmockoperations.testmockoperations.tasks.store_relationship_in_runtime_props
+                        inputs:
+                            input_value: {get_input: input1}
+                            prop_value: {get_property: [SOURCE, prop1]}
+                            prefix: source_
+              target_interfaces:
+                cloudify.interfaces.relationship_lifecycle:
+                    establish:
+                        implementation: testmockoperations.testmockoperations.tasks.store_relationship_in_runtime_props
+                        inputs:
+                            input_value: {get_input: input1}
+                            prop_value: {get_property: [TARGET, prop1]}
+                            prefix: target_
+
+outputs:
+    out1:
+        value: {get_input: input1}
+    out2:
+        value: {get_property: [node1, prop1]}
+    out3:
+        value: {get_property: [node1, prop2]}
