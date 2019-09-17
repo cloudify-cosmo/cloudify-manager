@@ -82,7 +82,7 @@ node_templates:
 
                 try:
                     cloudify_context = op.parameters['task_kwargs'][
-                        'kwargs']['__clooudify_context']
+                        'kwargs']['__cloudify_context']
                 except KeyError:
                     continue
                 op_name = cloudify_context['operation']['name']
