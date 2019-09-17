@@ -73,7 +73,6 @@ class TestRuntimeFunctionEvaluation(AgentlessTestCase):
             deployment_id=deployment.id,
             blueprint_or_archive_path=new_bp.name,
             inputs={'input1': self.CHANGED_VALUE, 'fail_create': False},
-            update_executions=True,
             **skip_params
         )
         execution = self.client.executions.get(dep_update.execution_id)
