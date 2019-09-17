@@ -43,6 +43,9 @@ class DeploymentsId(resources_v1.DeploymentsId):
         request_schema['skip_plugins_validation'] = {
             'optional': True, 'type': bool}
         request_schema['site_name'] = {'optional': True, 'type': unicode}
+        request_schema['runtime_only_evaluation'] = {
+            'optional': True, 'type': bool
+        }
         return request_schema
 
     def get_skip_plugin_validation_flag(self, request_dict):
@@ -75,7 +78,9 @@ class DeploymentsId(resources_v1.DeploymentsId):
             visibility=visibility,
             skip_plugins_validation=self.get_skip_plugin_validation_flag(
                 request_dict),
-            site_name=_get_site_name(request_dict)
+            site_name=_get_site_name(request_dict),
+            runtime_only_evaluation=request_dict.get(
+                'runtime_only_evaluation', False)
         )
         return deployment, 201
 

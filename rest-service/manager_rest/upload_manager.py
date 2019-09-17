@@ -338,6 +338,7 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
                                  file_server_root,
                                  archive_target_path,
                                  additional_inputs=None,
+                                 runtime_only_evaluation=False,
                                  **kwargs):
         application_dir = self._extract_file_to_file_server(
             archive_target_path,
@@ -347,7 +348,8 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
                 file_server_root,
                 application_dir,
                 data_id,
-                additional_inputs), archive_target_path
+                additional_inputs,
+                runtime_only_evaluation), archive_target_path
 
     def _move_archive_to_uploaded_dir(self, *args, **kwargs):
         pass
@@ -357,7 +359,8 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
                                       file_server_root,
                                       app_dir,
                                       deployment_id,
-                                      additional_inputs=None):
+                                      additional_inputs=None,
+                                      runtime_only_evaluation=False):
 
         app_file_name = cls._extract_application_file(file_server_root,
                                                       app_dir)
@@ -369,7 +372,8 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
                     deployment_id,
                     app_dir,
                     app_file_name,
-                    additional_inputs=additional_inputs or {}
+                    additional_inputs=additional_inputs or {},
+                    runtime_only_evaluation=runtime_only_evaluation
                 )
 
             # Moving the contents of the app dir to the dest dir, while

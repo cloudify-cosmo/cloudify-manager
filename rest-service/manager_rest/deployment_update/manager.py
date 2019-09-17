@@ -82,7 +82,8 @@ class DeploymentUpdateManager(object):
                                 app_blueprint,
                                 additional_inputs,
                                 new_blueprint_id=None,
-                                preview=False):
+                                preview=False,
+                                runtime_only_evaluation=False):
         # enables reverting to original blueprint resources
         deployment = self.sm.get(models.Deployment, deployment_id)
         old_blueprint = deployment.blueprint
@@ -91,6 +92,8 @@ class DeploymentUpdateManager(object):
                                               'blueprints',
                                               old_blueprint.tenant_name,
                                               old_blueprint.id)
+        runtime_only_evaluation = runtime_only_evaluation or \
+            deployment.runtime_only_evaluation
         # The dsl parser expects a URL
         blueprint_resource_dir_url = 'file:{0}'.format(blueprint_resource_dir)
         app_path = os.path.join(file_server_root, app_dir, app_blueprint)
@@ -116,9 +119,9 @@ class DeploymentUpdateManager(object):
 
         # applying intrinsic functions
         try:
-            prepared_plan = tasks.prepare_deployment_plan(plan,
-                                                          get_secret_method,
-                                                          inputs=new_inputs)
+            prepared_plan = tasks.prepare_deployment_plan(
+                plan, get_secret_method, inputs=new_inputs,
+                runtime_only_evaluation=runtime_only_evaluation)
         except parser_exceptions.MissingRequiredInputError, e:
             raise manager_exceptions.MissingRequiredDeploymentInputError(
                 str(e))
@@ -134,6 +137,7 @@ class DeploymentUpdateManager(object):
         deployment_update = models.DeploymentUpdate(
             id=deployment_update_id,
             deployment_plan=prepared_plan,
+            runtime_only_evaluation=runtime_only_evaluation,
             created_at=utils.get_formatted_timestamp()
         )
         deployment_update.set_deployment(deployment)
@@ -265,6 +269,7 @@ class DeploymentUpdateManager(object):
         # Update deployment attributes in the storage manager
         deployment = self.sm.get(models.Deployment, dep_update.deployment_id)
         deployment.inputs = dep_update.new_inputs
+        deployment.runtime_only_evaluation = dep_update.runtime_only_evaluation
         if dep_update.new_blueprint:
             deployment.blueprint = dep_update.new_blueprint
         self.sm.update(deployment)

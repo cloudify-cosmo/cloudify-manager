@@ -19,8 +19,18 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column('executions', sa.Column('blueprint_id', sa.Text(), nullable=True))
+    op.add_column(
+        'executions',
+        sa.Column('blueprint_id', sa.Text(), nullable=True))
+    op.add_column(
+        'deployments',
+        sa.Column('runtime_only_evaluation', sa.Boolean(), nullable=True))
+    op.add_column(
+        'deployment_updates',
+        sa.Column('runtime_only_evaluation', sa.Boolean(), nullable=True))
 
 
 def downgrade():
+    op.drop_column('deployment_updates', 'runtime_only_evaluation')
+    op.drop_column('deployments', 'runtime_only_evaluation')
     op.drop_column('executions', 'blueprint_id')
