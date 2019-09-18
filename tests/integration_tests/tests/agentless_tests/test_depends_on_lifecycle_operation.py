@@ -138,17 +138,17 @@ policies:
                 operations_id[op.id] = {}
                 operations_id[op.id]['dependencies'] = op.dependencies
                 operations_id[op.id]['info'] = op.info
-
-                task_kwargs = op.parameters.get('task_kwargs', {})
-                if task_kwargs.get('cloudify_context', None):
-                    node_task = op.parameters['task_kwargs']
-                    cloudify_context = node_task['cloudify_context']
-                    op_name = cloudify_context['operation']['name']
-                    node_id = cloudify_context['node_id']
-                    operations_info[(op_name, node_id)] = {}
-                    operations_info[(op_name, node_id)]['containing_subgraph']\
-                        = op.containing_subgraph
-                    operations_info[(op_name, node_id)]['op_name'] = op_name
+                try:
+                    cloudify_context = op.parameters['task_kwargs'][
+                        'kwargs']['__cloudify_context']
+                except KeyError:
+                    continue
+                op_name = cloudify_context['operation']['name']
+                node_id = cloudify_context['node_id']
+                operations_info[(op_name, node_id)] = {}
+                operations_info[(op_name, node_id)]['containing_subgraph']\
+                    = op.containing_subgraph
+                operations_info[(op_name, node_id)]['op_name'] = op_name
 
         install_subgraph_ids = [v['containing_subgraph']
                                 for (__, node), v in operations_info.items()
