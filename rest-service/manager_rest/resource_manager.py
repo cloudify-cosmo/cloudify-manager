@@ -618,6 +618,7 @@ class ResourceManager(object):
     def execute_workflow(self,
                          deployment_id,
                          workflow_id,
+                         blueprint_id=None,
                          parameters=None,
                          allow_custom_parameters=False,
                          force=False,
@@ -631,7 +632,8 @@ class ResourceManager(object):
         execution_creator = execution_creator or current_user
         deployment = self.sm.get(models.Deployment, deployment_id)
         self._validate_permitted_to_execute_global_workflow(deployment)
-        blueprint = self.sm.get(models.Blueprint, deployment.blueprint_id)
+        blueprint_id = blueprint_id or deployment.blueprint_id
+        blueprint = self.sm.get(models.Blueprint, blueprint_id)
         self._verify_workflow_in_deployment(workflow_id, deployment,
                                             deployment_id)
         workflow = deployment.workflows[workflow_id]
@@ -669,7 +671,7 @@ class ResourceManager(object):
                 scheduled_for=scheduled_time
             )
 
-            new_execution.set_deployment(deployment)
+            new_execution.set_deployment(deployment, blueprint_id)
         if should_queue and not scheduled_time:
             # Scheduled executions are passed to rabbit, no need to break here
             self.sm.put(new_execution)
