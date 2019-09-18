@@ -202,6 +202,26 @@ class DeploymentUpdatesTestCase(DeploymentUpdatesBase):
                                        "%Y-%m-%dT%H:%M:%S.%fZ")
         self.assertGreater(timestamp_after_update, timestamp_before_update)
 
+    @patch('manager_rest.deployment_update.handlers.'
+           'DeploymentUpdateNodeHandler.finalize')
+    @patch('manager_rest.deployment_update.handlers.'
+           'DeploymentUpdateNodeInstanceHandler.finalize')
+    def test_update_execution_attributes(self, *_):
+        deployment_id = 'dep'
+        self._deploy_base(deployment_id, 'no_output.yaml')
+        deployment = self.client.deployments.get(deployment_id=deployment_id)
+        self._update(deployment_id, 'one_output.yaml')
+        dep_update = self.client.deployment_updates.list(
+            deployment_id=deployment_id)[0]
+        update_execution = self.client.executions.get(dep_update.execution_id)
+        updated_deployment = \
+            self.client.deployments.get(deployment_id=deployment_id)
+        self.assertNotEqual(deployment.blueprint_id,
+                            updated_deployment.blueprint_id)
+        self.assertEqual(updated_deployment.blueprint_id,
+                         update_execution.blueprint_id)
+        self.assertIsNotNone(update_execution.started_at)
+
     def test_step_add(self):
         deployment_id = 'dep'
         self._deploy_base(deployment_id, 'no_output.yaml')

@@ -18,7 +18,6 @@ import copy
 import uuid
 
 from flask import current_app
-from flask_security import current_user
 
 from cloudify.models_states import ExecutionState
 from cloudify.utils import extract_and_merge_plugins
@@ -29,10 +28,9 @@ from dsl_parser import exceptions as parser_exceptions
 
 from manager_rest import utils
 from manager_rest import config
-from manager_rest import workflow_executor
 from manager_rest.dsl_functions import get_secret_method
 from manager_rest import app_context, manager_exceptions
-from manager_rest.resource_manager import ResourceManager
+from manager_rest.resource_manager import get_resource_manager
 from manager_rest.deployment_update import step_extractor
 from manager_rest.deployment_update.utils import extract_ids
 from manager_rest.deployment_update.validator import StepValidator
@@ -538,9 +536,10 @@ class DeploymentUpdateManager(object):
             # List of node-instances to reinstall
             'node_instances_to_reinstall': reinstall_list
         }
-        return self._execute_workflow(
-            deployment_update=dep_update,
-            workflow_id=workflow_id or DEFAULT_DEPLOYMENT_UPDATE_WORKFLOW,
+        return get_resource_manager().execute_workflow(
+            dep_update.deployment.id,
+            workflow_id or DEFAULT_DEPLOYMENT_UPDATE_WORKFLOW,
+            blueprint_id=dep_update.new_blueprint_id,
             parameters=parameters,
             allow_custom_parameters=True
         )
@@ -564,51 +563,6 @@ class DeploymentUpdateManager(object):
         dep_update.state = STATES.SUCCESSFUL
         self.sm.update(dep_update)
         return dep_update
-
-    def _execute_workflow(self,
-                          deployment_update,
-                          workflow_id,
-                          parameters=None,
-                          allow_custom_parameters=False):
-        deployment = deployment_update.deployment
-        if workflow_id not in deployment.workflows:
-            raise manager_exceptions.NonexistentWorkflowError(
-                'Workflow {0} does not exist in deployment {1}'.format(
-                    workflow_id, deployment.id))
-        workflow = deployment.workflows[workflow_id]
-        execution_parameters = \
-            ResourceManager._merge_and_validate_execution_parameters(
-                workflow, workflow_id, parameters, allow_custom_parameters)
-        execution_id = str(uuid.uuid4())
-        new_execution = models.Execution(
-            id=execution_id,
-            status=ExecutionState.PENDING,
-            created_at=utils.get_formatted_timestamp(),
-            workflow_id=workflow_id,
-            error='',
-            parameters=ResourceManager._get_only_user_execution_parameters(
-                execution_parameters),
-            is_system_workflow=False
-        )
-        new_execution.set_deployment(deployment,
-                                     deployment_update.new_blueprint_id)
-        deployment_update.execution = new_execution
-        self.sm.put(new_execution)
-
-        # executing the user workflow
-        workflow_plugins = deployment_update.deployment_plan[
-            constants.WORKFLOW_PLUGINS_TO_INSTALL]
-        workflow_executor.execute_workflow(
-            workflow_id,
-            workflow,
-            workflow_plugins=workflow_plugins,
-            blueprint_id=deployment.blueprint_id,
-            deployment_id=deployment.id,
-            execution_id=execution_id,
-            execution_parameters=execution_parameters,
-            execution_creator=current_user
-        )
-        return new_execution
 
     def _extract_plugins_changes(self, dep_update, update_plugins):
         """Extracts plugins that need to be installed or uninstalled.
