@@ -202,6 +202,8 @@ class DeploymentUpdatesTestCase(DeploymentUpdatesBase):
                                        "%Y-%m-%dT%H:%M:%S.%fZ")
         self.assertGreater(timestamp_after_update, timestamp_before_update)
 
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
     @patch('manager_rest.deployment_update.handlers.'
            'DeploymentUpdateNodeHandler.finalize')
     @patch('manager_rest.deployment_update.handlers.'
