@@ -712,6 +712,7 @@ class ResourceManager(object):
             for component_dep_id in components_dep_ids:
                 self.execute_workflow(component_dep_id,
                                       workflow_id,
+                                      blueprint_id,
                                       parameters,
                                       allow_custom_parameters,
                                       force,
