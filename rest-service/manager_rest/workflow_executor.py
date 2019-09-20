@@ -52,7 +52,7 @@ def execute_workflow(name,
     plugin_name = workflow['plugin']
     plugins = [p for p in workflow_plugins if p['name'] == plugin_name]
     plugin = plugins[0] if plugins else None
-    if plugin and plugin['package_name']:
+    if plugin is not None and plugin['package_name']:
         sm = get_storage_manager()
         filter_plugin = {'package_name': plugin.get('package_name'),
                          'package_version': plugin.get('package_version')}
