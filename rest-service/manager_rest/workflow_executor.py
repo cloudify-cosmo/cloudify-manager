@@ -63,7 +63,8 @@ def execute_workflow(name,
         'is_system_workflow': False,
         'wait_after_fail': wait_after_fail,
         'resume': resume,
-        'execution_token': generate_execution_token(execution_id)
+        'execution_token': generate_execution_token(execution_id),
+        'plugin': {}
     }
 
     plugin_name = workflow['plugin']
@@ -90,7 +91,8 @@ def execute_workflow(name,
 
     return _execute_task(execution_id=execution_id,
                          execution_parameters=execution_parameters,
-                         context=context, execution_creator=execution_creator,
+                         context=context,
+                         execution_creator=execution_creator,
                          scheduled_time=scheduled_time)
 
 
