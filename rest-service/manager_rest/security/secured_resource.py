@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2018 Cloudify Platform Ltd. All rights reserved
+# Copyright (c) 2018-2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ from manager_rest.manager_exceptions import MissingPremiumPackage
 from .authentication import authenticator
 
 
-def authenticate(func):
+def authenticate(func, readonly=False):
     def _extend_response_headers(response, extra_headers):
         response = jsonify(response)
         response.headers.extend(extra_headers)
@@ -49,7 +49,7 @@ def authenticate(func):
 
     @wraps(func)
     def wrapper(*args, **kwargs):
-        auth_response = authenticator.authenticate(request)
+        auth_response = authenticator.authenticate(request, readonly)
         auth_headers = getattr(auth_response, 'response_headers', {})
         if isinstance(auth_response, Response):
             return auth_response
@@ -71,6 +71,10 @@ def authenticate(func):
                     extra_headers=auth_response.response_headers)
         return response
     return wrapper
+
+
+def authenticate_readonly_mode(func):
+    return authenticate(func, True)
 
 
 def _abort_on_premium_missing(func):
@@ -111,6 +115,16 @@ def allow_on_community(func):
 
 class SecuredResource(Resource):
     method_decorators = [authenticate]
+
+
+class SecuredResourceReadonlyMode(Resource):
+    """
+    In case of readonly access to the DB with write access for the failed
+    counter login mechanism, only this kind of secured resource will allow
+    access to the endpoints needed in that scenario by not writing to a
+    readonly column.
+    """
+    method_decorators = [authenticate_readonly_mode]
 
 
 class MissingPremiumFeatureResource(Resource):

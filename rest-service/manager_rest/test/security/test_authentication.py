@@ -17,6 +17,7 @@ import os
 from base64 import urlsafe_b64encode
 
 from manager_rest.test.attribute import attr
+from manager_rest.storage import management_models
 from manager_rest.test.base_test import LATEST_API_VERSION
 from manager_rest.maintenance import get_maintenance_file_path
 from manager_rest.constants import (CLOUDIFY_TENANT_HEADER,
@@ -31,13 +32,31 @@ FAILED_LOGINS_NUMBER = 6
 @attr(client_min_version=1, client_max_version=LATEST_API_VERSION)
 class AuthenticationTests(SecurityTestBase):
 
+    def _fetch_alice(self):
+        alice = self.sm.list(management_models.User,
+                             filters={'username': 'alice'})
+        self.assertEqual(len(alice), 1)
+        return alice[0]
+
     def test_secured_client(self):
+        login_time = self._fetch_alice().last_login_at
+        self.assertIsNone(login_time)
         self._assert_user_authorized(username='alice',
                                      password='alice_password')
+        login_time = self._fetch_alice().last_login_at
+        self.assertIsNotNone(login_time)
 
     def test_wrong_credentials(self):
+        alice = self._fetch_alice()
+        self.assertIsNone(alice.last_failed_login_at)
+        self.assertIsNone(alice.last_login_at)
+        self.assertEqual(alice.failed_logins_counter, 0)
         self._assert_user_unauthorized(username='alice',
                                        password='wrong_password')
+        alice = self._fetch_alice()
+        self.assertIsNone(alice.last_login_at)
+        self.assertIsNotNone(alice.last_failed_login_at)
+        self.assertEqual(alice.failed_logins_counter, 1)
 
     def test_invalid_three_part_header(self):
         credentials = 'alice:alice_password:extra'
