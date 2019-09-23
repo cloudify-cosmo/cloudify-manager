@@ -34,6 +34,17 @@ defaults:
           name: Push coverage data to codecov
           command: |
             bash <(curl -s https://codecov.io/bash) -F $TOX_TEST
+  - &rest_service_external_tox_defaults
+    docker:
+      - image: circleci/python:2.7
+    steps:
+      - checkout
+      - run: pip install --user tox
+      - run: python -m tox -c $TOX_CONFIG/tox.ini -e $DO_ENV
+      - run:
+          name: Push coverage data to codecov
+          command: |
+            bash <(curl -s https://codecov.io/bash) -F $TOX_TEST
 
 jobs:
   flake8:
@@ -91,13 +102,13 @@ jobs:
       DO_ENV: clientV3_1-infrastructure
 
   test_workflows:
-    <<: *tox_defaults
+    <<: *rest_service_external_tox_defaults
     environment:
       TOX_CONFIG: ./workflows
       DO_ENV: py27
 
   test_cloudify_types:
-    <<: *tox_defaults
+    <<: *rest_service_external_tox_defaults
     environment:
       TOX_CONFIG: ./cloudify_types
       DO_ENV: py27
