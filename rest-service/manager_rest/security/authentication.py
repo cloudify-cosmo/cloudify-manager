@@ -56,7 +56,7 @@ class Authentication(object):
         user.failed_logins_counter += 1
         user_datastore.commit()
 
-    def authenticate(self, request, readonly):
+    def authenticate(self, request, readonly=False):
         user = self._internal_auth(request)
         is_bootstrap_admin = user and user.is_bootstrap_admin
         if self.external_auth_configured \
