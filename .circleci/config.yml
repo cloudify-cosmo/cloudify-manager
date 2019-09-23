@@ -54,7 +54,7 @@ jobs:
     steps:
       - checkout
       - run: pip install --user flake8
-      - run: python -m flake8 workflows/ rest-service/ tests/ amqp-postgres/ cloudify_types/ mgmtworker/
+      - run: python -m flake8 workflows/ rest-service/ tests/ amqp-postgres/ cloudify_types/ mgmtworker/ status-reporter/
 
   test_v1:
     <<: *tox_defaults
@@ -175,6 +175,8 @@ jobs:
           spec_file: cloudify-rabbitmq.spec
       - build_rpm:
           spec_file: cloudify-manager-ip-setter.spec
+      - build_rpm:
+          spec_file: cloudify-status-reporter.spec
       - run: |
           mkdir result
           mv noarch/*.rpm result || true
