@@ -79,15 +79,13 @@ def execute_workflow(name,
             plugin['visibility'] = managed_plugins[0].visibility
             plugin['tenant_name'] = managed_plugins[0].tenant_name
 
-        context.update({
-            'plugin': {
+        context['plugin'] = {
                 'name': plugin_name,
                 'package_name': plugin.get('package_name'),
                 'package_version': plugin.get('package_version'),
                 'visibility': plugin.get('visibility'),
                 'tenant_name': plugin.get('tenant_name')
             }
-        })
 
     return _execute_task(execution_id=execution_id,
                          execution_parameters=execution_parameters,
