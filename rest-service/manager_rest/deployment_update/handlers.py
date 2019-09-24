@@ -193,12 +193,13 @@ class OperationHandler(ModifiableEntityHandlerBase):
 
         def _filter_operation(column):
             # path in the parameters dict that stores the node name
-            node_name_path = ('task_kwargs', 'cloudify_context', 'node_name')
+            node_name_path = ('task_kwargs', 'kwargs',
+                              '__cloudify_context', 'node_name')
             # ..and the operation interface name,
             # eg. cloudify.interfaces.lifecycle.create
             # (NOT eg. script.runner.tasks.run)
-            operation_name_path = ('task_kwargs', 'cloudify_context',
-                                   'operation', 'name')
+            operation_name_path = ('task_kwargs', 'kwargs',
+                                   '__cloudify_context', 'operation', 'name')
             # this will use postgres' json operators
             json_column = cast(column, JSON)
             return and_(
@@ -236,8 +237,6 @@ class OperationHandler(ModifiableEntityHandlerBase):
             try:
                 op.parameters['task_kwargs']['kwargs'].update(new_op_inputs)
                 op.parameters['task_kwargs']['kwargs']['__cloudify_context'][
-                    'has_intrinsic_functions'] = True
-                op.parameters['task_kwargs']['cloudify_context'][
                     'has_intrinsic_functions'] = True
             except KeyError:
                 continue

@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2013-2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,10 +14,12 @@
 #  * limitations under the License.
 
 # Setting NOQA to avoid flake errors - these are convenience imports
+
 from .secured_resource import (  # NOQA
     SecuredResource,
     MissingPremiumFeatureResource,
     premium_only,
-    allow_on_community
+    allow_on_community,
+    SecuredResourceReadonlyMode
 )
 from .authorization import is_user_action_allowed  # NOQA

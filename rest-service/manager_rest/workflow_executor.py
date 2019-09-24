@@ -49,16 +49,6 @@ def execute_workflow(name,
 
     execution_parameters = execution_parameters or {}
     task_name = workflow['operation']
-    plugin_name = workflow['plugin']
-    plugin = [p for p in workflow_plugins if p['name'] == plugin_name][0]
-    if plugin and plugin['package_name']:
-        sm = get_storage_manager()
-        filter_plugin = {'package_name': plugin.get('package_name'),
-                         'package_version': plugin.get('package_version')}
-        managed_plugins = sm.list(models.Plugin, filters=filter_plugin).items
-        if managed_plugins:
-            plugin['visibility'] = managed_plugins[0].visibility
-            plugin['tenant_name'] = managed_plugins[0].tenant_name
 
     context = {
         'type': 'workflow',
@@ -74,17 +64,33 @@ def execute_workflow(name,
         'wait_after_fail': wait_after_fail,
         'resume': resume,
         'execution_token': generate_execution_token(execution_id),
-        'plugin': {
-            'name': plugin_name,
-            'package_name': plugin.get('package_name'),
-            'package_version': plugin.get('package_version'),
-            'visibility': plugin.get('visibility'),
-            'tenant_name': plugin.get('tenant_name')
-        }
+        'plugin': {}
     }
+
+    plugin_name = workflow['plugin']
+    plugins = [p for p in workflow_plugins if p['name'] == plugin_name]
+    plugin = plugins[0] if plugins else None
+    if plugin is not None and plugin['package_name']:
+        sm = get_storage_manager()
+        filter_plugin = {'package_name': plugin.get('package_name'),
+                         'package_version': plugin.get('package_version')}
+        managed_plugins = sm.list(models.Plugin, filters=filter_plugin).items
+        if managed_plugins:
+            plugin['visibility'] = managed_plugins[0].visibility
+            plugin['tenant_name'] = managed_plugins[0].tenant_name
+
+        context['plugin'] = {
+                'name': plugin_name,
+                'package_name': plugin.get('package_name'),
+                'package_version': plugin.get('package_version'),
+                'visibility': plugin.get('visibility'),
+                'tenant_name': plugin.get('tenant_name')
+            }
+
     return _execute_task(execution_id=execution_id,
                          execution_parameters=execution_parameters,
-                         context=context, execution_creator=execution_creator,
+                         context=context,
+                         execution_creator=execution_creator,
                          scheduled_time=scheduled_time)
 
 

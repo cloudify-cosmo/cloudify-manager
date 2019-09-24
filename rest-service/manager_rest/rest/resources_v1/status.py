@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2017 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2017-2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ from cloudify.constants import BROKER_PORT_SSL
 from manager_rest import config
 from manager_rest.rest import responses
 from manager_rest.rest.rest_decorators import marshal_with
-from manager_rest.security import SecuredResource
+from manager_rest.security import SecuredResourceReadonlyMode
 from manager_rest.security.authorization import authorize
 try:
     from manager_rest.systemddbus import get_services
@@ -44,7 +44,7 @@ OPTIONAL_SERVICES = {
 }
 
 
-class Status(SecuredResource):
+class Status(SecuredResourceReadonlyMode):
 
     @swagger.operation(
         responseClass=responses.Status,
