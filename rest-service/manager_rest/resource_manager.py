@@ -590,7 +590,7 @@ class ResourceManager(object):
             workflow,
             workflow_plugins=workflow_plugins,
             blueprint_id=deployment.blueprint_id,
-            deployment_id=deployment.id,
+            deployment=deployment,
             execution_id=execution_id,
             execution_parameters=execution.parameters,
             bypass_maintenance=False,
@@ -696,7 +696,7 @@ class ResourceManager(object):
             execution_creator=execution_creator,
             workflow_plugins=workflow_plugins,
             blueprint_id=deployment.blueprint_id,
-            deployment_id=deployment_id,
+            deployment=deployment,
             execution_id=execution_id,
             execution_parameters=execution_parameters,
             bypass_maintenance=bypass_maintenance,
@@ -1235,14 +1235,16 @@ class ResourceManager(object):
                           inputs=None,
                           bypass_maintenance=None,
                           skip_plugins_validation=False,
-                          site_name=None):
+                          site_name=None,
+                          runtime_only_evaluation=False):
         blueprint = self.sm.get(models.Blueprint, blueprint_id)
         plan = blueprint.plan
         site = self.sm.get(models.Site, site_name) if site_name else None
 
         try:
             deployment_plan = tasks.prepare_deployment_plan(
-                plan, get_secret_method, inputs)
+                plan, get_secret_method, inputs,
+                runtime_only_evaluation=runtime_only_evaluation)
         except parser_exceptions.MissingRequiredInputError as e:
             raise manager_exceptions.MissingRequiredDeploymentInputError(
                 str(e))

@@ -32,6 +32,31 @@ from manager_rest.manager_exceptions import (
 SecretType = namedtuple('Secret', 'key value')
 
 
+def evaluate_node(node):
+    # dsl-parser uses name in plans, while the db storage uses id :(
+    node['name'] = node['id']
+    deployment_id = node['deployment_id']
+    sm = get_storage_manager()
+    sm.get(Deployment, deployment_id, include=['id'])
+    storage = FunctionEvaluationStorage(deployment_id, sm)
+    try:
+        return functions.evaluate_node_functions(node, storage)
+    except parser_exceptions.FunctionEvaluationError as e:
+        raise FunctionsEvaluationError(str(e))
+
+
+def evaluate_node_instance(instance):
+    deployment_id = instance['deployment_id']
+    sm = get_storage_manager()
+    sm.get(Deployment, deployment_id, include=['id'])
+    storage = FunctionEvaluationStorage(deployment_id, sm)
+
+    try:
+        return functions.evaluate_node_instance_functions(instance, storage)
+    except parser_exceptions.FunctionEvaluationError as e:
+        raise FunctionsEvaluationError(str(e))
+
+
 def evaluate_intrinsic_functions(payload, deployment_id, context=None):
     context = context or {}
     sm = get_storage_manager()
@@ -48,7 +73,6 @@ def evaluate_deployment_outputs(deployment_id):
     sm = get_storage_manager()
     deployment = sm.get(Deployment, deployment_id, include=['outputs'])
     storage = FunctionEvaluationStorage(deployment_id, sm)
-
     if not deployment.outputs:
         return {}
 

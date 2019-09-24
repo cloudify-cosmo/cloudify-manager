@@ -206,6 +206,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
     scaling_groups = db.Column(db.PickleType)
     updated_at = db.Column(UTCDateTime)
     workflows = db.Column(db.PickleType(comparator=lambda *a: False))
+    runtime_only_evaluation = db.Column(db.Boolean, default=False)
 
     _blueprint_fk = foreign_key(Blueprint._storage_id)
     _site_fk = foreign_key(Site._storage_id,
@@ -448,6 +449,7 @@ class DeploymentUpdate(CreatedAtMixin, SQLResourceBase):
     old_inputs = db.Column(db.PickleType)
     new_inputs = db.Column(db.PickleType)
     state = db.Column(db.Text)
+    runtime_only_evaluation = db.Column(db.Boolean, default=False)
 
     _execution_fk = foreign_key(Execution._storage_id, nullable=True)
     _deployment_fk = foreign_key(Deployment._storage_id)

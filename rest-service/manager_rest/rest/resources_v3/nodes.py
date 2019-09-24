@@ -14,7 +14,10 @@
 #  * limitations under the License.
 
 from manager_rest.security.authorization import authorize
-from manager_rest.dsl_functions import evaluate_intrinsic_functions
+from manager_rest.dsl_functions import (
+    evaluate_node,
+    evaluate_node_instance
+)
 
 from .. import rest_decorators
 from ..resources_v1.nodes import NodeInstancesId as v1_NodeInstancesId
@@ -30,8 +33,7 @@ class Nodes(v2_Nodes):
         nodes = super(Nodes, self).get(*args, **kwargs)
         if evaluate_functions:
             for node in nodes['items']:
-                evaluate_intrinsic_functions(node['properties'],
-                                             node['deployment_id'])
+                evaluate_node(node)
         return nodes
 
 
@@ -44,6 +46,5 @@ class NodeInstancesId(v1_NodeInstancesId):
         # runtime properties
         node_instance = super(NodeInstancesId, self).get(*args, **kwargs)
         if evaluate_functions:
-            evaluate_intrinsic_functions(node_instance['runtime_properties'],
-                                         node_instance['deployment_id'])
+            evaluate_node_instance(node_instance)
         return node_instance
