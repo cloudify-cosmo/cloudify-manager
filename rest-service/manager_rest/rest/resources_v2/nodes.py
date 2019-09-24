@@ -57,7 +57,7 @@ class Nodes(resources_v1.Nodes):
             '_get_all_results',
             request.args.get('_get_all_results', False)
         )
-        return get_storage_manager().list(
+        nodes_list = get_storage_manager().list(
             models.Node,
             include=_include,
             pagination=pagination,
@@ -67,6 +67,22 @@ class Nodes(resources_v1.Nodes):
             all_tenants=all_tenants,
             get_all_results=get_all_results
         )
+        return self.update_node_instance_count_for_group_scaling(nodes_list)
+
+    @staticmethod
+    def update_node_instance_count_for_group_scaling(nodes_list):
+        for node in nodes_list:
+            if not hasattr(node, 'deployment'):
+                continue
+            scale_by = 1
+            scaling_groups = node.deployment.scaling_groups.values()
+            for group in scaling_groups:
+                if {node.id, node.host_id} & set(group['members']):
+                    scale_by *= group['properties']['planned_instances']
+            node.set_actual_planned_node_instances(
+                scale_by * node.planned_number_of_instances)
+            node.set_actual_node_instances(len(node.node_instances))
+        return nodes_list
 
 
 class NodeInstances(resources_v1.NodeInstances):
