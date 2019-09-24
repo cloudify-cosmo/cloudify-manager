@@ -585,6 +585,13 @@ class Node(SQLResourceBase):
 
     _deployment_fk = foreign_key(Deployment._storage_id)
 
+    # These are for fixing a bug where wrong number of instances was returned
+    # for deployments with group scaling policy
+    _extra_fields = {
+        'actual_number_of_instances': flask_fields.Integer,
+        'actual_planned_number_of_instances': flask_fields.Integer,
+    }
+
     @declared_attr
     def deployment(cls):
         return one_to_many_relationship(cls, Deployment, cls._deployment_fk)
@@ -592,9 +599,18 @@ class Node(SQLResourceBase):
     deployment_id = association_proxy('deployment', 'id')
     blueprint_id = association_proxy('deployment', 'blueprint_id')
 
+    actual_number_of_instances = flask_fields.Integer
+    actual_planned_number_of_instances = flask_fields.Integer
+
     def set_deployment(self, deployment):
         self._set_parent(deployment)
         self.deployment = deployment
+
+    def set_actual_node_instances(self, num):
+        self.actual_number_of_instances = num
+
+    def set_actual_planned_node_instances(self, num):
+        self.actual_planned_number_of_instances = num
 
 
 class NodeInstance(SQLResourceBase):
