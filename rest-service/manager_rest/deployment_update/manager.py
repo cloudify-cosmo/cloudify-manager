@@ -546,7 +546,8 @@ class DeploymentUpdateManager(object):
             workflow_id or DEFAULT_DEPLOYMENT_UPDATE_WORKFLOW,
             blueprint_id=dep_update.new_blueprint_id,
             parameters=parameters,
-            allow_custom_parameters=True
+            allow_custom_parameters=True,
+            allow_overlapping_running_wf=True
         )
 
     def finalize_commit(self, deployment_update_id):

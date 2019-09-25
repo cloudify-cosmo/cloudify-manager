@@ -629,7 +629,8 @@ class ResourceManager(object):
                          execution=None,
                          wait_after_fail=600,
                          execution_creator=None,
-                         scheduled_time=None):
+                         scheduled_time=None,
+                         allow_overlapping_running_wf=False):
         execution_creator = execution_creator or current_user
         deployment = self.sm.get(models.Deployment, deployment_id)
         self._validate_permitted_to_execute_global_workflow(deployment)
@@ -656,8 +657,13 @@ class ResourceManager(object):
 
             execution_id = str(uuid.uuid4())
 
-        should_queue = self.check_for_executions(deployment_id, force, queue,
-                                                 execution, scheduled_time)
+        should_queue = queue
+        if not allow_overlapping_running_wf:
+            should_queue = self.check_for_executions(deployment_id,
+                                                     force,
+                                                     queue,
+                                                     execution,
+                                                     scheduled_time)
         if not execution:
             new_execution = models.Execution(
                 id=execution_id,
