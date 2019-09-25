@@ -178,6 +178,11 @@ def zip_files(files):
         os.remove(destination_zip)
 
 
+def unzip(archive, destination):
+    with zipfile.ZipFile(archive, 'r') as zip_file:
+        zip_file.extractall(destination)
+
+
 def create_zip(source, destination, include_folder=True):
     with zipfile.ZipFile(destination, 'w') as zip_file:
         for root, _, files in os.walk(source):

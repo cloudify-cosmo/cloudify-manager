@@ -338,6 +338,7 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
                                  file_server_root,
                                  archive_target_path,
                                  additional_inputs=None,
+                                 runtime_only_evaluation=False,
                                  **kwargs):
         application_dir = self._extract_file_to_file_server(
             archive_target_path,
@@ -347,7 +348,8 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
                 file_server_root,
                 application_dir,
                 data_id,
-                additional_inputs), archive_target_path
+                additional_inputs,
+                runtime_only_evaluation), archive_target_path
 
     def _move_archive_to_uploaded_dir(self, *args, **kwargs):
         pass
@@ -357,7 +359,8 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
                                       file_server_root,
                                       app_dir,
                                       deployment_id,
-                                      additional_inputs=None):
+                                      additional_inputs=None,
+                                      runtime_only_evaluation=False):
 
         app_file_name = cls._extract_application_file(file_server_root,
                                                       app_dir)
@@ -369,7 +372,8 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
                     deployment_id,
                     app_dir,
                     app_file_name,
-                    additional_inputs=additional_inputs or {}
+                    additional_inputs=additional_inputs or {},
+                    runtime_only_evaluation=runtime_only_evaluation
                 )
 
             # Moving the contents of the app dir to the dest dir, while
@@ -752,6 +756,16 @@ class UploadedCaravanManager(UploadedPluginsManager):
         def __init__(self, caravan_path):
             self._caravan_path = caravan_path
             self._tempdir = tempfile.mkdtemp()
+            self._cvn_dir = None
+            self._metadata = None
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            remove(self._tempdir)
+
+        def init_metadata(self):
             self._cvn_dir = self._extract(self._caravan_path, self._tempdir)
             self._metadata = self._get_metadata(self._cvn_dir)
 
@@ -809,10 +823,13 @@ class UploadedCaravanManager(UploadedPluginsManager):
                     resource_target_path,
                     self._get_data_url_key(),
                     self._get_kind())
-            plugins = self._prepare_and_process_doc(
-                file_server_root,
-                resource_target_path,
-                **kwargs)
+            with self.Caravan(resource_target_path) as caravan_instance:
+                caravan_instance.init_metadata()
+                plugins = self._prepare_and_process_doc(
+                    file_server_root,
+                    resource_target_path,
+                    caravan_instance=caravan_instance,
+                    **kwargs)
             docs = []
             for doc, plugin_dir in plugins:
                 self._move_archive_to_uploaded_dir(
@@ -831,7 +848,7 @@ class UploadedCaravanManager(UploadedPluginsManager):
                                  archive_target_path,
                                  **kwargs):
         plugins = []
-        caravan_ = self.Caravan(archive_target_path)
+        caravan_ = kwargs['caravan_instance']
         for wgn_path, _ in caravan_:
             files_dir = os.path.dirname(wgn_path)
             archive_path = shutil.make_archive(

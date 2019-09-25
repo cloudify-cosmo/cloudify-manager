@@ -315,17 +315,19 @@ class BaseTestCase(unittest.TestCase):
 
     @staticmethod
     def deploy(dsl_path, blueprint_id=None, deployment_id=None,
-               inputs=None, wait=True, client=None):
+               inputs=None, wait=True, client=None,
+               runtime_only_evaluation=False):
         client = client or test_utils.create_rest_client()
         resource_id = uuid.uuid4()
         blueprint_id = blueprint_id or 'blueprint_{0}'.format(resource_id)
         blueprint = client.blueprints.upload(dsl_path, blueprint_id)
         deployment_id = deployment_id or 'deployment_{0}'.format(resource_id)
         deployment = client.deployments.create(
-                blueprint.id,
-                deployment_id,
-                inputs=inputs,
-                skip_plugins_validation=True)
+            blueprint.id,
+            deployment_id,
+            inputs=inputs,
+            skip_plugins_validation=True,
+            runtime_only_evaluation=runtime_only_evaluation)
         if wait:
             wait_for_deployment_creation_to_complete(deployment_id,
                                                      client=client)
@@ -540,6 +542,22 @@ class AgentlessTestCase(BaseTestCase):
         self.clear_directory('/opt/mgmtworker/work/deployments')
         self.clear_directory('/opt/manager/resources/blueprints')
         self.clear_directory('/opt/manager/resources/uploaded-blueprints')
+
+    def _get_latest_execution(self, workflow_id):
+        execution_list = self.client.executions.list(
+            include_system_workflows=True,
+            sort='created_at',
+            is_descending=True,
+            workflow_id=workflow_id).items
+        self.assertGreater(
+            len(execution_list),
+            0,
+            msg='Expected to find at least one execution with '
+                'workflow_id `{workflow_id}`, but found: '
+                '{execution_list}'.format(
+                workflow_id=workflow_id, execution_list=execution_list)
+        )
+        return execution_list[0]
 
 
 class BaseAgentTestCase(BaseTestCase):

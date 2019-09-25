@@ -21,7 +21,23 @@ from cloudify.models_states import ExecutionState
 
 @workflow(system_wide=True)
 def install(ctx, plugin, **_):
-    return _operate_on_plugin(ctx, plugin, 'install')
+    try:
+        execution_result = _operate_on_plugin(ctx, plugin, 'install')
+    except Exception as e:
+        ctx.send_event("The plugin '{0}' failed to install. "
+                       "Sending a 'force plugin uninstall' request..."
+                       "".format(plugin['id']))
+        client = get_rest_client()
+        plugins = client.plugins.list(id=plugin['id'])
+        if plugins:
+            client.plugins.delete(plugin_id=plugin['id'], force=True)
+            ctx.send_event("Sent a 'force plugin uninstall' request for "
+                           "plugin '{0}'.".format(plugin['id']))
+        else:
+            ctx.send_event("The plugin {0} entry doesn't exist."
+                           "".format(plugin['id']))
+        raise e
+    return execution_result
 
 
 @workflow(system_wide=True)
