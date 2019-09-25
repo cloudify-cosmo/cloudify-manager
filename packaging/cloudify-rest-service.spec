@@ -25,9 +25,6 @@ BuildRequires: python-devel
 Requires:       python >= 2.7, postgresql-libs, sudo, dbus >= 1.6
 Requires(pre):  shadow-utils
 
-Source0:  http://www.getcloudify.org/spec/diamond-plugin/1.3.17/plugin.yaml
-
-
 %description
 Cloudify's REST Service.
 
@@ -75,10 +72,6 @@ specs="%{buildroot}/opt/manager/resources/spec"
 types_yaml="${specs}/cloudify/5.0.5.dev1/types.yaml"
 mkdir -p $(dirname "$types_yaml")
 cp "${RPM_SOURCE_DIR}/resources/rest-service/cloudify/types/types.yaml" "$types_yaml"
-
-diamond_yaml="${specs}/diamond-plugin/1.3.17/plugin.yaml"
-mkdir -p $(dirname "$diamond_yaml")
-cp "%{S:0}" "$diamond_yaml"
 
 
 %pre
