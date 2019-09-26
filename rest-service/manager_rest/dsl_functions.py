@@ -118,10 +118,11 @@ class FunctionEvaluationStorage(object):
         filters = dict(deployment_id=self._deployment_id)
         if node_id:
             filters['node_id'] = node_id
-        return self.sm.list(NodeInstance, filters=filters).items
+        instances = self.sm.list(NodeInstance, filters=filters).items
+        return [ni.to_dict() for ni in instances]
 
     def get_node_instance(self, node_instance_id):
-        return self.sm.get(NodeInstance, node_instance_id)
+        return self.sm.get(NodeInstance, node_instance_id).to_dict()
 
     def get_input(self, input_name):
         deployment = self.sm.get(Deployment, self._deployment_id)
@@ -129,7 +130,7 @@ class FunctionEvaluationStorage(object):
 
     def get_node(self, node_id):
         node = get_storage_node(self._deployment_id, node_id)
-        return node
+        return node.to_dict()
 
     def get_secret(self, secret_key):
         secret = self.sm.get(Secret, secret_key)
