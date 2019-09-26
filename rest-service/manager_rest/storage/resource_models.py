@@ -591,6 +591,8 @@ class Node(SQLResourceBase):
         'actual_number_of_instances': flask_fields.Integer,
         'actual_planned_number_of_instances': flask_fields.Integer,
     }
+    actual_number_of_instances = 0
+    actual_planned_number_of_instances = 0
 
     @declared_attr
     def deployment(cls):
@@ -598,9 +600,6 @@ class Node(SQLResourceBase):
 
     deployment_id = association_proxy('deployment', 'id')
     blueprint_id = association_proxy('deployment', 'blueprint_id')
-
-    actual_number_of_instances = flask_fields.Integer
-    actual_planned_number_of_instances = flask_fields.Integer
 
     def set_deployment(self, deployment):
         self._set_parent(deployment)
