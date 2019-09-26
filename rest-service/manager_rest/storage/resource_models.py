@@ -601,6 +601,13 @@ class Node(SQLResourceBase):
     deployment_id = association_proxy('deployment', 'id')
     blueprint_id = association_proxy('deployment', 'blueprint_id')
 
+    def to_dict(self, suppress_error=False):
+        # some usages of the dict want 'name' instead of 'id' (notably,
+        # function evaluation in the dsl-parser)
+        d = super(Node, self).to_dict(suppress_error)
+        d['name'] = d['id']
+        return d
+
     def set_deployment(self, deployment):
         self._set_parent(deployment)
         self.deployment = deployment

@@ -198,8 +198,7 @@ class TestRuntimeFunctionEvaluation(AgentlessTestCase):
             self.fail('Expected execution {0} to fail'
                       .format(install_execution))
 
-        self._update_deployment(
-            deployment, update_executions=[install_execution.id])
+        self._update_deployment(deployment)
         self.client.executions.resume(install_execution.id)
         self.wait_for_execution_to_end(install_execution)
         self._assert_properties(deployment, self.CHANGED_VALUE)
