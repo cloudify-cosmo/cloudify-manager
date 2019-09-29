@@ -14,6 +14,8 @@
 #  * limitations under the License.
 #
 
+from datetime import datetime
+
 from flask_restful.reqparse import Argument
 from flask_restful_swagger import swagger
 from flask_restful.inputs import boolean
@@ -30,7 +32,7 @@ from manager_rest.rest.rest_utils import (
     get_args_and_verify_arguments,
     get_json_and_verify_params,
     verify_and_convert_bool,
-    parse_datetime
+    parse_datetime_string
 )
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
@@ -105,7 +107,7 @@ class Executions(SecuredResource):
         scheduled_time = request_dict.get('scheduled_time', None)
 
         if scheduled_time:
-            scheduled_time = parse_datetime(scheduled_time)
+            scheduled_time = self._parse_scheduled_time(scheduled_time)
 
         if parameters is not None and parameters.__class__ is not dict:
             raise manager_exceptions.BadParametersError(
@@ -120,6 +122,16 @@ class Executions(SecuredResource):
             queue=queue, wait_after_fail=wait_after_fail,
             scheduled_time=scheduled_time)
         return execution, 201
+
+    def _parse_scheduled_time(self, scheduled_time):
+        scheduled_utc = parse_datetime_string(scheduled_time)
+        if scheduled_utc <= datetime.utcnow():
+            raise manager_exceptions.BadParametersError(
+                'Date `{0}` has already passed, please provide'
+                ' valid date. \nExpected format: YYYYMMDDHHMM+HHMM or'
+                ' YYYYMMDDHHMM-HHMM i.e: 201801012230-0500'
+                ' (Jan-01-18 10:30pm EST)'.format(scheduled_time))
+        return scheduled_utc
 
 
 class ExecutionsId(SecuredResource):
