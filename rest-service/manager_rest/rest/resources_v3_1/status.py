@@ -113,8 +113,9 @@ class Status(SecuredResourceReadonlyMode):
         statuses = []
         for service in systemd_services:
             if should_be_in_services_output(service, OPTIONAL_SERVICES):
-                status = ACTIVE_STATE if service['instances'][0]['state'] == \
-                                         'running' else INACTIVE_STATE
+                is_service_running = service['instances'] and (
+                        service['instances'][0]['state'] == 'running')
+                status = ACTIVE_STATE if is_service_running else INACTIVE_STATE
                 services[service['display_name']] = {
                     'status': status,
                     'is_external': False,
