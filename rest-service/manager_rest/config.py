@@ -102,6 +102,7 @@ class Config(object):
     ldap_is_active_directory = Setting('ldap_is_active_directory')
     ldap_dn_extra = Setting('ldap_dn_extra')
     ldap_timeout = Setting('ldap_timeout')
+    ldap_ca_path = Setting('ldap_ca_path')
 
     file_server_root = Setting('file_server_root')
     file_server_url = Setting('file_server_url')

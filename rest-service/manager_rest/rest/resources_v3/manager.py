@@ -35,6 +35,9 @@ from .. import rest_decorators, rest_utils
 from ...security.authentication import authenticator
 from ..responses_v3 import BaseResponse, ResourceID
 
+
+LDAP_CA_PATH = '/etc/cloudify/ssl/ldap_ca.crt'
+
 try:
     from cloudify_premium.multi_tenancy.responses import LdapResponse
 except ImportError:
@@ -117,6 +120,16 @@ class LdapAuthentication(SecuredResource):
     def post(self):
         ldap_config = self._validate_set_ldap_request()
 
+        if 'ldap_ca_cert' in ldap_config:
+            destination = (
+                config.instance.ldap_ca_path
+                or LDAP_CA_PATH
+            )
+            with open(destination, 'w') as ca_handle:
+                ca_handle.write(ldap_config['ldap_ca_cert'])
+            ldap_config.pop('ldap_ca_cert')
+            ldap_config['ldap_ca_path'] = destination
+
         from cloudify_premium.authentication.ldap_authentication \
             import LdapAuthentication
 
@@ -170,7 +183,8 @@ class LdapAuthentication(SecuredResource):
             'ldap_password': {'optional': True},
             'ldap_domain': {},
             'ldap_is_active_directory': {'optional': True},
-            'ldap_dn_extra': {}
+            'ldap_dn_extra': {},
+            'ldap_ca_cert': {'optional': True},
         })
         # Not allowing empty username or password
         ldap_config['ldap_username'] = ldap_config.get('ldap_username', '')
@@ -179,6 +193,22 @@ class LdapAuthentication(SecuredResource):
             rest_utils.verify_and_convert_bool(
                 'ldap_is_active_directory',
                 ldap_config.get('ldap_is_active_directory') or False
+            )
+
+        if ldap_config['ldap_server'].startswith('ldaps://'):
+            if 'ldap_ca_cert' not in ldap_config:
+                raise BadParametersError(
+                    'A CA certificate must be provided to use ldaps.'
+                )
+        elif ldap_config['ldap_server'].startswith('ldap://'):
+            if 'ldap_ca_cert' in ldap_config:
+                raise BadParametersError(
+                    'CA certificate cannot be provided when not using ldaps.'
+                )
+        else:
+            raise BadParametersError(
+                'ldap_server must specify protocol and should specify port, '
+                'e.g. ldap://192.0.2.1:389 or ldaps://192.0.2.45:636'
             )
 
         if ((ldap_config['ldap_username']
