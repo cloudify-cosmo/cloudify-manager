@@ -64,6 +64,7 @@ def upgrade():
             is_editable=True
         )
     )
+    session.commit()
 
 
 def downgrade():
@@ -79,3 +80,4 @@ def downgrade():
         scope='rest',
     ).one()
     session.delete(ldap_ca_path)
+    session.commit()
