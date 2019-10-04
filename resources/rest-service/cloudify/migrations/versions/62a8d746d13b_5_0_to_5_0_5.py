@@ -80,3 +80,4 @@ def downgrade():
         scope='rest',
     ).one()
     session.delete(ldap_ca_path)
+    session.commit()
