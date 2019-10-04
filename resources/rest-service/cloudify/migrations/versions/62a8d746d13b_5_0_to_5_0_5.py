@@ -64,6 +64,7 @@ def upgrade():
             is_editable=True
         )
     )
+    session.commit()
 
 
 def downgrade():
