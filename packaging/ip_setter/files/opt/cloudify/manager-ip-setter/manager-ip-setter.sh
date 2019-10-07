@@ -26,7 +26,8 @@ function set_manager_ip() {
 
   echo "Creating internal SSL certificates.."
   cfy_manager create-internal-certs --manager-hostname $(hostname -s)
-  systemctl reload nginx
+  # reload nginx only if it is up
+  systemctl status nginx && systemctl reload nginx || echo "Nginx not up, not reloading"
   echo "Done!"
 
 }
