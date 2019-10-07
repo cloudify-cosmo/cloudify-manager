@@ -78,8 +78,6 @@ class Nodes(resources_v1.Nodes):
                     scale_by *= group['properties']['planned_instances']
             node.set_actual_planned_node_instances(
                 scale_by * node.planned_number_of_instances)
-            node.set_actual_node_instances(len(node.node_instances))
-
         return nodes_list
 
 

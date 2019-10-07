@@ -20,6 +20,7 @@ from datetime import datetime
 from sqlalchemy import case
 from flask_restful import fields as flask_fields
 from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy import func, select, table, column
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
 
@@ -591,8 +592,19 @@ class Node(SQLResourceBase):
         'actual_number_of_instances': flask_fields.Integer,
         'actual_planned_number_of_instances': flask_fields.Integer,
     }
-    actual_number_of_instances = 0
     actual_planned_number_of_instances = 0
+
+    instances = db.relationship('NodeInstance', lazy='subquery')
+    @hybrid_property
+    def actual_number_of_instances(self):
+        return len(self.instances)
+
+    @actual_number_of_instances.expression
+    def actual_number_of_instances(cls):
+        ni_table = table('node_instances', column('id'), column('_node_fk'))
+        return (select([func.count(ni_table.c.id)]).
+                where(ni_table.c._node_fk == cls._storage_id).
+                label("actual_number_of_instances"))
 
     @declared_attr
     def deployment(cls):
@@ -611,9 +623,6 @@ class Node(SQLResourceBase):
     def set_deployment(self, deployment):
         self._set_parent(deployment)
         self.deployment = deployment
-
-    def set_actual_node_instances(self, num):
-        self.actual_number_of_instances = num
 
     def set_actual_planned_node_instances(self, num):
         self.actual_planned_number_of_instances = num
