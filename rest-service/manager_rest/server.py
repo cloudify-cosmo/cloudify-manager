@@ -22,6 +22,7 @@ from contextlib import contextmanager
 from flask_restful import Api
 from flask import Flask, jsonify, Blueprint, current_app
 from flask_security import Security
+from sqlalchemy.exc import OperationalError
 from werkzeug.exceptions import InternalServerError
 
 from manager_rest import config, premium_enabled, manager_exceptions
@@ -71,6 +72,17 @@ def internal_error(e):
     ), 500
 
 
+def cope_with_db_failover():
+    try:
+        db.engine.execute('SELECT 1')
+    except OperationalError as err:
+        current_app.logger.warning(
+            'Database reconnection occurred. This is expected to happen when '
+            'there has been a recent failover or DB proxy restart. '
+            'Error was: {err}'.format(err=err)
+        )
+
+
 class CloudifyFlaskApp(Flask):
     def __init__(self, load_config=True):
         _detect_debug_environment()
@@ -78,6 +90,11 @@ class CloudifyFlaskApp(Flask):
         if load_config:
             config.instance.load_configuration()
         self._set_sql_alchemy()
+
+        # This must be the first before_request, otherwise db access may break
+        # after db failovers or db proxy restarts
+        self.before_request(cope_with_db_failover)
+
         # These two need to be called after the configuration was loaded
         if config.instance.rest_service_log_path:
             setup_logger(self.logger)
