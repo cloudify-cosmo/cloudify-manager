@@ -283,7 +283,5 @@ class SnapshotsStatus(Resource):
         """
         for filename in os.listdir('/tmp'):
             if TEMP_SNAPSHOT_FOLDER_SUFFIX in filename:
-                return {'status': 'Snapshot restore in progress...\nThis may '
-                                  'take a while, depending on the snapshot '
-                                  'size.'}
-        return {'status': 'No `restore_snapshot` workflow currently running.'}
+                return {'status': 'running'}
+        return {'status': 'not-running'}
