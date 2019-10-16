@@ -98,10 +98,6 @@ class SnapshotsId(SecuredResource):
     def put(self, snapshot_id):
         rest_utils.validate_inputs({'snapshot_id': snapshot_id})
         request_dict = rest_utils.get_json_and_verify_params()
-        include_metrics = rest_utils.verify_and_convert_bool(
-            'include_metrics',
-            request_dict.get('include_metrics', 'false')
-        )
         include_credentials = rest_utils.verify_and_convert_bool(
             'include_credentials',
             request_dict.get('include_credentials', 'true')
@@ -120,7 +116,6 @@ class SnapshotsId(SecuredResource):
         )
         execution = get_resource_manager().create_snapshot(
             snapshot_id,
-            include_metrics,
             include_credentials,
             include_logs,
             include_events,

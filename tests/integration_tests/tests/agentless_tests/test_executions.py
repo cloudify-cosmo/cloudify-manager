@@ -49,7 +49,6 @@ class ExecutionsTest(AgentlessTestCase):
 
     def _create_snapshot_and_modify_execution_status(self, new_status):
         snapshot = self.client.snapshots.create('snapshot_1',
-                                                include_metrics=True,
                                                 include_credentials=True,
                                                 include_logs=True,
                                                 include_events=True,
@@ -127,7 +126,6 @@ class ExecutionsTest(AgentlessTestCase):
 
         # Create another system execution and make sure it's being  queued
         second_snap = self.client.snapshots.create('snapshot_2',
-                                                   include_metrics=True,
                                                    include_credentials=True,
                                                    include_logs=True,
                                                    include_events=True,
@@ -177,7 +175,6 @@ class ExecutionsTest(AgentlessTestCase):
 
         # Create a system execution and make sure it's being queued
         second_snap = self.client.snapshots.create('snapshot_2',
-                                                   include_metrics=True,
                                                    include_credentials=True,
                                                    include_logs=True,
                                                    include_events=True,
@@ -262,7 +259,6 @@ class ExecutionsTest(AgentlessTestCase):
 
         # Create another system execution
         snapshot_2 = self.client.snapshots.create('snapshot_2',
-                                                  include_metrics=True,
                                                   include_credentials=True,
                                                   include_logs=True,
                                                   include_events=True,
@@ -314,7 +310,6 @@ class ExecutionsTest(AgentlessTestCase):
 
         # Create another system execution
         snapshot_2 = self.client.snapshots.create('snapshot_2',
-                                                  include_metrics=True,
                                                   include_credentials=True,
                                                   include_logs=True,
                                                   include_events=True,
@@ -433,13 +428,11 @@ class ExecutionsTest(AgentlessTestCase):
 
         # Create another system execution
         snapshot_2 = self.client.snapshots.create('snapshot_2',
-                                                  include_metrics=True,
                                                   include_credentials=True,
                                                   include_logs=True,
                                                   include_events=True,
                                                   queue=True)
         snapshot_3 = self.client.snapshots.create('snapshot_3',
-                                                  include_metrics=True,
                                                   include_credentials=True,
                                                   include_logs=True,
                                                   include_events=True,
@@ -482,7 +475,6 @@ class ExecutionsTest(AgentlessTestCase):
                                           queue=True)
 
         snapshot_2 = self.client.snapshots.create('snapshot_2',
-                                                  include_metrics=True,
                                                   include_credentials=True,
                                                   include_logs=True,
                                                   include_events=True,
