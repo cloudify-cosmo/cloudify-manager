@@ -17,11 +17,9 @@
 from flask import current_app
 from flask_restful_swagger import swagger
 
-from cloudify.amqp_client import get_client
-from cloudify.constants import BROKER_PORT_SSL
-
 from manager_rest import config
 from manager_rest.rest import responses
+from manager_rest.utils import get_amqp_client
 from manager_rest.security import SecuredResource
 from manager_rest.rest.rest_decorators import marshal_with
 from manager_rest.security.authorization import authorize
@@ -110,16 +108,7 @@ def get_systemd_manager_services(base_services, optional_services):
 
 
 def broker_is_healthy():
-    client = get_client(
-        amqp_host=config.instance.amqp_host,
-        amqp_user=config.instance.amqp_username,
-        amqp_pass=config.instance.amqp_password,
-        amqp_port=BROKER_PORT_SSL,
-        amqp_vhost='/',
-        ssl_enabled=True,
-        ssl_cert_path=config.instance.amqp_ca_path,
-        connect_timeout=3,
-    )
+    client = get_amqp_client()
     try:
         with client:
             return True

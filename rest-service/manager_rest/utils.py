@@ -36,7 +36,7 @@ from dsl_parser.constants import HOST_AGENT_PLUGINS_TO_INSTALL
 from cloudify import logs
 from cloudify.constants import BROKER_PORT_SSL
 from cloudify.models_states import VisibilityState
-from cloudify.amqp_client import create_events_publisher
+from cloudify.amqp_client import create_events_publisher, get_client
 
 from manager_rest import constants, config, manager_exceptions
 
@@ -328,3 +328,16 @@ def extract_host_agent_plugins_from_plan(plan):
             for plugin in node.get('plugins_to_install', []):
                 host_agent_plugins_to_install.append(plugin)
     return host_agent_plugins_to_install
+
+
+def get_amqp_client():
+    return get_client(
+        amqp_host=config.instance.amqp_host,
+        amqp_user=config.instance.amqp_username,
+        amqp_pass=config.instance.amqp_password,
+        amqp_port=BROKER_PORT_SSL,
+        amqp_vhost='/',
+        ssl_enabled=True,
+        ssl_cert_path=config.instance.amqp_ca_path,
+        connect_timeout=3,
+    )
