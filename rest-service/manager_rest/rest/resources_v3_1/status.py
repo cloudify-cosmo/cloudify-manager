@@ -21,6 +21,7 @@ from flask import current_app
 from flask_restful_swagger import swagger
 
 from manager_rest.rest import responses
+from manager_rest.utils import get_amqp_client
 from manager_rest.security.authorization import authorize
 from manager_rest.rest.rest_decorators import marshal_with
 from manager_rest.security import SecuredResourceReadonlyMode
@@ -29,7 +30,6 @@ from manager_rest.rest.rest_utils import (
     verify_and_convert_bool
 )
 from manager_rest.rest.resources_v1.status import (
-    broker_is_healthy,
     should_be_in_services_output,
     get_systemd_manager_services
 )
@@ -127,9 +127,23 @@ class Status(SecuredResourceReadonlyMode):
         return statuses
 
     def _check_rabbitmq(self, services):
-        broker_status = ACTIVE_STATE if broker_is_healthy() else INACTIVE_STATE
-        self._add_or_update_service(services, 'RabbitMQ', broker_status)
-        return broker_status
+        name = 'RabbitMQ'
+        client = get_amqp_client()
+        try:
+            with client:
+                extra_info = {'connection_check': HEALTHY_STATE}
+                self._add_or_update_service(services, name, ACTIVE_STATE,
+                                            extra_info=extra_info)
+                return ACTIVE_STATE
+        except Exception as err:
+            error_message = 'Broker check failed with {err_type}: ' \
+                            '{err_msg}'.format(err_type=type(err),
+                                               err_msg=str(err))
+            current_app.logger.error(error_message)
+            extra_info = {'connection_check': error_message}
+            self._add_or_update_service(services, name, INACTIVE_STATE,
+                                        extra_info=extra_info)
+            return INACTIVE_STATE
 
     def _check_syncthing(self, services):
         status = INACTIVE_STATE
@@ -139,13 +153,13 @@ class Status(SecuredResourceReadonlyMode):
             syncthing_config = syncthing_utils.config()
             device_stats = syncthing_utils.device_stats()
         except Exception as err:
-            current_app.logger.error(
-                'Syncthing check failed with {err_type}: {err_msg}'.format(
-                    err_type=type(err),
-                    err_msg=str(err),
-                )
-            )
-            self._add_or_update_service(services, display_name, status)
+            error_message = 'Syncthing check failed with {err_type}: ' \
+                            '{err_msg}'.format(err_type=type(err),
+                                               err_msg=str(err))
+            current_app.logger.error(error_message)
+            extra_info = {'connection_check': error_message}
+            self._add_or_update_service(services, display_name, status,
+                                        extra_info=extra_info)
             return status
 
         # Add 1 second to the interval for avoiding false negative
@@ -160,7 +174,12 @@ class Status(SecuredResourceReadonlyMode):
                 status = ACTIVE_STATE
                 break
 
-        self._add_or_update_service(services, display_name, status)
+        extra_info = {'connection_check': HEALTHY_STATE}
+        if status == INACTIVE_STATE:
+            extra_info = {'connection_check': 'No device was seen recently'}
+
+        self._add_or_update_service(services, display_name, status,
+                                    extra_info=extra_info)
         return status
 
     def _get_manager_status(self, systemd_statuses, rabbitmq_status,
@@ -168,7 +187,10 @@ class Status(SecuredResourceReadonlyMode):
         statuses = systemd_statuses + [rabbitmq_status, syncthing_status]
         return FAIL_STATE if INACTIVE_STATE in statuses else HEALTHY_STATE
 
-    def _add_or_update_service(self, services, display_name, status):
+    def _add_or_update_service(self, services, display_name, status,
+                               extra_info=None):
         # If this service is external it doesn't exist in services dict yet
         services.setdefault(display_name, {'is_external': True})
         services[display_name].update({'status': status})
+        if extra_info:
+            services[display_name]['extra_info'].update(extra_info)
