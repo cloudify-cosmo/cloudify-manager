@@ -193,4 +193,5 @@ class Status(SecuredResourceReadonlyMode):
         services.setdefault(display_name, {'is_external': True})
         services[display_name].update({'status': status})
         if extra_info:
+            services[display_name].setdefault('extra_info', {})
             services[display_name]['extra_info'].update(extra_info)
