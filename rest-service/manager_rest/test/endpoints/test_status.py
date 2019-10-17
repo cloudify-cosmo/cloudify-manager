@@ -17,6 +17,8 @@ from datetime import datetime
 
 from flask_security import current_user
 
+from cloudify.cluster_status import ServiceStatus
+
 from manager_rest.test import base_test
 from manager_rest.test.attribute import attr
 from manager_rest.storage import management_models
@@ -45,7 +47,7 @@ class StatusTestCase(base_test.BaseServerTestCase):
         result = self.client.manager.get_status()
 
         # There is no systemd in unit tests so the status response is FAIL
-        self.assertEqual(result['status'], 'FAIL')
+        self.assertEqual(result['status'], ServiceStatus.FAIL)
         self.assertEqual(type(result['services']), dict)
         self._assert_last_login_time_value(None)
 

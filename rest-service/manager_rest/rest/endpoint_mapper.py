@@ -122,6 +122,7 @@ def setup_resources(api):
         'License': 'license',
         'Sites': 'sites',
         'SitesName': 'sites/<string:name>',
+        'ClusterStatus': 'cluster-status',
         'ManagerClusterStatus': 'cluster-status/manager/<string:node_id>',
         'DbClusterStatus': 'cluster-status/db/<string:node_id>',
         'BrokerClusterStatus': 'cluster-status/broker/<string:node_id>'
