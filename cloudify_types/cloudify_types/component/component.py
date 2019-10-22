@@ -136,6 +136,18 @@ class Component(object):
         parse_url = urlparse(candidate)
         return not (parse_url.netloc and parse_url.scheme)
 
+    def _upload_if_not_existing(self):
+        try:
+            self.client.blueprints._upload(
+                blueprint_id=self.blueprint_id,
+                archive_location=self.blueprint_archive,
+                application_file_name=self.blueprint_file_name)
+        except CloudifyClientError as ex:
+            if 'already exists' in ex._message:
+                return False
+            raise NonRecoverableError('Client action "_upload" failed: {0}.'.format(ex))
+        return True
+
     def upload_blueprint(self):
         if 'blueprint' not in ctx.instance.runtime_properties:
             ctx.instance.runtime_properties['blueprint'] = dict()
@@ -158,14 +170,6 @@ class Component(object):
         elif self.blueprint.get(EXTERNAL_RESOURCE) and blueprint_exists:
             ctx.logger.info("Used external blueprint.")
             return False
-        elif blueprint_exists:
-            ctx.logger.warn(
-                'Blueprint ID "{0}" exists, '
-                'but {1} is {2}, will use the existing one.'.format(
-                    self.blueprint_id,
-                    EXTERNAL_RESOURCE,
-                    self.blueprint.get(EXTERNAL_RESOURCE)))
-            return False
         if not self.blueprint_archive:
             raise NonRecoverableError(
                 'No blueprint_archive supplied, '
@@ -177,13 +181,7 @@ class Component(object):
             self.blueprint_archive = ctx.download_resource(
                 self.blueprint_archive)
 
-        client_args = dict(blueprint_id=self.blueprint_id,
-                           archive_location=self.blueprint_archive,
-                           application_file_name=self.blueprint_file_name)
-
-        return self._http_client_wrapper('blueprints',
-                                         '_upload',
-                                         client_args)
+        return self._upload_if_not_existing()
 
     def _upload_plugins(self):
         if (not self.plugins or

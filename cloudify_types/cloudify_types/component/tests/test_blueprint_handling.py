@@ -52,6 +52,24 @@ class TestBlueprint(ComponentTestBase):
 
             self.assertIn('action "_upload" failed', error.message)
 
+    def test_upload_blueprint_rest_client_error(self):
+        with mock.patch('cloudify.manager.get_rest_client') as mock_client:
+            self.cfy_mock_client.blueprints._upload = REST_CLIENT_EXCEPTION
+            mock_client.return_value = self.cfy_mock_client
+
+            blueprint_params = dict()
+            blueprint_params['blueprint'] = {}
+            blueprint_params['blueprint']['blueprint_id'] = 'blu_name'
+            blueprint_params['blueprint']['blueprint_archive'] = self.archive
+            self.resource_config['resource_config'] = blueprint_params
+
+            error = self.assertRaises(NonRecoverableError,
+                                      upload_blueprint,
+                                      operation='upload_blueprint',
+                                      **self.resource_config)
+
+            self.assertIn('action "_upload" failed', error.message)
+
     def test_upload_blueprint_exists(self):
         blueprint_id = 'blu_name'
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
@@ -120,7 +138,7 @@ class TestBlueprint(ComponentTestBase):
                                       **self.resource_config)
             self.assertFalse(output)
 
-    def test_fail_uploading_existing_blueprint_id_when_using_external(self):
+    def test_not_fail_uploading_existing_blueprint_id_when_using_external(self):
         blueprint_id = 'blu_name'
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             self.cfy_mock_client.blueprints.set_existing_objects(
@@ -136,7 +154,7 @@ class TestBlueprint(ComponentTestBase):
             mock_client.return_value = self.cfy_mock_client
             output = upload_blueprint(operation='upload_blueprint',
                                       **self.resource_config)
-            self.assertFalse(output)
+            self.assertTrue(output)
 
     def test_upload_blueprint_use_not_existing_external(self):
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
