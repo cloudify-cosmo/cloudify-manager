@@ -118,7 +118,7 @@ class Status(SecuredResourceReadonlyMode):
                 status = ACTIVE_STATE if is_service_running else INACTIVE_STATE
                 services[service['display_name']] = {
                     'status': status,
-                    'is_external': False,
+                    'is_remote': False,
                     'extra_info': {
                         'systemd': service
                     }
@@ -189,8 +189,8 @@ class Status(SecuredResourceReadonlyMode):
 
     def _add_or_update_service(self, services, display_name, status,
                                extra_info=None):
-        # If this service is external it doesn't exist in services dict yet
-        services.setdefault(display_name, {'is_external': True})
+        # If this service is remote it doesn't exist in services dict yet
+        services.setdefault(display_name, {'is_remote': True})
         services[display_name].update({'status': status})
         if extra_info:
             services[display_name].setdefault('extra_info', {})

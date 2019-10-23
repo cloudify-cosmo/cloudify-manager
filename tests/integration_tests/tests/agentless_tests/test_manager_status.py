@@ -48,6 +48,13 @@ class TestManagerStatus(AgentlessTestCase):
                     for service in services]
         self.assertNotIn(INACTIVE_STATE, statuses)
 
+        services_status = manager_status['services'].values()
+        remote_values = [service['is_remote'] for service in services_status]
+        self.assertFalse(any(remote_values))
+
+        existing_key = ['extra_info' in service for service in services_status]
+        self.assertTrue(all(existing_key))
+
     def test_status_service_inactive(self):
         """One of the systemd services is down"""
         self._test_service_inactive('Management Worker')
