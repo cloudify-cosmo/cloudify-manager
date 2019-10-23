@@ -69,6 +69,21 @@ def upgrade():
     )
     session.commit()
 
+    _create_db_nodes_table()
+
+    op.add_column('managers', sa.Column('node_id', sa.Text(), nullable=False))
+    op.create_unique_constraint(op.f('managers_node_id_key'), 'managers',
+                                ['node_id'])
+    op.add_column('rabbitmq_brokers',
+                  sa.Column('is_external',
+                            sa.Boolean(),
+                            nullable=False,
+                            server_default='f'))
+    op.add_column('rabbitmq_brokers',
+                  sa.Column('node_id', sa.Text(), nullable=False))
+    op.create_unique_constraint(op.f('rabbitmq_brokers_node_id_key'),
+                                'rabbitmq_brokers', ['node_id'])
+
 
 def downgrade():
     op.drop_column('deployment_updates', 'runtime_only_evaluation')
@@ -85,3 +100,32 @@ def downgrade():
     ).one()
     session.delete(ldap_ca_path)
     session.commit()
+
+    op.drop_constraint(
+        op.f('rabbitmq_brokers_node_id_key'),
+        'rabbitmq_brokers',
+        type_='unique'
+    )
+    op.drop_column('rabbitmq_brokers', 'node_id')
+    op.drop_column('rabbitmq_brokers', 'is_external')
+    op.drop_constraint(
+        op.f('managers_node_id_key'),
+        'managers',
+        type_='unique'
+    )
+    op.drop_column('managers', 'node_id')
+    op.drop_table('db_nodes')
+
+
+def _create_db_nodes_table():
+    op.create_table(
+        'db_nodes',
+        sa.Column('name', sa.Text(), nullable=False),
+        sa.Column('node_id', sa.Text(), nullable=False),
+        sa.Column('private_ip', sa.Text(), nullable=False),
+        sa.Column('is_external', sa.Boolean(), nullable=False,
+                  server_default='f'),
+        sa.PrimaryKeyConstraint('name', name=op.f('db_nodes_pkey')),
+        sa.UniqueConstraint('node_id', name=op.f('db_nodes_node_id_key')),
+        sa.UniqueConstraint('private_ip', name=op.f('db_nodes_private_ip_key'))
+    )

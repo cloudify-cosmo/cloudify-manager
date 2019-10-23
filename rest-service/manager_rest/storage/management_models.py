@@ -601,6 +601,7 @@ class Manager(_WithCACert, SQLModelBase):
     distro_release = db.Column(db.Text, nullable=False)
     fs_sync_node_id = db.Column(db.Text, nullable=True)
     networks = db.Column(JSONString)
+    node_id = db.Column(db.Text, unique=True, nullable=False)
 
 
 class RabbitMQBroker(_WithCACert, SQLModelBase):
@@ -616,6 +617,24 @@ class RabbitMQBroker(_WithCACert, SQLModelBase):
     # additional params, as **kwargs to creating the connection
     params = db.Column(JSONString, nullable=True)
     networks = db.Column(JSONString)
+    node_id = db.Column(db.Text, unique=True, nullable=False)
+    is_external = db.Column(db.Boolean, default=False, nullable=False)
+
+    @classmethod
+    def unique_id(cls):
+        return 'name'
+
+    def _get_identifier_dict(self):
+        return {'name': self.name}
+
+
+class DBNodes(SQLModelBase):
+    __tablename__ = 'db_nodes'
+
+    name = db.Column(db.Text, primary_key=True)
+    node_id = db.Column(db.Text, unique=True, nullable=False)
+    private_ip = db.Column(db.Text, unique=True, nullable=False)
+    is_external = db.Column(db.Boolean, default=False, nullable=False)
 
     @classmethod
     def unique_id(cls):
