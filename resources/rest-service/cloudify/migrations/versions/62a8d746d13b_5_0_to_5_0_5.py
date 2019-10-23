@@ -52,6 +52,9 @@ def upgrade():
     op.add_column(
         'deployment_updates',
         sa.Column('runtime_only_evaluation', sa.Boolean(), nullable=True))
+    op.add_column(
+        'node_instances',
+        sa.Column('index', sa.Integer(), nullable=True))
 
     bind = op.get_bind()
     session = orm.Session(bind=bind)
@@ -71,6 +74,7 @@ def downgrade():
     op.drop_column('deployment_updates', 'runtime_only_evaluation')
     op.drop_column('deployments', 'runtime_only_evaluation')
     op.drop_column('executions', 'blueprint_id')
+    op.drop_column('node_instances', 'index')
 
     bind = op.get_bind()
     session = orm.Session(bind=bind)

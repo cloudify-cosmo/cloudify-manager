@@ -129,6 +129,21 @@ class ModifyTests(base_test.BaseServerTestCase):
 
         before_end = self._get_items(self.client.node_instances.list,
                                      deployment_id=deployment.id)
+
+        node1_instances = self.client.node_instances.list(
+            deployment_id=deployment.id, node_name='node1')
+        node2_instance1 = self.client.node_instances.list(
+            deployment_id=deployment.id, node_name='node2')[0]
+        self.assertEqual(
+            node1_instances[0]['index'],
+            node1_instance['index'])
+        self.assertEqual(
+            node2_instance1['index'],
+            node2_instance['index'])
+        self.assertNotEquals(
+            node1_instances[0]['index'],
+            node1_instances[1]['index'])
+
         end_func(modification_id)
         after_end = self._get_items(self.client.node_instances.list,
                                     deployment_id=deployment.id)
@@ -431,6 +446,11 @@ class ModifyTests(base_test.BaseServerTestCase):
             deployment_id=deployment.id
         ).items
         self.assertEqual(2, len(node_instances))
+        self.assertIsNotNone(node_instances[0]['index'])
+        self.assertIsNotNone(node_instances[1]['index'])
+        self.assertNotEquals(node_instances[0]['index'],
+                             node_instances[1]['index'])
+
         for instance in node_instances:
             node_instance_scaling_groups = instance['scaling_groups']
             self.assertEqual(1, len(node_instance_scaling_groups))

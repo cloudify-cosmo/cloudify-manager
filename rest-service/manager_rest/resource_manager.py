@@ -20,6 +20,7 @@ import shutil
 import itertools
 from copy import deepcopy
 from StringIO import StringIO
+from collections import defaultdict
 
 from flask import current_app
 from flask_security import current_user
@@ -1176,9 +1177,31 @@ class ResourceManager(object):
     def _prepare_deployment_node_instances_for_storage(self,
                                                        deployment_id,
                                                        dsl_node_instances):
+
+        # The index is the index of a node instance list for a
+        # node. It is used for serial operations on node instances of the
+        # same node. First we get the list of current node instances for the
+        # deployment.
+        deplyment_id_filter = self.create_filters_dict(
+            deployment_id=deployment_id)
+        all_deployment_node_instances = self.sm.list(
+            models.NodeInstance,
+            filters=deplyment_id_filter,
+            get_all_results=True
+        )
+        # We build a dictionary in order to track the current index.
+        current_node_index = defaultdict(int)
+        for ni in all_deployment_node_instances:
+            if ni.index > current_node_index[ni.node_id]:
+                current_node_index[ni.node_id] = ni.index
+
         node_instances = []
         for node_instance in dsl_node_instances:
             node = get_node(deployment_id, node_instance['node_id'])
+            # Update current node index.
+            index = node_instance.get(
+                'index', current_node_index[node.id] + 1)
+            current_node_index[node.id] = index
             instance_id = node_instance['id']
             scaling_groups = node_instance.get('scaling_groups', [])
             relationships = node_instance.get('relationships', [])
@@ -1186,6 +1209,7 @@ class ResourceManager(object):
             instance = models.NodeInstance(
                 id=instance_id,
                 host_id=host_id,
+                index=index,
                 relationships=relationships,
                 state='uninitialized',
                 runtime_properties={},

@@ -179,6 +179,7 @@ class ResourceListFiltersTestCase(BaseListTest):
             self.assertIn(node_instance['deployment_id'],
                           (self.first_deployment_id, self.sec_deployment_id))
             self.assertEquals(node_instance['state'], 'uninitialized')
+            self.assertEquals(node_instance['index'], 1)
 
     def test_node_instances_list_with_filters(self):
         filter_params = {'deployment_id': self.first_deployment_id}

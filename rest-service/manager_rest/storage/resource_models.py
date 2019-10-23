@@ -595,6 +595,7 @@ class Node(SQLResourceBase):
     actual_planned_number_of_instances = 0
 
     instances = db.relationship('NodeInstance', lazy='subquery')
+
     @hybrid_property
     def actual_number_of_instances(self):
         return len(self.instances)
@@ -640,6 +641,7 @@ class NodeInstance(SQLResourceBase):
     # TODO: This probably should be a foreign key, but there's no guarantee
     # in the code, currently, that the host will be created beforehand
     host_id = db.Column(db.Text)
+    index = db.Column(db.Integer)
     relationships = db.Column(db.PickleType)
     runtime_properties = db.Column(db.PickleType)
     scaling_groups = db.Column(db.PickleType)
