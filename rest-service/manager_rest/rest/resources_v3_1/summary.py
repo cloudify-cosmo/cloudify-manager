@@ -140,6 +140,7 @@ class SummarizeNodes(BaseSummary):
 class SummarizeNodeInstances(BaseSummary):
     summary_fields = [
         'deployment_id',
+        'index',
         'node_id',
         'state',
         'host_id',

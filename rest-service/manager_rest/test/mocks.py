@@ -197,8 +197,10 @@ def put_node_instance(storage_manager,
                       runtime_properties=None,
                       node_id='node_id',
                       version=None,
-                      blueprint_id='blueprint_id'):
+                      blueprint_id='blueprint_id',
+                      index=None):
     runtime_properties = runtime_properties or {}
+    index = index or 1
 
     blueprint = _get_or_create_blueprint(storage_manager, blueprint_id)
     deployment = _get_or_create_deployment(storage_manager,

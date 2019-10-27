@@ -93,7 +93,8 @@ class NodesTest(base_test.BaseServerTestCase):
             deployment_id='111',
             runtime_properties={
                 'key': 'value'
-            }
+            },
+            index=1,
         )
 
         # full patch
