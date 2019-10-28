@@ -68,7 +68,7 @@ class Blueprint(CreatedAtMixin, SQLResourceBase):
     plan = db.Column(db.PickleType, nullable=False)
     updated_at = db.Column(UTCDateTime)
     description = db.Column(db.Text)
-    is_hidden = db.Column(db.Boolean, default=False)
+    is_hidden = db.Column(db.Boolean, nullable=False, default=False)
 
 
 class Snapshot(CreatedAtMixin, SQLResourceBase):
