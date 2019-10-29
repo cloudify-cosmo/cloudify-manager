@@ -32,13 +32,11 @@ class SnapshotCreate(object):
     def __init__(self,
                  snapshot_id,
                  config,
-                 include_metrics,
                  include_credentials,
                  include_logs,
                  include_events):
         self._snapshot_id = snapshot_id
         self._config = utils.DictToAttributes(config)
-        self._include_metrics = include_metrics
         self._include_credentials = include_credentials
         self._include_logs = include_logs
         self._include_events = include_events

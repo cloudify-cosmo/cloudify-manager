@@ -24,14 +24,12 @@ from .snapshots.snapshot_restore import SnapshotRestore
 def create(snapshot_id, config, **kwargs):
     ctx.logger.info('Creating snapshot `{0}`'.format(snapshot_id))
 
-    include_metrics = kwargs.get('include_metrics', False)
     include_credentials = kwargs.get('include_credentials', False)
     include_logs = kwargs.get('include_logs', True)
     include_events = kwargs.get('include_events', True)
     create_snapshot = SnapshotCreate(
         snapshot_id,
         config,
-        include_metrics,
         include_credentials,
         include_logs,
         include_events

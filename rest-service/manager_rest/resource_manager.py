@@ -181,7 +181,6 @@ class ResourceManager(object):
 
     def create_snapshot(self,
                         snapshot_id,
-                        include_metrics,
                         include_credentials,
                         include_logs,
                         include_events,
@@ -195,7 +194,6 @@ class ResourceManager(object):
                 task_mapping='cloudify_system_workflows.snapshot.create',
                 execution_parameters={
                     'snapshot_id': snapshot_id,
-                    'include_metrics': include_metrics,
                     'include_credentials': include_credentials,
                     'include_logs': include_logs,
                     'include_events': include_events,
