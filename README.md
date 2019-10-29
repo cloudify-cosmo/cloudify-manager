@@ -12,7 +12,7 @@ This repository contains the following Cloudify components:
 
 # REST API Reference
 
-See [here](http://docs.getcloudify.org/api/).
+See [here](http:/]]docs.getcloudify.org/api/).
 
 ## Running Integration Tests
 
