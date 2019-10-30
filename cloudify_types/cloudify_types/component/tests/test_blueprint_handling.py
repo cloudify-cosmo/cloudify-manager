@@ -52,10 +52,11 @@ class TestBlueprint(ComponentTestBase):
 
             self.assertIn('action "_upload" failed', str(error))
 
-    def test_upload_existing_blueprint_and_skipping_failure(self):
+    def test_successful_upload_existing_blueprint(self):
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             self.cfy_mock_client.blueprints._upload = (
-                mock.MagicMock(side_effect=CloudifyClientError('already exists')))
+                mock.MagicMock(
+                    side_effect=CloudifyClientError('already exists')))
             mock_client.return_value = self.cfy_mock_client
 
             blueprint_params = dict()
@@ -64,24 +65,6 @@ class TestBlueprint(ComponentTestBase):
             blueprint_params['blueprint']['blueprint_archive'] = self.archive
             self.resource_config['resource_config'] = blueprint_params
 
-            output = upload_blueprint(operation='upload_blueprint',
-                                      **self.resource_config)
-            self.assertTrue(output)
-
-    def test_upload_external_blueprint_exists_cont_install(self):
-        blueprint_id = 'blu_name'
-        with mock.patch('cloudify.manager.get_rest_client') as mock_client:
-            self.cfy_mock_client.blueprints.set_existing_objects(
-                [{'id': blueprint_id}])
-
-            blueprint_params = dict()
-            blueprint_params['blueprint'] = {}
-            blueprint_params['blueprint']['id'] = blueprint_id
-            blueprint_params['blueprint']['blueprint_archive'] = self.archive
-            blueprint_params['blueprint'][EXTERNAL_RESOURCE] = True
-            self.resource_config['resource_config'] = blueprint_params
-
-            mock_client.return_value = self.cfy_mock_client
             output = upload_blueprint(operation='upload_blueprint',
                                       **self.resource_config)
             self.assertTrue(output)
@@ -117,7 +100,7 @@ class TestBlueprint(ComponentTestBase):
             self.assertIn('No blueprint_archive supplied, but '
                           'external_resource is False', str(error))
 
-    def test_not_fail_uploading_existing_blueprint_id_when_using_external(self):
+    def test_uploading_existing_blueprint_id_when_using_external(self):
         blueprint_id = 'blu_name'
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             self.cfy_mock_client.blueprints.set_existing_objects(

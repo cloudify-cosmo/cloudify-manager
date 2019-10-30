@@ -144,7 +144,8 @@ class Component(object):
                 application_file_name=self.blueprint_file_name)
         except CloudifyClientError as ex:
             if 'already exists' not in str(ex):
-                raise NonRecoverableError('Client action "_upload" failed: {0}.'.format(ex))
+                raise NonRecoverableError(
+                    'Client action "_upload" failed: {0}.'.format(ex))
         return True
 
     def upload_blueprint(self):
