@@ -12,9 +12,11 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-import tempfile
+
 import os
 import shutil
+import tempfile
+from distutils.version import StrictVersion
 
 from manager_rest.test.base_test import BaseServerTestCase
 
@@ -82,6 +84,12 @@ class BaseListTest(BaseServerTestCase):
         prefix = prefix or 'oh-snap'
         suffix = suffix or ''
         for i in range(number_of_snapshots):
+            params = {'snapshot_id': '{0}{1}{2}'.format(prefix, i, suffix),
+                      'include_credentials': False}
+
+            if StrictVersion(self.client._client.api_version[1:]) < \
+                    StrictVersion('3.1'):
+                params['include_metrics'] = True
             self.client.snapshots.create(
                 snapshot_id='{0}{1}{2}'.format(prefix, i, suffix),
                 include_credentials=False

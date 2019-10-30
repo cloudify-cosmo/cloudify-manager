@@ -155,6 +155,8 @@ class MaintenanceModeTest(BaseServerTestCase):
                           deployment_id='d1',
                           nodes={})
 
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
     def test_snapshot_creation_denial_in_maintenance_transition_mode(self):
         self._start_maintenance_transition_mode()
         self.assertRaises(exceptions.MaintenanceModeActivatingError,
