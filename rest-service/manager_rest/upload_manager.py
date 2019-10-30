@@ -830,14 +830,14 @@ class UploadedCaravanManager(UploadedPluginsManager):
                     resource_target_path,
                     caravan_instance=caravan_instance,
                     **kwargs)
-            docs = []
-            for doc, plugin_dir in plugins:
-                self._move_archive_to_uploaded_dir(
-                    doc.id,
-                    file_server_root,
-                    plugin_dir,
-                )
-                docs.append(doc)
+                docs = []
+                for doc, plugin_dir in plugins:
+                    self._move_archive_to_uploaded_dir(
+                        doc.id,
+                        file_server_root,
+                        plugin_dir,
+                    )
+                    docs.append(doc)
 
             return docs, 201
         finally:
