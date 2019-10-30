@@ -61,7 +61,7 @@ class TestBlueprint(ComponentTestBase):
 
             blueprint_params = dict()
             blueprint_params['blueprint'] = {}
-            blueprint_params['blueprint']['blueprint_id'] = 'blu_name'
+            blueprint_params['blueprint']['id'] = 'blu_name'
             blueprint_params['blueprint']['blueprint_archive'] = self.archive
             self.resource_config['resource_config'] = blueprint_params
 
