@@ -86,9 +86,8 @@ class BaseListTest(BaseServerTestCase):
         for i in range(number_of_snapshots):
             params = {'snapshot_id': '{0}{1}{2}'.format(prefix, i, suffix),
                       'include_credentials': False}
-
-            if StrictVersion(self.client._client.api_version[1:]) < \
-                    StrictVersion('3.1'):
+            client_version = '{}.0'.format(self.client._client.api_version[1:])
+            if StrictVersion(client_version) < StrictVersion('3.1'):
                 params['include_metrics'] = True
             self.client.snapshots.create(
                 snapshot_id='{0}{1}{2}'.format(prefix, i, suffix),
