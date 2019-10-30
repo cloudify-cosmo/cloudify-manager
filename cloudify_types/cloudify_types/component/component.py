@@ -143,9 +143,8 @@ class Component(object):
                 archive_location=self.blueprint_archive,
                 application_file_name=self.blueprint_file_name)
         except CloudifyClientError as ex:
-            if 'already exists' in ex._message:
-                return False
-            raise NonRecoverableError('Client action "_upload" failed: {0}.'.format(ex))
+            if 'already exists' not in str(ex):
+                raise NonRecoverableError('Client action "_upload" failed: {0}.'.format(ex))
         return True
 
     def upload_blueprint(self):
@@ -168,8 +167,8 @@ class Component(object):
                     EXTERNAL_RESOURCE,
                     self.blueprint.get(EXTERNAL_RESOURCE)))
         elif self.blueprint.get(EXTERNAL_RESOURCE) and blueprint_exists:
-            ctx.logger.info("Used external blueprint.")
-            return False
+            ctx.logger.info("Using external blueprint.")
+            return True
         if not self.blueprint_archive:
             raise NonRecoverableError(
                 'No blueprint_archive supplied, '
