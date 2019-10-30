@@ -95,20 +95,38 @@ class InterDeploymentDependencies(SecuredResource):
         :return: an InterDeploymentDependency object containing the information
          of the dependency.
         """
-        params = self._get_put_dependency_params()
         sm = get_storage_manager()
-        source_deployment = sm.get(models.Deployment,
-                                   params['source_deployment'])
-        target_deployment = sm.get(models.Deployment,
-                                   params['target_deployment'])
+        params = self._get_put_dependency_params(sm)
         now = utils.get_formatted_timestamp()
         deployment_dependency = models.InterDeploymentDependencies(
             id=str(uuid.uuid4()),
             dependency_creator=params['dependency_creator'],
-            source_deployment=source_deployment,
-            target_deployment=target_deployment,
+            source_deployment=params['source_deployment'],
+            target_deployment=params['target_deployment'],
             created_at=now)
         return sm.put(deployment_dependency)
+
+    @staticmethod
+    def _verify_and_get_source_and_target_deployments(sm,
+                                                      source_deployment_id,
+                                                      target_deployment_id):
+        source_deployment = sm.get(models.Deployment,
+                                   source_deployment_id,
+                                   doesnt_exist_ok=True)
+        if not source_deployment:
+            raise manager_exceptions.NotFoundError(
+                'Given source deployment with ID `{0}` does not exist.'
+                ''.format(source_deployment_id)
+            )
+        target_deployment = sm.get(models.Deployment,
+                                   target_deployment_id,
+                                   doesnt_exist_ok=True)
+        if not target_deployment:
+            raise manager_exceptions.NotFoundError(
+                'Given target deployment with ID `{0}` does not exist.'
+                ''.format(target_deployment_id)
+            )
+        return source_deployment, target_deployment
 
     @staticmethod
     def _verify_dependency_params():
@@ -119,13 +137,17 @@ class InterDeploymentDependencies(SecuredResource):
         })
 
     @staticmethod
-    def _get_put_dependency_params():
+    def _get_put_dependency_params(sm):
         request_dict = InterDeploymentDependencies._verify_dependency_params()
-
+        source_deployment, target_deployment = InterDeploymentDependencies. \
+            _verify_and_get_source_and_target_deployments(
+                sm,
+                request_dict.get('source_deployment'),
+                request_dict.get('target_deployment'))
         dependency_params = {
             'dependency_creator': request_dict.get('dependency_creator'),
-            'source_deployment': request_dict.get('source_deployment'),
-            'target_deployment': request_dict.get('target_deployment')
+            'source_deployment': source_deployment,
+            'target_deployment': target_deployment
         }
         return dependency_params
 
@@ -154,19 +176,15 @@ class InterDeploymentDependencies(SecuredResource):
         :return: an InterDeploymentDependency object containing the information
          of the dependency.
         """
-        params = self._get_delete_dependency_params()
         sm = get_storage_manager()
-        source_deployment = sm.get(models.Deployment,
-                                   params['source_deployment'])
-        target_deployment = sm.get(models.Deployment,
-                                   params['target_deployment'])
+        params = self._get_delete_dependency_params(sm)
         dependency = sm.get(
             models.InterDeploymentDependencies,
             None,
             filters={
                 'dependency_creator': params['dependency_creator'],
-                'source_deployment': source_deployment,
-                'target_deployment': target_deployment
+                'source_deployment': params['source_deployment'],
+                'target_deployment': params['target_deployment']
             },
             # Locking to make sure to fail here and not during the deletion
             # (for the purpose of clarifying the error in case one occurs).
@@ -177,17 +195,22 @@ class InterDeploymentDependencies(SecuredResource):
         return sm.delete(dependency)
 
     @staticmethod
-    def _get_delete_dependency_params():
+    def _get_delete_dependency_params(sm):
         request_dict = InterDeploymentDependencies._verify_dependency_params()
         doesnt_exist_ok = rest_utils.verify_and_convert_bool(
             'doesnt_exist_ok',
             request_dict.get('doesnt_exist_ok', False)
         )
+        source_deployment, target_deployment = InterDeploymentDependencies. \
+            _verify_and_get_source_and_target_deployments(
+                sm,
+                request_dict.get('source_deployment'),
+                request_dict.get('target_deployment'))
 
         dependency_params = {
             'dependency_creator': request_dict.get('dependency_creator'),
-            'source_deployment': request_dict.get('source_deployment'),
-            'target_deployment': request_dict.get('target_deployment'),
+            'source_deployment': source_deployment,
+            'target_deployment': target_deployment,
             'doesnt_exist_ok': doesnt_exist_ok
         }
         return dependency_params

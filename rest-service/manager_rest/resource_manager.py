@@ -2198,7 +2198,8 @@ class ResourceManager(object):
             target_deployment_instance = None
             if target_deployment:
                 target_deployment_instance = self.sm.get(models.Deployment,
-                                                         target_deployment)
+                                                         target_deployment,
+                                                         doesnt_exist_ok=True)
             now = utils.get_formatted_timestamp()
             self.sm.put(models.InterDeploymentDependencies(
                 id=str(uuid.uuid4()),

@@ -135,18 +135,18 @@ class InterDeploymentDependenciesTest(BaseServerTestCase):
     def test_adds_dependency_with_a_bad_source_and_target_deployments(self):
         source_deployment = self.source_deployment + '_doesnt_exist'
         target_deployment = self.target_deployment + '_doesnt_exist'
-        error_msg_regex = '.*404: Requested `Deployment` ' \
-                          'with ID `{0}` was not found'
+        error_msg_regex = '.*404: Given {1} deployment with ID `{0}` does ' \
+                          'not exist\\.'
         with self.assertRaisesRegexp(
                 CloudifyClientError,
-                error_msg_regex.format(source_deployment)):
+                error_msg_regex.format(source_deployment, 'source')):
             self.client.inter_deployment_dependencies.create(
                 self.dependency_creator,
                 source_deployment,
                 self.target_deployment)
         with self.assertRaisesRegexp(
                 CloudifyClientError,
-                error_msg_regex.format(target_deployment)):
+                error_msg_regex.format(target_deployment, 'target')):
             self.client.inter_deployment_dependencies.create(
                 self.dependency_creator,
                 self.source_deployment,
