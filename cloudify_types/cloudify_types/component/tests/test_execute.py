@@ -64,8 +64,7 @@ class TestExecute(ComponentTestBase):
                                       execute_start,
                                       deployment_id='dep_name',
                                       workflow_id='install')
-            self.assertIn('action "start" failed',
-                          error.message)
+            self.assertIn('action "start" failed', str(error))
 
     def test_execute_start_timeout(self):
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
@@ -75,7 +74,7 @@ class TestExecute(ComponentTestBase):
                                       deployment_id='dep_name',
                                       workflow_id='install',
                                       timeout=MOCK_TIMEOUT)
-            self.assertIn('Execution timed out', error.message)
+            self.assertIn('Execution timed out', str(error))
 
     def test_execute_start_succeeds(self):
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:

@@ -50,7 +50,7 @@ class TestBlueprint(ComponentTestBase):
                                       operation='upload_blueprint',
                                       **self.resource_config)
 
-            self.assertIn('action "_upload" failed', error.message)
+            self.assertIn('action "_upload" failed', str(error))
 
     def test_upload_blueprint_rest_client_error(self):
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
@@ -171,5 +171,5 @@ class TestBlueprint(ComponentTestBase):
                                       operation='upload_blueprint',
                                       **self.resource_config)
 
-            self.assertIn('Blueprint ID \"{0}\" does not exist'.format('test'),
-                          error.message)
+            self.assertIn('Blueprint ID \"{0}\" does not exist'.format(
+                'test'), str(error))
