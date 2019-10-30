@@ -666,13 +666,17 @@ class TestDeploymentDependencies(TestHandlerBase):
     def test_does_nothing_with_empty_new_and_old_dependencies(self):
         curr_dependencies = []
         self.mock_sm.list.return_value = curr_dependencies
-        self.handler._handle_dependency_changes(self.mock_dep_update, {})
+        self.handler._handle_dependency_changes(self.mock_dep_update,
+                                                {},
+                                                dep_plan_filter_func=_true)
         self._assert_sm_calls()
 
     def test_only_deletes_current_dependencies(self):
         curr_dependencies = [self._build_mock_dependency('creator_1')]
         self.mock_sm.list.return_value = curr_dependencies
-        self.handler._handle_dependency_changes(self.mock_dep_update, {})
+        self.handler._handle_dependency_changes(self.mock_dep_update,
+                                                {},
+                                                dep_plan_filter_func=_true)
         self._assert_sm_calls(
             delete_calls=self._as_calls(curr_dependencies))
 
@@ -682,6 +686,7 @@ class TestDeploymentDependencies(TestHandlerBase):
         self.handler._handle_dependency_changes(
             self.mock_dep_update,
             {},
+            dep_plan_filter_func=_true,
             keep_outdated_dependencies=True)
         self._assert_sm_calls()
 
@@ -691,7 +696,9 @@ class TestDeploymentDependencies(TestHandlerBase):
         dependency_creating_functions = {'creator_1': 'target_1'}
         self.mock_dep_update.deployment_plan[
             INTER_DEPLOYMENT_FUNCTIONS] = dependency_creating_functions
-        self.handler._handle_dependency_changes(self.mock_dep_update, {})
+        self.handler._handle_dependency_changes(self.mock_dep_update,
+                                                {},
+                                                dep_plan_filter_func=_true)
         put_calls = self._as_calls(
             [self._build_mock_dependency('creator_1', 'target_1')]
         )
@@ -703,7 +710,9 @@ class TestDeploymentDependencies(TestHandlerBase):
         dependency_creating_functions = {'creator_2': 'target_1'}
         self.mock_dep_update.deployment_plan[
             INTER_DEPLOYMENT_FUNCTIONS] = dependency_creating_functions
-        self.handler._handle_dependency_changes(self.mock_dep_update, {})
+        self.handler._handle_dependency_changes(self.mock_dep_update,
+                                                {},
+                                                dep_plan_filter_func=_true)
         put_calls = self._as_calls(
             [self._build_mock_dependency('creator_2', 'target_1')]
         )
@@ -711,15 +720,21 @@ class TestDeploymentDependencies(TestHandlerBase):
         self._assert_sm_calls(put_calls=put_calls,
                               delete_calls=delete_calls)
 
-    def test_creates_new_deletes_current_updates_common(self):
+    def test_creates_new_deletes_current_updates_common_ignores_filtered(self):
+        def ignores_ignore_me(dependency_creator):
+            return dependency_creator != 'ignore_me'
+
         common_dependency_updated = self._build_mock_dependency(
             'creator_common_updated', 'target_old')
         common_dependency_isnt_updated = self._build_mock_dependency(
             'creator_common2', 'target_old')
+        should_be_ignored = self._build_mock_dependency(
+            'ignore_me', 'doesnt_matter')
         curr_dependencies = [
             self._build_mock_dependency('creator_1'),
             common_dependency_updated,
-            common_dependency_isnt_updated
+            common_dependency_isnt_updated,
+            should_be_ignored
         ]
         self.mock_sm.list.return_value = curr_dependencies
         dependency_creating_functions = {
@@ -729,7 +744,10 @@ class TestDeploymentDependencies(TestHandlerBase):
         }
         self.mock_dep_update.deployment_plan[
             INTER_DEPLOYMENT_FUNCTIONS] = dependency_creating_functions
-        self.handler._handle_dependency_changes(self.mock_dep_update, {})
+        self.handler._handle_dependency_changes(
+            self.mock_dep_update,
+            {},
+            dep_plan_filter_func=ignores_ignore_me)
         put_calls = self._as_calls(
             [
                 self._build_mock_dependency('creator_2', 'target_1')
@@ -767,7 +785,9 @@ class TestDeploymentDependencies(TestHandlerBase):
         }
         self.mock_dep_update.deployment_plan[
             INTER_DEPLOYMENT_FUNCTIONS] = dependency_creating_functions
-        self.handler._handle_dependency_changes(self.mock_dep_update, {})
+        self.handler._handle_dependency_changes(self.mock_dep_update,
+                                                {},
+                                                dep_plan_filter_func=_true)
         update_calls = self._as_calls(
             [
                 self._build_mock_dependency(
@@ -777,3 +797,7 @@ class TestDeploymentDependencies(TestHandlerBase):
             ]
         )
         self._assert_sm_calls(update_calls=update_calls)
+
+
+def _true(*_, **__):
+    return True
