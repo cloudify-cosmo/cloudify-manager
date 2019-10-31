@@ -170,6 +170,14 @@ class Component(object):
         elif self.blueprint.get(EXTERNAL_RESOURCE) and blueprint_exists:
             ctx.logger.info("Using external blueprint.")
             return True
+        elif blueprint_exists:
+            ctx.logger.info(
+                'Blueprint ID "{0}" exists, '
+                'but {1} is {2}, will use the existing one.'.format(
+                    self.blueprint_id,
+                    EXTERNAL_RESOURCE,
+                    self.blueprint.get(EXTERNAL_RESOURCE)))
+            return True
         if not self.blueprint_archive:
             raise NonRecoverableError(
                 'No blueprint_archive supplied, '
