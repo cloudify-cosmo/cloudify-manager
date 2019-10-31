@@ -78,7 +78,7 @@ class TestPolling(ComponentTestBase):
         output = self.assertRaises(NonRecoverableError,
                                    is_all_executions_finished,
                                    self.cfy_mock_client)
-        self.assertIn('failed', output.message)
+        self.assertIn('failed', str(output))
 
     def test_dep_workflow_in_state_pollster_no_execution_given(self):
         self.assertRaises(NonRecoverableError,
@@ -154,7 +154,7 @@ class TestPolling(ComponentTestBase):
                                    'dep_name',
                                    'terminated',
                                    'exe_id')
-        self.assertIn('failed', output.message)
+        self.assertIn('failed', str(output))
 
     def test_component_logs_redirect_predefined_level(self):
         self.cfy_mock_client.events.set_existing_objects([{
