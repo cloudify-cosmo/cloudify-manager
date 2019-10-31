@@ -27,7 +27,8 @@ from .management_models import (User,
                                 Config,
                                 Manager,
                                 RabbitMQBroker,
-                                Certificate)
+                                Certificate,
+                                DBNodes)
 
 from .resource_models import (Blueprint,
                               Snapshot,
