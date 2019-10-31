@@ -323,7 +323,7 @@ class TestComponentPlugins(TestDeploymentBase):
                     timeout=MOCK_TIMEOUT)
 
                 self.assertIn('Failed to remove plugin "plugin_id"....',
-                              error.message)
+                              str(error))
 
             self.cfy_mock_client.plugins.delete.assert_called_with(
                 plugin_id='plugin_id')

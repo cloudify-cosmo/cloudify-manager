@@ -16,6 +16,7 @@
 import os
 import time
 import json
+import pickle
 import requests
 from collections import Counter
 
@@ -292,24 +293,104 @@ class TestSnapshot(AgentlessTestCase):
         self.assertEqual(0,
                          len(self.client.blueprints.list(_include=['id'])))
 
+    def test_v_4_5_restore_snapshot_validate_config(self):
+        """
+        Also validate the addition of config table in version 5 and later,
+        also validate the presence of ldap_ca_path field since 5.0.5.
+        """
+        snapshot_path = \
+            self._get_snapshot('snap_4.5.0_with_blueprint.zip')
+        self._upload_and_restore_snapshot(snapshot_path)
+
+        config = postgresql.run_query(
+            "SELECT name, value FROM config "
+            "WHERE name in ('rest_service_log_level', 'ldap_ca_path');"
+        )['all']
+        self.assertEqual(len(config), 2)
+        self.assertEqual(config[0][1], '"INFO"')
+
     def test_v_4_5_5_restore_snapshot_with_executions(self):
         """
         Validate the restore of executions
         """
         snapshot_path = self._get_snapshot('snap_4.5.5_with_executions.zip')
         self._upload_and_restore_snapshot(snapshot_path)
-        result = postgresql.run_query("SELECT workflow_id, token "
-                                      "FROM executions;")
+        result = postgresql.run_query("SELECT workflow_id, token, "
+                                      "blueprint_id FROM executions;")
 
-        # The executions from the snapshot don't have a token
+        # The executions from the snapshot don't have a token or a blueprint_id
         for execution in result['all'][:3]:
             self.assertIsNone(execution[1])
+            self.assertIsNone(execution[2])
 
         # The execution of the restore snapshot has a token
         token_4 = result['all'][5][1]
         self.assertIsNotNone(token_4)
         self.assertGreater(len(token_4), 10)
         self.assertEqual(result['all'][5][0], 'restore_snapshot')
+
+    def test_v_5_0_5_restore_snapshot(self):
+        """ Validate the restore of new DB fields added in 5.0 or 5.0.5 """
+        snapshot_path = \
+            self._get_snapshot('snap_5.0.5_with_updated_deployment.zip')
+        self._upload_and_restore_snapshot(snapshot_path)
+
+        managers = postgresql.run_query("SELECT node_id FROM managers;")['all']
+        self.assertGreater(len(managers[0][0]), 10)
+
+        brokers = postgresql.run_query("SELECT is_external, node_id "
+                                       "FROM rabbitmq_brokers;")['all']
+        self.assertFalse(brokers[0][0])
+        self.assertGreater(len(brokers[0][1]), 10)
+
+    def test_v_5_0_5_restore_snapshot_with_executions(self):
+        """
+        Validate the restore of new DB fields added in 5.0 or 5.0.5 which
+        relate to deployments and executions
+        """
+        snapshot_path = self._get_snapshot('snap_5.0.5_with_executions.zip')
+        self._upload_and_restore_snapshot(snapshot_path)
+        deployments = postgresql.run_query(
+            "SELECT id, runtime_only_evaluation FROM deployments;"
+        )['all']
+        self.assertEqual(set(deployments[0]), {'hello-world', False})
+
+        executions = postgresql.run_query(
+            "SELECT workflow_id, token, blueprint_id FROM executions;"
+        )['all']
+
+        instances = postgresql.run_query("SELECT index FROM node_instances;")
+        self.assertEqual(set(instances['all']), {(1,)})
+
+        # executions of `create_deployment_environment` and `install` have
+        # blueprint ids
+        self.assertEqual(executions[0][0], 'install')
+        self.assertEqual(executions[0][2], 'hello-world')
+        self.assertEqual(executions[2][0], 'create_deployment_environment')
+        self.assertEqual(executions[2][2], 'hello-world')
+
+    def test_v_5_0_5_restore_snapshot_with_updated_deployment(self):
+        """
+        Validate the restore of an updated deployment,
+        with DB fields added in 5.0 or 5.0.5
+        """
+        snapshot_path = \
+            self._get_snapshot('snap_5.0.5_with_updated_deployment.zip')
+        self._upload_and_restore_snapshot(snapshot_path)
+
+        dep_updates = postgresql.run_query(
+            "SELECT central_plugins_to_install, central_plugins_to_uninstall,"
+            "runtime_only_evaluation FROM deployment_updates;"
+        )['all']
+
+        plugins_to_install = pickle.loads(dep_updates[0][0])
+        plugins_to_uninstall = pickle.loads(dep_updates[0][1])
+        runtime_only_evaluation = dep_updates[0][2]
+        for plug in plugins_to_install:
+            self.assertEqual(plug['package_name'], 'cloudify-utilities-plugin')
+            self.assertEqual(plug['package_version'], '1.14.0')
+        self.assertListEqual(plugins_to_uninstall, [])
+        self.assertFalse(runtime_only_evaluation)
 
     def _test_secrets_restored(self, snapshot_name):
         snapshot_path = self._get_snapshot(snapshot_name)
