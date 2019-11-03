@@ -207,3 +207,100 @@ class TestScaleOut(TestScaleBase):
         expectations['compute']['new']['uninstall'] = 1
         expectations['compute']['existing']['install'] = 1
         self.deployment_assertions(expectations, rollback=True)
+
+    def test_db_contained_in_compute_scale_out_compute_doesnt_rollback(self):
+        """This test runs a scale out workflow on the db node. It fails
+        at the "start" operation of that node and makes sure that no rollback
+        has been made.
+        """
+        fail_operations = [{
+            'workflow': 'scale',
+            'node': 'db',
+            'operation': 'cloudify.interfaces.lifecycle.start'
+        }]
+
+        expectations = self.deploy_app(
+            'scale8', inputs={'fail': fail_operations})
+        expectations['compute']['new']['install'] = 1
+        expectations['db']['new']['install'] = 1
+        expectations['db']['new']['rel_install'] = 2
+        self.deployment_assertions(expectations)
+
+        with self.assertRaises(RuntimeError) as e:
+            self.scale(parameters={'scalable_entity_name': 'compute',
+                                   'rollback_if_failed': False})
+        self.assertIn('TEST_EXPECTED_FAIL', str(e.exception))
+        expectations = self.expectations()
+        expectations['compute']['new']['install'] = 1
+        expectations['compute']['new']['uninstall'] = 0
+        expectations['compute']['existing']['install'] = 1
+        expectations['db']['new']['install'] = 1
+        expectations['db']['new']['rel_install'] = 2
+        # this is somewhat of a hack. scale_rel_install only considers
+        # establish, so we reuse this to decrease 2 from the expected establish
+        # invocation, as start is the one that fails.
+        # whoever you are that may be reading this. please don't hate me.
+        # i mean no harm
+        expectations['db']['new']['scale_rel_install'] = -2
+        expectations['db']['new']['uninstall'] = 0
+        expectations['db']['new']['rel_uninstall'] = 0
+        expectations['db']['existing']['install'] = 1
+        expectations['db']['existing']['rel_install'] = 2
+        self.deployment_assertions(expectations)
+
+    def test_db_connected_to_compute_scale_out_compute_doesnt_rollback(self):
+        """This test runs a scale out workflow on the compute node. It fails
+        at the "start" operation of that node and makes sure that no rollback
+        has been made.
+        """
+        fail_operations = [{
+            'workflow': 'scale',
+            'node': 'compute',
+            'operation': 'cloudify.interfaces.lifecycle.start'
+        }]
+
+        expectations = self.deploy_app(
+            'scale9', inputs={'fail': fail_operations})
+        expectations['compute']['new']['install'] = 1
+        expectations['db']['new']['install'] = 1
+        expectations['db']['new']['rel_install'] = 2
+        self.deployment_assertions(expectations)
+
+        with self.assertRaises(RuntimeError) as e:
+            self.scale(parameters={'scalable_entity_name': 'compute',
+                                   'rollback_if_failed': False})
+        self.assertIn('TEST_EXPECTED_FAIL', str(e.exception))
+        expectations = self.expectations()
+        expectations['compute']['new']['install'] = 1
+        expectations['compute']['new']['uninstall'] = 0
+        expectations['compute']['existing']['install'] = 1
+        expectations['db']['existing']['install'] = 1
+        expectations['db']['existing']['rel_install'] = 2
+        expectations['db']['existing']['rel_uninstall'] = 0
+        self.deployment_assertions(expectations)
+
+    def test_compute_scale_out_compute_doesnt_rollback(self):
+        """This test runs a scale out workflow on the compute node. It fails
+        at the "start" operation of that node and makes sure that no rollback
+        has been made.
+        """
+        fail_operations = [{
+            'workflow': 'scale',
+            'node': 'compute',
+            'operation': 'cloudify.interfaces.lifecycle.start'
+        }]
+
+        expectations = self.deploy_app(
+            'scale7', inputs={'fail': fail_operations})
+        expectations['compute']['new']['install'] = 1
+        self.deployment_assertions(expectations)
+
+        with self.assertRaises(RuntimeError) as e:
+            self.scale(parameters={'scalable_entity_name': 'compute',
+                                   'rollback_if_failed': False})
+        self.assertIn('TEST_EXPECTED_FAIL', str(e.exception))
+        expectations = self.expectations()
+        expectations['compute']['new']['install'] = 1
+        expectations['compute']['new']['uninstall'] = 0
+        expectations['compute']['existing']['install'] = 1
+        self.deployment_assertions(expectations)

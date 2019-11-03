@@ -131,9 +131,7 @@ def saving_multiple_params_op(ctx, params, **_):
 
 def saving_operation_info(ctx, op, main_node, second_node=None, **_):
     with update_storage(ctx) as data:
-        invocations = data['mock_operation_invocation'] = data.get(
-            'mock_operation_invocation', []
-        )
+        invocations = data.setdefault('mock_operation_invocation', [])
         num = data.get('num', 0) + 1
         data['num'] = num
 
