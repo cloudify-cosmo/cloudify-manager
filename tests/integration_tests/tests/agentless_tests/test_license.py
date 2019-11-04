@@ -46,6 +46,15 @@ class TestLicense(AgentlessTestCase):
         self.assertRaises(MissingCloudifyLicense,
                           self.client.blueprints.list)
 
+    def test_error_when_no_license_substring_endpoint(self):
+        """
+        Restricted endpoint that partly contains allowed endpoint should not
+        be allowed. For example: `snapshot-status` is not allowed even
+        though `status` is allowed
+        """
+        self.assertRaises(MissingCloudifyLicense,
+                          self.client.snapshots.get_status)
+
     def test_no_error_when_using_allowed_endpoints(self):
         """
         The following endpoints are allowed even when there is no Cloudify

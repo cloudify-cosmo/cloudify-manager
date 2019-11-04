@@ -42,10 +42,13 @@ from manager_rest import constants, config, manager_exceptions
 
 
 def check_allowed_endpoint(allowed_endpoints):
-    for endpoint in allowed_endpoints:
-        if endpoint in request.endpoint:
-            return True
-    return False
+    # Getting the resource from the endpoint, for example 'status' or 'sites'
+    # from 'v3.1/status' and 'v3.1/sites/<string:name>'. GET /version url
+    # is the only one that excludes the api version
+    endpoint_parts = request.endpoint.split('/')
+    request_endpoint = endpoint_parts[1] if len(endpoint_parts) > 1 else \
+        endpoint_parts[0]
+    return request_endpoint in allowed_endpoints
 
 
 def is_sanity_mode():
