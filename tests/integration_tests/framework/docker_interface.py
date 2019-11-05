@@ -36,16 +36,14 @@ class DockerInterface(object):
         return self.get_docker_client()
 
     def list_image_tags(self):
-        image_tags = []
-        for image in self.docker_client.images.list():
-            image_tags = image_tags + image.tags
-        return image_tags
+        return [tag.encode('utf-8') for image in
+                self.docker_client.images.list() for tag in image.tags]
 
     def pull_image(self, **kwargs):
         return self.docker_client.images.pull(**kwargs)
 
-    def build_image(self, dockerfile_object, image_name):
-        return self.docker_client.images.build(fileobj=dockerfile_object,
+    def build_image(self, dockerfile, image_name):
+        return self.docker_client.images.build(path=dockerfile,
                                                tag=image_name)
 
     def run_container(self, image_name, **kwargs):

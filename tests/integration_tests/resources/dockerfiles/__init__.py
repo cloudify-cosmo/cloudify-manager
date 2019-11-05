@@ -13,30 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from io import StringIO
+from tempfile import mkdtemp
+from git import Git
+from os.path import join
 
-# TODO: Write Ubuntu Wagon Builder Image Dockerfile.
-
-# flake8: noqa
-
-centos_content = """FROM amd64/centos:latest
-MAINTAINER Cosmo (hello@cloudify.co)
-WORKDIR /build
-RUN echo "manylinux1_compatible = False" > "/usr/lib64/python2.7/_manylinux.py"
-RUN yum -y install python-devel gcc openssl git libxslt-devel libxml2-devel openldap-devel libffi-devel openssl-devel libvirt-devel
-RUN curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"
-RUN python get-pip.py
-RUN pip install --upgrade pip==9.0.1
-RUN pip install wagon==0.3.2
-ENTRYPOINT ["wagon"]
-CMD ["create", "-s", ".", "-v", "-f"]"""
+GIT_REPO = 'https://github.com/cloudify-cosmo/' \
+           'cloudify-wagon-build-containers.git'
 
 
-class DockerfileIO(StringIO):
+def get_docker_file(platform):
+    directory = mkdtemp()
+    Git(directory).clone(GIT_REPO)
+    return join(directory, 'cloudify-wagon-build-containers', platform)
 
-    @property
-    def name(self):
-        return 'Dockerfile'
 
-
-centos = DockerfileIO(unicode(centos_content))
+centos = get_docker_file('centos')

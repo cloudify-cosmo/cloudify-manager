@@ -20,10 +20,10 @@ from integration_tests.resources.dockerfiles import centos as dockerfile
 
 # This message is always the last message when a wagon build is finished.
 WAGON_BUILD_TIMEOUT = 600
-WAGON_BUILD_DOCKER_REPO_name = 'cloudifyplatform'
+WAGON_BUILD_DOCKER_REPO_NAME = 'earthmancfy'
 WAGON_BUILD_DOCKER_IMAGE_NAME = 'cloudify-centos-wagon-builder'
 WAGON_BUILD_DOCKER_TAG_NAME = 'latest'
-DOCKER_CONTAINER_BUILD_DIR = '/build'
+DOCKER_CONTAINER_BUILD_DIR = '/packaging'
 
 
 class WagonBuildError(RuntimeError):
@@ -56,18 +56,23 @@ class WagonBuilderMixin(DockerInterface):
 
     @property
     def docker_image_name_with_tag(self):
-        return "%s:%s" % (self.docker_image_name, self.docker_image_tag)
+        return '{repo}:{version}'.format(
+            repo=self.docker_image_name_with_repo,
+            version=self.docker_image_tag
+        )
 
     @property
     def docker_image_name_with_repo(self):
-        return "%s:%s" % (self.docker_repo_name, self.docker_image_name)
+        return '{repo}/{image}'.format(
+            repo=self.docker_repo_name,
+            image=self.docker_image_name)
 
     @property
     def docker_repo_name(self):
         """The repo of the Docker image that is used to build
         the plugin wagon.
         """
-        return WAGON_BUILD_DOCKER_REPO_name
+        return WAGON_BUILD_DOCKER_REPO_NAME
 
     @property
     def plugin_root_directory(self):
@@ -94,9 +99,8 @@ class WagonBuilderMixin(DockerInterface):
 
     def check_if_has_image_locally(self):
         """Check if the docker image already exists."""
-        if self.docker_image_name_with_tag not in self.list_image_tags():
-            return False
-        return True
+
+        return self.docker_image_name_with_tag in self.list_image_tags()
 
     def get_docker_image(self):
         try:
@@ -116,7 +120,7 @@ class WagonBuilderMixin(DockerInterface):
     def build_wagon(self):
         self.prepare_docker_image()
         container = self.run_container(
-            self.docker_image_name,
+            self.docker_image_name_with_repo,
             volumes=self.docker_volume_mapping,
             detach=True)
         response = container.wait(timeout=self.wagon_build_time_limit)
