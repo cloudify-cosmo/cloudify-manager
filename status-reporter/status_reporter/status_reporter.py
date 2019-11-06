@@ -105,6 +105,24 @@ class Reporter(object):
         return {'reporting_freq': self._current_reporting_freq,
                 'report': status}
 
+    def _update_managers_ips_list(self):
+        for manager_ip in self._managers_ips:
+            try:
+                url = 'https://{}/managers'.format(manager_ip)
+                response = requests.get(url,
+                                        headers={'tenant': 'default_tenant'},
+                                        verify=self._ca_path,
+                                        auth=(self._reporter_user_name,
+                                              self._reporter_token))
+                managers_list = [dict.update(manager) for manager in
+                                 response.json()['items']]
+                self._managers_ips = [manager.get('public_ip') for manager in
+                                      managers_list]
+                return
+            except Exception as e:
+                logger.debug('Error had occurred while trying to update the '
+                             'managers ips list: {}'.format(e))
+
     def _report(self):
         status = self.status_sampler()
         if not isinstance(status, dict):
@@ -131,10 +149,11 @@ class Reporter(object):
                 return
             except Exception as e:
                 logger.debug('Error had occurred while trying to report '
-                             'status: '.format(e))
+                             'status: {}'.format(e))
         logger.error('Could not find an active manager to '
                      'report the current status,'
                      ' tried %s', ','.join(self._managers_ips))
+        self._update_managers_ips_list()
 
     def run(self):
         while True:
