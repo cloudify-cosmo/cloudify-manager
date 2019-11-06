@@ -108,16 +108,16 @@ class Reporter(object):
     def _update_managers_ips_list(self):
         for manager_ip in self._managers_ips:
             try:
-                url = 'https://{}/managers'.format(manager_ip)
+                url = 'https://{}:443/api/v3.1/managers'.format(manager_ip)
+                headers = {'Tenant': 'default_tenant',
+                           'Content-type': 'application/json'}
                 response = requests.get(url,
-                                        headers={'tenant': 'default_tenant'},
+                                        headers=headers,
                                         verify=self._ca_path,
                                         auth=(self._reporter_user_name,
                                               self._reporter_token))
-                managers_list = [dict.update(manager) for manager in
-                                 response.json()['items']]
                 self._managers_ips = [manager.get('public_ip') for manager in
-                                      managers_list]
+                                      response.json()['items']]
                 return
             except Exception as e:
                 logger.debug('Error had occurred while trying to update the '
