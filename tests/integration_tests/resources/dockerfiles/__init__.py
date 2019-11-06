@@ -13,9 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from tempfile import mkdtemp
-from git import Git
 from os.path import join
+from tempfile import mkdtemp
+
+from git import Git
 
 GIT_REPO = 'https://github.com/cloudify-cosmo/' \
            'cloudify-wagon-build-containers.git'

@@ -20,7 +20,7 @@ from integration_tests.resources.dockerfiles import centos as dockerfile
 
 # This message is always the last message when a wagon build is finished.
 WAGON_BUILD_TIMEOUT = 600
-WAGON_BUILD_DOCKER_REPO_NAME = 'earthmancfy'
+WAGON_BUILD_DOCKER_REPO_NAME = 'cloudifycosmo'
 WAGON_BUILD_DOCKER_IMAGE_NAME = 'cloudify-centos-wagon-builder'
 WAGON_BUILD_DOCKER_TAG_NAME = 'latest'
 DOCKER_CONTAINER_BUILD_DIR = '/packaging'
