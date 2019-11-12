@@ -115,38 +115,46 @@ class PluginsUpdateManager(object):
         self.validate_no_active_updates_per_blueprint(blueprint_id, force)
         blueprint = self.sm.get(models.Blueprint, blueprint_id)
         temp_plan = self.get_reevaluated_plan(blueprint)
+        no_op = not _did_plugins_to_install_change(temp_plan, blueprint.plan)
 
         deployments_to_update = [dep.id
                                  for dep in
                                  self._get_deployments_to_update(blueprint_id)]
-        if not deployments_to_update:
-            raise PluginsUpdateError(
-                "The blueprint '{0}' has no deployments to update.".format(
-                    blueprint_id))
+        no_op |= not deployments_to_update
 
         plugins_update = self._stage_plugin_update(blueprint, force)
-        plugins_update.deployments_to_update = deployments_to_update
-        self.sm.update(plugins_update)
+        if not no_op:
+            plugins_update.deployments_to_update = deployments_to_update
+            self.sm.update(plugins_update)
 
-        temp_blueprint = self._create_temp_blueprint_from(blueprint, temp_plan)
-        plugins_update.temp_blueprint = temp_blueprint
-        plugins_update.state = STATES.UPDATING
-        self.sm.update(plugins_update)
+            temp_blueprint = self._create_temp_blueprint_from(blueprint,
+                                                              temp_plan)
+            plugins_update.temp_blueprint = temp_blueprint
+            plugins_update.state = STATES.UPDATING
+            self.sm.update(plugins_update)
 
         plugins_update.execution = get_resource_manager(
-            self.sm).update_plugins(plugins_update)
+            self.sm).update_plugins(plugins_update, no_op)
         plugins_update.state = STATES.EXECUTING_WORKFLOW
-        return self.sm.update(plugins_update)
+        plugins_update = self.sm.update(plugins_update)
+        if no_op:
+            return self.finalize(plugins_update, no_op=True)
+        return plugins_update
 
-    def finalize(self, plugins_update_id=id):
+    def finalize(self, plugins_update, no_op=False):
         """Executes the following procedure:
         * Updates the original blueprint plan
         * Changes all the deployments' blueprint back from the temp blueprint
            to the original one
         * Deletes the temporary blueprint
         * Updates the plugins update state
+
+        If this is a no-op then it just updates the plugins update state to
+        NO_CHANGES_REQUIRED.
         """
-        plugins_update = self.sm.get(models.PluginsUpdate, plugins_update_id)
+        if no_op:
+            plugins_update.state = STATES.NO_CHANGES_REQUIRED
+            return self.sm.update(plugins_update)
 
         self._validate_plugins_update_state(plugins_update)
         self._validate_execution_status(plugins_update)
@@ -168,8 +176,7 @@ class PluginsUpdateManager(object):
         self.sm.delete(plugins_update.temp_blueprint)
 
         plugins_update.state = STATES.SUCCESSFUL
-        self.sm.update(plugins_update)
-        return plugins_update
+        return self.sm.update(plugins_update)
 
     @staticmethod
     def _validate_plugins_update_state(plugins_update):
@@ -220,12 +227,6 @@ class PluginsUpdateManager(object):
         temp_plan = self.rm.parse_plan(blueprint_dir,
                                        blueprint.main_file_name,
                                        config.instance.file_server_root)
-        plan = blueprint.plan
-        if not _did_plugins_to_install_change(temp_plan, plan):
-            raise PluginsUpdateError(
-                'Found no plugins to update for "{0}" '
-                'blueprint, aborting plugins update.'.format(
-                    blueprint.id))
         return temp_plan
 
 

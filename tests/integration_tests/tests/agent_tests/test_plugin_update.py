@@ -19,8 +19,6 @@ import shutil
 
 from functools import wraps
 
-from cloudify_rest_client.exceptions import CloudifyClientError
-
 from integration_tests import AgentTestWithPlugins, BaseTestCase
 from integration_tests.tests.utils import \
     (get_resource as resource,
@@ -176,19 +174,21 @@ class TestPluginUpdate(AgentTestWithPlugins):
         )
         self._upload_v_2_plugin()
 
-        # Execute base (V 1.0) host op
+        # Execute base (V 1.0) workflows
         self._execute_workflows()
         self._assert_host_values(self.versions[0])
 
         self._perform_plugins_update()
 
-        # Execute mod (V 2.0) host op
+        # Execute mod (V 2.0) workflows
         self._execute_workflows()
         self._assert_host_values(self.versions[1])
 
-        self.assertRaisesRegexp(CloudifyClientError,
-                                '.*Found no plugins to update for.*',
-                                self._perform_plugins_update)
+        self._perform_plugins_update()
+
+        # Execute mod (V 2.0) workflows
+        self._execute_workflows()
+        self._assert_host_values(self.versions[1])
 
     @setup_for_plugins_update
     def test_many_deployments_are_updates(self):
@@ -208,7 +208,7 @@ class TestPluginUpdate(AgentTestWithPlugins):
             BaseTestCase.execute_workflow('install', dep_id)
         self._upload_v_2_plugin()
 
-        # Execute base (V 1.0) host op
+        # Execute base (V 1.0) workflows
         for dep_id in self.setup_deployment_ids:
             self.setup_deployment_id = dep_id
             self._execute_workflows()
@@ -216,7 +216,7 @@ class TestPluginUpdate(AgentTestWithPlugins):
 
         self._perform_plugins_update()
 
-        # Execute mod (V 2.0) host op
+        # Execute mod (V 2.0) workflows
         for dep_id in self.setup_deployment_ids:
             self.setup_deployment_id = dep_id
             self._execute_workflows()
