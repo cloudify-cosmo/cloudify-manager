@@ -45,6 +45,8 @@ def check_allowed_endpoint(allowed_endpoints):
     # Getting the resource from the endpoint, for example 'status' or 'sites'
     # from 'v3.1/status' and 'v3.1/sites/<string:name>'. GET /version url
     # is the only one that excludes the api version
+    if request.endpoint is None:
+        return False
     endpoint_parts = request.endpoint.split('/')
     request_endpoint = endpoint_parts[1] if len(endpoint_parts) > 1 else \
         endpoint_parts[0]
