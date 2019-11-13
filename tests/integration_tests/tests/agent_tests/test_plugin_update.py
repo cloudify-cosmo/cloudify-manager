@@ -233,7 +233,7 @@ class TestPluginUpdate(AgentTestWithPlugins):
         execution_id = plugins_update.execution_id
         execution = self.client.executions.get(execution_id)
         self.wait_for_execution_to_end(execution)
-        return plugins_update
+        return self.client.plugins_update.get(plugins_update.id)
 
     def _prepare_files(self):
         # Copy v1.0 twice to different directories
