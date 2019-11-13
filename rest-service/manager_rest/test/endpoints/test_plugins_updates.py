@@ -118,7 +118,7 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
             self.client.plugins_update.update_plugins("non_existing")
             self.assertEqual(404, e.exception.status_code)
 
-    def test_no_op_blueprint_has_no_deployments(self):
+    def test_plugins_update_does_nothing_when_no_deployments_to_update(self):
         self.put_file(*self.put_blueprint_args(blueprint_id='hello_world'))
         plugins_update = self.client.plugins_update.update_plugins(
             'hello_world')
