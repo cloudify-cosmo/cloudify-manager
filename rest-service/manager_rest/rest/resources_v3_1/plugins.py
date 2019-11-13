@@ -105,10 +105,8 @@ class PluginsUpdate(SecuredResource):
             return get_plugins_updates_manager().initiate_plugins_update(
                 blueprint_id=id, force=args.get('force'))
         elif phase == PHASES.FINAL:
-            sm = get_storage_manager()
-            plugins_update = sm.get(models.PluginsUpdate, id)
             return get_plugins_updates_manager().finalize(
-                plugins_update=plugins_update)
+                plugins_update_id=id)
 
 
 class PluginsUpdateId(SecuredResource):
