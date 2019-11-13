@@ -212,7 +212,7 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
                 'update IDs: {0}'.format(plugins_update.id)):
             self.client.plugins_update.update_plugins('hello_world', True)
 
-    def test_no_op_when_no_plugin_change_detected(self):
+    def test_no_changes_required_when_no_plugin_change_detected(self):
         self.plugin_change_patcher.stop()
         self.plugin_change_patched = False
         self.put_file(*self.put_blueprint_args(
