@@ -929,7 +929,7 @@ class ResourceManager(object):
         this execution was queued and now trying to run again. If the execution
         can currently run it will, if not it will be queued again.
         :param no_op: True if a fake execution should be created, meaning an
-        execution that never does anything and is initialized to the
+        execution that never does anything and is initialized with the
         TERMINATED state.
         :return: (async task object, execution object)
         """
