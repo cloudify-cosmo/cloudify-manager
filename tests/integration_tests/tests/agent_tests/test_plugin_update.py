@@ -19,6 +19,8 @@ import shutil
 
 from functools import wraps
 
+from manager_rest.plugins_update.constants import STATES
+
 from integration_tests import AgentTestWithPlugins, BaseTestCase
 from integration_tests.tests.utils import \
     (get_resource as resource,
@@ -178,13 +180,15 @@ class TestPluginUpdate(AgentTestWithPlugins):
         self._execute_workflows()
         self._assert_host_values(self.versions[0])
 
-        self._perform_plugins_update()
+        plugins_update = self._perform_plugins_update()
+        self.assertEqual(plugins_update.state, STATES.SUCCESSFUL)
 
         # Execute mod (V 2.0) workflows
         self._execute_workflows()
         self._assert_host_values(self.versions[1])
 
-        self._perform_plugins_update()
+        plugins_update = self._perform_plugins_update()
+        self.assertEqual(plugins_update.state, STATES.NO_CHANGES_REQUIRED)
 
         # Execute mod (V 2.0) workflows
         self._execute_workflows()
@@ -214,7 +218,8 @@ class TestPluginUpdate(AgentTestWithPlugins):
             self._execute_workflows()
             self._assert_host_values(self.versions[0])
 
-        self._perform_plugins_update()
+        plugins_update = self._perform_plugins_update()
+        self.assertEqual(plugins_update.state, STATES.SUCCESSFUL)
 
         # Execute mod (V 2.0) workflows
         for dep_id in self.setup_deployment_ids:
@@ -223,10 +228,12 @@ class TestPluginUpdate(AgentTestWithPlugins):
             self._assert_host_values(self.versions[1])
 
     def _perform_plugins_update(self):
-        execution_id = self.client.plugins_update.update_plugins(
-            self.base_blueprint_id).execution_id
+        plugins_update = self.client.plugins_update.update_plugins(
+            self.base_blueprint_id)
+        execution_id = plugins_update.execution_id
         execution = self.client.executions.get(execution_id)
         self.wait_for_execution_to_end(execution)
+        return plugins_update
 
     def _prepare_files(self):
         # Copy v1.0 twice to different directories

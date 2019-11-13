@@ -153,7 +153,7 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
                 '{0}'.format(plugins_update.id)):
             self.client.plugins_update.update_plugins('hello_world')
 
-    def test_doesnt_raise_when_plugins_updates_are_not_active(self):
+    def test_doesnt_raise_when_last_plugins_update_successful(self):
         self.put_file(*self.put_blueprint_args(blueprint_id='hello_world'))
         self.client.deployments.create('hello_world', 'd123')
         self.wait_for_deployment_creation(self.client, 'd123')
@@ -163,12 +163,24 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
         plugins_update.state = STATES.SUCCESSFUL
         self._sm.update(plugins_update)
 
+        self.client.plugins_update.update_plugins('hello_world')
+
+    def test_doesnt_raise_when_last_plugins_update_failed(self):
+        self.put_file(*self.put_blueprint_args(blueprint_id='hello_world'))
+        self.client.deployments.create('hello_world', 'd123')
+        self.wait_for_deployment_creation(self.client, 'd123')
         plugins_update_id = self.client.plugins_update.update_plugins(
             'hello_world').id
         plugins_update = self._sm.get(models.PluginsUpdate, plugins_update_id)
         plugins_update.state = STATES.FAILED
         self._sm.update(plugins_update)
 
+        self.client.plugins_update.update_plugins('hello_world')
+
+    def test_doesnt_raise_when_last_plugins_update_didnt_do_anything(self):
+        self.put_file(*self.put_blueprint_args(blueprint_id='hello_world'))
+        self.client.deployments.create('hello_world', 'd123')
+        self.wait_for_deployment_creation(self.client, 'd123')
         plugins_update_id = self.client.plugins_update.update_plugins(
             'hello_world').id
         plugins_update = self._sm.get(models.PluginsUpdate, plugins_update_id)
