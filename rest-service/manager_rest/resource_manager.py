@@ -294,11 +294,11 @@ class ResourceManager(object):
             verify_no_executions=False,
             timeout=300)
 
-    def update_plugins(self, plugins_update, no_op=False):
+    def update_plugins(self, plugins_update, no_changes_required=False):
         """Executes the plugin update workflow.
 
         :param plugins_update: a PluginUpdate object.
-        :param no_op: True if a fake execution should be created.
+        :param no_changes_required: True if a fake execution should be created.
         :return: execution ID.
         """
         return self._execute_system_workflow(
@@ -311,7 +311,7 @@ class ResourceManager(object):
                 'temp_blueprint_id': plugins_update.temp_blueprint_id
             },
             verify_no_executions=False,
-            no_op=no_op)
+            fake_execution=no_changes_required)
 
     def remove_plugin(self, plugin_id, force):
         # Verify plugin exists and can be removed
@@ -912,7 +912,7 @@ class ResourceManager(object):
                                  queue=False,
                                  execution=None,
                                  execution_creator=None,
-                                 no_op=False,
+                                 fake_execution=False,
                                  **_):
         """
         :param deployment: deployment for workflow execution
@@ -928,9 +928,9 @@ class ResourceManager(object):
         :param execution: an execution DB object. If it was passed it means
         this execution was queued and now trying to run again. If the execution
         can currently run it will, if not it will be queued again.
-        :param no_op: True if a fake execution should be created, meaning an
-        execution that never does anything and is initialized with the
-        TERMINATED state.
+        :param fake_execution: True if a fake execution should be created,
+        meaning an execution that never does anything and is initialized with
+        the TERMINATED state.
         :return: (async task object, execution object)
         """
         execution_creator = execution_creator or current_user
@@ -971,7 +971,7 @@ class ResourceManager(object):
             if deployment:
                 execution.set_deployment(deployment)
 
-        if no_op:
+        if fake_execution:
             execution.status = ExecutionState.TERMINATED
             return self.sm.put(execution)
 
