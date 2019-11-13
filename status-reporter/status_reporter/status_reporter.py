@@ -124,17 +124,6 @@ class Reporter(object):
                      auth=(self._reporter_user_name,
                            self._reporter_token))
 
-    def _report_and_update_managers_ips_list(self, report):
-        for manager_ip in self._managers_ips:
-            try:
-                self._report_status(manager_ip, report)
-                self._update_managers_ips_list(manager_ip)
-                return
-            except Exception as e:
-                logger.debug('Error had occurred while trying to report '
-                             'status and update active managers-ips list: {}'
-                             .format(e))
-
     def _report(self):
         status = self.status_sampler()
         if not isinstance(status, dict):
@@ -149,8 +138,15 @@ class Reporter(object):
         # If there is a malfunctioning manager,
         # let's try to avoid using the same manager always.
         random.shuffle(self._managers_ips)
-        self._report_and_update_managers_ips_list(report)
-        self._report_and_update_managers_ips_list(report)
+        for manager_ip in self._managers_ips:
+            try:
+                self._report_status(manager_ip, report)
+                self._update_managers_ips_list(manager_ip)
+                return
+            except Exception as e:
+                logger.debug('Error had occurred while trying to report '
+                             'status and update active managers-ips list: {}'
+                             .format(e))
         logger.error('Could not find an active manager to '
                      'report the current status,'
                      ' tried %s', ','.join(self._managers_ips))
