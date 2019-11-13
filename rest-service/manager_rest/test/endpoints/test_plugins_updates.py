@@ -118,12 +118,11 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
             self.client.plugins_update.update_plugins("non_existing")
             self.assertEqual(404, e.exception.status_code)
 
-    def test_raises_blueprint_has_no_deployments(self):
+    def test_plugins_update_does_nothing_when_no_deployments_to_update(self):
         self.put_file(*self.put_blueprint_args(blueprint_id='hello_world'))
-        with self.assertRaisesRegexp(CloudifyClientError,
-                                     "The blueprint 'hello_world' has no "
-                                     "deployments to update."):
-            self.client.plugins_update.update_plugins("hello_world")
+        plugins_update = self.client.plugins_update.update_plugins(
+            'hello_world')
+        self.assertEqual(plugins_update.state, STATES.NO_CHANGES_REQUIRED)
 
     def test_plugins_update_and_execution_parameters_are_correct(self):
         self.put_file(*self.put_blueprint_args(blueprint_id='hello_world'))
@@ -154,6 +153,42 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
                 '{0}'.format(plugins_update.id)):
             self.client.plugins_update.update_plugins('hello_world')
 
+    def test_doesnt_raise_when_last_plugins_update_successful(self):
+        self.put_file(*self.put_blueprint_args(blueprint_id='hello_world'))
+        self.client.deployments.create('hello_world', 'd123')
+        self.wait_for_deployment_creation(self.client, 'd123')
+        plugins_update_id = self.client.plugins_update.update_plugins(
+            'hello_world').id
+        plugins_update = self._sm.get(models.PluginsUpdate, plugins_update_id)
+        plugins_update.state = STATES.SUCCESSFUL
+        self._sm.update(plugins_update)
+
+        self.client.plugins_update.update_plugins('hello_world')
+
+    def test_doesnt_raise_when_last_plugins_update_failed(self):
+        self.put_file(*self.put_blueprint_args(blueprint_id='hello_world'))
+        self.client.deployments.create('hello_world', 'd123')
+        self.wait_for_deployment_creation(self.client, 'd123')
+        plugins_update_id = self.client.plugins_update.update_plugins(
+            'hello_world').id
+        plugins_update = self._sm.get(models.PluginsUpdate, plugins_update_id)
+        plugins_update.state = STATES.FAILED
+        self._sm.update(plugins_update)
+
+        self.client.plugins_update.update_plugins('hello_world')
+
+    def test_doesnt_raise_when_last_plugins_update_didnt_do_anything(self):
+        self.put_file(*self.put_blueprint_args(blueprint_id='hello_world'))
+        self.client.deployments.create('hello_world', 'd123')
+        self.wait_for_deployment_creation(self.client, 'd123')
+        plugins_update_id = self.client.plugins_update.update_plugins(
+            'hello_world').id
+        plugins_update = self._sm.get(models.PluginsUpdate, plugins_update_id)
+        plugins_update.state = STATES.NO_CHANGES_REQUIRED
+        self._sm.update(plugins_update)
+
+        self.client.plugins_update.update_plugins('hello_world')
+
     def test_doesnt_raise_while_plugins_updates_are_active_and_forced(self):
         self.put_file(*self.put_blueprint_args(blueprint_id='hello_world'))
         self.client.deployments.create('hello_world', 'd123')
@@ -177,16 +212,14 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
                 'update IDs: {0}'.format(plugins_update.id)):
             self.client.plugins_update.update_plugins('hello_world', True)
 
-    def test_raises_when_no_plugin_change_detected(self):
+    def test_no_changes_required_when_no_plugin_change_detected(self):
         self.plugin_change_patcher.stop()
         self.plugin_change_patched = False
         self.put_file(*self.put_blueprint_args(
             blueprint_id='host_agent_blueprint'))
-        with self.assertRaisesRegexp(
-                CloudifyClientError,
-                'Found no plugins to update for "host_agent_blueprint" '
-                'blueprint, aborting plugins update'):
-            self.client.plugins_update.update_plugins('host_agent_blueprint')
+        plugins_update = self.client.plugins_update.update_plugins(
+            'host_agent_blueprint')
+        self.assertEqual(plugins_update.state, STATES.NO_CHANGES_REQUIRED)
 
     def test_finalize_raises_plugins_update_with_not_compatible_state(self):
         self.put_file(*self.put_blueprint_args(blueprint_id='hello_world'))

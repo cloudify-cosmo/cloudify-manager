@@ -23,13 +23,17 @@ PluginsUpdateStates = namedtuple('PluginsUpdateStates',
                                   'EXECUTING_WORKFLOW',
                                   'FINALIZING',
                                   'SUCCESSFUL',
-                                  'FAILED'])
+                                  'FAILED',
+                                  'NO_CHANGES_REQUIRED'])
 STATES = PluginsUpdateStates(UPDATING='updating',
                              EXECUTING_WORKFLOW='executing_workflow',
                              FINALIZING='finalizing',
                              SUCCESSFUL='successful',
-                             FAILED='failed')
-NOT_ACTIVE_STATES = (STATES.SUCCESSFUL, STATES.FAILED)
+                             FAILED='failed',
+                             NO_CHANGES_REQUIRED='no_changes_required')
+NOT_ACTIVE_STATES = (STATES.SUCCESSFUL,
+                     STATES.FAILED,
+                     STATES.NO_CHANGES_REQUIRED)
 ACTIVE_STATES = [state for state in STATES if state not in NOT_ACTIVE_STATES]
 
 PLUGIN_UPDATE_WORKFLOW = 'cloudify_system_workflows.plugins.update'
