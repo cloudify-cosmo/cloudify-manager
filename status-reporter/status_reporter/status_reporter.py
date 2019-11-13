@@ -26,7 +26,6 @@ import requests
 
 from .constants import CONFIGURATION_PATH, STATUS_REPORTER
 
-
 LOGFILE = '/var/log/cloudify/status-reporter/reporter.log'
 
 logger = logging.getLogger(STATUS_REPORTER)
@@ -86,16 +85,16 @@ class Reporter(object):
 
         if not self._ca_path or not os.path.exists(self._ca_path):
             issues.append('CA certificate was not found, '
-                          'please verify the given location {0}'.format(
-                           self._ca_path))
+                          'please verify the given location {0}'.
+                          format(self._ca_path))
 
         self._current_reporting_freq = self._config.get('reporting_freq',
                                                         None)
         self._component_type = component_type
         if issues:
             raise InitializationError('Failed initialization of status '
-                                      'reporter due to:\n {issues}'.format(
-                                       issues='\n'.join(issues)))
+                                      'reporter due to:\n {issues}'.
+                                      format(issues='\n'.join(issues)))
 
     def _build_full_reporting_url(self, ip):
         return 'https://{0}/cluster_status/{1}'.format(ip,
@@ -104,6 +103,26 @@ class Reporter(object):
     def _build_report(self, status):
         return {'reporting_freq': self._current_reporting_freq,
                 'report': status}
+
+    def _update_managers_ips_list(self, manager_ip):
+        url = 'https://{}:443/api/v3.1/managers'.format(manager_ip)
+        headers = {'Tenant': 'default_tenant',
+                   'Content-type': 'application/json'}
+        response = requests.get(url,
+                                headers=headers,
+                                verify=self._ca_path,
+                                auth=(self._reporter_user_name,
+                                      self._reporter_token))
+        self._managers_ips = [manager.get('public_ip') for manager in
+                              response.json()['items']]
+
+    def _report_status(self, manager_ip, report):
+        requests.put(self._build_full_reporting_url(manager_ip),
+                     data=report,
+                     headers={'tenant': 'default_tenant'},
+                     verify=self._ca_path,
+                     auth=(self._reporter_user_name,
+                           self._reporter_token))
 
     def _report(self):
         status = self.status_sampler()
@@ -119,19 +138,15 @@ class Reporter(object):
         # If there is a malfunctioning manager,
         # let's try to avoid using the same manager always.
         random.shuffle(self._managers_ips)
-
         for manager_ip in self._managers_ips:
             try:
-                requests.put(self._build_full_reporting_url(manager_ip),
-                             data=report,
-                             headers={'tenant': 'default_tenant'},
-                             verify=self._ca_path,
-                             auth=(self._reporter_user_name,
-                                   self._reporter_token))
+                self._report_status(manager_ip, report)
+                self._update_managers_ips_list(manager_ip)
                 return
             except Exception as e:
                 logger.debug('Error had occurred while trying to report '
-                             'status: '.format(e))
+                             'status and update active managers-ips list: {}'
+                             .format(e))
         logger.error('Could not find an active manager to '
                      'report the current status,'
                      ' tried %s', ','.join(self._managers_ips))
