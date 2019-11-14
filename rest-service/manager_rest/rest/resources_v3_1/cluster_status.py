@@ -17,7 +17,9 @@
 import os
 import json
 
+from manager_rest import manager_exceptions
 from manager_rest.security.authorization import authorize
+from manager_rest.storage import models, get_storage_manager
 from manager_rest.security import SecuredResourceReadonlyMode
 from manager_rest.rest.rest_utils import get_json_and_verify_params
 
@@ -33,17 +35,33 @@ class ClusterStatus(SecuredResourceReadonlyMode):
         })
         return request_dict
 
-    @staticmethod
-    def _make_dirs(path):
-        dirs_path = os.path.dirname(path)
-        if not os.path.exists(dirs_path):
-            os.makedirs(dirs_path)
-
     @authorize('cluster_status_put')
-    def put(self, instance_type, instance_uuid):
+    def put(self, node_uuid, model, node_type):
         report = self._get_report()
-        path = '{status_path}/{type}/{uuid}.json'.format(
-            status_path=STATUS_PATH, type=instance_type, uuid=instance_uuid)
-        self._make_dirs(path)
+        path = '{status_path}/{node_uuid}_{node_type}.json'.format(
+            status_path=STATUS_PATH, node_uuid=node_uuid, node_type=node_type)
+        uuid_exists = get_storage_manager().exists(model,
+                                                   filters={'uuid': node_uuid})
+        if not uuid_exists:
+            raise manager_exceptions.BadParametersError(
+                'The given uuid does not match any node of type '
+                '{}'.format(node_type))
+        if not os.path.exists(STATUS_PATH):
+            os.makedirs(STATUS_PATH)
         with open(path, 'w') as report_file:
             json.dump(report, report_file)
+
+
+class ManagerClusterStatus(ClusterStatus):
+    def put(self, node_uuid, model=models.Manager, node_type='manager'):
+        super(ManagerClusterStatus, self).put(node_uuid, model, node_type)
+
+
+class DbClusterStatus(ClusterStatus):
+    def put(self, node_uuid, model=models.DBNodes, node_type='db'):
+        super(DbClusterStatus, self).put(node_uuid, model, node_type)
+
+
+class BrokerClusterStatus(ClusterStatus):
+    def put(self, node_uuid, model=models.RabbitMQBroker, node_type='broker'):
+        super(BrokerClusterStatus, self).put(node_uuid, model, node_type)
