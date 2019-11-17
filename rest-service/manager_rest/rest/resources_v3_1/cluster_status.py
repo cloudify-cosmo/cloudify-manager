@@ -96,8 +96,8 @@ class DBClusterStatus(ClusterStatus):
         super(DBClusterStatus, self).put(node_id, model, node_type)
 
 
-class MQClusterStatus(ClusterStatus):
-    @authorize('message_queue_cluster_status_put')
+class BrokerClusterStatus(ClusterStatus):
+    @authorize('broker_cluster_status_put')
     def put(self, node_id, model=models.RabbitMQBroker,
-            node_type='message_queue'):
-        super(MQClusterStatus, self).put(node_id, model, node_type)
+            node_type='broker'):
+        super(BrokerClusterStatus, self).put(node_id, model, node_type)
