@@ -122,9 +122,9 @@ def setup_resources(api):
         'License': 'license',
         'Sites': 'sites',
         'SitesName': 'sites/<string:name>',
-        'ManagerClusterStatus': 'cluster-status/manager/<string:node_uuid>',
-        'DbClusterStatus': 'cluster-status/db/<string:node_uuid>',
-        'BrokerClusterStatus': 'cluster-status/broker/<string:node_uuid>'
+        'ManagerClusterStatus': 'cluster-status/manager/<string:node_id>',
+        'DbClusterStatus': 'cluster-status/db/<string:node_id>',
+        'MQClusterStatus': 'cluster-status/message_queue/<string:node_id>'
     }
 
     # Set version endpoint as a non versioned endpoint

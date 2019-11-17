@@ -584,7 +584,7 @@ class SQLStorageManager(object):
             count = query.order_by(None).count()   # Fastest way to count
         return count
 
-    def exists(self, model_class, element_id=None, filters=None,
+    def exists(self, model_class, element_id, filters=None,
                all_tenants=None):
         """Check if a record exists
         """
