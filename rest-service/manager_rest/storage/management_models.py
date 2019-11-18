@@ -633,7 +633,7 @@ class DBNodes(SQLModelBase):
 
     name = db.Column(db.Text, primary_key=True)
     node_id = db.Column(db.Text, unique=True, nullable=False)
-    private_ip = db.Column(db.Text, unique=True, nullable=False)
+    host = db.Column(db.Text, unique=True, nullable=False)
     is_external = db.Column(db.Boolean, default=False, nullable=False)
 
     @classmethod

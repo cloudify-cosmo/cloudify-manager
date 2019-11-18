@@ -122,10 +122,10 @@ def _create_db_nodes_table():
         'db_nodes',
         sa.Column('name', sa.Text(), nullable=False),
         sa.Column('node_id', sa.Text(), nullable=False),
-        sa.Column('private_ip', sa.Text(), nullable=False),
+        sa.Column('host', sa.Text(), nullable=False),
         sa.Column('is_external', sa.Boolean(), nullable=False,
                   server_default='f'),
         sa.PrimaryKeyConstraint('name', name=op.f('db_nodes_pkey')),
         sa.UniqueConstraint('node_id', name=op.f('db_nodes_node_id_key')),
-        sa.UniqueConstraint('private_ip', name=op.f('db_nodes_private_ip_key'))
+        sa.UniqueConstraint('host', name=op.f('db_nodes_host_key'))
     )
