@@ -84,11 +84,11 @@ def create_status_reporter_user_and_assign_role(username, password, role):
 
     default_tenant = Tenant.query.filter_by(
         id=constants.DEFAULT_TENANT_ID).first()
-    user_role = user_datastore.find_role(constants.DEFAULT_TENANT_ROLE)
+    reporter_role = user_datastore.find_role(role)
     user_tenant_association = UserTenantAssoc(
         user=user,
         tenant=default_tenant,
-        role=user_role,
+        role=reporter_role,
     )
     user.tenant_associations.append(user_tenant_association)
     user_datastore.commit()
