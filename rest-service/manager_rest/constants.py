@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -34,6 +34,17 @@ DEFAULT_SYSTEM_ROLE = 'default'
 DEFAULT_TENANT_ROLE = 'user'
 
 BOOTSTRAP_ADMIN_ID = 0
+DB_STATUS_REPORTER_ROLE = 'database_status_reporter'
+DB_STATUS_REPORTER_USERNAME = 'database_status_reporter'
+QUEUE_STATUS_REPORTER_ROLE = 'queue_service_status_reporter'
+QUEUE_STATUS_REPORTER_USERNAME = 'queue_service_status_reporter'
+MANAGER_STATUS_REPORTER_ROLE = 'manager_status_reporter'
+MANAGER_STATUS_REPORTER_USERNAME = 'manager_status_reporter'
+STATUS_REPORTER_USERS = [DB_STATUS_REPORTER_USERNAME,
+                         QUEUE_STATUS_REPORTER_USERNAME,
+                         MANAGER_STATUS_REPORTER_USERNAME]
+# TODO CY-1731: temporary fix until CY-1701 is merged
+STATUS_REPORTER_ROLE = 'status_reporter'
 DEFAULT_TENANT_ID = 0
 
 REST_SERVICE_NAME = 'cloudify-restservice'

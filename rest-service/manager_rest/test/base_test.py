@@ -44,14 +44,22 @@ from manager_rest import server
 from manager_rest.rest import rest_utils
 from manager_rest.test.attribute import attr
 from manager_rest.flask_utils import set_admin_current_user
-from manager_rest.test.security_utils import get_admin_user
+from manager_rest.test.security_utils import (get_admin_user,
+                                              get_status_reporters)
 from manager_rest import utils, config, constants, archiving
 from manager_rest.storage import FileServer, get_storage_manager, models
-from manager_rest.storage.storage_utils import \
-    create_default_user_tenant_and_roles
-from manager_rest.constants import (CLOUDIFY_TENANT_HEADER,
-                                    DEFAULT_TENANT_NAME,
-                                    FILE_SERVER_BLUEPRINTS_FOLDER)
+from manager_rest.storage.storage_utils import (
+    create_default_user_tenant_and_roles,
+    create_status_reporter_user_and_assign_role
+)
+from manager_rest.constants import (
+    DEFAULT_TENANT_NAME,
+    CLOUDIFY_TENANT_HEADER,
+    DB_STATUS_REPORTER_ROLE,
+    QUEUE_STATUS_REPORTER_ROLE,
+    MANAGER_STATUS_REPORTER_ROLE,
+    FILE_SERVER_BLUEPRINTS_FOLDER,
+)
 from manager_rest import premium_enabled
 
 from .mocks import (
@@ -75,6 +83,9 @@ permitted_roles = ['sys_admin', 'manager', 'user', 'operations', 'viewer']
 auth_dict = {
     'roles': [
         {'name': 'sys_admin', 'description': ''},
+        {'name': MANAGER_STATUS_REPORTER_ROLE, 'description': ''},
+        {'name': QUEUE_STATUS_REPORTER_ROLE, 'description': ''},
+        {'name': DB_STATUS_REPORTER_ROLE, 'description': ''},
         {'name': 'manager', 'description': ''},
         {'name': 'user', 'description': ''},
         {'name': 'viewer', 'description': ''},
@@ -341,6 +352,12 @@ class BaseServerTestCase(unittest.TestCase):
                 'KD_hK1mQyKgjRss_Nz-3m-cgHpZChnVT4bxZIjnOnL6sF8RtozvlRoGHtnF' \
                 'G6jxqQDeEf5Heos0ia4Q5H  '
 
+            for reporter in get_status_reporters():
+                create_status_reporter_user_and_assign_role(
+                    reporter['username'],
+                    reporter['password'],
+                    reporter['role'],
+                )
             if premium_enabled:
                 # License is required only when working with Cloudify Premium
                 upload_mock_cloudify_license(get_storage_manager())
