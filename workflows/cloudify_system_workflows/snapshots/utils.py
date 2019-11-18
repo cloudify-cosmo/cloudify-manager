@@ -133,10 +133,6 @@ def _ignore_stage_conf_directory_during_restore(stage_tempdir):
 
 def restore_stage_files(archive_root, override=False):
     """Copy Cloudify Stage files from the snapshot archive to stage folder.
-
-    Note that only the stage user can write into the stage directory,
-    so we use sudo to run a script (created during bootstrap) that copies
-    the restored files.
     """
     stage_archive = os.path.join(archive_root, 'stage')
     if not os.path.exists(stage_archive):
@@ -156,8 +152,7 @@ def restore_stage_files(archive_root, override=False):
                            stage_tempdir]
         if override:
             restore_command.append('--override-existing')
-        sudo(restore_command,
-             user=snapshot_constants.STAGE_USER)
+        run([restore_command])
     finally:
         shutil.rmtree(stage_tempdir)
 
@@ -219,8 +214,8 @@ def copy(source, destination):
         ctx.logger.debug(
             'Path does not exist: {0}. Creating it...'.format(
                 destination_dir))
-        sudo(['mkdir', '-p', destination_dir])
-    sudo(['cp', '-rp', source, destination])
+        run(['mkdir', '-p', destination_dir])
+    run(['cp', '-rp', source, destination])
 
 
 def sudo(command, user=None, ignore_failures=False, cwd=None):
@@ -418,7 +413,6 @@ def stage_db_schema_get_current_revision():
     if version['edition'] != 'premium':
         return None
     output = subprocess.check_output([
-        'sudo', '-u', snapshot_constants.STAGE_USER,
         '/opt/nodejs/bin/node',
         '/opt/cloudify-stage/backend/migration.js',
         'current',
@@ -439,7 +433,6 @@ def composer_db_schema_get_current_revision():
     if version['edition'] != 'premium':
         return None
     output = subprocess.check_output([
-        'sudo', '-u', snapshot_constants.COMPOSER_USER,
         '/opt/nodejs/bin/npm',
         'run',
         '--prefix', snapshot_constants.COMPOSER_BASE_FOLDER,
