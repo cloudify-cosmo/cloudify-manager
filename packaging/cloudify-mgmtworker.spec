@@ -1,4 +1,3 @@
-%define _python_bytecompile_errors_terminate_build 0
 %define __jar_repack %{nil}
 %define PIP_INSTALL /opt/mgmtworker/env/bin/pip install -c "${RPM_SOURCE_DIR}/packaging/mgmtworker/constraints.txt"
 
@@ -37,6 +36,11 @@ STUBS=${RPM_SOURCE_DIR}/packaging/mgmtworker/stub_packages
 %{PIP_INSTALL} --upgrade ${STUBS}/cloudify-script-plugin/
 
 %{PIP_INSTALL} --upgrade kerberos==1.3.0
+
+# Jinja2 includes 2 files which will only be imported if async is available,
+# but rpmbuild's brp-python-bytecompile falls over when it finds them. Here
+# we remove them.
+rm -f /opt/mgmtworker/env/lib/python2.7/site-packages/jinja2/async*.py
 
 %install
 mkdir -p %{buildroot}/opt/mgmtworker
