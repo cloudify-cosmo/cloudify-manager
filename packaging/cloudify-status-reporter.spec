@@ -24,6 +24,11 @@ virtualenv %_status_reporter_env
 %_status_reporter_env/bin/pip install -r "${RPM_SOURCE_DIR}/packaging/status-reporter/requirements.txt"
 %_status_reporter_env/bin/pip install "${RPM_SOURCE_DIR}/status-reporter"
 
+# Jinja2 includes 2 files which will only be imported if async is available,
+# but rpmbuild's brp-python-bytecompile falls over when it finds them. Here
+# we remove them.
+rm -f %_status_reporter_env/lib/python2.7/site-packages/jinja2/async*.py
+
 %install
 
 mkdir -p %{buildroot}/opt/status-reporter
