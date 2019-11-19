@@ -19,9 +19,3 @@ STATUS_REPORTER = 'status-reporter'
 STATUS_REPORTER_PATH = join('/opt', STATUS_REPORTER)
 CONFIGURATION_PATH = join(STATUS_REPORTER_PATH,
                           'status_reporter_configuration.yaml')
-
-
-class ComponentType(object):
-    MANAGER = 'manager'
-    MESSAGE_QUEUE = 'message_queue'
-    DB = 'db'

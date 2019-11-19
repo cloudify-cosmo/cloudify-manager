@@ -13,7 +13,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from .constants import ComponentType
+from cloudify_rest_client.cluster import CloudifyNodeType
+
 from .status_reporter import Reporter
 
 
@@ -22,5 +23,5 @@ def collect_status():
 
 
 def main():
-    reporter = Reporter(collect_status, ComponentType.DB)
+    reporter = Reporter(collect_status, CloudifyNodeType.DB)
     reporter.run()

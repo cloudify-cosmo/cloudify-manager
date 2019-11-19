@@ -22,7 +22,9 @@ import logging
 from logging.handlers import WatchedFileHandler
 
 import yaml
-import requests
+
+from cloudify_rest_client import CloudifyClient
+from cloudify_rest_client.client import SECURED_PORT, SECURED_PROTOCOL
 
 from .constants import CONFIGURATION_PATH, STATUS_REPORTER
 
@@ -51,7 +53,7 @@ class InitializationError(Exception):
 
 
 class Reporter(object):
-    def __init__(self, sampler, component_type):
+    def __init__(self, sampler, node_type):
         issues = []
         if not callable(sampler):
             issues.append('Reporter expected a callable sampler,'
@@ -65,19 +67,19 @@ class Reporter(object):
             issues.append('Failed loading status reporter\'s '
                           'configuration with the following: {0}'.format(e))
 
-        self._reporter_user_name = self._config.get('user_name', None)
-        self._reporter_token = self._config.get('token', None)
+        self._cloudify_user_name = self._config.get('user_name', None)
+        self._token = self._config.get('token', None)
         self._ca_path = self._config.get('ca_path', None)
         self._managers_ips = self._config.get('managers_ips', [])
 
         if not all([self._managers_ips,
-                    self._reporter_token,
-                    self._reporter_user_name
+                    self._token,
+                    self._cloudify_user_name
                     ]):
             invalid_conf_settings = {
                 'Managers Ips': self._managers_ips,
-                'Username': self._reporter_user_name,
-                'Password token': self._reporter_token
+                'Username': self._cloudify_user_name,
+                'Password token': self._token
             }
             issues.append('Please verify the reporter\'s config related to '
                           '{0} ..'.format(json.dumps(invalid_conf_settings,
@@ -90,39 +92,33 @@ class Reporter(object):
 
         self._current_reporting_freq = self._config.get('reporting_freq',
                                                         None)
-        self._component_type = component_type
+        self._node_type = node_type
         if issues:
             raise InitializationError('Failed initialization of status '
                                       'reporter due to:\n {issues}'.
                                       format(issues='\n'.join(issues)))
 
-    def _build_full_reporting_url(self, ip):
-        return 'https://{0}/cluster_status/{1}'.format(ip,
-                                                       self._component_type)
-
     def _build_report(self, status):
         return {'reporting_freq': self._current_reporting_freq,
                 'report': status}
 
-    def _update_managers_ips_list(self, manager_ip):
-        url = 'https://{}:443/api/v3.1/managers'.format(manager_ip)
-        headers = {'Tenant': 'default_tenant',
-                   'Content-type': 'application/json'}
-        response = requests.get(url,
-                                headers=headers,
-                                verify=self._ca_path,
-                                auth=(self._reporter_user_name,
-                                      self._reporter_token))
+    def _update_managers_ips_list(self, client):
+        response = client.manager.get_managers()
         self._managers_ips = [manager.get('public_ip') for manager in
                               response.json()['items']]
 
-    def _report_status(self, manager_ip, report):
-        requests.put(self._build_full_reporting_url(manager_ip),
-                     data=report,
-                     headers={'tenant': 'default_tenant'},
-                     verify=self._ca_path,
-                     auth=(self._reporter_user_name,
-                           self._reporter_token))
+    def _report_status(self, client, report):
+        client.cluster_status.report_node_status(self._node_type, report)
+
+    def _get_cloudify_http_client(self, host):
+        return CloudifyClient(host=host,
+                              username=self._cloudify_user_name,
+                              token=self._token,
+                              cert=self._ca_path,
+                              tenant='default_tenant',
+                              port=SECURED_PORT,
+                              protocol=SECURED_PROTOCOL
+                              )
 
     def _report(self):
         status = self.status_sampler()
@@ -140,8 +136,9 @@ class Reporter(object):
         random.shuffle(self._managers_ips)
         for manager_ip in self._managers_ips:
             try:
-                self._report_status(manager_ip, report)
-                self._update_managers_ips_list(manager_ip)
+                client = self._get_cloudify_http_client(manager_ip)
+                self._report_status(client, report)
+                self._update_managers_ips_list(client)
                 return
             except Exception as e:
                 logger.debug('Error had occurred while trying to report '
