@@ -16,8 +16,9 @@
 
 import os
 import json
-from flask import current_app
 from datetime import datetime
+
+from flask import current_app
 
 from manager_rest import manager_exceptions
 from manager_rest.security.authorization import authorize
@@ -27,9 +28,6 @@ from manager_rest.rest.rest_utils import (get_json_and_verify_params,
                                           parse_datetime_string)
 
 STATUSES_PATH = '/opt/manager/resources/cluster_status'
-TIMESTAMP_FORMAT = 'please provide valid date. \nExpected format: ' \
-                   'YYYYMMDDHHMM+HHMM or YYYYMMDDHHMM-HHMM i.e: ' \
-                   '201801012230-0500 (Jan-01-18 10:30pm EST)'
 
 
 class ClusterStatus(SecuredResourceReadonlyMode):
@@ -47,22 +45,21 @@ class ClusterStatus(SecuredResourceReadonlyMode):
         with open(path) as current_report_file:
             current_report = json.load(current_report_file)
         if report_time < parse_datetime_string(current_report['timestamp']):
-            current_app.logger.error('The new report timestamp {0} is before'
-                                     ' the current report timestamp, {1}'.
-                                     format(report_time, TIMESTAMP_FORMAT))
+            current_app.logger.error('The new report timestamp `{}` is before'
+                                     ' the current report timestamp'.
+                                     format(report_time))
 
     @staticmethod
     def _verify_timestamp(report_time):
         if report_time > datetime.utcnow():
             raise manager_exceptions.BadParametersError(
-                'The report timestamp `{0}` is in the future, '
-                '{1}'.format(report_time, TIMESTAMP_FORMAT))
+                'The report timestamp `{}` is in the future'.
+                format(report_time))
 
     @staticmethod
     def _node_id_exists(node_id, model):
-        ids_list = get_storage_manager().exists(model,
-                                                filters={'node_id': node_id})
-        return True if len(ids_list) > 0 else False
+        return get_storage_manager().exists(model,
+                                            filters={'node_id': node_id})
 
     @authorize('cluster_status_put')
     def put(self, node_id, model, node_type):
