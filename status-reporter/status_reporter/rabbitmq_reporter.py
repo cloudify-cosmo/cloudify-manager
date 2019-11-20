@@ -13,7 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from cloudify_rest_client.cluster import CloudifyNodeType
+from cloudify.cluster_status import CloudifyNodeType
 
 from .status_reporter import Reporter
 
