@@ -121,7 +121,10 @@ def setup_resources(api):
         'RabbitMQBrokersId': 'brokers/<string:name>',
         'License': 'license',
         'Sites': 'sites',
-        'SitesName': 'sites/<string:name>'
+        'SitesName': 'sites/<string:name>',
+        'ManagerClusterStatus': 'cluster-status/manager/<string:node_id>',
+        'DbClusterStatus': 'cluster-status/db/<string:node_id>',
+        'BrokerClusterStatus': 'cluster-status/broker/<string:node_id>'
     }
 
     # Set version endpoint as a non versioned endpoint
