@@ -109,6 +109,7 @@ class Reporter(object):
 
     def _report_status(self, client, report):
         client.cluster_status.report_node_status(self._node_type, report)
+        return True
 
     def _get_cloudify_http_client(self, host):
         return CloudifyClient(host=host,
@@ -134,19 +135,21 @@ class Reporter(object):
         # If there is a malfunctioning manager,
         # let's try to avoid using the same manager always.
         random.shuffle(self._managers_ips)
+        reporting_result = False
         for manager_ip in self._managers_ips:
             try:
                 client = self._get_cloudify_http_client(manager_ip)
-                self._report_status(client, report)
-                self._update_managers_ips_list(client)
-                return
+                reporting_result = self._report_status(client, report)
             except Exception as e:
                 logger.debug('Error had occurred while trying to report '
-                             'status and update active managers-ips list: {}'
+                             'status: {0}'
                              .format(e))
-        logger.error('Could not find an active manager to '
-                     'report the current status,'
-                     ' tried %s', ','.join(self._managers_ips))
+        if reporting_result:
+            self._update_managers_ips_list(client)
+        else:
+            logger.error('Could not find an active manager to '
+                         'report the current status,'
+                         ' tried %s', ','.join(self._managers_ips))
 
     def run(self):
         while True:
