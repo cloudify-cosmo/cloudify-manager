@@ -61,7 +61,6 @@ class ClusterStatus(SecuredResourceReadonlyMode):
         return get_storage_manager().exists(model,
                                             filters={'node_id': node_id})
 
-    @authorize('cluster_status_put')
     def put(self, node_id, model, node_type):
         report_dict = self._get_request_dict()
         if not self._node_id_exists(node_id, model):
