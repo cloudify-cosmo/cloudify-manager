@@ -378,10 +378,7 @@ class TestSnapshot(AgentlessTestCase):
         self.assertFalse(runtime_only_evaluation)
 
     def test_v_5_0_5_restore_snapshot_v_4_6_0(self):
-        # import pydevd;
-        # pydevd.settrace('192.168.8.110', port=53100, stdoutToServer=True,
-        #                 stderrToServer=True, suspend=True)
-        snapshot_path = self._get_snapshot('snap_4_6_0_hello_world.zip ')
+        snapshot_path = self._get_snapshot('snap_4_6_0_hello_world.zip')
         self._upload_and_restore_snapshot(snapshot_path)
         docl.execute('cfy_manager restart --force')
         self.assertTrue(self._all_services_restarted_properly())
@@ -389,6 +386,7 @@ class TestSnapshot(AgentlessTestCase):
     def _all_services_restarted_properly(self):
         manager_status = self.client.manager.get_status()
         if manager_status['status'] == 'OK':
+            self.logger.info('All processes restarted properly')
             return True
         for display_name, service in manager_status['services'].items():
             if service['status'] == 'Active':
