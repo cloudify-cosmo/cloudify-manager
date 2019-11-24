@@ -55,9 +55,9 @@ from manager_rest.storage.storage_utils import (
 from manager_rest.constants import (
     DEFAULT_TENANT_NAME,
     CLOUDIFY_TENANT_HEADER,
-    DB_STATUS_REPORTER_ROLE,
-    BROKER_STATUS_REPORTER_ROLE,
-    MANAGER_STATUS_REPORTER_ROLE,
+    DB_STATUS_REPORTER,
+    BROKER_STATUS_REPORTER,
+    MANAGER_STATUS_REPORTER,
     FILE_SERVER_BLUEPRINTS_FOLDER,
 )
 from manager_rest import premium_enabled
@@ -83,9 +83,9 @@ permitted_roles = ['sys_admin', 'manager', 'user', 'operations', 'viewer']
 auth_dict = {
     'roles': [
         {'name': 'sys_admin', 'description': ''},
-        {'name': MANAGER_STATUS_REPORTER_ROLE, 'description': ''},
-        {'name': BROKER_STATUS_REPORTER_ROLE, 'description': ''},
-        {'name': DB_STATUS_REPORTER_ROLE, 'description': ''},
+        {'name': MANAGER_STATUS_REPORTER, 'description': ''},
+        {'name': BROKER_STATUS_REPORTER, 'description': ''},
+        {'name': DB_STATUS_REPORTER, 'description': ''},
         {'name': 'manager', 'description': ''},
         {'name': 'user', 'description': ''},
         {'name': 'viewer', 'description': ''},

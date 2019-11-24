@@ -27,8 +27,7 @@ from manager_rest.constants import (
     PROVIDER_CONTEXT_ID,
     DEFAULT_TENANT_NAME,
     CURRENT_TENANT_CONFIG,
-    MANAGER_STATUS_REPORTER_ROLE,
-    MANAGER_STATUS_REPORTER_USERNAME,
+    MANAGER_STATUS_REPORTER,
 )
 from manager_rest.storage.storage_utils import (
     create_default_user_tenant_and_roles,
@@ -86,12 +85,12 @@ def _add_defaults(app, amqp_manager, script_config):
         authorization_file_path=script_config['config']['authorization']
     )
     manager_reporter_user = models.User.query.filter_by(
-        username=MANAGER_STATUS_REPORTER_USERNAME).first()
+        username=MANAGER_STATUS_REPORTER).first()
     if not manager_reporter_user:
         create_status_reporter_user_and_assign_role(
-            MANAGER_STATUS_REPORTER_USERNAME,
+            MANAGER_STATUS_REPORTER,
             'password',
-            MANAGER_STATUS_REPORTER_ROLE
+            MANAGER_STATUS_REPORTER
         )
     for scope, configs in script_config['manager_config'].items():
         for name, value in configs.items():

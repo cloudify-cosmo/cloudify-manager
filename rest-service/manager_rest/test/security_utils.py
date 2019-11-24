@@ -19,13 +19,10 @@ from manager_rest.storage.models import Tenant, UserTenantAssoc
 from manager_rest.storage import user_datastore
 from manager_rest.constants import (
     DEFAULT_TENANT_ID,
+    DB_STATUS_REPORTER,
     DEFAULT_TENANT_ROLE,
-    DB_STATUS_REPORTER_ROLE,
-    BROKER_STATUS_REPORTER_ROLE,
-    DB_STATUS_REPORTER_USERNAME,
-    MANAGER_STATUS_REPORTER_ROLE,
-    BROKER_STATUS_REPORTER_USERNAME,
-    MANAGER_STATUS_REPORTER_USERNAME,
+    BROKER_STATUS_REPORTER,
+    MANAGER_STATUS_REPORTER,
 )
 
 
@@ -45,19 +42,19 @@ def get_admin_user():
 def get_status_reporters():
     return [
         {
-            'username': MANAGER_STATUS_REPORTER_USERNAME,
+            'username': MANAGER_STATUS_REPORTER,
             'password': 'password',
-            'role': MANAGER_STATUS_REPORTER_ROLE
+            'role': MANAGER_STATUS_REPORTER
         },
         {
-            'username': BROKER_STATUS_REPORTER_USERNAME,
+            'username': BROKER_STATUS_REPORTER,
             'password': 'password',
-            'role': BROKER_STATUS_REPORTER_ROLE
+            'role': BROKER_STATUS_REPORTER
         },
         {
-            'username': DB_STATUS_REPORTER_USERNAME,
+            'username': DB_STATUS_REPORTER,
             'password': 'password',
-            'role': DB_STATUS_REPORTER_ROLE
+            'role': DB_STATUS_REPORTER
         },
     ]
 
