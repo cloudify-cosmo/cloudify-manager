@@ -103,14 +103,14 @@ class ManagerClusterStatus(ClusterStatus):
 class DBClusterStatus(ClusterStatus):
     @authorize('db_cluster_status_put')
     def put(self, node_id):
-        super(DBClusterStatus, self).put(node_id,
-                                         models.DBNodes,
-                                         CloudifyNodeType.DB)
+        self._write_report(node_id,
+                           models.DBNodes,
+                           CloudifyNodeType.DB)
 
 
 class BrokerClusterStatus(ClusterStatus):
     @authorize('broker_cluster_status_put')
     def put(self, node_id):
-        super(BrokerClusterStatus, self).put(node_id,
-                                             models.RabbitMQBroker,
-                                             CloudifyNodeType.BROKER)
+        self._write_report(node_id,
+                           models.RabbitMQBroker,
+                           CloudifyNodeType.BROKER)
