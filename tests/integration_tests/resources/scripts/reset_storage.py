@@ -84,14 +84,11 @@ def _add_defaults(app, amqp_manager, script_config):
         amqp_manager=amqp_manager,
         authorization_file_path=script_config['config']['authorization']
     )
-    manager_reporter_user = models.User.query.filter_by(
-        username=MANAGER_STATUS_REPORTER).first()
-    if not manager_reporter_user:
-        create_status_reporter_user_and_assign_role(
-            MANAGER_STATUS_REPORTER,
-            'password',
-            MANAGER_STATUS_REPORTER
-        )
+    create_status_reporter_user_and_assign_role(
+        MANAGER_STATUS_REPORTER,
+        'password',
+        MANAGER_STATUS_REPORTER
+    )
     for scope, configs in script_config['manager_config'].items():
         for name, value in configs.items():
             item = (
