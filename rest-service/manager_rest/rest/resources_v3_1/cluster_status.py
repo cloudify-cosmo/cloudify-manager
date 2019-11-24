@@ -50,7 +50,7 @@ class ClusterStatus(SecuredResourceReadonlyMode):
         with open(path) as current_report_file:
             current_report = json.load(current_report_file)
         if report_time < parse_datetime_string(current_report['timestamp']):
-            current_app.logger.error('The new report timestamp `{}` is before'
+            current_app.logger.error('The new report timestamp `{0}` is before'
                                      ' the current report timestamp'.
                                      format(report_time))
 
