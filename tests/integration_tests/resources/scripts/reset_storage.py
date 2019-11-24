@@ -27,10 +27,9 @@ from manager_rest.constants import (
     PROVIDER_CONTEXT_ID,
     DEFAULT_TENANT_NAME,
     CURRENT_TENANT_CONFIG,
-    # TODO CY-1701: a temporary fix
-    # MANAGER_STATUS_REPORTER_ROLE,
+    MANAGER_STATUS_REPORTER_ROLE,
     MANAGER_STATUS_REPORTER_USERNAME,
-    STATUS_REPORTER_ROLE)
+)
 from manager_rest.storage.storage_utils import (
     create_default_user_tenant_and_roles,
     create_status_reporter_user_and_assign_role
@@ -92,9 +91,7 @@ def _add_defaults(app, amqp_manager, script_config):
         create_status_reporter_user_and_assign_role(
             MANAGER_STATUS_REPORTER_USERNAME,
             'password',
-            # TODO CY-1731: temporary fix until CY-1701 is merged
-            # MANAGER_STATUS_REPORTER_ROLE
-            STATUS_REPORTER_ROLE
+            MANAGER_STATUS_REPORTER_ROLE
         )
     for scope, configs in script_config['manager_config'].items():
         for name, value in configs.items():
