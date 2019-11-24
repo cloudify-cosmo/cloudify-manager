@@ -53,9 +53,9 @@ from manager_rest.storage.storage_utils import (
     create_status_reporter_user_and_assign_role
 )
 from manager_rest.constants import (
+    DB_STATUS_REPORTER,
     DEFAULT_TENANT_NAME,
     CLOUDIFY_TENANT_HEADER,
-    DB_STATUS_REPORTER,
     BROKER_STATUS_REPORTER,
     MANAGER_STATUS_REPORTER,
     FILE_SERVER_BLUEPRINTS_FOLDER,
