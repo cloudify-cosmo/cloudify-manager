@@ -56,7 +56,7 @@ from manager_rest.constants import (
     DEFAULT_TENANT_NAME,
     CLOUDIFY_TENANT_HEADER,
     DB_STATUS_REPORTER_ROLE,
-    QUEUE_STATUS_REPORTER_ROLE,
+    BROKER_STATUS_REPORTER_ROLE,
     MANAGER_STATUS_REPORTER_ROLE,
     FILE_SERVER_BLUEPRINTS_FOLDER,
 )
@@ -84,7 +84,7 @@ auth_dict = {
     'roles': [
         {'name': 'sys_admin', 'description': ''},
         {'name': MANAGER_STATUS_REPORTER_ROLE, 'description': ''},
-        {'name': QUEUE_STATUS_REPORTER_ROLE, 'description': ''},
+        {'name': BROKER_STATUS_REPORTER_ROLE, 'description': ''},
         {'name': DB_STATUS_REPORTER_ROLE, 'description': ''},
         {'name': 'manager', 'description': ''},
         {'name': 'user', 'description': ''},

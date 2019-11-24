@@ -34,14 +34,14 @@ DEFAULT_SYSTEM_ROLE = 'default'
 DEFAULT_TENANT_ROLE = 'user'
 
 BOOTSTRAP_ADMIN_ID = 0
-DB_STATUS_REPORTER_ROLE = 'database_status_reporter'
-DB_STATUS_REPORTER_USERNAME = 'database_status_reporter'
-QUEUE_STATUS_REPORTER_ROLE = 'queue_service_status_reporter'
-QUEUE_STATUS_REPORTER_USERNAME = 'queue_service_status_reporter'
+DB_STATUS_REPORTER_ROLE = 'db_status_reporter'
+DB_STATUS_REPORTER_USERNAME = 'db_status_reporter'
+BROKER_STATUS_REPORTER_ROLE = 'broker_status_reporter'
+BROKER_STATUS_REPORTER_USERNAME = 'broker_status_reporter'
 MANAGER_STATUS_REPORTER_ROLE = 'manager_status_reporter'
 MANAGER_STATUS_REPORTER_USERNAME = 'manager_status_reporter'
 STATUS_REPORTER_USERS = [DB_STATUS_REPORTER_USERNAME,
-                         QUEUE_STATUS_REPORTER_USERNAME,
+                         BROKER_STATUS_REPORTER_USERNAME,
                          MANAGER_STATUS_REPORTER_USERNAME]
 DEFAULT_TENANT_ID = 0
 

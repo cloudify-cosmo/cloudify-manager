@@ -21,10 +21,10 @@ from manager_rest.constants import (
     DEFAULT_TENANT_ID,
     DEFAULT_TENANT_ROLE,
     DB_STATUS_REPORTER_ROLE,
-    QUEUE_STATUS_REPORTER_ROLE,
+    BROKER_STATUS_REPORTER_ROLE,
     DB_STATUS_REPORTER_USERNAME,
     MANAGER_STATUS_REPORTER_ROLE,
-    QUEUE_STATUS_REPORTER_USERNAME,
+    BROKER_STATUS_REPORTER_USERNAME,
     MANAGER_STATUS_REPORTER_USERNAME,
 )
 
@@ -50,9 +50,9 @@ def get_status_reporters():
             'role': MANAGER_STATUS_REPORTER_ROLE
         },
         {
-            'username': QUEUE_STATUS_REPORTER_USERNAME,
+            'username': BROKER_STATUS_REPORTER_USERNAME,
             'password': 'password',
-            'role': QUEUE_STATUS_REPORTER_ROLE
+            'role': BROKER_STATUS_REPORTER_ROLE
         },
         {
             'username': DB_STATUS_REPORTER_USERNAME,
