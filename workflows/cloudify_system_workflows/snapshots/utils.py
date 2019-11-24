@@ -127,6 +127,10 @@ def copy_stage_files(archive_root):
             os.path.join(archive_root, 'stage', folder))
 
 
+def _ignore_stage_conf_directory_during_restore(stage_tempdir):
+    shutil.rmtree(os.path.join(stage_tempdir, 'conf'))
+
+
 def restore_stage_files(archive_root, override=False):
     """Copy Cloudify Stage files from the snapshot archive to stage folder.
 
@@ -145,6 +149,7 @@ def restore_stage_files(archive_root, override=False):
     stage_tempdir = '{0}_stage'.format(archive_root)
     shutil.copytree(stage_archive, stage_tempdir,
                     ignore=shutil.ignore_patterns('.stfolder'))
+    _ignore_stage_conf_directory_during_restore(stage_tempdir)
     run(['/bin/chmod', 'a+r', '-R', stage_tempdir])
     try:
         restore_command = [snapshot_constants.STAGE_RESTORE_SCRIPT,
@@ -180,18 +185,13 @@ def restore_composer_files(archive_root):
         # no composer files in the snapshot archive - nothing to do
         # (perhaps the snapshot was made before composer was included in it?)
         return
-    composer_data = [
-        snapshot_constants.COMPOSER_CONFIG_FOLDER,
-        snapshot_constants.COMPOSER_BLUEPRINTS_FOLDER,
-    ]
-    for folder in composer_data:
-        dest_path = os.path.join(snapshot_constants.COMPOSER_BASE_FOLDER,
-                                 folder)
-        copied = copy_snapshot_path(
-            os.path.join(archive_root, 'composer', folder),
-            dest_path)
-        if copied:
-            run(['/bin/chmod', '-R', 'g+w', dest_path])
+    bp_folder = snapshot_constants.COMPOSER_BLUEPRINTS_FOLDER
+    dest_path = os.path.join(snapshot_constants.COMPOSER_BASE_FOLDER,
+                             bp_folder)
+    copied = copy_snapshot_path(
+        os.path.join(archive_root, 'composer', bp_folder), dest_path)
+    if copied:
+        run(['/bin/chmod', '-R', 'g+w', dest_path])
 
 
 def copy_snapshot_path(source, destination):
