@@ -29,7 +29,9 @@ SERVICES = {
     'Management Worker': 'cloudify-mgmtworker.service',
     'PostgreSQL': 'postgresql-9.5.service',
     'RabbitMQ': 'cloudify-rabbitmq.service',
-    'Cloudify Composer': 'cloudify-composer.service'
+    'Cloudify Composer': 'cloudify-composer.service',
+    'Cloudify Console': 'cloudify-stage.service',
+    'AMQP-Postgres': 'cloudify-amqp-postgres.service'
 }
 
 
@@ -58,6 +60,8 @@ class TestManagerStatus(AgentlessTestCase):
     def test_status_service_inactive(self):
         """One of the systemd services is down"""
         self._test_service_inactive('Management Worker')
+        self._test_service_inactive('Cloudify Console')
+        self._test_service_inactive('AMQP-Postgres')
 
     def test_status_optional_service_inactive(self):
         """One of the optional systemd services is down"""
