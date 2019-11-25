@@ -26,6 +26,7 @@ import yaml
 from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.client import SECURED_PORT, SECURED_PROTOCOL
 
+from .utils import update_yaml_file, read_from_yaml_file
 from .constants import CONFIGURATION_PATH, STATUS_REPORTER
 
 LOGFILE = '/var/log/cloudify/status-reporter/reporter.log'
@@ -61,9 +62,8 @@ class Reporter(object):
         self.status_sampler = sampler
 
         try:
-            with open(CONFIGURATION_PATH) as f:
-                self._config = yaml.safe_load(f)
-        except yaml.YAMLError as e:
+            self._config = read_from_yaml_file(CONFIGURATION_PATH)
+        except Exception as e:
             issues.append('Failed loading status reporter\'s '
                           'configuration with the following: {0}'.format(e))
 
@@ -106,6 +106,9 @@ class Reporter(object):
         response = client.manager.get_managers()
         self._managers_ips = [manager.get('public_ip') for manager in
                               response.json()['items']]
+        update_yaml_file(CONFIGURATION_PATH, {
+            'managers_ips': self._managers_ips
+        })
 
     def _report_status(self, client, report):
         client.cluster_status.report_node_status(self._node_type, report)
