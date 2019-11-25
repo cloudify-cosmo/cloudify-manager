@@ -13,13 +13,23 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from cloudify_rest_client import CloudifyClient
 from cloudify.cluster_status import CloudifyNodeType
+from cloudify_rest_client.client import SECURED_PORT, SECURED_PROTOCOL
 
 from .status_reporter import Reporter
 
 
-def collect_status():
-    pass
+def collect_status(reporter_credentials):
+    client = CloudifyClient(host='localhost',
+                            username=reporter_credentials.get('username'),
+                            token=reporter_credentials.get('token'),
+                            cert=reporter_credentials.get('ca_path'),
+                            tenant='default_tenant',
+                            port=SECURED_PORT,
+                            protocol=SECURED_PROTOCOL
+                            )
+    return client.manager.get_status()
 
 
 def main():

@@ -53,7 +53,7 @@ class InitializationError(Exception):
 
 
 class Reporter(object):
-    def __init__(self, sampler, node_type):
+    def __init__(self, sampler, node_type, collect_node_credentials):
         issues = []
         if not callable(sampler):
             issues.append('Reporter expected a callable sampler,'
@@ -96,6 +96,11 @@ class Reporter(object):
             raise InitializationError('Failed initialization of status '
                                       'reporter due to:\n {issues}'.
                                       format(issues='\n'.join(issues)))
+        self._reporter_credentials = {
+            'username': self._cloudify_user_name,
+            'token': self._token,
+            'ca_path': self._ca_path
+        }
 
     def _build_report(self, status):
         return {'reporting_freq': self._current_reporting_freq,
@@ -124,7 +129,7 @@ class Reporter(object):
                               )
 
     def _report(self):
-        status = self.status_sampler()
+        status = self.status_sampler(self._reporter_credentials)
         if not isinstance(status, dict):
             logger.error('Ignoring status: expected a report in dict format,'
                          ' got %s', status)
