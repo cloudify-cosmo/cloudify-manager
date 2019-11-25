@@ -26,10 +26,13 @@ from manager_rest.manager_exceptions import (BadParametersError,
                                              MethodNotAllowedError,
                                              UnauthorizedError,
                                              NotFoundError)
-from manager_rest.constants import (FILE_SERVER_BLUEPRINTS_FOLDER,
-                                    FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
-                                    FILE_SERVER_DEPLOYMENTS_FOLDER,
-                                    FILE_SERVER_TENANT_RESOURCES_FOLDER)
+from manager_rest.constants import (
+    STATUS_REPORTER_USERS,
+    FILE_SERVER_BLUEPRINTS_FOLDER,
+    FILE_SERVER_DEPLOYMENTS_FOLDER,
+    FILE_SERVER_TENANT_RESOURCES_FOLDER,
+    FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
+)
 
 from .. import rest_decorators, rest_utils
 from ...security.authentication import authenticator
@@ -162,16 +165,17 @@ class LdapAuthentication(SecuredResource):
         return 'enabled' if config.instance.ldap_server else 'disabled'
 
     @staticmethod
-    def _only_admin_in_manager():
+    def _only_system_reserved_users_in_manager():
         """
-        True if no users other than the admin user exists.
+        True if no users other than the system reserved user exists.
         :return:
         """
         users = get_storage_manager().list(models.User)
-        return len(users) == 1
+        return all(user.username in STATUS_REPORTER_USERS or user.id == 0
+                   for user in users)
 
     def _validate_set_ldap_request(self):
-        if not self._only_admin_in_manager():
+        if not self._only_system_reserved_users_in_manager():
             raise MethodNotAllowedError('LDAP Configuration may be set only on'
                                         ' a clean manager.')
         if not premium_enabled:

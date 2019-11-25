@@ -85,6 +85,10 @@ def create_status_reporter_user_and_assign_role(username, password, role):
     default_tenant = Tenant.query.filter_by(
         id=constants.DEFAULT_TENANT_ID).first()
     reporter_role = user_datastore.find_role(role)
+    if not reporter_role:
+        raise NotFoundError("The username \"{0}\" cannot have the role \"{1}\""
+                            " as the role doesn't exist"
+                            "".format(username, role))
     user_tenant_association = UserTenantAssoc(
         user=user,
         tenant=default_tenant,

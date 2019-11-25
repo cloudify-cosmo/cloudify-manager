@@ -28,8 +28,9 @@ from flask_security import SQLAlchemyUserDatastore, UserMixin, RoleMixin
 
 from manager_rest import config
 from manager_rest.constants import (
-    BOOTSTRAP_ADMIN_ID,
     DEFAULT_TENANT_ID,
+    BOOTSTRAP_ADMIN_ID,
+    STATUS_REPORTER_USERS,
 )
 
 from .idencoder import get_encoder
@@ -444,6 +445,10 @@ class User(SQLModelBase, UserMixin):
     @property
     def is_bootstrap_admin(self):
         return self.id == BOOTSTRAP_ADMIN_ID
+
+    @property
+    def is_system_reserved_user(self):
+        return self.username in STATUS_REPORTER_USERS
 
     @property
     def is_locked(self):

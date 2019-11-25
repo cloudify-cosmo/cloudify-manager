@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -34,6 +34,12 @@ DEFAULT_SYSTEM_ROLE = 'default'
 DEFAULT_TENANT_ROLE = 'user'
 
 BOOTSTRAP_ADMIN_ID = 0
+DB_STATUS_REPORTER = 'db_status_reporter'
+BROKER_STATUS_REPORTER = 'broker_status_reporter'
+MANAGER_STATUS_REPORTER = 'manager_status_reporter'
+STATUS_REPORTER_USERS = [DB_STATUS_REPORTER,
+                         BROKER_STATUS_REPORTER,
+                         MANAGER_STATUS_REPORTER]
 DEFAULT_TENANT_ID = 0
 
 REST_SERVICE_NAME = 'cloudify-restservice'

@@ -1,17 +1,17 @@
-########
-# Copyright (c) 2015 GigaSpaces Technologies Ltd. All rights reserved
+#########
+# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#        http://www.apache.org/licenses/LICENSE-2.0
+#       http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  * See the License for the specific language governing permissions and
+#  * limitations under the License.
 
 from flask_security.utils import hash_password
 
@@ -19,7 +19,10 @@ from manager_rest.storage.models import Tenant, UserTenantAssoc
 from manager_rest.storage import user_datastore
 from manager_rest.constants import (
     DEFAULT_TENANT_ID,
+    DB_STATUS_REPORTER,
     DEFAULT_TENANT_ROLE,
+    BROKER_STATUS_REPORTER,
+    MANAGER_STATUS_REPORTER,
 )
 
 
@@ -30,10 +33,30 @@ USER_IN_TENANT_ROLE = 'user'
 
 def get_admin_user():
     return {
-            'username': 'admin',
-            'password': 'admin',
-            'role': ADMIN_ROLE
+        'username': 'admin',
+        'password': 'admin',
+        'role': ADMIN_ROLE
     }
+
+
+def get_status_reporters():
+    return [
+        {
+            'username': MANAGER_STATUS_REPORTER,
+            'password': 'password',
+            'role': MANAGER_STATUS_REPORTER
+        },
+        {
+            'username': BROKER_STATUS_REPORTER,
+            'password': 'password',
+            'role': BROKER_STATUS_REPORTER
+        },
+        {
+            'username': DB_STATUS_REPORTER,
+            'password': 'password',
+            'role': DB_STATUS_REPORTER
+        },
+    ]
 
 
 def get_test_users():

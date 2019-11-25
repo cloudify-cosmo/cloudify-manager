@@ -23,12 +23,16 @@ from flask_migrate import upgrade
 from manager_rest import config
 from manager_rest.amqp_manager import AMQPManager
 from manager_rest.flask_utils import setup_flask_app
-from manager_rest.constants import (PROVIDER_CONTEXT_ID,
-                                    CURRENT_TENANT_CONFIG,
-                                    DEFAULT_TENANT_NAME)
-from manager_rest.storage.storage_utils import \
-    create_default_user_tenant_and_roles
-
+from manager_rest.constants import (
+    PROVIDER_CONTEXT_ID,
+    DEFAULT_TENANT_NAME,
+    CURRENT_TENANT_CONFIG,
+    MANAGER_STATUS_REPORTER,
+)
+from manager_rest.storage.storage_utils import (
+    create_default_user_tenant_and_roles,
+    create_status_reporter_user_and_assign_role
+)
 
 # This is a hacky way to get to the migrations folder
 migrations_dir = '/opt/manager/resources/cloudify/migrations'
@@ -79,6 +83,11 @@ def _add_defaults(app, amqp_manager, script_config):
         admin_password=script_config['password'],
         amqp_manager=amqp_manager,
         authorization_file_path=script_config['config']['authorization']
+    )
+    create_status_reporter_user_and_assign_role(
+        MANAGER_STATUS_REPORTER,
+        'password',
+        MANAGER_STATUS_REPORTER
     )
     for scope, configs in script_config['manager_config'].items():
         for name, value in configs.items():
