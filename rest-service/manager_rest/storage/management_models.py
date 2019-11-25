@@ -588,7 +588,27 @@ class _WithCACert(object):
         return f.name
 
 
-class Manager(_WithCACert, SQLModelBase):
+class CloudifyNodeMixin(object):
+    """A mixin for Cloudify cluster node objects."""
+
+    @property
+    def name(self):
+        return None
+
+    @property
+    def is_external(self):
+        return None
+
+    @property
+    def public_ip(self):
+        return None
+
+    @property
+    def private_ip(self):
+        return None
+
+
+class Manager(_WithCACert, SQLModelBase, CloudifyNodeMixin):
     __tablename__ = 'managers'
 
     id = db.Column(db.Integer, autoincrement=True, primary_key=True)
@@ -603,8 +623,16 @@ class Manager(_WithCACert, SQLModelBase):
     networks = db.Column(JSONString)
     node_id = db.Column(db.Text, unique=True, nullable=False)
 
+    @property
+    def name(self):
+        return self.hostname
 
-class RabbitMQBroker(_WithCACert, SQLModelBase):
+    @property
+    def is_external(self):
+        return False
+
+
+class RabbitMQBroker(_WithCACert, SQLModelBase, CloudifyNodeMixin):
     __tablename__ = 'rabbitmq_brokers'
 
     name = db.Column(db.Text, primary_key=True)
@@ -627,8 +655,12 @@ class RabbitMQBroker(_WithCACert, SQLModelBase):
     def _get_identifier_dict(self):
         return {'name': self.name}
 
+    @property
+    def private_ip(self):
+        return self.host
 
-class DBNodes(SQLModelBase):
+
+class DBNodes(SQLModelBase, CloudifyNodeMixin):
     __tablename__ = 'db_nodes'
 
     name = db.Column(db.Text, primary_key=True)
@@ -642,6 +674,10 @@ class DBNodes(SQLModelBase):
 
     def _get_identifier_dict(self):
         return {'name': self.name}
+
+    @property
+    def private_ip(self):
+        return self.host
 
 
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)

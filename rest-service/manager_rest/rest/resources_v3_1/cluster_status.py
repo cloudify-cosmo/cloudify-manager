@@ -12,24 +12,23 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-#
 
-import os
-import json
-from datetime import datetime
 
-from flask import current_app
+from flask import request
+from flask_restful_swagger import swagger
 
 from cloudify.cluster_status import CloudifyNodeType
 
-from manager_rest import manager_exceptions
+from manager_rest.rest import responses
+from manager_rest.storage import models
 from manager_rest.security.authorization import authorize
-from manager_rest.storage import models, get_storage_manager
+from manager_rest.rest.rest_decorators import marshal_with
 from manager_rest.security import SecuredResourceReadonlyMode
-from manager_rest.rest.rest_utils import (get_json_and_verify_params,
-                                          parse_datetime_string)
+from manager_rest.cluster_status_manager import (get_cluster_status,
+                                                 write_status_report)
 
-STATUSES_PATH = '/opt/manager/resources/cluster_status'
+from manager_rest.rest.rest_utils import (verify_and_convert_bool,
+                                          get_json_and_verify_params)
 
 
 class ClusterStatus(SecuredResourceReadonlyMode):
@@ -42,54 +41,31 @@ class ClusterStatus(SecuredResourceReadonlyMode):
         })
         return request_dict
 
-    @staticmethod
-    def _verify_report_newer_than_current(report_time, path):
-        if not (os.path.exists(path) and os.path.isfile(path)):
-            # Nothing to do if the file does not exists
-            return
-        with open(path) as current_report_file:
-            current_report = json.load(current_report_file)
-        if report_time < parse_datetime_string(current_report['timestamp']):
-            current_app.logger.error('The new report timestamp `{0}` is before'
-                                     ' the current report timestamp'.
-                                     format(report_time))
-
-    @staticmethod
-    def _verify_timestamp(report_time):
-        if report_time > datetime.utcnow():
-            raise manager_exceptions.BadParametersError(
-                'The report timestamp `{0}` is in the future'.
-                format(report_time))
-
-    @staticmethod
-    def _verify_node_exists(node_id, model):
-        if not get_storage_manager().exists(model,
-                                            filters={'node_id': node_id}):
-            raise manager_exceptions.BadParametersError(
-                'The given node id {0} is invalid'.format(node_id))
-
-    @staticmethod
-    def _create_statues_folder_if_needed():
-        if not os.path.exists(STATUSES_PATH):
-            os.makedirs(STATUSES_PATH)
-
-    @staticmethod
-    def _save_report(path, report_dict):
-        with open(path, 'w') as report_file:
-            json.dump(report_dict, report_file)
-
     def _write_report(self, node_id, model, node_type):
-        self._create_statues_folder_if_needed()
-        self._verify_node_exists(node_id, model)
         report_dict = self._get_request_dict()
-        report_time = parse_datetime_string(report_dict['timestamp'])
-        self._verify_timestamp(report_time)
-        path = '{status_path}/{node_type}_{node_id}.json'.format(
-            status_path=STATUSES_PATH, node_type=node_type, node_id=node_id)
-        self._verify_report_newer_than_current(report_time, path)
-        self._save_report(path, report_dict)
-        current_app.logger.info('Received new status report for '
-                                '{0} of type {1}'.format(node_id, node_type))
+        write_status_report(node_id, model, node_type, report_dict)
+
+    @swagger.operation(
+        responseClass=responses.Status,
+        nickname="cluster-status",
+        notes="Returns state of the Cloudify cluster"
+    )
+    @authorize('cluster_status_get')
+    @marshal_with(responses.Status)
+    def get(self):
+        """Get the status of the entire cloudify cluster"""
+        summary_response = verify_and_convert_bool(
+            'summary',
+            request.args.get('summary', False)
+        )
+
+        cluster_status = get_cluster_status()
+
+        # If the response should be only the summary - mainly for LB
+        if summary_response:
+            return {'status': cluster_status['status'], 'services': {}}
+
+        return cluster_status
 
 
 class ManagerClusterStatus(ClusterStatus):

@@ -80,3 +80,5 @@ from .operations import (                        # NOQA
 )
 
 from .status import Status                       # NOQA
+
+from .cluster_status import ClusterStatus        # NOQA

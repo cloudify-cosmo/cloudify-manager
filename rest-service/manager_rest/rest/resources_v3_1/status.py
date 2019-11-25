@@ -20,6 +20,9 @@ from flask import request
 from flask import current_app
 from flask_restful_swagger import swagger
 
+from cloudify.cluster_status import (ServiceStatus,
+                                     NodeServiceStatus)
+
 from manager_rest.rest import responses
 from manager_rest.utils import get_amqp_client
 from manager_rest.security.authorization import authorize
@@ -61,10 +64,6 @@ OPTIONAL_SERVICES = {
     'cloudify-composer.service': 'Cloudify Composer',
     'cloudify-syncthing.service': 'File Sync Service'
 }
-ACTIVE_STATE = 'Active'
-INACTIVE_STATE = 'Inactive'
-HEALTHY_STATE = 'OK'
-FAIL_STATE = 'FAIL'
 
 
 class Status(SecuredResourceReadonlyMode):
@@ -84,16 +83,17 @@ class Status(SecuredResourceReadonlyMode):
         )
         # Systemd should be available on every manager
         if not get_services:
-            return {'status': FAIL_STATE, 'services': {}}
+            return {'status': ServiceStatus.FAIL, 'services': {}}
 
         services = {}
         systemd_statuses = self._check_systemd_services(services)
         rabbitmq_status = self._check_rabbitmq(services)
 
         # Passing our authentication implies PostgreSQL is healthy
-        self._add_or_update_service(services, 'PostgreSQL', ACTIVE_STATE)
+        self._add_or_update_service(services, 'PostgreSQL',
+                                    NodeServiceStatus.ACTIVE)
 
-        syncthing_status = ACTIVE_STATE
+        syncthing_status = NodeServiceStatus.ACTIVE
         if ha_utils and ha_utils.is_clustered():
             syncthing_status = self._check_syncthing(services)
 
@@ -115,7 +115,8 @@ class Status(SecuredResourceReadonlyMode):
             if should_be_in_services_output(service, OPTIONAL_SERVICES):
                 is_service_running = service['instances'] and (
                         service['instances'][0]['state'] == 'running')
-                status = ACTIVE_STATE if is_service_running else INACTIVE_STATE
+                status = NodeServiceStatus.ACTIVE if is_service_running \
+                    else NodeServiceStatus.INACTIVE
                 services[service['display_name']] = {
                     'status': status,
                     'is_remote': False,
@@ -131,22 +132,26 @@ class Status(SecuredResourceReadonlyMode):
         client = get_amqp_client()
         try:
             with client:
-                extra_info = {'connection_check': HEALTHY_STATE}
-                self._add_or_update_service(services, name, ACTIVE_STATE,
+                extra_info = {'connection_check': ServiceStatus.HEALTHY}
+                self._add_or_update_service(services,
+                                            name,
+                                            NodeServiceStatus.ACTIVE,
                                             extra_info=extra_info)
-                return ACTIVE_STATE
+                return NodeServiceStatus.ACTIVE
         except Exception as err:
             error_message = 'Broker check failed with {err_type}: ' \
                             '{err_msg}'.format(err_type=type(err),
                                                err_msg=str(err))
             current_app.logger.error(error_message)
             extra_info = {'connection_check': error_message}
-            self._add_or_update_service(services, name, INACTIVE_STATE,
+            self._add_or_update_service(services,
+                                        name,
+                                        NodeServiceStatus.INACTIVE,
                                         extra_info=extra_info)
-            return INACTIVE_STATE
+            return NodeServiceStatus.INACTIVE
 
     def _check_syncthing(self, services):
-        status = INACTIVE_STATE
+        status = NodeServiceStatus.INACTIVE
         display_name = 'File Sync Service'
 
         try:
@@ -171,11 +176,11 @@ class Status(SecuredResourceReadonlyMode):
 
             # Syncthing is valid when at least one device was seen recently
             if last_seen > min_last_seen:
-                status = ACTIVE_STATE
+                status = NodeServiceStatus.ACTIVE
                 break
 
-        extra_info = {'connection_check': HEALTHY_STATE}
-        if status == INACTIVE_STATE:
+        extra_info = {'connection_check': ServiceStatus.HEALTHY}
+        if status == NodeServiceStatus.INACTIVE:
             extra_info = {'connection_check': 'No device was seen recently'}
 
         self._add_or_update_service(services, display_name, status,
@@ -185,7 +190,8 @@ class Status(SecuredResourceReadonlyMode):
     def _get_manager_status(self, systemd_statuses, rabbitmq_status,
                             syncthing_status):
         statuses = systemd_statuses + [rabbitmq_status, syncthing_status]
-        return FAIL_STATE if INACTIVE_STATE in statuses else HEALTHY_STATE
+        return (ServiceStatus.FAIL if NodeServiceStatus.INACTIVE in statuses
+                else ServiceStatus.HEALTHY)
 
     def _add_or_update_service(self, services, display_name, status,
                                extra_info=None):
