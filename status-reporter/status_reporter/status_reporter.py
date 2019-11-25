@@ -21,8 +21,6 @@ import random
 import logging
 from logging.handlers import WatchedFileHandler
 
-import yaml
-
 from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.client import SECURED_PORT, SECURED_PROTOCOL
 
