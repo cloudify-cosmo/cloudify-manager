@@ -16,14 +16,10 @@
 import time
 
 from cloudify_rest_client.exceptions import CloudifyClientError
+from cloudify.cluster_status import ServiceStatus, NodeServiceStatus
 
 from integration_tests import AgentlessTestCase
 
-
-ACTIVE_STATE = 'Active'
-INACTIVE_STATE = 'Inactive'
-HEALTHY_STATE = 'OK'
-FAIL_STATE = 'FAIL'
 
 SERVICES = {
     'Management Worker': 'cloudify-mgmtworker.service',
@@ -39,7 +35,7 @@ class TestManagerStatus(AgentlessTestCase):
 
     def test_status_response(self):
         manager_status = self.client.manager.get_status()
-        self.assertEqual(manager_status['status'], HEALTHY_STATE)
+        self.assertEqual(manager_status['status'], ServiceStatus.HEALTHY)
 
         # Services for all-in-one premium manager
         services = ['Webserver', 'Cloudify Console', 'AMQP-Postgres',
@@ -48,7 +44,7 @@ class TestManagerStatus(AgentlessTestCase):
         self.assertEqual(len(manager_status['services'].keys()), len(services))
         statuses = [manager_status['services'][service]['status']
                     for service in services]
-        self.assertNotIn(INACTIVE_STATE, statuses)
+        self.assertNotIn(NodeServiceStatus.INACTIVE, statuses)
 
         services_status = manager_status['services'].values()
         remote_values = [service['is_remote'] for service in services_status]
@@ -93,13 +89,15 @@ class TestManagerStatus(AgentlessTestCase):
     def _test_service_inactive(self, service):
         self._stop_service(service)
         status = self.client.manager.get_status()
-        self.assertEqual(status['status'], FAIL_STATE)
-        self.assertEqual(status['services'][service]['status'], INACTIVE_STATE)
+        self.assertEqual(status['status'], ServiceStatus.FAIL)
+        self.assertEqual(status['services'][service]['status'],
+                         NodeServiceStatus.INACTIVE)
 
         self._start_service(service)
 
     def _start_service(self, service):
         self.execute_on_manager('systemctl start {}'.format(SERVICES[service]))
         status = self.client.manager.get_status()
-        self.assertEqual(status['status'], HEALTHY_STATE)
-        self.assertEqual(status['services'][service]['status'], ACTIVE_STATE)
+        self.assertEqual(status['status'], ServiceStatus.HEALTHY)
+        self.assertEqual(status['services'][service]['status'],
+                         NodeServiceStatus.ACTIVE)

@@ -20,8 +20,7 @@ from flask import request
 from flask import current_app
 from flask_restful_swagger import swagger
 
-from cloudify.cluster_status import (ServiceStatus,
-                                     NodeServiceStatus)
+from cloudify.cluster_status import ServiceStatus, NodeServiceStatus
 
 from manager_rest.rest import responses
 from manager_rest.utils import get_amqp_client
