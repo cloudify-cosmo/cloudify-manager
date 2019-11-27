@@ -15,10 +15,10 @@
 
 from os.path import join
 from integration_tests.framework import docl
+from integration_tests.tests.constants import MANAGER_PYTHON
 from integration_tests.tests.utils import (assert_messages_in_log,
                                            get_resource as resource)
 
-MANAGER_PYTHON = '/opt/manager/env/bin/python'
 COLLECTOR_SCRIPTS = ['collect_cloudify_uptime', 'collect_cloudify_usage']
 SCRIPTS_DESTINATION_PATH = '/opt/cloudify/usage_collector'
 LOG_PATH = '/var/log/cloudify/usage_collector'

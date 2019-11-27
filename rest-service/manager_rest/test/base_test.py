@@ -37,8 +37,13 @@ from flask.testing import FlaskClient
 from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.exceptions import CloudifyClientError
 
-from cloudify.constants import CLOUDIFY_EXECUTION_TOKEN_HEADER
 from cloudify.models_states import ExecutionState, VisibilityState
+from cloudify.constants import (
+    DB_STATUS_REPORTER,
+    BROKER_STATUS_REPORTER,
+    MANAGER_STATUS_REPORTER,
+    CLOUDIFY_EXECUTION_TOKEN_HEADER,
+)
 
 from manager_rest import server
 from manager_rest.rest import rest_utils
@@ -53,11 +58,8 @@ from manager_rest.storage.storage_utils import (
     create_status_reporter_user_and_assign_role
 )
 from manager_rest.constants import (
-    DB_STATUS_REPORTER,
     DEFAULT_TENANT_NAME,
     CLOUDIFY_TENANT_HEADER,
-    BROKER_STATUS_REPORTER,
-    MANAGER_STATUS_REPORTER,
     FILE_SERVER_BLUEPRINTS_FOLDER,
 )
 from manager_rest import premium_enabled

@@ -16,6 +16,7 @@
 import os
 
 from integration_tests import AgentlessTestCase
+from integration_tests.tests.constants import MANAGER_PYTHON
 from integration_tests.tests.utils import get_resource as resource
 
 
@@ -71,9 +72,8 @@ class TestRuntimeFunctionEvaluation(AgentlessTestCase):
         self.copy_file_to_manager(update_script, '/tmp/update_deployment.py')
 
         self.execute_on_manager(
-            '/opt/manager/env/bin/python /tmp/update_deployment.py '
-            '--deployment-id {0}'
-            .format(deployment.id))
+            '{0} /tmp/update_deployment.py --deployment-id {1}'
+            ''.format(MANAGER_PYTHON, deployment.id))
 
     def _update_deployment(self, deployment, skip=False):
         new_bp_path = os.path.join(

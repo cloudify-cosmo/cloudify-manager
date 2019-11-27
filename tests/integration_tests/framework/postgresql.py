@@ -26,7 +26,7 @@ logger = setup_logger('postgresql', logging.INFO)
 setup_logger('postgresql.trace', logging.INFO)
 
 
-def run_query(query, db_name=None):
+def run_query(query, db_name=None, fetch_results=True):
     conf = get_postgres_conf()
     manager_ip = utils.get_manager_ip()
 
@@ -40,9 +40,9 @@ def run_query(query, db_name=None):
         with closing(con.cursor()) as cur:
             try:
                 cur.execute(query)
-                fetchall = cur.fetchall()
+                fetchall = cur.fetchall() if fetch_results else None
                 status_message = 'ok'
-            except Exception, e:
+            except Exception as e:
                 fetchall = None
                 status_message = str(e)
             return {'status': status_message, 'all': fetchall}

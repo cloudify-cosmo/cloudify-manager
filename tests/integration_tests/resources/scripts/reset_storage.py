@@ -14,20 +14,21 @@
 #    * limitations under the License.
 
 import json
-import argparse
 import subprocess
 
-from manager_rest.storage import db, models
-
+import argparse
 from flask_migrate import upgrade
+
+from cloudify.constants import MANAGER_STATUS_REPORTER
+
 from manager_rest import config
+from manager_rest.storage import db, models
 from manager_rest.amqp_manager import AMQPManager
 from manager_rest.flask_utils import setup_flask_app
 from manager_rest.constants import (
     PROVIDER_CONTEXT_ID,
     DEFAULT_TENANT_NAME,
     CURRENT_TENANT_CONFIG,
-    MANAGER_STATUS_REPORTER,
 )
 from manager_rest.storage.storage_utils import (
     create_default_user_tenant_and_roles,

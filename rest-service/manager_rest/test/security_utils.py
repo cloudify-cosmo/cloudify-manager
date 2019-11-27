@@ -15,16 +15,18 @@
 
 from flask_security.utils import hash_password
 
-from manager_rest.storage.models import Tenant, UserTenantAssoc
-from manager_rest.storage import user_datastore
-from manager_rest.constants import (
-    DEFAULT_TENANT_ID,
+from cloudify.constants import (
     DB_STATUS_REPORTER,
-    DEFAULT_TENANT_ROLE,
     BROKER_STATUS_REPORTER,
     MANAGER_STATUS_REPORTER,
 )
 
+from manager_rest.storage.models import Tenant, UserTenantAssoc
+from manager_rest.storage import user_datastore
+from manager_rest.constants import (
+    DEFAULT_TENANT_ID,
+    DEFAULT_TENANT_ROLE,
+)
 
 ADMIN_ROLE = 'sys_admin'
 USER_ROLE = 'default'
