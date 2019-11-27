@@ -19,6 +19,7 @@ import time
 import json
 import random
 import logging
+import datetime
 from logging.handlers import WatchedFileHandler
 
 from cloudify.constants import CLOUDIFY_API_AUTH_TOKEN_HEADER
@@ -107,6 +108,7 @@ class Reporter(object):
 
     def _build_report(self, status):
         return {'reporting_freq': self._current_reporting_freq,
+                'timestamp': datetime.datetime.utcnow().strftime('%Y%m%d%H%M+0000'),
                 'report': status}
 
     def _update_managers_ips_list(self, client):
