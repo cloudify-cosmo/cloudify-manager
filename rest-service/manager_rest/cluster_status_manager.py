@@ -32,10 +32,10 @@ from manager_rest.rest.rest_utils import parse_datetime_string
 DB_SERVICE_KEY = 'PostgreSQL'
 BROKER_SERVICE_KEY = 'RabbitMQ'
 UNINITIALIZED_STATUS = 'Uninitialized'
-CLUSTER_STATUS_PATH = '/opt/manager/resources/cluster_status'
+CLUSTER_STATUS_PATH = '/opt/cloudify/cluster_statuses'
 
 
-def _get_report_path(node_type, node_id):
+def get_report_path(node_type, node_id):
     return '{status_path}/{node_type}_{node_id}.json'.format(
         status_path=CLUSTER_STATUS_PATH, node_type=node_type, node_id=node_id
     )
@@ -79,7 +79,7 @@ def _generate_service_nodes_status(service_type, service_nodes, cluster_status,
 
 def _read_status_report(node, service_type, formatted_nodes, cloudify_version,
                         missing_status_reports):
-    status_file_path = _get_report_path(service_type, node.node_id)
+    status_file_path = get_report_path(service_type, node.node_id)
     if not path.exists(status_file_path):
         _add_missing_status_reports(node,
                                     formatted_nodes,
@@ -337,7 +337,7 @@ def write_status_report(node_id, model, node_type, report_dict):
     _verify_node_exists(node_id, model)
     report_time = parse_datetime_string(report_dict['timestamp'])
     _verify_timestamp(report_time)
-    report_path = _get_report_path(node_type, node_id)
+    report_path = get_report_path(node_type, node_id)
     _verify_report_newer_than_current(report_time, report_path)
     _save_report(report_path, report_dict)
     current_app.logger.info('Successfully updated the status report for '
