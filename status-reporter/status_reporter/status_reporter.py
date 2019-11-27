@@ -21,6 +21,8 @@ import random
 import logging
 from logging.handlers import WatchedFileHandler
 
+from cloudify.constants import CLOUDIFY_API_AUTH_TOKEN_HEADER
+
 from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.client import SECURED_PORT, SECURED_PROTOCOL
 
@@ -53,7 +55,7 @@ class InitializationError(Exception):
 
 
 class Reporter(object):
-    def __init__(self, sampler, node_type, collect_node_credentials):
+    def __init__(self, sampler, node_type):
         issues = []
         if not callable(sampler):
             issues.append('Reporter expected a callable sampler,'
@@ -122,7 +124,8 @@ class Reporter(object):
     def _get_cloudify_http_client(self, host):
         return CloudifyClient(host=host,
                               username=self._cloudify_user_name,
-                              token=self._token,
+                              headers={CLOUDIFY_API_AUTH_TOKEN_HEADER:
+                                       self._token},
                               cert=self._ca_path,
                               tenant='default_tenant',
                               port=SECURED_PORT,
