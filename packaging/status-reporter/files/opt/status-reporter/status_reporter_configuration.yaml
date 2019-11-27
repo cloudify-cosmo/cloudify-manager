@@ -3,3 +3,4 @@ token:
 ca_path:
 managers_ips:
 reporting_freq: 5
+node_id:

@@ -96,6 +96,7 @@ class Reporter(object):
             raise InitializationError('Failed initialization of status '
                                       'reporter due to:\n {issues}'.
                                       format(issues='\n'.join(issues)))
+        self._node_id = self._config.get('node_id', None)
         self._reporter_credentials = {
             'username': self._cloudify_user_name,
             'token': self._token,
@@ -115,7 +116,7 @@ class Reporter(object):
         })
 
     def _report_status(self, client, report):
-        client.cluster_status.report_node_status(self._node_type, report)
+        client.cluster_status.report_node_status(self._node_type, self._node_id, report)
         return True
 
     def _get_cloudify_http_client(self, host):
