@@ -106,10 +106,12 @@ class Reporter(object):
             'ca_path': self._ca_path
         }
 
-    def _build_report(self, status):
+    def _build_report(self, status, services):
         return {'reporting_freq': self._current_reporting_freq,
                 'timestamp': datetime.datetime.utcnow().strftime('%Y%m%d%H%M+0000'),
-                'report': status}
+                'report': {'status': status,
+                           'services': services}
+                }
 
     def _update_managers_ips_list(self, client):
         response = client.manager.get_managers()
@@ -135,13 +137,13 @@ class Reporter(object):
                               )
 
     def _report(self):
-        status = self.status_sampler(self._reporter_credentials)
+        status, services = self.status_sampler(self._reporter_credentials)
         if not isinstance(status, dict):
             logger.error('Ignoring status: expected a report in dict format,'
                          ' got %s', status)
             return
 
-        report = self._build_report(status)
+        report = self._build_report(status, services)
         if report is None:
             return
 

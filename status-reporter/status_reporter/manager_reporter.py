@@ -32,7 +32,8 @@ def collect_status(reporter_credentials):
                             port=INTERNAL_REST_PORT,
                             protocol=SECURED_PROTOCOL
                             )
-    return client.manager.get_status()
+    report = client.manager.get_status()
+    return report['status'], report['services']
 
 
 def main():
