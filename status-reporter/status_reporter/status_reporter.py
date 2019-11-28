@@ -106,9 +106,13 @@ class Reporter(object):
             'ca_path': self._ca_path
         }
 
+    @staticmethod
+    def _generate_timestamp():
+        return datetime.datetime.utcnow().strftime('%Y%m%d%H%M+0000')
+
     def _build_report(self, status, services):
         return {'reporting_freq': self._current_reporting_freq,
-                'timestamp': datetime.datetime.utcnow().strftime('%Y%m%d%H%M+0000'),
+                'timestamp': self._generate_timestamp(),
                 'report': {'status': status,
                            'services': services}
                 }
@@ -122,7 +126,9 @@ class Reporter(object):
         })
 
     def _report_status(self, client, report):
-        client.cluster_status.report_node_status(self._node_type, self._node_id, report)
+        client.cluster_status.report_node_status(self._node_type,
+                                                 self._node_id,
+                                                 report)
         return True
 
     def _get_cloudify_http_client(self, host):
