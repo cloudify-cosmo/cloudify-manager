@@ -37,7 +37,7 @@ from manager_rest.rest.resources_v1.status import (
 )
 
 try:
-    from manager_rest.systemddbus import get_services
+    from cloudify.systemddbus import get_services
 except ImportError:
     # For unit tests, currently systemd should be available on every manager
     get_services = None

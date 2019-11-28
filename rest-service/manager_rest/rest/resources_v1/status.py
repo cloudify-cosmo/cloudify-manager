@@ -24,7 +24,7 @@ from manager_rest.security import SecuredResource
 from manager_rest.rest.rest_decorators import marshal_with
 from manager_rest.security.authorization import authorize
 try:
-    from manager_rest.systemddbus import get_services
+    from cloudify.systemddbus import get_services
 except ImportError:
     get_services = None
 
