@@ -114,7 +114,7 @@ class Reporter(object):
     def _update_managers_ips_list(self, client):
         response = client.manager.get_managers()
         self._managers_ips = [manager.get('public_ip') for manager in
-                              response.json()['items']]
+                              response]
         update_yaml_file(CONFIGURATION_PATH, {
             'managers_ips': self._managers_ips
         })
