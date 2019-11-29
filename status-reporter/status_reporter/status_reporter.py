@@ -161,6 +161,9 @@ class Reporter(object):
             try:
                 client = self._get_cloudify_http_client(manager_ip)
                 reporting_result = self._report_status(client, report)
+                logger.debug('Sent a status report to {0}:\n {1}'.format(
+                    manager_ip,
+                    json.dumps(report, indent=1)))
                 break
             except Exception as e:
                 logger.debug('Error had occurred while trying to report '
