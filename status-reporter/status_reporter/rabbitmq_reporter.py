@@ -23,7 +23,25 @@ from cloudify.cluster_status import (CloudifyNodeType, ServiceStatus,
                                      NodeServiceStatus)
 
 from .utils import get_systemd_services, get_node_status, get_service_status
-from .status_reporter import Reporter
+from .status_reporter import Reporter, logger
+
+
+class RabbitMQReporter(Reporter):
+    def __init__(self):
+        super(RabbitMQReporter, self).__init__(CloudifyNodeType.BROKER)
+
+    def _collect_status(self):
+        report = dict.fromkeys(['status', 'services'])
+        rabbitmq_credentials = _get_rabbitmq_credentials()
+        _check_rabbitmq_service(report)
+        if report['services']['RabbitMQ']['status'] == \
+                NodeServiceStatus.INACTIVE:  # rabbitmq service is down
+            _fail_tests(report)
+        else:
+            _check_and_report_node_status(report, rabbitmq_credentials)
+            _check_and_report_rabbitmq_cluster_status(report)
+        _update_report_status(report)
+        return report['status'], report['services']
 
 
 def _get_rabbitmq_credentials():
@@ -37,17 +55,17 @@ def _update_health_check_status(report, status):
     report['services']['RabbitMQ']['status'] = get_service_status([status])
 
 
-def _check_and_report_node_status(report, rabbitmq_credentials, logger):
+def _check_and_report_node_status(report, rabbitmq_credentials):
     url = 'https://localhost:15671/api/healthchecks/node'
     try:
         response = requests.get(url, auth=rabbitmq_credentials, verify=False)
     except requests.exceptions.RequestException as e:
-        logger.info(e)
+        logger.error(e)
         _update_health_check_status(report, ServiceStatus.FAIL)
         return
     if 'error' in response.json():
         status = ServiceStatus.FAIL
-        logger.error('RabbitMQ health-check failed: {0}'.format(
+        logger.error('RabbitMQ health-check failed with: {0}'.format(
             response.content))
     else:
         status = ServiceStatus.HEALTHY
@@ -62,13 +80,13 @@ def _update_cluster_status(report, cluster_status):
             [ServiceStatus.FAIL])
 
 
-def _check_and_report_rabbitmq_cluster_status(report, logger):
+def _check_and_report_rabbitmq_cluster_status(report):
     cmd = 'sudo rabbitmqctl cluster_status --formatter json'
     runner = LocalCommandRunner()
     try:
         cluster_status = json.loads(runner.run(cmd).std_out)
     except CommandExecutionException as e:
-        logger.error('RabbitMQ cluster-status failed:\n{0}'.format(e))
+        logger.error('RabbitMQ cluster-status failed with: {0}'.format(e))
         _update_cluster_status(report, {})
         return
     _update_cluster_status(report, cluster_status)
@@ -90,20 +108,6 @@ def _update_report_status(report):
     report['status'] = get_node_status([service_status])
 
 
-def collect_status(logger):
-    report = dict.fromkeys(['status', 'services'])
-    rabbitmq_credentials = _get_rabbitmq_credentials()
-    _check_rabbitmq_service(report)
-    if report['services']['RabbitMQ']['status'] == NodeServiceStatus.INACTIVE:
-        # rabbitmq service is down
-        _fail_tests(report)
-    else:
-        _check_and_report_node_status(report, rabbitmq_credentials, logger)
-        _check_and_report_rabbitmq_cluster_status(report, logger)
-    _update_report_status(report)
-    return report
-
-
 def main():
-    reporter = Reporter(collect_status, CloudifyNodeType.BROKER)
+    reporter = RabbitMQReporter()
     reporter.run()
