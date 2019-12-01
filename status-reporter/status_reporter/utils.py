@@ -17,6 +17,9 @@ import os
 
 import yaml
 
+from cloudify.systemddbus import get_services
+from cloudify.cluster_status import ServiceStatus, NodeServiceStatus
+
 
 def read_from_yaml_file(file_path):
     with open(file_path, 'r') as f:
@@ -46,3 +49,27 @@ def update_yaml_file(yaml_path, updated_content):
     updated_file = yaml.safe_dump(yaml_content,
                                   default_flow_style=False)
     _write_to_file(updated_file, yaml_path)
+
+
+def get_systemd_services(service_names):
+    systemd_services = get_services(service_names)
+    statuses = []
+    services = {}
+    for service in systemd_services:
+        is_service_running = service['instances'] and (
+                service['instances'][0]['state'] == 'running')
+        status = NodeServiceStatus.ACTIVE if is_service_running \
+            else NodeServiceStatus.INACTIVE
+        services[service['display_name']] = {
+            'status': status,
+            'extra_info': {
+                'systemd': service
+            }
+        }
+        statuses.append(status)
+    return services, statuses
+
+
+def get_node_status(statuses):
+    return ServiceStatus.FAIL if NodeServiceStatus.INACTIVE in statuses \
+        else ServiceStatus.HEALTHY

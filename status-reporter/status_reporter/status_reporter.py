@@ -24,9 +24,6 @@ from logging.handlers import WatchedFileHandler
 from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.client import SECURED_PORT, SECURED_PROTOCOL
 
-from cloudify.systemddbus import get_services
-from cloudify.cluster_status import ServiceStatus, NodeServiceStatus
-
 from .utils import update_yaml_file, read_from_yaml_file
 from .constants import CONFIGURATION_PATH, STATUS_REPORTER
 
@@ -99,28 +96,6 @@ class Reporter(object):
             raise InitializationError('Failed initialization of status '
                                       'reporter due to:\n {issues}'.
                                       format(issues='\n'.join(issues)))
-
-    def _get_systemd_services(self, service_names):
-        systemd_services = get_services(service_names)
-        statuses = []
-        services = {}
-        for service in systemd_services:
-            is_service_running = service['instances'] and (
-                    service['instances'][0]['state'] == 'running')
-            status = NodeServiceStatus.ACTIVE if is_service_running \
-                else NodeServiceStatus.INACTIVE
-            services[service['display_name']] = {
-                'status': status,
-                'extra_info': {
-                    'systemd': service
-                }
-            }
-            statuses.append(status)
-        return services, statuses
-
-    def _get_node_status(self, statuses):
-        return ServiceStatus.FAIL if NodeServiceStatus.INACTIVE in statuses \
-            else ServiceStatus.HEALTHY
 
     def _build_report(self, status):
         return {'reporting_freq': self._current_reporting_freq,
