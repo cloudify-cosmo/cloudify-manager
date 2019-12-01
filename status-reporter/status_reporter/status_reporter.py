@@ -72,12 +72,14 @@ class Reporter(object):
 
         if not all([self._managers_ips,
                     self._token,
-                    self._cloudify_user_name
+                    self._cloudify_user_name,
+                    self._node_id
                     ]):
             invalid_conf_settings = {
                 'Managers Ips': self._managers_ips,
                 'Username': self._cloudify_user_name,
-                'Password token': self._token
+                'Cloudify password token': self._token,
+                'Node id': self._node_id
             }
             issues.append('Please verify the reporter\'s config related to '
                           '{0} ..'.format(json.dumps(invalid_conf_settings,
