@@ -19,13 +19,16 @@ import time
 import json
 import random
 import logging
+import datetime
 from logging.handlers import WatchedFileHandler
 
+from cloudify.constants import CLOUDIFY_API_AUTH_TOKEN_HEADER
+
 from cloudify_rest_client import CloudifyClient
-from cloudify_rest_client.client import SECURED_PORT, SECURED_PROTOCOL
+from cloudify_rest_client.client import SECURED_PROTOCOL
 
 from .utils import update_yaml_file, read_from_yaml_file
-from .constants import CONFIGURATION_PATH, STATUS_REPORTER
+from .constants import CONFIGURATION_PATH, STATUS_REPORTER, INTERNAL_REST_PORT
 
 
 LOGFILE = '/var/log/cloudify/status-reporter/reporter.log'
@@ -96,41 +99,57 @@ class Reporter(object):
             raise InitializationError('Failed initialization of status '
                                       'reporter due to:\n {issues}'.
                                       format(issues='\n'.join(issues)))
+        self._node_id = self._config.get('node_id', None)
+        self._reporter_credentials = {
+            'username': self._cloudify_user_name,
+            'token': self._token,
+            'ca_path': self._ca_path
+        }
 
-    def _build_report(self, status):
+    @staticmethod
+    def _generate_timestamp():
+        return datetime.datetime.utcnow().strftime('%Y%m%d%H%M+0000')
+
+    def _build_report(self, status, services):
         return {'reporting_freq': self._current_reporting_freq,
-                'report': status}
+                'timestamp': self._generate_timestamp(),
+                'report': {'status': status,
+                           'services': services}
+                }
 
     def _update_managers_ips_list(self, client):
         response = client.manager.get_managers()
         self._managers_ips = [manager.get('public_ip') for manager in
-                              response.json()['items']]
+                              response]
         update_yaml_file(CONFIGURATION_PATH, {
             'managers_ips': self._managers_ips
         })
 
     def _report_status(self, client, report):
-        client.cluster_status.report_node_status(self._node_type, report)
+        client.cluster_status.report_node_status(self._node_type,
+                                                 self._node_id,
+                                                 report)
         return True
 
     def _get_cloudify_http_client(self, host):
         return CloudifyClient(host=host,
                               username=self._cloudify_user_name,
-                              token=self._token,
+                              headers={CLOUDIFY_API_AUTH_TOKEN_HEADER:
+                                       self._token},
                               cert=self._ca_path,
                               tenant='default_tenant',
-                              port=SECURED_PORT,
+                              port=INTERNAL_REST_PORT,
                               protocol=SECURED_PROTOCOL
                               )
 
     def _report(self):
-        status = self.status_sampler()
+        status, services = self.status_sampler(self._reporter_credentials)
         if not isinstance(status, dict):
             logger.error('Ignoring status: expected a report in dict format,'
                          ' got %s', status)
             return
 
-        report = self._build_report(status)
+        report = self._build_report(status, services)
         if report is None:
             return
 
@@ -142,6 +161,9 @@ class Reporter(object):
             try:
                 client = self._get_cloudify_http_client(manager_ip)
                 reporting_result = self._report_status(client, report)
+                logger.debug('Sent a status report to {0}:\n {1}'.format(
+                    manager_ip,
+                    json.dumps(report, indent=1)))
                 break
             except Exception as e:
                 logger.debug('Error had occurred while trying to report '

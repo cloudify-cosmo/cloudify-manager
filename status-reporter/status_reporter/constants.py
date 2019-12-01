@@ -19,3 +19,5 @@ STATUS_REPORTER = 'status-reporter'
 STATUS_REPORTER_PATH = join('/opt', STATUS_REPORTER)
 CONFIGURATION_PATH = join(STATUS_REPORTER_PATH,
                           'status_reporter_configuration.yaml')
+
+INTERNAL_REST_PORT = 53333

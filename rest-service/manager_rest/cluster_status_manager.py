@@ -40,6 +40,10 @@ def get_report_path(node_type, node_id):
         status_path=CLUSTER_STATUS_PATH, node_type=node_type, node_id=node_id
     )
 
+
+def _are_keys_in_dict(dictionary, keys):
+    return all(key in dictionary for key in keys)
+
 # region Get Cluster Status Helpers
 
 
@@ -154,7 +158,7 @@ def _get_service_status(formatted_nodes):
     return ServiceStatus.DEGRADED
 
 
-def _is_report_updated(report):
+def _is_status_report_updated(report):
     """
     The report is considered updated, if the time passed since the report was
     sent is maximum twice the frequency interval (Nyquist sampling theorem).
@@ -163,10 +167,6 @@ def _is_report_updated(report):
     report_time = parse_datetime_string(report['timestamp'])
     return (report_time + timedelta(seconds=reporting_delta) >
             datetime.utcnow())
-
-
-def _are_keys_in_dict(dictionary, keys):
-    return all(key in dictionary for key in keys)
 
 
 def _is_report_content_valid(report):
@@ -179,7 +179,8 @@ def _is_report_content_valid(report):
 
 
 def _is_report_valid(report):
-    return _is_report_updated(report) and _is_report_content_valid(report)
+    return (_is_status_report_updated(report) and
+            _is_report_content_valid(report))
 
 
 def _handle_missing_status_reports(missing_status_reports, cluster_status,
@@ -292,23 +293,32 @@ def get_cluster_status():
 
 # region Write Status Report Helpers
 
-def _verify_report_newer_than_current(report_time, status_path):
+def _verify_status_report_schema(node_id, report):
+    if not (_are_keys_in_dict(report['report'], ['status', 'services'])
+            and report['report']['status'] in [ServiceStatus.HEALTHY,
+                                               ServiceStatus.FAIL]):
+        raise manager_exceptions.BadParametersError(
+            'The status report for {0} is malformed and discarded'.format(
+                node_id))
+
+
+def _verify_report_newer_than_current(node_id, report_time, status_path):
     if not (path.exists(status_path) and path.isfile(status_path)):
         # Nothing to do if the file does not exists
         return
     with open(status_path) as current_report_file:
         current_report = json.load(current_report_file)
     if report_time < parse_datetime_string(current_report['timestamp']):
-        current_app.logger.error('The new report timestamp `{0}` is before'
-                                 ' the current report timestamp'.
-                                 format(report_time))
+        current_app.logger.error('The status report for {0} at {1} is before'
+                                 ' the latest report'.
+                                 format(node_id, report_time))
 
 
-def _verify_timestamp(report_time):
+def _verify_timestamp(node_id, report_time):
     if report_time > datetime.utcnow():
         raise manager_exceptions.BadParametersError(
-            'The report timestamp `{0}` is in the future'.
-            format(report_time))
+            'The status report for {0} is in the future at `{1}`'.
+            format(node_id, report_time))
 
 
 def _verify_node_exists(node_id, model):
@@ -330,15 +340,16 @@ def _save_report(report_path, report_dict):
 # endregion
 
 
-def write_status_report(node_id, model, node_type, report_dict):
+def write_status_report(node_id, model, node_type, report):
     current_app.logger.info('Received new status report for '
                             '{0} of type {1}...'.format(node_id, node_type))
     _create_statues_folder_if_needed()
     _verify_node_exists(node_id, model)
-    report_time = parse_datetime_string(report_dict['timestamp'])
-    _verify_timestamp(report_time)
+    _verify_status_report_schema(report)
+    report_time = parse_datetime_string(report['timestamp'])
+    _verify_timestamp(node_id, report_time)
     report_path = get_report_path(node_type, node_id)
-    _verify_report_newer_than_current(report_time, report_path)
-    _save_report(report_path, report_dict)
+    _verify_report_newer_than_current(node_id, report_time, report_path)
+    _save_report(report_path, report)
     current_app.logger.info('Successfully updated the status report for '
                             '{0} of type {1}'.format(node_id, node_type))

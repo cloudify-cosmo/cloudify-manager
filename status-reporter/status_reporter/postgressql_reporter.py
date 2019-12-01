@@ -18,8 +18,8 @@ from cloudify.cluster_status import CloudifyNodeType
 from .status_reporter import Reporter
 
 
-def collect_status():
-    pass
+def collect_status(reporter_credentials):
+    return {}
 
 
 def main():
