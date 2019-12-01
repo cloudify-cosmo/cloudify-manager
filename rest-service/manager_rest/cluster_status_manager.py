@@ -46,6 +46,7 @@ def _are_keys_in_dict(dictionary, keys):
 
 # region Get Cluster Status Helpers
 
+
 def _generate_cluster_status_structure():
     storage_manager = get_storage_manager()
     return {
@@ -178,7 +179,8 @@ def _is_report_content_valid(report):
 
 
 def _is_report_valid(report):
-    return _is_status_report_updated(report) and _is_report_content_valid(report)
+    return (_is_status_report_updated(report) and
+            _is_report_content_valid(report))
 
 
 def _handle_missing_status_reports(missing_status_reports, cluster_status,
