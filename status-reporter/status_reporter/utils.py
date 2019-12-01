@@ -55,6 +55,9 @@ def update_yaml_file(yaml_path, updated_content):
 
 
 def get_systemd_services(service_names):
+    """
+    :param service_names: {'service_unit_id': 'service_display_name'}
+    """
     systemd_services = get_services(service_names)
     statuses = []
     services = {}
