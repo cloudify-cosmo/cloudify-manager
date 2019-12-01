@@ -31,7 +31,7 @@ from .utils import update_yaml_file, read_from_yaml_file
 from .constants import CONFIGURATION_PATH, STATUS_REPORTER, INTERNAL_REST_PORT
 
 
-LOGFILE = '/var/log/cloudify/status_reporter/reporter.log'
+LOGFILE = '/var/log/cloudify/status-reporter/reporter.log'
 
 logger = logging.getLogger(STATUS_REPORTER)
 logger.setLevel(logging.INFO)
