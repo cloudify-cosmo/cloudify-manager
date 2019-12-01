@@ -40,8 +40,11 @@ def get_report_path(node_type, node_id):
         status_path=CLUSTER_STATUS_PATH, node_type=node_type, node_id=node_id
     )
 
-# region Get Cluster Status Helpers
 
+def _are_keys_in_dict(dictionary, keys):
+    return all(key in dictionary for key in keys)
+
+# region Get Cluster Status Helpers
 
 def _generate_cluster_status_structure():
     storage_manager = get_storage_manager()
@@ -92,7 +95,7 @@ def _read_status_report(node, service_type, formatted_nodes, cloudify_version,
         with open(status_file_path, 'r') as status_file:
             node_status = json.load(status_file)
 
-        if _is_status_report_updated(node_status):
+        if _is_report_valid(node_status):
             return node_status
     except ValueError:
         current_app.logger.error(
@@ -163,6 +166,19 @@ def _is_status_report_updated(report):
     report_time = parse_datetime_string(report['timestamp'])
     return (report_time + timedelta(seconds=reporting_delta) >
             datetime.utcnow())
+
+
+def _is_report_content_valid(report):
+    return (
+        _are_keys_in_dict(report, ['reporting_freq', 'report', 'timestamp'])
+        and _are_keys_in_dict(report['report'], ['status', 'services'])
+        and report['report']['status'] in [ServiceStatus.HEALTHY,
+                                           ServiceStatus.FAIL]
+    )
+
+
+def _is_report_valid(report):
+    return _is_status_report_updated(report) and _is_report_content_valid(report)
 
 
 def _handle_missing_status_reports(missing_status_reports, cluster_status,
@@ -275,14 +291,10 @@ def get_cluster_status():
 
 # region Write Status Report Helpers
 
-def _are_keys_in_dict(dictionary, keys):
-    return all(key in dictionary for key in keys)
-
-
 def _verify_status_report_schema(node_id, report):
-    if (_are_keys_in_dict(report['report'], ['status', 'services'])
-        and report['report']['status'] in [ServiceStatus.HEALTHY,
-                                           ServiceStatus.FAIL]):
+    if not (_are_keys_in_dict(report['report'], ['status', 'services'])
+            and report['report']['status'] in [ServiceStatus.HEALTHY,
+                                               ServiceStatus.FAIL]):
         raise manager_exceptions.BadParametersError(
             'The status report for {0} is malformed and discarded'.format(
                 node_id))
