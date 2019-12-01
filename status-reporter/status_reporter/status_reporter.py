@@ -96,6 +96,8 @@ class Reporter(object):
                                       'reporter due to:\n {issues}'.
                                       format(issues='\n'.join(issues)))
         self._node_id = self._config.get('node_id', None)
+        debug_level = self._config.get('log_level', logging.INFO)
+        logger.setLevel(debug_level)
 
     @staticmethod
     def _generate_timestamp():
