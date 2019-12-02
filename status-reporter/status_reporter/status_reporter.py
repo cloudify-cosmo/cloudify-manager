@@ -56,12 +56,8 @@ class InitializationError(Exception):
 
 
 class Reporter(object):
-    def __init__(self, sampler, node_type):
+    def __init__(self, node_type):
         issues = []
-        if not callable(sampler):
-            issues.append('Reporter expected a callable sampler,'
-                          ' got {0!r}..')
-        self.status_sampler = sampler
 
         try:
             self._config = read_from_yaml_file(CONFIGURATION_PATH)
@@ -100,11 +96,6 @@ class Reporter(object):
                                       'reporter due to:\n {issues}'.
                                       format(issues='\n'.join(issues)))
         self._node_id = self._config.get('node_id', None)
-        self._reporter_credentials = {
-            'username': self._cloudify_user_name,
-            'token': self._token,
-            'ca_path': self._ca_path
-        }
 
     @staticmethod
     def _generate_timestamp():
@@ -142,8 +133,11 @@ class Reporter(object):
                               protocol=SECURED_PROTOCOL
                               )
 
+    def _collect_status(self):
+        raise NotImplementedError
+
     def _report(self):
-        status, services = self.status_sampler(self._reporter_credentials)
+        status, services = self._collect_status()
         if not isinstance(status, dict):
             logger.error('Ignoring status: expected a report in dict format,'
                          ' got %s', status)

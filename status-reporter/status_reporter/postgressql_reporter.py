@@ -18,10 +18,14 @@ from cloudify.cluster_status import CloudifyNodeType
 from .status_reporter import Reporter
 
 
-def collect_status(reporter_credentials):
-    return {}
+class PostgresqlReporter(Reporter):
+    def __init__(self):
+        super(PostgresqlReporter, self).__init__(CloudifyNodeType.DB)
+
+    def _collect_status(self):
+        return {}
 
 
 def main():
-    reporter = Reporter(collect_status, CloudifyNodeType.DB)
+    reporter = PostgresqlReporter()
     reporter.run()
