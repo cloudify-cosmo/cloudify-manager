@@ -18,10 +18,14 @@ from cloudify.cluster_status import CloudifyNodeType
 from .status_reporter import Reporter
 
 
-def collect_status(reporter_credentials):
-    return {}
+class RabbitMQReporter(Reporter):
+    def __init__(self):
+        super(RabbitMQReporter, self).__init__(CloudifyNodeType.BROKER)
+
+    def _collect_status(self):
+        return {}
 
 
 def main():
-    reporter = Reporter(collect_status, CloudifyNodeType.BROKER)
+    reporter = RabbitMQReporter()
     reporter.run()

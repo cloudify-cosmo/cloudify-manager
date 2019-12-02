@@ -22,20 +22,24 @@ from .status_reporter import Reporter
 from .constants import INTERNAL_REST_PORT
 
 
-def collect_status(reporter_credentials):
-    client = CloudifyClient(host='localhost',
-                            username=reporter_credentials.get('username'),
-                            headers={CLOUDIFY_API_AUTH_TOKEN_HEADER:
-                                     reporter_credentials.get('token')},
-                            cert=reporter_credentials.get('ca_path'),
-                            tenant='default_tenant',
-                            port=INTERNAL_REST_PORT,
-                            protocol=SECURED_PROTOCOL
-                            )
-    report = client.manager.get_status()
-    return report['status'], report['services']
+class ManagerReporter(Reporter):
+    def __init__(self):
+        super(ManagerReporter, self).__init__(CloudifyNodeType.MANAGER)
+
+    def _collect_status(self):
+        client = CloudifyClient(host='localhost',
+                                username=self._cloudify_user_name,
+                                headers={CLOUDIFY_API_AUTH_TOKEN_HEADER:
+                                         self._token},
+                                cert=self._ca_path,
+                                tenant='default_tenant',
+                                port=INTERNAL_REST_PORT,
+                                protocol=SECURED_PROTOCOL
+                                )
+        report = client.manager.get_status()
+        return report['status'], report['services']
 
 
 def main():
-    reporter = Reporter(collect_status, CloudifyNodeType.MANAGER)
+    reporter = ManagerReporter()
     reporter.run()
