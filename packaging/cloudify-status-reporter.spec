@@ -1,5 +1,8 @@
 %define _status_reporter_env /opt/status-reporter/env
 
+%define dbus_glib_version 0.100
+%define dbus_version 1.6
+
 Name:           cloudify-status-reporter
 Version:        %{CLOUDIFY_VERSION}
 Release:        %{CLOUDIFY_PACKAGE_RELEASE}%{?dist}
@@ -10,7 +13,10 @@ URL:            https://github.com/cloudify-cosmo/cloudify-manager
 Vendor:         Cloudify Platform Ltd.
 Packager:       Cloudify Platform Ltd.
 
-BuildRequires:  python >= 2.7, python-virtualenv
+BuildRequires:  python >= 2.7, python-virtualenv, gcc
+BuildRequires:  dbus-devel >= %{dbus_version}
+BuildRequires:  dbus-glib-devel >= %{dbus_glib_version}
+BuildRequires:  python-devel
 Requires:       python >= 2.7
 
 %description

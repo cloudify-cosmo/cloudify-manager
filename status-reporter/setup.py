@@ -30,12 +30,13 @@ setup(
             'status_reporter.manager_reporter:main',
             'cloudify_rabbitmq_reporter = '
             'status_reporter.rabbitmq_reporter:main',
-            'cloudify_postgressql_reporter = '
-            'status_reporter.postgressql_reporter:main'
+            'cloudify_postgresql_reporter = '
+            'status_reporter.postgresql_reporter:main'
         ]
     },
     install_requires=[
         'PyYAML==3.10',
-        'cloudify-common==5.0.5.dev1'
+        'cloudify-common==5.0.5.dev1',
+        'dbus-python==1.2.4'
     ]
 )
