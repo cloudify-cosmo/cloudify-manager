@@ -13,7 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 import os
-import json
 import psycopg2
 from uuid import uuid4
 from contextlib import closing
