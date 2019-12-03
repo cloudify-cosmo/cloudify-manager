@@ -28,12 +28,12 @@ from integration_tests.tests.constants import MANAGER_PYTHON
 class TestManagerStatusReporter(AgentlessTestCase):
     def test_status_reporter_has_correct_key_after_snapshot_restore(self):
         snapshot_id = "test_" + str(uuid4())
-        initial_token_key, _ = self.get_reporter_token_key()
+        initial_token_key, _ = self._get_reporter_token_key()
 
         execution = self.client.snapshots.create(snapshot_id, False)
         self.wait_for_execution_to_end(execution)
 
-        self.update_reporter_token_key('a' * 32)
+        self._update_reporter_token_key('a' * 32)
 
         execution = self.client.snapshots.restore(snapshot_id)
         # Temporary fix until CY-1821 is fixed.
@@ -41,18 +41,11 @@ class TestManagerStatusReporter(AgentlessTestCase):
         #  At this point it should be safe to query executions.
         self.wait_for_execution_to_end(execution)
 
-        current_token_key, reporter_id = self.get_reporter_token_key()
+        current_token_key, reporter_id = self._get_reporter_token_key()
         self.assertEqual(initial_token_key, current_token_key)
 
-        reporter_configuration_json = self.execute_on_manager(
-            "cfy_manager status-reporter show-configuration --json").stdout
-        reporter_configuration = json.loads(reporter_configuration_json)
-        update_script = get_resource('scripts/getencodeduser.py')
-        script_dst = '/tmp/getencodeduser.py'
-        self.copy_file_to_manager(update_script, script_dst)
-        encoded_id = self.execute_on_manager(
-            '{0} {1} --user-id {2}'
-            ''.format(MANAGER_PYTHON, script_dst, reporter_id)).stdout.strip()
+        reporter_configuration = self._get_reporter_configuration()
+        encoded_id = self._get_reporter_encoded_user_id(reporter_id)
         full_token = '{0}{1}'.format(encoded_id, initial_token_key)
         self.assertEqual(reporter_configuration['token'], full_token)
 
@@ -61,7 +54,22 @@ class TestManagerStatusReporter(AgentlessTestCase):
         ).stdout.strip()
         self.assertEqual(reporter_service_status, 'active')
 
-    def get_reporter_token_key(self):
+    def _get_reporter_encoded_user_id(self, reporter_id):
+        update_script = get_resource('scripts/getencodeduser.py')
+        script_dst = '/tmp/getencodeduser.py'
+        self.copy_file_to_manager(update_script, script_dst)
+        encoded_id = self.execute_on_manager(
+            '{0} {1} --user-id {2}'
+            ''.format(MANAGER_PYTHON, script_dst, reporter_id)).stdout.strip()
+        return encoded_id
+
+    def _get_reporter_configuration(self):
+        reporter_configuration_json = self.execute_on_manager(
+            "cfy_manager status-reporter show-configuration --json").stdout
+        reporter_configuration = json.loads(reporter_configuration_json)
+        return reporter_configuration
+
+    def _get_reporter_token_key(self):
         query = """
         SELECT
             json_build_object(
@@ -80,7 +88,7 @@ class TestManagerStatusReporter(AgentlessTestCase):
         reporter = result['all'][0][0]
         return reporter['api_token_key'], reporter['id']
 
-    def update_reporter_token_key(self, new_token_key):
+    def _update_reporter_token_key(self, new_token_key):
         query = """
         UPDATE users
         SET api_token_key = '{0}'
