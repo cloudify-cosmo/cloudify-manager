@@ -33,7 +33,7 @@ class TestManagerStatusReporter(AgentlessTestCase):
         execution = self.client.snapshots.create(snapshot_id, False)
         self.wait_for_execution_to_end(execution)
 
-        self.update_reporter_token_key(uuid4().hex)
+        self.update_reporter_token_key('a' * 32)
 
         execution = self.client.snapshots.restore(snapshot_id)
         # Temporary fix until CY-1821 is fixed.
