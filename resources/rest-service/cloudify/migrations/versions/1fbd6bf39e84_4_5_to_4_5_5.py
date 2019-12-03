@@ -230,8 +230,8 @@ def downgrade():
         )
 
     # remove the 'scheduled' value of the execution status enum.
-    # Since we are downgrading, and in older versions the `schedule` option does
-    # not exist, we change it to `failed`.
+    # Since we are downgrading, and in older versions the `schedule` option
+    # does not exist, we change it to `failed`.
     op.execute("""
       update executions
       set status='failed'
