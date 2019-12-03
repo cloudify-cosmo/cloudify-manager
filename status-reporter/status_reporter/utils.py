@@ -21,6 +21,9 @@ from cloudify.systemddbus import get_services
 from cloudify.cluster_status import ServiceStatus, NodeServiceStatus
 
 
+CONFIG_PATH = '/etc/cloudify/config.yaml'
+
+
 def read_from_yaml_file(file_path):
     with open(file_path, 'r') as f:
         file_content = f.read()
@@ -73,3 +76,13 @@ def get_systemd_services(service_names):
 def get_node_status(statuses):
     return ServiceStatus.FAIL if NodeServiceStatus.INACTIVE in statuses \
         else ServiceStatus.HEALTHY
+
+
+def get_cloudify_config(logger):
+    try:
+        config = read_from_yaml_file(CONFIG_PATH)
+        return config
+    except yaml.YAMLError as e:
+        logger.error('Failed to load the config file {0}, due to {1}'
+                     .format(CONFIG_PATH, str(e)))
+        return {}
