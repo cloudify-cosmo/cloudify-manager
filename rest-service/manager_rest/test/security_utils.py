@@ -15,7 +15,7 @@
 
 from flask_security.utils import hash_password
 
-from cloudify.constants import (
+from cloudify.cluster_status import (
     DB_STATUS_REPORTER,
     BROKER_STATUS_REPORTER,
     MANAGER_STATUS_REPORTER,

@@ -38,11 +38,11 @@ from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from cloudify.models_states import ExecutionState, VisibilityState
-from cloudify.constants import (
+from cloudify.constants import CLOUDIFY_EXECUTION_TOKEN_HEADER
+from cloudify.cluster_status import (
     DB_STATUS_REPORTER,
     BROKER_STATUS_REPORTER,
     MANAGER_STATUS_REPORTER,
-    CLOUDIFY_EXECUTION_TOKEN_HEADER,
 )
 
 from manager_rest import server

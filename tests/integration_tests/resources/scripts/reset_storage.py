@@ -19,7 +19,7 @@ import subprocess
 import argparse
 from flask_migrate import upgrade
 
-from cloudify.constants import MANAGER_STATUS_REPORTER
+from cloudify.cluster_status import MANAGER_STATUS_REPORTER
 
 from manager_rest import config
 from manager_rest.storage import db, models

@@ -22,8 +22,7 @@ from psycopg2.extras import execute_values
 from cloudify.workflows import ctx
 from cloudify.cryptography_utils import encrypt
 from cloudify.exceptions import NonRecoverableError
-from cloudify.constants import MANAGER_STATUS_REPORTER
-
+from cloudify.cluster_status import MANAGER_STATUS_REPORTER
 
 from .constants import ADMIN_DUMP_FILE, LICENSE_DUMP_FILE
 from .utils import run as run_shell

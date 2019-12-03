@@ -26,7 +26,7 @@ from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
 from flask_security import SQLAlchemyUserDatastore, UserMixin, RoleMixin
 
-from cloudify.constants import STATUS_REPORTER_USERS
+from cloudify.cluster_status import STATUS_REPORTER_USERS
 
 from manager_rest import config
 from manager_rest.constants import (

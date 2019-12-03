@@ -17,7 +17,7 @@ from flask import request
 from flask import current_app
 
 from cloudify.models_states import VisibilityState
-from cloudify.constants import STATUS_REPORTER_USERS
+from cloudify.cluster_status import STATUS_REPORTER_USERS
 
 from manager_rest.security import SecuredResource
 from manager_rest import config, premium_enabled, utils

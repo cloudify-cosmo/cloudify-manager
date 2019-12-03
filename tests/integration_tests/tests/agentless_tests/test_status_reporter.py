@@ -17,7 +17,7 @@ import json
 from time import sleep
 from uuid import uuid4
 
-from cloudify.constants import MANAGER_STATUS_REPORTER
+from cloudify.cluster_status import MANAGER_STATUS_REPORTER
 
 from integration_tests import AgentlessTestCase
 from integration_tests.framework import postgresql
