@@ -1,2 +1,2 @@
-git+https://github.com/cloudify-cosmo/cloudify-common@master#egg=cloudify-common==master
+git+https://github.com/cloudify-cosmo/cloudify-common@CY-1905#egg=cloudify-common==CY-1905
 -e ../rest-service
