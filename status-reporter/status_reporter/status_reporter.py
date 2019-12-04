@@ -25,7 +25,9 @@ from logging.handlers import WatchedFileHandler
 from cloudify.constants import CLOUDIFY_API_AUTH_TOKEN_HEADER
 
 from cloudify_rest_client import CloudifyClient
-from cloudify_rest_client.client import SECURED_PROTOCOL
+from cloudify_rest_client.client import (SECURED_PROTOCOL,
+                                         DEFAULT_PROTOCOL,
+                                         DEFAULT_PORT)
 
 from .utils import update_yaml_file, read_from_yaml_file
 from .constants import CONFIGURATION_PATH, STATUS_REPORTER, INTERNAL_REST_PORT
@@ -72,12 +74,14 @@ class Reporter(object):
 
         if not all([self._managers_ips,
                     self._token,
-                    self._cloudify_user_name
+                    self._cloudify_user_name,
+                    self._node_id
                     ]):
             invalid_conf_settings = {
                 'Managers Ips': self._managers_ips,
                 'Username': self._cloudify_user_name,
-                'Password token': self._token
+                'Cloudify password token': self._token,
+                'Node id': self._node_id
             }
             issues.append('Please verify the reporter\'s config related to '
                           '{0} ..'.format(json.dumps(invalid_conf_settings,
@@ -96,6 +100,8 @@ class Reporter(object):
                                       'reporter due to:\n {issues}'.
                                       format(issues='\n'.join(issues)))
         self._node_id = self._config.get('node_id', None)
+        debug_level = self._config.get('log_level', logging.INFO)
+        logger.setLevel(debug_level)
 
     @staticmethod
     def _generate_timestamp():
@@ -123,15 +129,23 @@ class Reporter(object):
         return True
 
     def _get_cloudify_http_client(self, host):
-        return CloudifyClient(host=host,
-                              username=self._cloudify_user_name,
-                              headers={CLOUDIFY_API_AUTH_TOKEN_HEADER:
-                                       self._token},
-                              cert=self._ca_path,
-                              tenant='default_tenant',
-                              port=INTERNAL_REST_PORT,
-                              protocol=SECURED_PROTOCOL
-                              )
+        if self._ca_path:
+            return CloudifyClient(host=host,
+                                  username=self._cloudify_user_name,
+                                  headers={CLOUDIFY_API_AUTH_TOKEN_HEADER:
+                                           self._token},
+                                  cert=self._ca_path,
+                                  tenant='default_tenant',
+                                  port=INTERNAL_REST_PORT,
+                                  protocol=SECURED_PROTOCOL
+                                  )
+        else:
+            return CloudifyClient(host=host,
+                                  username=self._cloudify_user_name,
+                                  tenant='default_tenant',
+                                  port=DEFAULT_PORT,
+                                  protocol=DEFAULT_PROTOCOL
+                                  )
 
     def _collect_status(self):
         raise NotImplementedError

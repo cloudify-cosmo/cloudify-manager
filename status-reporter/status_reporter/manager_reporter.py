@@ -13,13 +13,9 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from cloudify_rest_client import CloudifyClient
 from cloudify.cluster_status import CloudifyNodeType
-from cloudify.constants import CLOUDIFY_API_AUTH_TOKEN_HEADER
-from cloudify_rest_client.client import SECURED_PROTOCOL
 
 from .status_reporter import Reporter
-from .constants import INTERNAL_REST_PORT
 
 
 class ManagerReporter(Reporter):
@@ -27,15 +23,7 @@ class ManagerReporter(Reporter):
         super(ManagerReporter, self).__init__(CloudifyNodeType.MANAGER)
 
     def _collect_status(self):
-        client = CloudifyClient(host='localhost',
-                                username=self._cloudify_user_name,
-                                headers={CLOUDIFY_API_AUTH_TOKEN_HEADER:
-                                         self._token},
-                                cert=self._ca_path,
-                                tenant='default_tenant',
-                                port=INTERNAL_REST_PORT,
-                                protocol=SECURED_PROTOCOL
-                                )
+        client = self._get_cloudify_http_client('localhost')
         report = client.manager.get_status()
         return report['status'], report['services']
 
