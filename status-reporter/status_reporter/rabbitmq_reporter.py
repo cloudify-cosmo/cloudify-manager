@@ -24,7 +24,7 @@ from cloudify.cluster_status import (CloudifyNodeType, ServiceStatus,
                                      NodeServiceStatus)
 
 from .status_reporter import Reporter, logger
-from .utils import (get_systemd_services, get_node_status, get_cloudify_config)
+from .utils import get_systemd_services, get_node_status
 
 RABBITMQ_SERVICE_KEY = 'RabbitMQ'
 CA_PATH = '/etc/cloudify/ssl/rabbitmq-ca.pem'
