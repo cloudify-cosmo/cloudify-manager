@@ -79,7 +79,7 @@ class RabbitMQReporter(Reporter):
     @staticmethod
     def _get_cluster_status_cmd(config):
         longnames = '--longnames' if config['use_long_name'] else ''
-        nodename = config['rabbitmq_nodename']
+        nodename = config['nodename']
         return ('sudo rabbitmqctl -n {nodename} {longnames} cluster_status '
                 '--formatter json'.format(nodename=nodename,
                                           longnames=longnames))
@@ -102,8 +102,7 @@ class RabbitMQReporter(Reporter):
 
     @staticmethod
     def _query_rabbitmq(config):
-        rabbitmq_cred = (config['rabbitmq_username'],
-                         config['rabbitmq_password'])
+        rabbitmq_cred = (config['username'], config['password'])
         try:
             response = get(RABBITMQ_URL, auth=rabbitmq_cred, verify=CA_PATH)
         except RequestException as error:
