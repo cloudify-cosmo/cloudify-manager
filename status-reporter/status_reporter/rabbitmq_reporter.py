@@ -22,7 +22,8 @@ from cloudify.exceptions import CommandExecutionException
 from cloudify.cluster_status import (CloudifyNodeType, ServiceStatus,
                                      NodeServiceStatus)
 
-from .utils import get_systemd_services, get_node_status, get_service_status
+from .utils import (get_systemd_services, get_node_status, get_service_status,
+                    read_from_yaml_file)
 from .status_reporter import Reporter, logger
 
 
@@ -31,32 +32,34 @@ class RabbitMQReporter(Reporter):
         super(RabbitMQReporter, self).__init__(CloudifyNodeType.BROKER)
 
     def _collect_status(self):
+        statuses = []
         report = dict.fromkeys(['status', 'services'])
-        rabbitmq_credentials = _get_rabbitmq_credentials()
-        _check_rabbitmq_service(report)
-        if report['services']['RabbitMQ']['status'] == \
-                NodeServiceStatus.INACTIVE:  # rabbitmq service is down
+        statuses.append(_check_rabbitmq_service(report))
+        if statuses[0] == NodeServiceStatus.INACTIVE:
             _fail_tests(report)
         else:
-            _check_and_report_node_status(report, rabbitmq_credentials)
+            _check_and_report_node_status(report)
             _check_and_report_rabbitmq_cluster_status(report)
-        _update_report_status(report)
+        _update_report_and_service_status(report, statuses)
         return report['status'], report['services']
 
 
 def _get_rabbitmq_credentials():
-    with open('/etc/cloudify/config.yaml') as config_file:
-        config = yaml.load(config_file, yaml.Loader)
+    config = read_from_yaml_file('/etc/cloudify/config.yaml')
     return config['rabbitmq']['username'], config['rabbitmq']['password']
 
 
 def _update_health_check_status(report, status):
     report['services']['RabbitMQ']['extra_info']['health_checks'] = status
-    report['services']['RabbitMQ']['status'] = get_service_status([status])
 
 
-def _check_and_report_node_status(report, rabbitmq_credentials):
+def _check_and_report_node_status(report):
     url = 'https://localhost:15671/api/healthchecks/node'
+    try:
+        rabbitmq_credentials = _get_rabbitmq_credentials()
+    except yaml.YAMLError as e:
+        logger.error(e)
+        return report
     try:
         response = requests.get(url, auth=rabbitmq_credentials, verify=False)
     except requests.exceptions.RequestException as e:
@@ -75,9 +78,6 @@ def _check_and_report_node_status(report, rabbitmq_credentials):
 def _update_cluster_status(report, cluster_status):
     report['services']['RabbitMQ']['extra_info']['cluster_status'] = \
         cluster_status
-    if not cluster_status:
-        report['services']['RabbitMQ']['status'] = get_service_status(
-            [ServiceStatus.FAIL])
 
 
 def _check_and_report_rabbitmq_cluster_status(report):
@@ -94,18 +94,20 @@ def _check_and_report_rabbitmq_cluster_status(report):
 
 def _check_rabbitmq_service(report):
     service = {'cloudify-rabbitmq.service': 'RabbitMQ'}
-    services, status = get_systemd_services(service)
+    services, statuses = get_systemd_services(service)
     report['services'] = services
+    return statuses[0]
 
 
 def _fail_tests(report):
-    _update_health_check_status(report, ServiceStatus.FAIL)
-    _update_cluster_status(report, {})
+    report['services']['RabbitMQ']['extra_info']['health_checks'] = \
+        'RabbitMQ service is inactive'
+    report['services']['RabbitMQ']['extra_info']['cluster_status'] = {}
 
 
-def _update_report_status(report):
-    service_status = report['services']['RabbitMQ']['status']
-    report['status'] = get_node_status([service_status])
+def _update_report_and_service_status(report, statuses):
+    report['services']['RabbitMQ']['status'] = get_service_status(statuses)
+    report['status'] = get_node_status(statuses)
 
 
 def main():

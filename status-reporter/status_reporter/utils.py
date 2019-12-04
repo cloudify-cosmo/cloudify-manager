@@ -77,5 +77,5 @@ def get_systemd_services(service_names):
 
 
 def get_node_status(statuses):
-    return ServiceStatus.FAIL if NodeServiceStatus.INACTIVE in statuses \
-        else ServiceStatus.HEALTHY
+    return (ServiceStatus.FAIL if NodeServiceStatus.INACTIVE in statuses
+            else ServiceStatus.HEALTHY)
