@@ -17,6 +17,7 @@ from os.path import join
 
 STATUS_REPORTER = 'status-reporter'
 STATUS_REPORTER_PATH = join('/opt', STATUS_REPORTER)
+STATUS_REPORTER_CONFIG_KEY = 'extra_config'
 CONFIGURATION_PATH = join(STATUS_REPORTER_PATH,
                           'status_reporter_configuration.yaml')
 

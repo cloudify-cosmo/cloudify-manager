@@ -67,10 +67,11 @@ class Reporter(object):
             issues.append('Failed loading status reporter\'s '
                           'configuration with the following: {0}'.format(e))
 
-        self._cloudify_user_name = self._config.get('user_name', None)
-        self._token = self._config.get('token', None)
-        self._ca_path = self._config.get('ca_path', None)
+        self._cloudify_user_name = self._config.get('user_name')
+        self._token = self._config.get('token')
+        self._ca_path = self._config.get('ca_path')
         self._managers_ips = self._config.get('managers_ips', [])
+        self._node_id = self._config.get('node_id')
 
         if not all([self._managers_ips,
                     self._token,
@@ -92,20 +93,18 @@ class Reporter(object):
                           'please verify the given location {0}'.
                           format(self._ca_path))
 
-        self._current_reporting_freq = self._config.get('reporting_freq',
-                                                        None)
+        self._current_reporting_freq = self._config.get('reporting_freq')
         self._node_type = node_type
         if issues:
             raise InitializationError('Failed initialization of status '
                                       'reporter due to:\n {issues}'.
                                       format(issues='\n'.join(issues)))
-        self._node_id = self._config.get('node_id', None)
         debug_level = self._config.get('log_level', logging.INFO)
         logger.setLevel(debug_level)
 
     @staticmethod
     def _generate_timestamp():
-        return datetime.datetime.utcnow().strftime('%Y%m%d%H%M+0000')
+        return datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S+0000')
 
     def _build_report(self, status, services):
         return {'reporting_freq': self._current_reporting_freq,
@@ -152,8 +151,8 @@ class Reporter(object):
 
     def _report(self):
         status, services = self._collect_status()
-        if not isinstance(status, dict):
-            logger.error('Ignoring status: expected a report in dict format,'
+        if not isinstance(services, dict):
+            logger.error('Ignoring status: expected services in dict format,'
                          ' got %s', status)
             return
 

@@ -345,7 +345,7 @@ def write_status_report(node_id, model, node_type, report):
                             '{0} of type {1}...'.format(node_id, node_type))
     _create_statues_folder_if_needed()
     _verify_node_exists(node_id, model)
-    _verify_status_report_schema(report)
+    _verify_status_report_schema(node_id, report)
     report_time = parse_datetime_string(report['timestamp'])
     _verify_timestamp(node_id, report_time)
     report_path = get_report_path(node_type, node_id)
