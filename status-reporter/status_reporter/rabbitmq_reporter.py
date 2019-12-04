@@ -23,8 +23,8 @@ from cloudify.exceptions import CommandExecutionException
 from cloudify.cluster_status import (CloudifyNodeType, ServiceStatus,
                                      NodeServiceStatus)
 
-from .utils import (get_systemd_services, get_node_status, get_cloudify_config)
 from .status_reporter import Reporter, logger
+from .utils import (get_systemd_services, get_node_status, get_cloudify_config)
 
 RABBITMQ_SERVICE_KEY = 'RabbitMQ'
 CA_PATH = '/etc/cloudify/ssl/rabbitmq-ca.pem'
