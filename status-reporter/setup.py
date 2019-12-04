@@ -36,7 +36,7 @@ setup(
     },
     install_requires=[
         'requests>=2.7.0,<3.0.0',
-        'PyYAML==3.10',
+        'ruamel.yaml==0.15.94',
         'cloudify-common==5.0.5.dev1',
         'dbus-python==1.2.4'
     ]
