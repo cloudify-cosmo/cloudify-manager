@@ -38,7 +38,7 @@ class RabbitMQReporter(Reporter):
 
     def _collect_status(self):
         services, statuses = get_systemd_services(RABBITMQ_SERVICES)
-        config = get_cloudify_config(logger)
+        config = self._config('extra_config', None)
         if self._rabbitmq_service_not_running(statuses) or not config:
             return self._rabbitmq_collect_status_failed(services)
         self._update_node_status(services, statuses, config)
@@ -46,7 +46,8 @@ class RabbitMQReporter(Reporter):
         status = get_node_status(statuses)
         return status, services
 
-    def _rabbitmq_service_not_running(self, statuses):
+    @staticmethod
+    def _rabbitmq_service_not_running(statuses):
         return statuses[0] == NodeServiceStatus.INACTIVE
 
     def _update_cluster_status(self, services, statuses, config):
@@ -75,10 +76,10 @@ class RabbitMQReporter(Reporter):
 
         return cluster_status_info
 
-    def _get_cluster_status_cmd(self, config):
-        longnames = ('--longnames' if config['rabbitmq']['use_long_name']
-                     else '')
-        nodename = config['rabbitmq']['nodename']
+    @staticmethod
+    def _get_cluster_status_cmd(config):
+        longnames = '--longnames' if config['use_long_name'] else ''
+        nodename = config['rabbitmq_nodename']
         return ('sudo rabbitmqctl -n {nodename} {longnames} cluster_status '
                 '--formatter json'.format(nodename=nodename,
                                           longnames=longnames))
@@ -99,9 +100,10 @@ class RabbitMQReporter(Reporter):
 
         return NodeServiceStatus.ACTIVE, detailed_status
 
-    def _query_rabbitmq(self, config):
-        rabbitmq_cred = (config['rabbitmq']['username'],
-                         config['rabbitmq']['password'])
+    @staticmethod
+    def _query_rabbitmq(config):
+        rabbitmq_cred = (config['rabbitmq_username'],
+                         config['rabbitmq_password'])
         try:
             response = get(RABBITMQ_URL, auth=rabbitmq_cred, verify=CA_PATH)
         except RequestException as error:
@@ -111,7 +113,8 @@ class RabbitMQReporter(Reporter):
 
         return response.json()
 
-    def _rabbitmq_collect_status_failed(self, services):
+    @staticmethod
+    def _rabbitmq_collect_status_failed(services):
         services['node_status'] = {}
         services['cluster_status'] = {}
         return ServiceStatus.FAIL, services

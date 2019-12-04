@@ -22,6 +22,7 @@ import logging
 import datetime
 from logging.handlers import WatchedFileHandler
 
+from cloudify.cluster_status import ServiceStatus
 from cloudify.constants import CLOUDIFY_API_AUTH_TOKEN_HEADER
 
 from cloudify_rest_client import CloudifyClient
@@ -149,11 +150,20 @@ class Reporter(object):
     def _collect_status(self):
         raise NotImplementedError
 
+    @staticmethod
+    def _assert_status(status):
+        return status in [ServiceStatus.HEALTHY, ServiceStatus.FAIL,
+                          ServiceStatus.DEGRADED]
+
     def _report(self):
         status, services = self._collect_status()
         if not isinstance(services, dict):
-            logger.error('Ignoring status: expected services in dict format,'
-                         ' got %s', status)
+            logger.error('Ignoring status: expected services in dict format'
+                         ' got {0}.'.format(services))
+            return
+        if not self._assert_status(status):
+            logger.error('Ignoring status: expected status as a ServiceStatus'
+                         ' got {0}.'.format(status))
             return
 
         report = self._build_report(status, services)

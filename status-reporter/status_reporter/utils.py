@@ -15,13 +15,11 @@
 
 import os
 
-from ruamel.yaml import YAML
-from ruamel.yaml.error import YAMLError
+import yaml
 
 from cloudify.systemddbus import get_services
 from cloudify.cluster_status import ServiceStatus, NodeServiceStatus
 
-yaml = YAML()
 
 CONFIG_PATH = '/etc/cloudify/config.yaml'
 
@@ -30,10 +28,10 @@ def read_from_yaml_file(file_path):
     with open(file_path, 'r') as f:
         file_content = f.read()
         try:
-            return yaml.load(file_content)
-        except YAMLError as e:
-            raise YAMLError('Failed to load yaml file {0}, due to '
-                            '{1}'.format(file_path, str(e)))
+            return yaml.safe_load(file_content)
+        except yaml.YAMLError as e:
+            raise yaml.YAMLError('Failed to load yaml file {0}, due to '
+                                 '{1}'.format(file_path, str(e)))
 
 
 def _write_to_file(content, file_path):
