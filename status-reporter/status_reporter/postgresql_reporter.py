@@ -19,7 +19,8 @@ from requests.exceptions import RequestException
 from cloudify.cluster_status import CloudifyNodeType, NodeServiceStatus
 
 from .status_reporter import Reporter, logger
-from .utils import get_systemd_services, get_cloudify_config, get_node_status
+from .constants import STATUS_REPORTER_CONFIG_KEY
+from .utils import get_systemd_services, get_node_status
 
 
 PATRONI_URL = 'https://{private_ip}:8008'
@@ -45,11 +46,12 @@ class PostgreSQLReporter(Reporter):
         return status, services
 
     def _get_patroni_status(self):
-        config = get_cloudify_config(logger)
-        if not config:
+        extra_config = self._config.get(STATUS_REPORTER_CONFIG_KEY, {})
+        private_ip = extra_config.get('private_ip')
+        if not private_ip:
             return NodeServiceStatus.INACTIVE, {}
 
-        detailed_status = self._query_patroni(config)
+        detailed_status = self._query_patroni(private_ip)
         if not detailed_status:
             return NodeServiceStatus.INACTIVE, {}
 
@@ -64,13 +66,10 @@ class PostgreSQLReporter(Reporter):
 
         return status, detailed_status
 
-    def _query_patroni(self, config):
+    def _query_patroni(self, private_ip):
         try:
-            node_private_ip = config['manager']['private_ip']
-            status_response = get(
-                PATRONI_URL.format(private_ip=node_private_ip),
-                verify='/etc/etcd/ca.crt'
-            )
+            status_response = get(PATRONI_URL.format(private_ip=private_ip),
+                                  verify='/etc/etcd/ca.crt')
         except RequestException as error:
             logger.error(
                 "Failed getting Patroni's status, due to {0}".format(error)

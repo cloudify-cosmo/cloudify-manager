@@ -76,13 +76,3 @@ def get_systemd_services(service_names):
 def get_node_status(statuses):
     return ServiceStatus.FAIL if NodeServiceStatus.INACTIVE in statuses \
         else ServiceStatus.HEALTHY
-
-
-def get_cloudify_config(logger):
-    try:
-        config = read_from_yaml_file(CONFIG_PATH)
-        return config
-    except yaml.YAMLError as e:
-        logger.error('Failed to load the config file {0}, due to {1}'
-                     .format(CONFIG_PATH, str(e)))
-        return {}
