@@ -151,7 +151,7 @@ class Reporter(object):
         raise NotImplementedError
 
     @staticmethod
-    def _assert_status(status):
+    def _is_service_status(status):
         return status in [ServiceStatus.HEALTHY, ServiceStatus.FAIL,
                           ServiceStatus.DEGRADED]
 
@@ -161,7 +161,7 @@ class Reporter(object):
             logger.error('Ignoring status: expected services in dict format'
                          ' got {0}.'.format(services))
             return
-        if not self._assert_status(status):
+        if not self._is_service_status(status):
             logger.error('Ignoring status: expected status as a ServiceStatus'
                          ' got {0}.'.format(status))
             return

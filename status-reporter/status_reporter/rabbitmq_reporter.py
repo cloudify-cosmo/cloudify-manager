@@ -24,12 +24,16 @@ from cloudify.cluster_status import (CloudifyNodeType, ServiceStatus,
                                      NodeServiceStatus)
 
 from .status_reporter import Reporter, logger
+from .constants import STATUS_REPORTER_CONFIG_KEY
 from .utils import get_systemd_services, get_node_status
 
+EXTRA_INFO = 'extra_info'
+NODE_STATUS = 'node_status'
+CLUSTER_STATUS = 'cluster_status'
 RABBITMQ_SERVICE_KEY = 'RabbitMQ'
 CA_PATH = '/etc/cloudify/ssl/rabbitmq-ca.pem'
-RABBITMQ_SERVICES = {'cloudify-rabbitmq.service': 'RabbitMQ'}
 RABBITMQ_URL = 'https://localhost:15671/api/healthchecks/node'
+RABBITMQ_SERVICES = {'cloudify-rabbitmq.service': RABBITMQ_SERVICE_KEY}
 
 
 class RabbitMQReporter(Reporter):
@@ -38,32 +42,25 @@ class RabbitMQReporter(Reporter):
 
     def _collect_status(self):
         services, statuses = get_systemd_services(RABBITMQ_SERVICES)
-        config = self._config('extra_config', None)
-        if self._rabbitmq_service_not_running(statuses) or not config:
-            return self._rabbitmq_collect_status_failed(services)
-        self._update_node_status(services, statuses, config)
-        self._update_cluster_status(services, statuses, config)
+        extra_config = self._config.get(STATUS_REPORTER_CONFIG_KEY)
+        if self._rabbitmq_service_not_running(statuses) or not extra_config:
+            return self._rabbitmq_status_failed(services)
+        self._update_node_status(services, statuses, extra_config)
+        self._update_cluster_status(services, statuses, extra_config)
         status = get_node_status(statuses)
         return status, services
 
     @staticmethod
     def _rabbitmq_service_not_running(statuses):
-        return statuses[0] == NodeServiceStatus.INACTIVE
+        return NodeServiceStatus.INACTIVE in statuses
 
     def _update_cluster_status(self, services, statuses, config):
         cluster_status, cluster_extra_info = self._get_cluster_status(config)
-        services[RABBITMQ_SERVICE_KEY]['extra_info']['cluster_status'] = \
+        services[RABBITMQ_SERVICE_KEY][EXTRA_INFO][CLUSTER_STATUS] = \
             cluster_extra_info
         statuses.append(cluster_status)
 
     def _get_cluster_status(self, config):
-        cluster_status_info = self._rabbitmqctl_cluster_status(config)
-        if not cluster_status_info:
-            return NodeServiceStatus.INACTIVE, {}
-
-        return NodeServiceStatus.ACTIVE, cluster_status_info
-
-    def _rabbitmqctl_cluster_status(self, config):
         cmd = self._get_cluster_status_cmd(config)
         runner = LocalCommandRunner()
         try:
@@ -72,9 +69,9 @@ class RabbitMQReporter(Reporter):
             logger.error(
                 'Failed getting RabbitMQ cluster-status due to '
                 '{0}'.format(error))
-            return None
+            return NodeServiceStatus.INACTIVE, {}
 
-        return cluster_status_info
+        return NodeServiceStatus.ACTIVE, cluster_status_info
 
     @staticmethod
     def _get_cluster_status_cmd(config):
@@ -86,36 +83,30 @@ class RabbitMQReporter(Reporter):
 
     def _update_node_status(self, services, statuses, config):
         node_status, node_extra_info = self._get_rabbitmq_node_status(config)
-        services[RABBITMQ_SERVICE_KEY]['extra_info']['node_status'] = \
+        services[RABBITMQ_SERVICE_KEY][EXTRA_INFO][NODE_STATUS] = \
             node_extra_info
         statuses.append(node_status)
 
-    def _get_rabbitmq_node_status(self, config):
-        detailed_status = self._query_rabbitmq(config)
-        if not detailed_status:
-            return NodeServiceStatus.INACTIVE, {}
-
-        if 'error' in detailed_status:
-            return NodeServiceStatus.INACTIVE, detailed_status
-
-        return NodeServiceStatus.ACTIVE, detailed_status
-
     @staticmethod
-    def _query_rabbitmq(config):
+    def _get_rabbitmq_node_status(config):
         rabbitmq_cred = (config['username'], config['password'])
         try:
             response = get(RABBITMQ_URL, auth=rabbitmq_cred, verify=CA_PATH)
         except RequestException as error:
             logger.error(
                 'Failed getting RabbitMQ node status due to {0}'.format(error))
-            return None
+            return NodeServiceStatus.INACTIVE, {}
 
-        return response.json()
+        if response.ok:
+            if response.json()['status'] == 'ok':
+                return NodeServiceStatus.ACTIVE, response.json()
+
+        return NodeServiceStatus.INACTIVE, {}
 
     @staticmethod
-    def _rabbitmq_collect_status_failed(services):
-        services['node_status'] = {}
-        services['cluster_status'] = {}
+    def _rabbitmq_status_failed(services):
+        services[RABBITMQ_SERVICE_KEY][EXTRA_INFO][NODE_STATUS] = {}
+        services[RABBITMQ_SERVICE_KEY][EXTRA_INFO][CLUSTER_STATUS] = {}
         return ServiceStatus.FAIL, services
 
 
