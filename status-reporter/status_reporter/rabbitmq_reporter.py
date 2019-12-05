@@ -101,7 +101,7 @@ class RabbitMQReporter(Reporter):
             if response.json()['status'] == 'ok':
                 return NodeServiceStatus.ACTIVE, response.json()
 
-        return NodeServiceStatus.INACTIVE, {}
+        return NodeServiceStatus.INACTIVE, response.json()
 
     @staticmethod
     def _rabbitmq_status_failed(services):
