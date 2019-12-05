@@ -13,13 +13,10 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import json
 
 from requests import get
 from requests.exceptions import RequestException
 
-from cloudify.utils import LocalCommandRunner
-from cloudify.exceptions import CommandExecutionException
 from cloudify.cluster_status import (CloudifyNodeType, ServiceStatus,
                                      NodeServiceStatus)
 
@@ -107,7 +104,6 @@ class RabbitMQReporter(Reporter):
             return None
 
         return response
-
 
     @staticmethod
     def _rabbitmq_status_failed(services):
