@@ -24,15 +24,15 @@ from .status_reporter import Reporter, logger
 from .constants import STATUS_REPORTER_CONFIG_KEY
 from .utils import get_systemd_services, get_node_status
 
-NODE = 'node'
 NODES = 'nodes'
 VHOSTS = 'vhosts'
 EXTRA_INFO = 'extra_info'
 NODE_STATUS = 'node_status'
 CLUSTER_STATUS = 'cluster_status'
 RABBITMQ_SERVICE_KEY = 'RabbitMQ'
+HEALTH_CHECK = 'healthchecks/node'
 CA_PATH = '/etc/cloudify/ssl/rabbitmq-ca.pem'
-RABBITMQ_URL = 'https://localhost:15671/api/healthchecks/'
+RABBITMQ_URL = 'https://localhost:15671/api/'
 RABBITMQ_SERVICES = {'cloudify-rabbitmq.service': RABBITMQ_SERVICE_KEY}
 
 
@@ -82,7 +82,7 @@ class RabbitMQReporter(Reporter):
         statuses.append(node_status)
 
     def _get_rabbitmq_node_status(self, config):
-        response = self._query_rabbitmq(config, NODE)
+        response = self._query_rabbitmq(config, HEALTH_CHECK)
         if not response:
             return NodeServiceStatus.INACTIVE, {}
 
