@@ -21,17 +21,19 @@ depends_on = None
 
 
 def upgrade():
-    op.create_table('licenses',
-    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
-    sa.Column('customer_id', sa.Text(), nullable=True),
-    sa.Column('expiration_date', UTCDateTime(), nullable=True),
-    sa.Column('license_edition', sa.String(length=255), nullable=True),
-    sa.Column('trial', sa.Boolean(), nullable=False),
-    sa.Column('cloudify_version', sa.Text(), nullable=True),
-    sa.Column('capabilities', postgresql.ARRAY(sa.Text()), nullable=True),
-    sa.Column('signature', sa.LargeBinary(), nullable=True),
-    sa.PrimaryKeyConstraint('id', name=op.f('licenses_pkey')),
-    sa.UniqueConstraint('customer_id', name=op.f('licenses_customer_id_key'))
+    op.create_table(
+        'licenses',
+        sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column('customer_id', sa.Text(), nullable=True),
+        sa.Column('expiration_date', UTCDateTime(), nullable=True),
+        sa.Column('license_edition', sa.String(length=255), nullable=True),
+        sa.Column('trial', sa.Boolean(), nullable=False),
+        sa.Column('cloudify_version', sa.Text(), nullable=True),
+        sa.Column('capabilities', postgresql.ARRAY(sa.Text()), nullable=True),
+        sa.Column('signature', sa.LargeBinary(), nullable=True),
+        sa.PrimaryKeyConstraint('id', name=op.f('licenses_pkey')),
+        sa.UniqueConstraint(
+            'customer_id', name=op.f('licenses_customer_id_key'))
     )
 
 

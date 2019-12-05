@@ -26,9 +26,14 @@ from manager_rest.constants import SECURITY_FILE_LOCATION
 from manager_rest.flask_utils import setup_flask_app as _setup_flask_app
 
 from integration_tests.framework import constants, utils
-from integration_tests.framework.docl import execute, copy_file_to_manager, \
-    read_file as read_manager_file
-from integration_tests.tests.constants import PROVIDER_CONTEXT, MANAGER_CONFIG
+from integration_tests.framework.docl import (execute,
+                                              copy_file_to_manager,
+                                              read_file as read_manager_file)
+from integration_tests.tests.constants import (
+    MANAGER_CONFIG,
+    MANAGER_PYTHON,
+    PROVIDER_CONTEXT,
+)
 from integration_tests.tests.utils import get_resource
 
 
@@ -78,15 +83,18 @@ def reset_storage():
     logger.info('Resetting PostgreSQL DB')
     # reset the storage by calling a script on the manager, to access
     # localhost-only APIs (rabbitmq management api)
-    execute("/opt/manager/env/bin/python {script_path} --config {config_path}"
-            .format(script_path=SCRIPT_PATH, config_path=CONFIG_PATH))
+    execute("{manager_python} {script_path} --config {config_path}"
+            .format(manager_python=MANAGER_PYTHON,
+                    script_path=SCRIPT_PATH,
+                    config_path=CONFIG_PATH))
 
 
 def set_ldap(config_data):
     logger.info('Setting LDAP configuration')
     _prepare_set_ldap_script()
-    execute("/opt/manager/env/bin/python {script_path} --config '{cfg_data}'"
-            .format(script_path='/tmp/set_ldap.py',
+    execute("{manager_python} {script_path} --config '{cfg_data}'"
+            .format(manager_python=MANAGER_PYTHON,
+                    script_path='/tmp/set_ldap.py',
                     cfg_data=json.dumps(config_data)))
 
 

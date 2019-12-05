@@ -143,6 +143,7 @@ class SnapshotRestore(object):
                 self._restore_agents()
                 self._restore_amqp_vhosts_and_users()
                 self._restore_deployment_envs(postgres)
+                self._reconfigure_status_reporter(postgres)
 
             if self._restore_certificates:
                 self._restore_certificate()
@@ -885,13 +886,24 @@ class SnapshotRestore(object):
         if token_info['uid'] == 0 and self._load_hash_salt():
             token_info['token'] = self._get_admin_user_token()
 
-        prefix = utils.run([
+        prefix = self._get_encoded_user_id(token_info['uid'])
+        return prefix + token_info['token']
+
+    def _reconfigure_status_reporter(self, postgres):
+        ctx.logger.debug("Reconfiguring the Manager's status reporter...")
+        reporter = postgres.get_manager_reporter_info()
+        encoded_id = self._get_encoded_user_id(reporter['id'])
+        token = encoded_id + reporter['api_token_key']
+        utils.run("sudo cfy_manager status-reporter configure --token '{0}'"
+                  "".format(token))
+
+    def _get_encoded_user_id(self, user_id):
+        return utils.run([
             MANAGER_PYTHON,
             self._get_script_path('getencodeduser.py'),
             '--user_id',
-            str(token_info['uid']),
+            str(user_id),
         ]).aggr_stdout.strip()
-        return prefix + token_info['token']
 
 
 class SnapshotRestoreValidator(object):

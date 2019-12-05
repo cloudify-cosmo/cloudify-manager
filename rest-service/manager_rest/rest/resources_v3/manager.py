@@ -17,6 +17,7 @@ from flask import request
 from flask import current_app
 
 from cloudify.models_states import VisibilityState
+from cloudify.cluster_status import STATUS_REPORTER_USERS
 
 from manager_rest.security import SecuredResource
 from manager_rest import config, premium_enabled, utils
@@ -27,7 +28,6 @@ from manager_rest.manager_exceptions import (BadParametersError,
                                              UnauthorizedError,
                                              NotFoundError)
 from manager_rest.constants import (
-    STATUS_REPORTER_USERS,
     FILE_SERVER_BLUEPRINTS_FOLDER,
     FILE_SERVER_DEPLOYMENTS_FOLDER,
     FILE_SERVER_TENANT_RESOURCES_FOLDER,

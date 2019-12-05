@@ -7,7 +7,6 @@ Create Date: 2017-10-04 11:10:48.227654
 """
 from alembic import op
 import sqlalchemy as sa
-import manager_rest     # Adding this manually
 
 
 # revision identifiers, used by Alembic.

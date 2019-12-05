@@ -34,12 +34,6 @@ DEFAULT_SYSTEM_ROLE = 'default'
 DEFAULT_TENANT_ROLE = 'user'
 
 BOOTSTRAP_ADMIN_ID = 0
-DB_STATUS_REPORTER = 'db_status_reporter'
-BROKER_STATUS_REPORTER = 'broker_status_reporter'
-MANAGER_STATUS_REPORTER = 'manager_status_reporter'
-STATUS_REPORTER_USERS = [DB_STATUS_REPORTER,
-                         BROKER_STATUS_REPORTER,
-                         MANAGER_STATUS_REPORTER]
 DEFAULT_TENANT_ID = 0
 
 REST_SERVICE_NAME = 'cloudify-restservice'

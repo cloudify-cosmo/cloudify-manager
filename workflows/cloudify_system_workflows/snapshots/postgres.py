@@ -1,17 +1,17 @@
-########
-# Copyright (c) 2015 GigaSpaces Technologies Ltd. All rights reserved
+#########
+# Copyright (c) 2017-2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#        http://www.apache.org/licenses/LICENSE-2.0
+#       http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
-#    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#    * See the License for the specific language governing permissions and
-#    * limitations under the License.
+#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  * See the License for the specific language governing permissions and
+#  * limitations under the License.
 
 import os
 import psycopg2
@@ -22,6 +22,7 @@ from psycopg2.extras import execute_values
 from cloudify.workflows import ctx
 from cloudify.cryptography_utils import encrypt
 from cloudify.exceptions import NonRecoverableError
+from cloudify.cluster_status import MANAGER_STATUS_REPORTER
 
 from .constants import ADMIN_DUMP_FILE, LICENSE_DUMP_FILE
 from .utils import run as run_shell
@@ -530,3 +531,16 @@ class Postgres(object):
         ctx.logger.debug('Init Postgres config: {0}'.format(config))
         config.postgresql_password, config.postgresql_username = \
             postgres_password, postgres_username
+
+    def get_manager_reporter_info(self):
+        query = """
+        SELECT
+            json_build_object(
+                'id', id,
+                'api_token_key', api_token_key
+            )
+        FROM users
+        WHERE username = '{0}'
+        """.format(MANAGER_STATUS_REPORTER)
+        result = self.run_query(query)
+        return result['all'][0][0]
