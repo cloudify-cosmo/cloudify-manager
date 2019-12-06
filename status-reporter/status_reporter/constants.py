@@ -15,6 +15,7 @@
 
 from os.path import join
 
+EXTRA_INFO = 'extra_info'
 STATUS_REPORTER = 'status-reporter'
 STATUS_REPORTER_PATH = join('/opt', STATUS_REPORTER)
 STATUS_REPORTER_CONFIG_KEY = 'extra_config'
