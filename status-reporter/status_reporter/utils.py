@@ -57,6 +57,7 @@ def update_yaml_file(yaml_path, updated_content):
 def get_systemd_services(service_names):
     """
     :param service_names: {'service_unit_id': 'service_display_name'}
+    e.g., {'cloudify-rabbitmq.service': 'RabbitMQ'}
     """
     systemd_services = get_services(service_names)
     statuses = []
@@ -76,6 +77,6 @@ def get_systemd_services(service_names):
     return services, statuses
 
 
-def get_node_status(statuses):
+def determine_node_status(statuses):
     return (ServiceStatus.FAIL if NodeServiceStatus.INACTIVE in statuses
             else ServiceStatus.HEALTHY)

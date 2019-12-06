@@ -20,7 +20,7 @@ from cloudify.cluster_status import CloudifyNodeType, NodeServiceStatus
 
 from .status_reporter import Reporter, logger
 from .constants import STATUS_REPORTER_CONFIG_KEY
-from .utils import get_systemd_services, get_node_status
+from .utils import get_systemd_services, determine_node_status
 
 
 PATRONI_URL = 'https://{private_ip}:8008'
@@ -42,7 +42,7 @@ class PostgreSQLReporter(Reporter):
         services[PATRONI_SERVICE_KEY]['extra_info']['patroni_status'] = \
             extra_info
         services[PATRONI_SERVICE_KEY]['status'] = patroni_status
-        status = get_node_status(systemd_statuses + [patroni_status])
+        status = determine_node_status(systemd_statuses + [patroni_status])
         return status, services
 
     def _get_patroni_status(self):

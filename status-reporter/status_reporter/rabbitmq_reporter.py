@@ -22,15 +22,15 @@ from cloudify.cluster_status import (CloudifyNodeType, ServiceStatus,
 
 from .status_reporter import Reporter, logger
 from .constants import STATUS_REPORTER_CONFIG_KEY
-from .utils import get_systemd_services, get_node_status
+from .utils import get_systemd_services, determine_node_status
 
-NODES = 'nodes'
-VHOSTS = 'vhosts'
+NODES_API = 'nodes'
+VHOSTS_API = 'vhosts'
 EXTRA_INFO = 'extra_info'
 NODE_STATUS = 'node_status'
 CLUSTER_STATUS = 'cluster_status'
 RABBITMQ_SERVICE_KEY = 'RabbitMQ'
-HEALTH_CHECK = 'healthchecks/node'
+HEALTH_CHECK_API = 'healthchecks/node'
 CA_PATH = '/etc/cloudify/ssl/rabbitmq-ca.pem'
 RABBITMQ_URL = 'https://localhost:15671/api/'
 RABBITMQ_SERVICES = {'cloudify-rabbitmq.service': RABBITMQ_SERVICE_KEY}
@@ -43,15 +43,15 @@ class RabbitMQReporter(Reporter):
     def _collect_status(self):
         services, statuses = get_systemd_services(RABBITMQ_SERVICES)
         extra_config = self._config.get(STATUS_REPORTER_CONFIG_KEY)
-        if self._rabbitmq_service_not_running(statuses) or not extra_config:
+        if self._is_rabbitmq_service_not_running(statuses) or not extra_config:
             return self._rabbitmq_status_failed(services)
         self._update_node_status(services, statuses, extra_config)
         self._update_cluster_status(services, statuses, extra_config)
-        status = get_node_status(statuses)
+        status = determine_node_status(statuses)
         return status, services
 
     @staticmethod
-    def _rabbitmq_service_not_running(statuses):
+    def _is_rabbitmq_service_not_running(statuses):
         return NodeServiceStatus.INACTIVE in statuses
 
     def _update_cluster_status(self, services, statuses, config):
@@ -61,12 +61,12 @@ class RabbitMQReporter(Reporter):
         statuses.append(cluster_status)
 
     def _get_cluster_status(self, config):
-        nodes_response = self._query_rabbitmq(config, NODES)
+        nodes_response = self._query_rabbitmq(config, NODES_API)
         if not nodes_response:
             return NodeServiceStatus.INACTIVE, {}
         number_of_nodes = len(nodes_response.json())
 
-        vhosts_response = self._query_rabbitmq(config, VHOSTS)
+        vhosts_response = self._query_rabbitmq(config, VHOSTS_API)
         if not vhosts_response:
             return NodeServiceStatus.INACTIVE, {}
         running_nodes = vhosts_response.json()[0]['cluster_state']
@@ -82,7 +82,7 @@ class RabbitMQReporter(Reporter):
         statuses.append(node_status)
 
     def _get_rabbitmq_node_status(self, config):
-        response = self._query_rabbitmq(config, HEALTH_CHECK)
+        response = self._query_rabbitmq(config, HEALTH_CHECK_API)
         if not response:
             return NodeServiceStatus.INACTIVE, {}
 

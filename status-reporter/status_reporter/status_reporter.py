@@ -33,8 +33,9 @@ from cloudify_rest_client.client import (SECURED_PROTOCOL,
 from .utils import update_yaml_file, read_from_yaml_file
 from .constants import CONFIGURATION_PATH, STATUS_REPORTER, INTERNAL_REST_PORT
 
-
 LOGFILE = '/var/log/cloudify/status-reporter/reporter.log'
+VALID_STATUS = [ServiceStatus.HEALTHY, ServiceStatus.FAIL,
+                ServiceStatus.DEGRADED]
 
 logger = logging.getLogger(STATUS_REPORTER)
 logger.setLevel(logging.INFO)
@@ -150,20 +151,16 @@ class Reporter(object):
     def _collect_status(self):
         raise NotImplementedError
 
-    @staticmethod
-    def _is_service_status(status):
-        return status in [ServiceStatus.HEALTHY, ServiceStatus.FAIL,
-                          ServiceStatus.DEGRADED]
-
     def _report(self):
         status, services = self._collect_status()
         if not isinstance(services, dict):
-            logger.error('Ignoring status: expected services in dict format'
-                         ' got {0}.'.format(services))
+            logger.error('Ignoring status report: expected services in dict '
+                         'format got {0}.'.format(services))
             return
-        if not self._is_service_status(status):
-            logger.error('Ignoring status: expected status as a ServiceStatus'
-                         ' got {0}.'.format(status))
+
+        if status not in VALID_STATUS:
+            logger.error('Ignoring status: expected status to be `OK`, '
+                         '`Fail`, or `Degraded`. got {0}.'.format(status))
             return
 
         report = self._build_report(status, services)
