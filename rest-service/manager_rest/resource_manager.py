@@ -2014,10 +2014,10 @@ class ResourceManager(object):
 
         # Validate that global visibility is permitted
         if visibility == VisibilityState.GLOBAL:
-            self._validate_global_permitted(model_class,
-                                            resource_id,
-                                            create_resource=True,
-                                            plugin_info=plugin_info)
+            self.validate_global_permitted(model_class,
+                                           resource_id,
+                                           create_resource=True,
+                                           plugin_info=plugin_info)
 
         return visibility or VisibilityState.TENANT
 
@@ -2058,15 +2058,15 @@ class ResourceManager(object):
             if model_class == models.Plugin:
                 plugin_info = {'package_name': resource.package_name,
                                'archive_name': resource.archive_name}
-            self._validate_global_permitted(model_class,
-                                            resource.id,
-                                            plugin_info=plugin_info)
+            self.validate_global_permitted(model_class,
+                                           resource.id,
+                                           plugin_info=plugin_info)
 
-    def _validate_global_permitted(self,
-                                   model_class,
-                                   resource_id,
-                                   create_resource=False,
-                                   plugin_info=None):
+    def validate_global_permitted(self,
+                                  model_class,
+                                  resource_id,
+                                  create_resource=False,
+                                  plugin_info=None):
         # Only admin is allowed to set a resource to global
         if not is_create_global_permitted(self.sm.current_tenant):
             raise manager_exceptions.ForbiddenError(

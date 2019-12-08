@@ -225,9 +225,20 @@ class SecretsImport(SecuredResource):
                                    secret_errors):
         if self._is_missing_field(secret, 'visibility', missing_fields):
             return
+
         visibility = secret['visibility']
-        if visibility not in ['private', 'tenant', 'global']:
+        if visibility not in VisibilityState.STATES:
             secret_errors['visibility'] = 'Not a valid visibility'
+            return
+
+        if visibility == VisibilityState.GLOBAL:
+            try:
+                get_resource_manager().validate_global_permitted(models.Secret,
+                                                                 secret['key'],
+                                                                 visibility)
+            except (manager_exceptions.IllegalActionError,
+                    manager_exceptions.ForbiddenError) as error:
+                secret_errors['visibility'] = str(error)
 
     def _handle_secret_tenant(self, secret, tenant_map, existing_tenants,
                               missing_fields, secret_errors):
