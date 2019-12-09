@@ -77,7 +77,7 @@ class BaseTestEnvironment(object):
                 kwargs['enable_colors'] = True
             cfy = utils.get_cfy()
             cfy.init(**kwargs)
-            docl.init(resources=self._build_resource_mapping())
+            docl.init(resources=self.build_resource_mapping())
             self.on_environment_created()
         except BaseException as e:
             logger.error(e)
@@ -94,8 +94,7 @@ class BaseTestEnvironment(object):
 
     def run_manager(self, tag=None, label=None):
         logger.info('Starting manager container')
-        docl.run_manager(label=([self.env_label] + list(label or [])),
-                         tag=tag)
+        docl.run_manager(label=([self.env_label] + list(label or [])), tag=tag)
         self.on_manager_created()
 
     def on_manager_created(self):
@@ -103,7 +102,10 @@ class BaseTestEnvironment(object):
         self.chown(constants.CLOUDIFY_USER, constants.PLUGIN_STORAGE_DIR)
         self.start_events_printer()
 
-    def _build_resource_mapping(self):
+    def build_resource_mapping(self):
+        return self._build_resource_mapping()
+
+    def _build_resource_mapping(self, additional_plugins=None):
         """
         This function builds a list of resources to mount on the manager
         container. Each entry is composed of the source directory on the host
@@ -111,6 +113,7 @@ class BaseTestEnvironment(object):
         """
 
         resources = []
+        additional_plugins = additional_plugins or None
         # Import only for the sake of finding the module path on the file
         # system
         import integration_tests_plugins

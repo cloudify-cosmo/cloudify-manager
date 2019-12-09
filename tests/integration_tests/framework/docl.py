@@ -83,9 +83,31 @@ def _save_docl_config(conf):
         yaml.safe_dump(conf, f)
 
 
+def _save_docl_container_details(container_details):
+    with open(
+            os.path.join(
+                _docl_home(), 'work', 'last_container_ip'), 'w') as outfile:
+        outfile.write(container_details['ip'])
+    with open(
+            os.path.join(
+                _docl_home(), 'work', 'last_container_id'), 'w') as outfile:
+        outfile.write(container_details['id'])
+
+
 def _get_docl_config_property(key):
     config = _load_docl_config()
     return config[key]
+
+
+def _get_docl_container_details():
+    container_details = {}
+    with open(
+            os.path.join(_docl_home(), 'work', 'last_container_ip')) as infile:
+        container_details['id'] = infile.read()
+    with open(
+            os.path.join(_docl_home(), 'work', 'last_container_id')) as infile:
+        container_details['ip'] = infile.read()
+    return container_details
 
 
 def docker_host():
@@ -139,6 +161,9 @@ def run_manager(label=None, tag=None):
     _wait_for_services()
     logger.info(
         'Container start took {0} seconds'.format(time.time() - start))
+    logger.info(
+        'Container details: {0}'.format(container_details)
+    )
     return container_details
 
 
@@ -193,9 +218,12 @@ def build_agent(container_id=None):
 
 
 def _set_container_id_and_ip(container_details):
+    logger.info('Setting container details')
     global default_container_id
     default_container_id = container_details['id']
     os.environ[constants.DOCL_CONTAINER_IP] = container_details['ip']
+    os.environ['DOCL_CONTAINER_ID'] = default_container_id
+    _save_docl_container_details(container_details)
 
 
 def _retry(func, exceptions, cleanup=None):
