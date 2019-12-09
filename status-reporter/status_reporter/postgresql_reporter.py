@@ -55,16 +55,20 @@ class PostgreSQLReporter(Reporter):
         if not detailed_status:
             return NodeServiceStatus.INACTIVE, {}
 
-        if detailed_status['state'] != 'running':
-            return NodeServiceStatus.INACTIVE, detailed_status
+        replications = detailed_status.get('replication', [])
+        replications_state = [{'sync_state': rep['sync_state'],
+                               'state': rep['state']}
+                              for rep in replications]
+        patroni_status = {
+            'state': detailed_status['state'],
+            'role': detailed_status['role'],
+            'replications_state': replications_state
+        }
 
-        # For replica, we just verify it is in running state
-        status = NodeServiceStatus.ACTIVE
+        if patroni_status['state'] != 'running':
+            return NodeServiceStatus.INACTIVE, patroni_status
 
-        if detailed_status['role'] == 'master':
-            status = self._get_master_status(detailed_status)
-
-        return status, detailed_status
+        return NodeServiceStatus.ACTIVE, patroni_status
 
     def _query_patroni(self, private_ip):
         try:
@@ -77,19 +81,6 @@ class PostgreSQLReporter(Reporter):
             return None
 
         return status_response.json()
-
-    def _get_master_status(self, patroni_status):
-        sync_replica = [
-            replica for replica in patroni_status['replication']
-            if (replica['sync_state'] == 'sync' and
-                replica['state'] == 'streaming')
-        ]
-
-        # At least one replica should be in sync state
-        if not sync_replica:
-            return NodeServiceStatus.INACTIVE
-
-        return NodeServiceStatus.ACTIVE
 
 
 def main():

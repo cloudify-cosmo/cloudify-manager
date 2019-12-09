@@ -29,8 +29,12 @@ from manager_rest.storage import models, get_storage_manager
 from manager_rest.rest.rest_utils import parse_datetime_string
 
 
+STATUS = 'status'
+SERVICES = 'services'
+EXTRA_INFO = 'extra_info'
 DB_SERVICE_KEY = 'PostgreSQL'
 BROKER_SERVICE_KEY = 'RabbitMQ'
+PATRONI_SERVICE_KEY = 'Patroni'
 UNINITIALIZED_STATUS = 'Uninitialized'
 CLUSTER_STATUS_PATH = '/opt/manager/cluster_statuses'
 
@@ -43,6 +47,7 @@ def get_report_path(node_type, node_id):
 
 def _are_keys_in_dict(dictionary, keys):
     return all(key in dictionary for key in keys)
+
 
 # region Get Cluster Status Helpers
 
@@ -57,10 +62,10 @@ def _generate_cluster_status_structure():
     }
 
 
-def _generate_service_nodes_status(service_type, service_nodes, cluster_status,
-                                   cloudify_version, missing_status_reports):
+def _generate_service_nodes_status(service_type, service_nodes,
+                                   cloudify_version):
     formatted_nodes = {}
-
+    missing_status_reports = {}
     for node in service_nodes:
         node_status = _read_status_report(node,
                                           service_type,
@@ -72,13 +77,8 @@ def _generate_service_nodes_status(service_type, service_nodes, cluster_status,
 
         report = node_status['report']
         _generate_node_status(node, formatted_nodes, cloudify_version,
-                              report['services'], report['status'])
-
-    cluster_status['services'][service_type] = {
-        'status': _get_service_status(formatted_nodes),
-        'is_external': service_nodes[0].is_external,
-        'nodes': formatted_nodes
-    }
+                              report[SERVICES], report[STATUS])
+    return formatted_nodes, missing_status_reports
 
 
 def _read_status_report(node, service_type, formatted_nodes, cloudify_version,
@@ -112,9 +112,9 @@ def _read_status_report(node, service_type, formatted_nodes, cloudify_version,
 def _generate_node_status(node, formatted_nodes, cloudify_version,
                           node_services=None, status=UNINITIALIZED_STATUS):
     formatted_nodes[node.name] = {
-        'status': status,
+        STATUS: status,
+        SERVICES: node_services or {},
         'node_id': node.node_id,
-        'services': node_services or {},
         'version': cloudify_version,
         'public_ip': node.public_ip,
         'private_ip': node.private_ip
@@ -128,9 +128,8 @@ def _add_missing_status_reports(node, formatted_nodes, service_type,
     missing_status_reports[service_type].append(node)
 
 
-def _get_entire_cluster_status(cluster_status):
-    statuses = [service['status'] for service in
-                cluster_status['services'].values()]
+def _get_entire_cluster_status(cluster_services):
+    statuses = [service[STATUS] for service in cluster_services.values()]
     if ServiceStatus.FAIL in statuses:
         return ServiceStatus.FAIL
     elif ServiceStatus.DEGRADED in statuses:
@@ -146,9 +145,8 @@ def _is_all_in_one(cluster_structure):
             cluster_structure[CloudifyNodeType.MANAGER][0].node_id)
 
 
-def _get_service_status(formatted_nodes):
-    service_statuses = {node['status'] for name, node in
-                        formatted_nodes.items()}
+def _get_service_status(service_nodes):
+    service_statuses = {node[STATUS] for name, node in service_nodes.items()}
 
     # Only one type of status - all the nodes are in Fail/OK/Uninitialized
     if len(service_statuses) == 1:
@@ -172,9 +170,9 @@ def _is_status_report_updated(report):
 def _is_report_content_valid(report):
     return (
         _are_keys_in_dict(report, ['reporting_freq', 'report', 'timestamp'])
-        and _are_keys_in_dict(report['report'], ['status', 'services'])
-        and report['report']['status'] in [ServiceStatus.HEALTHY,
-                                           ServiceStatus.FAIL]
+        and _are_keys_in_dict(report['report'], [STATUS, SERVICES])
+        and report['report'][STATUS] in [ServiceStatus.HEALTHY,
+                                         ServiceStatus.FAIL]
     )
 
 
@@ -183,13 +181,13 @@ def _is_report_valid(report):
             _is_report_content_valid(report))
 
 
-def _handle_missing_status_reports(missing_status_reports, cluster_status,
+def _handle_missing_status_reports(missing_status_reports, cluster_services,
                                    is_all_in_one):
     """Add status data to the nodes with missing status report"""
     if not missing_status_reports:
         return
 
-    manager_service = cluster_status['services'][CloudifyNodeType.MANAGER]
+    manager_service = cluster_services[CloudifyNodeType.MANAGER]
     _handle_missing_manager_report(missing_status_reports, manager_service)
 
     services_types = [(CloudifyNodeType.DB, DB_SERVICE_KEY),
@@ -199,7 +197,7 @@ def _handle_missing_status_reports(missing_status_reports, cluster_status,
                                            service_key,
                                            manager_service['nodes'],
                                            missing_status_reports,
-                                           cluster_status,
+                                           cluster_services,
                                            is_all_in_one)
 
 
@@ -212,12 +210,15 @@ def _handle_missing_manager_report(missing_status_reports, manager_service):
     manager_nodes = manager_service['nodes']
     for manager in missing_managers:
         # A manager's status report should not be missing
-        manager_nodes[manager.hostname]['status'] = ServiceStatus.FAIL
-    manager_service['status'] = _get_service_status(manager_nodes)
+        manager_nodes[manager.hostname][STATUS] = ServiceStatus.FAIL
+    manager_service[STATUS] = _get_service_status(manager_nodes)
 
 
-def _handle_missing_non_manager_report(service_type, service_key, managers,
-                                       missing_status_reports, cluster_status,
+def _handle_missing_non_manager_report(service_type,
+                                       service_key,
+                                       managers,
+                                       missing_status_reports,
+                                       cluster_services,
                                        is_all_in_one):
     """Add status data to the nodes with missing status report.
 
@@ -229,13 +230,13 @@ def _handle_missing_non_manager_report(service_type, service_key, managers,
     if not missing_nodes:
         return
 
-    service = cluster_status['services'][service_type]
+    service = cluster_services[service_type]
     for missing_node in missing_nodes:
         node_status = ServiceStatus.FAIL
 
         if missing_node.is_external:
             service_statuses = [
-                manager_node['services'][service_key]['status']
+                manager_node[SERVICES][service_key][STATUS]
                 for manager_node in managers
             ]
             # The service is healthy if one of the managers is able
@@ -249,14 +250,58 @@ def _handle_missing_non_manager_report(service_type, service_key, managers,
         if is_all_in_one:
             # In all-in-one the node name is identical for all nodes
             node_service[service_key] = copy.deepcopy(
-                managers[node_name]['services'].get(service_key, {})
+                managers[node_name][SERVICES].get(service_key, {})
             )
-            if (node_service[service_key].get('status') ==
+            if (node_service[service_key].get(STATUS) ==
                     NodeServiceStatus.ACTIVE):
                 node_status = ServiceStatus.HEALTHY
-        service['nodes'][node_name].update({'status': node_status,
-                                            'services': node_service})
-    service['status'] = _get_service_status(service['nodes'])
+        service['nodes'][node_name].update({STATUS: node_status,
+                                            SERVICES: node_service})
+    service[STATUS] = _get_service_status(service['nodes'])
+
+
+def _get_db_master_replications(db_service):
+    for node_name, node in db_service['nodes'].items():
+        if not node[SERVICES]:
+            continue
+        patroni_service = node[SERVICES][PATRONI_SERVICE_KEY]
+        patroni_status = patroni_service[EXTRA_INFO]['patroni_status']
+        if patroni_status.get('role') == 'master':
+            return patroni_status.get('replications_state')
+    return None
+
+
+def _get_db_cluster_status(db_service, expected_nodes_number):
+    """
+    Get the status of the db cluster. At least one replica should be in
+    sync state so the cluster will function. Healthy cluster has all the other
+    replicas in streaming state.
+    """
+    if db_service[STATUS] == ServiceStatus.FAIL or db_service['is_external']:
+        return db_service[STATUS]
+
+    master_replications_state = _get_db_master_replications(db_service)
+    if not master_replications_state:
+        return ServiceStatus.FAIL
+
+    sync_replica = False
+    all_replicas_streaming = True
+
+    for replica in master_replications_state:
+        if replica['state'] != 'streaming':
+            all_replicas_streaming = False
+        elif replica['sync_state'] == 'sync':
+            sync_replica = True
+
+    if not sync_replica:
+        return ServiceStatus.FAIL
+
+    if (len(master_replications_state) != expected_nodes_number or
+            not all_replicas_streaming):
+        return ServiceStatus.DEGRADED
+
+    return db_service[STATUS]
+
 
 # endregion
 
@@ -269,34 +314,46 @@ def get_cluster_status():
     2. The status reports (saved on the file system) each reporter sends
        with the most updated status of the node.
     """
-    cluster_status = {'status': ServiceStatus.DEGRADED, 'services': {}}
-
+    cluster_services = {}
     if not path.isdir(CLUSTER_STATUS_PATH):
-        return cluster_status
+        return {STATUS: ServiceStatus.DEGRADED, SERVICES: cluster_services}
 
     cluster_structure = _generate_cluster_status_structure()
     cloudify_version = cluster_structure[CloudifyNodeType.MANAGER][0].version
     missing_status_reports = {}
 
     for service_type, service_nodes in cluster_structure.items():
-        _generate_service_nodes_status(service_type,
-                                       service_nodes,
-                                       cluster_status,
-                                       cloudify_version,
-                                       missing_status_reports)
+        formatted_nodes, missing_reports = _generate_service_nodes_status(
+            service_type, service_nodes, cloudify_version
+        )
+        cluster_services[service_type] = {
+            STATUS: _get_service_status(formatted_nodes),
+            'is_external': service_nodes[0].is_external,
+            'nodes': formatted_nodes
+        }
+        missing_status_reports.update(missing_reports)
 
-    _handle_missing_status_reports(missing_status_reports, cluster_status,
-                                   _is_all_in_one(cluster_structure))
-    cluster_status['status'] = _get_entire_cluster_status(cluster_status)
-    return cluster_status
+    is_all_in_one = _is_all_in_one(cluster_structure)
+    _handle_missing_status_reports(missing_status_reports, cluster_services,
+                                   is_all_in_one)
+    if not is_all_in_one:
+        db_service = cluster_services[CloudifyNodeType.DB]
+        expected_nodes_number = len(cluster_structure[CloudifyNodeType.DB])
+        db_service[STATUS] = _get_db_cluster_status(db_service,
+                                                    expected_nodes_number)
+
+    return {
+        STATUS: _get_entire_cluster_status(cluster_services),
+        SERVICES: cluster_services
+    }
 
 
 # region Write Status Report Helpers
 
 def _verify_status_report_schema(node_id, report):
-    if not (_are_keys_in_dict(report['report'], ['status', 'services'])
-            and report['report']['status'] in [ServiceStatus.HEALTHY,
-                                               ServiceStatus.FAIL]):
+    if not (_are_keys_in_dict(report['report'], [STATUS, SERVICES])
+            and report['report'][STATUS] in [ServiceStatus.HEALTHY,
+                                             ServiceStatus.FAIL]):
         raise manager_exceptions.BadParametersError(
             'The status report for {0} is malformed and discarded'.format(
                 node_id))
