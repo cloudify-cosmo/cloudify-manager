@@ -50,9 +50,9 @@ cp -R ${RPM_SOURCE_DIR}/packaging/status-reporter/files/* %{buildroot}
 
 %pre
 
-getent passwd cfyreporter >/dev/null || useradd -r -d /etc/cloudify -s /sbin/nologin cfyreporter
+getent passwd cfyuser >/dev/null || useradd -r -d /etc/cloudify -s /sbin/nologin cfyuser
 
 %files
 /etc/logrotate.d/cloudify-status-reporter
-%attr(750,cfyreporter,adm) /opt/status-reporter
-%attr(750,cfyreporter,adm) /var/log/cloudify/status-reporter
+%attr(750,cfyuser,adm) /opt/status-reporter
+%attr(750,cfyuser,adm) /var/log/cloudify/status-reporter

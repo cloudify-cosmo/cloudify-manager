@@ -13,7 +13,7 @@ Packager:       Cloudify Platform Ltd.
 Requires:       rabbitmq-server = 3.7.7
 
 
-%define _user rabbitmq
+%define _user cfyuser
 
 
 %description
@@ -35,11 +35,11 @@ cp -R ${RPM_SOURCE_DIR}/packaging/rabbitmq/files/* %{buildroot}
 
 %files
 
-/etc/logrotate.d/cloudify-rabbitmq
-/etc/cloudify/rabbitmq/definitions.json
-/etc/cloudify/rabbitmq/enabled_plugins
-/etc/cloudify/rabbitmq/rabbitmq.config
-/etc/security/limits.d/rabbitmq.conf
-/opt/rabbitmq_NOTICE.txt
-/usr/lib/systemd/system/cloudify-rabbitmq.service
-%attr(750,%_user,adm) /var/log/cloudify/%_user
+%attr(750,cfyuser,cfyuser) /etc/logrotate.d/cloudify-rabbitmq
+%attr(750,cfyuser,cfyuser) /etc/cloudify/rabbitmq/definitions.json
+%attr(750,cfyuser,cfyuser) /etc/cloudify/rabbitmq/enabled_plugins
+%attr(750,cfyuser,cfyuser) /etc/cloudify/rabbitmq/rabbitmq.config
+%attr(750,cfyuser,cfyuser) /etc/security/limits.d/rabbitmq.conf
+%attr(750,cfyuser,cfyuser) /opt/rabbitmq_NOTICE.txt
+%attr(750,cfyuser,cfyuser) /usr/lib/systemd/system/cloudify-rabbitmq.service
+%attr(750,%_user,adm) /var/log/cloudify/rabbitmq

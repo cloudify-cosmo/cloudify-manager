@@ -52,6 +52,7 @@ mv %_manager_env %{buildroot}/opt/manager
 mkdir -p %{buildroot}/opt/manager/resources/
 cp -R "${RPM_SOURCE_DIR}/resources/rest-service/cloudify/" "%{buildroot}/opt/manager/resources/"
 
+mkdir -p %{buildroot}/run/cloudify-restservice
 # Create the log dirs
 mkdir -p %{buildroot}/var/log/cloudify/rest
 mkdir -p %{buildroot}/var/log/cloudify/amqp-postgres
@@ -85,7 +86,7 @@ getent passwd cfyuser >/dev/null || useradd -r -g cfyuser -d /etc/cloudify -s /s
 
 %files
 
-/opt/manager
+%attr(750,cfyuser,cfyuser) /opt/manager
 /etc/cloudify/delete_logs_and_events_from_db.py*
 %dir /opt/cloudify/encryption
 /opt/cloudify/encryption/update-encryption-key
@@ -95,6 +96,7 @@ getent passwd cfyuser >/dev/null || useradd -r -g cfyuser -d /etc/cloudify -s /s
 /usr/lib/systemd/system/cloudify-restservice.service
 /usr/lib/systemd/system/cloudify-amqp-postgres.service
 
+%attr(750,cfyuser,adm) /run/cloudify-restservice
 %attr(750,cfyuser,adm) /var/log/cloudify/rest
 %attr(750,cfyuser,adm) /opt/manager/snapshot_status
 %attr(750,cfyuser,adm) /var/log/cloudify/amqp-postgres
