@@ -83,9 +83,26 @@ def upgrade():
                   sa.Column('node_id', sa.Text(), nullable=False))
     op.create_unique_constraint(op.f('rabbitmq_brokers_node_id_key'),
                                 'rabbitmq_brokers', ['node_id'])
+    op.create_index(
+        op.f('node_instances__node_fk_idx'),
+        'node_instances',
+        ['_node_fk'],
+        unique=False)
+    op.create_index(
+        op.f('nodes__deployment_fk_idx'),
+        'nodes',
+        ['_deployment_fk'],
+        unique=False)
 
 
 def downgrade():
+    op.drop_index(
+        op.f('nodes__deployment_fk_idx'),
+        table_name='nodes')
+    op.drop_index(
+        op.f('node_instances__node_fk_idx'),
+        table_name='node_instances')
+
     op.drop_column('deployment_updates', 'runtime_only_evaluation')
     op.drop_column('deployments', 'runtime_only_evaluation')
     op.drop_column('executions', 'blueprint_id')

@@ -584,7 +584,7 @@ class Node(SQLResourceBase):
     type = db.Column(db.Text, nullable=False, index=True)
     type_hierarchy = db.Column(db.PickleType)
 
-    _deployment_fk = foreign_key(Deployment._storage_id)
+    _deployment_fk = foreign_key(Deployment._storage_id, index=True)
 
     # These are for fixing a bug where wrong number of instances was returned
     # for deployments with group scaling policy
@@ -651,7 +651,7 @@ class NodeInstance(SQLResourceBase):
     # This automatically increments the version on each update
     __mapper_args__ = {'version_id_col': version}
 
-    _node_fk = foreign_key(Node._storage_id)
+    _node_fk = foreign_key(Node._storage_id, index=True)
 
     @declared_attr
     def node(cls):
