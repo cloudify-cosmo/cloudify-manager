@@ -548,9 +548,9 @@ class TestSnapshot(AgentlessTestCase):
         execution = rest_client.snapshots.restore(
             snapshot_id,
             ignore_plugin_failure=ignore_plugin_failure)
-        time.sleep(10)
+        time.sleep(40)
         execution = self._wait_for_restore_execution_to_end(
-            execution, rest_client)
+            execution, rest_client, timeout_seconds=240)
         if execution.status == error_execution_status:
             self.logger.error('Execution error: {0}'.format(execution.error))
         self.assertEqual(desired_execution_status, execution.status)
