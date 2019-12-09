@@ -1328,6 +1328,7 @@ class ResourceManager(object):
             deployment_id,
             deployment_plan
         )
+        new_deployment.runtime_only_evaluation = runtime_only_evaluation
         new_deployment.blueprint = blueprint
         new_deployment.visibility = visibility
 
