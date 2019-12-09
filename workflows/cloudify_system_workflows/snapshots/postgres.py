@@ -22,12 +22,17 @@ from psycopg2.extras import execute_values
 from cloudify.workflows import ctx
 from cloudify.cryptography_utils import encrypt
 from cloudify.exceptions import NonRecoverableError
-from cloudify.cluster_status import MANAGER_STATUS_REPORTER
+from cloudify.cluster_status import (
+    STATUS_REPORTER_USERS,
+    MANAGER_STATUS_REPORTER,
+)
 
 from .constants import ADMIN_DUMP_FILE, LICENSE_DUMP_FILE
 from .utils import run as run_shell
 
 POSTGRESQL_DEFAULT_PORT = 5432
+_STATUS_REPORTERS_QUERY_TUPLE = ', '.join(
+    "'{0}'".format(reporter) for reporter in STATUS_REPORTER_USERS)
 
 
 class Postgres(object):
@@ -76,8 +81,14 @@ class Postgres(object):
         # Don't change admin user during the restore or the workflow will
         # fail to correctly execute (the admin user update query reverts it
         # to the one from before the restore)
-        query, protected_query = self._get_admin_user_update_query()
-        self._append_dump(dump_file, query, protected_query)
+        admin_query, admin_protected_query = \
+            self._get_admin_user_update_query()
+        self._append_dump(dump_file, admin_query, admin_protected_query)
+
+        reporters_query, reporters_protected_query = \
+            self._get_status_reporters_update_query()
+        self._append_dump(
+            dump_file, reporters_query, reporters_protected_query)
 
         self._restore_dump(dump_file, self._db_name)
 
@@ -187,6 +198,32 @@ class Postgres(object):
         return (base_query.format(username, password),
                 base_query.format('*'*8, '*'*8))
 
+    def _get_status_reporters_update_query(self):
+        """Returns a tuple of (query, print_query):
+        query - updates the status reporters in the DB and
+        protected_query - hides the credentials for the logs file
+        """
+        base_query = """
+        INSERT INTO users (username, password, api_token_key)
+        VALUES
+           (
+              '{0}',
+              '{1}',
+              '{2}'
+           )
+        ON CONFLICT (username) DO
+        UPDATE SET password='{1}', api_token_key='{2}'
+        WHERE users.username = '{0}';"""
+        queries = []
+        protected_queries = []
+        reporters = self._get_status_reporters_credentials()
+        for username, password, api_token_key in reporters:
+            queries.append(
+                base_query.format(username, password, api_token_key))
+            protected_queries.append(
+                base_query.format('*' * 8, '*' * 8, '*' * 8))
+        return '\n'.join(queries), '\n'.join(protected_queries)
+
     def _get_execution_restore_query(self):
         """Return a query that creates an execution to the DB with the ID (and
         other data) from the snapshot restore execution
@@ -242,6 +279,7 @@ class Postgres(object):
         """
         queries = self._get_clear_tables_queries(preserve_defaults=True)
         queries.append(self._get_admin_user_update_query()[0])
+        queries.append(self._get_status_reporters_update_query()[0])
         if not self.current_execution_date:
             self.init_current_execution_data()
         queries.append(self._get_execution_restore_query())
@@ -495,7 +533,9 @@ class Postgres(object):
         :param queries: List of truncate queries
         """
         queries.remove(self._TRUNCATE_QUERY.format('users'))
-        queries.append('DELETE FROM users CASCADE WHERE id != 0;')
+        queries.append('DELETE FROM users CASCADE '
+                       'WHERE id != 0 AND username NOT IN ({0});'
+                       ''.format(_STATUS_REPORTERS_QUERY_TUPLE))
         queries.remove(self._TRUNCATE_QUERY.format('tenants'))
         queries.append('DELETE FROM tenants CASCADE WHERE id != 0;')
 
@@ -514,6 +554,15 @@ class Postgres(object):
             raise NonRecoverableError('Illegal state - '
                                       'missing admin user in db')
         return response['all'][0]
+
+    def _get_status_reporters_credentials(self):
+        response = self.run_query("SELECT username, password, api_token_key "
+                                  "FROM users WHERE username IN ({0})"
+                                  "".format(_STATUS_REPORTERS_QUERY_TUPLE))
+        if not response:
+            raise NonRecoverableError('Illegal state - '
+                                      'missing status reporter users in db')
+        return response['all']
 
     def dump_license_to_file(self, tmp_dir):
         destination = os.path.join(tmp_dir, LICENSE_DUMP_FILE)
