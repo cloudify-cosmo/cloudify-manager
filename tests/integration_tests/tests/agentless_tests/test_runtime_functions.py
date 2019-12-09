@@ -75,7 +75,13 @@ class TestRuntimeFunctionEvaluation(AgentlessTestCase):
             '{0} /tmp/update_deployment.py --deployment-id {1}'
             ''.format(MANAGER_PYTHON, deployment.id))
 
-    def _update_deployment(self, deployment, skip=False):
+    def _update_deployment(self, deployment, skip=False, add_flag=False):
+        """Update the deployment, changing the property value.
+
+        :param skip: whether to skip install/reinstall
+        :param add_flag: pass the runtime_only flag to the dep-update
+                         call itself
+        """
         new_bp_path = os.path.join(
             os.path.dirname(self.bp_path),
             'altered_deployment_update_functions.yaml'
@@ -88,19 +94,20 @@ class TestRuntimeFunctionEvaluation(AgentlessTestCase):
                 "prop2: '{0}'".format(self.CHANGED_VALUE))
             new_bp.write(bp_content)
 
-        skip_params = {}
+        params = {}
         if skip:
-            skip_params = {
+            params = {
                 'skip_install': True,
                 'skip_uninstall': True,
                 'skip_reinstall': True,
             }
+        if add_flag:
+            params['runtime_only_evaluation'] = True
         dep_update = self.client.deployment_updates.update(
             deployment_id=deployment.id,
             blueprint_or_archive_path=new_bp.name,
-            runtime_only_evaluation=True,
             inputs={'input1': self.CHANGED_VALUE, 'fail_create': False},
-            **skip_params
+            **params
         )
         execution = self.client.executions.get(dep_update.execution_id)
         self.wait_for_execution_to_end(execution)
@@ -164,6 +171,14 @@ class TestRuntimeFunctionEvaluation(AgentlessTestCase):
                       .format(install_execution))
 
         self._update_deployment(deployment, skip=True)
+
+        # check that after the update, the property still contains a function
+        # reference, and the value was not rendered in
+        self.assertEqual(
+            self.client.nodes.get(deployment.id, 'node1').properties['prop1'],
+            {'get_input': 'input1'}
+        )
+
         self.client.executions.resume(install_execution.id)
         self.wait_for_execution_to_end(install_execution)
         self._assert_properties(deployment, self.CHANGED_VALUE)
@@ -176,7 +191,7 @@ class TestRuntimeFunctionEvaluation(AgentlessTestCase):
         self.assertFalse(deployment.runtime_only_evaluation)
         self.execute_workflow('install', deployment.id)
         self._assert_properties(deployment, self.BASE_VALUE)
-        self._update_deployment(deployment)
+        self._update_deployment(deployment, add_flag=True)
         self._assert_properties(deployment, self.CHANGED_VALUE)
 
         dep = self.client.deployments.get(deployment.id)
@@ -198,7 +213,7 @@ class TestRuntimeFunctionEvaluation(AgentlessTestCase):
             self.fail('Expected execution {0} to fail'
                       .format(install_execution))
 
-        self._update_deployment(deployment)
+        self._update_deployment(deployment, add_flag=True)
         self.client.executions.resume(install_execution.id)
         self.wait_for_execution_to_end(install_execution)
         self._assert_properties(deployment, self.CHANGED_VALUE)
