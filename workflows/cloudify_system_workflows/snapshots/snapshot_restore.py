@@ -51,10 +51,8 @@ from .credentials import restore as restore_credentials
 from .constants import (
     ADMIN_DUMP_FILE,
     ADMIN_TOKEN_SCRIPT,
-    ALLOW_DB_CLIENT_CERTS_SCRIPT,
     ARCHIVE_CERT_DIR,
     CERT_DIR,
-    DENY_DB_CLIENT_CERTS_SCRIPT,
     HASH_SALT_FILENAME,
     INTERNAL_CA_CERT_FILENAME,
     INTERNAL_CA_KEY_FILENAME,
@@ -129,7 +127,6 @@ class SnapshotRestore(object):
 
             existing_plugins = self._get_existing_plugin_names()
             with Postgres(self._config) as postgres:
-                utils.sudo(ALLOW_DB_CLIENT_CERTS_SCRIPT)
                 self._restore_files_to_manager()
                 utils.sudo(DENY_DB_CLIENT_CERTS_SCRIPT)
                 with self._pause_services():
@@ -204,7 +201,7 @@ class SnapshotRestore(object):
         self._client = get_rest_client()
 
     def _restart_rest_service(self):
-        restart_command = 'sudo systemctl restart cloudify-restservice'
+        restart_command = 'cfy_manager restart restservice'
         utils.run(restart_command)
         self._wait_for_rest_to_restart()
 
@@ -448,8 +445,7 @@ class SnapshotRestore(object):
         # workflow execution updating and thus cause the workflow to fail
         self._post_restore_commands.append(command)
         # recreate the admin REST token file
-        self._post_restore_commands.append(
-            'sudo {0}'.format(ADMIN_TOKEN_SCRIPT))
+        self._post_restore_commands.append(ADMIN_TOKEN_SCRIPT)
 
     def _get_admin_user_token(self):
         return self._load_admin_dump()['api_token_key']

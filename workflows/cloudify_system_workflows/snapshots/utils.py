@@ -156,13 +156,11 @@ def restore_stage_files(archive_root, override=False):
                            stage_tempdir]
         if override:
             restore_command.append('--override-existing')
-        sudo(restore_command,
-             user=snapshot_constants.STAGE_USER)
+        run(restore_command)
     finally:
         shutil.rmtree(stage_tempdir)
 
-    sudo(['/usr/bin/systemctl', 'restart', 'cloudify-stage'],
-         ignore_failures=True)
+    run(['cfy_manager', 'restart', 'stage'], ignore_failures=True)
 
 
 def copy_composer_files(archive_root):
@@ -219,8 +217,8 @@ def copy(source, destination):
         ctx.logger.debug(
             'Path does not exist: {0}. Creating it...'.format(
                 destination_dir))
-        sudo(['mkdir', '-p', destination_dir])
-    sudo(['cp', '-rp', source, destination])
+        run(['mkdir', '-p', destination_dir])
+    run(['cp', '-rp', source, destination])
 
 
 def sudo(command, user=None, ignore_failures=False, cwd=None):
@@ -418,7 +416,6 @@ def stage_db_schema_get_current_revision():
     if version['edition'] != 'premium':
         return None
     output = subprocess.check_output([
-        'sudo', '-u', snapshot_constants.STAGE_USER,
         '/opt/nodejs/bin/node',
         '/opt/cloudify-stage/backend/migration.js',
         'current',
@@ -439,7 +436,6 @@ def composer_db_schema_get_current_revision():
     if version['edition'] != 'premium':
         return None
     output = subprocess.check_output([
-        'sudo', '-u', snapshot_constants.COMPOSER_USER,
         '/opt/nodejs/bin/npm',
         'run',
         '--prefix', snapshot_constants.COMPOSER_BASE_FOLDER,

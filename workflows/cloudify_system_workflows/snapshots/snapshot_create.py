@@ -56,9 +56,7 @@ class SnapshotCreate(object):
             composer_schema_revision = \
                 utils.composer_db_schema_get_current_revision()
 
-            utils.sudo(constants.ALLOW_DB_CLIENT_CERTS_SCRIPT)
             self._dump_files()
-            utils.sudo(constants.DENY_DB_CLIENT_CERTS_SCRIPT)
             self._dump_postgres()
             self._dump_networks()
             self._dump_credentials(manager_version)

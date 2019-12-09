@@ -16,7 +16,7 @@
 import os
 
 from cloudify.workflows import ctx
-from .utils import sudo
+from .utils import run as run_command
 
 NPM_BIN = os.path.join('/opt', 'nodejs', 'bin', 'npm')
 
@@ -24,10 +24,9 @@ NPM_BIN = os.path.join('/opt', 'nodejs', 'bin', 'npm')
 def run(command, *args):
     npm_command = [NPM_BIN, 'run', command]
     npm_command.extend(args)
-    sudo(
+    run_command(
         npm_command,
         cwd='/opt/cloudify-stage/backend',
-        user='stage_user',
     )
 
 
