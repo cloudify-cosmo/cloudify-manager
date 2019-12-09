@@ -239,26 +239,26 @@ workflows:
     jobs: &build_jobs
       - flake8
       - build-rpms
-      - test_v1:
-          <<: *only_master
-      - test_clientv2_endpoints:
-          <<: *only_master
-      - test_clientv2_infrastructure:
-          <<: *only_master
-      - test_clientv2_1_endpoints:
-          <<: *only_master
-      - test_clientv2_1_infrastructure:
-          <<: *only_master
-      - test_clientv3_endpoints:
-          <<: *only_master
-      - test_clientv3_infrastructure:
-          <<: *only_master
-      - test_clientv3_1_endpoints
-      - test_clientv3_1_infrastructure
-      - test_workflows
-      - test_premium
-      - test_amqp_postgres
-      - test_cloudify_types
+      # - test_v1:
+      #     <<: *only_master
+      # - test_clientv2_endpoints:
+      #     <<: *only_master
+      # - test_clientv2_infrastructure:
+      #     <<: *only_master
+      # - test_clientv2_1_endpoints:
+      #     <<: *only_master
+      # - test_clientv2_1_infrastructure:
+      #     <<: *only_master
+      # - test_clientv3_endpoints:
+      #     <<: *only_master
+      # - test_clientv3_infrastructure:
+      #     <<: *only_master
+      # - test_clientv3_1_endpoints
+      # - test_clientv3_1_infrastructure
+      # - test_workflows
+      # - test_premium
+      # - test_amqp_postgres
+      # - test_cloudify_types
   nightly:
     triggers:
       - schedule:
