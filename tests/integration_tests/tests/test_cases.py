@@ -13,16 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
-import datetime
-import yaml
-import tarfile
-import logging
 import os
 import sys
-import shutil
+import json
 import time
 import uuid
+import yaml
+import shutil
+import tarfile
+import logging
+import datetime
 import tempfile
 import unittest
 from contextlib import contextmanager
@@ -32,8 +32,8 @@ from pytest import mark
 from retrying import retry
 from requests.exceptions import ConnectionError
 
-import cloudify.utils
 import cloudify.logs
+import cloudify.utils
 import cloudify.event
 
 from logging.handlers import RotatingFileHandler
@@ -224,7 +224,20 @@ class BaseTestCase(unittest.TestCase):
         Copy a file to the cloudify manager filesystem
 
         """
-        ret_val = docl.copy_file_to_manager(source=source, target=target)
+        ret_val = docl.copy_file_to_manager(
+            source=source, target=target)
+        if owner:
+            BaseTestCase.env.chown(owner, target)
+        return ret_val
+
+    @staticmethod
+    def copy_file_from_manager(source, target, owner=None):
+        """
+        Copy a file to the cloudify manager filesystem
+
+        """
+        ret_val = docl.copy_file_from_manager(
+            source=source, target=target)
         if owner:
             BaseTestCase.env.chown(owner, target)
         return ret_val
@@ -674,6 +687,9 @@ class AgentTestWithPlugins(AgentTestCase):
         )
 
     def upload_mock_plugin(self, plugin_name, plugin_path=None):
+        self.logger.info(
+            'Starting uploading {0} from {1}...'.format(
+                plugin_name, plugin_path))
         if not plugin_path:
             plugin_path = test_utils.get_resource(
                 'plugins/{0}'.format(plugin_name)
@@ -686,6 +702,8 @@ class AgentTestWithPlugins(AgentTestCase):
             self.client.plugins.upload(zip_path)
 
         self._wait_for_execution_by_wf_name('install_plugin')
+        self.logger.info(
+            'Finished uploading {0}...'.format(plugin_name, plugin_path))
 
     def _wait_for_execution_by_wf_name(self, wf_name):
         install_plugin_execution = [
@@ -698,6 +716,8 @@ class AgentTestWithPlugins(AgentTestCase):
 
 
 class PluginsTest(AgentTestWithPlugins, WagonBuilderMixin):
+    def setUp(self):
+        super(PluginsTest, self).setUp()
 
     @staticmethod
     def get_wagon_path(plugin_path):
@@ -716,3 +736,103 @@ class PluginsTest(AgentTestWithPlugins, WagonBuilderMixin):
         """Overrides the inherited class _create_test_wagon."""
         self.build_wagon()
         return self.get_wagon_path(plugin_path)
+
+
+class PluginTestContainerHosts(PluginsTest):
+
+    def setUp(self):
+        super(PluginTestContainerHosts, self).setUp()
+
+    @property
+    def plugin_root_directory(self):
+        """ Path to the plugin root directory."""
+        raise NotImplementedError('Implemented by plugin test class.')
+
+    def prepare_agent_host_container(self,
+                                     node_instance_id,
+                                     agent_workdir='/root',
+                                     agent_tarname='centos-core-agent.tar.gz'):
+
+        self.logger.info(
+            'Setting up agent container for {0}'.format(node_instance_id))
+
+        agent_tarpath = os.path.join(agent_workdir, agent_tarname)
+        agent_ssl_dir = os.path.join(
+            agent_workdir, node_instance_id, 'cloudify/ssl')
+        manager_dir = '/opt/manager/resources/packages/agents'
+        internal_cert_name = 'cloudify_internal_cert.pem'
+        container = self.run_agent_container(
+            node_instance_id, self.get_manager_ip(), self.logger)
+        self.addCleanup(container.remove)
+        self.addCleanup(container.stop)
+        temp_agent = tempfile.NamedTemporaryFile()
+        temp_cert = tempfile.NamedTemporaryFile()
+        self.copy_file_from_manager(
+            os.path.join(manager_dir, agent_tarname), temp_agent.name)
+        self.copy_file_from_manager(
+            '/etc/cloudify/ssl/cloudify_internal_ca_cert.pem',
+            temp_cert.name
+        )
+        self.put_file_on_container(
+            open(temp_agent.name, 'rb').read(), agent_workdir, container.id)
+        self.extract_tar_on_container(
+            agent_tarpath, agent_workdir, container.id)
+        container.exec_run('mv {0}/agent-template {1}'.format(
+            agent_workdir, os.path.join(agent_workdir, node_instance_id)))
+        self.mkdirs_on_container(
+            os.path.join(agent_ssl_dir, internal_cert_name),
+            container.id)
+        self.put_file_on_container(
+            self.tar_file_content_for_put_archive(
+                open(temp_cert.name, 'r').read(), internal_cert_name),
+            agent_ssl_dir,
+            container.id
+        )
+        self.client.node_instances.update(
+            node_instance_id,
+            runtime_properties={
+                'ip':  self.get_container_ip(container),
+            })
+
+    def deploy_and_execute_workflow_with_containers(self,
+                                                    dsl_path,
+                                                    timeout_seconds=240,
+                                                    blueprint_id=None,
+                                                    deployment_id=None,
+                                                    wait_for_execution=True,
+                                                    parameters=None,
+                                                    inputs=None,
+                                                    queue=False,
+                                                    node_ids=None,
+                                                    **kwargs):
+
+        node_ids = node_ids or []
+        node_instances = []
+
+        deployment = BaseTestCase.deploy(dsl_path,
+                                         blueprint_id,
+                                         deployment_id,
+                                         inputs)
+
+        for node_id in node_ids:
+            node_instances = self.client.node_instances.list(
+                deployment_id=deployment.id, node_id=node_id)
+            for node_instance in node_instances:
+                self.prepare_agent_host_container(node_instance.id)
+
+        try:
+            execution = BaseTestCase.execute_workflow(
+                    'install', deployment.id, parameters,
+                    timeout_seconds, wait_for_execution, queue=queue, **kwargs)
+        except Exception as e:
+            self.logger.info('Deployment failed: {0}'.format(e.message))
+            executions = [ex for ex in
+                          self.client.executions.list(
+                              deployment_id=deployment.id)
+                          if 'install' in ex.workflow_id]
+            if executions:
+                self.client.executions.cancel(executions[0].id, force=True)
+            self.undeploy_application(deployment.id)
+            raise e
+
+        return deployment, execution.id, node_instances

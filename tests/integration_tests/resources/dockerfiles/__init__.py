@@ -13,19 +13,36 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from os.path import join
+import os
 from tempfile import mkdtemp
+from io import StringIO
 
 from git import Git
 
 GIT_REPO = 'https://github.com/cloudify-cosmo/' \
            'cloudify-wagon-build-containers.git'
+RESOURCES = os.path.abspath(
+    os.path.join(
+        os.path.dirname(
+            os.path.realpath(__file__)), '..'))
 
 
-def get_docker_file(platform):
+def get_dockerfile_from_git(platform):
     directory = mkdtemp()
     Git(directory).clone(GIT_REPO)
-    return join(directory, 'cloudify-wagon-build-containers', platform)
+    return os.path.join(directory, 'cloudify-wagon-build-containers', platform)
 
 
-centos = get_docker_file('centos')
+def get_dockerfile_from_resources(directory):
+    return os.path.join(RESOURCES, 'dockerfiles', directory)
+
+
+class DockerfileIO(StringIO):
+
+    @property
+    def name(self):
+        return 'Dockerfile'
+
+
+centos = get_dockerfile_from_git('centos')
+agent_host = get_dockerfile_from_resources('cloudify_agent')
