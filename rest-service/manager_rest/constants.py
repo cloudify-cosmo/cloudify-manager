@@ -70,3 +70,5 @@ MODELS_TO_PERMISSIONS = {
 }
 FORBIDDEN_METHODS = ['POST', 'PATCH', 'PUT']
 SANITY_MODE_FILE_PATH = '/opt/manager/sanity_mode'
+
+PLUGIN_SUPPORTED_CLOUDIFY = 'supported_cloudify'

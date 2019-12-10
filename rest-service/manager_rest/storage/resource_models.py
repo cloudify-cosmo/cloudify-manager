@@ -93,6 +93,7 @@ class Plugin(SQLResourceBase):
     supported_py_versions = db.Column(db.PickleType)
     uploaded_at = db.Column(UTCDateTime, nullable=False, index=True)
     wheels = db.Column(db.PickleType, nullable=False)
+    supported_cloudify = db.Column(db.Text, nullable=True)
 
     def yaml_file_path(self):
         plugin_dir = path.join(config.instance.file_server_root,

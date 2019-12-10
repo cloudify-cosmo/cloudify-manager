@@ -208,8 +208,9 @@ def copy_file_from_manager(source, target, container_id=None):
 
 
 def install_docker(container_id=None):
-    container_id = container_id or default_container_id
-    return _docl('install-docker', container_id=container_id)
+    pass
+    # container_id = container_id or default_container_id
+    # return _docl('install-docker', container_id=container_id)
 
 
 def build_agent(container_id=None):
