@@ -17,6 +17,8 @@ import os
 import time
 import json
 import pickle
+from uuid import uuid4
+
 import requests
 from collections import Counter
 
@@ -26,6 +28,8 @@ from integration_tests import AgentlessTestCase
 from integration_tests.framework import postgresql
 
 from cloudify.models_states import ExecutionState, AgentState
+from cloudify.constants import SNAPSHOT_RESTORE_MARKER_FILE_PATH
+
 from manager_rest.constants import DEFAULT_TENANT_NAME, DEFAULT_TENANT_ROLE
 
 from cloudify_rest_client.executions import Execution
@@ -383,6 +387,55 @@ class TestSnapshot(AgentlessTestCase):
         docl.execute('cfy_manager restart --force')
         self.assertTrue(self._all_services_restarted_properly())
 
+    def test_snapshot_status_returns_correct_status(self):
+        self._assert_restore_marker_file_does_not_exist()
+        self._assert_snapshot_restore_status(is_running=False)
+
+        snapshot_id = "test_" + str(uuid4())
+        snapshot_create_execution = self.client.snapshots.create(
+            snapshot_id, False)
+        self.wait_for_execution_to_end(snapshot_create_execution)
+
+        snapshot_restore_execution_id = self.client.snapshots.restore(
+            snapshot_id).id
+        self.client.maintenance_mode.activate()
+        self._wait_for_restore_marker_file_to_be_created()
+        self._assert_snapshot_restore_status(is_running=True)
+        self.wait_for_snapshot_restore_to_end(
+            snapshot_restore_execution_id, client=self.client)
+        self.client.maintenance_mode.deactivate()
+
+        self._assert_restore_marker_file_does_not_exist()
+        self._assert_snapshot_restore_status(is_running=False)
+
+    def _wait_for_restore_marker_file_to_be_created(self, timeout_seconds=40):
+        deadline = time.time() + timeout_seconds
+        exists = None
+        while not exists:
+            time.sleep(0.5)
+            exists = self._does_restore_marker_file_exists()
+            if time.time() > deadline:
+                self.fail("Timed out waiting for the restore marker file to "
+                          "be created.")
+        return True
+
+    def _does_restore_marker_file_exists(self):
+        ls_exit_code = self.execute_on_manager(
+            "sh -c 'ls {0} &> /dev/null; echo $?'"
+            "".format(SNAPSHOT_RESTORE_MARKER_FILE_PATH)
+        ).stdout.strip()
+        return ls_exit_code == '0'
+
+    def _assert_restore_marker_file_does_not_exist(self):
+        marker_file_exists = self._does_restore_marker_file_exists()
+        self.assertFalse(marker_file_exists)
+
+    def _assert_snapshot_restore_status(self, is_running):
+        status_msg = 'running' if is_running else 'not-running'
+        restore_status = self.client.snapshots.get_status()
+        self.assertIn('status', restore_status)
+        self.assertEquals(restore_status['status'], status_msg)
+
     def _all_services_restarted_properly(self):
         manager_status = self.client.manager.get_status()
         if manager_status['status'] == 'OK':
@@ -548,7 +601,7 @@ class TestSnapshot(AgentlessTestCase):
         execution = rest_client.snapshots.restore(
             snapshot_id,
             ignore_plugin_failure=ignore_plugin_failure)
-        time.sleep(40)
+        self.wait_for_snapshot_restore_to_end(execution.id)
         execution = self._wait_for_restore_execution_to_end(
             execution, rest_client, timeout_seconds=240)
         if execution.status == error_execution_status:

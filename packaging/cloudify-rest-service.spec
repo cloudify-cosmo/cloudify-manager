@@ -55,6 +55,7 @@ cp -R "${RPM_SOURCE_DIR}/resources/rest-service/cloudify/" "%{buildroot}/opt/man
 # Create the log dirs
 mkdir -p %{buildroot}/var/log/cloudify/rest
 mkdir -p %{buildroot}/var/log/cloudify/amqp-postgres
+mkdir -p %{buildroot}/opt/cloudify/snapshot_status
 
 # Copy static files into place. In order to have files in /packaging/files
 # actually included in the RPM, they must have an entry in the %files
@@ -83,6 +84,7 @@ getent passwd cfyuser >/dev/null || useradd -r -g cfyuser -d /etc/cloudify -s /s
 %files
 
 /opt/manager
+%attr(750,cfyuser,adm) /opt/cloudify/snapshot_status
 /etc/cloudify/delete_logs_and_events_from_db.py*
 %dir /opt/cloudify/encryption
 /opt/cloudify/encryption/update-encryption-key

@@ -1,12 +1,15 @@
-
 import os
+from tempfile import NamedTemporaryFile
+
+from mock import patch
 
 from manager_rest.test.attribute import attr
 
 from manager_rest.test import base_test
-from .test_utils import generate_progress_func
 from manager_rest.test.base_test import BaseServerTestCase
 from cloudify_rest_client.exceptions import CloudifyClientError
+
+from .test_utils import generate_progress_func
 
 
 @attr(client_min_version=2, client_max_version=base_test.LATEST_API_VERSION)
@@ -65,3 +68,25 @@ class SnapshotsTest(BaseServerTestCase):
         finally:
             self.quiet_delete(tmp_file_path)
             self.quiet_delete(tmp_local_path)
+
+    @attr(client_min_version=2,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_snapshot_status_reports_not_running(self):
+        tmp_file = '/non_existent123'
+        with patch('manager_rest.rest.resources_v2.snapshots'
+                   '.SNAPSHOT_RESTORE_MARKER_FILE_PATH',
+                   tmp_file):
+            status = self.client.snapshots.get_status()
+            self.assertIn('status', status)
+            self.assertEquals(status['status'], 'not-running')
+
+    @attr(client_min_version=2,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_snapshot_status_reports_running(self):
+        with NamedTemporaryFile() as tmp_file:
+            with patch('manager_rest.rest.resources_v2.snapshots'
+                       '.SNAPSHOT_RESTORE_MARKER_FILE_PATH',
+                       tmp_file.name):
+                status = self.client.snapshots.get_status()
+                self.assertIn('status', status)
+                self.assertEquals(status['status'], 'running')

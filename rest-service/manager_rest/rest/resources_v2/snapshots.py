@@ -21,6 +21,7 @@ from flask_restful import Resource
 from flask_restful_swagger import swagger
 
 from cloudify.models_states import SnapshotState
+from cloudify.constants import SNAPSHOT_RESTORE_MARKER_FILE_PATH
 
 from manager_rest.security import SecuredResource
 from manager_rest import config, manager_exceptions
@@ -30,8 +31,7 @@ from manager_rest.storage import get_storage_manager, models
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.upload_manager import UploadedSnapshotsManager
 from manager_rest.constants import (FILE_SERVER_SNAPSHOTS_FOLDER,
-                                    FILE_SERVER_RESOURCES_FOLDER,
-                                    TEMP_SNAPSHOT_FOLDER_SUFFIX)
+                                    FILE_SERVER_RESOURCES_FOLDER)
 
 
 def _get_snapshot_path(snapshot_id):
@@ -281,7 +281,6 @@ class SnapshotsStatus(Resource):
         `<unique-str>-snapshot-data` is created on the Manager. If the file
         does not exists it means there is no snapshot restore running.
         """
-        for filename in os.listdir('/tmp'):
-            if TEMP_SNAPSHOT_FOLDER_SUFFIX in filename:
-                return {'status': 'running'}
+        if os.path.exists(SNAPSHOT_RESTORE_MARKER_FILE_PATH):
+            return {'status': 'running'}
         return {'status': 'not-running'}

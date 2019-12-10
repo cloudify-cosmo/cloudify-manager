@@ -459,9 +459,37 @@ class BaseTestCase(unittest.TestCase):
         if execution.status == Execution.FAILED:
             raise RuntimeError(
                     'Workflow execution failed: {0} [{1}]'.format(
-                            execution.error,
-                            execution.status))
+                        execution.error,
+                        execution.status))
         return execution
+
+    @staticmethod
+    def wait_for_snapshot_restore_to_end(execution_id=None,
+                                         timeout_seconds=240,
+                                         client=None):
+        def is_client_error(exception):
+            return isinstance(exception, CloudifyClientError)
+
+        @retry(retry_on_exception=is_client_error,
+               stop_max_attempt_number=3,
+               wait_fixed=10000)
+        def try_fetch_status():
+            status = ''
+            while status != 'not-running':
+                time.sleep(0.5)
+                status = client.snapshots.get_status()['status']
+                if time.time() > deadline:
+                    raise utils.TimeoutException(
+                        'Snapshot restore timed out.{0}'
+                        ''.format(error_message_suffix))
+
+        if not client:
+            client = test_utils.create_rest_client()
+        error_message_suffix = (
+            ' Execution ID provided: {0}'.format(execution_id)
+            if execution_id else '')
+        deadline = time.time() + timeout_seconds
+        try_fetch_status()
 
     @contextmanager
     def client_using_tenant(self, client, tenant_name):

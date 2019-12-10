@@ -33,8 +33,9 @@ from cloudify.manager import get_rest_client
 from cloudify.state import current_workflow_ctx
 from cloudify.exceptions import NonRecoverableError
 from cloudify.constants import (
-    FILE_SERVER_SNAPSHOTS_FOLDER,
     NEW_TOKEN_FILE_NAME,
+    FILE_SERVER_SNAPSHOTS_FOLDER,
+    SNAPSHOT_RESTORE_MARKER_FILE_PATH,
 )
 from cloudify.utils import ManagerVersion, get_local_rest_certificate
 
@@ -109,6 +110,7 @@ class SnapshotRestore(object):
             self._config.snapshot_restore_threads)
 
     def restore(self):
+        self._mark_restoring()
         self._tempdir = tempfile.mkdtemp('-snapshot-data')
         snapshot_path = self._get_snapshot_path()
         ctx.logger.debug('Going to restore snapshot, '
@@ -152,6 +154,7 @@ class SnapshotRestore(object):
             self._trigger_post_restore_commands()
             ctx.logger.debug('Removing temp dir: {0}'.format(self._tempdir))
             shutil.rmtree(self._tempdir)
+            os.remove(SNAPSHOT_RESTORE_MARKER_FILE_PATH)
 
     @contextmanager
     def _pause_amqppostgres(self):
@@ -904,6 +907,11 @@ class SnapshotRestore(object):
             '--user_id',
             str(user_id),
         ]).aggr_stdout.strip()
+
+    @staticmethod
+    def _mark_restoring():
+        with open(SNAPSHOT_RESTORE_MARKER_FILE_PATH, 'a'):
+            os.utime(SNAPSHOT_RESTORE_MARKER_FILE_PATH, None)
 
 
 class SnapshotRestoreValidator(object):
