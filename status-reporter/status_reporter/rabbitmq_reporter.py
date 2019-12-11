@@ -73,8 +73,7 @@ class RabbitMQReporter(Reporter):
         nodes_response = self._query_rabbitmq(config, NODES_API)
         if not nodes_response:
             return NodeServiceStatus.INACTIVE, {}
-        cluster_nodes_status = self._get_nodes_status(
-            nodes_response.json())
+        cluster_nodes_status = self._get_nodes_status(nodes_response.json())
 
         overview_response = self._query_rabbitmq(config, OVERVIEW_API)
         if not overview_response:

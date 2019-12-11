@@ -303,6 +303,51 @@ def _get_db_cluster_status(db_service, expected_nodes_number):
     return db_service[STATUS]
 
 
+
+def _update_broker_cluster_status(cluster_status):
+    broker_service = cluster_status['services'][CloudifyNodeType.BROKER]
+    if (broker_service['status'] == ServiceStatus.FAIL or
+            broker_service['is_external']):
+        return
+
+    broker_service['status'] = _get_broker_status(broker_service)
+
+
+def _get_broker_status(broker_service):
+    """
+    Get the status of the broker cluster. The majority of nodes should be
+    running and recognizing the same cluster, 'Healthy' cluster means all of
+    them do.
+    """
+    broker_nodes = broker_service['nodes']
+    active_broker_nodes = {name: node for name, node in broker_nodes.items()
+                           if node['status'] == ServiceStatus.HEALTHY}
+    if not _is_broker_cluster_status_the_same(active_broker_nodes):
+        return ServiceStatus.FAIL
+
+    return broker_service['status']
+
+
+def _is_broker_cluster_status_the_same(broker_nodes):
+    first_node_name = ''
+    first_node_cluster_status = {}
+
+    for node in broker_nodes.values():
+        broker_service = node['services'][BROKER_SERVICE_KEY]
+        node_cluster_status = broker_service['extra_info']['cluster_status']
+        cluster_status = node_cluster_status['cluster_nodes_status']
+        node_name = node_cluster_status['node_name']
+        if not first_node_cluster_status:
+            first_node_cluster_status = cluster_status
+            first_node_name = node_name
+            continue
+        if cluster_status != first_node_cluster_status:
+            current_app.logger.info('{0} is not in the same cluster as '
+                                    '{1}'.format(first_node_name, node_name))
+            return False
+    return True
+
+
 # endregion
 
 
