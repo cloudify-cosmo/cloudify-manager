@@ -304,13 +304,13 @@ def _get_db_cluster_status(db_service, expected_nodes_number):
 
 
 
-def _update_broker_cluster_status(cluster_status):
-    broker_service = cluster_status['services'][CloudifyNodeType.BROKER]
-    if (broker_service['status'] == ServiceStatus.FAIL or
-            broker_service['is_external']):
+def _update_service_cluster_status(cluster_status, node_type,
+                                   _get_service_status_func):
+    service = cluster_status['services'][node_type]
+    if service['status'] == ServiceStatus.FAIL or service['is_external']:
         return
 
-    broker_service['status'] = _get_broker_status(broker_service)
+    service['status'] = _get_service_status_func(service)
 
 
 def _get_broker_status(broker_service):
@@ -322,13 +322,18 @@ def _get_broker_status(broker_service):
     broker_nodes = broker_service['nodes']
     active_broker_nodes = {name: node for name, node in broker_nodes.items()
                            if node['status'] == ServiceStatus.HEALTHY}
-    if not _is_broker_cluster_status_the_same(active_broker_nodes):
+    if not _verify_broker_cluster_status(active_broker_nodes):
         return ServiceStatus.FAIL
 
     return broker_service['status']
 
 
-def _is_broker_cluster_status_the_same(broker_nodes):
+def _verify_broker_cluster_status(broker_nodes):
+    """
+    Checks whether the cluster status is the same on all active nodes.
+    If yes, returns True, else, logs which nodes don't recognize the same
+    cluster and returns False.
+    """
     first_node_name = ''
     first_node_cluster_status = {}
 
