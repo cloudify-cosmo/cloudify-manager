@@ -912,10 +912,14 @@ class SnapshotRestore(object):
     def _mark_manager_restoring():
         with open(SNAPSHOT_RESTORE_FLAG_FILE, 'a'):
             os.utime(SNAPSHOT_RESTORE_FLAG_FILE, None)
+        ctx.logger.debug('Marked manager is snapshot restoring with file:'
+                         ' {0}'.format(SNAPSHOT_RESTORE_FLAG_FILE))
 
     @staticmethod
     def _unmark_manager_restoring():
         os.remove(SNAPSHOT_RESTORE_FLAG_FILE)
+        ctx.logger.debug('Unmarked manager is snapshot restoring with file:'
+                         ' {0}'.format(SNAPSHOT_RESTORE_FLAG_FILE))
 
 
 class SnapshotRestoreValidator(object):
