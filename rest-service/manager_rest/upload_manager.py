@@ -36,8 +36,6 @@ from cloudify.models_states import SnapshotState
 from cloudify.plugins.install_utils import (INSTALLING_PREFIX,
                                             is_plugin_installing)
 
-from dsl_parser.utils import (get_specifier_set, InvalidSpecifier)
-
 from manager_rest.constants import (FILE_SERVER_PLUGINS_FOLDER,
                                     FILE_SERVER_SNAPSHOTS_FOLDER,
                                     FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
@@ -51,10 +49,12 @@ from manager_rest.storage.models import Plugin
 from manager_rest import config, chunked, manager_exceptions
 from manager_rest.utils import (mkdirs,
                                 get_formatted_timestamp,
+                                build_specifier_set_from_versions,
+                                get_supported_cloudify_from_plugin,
                                 current_tenant,
                                 unzip,
                                 files_in_folder,
-                                remove)
+                                remove,)
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.constants import (CONVENTION_APPLICATION_BLUEPRINT_FILE,
                                     SUPPORTED_ARCHIVE_TYPES)
@@ -623,32 +623,6 @@ class UploadedPluginsManager(UploadedDataManager):
     def _get_archive_type(self, archive_path):
         return 'tar.gz'
 
-    @staticmethod
-    def _get_supported_cloudify_version(plugin_target_path):
-        cloudify_version = None
-        plugin_payload = {}
-        if plugin_target_path:
-            with open(plugin_target_path, 'r') as plugin_file:
-                plugin_payload = yaml.load(plugin_file)
-
-            for _, metadata in plugin_payload.get('plugins').items():
-                if metadata.get(PLUGIN_SUPPORTED_CLOUDIFY):
-                    cloudify_version = metadata[PLUGIN_SUPPORTED_CLOUDIFY]
-                    break
-        return cloudify_version
-
-    @staticmethod
-    def _validate_supported_cloudify_version_format(versions):
-        try:
-            versions = versions.split(',')
-            return get_specifier_set(versions)
-        except InvalidSpecifier:
-            raise manager_exceptions.InvalidPluginError(
-                "Invalid '{0}' value '{1}',"
-                " must follow PEP 440 format".format(
-                    PLUGIN_SUPPORTED_CLOUDIFY, versions
-                ))
-
     def _prepare_and_process_doc(self,
                                  data_id,
                                  file_server_root,
@@ -682,15 +656,13 @@ class UploadedPluginsManager(UploadedDataManager):
                                                       wagon_target_path,
                                                       args.private_resource,
                                                       visibility)
-        cloudify_versions = self._get_supported_cloudify_version(
-            plugin_target_path)
+        cloudify_versions = \
+            get_supported_cloudify_from_plugin(plugin_target_path)
         # Do validation here before save the plugin
         if cloudify_versions:
             # "supported_cloudify" is PEP 440 format
             specs_version = \
-                self._validate_supported_cloudify_version_format(
-                    cloudify_versions
-                )
+                build_specifier_set_from_versions(cloudify_versions)
             if specs_version:
                 new_plugin.supported_cloudify = cloudify_versions
                 # TODO need to do a validation if the deployed plugin

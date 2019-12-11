@@ -26,12 +26,14 @@ from os import path, makedirs
 from base64 import urlsafe_b64encode
 
 import wagon
+import yaml
 from flask import g
 from flask import request
 from werkzeug.local import LocalProxy
 from flask_security import current_user
 
 from dsl_parser.constants import HOST_AGENT_PLUGINS_TO_INSTALL
+from dsl_parser.utils import (get_specifier_set, InvalidSpecifier)
 
 from cloudify import logs
 from cloudify.constants import BROKER_PORT_SSL
@@ -348,3 +350,30 @@ def get_amqp_client():
         ssl_cert_path=config.instance.amqp_ca_path,
         connect_timeout=3,
     )
+
+
+def build_specifier_set_from_versions(versions):
+    try:
+        versions = versions.split(',')
+        return get_specifier_set(versions)
+    except InvalidSpecifier:
+        raise manager_exceptions.InvalidPluginError(
+            "Invalid '{0}' value '{1}',"
+            " must follow PEP 440 format".format(
+                constants.PLUGIN_SUPPORTED_CLOUDIFY, versions
+            ))
+
+
+def get_supported_cloudify_from_plugin(plugin_target_path):
+    cloudify_version = None
+    plugin_payload = {}
+    if plugin_target_path:
+        with open(plugin_target_path, 'r') as plugin_file:
+            plugin_payload = yaml.load(plugin_file)
+
+        for _, metadata in plugin_payload.get('plugins').items():
+            if metadata.get(constants.PLUGIN_SUPPORTED_CLOUDIFY):
+                cloudify_version = \
+                    metadata[constants.PLUGIN_SUPPORTED_CLOUDIFY]
+                break
+    return cloudify_version

@@ -188,6 +188,15 @@ class InvalidPluginError(ManagerException):
             *args, **kwargs)
 
 
+class IncompatiblePluginError(ManagerException):
+    INCOMPATIBLE_PLUGIN_ERROR_CODE = 'incompatible_plugin_error'
+
+    def __init__(self, *args, **kwargs):
+        super(IncompatiblePluginError, self).__init__(
+            400, IncompatiblePluginError.INCOMPATIBLE_PLUGIN_ERROR_CODE,
+            *args, **kwargs)
+
+
 class ExistingRunningExecutionError(ManagerException):
     EXISTING_RUNNING_EXECUTION_ERROR_CODE = 'existing_running_execution_error'
 

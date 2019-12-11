@@ -24,6 +24,7 @@ from collections import defaultdict
 
 from flask import current_app
 from flask_security import current_user
+from packaging.version import Version
 
 from cloudify.cryptography_utils import encrypt
 from cloudify.workflows import tasks as cloudify_tasks
@@ -45,7 +46,8 @@ from manager_rest.utils import (send_event,
                                 is_create_global_permitted,
                                 validate_global_modification,
                                 validate_deployment_and_site_visibility,
-                                extract_host_agent_plugins_from_plan)
+                                extract_host_agent_plugins_from_plan,
+                                build_specifier_set_from_versions)
 from manager_rest.plugins_update.constants import PLUGIN_UPDATE_WORKFLOW
 from manager_rest.storage import (db,
                                   get_storage_manager,
@@ -1314,20 +1316,21 @@ class ResourceManager(object):
             raise manager_exceptions.UnsupportedDeploymentGetSecretError(
                 str(e))
 
+        plugins_list = deployment_plan.get(
+            constants.DEPLOYMENT_PLUGINS_TO_INSTALL, [])
+        host_agent_plugins = extract_host_agent_plugins_from_plan(
+            deployment_plan)
+        plugins = plugins_list + host_agent_plugins
         #  validate plugins exists on manager when
         #  skip_plugins_validation is False
         if not skip_plugins_validation:
-            plugins_list = deployment_plan.get(
-                constants.DEPLOYMENT_PLUGINS_TO_INSTALL, [])
-            # validate that all central-deployment plugins are installed
-            for plugin in plugins_list:
+            for plugin in plugins:
+                # validate that all plugins are installed including
+                # (host_agent, central-deployment) plugins
                 self.validate_plugin_is_installed(plugin)
-
-            # validate that all host_agent plugins are installed
-            host_agent_plugins = extract_host_agent_plugins_from_plan(
-                deployment_plan)
-            for plugin in host_agent_plugins:
-                self.validate_plugin_is_installed(plugin)
+        else:
+            for plugin in plugins:
+                self.validate_plugin_compatibility_with_cloudify(plugin)
         visibility = self.get_resource_visibility(models.Deployment,
                                                   deployment_id,
                                                   visibility,
@@ -1400,6 +1403,9 @@ class ResourceManager(object):
         if plugin['supported_platform']:
             query_parameters['supported_platform'] =\
                 plugin['supported_platform']
+        if plugin['supported_cloudify']:
+            query_parameters['supported_cloudify'] =\
+                plugin['supported_cloudify']
 
         result = self.sm.list(models.Plugin, filters=query_parameters)
         if result.metadata['pagination']['total'] == 0:
@@ -1409,6 +1415,19 @@ class ResourceManager(object):
                     'on the manager'.format(
                         plugin['package_name'],
                         plugin['package_version'] or '`any`'))
+
+    def validate_plugin_compatibility_with_cloudify(self, plugin):
+        cloudify_versions = plugin.get('supported_cloudify')
+        package_name = plugin.get('package_name')
+        if cloudify_versions:
+            manager = self.sm.list(models.Manager)[0]
+            specs_version = \
+                build_specifier_set_from_versions(cloudify_versions)
+            if Version(manager.version) not in specs_version:
+                raise manager_exceptions.IncompatiblePluginError(
+                    'Plugin {0} is incompatible with Cloudify manager {1}'
+                    ''.format(package_name, manager.version)
+                )
 
     def start_deployment_modification(self,
                                       deployment_id,

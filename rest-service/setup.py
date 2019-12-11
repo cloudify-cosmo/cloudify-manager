@@ -38,7 +38,8 @@ install_requires = [
     'click==6.7',
     'jsonschema==3.0.0',
     'SQLAlchemy==1.2.18',
-    'cachetools==3.1.0'
+    'cachetools==3.1.0',
+    'packaging==17.1'
 ]
 
 
