@@ -28,7 +28,7 @@ from integration_tests import AgentlessTestCase
 from integration_tests.framework import postgresql
 
 from cloudify.models_states import ExecutionState, AgentState
-from cloudify.constants import SNAPSHOT_RESTORE_FLAG_FILE
+from cloudify.snapshots import SNAPSHOT_RESTORE_FLAG_FILE, STATES
 
 from manager_rest.constants import DEFAULT_TENANT_NAME, DEFAULT_TENANT_ROLE
 
@@ -431,7 +431,7 @@ class TestSnapshot(AgentlessTestCase):
         self.assertFalse(marker_file_exists)
 
     def _assert_snapshot_restore_status(self, is_running):
-        status_msg = 'running' if is_running else 'not-running'
+        status_msg = STATES.RUNNING if is_running else STATES.NOT_RUNNING
         restore_status = self.client.snapshots.get_status()
         self.assertIn('status', restore_status)
         self.assertEquals(restore_status['status'], status_msg)

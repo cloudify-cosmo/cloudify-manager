@@ -35,8 +35,8 @@ from cloudify.exceptions import NonRecoverableError
 from cloudify.constants import (
     NEW_TOKEN_FILE_NAME,
     FILE_SERVER_SNAPSHOTS_FOLDER,
-    SNAPSHOT_RESTORE_FLAG_FILE,
 )
+from cloudify.snapshots import SNAPSHOT_RESTORE_FLAG_FILE
 from cloudify.utils import ManagerVersion, get_local_rest_certificate
 
 from cloudify_rest_client.executions import Execution

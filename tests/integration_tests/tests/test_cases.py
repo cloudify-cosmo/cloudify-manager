@@ -35,6 +35,7 @@ from requests.exceptions import ConnectionError
 import cloudify.logs
 import cloudify.utils
 import cloudify.event
+from cloudify.snapshots import STATES
 
 from logging.handlers import RotatingFileHandler
 
@@ -475,7 +476,7 @@ class BaseTestCase(unittest.TestCase):
                wait_fixed=10000)
         def try_fetch_status():
             status = ''
-            while status != 'not-running':
+            while status != STATES.NOT_RUNNING:
                 time.sleep(0.5)
                 status = client.snapshots.get_status()['status']
                 if time.time() > deadline:

@@ -3,6 +3,7 @@ from tempfile import NamedTemporaryFile
 
 from mock import patch
 
+from cloudify.snapshots import STATES
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from .test_utils import generate_progress_func
@@ -77,7 +78,7 @@ class SnapshotsTest(BaseServerTestCase):
                    tmp_file):
             status = self.client.snapshots.get_status()
             self.assertIn('status', status)
-            self.assertEquals(status['status'], 'not-running')
+            self.assertEquals(status['status'], STATES.NOT_RUNNING)
 
     @attr(client_min_version=2,
           client_max_version=base_test.LATEST_API_VERSION)
@@ -88,4 +89,4 @@ class SnapshotsTest(BaseServerTestCase):
                        tmp_file.name):
                 status = self.client.snapshots.get_status()
                 self.assertIn('status', status)
-                self.assertEquals(status['status'], 'running')
+                self.assertEquals(status['status'], STATES.RUNNING)
