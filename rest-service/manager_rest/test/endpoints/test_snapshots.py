@@ -6,9 +6,9 @@ from mock import patch
 from cloudify.snapshots import STATES
 from cloudify_rest_client.exceptions import CloudifyClientError
 
-from .test_utils import generate_progress_func
-from manager_rest.test.attribute import attr
 from manager_rest.test import base_test
+from manager_rest.test.attribute import attr
+from .test_utils import generate_progress_func
 from manager_rest.test.base_test import BaseServerTestCase
 
 
