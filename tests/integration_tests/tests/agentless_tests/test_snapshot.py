@@ -391,7 +391,7 @@ class TestSnapshot(AgentlessTestCase):
         self._assert_restore_marker_file_does_not_exist()
         self._assert_snapshot_restore_status(is_running=False)
 
-        snapshot_id = "test_" + str(uuid4())
+        snapshot_id = "test_snapshot_id"
         snapshot_create_execution = self.client.snapshots.create(
             snapshot_id, False)
         self.wait_for_execution_to_end(snapshot_create_execution)

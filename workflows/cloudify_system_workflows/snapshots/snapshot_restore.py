@@ -110,7 +110,7 @@ class SnapshotRestore(object):
             self._config.snapshot_restore_threads)
 
     def restore(self):
-        self._mark_restoring()
+        self._mark_manager_restoring()
         self._tempdir = tempfile.mkdtemp('-snapshot-data')
         snapshot_path = self._get_snapshot_path()
         ctx.logger.debug('Going to restore snapshot, '
@@ -154,7 +154,7 @@ class SnapshotRestore(object):
             self._trigger_post_restore_commands()
             ctx.logger.debug('Removing temp dir: {0}'.format(self._tempdir))
             shutil.rmtree(self._tempdir)
-            self._unmark_restoring()
+            self._unmark_manager_restoring()
 
     @contextmanager
     def _pause_amqppostgres(self):
@@ -909,12 +909,12 @@ class SnapshotRestore(object):
         ]).aggr_stdout.strip()
 
     @staticmethod
-    def _mark_restoring():
+    def _mark_manager_restoring():
         with open(SNAPSHOT_RESTORE_FLAG_FILE, 'a'):
             os.utime(SNAPSHOT_RESTORE_FLAG_FILE, None)
 
     @staticmethod
-    def _unmark_restoring():
+    def _unmark_manager_restoring():
         os.remove(SNAPSHOT_RESTORE_FLAG_FILE)
 
 
