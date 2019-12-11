@@ -534,7 +534,8 @@ class SnapshotRestore(object):
 
         config_dump_path = postgres.dump_config_tables(self._tempdir)
         with utils.db_schema(schema_revision, config=self._config):
-            admin_user_update_command = postgres.restore(self._tempdir)
+            admin_user_update_command = postgres.restore(
+                self._tempdir, premium_enabled=self._premium_enabled)
         postgres.restore_config_tables(config_dump_path)
         postgres.restore_current_execution()
         try:
@@ -893,6 +894,8 @@ class SnapshotRestore(object):
         return prefix + token_info['token']
 
     def _reconfigure_status_reporter(self, postgres):
+        if not self._premium_enabled:
+            return
         ctx.logger.debug("Reconfiguring the Manager's status reporter...")
         reporter = postgres.get_manager_reporter_info()
         encoded_id = self._get_encoded_user_id(reporter['id'])
