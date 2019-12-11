@@ -3,13 +3,12 @@ from tempfile import NamedTemporaryFile
 
 from mock import patch
 
-from manager_rest.test.attribute import attr
-
-from manager_rest.test import base_test
-from manager_rest.test.base_test import BaseServerTestCase
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from .test_utils import generate_progress_func
+from manager_rest.test.attribute import attr
+from manager_rest.test import base_test
+from manager_rest.test.base_test import BaseServerTestCase
 
 
 @attr(client_min_version=2, client_max_version=base_test.LATEST_API_VERSION)
