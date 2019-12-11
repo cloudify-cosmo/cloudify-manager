@@ -17,7 +17,6 @@ import os
 import time
 import json
 import pickle
-from uuid import uuid4
 
 import requests
 from collections import Counter
