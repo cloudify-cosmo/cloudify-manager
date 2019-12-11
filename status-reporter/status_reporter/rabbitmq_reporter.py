@@ -25,7 +25,7 @@ from .constants import STATUS_REPORTER_CONFIG_KEY, EXTRA_INFO
 from .utils import get_systemd_services, determine_node_status
 
 NODES_API = 'nodes'
-VHOSTS_API = 'vhosts'
+OVERVIEW_API = 'overview'
 NODE_STATUS = 'node_status'
 CLUSTER_STATUS = 'cluster_status'
 RABBITMQ_SERVICE_KEY = 'RabbitMQ'
@@ -59,20 +59,31 @@ class RabbitMQReporter(Reporter):
             cluster_extra_info
         statuses.append(cluster_status)
 
+    @staticmethod
+    def _get_nodes_status(nodes_response):
+        cluster_nodes = {}
+        for node in nodes_response:
+            cluster_nodes[node['name']] = (
+                ServiceStatus.HEALTHY if node['running']
+                else ServiceStatus.FAIL)
+
+        return cluster_nodes
+
     def _get_cluster_status(self, config):
         nodes_response = self._query_rabbitmq(config, NODES_API)
         if not nodes_response:
             return NodeServiceStatus.INACTIVE, {}
-        number_of_nodes = len(nodes_response.json())
+        cluster_nodes_status = self._get_nodes_status(
+            nodes_response.json())
 
-        vhosts_response = self._query_rabbitmq(config, VHOSTS_API)
-        if not vhosts_response:
+        overview_response = self._query_rabbitmq(config, OVERVIEW_API)
+        if not overview_response:
             return NodeServiceStatus.INACTIVE, {}
-        running_nodes = vhosts_response.json()[0]['cluster_state']
+        node_name = overview_response.json()['node']
 
         return (NodeServiceStatus.ACTIVE,
-                {'number_of_cluster_nodes': number_of_nodes,
-                 'running_nodes': running_nodes})
+                {'node_name': node_name,
+                 'cluster_nodes_status': cluster_nodes_status})
 
     def _update_node_status(self, services, statuses, config):
         node_status, node_extra_info = self._get_rabbitmq_node_status(config)
