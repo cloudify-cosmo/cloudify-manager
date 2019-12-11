@@ -21,7 +21,7 @@ from flask_restful import Resource
 from flask_restful_swagger import swagger
 
 from cloudify.models_states import SnapshotState
-from cloudify.constants import SNAPSHOT_RESTORE_MARKER_FILE_PATH
+from cloudify.constants import SNAPSHOT_RESTORE_FLAG_FILE
 
 from manager_rest.security import SecuredResource
 from manager_rest import config, manager_exceptions
@@ -281,6 +281,6 @@ class SnapshotsStatus(Resource):
         `<unique-str>-snapshot-data` is created on the Manager. If the file
         does not exists it means there is no snapshot restore running.
         """
-        if os.path.exists(SNAPSHOT_RESTORE_MARKER_FILE_PATH):
+        if os.path.exists(SNAPSHOT_RESTORE_FLAG_FILE):
             return {'status': 'running'}
         return {'status': 'not-running'}

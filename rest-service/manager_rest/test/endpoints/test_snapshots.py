@@ -74,7 +74,7 @@ class SnapshotsTest(BaseServerTestCase):
     def test_snapshot_status_reports_not_running(self):
         tmp_file = '/non_existent123'
         with patch('manager_rest.rest.resources_v2.snapshots'
-                   '.SNAPSHOT_RESTORE_MARKER_FILE_PATH',
+                   '.SNAPSHOT_RESTORE_FLAG_FILE',
                    tmp_file):
             status = self.client.snapshots.get_status()
             self.assertIn('status', status)
@@ -85,7 +85,7 @@ class SnapshotsTest(BaseServerTestCase):
     def test_snapshot_status_reports_running(self):
         with NamedTemporaryFile() as tmp_file:
             with patch('manager_rest.rest.resources_v2.snapshots'
-                       '.SNAPSHOT_RESTORE_MARKER_FILE_PATH',
+                       '.SNAPSHOT_RESTORE_FLAG_FILE',
                        tmp_file.name):
                 status = self.client.snapshots.get_status()
                 self.assertIn('status', status)

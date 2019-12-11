@@ -28,7 +28,7 @@ from integration_tests import AgentlessTestCase
 from integration_tests.framework import postgresql
 
 from cloudify.models_states import ExecutionState, AgentState
-from cloudify.constants import SNAPSHOT_RESTORE_MARKER_FILE_PATH
+from cloudify.constants import SNAPSHOT_RESTORE_FLAG_FILE
 
 from manager_rest.constants import DEFAULT_TENANT_NAME, DEFAULT_TENANT_ROLE
 
@@ -422,7 +422,7 @@ class TestSnapshot(AgentlessTestCase):
     def _does_restore_marker_file_exists(self):
         ls_exit_code = self.execute_on_manager(
             "sh -c 'ls {0} &> /dev/null; echo $?'"
-            "".format(SNAPSHOT_RESTORE_MARKER_FILE_PATH)
+            "".format(SNAPSHOT_RESTORE_FLAG_FILE)
         ).stdout.strip()
         return ls_exit_code == '0'
 
