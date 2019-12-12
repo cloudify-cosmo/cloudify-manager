@@ -278,7 +278,7 @@ def _get_db_cluster_status(db_service, expected_nodes_number):
     sync state so the cluster will function. Healthy cluster has all the other
     replicas in streaming state.
     """
-    if _is_service_external_or_fail(db_service):
+    if _should_validate_cluster(db_service):
         return db_service[STATUS]
 
     master_replications_state = _get_db_master_replications(db_service)
@@ -304,7 +304,7 @@ def _get_db_cluster_status(db_service, expected_nodes_number):
     return db_service[STATUS]
 
 
-def _is_service_external_or_fail(service):
+def _should_validate_cluster(service):
     return service[STATUS] == ServiceStatus.FAIL or service[IS_EXTERNAL]
 
 
@@ -314,7 +314,7 @@ def _get_broker_cluster_status(broker_service, expected_nodes_number):
     running and recognizing the same cluster, 'Healthy' cluster means all of
     them do.
     """
-    if _is_service_external_or_fail(broker_service):
+    if _should_validate_cluster(broker_service):
         return broker_service[STATUS]
 
     broker_nodes = broker_service['nodes']
@@ -388,24 +388,21 @@ def get_cluster_status():
     _handle_missing_status_reports(missing_status_reports, cluster_services,
                                    is_all_in_one)
     if not is_all_in_one:
-        _update_service_status(cluster_services, cluster_structure,
-                               CloudifyNodeType.DB, _get_db_cluster_status)
-        _update_service_status(cluster_services, cluster_structure,
-                               CloudifyNodeType.BROKER,
-                               _get_broker_cluster_status)
+        db_service = cluster_services[CloudifyNodeType.DB]
+        expected_db_nodes_number = len(cluster_structure[CloudifyNodeType.DB])
+        db_service[STATUS] = _get_db_cluster_status(db_service,
+                                                    expected_db_nodes_number)
+
+        broker_service = cluster_services[CloudifyNodeType.BROKER]
+        expected_broker_nodes_number = len(
+            cluster_structure[CloudifyNodeType.BROKER])
+        broker_service[STATUS] = _get_broker_cluster_status(
+            broker_service, expected_broker_nodes_number)
 
     return {
         STATUS: _get_entire_cluster_status(cluster_services),
         SERVICES: cluster_services
     }
-
-
-def _update_service_status(cluster_services, cluster_structure, service_type,
-                           get_service_cluster_status_func):
-    service = cluster_services[service_type]
-    expected_nodes_number = len(cluster_structure[service_type])
-    service[STATUS] = get_service_cluster_status_func(service,
-                                                      expected_nodes_number)
 
 # region Write Status Report Helpers
 
