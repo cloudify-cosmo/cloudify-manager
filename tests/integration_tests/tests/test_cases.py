@@ -466,7 +466,7 @@ class BaseTestCase(unittest.TestCase):
 
     def wait_for_snapshot_restore_to_end(self,
                                          execution_id=None,
-                                         timeout_seconds=240,
+                                         timeout_seconds=480,
                                          client=None):
         def is_client_error(exception):
             return isinstance(exception, CloudifyClientError)
