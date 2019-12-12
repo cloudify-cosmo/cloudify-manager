@@ -278,7 +278,7 @@ def _get_db_cluster_status(db_service, expected_nodes_number):
     sync state so the cluster will function. Healthy cluster has all the other
     replicas in streaming state.
     """
-    if _should_validate_cluster(db_service):
+    if _should_not_validate_cluster(db_service):
         return db_service[STATUS]
 
     master_replications_state = _get_db_master_replications(db_service)
@@ -304,7 +304,7 @@ def _get_db_cluster_status(db_service, expected_nodes_number):
     return db_service[STATUS]
 
 
-def _should_validate_cluster(service):
+def _should_not_validate_cluster(service):
     return service[STATUS] == ServiceStatus.FAIL or service[IS_EXTERNAL]
 
 
@@ -314,7 +314,7 @@ def _get_broker_cluster_status(broker_service, expected_nodes_number):
     running and recognizing the same cluster, 'Healthy' cluster means all of
     them do.
     """
-    if _should_validate_cluster(broker_service):
+    if _should_not_validate_cluster(broker_service):
         return broker_service[STATUS]
 
     broker_nodes = broker_service['nodes']
