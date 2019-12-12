@@ -93,9 +93,15 @@ def upgrade():
         'nodes',
         ['_deployment_fk'],
         unique=False)
+    op.create_index(
+        op.f('executions_ended_at_idx'),
+        'executions',
+        ['ended_at'],
+        unique=False)
 
 
 def downgrade():
+    op.drop_index(op.f('executions_ended_at_idx'), table_name='executions')
     op.drop_index(
         op.f('nodes__deployment_fk_idx'),
         table_name='nodes')

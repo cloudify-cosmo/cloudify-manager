@@ -261,7 +261,7 @@ class Execution(CreatedAtMixin, SQLResourceBase):
         'status_display': flask_fields.String
     }
 
-    ended_at = db.Column(UTCDateTime, nullable=True)
+    ended_at = db.Column(UTCDateTime, nullable=True, index=True)
     error = db.Column(db.Text)
     is_system_workflow = db.Column(db.Boolean, nullable=False)
     parameters = db.Column(db.PickleType)
