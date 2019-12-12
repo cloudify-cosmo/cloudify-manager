@@ -466,7 +466,8 @@ class BaseTestCase(unittest.TestCase):
 
     def wait_for_snapshot_restore_to_end(self,
                                          execution_id=None,
-                                         timeout_seconds=240):
+                                         timeout_seconds=240,
+                                         client=None):
         def is_client_error(exception):
             return isinstance(exception, CloudifyClientError)
 
@@ -477,12 +478,13 @@ class BaseTestCase(unittest.TestCase):
             status = ''
             while status != STATES.NOT_RUNNING:
                 time.sleep(0.5)
-                status = self.client.snapshots.get_status()['status']
+                status = client.snapshots.get_status()['status']
                 if time.time() > deadline:
                     raise utils.TimeoutException(
                         'Snapshot restore timed out.{0}'
                         ''.format(error_message_suffix))
 
+        client = client or self.client
         error_message_suffix = (
             ' Execution ID provided: {0}'.format(execution_id)
             if execution_id else '')
@@ -491,6 +493,8 @@ class BaseTestCase(unittest.TestCase):
         try_fetch_status()
 
     def _wait_for_restore_marker_file_to_be_created(self, timeout_seconds=40):
+        self.logger.debug("Waiting for snapshot restore marker to be "
+                          "created...")
         deadline = time.time() + timeout_seconds
         exists = None
         while not exists:
@@ -499,6 +503,7 @@ class BaseTestCase(unittest.TestCase):
             if time.time() > deadline:
                 self.fail("Timed out waiting for the restore marker file to "
                           "be created.")
+        self.logger.debug("Snapshot restore marker file created.")
         return True
 
     def _does_restore_marker_file_exists(self):

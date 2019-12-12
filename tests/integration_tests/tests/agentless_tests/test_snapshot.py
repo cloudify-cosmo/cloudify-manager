@@ -26,8 +26,8 @@ from integration_tests.framework import utils
 from integration_tests import AgentlessTestCase
 from integration_tests.framework import postgresql
 
+from cloudify.snapshots import STATES
 from cloudify.models_states import ExecutionState, AgentState
-from cloudify.snapshots import SNAPSHOT_RESTORE_FLAG_FILE, STATES
 
 from manager_rest.constants import DEFAULT_TENANT_NAME, DEFAULT_TENANT_ROLE
 
@@ -581,7 +581,9 @@ class TestSnapshot(AgentlessTestCase):
         execution = rest_client.snapshots.restore(
             snapshot_id,
             ignore_plugin_failure=ignore_plugin_failure)
-        self.wait_for_snapshot_restore_to_end(execution.id)
+        rest_client.maintenance_mode.activate()
+        self.wait_for_snapshot_restore_to_end(execution.id, client=rest_client)
+        rest_client.maintenance_mode.deactivate()
         execution = self._wait_for_restore_execution_to_end(
             execution, rest_client, timeout_seconds=240)
         if execution.status == error_execution_status:

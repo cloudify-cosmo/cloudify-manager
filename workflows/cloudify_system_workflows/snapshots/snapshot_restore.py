@@ -463,7 +463,7 @@ class SnapshotRestore(object):
             )
         )
 
-        subprocess.Popen(command, shell=True)
+        subprocess.check_call(command, shell=True)
 
     def _validate_snapshot(self):
         validator = SnapshotRestoreValidator(
