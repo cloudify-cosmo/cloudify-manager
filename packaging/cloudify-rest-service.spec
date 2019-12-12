@@ -56,7 +56,7 @@ cp -R "${RPM_SOURCE_DIR}/resources/rest-service/cloudify/" "%{buildroot}/opt/man
 mkdir -p %{buildroot}/var/log/cloudify/rest
 mkdir -p %{buildroot}/var/log/cloudify/amqp-postgres
 # Dir for snapshot restore marker files (CY-1821)
-mkdir -p %{buildroot}/opt/cloudify/snapshot_status
+mkdir -p %{buildroot}/opt/manager/snapshot_status
 
 # Copy static files into place. In order to have files in /packaging/files
 # actually included in the RPM, they must have an entry in the %files
@@ -95,6 +95,6 @@ getent passwd cfyuser >/dev/null || useradd -r -g cfyuser -d /etc/cloudify -s /s
 /usr/lib/systemd/system/cloudify-amqp-postgres.service
 
 %attr(750,cfyuser,adm) /var/log/cloudify/rest
-%attr(750,cfyuser,adm) /opt/cloudify/snapshot_status
+%attr(750,cfyuser,adm) /opt/manager/snapshot_status
 %attr(750,cfyuser,adm) /var/log/cloudify/amqp-postgres
 %attr(550,root,cfyuser) /opt/cloudify/encryption/update-encryption-key
