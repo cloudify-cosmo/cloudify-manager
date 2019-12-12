@@ -154,7 +154,6 @@ class SnapshotRestore(object):
             self._trigger_post_restore_commands()
             ctx.logger.debug('Removing temp dir: {0}'.format(self._tempdir))
             shutil.rmtree(self._tempdir)
-            self._unmark_manager_restoring()
 
     @contextmanager
     def _pause_amqppostgres(self):
@@ -456,6 +455,7 @@ class SnapshotRestore(object):
         command += 'sleep 3; '
 
         command += '; '.join(self._post_restore_commands)
+        command += '; sudo rm -f {0}'.format(SNAPSHOT_RESTORE_FLAG_FILE)
 
         ctx.logger.info(
             'After restore, the following commands will run: {cmds}'.format(
@@ -463,7 +463,7 @@ class SnapshotRestore(object):
             )
         )
 
-        subprocess.check_call(command, shell=True)
+        subprocess.Popen(command, shell=True)
 
     def _validate_snapshot(self):
         validator = SnapshotRestoreValidator(
@@ -913,12 +913,6 @@ class SnapshotRestore(object):
         with open(SNAPSHOT_RESTORE_FLAG_FILE, 'a'):
             os.utime(SNAPSHOT_RESTORE_FLAG_FILE, None)
         ctx.logger.debug('Marked manager is snapshot restoring with file:'
-                         ' {0}'.format(SNAPSHOT_RESTORE_FLAG_FILE))
-
-    @staticmethod
-    def _unmark_manager_restoring():
-        os.remove(SNAPSHOT_RESTORE_FLAG_FILE)
-        ctx.logger.debug('Unmarked manager is snapshot restoring with file:'
                          ' {0}'.format(SNAPSHOT_RESTORE_FLAG_FILE))
 
 
