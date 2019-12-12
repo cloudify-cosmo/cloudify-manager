@@ -389,15 +389,11 @@ def get_cluster_status():
                                    is_all_in_one)
     if not is_all_in_one:
         db_service = cluster_services[CloudifyNodeType.DB]
-        expected_db_nodes_number = len(cluster_structure[CloudifyNodeType.DB])
-        db_service[STATUS] = _get_db_cluster_status(db_service,
-                                                    expected_db_nodes_number)
-
+        db_service[STATUS] = _get_db_cluster_status(
+            db_service, len(cluster_structure[CloudifyNodeType.DB]))
         broker_service = cluster_services[CloudifyNodeType.BROKER]
-        expected_broker_nodes_number = len(
-            cluster_structure[CloudifyNodeType.BROKER])
         broker_service[STATUS] = _get_broker_cluster_status(
-            broker_service, expected_broker_nodes_number)
+            broker_service, len(cluster_structure[CloudifyNodeType.BROKER]))
 
     return {
         STATUS: _get_entire_cluster_status(cluster_services),
