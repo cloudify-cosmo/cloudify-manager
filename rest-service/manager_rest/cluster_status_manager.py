@@ -32,6 +32,7 @@ from manager_rest.rest.rest_utils import parse_datetime_string
 STATUS = 'status'
 SERVICES = 'services'
 EXTRA_INFO = 'extra_info'
+IS_EXTERNAL = 'is_external'
 DB_SERVICE_KEY = 'PostgreSQL'
 BROKER_SERVICE_KEY = 'RabbitMQ'
 PATRONI_SERVICE_KEY = 'Patroni'
@@ -277,7 +278,7 @@ def _get_db_cluster_status(db_service, expected_nodes_number):
     sync state so the cluster will function. Healthy cluster has all the other
     replicas in streaming state.
     """
-    if db_service[STATUS] == ServiceStatus.FAIL or db_service['is_external']:
+    if _is_service_external_or_fail(db_service):
         return db_service[STATUS]
 
     master_replications_state = _get_db_master_replications(db_service)
@@ -303,25 +304,30 @@ def _get_db_cluster_status(db_service, expected_nodes_number):
     return db_service[STATUS]
 
 
+def _is_service_external_or_fail(service):
+    return service[STATUS] == ServiceStatus.FAIL or service[IS_EXTERNAL]
+
+
 def _get_broker_cluster_status(broker_service, expected_nodes_number):
     """
     Get the status of the broker cluster. The majority of nodes should be
     running and recognizing the same cluster, 'Healthy' cluster means all of
     them do.
     """
-    if (broker_service[STATUS] == ServiceStatus.FAIL or
-            broker_service['is_external']):
-        return
+    if _is_service_external_or_fail(broker_service):
+        return broker_service[STATUS]
+
     broker_nodes = broker_service['nodes']
     active_broker_nodes = {name: node for name, node in broker_nodes.items()
-                           if node['status'] == ServiceStatus.HEALTHY}
+                           if node[STATUS] == ServiceStatus.HEALTHY}
+
     if not _verify_broker_cluster_status(active_broker_nodes):
         return ServiceStatus.FAIL
 
     if expected_nodes_number != len(active_broker_nodes):
         return ServiceStatus.DEGRADED
 
-    return broker_service['status']
+    return broker_service[STATUS]
 
 
 def _verify_broker_cluster_status(broker_nodes):
@@ -373,7 +379,7 @@ def get_cluster_status():
         )
         cluster_services[service_type] = {
             STATUS: _get_service_status(formatted_nodes),
-            'is_external': service_nodes[0].is_external,
+            IS_EXTERNAL: service_nodes[0].is_external,
             'nodes': formatted_nodes
         }
         missing_status_reports.update(missing_reports)
