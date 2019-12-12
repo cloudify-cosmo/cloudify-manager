@@ -35,7 +35,7 @@ from requests.exceptions import ConnectionError
 import cloudify.logs
 import cloudify.utils
 import cloudify.event
-from cloudify.snapshots import STATES
+from cloudify.snapshots import STATES, SNAPSHOT_RESTORE_FLAG_FILE
 
 from logging.handlers import RotatingFileHandler
 
@@ -464,10 +464,9 @@ class BaseTestCase(unittest.TestCase):
                         execution.status))
         return execution
 
-    @staticmethod
-    def wait_for_snapshot_restore_to_end(execution_id=None,
-                                         timeout_seconds=240,
-                                         client=None):
+    def wait_for_snapshot_restore_to_end(self,
+                                         execution_id=None,
+                                         timeout_seconds=240):
         def is_client_error(exception):
             return isinstance(exception, CloudifyClientError)
 
@@ -478,19 +477,36 @@ class BaseTestCase(unittest.TestCase):
             status = ''
             while status != STATES.NOT_RUNNING:
                 time.sleep(0.5)
-                status = client.snapshots.get_status()['status']
+                status = self.client.snapshots.get_status()['status']
                 if time.time() > deadline:
                     raise utils.TimeoutException(
                         'Snapshot restore timed out.{0}'
                         ''.format(error_message_suffix))
 
-        if not client:
-            client = test_utils.create_rest_client()
         error_message_suffix = (
             ' Execution ID provided: {0}'.format(execution_id)
             if execution_id else '')
         deadline = time.time() + timeout_seconds
+        self._wait_for_restore_marker_file_to_be_created()
         try_fetch_status()
+
+    def _wait_for_restore_marker_file_to_be_created(self, timeout_seconds=40):
+        deadline = time.time() + timeout_seconds
+        exists = None
+        while not exists:
+            time.sleep(0.5)
+            exists = self._does_restore_marker_file_exists()
+            if time.time() > deadline:
+                self.fail("Timed out waiting for the restore marker file to "
+                          "be created.")
+        return True
+
+    def _does_restore_marker_file_exists(self):
+        ls_exit_code = self.execute_on_manager(
+            "sh -c 'ls {0} &> /dev/null; echo $?'"
+            "".format(SNAPSHOT_RESTORE_FLAG_FILE)
+        ).stdout.strip()
+        return ls_exit_code == '0'
 
     @contextmanager
     def client_using_tenant(self, client, tenant_name):

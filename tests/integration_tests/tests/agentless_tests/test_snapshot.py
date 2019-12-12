@@ -400,30 +400,11 @@ class TestSnapshot(AgentlessTestCase):
         self.client.maintenance_mode.activate()
         self._wait_for_restore_marker_file_to_be_created()
         self._assert_snapshot_restore_status(is_running=True)
-        self.wait_for_snapshot_restore_to_end(
-            snapshot_restore_execution_id, client=self.client)
+        self.wait_for_snapshot_restore_to_end(snapshot_restore_execution_id)
         self.client.maintenance_mode.deactivate()
 
         self._assert_restore_marker_file_does_not_exist()
         self._assert_snapshot_restore_status(is_running=False)
-
-    def _wait_for_restore_marker_file_to_be_created(self, timeout_seconds=40):
-        deadline = time.time() + timeout_seconds
-        exists = None
-        while not exists:
-            time.sleep(0.5)
-            exists = self._does_restore_marker_file_exists()
-            if time.time() > deadline:
-                self.fail("Timed out waiting for the restore marker file to "
-                          "be created.")
-        return True
-
-    def _does_restore_marker_file_exists(self):
-        ls_exit_code = self.execute_on_manager(
-            "sh -c 'ls {0} &> /dev/null; echo $?'"
-            "".format(SNAPSHOT_RESTORE_FLAG_FILE)
-        ).stdout.strip()
-        return ls_exit_code == '0'
 
     def _assert_restore_marker_file_does_not_exist(self):
         marker_file_exists = self._does_restore_marker_file_exists()
