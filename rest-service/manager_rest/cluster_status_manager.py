@@ -330,7 +330,7 @@ def _get_broker_cluster_status(broker_service, expected_nodes_number):
     return broker_service[STATUS]
 
 
-def _verify_broker_cluster_status(broker_nodes):
+def _verify_broker_cluster_status(active_broker_nodes):
     """
     Checks whether the cluster status is the same on all active nodes.
     If yes, returns True, else, logs which nodes don't recognize the same
@@ -339,16 +339,16 @@ def _verify_broker_cluster_status(broker_nodes):
     first_node_name = ''
     first_node_cluster_status = {}
 
-    for node in broker_nodes.values():
+    for node in active_broker_nodes.values():
         broker_service = node[SERVICES][BROKER_SERVICE_KEY]
-        node_cluster_status = broker_service[EXTRA_INFO]['cluster_status']
-        cluster_status = node_cluster_status['cluster_nodes_status']
-        node_name = node_cluster_status['node_name']
+        cluster_status = broker_service[EXTRA_INFO]['cluster_status']
+        cluster_nodes_status = cluster_status['cluster_nodes_status']
+        node_name = cluster_status['node_name']
         if not first_node_cluster_status:
-            first_node_cluster_status = cluster_status
+            first_node_cluster_status = cluster_nodes_status
             first_node_name = node_name
             continue
-        if cluster_status != first_node_cluster_status:
+        if cluster_nodes_status != first_node_cluster_status:
             current_app.logger.info('{0} is not in the same cluster as '
                                     '{1}'.format(first_node_name, node_name))
             return False
