@@ -32,7 +32,7 @@ from manager_rest.rest.rest_utils import parse_datetime_string
 DB_SERVICE_KEY = 'PostgreSQL'
 BROKER_SERVICE_KEY = 'RabbitMQ'
 UNINITIALIZED_STATUS = 'Uninitialized'
-CLUSTER_STATUS_PATH = '/opt/status-reporter/cluster_statuses'
+CLUSTER_STATUS_PATH = '/opt/manager/cluster_statuses'
 
 
 def get_report_path(node_type, node_id):
