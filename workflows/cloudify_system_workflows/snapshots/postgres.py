@@ -70,7 +70,7 @@ class Postgres(object):
             ctx.logger.debug('Updating Postgres config: host: {0}, port: {1}'
                              .format(self._host, self._port))
 
-    def restore(self, tempdir, premium_enabled, license=None):
+    def restore(self, tempdir, license=None):
         ctx.logger.info('Restoring DB from postgres dump')
         dump_file = os.path.join(tempdir, self._POSTGRES_DUMP_FILENAME)
 
@@ -85,11 +85,10 @@ class Postgres(object):
             self._get_admin_user_update_query()
         self._append_dump(dump_file, admin_query, admin_protected_query)
 
-        if premium_enabled:
-            reporters_query, reporters_protected_query = \
-                self._get_status_reporters_update_query()
-            self._append_dump(
-                dump_file, reporters_query, reporters_protected_query)
+        reporters_query, reporters_protected_query = \
+            self._get_status_reporters_update_query()
+        self._append_dump(
+            dump_file, reporters_query, reporters_protected_query)
 
         self._restore_dump(dump_file, self._db_name)
 
