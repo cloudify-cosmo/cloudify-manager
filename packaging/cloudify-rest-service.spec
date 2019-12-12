@@ -55,6 +55,7 @@ cp -R "${RPM_SOURCE_DIR}/resources/rest-service/cloudify/" "%{buildroot}/opt/man
 # Create the log dirs
 mkdir -p %{buildroot}/var/log/cloudify/rest
 mkdir -p %{buildroot}/var/log/cloudify/amqp-postgres
+
 # Dir for snapshot restore marker files (CY-1821)
 mkdir -p %{buildroot}/opt/manager/snapshot_status
 

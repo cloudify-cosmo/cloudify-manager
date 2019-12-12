@@ -397,7 +397,6 @@ class TestSnapshot(AgentlessTestCase):
 
         snapshot_restore_execution_id = self.client.snapshots.restore(
             snapshot_id).id
-        # CY-2082
         self.client.maintenance_mode.activate()
         self._wait_for_restore_marker_file_to_be_created()
         self._assert_snapshot_restore_status(is_running=True)
