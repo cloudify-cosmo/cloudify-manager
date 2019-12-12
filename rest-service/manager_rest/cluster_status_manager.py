@@ -303,27 +303,23 @@ def _get_db_cluster_status(db_service, expected_nodes_number):
     return db_service[STATUS]
 
 
-
-def _update_service_cluster_status(cluster_status, node_type,
-                                   _get_service_status_func):
-    service = cluster_status['services'][node_type]
-    if service['status'] == ServiceStatus.FAIL or service['is_external']:
-        return
-
-    service['status'] = _get_service_status_func(service)
-
-
-def _get_broker_status(broker_service):
+def _get_broker_cluster_status(broker_service, expected_nodes_number):
     """
     Get the status of the broker cluster. The majority of nodes should be
     running and recognizing the same cluster, 'Healthy' cluster means all of
     them do.
     """
+    if (broker_service[STATUS] == ServiceStatus.FAIL or
+            broker_service['is_external']):
+        return
     broker_nodes = broker_service['nodes']
     active_broker_nodes = {name: node for name, node in broker_nodes.items()
                            if node['status'] == ServiceStatus.HEALTHY}
     if not _verify_broker_cluster_status(active_broker_nodes):
         return ServiceStatus.FAIL
+
+    if expected_nodes_number != len(active_broker_nodes):
+        return ServiceStatus.DEGRADED
 
     return broker_service['status']
 
@@ -338,8 +334,8 @@ def _verify_broker_cluster_status(broker_nodes):
     first_node_cluster_status = {}
 
     for node in broker_nodes.values():
-        broker_service = node['services'][BROKER_SERVICE_KEY]
-        node_cluster_status = broker_service['extra_info']['cluster_status']
+        broker_service = node[SERVICES][BROKER_SERVICE_KEY]
+        node_cluster_status = broker_service[EXTRA_INFO]['cluster_status']
         cluster_status = node_cluster_status['cluster_nodes_status']
         node_name = node_cluster_status['node_name']
         if not first_node_cluster_status:
@@ -351,7 +347,6 @@ def _verify_broker_cluster_status(broker_nodes):
                                     '{1}'.format(first_node_name, node_name))
             return False
     return True
-
 
 # endregion
 
@@ -387,10 +382,11 @@ def get_cluster_status():
     _handle_missing_status_reports(missing_status_reports, cluster_services,
                                    is_all_in_one)
     if not is_all_in_one:
-        db_service = cluster_services[CloudifyNodeType.DB]
-        expected_nodes_number = len(cluster_structure[CloudifyNodeType.DB])
-        db_service[STATUS] = _get_db_cluster_status(db_service,
-                                                    expected_nodes_number)
+        _update_service_status(cluster_services, cluster_structure,
+                               CloudifyNodeType.DB, _get_db_cluster_status)
+        _update_service_status(cluster_services, cluster_structure,
+                               CloudifyNodeType.BROKER,
+                               _get_broker_cluster_status)
 
     return {
         STATUS: _get_entire_cluster_status(cluster_services),
@@ -398,7 +394,15 @@ def get_cluster_status():
     }
 
 
+def _update_service_status(cluster_services, cluster_structure, service_type,
+                           get_service_cluster_status_func):
+    service = cluster_services[service_type]
+    expected_nodes_number = len(cluster_structure[service_type])
+    service[STATUS] = get_service_cluster_status_func(service,
+                                                      expected_nodes_number)
+
 # region Write Status Report Helpers
+
 
 def _verify_status_report_schema(node_id, report):
     if not (_are_keys_in_dict(report['report'], [STATUS, SERVICES])
