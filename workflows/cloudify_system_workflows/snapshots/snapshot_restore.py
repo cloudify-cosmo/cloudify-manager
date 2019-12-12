@@ -455,7 +455,7 @@ class SnapshotRestore(object):
         command += 'sleep 3; '
 
         command += '; '.join(self._post_restore_commands)
-        command += '; sudo rm -f {0}'.format(SNAPSHOT_RESTORE_FLAG_FILE)
+        command += '; rm -f {0}'.format(SNAPSHOT_RESTORE_FLAG_FILE)
 
         ctx.logger.info(
             'After restore, the following commands will run: {cmds}'.format(
