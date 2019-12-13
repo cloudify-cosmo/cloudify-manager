@@ -14,7 +14,6 @@
 #  * limitations under the License.
 
 import json
-from time import sleep
 from uuid import uuid4
 
 from cloudify.cluster_status import MANAGER_STATUS_REPORTER
@@ -30,15 +29,17 @@ class TestManagerStatusReporter(AgentlessTestCase):
         snapshot_id = "test_" + str(uuid4())
         initial_token_key, _ = self._get_reporter_token_key()
 
+        self._update_reporter_token_key('a' * 32)
+
         execution = self.client.snapshots.create(snapshot_id, False)
         self.wait_for_execution_to_end(execution)
 
-        self._update_reporter_token_key('a' * 32)
+        self._update_reporter_token_key(initial_token_key)
 
         execution = self.client.snapshots.restore(snapshot_id)
-        # Temporary fix until CY-1821 is fixed.
-        sleep(40)
-        #  At this point it should be safe to query executions.
+        self.client.maintenance_mode.activate()
+        self.wait_for_snapshot_restore_to_end(execution.id)
+        self.client.maintenance_mode.deactivate()
         self.wait_for_execution_to_end(execution)
 
         current_token_key, reporter_id = self._get_reporter_token_key()

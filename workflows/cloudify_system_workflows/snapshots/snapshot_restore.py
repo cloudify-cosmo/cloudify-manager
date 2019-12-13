@@ -33,9 +33,10 @@ from cloudify.manager import get_rest_client
 from cloudify.state import current_workflow_ctx
 from cloudify.exceptions import NonRecoverableError
 from cloudify.constants import (
-    FILE_SERVER_SNAPSHOTS_FOLDER,
     NEW_TOKEN_FILE_NAME,
+    FILE_SERVER_SNAPSHOTS_FOLDER,
 )
+from cloudify.snapshots import SNAPSHOT_RESTORE_FLAG_FILE
 from cloudify.utils import ManagerVersion, get_local_rest_certificate
 
 from cloudify_rest_client.executions import Execution
@@ -109,6 +110,7 @@ class SnapshotRestore(object):
             self._config.snapshot_restore_threads)
 
     def restore(self):
+        self._mark_manager_restoring()
         self._tempdir = tempfile.mkdtemp('-snapshot-data')
         snapshot_path = self._get_snapshot_path()
         ctx.logger.debug('Going to restore snapshot, '
@@ -453,6 +455,7 @@ class SnapshotRestore(object):
         command += 'sleep 3; '
 
         command += '; '.join(self._post_restore_commands)
+        command += '; rm -f {0}'.format(SNAPSHOT_RESTORE_FLAG_FILE)
 
         ctx.logger.info(
             'After restore, the following commands will run: {cmds}'.format(
@@ -904,6 +907,13 @@ class SnapshotRestore(object):
             '--user_id',
             str(user_id),
         ]).aggr_stdout.strip()
+
+    @staticmethod
+    def _mark_manager_restoring():
+        with open(SNAPSHOT_RESTORE_FLAG_FILE, 'a'):
+            os.utime(SNAPSHOT_RESTORE_FLAG_FILE, None)
+        ctx.logger.debug('Marked manager is snapshot restoring with file:'
+                         ' {0}'.format(SNAPSHOT_RESTORE_FLAG_FILE))
 
 
 class SnapshotRestoreValidator(object):

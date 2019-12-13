@@ -17,6 +17,7 @@ import os
 import time
 import json
 import pickle
+
 import requests
 from collections import Counter
 
@@ -25,7 +26,9 @@ from integration_tests.framework import utils
 from integration_tests import AgentlessTestCase
 from integration_tests.framework import postgresql
 
+from cloudify.snapshots import STATES
 from cloudify.models_states import ExecutionState, AgentState
+
 from manager_rest.constants import DEFAULT_TENANT_NAME, DEFAULT_TENANT_ROLE
 
 from cloudify_rest_client.executions import Execution
@@ -383,6 +386,36 @@ class TestSnapshot(AgentlessTestCase):
         docl.execute('cfy_manager restart --force')
         self.assertTrue(self._all_services_restarted_properly())
 
+    def test_snapshot_status_returns_correct_status(self):
+        self._assert_restore_marker_file_does_not_exist()
+        self._assert_snapshot_restore_status(is_running=False)
+
+        snapshot_id = "test_snapshot_id"
+        snapshot_create_execution = self.client.snapshots.create(
+            snapshot_id, False)
+        self.wait_for_execution_to_end(snapshot_create_execution)
+
+        snapshot_restore_execution_id = self.client.snapshots.restore(
+            snapshot_id).id
+        self.client.maintenance_mode.activate()
+        self._wait_for_restore_marker_file_to_be_created()
+        self._assert_snapshot_restore_status(is_running=True)
+        self.wait_for_snapshot_restore_to_end(snapshot_restore_execution_id)
+        self.client.maintenance_mode.deactivate()
+
+        self._assert_restore_marker_file_does_not_exist()
+        self._assert_snapshot_restore_status(is_running=False)
+
+    def _assert_restore_marker_file_does_not_exist(self):
+        marker_file_exists = self._does_restore_marker_file_exists()
+        self.assertFalse(marker_file_exists)
+
+    def _assert_snapshot_restore_status(self, is_running):
+        status_msg = STATES.RUNNING if is_running else STATES.NOT_RUNNING
+        restore_status = self.client.snapshots.get_status()
+        self.assertIn('status', restore_status)
+        self.assertEquals(restore_status['status'], status_msg)
+
     def _all_services_restarted_properly(self):
         manager_status = self.client.manager.get_status()
         if manager_status['status'] == 'OK':
@@ -548,7 +581,9 @@ class TestSnapshot(AgentlessTestCase):
         execution = rest_client.snapshots.restore(
             snapshot_id,
             ignore_plugin_failure=ignore_plugin_failure)
-        time.sleep(40)
+        rest_client.maintenance_mode.activate()
+        self.wait_for_snapshot_restore_to_end(execution.id, client=rest_client)
+        rest_client.maintenance_mode.deactivate()
         execution = self._wait_for_restore_execution_to_end(
             execution, rest_client, timeout_seconds=240)
         if execution.status == error_execution_status:
