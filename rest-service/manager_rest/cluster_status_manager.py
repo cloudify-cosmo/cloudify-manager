@@ -353,14 +353,13 @@ def _compare_broker_cluster_statuses(node_a, node_b):
     return True
 
 
-def _verify_identical_broker_cluster_status(active_broker_nodes):
-    is_cluster_status_identical = True
-    for node_a, node_b in itertools.combinations(
-            active_broker_nodes.items(), 2):
+def _verify_identical_broker_cluster_status(active_nodes):
+    are_cluster_statuses_identical = True
+    for node_a, node_b in itertools.combinations(active_nodes.items(), 2):
         comparison_result = _compare_broker_cluster_statuses(node_a, node_b)
-        is_cluster_status_identical = (is_cluster_status_identical and
-                                       comparison_result)
-    return is_cluster_status_identical
+        are_cluster_statuses_identical = (are_cluster_statuses_identical and
+                                          comparison_result)
+    return are_cluster_statuses_identical
 
 # endregion
 
