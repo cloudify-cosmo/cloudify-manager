@@ -15,6 +15,7 @@
 
 import copy
 import json
+import itertools
 from os import path, makedirs
 from datetime import datetime, timedelta
 
@@ -38,6 +39,9 @@ BROKER_SERVICE_KEY = 'RabbitMQ'
 PATRONI_SERVICE_KEY = 'Patroni'
 UNINITIALIZED_STATUS = 'Uninitialized'
 CLUSTER_STATUS_PATH = '/opt/manager/cluster_statuses'
+BROKER_NODES_DIFFERENT_CLUSTER_STATUS = \
+    '{node_name_a} recognizes the cluster: {cluster_status_a},\n' \
+    'but {node_name_b} recognizes the cluster {cluster_status_b}.'
 
 
 def get_report_path(node_type, node_id):
@@ -278,7 +282,7 @@ def _get_db_cluster_status(db_service, expected_nodes_number):
     sync state so the cluster will function. Healthy cluster has all the other
     replicas in streaming state.
     """
-    if _should_not_validate_cluster(db_service):
+    if _should_not_validate_cluster_status(db_service):
         return db_service[STATUS]
 
     master_replications_state = _get_db_master_replications(db_service)
@@ -304,55 +308,59 @@ def _get_db_cluster_status(db_service, expected_nodes_number):
     return db_service[STATUS]
 
 
-def _should_not_validate_cluster(service):
+def _should_not_validate_cluster_status(service):
     return service[STATUS] == ServiceStatus.FAIL or service[IS_EXTERNAL]
 
 
 def _get_broker_cluster_status(broker_service, expected_nodes_number):
-    """
-    Get the status of the broker cluster. The majority of nodes should be
-    running and recognizing the same cluster, 'Healthy' cluster means all of
-    them do.
-    """
-    if _should_not_validate_cluster(broker_service):
+    if _should_not_validate_cluster_status(broker_service):
         return broker_service[STATUS]
 
     broker_nodes = broker_service['nodes']
     active_broker_nodes = {name: node for name, node in broker_nodes.items()
                            if node[STATUS] == ServiceStatus.HEALTHY}
 
-    if not _verify_broker_cluster_status(active_broker_nodes):
+    if not _verify_identical_broker_cluster_status(active_broker_nodes):
         return ServiceStatus.FAIL
 
     if expected_nodes_number != len(active_broker_nodes):
+        # This should happen only on broker setup
+        current_app.logger.error(
+            'There are {0} active broker nodes, but there are {1} broker nodes'
+            ' registered in the DB.'.format(active_broker_nodes,
+                                            expected_nodes_number))
         return ServiceStatus.DEGRADED
 
     return broker_service[STATUS]
 
 
-def _verify_broker_cluster_status(active_broker_nodes):
-    """
-    Checks whether the cluster status is the same on all active nodes.
-    If yes, returns True, else, logs which nodes don't recognize the same
-    cluster and returns False.
-    """
-    first_node_name = ''
-    first_node_cluster_status = {}
+def _extract_broker_cluster_status_from_node(broker_node):
+    broker_service = broker_node[SERVICES][BROKER_SERVICE_KEY]
+    return broker_service[EXTRA_INFO]['cluster_status']
 
-    for node in active_broker_nodes.values():
-        broker_service = node[SERVICES][BROKER_SERVICE_KEY]
-        cluster_status = broker_service[EXTRA_INFO]['cluster_status']
-        cluster_nodes_status = cluster_status['cluster_nodes_status']
-        node_name = cluster_status['node_name']
-        if not first_node_cluster_status:
-            first_node_cluster_status = cluster_nodes_status
-            first_node_name = node_name
-            continue
-        if cluster_nodes_status != first_node_cluster_status:
-            current_app.logger.info('{0} is not in the same cluster as '
-                                    '{1}'.format(first_node_name, node_name))
-            return False
+
+def _compare_broker_cluster_statuses(node_a, node_b):
+    node_name_a, node_name_b = node_a[0], node_b[0]
+    cluster_status_a = _extract_broker_cluster_status_from_node(node_a[1])
+    cluster_status_b = _extract_broker_cluster_status_from_node(node_b[1])
+    if cluster_status_a != cluster_status_b:
+        current_app.logger.error(BROKER_NODES_DIFFERENT_CLUSTER_STATUS.
+                                 format(node_name_a=node_name_a,
+                                        cluster_status_a=cluster_status_a,
+                                        node_name_b=node_name_b,
+                                        cluster_status_b=cluster_status_b))
+        return False
     return True
+
+
+def _verify_identical_broker_cluster_status(active_broker_nodes):
+    is_cluster_status_identical = True
+    for node_a, node_b in itertools.combinations(
+            active_broker_nodes.items(), 2):
+        comparison_result = _compare_broker_cluster_statuses(node_a, node_b)
+        is_cluster_status_identical = (is_cluster_status_identical and
+                                       comparison_result)
+    return is_cluster_status_identical
 
 # endregion
 

@@ -24,8 +24,6 @@ from .status_reporter import Reporter, logger
 from .constants import STATUS_REPORTER_CONFIG_KEY, EXTRA_INFO
 from .utils import get_systemd_services, determine_node_status
 
-NODES_API = 'nodes'
-OVERVIEW_API = 'overview'
 NODE_STATUS = 'node_status'
 CLUSTER_STATUS = 'cluster_status'
 RABBITMQ_SERVICE_KEY = 'RabbitMQ'
@@ -70,19 +68,12 @@ class RabbitMQReporter(Reporter):
         return cluster_nodes
 
     def _get_cluster_status(self, config):
-        nodes_response = self._query_rabbitmq(config, NODES_API)
+        nodes_response = self._query_rabbitmq(config, 'nodes')
         if not nodes_response:
             return NodeServiceStatus.INACTIVE, {}
-        cluster_nodes_status = self._get_nodes_status(nodes_response.json())
+        cluster_status = self._get_nodes_status(nodes_response.json())
 
-        overview_response = self._query_rabbitmq(config, OVERVIEW_API)
-        if not overview_response:
-            return NodeServiceStatus.INACTIVE, {}
-        node_name = overview_response.json()['node']
-
-        return (NodeServiceStatus.ACTIVE,
-                {'node_name': node_name,
-                 'cluster_nodes_status': cluster_nodes_status})
+        return NodeServiceStatus.ACTIVE, cluster_status
 
     def _update_node_status(self, services, statuses, config):
         node_status, node_extra_info = self._get_rabbitmq_node_status(config)
