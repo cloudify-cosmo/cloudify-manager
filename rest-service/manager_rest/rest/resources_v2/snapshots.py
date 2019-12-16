@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2017 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2017-2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -267,20 +267,3 @@ class SnapshotsIdRestore(SecuredResource):
             ignore_plugin_failure
         )
         return execution, 200
-
-
-class SnapshotsStatus(Resource):
-    """
-    Note that this class is 'Resource' and not 'SecuredResource' since we
-    want it to work during the entire time of snapshot restore, even when
-    authentication is not possible.
-    """
-    def get(self):
-        """"
-        While a snapshot is restored a temp file called
-        `<unique-str>-snapshot-data` is created on the Manager. If the file
-        does not exists it means there is no snapshot restore running.
-        """
-        if os.path.exists(SNAPSHOT_RESTORE_FLAG_FILE):
-            return {'status': STATES.RUNNING}
-        return {'status': STATES.NOT_RUNNING}
