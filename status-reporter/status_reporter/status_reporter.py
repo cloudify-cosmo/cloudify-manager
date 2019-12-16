@@ -168,8 +168,8 @@ class Reporter(object):
         try:
             status, services = self._collect_status()
         except Exception as e:
-            logger.error('Failed collecting node status, skipping sending the report. '
-                         'This is due to {0}'.format(e))
+            logger.error('Failed collecting node status, skipping sending the'
+                         ' report. This is due to {0}'.format(e))
             return
 
         if not self._validate_status_format(status, services):
