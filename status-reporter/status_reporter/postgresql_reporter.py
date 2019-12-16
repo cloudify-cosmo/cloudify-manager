@@ -14,11 +14,10 @@
 #  * limitations under the License.
 
 from requests import get
-from requests.exceptions import RequestException
 
 from cloudify.cluster_status import CloudifyNodeType, NodeServiceStatus
 
-from .status_reporter import Reporter, logger
+from .status_reporter import Reporter
 from .constants import STATUS_REPORTER_CONFIG_KEY, EXTRA_INFO
 from .utils import get_systemd_services, determine_node_status
 
@@ -71,16 +70,8 @@ class PostgreSQLReporter(Reporter):
         return NodeServiceStatus.ACTIVE, patroni_status
 
     def _query_patroni(self, private_ip):
-        try:
-            status_response = get(PATRONI_URL.format(private_ip=private_ip),
-                                  verify='/etc/etcd/ca.crt')
-        except RequestException as error:
-            logger.error(
-                "Failed getting Patroni's status, due to {0}".format(error)
-            )
-            return None
-
-        return status_response.json()
+        return get(PATRONI_URL.format(private_ip=private_ip),
+                   verify='/etc/etcd/ca.crt').json()
 
 
 def main():

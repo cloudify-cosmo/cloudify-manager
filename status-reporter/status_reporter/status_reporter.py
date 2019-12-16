@@ -151,21 +151,31 @@ class Reporter(object):
     def _collect_status(self):
         raise NotImplementedError
 
-    def _report(self):
-        status, services = self._collect_status()
+    @staticmethod
+    def _validate_status_format(status, services):
         if not isinstance(services, dict):
             logger.error('Ignoring status report: expected services in dict '
                          'format got {0}.'.format(services))
-            return
+            return False
 
         if status not in VALID_STATUS:
             logger.error('Ignoring status: expected status to be `OK`, '
                          '`Fail`, or `Degraded`. got {0}.'.format(status))
+            return False
+        return True
+
+    def _report(self):
+        try:
+            status, services = self._collect_status()
+        except Exception as e:
+            logger.error('Failed collecting node status, skipping sending the report. '
+                         'This is due to {0}'.format(e))
+            return
+
+        if not self._validate_status_format(status, services):
             return
 
         report = self._build_report(status, services)
-        if report is None:
-            return
 
         # If there is a malfunctioning manager,
         # let's try to avoid using the same manager always.
