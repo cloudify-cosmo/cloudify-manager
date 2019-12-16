@@ -15,11 +15,12 @@
 
 
 from requests import get
+from requests.exceptions import RequestException
 
 from cloudify.cluster_status import (CloudifyNodeType, ServiceStatus,
                                      NodeServiceStatus)
 
-from .status_reporter import Reporter
+from .status_reporter import Reporter, logger
 from .constants import STATUS_REPORTER_CONFIG_KEY, EXTRA_INFO
 from .utils import get_systemd_services, determine_node_status
 
@@ -93,7 +94,15 @@ class RabbitMQReporter(Reporter):
     @staticmethod
     def _query_rabbitmq(config, endpoint):
         rabbitmq_cred = (config['username'], config['password'])
-        return get(RABBITMQ_URL+endpoint, auth=rabbitmq_cred, verify=CA_PATH)
+        try:
+            response = get(RABBITMQ_URL+endpoint, auth=rabbitmq_cred,
+                           verify=CA_PATH)
+        except RequestException as error:
+            logger.error(
+                'Failed getting RabbitMQ node status due to {0}'.format(error))
+            return None
+
+        return response
 
     @staticmethod
     def _rabbitmq_status_failed(services):
