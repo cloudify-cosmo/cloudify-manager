@@ -53,10 +53,11 @@ TEMP_SNAPSHOT_FOLDER_SUFFIX = 'snapshot-data'
 SECURITY_FILE_LOCATION = '/opt/manager/rest-security.conf'
 
 LOCAL_ADDRESS = '127.0.0.1'
-ALLOWED_ENDPOINTS = ['status', 'version', 'license', 'maintenance']
+ALLOWED_ENDPOINTS = ['status', 'version', 'license', 'maintenance',
+                     'cluster-status']
 ALLOWED_MAINTENANCE_ENDPOINTS = ALLOWED_ENDPOINTS + ['snapshots',
-                                                     'snapshot-status',
-                                                     'cluster-status']
+                                                     'snapshot-status'
+                                                     ]
 ALLOWED_LICENSE_ENDPOINTS = ALLOWED_ENDPOINTS + [
     'tokens', 'config', 'cluster', 'tenants', 'brokers', 'managers'
 ]
