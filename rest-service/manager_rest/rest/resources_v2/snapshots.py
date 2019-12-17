@@ -17,11 +17,9 @@
 import os
 import shutil
 
-from flask_restful import Resource
 from flask_restful_swagger import swagger
 
 from cloudify.models_states import SnapshotState
-from cloudify.snapshots import SNAPSHOT_RESTORE_FLAG_FILE, STATES
 
 from manager_rest.security import SecuredResource
 from manager_rest import config, manager_exceptions
