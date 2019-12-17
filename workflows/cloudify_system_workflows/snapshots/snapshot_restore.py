@@ -454,8 +454,11 @@ class SnapshotRestore(object):
         # messed around with while running.
         command += 'sleep 3; '
 
+        self._post_restore_commands.append(
+            'rm -f {0}'.format(SNAPSHOT_RESTORE_FLAG_FILE)
+        )
+
         command += '; '.join(self._post_restore_commands)
-        command += 'rm -f {0}'.format(SNAPSHOT_RESTORE_FLAG_FILE)
 
         ctx.logger.info(
             'After restore, the following commands will run: {cmds}'.format(
