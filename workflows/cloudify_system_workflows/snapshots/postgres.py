@@ -47,7 +47,8 @@ class Postgres(object):
     _COMPOSER_DB_NAME = 'composer'
     _TABLES_TO_KEEP = ['alembic_version', 'provider_context', 'roles',
                        'licenses']
-    _CONFIG_TABLES = ['config', 'rabbitmq_brokers', 'certificates', 'managers']
+    _CONFIG_TABLES = ['config', 'rabbitmq_brokers', 'certificates', 'managers',
+                      'db_nodes']
     _TABLES_TO_EXCLUDE_ON_DUMP = _TABLES_TO_KEEP + ['snapshots'] + \
         _CONFIG_TABLES
     _TABLES_TO_RESTORE = ['users', 'tenants']
