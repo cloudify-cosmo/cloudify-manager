@@ -87,3 +87,7 @@ from .cluster_status import (                    # NOQA
     BrokerClusterStatus,
     ClusterStatus
 )
+
+from .snapshots import ( # noqa
+    SnapshotsStatus
+)

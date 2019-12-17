@@ -43,6 +43,5 @@ from .snapshots import ( # noqa
     Snapshots,
     SnapshotsId,
     SnapshotsIdArchive,
-    SnapshotsIdRestore,
-    SnapshotsStatus
+    SnapshotsIdRestore
 )
