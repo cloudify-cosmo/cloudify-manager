@@ -330,7 +330,7 @@ def _get_broker_cluster_status(broker_service, expected_nodes_number):
 
 
 def _extract_broker_cluster_status(broker_node):
-    broker_service = broker_node[1][SERVICES][BROKER_SERVICE_KEY]
+    broker_service = broker_node[SERVICES][BROKER_SERVICE_KEY]
     return broker_service[EXTRA_INFO]['cluster_status']
 
 
@@ -347,12 +347,16 @@ def _log_different_cluster_status(node_name_a, cluster_status_a,
 
 def _verify_identical_broker_cluster_status(active_nodes):
     are_cluster_statuses_identical = True
-    first_node_name = active_nodes[0][0]
-    first_node_cluster_status = _extract_broker_cluster_status(active_nodes[0])
+    first_node_name = ''
+    first_node_cluster_status = {}
 
-    for node in active_nodes:
-        curr_node_name = node[0]
+    for node_name, node in active_nodes.items():
+        curr_node_name = node_name
         curr_node_cluster_status = _extract_broker_cluster_status(node)
+        if len(first_node_cluster_status) == 0:
+            first_node_name = curr_node_name
+            first_node_cluster_status = curr_node_cluster_status
+            continue
         if curr_node_cluster_status != first_node_cluster_status:
             are_cluster_statuses_identical = False
             _log_different_cluster_status(
