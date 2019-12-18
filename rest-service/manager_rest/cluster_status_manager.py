@@ -15,7 +15,6 @@
 
 import copy
 import json
-import itertools
 from os import path, makedirs
 from datetime import datetime, timedelta
 
@@ -29,7 +28,6 @@ from manager_rest import manager_exceptions
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.rest.rest_utils import parse_datetime_string
 
-
 STATUS = 'status'
 SERVICES = 'services'
 EXTRA_INFO = 'extra_info'
@@ -39,9 +37,6 @@ BROKER_SERVICE_KEY = 'RabbitMQ'
 PATRONI_SERVICE_KEY = 'Patroni'
 UNINITIALIZED_STATUS = 'Uninitialized'
 CLUSTER_STATUS_PATH = '/opt/manager/cluster_statuses'
-BROKER_NODES_DIFFERENT_CLUSTER_STATUS = \
-    '{node_name_a} recognizes the cluster: {cluster_status_a},\n' \
-    'but {node_name_b} recognizes the cluster {cluster_status_b}.'
 
 
 def get_report_path(node_type, node_id):
@@ -334,32 +329,38 @@ def _get_broker_cluster_status(broker_service, expected_nodes_number):
     return broker_service[STATUS]
 
 
-def _extract_broker_cluster_status_from_node(broker_node):
-    broker_service = broker_node[SERVICES][BROKER_SERVICE_KEY]
+def _extract_broker_cluster_status(broker_node):
+    broker_service = broker_node[1][SERVICES][BROKER_SERVICE_KEY]
     return broker_service[EXTRA_INFO]['cluster_status']
 
 
-def _compare_broker_cluster_statuses(node_a, node_b):
-    node_name_a, node_name_b = node_a[0], node_b[0]
-    cluster_status_a = _extract_broker_cluster_status_from_node(node_a[1])
-    cluster_status_b = _extract_broker_cluster_status_from_node(node_b[1])
-    if cluster_status_a != cluster_status_b:
-        current_app.logger.error(BROKER_NODES_DIFFERENT_CLUSTER_STATUS.
-                                 format(node_name_a=node_name_a,
-                                        cluster_status_a=cluster_status_a,
-                                        node_name_b=node_name_b,
-                                        cluster_status_b=cluster_status_b))
-        return False
-    return True
+def _log_different_cluster_status(node_name_a, cluster_status_a,
+                                  node_name_b, cluster_status_b):
+    current_app.logger.error('{node_name_a} recognizes the cluster: '
+                             '{cluster_status_a},\n but {node_name_b} '
+                             'recognizes the cluster {cluster_status_b}.'.
+                             format(node_name_a=node_name_a,
+                                    cluster_status_a=cluster_status_a,
+                                    node_name_b=node_name_b,
+                                    cluster_status_b=cluster_status_b))
 
 
 def _verify_identical_broker_cluster_status(active_nodes):
     are_cluster_statuses_identical = True
-    for node_a, node_b in itertools.combinations(active_nodes.items(), 2):
-        comparison_result = _compare_broker_cluster_statuses(node_a, node_b)
-        are_cluster_statuses_identical = (are_cluster_statuses_identical and
-                                          comparison_result)
+    first_node_name = active_nodes[0][0]
+    first_node_cluster_status = _extract_broker_cluster_status(active_nodes[0])
+
+    for node in active_nodes:
+        curr_node_name = node[0]
+        curr_node_cluster_status = _extract_broker_cluster_status(node)
+        if curr_node_cluster_status != first_node_cluster_status:
+            are_cluster_statuses_identical = False
+            _log_different_cluster_status(
+                first_node_name, first_node_cluster_status,
+                curr_node_name, curr_node_cluster_status)
+
     return are_cluster_statuses_identical
+
 
 # endregion
 
