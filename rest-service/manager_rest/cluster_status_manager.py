@@ -350,10 +350,10 @@ def _verify_identical_broker_cluster_status(active_nodes):
     first_node_name = ''
     first_node_cluster_status = {}
 
-    for node_name, node in active_nodes.items():
+    for i, (node_name, node) in enumerate(active_nodes.items()):
         curr_node_name = node_name
         curr_node_cluster_status = _extract_broker_cluster_status(node)
-        if len(first_node_cluster_status) == 0:
+        if i == 0:
             first_node_name = curr_node_name
             first_node_cluster_status = curr_node_cluster_status
             continue
