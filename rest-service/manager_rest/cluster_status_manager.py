@@ -337,7 +337,7 @@ def _extract_broker_cluster_status(broker_node):
 def _log_different_cluster_status(node_name_a, cluster_status_a,
                                   node_name_b, cluster_status_b):
     current_app.logger.error('{node_name_a} recognizes the cluster: '
-                             '{cluster_status_a},\n but {node_name_b} '
+                             '{cluster_status_a},\nbut {node_name_b} '
                              'recognizes the cluster {cluster_status_b}.'.
                              format(node_name_a=node_name_a,
                                     cluster_status_a=cluster_status_a,
