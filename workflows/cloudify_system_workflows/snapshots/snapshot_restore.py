@@ -365,7 +365,6 @@ class SnapshotRestore(object):
         existing_cert_dir = os.path.dirname(get_local_rest_certificate())
         restored_cert_dir = '{0}_from_snapshot_{1}'.format(existing_cert_dir,
                                                            self._snapshot_id)
-        command = ''
 
         # Put the certificates where we need them
         utils.copy_snapshot_path(archive_cert_dir, restored_cert_dir)
@@ -379,14 +378,13 @@ class SnapshotRestore(object):
         ]
         # Restore each cert from the snapshot over the current manager one
         for cert in certs:
-            subcommand = (
-                'mv -f {source_dir}/{cert} {dest_dir}/{cert}; '
-            ).format(
-                dest_dir=existing_cert_dir,
-                source_dir=restored_cert_dir,
-                cert=cert,
+            self._post_restore_commands.append(
+                'mv -f {source_dir}/{cert} {dest_dir}/{cert}'.format(
+                    dest_dir=existing_cert_dir,
+                    source_dir=restored_cert_dir,
+                    cert=cert,
+                )
             )
-            command += subcommand
 
         if not os.path.exists(
                 os.path.join(archive_cert_dir, INTERNAL_CA_CERT_FILENAME)):
@@ -395,13 +393,15 @@ class SnapshotRestore(object):
                      (INTERNAL_KEY_FILENAME, INTERNAL_CA_KEY_FILENAME)]:
                 source = os.path.join(CERT_DIR, source)
                 target = os.path.join(CERT_DIR, target)
-                command += 'cp {source} {target};'.format(
-                    source=source, target=target)
+                self._post_restore_commands.append(
+                    'cp {source} {target}'.format(
+                        source=source,
+                        target=target,
+                    )
+                )
 
         if not self._no_reboot:
-            command += 'sudo shutdown -r now'
-
-        self._post_restore_commands.append(command)
+            self._post_restore_commands.append('sudo shutdown -r now')
 
     def _load_admin_dump(self):
         # This should only have been called if the hash salt was found, so
