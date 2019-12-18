@@ -347,16 +347,12 @@ def _log_different_cluster_status(node_name_a, cluster_status_a,
 
 def _verify_identical_broker_cluster_status(active_nodes):
     are_cluster_statuses_identical = True
-    first_node_name = ''
-    first_node_cluster_status = {}
+    active_nodes_iter = iter(active_nodes.items())
+    first_node_name, first_node = next(active_nodes_iter)
+    first_node_cluster_status = _extract_broker_cluster_status(first_node)
 
-    for i, (node_name, node) in enumerate(active_nodes.items()):
-        curr_node_name = node_name
-        curr_node_cluster_status = _extract_broker_cluster_status(node)
-        if i == 0:
-            first_node_name = curr_node_name
-            first_node_cluster_status = curr_node_cluster_status
-            continue
+    for curr_node_name, curr_node in active_nodes_iter:
+        curr_node_cluster_status = _extract_broker_cluster_status(curr_node)
         if curr_node_cluster_status != first_node_cluster_status:
             are_cluster_statuses_identical = False
             _log_different_cluster_status(
