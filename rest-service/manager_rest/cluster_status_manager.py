@@ -28,10 +28,10 @@ from manager_rest import manager_exceptions
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.rest.rest_utils import parse_datetime_string
 
-
 STATUS = 'status'
 SERVICES = 'services'
 EXTRA_INFO = 'extra_info'
+IS_EXTERNAL = 'is_external'
 DB_SERVICE_KEY = 'PostgreSQL'
 BROKER_SERVICE_KEY = 'RabbitMQ'
 PATRONI_SERVICE_KEY = 'Patroni'
@@ -277,7 +277,7 @@ def _get_db_cluster_status(db_service, expected_nodes_number):
     sync state so the cluster will function. Healthy cluster has all the other
     replicas in streaming state.
     """
-    if db_service[STATUS] == ServiceStatus.FAIL or db_service['is_external']:
+    if _should_not_validate_cluster_status(db_service):
         return db_service[STATUS]
 
     master_replications_state = _get_db_master_replications(db_service)
@@ -301,6 +301,65 @@ def _get_db_cluster_status(db_service, expected_nodes_number):
         return ServiceStatus.DEGRADED
 
     return db_service[STATUS]
+
+
+def _should_not_validate_cluster_status(service):
+    return service[STATUS] == ServiceStatus.FAIL or service[IS_EXTERNAL]
+
+
+def _get_broker_cluster_status(broker_service, expected_nodes_number):
+    if _should_not_validate_cluster_status(broker_service):
+        return broker_service[STATUS]
+
+    broker_nodes = broker_service['nodes']
+    active_broker_nodes = {name: node for name, node in broker_nodes.items()
+                           if node[STATUS] == ServiceStatus.HEALTHY}
+
+    if not _verify_identical_broker_cluster_status(active_broker_nodes):
+        return ServiceStatus.FAIL
+
+    if expected_nodes_number != len(active_broker_nodes):
+        # This should happen only on broker setup
+        current_app.logger.error(
+            'There are {0} active broker nodes, but there are {1} broker nodes'
+            ' registered in the DB.'.format(active_broker_nodes,
+                                            expected_nodes_number))
+        return ServiceStatus.DEGRADED
+
+    return broker_service[STATUS]
+
+
+def _extract_broker_cluster_status(broker_node):
+    broker_service = broker_node[SERVICES][BROKER_SERVICE_KEY]
+    return broker_service[EXTRA_INFO]['cluster_status']
+
+
+def _log_different_cluster_status(node_name_a, cluster_status_a,
+                                  node_name_b, cluster_status_b):
+    current_app.logger.error('{node_name_a} recognizes the cluster: '
+                             '{cluster_status_a},\nbut {node_name_b} '
+                             'recognizes the cluster {cluster_status_b}.'.
+                             format(node_name_a=node_name_a,
+                                    cluster_status_a=cluster_status_a,
+                                    node_name_b=node_name_b,
+                                    cluster_status_b=cluster_status_b))
+
+
+def _verify_identical_broker_cluster_status(active_nodes):
+    are_cluster_statuses_identical = True
+    active_nodes_iter = iter(active_nodes.items())
+    first_node_name, first_node = next(active_nodes_iter)
+    first_node_cluster_status = _extract_broker_cluster_status(first_node)
+
+    for curr_node_name, curr_node in active_nodes_iter:
+        curr_node_cluster_status = _extract_broker_cluster_status(curr_node)
+        if curr_node_cluster_status != first_node_cluster_status:
+            are_cluster_statuses_identical = False
+            _log_different_cluster_status(
+                first_node_name, first_node_cluster_status,
+                curr_node_name, curr_node_cluster_status)
+
+    return are_cluster_statuses_identical
 
 
 # endregion
@@ -328,7 +387,7 @@ def get_cluster_status():
         )
         cluster_services[service_type] = {
             STATUS: _get_service_status(formatted_nodes),
-            'is_external': service_nodes[0].is_external,
+            IS_EXTERNAL: service_nodes[0].is_external,
             'nodes': formatted_nodes
         }
         missing_status_reports.update(missing_reports)
@@ -338,17 +397,19 @@ def get_cluster_status():
                                    is_all_in_one)
     if not is_all_in_one:
         db_service = cluster_services[CloudifyNodeType.DB]
-        expected_nodes_number = len(cluster_structure[CloudifyNodeType.DB])
-        db_service[STATUS] = _get_db_cluster_status(db_service,
-                                                    expected_nodes_number)
+        db_service[STATUS] = _get_db_cluster_status(
+            db_service, len(cluster_structure[CloudifyNodeType.DB]))
+        broker_service = cluster_services[CloudifyNodeType.BROKER]
+        broker_service[STATUS] = _get_broker_cluster_status(
+            broker_service, len(cluster_structure[CloudifyNodeType.BROKER]))
 
     return {
         STATUS: _get_entire_cluster_status(cluster_services),
         SERVICES: cluster_services
     }
 
-
 # region Write Status Report Helpers
+
 
 def _verify_status_report_schema(node_id, report):
     if not (_are_keys_in_dict(report['report'], [STATUS, SERVICES])
