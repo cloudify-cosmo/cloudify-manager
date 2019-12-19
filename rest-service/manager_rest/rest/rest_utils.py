@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2015 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2015-2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import os
 import pytz
 import copy
 import urllib
@@ -26,6 +27,7 @@ from flask import request, make_response, current_app
 from flask_restful.reqparse import Argument, RequestParser
 
 from cloudify.models_states import VisibilityState
+from cloudify.snapshots import SNAPSHOT_RESTORE_FLAG_FILE
 
 from manager_rest.utils import is_administrator
 from manager_rest import manager_exceptions, config
@@ -267,3 +269,7 @@ def parse_datetime_string(datetime_str):
 def is_hidden_value_permitted(secret):
     return is_administrator(secret.tenant) or \
            secret.created_by == current_user.username
+
+
+def is_system_in_snapshot_restore_process():
+    return os.path.exists(SNAPSHOT_RESTORE_FLAG_FILE)

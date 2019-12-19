@@ -42,8 +42,11 @@ from voluptuous import (
 from ..security.authentication import authenticator
 from manager_rest import config, manager_exceptions
 from manager_rest.storage.models_base import SQLModelBase
-from manager_rest.rest.rest_utils import (verify_and_convert_bool,
-                                          request_use_all_tenants)
+from manager_rest.rest.rest_utils import (
+    verify_and_convert_bool,
+    request_use_all_tenants,
+    is_system_in_snapshot_restore_process
+)
 
 from .responses_v2 import ListResponse
 
@@ -503,5 +506,19 @@ def no_external_authenticator(action):
             return func(*args, **kwargs)
         return wrapper
     return no_external_authenticator_dec
+
+# endregion
+
+# region V3_1 decorators
+
+
+def prevent_running_in_snapshot_restore(endpoint_func):
+    @wraps(endpoint_func)
+    def wrapper(*args, **kwargs):
+        if is_system_in_snapshot_restore_process():
+            raise manager_exceptions.SystemInSnapshotRestoreError()
+        return endpoint_func(*args, **kwargs)
+
+    return wrapper
 
 # endregion
