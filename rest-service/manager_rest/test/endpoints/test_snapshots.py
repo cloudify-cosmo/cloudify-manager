@@ -1,5 +1,4 @@
 import os
-from tempfile import NamedTemporaryFile
 
 from mock import patch
 
@@ -69,24 +68,19 @@ class SnapshotsTest(BaseServerTestCase):
             self.quiet_delete(tmp_file_path)
             self.quiet_delete(tmp_local_path)
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
+
+@attr(client_min_version=3.1,
+      client_max_version=base_test.LATEST_API_VERSION)
+class SnapshotStatusTest(BaseServerTestCase):
     def test_snapshot_status_reports_not_running(self):
-        tmp_file = '/non_existent123'
+        status = self.client.snapshots.get_status()
+        self.assertIn('status', status)
+        self.assertEquals(status['status'], STATES.NOT_RUNNING)
+
+    def test_snapshot_status_reports_running(self):
         with patch('manager_rest.rest.resources_v3_1.snapshots'
-                   '.SNAPSHOT_RESTORE_FLAG_FILE',
-                   tmp_file):
+                   '.is_system_in_snapshot_restore_process',
+                   False):
             status = self.client.snapshots.get_status()
             self.assertIn('status', status)
-            self.assertEquals(status['status'], STATES.NOT_RUNNING)
-
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
-    def test_snapshot_status_reports_running(self):
-        with NamedTemporaryFile() as tmp_file:
-            with patch('manager_rest.rest.resources_v3_1.snapshots'
-                       '.SNAPSHOT_RESTORE_FLAG_FILE',
-                       tmp_file.name):
-                status = self.client.snapshots.get_status()
-                self.assertIn('status', status)
-                self.assertEquals(status['status'], STATES.RUNNING)
+            self.assertEquals(status['status'], STATES.RUNNING)
