@@ -80,7 +80,7 @@ class SnapshotStatusTest(BaseServerTestCase):
     def test_snapshot_status_reports_running(self):
         with patch('manager_rest.rest.resources_v3_1.snapshots'
                    '.is_system_in_snapshot_restore_process',
-                   False):
+                   return_value=True):
             status = self.client.snapshots.get_status()
             self.assertIn('status', status)
             self.assertEquals(status['status'], STATES.RUNNING)
