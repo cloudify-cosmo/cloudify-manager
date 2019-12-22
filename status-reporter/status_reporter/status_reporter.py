@@ -116,12 +116,17 @@ class Reporter(object):
                 }
 
     def _update_managers_ips_list(self, client):
-        response = client.manager.get_managers()
-        self._managers_ips = [manager.get('private_ip') for manager in
-                              response]
-        update_yaml_file(CONFIGURATION_PATH, {
-            'managers_ips': self._managers_ips
-        })
+        try:
+            response = client.manager.get_managers()
+            self._managers_ips = [manager.get('private_ip') for manager in
+                                  response]
+            update_yaml_file(CONFIGURATION_PATH, {
+                'managers_ips': self._managers_ips
+            })
+        except Exception as e:
+            logger.error('Failed updating the managers ips list with the '
+                         'following: {0}'.format(e))
+            return
 
     def _report_status(self, client, report):
         client.cluster_status.report_node_status(self._node_type,
