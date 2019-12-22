@@ -42,7 +42,7 @@ class MiscManagerTest(AgentlessTestCase):
         self.logger.info('Testing `cfy logs purge`')
         self.cfy.logs.purge(force=True)
         self.execute_on_manager(
-            'test ! -s /var/log/cloudify/nginx/cloudify.access.log')
+            'test ! -s /var/log/cloudify/manager/cfy_manager.log')
 
     def test_tmux_session(self):
         self.logger.info('Test list without tmux installed...')
