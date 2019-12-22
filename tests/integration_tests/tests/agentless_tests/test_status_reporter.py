@@ -35,9 +35,8 @@ class TestManagerStatusReporter(AgentlessTestCase):
         self.wait_for_execution_to_end(execution)
 
         self._update_reporter_token_key(initial_token_key)
-
-        execution = self.client.snapshots.restore(snapshot_id)
         self.client.maintenance_mode.activate()
+        execution = self.client.snapshots.restore(snapshot_id)
         self.wait_for_snapshot_restore_to_end(execution.id)
         self.client.maintenance_mode.deactivate()
         self.wait_for_execution_to_end(execution)
