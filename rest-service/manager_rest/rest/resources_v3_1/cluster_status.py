@@ -22,17 +22,15 @@ from cloudify.cluster_status import CloudifyNodeType
 from manager_rest.rest import responses
 from manager_rest.storage import models
 from manager_rest.security.authorization import authorize
-from manager_rest.security import SecuredResourceReadonlyMode
-from manager_rest.rest.rest_decorators import (
-    marshal_with,
-    prevent_running_in_snapshot_restore)
+from manager_rest.rest.rest_decorators import marshal_with
+from manager_rest.security import SecuredResourceNotWhileSnapshotRestore
 from manager_rest.cluster_status_manager import (get_cluster_status,
                                                  write_status_report)
 from manager_rest.rest.rest_utils import (verify_and_convert_bool,
                                           get_json_and_verify_params)
 
 
-class ClusterStatus(SecuredResourceReadonlyMode):
+class ClusterStatus(SecuredResourceNotWhileSnapshotRestore):
     @staticmethod
     def _get_request_dict():
         request_dict = get_json_and_verify_params({
@@ -71,7 +69,6 @@ class ClusterStatus(SecuredResourceReadonlyMode):
 
 class ManagerClusterStatus(ClusterStatus):
     @authorize('manager_cluster_status_put')
-    @prevent_running_in_snapshot_restore
     def put(self, node_id):
         self._write_report(node_id,
                            models.Manager,
@@ -80,7 +77,6 @@ class ManagerClusterStatus(ClusterStatus):
 
 class DBClusterStatus(ClusterStatus):
     @authorize('db_cluster_status_put')
-    @prevent_running_in_snapshot_restore
     def put(self, node_id):
         self._write_report(node_id,
                            models.DBNodes,
@@ -89,7 +85,6 @@ class DBClusterStatus(ClusterStatus):
 
 class BrokerClusterStatus(ClusterStatus):
     @authorize('broker_cluster_status_put')
-    @prevent_running_in_snapshot_restore
     def put(self, node_id):
         self._write_report(node_id,
                            models.RabbitMQBroker,

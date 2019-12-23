@@ -22,6 +22,7 @@ from flask import request, Response, jsonify
 
 from manager_rest import premium_enabled
 from manager_rest.manager_exceptions import MissingPremiumPackage
+from manager_rest.rest.rest_decorators import prevent_running_in_snapshot_restore
 
 from .authentication import authenticator
 
@@ -115,6 +116,10 @@ def allow_on_community(func):
 
 class SecuredResource(Resource):
     method_decorators = [authenticate]
+
+
+class SecuredResourceNotWhileSnapshotRestore(Resource):
+    method_decorators = [prevent_running_in_snapshot_restore, authenticate]
 
 
 class SecuredResourceReadonlyMode(Resource):
