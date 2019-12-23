@@ -168,12 +168,13 @@ class SnapshotRestore(object):
         # Also for manager's status reporter that uses manager's rest
         # endpoint and in turn uses the DB for auth, that could cause
         # failure for migration of the users table.
-        utils.run('sudo systemctl stop cloudify-amqp-postgres '
-                  'cloudify-status-reporter')
+        utils.run('sudo systemctl stop {0} {1}'.format(
+            'cloudify-amqp-postgres', 'cloudify-status-reporter'))
         try:
             yield
         finally:
-            utils.run('sudo systemctl start cloudify-amqp-postgres cloudify-status-reporter')
+            utils.run('sudo systemctl start {0} {1}'.format(
+                'cloudify-amqp-postgres', 'cloudify-status-reporter'))
 
     def _generate_new_rest_token(self):
         """

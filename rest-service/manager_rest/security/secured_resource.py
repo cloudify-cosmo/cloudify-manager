@@ -22,7 +22,8 @@ from flask import request, Response, jsonify
 
 from manager_rest import premium_enabled
 from manager_rest.manager_exceptions import MissingPremiumPackage
-from manager_rest.rest.rest_decorators import prevent_running_in_snapshot_restore
+from manager_rest.rest.rest_decorators import (
+    prevent_running_in_snapshot_restore)
 
 from .authentication import authenticator
 
