@@ -60,7 +60,9 @@ def is_sanity_mode():
 def is_internal_request():
     remote_addr = _get_remote_addr()
     http_hosts = [_get_host(), constants.LOCAL_ADDRESS]
-    return all([remote_addr, http_hosts, remote_addr in http_hosts])
+
+    # cloudify-rest is the host for the auth request for the file-server
+    return remote_addr in http_hosts or 'cloudify-rest' in _get_host()
 
 
 def _get_host():
