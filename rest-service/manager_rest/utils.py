@@ -369,9 +369,9 @@ def get_supported_cloudify_from_plugin(plugin_target_path):
     plugin_payload = {}
     if plugin_target_path:
         with open(plugin_target_path, 'r') as plugin_file:
-            plugin_payload = yaml.load(plugin_file)
+            plugin_payload = yaml.load(plugin_file) or {}
 
-        for _, metadata in plugin_payload.get('plugins').items():
+        for _, metadata in plugin_payload.get('plugins', {}).items():
             if metadata.get(constants.PLUGIN_SUPPORTED_CLOUDIFY):
                 cloudify_version = \
                     metadata[constants.PLUGIN_SUPPORTED_CLOUDIFY]

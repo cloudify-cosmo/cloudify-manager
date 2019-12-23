@@ -272,3 +272,32 @@ def upload_mock_cloudify_license(storage_manager):
 
     )
     storage_manager.put(license)
+
+
+def put_certificate(storage_manager, name, value):
+    certificate = models.Certificate(name=name, value=value)
+    return storage_manager.put(certificate)
+
+
+def put_manager(storage_manager,
+                hostname,
+                node_id,
+                private_ip,
+                public_ip,
+                version,
+                edition,
+                distribution,
+                distro_release,
+                networks):
+    certificate = put_certificate(storage_manager, 'test-name', 'test-value')
+    manager = models.Manager(hostname=hostname,
+                             node_id=node_id,
+                             private_ip=private_ip,
+                             public_ip=public_ip,
+                             version=version,
+                             edition=edition,
+                             distribution=distribution,
+                             distro_release=distro_release,
+                             networks=networks,
+                             _ca_cert_id=certificate.id)
+    return storage_manager.put(manager)

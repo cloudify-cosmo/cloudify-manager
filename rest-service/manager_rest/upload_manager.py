@@ -40,8 +40,7 @@ from manager_rest.constants import (FILE_SERVER_PLUGINS_FOLDER,
                                     FILE_SERVER_SNAPSHOTS_FOLDER,
                                     FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
                                     FILE_SERVER_BLUEPRINTS_FOLDER,
-                                    FILE_SERVER_DEPLOYMENTS_FOLDER,
-                                    PLUGIN_SUPPORTED_CLOUDIFY)
+                                    FILE_SERVER_DEPLOYMENTS_FOLDER)
 from manager_rest.deployment_update.manager import \
     get_deployment_updates_manager
 from manager_rest.archiving import get_archive_type
@@ -54,7 +53,7 @@ from manager_rest.utils import (mkdirs,
                                 current_tenant,
                                 unzip,
                                 files_in_folder,
-                                remove,)
+                                remove)
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.constants import (CONVENTION_APPLICATION_BLUEPRINT_FILE,
                                     SUPPORTED_ARCHIVE_TYPES)
@@ -660,13 +659,11 @@ class UploadedPluginsManager(UploadedDataManager):
             get_supported_cloudify_from_plugin(plugin_target_path)
         # Do validation here before save the plugin
         if cloudify_versions:
-            # "supported_cloudify" is PEP 440 format
-            specs_version = \
-                build_specifier_set_from_versions(cloudify_versions)
-            if specs_version:
-                new_plugin.supported_cloudify = cloudify_versions
-                # TODO need to do a validation if the deployed plugin
-                #  is compatible with current manager CY-1924
+            new_plugin.supported_cloudify = cloudify_versions
+            get_resource_manager(
+            ).validate_plugin_compatibility_with_cloudify(
+                new_plugin.to_response())
+
         filter_by_name = {'package_name': new_plugin.package_name}
         sm = get_resource_manager().sm
         plugins = sm.list(Plugin, filters=filter_by_name)

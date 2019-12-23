@@ -26,6 +26,7 @@ import tarfile
 import unittest
 import tempfile
 import sqlalchemy.exc
+from collections import OrderedDict
 
 import yaml
 import wagon
@@ -711,7 +712,7 @@ class BaseServerTestCase(unittest.TestCase):
         )
 
     def upload_caravan(self, packages):
-        mapping = dict(
+        mapping = OrderedDict(
             self._create_wagon_and_yaml(
                 package,
                 version_and_yaml[0],

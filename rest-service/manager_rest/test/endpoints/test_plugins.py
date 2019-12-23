@@ -19,6 +19,7 @@ from manager_rest.test.attribute import attr
 
 from manager_rest import manager_exceptions
 from manager_rest.test import base_test
+from manager_rest.test import mocks
 from manager_rest.test.base_test import BaseServerTestCase
 
 from cloudify_rest_client import exceptions
@@ -36,6 +37,21 @@ TEST_PACKAGE_EMPTY_YAML_FILE = 'mock_blueprint/plugin_empty.yaml'
 TEST_PACKAGE_INCONSISTENT_YAML_FILE = \
     'mock_blueprint/plugin_inconsistent_with_wagon.yaml'
 
+TEST_PACKAGE_COMP_CFY_VERSION_YAML_FILE1 = \
+    'mock_blueprint/plugin_compatible_with_cfy_version_1.yaml'
+TEST_PACKAGE_COMP_CFY_VERSION_YAML_FILE2 = \
+    'mock_blueprint/plugin_compatible_with_cfy_version_2.yaml'
+
+TEST_PACKAGE_INCOMP_CFY_VERSION_YAML_FILE1 = \
+    'mock_blueprint/plugin_incompatible_with_cfy_version_1.yaml'
+TEST_PACKAGE_INCOMP_CFY_VERSION_YAML_FILE2 = \
+    'mock_blueprint/plugin_incompatible_with_cfy_version_2.yaml'
+
+TEST_PACKAGE_INVALID_CFY_VERSION_YAML_FILE1 = \
+    'mock_blueprint/plugin_invalid_with_cfy_version_format_1.yaml'
+TEST_PACKAGE_INVALID_CFY_VERSION_YAML_FILE2 = \
+    'mock_blueprint/plugin_invalid_with_cfy_version_format_2.yaml'
+
 OLD_TEST_PACKAGE_VERSION = '1.1'
 
 
@@ -44,6 +60,21 @@ class PluginsTest(BaseServerTestCase):
     """
     Test plugins upload and download.
     """
+    def setUp(self):
+        super(PluginsTest, self).setUp()
+        mocks.put_manager(
+            self.sm,
+            hostname='manager-hostname',
+            node_id='9f2c86e1-d3f5-4fac-9631-8a6cdef6747b',
+            private_ip='127.0.0.1',
+            public_ip='127.0.0.1',
+            version='5.0.5',
+            edition='community',
+            distribution='centos',
+            distro_release='Core',
+            networks={"default": "127.0.0.1"}
+        )
+
     def test_get_plugin_by_id(self):
         put_plugin_response = self.upload_plugin(TEST_PACKAGE_NAME,
                                                  TEST_PACKAGE_VERSION).json
@@ -348,3 +379,128 @@ class PluginsTest(BaseServerTestCase):
             self.client.plugins.upload(zip_path)
 
         self.quiet_delete(tmp_file_path)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_plugin_upload_with_supported_cfy_version(self):
+        response = self.upload_plugin(
+            TEST_PACKAGE_NAME,
+            TEST_PACKAGE_VERSION,
+            TEST_PACKAGE_COMP_CFY_VERSION_YAML_FILE1,
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(1, len(self.client.plugins.list()))
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_plugin_upload_fails_with_incompatible_cfy_version(self):
+        response = self.upload_plugin(
+            TEST_PACKAGE_NAME,
+            TEST_PACKAGE_VERSION,
+            TEST_PACKAGE_INCOMP_CFY_VERSION_YAML_FILE1
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json['error_code'],
+                         'incompatible_plugin_error')
+        self.assertEqual(0, len(self.client.plugins.list()))
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_plugin_upload_fails_with_invalid_cfy_version_format(self):
+        response = self.upload_plugin(
+            TEST_PACKAGE_NAME,
+            TEST_PACKAGE_VERSION,
+            TEST_PACKAGE_INVALID_CFY_VERSION_YAML_FILE1
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json['error_code'],
+                         'incompatible_plugin_error')
+        self.assertEqual(0, len(self.client.plugins.list()))
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_caravan_upload_with_supported_cfy_version(self):
+        self.upload_caravan(
+            {
+                TEST_PACKAGE_NAME:
+                    [TEST_PACKAGE_VERSION,
+                     TEST_PACKAGE_COMP_CFY_VERSION_YAML_FILE1],
+                TEST_PACKAGE_NAME2:
+                    [TEST_PACKAGE_VERSION2,
+                     TEST_PACKAGE_COMP_CFY_VERSION_YAML_FILE2]
+            }
+        )
+        plugins_list = self.client.plugins.list()
+        self.assertEqual(len(plugins_list), 2)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_caravan_upload_fails_with_incompatible_cfy_version(self):
+        response = self.upload_caravan(
+            {
+                TEST_PACKAGE_NAME:
+                    [TEST_PACKAGE_VERSION,
+                     TEST_PACKAGE_INCOMP_CFY_VERSION_YAML_FILE1],
+                TEST_PACKAGE_NAME2:
+                    [TEST_PACKAGE_VERSION2,
+                     TEST_PACKAGE_INCOMP_CFY_VERSION_YAML_FILE2]
+            }
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json['error_code'],
+                         'incompatible_plugin_error')
+        self.assertEqual(0, len(self.client.plugins.list()))
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_caravan_upload_partial_fails_for_incompatible_cfy_version(self):
+        response = self.upload_caravan(
+            {
+                TEST_PACKAGE_NAME:
+                    [TEST_PACKAGE_VERSION,
+                     TEST_PACKAGE_COMP_CFY_VERSION_YAML_FILE1],
+                TEST_PACKAGE_NAME2:
+                    [TEST_PACKAGE_VERSION2,
+                     TEST_PACKAGE_INCOMP_CFY_VERSION_YAML_FILE1]
+            }
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json['error_code'],
+                         'incompatible_plugin_error')
+        self.assertEqual(1, len(self.client.plugins.list()))
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_caravan_upload_fails_with_invalid_cfy_version_format(self):
+        response = self.upload_caravan(
+            {
+                TEST_PACKAGE_NAME:
+                    [TEST_PACKAGE_VERSION,
+                     TEST_PACKAGE_INVALID_CFY_VERSION_YAML_FILE1],
+                TEST_PACKAGE_NAME2:
+                    [TEST_PACKAGE_VERSION2,
+                     TEST_PACKAGE_INVALID_CFY_VERSION_YAML_FILE2]
+            }
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json['error_code'],
+                         'incompatible_plugin_error')
+        self.assertEqual(0, len(self.client.plugins.list()))
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_caravan_upload_partial_fails_for_invalid_cfy_version_format(self):
+        response = self.upload_caravan(
+            {
+                TEST_PACKAGE_NAME:
+                    [TEST_PACKAGE_VERSION,
+                     TEST_PACKAGE_COMP_CFY_VERSION_YAML_FILE1],
+                TEST_PACKAGE_NAME2:
+                    [TEST_PACKAGE_VERSION2,
+                     TEST_PACKAGE_INVALID_CFY_VERSION_YAML_FILE1]
+            }
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json['error_code'],
+                         'incompatible_plugin_error')
+        self.assertEqual(1, len(self.client.plugins.list()))

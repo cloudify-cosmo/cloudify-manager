@@ -1421,6 +1421,7 @@ class ResourceManager(object):
         package_name = plugin.get('package_name')
         if cloudify_versions:
             manager = self.sm.list(models.Manager)[0]
+            # "supported_cloudify" is based on PEP 440 format
             specs_version = \
                 build_specifier_set_from_versions(cloudify_versions)
             if Version(manager.version) not in specs_version:
