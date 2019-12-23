@@ -180,9 +180,10 @@ class Config(object):
             setattr(self, conf_value.name, conf_value.value)
 
         stored_brokers = session.query(models.RabbitMQBroker).all()
+        broker_hosts = [broker.host for broker in stored_brokers]
         for broker in stored_brokers:
             # currently, there's going to be only one rabbitmq
-            self.amqp_host = broker.host
+            self.amqp_host = broker_hosts
             self.amqp_management_host = broker.management_host
             self.amqp_username = broker.username
             self.amqp_password = broker.password
