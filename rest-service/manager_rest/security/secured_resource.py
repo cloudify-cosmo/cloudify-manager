@@ -118,7 +118,12 @@ class SecuredResource(Resource):
     method_decorators = [authenticate]
 
 
-class SecuredResourceNotWhileSnapshotRestore(Resource):
+class SecuredResourceBannedSnapshotRestore(Resource):
+    """
+    In case of a need to prevent a secured resource accessing the DB
+    during snapshot restore, which could cause a DB migration failure.
+    So we will block access to that resource.
+    """
     method_decorators = [prevent_running_in_snapshot_restore, authenticate]
 
 

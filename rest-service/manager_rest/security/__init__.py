@@ -21,7 +21,7 @@ from .secured_resource import (  # NOQA
     premium_only,
     allow_on_community,
     SecuredResourceReadonlyMode,
-    SecuredResourceNotWhileSnapshotRestore,
+    SecuredResourceBannedSnapshotRestore,
     authenticate
 )
 from .authorization import is_user_action_allowed  # NOQA
