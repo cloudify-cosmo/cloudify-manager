@@ -272,7 +272,7 @@ class Execution(CreatedAtMixin, SQLResourceBase):
     started_at = db.Column(UTCDateTime, nullable=True)
     scheduled_for = db.Column(UTCDateTime, nullable=True)
     is_dry_run = db.Column(db.Boolean, nullable=False, default=False)
-    token = db.Column(db.String(100), nullable=True)
+    token = db.Column(db.String(100), nullable=True, index=True)
 
     _deployment_fk = foreign_key(Deployment._storage_id, nullable=True)
 

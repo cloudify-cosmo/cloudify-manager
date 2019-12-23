@@ -98,9 +98,15 @@ def upgrade():
         'executions',
         ['ended_at'],
         unique=False)
+    op.create_index(
+        op.f('executions_token_idx'),
+        'executions',
+        ['token'],
+        unique=False)
 
 
 def downgrade():
+    op.drop_index(op.f('executions_token_idx'), table_name='executions')
     op.drop_index(op.f('executions_ended_at_idx'), table_name='executions')
     op.drop_index(
         op.f('nodes__deployment_fk_idx'),
@@ -113,7 +119,6 @@ def downgrade():
     op.drop_column('deployments', 'runtime_only_evaluation')
     op.drop_column('executions', 'blueprint_id')
     op.drop_column('node_instances', 'index')
-
     bind = op.get_bind()
     session = orm.Session(bind=bind)
 
