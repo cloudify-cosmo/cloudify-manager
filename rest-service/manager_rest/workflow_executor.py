@@ -45,10 +45,12 @@ def execute_workflow(name,
                      wait_after_fail=600,
                      execution_creator=None,
                      scheduled_time=None,
-                     resume=False):
+                     resume=False,
+                     execution_token=None):
 
     execution_parameters = execution_parameters or {}
     task_name = workflow['operation']
+    execution_token = execution_token or generate_execution_token(execution_id)
 
     context = {
         'type': 'workflow',
@@ -64,7 +66,7 @@ def execute_workflow(name,
         'is_system_workflow': False,
         'wait_after_fail': wait_after_fail,
         'resume': resume,
-        'execution_token': generate_execution_token(execution_id),
+        'execution_token': execution_token,
         'plugin': {}
     }
 
