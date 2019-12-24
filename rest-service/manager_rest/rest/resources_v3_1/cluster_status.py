@@ -23,15 +23,14 @@ from manager_rest.rest import responses
 from manager_rest.storage import models
 from manager_rest.security.authorization import authorize
 from manager_rest.rest.rest_decorators import marshal_with
-from manager_rest.security import SecuredResourceReadonlyMode
+from manager_rest.security import SecuredResourceBannedSnapshotRestore
 from manager_rest.cluster_status_manager import (get_cluster_status,
                                                  write_status_report)
-
 from manager_rest.rest.rest_utils import (verify_and_convert_bool,
                                           get_json_and_verify_params)
 
 
-class ClusterStatus(SecuredResourceReadonlyMode):
+class ClusterStatus(SecuredResourceBannedSnapshotRestore):
     @staticmethod
     def _get_request_dict():
         request_dict = get_json_and_verify_params({

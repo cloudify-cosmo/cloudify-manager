@@ -1,5 +1,5 @@
 ########
-# Copyright (c) 2015 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2015-2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -132,7 +132,7 @@ class SnapshotRestore(object):
                 utils.sudo(ALLOW_DB_CLIENT_CERTS_SCRIPT)
                 self._restore_files_to_manager()
                 utils.sudo(DENY_DB_CLIENT_CERTS_SCRIPT)
-                with self._pause_amqppostgres():
+                with self._pause_services():
                     self._restore_db(postgres, schema_revision, stage_revision)
                 self._restore_hash_salt()
                 self._encrypt_secrets(postgres)
@@ -156,7 +156,7 @@ class SnapshotRestore(object):
             shutil.rmtree(self._tempdir)
 
     @contextmanager
-    def _pause_amqppostgres(self):
+    def _pause_services(self):
         """Stop cloudify-amqp-postgres for the duration of this context"""
         # While the snapshot is being restored, the database is downgraded
         # and upgraded back, and the snapshot execution itself might not
@@ -165,11 +165,16 @@ class SnapshotRestore(object):
         # because they can't have a FK to a non-existent execution.
         # Pause amqp-postgres so that all the logs are only stored after
         # the database has finished restoring
-        utils.run('sudo systemctl stop cloudify-amqp-postgres')
+        # Also for manager's status reporter that uses manager's rest
+        # endpoint and in turn uses the DB for auth, that could cause
+        # failure for migration of the users table.
+        utils.run('sudo systemctl stop {0} {1}'.format(
+            'cloudify-amqp-postgres', 'cloudify-status-reporter'))
         try:
             yield
         finally:
-            utils.run('sudo systemctl start cloudify-amqp-postgres')
+            utils.run('sudo systemctl start {0} {1}'.format(
+                'cloudify-amqp-postgres', 'cloudify-status-reporter'))
 
     def _generate_new_rest_token(self):
         """

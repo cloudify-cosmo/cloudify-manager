@@ -33,6 +33,16 @@ class InsufficientMemoryError(ManagerException):
             *args, **kwargs)
 
 
+class SystemInSnapshotRestoreError(ManagerException):
+    IN_SNAPSHOT_RESTORE_ERROR_CODE = 'in_snapshot_restore_error'
+
+    def __init__(self, *args, **kwargs):
+        super(SystemInSnapshotRestoreError, self).__init__(
+            503,
+            SystemInSnapshotRestoreError.IN_SNAPSHOT_RESTORE_ERROR_CODE,
+            *args, **kwargs)
+
+
 class MissingPremiumPackage(ManagerException):
     MISSING_PREMIUM_ERROR_CODE = 'missing_premium_package_error'
 

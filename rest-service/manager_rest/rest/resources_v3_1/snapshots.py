@@ -14,11 +14,11 @@
 #  * limitations under the License.
 #
 
-import os
-
 from flask_restful import Resource
 
-from cloudify.snapshots import SNAPSHOT_RESTORE_FLAG_FILE, STATES
+from cloudify.snapshots import STATES
+
+from ..rest_utils import is_system_in_snapshot_restore_process
 
 
 class SnapshotsStatus(Resource):
@@ -33,6 +33,6 @@ class SnapshotsStatus(Resource):
         `<unique-str>-snapshot-data` is created on the Manager. If the file
         does not exists it means there is no snapshot restore running.
         """
-        if os.path.exists(SNAPSHOT_RESTORE_FLAG_FILE):
+        if is_system_in_snapshot_restore_process():
             return {'status': STATES.RUNNING}
         return {'status': STATES.NOT_RUNNING}
