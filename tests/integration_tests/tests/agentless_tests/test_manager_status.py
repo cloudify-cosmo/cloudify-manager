@@ -68,7 +68,7 @@ class TestManagerStatus(AgentlessTestCase):
 
         # Verify RabbitMQ connection check failed when the service was down
         log_path = '/var/log/cloudify/rest/cloudify-rest-service.log'
-        log_file = self.read_manager_file(log_path)[-150:]
+        log_file = self.read_manager_file(log_path)
         self.assertIn('Broker check failed', log_file)
 
     def test_status_postgres_inactive(self):
@@ -97,6 +97,7 @@ class TestManagerStatus(AgentlessTestCase):
 
     def _start_service(self, service):
         self.execute_on_manager('systemctl start {}'.format(SERVICES[service]))
+        time.sleep(1)
         status = self.client.manager.get_status()
         self.assertEqual(status['status'], ServiceStatus.HEALTHY)
         self.assertEqual(status['services'][service]['status'],
