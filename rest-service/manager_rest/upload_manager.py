@@ -48,7 +48,6 @@ from manager_rest.storage.models import Plugin
 from manager_rest import config, chunked, manager_exceptions
 from manager_rest.utils import (mkdirs,
                                 get_formatted_timestamp,
-                                build_specifier_set_from_versions,
                                 get_supported_cloudify_from_plugin,
                                 current_tenant,
                                 unzip,

@@ -467,7 +467,6 @@ class PluginsTest(BaseServerTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json['error_code'],
                          'incompatible_plugin_error')
-        self.assertEqual(1, len(self.client.plugins.list()))
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
@@ -503,4 +502,3 @@ class PluginsTest(BaseServerTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json['error_code'],
                          'incompatible_plugin_error')
-        self.assertEqual(1, len(self.client.plugins.list()))
