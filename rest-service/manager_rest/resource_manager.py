@@ -549,17 +549,20 @@ class ResourceManager(object):
                 if operation.id in retried_operations:
                     continue
 
-                if (operation.state in from_states |
-                        {cloudify_tasks.TASK_PENDING}):
-                    kwargs = operation.parameters.get('task_kwargs', {}) \
-                        .get('kwargs')
-                    if kwargs:
-                        kwargs['__cloudify_context']['execution_token'] = \
-                            execution_token
+                update_operation = False
+                kwargs = operation.parameters.get('task_kwargs', {}) \
+                    .get('kwargs')
+                if kwargs:
+                    kwargs['__cloudify_context']['execution_token'] = \
+                        execution_token
+                    update_operation = True
 
-                    if operation.state in from_states:
-                        operation.state = cloudify_tasks.TASK_PENDING
-                        operation.parameters['current_retries'] = 0
+                if operation.state in from_states:
+                    operation.state = cloudify_tasks.TASK_PENDING
+                    operation.parameters['current_retries'] = 0
+                    update_operation = True
+
+                if update_operation:
                     self.sm.update(operation,
                                    modified_attrs=('parameters', 'state'))
 
