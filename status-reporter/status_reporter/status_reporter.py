@@ -59,7 +59,7 @@ class InitializationError(Exception):
     pass
 
 
-CA_DEFAULT_PATH = '/etc/cloudify/status_reporter_cert.pem'
+CA_DEFAULT_PATH = '/etc/cloudify/ssl/status_reporter_cert.pem'
 
 
 class Reporter(object):
