@@ -19,6 +19,7 @@ from collections import namedtuple
 from flask import current_app, Response
 from flask_security.utils import verify_password, verify_hash
 
+from cloudify.workflows import tasks
 from cloudify.models_states import ExecutionState
 
 from manager_rest.security import user_handler
@@ -199,8 +200,8 @@ class Authentication(object):
             raise_unauthorized_user_error(error_msg)
 
         if current_execution.status not in ExecutionState.ACTIVE_STATES:
-            # Valid if it is a scheduled execution that is just started to run
-            if self._is_valid_scheduled_execution():
+            if self._is_valid_scheduled_execution() or \
+                    self._is_valid_cancelled_execution():
                 return current_execution.creator
 
             # Not an active execution
@@ -209,13 +210,27 @@ class Authentication(object):
             raise_unauthorized_user_error(error_msg)
         return current_execution.creator
 
-    def _is_valid_scheduled_execution(self):
+    @staticmethod
+    def _is_valid_scheduled_execution():
+        """Check if it's a scheduled execution that is just started to run"""
         if current_execution.status == ExecutionState.SCHEDULED:
             current_time = datetime.utcnow()
             scheduled_for = datetime.strptime(current_execution.scheduled_for,
                                               '%Y-%m-%dT%H:%M:%S.%fZ')
             # The scheduled execution just started to run
             return abs((current_time - scheduled_for).total_seconds()) < 60
+        return False
+
+    @staticmethod
+    def _is_valid_cancelled_execution():
+        """Check if it's a cancelled execution that has running operations"""
+        if current_execution.status != ExecutionState.CANCELLED:
+            return False
+
+        for graph in current_execution.tasks_graphs:
+            for operation in graph.operations:
+                if operation.state not in tasks.TERMINATED_STATES:
+                    return True
         return False
 
 
