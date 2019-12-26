@@ -235,10 +235,8 @@ def _handle_missing_non_manager_report(service_type,
         node_status = ServiceStatus.FAIL
 
         if missing_node.is_external:
-            service_statuses = [
-                manager_node[SERVICES][service_key][STATUS]
-                for manager_node in managers
-            ]
+            service_statuses = [node[SERVICES][service_key][STATUS]
+                                for name, node in managers.items()]
             # The service is healthy if one of the managers is able
             # to connect
             if NodeServiceStatus.ACTIVE in service_statuses:
