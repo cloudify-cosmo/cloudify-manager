@@ -16,11 +16,17 @@
 from cloudify.cluster_status import CloudifyNodeType
 
 from .status_reporter import Reporter
+from .utils import read_from_yaml_file
+
+CONFIG_PATH = '/etc/cloudify/config.yaml'
 
 
 class ManagerReporter(Reporter):
     def __init__(self):
-        super(ManagerReporter, self).__init__(CloudifyNodeType.MANAGER)
+        config = read_from_yaml_file(CONFIG_PATH)
+        super(ManagerReporter, self).__init__(
+            CloudifyNodeType.MANAGER,
+            config['constants']['ca_cert_path'])
 
     def _collect_status(self):
         client = self._get_cloudify_http_client('localhost')

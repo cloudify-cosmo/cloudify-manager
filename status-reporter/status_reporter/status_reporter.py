@@ -59,8 +59,11 @@ class InitializationError(Exception):
     pass
 
 
+CA_DEFAULT_PATH = '/etc/cloudify/status_reporter_cert.pem'
+
+
 class Reporter(object):
-    def __init__(self, node_type):
+    def __init__(self, node_type, ca_path=''):
         issues = []
 
         try:
@@ -71,7 +74,6 @@ class Reporter(object):
 
         self._cloudify_user_name = self._config.get('user_name')
         self._token = self._config.get('token')
-        self._ca_path = self._config.get('ca_path')
         self._managers_ips = self._config.get('managers_ips', [])
         self._node_id = self._config.get('node_id')
 
@@ -90,9 +92,10 @@ class Reporter(object):
                           '{0} ..'.format(json.dumps(invalid_conf_settings,
                                                      indent=1)))
 
-        if not self._ca_path or not os.path.exists(self._ca_path):
+        self._ca_path = ca_path or CA_DEFAULT_PATH
+        if not os.path.isfile(self._ca_path):
             issues.append('CA certificate was not found, '
-                          'please verify the given location {0}'.
+                          'please reconfigure with the correct location {0}'.
                           format(self._ca_path))
 
         self._current_reporting_freq = self._config.get('reporting_freq')
