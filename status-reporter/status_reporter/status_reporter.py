@@ -63,7 +63,7 @@ CA_DEFAULT_PATH = '/etc/cloudify/status_reporter_cert.pem'
 
 
 class Reporter(object):
-    def __init__(self, node_type, ca_path=''):
+    def __init__(self, node_type):
         issues = []
 
         try:
@@ -91,12 +91,12 @@ class Reporter(object):
             issues.append('Please verify the reporter\'s config related to '
                           '{0} ..'.format(json.dumps(invalid_conf_settings,
                                                      indent=1)))
-
-        self._ca_path = ca_path or CA_DEFAULT_PATH
-        if not os.path.isfile(self._ca_path):
+        if not os.path.isfile(CA_DEFAULT_PATH):
             issues.append('CA certificate was not found, '
-                          'please reconfigure with the correct location {0}'.
-                          format(self._ca_path))
+                          'please verify the given location {0}'.
+                          format(CA_DEFAULT_PATH))
+        else:
+            self._ca_path_valid = True
 
         self._current_reporting_freq = self._config.get('reporting_freq')
         self._node_type = node_type
@@ -138,12 +138,12 @@ class Reporter(object):
         return True
 
     def _get_cloudify_http_client(self, host):
-        if self._ca_path:
+        if self.self._ca_path_valid:
             return CloudifyClient(host=host,
                                   username=self._cloudify_user_name,
                                   headers={CLOUDIFY_API_AUTH_TOKEN_HEADER:
                                            self._token},
-                                  cert=self._ca_path,
+                                  cert=CA_DEFAULT_PATH,
                                   tenant='default_tenant',
                                   port=INTERNAL_REST_PORT,
                                   protocol=SECURED_PROTOCOL
