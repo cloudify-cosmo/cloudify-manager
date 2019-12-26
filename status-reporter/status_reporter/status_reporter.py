@@ -74,6 +74,7 @@ class Reporter(object):
 
         self._cloudify_user_name = self._config.get('user_name')
         self._token = self._config.get('token')
+        self._ca_path = self._config.get('ca_path')
         self._managers_ips = self._config.get('managers_ips', [])
         self._node_id = self._config.get('node_id')
 
@@ -91,12 +92,10 @@ class Reporter(object):
             issues.append('Please verify the reporter\'s config related to '
                           '{0} ..'.format(json.dumps(invalid_conf_settings,
                                                      indent=1)))
-        if not os.path.isfile(CA_DEFAULT_PATH):
+        if not os.path.isfile(self._ca_path):
             issues.append('CA certificate was not found, '
                           'please verify the given location {0}'.
-                          format(CA_DEFAULT_PATH))
-        else:
-            self._ca_path_valid = True
+                          format(self._ca_path))
 
         self._current_reporting_freq = self._config.get('reporting_freq')
         self._node_type = node_type
@@ -138,7 +137,7 @@ class Reporter(object):
         return True
 
     def _get_cloudify_http_client(self, host):
-        if self.self._ca_path_valid:
+        if self._ca_path:
             return CloudifyClient(host=host,
                                   username=self._cloudify_user_name,
                                   headers={CLOUDIFY_API_AUTH_TOKEN_HEADER:
