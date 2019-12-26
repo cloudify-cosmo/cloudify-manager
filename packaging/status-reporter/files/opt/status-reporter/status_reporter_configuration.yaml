@@ -4,4 +4,3 @@ managers_ips:
 reporting_freq: 5
 node_id:
 log_level: INFO
-ca_path:
