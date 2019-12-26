@@ -25,6 +25,7 @@ from .manager import (                           # NOQA
     ManagersId,
     RabbitMQBrokers,
     RabbitMQBrokersId,
+    DBNodes,
 )
 
 from .manager_config import (                    # NOQA
