@@ -21,9 +21,6 @@ from cloudify.systemddbus import get_services
 from cloudify.cluster_status import ServiceStatus, NodeServiceStatus
 
 
-CONFIG_PATH = '/etc/cloudify/config.yaml'
-
-
 def read_from_yaml_file(file_path):
     with open(file_path, 'r') as f:
         file_content = f.read()

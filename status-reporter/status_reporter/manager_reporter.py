@@ -20,7 +20,8 @@ from .status_reporter import Reporter
 
 class ManagerReporter(Reporter):
     def __init__(self):
-        super(ManagerReporter, self).__init__(CloudifyNodeType.MANAGER)
+        super(ManagerReporter, self).__init__(
+            CloudifyNodeType.MANAGER)
 
     def _collect_status(self):
         client = self._get_cloudify_http_client('localhost')

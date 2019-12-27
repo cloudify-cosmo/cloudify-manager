@@ -59,6 +59,9 @@ class InitializationError(Exception):
     pass
 
 
+CA_DEFAULT_PATH = '/etc/cloudify/ssl/status_reporter_cert.pem'
+
+
 class Reporter(object):
     def __init__(self, node_type):
         issues = []
@@ -71,7 +74,6 @@ class Reporter(object):
 
         self._cloudify_user_name = self._config.get('user_name')
         self._token = self._config.get('token')
-        self._ca_path = self._config.get('ca_path')
         self._managers_ips = self._config.get('managers_ips', [])
         self._node_id = self._config.get('node_id')
 
@@ -89,11 +91,12 @@ class Reporter(object):
             issues.append('Please verify the reporter\'s config related to '
                           '{0} ..'.format(json.dumps(invalid_conf_settings,
                                                      indent=1)))
-
-        if not self._ca_path or not os.path.exists(self._ca_path):
+        self._ca_cert_valid = True
+        if not os.path.isfile(CA_DEFAULT_PATH):
             issues.append('CA certificate was not found, '
                           'please verify the given location {0}'.
-                          format(self._ca_path))
+                          format(CA_DEFAULT_PATH))
+            self._ca_cert_valid = False
 
         self._current_reporting_freq = self._config.get('reporting_freq')
         self._node_type = node_type
@@ -135,12 +138,12 @@ class Reporter(object):
         return True
 
     def _get_cloudify_http_client(self, host):
-        if self._ca_path:
+        if self._ca_cert_valid:
             return CloudifyClient(host=host,
                                   username=self._cloudify_user_name,
                                   headers={CLOUDIFY_API_AUTH_TOKEN_HEADER:
                                            self._token},
-                                  cert=self._ca_path,
+                                  cert=CA_DEFAULT_PATH,
                                   tenant='default_tenant',
                                   port=INTERNAL_REST_PORT,
                                   protocol=SECURED_PROTOCOL
