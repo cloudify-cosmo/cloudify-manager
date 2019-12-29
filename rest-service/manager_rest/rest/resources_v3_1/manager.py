@@ -125,24 +125,14 @@ class _CommunityBrokersId(SecuredResource):
         raise NotImplementedError('Premium implementation only')
 
 
-class _CommunityDBNodesBase(SecuredResource):
-    @authorize('db_manage')
-    @marshal_with(models.DBNodes)
-    @premium_only
-    def post(self):
-        raise NotImplementedError('Premium implementation only')
-
-
 if manager_premium:
     managers_base = manager_premium.ManagersBase
     brokers_base = manager_premium.RabbitMQBrokersBase
-    db_nodes_base = manager_premium.DBNodesBase
     ManagersId = manager_premium.ManagersId
     RabbitMQBrokersId = manager_premium.RabbitMQBrokersId
 else:
     managers_base = _CommunityManagersBase
     brokers_base = _CommunityBrokersBase
-    db_nodes_base = _CommunityDBNodesBase
     ManagersId = _CommunityManagersId
     RabbitMQBrokersId = _CommunityBrokersId
 
@@ -187,7 +177,7 @@ class RabbitMQBrokers(brokers_base):
         return brokers
 
 
-class DBNodes(db_nodes_base):
+class DBNodes(SecuredResource):
     @marshal_with(models.DBNodes)
     @paginate
     @authorize('db_node_get')
