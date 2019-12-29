@@ -50,6 +50,7 @@ from integration_tests.framework.constants import (PLUGIN_STORAGE_DIR,
                                                    CLOUDIFY_USER)
 from integration_tests.framework.wagon_build import (WagonBuilderMixin,
                                                      WagonBuildError)
+from integration_tests.framework.github_interface import GithubInterface
 from integration_tests.tests.utils import (
     wait_for_deployment_creation_to_complete,
     wait_for_deployment_deletion_to_complete
@@ -698,6 +699,18 @@ class BaseAgentTestCase(BaseTestCase):
             modify_blueprint_func=modify_blueprint_func,
             skip_uninstall=skip_uninstall)
 
+    def _create_secrets(self, secrets):
+        self.logger.info('Adding secrets...')
+        for key, value in secrets.items():
+            self.logger.info('Adding secret {0} {1}...'.format(key, value))
+            while not any([secret for secret in
+                           self.client.secrets.list()
+                           if key in secret.key]):
+                self.client.secrets.create(key, value, update_if_exists=True)
+                time.sleep(0.5)
+            self.logger.info('Finished adding secret {0}...'.format(key))
+        self.logger.info('Finished adding secrets...')
+
 
 class AgentTestCase(BaseAgentTestCase):
 
@@ -768,6 +781,12 @@ class AgentTestWithPlugins(AgentTestCase):
 class PluginsTest(AgentTestWithPlugins, WagonBuilderMixin):
     def setUp(self):
         super(PluginsTest, self).setUp()
+        self.examples = GithubInterface()
+        self.examples.clone()
+
+    def tearDown(self):
+        self.examples.cleanup()
+        super(PluginsTest, self).tearDown()
 
     @staticmethod
     def get_wagon_path(plugin_path):
@@ -786,6 +805,124 @@ class PluginsTest(AgentTestWithPlugins, WagonBuilderMixin):
         """Overrides the inherited class _create_test_wagon."""
         self.build_wagon()
         return self.get_wagon_path(plugin_path)
+
+    def add_cleanup_deployment(self, deployment_id):
+        self.addCleanup(
+            self.undeploy_application,
+            deployment_id,
+            parameters={'ignore_failure': True}
+        )
+
+    def check_blueprint(self,
+                        blueprint_id,
+                        blueprint_path,
+                        deployment_inputs,
+                        timeout=None):
+
+        self.add_cleanup_deployment(blueprint_id)
+        self.deploy_application(
+            test_utils.get_resource(blueprint_path),
+            timeout_seconds=timeout,
+            blueprint_id=blueprint_id,
+            deployment_id=blueprint_id,
+            inputs=deployment_inputs)
+        self.undeploy_application(blueprint_id, timeout)
+
+    def check_hello_world_blueprint(self, iaas, inputs, timeout=400):
+        blueprint_path = os.path.join(
+            self.examples.git_location,
+            'hello-world-example', '{iaas}.yaml'.format(iaas=iaas))
+        blueprint_id = 'hello-world-{iaas}'.format(iaas=iaas)
+        self.check_blueprint(blueprint_id, blueprint_path, inputs, timeout)
+
+    def check_db_lb_app_blueprint(self,
+                                  iaas,
+                                  timeout,
+                                  network_inputs=None,
+                                  db_inputs_override=None,
+                                  lb_inputs_override=None,
+                                  app_inputs_override=None):
+
+        network_inputs = network_inputs or {}
+        db_inputs_override = db_inputs_override or {}
+        lb_inputs_override = lb_inputs_override or {}
+        app_inputs_override = app_inputs_override or {}
+
+        infrastructure_blueprint_path = os.path.join(
+            self.examples.git_location,
+            'db-lb-app/infrastructure/{iaas}.yaml'.format(iaas=iaas))
+        infrastructure_blueprint_id = 'infrastructure'
+
+        network_blueprint_id = iaas
+        network_blueprint_path = os.path.join(
+            self.examples.git_location,
+            '{iaas}-example-network'.format(iaas=iaas), 'blueprint.yaml')
+
+        db_blueprint_id = 'db'
+        db_blueprint_path = os.path.join(
+            self.examples.git_location,
+            'db-lb-app/db/application.yaml')
+        db_inputs = {'infrastructure--resource_name_prefix': 'db'}
+        db_inputs.update(db_inputs_override)
+
+        lb_blueprint_id = 'lb'
+        lb_blueprint_path = os.path.join(
+            self.examples.git_location,
+            'db-lb-app/lb/application.yaml')
+        lb_inputs = {'infrastructure--resource_name_prefix': 'lb'}
+        lb_inputs.update(lb_inputs_override)
+
+        app_blueprint_id = 'app'
+        app_blueprint_path = os.path.join(
+            self.examples.git_location,
+            'db-lb-app/app/application.yaml')
+        app_inputs = {'infrastructure--resource_name_prefix': 'app'}
+        app_inputs.update(app_inputs_override)
+
+        self.add_cleanup_deployment(network_blueprint_id)
+        self.deploy_application(
+            test_utils.get_resource(network_blueprint_path),
+            timeout_seconds=timeout,
+            blueprint_id=network_blueprint_id,
+            deployment_id=network_blueprint_id,
+            inputs=network_inputs
+        )
+
+        self.client.blueprints.upload(
+            test_utils.get_resource(infrastructure_blueprint_path),
+            infrastructure_blueprint_id)
+
+        self.add_cleanup_deployment(db_blueprint_id)
+        self.deploy_application(
+            test_utils.get_resource(db_blueprint_path),
+            timeout_seconds=timeout,
+            blueprint_id=db_blueprint_id,
+            deployment_id=db_blueprint_id,
+            inputs=db_inputs
+        )
+
+        self.add_cleanup_deployment(lb_blueprint_id)
+        self.deploy_application(
+            test_utils.get_resource(lb_blueprint_path),
+            timeout_seconds=timeout,
+            blueprint_id=lb_blueprint_id,
+            deployment_id=lb_blueprint_id,
+            inputs=lb_inputs
+        )
+
+        self.add_cleanup_deployment(app_blueprint_id)
+        self.deploy_application(
+            test_utils.get_resource(app_blueprint_path),
+            timeout_seconds=timeout,
+            blueprint_id=app_blueprint_id,
+            deployment_id=app_blueprint_id,
+            inputs=app_inputs
+        )
+
+        self.undeploy_application(app_blueprint_id, timeout)
+        self.undeploy_application(lb_blueprint_id, timeout)
+        self.undeploy_application(db_blueprint_id, timeout)
+        self.undeploy_application(network_blueprint_id, timeout)
 
 
 class PluginTestContainerHosts(PluginsTest):

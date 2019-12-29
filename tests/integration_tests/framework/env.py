@@ -103,9 +103,6 @@ class BaseTestEnvironment(object):
         self.start_events_printer()
 
     def build_resource_mapping(self):
-        return self._build_resource_mapping()
-
-    def _build_resource_mapping(self, additional_plugins=None):
         """
         This function builds a list of resources to mount on the manager
         container. Each entry is composed of the source directory on the host
@@ -113,7 +110,6 @@ class BaseTestEnvironment(object):
         """
 
         resources = []
-        additional_plugins = additional_plugins or None
         # Import only for the sake of finding the module path on the file
         # system
         import integration_tests_plugins
