@@ -21,10 +21,10 @@ import argparse
 
 from cloudify import broker_config, dispatch
 from cloudify.logs import setup_agent_logger
-from cloudify.utils import get_admin_api_token
+from cloudify.utils import get_admin_api_token, get_tenant
 from cloudify.constants import MGMTWORKER_QUEUE
 from cloudify.models_states import ExecutionState
-from cloudify.state import current_workflow_ctx, workflow_ctx
+from cloudify.state import current_workflow_ctx
 from cloudify.manager import get_rest_client, update_execution_status
 from cloudify.amqp_client import AMQPConnection, get_client, SendHandler
 
@@ -114,7 +114,6 @@ class MgmtworkerServiceTaskConsumer(ServiceTaskConsumer):
             """A CloudifyContext that has just enough data to cancel workflows
             """
             def __init__(self):
-                self.tenant = tenant
                 self.tenant_name = tenant['name']
                 self.rest_token = rest_token
                 self.execution_token = execution_token
@@ -147,7 +146,7 @@ class MgmtworkerServiceTaskConsumer(ServiceTaskConsumer):
         if target == MGMTWORKER_QUEUE:
             client = get_client()
         else:
-            tenant = workflow_ctx.tenant
+            tenant = get_tenant()
             client = get_client(
                 amqp_user=tenant['rabbitmq_username'],
                 amqp_pass=tenant['rabbitmq_password'],
