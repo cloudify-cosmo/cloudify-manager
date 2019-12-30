@@ -335,6 +335,7 @@ class TestResumeMgmtworker(AgentlessTestCase):
         self.assertEqual(execution.status, 'cancelled')
 
         self._unlock_operation('interface1.op_nonresumable')
+        time.sleep(5)
         execution = self.client.executions.resume(execution.id, force=True)
         execution = self.wait_for_execution_to_end(execution)
         self.assertEqual(execution.status, 'terminated')
