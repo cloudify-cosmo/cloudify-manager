@@ -550,12 +550,6 @@ class ResourceManager(object):
                     continue
 
                 update_operation = False
-                kwargs = operation.parameters.get('task_kwargs', {}) \
-                    .get('kwargs')
-                if kwargs:
-                    kwargs['__cloudify_context']['execution_token'] = \
-                        execution_token
-                    update_operation = True
 
                 if operation.state in from_states:
                     operation.state = cloudify_tasks.TASK_PENDING
