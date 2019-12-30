@@ -549,14 +549,9 @@ class ResourceManager(object):
                 if operation.id in retried_operations:
                     continue
 
-                update_operation = False
-
                 if operation.state in from_states:
                     operation.state = cloudify_tasks.TASK_PENDING
                     operation.parameters['current_retries'] = 0
-                    update_operation = True
-
-                if update_operation:
                     self.sm.update(operation,
                                    modified_attrs=('parameters', 'state'))
 
