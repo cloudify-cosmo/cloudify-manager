@@ -99,6 +99,7 @@ class Reporter(object):
             self._ca_cert_valid = False
 
         self._current_reporting_freq = self._config.get('reporting_freq')
+        self._request_timeout = self._config.get('request_timeout')
         self._node_type = node_type
         if issues:
             raise InitializationError('Failed initialization of status '
@@ -146,14 +147,16 @@ class Reporter(object):
                                   cert=CA_DEFAULT_PATH,
                                   tenant='default_tenant',
                                   port=INTERNAL_REST_PORT,
-                                  protocol=SECURED_PROTOCOL
+                                  protocol=SECURED_PROTOCOL,
+                                  timeout=self._request_timeout
                                   )
         else:
             return CloudifyClient(host=host,
                                   username=self._cloudify_user_name,
                                   tenant='default_tenant',
                                   port=DEFAULT_PORT,
-                                  protocol=DEFAULT_PROTOCOL
+                                  protocol=DEFAULT_PROTOCOL,
+                                  timeout=self._request_timeout
                                   )
 
     def _collect_status(self):
