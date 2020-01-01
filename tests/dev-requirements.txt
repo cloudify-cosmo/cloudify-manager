@@ -1,5 +1,5 @@
-https://github.com/cloudify-cosmo/cloudify-common/archive/CY-2118-cfy-logs-download-all-nodes.zip
-https://github.com/cloudify-cosmo/cloudify-cli/archive/CY-2118-cfy-logs-download-all-nodes.zip
+https://github.com/cloudify-cosmo/cloudify-common/archive/CY-2155-get-db-nodes-api.zip
+https://github.com/cloudify-cosmo/cloudify-cli/archive/CY-2155-get-db-nodes-api.zip
 https://github.com/cloudify-cosmo/cloudify-diamond-plugin/archive/master.zip
 https://github.com/cloudify-cosmo/cloudify-agent/archive/master.zip
 

@@ -1,2 +1,2 @@
-git+https://github.com/cloudify-cosmo/cloudify-common@CY-2118-cfy-logs-download-all-nodes#egg=cloudify-common==CY-2118-cfy-logs-download-all-nodes
+git+https://github.com/cloudify-cosmo/cloudify-common@CY-2155-get-db-nodes-api#egg=cloudify-common==CY-2155-get-db-nodes-api
 -e ../rest-service
