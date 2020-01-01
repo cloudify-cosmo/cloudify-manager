@@ -118,6 +118,7 @@ def setup_resources(api):
         'TasksGraphsId': 'tasks_graphs/<string:tasks_graph_id>',
         'ExecutionsCheck': 'executions/<execution_id>/should-start',
         'RabbitMQBrokers': 'brokers',
+        'DBNodes': 'db-nodes',
         'RabbitMQBrokersId': 'brokers/<string:name>',
         'License': 'license',
         'Sites': 'sites',

@@ -175,3 +175,12 @@ class RabbitMQBrokers(brokers_base):
                 broker.username = None
                 broker.password = None
         return brokers
+
+
+class DBNodes(SecuredResource):
+    @marshal_with(models.DBNodes)
+    @paginate
+    @authorize('db_nodes_get')
+    def get(self, pagination=None):
+        """List DB nodes from database"""
+        return get_storage_manager().list(models.DBNodes)
