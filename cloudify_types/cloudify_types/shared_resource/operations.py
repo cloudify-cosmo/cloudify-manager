@@ -21,13 +21,13 @@ from .constants import WORKFLOW_EXECUTION_TIMEOUT
 from .execute_shared_resource_workflow import execute_shared_resource_workflow
 
 
-@operation
+@operation(resumable=True)
 @proxy_operation('validate_deployment')
 def connect_deployment(operation, **_):
     return getattr(SharedResource(_), operation)()
 
 
-@operation
+@operation(resumable=True)
 def execute_workflow(workflow_id,
                      parameters,
                      timeout=WORKFLOW_EXECUTION_TIMEOUT,
