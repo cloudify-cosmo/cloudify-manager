@@ -32,6 +32,7 @@ class ComponentTypeTest(AgentlessTestCase):
         deployment_id = 'd{0}'.format(uuid.uuid4())
         dsl_path = resource('dsl/component_with_blueprint_id.yaml')
         self.deploy_application(dsl_path, deployment_id=deployment_id)
+        self._validate_component_capabilities(deployment_id, {'test': 1})
         self.assertTrue(self.client.deployments.get(self.component_name))
         self.undeploy_application(deployment_id, is_delete_deployment=True)
         self.assertRaises(CloudifyClientError,
@@ -40,6 +41,14 @@ class ComponentTypeTest(AgentlessTestCase):
         self.assertRaises(CloudifyClientError,
                           self.client.deployments.get,
                           deployment_id)
+
+    def _validate_component_capabilities(self, deployment_id, capabilities):
+        component_id = self.client.node_instances.list(
+            deployment_id=deployment_id)[0].id
+        component_runtime_props = self.client.node_instances.get(
+            component_id).runtime_properties
+        self.assertEqual(capabilities,
+                         component_runtime_props['capabilities'])
 
     def test_component_creation_with_blueprint_package(self):
         deployment_id = 'd{0}'.format(uuid.uuid4())
