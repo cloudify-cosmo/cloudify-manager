@@ -47,6 +47,10 @@ class MockBlueprintsClient(BaseMockClient):
 
 class MockDeploymentsClient(BaseMockClient):
 
+    def __init__(self):
+        super(MockDeploymentsClient, self).__init__()
+        self.capabilities = MockDeploymentCapabilitiesClient()
+
     def create(self, *_, **__):
         _return_value = {
             'id': 'test',
@@ -79,6 +83,12 @@ class MockEventsClient(BaseMockClient):
 
 class MockSecretsClient(BaseMockClient):
     pass
+
+
+class MockDeploymentCapabilitiesClient(BaseMockClient):
+
+    def get(self, *args, **_):
+        return MagicMock(return_value={'capabilities': dict()})
 
 
 class MockCloudifyRestClient(object):
