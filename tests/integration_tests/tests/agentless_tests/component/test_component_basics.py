@@ -26,8 +26,18 @@ class ComponentTypeTest(AgentlessTestCase):
     component_name = 'component'
 
     def test_component_creation_with_blueprint_id(self):
-        basic_blueprint_path = resource('dsl/basic.yaml')
-        self.client.blueprints.upload(basic_blueprint_path,
+        component_blueprint = """
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - cloudify/types/types.yaml
+
+capabilities:
+    test:
+        value: 1
+"""
+        blueprint_path = self.make_yaml_file(component_blueprint)
+        self.client.blueprints.upload(blueprint_path,
                                       entity_id='basic')
         deployment_id = 'd{0}'.format(uuid.uuid4())
         dsl_path = resource('dsl/component_with_blueprint_id.yaml')
