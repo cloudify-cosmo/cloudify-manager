@@ -429,16 +429,14 @@ class Component(object):
     def _populate_runtime_with_wf_results(self):
         ctx.logger.info('Fetching "{0}" deployment capabilities..'.format(
             self.deployment_id))
-        runtime_prop = ctx.instance.runtime_properties['deployment']
 
-        if 'capabilities' not in runtime_prop.keys():
-            update_runtime_properties('deployment', 'capabilities', dict())
+        if 'capabilities' not in ctx.instance.runtime_properties.keys():
+            ctx.instance.runtime_properties['plugins'] = dict()
 
         ctx.logger.debug('Deployment ID is {0}'.format(self.deployment_id))
         response = self.client.deployments.capabilities.get(self.deployment_id)
         dep_capabilities = response.get('capabilities')
-        ctx.instance.runtime_properties[
-            'deployment']['capabilities'] = dep_capabilities
+        ctx.instance.runtime_properties['capabilities'] = dep_capabilities
         ctx.logger.info('Fetched capabilities:\n{0}'.format(json.dumps(
             dep_capabilities, indent=1)))
 
