@@ -20,6 +20,7 @@ from urlparse import urlparse
 from cloudify import manager, ctx
 from cloudify.exceptions import NonRecoverableError
 from cloudify_rest_client.client import CloudifyClient
+from cloudify_types.utils import handle_client_exception
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from .constants import (
@@ -424,8 +425,10 @@ class Component(object):
 
         return poll_result
 
+    @handle_client_exception('Failed fetching workflow results')
     def _populate_runtime_with_wf_results(self):
-        ctx.logger.info('Fetching "{0}" deployment capabilities..'.format(self.deployment_id))
+        ctx.logger.info('Fetching "{0}" deployment capabilities..'.format(
+            self.deployment_id))
         runtime_prop = ctx.instance.runtime_properties['deployment']
 
         if 'capabilities' not in runtime_prop.keys():
@@ -434,10 +437,8 @@ class Component(object):
         ctx.logger.debug('Deployment ID is {0}'.format(self.deployment_id))
         response = self.client.deployments.capabilities.get(self.deployment_id)
         dep_capabilities = response.get('capabilities')
-
         ctx.instance.runtime_properties[
             'deployment']['capabilities'] = dep_capabilities
-
         ctx.logger.info('Fetched capabilities:\n{0}'.format(json.dumps(
             dep_capabilities, indent=1)))
 
@@ -474,9 +475,7 @@ class Component(object):
 
         ctx.logger.info('Execution succeeded for "{0}" deployment'.format(
             self.deployment_id))
-
         self._populate_runtime_with_wf_results()
-
         return True
 
     def verify_execution_successful(self,
