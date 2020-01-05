@@ -59,7 +59,8 @@ class SQLResourceBase(SQLModelBase):
     id = db.Column(db.Text, index=True)
     visibility = db.Column(
         db.Enum(*VisibilityState.STATES, name='visibility_states'),
-        default=VisibilityState.TENANT
+        default=VisibilityState.TENANT,
+        index=True
     )
 
     @declared_attr
