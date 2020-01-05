@@ -263,7 +263,7 @@ class Execution(CreatedAtMixin, SQLResourceBase):
 
     ended_at = db.Column(UTCDateTime, nullable=True, index=True)
     error = db.Column(db.Text)
-    is_system_workflow = db.Column(db.Boolean, nullable=False)
+    is_system_workflow = db.Column(db.Boolean, nullable=False, index=True)
     parameters = db.Column(db.PickleType)
     status = db.Column(
         db.Enum(*ExecutionState.STATES, name='execution_status')
@@ -332,7 +332,7 @@ class Event(SQLResourceBase):
     message_code = db.Column(db.Text)
     event_type = db.Column(db.Text)
     operation = db.Column(db.Text)
-    node_id = db.Column(db.Text)
+    node_id = db.Column(db.Text, index=True)
     source_id = db.Column(db.Text)
     target_id = db.Column(db.Text)
     error_causes = db.Column(JSONString)
@@ -372,7 +372,7 @@ class Log(SQLResourceBase):
     logger = db.Column(db.Text)
     level = db.Column(db.Text)
     operation = db.Column(db.Text)
-    node_id = db.Column(db.Text)
+    node_id = db.Column(db.Text, index=True)
     source_id = db.Column(db.Text)
     target_id = db.Column(db.Text)
 
@@ -645,7 +645,7 @@ class NodeInstance(SQLResourceBase):
     relationships = db.Column(db.PickleType)
     runtime_properties = db.Column(db.PickleType)
     scaling_groups = db.Column(db.PickleType)
-    state = db.Column(db.Text, nullable=False)
+    state = db.Column(db.Text, nullable=False, index=True)
     version = db.Column(db.Integer, nullable=False)
 
     # This automatically increments the version on each update
@@ -732,7 +732,7 @@ class Agent(CreatedAtMixin, SQLResourceBase):
 class TasksGraph(SQLResourceBase):
     __tablename__ = 'tasks_graphs'
 
-    name = db.Column(db.Text)
+    name = db.Column(db.Text, index=True)
     created_at = db.Column(UTCDateTime, nullable=False, index=True)
 
     _execution_fk = foreign_key(Execution._storage_id)
