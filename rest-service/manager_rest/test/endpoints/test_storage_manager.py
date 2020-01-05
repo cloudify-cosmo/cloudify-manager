@@ -112,13 +112,16 @@ class StorageManagerTests(base_test.BaseServerTestCase):
             self.sm.list(models.Deployment, filters=filters_bp)
 
         self.assertEquals(2, len(blueprint_deployments))
-        if blueprint_deployments[0].id != deployment1.id:
-            blueprint_deployments[0], blueprint_deployments[1] =\
-                blueprint_deployments[1], blueprint_deployments[0]
-        self.assertEquals(deployment1.to_dict(),
-                          blueprint_deployments[0].to_dict())
-        self.assertEquals(deployment2.to_dict(),
-                          blueprint_deployments[1].to_dict())
+        if blueprint_deployments[0].id == deployment1.id:
+            self.assertEquals(deployment1.to_dict(),
+                              blueprint_deployments[0].to_dict())
+            self.assertEquals(deployment2.to_dict(),
+                              blueprint_deployments[1].to_dict())
+        else:
+            self.assertEquals(deployment2.to_dict(),
+                              blueprint_deployments[0].to_dict())
+            self.assertEquals(deployment1.to_dict(),
+                              blueprint_deployments[1].to_dict())
 
     def test_model_serialization(self):
         now = utils.get_formatted_timestamp()
