@@ -59,7 +59,7 @@ ALLOWED_MAINTENANCE_ENDPOINTS = ALLOWED_ENDPOINTS + ['snapshots',
                                                      'snapshot-status'
                                                      ]
 ALLOWED_LICENSE_ENDPOINTS = ALLOWED_ENDPOINTS + [
-    'tokens', 'config', 'cluster', 'tenants', 'brokers', 'managers'
+    'tokens', 'config', 'cluster', 'tenants', 'brokers', 'managers', 'db-nodes'
 ]
 CLOUDIFY_AUTH_HEADER = 'Authorization'
 CLOUDIFY_AUTH_TOKEN_HEADER = 'Authentication-Token'
