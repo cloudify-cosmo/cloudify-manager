@@ -97,23 +97,490 @@ def upgrade():
         op.f('executions_ended_at_idx'),
         'executions',
         ['ended_at'],
-        unique=False)
+        unique=False,
+    )
     op.create_index(
-        op.f('executions_token_idx'),
+        op.f('executions_token_idx'), 'executions', ['token'], unique=False
+    )
+    op.create_index(
+        op.f('agents__creator_id_idx'), 'agents', ['_creator_id'], unique=False
+    )
+    op.create_index(
+        op.f('agents__node_instance_fk_idx'),
+        'agents',
+        ['_node_instance_fk'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('agents_visibility_idx'), 'agents', ['visibility'], unique=False
+    )
+    op.create_index(
+        op.f('blueprints__creator_id_idx'),
+        'blueprints',
+        ['_creator_id'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('blueprints_visibility_idx'),
+        'blueprints',
+        ['visibility'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('certificates__updater_id_idx'),
+        'certificates',
+        ['_updater_id'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('config__updater_id_idx'), 'config', ['_updater_id'], unique=False
+    )
+    op.create_index(
+        op.f('deployment_modifications__creator_id_idx'),
+        'deployment_modifications',
+        ['_creator_id'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('deployment_modifications__deployment_fk_idx'),
+        'deployment_modifications',
+        ['_deployment_fk'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('deployment_modifications_visibility_idx'),
+        'deployment_modifications',
+        ['visibility'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('deployment_update_steps__creator_id_idx'),
+        'deployment_update_steps',
+        ['_creator_id'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('deployment_update_steps__deployment_update_fk_idx'),
+        'deployment_update_steps',
+        ['_deployment_update_fk'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('deployment_update_steps_visibility_idx'),
+        'deployment_update_steps',
+        ['visibility'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('deployment_updates__creator_id_idx'),
+        'deployment_updates',
+        ['_creator_id'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('deployment_updates__deployment_fk_idx'),
+        'deployment_updates',
+        ['_deployment_fk'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('deployment_updates__execution_fk_idx'),
+        'deployment_updates',
+        ['_execution_fk'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('deployment_updates__new_blueprint_fk_idx'),
+        'deployment_updates',
+        ['_new_blueprint_fk'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('deployment_updates__old_blueprint_fk_idx'),
+        'deployment_updates',
+        ['_old_blueprint_fk'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('deployment_updates_visibility_idx'),
+        'deployment_updates',
+        ['visibility'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('deployments__blueprint_fk_idx'),
+        'deployments',
+        ['_blueprint_fk'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('deployments__creator_id_idx'),
+        'deployments',
+        ['_creator_id'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('deployments__site_fk_idx'),
+        'deployments',
+        ['_site_fk'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('deployments_visibility_idx'),
+        'deployments',
+        ['visibility'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('events__creator_id_idx'), 'events', ['_creator_id'], unique=False
+    )
+    op.create_index(
+        op.f('events_visibility_idx'), 'events', ['visibility'], unique=False
+    )
+    op.create_index(
+        op.f('executions__creator_id_idx'),
         'executions',
-        ['token'],
-        unique=False)
+        ['_creator_id'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('executions__deployment_fk_idx'),
+        'executions',
+        ['_deployment_fk'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('executions_visibility_idx'),
+        'executions',
+        ['visibility'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('groups_tenants_group_id_idx'),
+        'groups_tenants',
+        ['group_id'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('groups_tenants_role_id_idx'),
+        'groups_tenants',
+        ['role_id'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('groups_tenants_tenant_id_idx'),
+        'groups_tenants',
+        ['tenant_id'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('logs__creator_id_idx'), 'logs', ['_creator_id'], unique=False
+    )
+    op.create_index(
+        op.f('logs_visibility_idx'), 'logs', ['visibility'], unique=False
+    )
+    op.create_index(
+        op.f('managers__ca_cert_id_idx'),
+        'managers',
+        ['_ca_cert_id'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('node_instances__creator_id_idx'),
+        'node_instances',
+        ['_creator_id'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('node_instances_visibility_idx'),
+        'node_instances',
+        ['visibility'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('nodes__creator_id_idx'), 'nodes', ['_creator_id'], unique=False
+    )
+    op.create_index(
+        op.f('nodes_visibility_idx'), 'nodes', ['visibility'], unique=False
+    )
+    op.create_index(
+        op.f('operations__creator_id_idx'),
+        'operations',
+        ['_creator_id'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('operations__tasks_graph_fk_idx'),
+        'operations',
+        ['_tasks_graph_fk'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('operations_visibility_idx'),
+        'operations',
+        ['visibility'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('plugins__creator_id_idx'),
+        'plugins',
+        ['_creator_id'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('plugins_visibility_idx'), 'plugins', ['visibility'], unique=False
+    )
+    op.create_index(
+        op.f('plugins_updates__creator_id_idx'),
+        'plugins_updates',
+        ['_creator_id'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('plugins_updates__execution_fk_idx'),
+        'plugins_updates',
+        ['_execution_fk'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('plugins_updates__original_blueprint_fk_idx'),
+        'plugins_updates',
+        ['_original_blueprint_fk'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('plugins_updates__temp_blueprint_fk_idx'),
+        'plugins_updates',
+        ['_temp_blueprint_fk'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('plugins_updates_visibility_idx'),
+        'plugins_updates',
+        ['visibility'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('rabbitmq_brokers__ca_cert_id_idx'),
+        'rabbitmq_brokers',
+        ['_ca_cert_id'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('secrets__creator_id_idx'),
+        'secrets',
+        ['_creator_id'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('secrets_visibility_idx'), 'secrets', ['visibility'], unique=False
+    )
+    op.create_index(
+        op.f('sites__creator_id_idx'), 'sites', ['_creator_id'], unique=False
+    )
+    op.create_index(
+        op.f('sites_visibility_idx'), 'sites', ['visibility'], unique=False
+    )
+    op.create_index(
+        op.f('snapshots__creator_id_idx'),
+        'snapshots',
+        ['_creator_id'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('snapshots_visibility_idx'),
+        'snapshots',
+        ['visibility'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('tasks_graphs__creator_id_idx'),
+        'tasks_graphs',
+        ['_creator_id'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('tasks_graphs__execution_fk_idx'),
+        'tasks_graphs',
+        ['_execution_fk'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('tasks_graphs_visibility_idx'),
+        'tasks_graphs',
+        ['visibility'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('users_tenants_role_id_idx'),
+        'users_tenants',
+        ['role_id'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('users_tenants_tenant_id_idx'),
+        'users_tenants',
+        ['tenant_id'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('users_tenants_user_id_idx'),
+        'users_tenants',
+        ['user_id'],
+        unique=False,
+    )
 
 
 def downgrade():
+    op.drop_index(
+        op.f('users_tenants_user_id_idx'), table_name='users_tenants'
+    )
+    op.drop_index(
+        op.f('users_tenants_tenant_id_idx'), table_name='users_tenants'
+    )
+    op.drop_index(
+        op.f('users_tenants_role_id_idx'), table_name='users_tenants'
+    )
+    op.drop_index(
+        op.f('tasks_graphs_visibility_idx'), table_name='tasks_graphs'
+    )
+    op.drop_index(
+        op.f('tasks_graphs__execution_fk_idx'), table_name='tasks_graphs'
+    )
+    op.drop_index(
+        op.f('tasks_graphs__creator_id_idx'), table_name='tasks_graphs'
+    )
+    op.drop_index(op.f('snapshots_visibility_idx'), table_name='snapshots')
+    op.drop_index(op.f('snapshots__creator_id_idx'), table_name='snapshots')
+    op.drop_index(op.f('sites_visibility_idx'), table_name='sites')
+    op.drop_index(op.f('sites__creator_id_idx'), table_name='sites')
+    op.drop_index(op.f('secrets_visibility_idx'), table_name='secrets')
+    op.drop_index(op.f('secrets__creator_id_idx'), table_name='secrets')
+    op.drop_index(
+        op.f('rabbitmq_brokers__ca_cert_id_idx'), table_name='rabbitmq_brokers'
+    )
+    op.drop_index(
+        op.f('plugins_updates_visibility_idx'), table_name='plugins_updates'
+    )
+    op.drop_index(
+        op.f('plugins_updates__temp_blueprint_fk_idx'),
+        table_name='plugins_updates',
+    )
+    op.drop_index(
+        op.f('plugins_updates__original_blueprint_fk_idx'),
+        table_name='plugins_updates',
+    )
+    op.drop_index(
+        op.f('plugins_updates__execution_fk_idx'), table_name='plugins_updates'
+    )
+    op.drop_index(
+        op.f('plugins_updates__creator_id_idx'), table_name='plugins_updates'
+    )
+    op.drop_index(op.f('plugins_visibility_idx'), table_name='plugins')
+    op.drop_index(op.f('plugins__creator_id_idx'), table_name='plugins')
+    op.drop_index(op.f('operations_visibility_idx'), table_name='operations')
+    op.drop_index(
+        op.f('operations__tasks_graph_fk_idx'), table_name='operations'
+    )
+    op.drop_index(op.f('operations__creator_id_idx'), table_name='operations')
+    op.drop_index(op.f('nodes_visibility_idx'), table_name='nodes')
+    op.drop_index(op.f('nodes__creator_id_idx'), table_name='nodes')
+    op.drop_index(
+        op.f('node_instances_visibility_idx'), table_name='node_instances'
+    )
+    op.drop_index(
+        op.f('node_instances__creator_id_idx'), table_name='node_instances'
+    )
+    op.drop_index(op.f('managers__ca_cert_id_idx'), table_name='managers')
+    op.drop_index(op.f('logs_visibility_idx'), table_name='logs')
+    op.drop_index(op.f('logs__creator_id_idx'), table_name='logs')
+    op.drop_index(
+        op.f('groups_tenants_tenant_id_idx'), table_name='groups_tenants'
+    )
+    op.drop_index(
+        op.f('groups_tenants_role_id_idx'), table_name='groups_tenants'
+    )
+    op.drop_index(
+        op.f('groups_tenants_group_id_idx'), table_name='groups_tenants'
+    )
+    op.drop_index(op.f('executions_visibility_idx'), table_name='executions')
+    op.drop_index(
+        op.f('executions__deployment_fk_idx'), table_name='executions'
+    )
+    op.drop_index(op.f('executions__creator_id_idx'), table_name='executions')
+    op.drop_index(op.f('events_visibility_idx'), table_name='events')
+    op.drop_index(op.f('events__creator_id_idx'), table_name='events')
+    op.drop_index(op.f('deployments_visibility_idx'), table_name='deployments')
+    op.drop_index(op.f('deployments__site_fk_idx'), table_name='deployments')
+    op.drop_index(
+        op.f('deployments__creator_id_idx'), table_name='deployments'
+    )
+    op.drop_index(
+        op.f('deployments__blueprint_fk_idx'), table_name='deployments'
+    )
+    op.drop_index(
+        op.f('deployment_updates_visibility_idx'),
+        table_name='deployment_updates',
+    )
+    op.drop_index(
+        op.f('deployment_updates__old_blueprint_fk_idx'),
+        table_name='deployment_updates',
+    )
+    op.drop_index(
+        op.f('deployment_updates__new_blueprint_fk_idx'),
+        table_name='deployment_updates',
+    )
+    op.drop_index(
+        op.f('deployment_updates__execution_fk_idx'),
+        table_name='deployment_updates',
+    )
+    op.drop_index(
+        op.f('deployment_updates__deployment_fk_idx'),
+        table_name='deployment_updates',
+    )
+    op.drop_index(
+        op.f('deployment_updates__creator_id_idx'),
+        table_name='deployment_updates',
+    )
+    op.drop_index(
+        op.f('deployment_update_steps_visibility_idx'),
+        table_name='deployment_update_steps',
+    )
+    op.drop_index(
+        op.f('deployment_update_steps__deployment_update_fk_idx'),
+        table_name='deployment_update_steps',
+    )
+    op.drop_index(
+        op.f('deployment_update_steps__creator_id_idx'),
+        table_name='deployment_update_steps',
+    )
+    op.drop_index(
+        op.f('deployment_modifications_visibility_idx'),
+        table_name='deployment_modifications',
+    )
+    op.drop_index(
+        op.f('deployment_modifications__deployment_fk_idx'),
+        table_name='deployment_modifications',
+    )
+    op.drop_index(
+        op.f('deployment_modifications__creator_id_idx'),
+        table_name='deployment_modifications',
+    )
+    op.drop_index(op.f('config__updater_id_idx'), table_name='config')
+    op.drop_index(
+        op.f('certificates__updater_id_idx'), table_name='certificates'
+    )
+    op.drop_index(op.f('blueprints_visibility_idx'), table_name='blueprints')
+    op.drop_index(op.f('blueprints__creator_id_idx'), table_name='blueprints')
+    op.drop_index(op.f('agents_visibility_idx'), table_name='agents')
+    op.drop_index(op.f('agents__node_instance_fk_idx'), table_name='agents')
+    op.drop_index(op.f('agents__creator_id_idx'), table_name='agents')
     op.drop_index(op.f('executions_token_idx'), table_name='executions')
     op.drop_index(op.f('executions_ended_at_idx'), table_name='executions')
+    op.drop_index(op.f('nodes__deployment_fk_idx'), table_name='nodes')
     op.drop_index(
-        op.f('nodes__deployment_fk_idx'),
-        table_name='nodes')
-    op.drop_index(
-        op.f('node_instances__node_fk_idx'),
-        table_name='node_instances')
+        op.f('node_instances__node_fk_idx'), table_name='node_instances'
+    )
 
     op.drop_column('deployment_updates', 'runtime_only_evaluation')
     op.drop_column('deployments', 'runtime_only_evaluation')
