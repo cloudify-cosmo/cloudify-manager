@@ -112,7 +112,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
             self.sm.list(models.Deployment, filters=filters_bp)
 
         self.assertEquals(2, len(blueprint_deployments))
-        if blueprint_deployments[0].id != deployment1.id:
+        if blueprint_deployments[0].id == deployment1.id:
             self.assertEquals(deployment1.to_dict(),
                               blueprint_deployments[0].to_dict())
             self.assertEquals(deployment2.to_dict(),
