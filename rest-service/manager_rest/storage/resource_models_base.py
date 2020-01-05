@@ -64,7 +64,7 @@ class SQLResourceBase(SQLModelBase):
 
     @declared_attr
     def _tenant_id(cls):
-        return foreign_key(Tenant.id, index=True)
+        return foreign_key(Tenant.id)
 
     @declared_attr
     def _creator_id(cls):
