@@ -26,6 +26,7 @@ from manager_rest.rest import responses
 from manager_rest.utils import get_amqp_client
 from manager_rest.security.authorization import authorize
 from manager_rest.rest.rest_decorators import marshal_with
+from manager_rest.storage import models, get_storage_manager
 from manager_rest.security import SecuredResourceReadonlyMode
 from manager_rest.rest.rest_utils import (
     parse_datetime_string,
@@ -149,6 +150,49 @@ class Status(SecuredResourceReadonlyMode):
                                         extra_info=extra_info)
             return NodeServiceStatus.INACTIVE
 
+    def _not_last_manager_in_cluster(self):
+        storage_manager = get_storage_manager()
+        managers = storage_manager.list(models.Manager,
+                                        sort={'last_seen': 'desc'})
+        active_managers = 0
+        for manager in managers:
+            # Probably new manager, first status report is yet to arrive
+            if manager.status_report_frequency is None:
+                active_managers += 1
+            else:
+                min_last_seen = datetime.utcnow() - \
+                    timedelta(seconds=manager.status_report_frequency)
+
+                # Current manager is active
+                if parse_datetime_string(manager.last_seen) > min_last_seen:
+                    active_managers += 1
+            if active_managers > 1:
+                return True
+        return False
+
+    def _get_syncthing_status(self, syncthing_config, device_stats):
+        status = NodeServiceStatus.INACTIVE
+
+        # Add 1 second to the interval for avoiding false negative
+        interval = syncthing_config['options']['reconnectionIntervalS'] + 1
+        min_last_seen = datetime.utcnow() - timedelta(seconds=interval)
+
+        for device_id, stats in device_stats.items():
+            last_seen = parse_datetime_string(stats['lastSeen'])
+
+            # Syncthing is valid when at least one device was seen recently
+            if last_seen > min_last_seen:
+                status = NodeServiceStatus.ACTIVE
+                break
+
+        if status == NodeServiceStatus.INACTIVE:
+            if self._not_last_manager_in_cluster():
+                return (NodeServiceStatus.INACTIVE,
+                        {'connection_check': 'No device was seen recently'})
+
+        return (NodeServiceStatus.ACTIVE,
+                {'connection_check': ServiceStatus.HEALTHY})
+
     def _check_syncthing(self, services):
         status = NodeServiceStatus.INACTIVE
         display_name = 'File Sync Service'
@@ -166,22 +210,8 @@ class Status(SecuredResourceReadonlyMode):
                                         extra_info=extra_info)
             return status
 
-        # Add 1 second to the interval for avoiding false negative
-        interval = syncthing_config['options']['reconnectionIntervalS'] + 1
-        min_last_seen = datetime.utcnow() - timedelta(seconds=interval)
-
-        for device_id, stats in device_stats.items():
-            last_seen = parse_datetime_string(stats['lastSeen'])
-
-            # Syncthing is valid when at least one device was seen recently
-            if last_seen > min_last_seen:
-                status = NodeServiceStatus.ACTIVE
-                break
-
-        extra_info = {'connection_check': ServiceStatus.HEALTHY}
-        if status == NodeServiceStatus.INACTIVE:
-            extra_info = {'connection_check': 'No device was seen recently'}
-
+        status, extra_info = self._get_syncthing_status(syncthing_config,
+                                                        device_stats)
         self._add_or_update_service(services, display_name, status,
                                     extra_info=extra_info)
         return status
