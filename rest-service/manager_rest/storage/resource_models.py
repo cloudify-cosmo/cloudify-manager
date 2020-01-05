@@ -337,7 +337,7 @@ class Event(SQLResourceBase):
     target_id = db.Column(db.Text)
     error_causes = db.Column(JSONString)
 
-    _execution_fk = foreign_key(Execution._storage_id, index=True)
+    _execution_fk = foreign_key(Execution._storage_id)
 
     @classmethod
     def default_sort_column(cls):
@@ -376,7 +376,7 @@ class Log(SQLResourceBase):
     source_id = db.Column(db.Text)
     target_id = db.Column(db.Text)
 
-    _execution_fk = foreign_key(Execution._storage_id, index=True)
+    _execution_fk = foreign_key(Execution._storage_id)
 
     @classmethod
     def default_sort_column(cls):
@@ -584,7 +584,7 @@ class Node(SQLResourceBase):
     type = db.Column(db.Text, nullable=False, index=True)
     type_hierarchy = db.Column(db.PickleType)
 
-    _deployment_fk = foreign_key(Deployment._storage_id, index=True)
+    _deployment_fk = foreign_key(Deployment._storage_id)
 
     # These are for fixing a bug where wrong number of instances was returned
     # for deployments with group scaling policy
@@ -651,7 +651,7 @@ class NodeInstance(SQLResourceBase):
     # This automatically increments the version on each update
     __mapper_args__ = {'version_id_col': version}
 
-    _node_fk = foreign_key(Node._storage_id, index=True)
+    _node_fk = foreign_key(Node._storage_id)
 
     @declared_attr
     def node(cls):

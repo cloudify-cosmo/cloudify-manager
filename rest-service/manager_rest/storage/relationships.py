@@ -18,7 +18,7 @@ from .models_base import db
 
 def foreign_key(foreign_key_column,
                 nullable=False,
-                index=False,
+                index=True,
                 primary_key=False,
                 ondelete='CASCADE'):
     """Return a ForeignKey object with the relevant

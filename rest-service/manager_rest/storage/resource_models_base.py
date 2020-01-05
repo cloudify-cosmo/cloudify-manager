@@ -59,12 +59,13 @@ class SQLResourceBase(SQLModelBase):
     id = db.Column(db.Text, index=True)
     visibility = db.Column(
         db.Enum(*VisibilityState.STATES, name='visibility_states'),
-        default=VisibilityState.TENANT
+        default=VisibilityState.TENANT,
+        index=True
     )
 
     @declared_attr
     def _tenant_id(cls):
-        return foreign_key(Tenant.id, index=True)
+        return foreign_key(Tenant.id)
 
     @declared_attr
     def _creator_id(cls):
