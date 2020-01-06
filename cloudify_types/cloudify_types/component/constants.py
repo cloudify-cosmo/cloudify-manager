@@ -18,3 +18,4 @@ POLLING_INTERVAL = 10
 PAGINATION_SIZE = 1000
 
 EXTERNAL_RESOURCE = 'external_resource'
+CAPABILITIES = 'capabilities'

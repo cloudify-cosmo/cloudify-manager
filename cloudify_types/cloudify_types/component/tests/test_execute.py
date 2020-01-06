@@ -18,6 +18,8 @@ from cloudify.exceptions import NonRecoverableError
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from ..operations import execute_start
+from ..constants import CAPABILITIES
+
 from .base_test_suite import (ComponentTestBase,
                               REST_CLIENT_EXCEPTION,
                               MOCK_TIMEOUT)
@@ -95,8 +97,7 @@ class TestExecute(ComponentTestBase):
                 self.assertTrue(output)
                 self.assertEqual(
                     test_capabilities,
-                    (self._ctx.instance.runtime_properties
-                        ['deployment']['capabilities']))
+                    (self._ctx.instance.runtime_properties[CAPABILITIES]))
 
     def test_execute_start_succeeds_not_finished(self):
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
@@ -115,8 +116,7 @@ class TestExecute(ComponentTestBase):
                 self.assertTrue(output)
                 self.assertEqual(
                     {},
-                    (self._ctx.instance.runtime_properties
-                        ['deployment']['capabilities']))
+                    (self._ctx.instance.runtime_properties[CAPABILITIES]))
 
     def test_execute_failing_to_fetch_capabilities(self):
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
