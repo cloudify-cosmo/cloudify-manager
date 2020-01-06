@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import os
+import json
 import shutil
 import zipfile
 import tempfile
@@ -26,6 +27,8 @@ from cloudify import ctx
 from cloudify.exceptions import NonRecoverableError
 
 from cloudify_types.utils import handle_client_exception, get_deployment_by_id
+
+from .constants import CAPABILITIES
 
 
 def update_runtime_properties(_type, _key, _value):
@@ -151,3 +154,22 @@ def should_upload_plugin(plugin_yaml_path, existing_plugins):
                     plugin.distribution == distribution):
                 return False
     return True
+
+
+@handle_client_exception('Failed fetching workflow results')
+def populate_runtime_with_wf_results(client, deployment_id, node_instance=None):
+    if not node_instance:
+        node_instance = ctx.instance
+    ctx.logger.info('Fetching "{0}" deployment capabilities..'.format(
+        deployment_id))
+
+    if CAPABILITIES not in node_instance.runtime_properties.keys():
+        node_instance.runtime_properties[CAPABILITIES] = dict()
+
+    ctx.logger.debug('Deployment ID is {0}'.format(deployment_id))
+    response = client.deployments.capabilities.get(deployment_id)
+    dep_capabilities = response.get(CAPABILITIES)
+    node_instance.runtime_properties[CAPABILITIES] = dep_capabilities
+    ctx.logger.info('Fetched capabilities:\n{0}'.format(json.dumps(
+        dep_capabilities, indent=1)))
+

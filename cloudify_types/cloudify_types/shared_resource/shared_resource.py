@@ -17,6 +17,8 @@ from cloudify.exceptions import NonRecoverableError
 from cloudify_rest_client.client import CloudifyClient
 
 from cloudify_types.utils import get_deployment_by_id
+from cloudify_types.component.utils import (
+    populate_runtime_with_wf_results)
 
 
 class SharedResource(object):
@@ -67,4 +69,5 @@ class SharedResource(object):
                 'please verify the given ID.'.format(
                     self.deployment_id))
         self._mark_verified_shared_resource_node()
+        populate_runtime_with_wf_results(self.client, self.deployment_id)
         return True

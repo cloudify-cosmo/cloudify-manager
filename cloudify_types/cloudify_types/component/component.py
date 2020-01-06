@@ -38,7 +38,8 @@ from .utils import (
     update_runtime_properties,
     get_local_path,
     zip_files,
-    should_upload_plugin
+    should_upload_plugin,
+    populate_runtime_with_wf_results
 )
 
 
@@ -425,21 +426,6 @@ class Component(object):
 
         return poll_result
 
-    @handle_client_exception('Failed fetching workflow results')
-    def _populate_runtime_with_wf_results(self):
-        ctx.logger.info('Fetching "{0}" deployment capabilities..'.format(
-            self.deployment_id))
-
-        if 'capabilities' not in ctx.instance.runtime_properties.keys():
-            ctx.instance.runtime_properties['plugins'] = dict()
-
-        ctx.logger.debug('Deployment ID is {0}'.format(self.deployment_id))
-        response = self.client.deployments.capabilities.get(self.deployment_id)
-        dep_capabilities = response.get('capabilities')
-        ctx.instance.runtime_properties['capabilities'] = dep_capabilities
-        ctx.logger.info('Fetched capabilities:\n{0}'.format(json.dumps(
-            dep_capabilities, indent=1)))
-
     def execute_workflow(self):
         # Wait for the deployment to finish any executions
         if not poll_with_timeout(lambda:
@@ -473,7 +459,7 @@ class Component(object):
 
         ctx.logger.info('Execution succeeded for "{0}" deployment'.format(
             self.deployment_id))
-        self._populate_runtime_with_wf_results()
+        populate_runtime_with_wf_results(self.client, self.deployment_id)
         return True
 
     def verify_execution_successful(self,
