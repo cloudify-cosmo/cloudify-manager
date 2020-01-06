@@ -206,22 +206,24 @@ class Postgres(object):
         protected_query - hides the credentials for the logs file
         """
         base_query = """
-        INSERT INTO users (username, password, api_token_key)
+        INSERT INTO users (username, password, api_token_key, active, role)
         VALUES
            (
               '{0}',
               '{1}',
-              '{2}'
+              '{2}',
+              TRUE,
+              '{3}'
            )
         ON CONFLICT (username) DO
-        UPDATE SET password='{1}', api_token_key='{2}'
+        UPDATE SET password='{1}', api_token_key='{2}', active=TRUE, role='{3}'
         WHERE users.username = '{0}';"""
         queries = []
         protected_queries = []
         reporters = self._get_status_reporters_credentials()
         for username, password, api_token_key in reporters:
             queries.append(
-                base_query.format(username, password, api_token_key))
+                base_query.format(username, password, api_token_key, roles[username]))
             protected_queries.append(
                 base_query.format('*' * 8, '*' * 8, '*' * 8))
         return '\n'.join(queries), '\n'.join(protected_queries)
