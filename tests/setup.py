@@ -33,6 +33,7 @@ setup(
         'awscli==1.11.14',
         'docl',
         'docker==3.6.0',
-        'gitpython'
+        'GitPython==2.1.14',
+        'PyGithub==1.45'
     ]
 )
