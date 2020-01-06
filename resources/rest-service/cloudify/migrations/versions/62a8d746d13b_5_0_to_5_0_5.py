@@ -429,9 +429,46 @@ def upgrade():
         ['user_id'],
         unique=False,
     )
+    op.create_index(
+        op.f('events_node_id_idx'),
+        'events',
+        ['node_id'],
+        unique=False
+    )
+    op.create_index(
+        op.f('executions_is_system_workflow_idx'),
+        'executions',
+        ['is_system_workflow'],
+        unique=False
+    )
+    op.create_index(
+        op.f('logs_node_id_idx'),
+        'logs',
+        ['node_id'],
+        unique=False
+    )
+    op.create_index(
+        op.f('node_instances_state_idx'),
+        'node_instances',
+        ['state'],
+        unique=False
+    )
+    op.create_index(
+        op.f('tasks_graphs_name_idx'),
+        'tasks_graphs',
+        ['name'],
+        unique=False
+    )
 
 
 def downgrade():
+    op.drop_index(op.f('tasks_graphs_name_idx'), table_name='tasks_graphs')
+    op.drop_index(op.f('node_instances_state_idx'),
+                  table_name='node_instances')
+    op.drop_index(op.f('logs_node_id_idx'), table_name='logs')
+    op.drop_index(op.f('executions_is_system_workflow_idx'),
+                  table_name='executions')
+    op.drop_index(op.f('events_node_id_idx'), table_name='events')
     op.drop_index(
         op.f('users_tenants_user_id_idx'), table_name='users_tenants'
     )
