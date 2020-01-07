@@ -17,8 +17,8 @@ import mock
 from cloudify.exceptions import NonRecoverableError
 from cloudify_rest_client.exceptions import CloudifyClientError
 
-from ..operations import execute_start
 from ..constants import CAPABILITIES
+from ..operations import execute_start
 
 from .base_test_suite import (ComponentTestBase,
                               REST_CLIENT_EXCEPTION,
