@@ -1,5 +1,5 @@
 ########
-# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
+# Copyright (c) 2019-2020 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,12 +26,23 @@ class ComponentTypeTest(AgentlessTestCase):
     component_name = 'component'
 
     def test_component_creation_with_blueprint_id(self):
-        basic_blueprint_path = resource('dsl/basic.yaml')
-        self.client.blueprints.upload(basic_blueprint_path,
+        component_blueprint = """
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - cloudify/types/types.yaml
+
+capabilities:
+    test:
+        value: 1
+"""
+        blueprint_path = self.make_yaml_file(component_blueprint)
+        self.client.blueprints.upload(blueprint_path,
                                       entity_id='basic')
         deployment_id = 'd{0}'.format(uuid.uuid4())
         dsl_path = resource('dsl/component_with_blueprint_id.yaml')
         self.deploy_application(dsl_path, deployment_id=deployment_id)
+        self._validate_component_capabilities(deployment_id, {'test': 1})
         self.assertTrue(self.client.deployments.get(self.component_name))
         self.undeploy_application(deployment_id, is_delete_deployment=True)
         self.assertRaises(CloudifyClientError,
@@ -40,6 +51,14 @@ class ComponentTypeTest(AgentlessTestCase):
         self.assertRaises(CloudifyClientError,
                           self.client.deployments.get,
                           deployment_id)
+
+    def _validate_component_capabilities(self, deployment_id, capabilities):
+        component_id = self.client.node_instances.list(
+            deployment_id=deployment_id)[0].id
+        component_runtime_props = self.client.node_instances.get(
+            component_id).runtime_properties
+        self.assertEqual(capabilities,
+                         component_runtime_props['capabilities'])
 
     def test_component_creation_with_blueprint_package(self):
         deployment_id = 'd{0}'.format(uuid.uuid4())

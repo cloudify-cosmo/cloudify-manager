@@ -19,25 +19,25 @@ from cloudify_types.utils import proxy_operation
 from .component import Component
 
 
-@operation
+@operation(resumable=True)
 @proxy_operation('upload_blueprint')
 def upload_blueprint(operation, **_):
     return getattr(Component(_), operation)()
 
 
-@operation
+@operation(resumable=True)
 @proxy_operation('create_deployment')
 def create(operation, **_):
     return getattr(Component(_), operation)()
 
 
-@operation
+@operation(resumable=True)
 @proxy_operation('delete_deployment')
 def delete(operation, **_):
     return getattr(Component(_), operation)()
 
 
-@operation
+@operation(resumable=True)
 @proxy_operation('execute_workflow')
 def execute_start(operation, **_):
     return getattr(Component(_), operation)()

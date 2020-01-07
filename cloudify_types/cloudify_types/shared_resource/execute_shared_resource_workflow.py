@@ -16,6 +16,8 @@ from cloudify import ctx, manager
 from cloudify.exceptions import NonRecoverableError
 from cloudify_rest_client.client import CloudifyClient
 
+from cloudify_types.component.utils import (
+    populate_runtime_with_wf_results)
 from cloudify_types.component.polling import (poll_with_timeout,
                                               is_all_executions_finished,
                                               verify_execution_state)
@@ -93,4 +95,7 @@ def execute_shared_resource_workflow(workflow_id,
     ctx.logger.info('Execution succeeded for "{0}" SharedResource '
                     'deployment of "{1}" workflow'.format(
                         target_deployment_id, workflow_id))
+    populate_runtime_with_wf_results(http_client,
+                                     target_deployment_id,
+                                     ctx.target.instance)
     return True

@@ -1,4 +1,4 @@
-# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
+# Copyright (c) 2019-2020 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,7 +29,18 @@ workflows:
         mapping: wf--mock_workflows.mock_workflows.workflows.do_nothing
     failing:
         mapping: wf--mock_workflows.mock_workflows.workflows.non_recoverable
+
+capabilities:
+    test:
+        value: 1
 """
+
+    def setUp(self):
+        super(TestRelationshipRunningRemoteWorkflow, self).setUp()
+        self.client.blueprints.upload(
+            resource('dsl/plugins/mock_workflows.yaml'),
+            entity_id='mock_workflows')
+        self._create_shared_resource_deployment()
 
     @staticmethod
     def _generate_app_blueprint(relationship_type, wf_id='test_wf'):
@@ -65,19 +76,22 @@ node_templates:
                         parameters: {t: 1}
 """
 
-    def setUp(self):
-        super(TestRelationshipRunningRemoteWorkflow, self).setUp()
-        self.client.blueprints.upload(
-            resource('dsl/plugins/mock_workflows.yaml'),
-            entity_id='mock_workflows')
-
-    def create_shared_resource_deployment(self):
+    def _create_shared_resource_deployment(self):
         blueprint_path = self.make_yaml_file(self.shared_resource_blueprint)
         self.deploy(blueprint_path, deployment_id='test')
 
-    def test_running_connected_to_shared_resource(self):
-        self.create_shared_resource_deployment()
+    def _validate_shared_resource_capabilities(self,
+                                               deployment_id,
+                                               capabilities):
+        shared_resource_id = self.client.node_instances.list(
+            deployment_id=deployment_id,
+            filters={'node-id': 'shared_resource_node'})[0].id
+        runtime_props = self.client.node_instances.get(
+            shared_resource_id).runtime_properties
+        self.assertEqual(capabilities,
+                         runtime_props['capabilities'])
 
+    def test_running_connected_to_shared_resource(self):
         test_blueprint = self._generate_app_blueprint(
             'cloudify.relationships.connected_to_shared_resource')
         blueprint_path = self.make_yaml_file(test_blueprint)
@@ -100,6 +114,7 @@ node_templates:
         self.assertGreater(install_execution.ended_at,
                            establish_execution.ended_at)
 
+        self._validate_shared_resource_capabilities('test', {'test': 1})
         self.undeploy_application('app')
         executions = self.client.executions.list(
             workflow_id='test_wf', is_descending=True, sort='created_at')
@@ -121,8 +136,6 @@ node_templates:
                            unlink_execution.ended_at)
 
     def test_running_depends_on_shared_resource(self):
-        self.create_shared_resource_deployment()
-
         test_blueprint = self._generate_app_blueprint(
             'cloudify.relationships.depends_on_shared_resource')
         blueprint_path = self.make_yaml_file(test_blueprint)
@@ -144,6 +157,7 @@ node_templates:
                         establish_execution.created_at)
         self.assertGreater(install_execution.ended_at,
                            establish_execution.ended_at)
+        self._validate_shared_resource_capabilities('test', {'test': 1})
 
         self.undeploy_application('app')
         executions = self.client.executions.list(
@@ -166,8 +180,6 @@ node_templates:
                            unlink_execution.ended_at)
 
     def test_fails_on_not_existing_workflow(self):
-        self.create_shared_resource_deployment()
-
         test_blueprint = self._generate_app_blueprint(
             'cloudify.relationships.depends_on_shared_resource',
             'not_existing')
@@ -177,10 +189,9 @@ node_templates:
                           self.deploy_application,
                           blueprint_path,
                           deployment_id='app')
+        self._validate_shared_resource_capabilities('test', {'test': 1})
 
     def test_fail_when_remote_workflow_fails(self):
-        self.create_shared_resource_deployment()
-
         test_blueprint = self._generate_app_blueprint(
             'cloudify.relationships.depends_on_shared_resource',
             'failing')
@@ -190,3 +201,4 @@ node_templates:
                           self.deploy_application,
                           blueprint_path,
                           deployment_id='app')
+        self._validate_shared_resource_capabilities('test', {'test': 1})

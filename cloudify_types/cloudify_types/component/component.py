@@ -1,4 +1,4 @@
-# Copyright (c) 2017-2019 Cloudify Platform Ltd. All rights reserved
+# Copyright (c) 2017-2020 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import time
 import os
+import time
 from urlparse import urlparse
 
 from cloudify import manager, ctx
@@ -36,7 +36,8 @@ from .utils import (
     update_runtime_properties,
     get_local_path,
     zip_files,
-    should_upload_plugin
+    should_upload_plugin,
+    populate_runtime_with_wf_results
 )
 
 
@@ -93,6 +94,7 @@ class Component(object):
                               self.deployment.get('id') or
                               ctx.instance.id)
         self.deployment_inputs = self.deployment.get('inputs', {})
+        self.deployment_capabilities = self.deployment.get('capabilities')
         self.deployment_logs = self.deployment.get('logs', {})
         self.deployment_auto_suffix = self.deployment.get('auto_inc_suffix',
                                                           False)
@@ -455,7 +457,7 @@ class Component(object):
 
         ctx.logger.info('Execution succeeded for "{0}" deployment'.format(
             self.deployment_id))
-
+        populate_runtime_with_wf_results(self.client, self.deployment_id)
         return True
 
     def verify_execution_successful(self,
