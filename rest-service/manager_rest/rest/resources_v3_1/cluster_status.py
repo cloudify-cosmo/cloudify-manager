@@ -20,9 +20,10 @@ from flask_restful_swagger import swagger
 from cloudify.cluster_status import CloudifyNodeType
 
 from manager_rest.rest import responses
-from manager_rest.storage import models
+from manager_rest.utils import get_formatted_timestamp
 from manager_rest.security.authorization import authorize
 from manager_rest.rest.rest_decorators import marshal_with
+from manager_rest.storage import models, get_storage_manager
 from manager_rest.security import SecuredResourceBannedSnapshotRestore
 from manager_rest.cluster_status_manager import (get_cluster_status,
                                                  write_status_report)
@@ -73,6 +74,14 @@ class ManagerClusterStatus(ClusterStatus):
         self._write_report(node_id,
                            models.Manager,
                            CloudifyNodeType.MANAGER)
+
+        # Update the manager's last_seen
+        storage_manager = get_storage_manager()
+        manager = storage_manager.get(models.Manager, None,
+                                      filters={'node_id': node_id})
+        manager.last_seen = get_formatted_timestamp()
+        manager.status_report_frequency = request.json.get('reporting_freq')
+        storage_manager.update(manager)
 
 
 class DBClusterStatus(ClusterStatus):

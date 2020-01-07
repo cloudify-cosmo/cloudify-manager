@@ -342,7 +342,7 @@ def db_schema(revision, config=None):
     """Downgrade schema to desired revision to perform operation and upgrade.
 
     Used when restoring a snapshot to make sure the restore operation happens
-    whith the same version of the schema that was used when the snapshot was
+    with the same version of the schema that was used when the snapshot was
     created.
 
     :param revision: Revision to downgrade to before performing any operation.

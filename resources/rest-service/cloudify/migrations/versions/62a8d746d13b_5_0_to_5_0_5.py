@@ -70,19 +70,9 @@ def upgrade():
     session.commit()
 
     _create_db_nodes_table()
+    _update_managers_table()
+    _update_brokers_table()
 
-    op.add_column('managers', sa.Column('node_id', sa.Text(), nullable=False))
-    op.create_unique_constraint(op.f('managers_node_id_key'), 'managers',
-                                ['node_id'])
-    op.add_column('rabbitmq_brokers',
-                  sa.Column('is_external',
-                            sa.Boolean(),
-                            nullable=False,
-                            server_default='f'))
-    op.add_column('rabbitmq_brokers',
-                  sa.Column('node_id', sa.Text(), nullable=False))
-    op.create_unique_constraint(op.f('rabbitmq_brokers_node_id_key'),
-                                'rabbitmq_brokers', ['node_id'])
     op.create_index(
         op.f('node_instances__node_fk_idx'),
         'node_instances',
@@ -646,7 +636,46 @@ def downgrade():
         type_='unique'
     )
     op.drop_column('managers', 'node_id')
+    op.drop_index(op.f('managers_last_seen_idx'), table_name='managers')
+    op.drop_column('managers', 'last_seen')
+    op.drop_column('managers', 'status_report_frequency')
     op.drop_table('db_nodes')
+
+
+def _update_managers_table():
+    op.add_column('managers', sa.Column('node_id', sa.Text(), nullable=True))
+    op.add_column('managers',
+                  sa.Column('last_seen', UTCDateTime(), nullable=False,
+                            server_default=sa.func.current_timestamp()))
+    op.add_column('managers',
+                  sa.Column('status_report_frequency', sa.Integer(),
+                            nullable=True))
+    op.execute("""
+      UPDATE managers
+      SET node_id = hostname;
+    """)
+    op.alter_column('managers', 'node_id', nullable=False)
+    op.create_unique_constraint(op.f('managers_node_id_key'), 'managers',
+                                ['node_id'])
+    op.create_index(op.f('managers_last_seen_idx'), 'managers', ['last_seen'],
+                    unique=False)
+
+
+def _update_brokers_table():
+    op.add_column('rabbitmq_brokers',
+                  sa.Column('is_external',
+                            sa.Boolean(),
+                            nullable=False,
+                            server_default='f'))
+    op.add_column('rabbitmq_brokers',
+                  sa.Column('node_id', sa.Text(), nullable=True))
+    op.execute("""
+      UPDATE rabbitmq_brokers
+      SET node_id = name;
+    """)
+    op.alter_column('rabbitmq_brokers', 'node_id', nullable=False)
+    op.create_unique_constraint(op.f('rabbitmq_brokers_node_id_key'),
+                                'rabbitmq_brokers', ['node_id'])
 
 
 def _create_db_nodes_table():

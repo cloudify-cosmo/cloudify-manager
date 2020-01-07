@@ -628,6 +628,8 @@ class Manager(_WithCACert, SQLModelBase, CloudifyNodeMixin):
     fs_sync_node_id = db.Column(db.Text, nullable=True)
     networks = db.Column(JSONString)
     node_id = db.Column(db.Text, unique=True, nullable=False)
+    last_seen = db.Column(UTCDateTime, nullable=False, index=True)
+    status_report_frequency = db.Column(db.Integer, nullable=True)
 
     @property
     def name(self):
