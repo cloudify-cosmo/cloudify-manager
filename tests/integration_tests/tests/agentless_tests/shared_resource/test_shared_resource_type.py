@@ -1,4 +1,4 @@
-# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
+# Copyright (c) 2019-2020 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -37,10 +37,29 @@ node_templates:
             id: test
 """
         self.test_blueprint_path = self.make_yaml_file(test_blueprint)
+        self.deployment_id = 'test'
 
     def _create_shared_resource_deployment(self):
-        blueprint_path = get_resource('dsl/basic.yaml')
-        self.deploy(blueprint_path, deployment_id='test')
+        blueprint = """
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - cloudify/types/types.yaml
+
+capabilities:
+    test:
+        value: 1
+"""
+        blueprint_path = self.make_yaml_file(blueprint)
+        self.deploy(blueprint_path, deployment_id=self.deployment_id)
+
+    def _validate_shared_resource_capabilities(self, deployment_id, capabilities):
+        shared_resource_id = self.client.node_instances.list(
+            deployment_id=deployment_id)[0].id
+        runtime_props = self.client.node_instances.get(
+            shared_resource_id).runtime_properties
+        self.assertEqual(capabilities,
+                         runtime_props['capabilities'])
 
     def test_connecting_to_live_deployment(self):
         self._create_shared_resource_deployment()
@@ -48,6 +67,8 @@ node_templates:
         deployment_id = 'd{0}'.format(uuid.uuid4())
         self.deploy_application(self.test_blueprint_path,
                                 deployment_id=deployment_id)
+        self._validate_shared_resource_capabilities(self.deployment_id,
+                                                    {'test': 1})
 
     def test_connecting_to_not_existing_deployment(self):
         deployment_id = 'd{0}'.format(uuid.uuid4())
