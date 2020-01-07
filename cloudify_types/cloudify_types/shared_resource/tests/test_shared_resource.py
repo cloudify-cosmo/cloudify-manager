@@ -14,6 +14,8 @@
 
 import mock
 
+from cloudify_types.component.constants import CAPABILITIES
+
 from ..operations import connect_deployment
 from .base_test_suite import TestSharedResourceBase
 
@@ -22,6 +24,11 @@ class TestSharedResource(TestSharedResourceBase):
 
     def test_runtime_props_propagation_after_successful_connection(self):
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
+            self.cfy_mock_client.deployments.capabilities.get = \
+                mock.MagicMock(return_value={
+                    CAPABILITIES:
+                        {'test': 1}
+                })
             mock_client.return_value = self.cfy_mock_client
             poll_with_timeout_test = (
                 'cloudify_types.shared_resource.'
@@ -39,3 +46,6 @@ class TestSharedResource(TestSharedResourceBase):
                               self._ctx.instance.runtime_properties)
                 self.assertEqual(self._ctx.instance.runtime_properties[
                                      'deployment']['id'], 'test')
+                self.assertEqual(
+                    {'test': 1},
+                    (self._ctx.instance.runtime_properties[CAPABILITIES]))

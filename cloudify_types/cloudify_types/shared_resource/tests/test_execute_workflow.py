@@ -19,6 +19,8 @@ from cloudify.state import current_ctx
 from cloudify.mocks import MockCloudifyContext
 from cloudify.exceptions import NonRecoverableError
 
+from cloudify_types.component.constants import CAPABILITIES
+
 from ..operations import execute_workflow
 from ..constants import SHARED_RESOURCE_TYPE
 from .base_test_suite import TestSharedResourceBase, NODE_PROPS
@@ -75,6 +77,8 @@ class TestExecuteWorkflow(TestSharedResourceBase):
 
     def test_basic_run(self):
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
+            self.cfy_mock_client.deployments.capabilities.get = \
+                mock.MagicMock(return_value={'capabilities': {}})
             mock_client.return_value = self.cfy_mock_client
             poll_with_timeout_test = \
                 'cloudify_types.component.polling.poll_with_timeout'
@@ -131,7 +135,12 @@ class TestExecuteWorkflow(TestSharedResourceBase):
         with mock.patch('cloudify_types.shared_resource.'
                         'execute_shared_resource_workflow.'
                         'CloudifyClient') as mock_client:
-            mock_client.return_value = mock.MagicMock()
+            self.cfy_mock_client.deployments.capabilities.get = \
+                mock.MagicMock(return_value={
+                    CAPABILITIES:
+                        {'test': 1}
+                })
+            mock_client.return_value = self.cfy_mock_client
             poll_with_timeout_test = (
                 'cloudify_types.shared_resource.'
                 'execute_shared_resource_workflow.poll_with_timeout')
@@ -145,3 +154,7 @@ class TestExecuteWorkflow(TestSharedResourceBase):
                     execute_workflow('test',
                                      parameters={})
                     self.assertEqual(mock_client.called, True)
+                    self.assertEqual(
+                        {'test': 1},
+                        (self._ctx.target.instance.runtime_properties
+                            [CAPABILITIES]))
