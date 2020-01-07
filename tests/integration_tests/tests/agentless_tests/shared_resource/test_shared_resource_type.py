@@ -15,7 +15,6 @@
 import uuid
 
 from integration_tests import AgentlessTestCase
-from integration_tests.tests.utils import get_resource
 
 
 class TestSharedResourceType(AgentlessTestCase):
@@ -53,7 +52,9 @@ capabilities:
         blueprint_path = self.make_yaml_file(blueprint)
         self.deploy(blueprint_path, deployment_id=self.deployment_id)
 
-    def _validate_shared_resource_capabilities(self, deployment_id, capabilities):
+    def _validate_shared_resource_capabilities(self,
+                                               deployment_id,
+                                               capabilities):
         shared_resource_id = self.client.node_instances.list(
             deployment_id=deployment_id)[0].id
         runtime_props = self.client.node_instances.get(

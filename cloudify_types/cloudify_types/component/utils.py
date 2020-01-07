@@ -157,7 +157,9 @@ def should_upload_plugin(plugin_yaml_path, existing_plugins):
 
 
 @handle_client_exception('Failed fetching workflow results')
-def populate_runtime_with_wf_results(client, deployment_id, node_instance=None):
+def populate_runtime_with_wf_results(client,
+                                     deployment_id,
+                                     node_instance=None):
     if not node_instance:
         node_instance = ctx.instance
     ctx.logger.info('Fetching "{0}" deployment capabilities..'.format(
@@ -172,4 +174,3 @@ def populate_runtime_with_wf_results(client, deployment_id, node_instance=None):
     node_instance.runtime_properties[CAPABILITIES] = dep_capabilities
     ctx.logger.info('Fetched capabilities:\n{0}'.format(json.dumps(
         dep_capabilities, indent=1)))
-

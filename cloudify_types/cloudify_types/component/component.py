@@ -14,13 +14,11 @@
 
 import os
 import time
-import json
 from urlparse import urlparse
 
 from cloudify import manager, ctx
 from cloudify.exceptions import NonRecoverableError
 from cloudify_rest_client.client import CloudifyClient
-from cloudify_types.utils import handle_client_exception
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from .constants import (

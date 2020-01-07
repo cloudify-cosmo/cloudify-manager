@@ -80,7 +80,9 @@ node_templates:
         blueprint_path = self.make_yaml_file(self.shared_resource_blueprint)
         self.deploy(blueprint_path, deployment_id='test')
 
-    def _validate_shared_resource_capabilities(self, deployment_id, capabilities):
+    def _validate_shared_resource_capabilities(self,
+                                               deployment_id,
+                                               capabilities):
         shared_resource_id = self.client.node_instances.list(
             deployment_id=deployment_id,
             filters={'node-id': 'shared_resource_node'})[0].id
