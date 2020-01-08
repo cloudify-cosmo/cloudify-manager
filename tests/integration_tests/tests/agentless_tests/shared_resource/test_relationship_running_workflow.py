@@ -161,4 +161,4 @@ node_templates:
                           self.deploy_application,
                           blueprint_path,
                           deployment_id='app')
-        self._validate_shared_resource_capabilities('test', {'test': 1})
+        self._validate_shared_resource_capabilities('app', {'test': 1})
