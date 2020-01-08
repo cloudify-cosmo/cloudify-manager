@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import uuid
-
 from integration_tests import AgentlessTestCase
 
 
@@ -65,14 +63,13 @@ capabilities:
     def test_connecting_to_live_deployment(self):
         self._create_shared_resource_deployment()
 
-        deployment_id = 'd{0}'.format(uuid.uuid4())
+        deployment_id = 'root_dep'
         self.deploy_application(self.test_blueprint_path,
                                 deployment_id=deployment_id)
-        self._validate_shared_resource_capabilities(self.deployment_id,
+        self._validate_shared_resource_capabilities(deployment_id,
                                                     {'test': 1})
 
     def test_connecting_to_not_existing_deployment(self):
-        deployment_id = 'd{0}'.format(uuid.uuid4())
         self.assertRaises(RuntimeError, self.deploy_application,
                           self.test_blueprint_path,
-                          deployment_id=deployment_id)
+                          deployment_id='root_dep')

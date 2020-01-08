@@ -91,31 +91,27 @@ node_templates:
         self.assertEqual(capabilities,
                          runtime_props['capabilities'])
 
-    def test_running_connected_to_shared_resource(self):
-        test_blueprint = self._generate_app_blueprint(
-            'cloudify.relationships.connected_to_shared_resource')
+    def _test_shared_resource_relationship(self, test_blueprint):
         blueprint_path = self.make_yaml_file(test_blueprint)
-
-        self.deploy_application(blueprint_path, deployment_id='app')
+        deployment_id = 'app'
+        self.deploy_application(blueprint_path, deployment_id=deployment_id)
         executions = self.client.executions.list(
             workflow_id='test_wf')
         self.assertEqual(len(executions), 1)
         self.assertEqual(executions[0].deployment_id, 'test')
         establish_execution = executions[0]
-
         # Getting the install execution
         executions = self.client.executions.list(
-            deployment_id='app', workflow_id='install')
+            deployment_id=deployment_id, workflow_id='install')
         self.assertEqual(len(executions), 1)
         install_execution = executions[0]
-
         self.assertLess(install_execution.created_at,
                         establish_execution.created_at)
         self.assertGreater(install_execution.ended_at,
                            establish_execution.ended_at)
-
-        self._validate_shared_resource_capabilities('test', {'test': 1})
-        self.undeploy_application('app')
+        self._validate_shared_resource_capabilities(deployment_id,
+                                                    {'test': 1})
+        self.undeploy_application(deployment_id)
         executions = self.client.executions.list(
             workflow_id='test_wf', is_descending=True, sort='created_at')
         self.assertEqual(len(executions), 2)
@@ -123,61 +119,25 @@ node_templates:
             self.assertEqual(execution.deployment_id, 'test')
             self.assertEqual(execution.parameters, {'t': 1})
         unlink_execution = executions[0]
-
         # Getting the uninstall execution
         executions = self.client.executions.list(
-            deployment_id='app', workflow_id='uninstall')
+            deployment_id=deployment_id, workflow_id='uninstall')
         self.assertEqual(len(executions), 1)
         uninstall_execution = executions[0]
-
         self.assertLess(uninstall_execution.created_at,
                         unlink_execution.created_at)
         self.assertGreater(uninstall_execution.ended_at,
                            unlink_execution.ended_at)
+
+    def test_running_connected_to_shared_resource(self):
+        test_blueprint = self._generate_app_blueprint(
+            'cloudify.relationships.connected_to_shared_resource')
+        self._test_shared_resource_relationship(test_blueprint)
 
     def test_running_depends_on_shared_resource(self):
         test_blueprint = self._generate_app_blueprint(
             'cloudify.relationships.depends_on_shared_resource')
-        blueprint_path = self.make_yaml_file(test_blueprint)
-
-        self.deploy_application(blueprint_path, deployment_id='app')
-        executions = self.client.executions.list(
-            workflow_id='test_wf')
-        self.assertEqual(len(executions), 1)
-        self.assertEqual(executions[0].deployment_id, 'test')
-        establish_execution = executions[0]
-
-        # Getting the install execution
-        executions = self.client.executions.list(
-            deployment_id='app', workflow_id='install')
-        self.assertEqual(len(executions), 1)
-        install_execution = executions[0]
-
-        self.assertLess(install_execution.created_at,
-                        establish_execution.created_at)
-        self.assertGreater(install_execution.ended_at,
-                           establish_execution.ended_at)
-        self._validate_shared_resource_capabilities('test', {'test': 1})
-
-        self.undeploy_application('app')
-        executions = self.client.executions.list(
-            workflow_id='test_wf', is_descending=True, sort='created_at')
-        self.assertEqual(len(executions), 2)
-        for execution in executions:
-            self.assertEqual(execution.deployment_id, 'test')
-            self.assertEqual(execution.parameters, {'t': 1})
-        unlink_execution = executions[0]
-
-        # Getting the uninstall execution
-        executions = self.client.executions.list(
-            deployment_id='app', workflow_id='uninstall')
-        self.assertEqual(len(executions), 1)
-        uninstall_execution = executions[0]
-
-        self.assertLess(uninstall_execution.created_at,
-                        unlink_execution.created_at)
-        self.assertGreater(uninstall_execution.ended_at,
-                           unlink_execution.ended_at)
+        self._test_shared_resource_relationship(test_blueprint)
 
     def test_fails_on_not_existing_workflow(self):
         test_blueprint = self._generate_app_blueprint(
@@ -189,7 +149,7 @@ node_templates:
                           self.deploy_application,
                           blueprint_path,
                           deployment_id='app')
-        self._validate_shared_resource_capabilities('test', {'test': 1})
+        self._validate_shared_resource_capabilities('app', {'test': 1})
 
     def test_fail_when_remote_workflow_fails(self):
         test_blueprint = self._generate_app_blueprint(
