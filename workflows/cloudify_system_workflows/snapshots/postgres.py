@@ -206,26 +206,25 @@ class Postgres(object):
         protected_query - hides the credentials for the logs file
         """
         base_query = """
-        INSERT INTO users (username, password, api_token_key, active, role)
+        INSERT INTO users (username, password, api_token_key, active)
         VALUES
            (
               '{0}',
               '{1}',
               '{2}',
-              TRUE,
-              '{3}'
+              TRUE
            )
         ON CONFLICT (username) DO
-        UPDATE SET password='{1}', api_token_key='{2}', active=TRUE, role='{3}'
+        UPDATE SET password='{1}', api_token_key='{2}', active=TRUE
         WHERE users.username = '{0}';"""
         queries = []
         protected_queries = []
         reporters = self._get_status_reporters_credentials()
         for username, password, api_token_key in reporters:
             queries.append(
-                base_query.format(username, password, api_token_key, roles[username]))
+                base_query.format(username, password, api_token_key))
             protected_queries.append(
-                base_query.format('*' * 8, '*' * 8, '*' * 8))
+                base_query.format('*' * 8, '*' * 8, '*' * 8, '*' * 8))
         return '\n'.join(queries), '\n'.join(protected_queries)
 
     def _get_execution_restore_query(self):
