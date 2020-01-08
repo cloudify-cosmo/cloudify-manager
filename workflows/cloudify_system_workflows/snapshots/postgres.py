@@ -289,8 +289,20 @@ class Postgres(object):
         # Make the admin user actually has the admin role
         queries.append("INSERT INTO users_roles (user_id, role_id)"
                        "VALUES (0, 1);")
+        queries.append("INSERT INTO users_roles (user_id, role_id)"
+                       "VALUES (90000, 7);")
+        queries.append("INSERT INTO users_roles (user_id, role_id)"
+                       "VALUES (90001, 8);")
+        queries.append("INSERT INTO users_roles (user_id, role_id)"
+                       "VALUES (90002, 9);")
         queries.append("INSERT INTO users_tenants (user_id, tenant_id)"
                        "VALUES (0, 0);")
+        queries.append("INSERT INTO users_tenants (user_id, tenant_id)"
+                       "VALUES (90000, 0);")
+        queries.append("INSERT INTO users_tenants (user_id, tenant_id)"
+                       "VALUES (90001, 0);")
+        queries.append("INSERT INTO users_tenants (user_id, tenant_id)"
+                       "VALUES (90002, 0);")
         for query in queries:
             self.run_query(query)
 
