@@ -85,7 +85,7 @@ node_templates:
                                                capabilities):
         shared_resource_id = self.client.node_instances.list(
             deployment_id=deployment_id,
-            filters={'node-id': 'shared_resource_node'})[0].id
+            node_id='shared_resource_node')[0].id
         runtime_props = self.client.node_instances.get(
             shared_resource_id).runtime_properties
         self.assertEqual(capabilities,
