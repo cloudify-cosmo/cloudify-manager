@@ -83,7 +83,7 @@ def create_status_reporter_user_and_assign_role(username,
         username=username,
         password=hash_password(password),
         roles=[role],
-        user_id=user_id
+        id=user_id
     )
 
     default_tenant = Tenant.query.filter_by(
