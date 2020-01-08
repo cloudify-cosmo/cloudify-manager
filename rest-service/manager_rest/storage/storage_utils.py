@@ -73,13 +73,17 @@ def create_default_user_tenant_and_roles(admin_username,
     return default_tenant
 
 
-def create_status_reporter_user_and_assign_role(username, password, role):
+def create_status_reporter_user_and_assign_role(username,
+                                                password,
+                                                role,
+                                                user_id):
     """Creates a user and assigns its given role.
     """
     user = user_datastore.create_user(
         username=username,
         password=hash_password(password),
-        roles=[role]
+        roles=[role],
+        user_id=user_id
     )
 
     default_tenant = Tenant.query.filter_by(

@@ -88,7 +88,8 @@ def _add_defaults(app, amqp_manager, script_config):
     create_status_reporter_user_and_assign_role(
         MANAGER_STATUS_REPORTER,
         'password',
-        MANAGER_STATUS_REPORTER
+        MANAGER_STATUS_REPORTER,
+        90000
     )
     for scope, configs in script_config['manager_config'].items():
         for name, value in configs.items():
