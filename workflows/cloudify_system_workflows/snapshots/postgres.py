@@ -89,17 +89,17 @@ class Postgres(object):
         if premium_enabled:
             reporters_query, reporters_protected_query = \
                 self._get_status_reporters_update_query()
-            reporters_protected_query.append("INSERT INTO users_roles (user_id, role_id)"
+            reporters_query.append("INSERT INTO users_roles (user_id, role_id)"
                            "VALUES (90000, 7);")
-            reporters_protected_query.append("INSERT INTO users_roles (user_id, role_id)"
+            reporters_query.append("INSERT INTO users_roles (user_id, role_id)"
                            "VALUES (90001, 8);")
-            reporters_protected_query.append("INSERT INTO users_roles (user_id, role_id)"
+            reporters_query.append("INSERT INTO users_roles (user_id, role_id)"
                            "VALUES (90002, 9);")
-            reporters_protected_query.append("INSERT INTO users_tenants (user_id, tenant_id)"
+            reporters_query.append("INSERT INTO users_tenants (user_id, tenant_id)"
                            "VALUES (90000, 0);")
-            reporters_protected_query.append("INSERT INTO users_tenants (user_id, tenant_id)"
+            reporters_query.append("INSERT INTO users_tenants (user_id, tenant_id)"
                            "VALUES (90001, 0);")
-            reporters_protected_query.append("INSERT INTO users_tenants (user_id, tenant_id)"
+            reporters_query.append("INSERT INTO users_tenants (user_id, tenant_id)"
                            "VALUES (90002, 0);")
             self._append_dump(
                 dump_file, reporters_query, reporters_protected_query)
