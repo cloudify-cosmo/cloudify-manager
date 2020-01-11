@@ -89,18 +89,12 @@ class Postgres(object):
         if premium_enabled:
             reporters_query, reporters_protected_query = \
                 self._get_status_reporters_update_query()
-            reporters_query.append("INSERT INTO users_roles (user_id, role_id)"
-                           "VALUES (90000, 7);\n")
-            reporters_query.append("INSERT INTO users_roles (user_id, role_id)"
-                           "VALUES (90001, 8);\n")
-            reporters_query.append("INSERT INTO users_roles (user_id, role_id)"
-                           "VALUES (90002, 9);\n")
-            reporters_query.append("INSERT INTO users_tenants (user_id, tenant_id)"
-                           "VALUES (90000, 0);\n")
-            reporters_query.append("INSERT INTO users_tenants (user_id, tenant_id)"
-                           "VALUES (90001, 0);\n")
-            reporters_query.append("INSERT INTO users_tenants (user_id, tenant_id)"
-                           "VALUES (90002, 0);")
+            reporters_query += "\nINSERT INTO users_roles (user_id, role_id) VALUES (90000, 7);\n"
+            reporters_query += "INSERT INTO users_roles (user_id, role_id) VALUES (90001, 8);\n"
+            reporters_query += "INSERT INTO users_roles (user_id, role_id) VALUES (90002, 9);\n"
+            reporters_query += "INSERT INTO users_tenants (user_id, tenant_id) VALUES (90000, 0);\n"
+            reporters_query += "INSERT INTO users_tenants (user_id, tenant_id) VALUES (90001, 0);\n"
+            reporters_query += "INSERT INTO users_tenants (user_id, tenant_id) VALUES (90002, 0);\n"
             self._append_dump(
                 dump_file, reporters_query, reporters_protected_query)
 
