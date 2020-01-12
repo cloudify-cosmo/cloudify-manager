@@ -92,9 +92,9 @@ class Postgres(object):
             reporters_query += "\nINSERT INTO users_roles (user_id, role_id) VALUES (90000, 7);\n"
             reporters_query += "INSERT INTO users_roles (user_id, role_id) VALUES (90001, 8);\n"
             reporters_query += "INSERT INTO users_roles (user_id, role_id) VALUES (90002, 9);\n"
-            reporters_query += "INSERT INTO users_tenants (user_id, tenant_id) VALUES (90000, 0);\n"
-            reporters_query += "INSERT INTO users_tenants (user_id, tenant_id) VALUES (90001, 0);\n"
-            reporters_query += "INSERT INTO users_tenants (user_id, tenant_id) VALUES (90002, 0);\n"
+            reporters_query += "INSERT INTO users_tenants (user_id, tenant_id, role_id) VALUES (90000, 0, 7);\n"
+            reporters_query += "INSERT INTO users_tenants (user_id, tenant_id, role_id) VALUES (90001, 0, 8);\n"
+            reporters_query += "INSERT INTO users_tenants (user_id, tenant_id, role_id) VALUES (90002, 0, 9);\n"
             self._append_dump(
                 dump_file, reporters_query, reporters_protected_query)
 
@@ -212,25 +212,28 @@ class Postgres(object):
         protected_query - hides the credentials for the logs file
         """
         base_query = """
-        INSERT INTO users (username, password, api_token_key, active)
+        INSERT INTO users (username, password, api_token_key, active, id)
         VALUES
            (
               '{0}',
               '{1}',
               '{2}',
-              TRUE
+              TRUE,
+              {3}
            )
         ON CONFLICT (username) DO
-        UPDATE SET password='{1}', api_token_key='{2}', active=TRUE
+        UPDATE SET password='{1}', api_token_key='{2}', active=TRUE, id={3}
         WHERE users.username = '{0}';"""
         queries = []
         protected_queries = []
         reporters = self._get_status_reporters_credentials()
+        current_id = 90000
         for username, password, api_token_key in reporters:
             queries.append(
-                base_query.format(username, password, api_token_key))
+                base_query.format(username, password, api_token_key, current_id))
             protected_queries.append(
                 base_query.format('*' * 8, '*' * 8, '*' * 8, '*' * 8))
+            current_id = current_id + 1
         return '\n'.join(queries), '\n'.join(protected_queries)
 
     def _get_execution_restore_query(self):
