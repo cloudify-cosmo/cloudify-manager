@@ -13,18 +13,18 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-import base64
+import re
 import os
 import json
 import time
 import Queue
+import base64
 import shutil
 import zipfile
 import platform
 import tempfile
 import threading
 import subprocess
-import re
 from contextlib import closing, contextmanager
 
 import wagon
@@ -145,7 +145,9 @@ class SnapshotRestore(object):
                 self._restore_agents()
                 self._restore_amqp_vhosts_and_users()
                 self._restore_deployment_envs(postgres)
-                self._reconfigure_status_reporter(postgres)
+
+                if self._premium_enabled:
+                    self._reconfigure_status_reporter(postgres)
 
             if self._restore_certificates:
                 self._restore_certificate()
@@ -168,13 +170,16 @@ class SnapshotRestore(object):
         # Also for manager's status reporter that uses manager's rest
         # endpoint and in turn uses the DB for auth, that could cause
         # failure for migration of the users table.
-        utils.run('sudo systemctl stop {0} {1}'.format(
-            'cloudify-amqp-postgres', 'cloudify-status-reporter'))
+        process_to_pause = ['cloudify-amqp-postgres']
+        if  self._premium_enabled:
+            process_to_pause.extend('cloudify-status-reporter')
+        utils.run('sudo systemctl stop {0}'.format(
+            ' '.join(process_to_pause)))
         try:
             yield
         finally:
-            utils.run('sudo systemctl start {0} {1}'.format(
-                'cloudify-amqp-postgres', 'cloudify-status-reporter'))
+            utils.run('sudo systemctl start {0}'.format(
+            ' '.join(process_to_pause)))
 
     def _generate_new_rest_token(self):
         """
