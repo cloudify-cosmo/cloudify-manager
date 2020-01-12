@@ -35,6 +35,9 @@ def update_provider_context(args):
             broker.networks['default'] = args.manager_ip
             flag_modified(broker, 'networks')
             sm.update(broker)
+        for db in sm.list(models.DBNodes):
+            db.host = args.manager_ip
+            sm.update(db)
 
 
 parser = argparse.ArgumentParser()
