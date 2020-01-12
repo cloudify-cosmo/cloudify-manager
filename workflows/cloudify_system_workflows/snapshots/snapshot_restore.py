@@ -172,7 +172,7 @@ class SnapshotRestore(object):
         # failure for migration of the users table.
         process_to_pause = ['cloudify-amqp-postgres']
         if self._premium_enabled:
-            process_to_pause.extend('cloudify-status-reporter')
+            process_to_pause.append('cloudify-status-reporter')
         utils.run('sudo systemctl stop {0}'.format(
             ' '.join(process_to_pause)))
         try:
