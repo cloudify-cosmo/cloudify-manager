@@ -171,7 +171,7 @@ class SnapshotRestore(object):
         # endpoint and in turn uses the DB for auth, that could cause
         # failure for migration of the users table.
         process_to_pause = ['cloudify-amqp-postgres']
-        if  self._premium_enabled:
+        if self._premium_enabled:
             process_to_pause.extend('cloudify-status-reporter')
         utils.run('sudo systemctl stop {0}'.format(
             ' '.join(process_to_pause)))
@@ -179,7 +179,7 @@ class SnapshotRestore(object):
             yield
         finally:
             utils.run('sudo systemctl start {0}'.format(
-            ' '.join(process_to_pause)))
+             ' '.join(process_to_pause)))
 
     def _generate_new_rest_token(self):
         """
