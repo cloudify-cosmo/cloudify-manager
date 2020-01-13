@@ -160,10 +160,12 @@ class Status(SecuredResourceReadonlyMode):
             if manager.status_report_frequency is None:
                 active_managers += 1
             else:
-                min_last_seen = datetime.utcnow() - \
-                    timedelta(seconds=manager.status_report_frequency)
+                # The manager is considered active, if the time passed since
+                # it's last_seen is maximum twice the frequency interval
+                # (Nyquist sampling theorem)
+                interval = manager.status_report_frequency * 2
+                min_last_seen = datetime.utcnow() - timedelta(seconds=interval)
 
-                # Current manager is active
                 if parse_datetime_string(manager.last_seen) > min_last_seen:
                     active_managers += 1
             if active_managers > 1:
