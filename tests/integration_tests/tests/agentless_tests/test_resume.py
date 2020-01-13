@@ -109,6 +109,9 @@ class TestResumeMgmtworker(AgentlessTestCase):
                             node_instance.id)
                     else:
                         break
+        # and now wait for the task to finish. It polls every 1 second, so
+        # allow a 3 seconds wait.
+        time.sleep(3)
 
     def _start_mgmtworker(self):
         self.logger.info('Restarting mgmtworker')
@@ -135,9 +138,6 @@ class TestResumeMgmtworker(AgentlessTestCase):
 
         self._unlock_operation('interface1.op_resumable', node_ids=['node1'])
 
-        # and now wait for the task to finish. It polls every 1 second, so
-        # allow a 3 seconds wait.
-        time.sleep(3)
         task = self._find_remote_operation(graphs[0].id)
         self.assertEqual(task.state, tasks.TASK_SUCCEEDED)
 
