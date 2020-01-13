@@ -354,12 +354,12 @@ class BaseServerTestCase(unittest.TestCase):
                 'KD_hK1mQyKgjRss_Nz-3m-cgHpZChnVT4bxZIjnOnL6sF8RtozvlRoGHtnF' \
                 'G6jxqQDeEf5Heos0ia4Q5H  '
 
-            for i, reporter in enumerate(get_status_reporters()):
+            for reporter in get_status_reporters():
                 create_status_reporter_user_and_assign_role(
                     reporter['username'],
                     reporter['password'],
                     reporter['role'],
-                    i + 90000
+                    reporter['id']
                 )
             if premium_enabled:
                 # License is required only when working with Cloudify Premium

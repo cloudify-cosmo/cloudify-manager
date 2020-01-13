@@ -29,6 +29,7 @@ from manager_rest.constants import (
     PROVIDER_CONTEXT_ID,
     DEFAULT_TENANT_NAME,
     CURRENT_TENANT_CONFIG,
+    MANAGER_STATUS_REPORTER_ID
 )
 from manager_rest.storage.storage_utils import (
     create_default_user_tenant_and_roles,
@@ -89,7 +90,7 @@ def _add_defaults(app, amqp_manager, script_config):
         MANAGER_STATUS_REPORTER,
         'password',
         MANAGER_STATUS_REPORTER,
-        90000
+        MANAGER_STATUS_REPORTER_ID
     )
     for scope, configs in script_config['manager_config'].items():
         for name, value in configs.items():

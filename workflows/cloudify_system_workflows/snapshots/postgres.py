@@ -27,12 +27,24 @@ from cloudify.cluster_status import (
     MANAGER_STATUS_REPORTER,
 )
 
+from manager_rest.constants import (
+    MANAGER_STATUS_REPORTER_ID,
+    BROKER_STATUS_REPORTER_ID,
+    DB_STATUS_REPORTER_ID
+)
+
 from .constants import ADMIN_DUMP_FILE, LICENSE_DUMP_FILE
 from .utils import run as run_shell
 
 POSTGRESQL_DEFAULT_PORT = 5432
 _STATUS_REPORTERS_QUERY_TUPLE = ', '.join(
     "'{0}'".format(reporter) for reporter in STATUS_REPORTER_USERS)
+
+STATUS_REPORTERS_ROLES = {
+    MANAGER_STATUS_REPORTER_ID: 7,
+    DB_STATUS_REPORTER_ID: 8,
+    BROKER_STATUS_REPORTER_ID: 9
+}
 
 
 class Postgres(object):
@@ -89,12 +101,6 @@ class Postgres(object):
         if premium_enabled:
             reporters_query, reporters_protected_query = \
                 self._get_status_reporters_update_query()
-            reporters_query += "\nINSERT INTO users_roles (user_id, role_id) VALUES (90000, 7);\n"
-            reporters_query += "INSERT INTO users_roles (user_id, role_id) VALUES (90001, 8);\n"
-            reporters_query += "INSERT INTO users_roles (user_id, role_id) VALUES (90002, 9);\n"
-            reporters_query += "INSERT INTO users_tenants (user_id, tenant_id, role_id) VALUES (90000, 0, 7);\n"
-            reporters_query += "INSERT INTO users_tenants (user_id, tenant_id, role_id) VALUES (90001, 0, 8);\n"
-            reporters_query += "INSERT INTO users_tenants (user_id, tenant_id, role_id) VALUES (90002, 0, 9);\n"
             self._append_dump(
                 dump_file, reporters_query, reporters_protected_query)
 
@@ -211,7 +217,7 @@ class Postgres(object):
         query - updates the status reporters in the DB and
         protected_query - hides the credentials for the logs file
         """
-        base_query = """
+        create_user_query = """
         INSERT INTO users (username, password, api_token_key, active, id)
         VALUES
            (
@@ -224,16 +230,44 @@ class Postgres(object):
         ON CONFLICT (username) DO
         UPDATE SET password='{1}', api_token_key='{2}', active=TRUE, id={3}
         WHERE users.username = '{0}';"""
+
+        create_user_role_query = """
+        INSERT INTO users_roles (user_id, role_id)
+        VALUES ({0}, {1});
+        """
+
+        create_user_tenant_query = """
+        INSERT INTO users_tenants (user_id, tenant_id, role_id)
+        VALUES ({0}, 0, {1});
+        """
+
         queries = []
         protected_queries = []
         reporters = self._get_status_reporters_credentials()
-        current_id = 90000
-        for username, password, api_token_key in reporters:
+        for username, password, api_token_key, reporter_id in reporters:
             queries.append(
-                base_query.format(username, password, api_token_key, current_id))
+                create_user_query.format(username,
+                                         password,
+                                         api_token_key,
+                                         reporter_id))
             protected_queries.append(
-                base_query.format('*' * 8, '*' * 8, '*' * 8, '*' * 8))
-            current_id = current_id + 1
+                create_user_query.format(username, '*' * 8, '*' * 8, '*' * 8))
+
+            queries.append(
+                create_user_role_query.format(
+                    username,
+                    STATUS_REPORTERS_ROLES[reporter_id]
+                ))
+            protected_queries.append(
+                create_user_role_query.format(username, '*' * 8))
+
+            queries.append(
+                create_user_tenant_query.format(
+                    username,
+                    STATUS_REPORTERS_ROLES[reporter_id]
+                ))
+            protected_queries.append(
+                create_user_tenant_query.format(username, '*' * 8))
         return '\n'.join(queries), '\n'.join(protected_queries)
 
     def _get_execution_restore_query(self):
@@ -298,20 +332,8 @@ class Postgres(object):
         # Make the admin user actually has the admin role
         queries.append("INSERT INTO users_roles (user_id, role_id)"
                        "VALUES (0, 1);")
-        queries.append("INSERT INTO users_roles (user_id, role_id)"
-                       "VALUES (90000, 7);")
-        queries.append("INSERT INTO users_roles (user_id, role_id)"
-                       "VALUES (90001, 8);")
-        queries.append("INSERT INTO users_roles (user_id, role_id)"
-                       "VALUES (90002, 9);")
         queries.append("INSERT INTO users_tenants (user_id, tenant_id)"
                        "VALUES (0, 0);")
-        queries.append("INSERT INTO users_tenants (user_id, tenant_id)"
-                       "VALUES (90000, 0);")
-        queries.append("INSERT INTO users_tenants (user_id, tenant_id)"
-                       "VALUES (90001, 0);")
-        queries.append("INSERT INTO users_tenants (user_id, tenant_id)"
-                       "VALUES (90002, 0);")
         for query in queries:
             self.run_query(query)
 
@@ -580,7 +602,7 @@ class Postgres(object):
         return response['all'][0]
 
     def _get_status_reporters_credentials(self):
-        response = self.run_query("SELECT username, password, api_token_key "
+        response = self.run_query("SELECT username, password, api_token_key, id "
                                   "FROM users WHERE username IN ({0})"
                                   "".format(_STATUS_REPORTERS_QUERY_TUPLE))
         if not response['all']:
