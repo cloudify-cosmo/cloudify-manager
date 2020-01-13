@@ -1,6 +1,6 @@
 [Unit]
 Description=Cloudify Manager IP Setter
-Before=cloudify-mgmtworker.service cloudify-restservice.service cloudify-stage.service nginx.service cloudify-rabbitmq.service cloudify-amqp-postgres.service
+Before=cloudify-mgmtworker.service cloudify-restservice.service cloudify-stage.service nginx.service cloudify-rabbitmq.service cloudify-amqp-postgres.service cloudify-status-reporter.service
 Requires=postgresql-9.5.service
 After=network-online.target postgresql-9.5.service
 
