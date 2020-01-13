@@ -27,6 +27,9 @@ function set_manager_ip() {
   echo "Creating internal SSL certificates.."
   cfy_manager create-internal-certs --manager-hostname $(hostname -s)
 
+  echo "Updating status reporter initial IP..."
+  cfy_manager status-reporter configure --managers-ip ${ip}
+
   echo "Done!"
 
 }
