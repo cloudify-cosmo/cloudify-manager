@@ -19,6 +19,9 @@ from cloudify.cluster_status import (
     DB_STATUS_REPORTER,
     BROKER_STATUS_REPORTER,
     MANAGER_STATUS_REPORTER,
+    MANAGER_STATUS_REPORTER_ID,
+    BROKER_STATUS_REPORTER_ID,
+    DB_STATUS_REPORTER_ID
 )
 
 from manager_rest.storage.models import Tenant, UserTenantAssoc
@@ -26,9 +29,6 @@ from manager_rest.storage import user_datastore
 from manager_rest.constants import (
     DEFAULT_TENANT_ID,
     DEFAULT_TENANT_ROLE,
-    MANAGER_STATUS_REPORTER_ID,
-    BROKER_STATUS_REPORTER_ID,
-    DB_STATUS_REPORTER_ID
 )
 
 ADMIN_ROLE = 'sys_admin'

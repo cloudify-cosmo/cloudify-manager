@@ -25,9 +25,6 @@ from cloudify.exceptions import NonRecoverableError
 from cloudify.cluster_status import (
     STATUS_REPORTER_USERS,
     MANAGER_STATUS_REPORTER,
-)
-
-from manager_rest.constants import (
     MANAGER_STATUS_REPORTER_ID,
     BROKER_STATUS_REPORTER_ID,
     DB_STATUS_REPORTER_ID
@@ -602,9 +599,10 @@ class Postgres(object):
         return response['all'][0]
 
     def _get_status_reporters_credentials(self):
-        response = self.run_query("SELECT username, password, api_token_key, id "
-                                  "FROM users WHERE username IN ({0})"
-                                  "".format(_STATUS_REPORTERS_QUERY_TUPLE))
+        response = self.run_query(
+            "SELECT username, password, api_token_key, id "
+            "FROM users WHERE username IN ({0})"
+            "".format(_STATUS_REPORTERS_QUERY_TUPLE))
         if not response['all']:
             raise NonRecoverableError('Illegal state - '
                                       'missing status reporter users in db')

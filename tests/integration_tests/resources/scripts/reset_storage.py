@@ -19,7 +19,9 @@ import subprocess
 import argparse
 from flask_migrate import upgrade
 
-from cloudify.cluster_status import MANAGER_STATUS_REPORTER
+from cloudify.cluster_status import (MANAGER_STATUS_REPORTER,
+                                     MANAGER_STATUS_REPORTER_ID
+                                     )
 
 from manager_rest import config
 from manager_rest.storage import db, models
@@ -28,8 +30,7 @@ from manager_rest.flask_utils import setup_flask_app
 from manager_rest.constants import (
     PROVIDER_CONTEXT_ID,
     DEFAULT_TENANT_NAME,
-    CURRENT_TENANT_CONFIG,
-    MANAGER_STATUS_REPORTER_ID
+    CURRENT_TENANT_CONFIG
 )
 from manager_rest.storage.storage_utils import (
     create_default_user_tenant_and_roles,
