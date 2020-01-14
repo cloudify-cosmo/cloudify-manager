@@ -252,7 +252,7 @@ class Postgres(object):
 
             queries.append(
                 create_user_role_query.format(
-                    username,
+                    reporter_id,
                     STATUS_REPORTERS_ROLES[reporter_id]
                 ))
             protected_queries.append(
@@ -260,7 +260,7 @@ class Postgres(object):
 
             queries.append(
                 create_user_tenant_query.format(
-                    username,
+                    reporter_id,
                     STATUS_REPORTERS_ROLES[reporter_id]
                 ))
             protected_queries.append(
