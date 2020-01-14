@@ -37,12 +37,6 @@ POSTGRESQL_DEFAULT_PORT = 5432
 _STATUS_REPORTERS_QUERY_TUPLE = ', '.join(
     "'{0}'".format(reporter) for reporter in STATUS_REPORTER_USERS)
 
-STATUS_REPORTERS_ROLES = {
-    MANAGER_STATUS_REPORTER_ID: 7,
-    DB_STATUS_REPORTER_ID: 8,
-    BROKER_STATUS_REPORTER_ID: 9
-}
-
 
 class Postgres(object):
     """Use as a context manager
@@ -209,6 +203,18 @@ class Postgres(object):
         return (base_query.format(username, password),
                 base_query.format('*'*8, '*'*8))
 
+    @staticmethod
+    def _find_reporter_role(roles_mapping, reporter_id):
+        reporter_role = [role_id for user_id, role_id in roles_mapping
+                         if user_id == reporter_id]
+        if reporter_role:
+            return role_id
+        raise NonRecoverableError('Illegal state - '
+                                  'missing status reporter user\'s {0}'
+                                  'roles in mapping {1}'.format(
+                                    reporter_id,
+                                    roles_mapping))
+
     def _get_status_reporters_update_query(self):
         """Returns a tuple of (query, print_query):
         query - updates the status reporters in the DB and
@@ -241,6 +247,7 @@ class Postgres(object):
         queries = []
         protected_queries = []
         reporters = self._get_status_reporters_credentials()
+        reporters_roles = self._get_status_reporters_roles()
         for username, password, api_token_key, reporter_id in reporters:
             queries.append(
                 create_user_query.format(username,
@@ -250,10 +257,11 @@ class Postgres(object):
             protected_queries.append(
                 create_user_query.format(username, '*' * 8, '*' * 8, '*' * 8))
 
+            role_id = self._find_reporter_role(reporters_roles, reporter_id)
             queries.append(
                 create_user_role_query.format(
                     reporter_id,
-                    STATUS_REPORTERS_ROLES[reporter_id]
+                    role_id
                 ))
             protected_queries.append(
                 create_user_role_query.format(username, '*' * 8))
@@ -261,7 +269,7 @@ class Postgres(object):
             queries.append(
                 create_user_tenant_query.format(
                     reporter_id,
-                    STATUS_REPORTERS_ROLES[reporter_id]
+                    role_id
                 ))
             protected_queries.append(
                 create_user_tenant_query.format(username, '*' * 8))
@@ -606,6 +614,21 @@ class Postgres(object):
         if not response['all']:
             raise NonRecoverableError('Illegal state - '
                                       'missing status reporter users in db')
+        return response['all']
+
+    def _get_status_reporters_roles(self):
+        reporter_ids = "'{0}', '{1}', '{2}'".format(
+            MANAGER_STATUS_REPORTER_ID,
+            DB_STATUS_REPORTER_ID,
+            BROKER_STATUS_REPORTER_ID)
+        response = self.run_query(
+            "SELECT user_id, role_id "
+            "FROM users_roles WHERE user_id IN ({0})"
+            "".format(reporter_ids))
+        if not response['all']:
+            raise NonRecoverableError('Illegal state - '
+                                      'missing status reporter users\' '
+                                      'roles in db')
         return response['all']
 
     def dump_license_to_file(self, tmp_dir):
