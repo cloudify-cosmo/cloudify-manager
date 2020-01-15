@@ -14,6 +14,7 @@
 #  * limitations under the License.
 
 from flask_restful.reqparse import Argument
+from manager_rest import manager_exceptions
 from manager_rest.rest.rest_utils import (
     get_args_and_verify_arguments,
     get_json_and_verify_params,
@@ -29,6 +30,8 @@ from manager_rest.storage import (
 from manager_rest.security.authorization import authorize
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.security import SecuredResource
+
+from cloudify.workflows import tasks
 
 
 class Operations(SecuredResource):
@@ -77,9 +80,16 @@ class OperationsId(SecuredResource):
         request_dict = get_json_and_verify_params(
             {'state': {'type': unicode}}
         )
+        new_state = request_dict.get('state')
         sm = get_storage_manager()
         instance = sm.get(models.Operation, operation_id, locking=True)
-        instance.state = request_dict.get('state', instance.state)
+        allowed = self._is_transition_allowed(
+            instance.state, new_state)
+        if not allowed:
+            raise manager_exceptions.ConflictError(
+                'Transitioning operation state from {0} to {1} is not allowed'
+                .format(instance.state, new_state))
+        instance.state = new_state
         return sm.update(instance)
 
     @authorize('operations')
@@ -89,6 +99,22 @@ class OperationsId(SecuredResource):
         instance = sm.get(models.Operation, operation_id, locking=True)
         sm.delete(instance)
         return instance, 200
+
+    def _is_transition_allowed(self, from_state, to_state):
+        """Check if transitioning from_state->to_state is allowed.
+
+        Eg. transitioning from PENDING to SENT is allowed, but from SENT
+        to PENDING is not.
+        Also, transitioning from any state to itself, is also disallowed.
+        """
+        states = [None, tasks.TASK_PENDING, tasks.TASK_SENDING,
+                  tasks.TASK_SENT, tasks.TASK_STARTED, tasks.TASK_RESCHEDULED,
+                  tasks.TASK_SUCCEEDED, tasks.TASK_FAILED]
+        try:
+            return states.index(from_state) < states.index(to_state)
+        except ValueError:
+            raise ValueError('Unknown operation state: {0} -> {1}'
+                             .format(from_state, to_state))
 
 
 class TasksGraphs(SecuredResource):
