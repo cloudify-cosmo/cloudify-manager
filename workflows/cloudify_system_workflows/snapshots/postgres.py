@@ -205,15 +205,13 @@ class Postgres(object):
 
     @staticmethod
     def _find_reporter_role(roles_mapping, reporter_id):
-        reporter_role = [role_id for user_id, role_id in roles_mapping
-                         if user_id == reporter_id]
-        if reporter_role:
-            return role_id
-        raise NonRecoverableError('Illegal state - '
-                                  'missing status reporter user\'s {0}'
-                                  'roles in mapping {1}'.format(
-                                    reporter_id,
-                                    roles_mapping))
+        if reporter_id not in roles_mapping:
+            raise NonRecoverableError('Illegal state - '
+                                      'missing status reporter user\'s {0}'
+                                      'roles in mapping {1}'.format(
+                                        reporter_id,
+                                        roles_mapping))
+        return roles_mapping[reporter_id]
 
     def _get_status_reporters_update_query(self):
         """Returns a tuple of (query, print_query):
@@ -629,7 +627,7 @@ class Postgres(object):
             raise NonRecoverableError('Illegal state - '
                                       'missing status reporter users\' '
                                       'roles in db')
-        return response['all']
+        return dict(response['all'])
 
     def dump_license_to_file(self, tmp_dir):
         destination = os.path.join(tmp_dir, LICENSE_DUMP_FILE)
