@@ -19,6 +19,9 @@ from cloudify.cluster_status import (
     DB_STATUS_REPORTER,
     BROKER_STATUS_REPORTER,
     MANAGER_STATUS_REPORTER,
+    MANAGER_STATUS_REPORTER_ID,
+    BROKER_STATUS_REPORTER_ID,
+    DB_STATUS_REPORTER_ID
 )
 
 from manager_rest.storage.models import Tenant, UserTenantAssoc
@@ -46,17 +49,20 @@ def get_status_reporters():
         {
             'username': MANAGER_STATUS_REPORTER,
             'password': 'password',
-            'role': MANAGER_STATUS_REPORTER
+            'role': MANAGER_STATUS_REPORTER,
+            'id': MANAGER_STATUS_REPORTER_ID
         },
         {
             'username': BROKER_STATUS_REPORTER,
             'password': 'password',
-            'role': BROKER_STATUS_REPORTER
+            'role': BROKER_STATUS_REPORTER,
+            'id': BROKER_STATUS_REPORTER_ID
         },
         {
             'username': DB_STATUS_REPORTER,
             'password': 'password',
-            'role': DB_STATUS_REPORTER
+            'role': DB_STATUS_REPORTER,
+            'id': DB_STATUS_REPORTER_ID
         },
     ]
 

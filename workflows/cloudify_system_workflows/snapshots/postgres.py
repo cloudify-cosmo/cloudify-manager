@@ -25,6 +25,9 @@ from cloudify.exceptions import NonRecoverableError
 from cloudify.cluster_status import (
     STATUS_REPORTER_USERS,
     MANAGER_STATUS_REPORTER,
+    MANAGER_STATUS_REPORTER_ID,
+    BROKER_STATUS_REPORTER_ID,
+    DB_STATUS_REPORTER_ID
 )
 
 from .constants import ADMIN_DUMP_FILE, LICENSE_DUMP_FILE
@@ -200,30 +203,74 @@ class Postgres(object):
         return (base_query.format(username, password),
                 base_query.format('*'*8, '*'*8))
 
+    @staticmethod
+    def _find_reporter_role(roles_mapping, reporter_id):
+        if reporter_id not in roles_mapping:
+            raise NonRecoverableError('Illegal state - '
+                                      'missing status reporter user\'s {0}'
+                                      'roles in mapping {1}'.format(
+                                        reporter_id,
+                                        roles_mapping))
+        return roles_mapping[reporter_id]
+
     def _get_status_reporters_update_query(self):
         """Returns a tuple of (query, print_query):
         query - updates the status reporters in the DB and
         protected_query - hides the credentials for the logs file
         """
-        base_query = """
-        INSERT INTO users (username, password, api_token_key)
+        create_user_query = """
+        INSERT INTO users (username, password, api_token_key, active, id)
         VALUES
            (
               '{0}',
               '{1}',
-              '{2}'
+              '{2}',
+              TRUE,
+              {3}
            )
         ON CONFLICT (username) DO
-        UPDATE SET password='{1}', api_token_key='{2}'
+        UPDATE SET password='{1}', api_token_key='{2}', active=TRUE, id={3}
         WHERE users.username = '{0}';"""
+
+        create_user_role_query = """
+        INSERT INTO users_roles (user_id, role_id)
+        VALUES ({0}, {1});
+        """
+
+        create_user_tenant_query = """
+        INSERT INTO users_tenants (user_id, tenant_id, role_id)
+        VALUES ({0}, 0, {1});
+        """
+
         queries = []
         protected_queries = []
         reporters = self._get_status_reporters_credentials()
-        for username, password, api_token_key in reporters:
+        reporters_roles = self._get_status_reporters_roles()
+        for username, password, api_token_key, reporter_id in reporters:
             queries.append(
-                base_query.format(username, password, api_token_key))
+                create_user_query.format(username,
+                                         password,
+                                         api_token_key,
+                                         reporter_id))
             protected_queries.append(
-                base_query.format('*' * 8, '*' * 8, '*' * 8))
+                create_user_query.format(username, '*' * 8, '*' * 8, '*' * 8))
+
+            role_id = self._find_reporter_role(reporters_roles, reporter_id)
+            queries.append(
+                create_user_role_query.format(
+                    reporter_id,
+                    role_id
+                ))
+            protected_queries.append(
+                create_user_role_query.format(username, '*' * 8))
+
+            queries.append(
+                create_user_tenant_query.format(
+                    reporter_id,
+                    role_id
+                ))
+            protected_queries.append(
+                create_user_tenant_query.format(username, '*' * 8))
         return '\n'.join(queries), '\n'.join(protected_queries)
 
     def _get_execution_restore_query(self):
@@ -558,13 +605,29 @@ class Postgres(object):
         return response['all'][0]
 
     def _get_status_reporters_credentials(self):
-        response = self.run_query("SELECT username, password, api_token_key "
-                                  "FROM users WHERE username IN ({0})"
-                                  "".format(_STATUS_REPORTERS_QUERY_TUPLE))
+        response = self.run_query(
+            "SELECT username, password, api_token_key, id "
+            "FROM users WHERE username IN ({0})"
+            "".format(_STATUS_REPORTERS_QUERY_TUPLE))
         if not response['all']:
             raise NonRecoverableError('Illegal state - '
                                       'missing status reporter users in db')
         return response['all']
+
+    def _get_status_reporters_roles(self):
+        reporter_ids = "'{0}', '{1}', '{2}'".format(
+            MANAGER_STATUS_REPORTER_ID,
+            DB_STATUS_REPORTER_ID,
+            BROKER_STATUS_REPORTER_ID)
+        response = self.run_query(
+            "SELECT user_id, role_id "
+            "FROM users_roles WHERE user_id IN ({0})"
+            "".format(reporter_ids))
+        if not response['all']:
+            raise NonRecoverableError('Illegal state - '
+                                      'missing status reporter users\' '
+                                      'roles in db')
+        return dict(response['all'])
 
     def dump_license_to_file(self, tmp_dir):
         destination = os.path.join(tmp_dir, LICENSE_DUMP_FILE)

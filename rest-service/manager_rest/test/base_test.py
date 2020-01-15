@@ -359,6 +359,7 @@ class BaseServerTestCase(unittest.TestCase):
                     reporter['username'],
                     reporter['password'],
                     reporter['role'],
+                    reporter['id']
                 )
             if premium_enabled:
                 # License is required only when working with Cloudify Premium
