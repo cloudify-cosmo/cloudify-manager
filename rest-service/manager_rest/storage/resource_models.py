@@ -189,7 +189,12 @@ class Site(CreatedAtMixin, SQLResourceBase):
 
 class Deployment(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'deployments'
-
+    __table_args__ = (
+        db.Index(
+            'deployments__sife_fk_visibility_idx',
+            '_blueprint_fk', '_site_fk', 'visibility', '_tenant_id'
+        ),
+    )
     skipped_fields = dict(
         SQLResourceBase.skipped_fields,
         v1=['scaling_groups'],
@@ -260,6 +265,12 @@ class Execution(CreatedAtMixin, SQLResourceBase):
     _extra_fields = {
         'status_display': flask_fields.String
     }
+    __table_args__ = (
+        db.Index(
+            'executions_dep_fk_isw_vis_tenant_id_idx',
+            '_deployment_fk', 'is_system_workflow', 'visibility', '_tenant_id'
+        ),
+    )
 
     ended_at = db.Column(UTCDateTime, nullable=True, index=True)
     error = db.Column(db.Text)
@@ -316,11 +327,14 @@ class Execution(CreatedAtMixin, SQLResourceBase):
 
 
 class Event(SQLResourceBase):
-
     """Execution events."""
-
     __tablename__ = 'events'
-
+    __table_args__ = (
+        db.Index(
+            'events_node_id_visibility_idx',
+            'node_id', 'visibility'
+        ),
+    )
     timestamp = db.Column(
         UTCDateTime,
         default=datetime.utcnow,
@@ -355,10 +369,14 @@ class Event(SQLResourceBase):
 
 
 class Log(SQLResourceBase):
-
     """Execution logs."""
-
     __tablename__ = 'logs'
+    __table_args__ = (
+        db.Index(
+            'logs_node_id_visibility_execution_fk_idx',
+            'node_id', 'visibility', '_execution_fk'
+        ),
+    )
 
     timestamp = db.Column(
         UTCDateTime,
@@ -631,7 +649,12 @@ class Node(SQLResourceBase):
 
 class NodeInstance(SQLResourceBase):
     __tablename__ = 'node_instances'
-
+    __table_args__ = (
+        db.Index(
+            'node_instances_state_visibility_idx',
+            'state', 'visibility'
+        ),
+    )
     skipped_fields = dict(
         SQLResourceBase.skipped_fields,
         v1=['scaling_groups'],
@@ -731,6 +754,12 @@ class Agent(CreatedAtMixin, SQLResourceBase):
 
 class TasksGraph(SQLResourceBase):
     __tablename__ = 'tasks_graphs'
+    __table_args__ = (
+        db.Index(
+            'tasks_graphs__execution_fk_name_visibility_idx',
+            '_execution_fk', 'name', 'visibility'
+        ),
+    )
 
     name = db.Column(db.Text, index=True)
     created_at = db.Column(UTCDateTime, nullable=False, index=True)
