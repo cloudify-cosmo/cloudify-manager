@@ -449,9 +449,70 @@ def upgrade():
         ['name'],
         unique=False
     )
+    op.create_index(
+        'deployments__sife_fk_visibility_idx',
+        'deployments',
+        ['_blueprint_fk', '_site_fk', 'visibility', '_tenant_id'],
+        unique=False
+    )
+    op.create_index(
+        'events_node_id_visibility_idx',
+        'events',
+        ['node_id', 'visibility'],
+        unique=False
+    )
+    op.create_index(
+        'executions_dep_fk_isw_vis_tenant_id_idx',
+        'executions',
+        ['_deployment_fk', 'is_system_workflow', 'visibility', '_tenant_id'],
+        unique=False
+    )
+    op.create_index(
+        'logs_node_id_visibility_execution_fk_idx',
+        'logs',
+        ['node_id', 'visibility', '_execution_fk'],
+        unique=False
+    )
+    op.create_index(
+        'node_instances_state_visibility_idx',
+        'node_instances',
+        ['state', 'visibility'],
+        unique=False
+    )
+    op.create_index(
+        'tasks_graphs__execution_fk_name_visibility_idx',
+        'tasks_graphs',
+        ['_execution_fk', 'name', 'visibility'],
+        unique=False
+    )
 
 
 def downgrade():
+    op.drop_index(
+        'tasks_graphs__execution_fk_name_visibility_idx',
+        table_name='tasks_graphs'
+    )
+    op.drop_index(
+        'node_instances_state_visibility_idx',
+        table_name='node_instances'
+    )
+    op.drop_index(
+        'logs_node_id_visibility_execution_fk_idx',
+        table_name='logs'
+    )
+    op.drop_index(
+        'executions_dep_fk_isw_vis_tenant_id_idx',
+        table_name='executions'
+    )
+    op.drop_index(
+        'events_node_id_visibility_idx',
+        table_name='events'
+    )
+    op.drop_index(
+        'deployments__sife_fk_visibility_idx',
+        table_name='deployments'
+    )
+
     op.drop_index(op.f('tasks_graphs_name_idx'), table_name='tasks_graphs')
     op.drop_index(op.f('node_instances_state_idx'),
                   table_name='node_instances')
