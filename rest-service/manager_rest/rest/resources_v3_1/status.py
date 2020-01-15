@@ -14,7 +14,6 @@
 #  * limitations under the License.
 #
 
-from datetime import datetime, timedelta
 
 from flask import request
 from flask import current_app
@@ -26,12 +25,9 @@ from manager_rest.rest import responses
 from manager_rest.utils import get_amqp_client
 from manager_rest.security.authorization import authorize
 from manager_rest.rest.rest_decorators import marshal_with
-from manager_rest.storage import models, get_storage_manager
 from manager_rest.security import SecuredResourceReadonlyMode
-from manager_rest.rest.rest_utils import (
-    parse_datetime_string,
-    verify_and_convert_bool
-)
+from manager_rest.rest.rest_utils import verify_and_convert_bool
+from manager_rest.cluster_status_manager import get_syncthing_status
 from manager_rest.rest.resources_v1.status import (
     should_be_in_services_output,
     get_systemd_manager_services
@@ -150,70 +146,9 @@ class Status(SecuredResourceReadonlyMode):
                                         extra_info=extra_info)
             return NodeServiceStatus.INACTIVE
 
-    def _not_last_manager_in_cluster(self):
-        storage_manager = get_storage_manager()
-        managers = storage_manager.list(models.Manager,
-                                        sort={'last_seen': 'desc'})
-        active_managers = 0
-        for manager in managers:
-            # Probably new manager, first status report is yet to arrive
-            if manager.status_report_frequency is None:
-                active_managers += 1
-            else:
-                # The manager is considered active, if the time passed since
-                # it's last_seen is maximum twice the frequency interval
-                # (Nyquist sampling theorem)
-                interval = manager.status_report_frequency * 2
-                min_last_seen = datetime.utcnow() - timedelta(seconds=interval)
-
-                if parse_datetime_string(manager.last_seen) > min_last_seen:
-                    active_managers += 1
-            if active_managers > 1:
-                return True
-        return False
-
-    def _get_syncthing_status(self, syncthing_config, device_stats):
-        status = NodeServiceStatus.INACTIVE
-
-        # Add 1 second to the interval for avoiding false negative
-        interval = syncthing_config['options']['reconnectionIntervalS'] + 1
-        min_last_seen = datetime.utcnow() - timedelta(seconds=interval)
-
-        for device_id, stats in device_stats.items():
-            last_seen = parse_datetime_string(stats['lastSeen'])
-
-            # Syncthing is valid when at least one device was seen recently
-            if last_seen > min_last_seen:
-                status = NodeServiceStatus.ACTIVE
-                break
-
-        if status == NodeServiceStatus.INACTIVE:
-            if self._not_last_manager_in_cluster():
-                return (NodeServiceStatus.INACTIVE,
-                        {'connection_check': 'No device was seen recently'})
-
-        return (NodeServiceStatus.ACTIVE,
-                {'connection_check': ServiceStatus.HEALTHY})
-
     def _check_syncthing(self, services):
-        status = NodeServiceStatus.INACTIVE
         display_name = 'File Sync Service'
-
-        try:
-            syncthing_config = syncthing_utils.config()
-            device_stats = syncthing_utils.device_stats()
-        except Exception as err:
-            error_message = 'Syncthing check failed with {err_type}: ' \
-                            '{err_msg}'.format(err_type=type(err),
-                                               err_msg=str(err))
-            current_app.logger.error(error_message)
-            extra_info = {'connection_check': error_message}
-            self._add_or_update_service(services, display_name, status,
-                                        extra_info=extra_info)
-            return status
-
-        status, extra_info = self._get_syncthing_status(syncthing_config,
-                                                        device_stats)
+        status, extra_info = get_syncthing_status()
         self._add_or_update_service(services, display_name, status,
                                     extra_info=extra_info)
         return status
