@@ -235,14 +235,14 @@ class Postgres(object):
         create_user_role_query = """
         INSERT INTO users_roles (user_id, role_id)
         VALUES ({0}, {1})
-        ON CONFLICT (user_id) DO
+        ON CONFLICT (user_id)
         DO NOTHING;
         """
 
         create_user_tenant_query = """
         INSERT INTO users_tenants (user_id, tenant_id, role_id)
         VALUES ({0}, 0, {1})
-        ON CONFLICT (user_id) DO
+        ON CONFLICT (user_id)
         DO NOTHING;
         """
 
