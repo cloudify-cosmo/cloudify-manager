@@ -236,14 +236,14 @@ class Postgres(object):
         UPDATE users_roles SET user_id={0}, role_id={1} WHERE user_id={0};
         INSERT INTO users_roles (user_id, role_id)
                SELECT {0}, {1}
-               WHERE NOT EXISTS (SELECT 1 FROM users_roles WHERE user_id={0});
+               WHERE NOT EXISTS (SELECT 1 FROM users_roles WHERE user_id={0} AND role_id={1});
         """
 
         create_user_tenant_query = """
-        UPDATE users_tenants SET user_id={0}, tenant_id=0 WHERE user_id={0};
-        INSERT INTO users_tenants (user_id, tenant_id)
-               SELECT {0}, 0
-               WHERE NOT EXISTS (SELECT 1 FROM users_tenants WHERE user_id={0});
+        UPDATE users_tenants SET user_id={0}, tenant_id=0, role_id={1} WHERE user_id={0};
+        INSERT INTO users_tenants (user_id, tenant_id, role_id)
+               SELECT {0}, 0, {1}
+               WHERE NOT EXISTS (SELECT 1 FROM users_tenants WHERE user_id={0} AND tenant_id=0 AND role_id={1});
         """
 
         queries = []
@@ -270,10 +270,11 @@ class Postgres(object):
 
             queries.append(
                 create_user_tenant_query.format(
-                    reporter_id
+                    reporter_id,
+                    role_id
                 ))
             protected_queries.append(
-                create_user_tenant_query.format(username))
+                create_user_tenant_query.format(username, role_id))
         return '\n'.join(queries), '\n'.join(protected_queries)
 
     def _get_execution_restore_query(self):
