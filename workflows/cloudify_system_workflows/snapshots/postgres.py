@@ -240,8 +240,8 @@ class Postgres(object):
         """
 
         create_user_tenant_query = """
-        INSERT INTO users_tenants (user_id, tenant_id, role_id)
-        VALUES ({0}, 0, {1})
+        INSERT INTO users_tenants (user_id, tenant_id)
+        VALUES ({0}, 0)
         ON CONFLICT (user_id, tenant_id)
         DO NOTHING;
         """
@@ -270,11 +270,10 @@ class Postgres(object):
 
             queries.append(
                 create_user_tenant_query.format(
-                    reporter_id,
-                    role_id
+                    reporter_id
                 ))
             protected_queries.append(
-                create_user_tenant_query.format(username, '*' * 8))
+                create_user_tenant_query.format(username))
         return '\n'.join(queries), '\n'.join(protected_queries)
 
     def _get_execution_restore_query(self):
