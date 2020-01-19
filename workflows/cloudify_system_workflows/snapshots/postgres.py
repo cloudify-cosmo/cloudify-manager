@@ -240,10 +240,10 @@ class Postgres(object):
         """
 
         create_user_tenant_query = """
+        UPDATE users_tenants SET user_id={0}, tenant_id=0 WHERE user_id={0};
         INSERT INTO users_tenants (user_id, tenant_id)
-        VALUES ({0}, 0)
-        ON CONFLICT (user_id, tenant_id)
-        DO NOTHING;
+               SELECT {0}, 0
+               WHERE NOT EXISTS (SELECT 1 FROM users_tenants WHERE user_id={0});
         """
 
         queries = []
