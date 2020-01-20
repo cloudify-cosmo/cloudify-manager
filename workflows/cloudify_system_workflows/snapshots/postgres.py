@@ -209,7 +209,7 @@ class Postgres(object):
                                         roles_mapping))
         return roles_mapping[reporter_id]
 
-    def _get_status_reporters_update_query(self):
+    def _get_status_reporters_update_query(self, reporters, reporters_roles):
         """Returns a tuple of (query, print_query):
         query - updates the status reporters in the DB and
         protected_query - hides the credentials for the logs file
@@ -243,8 +243,6 @@ class Postgres(object):
         """
 
         queries = []
-        reporters = self._get_status_reporters_credentials()
-        reporters_roles = self._get_status_reporters_roles()
         for username, password, api_token_key, reporter_id in reporters:
             queries.append(
                 create_user_query.format(username,
@@ -302,6 +300,64 @@ class Postgres(object):
             for table in self._CONFIG_TABLES
         ])
         self._restore_dump(new_dump_file, self._db_name)
+
+    def dump_status_reporter_users(self, tempdir):
+        ctx.logger.debug('Dumping status reporter users')
+        path = os.path.join(tempdir, 'status_reporter_users.dump')
+        command = self.get_psql_command(self._db_name)
+
+        reporter_ids = "'{0}', '{1}', '{2}'".format(
+            MANAGER_STATUS_REPORTER_ID,
+            DB_STATUS_REPORTER_ID,
+            BROKER_STATUS_REPORTER_ID)
+
+        # Hardcoded uid as we only allow running restore on a clean manager
+        # at the moment, so admin must be the first user (ID=0)
+        query = (
+            'select row_to_json(row) from ('
+            'select * from users where id in {0}'
+            ') row;'.format(reporter_ids)
+        )
+        command.extend([
+            '-c', query,
+            '-t',  # Dump just the data, without extra headers, etc
+            '-o', path,
+        ])
+        run_shell(command)
+        return path
+
+    def dump_status_reporter_roles(self, tempdir):
+        ctx.logger.debug('Dumping status reporter users\' roles')
+        path = os.path.join(tempdir, 'status_reporter_users.dump')
+        command = self.get_psql_command(self._db_name)
+
+        reporter_ids = "'{0}', '{1}', '{2}'".format(
+            MANAGER_STATUS_REPORTER_ID,
+            DB_STATUS_REPORTER_ID,
+            BROKER_STATUS_REPORTER_ID)
+
+        # Hardcoded uid as we only allow running restore on a clean manager
+        # at the moment, so admin must be the first user (ID=0)
+        query = (
+            'select row_to_json(row) from ('
+            'select * from users_roles where user_id in {0}'
+            ') row;'.format(reporter_ids)
+        )
+        command.extend([
+            '-c', query,
+            '-t',  # Dump just the data, without extra headers, etc
+            '-o', path,
+        ])
+        run_shell(command)
+        return path
+
+    def restore_status_reporter_users(self, users_path):
+        with open(users_path) as dump:
+            return json.load(dump)
+
+    def restore_status_reporter_roles(self, roles_path):
+        with open(roles_path) as dump:
+            return json.load(dump)
 
     def restore_current_execution(self):
         self.run_query(self._get_execution_restore_query())
