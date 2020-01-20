@@ -315,7 +315,7 @@ class Postgres(object):
         # at the moment, so admin must be the first user (ID=0)
         query = (
             'select row_to_json(row) from ('
-            'select * from users where id in ({0})'
+            'select username, password, api_token_key, id from users where id in ({0})'
             ') row;'.format(reporter_ids)
         )
         command.extend([
@@ -389,7 +389,7 @@ class Postgres(object):
                        "VALUES (0, 0);")
         for query in queries:
             self.run_query(query)
-        self._get_status_reporters_update_query()
+        # self._get_status_reporters_update_query()
 
     def drop_db(self):
         ctx.logger.info('Dropping db')
