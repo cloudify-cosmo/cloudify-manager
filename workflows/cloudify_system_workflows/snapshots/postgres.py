@@ -241,9 +241,13 @@ class Postgres(object):
         ON CONFLICT (user_id, tenant_id)
         DO NOTHING;
         """
-
+        reporters_roles = {r['user_id']: r['role_id'] for r in reporters_roles}
         queries = []
-        for username, password, api_token_key, reporter_id in reporters:
+        for reporter in reporters:
+            username = reporter['username']
+            password = reporter['password']
+            api_token_key = reporter['api_token_key']
+            reporter_id = reporter['id']
             queries.append(
                 create_user_query.format(username,
                                          password,
@@ -314,8 +318,8 @@ class Postgres(object):
         # Hardcoded uid as we only allow running restore on a clean manager
         # at the moment, so admin must be the first user (ID=0)
         query = (
-            'select row_to_json(row) from ('
-            'select username, password, api_token_key, id from users where id in ({0})'
+            'select array_to_json(array_agg(row)) from ('
+            'select * from users where id in ({0})'
             ') row;'.format(reporter_ids)
         )
         command.extend([
@@ -339,7 +343,7 @@ class Postgres(object):
         # Hardcoded uid as we only allow running restore on a clean manager
         # at the moment, so admin must be the first user (ID=0)
         query = (
-            'select row_to_json(row) from ('
+            'select array_to_json(array_agg(row)) from ('
             'select * from users_roles where user_id in ({0})'
             ') row;'.format(reporter_ids)
         )
