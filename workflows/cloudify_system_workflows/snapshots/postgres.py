@@ -89,12 +89,6 @@ class Postgres(object):
             self._get_admin_user_update_query()
         self._append_dump(dump_file, admin_query, admin_protected_query)
 
-        if premium_enabled:
-            reporters_query, reporters_protected_query = \
-                self._get_status_reporters_update_query()
-            self._append_dump(
-                dump_file, reporters_query, reporters_protected_query)
-
         self._restore_dump(dump_file, self._db_name)
 
         self._make_api_token_keys()
@@ -247,7 +241,6 @@ class Postgres(object):
         """
 
         queries = []
-        protected_queries = []
         reporters = self._get_status_reporters_credentials()
         reporters_roles = self._get_status_reporters_roles()
         for username, password, api_token_key, reporter_id in reporters:
@@ -256,26 +249,21 @@ class Postgres(object):
                                          password,
                                          api_token_key,
                                          reporter_id))
-            protected_queries.append(
-                create_user_query.format(username, '*' * 8, '*' * 8, '*' * 8))
-
             role_id = self._find_reporter_role(reporters_roles, reporter_id)
             queries.append(
                 create_user_role_query.format(
                     reporter_id,
                     role_id
                 ))
-            protected_queries.append(
-                create_user_role_query.format(username, '*' * 8))
 
             queries.append(
                 create_user_tenant_query.format(
                     reporter_id,
                     role_id
                 ))
-            protected_queries.append(
-                create_user_tenant_query.format(username, role_id))
-        return '\n'.join(queries), '\n'.join(protected_queries)
+
+        full_query = '\n'.join(queries)
+        self.run_query(full_query)
 
     def _get_execution_restore_query(self):
         """Return a query that creates an execution to the DB with the ID (and
@@ -328,11 +316,11 @@ class Postgres(object):
 
     def clean_db(self):
         """Run a series of queries that recreate the schema and restore the
-        admin user, the provider context and the current execution
+        admin user, the status reporters users, the provider context and the
+        current execution.
         """
         queries = self._get_clear_tables_queries(preserve_defaults=True)
         queries.append(self._get_admin_user_update_query()[0])
-        queries.append(self._get_status_reporters_update_query()[0])
         if not self.current_execution_date:
             self.init_current_execution_data()
         queries.append(self._get_execution_restore_query())
@@ -343,6 +331,7 @@ class Postgres(object):
                        "VALUES (0, 0);")
         for query in queries:
             self.run_query(query)
+        self._get_status_reporters_update_query()
 
     def drop_db(self):
         ctx.logger.info('Dropping db')

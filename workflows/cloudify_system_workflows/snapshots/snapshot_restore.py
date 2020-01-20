@@ -551,6 +551,7 @@ class SnapshotRestore(object):
                 self._tempdir, premium_enabled=self._premium_enabled)
         postgres.restore_config_tables(config_dump_path)
         postgres.restore_current_execution()
+        postgres._get_status_reporters_update_query()
         try:
             self._restore_stage(postgres, self._tempdir, stage_revision)
         except Exception as e:
