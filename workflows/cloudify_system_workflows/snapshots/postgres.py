@@ -328,7 +328,7 @@ class Postgres(object):
 
     def dump_status_reporter_roles(self, tempdir):
         ctx.logger.debug('Dumping status reporter users\' roles')
-        path = os.path.join(tempdir, 'status_reporter_users.dump')
+        path = os.path.join(tempdir, 'status_reporter_roles.dump')
         command = self.get_psql_command(self._db_name)
 
         reporter_ids = "'{0}', '{1}', '{2}'".format(
