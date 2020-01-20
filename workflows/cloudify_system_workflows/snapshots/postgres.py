@@ -227,17 +227,17 @@ class Postgres(object):
         WHERE users.username = '{0}';"""
 
         create_user_role_query = """
-        UPDATE users_roles SET user_id={0}, role_id={1} WHERE user_id={0};
         INSERT INTO users_roles (user_id, role_id)
-               SELECT {0}, {1}
-               WHERE NOT EXISTS (SELECT 1 FROM users_roles WHERE user_id={0} AND role_id={1});
+        VALUES ({0}, {1})
+        ON CONFLICT (user_id, role_id)
+        DO NOTHING;
         """
 
         create_user_tenant_query = """
-        UPDATE users_tenants SET user_id={0}, tenant_id=0, role_id={1} WHERE user_id={0};
         INSERT INTO users_tenants (user_id, tenant_id, role_id)
-               SELECT {0}, 0, {1}
-               WHERE NOT EXISTS (SELECT 1 FROM users_tenants WHERE user_id={0} AND tenant_id=0 AND role_id={1});
+        VALUES ({0}, 0, {1})
+        ON CONFLICT (user_id, tenant_id)
+        DO NOTHING;
         """
 
         queries = []

@@ -68,7 +68,7 @@ def one_to_many_relationship(child_class,
 
 
 def many_to_many_relationship(current_class, other_class, table_prefix=None,
-                              **relationship_kwargs):
+                              primary_key_tuple=False, **relationship_kwargs):
     """Return a many-to-many SQL relationship object
 
     Notes:
@@ -79,6 +79,8 @@ def many_to_many_relationship(current_class, other_class, table_prefix=None,
     :param other_class: The class of the table we're connecting to
     :param table_prefix: Custom prefix for the helper table name and the
     backreference name
+    :param primary_key_tuple: Will make the two foreign keys as primary keys,
+    which will also index them.
     """
     current_table_name = current_class.__tablename__
     current_column_name = '{0}_id'.format(current_table_name[:-1])
@@ -109,7 +111,8 @@ def many_to_many_relationship(current_class, other_class, table_prefix=None,
         current_column_name,
         other_column_name,
         current_foreign_key,
-        other_foreign_key
+        other_foreign_key,
+        primary_key_tuple
     )
     return db.relationship(
         other_class,
@@ -123,7 +126,8 @@ def get_secondary_table(helper_table_name,
                         first_column_name,
                         second_column_name,
                         first_foreign_key,
-                        second_foreign_key):
+                        second_foreign_key,
+                        primary_key_tuple):
     """Create a helper table for a many-to-many relationship
 
     :param helper_table_name: The name of the table
@@ -132,6 +136,8 @@ def get_secondary_table(helper_table_name,
     :param first_foreign_key: The string representing the first foreign key,
     for example `blueprint._storage_id`, or `tenants.id`
     :param second_foreign_key: The string representing the second foreign key
+    :param primary_key_tuple: Will make the two foreign keys as primary keys,
+    which will also index them.
     :return: A Table object
     """
     return db.Table(
@@ -139,11 +145,13 @@ def get_secondary_table(helper_table_name,
         db.Column(
             first_column_name,
             db.Integer,
-            db.ForeignKey(first_foreign_key)
+            db.ForeignKey(first_foreign_key),
+            primary_key=primary_key_tuple
         ),
         db.Column(
             second_column_name,
             db.Integer,
-            db.ForeignKey(second_foreign_key)
+            db.ForeignKey(second_foreign_key),
+            primary_key=primary_key_tuple
         )
     )
