@@ -14,9 +14,11 @@
 #  * limitations under the License.
 
 import os
-import psycopg2
+import json
 from uuid import uuid4
 from contextlib import closing
+
+import psycopg2
 from psycopg2.extras import execute_values
 
 from cloudify.workflows import ctx
