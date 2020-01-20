@@ -99,8 +99,9 @@ class WagonBuilderMixin(DockerInterface):
 
     def check_if_has_image_locally(self):
         """Check if the docker image already exists."""
-
-        return self.docker_image_name_with_tag in self.list_image_tags()
+        return any(
+            self.docker_image_name_with_tag in t
+            for t in self.list_image_tags())
 
     def get_docker_image(self):
         try:
