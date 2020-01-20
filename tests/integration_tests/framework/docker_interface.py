@@ -35,7 +35,7 @@ class DockerInterface(object):
         docker_base_url = \
             docker_base_url or '{0}:{1}'.format(
                 os.getenv('DOCKER_HOST'), docker_port)
-        return docker.DockerClient(base_url=docker_base_url)
+        return docker.DockerClient(base_url=docker_base_url, version='auto')
 
     @property
     def docker_client(self):
