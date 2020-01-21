@@ -20,8 +20,8 @@ from integration_tests.resources.dockerfiles import centos as dockerfile
 
 # This message is always the last message when a wagon build is finished.
 WAGON_BUILD_TIMEOUT = 600
-WAGON_BUILD_DOCKER_REPO_NAME = 'cloudifycosmo'
-WAGON_BUILD_DOCKER_IMAGE_NAME = 'cloudify-centos-wagon-builder'
+WAGON_BUILD_DOCKER_REPO_NAME = 'cloudifyplatform'
+WAGON_BUILD_DOCKER_IMAGE_NAME = 'cloudify-centos-7-wagon-builder'
 WAGON_BUILD_DOCKER_TAG_NAME = 'latest'
 DOCKER_CONTAINER_BUILD_DIR = '/packaging'
 
@@ -120,9 +120,12 @@ class WagonBuilderMixin(DockerInterface):
 
     def build_wagon(self, logger):
         self.prepare_docker_image()
+        # container = self.run_container(
+        #     self.docker_image_name_with_repo,
+        #     volumes=self.docker_volume_mapping,
+        #     detach=True)
         container = self.run_container(
             self.docker_image_name_with_repo,
-            volumes=self.docker_volume_mapping,
             detach=True)
         response = container.wait(timeout=self.wagon_build_time_limit)
         if response['StatusCode'] != 0:
