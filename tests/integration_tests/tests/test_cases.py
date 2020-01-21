@@ -803,7 +803,7 @@ class PluginsTest(AgentTestWithPlugins, WagonBuilderMixin):
 
     def _create_test_wagon(self, plugin_path):
         """Overrides the inherited class _create_test_wagon."""
-        self.build_wagon(self.logger)
+        self.build_wagon(self.logger, plugin_path)
         return self.get_wagon_path(plugin_path)
 
     def add_cleanup_deployment(self, deployment_id):
