@@ -124,13 +124,17 @@ class WagonBuilderMixin(DockerInterface):
         present_dir = os.getcwd()
         logger.info('Build wagon cur dir: {0}'.format(os.getcwd()))
         logger.info('Build dir: {0}'.format(build_directory))
+        logger.info('Build dir contents {0}'.format(
+            os.listdir(build_directory)))
         self.prepare_docker_image()
         if build_directory:
             volume_mapping = {
-                build_directory: self.docker_volume_mapping[self.plugin_root_directory]
+                build_directory: self.docker_volume_mapping[
+                    self.plugin_root_directory]
             }
         else:
             volume_mapping = self.docker_volume_mapping
+        logger.info('Changing directory...')
         os.chdir(build_directory)
         container = self.run_container(
             self.docker_image_name_with_repo,
@@ -138,6 +142,7 @@ class WagonBuilderMixin(DockerInterface):
             detach=True)
         response = container.wait(timeout=self.wagon_build_time_limit)
         os.chdir(present_dir)
+        logger.info('Changing back directory...')
         if response['StatusCode'] != 0:
             for i in container.logs(stream=True):
                 logger.info('{0} {1}'.format(container.id, i))
