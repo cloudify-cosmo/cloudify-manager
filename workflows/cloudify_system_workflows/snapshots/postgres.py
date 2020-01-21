@@ -376,25 +376,6 @@ class Postgres(object):
         self.current_execution_date = response['all'][0][0]
         self.hashed_execution_token = response['all'][0][1]
 
-    def clean_db(self):
-        """Run a series of queries that recreate the schema and restore the
-        admin user, the status reporters users, the provider context and the
-        current execution.
-        """
-        queries = self._get_clear_tables_queries(preserve_defaults=True)
-        queries.append(self._get_admin_user_update_query()[0])
-        if not self.current_execution_date:
-            self.init_current_execution_data()
-        queries.append(self._get_execution_restore_query())
-        # Make the admin user actually has the admin role
-        queries.append("INSERT INTO users_roles (user_id, role_id)"
-                       "VALUES (0, 1);")
-        queries.append("INSERT INTO users_tenants (user_id, tenant_id)"
-                       "VALUES (0, 0);")
-        for query in queries:
-            self.run_query(query)
-        # self._get_status_reporters_update_query()
-
     def drop_db(self):
         ctx.logger.info('Dropping db')
         drop_db_bin = os.path.join(self._bin_dir, 'dropdb')
