@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+
 from docker.errors import APIError as DockerAPIError
 
 from integration_tests.framework.docker_interface import DockerInterface
@@ -119,13 +121,11 @@ class WagonBuilderMixin(DockerInterface):
             self.get_docker_image()
 
     def build_wagon(self, logger):
+        logger.info('Build wagon cur dir: {0}'.format(os.getcwd()))
         self.prepare_docker_image()
-        # container = self.run_container(
-        #     self.docker_image_name_with_repo,
-        #     volumes=self.docker_volume_mapping,
-        #     detach=True)
         container = self.run_container(
             self.docker_image_name_with_repo,
+            volumes=self.docker_volume_mapping,
             detach=True)
         response = container.wait(timeout=self.wagon_build_time_limit)
         if response['StatusCode'] != 0:
