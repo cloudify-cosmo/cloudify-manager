@@ -486,6 +486,12 @@ def upgrade():
         unique=False
     )
 
+    op.create_primary_key(
+        'users_roles_pkey',
+        'users_roles',
+        ['user_id', 'role_id'],
+    )
+
 
 def downgrade():
     op.drop_index(
@@ -701,6 +707,10 @@ def downgrade():
     op.drop_column('managers', 'last_seen')
     op.drop_column('managers', 'status_report_frequency')
     op.drop_table('db_nodes')
+    op.drop_constraint(
+        'users_roles_pkey',
+        'users_roles',
+    )
 
 
 def _update_managers_table():

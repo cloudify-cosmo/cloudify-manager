@@ -546,11 +546,16 @@ class SnapshotRestore(object):
         postgres.init_current_execution_data()
 
         config_dump_path = postgres.dump_config_tables(self._tempdir)
+        status_reporter_roles_path, status_reporter_users_path = \
+            postgres.dump_status_reporters(postgres, self._tempdir)
         with utils.db_schema(schema_revision, config=self._config):
             admin_user_update_command = postgres.restore(
                 self._tempdir, premium_enabled=self._premium_enabled)
         postgres.restore_config_tables(config_dump_path)
         postgres.restore_current_execution()
+        postgres.restore_status_reporters(postgres,
+                                          status_reporter_roles_path,
+                                          status_reporter_users_path)
         try:
             self._restore_stage(postgres, self._tempdir, stage_revision)
         except Exception as e:
