@@ -28,6 +28,14 @@ from manager_rest import manager_exceptions
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.rest.rest_utils import parse_datetime_string
 
+try:
+    from cloudify_premium import syncthing_utils
+    from cloudify_premium.ha import utils as ha_utils
+except ImportError:
+    syncthing_utils = None
+    ha_utils = None
+
+
 STATUS = 'status'
 SERVICES = 'services'
 EXTRA_INFO = 'extra_info'
@@ -37,6 +45,86 @@ BROKER_SERVICE_KEY = 'RabbitMQ'
 PATRONI_SERVICE_KEY = 'Patroni'
 UNINITIALIZED_STATUS = 'Uninitialized'
 CLUSTER_STATUS_PATH = '/opt/manager/cluster_statuses'
+
+
+# region Syncthing Status Helpers
+
+
+def _last_manager_in_cluster():
+    storage_manager = get_storage_manager()
+    managers = storage_manager.list(models.Manager,
+                                    sort={'last_seen': 'desc'})
+    active_managers = 0
+    for manager in managers:
+        # Probably new manager, first status report is yet to arrive
+        if manager.status_report_frequency is None:
+            active_managers += 1
+        else:
+            # The manager is considered active, if the time passed since
+            # it's last_seen is maximum twice the frequency interval
+            # (Nyquist sampling theorem)
+            interval = manager.status_report_frequency * 2
+            min_last_seen = datetime.utcnow() - timedelta(seconds=interval)
+
+            if parse_datetime_string(manager.last_seen) > min_last_seen:
+                active_managers += 1
+        if active_managers > 1:
+            return False
+    return True
+
+
+def _other_device_was_seen(syncthing_config, device_stats):
+    # Add 1 second to the interval for avoiding false negative
+    interval = syncthing_config['options']['reconnectionIntervalS'] + 1
+    min_last_seen = datetime.utcnow() - timedelta(seconds=interval)
+
+    for device_id, stats in device_stats.items():
+        last_seen = parse_datetime_string(stats['lastSeen'])
+
+        # Syncthing is valid when at least one device was seen recently
+        if last_seen > min_last_seen:
+            return True
+    return False
+
+
+def _is_syncthing_valid(syncthing_config, device_stats):
+    if _other_device_was_seen(syncthing_config, device_stats):
+        return True
+
+    if _last_manager_in_cluster():
+        current_app.logger.debug(
+            'It is the last healthy manager in the cluster, no other '
+            'devices were seen by File Sync Service'
+        )
+        return True
+
+    current_app.logger.debug(
+        'Inactive File Sync Service - no other devices were seen by it'
+    )
+    return False
+
+
+# endregion
+
+
+def get_syncthing_status():
+    try:
+        syncthing_config = syncthing_utils.config()
+        device_stats = syncthing_utils.device_stats()
+    except Exception as err:
+        error_message = 'Syncthing check failed with {err_type}: ' \
+                        '{err_msg}'.format(err_type=type(err),
+                                           err_msg=str(err))
+        current_app.logger.error(error_message)
+        extra_info = {'connection_check': error_message}
+        return NodeServiceStatus.INACTIVE, extra_info
+
+    if _is_syncthing_valid(syncthing_config, device_stats):
+        return (NodeServiceStatus.ACTIVE,
+                {'connection_check': ServiceStatus.HEALTHY})
+
+    return (NodeServiceStatus.INACTIVE,
+            {'connection_check': 'No device was seen recently'})
 
 
 def get_report_path(node_type, node_id):
@@ -455,12 +543,24 @@ def _save_report(report_path, report_dict):
     with open(report_path, 'w') as report_file:
         json.dump(report_dict, report_file)
 
+
+def _verify_syncthing_status():
+    if not (ha_utils and ha_utils.is_clustered()):
+        return
+    syncthing_status, _ = get_syncthing_status()
+    if syncthing_status == NodeServiceStatus.INACTIVE:
+        raise manager_exceptions.FileSyncServiceError(
+            "Can't update the status report when Syncthing is not healthy"
+        )
+
+
 # endregion
 
 
 def write_status_report(node_id, model, node_type, report):
     current_app.logger.debug('Received new status report for '
                              '{0} of type {1}...'.format(node_id, node_type))
+    _verify_syncthing_status()
     _create_statues_folder_if_needed()
     _verify_node_exists(node_id, model)
     _verify_status_report_schema(node_id, report)

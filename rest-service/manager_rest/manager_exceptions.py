@@ -43,6 +43,16 @@ class SystemInSnapshotRestoreError(ManagerException):
             *args, **kwargs)
 
 
+class FileSyncServiceError(ManagerException):
+    FILE_SYNC_SERVICE_ERROR_CODE = 'file_sync_service_error'
+
+    def __init__(self, *args, **kwargs):
+        super(FileSyncServiceError, self).__init__(
+            503,
+            FileSyncServiceError.FILE_SYNC_SERVICE_ERROR_CODE,
+            *args, **kwargs)
+
+
 class MissingPremiumPackage(ManagerException):
     MISSING_PREMIUM_ERROR_CODE = 'missing_premium_package_error'
 
