@@ -571,14 +571,21 @@ class SnapshotRestore(object):
         # user depending on whether we have the hash salt
         return admin_user_update_command
 
-    def _restore_status_reporters(self, postgres, status_reporter_roles_path, status_reporter_users_path):
-        users = postgres.restore_status_reporter_users(status_reporter_users_path)
-        roles = postgres.restore_status_reporter_roles(status_reporter_roles_path)
+    @staticmethod
+    def _restore_status_reporters(postgres,
+                                  status_reporter_roles_path,
+                                  status_reporter_users_path):
+        users = postgres.restore_status_reporter_users(
+            status_reporter_users_path)
+        roles = postgres.restore_status_reporter_roles(
+            status_reporter_roles_path)
         postgres.upsert_status_reporters_users(users, roles)
 
     def _dump_status_reporters(self, postgres):
-        status_reporter_users_path = postgres.dump_status_reporter_users(self._tempdir)
-        status_reporter_roles_path = postgres.dump_status_reporter_roles(self._tempdir)
+        status_reporter_users_path = postgres.dump_status_reporter_users(
+            self._tempdir)
+        status_reporter_roles_path = postgres.dump_status_reporter_roles(
+            self._tempdir)
         return status_reporter_roles_path, status_reporter_users_path
 
     def _license_exists(self, postgres):

@@ -492,6 +492,7 @@ def upgrade():
         ['user_id', 'role_id'],
     )
 
+
 def downgrade():
     op.drop_index(
         'tasks_graphs__execution_fk_name_visibility_idx',
@@ -710,6 +711,7 @@ def downgrade():
         'users_roles_pkey',
         'users_roles',
     )
+
 
 def _update_managers_table():
     op.add_column('managers', sa.Column('node_id', sa.Text(), nullable=True))
