@@ -26,7 +26,10 @@ from cloudify.cryptography_utils import encrypt
 from cloudify.exceptions import NonRecoverableError
 from cloudify.cluster_status import (
     STATUS_REPORTER_USERS,
-    MANAGER_STATUS_REPORTER
+    MANAGER_STATUS_REPORTER,
+    MANAGER_STATUS_REPORTER_ID,
+    BROKER_STATUS_REPORTER_ID,
+    DB_STATUS_REPORTER_ID
 )
 
 from .constants import ADMIN_DUMP_FILE, LICENSE_DUMP_FILE
@@ -35,6 +38,11 @@ from .utils import run as run_shell
 POSTGRESQL_DEFAULT_PORT = 5432
 _STATUS_REPORTERS_QUERY_TUPLE = ', '.join(
     "'{0}'".format(reporter) for reporter in STATUS_REPORTER_USERS)
+
+_STATUS_REPORTERS_IDS_QUERY_TUPLE = "'{0}', '{1}', '{2}'".format(
+    MANAGER_STATUS_REPORTER_ID,
+    DB_STATUS_REPORTER_ID,
+    BROKER_STATUS_REPORTER_ID)
 
 
 class Postgres(object):
@@ -314,7 +322,7 @@ class Postgres(object):
         query = (
             'select array_to_json(array_agg(row)) from ('
             'select * from users where id in ({0})'
-            ') row;'.format(_STATUS_REPORTERS_QUERY_TUPLE)
+            ') row;'.format(_STATUS_REPORTERS_IDS_QUERY_TUPLE)
         )
         command.extend([
             '-c', query,
@@ -333,7 +341,7 @@ class Postgres(object):
         query = (
             'select array_to_json(array_agg(row)) from ('
             'select * from users_roles where user_id in ({0})'
-            ') row;'.format(_STATUS_REPORTERS_QUERY_TUPLE)
+            ') row;'.format(_STATUS_REPORTERS_IDS_QUERY_TUPLE)
         )
         command.extend([
             '-c', query,
