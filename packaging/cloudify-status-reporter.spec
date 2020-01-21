@@ -26,7 +26,7 @@ Service for reporting the status of every Cloudify component
 
 virtualenv %_status_reporter_env
 
-%_status_reporter_env/bin/pip install --upgrade pip"<20.0" setuptools
+%_status_reporter_env/bin/pip install --upgrade pip setuptools
 %_status_reporter_env/bin/pip install -r "${RPM_SOURCE_DIR}/packaging/status-reporter/requirements.txt"
 %_status_reporter_env/bin/pip install "${RPM_SOURCE_DIR}/status-reporter"
 
