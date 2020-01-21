@@ -26,10 +26,7 @@ from cloudify.cryptography_utils import encrypt
 from cloudify.exceptions import NonRecoverableError
 from cloudify.cluster_status import (
     STATUS_REPORTER_USERS,
-    MANAGER_STATUS_REPORTER,
-    MANAGER_STATUS_REPORTER_ID,
-    BROKER_STATUS_REPORTER_ID,
-    DB_STATUS_REPORTER_ID
+    MANAGER_STATUS_REPORTER
 )
 
 from .constants import ADMIN_DUMP_FILE, LICENSE_DUMP_FILE
@@ -209,10 +206,14 @@ class Postgres(object):
                                         roles_mapping))
         return roles_mapping[reporter_id]
 
-    def _get_status_reporters_update_query(self, reporters, reporters_roles):
-        """Returns a tuple of (query, print_query):
-        query - updates the status reporters in the DB and
-        protected_query - hides the credentials for the logs file
+    def upsert_status_reporters_users(self, reporters, reporters_roles):
+        """
+        Handles the insertion/update of status reporters users to the manager,
+        which will maintain their current api token (and not from the
+        snapshot).
+        :param reporters Needed user info for the current status reporter
+         users.
+        :param reporters_roles Mapping between user id an role id.
         """
         create_user_query = """
         INSERT INTO users (username, password, api_token_key, active, id)
@@ -306,21 +307,14 @@ class Postgres(object):
         self._restore_dump(new_dump_file, self._db_name)
 
     def dump_status_reporter_users(self, tempdir):
-        ctx.logger.debug('Dumping status reporter users')
+        ctx.logger.debug('Dumping status reporter users...')
         path = os.path.join(tempdir, 'status_reporter_users.dump')
         command = self.get_psql_command(self._db_name)
 
-        reporter_ids = "'{0}', '{1}', '{2}'".format(
-            MANAGER_STATUS_REPORTER_ID,
-            DB_STATUS_REPORTER_ID,
-            BROKER_STATUS_REPORTER_ID)
-
-        # Hardcoded uid as we only allow running restore on a clean manager
-        # at the moment, so admin must be the first user (ID=0)
         query = (
             'select array_to_json(array_agg(row)) from ('
             'select * from users where id in ({0})'
-            ') row;'.format(reporter_ids)
+            ') row;'.format(_STATUS_REPORTERS_QUERY_TUPLE)
         )
         command.extend([
             '-c', query,
@@ -328,6 +322,7 @@ class Postgres(object):
             '-o', path,
         ])
         run_shell(command)
+        ctx.logger.debug('Dumped status reporter users to {}'.format(path))
         return path
 
     def dump_status_reporter_roles(self, tempdir):
@@ -335,17 +330,10 @@ class Postgres(object):
         path = os.path.join(tempdir, 'status_reporter_roles.dump')
         command = self.get_psql_command(self._db_name)
 
-        reporter_ids = "'{0}', '{1}', '{2}'".format(
-            MANAGER_STATUS_REPORTER_ID,
-            DB_STATUS_REPORTER_ID,
-            BROKER_STATUS_REPORTER_ID)
-
-        # Hardcoded uid as we only allow running restore on a clean manager
-        # at the moment, so admin must be the first user (ID=0)
         query = (
             'select array_to_json(array_agg(row)) from ('
             'select * from users_roles where user_id in ({0})'
-            ') row;'.format(reporter_ids)
+            ') row;'.format(_STATUS_REPORTERS_QUERY_TUPLE)
         )
         command.extend([
             '-c', query,
@@ -353,15 +341,19 @@ class Postgres(object):
             '-o', path,
         ])
         run_shell(command)
+        ctx.logger.debug('Dumped status reporter roles to {}'.format(path))
         return path
 
-    def restore_status_reporter_users(self, users_path):
-        with open(users_path) as dump:
-            return json.load(dump)
+    @staticmethod
+    def _restore_json_dump_file(dump_path):
+        with open(dump_path) as dump_file:
+            return json.load(dump_file)
 
-    def restore_status_reporter_roles(self, roles_path):
-        with open(roles_path) as dump:
-            return json.load(dump)
+    def restore_status_reporter_users(self, users_dump_path):
+        return self._restore_json_dump_file(users_dump_path)
+
+    def restore_status_reporter_roles(self, roles_dump_path):
+        return self._restore_json_dump_file(roles_dump_path)
 
     def restore_current_execution(self):
         self.run_query(self._get_execution_restore_query())
@@ -668,21 +660,6 @@ class Postgres(object):
             raise NonRecoverableError('Illegal state - '
                                       'missing status reporter users in db')
         return response['all']
-
-    def _get_status_reporters_roles(self):
-        reporter_ids = "'{0}', '{1}', '{2}'".format(
-            MANAGER_STATUS_REPORTER_ID,
-            DB_STATUS_REPORTER_ID,
-            BROKER_STATUS_REPORTER_ID)
-        response = self.run_query(
-            "SELECT user_id, role_id "
-            "FROM users_roles WHERE user_id IN ({0})"
-            "".format(reporter_ids))
-        if not response['all']:
-            raise NonRecoverableError('Illegal state - '
-                                      'missing status reporter users\' '
-                                      'roles in db')
-        return dict(response['all'])
 
     def dump_license_to_file(self, tmp_dir):
         destination = os.path.join(tmp_dir, LICENSE_DUMP_FILE)
