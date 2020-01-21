@@ -357,27 +357,17 @@ class Postgres(object):
         with open(dump_path) as dump_file:
             return json.load(dump_file)
 
-    def restore_status_reporter_users(self, users_dump_path):
-        return self._restore_json_dump_file(users_dump_path)
-
-    def restore_status_reporter_roles(self, roles_dump_path):
-        return self._restore_json_dump_file(roles_dump_path)
-
-    @staticmethod
-    def restore_status_reporters(postgres,
+    def restore_status_reporters(self,
                                  status_reporter_roles_path,
                                  status_reporter_users_path):
-        users = postgres.restore_status_reporter_users(
-            status_reporter_users_path)
-        roles = postgres.restore_status_reporter_roles(
-            status_reporter_roles_path)
-        postgres.upsert_status_reporters_users(users, roles)
+        users = self._restore_json_dump_file(status_reporter_users_path)
+        roles = self._restore_json_dump_file(status_reporter_roles_path)
+        self.upsert_status_reporters_users(users, roles)
 
-    @staticmethod
-    def dump_status_reporters(postgres, tempdir):
-        status_reporter_users_path = postgres.dump_status_reporter_users(
+    def dump_status_reporters(self, tempdir):
+        status_reporter_users_path = self.dump_status_reporter_users(
             tempdir)
-        status_reporter_roles_path = postgres.dump_status_reporter_roles(
+        status_reporter_roles_path = self.dump_status_reporter_roles(
             tempdir)
         return status_reporter_roles_path, status_reporter_users_path
 
