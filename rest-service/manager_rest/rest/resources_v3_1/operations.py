@@ -53,6 +53,11 @@ class Operations(SecuredResource):
 class OperationsId(SecuredResource):
     @authorize('operations')
     @marshal_with(models.Operation)
+    def get(self, operation_id, **kwargs):
+        return get_storage_manager().get(models.Operation, operation_id)
+
+    @authorize('operations')
+    @marshal_with(models.Operation)
     def put(self, operation_id, **kwargs):
         params = get_json_and_verify_params({
             'name': {'type': unicode, 'required': True},
