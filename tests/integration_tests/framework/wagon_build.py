@@ -118,7 +118,7 @@ class WagonBuilderMixin(DockerInterface):
         if not self.check_if_has_image_locally():
             self.get_docker_image()
 
-    def build_wagon(self):
+    def build_wagon(self, logger):
         self.prepare_docker_image()
         container = self.run_container(
             self.docker_image_name_with_repo,
@@ -126,6 +126,8 @@ class WagonBuilderMixin(DockerInterface):
             detach=True)
         response = container.wait(timeout=self.wagon_build_time_limit)
         if response['StatusCode'] != 0:
+            for i in container.logs(stream=True):
+                logger.info('{0} {1}'.format(container.id, i))
             raise WagonBuildError(response)
         container.stop()
         container.remove()
