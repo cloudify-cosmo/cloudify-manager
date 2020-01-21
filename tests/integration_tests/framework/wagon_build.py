@@ -16,6 +16,7 @@
 import os
 
 from docker.errors import APIError as DockerAPIError
+from docker.types import Mount
 
 from integration_tests.framework.docker_interface import DockerInterface
 from integration_tests.resources.dockerfiles import centos as dockerfile
@@ -128,17 +129,15 @@ class WagonBuilderMixin(DockerInterface):
             os.listdir(build_directory)))
         self.prepare_docker_image()
         if build_directory:
-            volume_mapping = {
-                build_directory: self.docker_volume_mapping[
-                    self.plugin_root_directory]
-            }
+            mounts = [Mount(self.docker_target_folder, build_directory)]
         else:
-            volume_mapping = self.docker_volume_mapping
+            mounts = [Mount(self.docker_target_folder,
+                            self.plugin_root_directory)]
         logger.info('Changing directory...')
         os.chdir(build_directory)
         container = self.run_container(
             self.docker_image_name_with_repo,
-            volumes=volume_mapping,
+            mounts=mounts,
             detach=True)
         response = container.wait(timeout=self.wagon_build_time_limit)
         os.chdir(present_dir)
