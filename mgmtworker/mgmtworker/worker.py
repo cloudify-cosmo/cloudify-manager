@@ -46,6 +46,16 @@ DEFAULT_MAX_WORKERS = 10
 logger = logging.getLogger('mgmtworker')
 
 
+class MgmtworkerOperationConsumer(CloudifyOperationConsumer):
+    """CloudifyOperationConsumer but with late_ack enabled.
+
+    late_ack means that operations are acked after they're finished, so
+    if one mgmtworker dies while handling an operation, the operation
+    will be re-sent to another mgmtworker.
+    """
+    late_ack = True
+
+
 class CloudifyWorkflowConsumer(CloudifyOperationConsumer):
     routing_key = 'workflow'
     handler = dispatch.WorkflowHandler
@@ -187,8 +197,8 @@ def make_amqp_worker(args):
     operation_registry = ProcessRegistry()
     workflow_registry = ProcessRegistry()
     handlers = [
-        CloudifyOperationConsumer(args.queue, args.max_workers,
-                                  registry=operation_registry),
+        MgmtworkerOperationConsumer(args.queue, args.max_workers,
+                                    registry=operation_registry),
         CloudifyWorkflowConsumer(args.queue, args.max_workers,
                                  registry=workflow_registry),
         MgmtworkerServiceTaskConsumer(args.name, args.queue, args.max_workers,
