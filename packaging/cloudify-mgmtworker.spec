@@ -22,7 +22,7 @@ Cloudify's Management worker
 
 %build
 virtualenv /opt/mgmtworker/env
-%{PIP_INSTALL} --upgrade pip setuptools
+%{PIP_INSTALL} --upgrade pip"<20.0" setuptools
 %{PIP_INSTALL} -r "${RPM_SOURCE_DIR}/packaging/mgmtworker/requirements.txt"
 %{PIP_INSTALL} --upgrade "${RPM_SOURCE_DIR}/mgmtworker"
 %{PIP_INSTALL} --upgrade "${RPM_SOURCE_DIR}/workflows"
