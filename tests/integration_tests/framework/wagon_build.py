@@ -129,15 +129,22 @@ class WagonBuilderMixin(DockerInterface):
             os.listdir(build_directory)))
         self.prepare_docker_image()
         if build_directory:
-            mounts = [Mount(self.docker_target_folder, build_directory)]
+            # mounts = [Mount(self.docker_target_folder, build_directory)]
+            volumes = {
+                build_directory: {
+                    'bind': self.docker_target_folder,
+                    'mode': 'rw'
+                }
+            }
         else:
-            mounts = [Mount(self.docker_target_folder,
-                            self.plugin_root_directory)]
+            # mounts = [Mount(self.docker_target_folder,
+            #                 self.plugin_root_directory)]
+            volumes = self.docker_volume_mapping
         logger.info('Changing directory...')
         os.chdir(build_directory)
         container = self.run_container(
             self.docker_image_name_with_repo,
-            mounts=mounts,
+            volumes=volumes,
             detach=True)
         response = container.wait(timeout=self.wagon_build_time_limit)
         os.chdir(present_dir)
