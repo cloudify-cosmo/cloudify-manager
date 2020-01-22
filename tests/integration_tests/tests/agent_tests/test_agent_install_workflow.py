@@ -56,8 +56,10 @@ class TestWorkflow(AgentTestWithPlugins):
                                        uninstall_events):
         deployment_id = 'd{0}'.format(uuid.uuid4())
         dsl_path = resource(blueprint)
-        _, execution_id = self.deploy_application(dsl_path,
-                                                  deployment_id=deployment_id)
+        _, execution_id = self.deploy_application(
+            dsl_path,
+            deployment_id=deployment_id,
+            timeout_seconds=120)
 
         events = self.client.events.list(execution_id=execution_id,
                                          sort='timestamp')
@@ -85,7 +87,8 @@ class TestWorkflow(AgentTestWithPlugins):
         dsl_path = resource('dsl/agent_tests/operation_executor_override.yaml')
         _, execution_id = self.deploy_application(
             dsl_path,
-            deployment_id=self.setup_deployment_id
+            deployment_id=self.setup_deployment_id,
+            timeout_seconds=120
         )
 
         deployment_nodes = self.client.node_instances.list(
