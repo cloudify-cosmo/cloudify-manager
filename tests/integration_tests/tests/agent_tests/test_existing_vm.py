@@ -103,7 +103,8 @@ class HostPluginTest(BaseExistingVMTest):
                 deployment_id=self.setup_deployment_id),
             'agent_user': 'root'
         }
-        deployment, _ = self.deploy_application(dsl_path, inputs=inputs)
+        deployment, _ = self.deploy_application(dsl_path, inputs=inputs,
+                                                timeout_seconds=90)
         self.undeploy_application(deployment.id)
 
     def _get_plugin_wagon(self, name):
