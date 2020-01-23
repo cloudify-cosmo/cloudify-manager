@@ -232,7 +232,7 @@ class TestPluginUpdate(AgentTestWithPlugins):
             self.base_blueprint_id)
         execution_id = plugins_update.execution_id
         execution = self.client.executions.get(execution_id)
-        self.wait_for_execution_to_end(execution)
+        self.wait_for_execution_to_end(execution, timeout_seconds=360)
         return self.client.plugins_update.get(plugins_update.id)
 
     def _prepare_files(self):
