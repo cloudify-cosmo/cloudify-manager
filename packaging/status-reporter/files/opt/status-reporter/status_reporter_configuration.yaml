@@ -4,4 +4,4 @@ managers_ips:
 reporting_freq: 5
 node_id:
 log_level: INFO
-request_timeout: 1
+request_timeout: 2
