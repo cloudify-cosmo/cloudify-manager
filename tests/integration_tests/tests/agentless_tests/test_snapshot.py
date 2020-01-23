@@ -27,9 +27,9 @@ from integration_tests import AgentlessTestCase
 from integration_tests.framework import postgresql
 
 from cloudify.snapshots import STATES
-from cloudify.models_states import ExecutionState, AgentState
+from cloudify.models_states import AgentState
 
-from manager_rest.constants import DEFAULT_TENANT_NAME, DEFAULT_TENANT_ROLE
+from manager_rest.constants import DEFAULT_TENANT_NAME
 
 from cloudify_rest_client.executions import Execution
 from cloudify_rest_client.exceptions import CloudifyClientError
@@ -45,56 +45,6 @@ class TestSnapshot(AgentlessTestCase):
         super(TestSnapshot, self).setUp()
         self._save_security_config()
         self.addCleanup(self._restore_security_config)
-
-    def test_v_4_snapshot_restore_validation(self):
-        snapshot = self._get_snapshot('snap_4.0.0.zip')
-        self.client.snapshots.upload(snapshot, self.SNAPSHOT_ID)
-        username = 'username'
-        password = 'password'
-        self.client.users.create(username, password, role='sys_admin')
-        self.client.tenants.add_user(username,
-                                     DEFAULT_TENANT_NAME,
-                                     DEFAULT_TENANT_ROLE)
-        admin_client = utils.create_rest_client(username=username,
-                                                password=password)
-        self._try_restore_snapshot(
-            snapshot_id=self.SNAPSHOT_ID,
-            error_msg='Only the bootstrap admin is allowed '
-                      'to perform this action',
-            client=admin_client
-        )
-
-    def test_v_3_x_snapshot_restore_validation(self):
-        snapshot = self._get_snapshot('snap_3.4.0.zip')
-        self.client.snapshots.upload(snapshot, self.SNAPSHOT_ID)
-        self._try_restore_snapshot(
-            snapshot_id=self.SNAPSHOT_ID,
-            error_msg='Restoring snapshot from version '
-                      '3.4.0 is not supported',
-        )
-
-    def test_v_4_2_restore_validation_networks(self):
-        snapshot = self._get_snapshot('snap_4.2.0_networks_validation.zip')
-        self.client.snapshots.upload(snapshot, self.SNAPSHOT_ID)
-        self._try_restore_snapshot(
-            snapshot_id=self.SNAPSHOT_ID,
-            error_msg="Snapshot networks: `new_network` are used by agents, "
-                      "but are missing"
-        )
-
-    def _try_restore_snapshot(self,
-                              snapshot_id,
-                              error_msg,
-                              tenant_name=None,
-                              client=None):
-        client = client or self.client
-        execution = client.snapshots.restore(snapshot_id)
-        try:
-            self.wait_for_execution_to_end(execution)
-        except RuntimeError, e:
-            self.assertIn(error_msg, str(e))
-        execution = client.executions.get(execution.id)
-        self.assertEqual(execution.status, ExecutionState.FAILED)
 
     def test_4_4_snapshot_restore_with_bad_plugin_wgn_file(self):
         snapshot_path = \
@@ -144,65 +94,6 @@ class TestSnapshot(AgentlessTestCase):
             desired_execution_status=Execution.FAILED,
             error_execution_status=Execution.CANCELLED)
 
-    def test_4_2_snapshot_with_deployment(self):
-        snapshot_path = self._get_snapshot('snap_4.2.0.zip')
-        self._upload_and_restore_snapshot(snapshot_path)
-
-        # Now make sure all the resources really exist in the DB
-        self._assert_snapshot_restored(
-            blueprint_id='bp',
-            deployment_id='dep',
-            node_ids=['vm', 'http_web_server'],
-            node_instance_ids=[
-                'vm_monryi',
-                'http_web_server_qxx9t0'
-            ],
-            num_of_workflows=7,
-            num_of_inputs=4,
-            num_of_outputs=1,
-            num_of_executions=2,
-            num_of_events=4,
-        )
-
-    def test_4_0_1_snapshot_with_deployment(self):
-        """Restore a 4_0_1 snapshot with a deployment."""
-        snapshot_path = self._get_snapshot('secretshot_4.0.1.zip')
-        self._upload_and_restore_snapshot(snapshot_path)
-
-        # Now make sure all the resources really exist in the DB
-        self._assert_snapshot_restored(
-            blueprint_id='t',
-            deployment_id='t',
-            node_ids=['vm1', 'vm2', 'some_sort_of_thing'],
-            node_instance_ids=[
-                'vm1_vj52lv',
-                'vm2_pxra28',
-                'some_sort_of_thing_papsns',
-            ],
-            num_of_workflows=7,
-            num_of_inputs=3,
-            num_of_outputs=0,
-            num_of_executions=2,
-            num_of_events=4,
-        )
-
-    def test_4_0_0_snapshot_with_deployment(self):
-        snapshot_path = self._get_snapshot('snap_4.0.0.zip')
-        self._upload_and_restore_snapshot(snapshot_path)
-
-        # Now make sure all the resources really exist in the DB
-        self._assert_snapshot_restored(
-            blueprint_id='bp',
-            deployment_id='dep',
-            node_ids=['http_web_server', 'vm'],
-            node_instance_ids=['http_web_server_qsmovz', 'vm_n19lu7'],
-            num_of_workflows=7,
-            num_of_inputs=4,
-            num_of_outputs=1,
-            num_of_executions=1,
-            num_of_events=12,
-        )
-
     def _assert_4_4_0_snapshot_restored_bad_plugin(
             self,
             tenant_name=DEFAULT_TENANT_NAME,
@@ -211,39 +102,6 @@ class TestSnapshot(AgentlessTestCase):
             tenant_name=tenant_name,
             number_of_deployments=number_of_deployments
         )
-
-    def test_v_4_1_1_restore_snapshot_with_private_resource(self):
-        """
-        Validate the conversion from the old column private_resource to
-        the new column visibility
-        """
-        snapshot_path = self._get_snapshot('snap_4.1.1.zip')
-        self._upload_and_restore_snapshot(snapshot_path)
-        blueprints = self.client.blueprints.list(
-            _include=['id', 'visibility'])
-        assert (blueprints[0]['id'] == 'blueprint_1' and
-                blueprints[0]['visibility'] == 'tenant')
-        assert (blueprints[1]['id'] == 'blueprint_2' and
-                blueprints[1]['visibility'] == 'private')
-        assert (blueprints[2]['id'] == 'blueprint_3' and
-                blueprints[2]['visibility'] == 'private')
-
-    def test_v_4_2_restore_snapshot_with_resource_availability(self):
-        """
-        Validate the conversion from the old column resource_availability to
-        the new column visibility
-        """
-        snapshot_name = 'snap_4.2.0_visibility_validation.zip'
-        snapshot_path = self._get_snapshot(snapshot_name)
-        self._upload_and_restore_snapshot(snapshot_path)
-        blueprints = self.client.blueprints.list(
-            _include=['id', 'visibility'])
-        assert (blueprints[0]['id'] == 'blueprint_1' and
-                blueprints[0]['visibility'] == 'private')
-        assert (blueprints[1]['id'] == 'blueprint_2' and
-                blueprints[1]['visibility'] == 'tenant')
-        assert (blueprints[2]['id'] == 'blueprint_3' and
-                blueprints[2]['visibility'] == 'global')
 
     def test_v_4_3_restore_snapshot_with_secrets(self):
         """
