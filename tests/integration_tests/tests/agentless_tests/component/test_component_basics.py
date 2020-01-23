@@ -336,4 +336,5 @@ class ComponentTypeFailuresTest(AgentlessTestCase):
         self.assertRaises(RuntimeError,
                           self.deploy_application,
                           dsl_path,
-                          deployment_id=deployment_id)
+                          deployment_id=deployment_id,
+                          timeout_seconds=120)
