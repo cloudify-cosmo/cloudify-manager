@@ -384,7 +384,7 @@ def _get_db_cluster_status(db_service, expected_nodes_number):
     if not sync_replica:
         return ServiceStatus.FAIL
 
-    if (len(master_replications_state) != expected_nodes_number - 1 or
+    if (len(master_replications_state) < expected_nodes_number - 1 or
             not all_replicas_streaming):
         return ServiceStatus.DEGRADED
 
