@@ -18,7 +18,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='cloudify-status-reporter',
-    version='5.0.5',
+    version='5.1.0.dev1',
     author='Cloudify',
     author_email='cosmo-admin@cloudify.co',
     packages=find_packages(),
@@ -37,7 +37,7 @@ setup(
     install_requires=[
         'requests>=2.7.0,<3.0.0',
         'PyYAML==3.10',
-        'cloudify-common==5.0.5',
+        'cloudify-common==5.1.0.dev1',
         'dbus-python==1.2.4'
     ]
 )
