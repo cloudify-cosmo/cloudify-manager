@@ -17,6 +17,7 @@ import copy
 import json
 from os import path, makedirs
 from datetime import datetime, timedelta
+import subprocess
 
 from flask import current_app
 
@@ -540,6 +541,7 @@ def _create_statues_folder_if_needed():
 
 
 def _save_report(report_path, report_dict):
+    subprocess.check_call(['rm', '-f', report_path])
     with open(report_path, 'w') as report_file:
         json.dump(report_dict, report_file)
 
