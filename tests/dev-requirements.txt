@@ -1,4 +1,4 @@
-https://github.com/cloudify-cosmo/cloudify-common/archive/5.0.5.zip
+https://github.com/cloudify-cosmo/cloudify-common/archive/5.0.5.1.zip
 https://github.com/cloudify-cosmo/cloudify-cli/archive/5.0.5.zip
 https://github.com/cloudify-cosmo/cloudify-diamond-plugin/archive/master.zip
 https://github.com/cloudify-cosmo/cloudify-agent/archive/5.0.5.zip
