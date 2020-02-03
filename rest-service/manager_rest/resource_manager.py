@@ -560,6 +560,24 @@ class ResourceManager(object):
         execution_token = generate_execution_token(execution_id)
         if execution.status in {ExecutionState.CANCELLED,
                                 ExecutionState.FAILED}:
+            if not force:
+                tasks_graphs = self.sm.list(
+                    models.TasksGraph,
+                    filters={'execution': execution},
+                    get_all_results=True)
+                for graph in tasks_graphs:
+                    killed_operations = self.sm.list(
+                        models.Operation,
+                        filters={
+                            'tasks_graph': graph,
+                            'state': cloudify_tasks.TASK_KILLED
+                        },
+                        get_all_results=True)
+                    if killed_operations:
+                        raise manager_exceptions.ConflictError(
+                            'Execution has killed operations and can only '
+                            'be force-resumed via --reset-operations'
+                        )
             self._reset_operations(execution, execution_token)
             if force:
                 # with force, we resend all tasks which haven't finished yet
@@ -569,6 +587,7 @@ class ResourceManager(object):
                                            cloudify_tasks.TASK_STARTED,
                                            cloudify_tasks.TASK_SENT,
                                            cloudify_tasks.TASK_SENDING,
+                                           cloudify_tasks.TASK_KILLED,
                                        })
         elif force:
             raise manager_exceptions.ConflictError(
@@ -1126,6 +1145,25 @@ class ResourceManager(object):
         execution.error = ''
         if kill:
             workflow_executor.cancel_execution(execution_id)
+            tasks_graphs = self.sm.list(
+                models.TasksGraph,
+                filters={'execution': execution},
+                get_all_results=True)
+            for graph in tasks_graphs:
+                running_operations = self.sm.list(
+                    models.Operation,
+                    filters={
+                        'tasks_graph': graph,
+                        'state': [
+                            cloudify_tasks.TASK_SENT,
+                            cloudify_tasks.TASK_STARTED
+                        ],
+                        'type':
+                        cloudify_tasks.RemoteWorkflowTask.__class__.__name__
+                    })
+                for op in running_operations:
+                    op.state = cloudify_tasks.TASK_KILLED
+                    self.sm.update(op, modified_attrs=('state', ))
 
         # Dealing with the inner Component-s deployments
         components_executions = self._find_all_components_executions(
