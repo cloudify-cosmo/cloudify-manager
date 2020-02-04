@@ -27,11 +27,12 @@ function set_manager_ip() {
   echo "Creating internal SSL certificates.."
   cfy_manager create-internal-certs --manager-hostname $(hostname -s)
 
-  echo "Updating status reporter initial IP..."
-  cfy_manager status-reporter configure --managers-ip ${ip} --no-restart
+  if [[ -d "/opt/status-reporter" ]]; then
+    echo "Updating status reporter initial IP..."
+    cfy_manager status-reporter configure --managers-ip ${ip} --no-restart
+  fi
 
   echo "Done!"
-
 }
 
 touched_file_path="/opt/cloudify/manager-ip-setter/touched"
