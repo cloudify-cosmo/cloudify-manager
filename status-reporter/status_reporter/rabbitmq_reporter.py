@@ -22,7 +22,7 @@ from cloudify.cluster_status import (CloudifyNodeType, ServiceStatus,
 
 from .status_reporter import Reporter, logger
 from .constants import STATUS_REPORTER_CONFIG_KEY, EXTRA_INFO
-from .utils import get_systemd_services, determine_node_status
+from .utils import get_supervisord_services, determine_node_status
 
 NODE_STATUS = 'node_status'
 CLUSTER_STATUS = 'cluster_status'
@@ -38,7 +38,7 @@ class RabbitMQReporter(Reporter):
         super(RabbitMQReporter, self).__init__(CloudifyNodeType.BROKER)
 
     def _collect_status(self):
-        services, statuses = get_systemd_services(RABBITMQ_SERVICE)
+        services, statuses = get_supervisord_services(RABBITMQ_SERVICE)
         extra_config = self._config.get(STATUS_REPORTER_CONFIG_KEY)
         if self._is_rabbitmq_service_not_running(statuses) or not extra_config:
             return self._rabbitmq_status_failed(services)
