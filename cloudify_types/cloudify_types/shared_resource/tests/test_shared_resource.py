@@ -24,38 +24,17 @@ from ..operations import connect_deployment, disconnect_deployment
 
 class TestSharedResource(TestSharedResourceBase):
 
-    def test_runtime_props_propagation_after_successful_connection(self):
-        with mock.patch('cloudify.manager.get_rest_client') as mock_client:
-            self.cfy_mock_client.deployments.capabilities.get = \
-                mock.MagicMock(return_value={
-                    CAPABILITIES:
-                        {'test': 1}
-                })
-            mock_client.return_value = self.cfy_mock_client
-            poll_with_timeout_test = (
-                'cloudify_types.shared_resource.'
-                'shared_resource.get_deployment_by_id')
-            with mock.patch(poll_with_timeout_test) as poll:
-                poll.return_value = True
-                connect_deployment(operation_inputs={
-                    'resource_config':
-                        {
-                            'deployment':
-                                {'id': 'test'}
-                        }
-                })
-                self.assertIn('deployment',
-                              self._ctx.instance.runtime_properties)
-                self.assertEqual(self._ctx.instance.runtime_properties[
-                                     'deployment']['id'], 'test')
-                self.assertEqual(
-                    {'test': 1},
-                    (self._ctx.instance.runtime_properties[CAPABILITIES]))
-
     @mock.patch('cloudify_types.shared_resource.shared_resource'
                 '.get_deployment_by_id',
                 return_value=True)
-    def test_runtime_props_propagation_after_successful_connection(self, _):
+    def test_runtime_props_set_after_successful_connection(self, mock_client):
+        self.cfy_mock_client.deployments.capabilities.get = \
+            mock.MagicMock(return_value={
+                CAPABILITIES:
+                    {'test': 1}
+            })
+        mock_client.return_value = self.cfy_mock_client
+
         connect_deployment()
         self.assertIn('deployment',
                       self._ctx.instance.runtime_properties)
@@ -70,6 +49,9 @@ class TestSharedResource(TestSharedResourceBase):
                 source_deployment=self._ctx.deployment.id,
                 target_deployment='test_deployment'
             )
+        self.assertEqual(
+            {'test': 1},
+            (self._ctx.instance.runtime_properties[CAPABILITIES]))
 
     @mock.patch('cloudify_types.shared_resource.shared_resource'
                 '.get_deployment_by_id',

@@ -75,16 +75,14 @@ class TestExecuteWorkflow(TestSharedResourceBase):
         self.total_patch.stop()
         super(TestExecuteWorkflow, self).tearDown()
 
-
     @mock.patch('cloudify_types.component.polling.poll_with_timeout',
-            return_value=True)
-    def test_basic_run(self):
-        with mock.patch('cloudify.manager.get_rest_client') as mock_client:
-            self.cfy_mock_client.deployments.capabilities.get = \
-                mock.MagicMock(return_value={'capabilities': {}})
-            mock_client.return_value = self.cfy_mock_client
-            execute_workflow('test',
-                             parameters={})
+                return_value=True)
+    def test_basic_run(self, mock_client):
+        self.cfy_mock_client.deployments.capabilities.get = \
+            mock.MagicMock(return_value={'capabilities': {}})
+        mock_client.return_value = self.cfy_mock_client
+        execute_workflow('test',
+                         parameters={})
 
     def test_failed_run_on_non_shared_resource_node(self):
         self._ctx = self.get_mock_ctx('test', 'not_shared_resource')
