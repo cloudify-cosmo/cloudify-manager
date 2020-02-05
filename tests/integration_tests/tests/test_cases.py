@@ -741,7 +741,7 @@ class AgentTestWithPlugins(AgentTestCase):
         data = json.loads(data)
         return data.get(deployment_id, {})
 
-    def _create_test_wagon(self, plugin_path):
+    def _get_or_create_wagon(self, plugin_path):
         target_dir = tempfile.mkdtemp(dir=self.workdir)
         return [wagon.create(
             plugin_path,
@@ -758,7 +758,7 @@ class AgentTestWithPlugins(AgentTestCase):
                 'plugins/{0}'.format(plugin_name)
             )
 
-        wagon_paths = self._create_test_wagon(plugin_path)
+        wagon_paths = self._get_or_create_wagon(plugin_path)
         for wagon_path in wagon_paths:
             yaml_path = os.path.join(plugin_path, 'plugin.yaml')
             with utils.zip_files([wagon_path, yaml_path]) as zip_path:
@@ -788,12 +788,11 @@ class PluginsTest(AgentTestWithPlugins, WagonBuilderMixin):
         self.examples.cleanup()
         super(PluginsTest, self).tearDown()
 
-    # @staticmethod
-    def get_wagon_path(self, plugin_path):
+    @staticmethod
+    def get_wagon_path(plugin_path):
         wagons = []
         for filename in os.listdir(plugin_path):
-            if filename.endswith('wgn') and 'redhat' not in filename:
-                wagons.append(os.path.join(plugin_path, filename))
+            wagons.append(os.path.join(plugin_path, filename))
         if wagons:
             return wagons
         raise WagonBuildError(
@@ -804,7 +803,7 @@ class PluginsTest(AgentTestWithPlugins, WagonBuilderMixin):
         """ Path to the plugin root directory."""
         raise NotImplementedError('Implemented by plugin test class.')
 
-    def _create_test_wagon(self, plugin_path):
+    def _get_or_create_wagon(self, plugin_path):
         """Overrides the inherited class _create_test_wagon."""
         try:
             return self.get_wagon_path(plugin_path)

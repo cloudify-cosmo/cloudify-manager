@@ -126,7 +126,7 @@ class WagonBuilderMixin(DockerInterface):
             detach=True)
         response = container.wait(timeout=self.wagon_build_time_limit)
         for msg in container.logs(stream=True):
-            logger.info(msg)
+            logger.info('Wagon build container log: {0}'.format(msg))
         if response['StatusCode'] != 0:
             raise WagonBuildError(response)
         container.stop()
