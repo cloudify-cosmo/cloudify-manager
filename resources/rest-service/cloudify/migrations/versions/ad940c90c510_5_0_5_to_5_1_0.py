@@ -1,4 +1,6 @@
-"""empty message
+"""5.0.5 to 5.1.0
+- Adding inter deployment dependencies table
+
 
 Revision ID: ad940c90c510
 Revises: 62a8d746d13b

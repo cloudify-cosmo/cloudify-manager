@@ -11,11 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import uuid
 from collections import namedtuple
 
 from retrying import retry
-from manager_rest import utils
 
 from dsl_parser import functions
 from dsl_parser import exceptions as parser_exceptions
@@ -23,10 +23,13 @@ from dsl_parser.constants import CAPABILITIES, EVAL_FUNCS_PATH_PREFIX_KEY
 
 from cloudify import cryptography_utils
 
-from manager_rest.storage import get_storage_manager
-from manager_rest.storage import get_node as get_storage_node
-from manager_rest.storage.models import InterDeploymentDependencies
-from manager_rest.storage.models import NodeInstance, Deployment, Secret
+from manager_rest import utils
+from manager_rest.storage import (get_storage_manager,
+                                  get_node as get_storage_node)
+from manager_rest.storage.models import (InterDeploymentDependencies,
+                                         NodeInstance,
+                                         Deployment,
+                                         Secret)
 from manager_rest.manager_exceptions import (
     SQLStorageException,
     FunctionsEvaluationError,
