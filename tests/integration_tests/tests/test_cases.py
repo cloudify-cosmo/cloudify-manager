@@ -340,7 +340,9 @@ class BaseTestCase(unittest.TestCase):
                runtime_only_evaluation=False,
                blueprint_visibility=None,
                deployment_visibility=None):
-        assert dsl_path or blueprint_id
+        if not (dsl_path or blueprint_id):
+            raise RuntimeWarning('Please supply blueprint path '
+                                 'or blueprint id for deploying')
 
         client = client or test_utils.create_rest_client()
         resource_id = uuid.uuid4()
