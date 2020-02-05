@@ -14,11 +14,28 @@
 #  * limitations under the License.
 
 import os
+import httplib
+import socket
+import xmlrpclib
 
 import yaml
 
-from cloudify.systemddbus import get_services
 from cloudify.cluster_status import ServiceStatus, NodeServiceStatus
+
+
+class UnixSocketHTTPConnection(httplib.HTTPConnection):
+    def connect(self):
+        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.sock.connect(self.host)
+
+
+class UnixSocketTransport(xmlrpclib.Transport, object):
+    def __init__(self, path):
+        super(UnixSocketTransport, self).__init__()
+        self._path = path
+
+    def make_connection(self, host):
+        return UnixSocketHTTPConnection(self._path)
 
 
 def read_from_yaml_file(file_path):
@@ -51,26 +68,36 @@ def update_yaml_file(yaml_path, updated_content):
     _write_to_file(updated_file, yaml_path)
 
 
-def get_systemd_services(service_names):
+def get_supervisord_services(service_names):
     """
     :param service_names: {'service_unit_id': 'service_display_name'}
     e.g., {'cloudify-rabbitmq.service': 'RabbitMQ'}
     """
-    systemd_services = get_services(service_names)
+
+    server = xmlrpclib.Server(
+        'http://',
+        transport=UnixSocketTransport("/tmp/supervisor.sock"))
     statuses = []
     services = {}
-    for service in systemd_services:
-        is_service_running = service['instances'] and (
-                service['instances'][0]['state'] == 'running')
-        status = NodeServiceStatus.ACTIVE if is_service_running \
-            else NodeServiceStatus.INACTIVE
-        services[service['display_name']] = {
-            'status': status,
-            'extra_info': {
-                'systemd': service
-            }
+    for name, display_name in service_names.items():
+        try:
+            status_response = server.supervisor.getProcessInfo(name)
+        except xmlrpclib.Fault as e:
+            if e.faultCode == 10:  # bad service name
+                service_status = NodeServiceStatus.INACTIVE
+            else:
+                raise
+        else:
+            if status_response['statename'] == 'RUNNING':
+                service_status = NodeServiceStatus.ACTIVE
+            else:
+                service_status = NodeServiceStatus.INACTIVE
+        statuses.append(service_status)
+        services[display_name] = {
+            'status': service_status,
+            'is_remote': False,
+            'extra_info': {}
         }
-        statuses.append(status)
     return services, statuses
 
 
