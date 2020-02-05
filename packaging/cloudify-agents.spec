@@ -21,14 +21,14 @@ Packager:       Cloudify Platform Ltd.
 BuildRequires:  python >= 2.7
 Requires(pre):  shadow-utils
 
-Source0:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/%{CLOUDIFY_VERSION}/%{CLOUDIFY_PACKAGE_RELEASE}-release/Ubuntu-trusty-agent_%{CLOUDIFY_VERSION}-%{CLOUDIFY_PACKAGE_RELEASE}.tar.gz
-Source1:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/%{CLOUDIFY_VERSION}/%{CLOUDIFY_PACKAGE_RELEASE}-release/Ubuntu-xenial-agent_%{CLOUDIFY_VERSION}-%{CLOUDIFY_PACKAGE_RELEASE}.tar.gz
-Source2:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/%{CLOUDIFY_VERSION}/%{CLOUDIFY_PACKAGE_RELEASE}-release/Ubuntu-bionic-agent_%{CLOUDIFY_VERSION}-%{CLOUDIFY_PACKAGE_RELEASE}.tar.gz
-Source3:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/%{CLOUDIFY_VERSION}/%{CLOUDIFY_PACKAGE_RELEASE}-release/centos-Core-agent_%{CLOUDIFY_VERSION}-%{CLOUDIFY_PACKAGE_RELEASE}.tar.gz
-Source4:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/%{CLOUDIFY_VERSION}/%{CLOUDIFY_PACKAGE_RELEASE}-release/centos-Final-agent_%{CLOUDIFY_VERSION}-%{CLOUDIFY_PACKAGE_RELEASE}.tar.gz
-Source5:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/%{CLOUDIFY_VERSION}/%{CLOUDIFY_PACKAGE_RELEASE}-release/redhat-Maipo-agent_%{CLOUDIFY_VERSION}-%{CLOUDIFY_PACKAGE_RELEASE}.tar.gz
-Source6:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/%{CLOUDIFY_VERSION}/%{CLOUDIFY_PACKAGE_RELEASE}-release/redhat-Santiago-agent_%{CLOUDIFY_VERSION}-%{CLOUDIFY_PACKAGE_RELEASE}.tar.gz
-Source7:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/%{CLOUDIFY_VERSION}/%{CLOUDIFY_PACKAGE_RELEASE}-release/cloudify-windows-agent_%{CLOUDIFY_VERSION}-%{CLOUDIFY_PACKAGE_RELEASE}.exe
+Source0:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/5.0.5/ga-release/Ubuntu-trusty-agent_5.0.5-ga.tar.gz
+Source1:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/5.0.5/ga-release/Ubuntu-xenial-agent_5.0.5-ga.tar.gz
+Source2:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/5.0.5/ga-release/Ubuntu-bionic-agent_5.0.5-ga.tar.gz
+Source3:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/5.0.5/ga-release/centos-Core-agent_5.0.5-ga.tar.gz
+Source4:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/5.0.5/ga-release/centos-Final-agent_5.0.5-ga.tar.gz
+Source5:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/5.0.5/ga-release/redhat-Maipo-agent_5.0.5-ga.tar.gz
+Source6:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/5.0.5/ga-release/redhat-Santiago-agent_5.0.5-ga.tar.gz
+Source7:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/5.0.5/ga-release/cloudify-windows-agent_5.0.5-ga.exe
 
 %description
 Cloudify Agent packages
