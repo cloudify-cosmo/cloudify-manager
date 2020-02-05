@@ -178,7 +178,7 @@ class SQLStorageManager(object):
     @staticmethod
     def _add_like_filter(query, filters):
         for column, value in filters.items():
-            if isinstance(value, string_types):
+            if isinstance(value, text_type):
                 query = query.filter(column.ilike(value))
             elif isinstance(value, (list, tuple)):
                 criteria = (column.ilike(expression)
@@ -194,7 +194,7 @@ class SQLStorageManager(object):
     @staticmethod
     def _add_notlike_filter(query, filters):
         for column, value in filters.items():
-            if isinstance(value, string_types):
+            if isinstance(value, text_type):
                 query = query.filter(column.notilike(value))
             elif isinstance(value, (list, tuple)):
                 criteria = (column.notilike(expression)
