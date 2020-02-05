@@ -137,14 +137,13 @@ class Status(SecuredResourceReadonlyMode):
             'http://',
             transport=UnixSocketTransport("/tmp/supervisor.sock"))
         statuses = []
+        services_status = {
+            s['name']: s for s in server.supervisor.getAllProcessInfo()}
         for display_name, name in SUPERVISORD_SERVICES.items():
             try:
-                status_response = server.supervisor.getProcessInfo(name)
-            except xmlrpclib.Fault as e:
-                if e.faultCode == 10:  # bad service name
-                    service_status = 'failed'
-                else:
-                    raise
+                status_response = services_status[name]
+            except KeyError:  # service doesnt exist in supervisord
+                service_status = NodeServiceStatus.INACTIVE
             else:
                 if status_response['statename'] == 'RUNNING':
                     service_status = NodeServiceStatus.ACTIVE
