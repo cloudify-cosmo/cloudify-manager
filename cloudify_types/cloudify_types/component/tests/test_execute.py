@@ -60,73 +60,63 @@ class TestExecute(ComponentTestBase):
         super(TestExecute, cls).tearDownClass()
 
     def test_execute_start_rest_client_error(self):
-        with mock.patch('cloudify.manager.get_rest_client') as mock_client:
-            self.cfy_mock_client.executions.start = REST_CLIENT_EXCEPTION
-            mock_client.return_value = self.cfy_mock_client
-            with self.assertRaisesRegexp(
-                    NonRecoverableError, 'action "start" failed'):
-                execute_start(deployment_id='dep_name', workflow_id='install')
-
-    def test_execute_start_timeout(self):
-        with mock.patch('cloudify.manager.get_rest_client') as mock_client:
-            mock_client.return_value = self.cfy_mock_client
-            with self.assertRaisesRegexp(
-                    NonRecoverableError, 'Execution timed out'):
-                execute_start(
-                    deployment_id='dep_name',
-                    workflow_id='install',
-                    timeout=MOCK_TIMEOUT)
-
-    def test_execute_start_succeeds(self):
-        test_capabilities = {'test': 1}
-        with mock.patch('cloudify.manager.get_rest_client') as mock_client:
-            mock_client.return_value = self.cfy_mock_client
-            self.cfy_mock_client.deployments.capabilities.get =\
-                mock.MagicMock(return_value={
-                    'capabilities': test_capabilities})
-            poll_with_timeout_test = \
-                'cloudify_types.component.polling.poll_with_timeout'
-            with mock.patch(poll_with_timeout_test) as poll:
-                poll.return_value = True
-                output = execute_start(operation='execute_workflow',
-                                       deployment_id='dep_name',
-                                       workflow_id='install',
-                                       timeout=MOCK_TIMEOUT)
-                self.assertTrue(output)
-                self.assertEqual(
-                    test_capabilities,
-                    (self._ctx.instance.runtime_properties[CAPABILITIES]))
-
-    def test_execute_start_succeeds_not_finished(self):
-        with mock.patch('cloudify.manager.get_rest_client') as mock_client:
-            mock_client.return_value = self.cfy_mock_client
-            self.cfy_mock_client.deployments.capabilities.get = \
-                mock.MagicMock(return_value={'capabilities': {}})
-            poll_with_timeout_test = \
-                'cloudify_types.component.component.Component.' \
-                'verify_execution_successful'
-            with mock.patch(poll_with_timeout_test) as poll:
-                poll.return_value = False
-                output = execute_start(operation='execute_workflow',
-                                       deployment_id='dep_name',
-                                       workflow_id='install',
-                                       timeout=MOCK_TIMEOUT)
-                self.assertTrue(output)
-                self.assertEqual(
-                    {},
-                    (self._ctx.instance.runtime_properties[CAPABILITIES]))
-
-    def test_execute_failing_to_fetch_capabilities(self):
-        with mock.patch('cloudify.manager.get_rest_client') as mock_client:
-            mock_client.return_value = self.cfy_mock_client
-            self.cfy_mock_client.deployments.capabilities.get =\
-                mock.MagicMock(side_effect=CloudifyClientError(
-                               'Failing to get capabilities'))
-            poll_with_timeout_test = \
-                'cloudify_types.component.polling.poll_with_timeout'
-            with mock.patch(poll_with_timeout_test) as poll:
-                poll.return_value = True
-                self.assertRaises(NonRecoverableError,
+        self.cfy_mock_client.executions.start = REST_CLIENT_EXCEPTION
+        error = self.assertRaises(NonRecoverableError,
                                   execute_start,
                                   deployment_id='dep_name',
                                   workflow_id='install')
+        self.assertIn('action "start" failed', str(error))
+
+    def test_execute_start_timeout(self):
+        error = self.assertRaises(NonRecoverableError,
+                                  execute_start,
+                                  deployment_id='dep_name',
+                                  workflow_id='install',
+                                  timeout=MOCK_TIMEOUT)
+        self.assertIn('Execution timed out', str(error))
+
+    @mock.patch('cloudify_types.component.'
+                'polling.poll_with_timeout',
+                return_value=True)
+    @mock.patch('cloudify_types.shared_resource.'
+                'execute_shared_resource_workflow.CloudifyClient')
+    def test_execute_start_succeeds(self, mock_client, _):
+        test_capabilities = {'test': 1}
+        self.cfy_mock_client.deployments.capabilities.get =\
+            mock.MagicMock(return_value={
+                'capabilities': test_capabilities})
+        output = execute_start(operation='execute_workflow',
+                               deployment_id='dep_name',
+                               workflow_id='install',
+                               timeout=MOCK_TIMEOUT)
+        self.assertTrue(output)
+        self.assertEqual(
+            test_capabilities,
+            (self._ctx.instance.runtime_properties[CAPABILITIES]))
+
+    @mock.patch('cloudify_types.component.component.Component.'
+                'verify_execution_successful',
+                return_value=False)
+    def test_execute_start_succeeds_not_finished(self, _):
+        self.cfy_mock_client.deployments.capabilities.get = \
+            mock.MagicMock(return_value={'capabilities': {}})
+        output = execute_start(operation='execute_workflow',
+                               deployment_id='dep_name',
+                               workflow_id='install',
+                               timeout=MOCK_TIMEOUT)
+        self.assertTrue(output)
+        self.assertEqual(
+            {},
+            (self._ctx.instance.runtime_properties[CAPABILITIES]))
+
+    @mock.patch('cloudify_types.component.'
+                'polling.poll_with_timeout',
+                return_value=True)
+    def test_execute_failing_to_fetch_capabilities(self, _):
+        self.cfy_mock_client.deployments.capabilities.get =\
+            mock.MagicMock(side_effect=CloudifyClientError(
+                               'Failing to get capabilities'))
+        self.assertRaises(NonRecoverableError,
+                          execute_start,
+                          deployment_id='dep_name',
+                          workflow_id='install')
