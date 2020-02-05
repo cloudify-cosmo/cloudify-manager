@@ -164,9 +164,7 @@ def _docker_exec(container_id, args, quiet=False):
 
 
 def _docker(subcommand, args, quiet=False):
-    return _run('docker -H {0} {1} {2}'.format(_docker_conf()['docker_host'],
-                                               subcommand, args),
-                quiet=quiet)
+    return _run('sudo docker {0} {1}'.format(subcommand, args), quiet=quiet)
 
 
 def _run(command, quiet=False):
