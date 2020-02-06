@@ -17,6 +17,7 @@ from collections import namedtuple
 
 from cloudify.constants import COMPONENT
 from cloudify.exceptions import NonRecoverableError
+from cloudify.deployment_dependencies import dependency_creator_generator
 
 from ..operations import create, delete
 from cloudify_types.component.component import Component, CloudifyClientError
@@ -32,14 +33,9 @@ class TestDeploymentBase(ComponentTestBase):
         self.sleep_mock = mock.patch('time.sleep', mock.MagicMock())
         self.sleep_mock.start()
         self._ctx.instance.runtime_properties['deployment'] = {}
-        self.mock_client_patcher = mock.patch(
-            'cloudify.manager.get_rest_client')
-        mock_client = self.mock_client_patcher.start()
-        mock_client.return_value = self.cfy_mock_client
 
     def tearDown(self):
         self.sleep_mock.stop()
-        self.mock_client_patcher.stop()
         super(TestDeploymentBase, self).tearDown()
 
 
@@ -148,7 +144,7 @@ class TestDeployment(TestDeploymentBase):
         self.assertTrue(output)
         self.cfy_mock_client.inter_deployment_dependencies.create \
             .assert_called_with(
-                dependency_creator='{0}.{1}'.format(
+                dependency_creator=dependency_creator_generator(
                     COMPONENT, self._ctx.instance.id),
                 source_deployment=self._ctx.deployment.id,
                 target_deployment='target_dep'

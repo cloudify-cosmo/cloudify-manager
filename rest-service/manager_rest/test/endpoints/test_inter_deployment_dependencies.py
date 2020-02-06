@@ -15,6 +15,7 @@
 import uuid
 
 from cloudify_rest_client.exceptions import CloudifyClientError
+from cloudify.deployment_dependencies import create_deployment_dependency
 
 from manager_rest import utils
 from manager_rest.storage import models
@@ -60,40 +61,41 @@ class InterDeploymentDependenciesTest(BaseServerTestCase):
 
     def setUp(self):
         super(InterDeploymentDependenciesTest, self).setUp()
-        self.dependency_creator = str(uuid.uuid4())
-        self.source_deployment = str(uuid.uuid4())
-        self.target_deployment = str(uuid.uuid4())
-        self.dependency_tuple = (self.dependency_creator,
-                                 self.source_deployment,
-                                 self.target_deployment)
+        self.dependency_creator = 'dependency_creator'
+        self.source_deployment = 'source_deployment'
+        self.target_deployment = 'target_deployment'
+        self.dependency = create_deployment_dependency(
+            self.dependency_creator,
+            self.source_deployment,
+            self.target_deployment)
         self._put_mock_deployments(self.source_deployment,
                                    self.target_deployment)
 
     def test_adds_dependency_and_retrieves_it(self):
         dependency = self.client.inter_deployment_dependencies.create(
-            *self.dependency_tuple)
+            **self.dependency)
         response = self.client.inter_deployment_dependencies.get(
-            *self.dependency_tuple)
+            **self.dependency)
         self.assertDictEqual(dependency, response)
 
     def test_fails_to_add_duplicate_dependency(self):
         self.client.inter_deployment_dependencies.create(
-            *self.dependency_tuple)
+            **self.dependency)
         error_msg_regex = '.*Instance with ID .* cannot be added on .* or ' \
                           'with global visibility.*'
         with self.assertRaisesRegexp(CloudifyClientError, error_msg_regex):
             self.client.inter_deployment_dependencies.create(
-                *self.dependency_tuple)
+                **self.dependency)
 
     def test_deletes_existing_dependency(self):
         self.client.inter_deployment_dependencies.create(
-            *self.dependency_tuple)
+            **self.dependency)
         self.assertEqual(
             1,
             len(self.client.inter_deployment_dependencies.list())
         )
         self.client.inter_deployment_dependencies.delete(
-            *self.dependency_tuple)
+            **self.dependency)
         self.assertEqual(
             0,
             len(self.client.inter_deployment_dependencies.list())
@@ -104,20 +106,20 @@ class InterDeploymentDependenciesTest(BaseServerTestCase):
                           'with ID `None` was not found \\(filters:.*'
         with self.assertRaisesRegexp(CloudifyClientError, error_msg_regex):
             self.client.inter_deployment_dependencies.delete(
-                *self.dependency_tuple)
+                **self.dependency)
 
     def test_doesnt_fail_deleting_non_existing_dependency_with_flag(self):
         self.client.inter_deployment_dependencies.delete(
-            *self.dependency_tuple)
+            **self.dependency)
 
     def test_fails_to_get_non_existing_dependency(self):
         error_msg_regex = '.*404: Requested Inter-deployment Dependency ' \
                           'with params `dependency_creator: {0}, ' \
                           'source_deployment: {1}, target_deployment: {2}` ' \
-                          'was not found.*'.format(*self.dependency_tuple)
+                          'was not found.*'.format(*self.dependency)
         with self.assertRaisesRegexp(CloudifyClientError, error_msg_regex):
             self.client.inter_deployment_dependencies.get(
-                *self.dependency_tuple)
+                **self.dependency)
 
     def test_list_dependencies_returns_empty_list(self):
         self.assertEqual(
@@ -127,7 +129,7 @@ class InterDeploymentDependenciesTest(BaseServerTestCase):
 
     def test_list_dependencies_returns_correct_list(self):
         dependency = self.client.inter_deployment_dependencies.create(
-            *self.dependency_tuple)
+            **self.dependency)
         dependency_list = list(
             self.client.inter_deployment_dependencies.list())
         self.assertListEqual([dependency], dependency_list)
