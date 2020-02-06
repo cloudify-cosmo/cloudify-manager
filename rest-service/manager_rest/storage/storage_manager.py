@@ -566,7 +566,7 @@ class SQLStorageManager(object):
             filters=None,
             locking=False,
             all_tenants=None,
-            doesnt_exist_ok=False):
+            fail_silently=False):
         """Return a single result based on the model class and element ID
         """
         current_app.logger.debug(
@@ -579,7 +579,7 @@ class SQLStorageManager(object):
             query = query.with_for_update()
         result = query.first()
 
-        if not result and not doesnt_exist_ok:
+        if not result and not fail_silently:
             if filters and set(filters.keys()) != {'id'}:
                 filters_message = ' (filters: {0})'.format(filters)
             else:

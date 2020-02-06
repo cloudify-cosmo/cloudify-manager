@@ -77,6 +77,5 @@ class TestSharedResource(TestSharedResourceBase):
                 dependency_creator='{0}.{1}'.format(
                     SHARED_RESOURCE, self._ctx.instance.id),
                 source_deployment=self._ctx.deployment.id,
-                target_deployment='test_deployment',
-                doesnt_exist_ok=True
+                target_deployment='test_deployment'
             )

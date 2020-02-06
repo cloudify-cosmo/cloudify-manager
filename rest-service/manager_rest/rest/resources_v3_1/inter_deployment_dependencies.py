@@ -112,7 +112,7 @@ class InterDeploymentDependencies(SecuredResource):
                                                       target_deployment_id):
         source_deployment = sm.get(models.Deployment,
                                    source_deployment_id,
-                                   doesnt_exist_ok=True)
+                                   fail_silently=True)
         if not source_deployment:
             raise manager_exceptions.NotFoundError(
                 'Given source deployment with ID `{0}` does not exist.'
@@ -120,7 +120,7 @@ class InterDeploymentDependencies(SecuredResource):
             )
         target_deployment = sm.get(models.Deployment,
                                    target_deployment_id,
-                                   doesnt_exist_ok=True)
+                                   fail_silently=True)
         if not target_deployment:
             raise manager_exceptions.NotFoundError(
                 'Given target deployment with ID `{0}` does not exist.'
@@ -171,8 +171,6 @@ class InterDeploymentDependencies(SecuredResource):
          deployment.
         :param target_deployment: the deployment that the source deployment
          depends on.
-        :param doesnt_exist_ok: if it's False then no error will be raised if
-         the dependency doesn't exist. Defaults to False.
         :return: an InterDeploymentDependency object containing the information
          of the dependency.
         """
@@ -189,7 +187,7 @@ class InterDeploymentDependencies(SecuredResource):
             # Locking to make sure to fail here and not during the deletion
             # (for the purpose of clarifying the error in case one occurs).
             locking=True,
-            doesnt_exist_ok=params['doesnt_exist_ok'])
+            fail_silently=True)
         if not dependency:
             return {}
         return sm.delete(dependency)
@@ -197,10 +195,6 @@ class InterDeploymentDependencies(SecuredResource):
     @staticmethod
     def _get_delete_dependency_params(sm):
         request_dict = InterDeploymentDependencies._verify_dependency_params()
-        doesnt_exist_ok = rest_utils.verify_and_convert_bool(
-            'doesnt_exist_ok',
-            request_dict.get('doesnt_exist_ok', False)
-        )
         source_deployment, target_deployment = InterDeploymentDependencies. \
             _verify_and_get_source_and_target_deployments(
                 sm,
@@ -210,8 +204,7 @@ class InterDeploymentDependencies(SecuredResource):
         dependency_params = {
             'dependency_creator': request_dict.get('dependency_creator'),
             'source_deployment': source_deployment,
-            'target_deployment': target_deployment,
-            'doesnt_exist_ok': doesnt_exist_ok
+            'target_deployment': target_deployment
         }
         return dependency_params
 
