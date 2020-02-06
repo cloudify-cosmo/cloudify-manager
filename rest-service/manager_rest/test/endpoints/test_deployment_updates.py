@@ -21,7 +21,6 @@ import unittest
 
 from pytest import mark
 from mock import patch, MagicMock, call
-from manager_rest.test.attribute import attr
 
 from dsl_parser.constants import INTER_DEPLOYMENT_FUNCTIONS
 from dsl_parser import exceptions as parser_exceptions, constants
@@ -31,6 +30,7 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 
 from manager_rest.test import base_test
 from manager_rest.storage import models
+from manager_rest.test.attribute import attr
 from manager_rest.deployment_update import handlers
 from manager_rest.deployment_update.constants import STATES
 from manager_rest.test.utils import get_resource as resource
@@ -588,20 +588,8 @@ class DeploymentUpdatesSourcePluginsTestCase(DeploymentUpdatesBase):
             execution.parameters['central_plugins_to_uninstall'], [])
 
 
-class TestHandlerBase(unittest.TestCase):
-    def setUp(self):
-        self.mock_get_rm = patch('manager_rest.deployment_update.handlers'
-                                 '.get_resource_manager')
-        self.mock_get_rm.start()
-        self.mock_sm = MagicMock()
-
-    def tearDown(self):
-        self.mock_get_rm.stop()
-
-
-class TestDeploymentDependencies(TestHandlerBase):
+class TestDeploymentDependencies(unittest.TestCase):
     class MockDependency(dict):
-
         def __init__(self, dependency):
             self.update(dependency)
 
@@ -622,7 +610,10 @@ class TestDeploymentDependencies(TestHandlerBase):
             self['target_deployment'] = value
 
     def setUp(self):
-        super(TestDeploymentDependencies, self).setUp()
+        self.mock_get_rm = patch('manager_rest.deployment_update.handlers'
+                                 '.get_resource_manager')
+        self.mock_get_rm.start()
+        self.mock_sm = MagicMock()
         self.handler = handlers.DeploymentDependencies(self.mock_sm)
         self.mock_inter_deployment_dependency = patch(
             'manager_rest.storage.models.InterDeploymentDependencies')
@@ -633,6 +624,7 @@ class TestDeploymentDependencies(TestHandlerBase):
         self.mock_dep_update.deployment_id = 'test_deployment_id'
 
     def tearDown(self):
+        self.mock_get_rm.stop()
         self.mock_inter_deployment_dependency.stop()
         super(TestDeploymentDependencies, self).tearDown()
 
