@@ -741,13 +741,13 @@ class AgentTestWithPlugins(AgentTestCase):
         data = json.loads(data)
         return data.get(deployment_id, {})
 
-    def _create_test_wagon(self, plugin_path):
+    def _get_or_create_wagon(self, plugin_path):
         target_dir = tempfile.mkdtemp(dir=self.workdir)
-        return wagon.create(
+        return [wagon.create(
             plugin_path,
             archive_destination_dir=target_dir,
             force=True
-        )
+        )]
 
     def upload_mock_plugin(self, plugin_name, plugin_path=None):
         self.logger.info(
@@ -758,24 +758,24 @@ class AgentTestWithPlugins(AgentTestCase):
                 'plugins/{0}'.format(plugin_name)
             )
 
-        wagon_path = self._create_test_wagon(plugin_path)
-
-        yaml_path = os.path.join(plugin_path, 'plugin.yaml')
-        with utils.zip_files([wagon_path, yaml_path]) as zip_path:
-            self.client.plugins.upload(zip_path)
-
+        wagon_paths = self._get_or_create_wagon(plugin_path)
+        for wagon_path in wagon_paths:
+            yaml_path = os.path.join(plugin_path, 'plugin.yaml')
+            with utils.zip_files([wagon_path, yaml_path]) as zip_path:
+                self.client.plugins.upload(zip_path)
+        time.sleep(500)
         self._wait_for_execution_by_wf_name('install_plugin')
         self.logger.info(
             'Finished uploading {0}...'.format(plugin_name, plugin_path))
 
     def _wait_for_execution_by_wf_name(self, wf_name):
-        install_plugin_execution = [
-            execution for execution in self.client.executions.list(
-                workflow_id=wf_name,
-                include_system_workflows=True,
-                sort={'created_at': 'desc'})
-            if execution.status not in Execution.END_STATES][0]
-        self.wait_for_execution_to_end(install_plugin_execution)
+        executions = self.client.executions.list(
+            workflow_id=wf_name,
+            include_system_workflows=True,
+            sort={'created_at': 'desc'})
+        for execution in executions:
+            if execution.status not in Execution.END_STATES:
+                self.wait_for_execution_to_end(execution)
 
 
 class PluginsTest(AgentTestWithPlugins, WagonBuilderMixin):
@@ -790,9 +790,11 @@ class PluginsTest(AgentTestWithPlugins, WagonBuilderMixin):
 
     @staticmethod
     def get_wagon_path(plugin_path):
+        wagons = []
         for filename in os.listdir(plugin_path):
-            if filename.endswith('.wgn'):
-                return os.path.join(plugin_path, filename)
+            wagons.append(os.path.join(plugin_path, filename))
+        if wagons:
+            return wagons
         raise WagonBuildError(
             'No wagon file was found in the plugin build directory.')
 
@@ -801,9 +803,12 @@ class PluginsTest(AgentTestWithPlugins, WagonBuilderMixin):
         """ Path to the plugin root directory."""
         raise NotImplementedError('Implemented by plugin test class.')
 
-    def _create_test_wagon(self, plugin_path):
+    def _get_or_create_wagon(self, plugin_path):
         """Overrides the inherited class _create_test_wagon."""
-        self.build_wagon()
+        try:
+            return self.get_wagon_path(plugin_path)
+        except WagonBuildError:
+            self.build_wagon(self.logger)
         return self.get_wagon_path(plugin_path)
 
     def add_cleanup_deployment(self, deployment_id):
