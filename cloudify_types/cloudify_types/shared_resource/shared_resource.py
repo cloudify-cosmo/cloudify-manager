@@ -94,6 +94,5 @@ class SharedResource(object):
         self._inter_deployment_dependency['target_deployment'] = \
             target_deployment
         self.client.inter_deployment_dependencies.delete(
-            doesnt_exist_ok=True,
             **self._inter_deployment_dependency)
         return True

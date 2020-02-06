@@ -108,7 +108,7 @@ class InterDeploymentDependenciesTest(BaseServerTestCase):
 
     def test_doesnt_fail_deleting_non_existing_dependency_with_flag(self):
         self.client.inter_deployment_dependencies.delete(
-            *self.dependency_tuple, doesnt_exist_ok=True)
+            *self.dependency_tuple)
 
     def test_fails_to_get_non_existing_dependency(self):
         error_msg_regex = '.*404: Requested Inter-deployment Dependency ' \
