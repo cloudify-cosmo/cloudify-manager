@@ -792,7 +792,8 @@ class PluginsTest(AgentTestWithPlugins, WagonBuilderMixin):
     def get_wagon_path(plugin_path):
         wagons = []
         for filename in os.listdir(plugin_path):
-            wagons.append(os.path.join(plugin_path, filename))
+            if filename.endswith('.wgn'):
+                wagons.append(os.path.join(plugin_path, filename))
         if wagons:
             return wagons
         raise WagonBuildError(
