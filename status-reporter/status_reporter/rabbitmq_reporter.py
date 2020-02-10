@@ -30,7 +30,7 @@ RABBITMQ_SERVICE_KEY = 'RabbitMQ'
 HEALTH_CHECK_API = 'healthchecks/node'
 CA_PATH = '/etc/cloudify/ssl/rabbitmq-ca.pem'
 RABBITMQ_URL = 'https://localhost:15671/api/'
-RABBITMQ_SERVICE = {'cloudify-rabbitmq.service': RABBITMQ_SERVICE_KEY}
+RABBITMQ_SERVICE = {'cloudify-rabbitmq': RABBITMQ_SERVICE_KEY}
 
 
 class RabbitMQReporter(Reporter):
