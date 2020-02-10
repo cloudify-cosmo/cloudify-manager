@@ -27,8 +27,8 @@ PATRONI_URL = 'https://{private_ip}:8008'
 CA_PATH = '/etc/etcd/ca.crt'
 PATRONI_SERVICE_KEY = 'Patroni'
 POSTGRES_SERVICES = {
-    'patroni.service': PATRONI_SERVICE_KEY,
-    'etcd.service': 'Etcd'
+    'patroni': PATRONI_SERVICE_KEY,
+    'etcd': 'Etcd'
 }
 
 
