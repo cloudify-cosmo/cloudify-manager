@@ -21,6 +21,7 @@ install_requires = [
     'flask-restful-swagger==0.20.1',
     'flask-sqlalchemy==2.3.2',
     'flask-security==3.0.0',
+    'flask-login==0.4.1',
     'flask-migrate==2.2.1',
     'cloudify-common==5.1.0.dev1',
     'requests>=2.7.0,<3.0.0',
