@@ -20,7 +20,6 @@ from .secured_resource import (  # NOQA
     MissingPremiumFeatureResource,
     premium_only,
     allow_on_community,
-    SecuredResourceReadonlyMode,
     SecuredResourceBannedSnapshotRestore,
     authenticate
 )
