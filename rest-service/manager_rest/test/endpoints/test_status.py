@@ -43,15 +43,8 @@ class StatusV1TestCase(base_test.BaseServerTestCase):
 class StatusTestCase(base_test.BaseServerTestCase):
 
     def test_get_status(self):
-        self._assert_last_login_time_value(None)
         result = self.client.manager.get_status()
 
         # There is no systemd in unit tests so the status response is FAIL
         self.assertEqual(result['status'], ServiceStatus.FAIL)
         self.assertEqual(type(result['services']), dict)
-        self._assert_last_login_time_value(None)
-
-    def _assert_last_login_time_value(self, value):
-        login_time_before = self.sm.get(management_models.User,
-                                        current_user.id).last_login_at
-        self.assertEqual(login_time_before, value)
