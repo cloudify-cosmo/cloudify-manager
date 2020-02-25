@@ -715,6 +715,7 @@ workflows:
 
   execute_operation:
     mapping: default_workflows.cloudify.plugins.workflows.execute_operation
+    is_cascading: false
     parameters:
       operation: {}
       operation_kwargs:
@@ -800,6 +801,7 @@ workflows:
 
   install_new_agents:
     mapping: default_workflows.cloudify.plugins.workflows.install_new_agents
+    is_cascading: false
     parameters:
       install_agent_timeout:
         default: 300
@@ -827,6 +829,7 @@ workflows:
 
   validate_agents:
     mapping: default_workflows.cloudify.plugins.workflows.validate_agents
+    is_cascading: false
     parameters:
       node_ids:
         default: []
