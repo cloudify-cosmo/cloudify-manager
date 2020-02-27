@@ -231,6 +231,16 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
 
     site_name = association_proxy('site', 'name')
 
+    @declared_attr
+    def _execution_fk(cls):
+        return foreign_key(Execution._storage_id)
+
+    @declared_attr
+    def execution(cls):
+        return one_to_many_relationship(cls, Execution, cls._execution_fk)
+
+    creation_execution_id = association_proxy('creation_execution_id', 'id')
+
     @classproperty
     def response_fields(cls):
         fields = super(Deployment, cls).response_fields

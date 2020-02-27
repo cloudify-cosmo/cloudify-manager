@@ -1351,15 +1351,17 @@ class ResourceManager(object):
             dsl_node_instances=deployment_plan['node_instances'])
 
         try:
-            self._create_deployment_environment(new_deployment,
-                                                deployment_plan,
-                                                bypass_maintenance)
+            execution = self._create_deployment_environment(
+                new_deployment,
+                deployment_plan,
+                bypass_maintenance)
         except manager_exceptions.ExistingRunningExecutionError as e:
             self.delete_deployment(deployment_id=deployment_id,
                                    ignore_live_nodes=True,
                                    delete_db_mode=True)
             raise e
 
+        new_deployment.creation_execution_id = execution.id
         return new_deployment
 
     def validate_plugin_is_installed(self, plugin):
@@ -1888,7 +1890,7 @@ class ResourceManager(object):
         wf_id = 'create_deployment_environment'
         deployment_env_creation_task_name = \
             'cloudify_system_workflows.deployment_environment.create'
-        self._execute_system_workflow(
+        return self._execute_system_workflow(
             wf_id=wf_id,
             task_mapping=deployment_env_creation_task_name,
             deployment=deployment,
