@@ -606,6 +606,56 @@ class UploadedBlueprintsManager(UploadedDataManager):
         return application_file_name
 
 
+class UploadedBlueprintsValidator(UploadedBlueprintsManager):
+
+    @classmethod
+    def _prepare_and_submit_blueprint(cls,
+                                      file_server_root,
+                                      app_dir,
+                                      blueprint_id,
+                                      visibility):
+        args = get_args_and_verify_arguments([
+            Argument('application_file_name',
+                     default='')])
+
+        app_file_name = cls._extract_application_file(
+            file_server_root, app_dir, args.application_file_name)
+
+        # add to blueprints manager (will also dsl_parse it)
+        try:
+            get_resource_manager().validate_blueprint(
+                app_dir,
+                app_file_name,
+                file_server_root
+            )
+        except manager_exceptions.DslParseException, ex:
+            raise manager_exceptions.InvalidBlueprintError(
+                'Invalid blueprint - {0}'.format(ex.message))
+        finally:
+            # remove uploaded data that has been validated
+            shutil.rmtree(os.path.join(file_server_root, app_dir))
+
+        return {}
+
+    def receive_uploaded_data(self, data_id=None, **kwargs):
+        file_server_root = config.instance.file_server_root
+        resource_target_path = tempfile.mktemp(dir=file_server_root)
+        try:
+            additional_inputs = self._save_file_locally_and_extract_inputs(
+                    resource_target_path,
+                    self._get_data_url_key(),
+                    self._get_kind())
+            self._prepare_and_process_doc(
+                data_id,
+                file_server_root,
+                resource_target_path,
+                additional_inputs=additional_inputs,
+                **kwargs)
+            return {}, 204
+        finally:
+            remove(resource_target_path)
+
+
 class UploadedPluginsManager(UploadedDataManager):
 
     def _get_kind(self):

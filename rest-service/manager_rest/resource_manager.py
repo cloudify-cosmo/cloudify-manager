@@ -404,6 +404,13 @@ class ResourceManager(object):
         )
         return self.sm.put(new_blueprint)
 
+    def validate_blueprint(self,
+                           application_dir,
+                           application_file_name,
+                           resources_base):
+        self.parse_plan(
+            application_dir, application_file_name, resources_base)
+
     @staticmethod
     def parse_plan(application_dir, application_file_name, resources_base):
         dsl_location = os.path.join(

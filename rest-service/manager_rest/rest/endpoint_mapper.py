@@ -27,6 +27,7 @@ def setup_resources(api):
     resources_endpoints = {
         'Blueprints': 'blueprints',
         'BlueprintsId': 'blueprints/<string:blueprint_id>',
+        'BlueprintsIdValidate': 'blueprints/<string:blueprint_id>/validate',
         'BlueprintsIdArchive': 'blueprints/<string:blueprint_id>/archive',
         'BlueprintsSetGlobal': 'blueprints/<string:blueprint_id>/set-global',
         'BlueprintsSetVisibility': 'blueprints/<string:blueprint_id>/'

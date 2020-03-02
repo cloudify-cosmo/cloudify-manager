@@ -39,7 +39,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
     def test_get_nonexistent_blueprint(self):
         with self.assertRaises(exceptions.CloudifyClientError) as context:
             self.client.blueprints.get('15')
-            self.assertEqual(404, context.exception.status_code)
+        self.assertEqual(404, context.exception.status_code)
 
     def test_upload_blueprint_illegal_id(self):
         # try id with whitespace
@@ -465,3 +465,46 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         blueprints = self.client.blueprints.list()
         self.assertEqual(1, len(blueprints))
         self.assertEqual(b0_id, blueprints[0].id)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_blueprint_validate_valid(self):
+        blueprint_id = 'blueprint_main_file_name'
+        blueprint_file = 'blueprint.yaml'
+        blueprint_path = os.path.join(
+            self.get_blueprint_path('mock_blueprint'),
+            blueprint_file)
+        self.client.blueprints.validate(blueprint_path, blueprint_id)
+        self.assertEquals(0, len(self.client.blueprints.list()))
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_blueprint_validate_invalid_blueprint(self):
+        blueprint_id = 'blueprint_main_file_name'
+        blueprint_file = 'invalid_blueprint.yaml'
+        blueprint_path = os.path.join(
+            self.get_blueprint_path('mock_blueprint'),
+            blueprint_file)
+        self.assertEquals(0, len(self.client.blueprints.list()))
+        with self.assertRaises(exceptions.CloudifyClientError) as context:
+            self.client.blueprints.validate(blueprint_path, blueprint_id)
+        # import pdb; pdb.set_trace()
+        self.assertEqual(400, context.exception.status_code)
+        self.assertIn("Invalid blueprint - 'foo' is not in schema.",
+                      str(context.exception))
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_blueprint_validate_invalid_id(self):
+        blueprint_id = 'invalid blueprint id'
+        blueprint_file = 'blueprint.yaml'
+        blueprint_path = os.path.join(
+            self.get_blueprint_path('mock_blueprint'),
+            blueprint_file)
+        with self.assertRaises(exceptions.CloudifyClientError) as context:
+            self.client.blueprints.validate(blueprint_path, blueprint_id)
+        # import pdb; pdb.set_trace()
+        self.assertEqual(400, context.exception.status_code)
+        self.assertIn(
+            "The `blueprint_id` argument contains illegal characters.",
+            str(context.exception))
