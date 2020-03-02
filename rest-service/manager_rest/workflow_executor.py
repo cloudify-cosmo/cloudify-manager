@@ -69,7 +69,6 @@ def execute_workflow(name,
         'execution_token': execution_token,
         'plugin': {}
     }
-
     plugin_name = workflow['plugin']
     plugins = [p for p in workflow_plugins if p['name'] == plugin_name]
     plugin = plugins[0] if plugins else None
@@ -200,6 +199,10 @@ def _send_task_to_dlx(message, message_ttl, routing_key='workflow'):
 
 def _execute_task(execution_id, execution_parameters,
                   context, execution_creator, scheduled_time=None):
+    # Get the host ip info and return them
+    sm = get_storage_manager()
+    managers = sm.list(models.Manager)
+    context['rest_host'] = [manager.private_ip for manager in managers]
     context['rest_token'] = execution_creator.get_auth_token()
     context['tenant'] = _get_tenant_dict()
     context['task_target'] = MGMTWORKER_QUEUE
