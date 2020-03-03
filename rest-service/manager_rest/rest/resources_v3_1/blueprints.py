@@ -23,7 +23,8 @@ from manager_rest.storage import models
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.resource_manager import get_resource_manager
-from manager_rest.upload_manager import UploadedBlueprintsManager
+from manager_rest.upload_manager import (UploadedBlueprintsManager,
+                                         UploadedBlueprintsValidator)
 from manager_rest.rest import (rest_utils,
                                resources_v2,
                                rest_decorators)
@@ -93,3 +94,20 @@ class BlueprintsId(resources_v2.BlueprintsId):
             blueprint_id,
             force=query_args.force)
         return blueprint, 200
+
+
+class BlueprintsIdValidate(BlueprintsId):
+    @authorize('blueprint_upload')
+    def put(self, blueprint_id, **kwargs):
+        """
+        Validate a blueprint (id specified)
+        """
+        rest_utils.validate_inputs({'blueprint_id': blueprint_id})
+        visibility = rest_utils.get_visibility_parameter(
+            optional=True,
+            is_argument=True,
+            valid_values=VisibilityState.STATES
+        )
+        return UploadedBlueprintsValidator().\
+            receive_uploaded_data(data_id=blueprint_id,
+                                  visibility=visibility)
