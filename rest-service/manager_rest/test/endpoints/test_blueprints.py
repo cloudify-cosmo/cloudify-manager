@@ -488,7 +488,6 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         self.assertEquals(0, len(self.client.blueprints.list()))
         with self.assertRaises(exceptions.CloudifyClientError) as context:
             self.client.blueprints.validate(blueprint_path, blueprint_id)
-        # import pdb; pdb.set_trace()
         self.assertEqual(400, context.exception.status_code)
         self.assertIn("Invalid blueprint - 'foo' is not in schema.",
                       str(context.exception))
@@ -503,7 +502,6 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
             blueprint_file)
         with self.assertRaises(exceptions.CloudifyClientError) as context:
             self.client.blueprints.validate(blueprint_path, blueprint_id)
-        # import pdb; pdb.set_trace()
         self.assertEqual(400, context.exception.status_code)
         self.assertIn(
             "The `blueprint_id` argument contains illegal characters.",

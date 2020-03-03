@@ -98,7 +98,6 @@ class BlueprintsId(resources_v2.BlueprintsId):
 
 class BlueprintsIdValidate(BlueprintsId):
     @authorize('blueprint_upload')
-    @rest_decorators.marshal_with(models.Blueprint)
     def put(self, blueprint_id, **kwargs):
         """
         Validate a blueprint (id specified)

@@ -628,12 +628,9 @@ class UploadedBlueprintsValidator(UploadedBlueprintsManager):
                 app_file_name,
                 file_server_root
             )
-        except manager_exceptions.DslParseException, ex:
+        except manager_exceptions.DslParseException as ex:
             raise manager_exceptions.InvalidBlueprintError(
-                'Invalid blueprint - {0}'.format(ex.message))
-        finally:
-            # remove uploaded data that has been validated
-            shutil.rmtree(os.path.join(file_server_root, app_dir))
+                'Invalid blueprint - {0}'.format(ex))
 
         return {}
 
@@ -651,7 +648,7 @@ class UploadedBlueprintsValidator(UploadedBlueprintsManager):
                 resource_target_path,
                 additional_inputs=additional_inputs,
                 **kwargs)
-            return {}, 204
+            return "", 204
         finally:
             remove(resource_target_path)
 
