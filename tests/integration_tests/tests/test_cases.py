@@ -30,6 +30,8 @@ from contextlib import contextmanager
 import wagon
 from pytest import mark
 from retrying import retry
+import requests
+from zipfile import ZipFile
 from requests.exceptions import ConnectionError
 
 import cloudify.logs
@@ -50,7 +52,6 @@ from integration_tests.framework.constants import (PLUGIN_STORAGE_DIR,
                                                    CLOUDIFY_USER)
 from integration_tests.framework.wagon_build import (WagonBuilderMixin,
                                                      WagonBuildError)
-from integration_tests.framework.github_interface import GithubInterface
 from integration_tests.tests.utils import (
     wait_for_deployment_creation_to_complete,
     wait_for_deployment_deletion_to_complete
@@ -779,14 +780,32 @@ class AgentTestWithPlugins(AgentTestCase):
 
 
 class PluginsTest(AgentTestWithPlugins, WagonBuilderMixin):
-    def setUp(self):
-        super(PluginsTest, self).setUp()
-        self.examples = GithubInterface()
-        self.examples.clone()
+    BLUEPRINT_EXAMPLES = (
+        "https://github.com/cloudify-community/"
+        "blueprint-examples/archive/master.zip"
+    )
 
-    def tearDown(self):
-        self.examples.cleanup()
-        super(PluginsTest, self).tearDown()
+    @classmethod
+    def setUpClass(cls):
+        super(PluginsTest, cls).setUpClass()
+        cls.examples_basedir = tempfile.mkdtemp()
+        examples_zip = os.path.join(cls.examples_basedir, 'examples.zip')
+        with requests.get(cls.BLUEPRINT_EXAMPLES, stream=True) as resp:
+            resp.raise_for_status()
+            with open(examples_zip, 'wb') as f:
+                for part in resp.iter_content(chunk_size=8192):
+                    if not part:
+                        continue
+                    f.write(part)
+        zipped_examples = ZipFile(examples_zip)
+        zipped_examples.extractall(cls.examples_basedir)
+        cls.examples = os.path.join(
+            cls.examples_basedir, 'blueprint-examples-master')
+
+    @classmethod
+    def tearDownClass(cls):
+        super(PluginsTest, cls).tearDownClass()
+        shutil.rmtree(cls.examples_basedir, ignore_failure=True)
 
     @staticmethod
     def get_wagon_path(plugin_path):
@@ -855,32 +874,32 @@ class PluginsTest(AgentTestWithPlugins, WagonBuilderMixin):
         app_inputs_override = app_inputs_override or {}
 
         infrastructure_blueprint_path = os.path.join(
-            self.examples.git_location,
+            self.examples,
             'db-lb-app/infrastructure/{iaas}.yaml'.format(iaas=iaas))
         infrastructure_blueprint_id = 'infrastructure'
 
         network_blueprint_id = iaas
         network_blueprint_path = os.path.join(
-            self.examples.git_location,
+            self.examples,
             '{iaas}-example-network'.format(iaas=iaas), 'blueprint.yaml')
 
         db_blueprint_id = 'db'
         db_blueprint_path = os.path.join(
-            self.examples.git_location,
+            self.examples,
             'db-lb-app/db/application.yaml')
         db_inputs = {'infrastructure--resource_name_prefix': 'db'}
         db_inputs.update(db_inputs_override)
 
         lb_blueprint_id = 'lb'
         lb_blueprint_path = os.path.join(
-            self.examples.git_location,
+            self.examples,
             'db-lb-app/lb/application.yaml')
         lb_inputs = {'infrastructure--resource_name_prefix': 'lb'}
         lb_inputs.update(lb_inputs_override)
 
         app_blueprint_id = 'app'
         app_blueprint_path = os.path.join(
-            self.examples.git_location,
+            self.examples,
             'db-lb-app/app/application.yaml')
         app_inputs = {'infrastructure--resource_name_prefix': 'app'}
         app_inputs.update(app_inputs_override)
