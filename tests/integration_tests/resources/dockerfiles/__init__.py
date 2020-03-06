@@ -14,13 +14,18 @@
 # limitations under the License.
 
 import os
-from tempfile import mkdtemp
 from io import StringIO
+from tempfile import mkdtemp
+from zipfile import ZipFile
 
-from git import Git
+import requests
 
-GIT_REPO = 'https://github.com/cloudify-cosmo/' \
-           'cloudify-wagon-build-containers.git'
+
+WAGON_BUILD_CONTAINERS = (
+    'https://github.com/cloudify-cosmo/'
+    'cloudify-wagon-build-containers/archive/master.zip'
+)
+
 RESOURCES = os.path.abspath(
     os.path.join(
         os.path.dirname(
@@ -29,8 +34,18 @@ RESOURCES = os.path.abspath(
 
 def get_dockerfile_from_git(platform):
     directory = mkdtemp()
-    Git(directory).clone(GIT_REPO)
-    return os.path.join(directory, 'cloudify-wagon-build-containers', platform)
+    containers_zip = os.path.join(directory, 'containers.zip')
+    with requests.get(WAGON_BUILD_CONTAINERS, stream=True) as resp:
+        resp.raise_for_status()
+        with open(containers_zip, 'wb') as f:
+            for part in resp.iter_content(chunk_size=8192):
+                if not part:
+                    continue
+                f.write(part)
+    zipped_containers = ZipFile(containers_zip)
+    zipped_containers.extractall(directory)
+    return os.path.join(
+        directory, 'cloudify-wagon-build-containers-master', platform)
 
 
 def get_dockerfile_from_resources(directory):

@@ -855,7 +855,7 @@ class PluginsTest(AgentTestWithPlugins, WagonBuilderMixin):
 
     def check_hello_world_blueprint(self, iaas, inputs, timeout=400):
         blueprint_path = os.path.join(
-            self.examples.git_location,
+            self.examples,
             'hello-world-example', '{iaas}.yaml'.format(iaas=iaas))
         blueprint_id = 'hello-world-{iaas}'.format(iaas=iaas)
         self.check_blueprint(blueprint_id, blueprint_path, inputs, timeout)
