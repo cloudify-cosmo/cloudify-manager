@@ -225,10 +225,10 @@ class CapabilitiesTestCase(base_test.BaseServerTestCase):
         # `get_capability` evaluation, which should fail
         self.assertRaisesRegexp(
             CloudifyClientError,
-            "Item in index '5' in the get_capability arguments list "
-            "'\\['shared', 'complex_capability', 'level_1', 'level_2', "
-            "'level_3', 'bad_index_type'\\]' is expected to be an int but "
-            "got str.",
+            "Item in index 5 in the get_capability arguments list "
+            "\\[shared, complex_capability, level_1, level_2, "
+            "level_3, bad_index_type\\] is expected to be an int but "
+            "got (str|unicode).",
             self.client.nodes.get,
             deployment_id=other_dep_id,
             node_id='node1',
