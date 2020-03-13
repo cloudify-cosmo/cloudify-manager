@@ -932,16 +932,17 @@ class SnapshotRestore(object):
         for execution in self._client.executions.list(
                 _get_all_results=True, status=Execution.SCHEDULED):
             if is_later_than_now(execution.scheduled_for):
-                ctx.logger.debug("Restoring execution {} (at {})".format(
-                    execution.workflow_id, execution.scheduled_for))
+                ctx.logger.debug("Restoring execution %s (at %s)",
+                                 execution.workflow_id,
+                                 execution.scheduled_for)
                 self._client.executions.requeue(execution.id)
             else:
                 self._client.executions.update(execution.id,
                                                Execution.FAILED)
-                ctx.logger.info(
-                    "Execution {} scheduled for {} is overdue. "
-                    "Marking as FAILED.".format(execution.id,
-                                                execution.scheduled_for))
+                ctx.logger.warning("Execution %s scheduled for %s is "
+                                   "overdue. Marking as FAILED.",
+                                   execution.id,
+                                   execution.scheduled_for)
 
     @staticmethod
     def _mark_manager_restoring():
