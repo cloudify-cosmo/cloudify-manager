@@ -25,7 +25,8 @@ from manager_rest.security.authorization import authorize
 from manager_rest.rest.rest_decorators import marshal_with
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.security import SecuredResourceBannedSnapshotRestore
-from manager_rest.cluster_status_manager import (get_cluster_status,
+from manager_rest.cluster_status_manager import (STATUS,
+                                                 get_cluster_status,
                                                  write_status_report)
 from manager_rest.rest.rest_utils import (parse_datetime_string,
                                           verify_and_convert_bool,
@@ -113,3 +114,26 @@ class BrokerClusterStatus(ClusterStatus):
         self._write_report(node_id,
                            models.RabbitMQBroker,
                            CloudifyNodeType.BROKER)
+
+
+class SimpleClusterStatus(SecuredResourceBannedSnapshotRestore):
+    @swagger.operation(
+        nickname="is-cluster-alive",
+        notes="Returns state of the Cloudify cluster as a return code"
+    )
+    @authorize('cluster_status_get')
+    def get(self):
+        """
+        Get the status of the entire cloudify cluster.
+        return code 200: OK or DEGRADED
+        return code 512: FAILED
+
+        """
+
+        return_msg = 'The cluster status is {status}'
+        cluster_status = get_cluster_status().get(STATUS)
+        if cluster_status == ServiceStatus.FAIL:
+            return return_msg.format(status=ServiceStatus.FAIL), 512
+
+        return return_msg.format(status='{0} or {1}'.format(
+            ServiceStatus.HEALTHY, ServiceStatus.DEGRADED)), 200
