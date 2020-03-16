@@ -494,3 +494,36 @@ class TestSnapshot(AgentlessTestCase):
             securityconf=self.REST_SEC_CONFIG_PATH,
         ))
         self.restart_service('cloudify-restservice')
+
+    def test_restore_snapshot_scheduled_tasks(self):
+        """
+        Validate workflow restoration from snapshot.
+
+        This test uses a file with four scheduled transactions:
+          - uninstall  at 2020-03-10 12:00:00+00:00
+          - install    at 2020-03-11 12:00:00+00:00
+          - install    at 2050-01-01 12:00:00+00:00
+          - uninstall  at 2050-01-02 12:00:00+00:00
+        """
+        SNAPSHOTS_DIR = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+            'resources', 'snapshots')
+        snapshot_path = os.path.join(SNAPSHOTS_DIR,
+                                     'snap_with_scheduled_execs_20200310.zip')
+        self._upload_and_restore_snapshot(snapshot_path)
+
+        failed_executions = self.client.executions.list(
+            status=Execution.FAILED
+        )
+        self.assertEqual(len(failed_executions), 2)
+
+        executions = self.client.executions.list(status=Execution.SCHEDULED)
+        self.assertEqual(len(executions), 2)
+
+        for execution in executions:
+            if execution.workflow_id == 'install':
+                self.assertEqual(execution.scheduled_for,
+                                 '2050-01-01T12:00:00.000Z')
+            if execution.workflow_id == 'uninstall':
+                self.assertEqual(execution.scheduled_for,
+                                 '2050-01-02T12:00:00.000Z')
