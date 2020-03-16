@@ -1,4 +1,4 @@
-git+https://github.com/cloudify-cosmo/cloudify-common@master#egg=cloudify-common==master
+git+https://github.com/cloudify-cosmo/cloudify-common@CY-2462-5xx-cluster-status-endpoint-patch#egg=cloudify-common==CY-2462-5xx-cluster-status-endpoint-patch
 git+https://github.com/cloudify-cosmo/cloudify-agent@master#egg=cloudify-agent[celery,kerberos]==master
 
 # For dealing with the binary leftovers of psycopg2 in the 2.7.x version
