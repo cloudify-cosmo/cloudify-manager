@@ -61,11 +61,26 @@ class ClusterStatus(SecuredResourceBannedSnapshotRestore):
             request.args.get('summary', False)
         )
 
+        modify_return_code = verify_and_convert_bool(
+            'short',
+            request.args.get('short', False)
+        )
+
+        return_msg = 'The cluster status is {status}'
         cluster_status = get_cluster_status()
 
         # If the response should be only the summary - mainly for LB
         if summary_response:
             return {'status': cluster_status['status'], 'services': {}}
+
+        # If the return code should signify the cluster-status
+        if modify_return_code:
+            short_cluster_status = cluster_status.get(STATUS)
+            if short_cluster_status == ServiceStatus.FAIL:
+                return return_msg.format(status=ServiceStatus.FAIL), 512
+
+            return return_msg.format(status='{0} or {1}'.format(
+                ServiceStatus.HEALTHY, ServiceStatus.DEGRADED)), 200
 
         return cluster_status
 
@@ -114,26 +129,3 @@ class BrokerClusterStatus(ClusterStatus):
         self._write_report(node_id,
                            models.RabbitMQBroker,
                            CloudifyNodeType.BROKER)
-
-
-class SimpleClusterStatus(SecuredResourceBannedSnapshotRestore):
-    @swagger.operation(
-        nickname="is-cluster-alive",
-        notes="Returns state of the Cloudify cluster as a return code"
-    )
-    @authorize('cluster_status_get')
-    def get(self):
-        """
-        Get the status of the entire cloudify cluster.
-        return code 200: OK or DEGRADED
-        return code 512: FAILED
-
-        """
-
-        return_msg = 'The cluster status is {status}'
-        cluster_status = get_cluster_status().get(STATUS)
-        if cluster_status == ServiceStatus.FAIL:
-            return return_msg.format(status=ServiceStatus.FAIL), 512
-
-        return return_msg.format(status='{0} or {1}'.format(
-            ServiceStatus.HEALTHY, ServiceStatus.DEGRADED)), 200
