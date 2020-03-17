@@ -64,11 +64,9 @@ class ClusterStatus(SecuredResourceBannedSnapshotRestore):
 
         # If the response should be only the summary
         if summary_response:
-            short_cluster_status = cluster_status.get(STATUS)
-            if short_cluster_status == ServiceStatus.FAIL:
-                return {'status': short_cluster_status, 'services': {}}, 500
-
-            return {'status': short_cluster_status, 'services': {}}, 200
+            short_status = cluster_status.get(STATUS)
+            status_code = 500 if short_status == ServiceStatus.FAIL else 200
+            return {'status': short_status, 'services': {}}, status_code
 
         return cluster_status
 
