@@ -60,27 +60,15 @@ class ClusterStatus(SecuredResourceBannedSnapshotRestore):
             'summary',
             request.args.get('summary', False)
         )
-
-        modify_return_code = verify_and_convert_bool(
-            'short',
-            request.args.get('short', False)
-        )
-
-        return_msg = 'The cluster status is {status}'
         cluster_status = get_cluster_status()
 
-        # If the response should be only the summary - mainly for LB
+        # If the response should be only the summary
         if summary_response:
-            return {'status': cluster_status['status'], 'services': {}}
-
-        # If the return code should signify the cluster-status
-        if modify_return_code:
             short_cluster_status = cluster_status.get(STATUS)
             if short_cluster_status == ServiceStatus.FAIL:
-                return return_msg.format(status=ServiceStatus.FAIL), 512
+                return {'status': short_cluster_status, 'services': {}}, 512
 
-            return return_msg.format(status='{0} or {1}'.format(
-                ServiceStatus.HEALTHY, ServiceStatus.DEGRADED)), 200
+            return {'status': short_cluster_status, 'services': {}}, 200
 
         return cluster_status
 
