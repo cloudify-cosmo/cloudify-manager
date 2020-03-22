@@ -791,13 +791,15 @@ workflows:
       ignore_failure:
         default: false
         type: boolean
-      rollback_if_failed:
+      rollback_behavior:
         description: >
             If this is False then no rollback will be triggered when an error
             occurs during the workflow, otherwise the rollback will be
             triggered.
-        default: true
-        type: boolean
+        default: all
+        type: string
+        constraints:
+          - valid_values: [ 'all', 'none', 'failed' ]
 
   install_new_agents:
     mapping: default_workflows.cloudify.plugins.workflows.install_new_agents

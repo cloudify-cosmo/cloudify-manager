@@ -55,6 +55,9 @@ def setup_resources(api):
         'DeploymentModificationsIdRollback': 'deployment-modifications/'
                                              '<string:modification_id>/'
                                              'rollback',
+        'DeploymentModificationsPartialRollback': 'deployment-modifications/'
+                                             '<string:modification_id>/'
+                                             'partial-rollback',
         'Nodes': 'nodes',
         'NodeInstances': 'node-instances',
         'NodeInstancesId': 'node-instances/<string:node_instance_id>',

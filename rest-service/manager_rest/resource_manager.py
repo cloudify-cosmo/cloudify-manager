@@ -687,7 +687,6 @@ class ResourceManager(object):
         self._verify_workflow_in_deployment(workflow_id, deployment,
                                             deployment_id)
         workflow = deployment.workflows[workflow_id]
-
         if execution:
             new_execution = execution
             execution_parameters = parameters
@@ -1511,6 +1510,7 @@ class ResourceManager(object):
                 node = get_node(modification.deployment_id, node_id)
                 node.planned_number_of_instances = modified_node['instances']
                 self.sm.update(node)
+
         self.sm.update(deployment)
 
         added_and_related = node_instances_modification['added_and_related']
@@ -1608,7 +1608,72 @@ class ResourceManager(object):
         self.sm.update(modification)
         return modification
 
-    def rollback_deployment_modification(self, modification_id):
+    def _update_node_instances_and_relationships(self,
+                                                 modified_action,
+                                                 modified_and_related,
+                                                 target_instances):
+
+        for node_instance_dict in modified_and_related:
+            instance = self.sm.get(
+                models.NodeInstance,
+                node_instance_dict['id'],
+                locking=True
+            )
+            if node_instance_dict.get('modification') == modified_action:
+                if instance.id in target_instances:
+                    self.sm.delete(instance)
+            else:
+                new_relationships = [
+                    rel for rel in instance.relationships
+                    if rel['target_id'] not in target_instances
+                ]
+                instance.relationships = deepcopy(new_relationships)
+                instance.version += 1
+                self.sm.update(instance)
+
+    def _handle_rollback_for_scale_in_failure(self,
+                                              modified_instances,
+                                              failed_instances):
+        deleted_instances = []
+        removed_and_related = modified_instances['removed_and_related']
+        for removed_instance_dict in removed_and_related:
+            if removed_instance_dict.get('modification') == 'removed':
+                if removed_instance_dict['id'] not in failed_instances:
+                    deleted_instances.append(removed_instance_dict['id'])
+
+        self._update_node_instances_and_relationships(
+            'removed', removed_and_related, deleted_instances
+        )
+
+        for instance_dict in modified_instances['before_modification']:
+            if instance_dict['id'] in failed_instances:
+                instance = self.sm.get(
+                    models.NodeInstance,
+                    instance_dict['id'],
+                    locking=True
+                )
+                self.sm.delete(instance)
+                self.add_node_instance_from_dict(instance_dict)
+
+    def _partial_rollback_modification(self,
+                                       modified_action,
+                                       modified_instances,
+                                       failed_instances):
+        if modified_action == 'added':
+            added_and_related = modified_instances['added_and_related']
+            self._update_node_instances_and_relationships(
+                modified_action, added_and_related, failed_instances
+            )
+        elif modified_action == 'removed':
+            self._handle_rollback_for_scale_in_failure(
+                modified_instances, failed_instances
+            )
+
+    def rollback_deployment_modification(self,
+                                         modification_id,
+                                         modified_action=None,
+                                         partial_rollback=False,
+                                         failed_instances=None):
         modification = self.sm.get(
             models.DeploymentModification,
             modification_id
@@ -1632,10 +1697,15 @@ class ResourceManager(object):
         modified_instances = deepcopy(modification.node_instances)
         modified_instances['before_rollback'] = [
             instance.to_dict() for instance in node_instances]
-        for instance in node_instances:
-            self.sm.delete(instance)
-        for instance_dict in modified_instances['before_modification']:
-            self.add_node_instance_from_dict(instance_dict)
+        if partial_rollback:
+            self._partial_rollback_modification(
+                modified_action, modified_instances, failed_instances
+            )
+        else:
+            for instance in node_instances:
+                self.sm.delete(instance)
+            for instance_dict in modified_instances['before_modification']:
+                self.add_node_instance_from_dict(instance_dict)
         nodes_num_instances = {
             node.id: node for node in self.sm.list(
                 models.Node,
@@ -1643,7 +1713,6 @@ class ResourceManager(object):
                 include=['id', 'number_of_instances'],
                 get_all_results=True)
         }
-
         scaling_groups = deepcopy(deployment.scaling_groups)
         for node_id, modified_node in modification.modified_nodes.items():
             if node_id in deployment.scaling_groups:

@@ -56,6 +56,7 @@ from .deployments import (                       # NOQA
     DeploymentsSetSite,
     DeploymentsSetVisibility,
     DeploymentsIdCapabilities,
+    DeploymentModificationsPartialRollback,
 )
 
 from .blueprints import (                        # NOQA

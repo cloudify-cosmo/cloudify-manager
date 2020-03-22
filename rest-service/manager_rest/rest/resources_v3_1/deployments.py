@@ -26,6 +26,7 @@ from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.manager_exceptions import BadParametersError
 from manager_rest.resource_manager import get_resource_manager
+from manager_rest.rest.rest_decorators import marshal_with
 from manager_rest.maintenance import is_bypass_maintenance_mode
 from manager_rest.dsl_functions import evaluate_deployment_capabilities
 from manager_rest.rest import (
@@ -142,6 +143,30 @@ class DeploymentsSetSite(SecuredResource):
                 "`detach_site` with true value for detaching the current "
                 "site of the given deployment"
             )
+
+
+class DeploymentModificationsPartialRollback(SecuredResource):
+
+    @swagger.operation(
+        responseClass=models.DeploymentModification,
+        nickname="partialRollbackDeploymentModification",
+        notes="Partial Rollback deployment modification."
+    )
+    @authorize('deployment_modification_partial_rollback')
+    @marshal_with(models.DeploymentModification)
+    def post(self, modification_id, **kwargs):
+        request_dict = \
+            rest_utils.get_json_and_verify_params({
+                'modification_action': {'type': unicode},
+                'rollback_instances': {'type': list},
+            })
+        print request_dict
+        return get_resource_manager().rollback_deployment_modification(
+            modification_id,
+            modified_action=request_dict['modification_action'],
+            partial_rollback=True,
+            failed_instances=request_dict['rollback_instances']
+        )
 
 
 def _get_site_name(request_dict):
