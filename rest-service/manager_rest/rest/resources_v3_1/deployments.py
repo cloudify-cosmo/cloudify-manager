@@ -160,7 +160,6 @@ class DeploymentModificationsPartialRollback(SecuredResource):
                 'modification_action': {'type': unicode},
                 'rollback_instances': {'type': list},
             })
-        print request_dict
         return get_resource_manager().rollback_deployment_modification(
             modification_id,
             modified_action=request_dict['modification_action'],

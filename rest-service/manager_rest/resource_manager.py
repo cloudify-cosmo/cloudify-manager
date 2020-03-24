@@ -1609,7 +1609,6 @@ class ResourceManager(object):
         return modification
 
     def _update_node_instances_and_relationships(self,
-                                                 modified_action,
                                                  modified_and_related,
                                                  target_instances):
 
@@ -1619,9 +1618,8 @@ class ResourceManager(object):
                 node_instance_dict['id'],
                 locking=True
             )
-            if node_instance_dict.get('modification') == modified_action:
-                if instance.id in target_instances:
-                    self.sm.delete(instance)
+            if instance.id in target_instances:
+                self.sm.delete(instance)
             else:
                 new_relationships = [
                     rel for rel in instance.relationships
@@ -1631,18 +1629,45 @@ class ResourceManager(object):
                 instance.version += 1
                 self.sm.update(instance)
 
+    def _handle_rollback_for_scale_out_failure(self,
+                                               modified_instances,
+                                               failed_instances):
+        added_and_related = modified_instances['added_and_related']
+        instances_to_revert = []
+        for added_instance_dict in added_and_related:
+            instance = self.sm.get(
+                models.NodeInstance,
+                added_instance_dict['id'],
+                locking=True
+            )
+            if added_instance_dict['id'] in failed_instances:
+                # State inside `removed_instance_dict` is outdated and
+                # not updated as started
+                if instance.state != 'started':
+                    instances_to_revert.append(added_instance_dict['id'])
+        self._update_node_instances_and_relationships(
+            added_and_related, instances_to_revert
+        )
+
     def _handle_rollback_for_scale_in_failure(self,
                                               modified_instances,
                                               failed_instances):
         deleted_instances = []
         removed_and_related = modified_instances['removed_and_related']
         for removed_instance_dict in removed_and_related:
-            if removed_instance_dict.get('modification') == 'removed':
-                if removed_instance_dict['id'] not in failed_instances:
+            if removed_instance_dict['id'] not in failed_instances:
+                instance = self.sm.get(
+                    models.NodeInstance,
+                    removed_instance_dict['id'],
+                    locking=True
+                )
+                # State inside `removed_instance_dict` is outdated and
+                # not updated as deleted
+                if instance.state == 'deleted':
                     deleted_instances.append(removed_instance_dict['id'])
 
         self._update_node_instances_and_relationships(
-            'removed', removed_and_related, deleted_instances
+            removed_and_related, deleted_instances
         )
 
         for instance_dict in modified_instances['before_modification']:
@@ -1655,19 +1680,46 @@ class ResourceManager(object):
                 self.sm.delete(instance)
                 self.add_node_instance_from_dict(instance_dict)
 
+    def _update_node_instances_number_after_rollback(self,
+                                                     deployment_id,
+                                                     node_instances,
+                                                     state):
+        nodes_num_instances = {}
+        for instance in node_instances:
+            if instance['state'] == state:
+                if instance['node_id'] not in nodes_num_instances:
+                    nodes_num_instances[instance['node_id']] = 1
+                else:
+                    nodes_num_instances[instance['node_id']] += 1
+
+        for node_id, instances_num in nodes_num_instances.items():
+            node = get_node(deployment_id, node_id)
+            node.number_of_instances = instances_num
+            node.planned_number_of_instances = instances_num
+            self.sm.update(node)
+
     def _partial_rollback_modification(self,
+                                       deployment_id,
                                        modified_action,
                                        modified_instances,
                                        failed_instances):
+        state = 'started'
         if modified_action == 'added':
-            added_and_related = modified_instances['added_and_related']
-            self._update_node_instances_and_relationships(
-                modified_action, added_and_related, failed_instances
+            self._handle_rollback_for_scale_out_failure(
+                modified_instances, failed_instances
             )
         elif modified_action == 'removed':
             self._handle_rollback_for_scale_in_failure(
                 modified_instances, failed_instances
             )
+
+        # We need to update the number of node instances at this point
+        # Update the actual number of instances
+        self._update_node_instances_number_after_rollback(
+            deployment_id,
+            modified_instances['before_rollback'],
+            state
+        )
 
     def rollback_deployment_modification(self,
                                          modification_id,
@@ -1699,32 +1751,35 @@ class ResourceManager(object):
             instance.to_dict() for instance in node_instances]
         if partial_rollback:
             self._partial_rollback_modification(
-                modified_action, modified_instances, failed_instances
+                modification.deployment_id,
+                modified_action,
+                modified_instances,
+                failed_instances
             )
         else:
             for instance in node_instances:
                 self.sm.delete(instance)
             for instance_dict in modified_instances['before_modification']:
                 self.add_node_instance_from_dict(instance_dict)
-        nodes_num_instances = {
-            node.id: node for node in self.sm.list(
-                models.Node,
-                filters=deployment_id_filter,
-                include=['id', 'number_of_instances'],
-                get_all_results=True)
-        }
-        scaling_groups = deepcopy(deployment.scaling_groups)
-        for node_id, modified_node in modification.modified_nodes.items():
-            if node_id in deployment.scaling_groups:
-                props = scaling_groups[node_id]['properties']
-                props['planned_instances'] = props['current_instances']
-                deployment.scaling_groups = scaling_groups
-            else:
-                node = get_node(modification.deployment_id, node_id)
-                node.planned_number_of_instances = nodes_num_instances[
-                    node_id].number_of_instances
-                self.sm.update(node)
-        self.sm.update(deployment)
+            nodes_num_instances = {
+                node.id: node for node in self.sm.list(
+                    models.Node,
+                    filters=deployment_id_filter,
+                    include=['id', 'number_of_instances'],
+                    get_all_results=True)
+            }
+            scaling_groups = deepcopy(deployment.scaling_groups)
+            for node_id, modified_node in modification.modified_nodes.items():
+                if node_id in deployment.scaling_groups:
+                    props = scaling_groups[node_id]['properties']
+                    props['planned_instances'] = props['current_instances']
+                    deployment.scaling_groups = scaling_groups
+                else:
+                    node = get_node(modification.deployment_id, node_id)
+                    node.planned_number_of_instances = nodes_num_instances[
+                        node_id].number_of_instances
+                    self.sm.update(node)
+            self.sm.update(deployment)
 
         modification.status = DeploymentModificationState.ROLLEDBACK
         modification.ended_at = utils.get_formatted_timestamp()
