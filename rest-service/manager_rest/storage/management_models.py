@@ -688,4 +688,14 @@ class DBNodes(SQLModelBase, CloudifyNodeMixin):
         return self.host
 
 
+class UsageCollector(SQLModelBase):
+    __tablename__ = 'usage_collector'
+
+    manager_id = db.column(db.text, primary_key=True)
+    hourly_timestamp = db.Column(UTCDateTime)
+    daily_timestamp = db.Column(UTCDateTime)
+    hours_interval = db.column(db.Integer, nullable=False)
+    days_interval = db.column(db.Integer, nullable=False)
+
+
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)
