@@ -17,6 +17,8 @@ import sys
 
 from flask_restful_swagger import swagger
 
+from cloudify._compat import reraise
+
 from manager_rest.storage import models
 from manager_rest import manager_exceptions
 from manager_rest.security.authorization import authorize
@@ -50,11 +52,19 @@ class PluginsId(resources_v2.PluginsId):
             raise
         except manager_exceptions.ExecutionTimeout:
             tp, ex, tb = sys.exc_info()
-            raise manager_exceptions.PluginInstallationTimeout(
-                'Timed out during plugin un-installation. ({0}: {1})'
-                .format(tp.__name__, ex)), None, tb
+            reraise(
+                manager_exceptions.PluginInstallationTimeout,
+                manager_exceptions.PluginInstallationTimeout(
+                    'Timed out during plugin un-installation. '
+                    '({0}: {1})'.format(tp.__name__, ex)
+                ),
+                tb)
         except Exception:
             tp, ex, tb = sys.exc_info()
-            raise manager_exceptions.PluginInstallationError(
-                'Failed during plugin un-installation. ({0}: {1})'
-                .format(tp.__name__, ex)), None, tb
+            reraise(
+                manager_exceptions.PluginInstallationError,
+                manager_exceptions.PluginInstallationError(
+                    'Failed during plugin un-installation. '
+                    '({0}: {1})'.format(tp.__name__, ex)
+                ),
+                tb)

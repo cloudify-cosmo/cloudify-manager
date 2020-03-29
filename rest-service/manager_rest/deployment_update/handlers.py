@@ -1,9 +1,7 @@
-
 from copy import deepcopy
 from sqlalchemy import and_, cast
 from sqlalchemy.dialects.postgresql import JSON
 
-import utils as deployment_update_utils
 
 from cloudify.constants import COMPUTE_NODE_TYPE
 from cloudify.workflows import tasks as cloudify_tasks
@@ -14,10 +12,12 @@ from dsl_parser.constants import (HOST_AGENT,
                                   PLUGIN_EXECUTOR_KEY)
 
 from manager_rest import utils
-from entity_context import get_entity_context
-from constants import ENTITY_TYPES, NODE_MOD_TYPES
 from manager_rest.storage import models, get_node
 from manager_rest.resource_manager import get_resource_manager
+
+from .entity_context import get_entity_context
+from .constants import ENTITY_TYPES, NODE_MOD_TYPES
+from . import utils as deployment_update_utils
 
 
 class StorageClient(object):
@@ -183,10 +183,10 @@ class OperationHandler(ModifiableEntityHandlerBase):
 
     def modify(self, ctx, current_entities):
         return self._choose_and_execute_operation_handler(
-                ctx,
-                current_entities,
-                self._modify_relationship_operation,
-                self._modify_node_operation)
+            ctx,
+            current_entities,
+            self._modify_relationship_operation,
+            self._modify_node_operation)
 
     def _update_stored_operations(self, ctx, node, new_operation):
         """Update the operations table with the new operation inputs."""
@@ -256,8 +256,8 @@ class OperationHandler(ModifiableEntityHandlerBase):
         current_node = current_entities[ctx.raw_node_id]
         if ctx.modification_breadcrumbs:
             operation_to_update = deployment_update_utils.traverse_object(
-                    current_node[ctx.OPERATIONS][ctx.operation_id],
-                    ctx.modification_breadcrumbs[:-1]
+                current_node[ctx.OPERATIONS][ctx.operation_id],
+                ctx.modification_breadcrumbs[:-1]
             )
             operation_to_update[ctx.modification_breadcrumbs[-1]] = \
                 ctx.raw_entity_value
@@ -295,10 +295,10 @@ class OperationHandler(ModifiableEntityHandlerBase):
 
     def remove(self, ctx, current_entities):
         return self._choose_and_execute_operation_handler(
-                ctx,
-                current_entities,
-                self._remove_relationship_operation,
-                self._remove_node_operation
+            ctx,
+            current_entities,
+            self._remove_relationship_operation,
+            self._remove_node_operation
         )
 
     @staticmethod
@@ -317,10 +317,10 @@ class OperationHandler(ModifiableEntityHandlerBase):
 
     def add(self, ctx, current_entities):
         return self._choose_and_execute_operation_handler(
-                ctx,
-                current_entities,
-                self._add_relationship_operation,
-                self._add_node_operation
+            ctx,
+            current_entities,
+            self._add_relationship_operation,
+            self._add_node_operation
         )
 
     def _add_node_operation(self, ctx, current_entities):
@@ -489,8 +489,8 @@ class PluginHandler(ModifiableEntityHandlerBase):
         # Central deployment agent plugins are handled during plugin upload,
         # and non-compute nodes don't have plugins anyway
         return COMPUTE_NODE_TYPE in node.type_hierarchy \
-               and plugin[PLUGIN_INSTALL_KEY] \
-               and plugin[PLUGIN_EXECUTOR_KEY] == HOST_AGENT
+            and plugin[PLUGIN_INSTALL_KEY] \
+            and plugin[PLUGIN_EXECUTOR_KEY] == HOST_AGENT
 
 
 class DeploymentUpdateNodeHandler(UpdateHandler):

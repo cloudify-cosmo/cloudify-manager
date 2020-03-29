@@ -183,7 +183,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             self.client.executions.start(deployment_id,
                                          'nonexisting-workflow-id')
             self.fail()
-        except CloudifyClientError, e:
+        except CloudifyClientError as e:
             self.assertEqual(400, e.status_code)
             error = manager_exceptions.NonexistentWorkflowError
             self.assertEquals(error.NONEXISTENT_WORKFLOW_ERROR_CODE,
@@ -348,8 +348,6 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             else:
                 raise
         deployment_resource_path = os.path.join(deployment_folder, 'test.txt')
-        print('Creating deployment resource: {0}'.format(
-            deployment_resource_path))
         with open(deployment_resource_path, 'w') as f:
             f.write('deployment resource')
 
@@ -537,7 +535,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                 deployment_id=id_)
             raise exceptions.AssertionError(
                 "Expected DeploymentPluginNotFound error")
-        except DeploymentPluginNotFound, e:
+        except DeploymentPluginNotFound as e:
             self.assertEqual(400, e.status_code)
             self.assertEqual(manager_exceptions.DeploymentPluginNotFound.
                              ERROR_CODE,
@@ -556,7 +554,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                 deployment_id=id_)
             raise exceptions.AssertionError(
                 "Expected DeploymentPluginNotFound error")
-        except DeploymentPluginNotFound, e:
+        except DeploymentPluginNotFound as e:
             self.assertEqual(400, e.status_code)
             self.assertEqual(manager_exceptions.DeploymentPluginNotFound.
                              ERROR_CODE,
@@ -604,7 +602,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                 deployment_id=id_,
                 skip_plugins_validation='invalid_arg')
             raise exceptions.AssertionError("Expected CloudifyClientError")
-        except CloudifyClientError, e:
+        except CloudifyClientError as e:
             self.assertEqual(400, e.status_code)
             self.assertEqual(manager_exceptions.BadParametersError.
                              BAD_PARAMETERS_ERROR_CODE,
@@ -628,48 +626,48 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             self):
         id_ = 'i{0}'.format(uuid.uuid4())
         self.put_deployment(
-             blueprint_file_name='deployment_with_source_plugin.yaml',
-             blueprint_id=id_,
-             deployment_id=id_)
+            blueprint_file_name='deployment_with_source_plugin.yaml',
+            blueprint_id=id_,
+            deployment_id=id_)
 
     @attr(client_min_version=1, client_max_version=3)
     def test_creation_success_when_plugin_not_found_host_agent(self):
         id_ = 'i{0}'.format(uuid.uuid4())
         self.put_deployment(
-             blueprint_file_name='deployment_with'
-                                 '_source_plugin_host_agent.yaml',
-             blueprint_id=id_,
-             deployment_id=id_)
+            blueprint_file_name='deployment_with'
+                                '_source_plugin_host_agent.yaml',
+            blueprint_id=id_,
+            deployment_id=id_)
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
     def test_creation_success_when_diamond_plugin_in_blueprint(self):
         id_ = 'i{0}'.format(uuid.uuid4())
         self.put_deployment(
-             blueprint_file_name='deployment_with_'
-                                 'diamond_as_source_plugin.yaml',
-             blueprint_id=id_,
-             deployment_id=id_)
+            blueprint_file_name='deployment_with_'
+                                'diamond_as_source_plugin.yaml',
+            blueprint_id=id_,
+            deployment_id=id_)
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
     def test_creation_success_when_diamond_as_host_agent_in_blueprint(self):
         id_ = 'i{0}'.format(uuid.uuid4())
         self.put_deployment(
-             blueprint_file_name='deployment_with_'
-                                 'diamond_as_host_agent.yaml',
-             blueprint_id=id_,
-             deployment_id=id_)
+            blueprint_file_name='deployment_with_'
+                                'diamond_as_host_agent.yaml',
+            blueprint_id=id_,
+            deployment_id=id_)
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
     def test_creation_success_when_install_plugin_is_false(self):
         id_ = 'i{0}'.format(uuid.uuid4())
         self.put_deployment(
-             blueprint_file_name='deployment_with_'
-                                 'install_plugin_false.yaml',
-             blueprint_id=id_,
-             deployment_id=id_)
+            blueprint_file_name='deployment_with_'
+                                'install_plugin_false.yaml',
+            blueprint_id=id_,
+            deployment_id=id_)
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)

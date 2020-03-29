@@ -1,7 +1,6 @@
-
 import copy
 
-from constants import ENTITY_TYPES, PATH_SEPARATOR
+from .constants import ENTITY_TYPES, PATH_SEPARATOR
 
 
 def pluralize(input):

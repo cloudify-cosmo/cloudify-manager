@@ -23,7 +23,7 @@ def get_resource(resource):
     Gets the path for the provided resource.
     :param resource: resource name relative to /resources.
     """
-    import resources
+    from . import resources
     resources_path = path.dirname(resources.__file__)
     resource_path = path.join(resources_path, resource)
     if not path.exists(resource_path):

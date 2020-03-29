@@ -1,3 +1,4 @@
+from __future__ import print_function
 
 import os
 import sys
@@ -70,14 +71,14 @@ def main(s3_uri, logs_dir, build, edition):
 if __name__ == '__main__':
 
     if len(sys.argv) != 3:
-        print 'Usage: python upload_manager_logs.py JENKINS_BUILD_NUMBER ' \
-              'CLOUDIFY_EDITION'
+        print('Usage: python upload_manager_logs.py JENKINS_BUILD_NUMBER '
+              'CLOUDIFY_EDITION')
         exit(1)
 
     logs_path = os.environ.get('CFY_LOGS_PATH_REMOTE')
     if not logs_path:
-        print 'The environment variable "CFY_LOGS_PATH_REMOTE" is not ' \
-              'specified'
+        print('The environment variable "CFY_LOGS_PATH_REMOTE" is not '
+              'specified')
         exit(1)
 
     main(s3_uri=S3_URI,

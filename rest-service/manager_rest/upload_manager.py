@@ -569,7 +569,7 @@ class UploadedBlueprintsManager(UploadedDataManager):
                         os.path.join(tenant_dir, blueprint.id))
             cls._process_plugins(file_server_root, blueprint.id)
             return blueprint
-        except manager_exceptions.DslParseException, ex:
+        except manager_exceptions.DslParseException as ex:
             shutil.rmtree(os.path.join(file_server_root, app_dir))
             raise manager_exceptions.InvalidBlueprintError(
                 'Invalid blueprint - {0}'.format(ex.message))
