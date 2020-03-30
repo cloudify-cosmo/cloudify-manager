@@ -119,3 +119,13 @@ def _create_default_tenant():
     )
     db.session.add(default_tenant)
     return default_tenant
+
+
+def try_acquire_lock_on_table(lock_number, table_name):
+    return db.session.execute('SELECT pg_try_advisory_lock({0}) FROM {1}'
+                              .format(lock_number, table_name))
+
+
+def unlock_table(lock_number):
+    return db.session.execute('SELECT pg_try_advisory_unlock({0})'
+                              .format(lock_number))
