@@ -25,9 +25,11 @@ class TestDeploymentNodes(AgentlessTestCase):
         deployment_id = deployment.id
 
         def assert_node_state(node_id_infix, nodes):
-            self.assertTrue(any(map(
-                lambda n: node_id_infix in n.id and n.state == 'started', nodes
-            )), 'Failed finding node {0} state'.format(node_id_infix))
+            self.assertTrue(
+                any(
+                    node_id_infix in n.id and n.state == 'started'
+                    for n in nodes),
+                'Failed finding node {0} state'.format(node_id_infix))
 
         def assert_node_states():
             nodes = self.client.node_instances.list(

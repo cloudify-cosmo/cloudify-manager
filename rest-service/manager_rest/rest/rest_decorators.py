@@ -155,7 +155,7 @@ class marshal_with(object):
         if isinstance(data, dict):
             return data
         elif isinstance(data, list):
-            return map(self.wrap_with_response_object, data)
+            return [self.wrap_with_response_object(item) for item in data]
         elif isinstance(data, SQLModelBase):
             return data.to_response(get_data=self._get_data())
         # Support for partial results from SQLAlchemy (i.e. only
