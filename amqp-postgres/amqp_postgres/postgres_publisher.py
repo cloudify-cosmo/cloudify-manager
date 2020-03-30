@@ -15,7 +15,6 @@
 ############
 
 import json
-import Queue
 import logging
 from time import time
 from threading import Thread, Lock
@@ -24,6 +23,8 @@ import psycopg2
 import psycopg2.errorcodes
 from psycopg2.extras import execute_values, DictCursor
 from collections import OrderedDict
+
+from cloudify._compat import queue
 from cloudify.constants import EVENTS_EXCHANGE_NAME, LOGS_EXCHANGE_NAME
 
 
@@ -130,12 +131,12 @@ class DBLogEventPublisher(object):
 
     def __init__(self, config, connection):
         self._lock = Lock()
-        self._batch = Queue.Queue()
+        self._batch = queue.Queue()
 
         self._last_commit = time()
         self.config = config
         self._amqp_connection = connection
-        self._started = Queue.Queue()
+        self._started = queue.Queue()
         self._reset_cache()
         # exception stored here will be raised by the main thread
         self.error_exit = None
@@ -165,7 +166,7 @@ class DBLogEventPublisher(object):
         publish_thread.start()
         try:
             started = self._started.get(3)
-        except Queue.Empty:
+        except queue.Empty:
             raise RuntimeError('Timeout connecting to database')
         else:
             if isinstance(started, Exception):
@@ -209,7 +210,7 @@ class DBLogEventPublisher(object):
         while True:
             try:
                 items.append(self._batch.get(timeout=BATCH_DELAY / 2))
-            except Queue.Empty:
+            except queue.Empty:
                 pass
             if len(items) > 100 or \
                     (items and (time() - self._last_commit > BATCH_DELAY)):

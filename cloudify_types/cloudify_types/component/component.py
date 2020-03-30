@@ -14,9 +14,9 @@
 
 import os
 import time
-from urlparse import urlparse
 
 from cloudify import manager, ctx
+from cloudify._compat import urlparse
 from cloudify.exceptions import NonRecoverableError
 from cloudify_rest_client.client import CloudifyClient
 from cloudify_rest_client.exceptions import CloudifyClientError

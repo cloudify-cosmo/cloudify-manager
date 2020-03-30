@@ -19,12 +19,12 @@ import yaml
 import shutil
 import itertools
 from copy import deepcopy
-from StringIO import StringIO
 from collections import defaultdict
 
 from flask import current_app
 from flask_security import current_user
 
+from cloudify._compat import StringIO
 from cloudify.cryptography_utils import encrypt
 from cloudify.workflows import tasks as cloudify_tasks
 from cloudify.plugins.install_utils import INSTALLING_PREFIX

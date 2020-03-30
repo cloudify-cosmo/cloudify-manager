@@ -17,7 +17,6 @@ import re
 import os
 import json
 import time
-import Queue
 import base64
 import shutil
 import zipfile
@@ -28,6 +27,8 @@ import subprocess
 from contextlib import closing, contextmanager
 
 import wagon
+
+from cloudify._compat import queue
 from cloudify.workflows import ctx
 from cloudify.manager import get_rest_client
 from cloudify.state import current_workflow_ctx
@@ -309,8 +310,8 @@ class SnapshotRestore(object):
     def _restore_deployment_envs(self, postgres):
         deps = utils.get_dep_contexts(self._snapshot_version)
         token_info = postgres.get_deployment_creator_ids_and_tokens()
-        deps_with_failed_plugins = Queue.Queue()
-        failed_deployments = Queue.Queue()
+        deps_with_failed_plugins = queue.Queue()
+        failed_deployments = queue.Queue()
         threads = list()
 
         for tenant, deployments in deps:

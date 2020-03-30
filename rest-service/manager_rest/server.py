@@ -13,7 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import StringIO
 import traceback
 import os
 import yaml
@@ -24,6 +23,8 @@ from flask import Flask, jsonify, Blueprint, current_app
 from flask_security import Security
 from sqlalchemy.exc import OperationalError
 from werkzeug.exceptions import InternalServerError
+
+from cloudify._compat import StringIO
 
 from manager_rest import config, premium_enabled, manager_exceptions
 from manager_rest.storage import db, user_datastore
@@ -61,7 +62,7 @@ def manager_exception(error):
 
 @app_errors.app_errorhandler(InternalServerError)
 def internal_error(e):
-    s_traceback = StringIO.StringIO()
+    s_traceback = StringIO()
     traceback.print_exc(file=s_traceback)
 
     return jsonify(

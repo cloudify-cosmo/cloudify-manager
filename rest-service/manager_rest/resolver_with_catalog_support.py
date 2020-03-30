@@ -15,10 +15,10 @@
 
 import os
 import glob
-from urlparse import parse_qs
 from packaging.specifiers import SpecifierSet, InvalidSpecifier
 from packaging.version import parse as parse_version
 
+from cloudify._compat import parse_qs
 from dsl_parser import parser
 from dsl_parser.import_resolver.default_import_resolver import (
     DefaultImportResolver)

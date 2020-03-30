@@ -15,9 +15,9 @@
 ############
 
 import json
-import Queue
 import logging
 
+from cloudify._compat import queue
 from cloudify.amqp_client import AMQPConnection
 from cloudify.constants import EVENTS_EXCHANGE_NAME, LOGS_EXCHANGE_NAME
 
@@ -32,7 +32,7 @@ class AckingAMQPConnection(AMQPConnection):
             try:
                 channel, tag = self.acks_queue.get_nowait()
                 channel.basic_ack(tag)
-            except Queue.Empty:
+            except queue.Empty:
                 return
 
 

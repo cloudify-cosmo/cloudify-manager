@@ -2,10 +2,15 @@
 from __future__ import print_function
 
 import os
+import sys
 import subprocess
-from StringIO import StringIO
 
 import boto3
+
+if sys.version_info[0] == 2:
+    from StringIO import StringIO
+else:
+    from io import StringIO
 
 build_dir = os.environ.get('BUILD_DIR', 'build')
 BUCKET = 'cloudify-release-eu'
