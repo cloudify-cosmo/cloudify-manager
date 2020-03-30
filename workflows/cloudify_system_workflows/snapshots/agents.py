@@ -43,7 +43,7 @@ class Agents(object):
         if version < V_4_1_0:
             self._insert_agents_data(agents)
             return
-        for tenant_name, deployments in agents.iteritems():
+        for tenant_name, deployments in agents.items():
             self._insert_agents_data(agents[tenant_name], tenant_name)
 
     def dump(self, tempdir, manager_version):
@@ -89,7 +89,7 @@ class Agents(object):
         }
 
     def _insert_agents_data(self, agents, tenant_name=None):
-        for deployment_id, nodes in agents.iteritems():
+        for deployment_id, nodes in agents.items():
             try:
                 self._create_agent(nodes, tenant_name)
             except Exception:
@@ -118,8 +118,8 @@ class Agents(object):
 
     def _create_agent(self, nodes, tenant_name):
         client = None
-        for node_instances in nodes.itervalues():
-            for node_instance_id, agent in node_instances.iteritems():
+        for node_instances in nodes.values():
+            for node_instance_id, agent in node_instances.items():
                 broker_config = self._get_broker_config(agent)
                 tenant_name = tenant_name or self._get_tenant_name(
                     node_instance_id)

@@ -21,7 +21,7 @@ def attr(*args, **kwargs):
     def wrapped(element):
         for name in args:
             setattr(element, name, True)
-        for name, value in kwargs.iteritems():
+        for name, value in kwargs.items():
             setattr(element, name, value)
         return element
     return wrapped

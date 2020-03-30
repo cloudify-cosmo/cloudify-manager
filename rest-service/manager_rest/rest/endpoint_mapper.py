@@ -132,7 +132,7 @@ def setup_resources(api):
 
     # Set version endpoint as a non versioned endpoint
     api.add_resource(resources_v1.Version, '/api/version', endpoint='version')
-    for resource, endpoint_suffix in resources_endpoints.iteritems():
+    for resource, endpoint_suffix in resources_endpoints.items():
         _set_versioned_urls(api, resource, endpoint_suffix)
 
 

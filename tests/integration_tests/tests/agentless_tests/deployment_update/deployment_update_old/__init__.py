@@ -135,10 +135,10 @@ class DeploymentUpdateOldBase(AgentlessTestCase):
             self._wait_for_execution(execution)
 
     def _map_node_and_node_instances(self, deployment_id, dct):
-        nodes_dct = {k: [] for k, _ in dct.iteritems()}
-        node_instances_dct = {k: [] for k, _ in dct.iteritems()}
+        nodes_dct = {k: [] for k, _ in dct.items()}
+        node_instances_dct = {k: [] for k, _ in dct.items()}
 
-        for k, v in dct.iteritems():
+        for k, v in dct.items():
             nodes = list(self.client.nodes.list(
                 deployment_id=deployment_id,
                 node_id=dct[k]
@@ -172,7 +172,7 @@ class DeploymentUpdateOldBase(AgentlessTestCase):
                                      excluded_items=excluded_items)
 
     def _assert_equal_dicts(self, d1, d2, excluded_items=()):
-        for k, v in d1.iteritems():
+        for k, v in d1.items():
             if k not in excluded_items:
                 # Assuming here that only node instances have a version
                 # in their dict, and so `version_changed` is only applicable

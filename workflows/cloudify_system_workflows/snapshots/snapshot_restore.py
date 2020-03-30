@@ -321,7 +321,7 @@ class SnapshotRestore(object):
             )
             tenant_client = get_rest_client(tenant=tenant)
 
-            for deployment_id, dep_ctx in deployments.iteritems():
+            for deployment_id, dep_ctx in deployments.items():
                 # Task graph is created and executed by threads to
                 # shorten restore time significantly
                 wf_ctx = current_workflow_ctx.get_ctx()

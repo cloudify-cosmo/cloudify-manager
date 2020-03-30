@@ -289,7 +289,7 @@ def get_dep_contexts(version):
 
             # Get deployment contexts for this tenant
             deps[tenant_name] = ctx.deployments_contexts
-    return deps.items()
+    return list(deps.items())
 
 
 def is_compute(node):

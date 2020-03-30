@@ -532,7 +532,7 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
             modified_entities=modified_entities,
             current_entities_dict=nodes_dict
         )
-        return modified_entities, nodes_dict.values()
+        return modified_entities, list(nodes_dict.values())
 
     def finalize(self, dep_update):
         """update any removed entity from nodes
@@ -594,9 +594,8 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
         modification type
         """
         # create node instance relationship ordering
-        modified_instances = {k: {}
-                              for k, _ in self._handlers_mapper.iteritems()}
-        for change_type, handler in self._handlers_mapper.iteritems():
+        modified_instances = {k: {} for k in self._handlers_mapper}
+        for change_type, handler in self._handlers_mapper.items():
             if updated_instances[change_type]:
                 modified_instances[change_type] = handler(
                     updated_instances[change_type], dep_update)
@@ -776,7 +775,7 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
         return relationships
 
     def _reorder_relationships(self, deployment_id, rel_order_instances):
-        for node_id, indices_list in rel_order_instances.iteritems():
+        for node_id, indices_list in rel_order_instances.items():
             # Getting node instance ID from deployment ID and node ID
             node_instance_id = self.sm.list(
                 models.NodeInstance,

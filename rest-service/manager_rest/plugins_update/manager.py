@@ -59,10 +59,10 @@ class PluginsUpdateManager(object):
                             if u.execution_id}
         running_updates = [
             execs_to_updates[execution.id]
-            for execution in self.sm.list(models.Execution,
-                                          filters={
-                                              'id': execs_to_updates.keys()}
-                                          ).items
+            for execution in self.sm.list(
+                models.Execution,
+                filters={'id': list(execs_to_updates.keys())}
+            ).items
             if execution.status not in ExecutionState.END_STATES]
 
         if running_updates:

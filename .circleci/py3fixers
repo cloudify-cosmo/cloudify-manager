@@ -11,3 +11,5 @@
 -f libfuturize.fixes.fix_execfile
 -f libpasteurize.fixes.fix_newstyle
 -f lib2to3.fixes.fix_filter
+# fix_dict is not idempotent
+# -f lib2to3.fixes.fix_dict

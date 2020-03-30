@@ -178,7 +178,7 @@ class SQLModelBase(db.Model):
         columns_dict = {col.name: col.type for col in columns
                         if not col.name.startswith('_')}
         columns_dict.update(cls._get_orm_descriptors())
-        for field_name, field_type in columns_dict.iteritems():
+        for field_name, field_type in columns_dict.items():
             field_type_name = field_type.__class__.__name__
             fields[field_name] = cls._sql_to_flask_type_map[field_type_name]
         return fields

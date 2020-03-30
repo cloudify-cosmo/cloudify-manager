@@ -120,7 +120,7 @@ class Tenant(SQLModelBase):
                 'tenant-role': tenant_roles.get(user.username),
                 'roles': sorted(list(role.name for role in roles)),
             }
-            for user, roles in self.all_users.iteritems()
+            for user, roles in self.all_users.items()
         }
 
     def to_response(self, get_data=False):
@@ -393,7 +393,7 @@ class User(SQLModelBase, UserMixin):
                 'tenant-role': tenant_roles.get(tenant.name),
                 'roles': sorted(list(role.name for role in roles)),
             }
-            for tenant, roles in self.all_tenants.iteritems()
+            for tenant, roles in self.all_tenants.items()
         }
 
     def _get_groups_response(self):

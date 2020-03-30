@@ -156,7 +156,7 @@ class Config(object):
     def load_from_file(self, filename, namespace=''):
         with open(filename) as f:
             yaml_conf = yaml.safe_load(f.read())
-        for key, value in yaml_conf.iteritems():
+        for key, value in yaml_conf.items():
             config_key = '{0}_{1}'.format(namespace, key) if namespace \
                 else key
             if hasattr(self, config_key):

@@ -82,7 +82,7 @@ class SQLStorageManager(object):
         :return: An SQLAlchemy AppenderQuery object
         """
         if sort:
-            for column, order in sort.iteritems():
+            for column, order in sort.items():
                 if order == 'desc':
                     column = column.desc()
                 query = query.order_by(column)
@@ -114,7 +114,7 @@ class SQLStorageManager(object):
         return query
 
     def _add_value_filter(self, query, filters):
-        for column, value in filters.iteritems():
+        for column, value in filters.items():
             column, value = self._update_case_insensitive(column, value)
             if callable(value):
                 query = query.filter(value(column))
@@ -125,7 +125,7 @@ class SQLStorageManager(object):
         return query
 
     def _add_substr_filter(self, query, filters):
-        for column, value in filters.iteritems():
+        for column, value in filters.items():
             column, value = self._update_case_insensitive(column, value, True)
             if isinstance(value, basestring):
                 query = query.filter(column.contains(value))

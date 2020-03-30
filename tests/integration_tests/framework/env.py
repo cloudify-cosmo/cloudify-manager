@@ -38,7 +38,7 @@ third_party_logs = {
     'pika.adapters.base_connection': logging.CRITICAL,
     'requests': logging.ERROR,
 }
-for logger_name, logger_level in third_party_logs.iteritems():
+for logger_name, logger_level in third_party_logs.items():
     cloudify.utils.setup_logger(logger_name, logger_level)
 
 instance = None

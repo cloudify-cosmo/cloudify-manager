@@ -129,10 +129,10 @@ class EventsTest(AgentlessTestCase):
         _include = ['timestamp', 'type']
         events = self._events_list(_include=_include)
         for event in events:
-            self.assertListEqual(_include, event.keys(),
+            self.assertListEqual(_include, list(event.keys()),
                                  'Expected only the following fields: {0},'
                                  ' received: {1}'
-                                 .format(_include, event.keys()))
+                                 .format(_include, list(event.keys())))
 
     def test_events_with_logs(self):
         events = self._events_list(include_logs=True)

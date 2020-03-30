@@ -836,7 +836,7 @@ class UploadedCaravanManager(UploadedPluginsManager):
             return self._metadata
 
         def __iter__(self):
-            for wgn_path, yaml_path in self._metadata.iteritems():
+            for wgn_path, yaml_path in self._metadata.items():
                 yield os.path.join(self._cvn_dir, wgn_path), \
                       os.path.join(self._cvn_dir, yaml_path)
 

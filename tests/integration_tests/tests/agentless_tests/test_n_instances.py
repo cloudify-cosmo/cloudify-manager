@@ -35,7 +35,7 @@ class TestMultiInstanceApplication(AgentlessTestCase):
         )['state']
         machines_with_apps = set([])
         for app_state in apps_state:
-            host_id = app_state['capabilities'].keys()[0]
+            host_id = list(app_state['capabilities'].keys())[0]
             machines_with_apps.add(host_id)
         self.assertEquals(machines, machines_with_apps)
 

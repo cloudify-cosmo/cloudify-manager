@@ -122,10 +122,10 @@ class DeploymentUpdateBase(AgentlessTestCase):
             self._wait_for_execution(execution)
 
     def _map_node_and_node_instances(self, deployment_id, dct):
-        nodes_dct = {k: [] for k, _ in dct.iteritems()}
-        node_instances_dct = {k: [] for k, _ in dct.iteritems()}
+        nodes_dct = {k: [] for k, _ in dct.items()}
+        node_instances_dct = {k: [] for k, _ in dct.items()}
 
-        for k, v in dct.iteritems():
+        for k, v in dct.items():
             nodes = list(self.client.nodes.list(
                 deployment_id=deployment_id,
                 node_id=dct[k]
@@ -161,7 +161,7 @@ class DeploymentUpdateBase(AgentlessTestCase):
         # the blueprint id will always change in deployment update
         excluded_items = excluded_items or []
         excluded_items.append('blueprint_id')
-        for k, v in d1.iteritems():
+        for k, v in d1.items():
             if k not in excluded_items:
                 # Assuming here that only node instances have a version
                 # in their dict, and so `version_changed` is only applicable

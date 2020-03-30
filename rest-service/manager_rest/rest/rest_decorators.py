@@ -120,7 +120,7 @@ class marshal_with(object):
                 # only pushing "_include" into kwargs when the request
                 # contained this parameter, to keep things cleaner (identical
                 # behavior for passing "_include" which contains all fields)
-                kwargs['_include'] = fields_to_include.keys()
+                kwargs['_include'] = list(fields_to_include.keys())
 
             response = f(*args, **kwargs)
 
@@ -176,13 +176,13 @@ class marshal_with(object):
 
     def _get_fields_to_include(self):
         skipped_fields = self._get_skipped_fields()
-        model_fields = {k: v for k, v in self._fields.iteritems()
+        model_fields = {k: v for k, v in self._fields.items()
                         if k not in skipped_fields}
 
         if self._is_include_parameter_in_request():
             include = set(request.args['_include'].split(','))
             _validate_fields(model_fields, include, INCLUDE)
-            include_fields = {k: v for k, v in model_fields.iteritems()
+            include_fields = {k: v for k, v in model_fields.items()
                               if k in include}
             return include_fields
         return model_fields
@@ -471,9 +471,9 @@ def create_filters(response_class=None):
             request_args = request.args.to_dict(flat=False)
             # NOTE: all filters are created as lists
             filters = {k: v for k, v in
-                       request_args.iteritems() if not k.startswith('_')}
+                       request_args.items() if not k.startswith('_')}
             if fields:
-                _validate_fields(fields, filters.iterkeys(), FILTER)
+                _validate_fields(fields, filters.keys(), FILTER)
             return f(filters=filters, *args, **kw)
         return some_func
     return create_filters_dec
