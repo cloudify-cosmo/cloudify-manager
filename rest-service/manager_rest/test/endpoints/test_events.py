@@ -149,13 +149,13 @@ class SelectEventsBaseTest(TestCase):
                 _tenant_id=tenant.id,
                 _creator_id=user.id
             )
-            for _ in xrange(self.BLUEPRINT_COUNT)
+            for _ in range(self.BLUEPRINT_COUNT)
         ]
         session.add_all(blueprints)
         session.commit()
 
         deployments = []
-        for _ in xrange(self.DEPLOYMENT_COUNT):
+        for _ in range(self.DEPLOYMENT_COUNT):
             blueprint = choice(blueprints)
             deployments.append(Deployment(
                 id='deployment_{}'.format(fake.uuid4()),
@@ -168,7 +168,7 @@ class SelectEventsBaseTest(TestCase):
         session.commit()
 
         executions = []
-        for _ in xrange(self.EXECUTION_COUNT):
+        for _ in range(self.EXECUTION_COUNT):
             deployment = choice(deployments)
             executions.append(Execution(
                 id='execution_{}'.format(fake.uuid4()),
@@ -183,7 +183,7 @@ class SelectEventsBaseTest(TestCase):
         session.commit()
 
         nodes = []
-        for _ in xrange(self.NODE_COUNT):
+        for _ in range(self.NODE_COUNT):
             deployment = choice(deployments)
             nodes.append(Node(
                 id='node_{}'.format(fake.uuid4()),
@@ -201,7 +201,7 @@ class SelectEventsBaseTest(TestCase):
         session.commit()
 
         node_instances = []
-        for _ in xrange(self.NODE_INSTANCE_COUNT):
+        for _ in range(self.NODE_INSTANCE_COUNT):
             node = choice(nodes)
             node_instances.append(NodeInstance(
                 id='node_instance_{}'.format(fake.uuid4()),
@@ -250,7 +250,7 @@ class SelectEventsBaseTest(TestCase):
 
         events = [
             choice([create_event, create_log])()
-            for _ in xrange(self.EVENT_COUNT)
+            for _ in range(self.EVENT_COUNT)
         ]
         sorted_events = sorted(events, key=lambda event: event.timestamp)
         session.add_all(sorted_events)

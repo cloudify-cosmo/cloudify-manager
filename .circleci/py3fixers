@@ -14,3 +14,4 @@
 # fix_dict is not idempotent
 # -f lib2to3.fixes.fix_dict
 -f lib2to3.fixes.fix_map
+-f lib2to3.fixes.fix_xrange
