@@ -18,12 +18,12 @@ import shutil
 import zipfile
 import tempfile
 from shutil import copy
-from urlparse import urlparse
 
 import yaml
 import requests
 
 from cloudify import ctx
+from cloudify._compat import urlparse
 from cloudify.exceptions import NonRecoverableError
 
 from cloudify_types.utils import handle_client_exception, get_deployment_by_id

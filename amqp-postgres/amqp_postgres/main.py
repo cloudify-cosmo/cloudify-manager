@@ -14,10 +14,10 @@
 # limitations under the License.
 ############
 
-import Queue
 import logging
 import argparse
 
+from cloudify._compat import queue
 from cloudify.amqp_client import get_client
 from manager_rest import config
 
@@ -33,7 +33,7 @@ CONFIG_PATH = '/opt/manager/cloudify-rest.conf'
 
 
 def _create_connections():
-    acks_queue = Queue.Queue()
+    acks_queue = queue.Queue()
     cfy_config = config.instance
     port = BROKER_PORT_SSL if cfy_config.amqp_ca_path else BROKER_PORT_NO_SSL
     amqp_client = get_client(

@@ -15,11 +15,11 @@
 #
 
 import os
-import StringIO
 import traceback
 
 from flask import jsonify, request
 
+from cloudify._compat import StringIO
 from cloudify.models_states import ExecutionState
 
 from manager_rest import config
@@ -147,7 +147,7 @@ def is_bypass_maintenance_mode():
 
 def _create_maintenance_error(error_code):
     # app.logger.exception(e)  # gets logged automatically
-    s_traceback = StringIO.StringIO()
+    s_traceback = StringIO()
     traceback.print_exc(file=s_traceback)
     error_message = 'Your request was rejected since Cloudify ' \
                     'manager is currently in maintenance mode'

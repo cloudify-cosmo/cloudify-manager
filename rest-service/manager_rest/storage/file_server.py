@@ -15,12 +15,19 @@
 
 from multiprocessing import Process
 import subprocess
-import SimpleHTTPServer
-import SocketServer
 import os
 import sys
 import socket
 import time
+
+
+if sys.version_info[0] == 2:
+    from SimpleHTTPServer import SimpleHTTPRequestHandler
+    from SocketServer import TCPServer
+else:
+    from http.server import SimpleHTTPRequestHandler
+    from socketserver import TCPServer
+
 
 PORT = 53229
 FNULL = open(os.devnull, 'w')
@@ -76,10 +83,10 @@ class FileServer(object):
     def start_impl(self):
         os.chdir(self.root_path)
 
-        class TCPServer(SocketServer.TCPServer):
+        class ReuseAddressTCPServer(TCPServer):
             allow_reuse_address = True
-        httpd = TCPServer(('0.0.0.0', self.port),
-                          SimpleHTTPServer.SimpleHTTPRequestHandler)
+        httpd = ReuseAddressTCPServer(
+            ('0.0.0.0', self.port), SimpleHTTPRequestHandler)
         httpd.serve_forever()
 
     def is_alive(self):
