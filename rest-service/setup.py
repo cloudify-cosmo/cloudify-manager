@@ -34,7 +34,7 @@ install_requires = [
     'voluptuous==0.9.3',
     'toolz==0.8.2',
     'pika==0.11.2',
-    'cryptography==2.1.4',
+    'cryptography==2.3',
     'psycopg2==2.7.4',
     'pytz==2018.4',
     'click==6.7',
