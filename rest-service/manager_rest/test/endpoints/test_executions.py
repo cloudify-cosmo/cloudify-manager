@@ -532,7 +532,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                                         execution['workflow_id']),
                 response.json['message'])
 
-        for last_status, status_list in invalid_status_map.iteritems():
+        for last_status, status_list in invalid_status_map.items():
             for next_status in status_list:
                 assert_invalid_update()
 

@@ -41,12 +41,14 @@ class TestManagerStatus(AgentlessTestCase):
         services = ['Webserver', 'Cloudify Console', 'AMQP-Postgres',
                     'Management Worker', 'Manager Rest-Service', 'PostgreSQL',
                     'RabbitMQ', 'Cloudify Composer']
-        self.assertEqual(len(manager_status['services'].keys()), len(services))
+        self.assertEqual(
+            len(manager_status['services']),
+            len(services))
         statuses = [manager_status['services'][service]['status']
                     for service in services]
         self.assertNotIn(NodeServiceStatus.INACTIVE, statuses)
 
-        services_status = manager_status['services'].values()
+        services_status = list(manager_status['services'].values())
         remote_values = [service['is_remote'] for service in services_status]
         self.assertFalse(any(remote_values))
 

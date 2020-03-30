@@ -128,7 +128,7 @@ def set_restart_task(delay=1):
 
 
 def validate_inputs(input_dict):
-    for input_name, input_value in input_dict.iteritems():
+    for input_name, input_value in input_dict.items():
         prefix = 'The `{0}` argument'.format(input_name)
 
         if not input_value:

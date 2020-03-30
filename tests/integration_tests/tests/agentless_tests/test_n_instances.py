@@ -35,7 +35,7 @@ class TestMultiInstanceApplication(AgentlessTestCase):
         )['state']
         machines_with_apps = set([])
         for app_state in apps_state:
-            host_id = app_state['capabilities'].keys()[0]
+            host_id = list(app_state['capabilities'].keys())[0]
             machines_with_apps.add(host_id)
         self.assertEquals(machines, machines_with_apps)
 
@@ -47,12 +47,12 @@ class TestMultiInstanceApplication(AgentlessTestCase):
             deployment_id=deployment.id
         )['machines'])
         self.assertEquals(15, len(machines))
-        self.assertEquals(5, len(filter(lambda ma: ma.startswith('host1'),
-                                        machines)))
-        self.assertEquals(5, len(filter(lambda ma: ma.startswith('host2'),
-                                        machines)))
-        self.assertEquals(5, len(filter(lambda ma: ma.startswith('host3'),
-                                        machines)))
+        self.assertEquals(
+            5, len([ma for ma in machines if ma.startswith('host1')]))
+        self.assertEquals(
+            5, len([ma for ma in machines if ma.startswith('host2')]))
+        self.assertEquals(
+            5, len([ma for ma in machines if ma.startswith('host3')]))
 
     def test_deploy_multi_large_scale(self):
         dsl_path = resource('dsl/multi_instance_large_scale.yaml')

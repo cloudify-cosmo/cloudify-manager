@@ -110,7 +110,7 @@ class DeploymentPlan(dict):
         """
         super(DeploymentPlan, self).__init__()
         filtered_deployment = {k: v
-                               for k, v in deployment.iteritems()
+                               for k, v in deployment.items()
                                if k in RELEVANT_DEPLOYMENT_FIELDS}
         self.update(filtered_deployment)
 
@@ -330,7 +330,7 @@ class StepExtractor(object):
         added_nodes_graph = nx.DiGraph()
         added_nodes_graph.add_nodes_from(added_nodes_names)
         nodes = self.new_deployment_plan[NODES]
-        for node_name, node in nodes.iteritems():
+        for node_name, node in nodes.items():
             if node_name in added_nodes_names:
                 for relationship in node[RELATIONSHIPS]:
                     if relationship[TARGET_ID] in added_nodes_names:
@@ -480,7 +480,7 @@ class StepExtractor(object):
                                   new_nodes,
                                   old_nodes):
         with self.entity_id_builder.extend_id(NODES):
-            for node_name, node in new_nodes.iteritems():
+            for node_name, node in new_nodes.items():
                 with self.entity_id_builder.extend_id(node_name):
                     if node_name in old_nodes:
                         old_node = old_nodes[node_name]
@@ -538,7 +538,7 @@ class StepExtractor(object):
                         )
 
     def _extract_steps(self, new, old):
-        for entities_name, new_entities in new.iteritems():
+        for entities_name, new_entities in new.items():
             old_entities = old.get(entities_name, {})
             if entities_name == NODES:
                 self._extract_steps_from_nodes(new_entities, old_entities)

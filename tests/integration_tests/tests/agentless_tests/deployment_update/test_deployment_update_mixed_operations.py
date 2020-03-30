@@ -234,7 +234,7 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         nodes, node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
 
-        node_instances = {k: v[0] for k, v in node_instances.iteritems()}
+        node_instances = {k: v[0] for k, v in node_instances.items()}
 
         # Assert that f isn't connected to any node, and all of the install
         # operation ran

@@ -254,7 +254,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                          plugin=wf.get('plugin', ''),
                          operation=wf.get('operation', ''),
                          parameters=wf.get('parameters', dict()))
-                for wf_name, wf in deployment_workflows.iteritems()]
+                for wf_name, wf in deployment_workflows.items()]
 
 
 class Execution(CreatedAtMixin, SQLResourceBase):

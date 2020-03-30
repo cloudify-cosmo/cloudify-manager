@@ -51,7 +51,7 @@ class Credentials(object):
         os.makedirs(self._ARCHIVE_CRED_PATH)
 
         for tenant, value in self._get_hosts(version):
-            for dep_id, nodes in value.iteritems():
+            for dep_id, nodes in value.items():
                 for node in nodes:
                     agent_config = get_agent_config(node.properties)
                     agent_key = agent_config.get('key')
@@ -70,13 +70,13 @@ class Credentials(object):
         """
         hosts = {}
         for tenant, deployments in get_dep_contexts(version):
-            for deployment_id, dep_ctx in deployments.iteritems():
+            for deployment_id, dep_ctx in deployments.items():
                 for node in dep_ctx.nodes:
                     if is_compute(node):
                         tenant_hosts = hosts.setdefault(tenant, {})
                         deps = tenant_hosts.setdefault(deployment_id, [])
                         deps.append(node)
-        return hosts.iteritems()
+        return iter(hosts.items())
 
     def _dump_agent_key(self, agent_dirname, agent_key):
         """Copy an agent key from its location on the manager to the snapshot

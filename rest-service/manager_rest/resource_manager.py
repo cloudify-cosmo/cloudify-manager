@@ -1792,7 +1792,7 @@ class ResourceManager(object):
         }
         wrong_types = {}
 
-        for param_name, param in workflow_parameters.iteritems():
+        for param_name, param in workflow_parameters.items():
 
             if 'type' in param and param_name in execution_parameters:
 
@@ -1832,13 +1832,13 @@ class ResourceManager(object):
 
         if wrong_types:
             error_message = StringIO()
-            for param_name, param_type in wrong_types.iteritems():
+            for param_name, param_type in wrong_types.items():
                 error_message.write('Parameter "{0}" must be of type {1}\n'.
                                     format(param_name, param_type))
             raise manager_exceptions.IllegalExecutionParametersError(
                 error_message.getvalue())
 
-        custom_parameters = {k: v for k, v in execution_parameters.iteritems()
+        custom_parameters = {k: v for k, v in execution_parameters.items()
                              if k not in workflow_parameters}
 
         if not allow_custom_parameters and custom_parameters:
@@ -1917,7 +1917,7 @@ class ResourceManager(object):
     @staticmethod
     def create_filters_dict(**kwargs):
         filters = {}
-        for key, val in kwargs.iteritems():
+        for key, val in kwargs.items():
             if val:
                 filters[key] = val
         return filters or None
@@ -2010,7 +2010,7 @@ class ResourceManager(object):
 
     @staticmethod
     def _get_only_user_execution_parameters(execution_parameters):
-        return {k: v for k, v in execution_parameters.iteritems()
+        return {k: v for k, v in execution_parameters.items()
                 if not k.startswith('__')}
 
     def update_provider_context(self, update, context_dict):

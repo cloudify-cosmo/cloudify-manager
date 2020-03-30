@@ -94,7 +94,7 @@ def marshal_summary(summary_type):
                     })
                 marshalled_items[item[0]][summary_type] += item[-1]
 
-            return {"items": marshalled_items.values(),
+            return {"items": list(marshalled_items.values()),
                     "metadata": result.metadata}
         return wrapper
     return build_wrapper

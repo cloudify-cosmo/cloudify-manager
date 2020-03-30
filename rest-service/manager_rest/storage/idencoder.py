@@ -14,7 +14,7 @@ class IDEncoder(object):
         self.alphabet = self._alphabet
         self.block_size = self._block_size
         self.mask = (1 << self._block_size) - 1
-        self.mapping = range(self._block_size)
+        self.mapping = list(range(self._block_size))
 
     def encode(self, n, min_length=None):
         n += 1  # handle `0` as input

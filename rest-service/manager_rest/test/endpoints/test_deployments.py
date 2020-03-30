@@ -326,8 +326,8 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         self.assertEquals(2, len(nodes))
 
         def assert_node_exists(starts_with):
-            self.assertTrue(any(map(
-                lambda n: n['id'].startswith(starts_with), nodes)),
+            self.assertTrue(
+                any(n['id'].startswith(starts_with) for n in nodes),
                 'Failed finding node with prefix {0}'.format(starts_with))
         assert_node_exists('vm')
         assert_node_exists('http_web_server')

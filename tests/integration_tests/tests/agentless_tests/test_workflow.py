@@ -118,7 +118,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
             deployment_id=deployment.id
         )['state']
         node_runtime_props = None
-        for k, v in states[1]['capabilities'].iteritems():
+        for k, v in states[1]['capabilities'].items():
             if 'host_node' in k:
                 node_runtime_props = v
                 break
