@@ -10,7 +10,6 @@ Create Date: 2020-03-30 06:27:26.747213
 """
 from alembic import op
 import sqlalchemy as sa
-from manager_rest.storage.models_base import UTCDateTime
 
 revision = '212993f69df7'
 down_revision = '62a8d746d13b'
@@ -23,8 +22,8 @@ def upgrade():
         'usage_collector',
         sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
         sa.Column('manager_id', sa.Text(), nullable=True),
-        sa.Column('hourly_timestamp', UTCDateTime(), nullable=True),
-        sa.Column('daily_timestamp', UTCDateTime(), nullable=True),
+        sa.Column('hourly_timestamp', sa.Integer(), nullable=True),
+        sa.Column('daily_timestamp', sa.Integer(), nullable=True),
         sa.Column('hours_interval', sa.Integer(), nullable=False),
         sa.Column('days_interval', sa.Integer(), nullable=False),
         sa.PrimaryKeyConstraint('id', name=op.f('usage_collector_pkey')),
