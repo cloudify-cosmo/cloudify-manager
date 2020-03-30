@@ -10,3 +10,4 @@
 -f lib2to3.fixes.fix_operator
 -f libfuturize.fixes.fix_execfile
 -f libpasteurize.fixes.fix_newstyle
+-f lib2to3.fixes.fix_filter

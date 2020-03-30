@@ -759,8 +759,10 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
                 self._clean_relationship_index_field(relationships)
                 remaining_relationships.extend(relationships)
 
-            remaining_relationships = filter(
-                lambda r: r in remaining_relationships, storage_relationships)
+            remaining_relationships = [
+                r for r in storage_relationships
+                if r in remaining_relationships
+            ]
             updated_node_instance.relationships = deepcopy(
                 remaining_relationships)
             updated_node_instance.version += 1

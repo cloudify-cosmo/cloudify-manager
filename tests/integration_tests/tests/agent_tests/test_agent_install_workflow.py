@@ -95,8 +95,10 @@ class TestWorkflow(AgentTestWithPlugins):
             deployment_id=self.setup_deployment_id
         )
 
-        webserver_nodes = filter(lambda node: 'host' not in node.node_id,
-                                 deployment_nodes)
+        webserver_nodes = [
+            node for node in deployment_nodes
+            if 'host' not in node.node_id
+        ]
         self.assertEquals(1, len(webserver_nodes))
         webserver_node = webserver_nodes[0]
         webserver_host_node = self.client.node_instances.list(
