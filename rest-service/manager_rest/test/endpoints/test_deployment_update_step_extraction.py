@@ -267,7 +267,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 action='remove',
                 entity_type=DESCRIPTION,
                 entity_id='description'
-                )
+            )
         ]
 
         self.assertEquals(expected_steps, steps)
@@ -1398,12 +1398,12 @@ class StepExtractorTestCase(unittest.TestCase):
             {'type': 'typeB', 'target_id': 'id_1'},
             {'type': 'typeB', 'target_id': 'id_2'},
             {'type': 'typeA', 'target_id': 'id_2'}
-                                    ]
+        ]
         relationships_with_no_match = [
             {'type': 'typeB', 'target_id': 'id_1'},
             {'type': 'typeB', 'target_id': 'id_2'},
             {'type': 'typeA', 'target_id': 'id_2'}
-            ]
+        ]
 
         relationship = {
             'type': 'typeA',
@@ -2463,12 +2463,4 @@ class StepExtractorTestCase(unittest.TestCase):
         }
         steps, unsupported_steps = self.step_extractor.extract_steps()
         steps.extend(unsupported_steps)
-
-        for step in steps:
-            if step not in expected_steps.values():
-                print 'in actual: {}'.format(step)
-        for step in expected_steps.values():
-            if step not in steps:
-                print 'in expected: {}'.format(step)
-
         self.assertEquals(set(expected_steps.values()), set(steps))

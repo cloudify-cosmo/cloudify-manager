@@ -151,7 +151,7 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
             raise InvalidPluginError('No matching version was found for '
                                      'plugin {0} and '
                                      'version(s) {1}.'.format(name, versions))
-        max_item = max(matching_versions, key=lambda (i, v): v)
+        max_item = max(matching_versions, key=lambda i_v: i_v[1])
         return plugins[max_item[0]]
 
     @staticmethod

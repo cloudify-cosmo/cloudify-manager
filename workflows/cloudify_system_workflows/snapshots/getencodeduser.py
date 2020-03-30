@@ -1,3 +1,4 @@
+from __future__ import print_function
 from manager_rest import config
 from manager_rest.storage import idencoder
 

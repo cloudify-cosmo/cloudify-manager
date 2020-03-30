@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 import shutil
 import sys
@@ -13,8 +14,8 @@ def splitext(filename):
         if filename.endswith(ext):
             return filename[:-len(ext)], ext
     raise WrongExtension(
-            "Unknown agent format for {0}. "
-            "Must be either tar.gz or exe".format(filename))
+        "Unknown agent format for {0}. "
+        "Must be either tar.gz or exe".format(filename))
 
 
 def normalize_agent_name(filename):
@@ -34,7 +35,7 @@ def normalize_names(directory, target_dir):
         print('copying {} to {}'.format(source, target))
         if target in previous_targets:
             raise RuntimeError(
-                    'packages normalised to same target path!', target)
+                'packages normalised to same target path!', target)
         previous_targets.add(target)
         shutil.copy(source, target)
 

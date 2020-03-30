@@ -180,6 +180,6 @@ def _detect_debug_environment():
                 pydevd.settrace(
                     debug_config['host'], port=53100, stdoutToServer=True,
                     stderrToServer=True, suspend=False)
-    except BaseException, e:
+    except BaseException as e:
         raise Exception('Failed to connect to debug server, {0}: {1}'.
                         format(type(e).__name__, str(e)))

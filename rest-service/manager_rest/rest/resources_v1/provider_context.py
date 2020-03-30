@@ -93,5 +93,5 @@ class ProviderContext(SecuredResource):
         try:
             get_resource_manager().update_provider_context(update, context)
             return dict(status='ok'), status_code
-        except dsl_parser_utils.ResolverInstantiationError, ex:
+        except dsl_parser_utils.ResolverInstantiationError as ex:
             raise manager_exceptions.ResolverInstantiationError(str(ex))

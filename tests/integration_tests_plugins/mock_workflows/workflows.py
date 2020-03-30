@@ -299,7 +299,7 @@ def operation_mapping3(ctx, value, **_):
             func('test.operation', kwargs={
                 'value': value
             }).get()
-        except RuntimeError, e:
+        except RuntimeError as e:
             assert 'Duplicate' in e.message
 
     node1 = list(ctx.get_node('node1').instances)[0]

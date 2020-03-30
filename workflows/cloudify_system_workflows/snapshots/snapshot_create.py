@@ -72,7 +72,7 @@ class SnapshotCreate(object):
             self._create_archive()
             self._update_snapshot_status(self._config.created_status)
             ctx.logger.info('Snapshot created successfully')
-        except BaseException, e:
+        except BaseException as e:
             self._update_snapshot_status(self._config.failed_status, str(e))
             ctx.logger.error('Snapshot creation failed: {0}'.format(str(e)))
         finally:

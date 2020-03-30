@@ -39,7 +39,7 @@ class TestResourceListV1(BaseListTest):
     def test_insecure_endpoints_disabled_by_default(self):
         try:
             self.client.executions.list(deployment_id='111')
-        except CloudifyClientError, e:
+        except CloudifyClientError as e:
             self.assertEquals(405, e.status_code)
 
     def test_insecure_endpoints_enabled(self):

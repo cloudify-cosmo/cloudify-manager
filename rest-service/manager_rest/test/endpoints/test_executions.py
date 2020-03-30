@@ -188,7 +188,7 @@ class ExecutionsTestCase(BaseServerTestCase):
             self.client.executions.start(deployment_id,
                                          'install',
                                          parameters)
-        except exceptions.CloudifyClientError, e:
+        except exceptions.CloudifyClientError as e:
             self.assertEquals(400, e.status_code)
             expected_error = manager_exceptions.IllegalExecutionParametersError
             self.assertEquals(
@@ -220,7 +220,7 @@ class ExecutionsTestCase(BaseServerTestCase):
             self.client.executions.start(deployment_id,
                                          'mock_workflow',
                                          parameters)
-        except exceptions.IllegalExecutionParametersError, e:
+        except exceptions.IllegalExecutionParametersError as e:
             self.assertIn('mandatory_int2', str(e))
             self.assertIn('mandatory_float2', str(e))
             self.assertIn('mandatory_str2', str(e))
@@ -267,7 +267,7 @@ class ExecutionsTestCase(BaseServerTestCase):
             self.client.executions.start(deployment_id,
                                          'mock_workflow',
                                          parameters)
-        except exceptions.IllegalExecutionParametersError, e:
+        except exceptions.IllegalExecutionParametersError as e:
             self.assertIn('mandatory_int2', str(e))
             self.assertIn('mandatory_float2', str(e))
             self.assertIn('mandatory_str2', str(e))
@@ -326,7 +326,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                                          'mock_workflow',
                                          parameters,
                                          allow_custom_parameters=True)
-        except exceptions.IllegalExecutionParametersError, e:
+        except exceptions.IllegalExecutionParametersError as e:
             self.assertNotIn('mandatory_int2', str(e))
             self.assertNotIn('mandatory_float2', str(e))
             self.assertNotIn('mandatory_str2', str(e))
@@ -435,7 +435,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                                          'mock_workflow',
                                          parameters)
             self.fail()
-        except exceptions.CloudifyClientError, e:
+        except exceptions.CloudifyClientError as e:
             self.assertEquals(400, e.status_code)
             error = manager_exceptions.IllegalExecutionParametersError
             self.assertEquals(
@@ -454,7 +454,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                                          'mock_workflow',
                                          'not_a_dictionary')
             self.fail()
-        except exceptions.CloudifyClientError, e:
+        except exceptions.CloudifyClientError as e:
             self.assertEqual(400, e.status_code)
             bad_params_error = manager_exceptions.BadParametersError
             self.assertEqual(bad_params_error.BAD_PARAMETERS_ERROR_CODE,
@@ -464,7 +464,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                                          'mock_workflow',
                                          '[still_not_a_dictionary]')
             self.fail()
-        except exceptions.CloudifyClientError, e:
+        except exceptions.CloudifyClientError as e:
             self.assertEqual(400, e.status_code)
             bad_params_error = manager_exceptions.BadParametersError
             self.assertEqual(bad_params_error.BAD_PARAMETERS_ERROR_CODE,
@@ -750,7 +750,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                                              'install',
                                              force=is_use_force)
                 self.fail()
-            except exceptions.CloudifyClientError, e:
+            except exceptions.CloudifyClientError as e:
                 self.assertEqual(expected_status_code, e.status_code)
 
     def test_get_non_existent_execution(self):

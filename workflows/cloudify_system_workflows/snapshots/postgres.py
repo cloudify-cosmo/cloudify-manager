@@ -512,7 +512,7 @@ class Postgres(object):
                 result = {'status': status_message, 'all': fetchall}
                 ctx.logger.debug('Running query result status: {0}'
                                  .format(status_message))
-            except Exception, e:
+            except Exception as e:
                 fetchall = None
                 status_message = str(e)
                 result = {'status': status_message, 'all': fetchall}

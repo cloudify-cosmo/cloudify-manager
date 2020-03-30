@@ -122,14 +122,14 @@ class DeploymentUpdateManager(object):
             prepared_plan = tasks.prepare_deployment_plan(
                 plan, get_secret_method, inputs=new_inputs,
                 runtime_only_evaluation=runtime_only_evaluation)
-        except parser_exceptions.MissingRequiredInputError, e:
+        except parser_exceptions.MissingRequiredInputError as e:
             raise manager_exceptions.MissingRequiredDeploymentInputError(
                 str(e))
-        except parser_exceptions.UnknownInputError, e:
+        except parser_exceptions.UnknownInputError as e:
             raise manager_exceptions.UnknownDeploymentInputError(str(e))
-        except parser_exceptions.UnknownSecretError, e:
+        except parser_exceptions.UnknownSecretError as e:
             raise manager_exceptions.UnknownDeploymentSecretError(str(e))
-        except parser_exceptions.UnsupportedGetSecretError, e:
+        except parser_exceptions.UnsupportedGetSecretError as e:
             raise manager_exceptions.UnsupportedDeploymentGetSecretError(
                 str(e))
 

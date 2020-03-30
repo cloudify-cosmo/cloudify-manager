@@ -24,6 +24,7 @@ from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
 from cloudify.constants import AGENT_INSTALL_METHOD_PLUGIN
 from cloudify.utils import LocalCommandRunner, CommandExecutionException
+from cloudify._compat import reraise
 
 
 IMAGE = 'cloudify/centos:7'
@@ -122,7 +123,7 @@ def _init_script_agent_setup(container_id, install_agent_script):
             _docker_exec(container_id, container_install_agent_script_path)
         except BaseException as e:
             tpe, value, tb = sys.exc_info()
-            raise NonRecoverableError, NonRecoverableError(str(e)), tb
+            reraise(NonRecoverableError, NonRecoverableError(str(e)), tb)
 
 
 def _remote_agent_setup(container_id):

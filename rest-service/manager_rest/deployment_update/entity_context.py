@@ -1,7 +1,5 @@
-
-import utils
-
-from constants import ENTITY_TYPES
+from . import utils
+from .constants import ENTITY_TYPES
 from manager_rest.storage import get_storage_manager, models, get_node
 
 
@@ -159,7 +157,7 @@ class RelationshipContext(NodeContextBase):
     @property
     def target_id(self):
         return self.raw_entity_value.get('target_id') \
-               or self.storage_entity_value.get('target_id')
+            or self.storage_entity_value.get('target_id')
 
     @property
     def storage_target_node(self):
@@ -259,10 +257,10 @@ class NodeInterfaceOperationContext(NodeContextBase):
                  operation_id,
                  *modification_breadcrumbs):
         super(NodeInterfaceOperationContext, self).__init__(
-                plan,
-                deployment_id,
-                ENTITY_TYPES.OPERATION,
-                top_level_entity_id)
+            plan,
+            deployment_id,
+            ENTITY_TYPES.OPERATION,
+            top_level_entity_id)
         self._operation_id = operation_id
         self._modification_breadcrumbs = modification_breadcrumbs
         entity_keys = [nodes_key, top_level_entity_id, operation_id]
@@ -309,10 +307,10 @@ class PluginContext(NodeContextBase):
                  plugin_name,
                  *modification_breadcrumbs):
         super(PluginContext, self).__init__(
-                plan,
-                deployment_id,
-                ENTITY_TYPES.PLUGIN,
-                node_id)
+            plan,
+            deployment_id,
+            ENTITY_TYPES.PLUGIN,
+            node_id)
         self._plugin_key = plugin_key
         self._plugin_name = plugin_name
         self._modification_breadcrumbs = modification_breadcrumbs

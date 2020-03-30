@@ -144,5 +144,5 @@ class UploadBlueprintsWithImportResolverTests(BaseServerTestCase):
             try:
                 self._update_provider_context()
                 self.fail('CloudifyClientError expected')
-            except CloudifyClientError, ex:
+            except CloudifyClientError as ex:
                 self.assertIn(err_msg, str(ex))
