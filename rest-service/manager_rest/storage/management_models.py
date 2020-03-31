@@ -692,7 +692,7 @@ class UsageCollector(SQLModelBase):
     __tablename__ = 'usage_collector'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    manager_id = db.Column(db.Text, unique=True)
+    manager_id = db.Column(db.Text, unique=True, nullable=False)
     hourly_timestamp = db.Column(db.Integer)
     daily_timestamp = db.Column(db.Integer)
     hours_interval = db.Column(db.Integer, nullable=False)

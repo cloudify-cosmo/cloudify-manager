@@ -21,7 +21,7 @@ def upgrade():
     op.create_table(
         'usage_collector',
         sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
-        sa.Column('manager_id', sa.Text(), nullable=True),
+        sa.Column('manager_id', sa.Text(), nullable=False),
         sa.Column('hourly_timestamp', sa.Integer(), nullable=True),
         sa.Column('daily_timestamp', sa.Integer(), nullable=True),
         sa.Column('hours_interval', sa.Integer(), nullable=False),
