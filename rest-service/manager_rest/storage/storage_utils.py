@@ -124,10 +124,12 @@ def _create_default_tenant():
 
 
 def try_acquire_lock_on_table(lock_number, table_name):
-    return db.session.execute('SELECT pg_try_advisory_lock({0}) FROM {1}'
-                              .format(lock_number, table_name))
+    # make sure a flask app exists before calling this function
+    results = db.session.execute('SELECT pg_try_advisory_lock({0}) FROM {1}'
+                                 .format(lock_number, table_name))
+    return results.first()[0]
 
 
 def unlock_table(lock_number):
-    return db.session.execute('SELECT pg_try_advisory_unlock({0})'
-                              .format(lock_number))
+    # make sure a flask app exists before calling this function
+    db.session.execute('SELECT pg_advisory_unlock({0})'.format(lock_number))
