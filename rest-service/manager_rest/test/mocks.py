@@ -15,11 +15,11 @@
 
 import json
 import types
-import urllib
 from datetime import datetime
 
 from functools import wraps
 
+from cloudify._compat import urlencode
 from manager_rest import utils, manager_exceptions
 from cloudify_rest_client.client import HTTPClient
 from cloudify_rest_client.executions import Execution
@@ -40,7 +40,7 @@ except ImportError:
 def build_query_string(query_params):
     query_string = ''
     if query_params and len(query_params) > 0:
-        query_string += urllib.urlencode(query_params, True) + '&'
+        query_string += urlencode(query_params, True) + '&'
     return query_string
 
 

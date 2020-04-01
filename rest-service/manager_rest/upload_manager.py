@@ -23,13 +23,14 @@ import yaml
 import shutil
 import zipfile
 import tempfile
-import contextlib
+import requests
 
 from setuptools import archive_util
 from flask import request, current_app
 from flask_restful.reqparse import Argument
 from flask_restful.inputs import boolean
 
+from cloudify._compat import unquote
 from cloudify.models_states import SnapshotState
 from cloudify.plugins.install_utils import (INSTALLING_PREFIX,
                                             is_plugin_installing)
@@ -129,25 +130,23 @@ class UploadedDataManager(object):
             shutil.rmtree(tempdir)
 
     @staticmethod
-    def _save_file_from_url(archive_target_path, data_url, data_type):
-        if any([request.data,
-                'Transfer-Encoding' in request.headers,
-                'blueprint_archive' in request.files]):
+    def _save_file_from_url(archive_target_path, url, data_type):
+        if request.data or \
+                'Transfer-Encoding' in request.headers or \
+                'blueprint_archive' in request.files:
             raise manager_exceptions.BadParametersError(
                 "Can't pass both a {0} URL via query parameters, request body"
                 ", multi-form and chunked.".format(data_type))
         try:
-            with contextlib.closing(urlopen(data_url)) as urlf:
-                with open(archive_target_path, 'w') as f:
-                    f.write(urlf.read())
-        except URLError:
-            raise manager_exceptions.ParamUrlNotFoundError(
-                "URL {0} not found - can't download {1} archive"
-                .format(data_url, data_type))
-        except ValueError:
+            with requests.get(url, stream=True, timeout=(5, None)) as resp:
+                resp.raise_for_status()
+                with open(archive_target_path, 'wb') as f:
+                    for chunk in resp.iter_content(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
+        except requests.exceptions.RequestException as e:
             raise manager_exceptions.BadParametersError(
-                "URL {0} is malformed - can't download {1} archive"
-                .format(data_url, data_type))
+                "Cannot fetch URL {0}: {1}".format(url, e))
 
     @staticmethod
     def _save_file_from_chunks(archive_target_path, data_type):
@@ -414,7 +413,7 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
         full_application_dir = os.path.join(file_server_root, application_dir)
 
         if 'application_file_name' in request.args:
-            application_file_name = urllib.parse.unquote(
+            application_file_name = unquote(
                 request.args['application_file_name']).decode('utf-8')
             application_file = os.path.join(full_application_dir,
                                             application_file_name)
@@ -578,7 +577,7 @@ class UploadedBlueprintsManager(UploadedDataManager):
         full_application_dir = os.path.join(file_server_root, application_dir)
 
         if application_file_name:
-            application_file_name = urllib.parse.unquote(
+            application_file_name = unquote(
                 application_file_name).decode('utf-8')
             application_file = os.path.join(full_application_dir,
                                             application_file_name)
