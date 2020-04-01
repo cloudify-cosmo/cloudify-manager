@@ -25,6 +25,7 @@ from manager_rest.manager_exceptions import BadParametersError
 from .. import rest_decorators, rest_utils
 from ..responses_v3 import UserResponse
 
+from cloudify._compat import text_type
 try:
     from cloudify_premium.multi_tenancy.secured_tenant_resource \
         import SecuredMultiTenancyResource
@@ -72,13 +73,13 @@ class Users(SecuredMultiTenancyResource):
         request_dict = rest_utils.get_json_and_verify_params(
             {
                 'username': {
-                    'type': unicode,
+                    'type': text_type,
                 },
                 'password': {
-                    'type': unicode,
+                    'type': text_type,
                 },
                 'role': {
-                    'type': unicode,
+                    'type': text_type,
                     'optional': True,
                 },
             }

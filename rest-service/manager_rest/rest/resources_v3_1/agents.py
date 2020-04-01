@@ -15,6 +15,7 @@
 
 from flask import current_app, request
 
+from cloudify._compat import text_type
 from cloudify.models_states import AgentState
 from cloudify.cryptography_utils import encrypt, decrypt
 
@@ -79,8 +80,8 @@ class AgentsName(SecuredResource):
         Create a new agent
         """
         request_dict = get_json_and_verify_params({
-            'node_instance_id': {'type': unicode},
-            'state': {'type': unicode},
+            'node_instance_id': {'type': text_type},
+            'state': {'type': text_type},
             'create_rabbitmq_user': {'type': bool}
         })
         validate_inputs({'name': name})
@@ -110,7 +111,7 @@ class AgentsName(SecuredResource):
         Update an existing agent
         """
         request_dict = get_json_and_verify_params({
-            'state': {'type': unicode}
+            'state': {'type': text_type}
         })
         validate_inputs({'name': name})
         state = request_dict['state']

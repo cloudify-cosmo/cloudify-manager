@@ -16,6 +16,7 @@
 from flask import request
 from flask_security import current_user
 
+from cloudify._compat import text_type
 from cloudify.models_states import VisibilityState
 from cloudify.cryptography_utils import encrypt, decrypt
 
@@ -58,7 +59,7 @@ class SecretsKey(SecuredResource):
         """
         request_dict = rest_utils.get_json_and_verify_params({
             'value': {
-                'type': unicode,
+                'type': text_type,
             },
             'update_if_exists': {
                 'optional': True,
@@ -159,7 +160,7 @@ class SecretsKey(SecuredResource):
 
     def _update_value(self, secret):
         request_dict = rest_utils.get_json_and_verify_params({
-            'value': {'type': unicode, 'optional': True}
+            'value': {'type': text_type, 'optional': True}
         })
         value = request_dict.get('value')
         if value:

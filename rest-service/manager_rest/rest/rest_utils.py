@@ -231,7 +231,7 @@ def get_visibility_parameter(optional=False,
         visibility = args.visibility
     else:
         request_dict = get_json_and_verify_params({
-            'visibility': {'optional': optional, 'type': unicode}
+            'visibility': {'optional': optional, 'type': text_type}
         })
         visibility = request_dict.get('visibility', None)
 

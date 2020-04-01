@@ -29,6 +29,7 @@ from manager_rest.security import (MissingPremiumFeatureResource,
 from .. import rest_decorators, rest_utils
 from ..responses_v3 import TenantResponse, TenantDetailsResponse
 
+from cloudify._compat import text_type
 from cloudify.cryptography_utils import decrypt
 
 try:
@@ -144,13 +145,13 @@ class TenantUsers(SecuredMultiTenancyResource):
         request_dict = rest_utils.get_json_and_verify_params(
             {
                 'tenant_name': {
-                    'type': unicode
+                    'type': text_type
                 },
                 'username': {
-                    'type': unicode
+                    'type': text_type
                 },
                 'role': {
-                    'type': unicode
+                    'type': text_type
                 },
             },
         )
@@ -175,13 +176,13 @@ class TenantUsers(SecuredMultiTenancyResource):
         request_dict = rest_utils.get_json_and_verify_params(
             {
                 'tenant_name': {
-                    'type': unicode,
+                    'type': text_type,
                 },
                 'username': {
-                    'type': unicode,
+                    'type': text_type,
                 },
                 'role': {
-                    'type': unicode,
+                    'type': text_type,
                 },
             },
         )
@@ -220,13 +221,13 @@ class TenantGroups(SecuredMultiTenancyResource):
         request_dict = rest_utils.get_json_and_verify_params(
             {
                 'tenant_name': {
-                    'type': unicode
+                    'type': text_type
                 },
                 'group_name': {
-                    'type': unicode
+                    'type': text_type
                 },
                 'role': {
-                    'type': unicode
+                    'type': text_type
                 },
             })
         rest_utils.validate_inputs(request_dict)
@@ -249,13 +250,13 @@ class TenantGroups(SecuredMultiTenancyResource):
         request_dict = rest_utils.get_json_and_verify_params(
             {
                 'tenant_name': {
-                    'type': unicode,
+                    'type': text_type,
                 },
                 'group_name': {
-                    'type': unicode,
+                    'type': text_type,
                 },
                 'role': {
-                    'type': unicode,
+                    'type': text_type,
                 },
             },
         )
