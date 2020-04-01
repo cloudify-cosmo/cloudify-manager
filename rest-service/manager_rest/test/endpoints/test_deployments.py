@@ -16,7 +16,6 @@
 import errno
 import os
 import uuid
-import exceptions
 
 from cloudify.models_states import VisibilityState
 
@@ -528,37 +527,32 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
     def test_creation_failure_when_plugin_not_found_central_deployment(self):
         from cloudify_rest_client.exceptions import DeploymentPluginNotFound
         id_ = 'i{0}'.format(uuid.uuid4())
-        try:
+        with self.assertRaises(DeploymentPluginNotFound) as cm:
             self.put_deployment(
                 blueprint_file_name='deployment_with_source_plugin.yaml',
                 blueprint_id=id_,
                 deployment_id=id_)
-            raise exceptions.AssertionError(
-                "Expected DeploymentPluginNotFound error")
-        except DeploymentPluginNotFound as e:
-            self.assertEqual(400, e.status_code)
-            self.assertEqual(manager_exceptions.DeploymentPluginNotFound.
-                             ERROR_CODE,
-                             e.error_code)
+
+        self.assertEqual(400, cm.exception.status_code)
+        self.assertEqual(manager_exceptions.DeploymentPluginNotFound.
+                         ERROR_CODE,
+                         cm.exception.error_code)
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
     def test_creation_failure_when_plugin_not_found_host_agent(self):
         from cloudify_rest_client.exceptions import DeploymentPluginNotFound
         id_ = 'i{0}'.format(uuid.uuid4())
-        try:
+        with self.assertRaises(DeploymentPluginNotFound) as cm:
             self.put_deployment(
                 blueprint_file_name='deployment_'
                                     'with_source_plugin_host_agent.yaml',
                 blueprint_id=id_,
                 deployment_id=id_)
-            raise exceptions.AssertionError(
-                "Expected DeploymentPluginNotFound error")
-        except DeploymentPluginNotFound as e:
-            self.assertEqual(400, e.status_code)
-            self.assertEqual(manager_exceptions.DeploymentPluginNotFound.
-                             ERROR_CODE,
-                             e.error_code)
+        self.assertEqual(400, cm.exception.status_code)
+        self.assertEqual(manager_exceptions.DeploymentPluginNotFound.
+                         ERROR_CODE,
+                         cm.exception.error_code)
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
@@ -595,18 +589,16 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
           client_max_version=base_test.LATEST_API_VERSION)
     def test_creation_failure_with_invalid_flag_argument(self):
         id_ = 'i{0}'.format(uuid.uuid4())
-        try:
+        with self.assertRaises(CloudifyClientError) as cm:
             self.put_deployment(
                 blueprint_file_name='deployment_with_source_plugin.yaml',
                 blueprint_id=id_,
                 deployment_id=id_,
                 skip_plugins_validation='invalid_arg')
-            raise exceptions.AssertionError("Expected CloudifyClientError")
-        except CloudifyClientError as e:
-            self.assertEqual(400, e.status_code)
-            self.assertEqual(manager_exceptions.BadParametersError.
-                             BAD_PARAMETERS_ERROR_CODE,
-                             e.error_code)
+        self.assertEqual(400, cm.exception.status_code)
+        self.assertEqual(manager_exceptions.BadParametersError.
+                         BAD_PARAMETERS_ERROR_CODE,
+                         cm.exception.error_code)
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
