@@ -14,6 +14,9 @@
 #  * limitations under the License.
 
 from flask_restful.reqparse import Argument
+
+from cloudify._compat import text_type
+
 from manager_rest.rest.rest_utils import (
     get_args_and_verify_arguments,
     get_json_and_verify_params,
@@ -37,7 +40,7 @@ class Operations(SecuredResource):
     @paginate
     def get(self, _include=None, pagination=None, **kwargs):
         args = get_args_and_verify_arguments([
-            Argument('graph_id', type=unicode, required=True)
+            Argument('graph_id', type=text_type, required=True)
         ])
         sm = get_storage_manager()
         graph_id = args.get('graph_id')
@@ -60,11 +63,11 @@ class OperationsId(SecuredResource):
     @marshal_with(models.Operation)
     def put(self, operation_id, **kwargs):
         params = get_json_and_verify_params({
-            'name': {'type': unicode, 'required': True},
-            'graph_id': {'type': unicode, 'required': True},
+            'name': {'type': text_type, 'required': True},
+            'graph_id': {'type': text_type, 'required': True},
             'dependencies': {'type': list, 'required': True},
             'parameters': {'type': dict},
-            'type': {'type': unicode}
+            'type': {'type': text_type}
         })
         operation = get_resource_manager().create_operation(
             operation_id,
@@ -80,7 +83,7 @@ class OperationsId(SecuredResource):
     @marshal_with(models.Operation)
     def patch(self, operation_id, **kwargs):
         request_dict = get_json_and_verify_params(
-            {'state': {'type': unicode}}
+            {'state': {'type': text_type}}
         )
         sm = get_storage_manager()
         instance = sm.get(models.Operation, operation_id, locking=True)
@@ -102,8 +105,8 @@ class TasksGraphs(SecuredResource):
     @paginate
     def get(self, _include=None, pagination=None, **kwargs):
         args = get_args_and_verify_arguments([
-            Argument('execution_id', type=unicode, required=True),
-            Argument('name', type=unicode, required=True)
+            Argument('execution_id', type=text_type, required=True),
+            Argument('name', type=text_type, required=True)
         ])
         sm = get_storage_manager()
         execution_id = args.get('execution_id')
@@ -121,8 +124,8 @@ class TasksGraphsId(SecuredResource):
     @marshal_with(models.TasksGraph)
     def post(self, **kwargs):
         params = get_json_and_verify_params({
-            'name': {'type': unicode, 'required': True},
-            'execution_id': {'type': unicode, 'required': True},
+            'name': {'type': text_type, 'required': True},
+            'execution_id': {'type': text_type, 'required': True},
             'operations': {'required': False}
         })
         tasks_graph = get_resource_manager().create_tasks_graph(
@@ -136,7 +139,7 @@ class TasksGraphsId(SecuredResource):
     @marshal_with(models.TasksGraph)
     def patch(self, tasks_graph_id, **kwargs):
         request_dict = get_json_and_verify_params(
-            {'state': {'type': unicode}}
+            {'state': {'type': text_type}}
         )
         sm = get_storage_manager()
         instance = sm.get(models.TasksGraph, tasks_graph_id, locking=True)

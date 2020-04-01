@@ -18,6 +18,7 @@ from subprocess import check_call
 from flask import request
 from flask_restful.reqparse import Argument
 
+from cloudify._compat import text_type
 from manager_rest.security import SecuredResource, premium_only
 from manager_rest.rest import rest_utils
 from manager_rest.storage import get_storage_manager, models
@@ -148,7 +149,7 @@ class Managers(managers_base):
         :param _include: optional, what columns to include in the response
         """
         args = rest_utils.get_args_and_verify_arguments([
-            Argument('hostname', type=unicode, required=False)
+            Argument('hostname', type=text_type, required=False)
         ])
         hostname = args.get('hostname')
         if hostname:

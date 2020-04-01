@@ -16,6 +16,7 @@
 from flask import request
 from flask_security import current_user
 
+from cloudify._compat import text_type
 from cloudify.models_states import VisibilityState
 from cloudify.cryptography_utils import (encrypt,
                                          decrypt,
@@ -86,7 +87,7 @@ class SecretsKey(resources_v3.SecretsKey):
     def _get_secret_params(key):
         rest_utils.validate_inputs({'key': key})
         request_dict = rest_utils.get_json_and_verify_params({
-            'value': {'type': unicode}
+            'value': {'type': text_type}
         })
         update_if_exists = rest_utils.verify_and_convert_bool(
             'update_if_exists',
@@ -182,7 +183,7 @@ class SecretsImport(SecuredResource):
         request_dict = rest_utils.get_json_and_verify_params({
             'secrets_list': {'type': list, 'optional': False},
             'tenant_map': {'type': dict, 'optional': True},
-            'passphrase': {'type': unicode, 'optional': True},
+            'passphrase': {'type': text_type, 'optional': True},
             'override_collisions': {'type': bool, 'optional': False}
         })
         return request_dict
@@ -309,7 +310,7 @@ class SecretsImport(SecuredResource):
     @staticmethod
     def _is_missing_field(secret, field, missing_fields):
         value = secret[field] if field in secret else None
-        empty_string = isinstance(value, unicode) and not value.strip()
+        empty_string = isinstance(value, text_type) and not value.strip()
         if value is None or empty_string:
             missing_fields.append(field)
             return True

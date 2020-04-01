@@ -18,6 +18,7 @@ from flask_restful.inputs import boolean
 from flask_restful_swagger import swagger
 from flask_restful.reqparse import Argument
 
+from cloudify._compat import text_type
 from cloudify.models_states import VisibilityState
 
 from manager_rest import utils
@@ -42,7 +43,7 @@ class DeploymentsId(resources_v1.DeploymentsId):
         request_schema = super(DeploymentsId, self).create_request_schema()
         request_schema['skip_plugins_validation'] = {
             'optional': True, 'type': bool}
-        request_schema['site_name'] = {'optional': True, 'type': unicode}
+        request_schema['site_name'] = {'optional': True, 'type': text_type}
         request_schema['runtime_only_evaluation'] = {
             'optional': True, 'type': bool
         }
