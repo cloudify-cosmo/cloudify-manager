@@ -16,7 +16,6 @@
 import os
 import pytz
 import copy
-import urllib
 import subprocess
 import dateutil.parser
 from string import ascii_letters
@@ -26,6 +25,7 @@ from flask_security import current_user
 from flask import request, make_response, current_app
 from flask_restful.reqparse import Argument, RequestParser
 
+from cloudify._compat import urlquote
 from cloudify.models_states import VisibilityState
 from cloudify.snapshots import SNAPSHOT_RESTORE_FLAG_FILE
 
@@ -143,7 +143,7 @@ def validate_inputs(input_dict):
             )
 
         # urllib.quote changes all chars except alphanumeric chars and _-.
-        quoted_value = urllib.quote(input_value, safe='')
+        quoted_value = urlquote(input_value, safe='')
         if quoted_value != input_value:
             raise manager_exceptions.BadParametersError(
                 '{0} contains illegal characters. Only letters, digits and the'
@@ -268,7 +268,7 @@ def parse_datetime_string(datetime_str):
 
 def is_hidden_value_permitted(secret):
     return is_administrator(secret.tenant) or \
-           secret.created_by == current_user.username
+        secret.created_by == current_user.username
 
 
 def is_system_in_snapshot_restore_process():
