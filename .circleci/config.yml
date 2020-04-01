@@ -47,6 +47,54 @@ defaults:
             bash <(curl -s https://codecov.io/bash) -F $TOX_TEST
 
 jobs:
+  test_endpoints:
+    docker:
+      - image: circleci/python:2.7
+      - image: circleci/postgres:9.5-alpine
+        environment:
+          POSTGRES_USER: cloudify
+          POSTGRES_PASSWORD: cloudify
+          POSTGRES_DB: cloudify_db
+    steps:
+      - checkout
+      - run: sudo apt-get install libldap-dev libsasl2-dev
+      - run: virtualenv ~/venv
+      - run: |
+          pushd rest-service
+            ~/venv/bin/pip install -Ur dev-requirements.txt
+            ~/venv/bin/pip install -Ur test-requirements.txt
+            ~/venv/bin/pip install -e .
+          popd
+      - run: |
+          ~/venv/bin/pytest \
+            -sv \
+            -a '(client_min_version is None or client_min_version <= 3.1) and (client_max_version is None or 3.1 <= client_max_version)' \
+            rest-service/manager_rest/test/endpoints
+
+  test_endpoints_36:
+    docker:
+      - image: circleci/python:3.6
+      - image: circleci/postgres:9.5-alpine
+        environment:
+          POSTGRES_USER: cloudify
+          POSTGRES_PASSWORD: cloudify
+          POSTGRES_DB: cloudify_db
+    steps:
+      - checkout
+      - run: sudo apt-get install libldap-dev libsasl2-dev
+      - run: virtualenv ~/venv
+      - run: |
+          pushd rest-service
+            ~/venv/bin/pip install -Ur dev-requirements.txt
+            ~/venv/bin/pip install -Ur test-requirements.txt
+            ~/venv/bin/pip install -e .
+          popd
+      - run: |
+          ~/venv/bin/pytest \
+            -sv \
+            -a 'client_min_version <= 3.1 <= client_max_version' \
+            rest-service/manager_rest/test/endpoints
+
   flake8:
     docker:
       - image: circleci/python:2.7
@@ -94,7 +142,7 @@ jobs:
   test_clientv3_1_endpoints:
     <<: *tox_defaults
     environment:
-      DO_ENV: clientV3_1-endpoints
+      DO_ENV: clientV3_1-endpoints212
 
   test_clientv3_1_infrastructure:
     <<: *tox_defaults
@@ -264,27 +312,7 @@ workflows:
   build_and_test:
     jobs: &build_jobs
       - flake8
-      - build-rpms
-      - test_v1:
-          <<: *only_master
-      - test_clientv2_endpoints:
-          <<: *only_master
-      - test_clientv2_infrastructure:
-          <<: *only_master
-      - test_clientv2_1_endpoints:
-          <<: *only_master
-      - test_clientv2_1_infrastructure:
-          <<: *only_master
-      - test_clientv3_endpoints:
-          <<: *only_master
-      - test_clientv3_infrastructure:
-          <<: *only_master
-      - test_clientv3_1_endpoints
-      - test_clientv3_1_infrastructure
-      - test_workflows
-      - test_premium
-      - test_amqp_postgres
-      - test_cloudify_types
+      - test_endpoints_36
       - py3_compat
   nightly:
     triggers:
