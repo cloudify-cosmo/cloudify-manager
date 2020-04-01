@@ -17,6 +17,7 @@
 from flask import request, current_app
 from flask_restful_swagger import swagger
 
+from cloudify._compat import text_type
 from cloudify.cluster_status import CloudifyNodeType, ServiceStatus
 
 from manager_rest.rest import responses
@@ -39,7 +40,7 @@ class ClusterStatus(SecuredResourceBannedSnapshotRestore):
         request_dict = get_json_and_verify_params({
             'reporting_freq': {'type': int},
             'report': {'type': dict},
-            'timestamp': {'type': basestring}
+            'timestamp': {'type': text_type}
         })
         return request_dict
 

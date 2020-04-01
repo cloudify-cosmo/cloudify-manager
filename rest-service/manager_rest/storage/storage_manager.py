@@ -22,6 +22,7 @@ from flask import current_app, has_request_context
 from sqlite3 import DatabaseError as SQLiteDBError
 from sqlalchemy.orm.attributes import flag_modified
 
+from cloudify._compat import text_type
 from cloudify.models_states import VisibilityState
 
 from manager_rest.storage.models_base import db
@@ -127,7 +128,7 @@ class SQLStorageManager(object):
     def _add_substr_filter(self, query, filters):
         for column, value in filters.items():
             column, value = self._update_case_insensitive(column, value, True)
-            if isinstance(value, basestring):
+            if isinstance(value, text_type):
                 query = query.filter(column.contains(value))
             else:
                 raise manager_exceptions.BadParametersError(

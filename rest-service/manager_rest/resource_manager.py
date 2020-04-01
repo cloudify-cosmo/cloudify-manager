@@ -24,7 +24,7 @@ from collections import defaultdict
 from flask import current_app
 from flask_security import current_user
 
-from cloudify._compat import StringIO
+from cloudify._compat import StringIO, text_type
 from cloudify.cryptography_utils import encrypt
 from cloudify.workflows import tasks as cloudify_tasks
 from cloudify.plugins.install_utils import INSTALLING_PREFIX
@@ -1752,7 +1752,7 @@ class ResourceManager(object):
 
     @staticmethod
     def _try_convert_from_str(string, target_type):
-        if target_type == basestring:
+        if target_type == text_type:
             return string
         if target_type == bool:
             if string.lower() == 'true':
@@ -1787,7 +1787,7 @@ class ResourceManager(object):
         allowed_types = {
             'integer': int,
             'float': float,
-            'string': basestring,
+            'string': text_type,
             'boolean': bool
         }
         wrong_types = {}
@@ -1797,7 +1797,7 @@ class ResourceManager(object):
             if 'type' in param and param_name in execution_parameters:
 
                 # check if need to convert from string
-                if isinstance(execution_parameters[param_name], basestring) \
+                if isinstance(execution_parameters[param_name], text_type) \
                         and param['type'] in allowed_types:
                     execution_parameters[param_name] = \
                         cls._try_convert_from_str(
