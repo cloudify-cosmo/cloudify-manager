@@ -63,7 +63,7 @@ class TestInterDeploymentDependenciesInfrastructure(AgentlessTestCase):
         node_instances = self.client.node_instances.list()
         shared_resource = self._get_shared_resource_instance(
             node_instances)
-        components = filter(lambda i: 'component' in i.node_id, node_instances)
+        components = [i for i in node_instances if 'component' in i.node_id]
         # 6 = 3 components + 1 shared resource + 2 get_capability functions
         dependencies = self._assert_dependencies_count(6)
         dependencies = self._get_dependencies_dict(dependencies)
@@ -201,7 +201,7 @@ class TestInterDeploymentDependenciesInfrastructure(AgentlessTestCase):
         self.assertEqual(
             target_deployment,
             dependency.target_deployment_id,
-            msg='Target deployment of dependnecy creator {0} with the value '
+            msg='Target deployment of dependency creator {0} with the value '
                 '{1} is not equal to the expected value {2}'
                 ''.format(dependency_creator,
                           dependency.target_deployment_id,
