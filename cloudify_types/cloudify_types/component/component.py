@@ -14,7 +14,6 @@
 
 import os
 import time
-from urlparse import urlparse
 
 from cloudify import manager, ctx
 from cloudify._compat import urlparse
