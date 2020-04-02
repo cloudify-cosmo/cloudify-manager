@@ -204,8 +204,7 @@ class Component(object):
                     'plugins', 'list')
 
         for plugin_name, plugin in self.plugins.items():
-            wagon_path = None
-            yaml_path = None
+            zip_list = []
             zip_path = None
             try:
                 if (not plugin.get('wagon_path') or
@@ -219,6 +218,11 @@ class Component(object):
                                             create_temp=True)
                 yaml_path = get_local_path(plugin['plugin_yaml_path'],
                                            create_temp=True)
+                zip_list = [wagon_path, yaml_path]
+                if 'icon_png_path' in plugin:
+                    icon_path = get_local_path(plugin['icon_png_path'],
+                                               create_temp=True)
+                    zip_list.append(icon_path)
                 if not should_upload_plugin(yaml_path, existing_plugins):
                     ctx.logger.warn('Plugin "{0}" was already '
                                     'uploaded...'.format(plugin_name))
@@ -226,7 +230,7 @@ class Component(object):
 
                 ctx.logger.info('Creating plugin "{0}" zip '
                                 'archive...'.format(plugin_name))
-                zip_path = zip_files([wagon_path, yaml_path])
+                zip_path = zip_files(zip_list)
 
                 # upload plugin
                 plugin = self._http_client_wrapper(
@@ -235,10 +239,8 @@ class Component(object):
                     plugin.id)
                 ctx.logger.info('Uploaded {}'.format(repr(plugin.id)))
             finally:
-                if wagon_path:
-                    os.remove(wagon_path)
-                if yaml_path:
-                    os.remove(yaml_path)
+                for f in zip_list:
+                    os.remove(f)
                 if zip_path:
                     os.remove(zip_path)
 
