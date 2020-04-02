@@ -147,9 +147,10 @@ class InterDeploymentDependencies(SecuredResource):
                 sm,
                 request_dict.get(SOURCE_DEPLOYMENT),
                 request_dict.get(TARGET_DEPLOYMENT))
-        dependency_params = create_deployment_dependency(request_dict.get(DEPENDENCY_CREATOR),
-                                                         source_deployment,
-                                                         target_deployment)
+        dependency_params = create_deployment_dependency(
+            request_dict.get(DEPENDENCY_CREATOR),
+            source_deployment,
+            target_deployment)
         return dependency_params
 
     @swagger.operation(
@@ -200,9 +201,10 @@ class InterDeploymentDependencies(SecuredResource):
                 sm,
                 request_dict.get(SOURCE_DEPLOYMENT),
                 request_dict.get(TARGET_DEPLOYMENT))
-        dependency_params = create_deployment_dependency(request_dict.get(DEPENDENCY_CREATOR),
-                                                         source_deployment,
-                                                         target_deployment)
+        dependency_params = create_deployment_dependency(
+            request_dict.get(DEPENDENCY_CREATOR),
+            source_deployment,
+            target_deployment)
         return dependency_params
 
     @swagger.operation(
