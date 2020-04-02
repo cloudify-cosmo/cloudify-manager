@@ -36,7 +36,7 @@ setup(
     },
     install_requires=[
         'requests>=2.7.0,<3.0.0',
-        'PyYAML==3.10',
+        'PyYAML==3.12',
         'cloudify-common==5.1.0.dev1',
         'dbus-python==1.2.4'
     ]
