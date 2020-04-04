@@ -3,6 +3,6 @@ python-dateutil
 faker
 virtualenv==15.1.0
 wagon==0.6.3
-pytest
+pytest>=5.3,<5.4
 pytest-cov
 pytest-attrib
