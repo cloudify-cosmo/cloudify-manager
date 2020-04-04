@@ -44,25 +44,21 @@ def log_request():
     args_data = request.args.to_dict(False)
     # json data; other data (e.g. binary) is available via request.data,
     #  but is not logged
-    json_data = request.json if hasattr(request, 'json') else None
 
     # content-type and content-length are already included in headers
 
     current_app.logger.debug(
-        '\nRequest ({0}):\n'
-        '\tpath: {1}\n'
-        '\thttp method: {2}\n'
-        '\tjson data: {3}\n'
-        '\tquery string data: {4}\n'
-        '\tform data: {5}\n'
-        '\theaders: {6}'.format(
-            id(request),
-            request.path,  # includes "path parameters"
-            request.method,
-            json_data,
-            args_data,
-            form_data,
-            _headers_pretty_print(request.headers)))
+        '\nRequest (%s):\n'
+        '\tpath: %s\n'
+        '\thttp method: %s\n'
+        '\tquery string data: %s\n'
+        '\tform data: %s',
+        id(request),
+        request.path,  # includes "path parameters"
+        request.method,
+        args_data,
+        form_data
+    )
 
 
 def log_response(response):
@@ -70,13 +66,11 @@ def log_response(response):
     # not logging response.data as volumes are massive
 
     current_app.logger.debug(
-        '\nResponse ({0}):\n'
-        '\tstatus: {1}\n'
-        '\theaders: {2}'
-        .format(
-            id(request),
-            response.status,
-            _headers_pretty_print(response.headers)))
+        '\nResponse (%s):\n'
+        '\tstatus: %s',
+        id(request),
+        response.status,
+    )
     return response
 
 
@@ -85,11 +79,6 @@ def raise_unauthorized_user_error(extra_info=None):
     if extra_info:
         error += ': {0}'.format(extra_info)
     raise UnauthorizedError(error)
-
-
-def _headers_pretty_print(headers):
-    pp_headers = ''.join(['\t\t{0}: {1}\n'.format(k, v) for k, v in headers])
-    return '\n' + pp_headers
 
 
 def _setup_python_logger(

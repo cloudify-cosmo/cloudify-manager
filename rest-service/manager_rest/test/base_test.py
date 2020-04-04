@@ -206,10 +206,10 @@ class BaseServerTestCase(unittest.TestCase):
             patcher.start()
 
     def setUp(self):
+        self.addCleanup(self._drop_db, keep_tables=['config'])
         self._handle_default_db_config()
         self.initialize_provider_context()
         self._setup_current_user()
-        self.addCleanup(self._drop_db, keep_tables=['config'])
 
     @staticmethod
     def _drop_db(keep_tables=None):
@@ -315,8 +315,7 @@ class BaseServerTestCase(unittest.TestCase):
         flask_app_context = server.app.test_request_context()
         flask_app_context.push()
 
-    @staticmethod
-    def _handle_default_db_config():
+    def _handle_default_db_config(self):
         Migrate(app=server.app, db=server.db)
         try:
             upgrade(directory=MIGRATION_DIR)
