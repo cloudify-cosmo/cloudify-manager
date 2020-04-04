@@ -512,9 +512,10 @@ class BaseServerTestCase(unittest.TestCase):
 
     def put_file(self, resource_path, file_path, query_params=None):
         url = self._version_url(resource_path)
-        with open(file_path) as f:
+        with open(file_path, 'rb') as f:
+            x = f.read()
             result = self.app.put(urlquote(url),
-                                  data=f.read(),
+                                  data=x,
                                   query_string=build_query_string(
                                       query_params))
             return result

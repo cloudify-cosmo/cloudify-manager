@@ -135,7 +135,8 @@ def generate_execution_token(execution_id):
     execution_token = uuid.uuid4().hex
 
     # Store the token hashed in the DB
-    execution.token = hashlib.sha256(execution_token).hexdigest()
+    execution.token = hashlib.sha256(
+        execution_token.encode('ascii')).hexdigest()
     sm.update(execution)
     return execution_token
 

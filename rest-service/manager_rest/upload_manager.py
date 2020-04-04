@@ -166,7 +166,7 @@ class UploadedDataManager(object):
                 "Can't pass both a {0} URL via request body , multi-form"
                 .format(data_type))
         uploaded_file_data = request.data
-        with open(archive_target_path, 'w') as f:
+        with open(archive_target_path, 'wb') as f:
             f.write(uploaded_file_data)
 
     def _save_files_multipart(self, archive_target_path):
@@ -411,7 +411,6 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
     def _extract_application_file(cls, file_server_root, application_dir):
 
         full_application_dir = os.path.join(file_server_root, application_dir)
-
         if 'application_file_name' in request.args:
             application_file_name = unquote(
                 request.args['application_file_name']).decode('utf-8')
@@ -577,8 +576,7 @@ class UploadedBlueprintsManager(UploadedDataManager):
         full_application_dir = os.path.join(file_server_root, application_dir)
 
         if application_file_name:
-            application_file_name = unquote(
-                application_file_name).decode('utf-8')
+            application_file_name = unquote(application_file_name)
             application_file = os.path.join(full_application_dir,
                                             application_file_name)
             if not os.path.isfile(application_file):
