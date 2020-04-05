@@ -18,9 +18,9 @@ from flask_security.utils import hash_password
 
 from manager_rest import constants
 from manager_rest.storage.models import Node
-from manager_rest.storage.management_models import Tenant, UserTenantAssoc
 from manager_rest.manager_exceptions import NotFoundError
 from manager_rest.storage import user_datastore, db, get_storage_manager
+from manager_rest.storage.management_models import Tenant, UserTenantAssoc
 
 
 def get_node(deployment_id, node_id):
@@ -119,3 +119,16 @@ def _create_default_tenant():
     )
     db.session.add(default_tenant)
     return default_tenant
+
+
+def try_acquire_lock_on_table(lock_number):
+    # make sure a flask app exists before calling this function
+    results = db.session.execute('SELECT pg_try_advisory_lock(:lock_number)',
+                                 {'lock_number': lock_number})
+    return results.first()[0]
+
+
+def unlock_table(lock_number):
+    # make sure a flask app exists before calling this function
+    db.session.execute('SELECT pg_advisory_unlock(:lock_number)',
+                       {'lock_number': lock_number})
