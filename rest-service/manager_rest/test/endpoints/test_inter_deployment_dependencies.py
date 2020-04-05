@@ -113,8 +113,8 @@ class InterDeploymentDependenciesTest(BaseServerTestCase):
             '.*404: Requested Inter-deployment Dependency ' \
             'with params `dependency_creator: {dependency_creator}, ' \
             'source_deployment: {source_deployment}, ' \
-            'target_deployment: {target_deployment}` ' \
-            'was not found.*'.format(**self.dependency)
+            'target_deployment: {target_deployment}` was not ' \
+            'found.*'.format(**self.dependency)
         with self.assertRaisesRegexp(CloudifyClientError, error_msg_regex):
             self.client.inter_deployment_dependencies.get(
                 **self.dependency)
