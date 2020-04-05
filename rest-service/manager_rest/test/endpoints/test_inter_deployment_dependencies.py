@@ -108,15 +108,13 @@ class InterDeploymentDependenciesTest(BaseServerTestCase):
             self.client.inter_deployment_dependencies.delete(
                 **self.dependency)
 
-    def test_doesnt_fail_deleting_non_existing_dependency_with_flag(self):
-        self.client.inter_deployment_dependencies.delete(
-            **self.dependency)
-
     def test_fails_to_get_non_existing_dependency(self):
-        error_msg_regex = '.*404: Requested Inter-deployment Dependency ' \
-                          'with params `dependency_creator: {0}, ' \
-                          'source_deployment: {1}, target_deployment: {2}` ' \
-                          'was not found.*'.format(*self.dependency)
+        error_msg_regex = \
+            '.*404: Requested Inter-deployment Dependency ' \
+            'with params `dependency_creator: {dependency_creator}, ' \
+            'source_deployment: {source_deployment}, ' \
+            'target_deployment: {target_deployment}` ' \
+            'was not found.*'.format(**self.dependency)
         with self.assertRaisesRegexp(CloudifyClientError, error_msg_regex):
             self.client.inter_deployment_dependencies.get(
                 **self.dependency)
