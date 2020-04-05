@@ -40,7 +40,7 @@ class TestResourceListV1(BaseListTest):
         try:
             self.client.executions.list(deployment_id='111')
         except CloudifyClientError as e:
-            self.assertEquals(405, e.status_code)
+            self.assertEqual(405, e.status_code)
 
     def test_insecure_endpoints_enabled(self):
         from manager_rest.config import instance
@@ -73,10 +73,10 @@ class TestResourceListV1(BaseListTest):
         if deployments[0]['id'] != self.first_deployment_id:
             deployments[0], deployments[1] = deployments[1], deployments[0]
 
-        self.assertEquals(self.first_blueprint_id,
-                          deployments[0]['blueprint_id'])
-        self.assertEquals(self.sec_blueprint_id,
-                          deployments[1]['blueprint_id'])
+        self.assertEqual(self.first_blueprint_id,
+                         deployments[0]['blueprint_id'])
+        self.assertEqual(self.sec_blueprint_id,
+                         deployments[1]['blueprint_id'])
 
     def test_nodes_list_no_params(self):
         response = self.client.nodes.list()
@@ -94,8 +94,8 @@ class TestResourceListV1(BaseListTest):
         self.assertEqual(2, len(response), 'expecting 1 node result, '
                                            'got {0}'.format(len(response)))
         for node in response:
-            self.assertEquals(node['deployment_id'], self.first_deployment_id)
-            self.assertEquals(node['blueprint_id'], self.first_blueprint_id)
+            self.assertEqual(node['deployment_id'], self.first_deployment_id)
+            self.assertEqual(node['blueprint_id'], self.first_blueprint_id)
 
     def test_executions_list_no_params(self):
         response = self.client.executions.list()
@@ -106,7 +106,7 @@ class TestResourceListV1(BaseListTest):
                           (self.first_deployment_id, self.sec_deployment_id))
             self.assertIn(execution['blueprint_id'],
                           (self.first_blueprint_id, self.sec_blueprint_id))
-            self.assertEquals(execution['status'], 'terminated')
+            self.assertEqual(execution['status'], 'terminated')
 
     def test_executions_list_with_params(self):
         params = {'deployment_id': self.first_deployment_id}
@@ -118,7 +118,7 @@ class TestResourceListV1(BaseListTest):
                           (self.first_deployment_id, self.sec_deployment_id))
             self.assertIn(execution['blueprint_id'],
                           (self.first_blueprint_id, self.sec_blueprint_id))
-            self.assertEquals(execution['status'], 'terminated')
+            self.assertEqual(execution['status'], 'terminated')
 
     def test_node_instances_list_no_params(self):
         response = self.client.node_instances.list()
@@ -127,7 +127,7 @@ class TestResourceListV1(BaseListTest):
         for node_instance in response:
             self.assertIn(node_instance['deployment_id'],
                           (self.first_deployment_id, self.sec_deployment_id))
-            self.assertEquals(node_instance['state'], 'uninitialized')
+            self.assertEqual(node_instance['state'], 'uninitialized')
 
     def test_node_instances_list_with_params(self):
         params = {'deployment_id': self.first_deployment_id}
@@ -135,8 +135,8 @@ class TestResourceListV1(BaseListTest):
         self.assertEqual(2, len(response), 'expecting 2 node instance results,'
                                            ' got {0}'.format(len(response)))
         for instance in response:
-            self.assertEquals(instance['deployment_id'],
-                              self.first_deployment_id)
+            self.assertEqual(instance['deployment_id'],
+                             self.first_deployment_id)
 
     # special parameter 'node_name' is converted to 'node_id' on the server
     def test_node_instances_list_with_node_name_filter(self):
@@ -147,7 +147,7 @@ class TestResourceListV1(BaseListTest):
         for node_instance in response:
             self.assertIn(node_instance['deployment_id'],
                           (self.first_deployment_id, self.sec_deployment_id))
-            self.assertEquals(node_instance['state'], 'uninitialized')
+            self.assertEqual(node_instance['state'], 'uninitialized')
 
         self._put_n_deployment_modifications(id_prefix='test',
                                              number_of_modifications=2,
@@ -171,6 +171,6 @@ class TestResourceListV1(BaseListTest):
                                            'results, got {0}'
                          .format(len(response)))
         for modification in response:
-            self.assertEquals(modification['deployment_id'],
-                              self.first_deployment_id)
+            self.assertEqual(modification['deployment_id'],
+                             self.first_deployment_id)
             self.assertIn(modification['status'], ('finished', 'started'))

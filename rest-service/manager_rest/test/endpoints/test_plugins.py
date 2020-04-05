@@ -49,19 +49,19 @@ class PluginsTest(BaseServerTestCase):
                                                  TEST_PACKAGE_VERSION).json
         plugin_id = put_plugin_response.get('id')
         self.assertIsNotNone(plugin_id)
-        self.assertEquals(put_plugin_response.get('package_name'),
-                          TEST_PACKAGE_NAME)
-        self.assertEquals(put_plugin_response.get('package_version'),
-                          TEST_PACKAGE_VERSION)
+        self.assertEqual(put_plugin_response.get('package_name'),
+                         TEST_PACKAGE_NAME)
+        self.assertEqual(put_plugin_response.get('package_version'),
+                         TEST_PACKAGE_VERSION)
         get_plugin_by_id_response = self.client.plugins.get(plugin_id)
 
-        self.assertEquals(put_plugin_response, get_plugin_by_id_response)
+        self.assertEqual(put_plugin_response, get_plugin_by_id_response)
 
     def test_get_plugin_not_found(self):
         try:
             self.client.plugins.get('DUMMY_PLUGIN_ID')
         except exceptions.CloudifyClientError as e:
-            self.assertEquals(404, e.status_code)
+            self.assertEqual(404, e.status_code)
 
     def test_delete_plugin(self):
         put_response = self.upload_plugin(TEST_PACKAGE_NAME,
@@ -76,7 +76,7 @@ class PluginsTest(BaseServerTestCase):
 
         # the yaml path should not be in the delete response
         put_response['yaml_url_path'] = ''
-        self.assertEquals(put_response, delete_response)
+        self.assertEqual(put_response, delete_response)
 
         plugins_list = self.client.plugins.list()
         self.assertEqual(0, len(plugins_list),
@@ -104,27 +104,27 @@ class PluginsTest(BaseServerTestCase):
         try:
             self.client.plugins.delete('DUMMY_PLUGIN_ID')
         except exceptions.CloudifyClientError as e:
-            self.assertEquals(404, e.status_code)
+            self.assertEqual(404, e.status_code)
 
     def test_put_same_plugin_module_twice_response_status(self):
         ok_response = self.upload_plugin(TEST_PACKAGE_NAME,
                                          TEST_PACKAGE_VERSION)
-        self.assertEquals('201 CREATED', ok_response._status)
+        self.assertEqual('201 CREATED', ok_response._status)
         error_response = self.upload_plugin(TEST_PACKAGE_NAME,
                                             TEST_PACKAGE_VERSION)
-        self.assertEquals('409 CONFLICT', error_response._status)
+        self.assertEqual('409 CONFLICT', error_response._status)
 
     def test_post_plugin_package_different_versions(self):
         response_a = self.upload_plugin(TEST_PACKAGE_NAME,
                                         TEST_PACKAGE_VERSION)
-        self.assertEquals('201 CREATED', response_a._status)
+        self.assertEqual('201 CREATED', response_a._status)
         response_b = self.upload_plugin(TEST_PACKAGE_NAME,
                                         OLD_TEST_PACKAGE_VERSION)
-        self.assertEquals('201 CREATED', response_b._status)
-        self.assertNotEquals(response_a.json.get('package_version'),
-                             response_b.json.get('package_version'))
-        self.assertNotEquals(response_a.json.get('archive_name'),
-                             response_b.json.get('archive_name'))
+        self.assertEqual('201 CREATED', response_b._status)
+        self.assertNotEqual(response_a.json.get('package_version'),
+                            response_b.json.get('package_version'))
+        self.assertNotEqual(response_a.json.get('archive_name'),
+                            response_b.json.get('archive_name'))
 
     @attr(client_min_version=2,
           client_max_version=base_test.LATEST_API_VERSION)
@@ -142,7 +142,7 @@ class PluginsTest(BaseServerTestCase):
         plugin_id = self.client.plugins.list()[0].id
         self.client.plugins.delete(plugin_id=plugin_id)
         executions = self.client.executions.list(
-                include_system_workflows=True).items
+            include_system_workflows=True).items
         self.assertEqual(2, len(executions))
         if executions[0] != execution:
             execution = executions[0]

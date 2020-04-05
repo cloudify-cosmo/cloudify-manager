@@ -35,8 +35,8 @@ class EventsTest(base_test.BaseServerTestCase):
         # TBD: Add events to the database to check results
         total = 0
         hits = []
-        self.assertEquals(total, response.metadata.pagination.total)
-        self.assertEquals(len(hits), len(response.items))
+        self.assertEqual(total, response.metadata.pagination.total)
+        self.assertEqual(len(hits), len(response.items))
 
     @attr(client_min_version=3,
           client_max_version=base_test.LATEST_API_VERSION)

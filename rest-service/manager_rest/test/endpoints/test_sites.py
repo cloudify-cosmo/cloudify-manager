@@ -43,37 +43,37 @@ class SitesTestCase(base_test.BaseServerTestCase):
         error_msg = '400: Invalid location `34.787274`, the format is ' \
                     'expected to be "latitude,longitude" such as ' \
                     '"32.071072,34.787274"'
-        self.assertRaisesRegexp(CloudifyClientError,
-                                error_msg,
-                                sites_command,
-                                'test_site',
-                                location='34.787274')
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_msg,
+                               sites_command,
+                               'test_site',
+                               location='34.787274')
 
         error_msg = '400: Invalid location `lat,long`, the latitude and ' \
                     'longitude are expected to be of type float'
-        self.assertRaisesRegexp(CloudifyClientError,
-                                error_msg,
-                                sites_command,
-                                'test_site',
-                                location='lat,long')
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_msg,
+                               sites_command,
+                               'test_site',
+                               location='lat,long')
 
         error_msg = '400: Invalid location `200,32.071072`. The latitude ' \
                     'must be a number between -90 and 90 and the longitude ' \
                     'between -180 and 180'
-        self.assertRaisesRegexp(CloudifyClientError,
-                                error_msg,
-                                sites_command,
-                                'test_site',
-                                location='200,32.071072')
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_msg,
+                               sites_command,
+                               'test_site',
+                               location='200,32.071072')
 
         error_msg = '400: Invalid location `32.071072,200`. The latitude ' \
                     'must be a number between -90 and 90 and the longitude ' \
                     'between -180 and 180'
-        self.assertRaisesRegexp(CloudifyClientError,
-                                error_msg,
-                                sites_command,
-                                'test_site',
-                                location='32.071072,200')
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_msg,
+                               sites_command,
+                               'test_site',
+                               location='32.071072,200')
 
     def test_get_site(self):
         self._put_site()
@@ -88,10 +88,10 @@ class SitesTestCase(base_test.BaseServerTestCase):
 
     def test_get_site_not_found(self):
         error_msg = "404: Requested `Site` with ID `my_site` was not found"
-        self.assertRaisesRegexp(CloudifyClientError,
-                                error_msg,
-                                self.client.sites.get,
-                                'my_site')
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_msg,
+                               self.client.sites.get,
+                               'my_site')
 
     def test_list_sites(self):
         self._create_sites(sites_number=3)
@@ -178,28 +178,28 @@ class SitesTestCase(base_test.BaseServerTestCase):
         self._put_site()
         error_msg = "409: <Site id=`test_site` tenant=`default_tenant`> " \
                     "already exists on <Tenant name=`default_tenant`>"
-        self.assertRaisesRegexp(CloudifyClientError,
-                                error_msg,
-                                self.client.sites.create,
-                                'test_site')
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_msg,
+                               self.client.sites.create,
+                               'test_site')
 
     def test_create_site_invalid_location(self):
         self._test_invalid_location(self.client.sites.create)
 
     def test_create_site_invalid_visibility(self):
         error_msg = "400: Invalid visibility: `test`"
-        self.assertRaisesRegexp(CloudifyClientError,
-                                error_msg,
-                                self.client.sites.create,
-                                'test_site',
-                                visibility='test')
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_msg,
+                               self.client.sites.create,
+                               'test_site',
+                               visibility='test')
 
     def test_create_site_invalid_name(self):
         error_msg = "400: The `name` argument contains illegal characters."
-        self.assertRaisesRegexp(CloudifyClientError,
-                                error_msg,
-                                self.client.sites.create,
-                                'site:')
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_msg,
+                               self.client.sites.create,
+                               'site:')
 
     def test_update_site(self):
         self._put_site()
@@ -228,21 +228,21 @@ class SitesTestCase(base_test.BaseServerTestCase):
     def test_update_site_invalid_name(self):
         self._put_site()
         error_msg = "400: The `new_name` argument contains illegal characters."
-        self.assertRaisesRegexp(CloudifyClientError,
-                                error_msg,
-                                self.client.sites.update,
-                                'test_site',
-                                new_name='site:')
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_msg,
+                               self.client.sites.update,
+                               'test_site',
+                               new_name='site:')
 
         self._put_site('test_site_1')
         error_msg = "409: Invalid new name `test_site_1`, it already " \
                     "exists on <Tenant name=`default_tenant`> or with " \
                     "global visibility"
-        self.assertRaisesRegexp(CloudifyClientError,
-                                error_msg,
-                                self.client.sites.update,
-                                'test_site',
-                                new_name='test_site_1')
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_msg,
+                               self.client.sites.update,
+                               'test_site',
+                               new_name='test_site_1')
 
         # Makes sure it didn't update the site
         site = self.client.sites.get('test_site')
@@ -250,20 +250,20 @@ class SitesTestCase(base_test.BaseServerTestCase):
 
     def test_update_site_invalid_visibility(self):
         error_msg = "400: Invalid visibility: `test`"
-        self.assertRaisesRegexp(CloudifyClientError,
-                                error_msg,
-                                self.client.sites.update,
-                                'test_site',
-                                visibility='test')
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_msg,
+                               self.client.sites.update,
+                               'test_site',
+                               visibility='test')
 
         self._put_site()
         error_msg = "400: Can't set the visibility of `test_site` to " \
                     "private because it already has wider visibility"
-        self.assertRaisesRegexp(CloudifyClientError,
-                                error_msg,
-                                self.client.sites.update,
-                                'test_site',
-                                visibility=VisibilityState.PRIVATE)
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_msg,
+                               self.client.sites.update,
+                               'test_site',
+                               visibility=VisibilityState.PRIVATE)
 
     def test_update_site_invalid_location(self):
         self._test_invalid_location(self.client.sites.update)
@@ -272,14 +272,14 @@ class SitesTestCase(base_test.BaseServerTestCase):
         self._put_site()
         self.client.sites.delete('test_site')
         error_msg = "404: Requested `Site` with ID `test_site` was not found"
-        self.assertRaisesRegexp(CloudifyClientError,
-                                error_msg,
-                                self.client.sites.get,
-                                'test_site')
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_msg,
+                               self.client.sites.get,
+                               'test_site')
 
     def test_delete_site_not_found(self):
         error_msg = "404: Requested `Site` with ID `my_site` was not found"
-        self.assertRaisesRegexp(CloudifyClientError,
-                                error_msg,
-                                self.client.sites.delete,
-                                'my_site')
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_msg,
+                               self.client.sites.delete,
+                               'my_site')

@@ -76,10 +76,10 @@ class ResourceListFiltersTestCase(BaseListTest):
         if items[0]['id'] != self.first_deployment_id:
             items[0], items[1] = items[1], items[0]
 
-        self.assertEquals(self.first_blueprint_id,
-                          items[0]['blueprint_id'])
-        self.assertEquals(self.sec_blueprint_id,
-                          items[1]['blueprint_id'])
+        self.assertEqual(self.first_blueprint_id,
+                         items[0]['blueprint_id'])
+        self.assertEqual(self.sec_blueprint_id,
+                         items[1]['blueprint_id'])
 
     def test_nodes_list_with_filters(self):
         filter_params = {'deployment_id': self.first_deployment_id}
@@ -87,8 +87,8 @@ class ResourceListFiltersTestCase(BaseListTest):
         self.assertEqual(2, len(response), 'expecting 2 node results, '
                                            'got {0}'.format(len(response)))
         for node in response:
-            self.assertEquals(node['deployment_id'], self.first_deployment_id)
-            self.assertEquals(node['blueprint_id'], self.first_blueprint_id)
+            self.assertEqual(node['deployment_id'], self.first_deployment_id)
+            self.assertEqual(node['blueprint_id'], self.first_blueprint_id)
 
     def test_nodes_list_with_filters_multiple_values(self):
         filter_params = {'deployment_id':
@@ -121,7 +121,7 @@ class ResourceListFiltersTestCase(BaseListTest):
                                            'got {0}'.format(len(response)))
         execution = response[0]
         self.assertEqual(execution['deployment_id'], self.first_deployment_id)
-        self.assertEquals(execution['status'], 'terminated')
+        self.assertEqual(execution['status'], 'terminated')
 
     def test_executions_list_with_hybrid_field_filter(self):
         filter_params = {'status_display': 'completed'}
@@ -130,9 +130,9 @@ class ResourceListFiltersTestCase(BaseListTest):
                                            'got {0}'.format(len(response)))
         self.assertEqual(response[0]['deployment_id'],
                          self.first_deployment_id)
-        self.assertEquals(response[0]['status'], 'terminated')
+        self.assertEqual(response[0]['status'], 'terminated')
         self.assertEqual(response[1]['deployment_id'], self.sec_deployment_id)
-        self.assertEquals(response[1]['status'], 'terminated')
+        self.assertEqual(response[1]['status'], 'terminated')
 
     def test_executions_list_with_filters_multiple_values(self):
         filter_params = {'deployment_id':
@@ -150,12 +150,12 @@ class ResourceListFiltersTestCase(BaseListTest):
                           (self.first_deployment_id, self.sec_deployment_id))
             self.assertIn(execution['blueprint_id'],
                           (self.first_blueprint_id, self.sec_blueprint_id))
-            self.assertEquals(execution['status'], 'terminated')
+            self.assertEqual(execution['status'], 'terminated')
 
     def assert_bad_parameter_error(self, fields, e):
         self.assertEqual(400, e.status_code)
         error = manager_exceptions.BadParametersError
-        self.assertEquals(error.BAD_PARAMETERS_ERROR_CODE, e.error_code)
+        self.assertEqual(error.BAD_PARAMETERS_ERROR_CODE, e.error_code)
         for filter_val in fields:
             self.assertIn(filter_val,
                           str(e),
@@ -178,8 +178,8 @@ class ResourceListFiltersTestCase(BaseListTest):
         for node_instance in response:
             self.assertIn(node_instance['deployment_id'],
                           (self.first_deployment_id, self.sec_deployment_id))
-            self.assertEquals(node_instance['state'], 'uninitialized')
-            self.assertEquals(node_instance['index'], 1)
+            self.assertEqual(node_instance['state'], 'uninitialized')
+            self.assertEqual(node_instance['index'], 1)
 
     def test_node_instances_list_with_filters(self):
         filter_params = {'deployment_id': self.first_deployment_id}
@@ -189,7 +189,7 @@ class ResourceListFiltersTestCase(BaseListTest):
         for node_instance in response:
             self.assertEqual(node_instance['deployment_id'],
                              self.first_deployment_id)
-            self.assertEquals(node_instance['state'], 'uninitialized')
+            self.assertEqual(node_instance['state'], 'uninitialized')
 
     def test_node_instances_list_with_filters_multiple_values(self):
         filter_fields = {'deployment_id': [self.first_deployment_id,
@@ -214,7 +214,7 @@ class ResourceListFiltersTestCase(BaseListTest):
         for node_instance in response:
             self.assertIn(node_instance['deployment_id'],
                           (self.first_deployment_id, self.sec_deployment_id))
-            self.assertEquals(node_instance['state'], 'uninitialized')
+            self.assertEqual(node_instance['state'], 'uninitialized')
 
     def test_deployment_modifications_list_no_filters(self):
         self._put_n_deployment_modifications(id_prefix='test',
@@ -243,7 +243,7 @@ class ResourceListFiltersTestCase(BaseListTest):
                                       'expecting results having '
                                       'values {0}, got {1}'
                                       .format(filter_params, modification))
-        self.assertEquals(modification['status'], 'finished')
+        self.assertEqual(modification['status'], 'finished')
 
     def test_deployment_modifications_list_with_filters_multiple_values(self):
         self._put_n_deployment_modifications(id_prefix='test',
@@ -277,7 +277,7 @@ class ResourceListFiltersTestCase(BaseListTest):
                                       'expecting results having '
                                       'values {0}, got {1}'
                                       .format(filter_params, blueprint))
-        self.assertEquals(self.first_blueprint_id, blueprint['id'])
+        self.assertEqual(self.first_blueprint_id, blueprint['id'])
         self.assertIsNotNone(response[0]['plan'])
 
     def test_blueprints_list_with_filters_multiple_values(self):
@@ -380,7 +380,7 @@ class ResourceListFiltersTestCase(BaseListTest):
         for snapshot in response:
             self.assertIn(snapshot['id'],
                           (self.first_snapshot_id, self.sec_snapshot_id))
-            self.assertEquals(snapshot['status'], 'creating')
+            self.assertEqual(snapshot['status'], 'creating')
 
     def test_snapshots_list_with_filters(self):
         filter_params = {'id': self.first_snapshot_id}
@@ -389,7 +389,7 @@ class ResourceListFiltersTestCase(BaseListTest):
                                            ' got {0}'.format(len(response)))
         for snapshot in response:
             self.assertEqual(snapshot['id'], self.first_snapshot_id)
-            self.assertEquals(snapshot['status'], 'creating')
+            self.assertEqual(snapshot['status'], 'creating')
 
     def test_snapshots_list_with_filters_multiple_values(self):
         filter_fields = {'id': [self.first_snapshot_id, self.sec_snapshot_id]}
@@ -402,4 +402,4 @@ class ResourceListFiltersTestCase(BaseListTest):
             self.fail('Expecting \'CloudifyClientError\' to be raised')
         except CloudifyClientError as e:
             self.assert_bad_parameter_error(
-                    models.Snapshot.resource_fields, e)
+                models.Snapshot.resource_fields, e)

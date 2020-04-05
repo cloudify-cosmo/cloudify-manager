@@ -35,7 +35,7 @@ from manager_rest.plugins_update.constants import STATES
 from manager_rest.manager_exceptions import NotFoundError
 from manager_rest.storage import get_storage_manager, models
 from manager_rest.plugins_update.manager import \
-        _did_plugins_to_install_change as plugins_to_install_change_detector
+    _did_plugins_to_install_change as plugins_to_install_change_detector
 
 
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
@@ -84,7 +84,7 @@ class PluginsUpdatesTest(PluginsUpdatesBaseTest):
 class PluginsUpdateIdTest(PluginsUpdatesBaseTest):
 
     def test_raises_when_plugins_update_doesnt_exist(self):
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 CloudifyClientError,
                 'Requested `PluginsUpdate` with ID `non_existing` was '
                 'not found') as e:
@@ -147,7 +147,7 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
         self.wait_for_deployment_creation(self.client, 'd123')
         plugins_update = self.client.plugins_update.update_plugins(
             'hello_world')
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 CloudifyClientError,
                 'There are plugins updates still active, update IDs: '
                 '{0}'.format(plugins_update.id)):
@@ -205,7 +205,7 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
         execution = self._sm.get(models.Execution, plugins_update.execution_id)
         execution.status = ExecutionState.STARTED
         self._sm.update(execution)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 CloudifyClientError,
                 'There are plugins updates still active; the "force" flag '
                 'was used yet these updates have actual executions running '
@@ -230,7 +230,7 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
         plugins_update = self._sm.get(models.PluginsUpdate, plugins_update_id)
         plugins_update.state = STATES.SUCCESSFUL
         self._sm.update(plugins_update)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 CloudifyClientError,
                 "Cannot finalize plugins update .+, it's not in the "
                 "{0} state\\.".format(STATES.EXECUTING_WORKFLOW)):

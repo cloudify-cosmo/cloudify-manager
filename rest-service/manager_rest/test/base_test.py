@@ -852,7 +852,7 @@ class BaseServerTestCase(unittest.TestCase):
         return self.sm.put(deployment_update)
 
     def _test_invalid_input(self, func, argument, *args):
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             CloudifyClientError,
             'The `{0}` argument contains illegal characters'.format(argument),
             func,

@@ -104,7 +104,7 @@ class MaintenanceModeTest(BaseServerTestCase):
         self._activate_maintenance_mode()
 
         internal_request_bypass_maintenance_client = self.create_client(
-                headers={'X-BYPASS-MAINTENANCE': 'true'})
+            headers={'X-BYPASS-MAINTENANCE': 'true'})
         with patch('manager_rest.utils._get_remote_addr',
                    new=self._get_remote_addr):
             with patch('manager_rest.utils._get_host',
@@ -115,7 +115,7 @@ class MaintenanceModeTest(BaseServerTestCase):
         self._activate_maintenance_mode()
 
         internal_request_client = self.create_client(
-                headers={'X-BYPASS-MAINTENANCE': 'true'})
+            headers={'X-BYPASS-MAINTENANCE': 'true'})
         with patch('manager_rest.utils._get_remote_addr',
                    new=self._get_remote_addr):
             self.assertRaises(exceptions.MaintenanceModeActiveError,
@@ -256,23 +256,23 @@ class MaintenanceModeTest(BaseServerTestCase):
 
     def test_pending_execution_maintenance_activating_error_raised(self):
         self._test_different_execution_status_in_activating_mode(
-                ExecutionState.PENDING)
+            ExecutionState.PENDING)
 
     def test_cancelling_execution_maintenance_activating_error_raised(self):
         self._test_different_execution_status_in_activating_mode(
-                ExecutionState.CANCELLING)
+            ExecutionState.CANCELLING)
 
     def test_force_cancelling_execution_maintenance_activating_error_raised(
             self):
         self._test_different_execution_status_in_activating_mode(
-                ExecutionState.FORCE_CANCELLING)
+            ExecutionState.FORCE_CANCELLING)
 
     def _test_different_execution_status_in_activating_mode(
             self,
             execution_status=None):
         self.client.blueprints.upload(self.get_mock_blueprint_path(), 'b1')
         self._start_maintenance_transition_mode(
-                execution_status=execution_status)
+            execution_status=execution_status)
         self.assertRaises(exceptions.MaintenanceModeActivatingError,
                           self.client.deployments.create,
                           blueprint_id='b1',
@@ -289,11 +289,11 @@ class MaintenanceModeTest(BaseServerTestCase):
             execution_status=ExecutionState.STARTED):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(
-                blueprint_id=bp_id,
-                deployment_id=dep_id)
+            blueprint_id=bp_id,
+            deployment_id=dep_id)
         execution = self.client.executions.start(deployment_id, 'install')
         execution = self.client.executions.get(execution.id)
-        self.assertEquals('terminated', execution.status)
+        self.assertEqual('terminated', execution.status)
         self._update_execution_status(execution.id, execution_status)
 
         self.client.maintenance_mode.activate()
