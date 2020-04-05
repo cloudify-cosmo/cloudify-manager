@@ -187,10 +187,8 @@ class InterDeploymentDependencies(SecuredResource):
             filters=filters,
             # Locking to make sure to fail here and not during the deletion
             # (for the purpose of clarifying the error in case one occurs).
-            locking=True,
-            fail_silently=True)
-        if not dependency:
-            return {}
+            locking=True)
+
         return sm.delete(dependency)
 
     @staticmethod
