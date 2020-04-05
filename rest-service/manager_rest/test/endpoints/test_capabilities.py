@@ -145,7 +145,7 @@ class CapabilitiesTestCase(base_test.BaseServerTestCase):
 
         # Trying to evaluate functions on the node's properties will trigger
         # `get_capability` evaluation, which should fail
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             CloudifyClientError,
             'Requested `Deployment` with ID `wrong_id` was not found',
             self.client.nodes.get,
@@ -163,7 +163,7 @@ class CapabilitiesTestCase(base_test.BaseServerTestCase):
 
         # Trying to evaluate functions on the node's properties will trigger
         # `get_capability` evaluation, which should fail
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             CloudifyClientError,
             'Requested capability `wrong_capability` is not '
             'declared in deployment `shared`',
@@ -183,7 +183,7 @@ class CapabilitiesTestCase(base_test.BaseServerTestCase):
 
         # Trying to evaluate functions on the node's properties will trigger
         # `get_capability` evaluation, which should fail
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             CloudifyClientError,
             "Attribute 'random_stuff' doesn't exist in 'complex_capability' "
             "in deployment 'shared'.",
@@ -203,7 +203,7 @@ class CapabilitiesTestCase(base_test.BaseServerTestCase):
 
         # Trying to evaluate functions on the node's properties will trigger
         # `get_capability` evaluation, which should fail
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             CloudifyClientError,
             "List size of 'complex_capability.level_1.level_2.level_3' is 2, "
             "in deployment 'shared', but index 8 is retrieved.",
@@ -223,7 +223,7 @@ class CapabilitiesTestCase(base_test.BaseServerTestCase):
 
         # Trying to evaluate functions on the node's properties will trigger
         # `get_capability` evaluation, which should fail
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             CloudifyClientError,
             "Item in index 5 in the get_capability arguments list "
             "\\[shared, complex_capability, level_1, level_2, "

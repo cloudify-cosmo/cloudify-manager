@@ -33,11 +33,11 @@ class TestBlueprintsV1(BaseServerTestCase):
         post_blueprints_response = self.put_file(
             *self.put_blueprint_args('blueprint.yaml',
                                      blueprint_id='blueprint')).json
-        self.assertEquals('blueprint',
-                          post_blueprints_response['id'])
+        self.assertEqual('blueprint',
+                         post_blueprints_response['id'])
         self.assertNotIn('description', post_blueprints_response)
-        self.assertEquals("this is my blueprint's description",
-                          post_blueprints_response['plan']['description'])
+        self.assertEqual("this is my blueprint's description",
+                         post_blueprints_response['plan']['description'])
 
     def test_blueprint_main_file_name(self):
         # main_file_name should not be returned in blueprint response.
@@ -58,8 +58,8 @@ class TestBlueprintsV1(BaseServerTestCase):
             *self.put_blueprint_args('blueprint.yaml',
                                      blueprint_id='blueprint')).json
         blueprint = self.client.blueprints.get(blueprint_id='blueprint')
-        self.assertEquals('blueprint', post_blueprints_response['id'])
-        self.assertEquals(post_blueprints_response['id'], blueprint['id'])
+        self.assertEqual('blueprint', post_blueprints_response['id'])
+        self.assertEqual(post_blueprints_response['id'], blueprint['id'])
         self.client.blueprints.delete(blueprint_id='blueprint')
         try:
             self.client.blueprints.get(blueprint_id='blueprint')

@@ -15,19 +15,19 @@ from manager_rest.test.base_test import BaseServerTestCase
 class SnapshotsTest(BaseServerTestCase):
     def test_create_snapshot_illegal_id(self):
         # try id with whitespace
-        self.assertRaisesRegexp(CloudifyClientError,
-                                'contains illegal characters',
-                                self.client.snapshots.create,
-                                'illegal id',
-                                False,
-                                False)
+        self.assertRaisesRegex(CloudifyClientError,
+                               'contains illegal characters',
+                               self.client.snapshots.create,
+                               'illegal id',
+                               False,
+                               False)
         # try id that starts with a number
-        self.assertRaisesRegexp(CloudifyClientError,
-                                'must begin with a letter',
-                                self.client.snapshots.create,
-                                '0',
-                                False,
-                                False)
+        self.assertRaisesRegex(CloudifyClientError,
+                               'must begin with a letter',
+                               self.client.snapshots.create,
+                               '0',
+                               False,
+                               False)
 
     @attr(client_min_version=3,
           client_max_version=base_test.LATEST_API_VERSION)
@@ -75,7 +75,7 @@ class SnapshotStatusTest(BaseServerTestCase):
     def test_snapshot_status_reports_not_running(self):
         status = self.client.snapshots.get_status()
         self.assertIn('status', status)
-        self.assertEquals(status['status'], STATES.NOT_RUNNING)
+        self.assertEqual(status['status'], STATES.NOT_RUNNING)
 
     def test_snapshot_status_reports_running(self):
         with patch('manager_rest.rest.resources_v3_1.snapshots'
@@ -83,4 +83,4 @@ class SnapshotStatusTest(BaseServerTestCase):
                    return_value=True):
             status = self.client.snapshots.get_status()
             self.assertIn('status', status)
-            self.assertEquals(status['status'], STATES.RUNNING)
+            self.assertEqual(status['status'], STATES.RUNNING)

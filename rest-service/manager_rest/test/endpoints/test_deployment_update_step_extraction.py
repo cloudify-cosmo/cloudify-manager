@@ -88,33 +88,33 @@ class StepExtractorTestCase(unittest.TestCase):
 
         entity_id_builder = EntityIdBuilder()
         with entity_id_builder.extend_id(NODES):
-            self.assertEquals(NODES, entity_id_builder.entity_id)
+            self.assertEqual(NODES, entity_id_builder.entity_id)
 
             with entity_id_builder.extend_id(NODE):
                 expected = 'nodes{0}node'.format(entity_id_builder._separator)
-                self.assertEquals(expected, entity_id_builder.entity_id)
+                self.assertEqual(expected, entity_id_builder.entity_id)
 
-            self.assertEquals(NODES, entity_id_builder.entity_id)
-        self.assertEquals('', entity_id_builder.entity_id)
+            self.assertEqual(NODES, entity_id_builder.entity_id)
+        self.assertEqual('', entity_id_builder.entity_id)
 
     def test_entity_id_builder_prepend_before_last_element(self):
 
         entity_id_builder = EntityIdBuilder()
         with entity_id_builder.extend_id(NODE):
-            self.assertEquals(NODE, entity_id_builder.entity_id)
+            self.assertEqual(NODE, entity_id_builder.entity_id)
 
             with entity_id_builder.prepend_id_last_element(NODES):
                 expected = 'nodes{0}node'.format(entity_id_builder._separator)
-                self.assertEquals(expected, entity_id_builder.entity_id)
+                self.assertEqual(expected, entity_id_builder.entity_id)
 
-            self.assertEquals(NODE, entity_id_builder.entity_id)
-        self.assertEquals('', entity_id_builder.entity_id)
+            self.assertEqual(NODE, entity_id_builder.entity_id)
+        self.assertEqual('', entity_id_builder.entity_id)
 
     def test_entity_name(self):
         step = DeploymentUpdateStep(action='add',
                                     entity_type=NODE,
                                     entity_id='nodes:node1')
-        self.assertEquals('node1', step.entity_name)
+        self.assertEqual('node1', step.entity_name)
 
     def test_update_topology_order_of_add_node_steps(self):
 
@@ -160,12 +160,12 @@ class StepExtractorTestCase(unittest.TestCase):
         self.step_extractor._update_topology_order_of_add_node_steps(
             steps, topologically_sorted_added_nodes)
 
-        self.assertEquals(5, add_node_e_step.topology_order)
-        self.assertEquals(4, add_node_d_step.topology_order)
-        self.assertEquals(3, add_node_c_step.topology_order)
-        self.assertEquals(2, add_node_b_step.topology_order)
-        self.assertEquals(1, add_node_a_step.topology_order)
-        self.assertEquals(0, add_node_f_step.topology_order)
+        self.assertEqual(5, add_node_e_step.topology_order)
+        self.assertEqual(4, add_node_d_step.topology_order)
+        self.assertEqual(3, add_node_c_step.topology_order)
+        self.assertEqual(2, add_node_b_step.topology_order)
+        self.assertEqual(1, add_node_a_step.topology_order)
+        self.assertEqual(0, add_node_f_step.topology_order)
 
     def test_create_added_nodes_graph(self):
 
@@ -220,7 +220,7 @@ class StepExtractorTestCase(unittest.TestCase):
         expected_graph.add_node('node_f')
 
         # no built-in comparison of graphs in networkx
-        self.assertEquals(expected_graph.__dict__, graph.__dict__)
+        self.assertEqual(expected_graph.__dict__, graph.__dict__)
 
     def test_description_no_change(self):
 
@@ -231,7 +231,7 @@ class StepExtractorTestCase(unittest.TestCase):
         self.step_extractor.new_deployment_plan.update(description_new)
 
         steps, _ = self.step_extractor.extract_steps()
-        self.assertEquals([], steps)
+        self.assertEqual([], steps)
 
     def test_description_add_description(self):
 
@@ -250,7 +250,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 entity_id='description')
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_description_remove_description(self):
 
@@ -270,7 +270,7 @@ class StepExtractorTestCase(unittest.TestCase):
             )
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_description_modify_description(self):
 
@@ -289,7 +289,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 entity_id='description')
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_outputs_no_change(self):
 
@@ -300,7 +300,7 @@ class StepExtractorTestCase(unittest.TestCase):
         self.step_extractor.new_deployment_plan.update(outputs_new)
 
         steps, _ = self.step_extractor.extract_steps()
-        self.assertEquals([], steps)
+        self.assertEqual([], steps)
 
     def test_outputs_add_output(self):
 
@@ -317,7 +317,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 entity_id='outputs:output1')
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_outputs_remove_output(self):
 
@@ -334,7 +334,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 entity_id='outputs:output1')
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_outputs_modify_output(self):
 
@@ -353,7 +353,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 entity_id='outputs:output1')
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_workflows_no_change(self):
 
@@ -381,7 +381,7 @@ class StepExtractorTestCase(unittest.TestCase):
 
         steps, _ = self.step_extractor.extract_steps()
 
-        self.assertEquals([], steps)
+        self.assertEqual([], steps)
 
     def test_workflows_add_workflow_of_existing_plugin(self):
 
@@ -415,7 +415,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 entity_id='workflows:added_workflow')
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_workflows_add_workflow_script(self):
 
@@ -456,7 +456,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 entity_id='workflows:new_workflow')
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_workflows_remove_workflow(self):
 
@@ -489,7 +489,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 entity_id='workflows:removed_workflow')
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_workflows_modify_workflow_of_existing_plugin(self):
 
@@ -529,7 +529,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 entity_id='workflows:added_workflow')
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_workflows_modify_workflow_new_plugin_no_install(self):
 
@@ -565,7 +565,7 @@ class StepExtractorTestCase(unittest.TestCase):
 
         _, steps = self.step_extractor.extract_steps()
 
-        self.assertEquals([], steps)
+        self.assertEqual([], steps)
 
     def test_nodes_no_change(self):
         nodes_old = {NODES: {'node1': self._get_node_scheme()}}
@@ -576,7 +576,7 @@ class StepExtractorTestCase(unittest.TestCase):
 
         steps, _ = self.step_extractor.extract_steps()
 
-        self.assertEquals([], steps)
+        self.assertEqual([], steps)
 
     def test_nodes_add_node(self):
 
@@ -593,7 +593,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 entity_id='nodes:node1')
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_nodes_remove_node(self):
 
@@ -610,7 +610,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 entity_id='nodes:node1')
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_nodes_add_and_remove_node_changed_type(self):
         node_old = self._get_node_scheme()
@@ -636,7 +636,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 entity_id='nodes:node1',
                 supported=False),
         ]
-        self.assertEquals(expected_steps, unsupported_steps)
+        self.assertEqual(expected_steps, unsupported_steps)
 
     def test_nodes_add_and_remove_node_changed_type_and_host_id(self):
         node_old = self._get_node_scheme()
@@ -661,7 +661,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 supported=False),
         ]
 
-        self.assertEquals(expected_steps, unsupported_steps)
+        self.assertEqual(expected_steps, unsupported_steps)
 
     def test_node_properties_no_change(self):
 
@@ -676,7 +676,7 @@ class StepExtractorTestCase(unittest.TestCase):
 
         steps, _ = self.step_extractor.extract_steps()
 
-        self.assertEquals([], steps)
+        self.assertEqual([], steps)
 
     def test_node_properties_add_property(self):
 
@@ -698,7 +698,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 entity_id='nodes:node1:properties:property1')
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_node_properties_remove_property(self):
 
@@ -720,7 +720,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 entity_id='nodes:node1:properties:property1')
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_node_properties_modify_property(self):
 
@@ -748,7 +748,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 entity_id='nodes:node1:properties:property1')
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_node_operations_no_change(self):
 
@@ -764,7 +764,7 @@ class StepExtractorTestCase(unittest.TestCase):
 
         steps, _ = self.step_extractor.extract_steps()
 
-        self.assertEquals([], steps)
+        self.assertEqual([], steps)
 
     def test_node_operations_add_operation(self):
 
@@ -787,7 +787,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 entity_id='nodes:node1:operations:full.operation1.name')
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_node_operations_remove_operation(self):
 
@@ -810,7 +810,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 entity_id='nodes:node1:operations:full.operation1.name')
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_node_operations_modify_operation(self):
 
@@ -836,7 +836,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 entity_id='nodes:node1:operations:full.operation1.name')
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_relationships_no_change(self):
 
@@ -855,7 +855,7 @@ class StepExtractorTestCase(unittest.TestCase):
 
         steps, _ = self.step_extractor.extract_steps()
 
-        self.assertEquals([], steps)
+        self.assertEqual([], steps)
 
     def test_relationships_add_relationship(self):
 
@@ -881,7 +881,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 entity_id='nodes:node1:relationships:[0]')
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_relationships_remove_relationship(self):
 
@@ -907,7 +907,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 entity_id='nodes:node1:relationships:[0]')
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_relationships_change_type(self):
 
@@ -943,7 +943,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 entity_id='nodes:node1:relationships:[0]')
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_relationships_change_target_non_contained_in(self):
         node_old = self._get_node_scheme()
@@ -978,7 +978,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 entity_id='nodes:node1:relationships:[0]')
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_relationships_change_target_contained_in(self):
         node_old = self._get_node_scheme()
@@ -1012,7 +1012,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 supported=False),
         ]
         for index, step in enumerate(expected_steps):
-            self.assertEquals(step, unsupported_steps[
+            self.assertEqual(step, unsupported_steps[
                 index])
 
     def test_relationships_change_type_and_target(self):
@@ -1048,7 +1048,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 entity_id='nodes:node1:relationships:[0]')
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_relationships_modify_order(self):
         node_old = self._get_node_scheme()
@@ -1199,7 +1199,7 @@ class StepExtractorTestCase(unittest.TestCase):
                           'source_operations:full.operation1')
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_relationships_remove_source_operation(self):
 
@@ -1234,7 +1234,7 @@ class StepExtractorTestCase(unittest.TestCase):
                           'source_operations:full.operation1')
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_relationships_modify_source_operation(self):
 
@@ -1277,7 +1277,7 @@ class StepExtractorTestCase(unittest.TestCase):
                           'source_operations:full.operation1')
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_relationships_add_target_operation(self):
 
@@ -1312,7 +1312,7 @@ class StepExtractorTestCase(unittest.TestCase):
                           'target_operations:full.operation1')
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_relationships_remove_target_operation(self):
 
@@ -1347,7 +1347,7 @@ class StepExtractorTestCase(unittest.TestCase):
                           'target_operations:full.operation1')
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_relationships_modify_target_operation(self):
 
@@ -1390,7 +1390,7 @@ class StepExtractorTestCase(unittest.TestCase):
                           'target_operations:full.operation1')
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_get_matching_relationship(self):
         relationships_with_match = [
@@ -1414,11 +1414,11 @@ class StepExtractorTestCase(unittest.TestCase):
         _get_matching_relationship = \
             self.step_extractor._get_matching_relationship
 
-        self.assertEquals(
+        self.assertEqual(
             ({'type': 'typeA', 'target_id': 'id_1', 'field2': 'value2'}, 0),
             _get_matching_relationship(relationship, relationships_with_match))
 
-        self.assertEquals((None, None), _get_matching_relationship(
+        self.assertEqual((None, None), _get_matching_relationship(
             relationship, relationships_with_no_match))
 
     def test_sort_steps_compare_action(self):
@@ -1438,7 +1438,7 @@ class StepExtractorTestCase(unittest.TestCase):
         steps = [add_step, remove_step, modify_step]
         expected_step_order = [remove_step, add_step, modify_step]
         steps.sort(),
-        self.assertEquals(expected_step_order, steps)
+        self.assertEqual(expected_step_order, steps)
 
     def test_sort_steps_add_node_before_add_relationship(self):
 
@@ -1453,7 +1453,7 @@ class StepExtractorTestCase(unittest.TestCase):
         steps = [add_relationship_step, add_node_step]
         expected_step_order = [add_node_step, add_relationship_step]
         steps.sort()
-        self.assertEquals(expected_step_order, steps)
+        self.assertEqual(expected_step_order, steps)
 
     def test_sort_steps_remove_relationship_before_remove_node(self):
 
@@ -1468,7 +1468,7 @@ class StepExtractorTestCase(unittest.TestCase):
         steps = [remove_node_step, remove_relationship_step]
         expected_step_order = [remove_relationship_step, remove_node_step]
         steps.sort()
-        self.assertEquals(expected_step_order, steps)
+        self.assertEqual(expected_step_order, steps)
 
     def test_sort_steps_higher_topology_before_lower_topology(self):
 
@@ -1494,7 +1494,7 @@ class StepExtractorTestCase(unittest.TestCase):
             topology_order_1_step,
             default_topology_step]
         steps.sort()
-        self.assertEquals(expected_step_order, steps)
+        self.assertEqual(expected_step_order, steps)
 
     def test_sort_steps_all_comparison_considerations(self):
 
@@ -1542,7 +1542,7 @@ class StepExtractorTestCase(unittest.TestCase):
             add_relationship_step,
             modify_property_step]
         steps.sort()
-        self.assertEquals(expected_step_order, steps)
+        self.assertEqual(expected_step_order, steps)
 
     # from here, tests involving unsupported steps
 
@@ -1565,7 +1565,7 @@ class StepExtractorTestCase(unittest.TestCase):
 
         _, steps = self.step_extractor.extract_steps()
 
-        self.assertEquals([], steps)
+        self.assertEqual([], steps)
 
     def test_relationships_add_property(self):
 
@@ -1601,7 +1601,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 supported=False)
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_relationships_remove_property(self):
 
@@ -1637,7 +1637,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 supported=False)
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_relationships_modify_property(self):
 
@@ -1675,7 +1675,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 supported=False)
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_extract_steps_policy_types_no_change(self):
         policy_types_old = {
@@ -1687,7 +1687,7 @@ class StepExtractorTestCase(unittest.TestCase):
 
         _, steps = self.step_extractor.extract_steps()
 
-        self.assertEquals([], steps)
+        self.assertEqual([], steps)
 
     def test_policy_types_add_policy_type(self):
 
@@ -1706,7 +1706,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 supported=False)
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_policy_types_remove_policy_type(self):
 
@@ -1725,7 +1725,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 supported=False)
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_policy_types_modify_policy_type(self):
 
@@ -1747,7 +1747,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 supported=False)
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_extract_steps_policy_triggers_no_change(self):
         policy_triggers_old = {
@@ -1759,7 +1759,7 @@ class StepExtractorTestCase(unittest.TestCase):
 
         _, steps = self.step_extractor.extract_steps()
 
-        self.assertEquals([], steps)
+        self.assertEqual([], steps)
 
     def test_policy_triggers_add_policy_trigger(self):
 
@@ -1778,7 +1778,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 supported=False)
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_policy_triggers_remove_policy_trigger(self):
 
@@ -1797,7 +1797,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 supported=False)
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_policy_triggers_modify_policy_trigger(self):
 
@@ -1821,7 +1821,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 supported=False)
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_workflows_add_workflow_of_a_new_plugin(self):
 
@@ -1859,7 +1859,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 supported=True)
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_workflows_modify_workflow_new_plugin_install(self):
 
@@ -1903,7 +1903,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 supported=True)
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_groups_no_change(self):
 
@@ -1914,7 +1914,7 @@ class StepExtractorTestCase(unittest.TestCase):
         self.step_extractor.new_deployment_plan.update(groups_new)
 
         _, steps = self.step_extractor.extract_steps()
-        self.assertEquals([], steps)
+        self.assertEqual([], steps)
 
     def test_groups_add_group(self):
 
@@ -1932,7 +1932,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 supported=False)
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_groups_remove_group(self):
 
@@ -1950,7 +1950,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 supported=False)
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_groups_modify_group(self):
 
@@ -1970,7 +1970,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 supported=False)
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_cda_plugins_no_install(self):
 
@@ -1983,7 +1983,7 @@ class StepExtractorTestCase(unittest.TestCase):
 
         _, steps = self.step_extractor.extract_steps()
 
-        self.assertEquals([], steps)
+        self.assertEqual([], steps)
 
     def test_cda_plugins_add_cda_plugin(self):
 
@@ -1995,7 +1995,7 @@ class StepExtractorTestCase(unittest.TestCase):
         steps, _ = self.step_extractor.extract_steps()
 
         # Managed CDA plugins are handled during plugin upload/delete
-        self.assertEquals([], steps)
+        self.assertEqual([], steps)
 
     def test_cda_plugins_modify_cda_plugin(self):
 
@@ -2016,7 +2016,7 @@ class StepExtractorTestCase(unittest.TestCase):
         steps, _ = self.step_extractor.extract_steps()
 
         # Managed CDA plugins are handled during plugin upload/delete
-        self.assertEquals([], steps)
+        self.assertEqual([], steps)
 
     def test_ha_plugins_no_install(self):
 
@@ -2049,7 +2049,7 @@ class StepExtractorTestCase(unittest.TestCase):
             )
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_ha_plugins_add_ha_plugin(self):
 
@@ -2078,7 +2078,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 supported=True)
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_ha_plugins_modify_ha_plugin(self):
 
@@ -2111,7 +2111,7 @@ class StepExtractorTestCase(unittest.TestCase):
                 supported=True)
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEqual(expected_steps, steps)
 
     def test_all_changes_combined(self):
 
@@ -2463,4 +2463,4 @@ class StepExtractorTestCase(unittest.TestCase):
         }
         steps, unsupported_steps = self.step_extractor.extract_steps()
         steps.extend(unsupported_steps)
-        self.assertEquals(set(expected_steps.values()), set(steps))
+        self.assertEqual(set(expected_steps.values()), set(steps))

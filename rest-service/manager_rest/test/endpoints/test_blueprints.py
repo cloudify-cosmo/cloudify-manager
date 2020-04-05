@@ -34,7 +34,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
 
     def test_get_empty(self):
         result = self.client.blueprints.list()
-        self.assertEquals(0, len(result))
+        self.assertEqual(0, len(result))
 
     def test_get_nonexistent_blueprint(self):
         with self.assertRaises(exceptions.CloudifyClientError) as context:
@@ -43,25 +43,25 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
 
     def test_upload_blueprint_illegal_id(self):
         # try id with whitespace
-        self.assertRaisesRegexp(exceptions.CloudifyClientError,
-                                'contains illegal characters',
-                                self.client.blueprints.upload,
-                                'path',
-                                'illegal id')
+        self.assertRaisesRegex(exceptions.CloudifyClientError,
+                               'contains illegal characters',
+                               self.client.blueprints.upload,
+                               'path',
+                               'illegal id')
         # try id that starts with a number
-        self.assertRaisesRegexp(exceptions.CloudifyClientError,
-                                'must begin with a letter',
-                                self.client.blueprints.upload,
-                                'path',
-                                '0')
+        self.assertRaisesRegex(exceptions.CloudifyClientError,
+                               'must begin with a letter',
+                               self.client.blueprints.upload,
+                               'path',
+                               '0')
 
     def test_post_and_then_search(self):
         post_blueprints_response = self.put_file(
             *self.put_blueprint_args(blueprint_id='hello_world')).json
-        self.assertEquals('hello_world', post_blueprints_response['id'])
+        self.assertEqual('hello_world', post_blueprints_response['id'])
         get_blueprints_response = self.client.blueprints.list()
-        self.assertEquals(1, len(get_blueprints_response))
-        self.assertEquals(post_blueprints_response, get_blueprints_response[0])
+        self.assertEqual(1, len(get_blueprints_response))
+        self.assertEqual(post_blueprints_response, get_blueprints_response[0])
 
     def test_post_blueprint_already_exists(self):
         self.put_file(*self.put_blueprint_args())
@@ -77,8 +77,8 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         post_blueprints_response = self.put_file(
             *self.put_blueprint_args('blueprint_with_workflows.yaml',
                                      blueprint_id='hello_world')).json
-        self.assertEquals('hello_world',
-                          post_blueprints_response['id'])
+        self.assertEqual('hello_world',
+                         post_blueprints_response['id'])
 
     @attr(client_min_version=2,
           client_max_version=base_test.LATEST_API_VERSION)
@@ -86,10 +86,10 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         post_blueprints_response = self.put_file(
             *self.put_blueprint_args('blueprint.yaml',
                                      blueprint_id='blueprint')).json
-        self.assertEquals('blueprint',
-                          post_blueprints_response['id'])
-        self.assertEquals("this is my blueprint's description",
-                          post_blueprints_response['description'])
+        self.assertEqual('blueprint',
+                         post_blueprints_response['id'])
+        self.assertEqual("this is my blueprint's description",
+                         post_blueprints_response['description'])
 
     def test_get_blueprint_by_id(self):
         post_blueprints_response = self.put_file(
@@ -97,8 +97,8 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         get_blueprint_by_id_response = self.get(
             '/blueprints/{0}'.format(post_blueprints_response['id'])).json
         # setting 'source' field to be None as expected
-        self.assertEquals(post_blueprints_response,
-                          get_blueprint_by_id_response)
+        self.assertEqual(post_blueprints_response,
+                         get_blueprint_by_id_response)
 
     def test_delete_blueprint(self):
         post_blueprints_response = self.put_file(
@@ -112,13 +112,13 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         # deleting the blueprint that was just uploaded
         delete_blueprint_response = self.delete(
             '/blueprints/{0}'.format(post_blueprints_response['id'])).json
-        self.assertEquals(post_blueprints_response['id'],
-                          delete_blueprint_response['id'])
+        self.assertEqual(post_blueprints_response['id'],
+                         delete_blueprint_response['id'])
 
         # verifying deletion of blueprint
         resp = self.get('/blueprints/{0}'.format(post_blueprints_response[
                         'id']))
-        self.assertEquals(404, resp.status_code)
+        self.assertEqual(404, resp.status_code)
 
         # verifying deletion of fileserver resources
         self.assertFalse(
@@ -127,7 +127,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
 
         # trying to delete a nonexistent blueprint
         resp = self.delete('/blueprints/nonexistent-blueprint')
-        self.assertEquals(404, resp.status_code)
+        self.assertEqual(404, resp.status_code)
 
     def test_zipped_plugin(self):
         self.put_file(*self.put_blueprint_args())
@@ -349,7 +349,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         blueprint_file = 'blueprint.yaml'
         response = self.put_file(
             *self.put_blueprint_args(blueprint_id=blueprint_id)).json
-        self.assertEquals(blueprint_file, response['main_file_name'])
+        self.assertEqual(blueprint_file, response['main_file_name'])
 
     @attr(client_min_version=2,
           client_max_version=base_test.LATEST_API_VERSION)
@@ -475,7 +475,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
             self.get_blueprint_path('mock_blueprint'),
             blueprint_file)
         self.client.blueprints.validate(blueprint_path, blueprint_id)
-        self.assertEquals(0, len(self.client.blueprints.list()))
+        self.assertEqual(0, len(self.client.blueprints.list()))
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
@@ -485,7 +485,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         blueprint_path = os.path.join(
             self.get_blueprint_path('mock_blueprint'),
             blueprint_file)
-        self.assertEquals(0, len(self.client.blueprints.list()))
+        self.assertEqual(0, len(self.client.blueprints.list()))
         with self.assertRaises(exceptions.CloudifyClientError) as context:
             self.client.blueprints.validate(blueprint_path, blueprint_id)
         self.assertEqual(400, context.exception.status_code)
