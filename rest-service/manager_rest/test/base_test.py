@@ -503,7 +503,7 @@ class BaseServerTestCase(unittest.TestCase):
     @classmethod
     def post_file(cls, resource_path, file_path, query_params=None):
         url = cls._version_url(resource_path)
-        with open(file_path) as f:
+        with open(file_path, 'rb') as f:
             result = cls.app.post(urlquote(url),
                                   data=f.read(),
                                   query_string=build_query_string(

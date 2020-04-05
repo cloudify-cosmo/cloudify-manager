@@ -150,8 +150,7 @@ class UploadedDataManager(object):
 
     @staticmethod
     def _save_file_from_chunks(archive_target_path, data_type):
-        if any([request.data,
-                'blueprint_archive' in request.files]):
+        if request.data or 'blueprint_archive' in request.files:
             raise manager_exceptions.BadParametersError(
                 "Can't pass both a {0} URL via request body , multi-form "
                 "and chunked.".format(data_type))
