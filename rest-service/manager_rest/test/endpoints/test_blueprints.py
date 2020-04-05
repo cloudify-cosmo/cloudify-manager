@@ -167,8 +167,6 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
             resource_path,
             None,
             {'blueprint_archive_url': 'http://www.fake.url/does/not/exist'})
-        self.assertTrue("not found - can't download blueprint archive" in
-                        response.json['message'])
         self.assertEqual(400, response.status_code)
 
     def test_put_blueprint_archive_from_malformed_url(self):
@@ -178,8 +176,6 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
             resource_path,
             None,
             {'blueprint_archive_url': 'malformed/url_is.bad'})
-        self.assertIn("is malformed - can't download blueprint archive",
-                      response.json['message'])
         self.assertEqual(400, response.status_code)
 
     def test_put_blueprint_archive_from_url_and_data(self):
