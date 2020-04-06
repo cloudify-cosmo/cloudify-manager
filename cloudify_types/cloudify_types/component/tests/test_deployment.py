@@ -257,6 +257,49 @@ class TestComponentPlugins(TestDeploymentBase):
                 zip_files.assert_not_called()
                 get_local_path.assert_not_called()
 
+    @mock.patch('cloudify_types.component.component.should_upload_plugin',
+                return_value=True)
+    @mock.patch('cloudify.manager.get_rest_client')
+    def test_upload_plugins_with_icon(self, *_mocks):
+        plugin = mock.Mock()
+        plugin.id = "CustomPlugin"
+        component = Component({'plugins': {
+            'base_plugin': {
+                'wagon_path': '_wagon_path',
+                'plugin_yaml_path': '_plugin_yaml_path',
+                'icon_png_path': '_icon_png_path',
+            }
+        }})
+        get_local_path = mock.patch(
+            'cloudify_types.component.component.get_local_path',
+            side_effect=lambda filename, create_temp=True: filename
+        )
+        zip_files = mock.patch(
+            'cloudify_types.component.component.zip_files',
+            return_value='_zip'
+        )
+        component_os = mock.patch('cloudify_types.component.component.os')
+        with get_local_path as local_path_mock, \
+                zip_files as zip_mock, \
+                component_os as os_mock:
+            component._upload_plugins()
+        zip_mock.assert_called_with([
+            '_wagon_path',
+            '_plugin_yaml_path',
+            '_icon_png_path'
+        ])
+        local_path_mock.assert_has_calls([
+            mock.call('_wagon_path', create_temp=True),
+            mock.call('_plugin_yaml_path', create_temp=True),
+            mock.call('_icon_png_path', create_temp=True),
+        ], any_order=True)
+        os_mock.remove.assert_has_calls([
+            mock.call('_wagon_path'),
+            mock.call('_plugin_yaml_path'),
+            mock.call('_icon_png_path'),
+            mock.call('_zip'),
+        ], any_order=True)
+
     def test_delete_deployment_success_with_plugins(self):
         self._ctx.instance.runtime_properties['deployment']['id'] = 'dep_name'
         self._ctx.instance.runtime_properties['plugins'] = {'plugin_id'}
