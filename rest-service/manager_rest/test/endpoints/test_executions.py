@@ -967,7 +967,7 @@ class ExecutionsTestCase(BaseServerTestCase):
 
         # Update the token in the db
         execution = self.sm.get(models.Execution, execution.id)
-        execution.token = hashlib.sha256(token).hexdigest()
+        execution.token = hashlib.sha256(token.encode('ascii')).hexdigest()
         execution.status = ExecutionState.STARTED
         self.sm.update(execution)
         return execution.id
