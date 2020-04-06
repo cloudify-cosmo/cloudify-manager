@@ -932,7 +932,7 @@ class ExecutionsTestCase(BaseServerTestCase):
 
         # Update the token in the db
         execution = self.sm.get(models.Execution, execution.id)
-        execution.token = hashlib.sha256(token).hexdigest()
+        execution.token = hashlib.sha256(token.encode('ascii')).hexdigest()
         self.sm.update(execution)
 
         headers = {CLOUDIFY_EXECUTION_TOKEN_HEADER: token}
