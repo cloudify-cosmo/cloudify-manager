@@ -47,30 +47,6 @@ defaults:
             bash <(curl -s https://codecov.io/bash) -F $TOX_TEST
 
 jobs:
-  test_endpoints:
-    docker:
-      - image: circleci/python:2.7
-      - image: circleci/postgres:9.5-alpine
-        environment:
-          POSTGRES_USER: cloudify
-          POSTGRES_PASSWORD: cloudify
-          POSTGRES_DB: cloudify_db
-    steps:
-      - checkout
-      - run: sudo apt-get install libldap-dev libsasl2-dev
-      - run: virtualenv ~/venv
-      - run: |
-          pushd rest-service
-            ~/venv/bin/pip install -Ur dev-requirements.txt
-            ~/venv/bin/pip install -Ur test-requirements.txt
-            ~/venv/bin/pip install -e .
-          popd
-      - run: |
-          ~/venv/bin/pytest \
-            -sv \
-            -a '(client_min_version is None or client_min_version <= 3.1) and (client_max_version is None or 3.1 <= client_max_version)' \
-            rest-service/manager_rest/test/endpoints
-
   test_endpoints_36:
     docker:
       - image: circleci/python:3.6
@@ -94,76 +70,27 @@ jobs:
             -sv \
             -a '(client_min_version is None or client_min_version <= 3.1) and (client_max_version is None or 3.1 <= client_max_version)' \
             rest-service/manager_rest/test/endpoints
-
-  flake8:
-    docker:
-      - image: circleci/python:2.7
-
-    steps:
-      - checkout
-      - run: pip install --user flake8
-      - run: python -m flake8
-
-  test_v1:
-    <<: *tox_defaults
-    environment:
-      DO_ENV: clientV1-endpoints,clientV1-infrastructure
-
-  test_clientv2_endpoints:
-    <<: *tox_defaults
-    environment:
-      DO_ENV: clientV2-endpoints
-
-  test_clientv2_infrastructure:
-    <<: *tox_defaults
-    environment:
-      DO_ENV: clientV2-infrastructure
-
-  test_clientv2_1_endpoints:
-    <<: *tox_defaults
-    environment:
-      DO_ENV: clientV2_1-endpoints
-
-  test_clientv2_1_infrastructure:
-    <<: *tox_defaults
-    environment:
-      DO_ENV: clientV2_1-infrastructure
-
-  test_clientv3_endpoints:
-    <<: *tox_defaults
-    environment:
-      DO_ENV: clientV3-endpoints
-
-  test_clientv3_infrastructure:
-    <<: *tox_defaults
-    environment:
-      DO_ENV: clientV3-infrastructure
-
-  test_clientv3_1_endpoints:
-    <<: *tox_defaults
-    environment:
-      DO_ENV: clientV3_1-endpoints212
-
-  test_clientv3_1_infrastructure:
-    <<: *tox_defaults
-    environment:
-      DO_ENV: clientV3_1-infrastructure
-
-  test_workflows:
-    <<: *rest_service_external_tox_defaults
-    environment:
-      TOX_CONFIG: ./workflows
-      DO_ENV: py27
-
-  test_cloudify_types:
-    <<: *rest_service_external_tox_defaults
-    environment:
-      TOX_CONFIG: ./cloudify_types
-      DO_ENV: py27
+      - run: |
+          ~/venv/bin/pytest \
+            -sv \
+            -a '(client_min_version is None or client_min_version <= 3.1) and (client_max_version is None or 3.1 <= client_max_version)' \
+            rest-service/manager_rest/test/infrastructure
+      - run: |
+          ~/venv/bin/pytest \
+            -sv \
+            rest-service/manager_rest/test/security
+      - run: |
+          ~/venv/bin/pytest \
+            -sv \
+            workflows
+      - run: |
+          ~/venv/bin/pytest \
+            -sv \
+            cloudify_types
 
   test_amqp_postgres:
     docker:
-      - image: circleci/python:2.7
+      - image: circleci/python:3.6
         environment:
           TEST_DATABASE_URL: postgresql://cloudify:cloudify@localhost/cloudify_db
       - image: rabbitmq:3.7.7
@@ -175,15 +102,25 @@ jobs:
     steps:
       - checkout
       - run: sudo apt-get install libldap-dev libsasl2-dev
-      - run:
-          name: Install tox and run test
-          command: |
-            pip install --user tox
-            python -m tox -c amqp-postgres/tox.ini
-      - run:
-          name: Push coverage data to codecov
-          command: |
-            bash <(curl -s https://codecov.io/bash)
+      - run: virtualenv ~/venv
+      - run: |
+          pushd amqp-postgres
+            ~/venv/bin/pip install -Ur test-requirements.txt
+            ~/venv/bin/pip install -e .
+          popd
+      - run: |
+          ~/venv/bin/pytest \
+            -sv \
+            amqp-postgres
+
+  flake8:
+    docker:
+      - image: circleci/python:2.7
+
+    steps:
+      - checkout
+      - run: pip install --user flake8
+      - run: python -m flake8
 
   test_premium:
     docker:
@@ -313,6 +250,7 @@ workflows:
     jobs: &build_jobs
       - flake8
       - test_endpoints_36
+      - test_amqp_postgres
       - py3_compat
   nightly:
     triggers:

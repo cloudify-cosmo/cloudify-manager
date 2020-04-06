@@ -1,0 +1,5 @@
+git+https://github.com/cloudify-cosmo/cloudify-common@compat-urlencode-1#egg=cloudify-common==compat-urlencode-1
+-e ../rest-service
+mock
+pytest
+pytest-cov
