@@ -117,7 +117,7 @@ class MockHTTPClient(HTTPClient):
                                     query_string=build_query_string(params))
         elif 'post' in requests_method.__name__:
             if isinstance(body, types.GeneratorType):
-                body = ''.join(body)
+                body = b''.join(body)
             response = self.app.post(request_url,
                                      headers=headers,
                                      data=body,
