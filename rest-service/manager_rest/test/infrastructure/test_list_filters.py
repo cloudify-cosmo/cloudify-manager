@@ -160,7 +160,7 @@ class ResourceListFiltersTestCase(BaseListTest):
             self.assertIn(filter_val,
                           str(e),
                           'expecting available filter names be contained '
-                          'in error message {0}'.format(e.message))
+                          'in error message {0}'.format(e))
 
     def test_executions_list_non_existent_filters(self):
         filter_fields = {'non_existing_field': 'just_some_value'}

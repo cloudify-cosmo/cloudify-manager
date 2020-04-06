@@ -572,7 +572,7 @@ class UploadedBlueprintsManager(UploadedDataManager):
         except manager_exceptions.DslParseException as ex:
             shutil.rmtree(os.path.join(file_server_root, app_dir))
             raise manager_exceptions.InvalidBlueprintError(
-                'Invalid blueprint - {0}'.format(ex.message))
+                'Invalid blueprint - {0}'.format(ex))
 
     @classmethod
     def _extract_application_file(cls,

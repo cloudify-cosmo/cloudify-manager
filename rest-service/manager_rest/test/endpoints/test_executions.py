@@ -184,19 +184,18 @@ class ExecutionsTestCase(BaseServerTestCase):
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
         parameters = {'param1': 'val1', 'param2': 'val2'}
-        try:
+        # ensure all custom parameters are mentioned in the error message,
+        # but they can be in any order
+        expected_regex = 'param1,param2|param2,param1'
+        with self.assertRaisesRegex(
+                exceptions.CloudifyClientError, expected_regex) as cm:
             self.client.executions.start(deployment_id,
                                          'install',
                                          parameters)
-        except exceptions.CloudifyClientError as e:
-            self.assertEqual(400, e.status_code)
-            expected_error = manager_exceptions.IllegalExecutionParametersError
-            self.assertEqual(
-                expected_error.ILLEGAL_EXECUTION_PARAMETERS_ERROR_CODE,
-                e.error_code)
-            self.assertIn('param1', e.message)
-            self.assertIn('param2', e.message)
-            # ensure all custom parameters are mentioned in the error message
+        self.assertEqual(
+            manager_exceptions.IllegalExecutionParametersError.
+            ILLEGAL_EXECUTION_PARAMETERS_ERROR_CODE,
+            cm.exception.error_code)
 
     def test_execute_with_mandatory_parameters_types(self):
         (blueprint_id, deployment_id, blueprint_response,
@@ -430,45 +429,40 @@ class ExecutionsTestCase(BaseServerTestCase):
              self.DEPLOYMENT_ID, 'blueprint_with_workflows.yaml')
 
         parameters = {'optional_param': 'some_value'}
-        try:
+        # ensure all custom parameters are mentioned in the error message,
+        # but they can be in any order
+        expected_regex = 'mandatory_param,mandatory_param2|'\
+            'mandatory_param2,mandatory_param'
+        with self.assertRaisesRegex(
+                exceptions.CloudifyClientError, expected_regex) as cm:
             self.client.executions.start(deployment_id,
                                          'mock_workflow',
                                          parameters)
-            self.fail()
-        except exceptions.CloudifyClientError as e:
-            self.assertEqual(400, e.status_code)
-            error = manager_exceptions.IllegalExecutionParametersError
-            self.assertEqual(
-                error.ILLEGAL_EXECUTION_PARAMETERS_ERROR_CODE,
-                e.error_code)
-            # ensure all missing mandatory parameters are mentioned in message
-            self.assertIn('mandatory_param', e.message)
-            self.assertIn('mandatory_param2', e.message)
+
+        self.assertEqual(
+            manager_exceptions.IllegalExecutionParametersError.
+            ILLEGAL_EXECUTION_PARAMETERS_ERROR_CODE,
+            cm.exception.error_code)
 
     def test_bad_execution_parameters(self):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(
              self.DEPLOYMENT_ID, 'blueprint_with_workflows.yaml')
-        try:
+        with self.assertRaises(exceptions.CloudifyClientError) as cm:
             self.client.executions.start(deployment_id,
                                          'mock_workflow',
                                          'not_a_dictionary')
-            self.fail()
-        except exceptions.CloudifyClientError as e:
-            self.assertEqual(400, e.status_code)
-            bad_params_error = manager_exceptions.BadParametersError
-            self.assertEqual(bad_params_error.BAD_PARAMETERS_ERROR_CODE,
-                             e.error_code)
-        try:
+        self.assertEqual(
+            manager_exceptions.BadParametersError.BAD_PARAMETERS_ERROR_CODE,
+            cm.exception.error_code)
+
+        with self.assertRaises(exceptions.CloudifyClientError) as cm:
             self.client.executions.start(deployment_id,
                                          'mock_workflow',
                                          '[still_not_a_dictionary]')
-            self.fail()
-        except exceptions.CloudifyClientError as e:
-            self.assertEqual(400, e.status_code)
-            bad_params_error = manager_exceptions.BadParametersError
-            self.assertEqual(bad_params_error.BAD_PARAMETERS_ERROR_CODE,
-                             e.error_code)
+        self.assertEqual(
+            manager_exceptions.BadParametersError.BAD_PARAMETERS_ERROR_CODE,
+            cm.exception.error_code)
 
     def test_passing_parameters_parameter_to_execute(self):
         (blueprint_id, deployment_id, blueprint_response,

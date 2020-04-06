@@ -123,13 +123,9 @@ class MaintenanceModeTest(BaseServerTestCase):
 
     def test_multiple_maintenance_mode_activations(self):
         self._activate_maintenance_mode()
-        try:
+        with self.assertRaises(exceptions.NotModifiedError) as cm:
             self._activate_maintenance_mode()
-            self.fail('Expected the second start request to fail '
-                      'since maintenance mode is already started.')
-        except exceptions.NotModifiedError as e:
-            self.assertEqual(304, e.status_code)
-        self.assertIn('already on', e.message)
+        self.assertEqual(304, cm.exception.status_code)
 
     def test_transition_to_active(self):
         execution = self._start_maintenance_transition_mode()
@@ -238,13 +234,9 @@ class MaintenanceModeTest(BaseServerTestCase):
 
     def test_multiple_maintenance_mode_deactivations(self):
         self._activate_and_deactivate_maintenance_mode()
-        try:
+        with self.assertRaises(exceptions.NotModifiedError) as cm:
             self.client.maintenance_mode.deactivate()
-            self.fail('Expected the second stop request to fail '
-                      'since maintenance mode is not active.')
-        except exceptions.NotModifiedError as e:
-            self.assertEqual(304, e.status_code)
-        self.assertTrue('already off' in e.message)
+        self.assertEqual(304, cm.exception.status_code)
 
     def test_maintenance_mode_activated_error_raised(self):
         self._activate_maintenance_mode()
