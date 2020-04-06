@@ -14,6 +14,8 @@
 #  * limitations under the License.
 #
 
+from functools import reduce
+
 from sqlalchemy import (
     asc,
     bindparam,
