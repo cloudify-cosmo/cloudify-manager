@@ -75,10 +75,8 @@ class TestPolling(ComponentTestBase):
 
         self.cfy_mock_client.executions.list = mock_return
 
-        output = self.assertRaises(NonRecoverableError,
-                                   is_all_executions_finished,
-                                   self.cfy_mock_client)
-        self.assertIn('failed', str(output))
+        with self.assertRaisesRegex(NonRecoverableError, 'failed'):
+            is_all_executions_finished(self.cfy_mock_client)
 
     def test_dep_workflow_in_state_pollster_no_execution_given(self):
         self.assertRaises(NonRecoverableError,
@@ -148,13 +146,12 @@ class TestPolling(ComponentTestBase):
             raise CloudifyClientError('Mistake')
 
         self.cfy_mock_client.executions.get = mock_return
-        output = self.assertRaises(NonRecoverableError,
-                                   is_deployment_execution_at_state,
-                                   self.cfy_mock_client,
-                                   'dep_name',
-                                   'terminated',
-                                   'exe_id')
-        self.assertIn('failed', str(output))
+        with self.assertRaisesRegex(NonRecoverableError, 'failed'):
+            is_deployment_execution_at_state(
+                self.cfy_mock_client,
+                'dep_name',
+                'terminated',
+                'exe_id')
 
     def test_component_logs_redirect_predefined_level(self):
         self.cfy_mock_client.events.set_existing_objects([{

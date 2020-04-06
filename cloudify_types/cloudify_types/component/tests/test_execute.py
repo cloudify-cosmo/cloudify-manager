@@ -63,21 +63,19 @@ class TestExecute(ComponentTestBase):
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             self.cfy_mock_client.executions.start = REST_CLIENT_EXCEPTION
             mock_client.return_value = self.cfy_mock_client
-            error = self.assertRaises(NonRecoverableError,
-                                      execute_start,
-                                      deployment_id='dep_name',
-                                      workflow_id='install')
-            self.assertIn('action "start" failed', str(error))
+            with self.assertRaisesRegex(
+                    NonRecoverableError, 'action "start" failed'):
+                execute_start(deployment_id='dep_name', workflow_id='install')
 
     def test_execute_start_timeout(self):
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             mock_client.return_value = self.cfy_mock_client
-            error = self.assertRaises(NonRecoverableError,
-                                      execute_start,
-                                      deployment_id='dep_name',
-                                      workflow_id='install',
-                                      timeout=MOCK_TIMEOUT)
-            self.assertIn('Execution timed out', str(error))
+            with self.assertRaisesRegex(
+                    NonRecoverableError, 'Execution timed out'):
+                execute_start(
+                    deployment_id='dep_name',
+                    workflow_id='install',
+                    timeout=MOCK_TIMEOUT)
 
     def test_execute_start_succeeds(self):
         test_capabilities = {'test': 1}
@@ -123,7 +121,7 @@ class TestExecute(ComponentTestBase):
             mock_client.return_value = self.cfy_mock_client
             self.cfy_mock_client.deployments.capabilities.get =\
                 mock.MagicMock(side_effect=CloudifyClientError(
-                                   'Failing to get capabilities'))
+                               'Failing to get capabilities'))
             poll_with_timeout_test = \
                 'cloudify_types.component.polling.poll_with_timeout'
             with mock.patch(poll_with_timeout_test) as poll:

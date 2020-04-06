@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import testtools
+import unittest
 
 from cloudify.state import current_ctx
 from cloudify.mocks import MockCloudifyContext
@@ -32,7 +32,7 @@ NODE_PROPS = {
 }
 
 
-class TestSharedResourceBase(testtools.TestCase):
+class TestSharedResourceBase(unittest.TestCase):
 
     def setUp(self):
         super(TestSharedResourceBase, self).setUp()
