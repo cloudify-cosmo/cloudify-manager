@@ -45,12 +45,12 @@ class TestBlueprint(ComponentTestBase):
             blueprint_params['blueprint']['blueprint_archive'] = self.archive
             self.resource_config['resource_config'] = blueprint_params
 
-            error = self.assertRaises(NonRecoverableError,
-                                      upload_blueprint,
-                                      operation='upload_blueprint',
-                                      **self.resource_config)
-
-            self.assertIn('action "_upload" failed', str(error))
+            with self.assertRaisesRegexp(
+                NonRecoverableError,
+                'action "_upload" failed'
+            ):
+                upload_blueprint(
+                    operation='upload_blueprint', **self.resource_config)
 
     def test_successful_upload_existing_blueprint(self):
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
@@ -92,13 +92,13 @@ class TestBlueprint(ComponentTestBase):
             blueprint_params['blueprint']['id'] = 'blu_name'
             self.resource_config['resource_config'] = blueprint_params
 
-            error = self.assertRaises(NonRecoverableError,
-                                      upload_blueprint,
-                                      operation='upload_blueprint',
-                                      **self.resource_config)
-
-            self.assertIn('No blueprint_archive supplied, but '
-                          'external_resource is False', str(error))
+            with self.assertRaisesRegexp(
+                NonRecoverableError,
+                'No blueprint_archive supplied, but '
+                'external_resource is False'
+            ):
+                upload_blueprint(
+                    operation='upload_blueprint', **self.resource_config)
 
     def test_uploading_existing_blueprint_id_when_using_external(self):
         blueprint_id = 'blu_name'
@@ -128,10 +128,9 @@ class TestBlueprint(ComponentTestBase):
 
             mock_client.return_value = self.cfy_mock_client
 
-            error = self.assertRaises(NonRecoverableError,
-                                      upload_blueprint,
-                                      operation='upload_blueprint',
-                                      **self.resource_config)
-
-            self.assertIn('Blueprint ID \"{0}\" does not exist'.format(
-                'test'), str(error))
+            with self.assertRaisesRegexp(
+                NonRecoverableError,
+                'Blueprint ID "test" does not exist'
+            ):
+                upload_blueprint(
+                    operation='upload_blueprint', **self.resource_config)
