@@ -996,6 +996,11 @@ data_types:
 
   cloudify.datatypes.ComponentDeployment:
     properties:
+      external_resource:
+        description: >
+          Use external deployment resource.
+        type: boolean
+        default: false
       id:
         description: >
           This is the deployment ID that the Component's node is connected to.
