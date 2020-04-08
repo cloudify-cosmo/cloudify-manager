@@ -51,12 +51,9 @@ class TestDeployment(TestDeploymentBase):
             with mock.patch('cloudify.manager.get_rest_client') as mock_client:
                 self.cfy_mock_client.deployments.delete = REST_CLIENT_EXCEPTION
                 mock_client.return_value = self.cfy_mock_client
-                error = self.assertRaises(NonRecoverableError,
-                                          delete,
-                                          deployment_id=deployment_name,
-                                          timeout=MOCK_TIMEOUT)
-                self.assertIn('action "delete" failed',
-                              str(error))
+                with self.assertRaisesRegexp(NonRecoverableError,
+                                             'action "delete" failed'):
+                    delete(deployment_id=deployment_name, timeout=MOCK_TIMEOUT)
 
     def test_delete_deployment_delete_not_existing_deployment(self):
         deployment_name = 'dep_name'
@@ -118,13 +115,12 @@ class TestDeployment(TestDeploymentBase):
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             self.cfy_mock_client.deployments.create = REST_CLIENT_EXCEPTION
             mock_client.return_value = self.cfy_mock_client
-            error = self.assertRaises(NonRecoverableError,
-                                      create,
-                                      deployment_id='test_deployments_create',
-                                      blueprint_id='test_deployments_create',
-                                      timeout=MOCK_TIMEOUT)
-            self.assertIn('action "create" failed',
-                          str(error))
+            with self.assertRaisesRegexp(NonRecoverableError,
+                                         'action "create" failed'):
+                create(
+                    deployment_id='test_deployments_create',
+                    blueprint_id='test_deployments_create',
+                    timeout=MOCK_TIMEOUT)
 
     def test_create_deployment_timeout(self):
         self._ctx.instance.runtime_properties['deployment']['id'] = 'dep_name'
@@ -142,13 +138,12 @@ class TestDeployment(TestDeploymentBase):
                 'cloudify_types.component.polling.poll_with_timeout'
             with mock.patch(poll_with_timeout_test) as poll:
                 poll.return_value = False
-                error = self.assertRaises(
-                    NonRecoverableError, create,
-                    deployment_id='test_create_deployment_timeout',
-                    blueprint_id='test',
-                    timeout=MOCK_TIMEOUT)
-
-                self.assertIn('Execution timed out', str(error))
+                with self.assertRaisesRegexp(NonRecoverableError,
+                                             'Execution timed out'):
+                    create(
+                        deployment_id='test_create_deployment_timeout',
+                        blueprint_id='test',
+                        timeout=MOCK_TIMEOUT)
 
     def test_create_deployment_success(self):
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
@@ -184,14 +179,10 @@ class TestDeployment(TestDeploymentBase):
             with mock.patch(poll_with_timeout_test) as poll:
                 poll.return_value = True
 
-                error = self.assertRaises(
-                    NonRecoverableError,
-                    create,
-                    operation='create_deployment',
-                    timeout=MOCK_TIMEOUT)
-
-                self.assertIn('No execution Found for component'
-                              ' "test" deployment', str(error))
+                with self.assertRaisesRegexp(
+                        NonRecoverableError,
+                        'No execution Found for component "test" deployment'):
+                    create(operation='create_deployment', timeout=MOCK_TIMEOUT)
 
     def test_create_deployment_exists(self):
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
@@ -358,15 +349,13 @@ class TestComponentPlugins(TestDeploymentBase):
             with mock.patch(poll_with_timeout_test) as poll:
                 poll.return_value = True
 
-                error = self.assertRaises(
-                    NonRecoverableError,
-                    delete,
-                    operation='delete_deployment',
-                    deployment_id='dep_name',
-                    timeout=MOCK_TIMEOUT)
-
-                self.assertIn('Failed to remove plugin "plugin_id"....',
-                              str(error))
+                with self.assertRaisesRegexp(
+                        NonRecoverableError,
+                        'Failed to remove plugin "plugin_id"'):
+                    delete(
+                        operation='delete_deployment',
+                        deployment_id='dep_name',
+                        timeout=MOCK_TIMEOUT)
 
             self.cfy_mock_client.plugins.delete.assert_called_with(
                 plugin_id='plugin_id')
@@ -416,14 +405,11 @@ class TestComponentSecrets(TestDeploymentBase):
             ])
             mock_client.return_value = self.cfy_mock_client
 
-            error = self.assertRaises(
-                NonRecoverableError,
-                create,
-                operation='create_deployment',
-                timeout=MOCK_TIMEOUT)
+            with self.assertRaisesRegexp(
+                    NonRecoverableError,
+                    'The secrets: "a" already exist, not updating...'):
+                create(operation='create_deployment', timeout=MOCK_TIMEOUT)
 
-            self.assertIn('The secrets: "a" already exist, not updating...',
-                          str(error))
             assert not self.cfy_mock_client.secrets.create.called
 
     def test_delete_deployment_success_with_secrets(self):

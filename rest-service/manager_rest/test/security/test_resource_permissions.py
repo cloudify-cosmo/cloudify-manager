@@ -135,7 +135,7 @@ class ResourcePermissionTests(SecurityTestBase):
                                      password='dave_password'):
             get_func = get_func_getter(self.client)
             list_func = list_func_getter(self.client)
-            self.assertRaisesRegexp(
+            self.assertRaisesRegex(
                 CloudifyClientError,
                 error_msg,
                 get_func,
@@ -163,7 +163,7 @@ class ResourcePermissionTests(SecurityTestBase):
         with self.use_secured_client(username='dave',
                                      password='dave_password'):
             get_func = get_func_getter(self.client)
-            self.assertRaisesRegexp(
+            self.assertRaisesRegex(
                 CloudifyClientError,
                 error_msg,
                 get_func,

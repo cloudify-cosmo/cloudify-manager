@@ -140,7 +140,7 @@ class ModifyTests(base_test.BaseServerTestCase):
         self.assertEqual(
             node2_instance1['index'],
             node2_instance['index'])
-        self.assertNotEquals(
+        self.assertNotEqual(
             node1_instances[0]['index'],
             node1_instances[1]['index'])
 
@@ -160,10 +160,10 @@ class ModifyTests(base_test.BaseServerTestCase):
         created_at = dateutil.parser.parse(modification.created_at)
         ended_at = dateutil.parser.parse(modification.ended_at)
         self.assertTrue(
-                dateutil.parser.parse(utils.get_formatted_timestamp()) -
-                timedelta(seconds=5) <=
-                created_at <= ended_at <=
-                dateutil.parser.parse(utils.get_formatted_timestamp()))
+            dateutil.parser.parse(utils.get_formatted_timestamp()) -
+            timedelta(seconds=5) <=
+            created_at <= ended_at <=
+            dateutil.parser.parse(utils.get_formatted_timestamp()))
         all_modifications = self._get_items(
             self.client.deployment_modifications.list
         )
@@ -421,8 +421,8 @@ class ModifyTests(base_test.BaseServerTestCase):
 
         def assert_deployment_instances(dep, current, planned):
             props = dep['scaling_groups']['group']['properties']
-            self.assertEquals(current, props['current_instances'])
-            self.assertEquals(planned, props['planned_instances'])
+            self.assertEqual(current, props['current_instances'])
+            self.assertEqual(planned, props['planned_instances'])
 
         def assert_instances(current, planned):
             # Test get and list deployments endpoints
@@ -448,8 +448,8 @@ class ModifyTests(base_test.BaseServerTestCase):
         self.assertEqual(2, len(node_instances))
         self.assertIsNotNone(node_instances[0]['index'])
         self.assertIsNotNone(node_instances[1]['index'])
-        self.assertNotEquals(node_instances[0]['index'],
-                             node_instances[1]['index'])
+        self.assertNotEqual(node_instances[0]['index'],
+                            node_instances[1]['index'])
 
         for instance in node_instances:
             node_instance_scaling_groups = instance['scaling_groups']

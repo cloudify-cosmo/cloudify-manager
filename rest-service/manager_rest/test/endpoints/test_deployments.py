@@ -16,7 +16,6 @@
 import errno
 import os
 import uuid
-import exceptions
 
 from cloudify.models_states import VisibilityState
 
@@ -42,21 +41,21 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
 
     def test_get_empty(self):
         result = self.client.deployments.list()
-        self.assertEquals(0, len(result))
+        self.assertEqual(0, len(result))
 
     def test_create_deployment_illegal_id(self):
         # try id with whitespace
-        self.assertRaisesRegexp(CloudifyClientError,
-                                'contains illegal characters',
-                                self.client.deployments.create,
-                                'blueprint_id',
-                                'illegal deployment id')
+        self.assertRaisesRegex(CloudifyClientError,
+                               'contains illegal characters',
+                               self.client.deployments.create,
+                               'blueprint_id',
+                               'illegal deployment id')
         # try id that starts with a number
-        self.assertRaisesRegexp(CloudifyClientError,
-                                'must begin with a letter',
-                                self.client.deployments.create,
-                                'blueprint_id',
-                                '0')
+        self.assertRaisesRegex(CloudifyClientError,
+                               'must begin with a letter',
+                               self.client.deployments.create,
+                               'blueprint_id',
+                               '0')
 
     def test_put(self):
         (blueprint_id,
@@ -64,8 +63,8 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
          blueprint_response,
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
-        self.assertEquals(deployment_id, self.DEPLOYMENT_ID)
-        self.assertEquals(blueprint_id, deployment_response['blueprint_id'])
+        self.assertEqual(deployment_id, self.DEPLOYMENT_ID)
+        self.assertEqual(blueprint_id, deployment_response['blueprint_id'])
         self.assertIsNotNone(deployment_response['created_at'])
         self.assertIsNotNone(deployment_response['updated_at'])
 
@@ -101,10 +100,10 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
         with self.assertRaises(CloudifyClientError) as context:
             self.client.blueprints.delete(blueprint_id)
-        self.assertEquals(400, context.exception.status_code)
+        self.assertEqual(400, context.exception.status_code)
         self.assertIn('There exist deployments for this blueprint',
                       str(context.exception))
-        self.assertEquals(
+        self.assertEqual(
             context.exception.error_code,
             manager_exceptions.DependentExistsError.
             DEPENDENT_EXISTS_ERROR_CODE)
@@ -129,46 +128,46 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
 
         single_deployment = self.get('/deployments/{0}'
                                      .format(deployment_id)).json
-        self.assertEquals(deployment_id, single_deployment['id'])
-        self.assertEquals(deployment_response['blueprint_id'],
-                          single_deployment['blueprint_id'])
-        self.assertEquals(deployment_response['id'],
-                          single_deployment['id'])
-        self.assertEquals(deployment_response['created_at'],
-                          single_deployment['created_at'])
-        self.assertEquals(deployment_response['created_at'],
-                          single_deployment['updated_at'])
+        self.assertEqual(deployment_id, single_deployment['id'])
+        self.assertEqual(deployment_response['blueprint_id'],
+                         single_deployment['blueprint_id'])
+        self.assertEqual(deployment_response['id'],
+                         single_deployment['id'])
+        self.assertEqual(deployment_response['created_at'],
+                         single_deployment['created_at'])
+        self.assertEqual(deployment_response['created_at'],
+                         single_deployment['updated_at'])
 
     def test_get(self):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
         get_deployments_response = self.client.deployments.list()
-        self.assertEquals(1, len(get_deployments_response))
+        self.assertEqual(1, len(get_deployments_response))
         single_deployment = get_deployments_response[0]
-        self.assertEquals(deployment_id, single_deployment['id'])
-        self.assertEquals(deployment_response['blueprint_id'],
-                          single_deployment['blueprint_id'])
-        self.assertEquals(deployment_response['id'],
-                          single_deployment['id'])
-        self.assertEquals(deployment_response['created_at'],
-                          single_deployment['created_at'])
-        self.assertEquals(deployment_response['created_at'],
-                          single_deployment['updated_at'])
+        self.assertEqual(deployment_id, single_deployment['id'])
+        self.assertEqual(deployment_response['blueprint_id'],
+                         single_deployment['blueprint_id'])
+        self.assertEqual(deployment_response['id'],
+                         single_deployment['id'])
+        self.assertEqual(deployment_response['created_at'],
+                         single_deployment['created_at'])
+        self.assertEqual(deployment_response['created_at'],
+                         single_deployment['updated_at'])
 
     def test_get_executions_of_deployment(self):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
         execution = self.client.executions.start(deployment_id, 'install')
-        self.assertEquals('install', execution.workflow_id)
-        self.assertEquals(blueprint_id, execution['blueprint_id'])
-        self.assertEquals(deployment_id, execution.deployment_id)
+        self.assertEqual('install', execution.workflow_id)
+        self.assertEqual(blueprint_id, execution['blueprint_id'])
+        self.assertEqual(deployment_id, execution.deployment_id)
         self.assertIsNotNone(execution.created_at)
         executions = self.client.executions.list(deployment_id=deployment_id)
         # expecting two executions - 'install' and
         # 'create_deployment_environment'
-        self.assertEquals(2, len(executions))
+        self.assertEqual(2, len(executions))
         self.assertIn(execution['id'],
                       [executions[0]['id'], executions[1]['id']])
         self.assertIn('create_deployment_environment',
@@ -186,8 +185,8 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         except CloudifyClientError as e:
             self.assertEqual(400, e.status_code)
             error = manager_exceptions.NonexistentWorkflowError
-            self.assertEquals(error.NONEXISTENT_WORKFLOW_ERROR_CODE,
-                              e.error_code)
+            self.assertEqual(error.NONEXISTENT_WORKFLOW_ERROR_CODE,
+                             e.error_code)
 
     def test_listing_executions_for_nonexistent_deployment(self):
         result = self.client.executions.list(deployment_id='doesnotexist')
@@ -202,7 +201,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
 
         resource_path = '/deployments/{0}'.format(deployment_id)
         workflows = self.get(resource_path).json['workflows']
-        self.assertEquals(12, len(workflows))
+        self.assertEqual(12, len(workflows))
         workflow = next((workflow for workflow in workflows if
                         workflow['name'] == 'mock_workflow'), None)
         self.assertIsNotNone(workflow)
@@ -218,7 +217,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                 }
             }
         }
-        self.assertEquals(parameters, workflow['parameters'])
+        self.assertEqual(parameters, workflow['parameters'])
 
     def test_delete_deployment_verify_nodes_deletion(self):
         (blueprint_id, deployment_id, blueprint_response,
@@ -231,12 +230,12 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
 
         response = self._delete_deployment(deployment_id, True)
 
-        self.assertEquals(deployment_id, response['id'])
+        self.assertEqual(deployment_id, response['id'])
 
         # verifying deletion of deployment nodes and executions
         for node_id in nodes_ids:
             resp = self.get('/node-instances/{0}'.format(node_id))
-            self.assertEquals(404, resp.status_code)
+            self.assertEqual(404, resp.status_code)
 
     def test_delete_deployment_with_live_nodes_without_ignore_flag(self):
         (blueprint_id, deployment_id, blueprint_response,
@@ -250,7 +249,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             'version': 1,
             'state': 'started'
         })
-        self.assertEquals(200, resp.status_code)
+        self.assertEqual(200, resp.status_code)
 
         # attempting to delete the deployment - should fail because there
         # are live nodes for the deployment
@@ -258,9 +257,9 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         try:
             self._delete_deployment(deployment_id)
         except CloudifyClientError as e:
-            self.assertEquals(e.status_code, 400)
-            self.assertEquals(e.error_code, manager_exceptions.
-                              DependentExistsError.DEPENDENT_EXISTS_ERROR_CODE)
+            self.assertEqual(e.status_code, 400)
+            self.assertEqual(e.error_code, manager_exceptions.
+                             DependentExistsError.DEPENDENT_EXISTS_ERROR_CODE)
 
     def test_delete_deployment_with_uninitialized_nodes(self):
         # simulates a deletion of a deployment right after its creation
@@ -286,33 +285,33 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                 'version': 1,
                 'state': state
             })
-            self.assertEquals(200, resp.status_code)
+            self.assertEqual(200, resp.status_code)
 
         # deleting the deployment
         delete_deployment_response = self._delete_deployment(deployment_id)
-        self.assertEquals(delete_deployment_response['id'],
-                          deployment_id)
+        self.assertEqual(delete_deployment_response['id'],
+                         deployment_id)
 
         # verifying deletion of deployment
         resp = self.get('/deployments/{0}'.format(deployment_id))
-        self.assertEquals(404, resp.status_code)
+        self.assertEqual(404, resp.status_code)
 
     def test_delete_deployment_with_live_nodes_and_ignore_flag(self):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
         response = self._delete_deployment(deployment_id)
-        self.assertEquals(deployment_id, response['id'])
+        self.assertEqual(deployment_id, response['id'])
 
         # verifying deletion of deployment
         resp = self.get('/deployments/{0}'.format(deployment_id))
-        self.assertEquals(404, resp.status_code)
+        self.assertEqual(404, resp.status_code)
 
     def test_delete_nonexistent_deployment(self):
         # trying to delete a nonexistent deployment
         resp = self.delete('/deployments/nonexistent-deployment')
-        self.assertEquals(404, resp.status_code)
-        self.assertEquals(
+        self.assertEqual(404, resp.status_code)
+        self.assertEqual(
             resp.json['error_code'],
             manager_exceptions.NotFoundError.NOT_FOUND_ERROR_CODE)
 
@@ -323,7 +322,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
 
         nodes = self.client.node_instances.list(deployment_id=deployment_id)
 
-        self.assertEquals(2, len(nodes))
+        self.assertEqual(2, len(nodes))
 
         def assert_node_exists(starts_with):
             self.assertTrue(
@@ -366,68 +365,68 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         self.assertEqual('8080', node.properties['port'])
         node2 = self.client.nodes.get(self.DEPLOYMENT_ID, 'http_web_server2')
         self.assertEqual('9090', node2.properties['port'])
-        self.assertRaisesRegexp(CloudifyClientError,
-                                'inputs parameter is expected',
-                                self.put_deployment,
-                                blueprint_id='b1122',
-                                blueprint_file_name='blueprint_with_inputs'
-                                                    '.yaml',
-                                deployment_id=self.DEPLOYMENT_ID,
-                                inputs='illegal')
-        self.assertRaisesRegexp(CloudifyClientError,
-                                'were not specified',
-                                self.put_deployment,
-                                blueprint_id='b3344',
-                                blueprint_file_name='blueprint_with_inputs'
-                                                    '.yaml',
-                                deployment_id=self.DEPLOYMENT_ID,
-                                inputs={'some_input': '1234'})
-        self.assertRaisesRegexp(CloudifyClientError,
-                                'Unknown input',
-                                self.put_deployment,
-                                blueprint_id='b7788',
-                                blueprint_file_name='blueprint_with_inputs'
-                                                    '.yaml',
-                                deployment_id=self.DEPLOYMENT_ID,
-                                inputs={
-                                    'http_web_server_port': '1234',
-                                    'http_web_server_port2': {'a': ['9090']},
-                                    'unknown_input': 'yay'
-                                })
-        self.assertRaisesRegexp(CloudifyClientError,
-                                "(Input attribute).+(doesn't exist)",
-                                self.put_deployment,
-                                blueprint_id='b7789',
-                                blueprint_file_name='blueprint_with_inputs'
-                                                    '.yaml',
-                                deployment_id=self.DEPLOYMENT_ID,
-                                inputs={
-                                    'http_web_server_port': '1234',
-                                    'http_web_server_port2': {
-                                        'something_new': ['9090']}
-                                })
-        self.assertRaisesRegexp(CloudifyClientError,
-                                'is expected to be an int but got',
-                                self.put_deployment,
-                                blueprint_id='b7790',
-                                blueprint_file_name='blueprint_with_inputs'
-                                                    '.yaml',
-                                deployment_id=self.DEPLOYMENT_ID,
-                                inputs={
-                                    'http_web_server_port': '1234',
-                                    'http_web_server_port2': [1234]
-                                })
-        self.assertRaisesRegexp(CloudifyClientError,
-                                "(List size of).+(but index)",
-                                self.put_deployment,
-                                blueprint_id='b7791',
-                                blueprint_file_name='blueprint_with_inputs'
-                                                    '.yaml',
-                                deployment_id=self.DEPLOYMENT_ID,
-                                inputs={
-                                    'http_web_server_port': '1234',
-                                    'http_web_server_port2': {'a': []}
-                                })
+        self.assertRaisesRegex(CloudifyClientError,
+                               'inputs parameter is expected',
+                               self.put_deployment,
+                               blueprint_id='b1122',
+                               blueprint_file_name='blueprint_with_inputs'
+                                                   '.yaml',
+                               deployment_id=self.DEPLOYMENT_ID,
+                               inputs='illegal')
+        self.assertRaisesRegex(CloudifyClientError,
+                               'were not specified',
+                               self.put_deployment,
+                               blueprint_id='b3344',
+                               blueprint_file_name='blueprint_with_inputs'
+                                                   '.yaml',
+                               deployment_id=self.DEPLOYMENT_ID,
+                               inputs={'some_input': '1234'})
+        self.assertRaisesRegex(CloudifyClientError,
+                               'Unknown input',
+                               self.put_deployment,
+                               blueprint_id='b7788',
+                               blueprint_file_name='blueprint_with_inputs'
+                                                   '.yaml',
+                               deployment_id=self.DEPLOYMENT_ID,
+                               inputs={
+                                   'http_web_server_port': '1234',
+                                   'http_web_server_port2': {'a': ['9090']},
+                                   'unknown_input': 'yay'
+                               })
+        self.assertRaisesRegex(CloudifyClientError,
+                               "(Input attribute).+(doesn't exist)",
+                               self.put_deployment,
+                               blueprint_id='b7789',
+                               blueprint_file_name='blueprint_with_inputs'
+                                                   '.yaml',
+                               deployment_id=self.DEPLOYMENT_ID,
+                               inputs={
+                                   'http_web_server_port': '1234',
+                                   'http_web_server_port2': {
+                                       'something_new': ['9090']}
+                               })
+        self.assertRaisesRegex(CloudifyClientError,
+                               'is expected to be an int but got',
+                               self.put_deployment,
+                               blueprint_id='b7790',
+                               blueprint_file_name='blueprint_with_inputs'
+                                                   '.yaml',
+                               deployment_id=self.DEPLOYMENT_ID,
+                               inputs={
+                                   'http_web_server_port': '1234',
+                                   'http_web_server_port2': [1234]
+                               })
+        self.assertRaisesRegex(CloudifyClientError,
+                               "(List size of).+(but index)",
+                               self.put_deployment,
+                               blueprint_id='b7791',
+                               blueprint_file_name='blueprint_with_inputs'
+                                                   '.yaml',
+                               deployment_id=self.DEPLOYMENT_ID,
+                               inputs={
+                                   'http_web_server_port': '1234',
+                                   'http_web_server_port2': {'a': []}
+                               })
 
     def test_input_with_default_value_and_constraints(self):
         self.put_deployment(
@@ -448,7 +447,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         self.assertEqual('9090', node.properties['port'])
 
     def test_input_violates_constraint(self):
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             CloudifyClientError,
             "Value .+ of input .+ violates constraint length.+\\.",
             self.put_deployment,
@@ -458,7 +457,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             inputs={'http_web_server_port': '123'})
 
     def test_input_violates_constraint_data_type(self):
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             CloudifyClientError,
             "Value's length could not be computed. Value type is 'int'\\.",
             self.put_deployment,
@@ -528,37 +527,32 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
     def test_creation_failure_when_plugin_not_found_central_deployment(self):
         from cloudify_rest_client.exceptions import DeploymentPluginNotFound
         id_ = 'i{0}'.format(uuid.uuid4())
-        try:
+        with self.assertRaises(DeploymentPluginNotFound) as cm:
             self.put_deployment(
                 blueprint_file_name='deployment_with_source_plugin.yaml',
                 blueprint_id=id_,
                 deployment_id=id_)
-            raise exceptions.AssertionError(
-                "Expected DeploymentPluginNotFound error")
-        except DeploymentPluginNotFound as e:
-            self.assertEqual(400, e.status_code)
-            self.assertEqual(manager_exceptions.DeploymentPluginNotFound.
-                             ERROR_CODE,
-                             e.error_code)
+
+        self.assertEqual(400, cm.exception.status_code)
+        self.assertEqual(manager_exceptions.DeploymentPluginNotFound.
+                         ERROR_CODE,
+                         cm.exception.error_code)
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
     def test_creation_failure_when_plugin_not_found_host_agent(self):
         from cloudify_rest_client.exceptions import DeploymentPluginNotFound
         id_ = 'i{0}'.format(uuid.uuid4())
-        try:
+        with self.assertRaises(DeploymentPluginNotFound) as cm:
             self.put_deployment(
                 blueprint_file_name='deployment_'
                                     'with_source_plugin_host_agent.yaml',
                 blueprint_id=id_,
                 deployment_id=id_)
-            raise exceptions.AssertionError(
-                "Expected DeploymentPluginNotFound error")
-        except DeploymentPluginNotFound as e:
-            self.assertEqual(400, e.status_code)
-            self.assertEqual(manager_exceptions.DeploymentPluginNotFound.
-                             ERROR_CODE,
-                             e.error_code)
+        self.assertEqual(400, cm.exception.status_code)
+        self.assertEqual(manager_exceptions.DeploymentPluginNotFound.
+                         ERROR_CODE,
+                         cm.exception.error_code)
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
@@ -595,18 +589,16 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
           client_max_version=base_test.LATEST_API_VERSION)
     def test_creation_failure_with_invalid_flag_argument(self):
         id_ = 'i{0}'.format(uuid.uuid4())
-        try:
+        with self.assertRaises(CloudifyClientError) as cm:
             self.put_deployment(
                 blueprint_file_name='deployment_with_source_plugin.yaml',
                 blueprint_id=id_,
                 deployment_id=id_,
                 skip_plugins_validation='invalid_arg')
-            raise exceptions.AssertionError("Expected CloudifyClientError")
-        except CloudifyClientError as e:
-            self.assertEqual(400, e.status_code)
-            self.assertEqual(manager_exceptions.BadParametersError.
-                             BAD_PARAMETERS_ERROR_CODE,
-                             e.error_code)
+        self.assertEqual(400, cm.exception.status_code)
+        self.assertEqual(manager_exceptions.BadParametersError.
+                         BAD_PARAMETERS_ERROR_CODE,
+                         cm.exception.error_code)
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
@@ -709,35 +701,35 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         error_msg = "400: The visibility of deployment `{0}`: `tenant` " \
                     "can't be wider than the visibility of it's site " \
                     "`{1}`: `private`".format(resource_id, self.SITE_NAME)
-        self.assertRaisesRegexp(CloudifyClientError,
-                                error_msg,
-                                self.put_deployment,
-                                blueprint_file_name='blueprint.yaml',
-                                blueprint_id=resource_id,
-                                deployment_id=resource_id,
-                                site_name=self.SITE_NAME)
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_msg,
+                               self.put_deployment,
+                               blueprint_file_name='blueprint.yaml',
+                               blueprint_id=resource_id,
+                               deployment_id=resource_id,
+                               site_name=self.SITE_NAME)
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
     def test_creation_failure_invalid_site(self):
         error_msg = '404: Requested `Site` with ID `test_site` was not found'
-        self.assertRaisesRegexp(CloudifyClientError,
-                                error_msg,
-                                self.put_deployment,
-                                blueprint_file_name='blueprint.yaml',
-                                blueprint_id='i{0}'.format(uuid.uuid4()),
-                                deployment_id='i{0}'.format(uuid.uuid4()),
-                                site_name=self.SITE_NAME)
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_msg,
+                               self.put_deployment,
+                               blueprint_file_name='blueprint.yaml',
+                               blueprint_id='i{0}'.format(uuid.uuid4()),
+                               deployment_id='i{0}'.format(uuid.uuid4()),
+                               site_name=self.SITE_NAME)
 
         error_msg = '400: The `site_name` argument contains illegal ' \
                     'characters.'
-        self.assertRaisesRegexp(CloudifyClientError,
-                                error_msg,
-                                self.put_deployment,
-                                blueprint_file_name='blueprint.yaml',
-                                blueprint_id='i{0}'.format(uuid.uuid4()),
-                                deployment_id='i{0}'.format(uuid.uuid4()),
-                                site_name=':invalid_site')
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_msg,
+                               self.put_deployment,
+                               blueprint_file_name='blueprint.yaml',
+                               blueprint_id='i{0}'.format(uuid.uuid4()),
+                               deployment_id='i{0}'.format(uuid.uuid4()),
+                               site_name=':invalid_site')
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
@@ -788,22 +780,22 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         error_msg = "400: The visibility of deployment `{0}`: `tenant` " \
                     "can't be wider than the visibility of it's site " \
                     "`{1}`: `private`".format(resource_id, self.SITE_NAME)
-        self.assertRaisesRegexp(CloudifyClientError,
-                                error_msg,
-                                self.client.deployments.set_site,
-                                resource_id,
-                                site_name=self.SITE_NAME)
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_msg,
+                               self.client.deployments.set_site,
+                               resource_id,
+                               site_name=self.SITE_NAME)
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
     def test_set_site_invalid_deployment(self):
         error_msg = '404: Requested `Deployment` with ID `no_deployment` ' \
                     'was not found'
-        self.assertRaisesRegexp(CloudifyClientError,
-                                error_msg,
-                                self.client.deployments.set_site,
-                                'no_deployment',
-                                site_name=self.SITE_NAME)
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_msg,
+                               self.client.deployments.set_site,
+                               'no_deployment',
+                               site_name=self.SITE_NAME)
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
@@ -811,19 +803,19 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         resource_id = self._put_deployment_without_site()
         error_msg = '404: Requested `Site` with ID `{0}` was not ' \
                     'found'.format(self.SITE_NAME)
-        self.assertRaisesRegexp(CloudifyClientError,
-                                error_msg,
-                                self.client.deployments.set_site,
-                                resource_id,
-                                site_name=self.SITE_NAME)
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_msg,
+                               self.client.deployments.set_site,
+                               resource_id,
+                               site_name=self.SITE_NAME)
 
         error_msg = '400: The `site_name` argument contains illegal ' \
                     'characters.'
-        self.assertRaisesRegexp(CloudifyClientError,
-                                error_msg,
-                                self.client.deployments.set_site,
-                                deployment_id='i{0}'.format(uuid.uuid4()),
-                                site_name=':invalid_site')
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_msg,
+                               self.client.deployments.set_site,
+                               deployment_id='i{0}'.format(uuid.uuid4()),
+                               site_name=':invalid_site')
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
@@ -832,17 +824,17 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         error_msg = '400: Must provide either a `site_name` of a valid site ' \
                     'or `detach_site` with true value for detaching the ' \
                     'current site of the given deployment'
-        self.assertRaisesRegexp(CloudifyClientError,
-                                error_msg,
-                                self.client.deployments.set_site,
-                                deployment_id=resource_id)
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_msg,
+                               self.client.deployments.set_site,
+                               deployment_id=resource_id)
         self.client.sites.create(self.SITE_NAME)
-        self.assertRaisesRegexp(CloudifyClientError,
-                                error_msg,
-                                self.client.deployments.set_site,
-                                deployment_id=resource_id,
-                                site_name=self.SITE_NAME,
-                                detach_site=True)
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_msg,
+                               self.client.deployments.set_site,
+                               deployment_id=resource_id,
+                               site_name=self.SITE_NAME,
+                               detach_site=True)
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
@@ -873,10 +865,10 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         deployment = self.client.deployments.get(resource_id)
         self.assertIsNone(deployment.site_name)
         error_msg = '404: Requested `Site` with ID `test_site` was not found'
-        self.assertRaisesRegexp(CloudifyClientError,
-                                error_msg,
-                                self.client.sites.get,
-                                self.SITE_NAME)
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_msg,
+                               self.client.sites.get,
+                               self.SITE_NAME)
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
@@ -889,10 +881,10 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         self.assertEqual(site.name, self.SITE_NAME)
         error_msg = '404: Requested `Deployment` with ID `{}` ' \
                     'was not found'.format(resource_id)
-        self.assertRaisesRegexp(CloudifyClientError,
-                                error_msg,
-                                self.client.deployments.get,
-                                resource_id)
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_msg,
+                               self.client.deployments.get,
+                               resource_id)
 
     def _delete_deployment(self, deployment_id, ignore_live_nodes=False):
 

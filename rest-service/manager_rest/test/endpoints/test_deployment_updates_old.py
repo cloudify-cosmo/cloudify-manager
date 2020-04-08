@@ -48,7 +48,7 @@ class DeploymentUpdatesOldTestCase(base_test.BaseServerTestCase):
 
     def test_get_empty(self):
         result = self.client.deployment_updates.list()
-        self.assertEquals(0, len(result))
+        self.assertEqual(0, len(result))
 
     def test_invalid_blueprint_raises_invalid_blueprint_exception(self):
         deployment_id = 'dep'
@@ -60,9 +60,9 @@ class DeploymentUpdatesOldTestCase(base_test.BaseServerTestCase):
             # # It doesn't matter that we are updating the deployment with the
             # same blueprint, since we mocked the blueprint parsing process.
             response = self._update(deployment_id, 'no_output.yaml')
-            self.assertEquals(400, response.status_code)
-            self.assertEquals('invalid_blueprint_error',
-                              response.json['error_code'])
+            self.assertEqual(400, response.status_code)
+            self.assertEqual('invalid_blueprint_error',
+                             response.json['error_code'])
 
     def test_missing_required_input_raises_missing_required_input_error(self):
         deployment_id = 'dep'
@@ -75,9 +75,9 @@ class DeploymentUpdatesOldTestCase(base_test.BaseServerTestCase):
                 parser_exceptions.MissingRequiredInputError()
 
             response = self._update(deployment_id, 'no_output.yaml')
-            self.assertEquals(400, response.status_code)
-            self.assertEquals('missing_required_deployment_input_error',
-                              response.json['error_code'])
+            self.assertEqual(400, response.status_code)
+            self.assertEqual('missing_required_deployment_input_error',
+                             response.json['error_code'])
 
     def test_unknown_input_raises_unknown_input_error(self):
         deployment_id = 'dep'
@@ -90,9 +90,9 @@ class DeploymentUpdatesOldTestCase(base_test.BaseServerTestCase):
                 parser_exceptions.UnknownInputError()
 
             response = self._update(deployment_id, 'no_output.yaml')
-            self.assertEquals(400, response.status_code)
-            self.assertEquals('unknown_deployment_input_error',
-                              response.json['error_code'])
+            self.assertEqual(400, response.status_code)
+            self.assertEqual('unknown_deployment_input_error',
+                             response.json['error_code'])
 
     def test_add_node_and_relationship(self):
         deployment_id = 'dep'
@@ -104,8 +104,8 @@ class DeploymentUpdatesOldTestCase(base_test.BaseServerTestCase):
             self.client.deployment_updates.list(deployment_id=deployment_id)[0]
         execution = self.client.executions.get(dep_update.execution_id)
         for param in self.execution_parameters:
-            self.assertEquals(1 if param in changed_params else 0,
-                              len(execution.parameters[param]))
+            self.assertEqual(1 if param in changed_params else 0,
+                             len(execution.parameters[param]))
 
     def test_remove_node_and_relationship(self):
         deployment_id = 'dep'
@@ -119,8 +119,8 @@ class DeploymentUpdatesOldTestCase(base_test.BaseServerTestCase):
 
         execution = self.client.executions.get(dep_update.execution_id)
         for param in self.execution_parameters:
-            self.assertEquals(1 if param in changed_params else 0,
-                              len(execution.parameters[param]))
+            self.assertEqual(1 if param in changed_params else 0,
+                             len(execution.parameters[param]))
 
     def test_add_relationship(self):
         deployment_id = 'dep'
@@ -135,8 +135,8 @@ class DeploymentUpdatesOldTestCase(base_test.BaseServerTestCase):
 
         execution = self.client.executions.get(dep_update.execution_id)
         for param in self.execution_parameters:
-            self.assertEquals(1 if param in changed_params else 0,
-                              len(execution.parameters[param]))
+            self.assertEqual(1 if param in changed_params else 0,
+                             len(execution.parameters[param]))
 
     def test_remove_relationship(self):
         deployment_id = 'dep'
@@ -150,10 +150,10 @@ class DeploymentUpdatesOldTestCase(base_test.BaseServerTestCase):
 
         execution = self.client.executions.get(dep_update.execution_id)
         for param in self.execution_parameters:
-            self.assertEquals(1 if param in changed_params else 0,
-                              len(execution.parameters[param]),
-                              '{0}:{1}'.format(param, execution.parameters[
-                                  param]))
+            self.assertEqual(1 if param in changed_params else 0,
+                             len(execution.parameters[param]),
+                             '{0}:{1}'.format(param, execution.parameters[
+                                 param]))
 
     @patch('manager_rest.deployment_update.handlers.'
            'DeploymentUpdateNodeHandler.finalize')
@@ -221,7 +221,7 @@ class DeploymentUpdatesOldTestCase(base_test.BaseServerTestCase):
         self._update(deployment_id, 'one_output.yaml')
         response = self._update(deployment_id,
                                 blueprint_name='one_output.yaml')
-        self.assertEquals(response.json['error_code'], 'conflict_error')
+        self.assertEqual(response.json['error_code'], 'conflict_error')
         self.assertIn('there are deployment updates still active',
                       response.json['message'])
 
@@ -234,12 +234,12 @@ class DeploymentUpdatesOldTestCase(base_test.BaseServerTestCase):
                                 blueprint_name='one_output.yaml',
                                 force=True)
         # the second update should be running because the force flag was used
-        self.assertEquals(STATES.EXECUTING_WORKFLOW, response.json['state'])
+        self.assertEqual(STATES.EXECUTING_WORKFLOW, response.json['state'])
         # the first update should be with failed state
         # because the execution had terminated but the deployment update
         # object wasn't in an end state
         first_update = self.client.deployment_updates.get(first_update_id)
-        self.assertEquals(STATES.FAILED, first_update.state)
+        self.assertEqual(STATES.FAILED, first_update.state)
 
     def test_one_active_update_per_dep_force_flag_real_active_executions(self):
         deployment_id = 'dep'
@@ -260,7 +260,7 @@ class DeploymentUpdatesOldTestCase(base_test.BaseServerTestCase):
                                 force=True)
         # force flag is expected not to work because the first update is
         # still really running
-        self.assertEquals(response.json['error_code'], 'conflict_error')
+        self.assertEqual(response.json['error_code'], 'conflict_error')
         self.assertIn('there are deployment updates still active',
                       response.json['message'])
         self.assertIn('the "force" flag was used',
@@ -268,7 +268,7 @@ class DeploymentUpdatesOldTestCase(base_test.BaseServerTestCase):
         # verifying the first update wasn't set with a failed state by the
         # force flag call
         first_update = self.client.deployment_updates.get(first_update_id)
-        self.assertEquals(STATES.EXECUTING_WORKFLOW, first_update.state)
+        self.assertEqual(STATES.EXECUTING_WORKFLOW, first_update.state)
 
     def _deploy_base(self,
                      deployment_id,
@@ -320,11 +320,11 @@ class DeploymentUpdatesStepAndStageTestCase(base_test.BaseServerTestCase):
         step = {'action': 'illegal_operation',
                 'entity_type': 'node',
                 'entity_id': 'site1'}
-        self.assertRaisesRegexp(CloudifyClientError,
-                                'illegal modification operation',
-                                self.client.deployment_updates.step,
-                                deployment_update_id,
-                                **step)
+        self.assertRaisesRegex(CloudifyClientError,
+                               'illegal modification operation',
+                               self.client.deployment_updates.step,
+                               deployment_update_id,
+                               **step)
 
     def test_step_non_existent_entity_id(self):
         deployment_id = 'dep'
@@ -400,8 +400,7 @@ class DeploymentUpdatesStepAndStageTestCase(base_test.BaseServerTestCase):
                 self.assertEqual(e.error_code,
                                  'unknown_modification_stage_error')
                 self.assertIn("Entity type {0} with entity id {1}:".format(
-                    step['entity_type'], step['entity_id']),
-                              e.message)
+                    step['entity_type'], step['entity_id']), e.message)
                 break
             self.fail("entity id {0} of entity type {1} shouldn't be valid"
                       .format(step['entity_id'], step['entity_type']))
@@ -411,12 +410,12 @@ class DeploymentUpdatesStepAndStageTestCase(base_test.BaseServerTestCase):
 
         dep_update = self._stage(deployment_id)
 
-        self.assertEquals('staged', dep_update.state)
-        self.assertEquals(deployment_id, dep_update.deployment_id)
+        self.assertEqual('staged', dep_update.state)
+        self.assertEqual(deployment_id, dep_update.deployment_id)
 
         # assert that deployment update id has deployment id prefix
         dep_up_id_regex = re.compile('^{0}-'.format(deployment_id))
-        self.assertRegexpMatches(dep_update.id, re.compile(dep_up_id_regex))
+        self.assertRegex(dep_update.id, re.compile(dep_up_id_regex))
 
         # assert steps list is initialized and empty
         self.assertListEqual([], dep_update.steps)
@@ -428,8 +427,8 @@ class DeploymentUpdatesStepAndStageTestCase(base_test.BaseServerTestCase):
                 'entity_type': 'non_existent_type',
                 'entity_id': 'site1'}
 
-        self.assertRaisesRegexp(CloudifyClientError,
-                                'illegal modification entity type',
-                                self.client.deployment_updates.step,
-                                deployment_update_id,
-                                **step)
+        self.assertRaisesRegex(CloudifyClientError,
+                               'illegal modification entity type',
+                               self.client.deployment_updates.step,
+                               deployment_update_id,
+                               **step)

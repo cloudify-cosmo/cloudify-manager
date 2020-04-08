@@ -36,13 +36,13 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         blueprint_from_list = self.sm.list(models.Blueprint)[0]
         blueprint_restored = self.sm.get(models.Blueprint, 'blueprint-id')
         bp_from_delete = self.sm.delete(blueprint_restored)
-        self.assertEquals(blueprint.to_dict(), blueprint_from_list.to_dict())
-        self.assertEquals(blueprint.to_dict(), blueprint_restored.to_dict())
+        self.assertEqual(blueprint.to_dict(), blueprint_from_list.to_dict())
+        self.assertEqual(blueprint.to_dict(), blueprint_restored.to_dict())
         # in bp returned from delete operation only 'id' is guaranteed to
         # return
-        self.assertEquals(blueprint.id, bp_from_delete.id)
+        self.assertEqual(blueprint.id, bp_from_delete.id)
         blueprints_list = self.sm.list(models.Blueprint)
-        self.assertEquals(0, len(blueprints_list))
+        self.assertEqual(0, len(blueprints_list))
 
     def test_get_blueprint_deployments(self):
         now = utils.get_formatted_timestamp()
@@ -111,17 +111,17 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         blueprint_deployments = \
             self.sm.list(models.Deployment, filters=filters_bp)
 
-        self.assertEquals(2, len(blueprint_deployments))
+        self.assertEqual(2, len(blueprint_deployments))
         if blueprint_deployments[0].id == deployment1.id:
-            self.assertEquals(deployment1.to_dict(),
-                              blueprint_deployments[0].to_dict())
-            self.assertEquals(deployment2.to_dict(),
-                              blueprint_deployments[1].to_dict())
+            self.assertEqual(deployment1.to_dict(),
+                             blueprint_deployments[0].to_dict())
+            self.assertEqual(deployment2.to_dict(),
+                             blueprint_deployments[1].to_dict())
         else:
-            self.assertEquals(deployment2.to_dict(),
-                              blueprint_deployments[0].to_dict())
-            self.assertEquals(deployment1.to_dict(),
-                              blueprint_deployments[1].to_dict())
+            self.assertEqual(deployment2.to_dict(),
+                             blueprint_deployments[0].to_dict())
+            self.assertEqual(deployment1.to_dict(),
+                             blueprint_deployments[1].to_dict())
 
     def test_model_serialization(self):
         now = utils.get_formatted_timestamp()
@@ -152,14 +152,14 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         self.sm.put(dep)
 
         serialized_dep = dep.to_response()
-        self.assertEquals(21, len(serialized_dep))
-        self.assertEquals(dep.id, serialized_dep['id'])
-        self.assertEquals(dep.created_at, serialized_dep['created_at'])
-        self.assertEquals(dep.updated_at, serialized_dep['updated_at'])
-        self.assertEquals(dep.blueprint_id, serialized_dep['blueprint_id'])
-        self.assertEquals(dep.permalink, serialized_dep['permalink'])
-        self.assertEquals(dep.tenant.name, serialized_dep['tenant_name'])
-        self.assertEquals(dep.description, None)
+        self.assertEqual(21, len(serialized_dep))
+        self.assertEqual(dep.id, serialized_dep['id'])
+        self.assertEqual(dep.created_at, serialized_dep['created_at'])
+        self.assertEqual(dep.updated_at, serialized_dep['updated_at'])
+        self.assertEqual(dep.blueprint_id, serialized_dep['blueprint_id'])
+        self.assertEqual(dep.permalink, serialized_dep['permalink'])
+        self.assertEqual(dep.tenant.name, serialized_dep['tenant_name'])
+        self.assertEqual(dep.description, None)
 
         # `blueprint_id` isn't a regular column, but a relationship
         serialized_dep.pop('blueprint_id')
@@ -173,11 +173,11 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         serialized_dep.pop('private_resource')
 
         deserialized_dep = models.Deployment(**serialized_dep)
-        self.assertEquals(dep.id, deserialized_dep.id)
-        self.assertEquals(dep.created_at, deserialized_dep.created_at)
-        self.assertEquals(dep.updated_at, deserialized_dep.updated_at)
-        self.assertEquals(dep.permalink, deserialized_dep.permalink)
-        self.assertEquals(dep.description, deserialized_dep.description)
+        self.assertEqual(dep.id, deserialized_dep.id)
+        self.assertEqual(dep.created_at, deserialized_dep.created_at)
+        self.assertEqual(dep.updated_at, deserialized_dep.updated_at)
+        self.assertEqual(dep.permalink, deserialized_dep.permalink)
+        self.assertEqual(dep.description, deserialized_dep.description)
 
     def test_fields_query(self):
         now = utils.get_formatted_timestamp()
@@ -194,8 +194,8 @@ class StorageManagerTests(base_test.BaseServerTestCase):
             'blueprint-id',
             include=['id', 'created_at']
         )
-        self.assertEquals('blueprint-id', blueprint_restored.id)
-        self.assertEquals(now, blueprint_restored.created_at)
+        self.assertEqual('blueprint-id', blueprint_restored.id)
+        self.assertEqual(now, blueprint_restored.created_at)
         self.assertFalse(hasattr(blueprint_restored, 'updated_at'))
         self.assertFalse(hasattr(blueprint_restored, 'plan'))
         self.assertFalse(hasattr(blueprint_restored, 'main_file_name'))
@@ -215,4 +215,4 @@ class StorageManagerTests(base_test.BaseServerTestCase):
             include=['id', 'created_at'],
             get_all_results=True
         )
-        self.assertEquals(1000, len(secret_list))
+        self.assertEqual(1000, len(secret_list))

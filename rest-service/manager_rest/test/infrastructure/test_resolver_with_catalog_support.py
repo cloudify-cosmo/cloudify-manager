@@ -16,10 +16,10 @@
 from manager_rest.test.attribute import attr
 from manager_rest.test.base_test import (BaseServerTestCase,
                                          LATEST_API_VERSION)
-from manager_rest.resolver_with_catalog_support import \
-    (ResolverWithCatalogSupport,
-     BLUEPRINT_PREFIX,
-     PLUGIN_PREFIX)
+from manager_rest.resolver_with_catalog_support import (
+    ResolverWithCatalogSupport,
+    BLUEPRINT_PREFIX,
+    PLUGIN_PREFIX)
 from manager_rest.manager_exceptions import (InvalidPluginError,
                                              NotFoundError)
 
@@ -50,7 +50,7 @@ class TestPluginParseWithResolver(BaseServerTestCase):
         self.assertTrue('this_is_plugin_1' in plugin_str)
 
     def test_not_existing_plugin_import_resolver(self):
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 InvalidPluginError, r'Plugin .+ not found'):
             self.resolver.fetch_import(
                 import_url=PLUGIN_PREFIX + TEST_PACKAGE_NAME)
@@ -88,13 +88,13 @@ class TestPluginParseWithResolver(BaseServerTestCase):
         import_url = PLUGIN_IMPORT_FORMAT.format(
             TEST_PACKAGE_NAME,
             '!={0},!={1}'.format(TEST_PLUGIN_VERSION1, TEST_PLUGIN_VERSION2))
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 InvalidPluginError, r'No matching version was found .+'):
             self.resolver.fetch_import(import_url)
         import_url = PLUGIN_IMPORT_FORMAT.format(
             TEST_PACKAGE_NAME,
             '{0},{1}'.format(TEST_PLUGIN_VERSION1, TEST_PLUGIN_VERSION2))
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 InvalidPluginError, r'No matching version was found .+'):
             self.resolver.fetch_import(import_url)
 
@@ -103,7 +103,7 @@ class TestPluginParseWithResolver(BaseServerTestCase):
         import_url = PLUGIN_IMPORT_FORMAT.format(
             TEST_PACKAGE_NAME,
             ',{0}'.format(TEST_PLUGIN_VERSION1))
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 InvalidPluginError, r'Specified version param .+ '
                                     r'are in an invalid form'):
             self.resolver.fetch_import(import_url)

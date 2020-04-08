@@ -57,14 +57,12 @@ class ProviderContextTestCase(base_test.BaseServerTestCase):
         self.assertEqual(context['context'], new_context)
 
     def test_update_empty_provider_context(self):
-        try:
+        with self.assertRaisesRegex(
+                exceptions.CloudifyClientError,
+                'Requested `ProviderContext` with ID `CONTEXT` was not found'
+        ) as cm:
             self.client.manager.update_context(
                 'test_provider',
                 {'key': 'value'})
-            self.fail('Expected failure due to nonexisting context')
-        except exceptions.CloudifyClientError as e:
-            self.assertEqual(e.status_code, 404)
-            self.assertEqual(
-                e.message,
-                'Requested `ProviderContext` with ID `CONTEXT` was not found'
-            )
+
+        self.assertEqual(cm.exception.status_code, 404)

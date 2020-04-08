@@ -45,7 +45,7 @@ class ExecutionsTestCase(BaseServerTestCase):
 
     def _modify_execution_status(self, execution_id, new_status):
         execution = self.client.executions.update(execution_id, new_status)
-        self.assertEquals(new_status, execution.status)
+        self.assertEqual(new_status, execution.status)
         return execution
 
     def _modify_execution_status_in_database(
@@ -66,9 +66,9 @@ class ExecutionsTestCase(BaseServerTestCase):
         executions = self.client.executions.list(deployment_id=deployment_id)
 
         # expecting 1 execution (create_deployment_environment)
-        self.assertEquals(1, len(executions))
-        self.assertEquals('create_deployment_environment',
-                          executions[0]['workflow_id'])
+        self.assertEqual(1, len(executions))
+        self.assertEqual('create_deployment_environment',
+                         executions[0]['workflow_id'])
 
     def test_get_execution_by_id(self):
         (blueprint_id, deployment_id, _,
@@ -76,10 +76,10 @@ class ExecutionsTestCase(BaseServerTestCase):
 
         execution = self.client.executions.start(deployment_id, 'install')
         get_execution = self.client.executions.get(execution.id)
-        self.assertEquals(get_execution.status, 'terminated')
-        self.assertEquals(get_execution['blueprint_id'], blueprint_id)
-        self.assertEquals(get_execution['deployment_id'],
-                          deployment_response['id'])
+        self.assertEqual(get_execution.status, 'terminated')
+        self.assertEqual(get_execution['blueprint_id'], blueprint_id)
+        self.assertEqual(get_execution['deployment_id'],
+                         deployment_response['id'])
         self.assertIsNotNone(get_execution['created_at'])
         self.assertIsNotNone(get_execution['ended_at'])
 
@@ -111,9 +111,9 @@ class ExecutionsTestCase(BaseServerTestCase):
         executions = self.client.executions.list(deployment_id=deployment_id)
 
         # expecting 1 execution (create_deployment_environment)
-        self.assertEquals(1, len(executions))
-        self.assertEquals('create_deployment_environment',
-                          executions[0]['workflow_id'])
+        self.assertEqual(1, len(executions))
+        self.assertEqual('create_deployment_environment',
+                         executions[0]['workflow_id'])
 
         # listing all executions
         executions = self.client.executions.list(deployment_id=deployment_id,
@@ -121,10 +121,10 @@ class ExecutionsTestCase(BaseServerTestCase):
         executions.sort(key=lambda e: e.created_at)
 
         # expecting 2 executions
-        self.assertEquals(2, len(executions))
-        self.assertEquals('create_deployment_environment',
-                          executions[0]['workflow_id'])
-        self.assertEquals(system_wf_id, executions[1]['workflow_id'])
+        self.assertEqual(2, len(executions))
+        self.assertEqual('create_deployment_environment',
+                         executions[0]['workflow_id'])
+        self.assertEqual(system_wf_id, executions[1]['workflow_id'])
 
         return deployment_id, system_wf_id
 
@@ -155,14 +155,14 @@ class ExecutionsTestCase(BaseServerTestCase):
         # explicitly listing only non-system executions
         executions = self.client.executions.list(deployment_id=deployment_id,
                                                  is_system_workflow=False)
-        self.assertEquals(1, len(executions))
+        self.assertEqual(1, len(executions))
         self.assertEqual('create_deployment_environment',
                          executions[0]['workflow_id'])
 
         # listing only system executions
         executions = self.client.executions.list(deployment_id=deployment_id,
                                                  is_system_workflow=True)
-        self.assertEquals(1, len(executions))
+        self.assertEqual(1, len(executions))
         self.assertEqual(system_wf_id, executions[0]['workflow_id'])
 
     def test_execute_with_custom_parameters(self):
@@ -184,19 +184,18 @@ class ExecutionsTestCase(BaseServerTestCase):
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
         parameters = {'param1': 'val1', 'param2': 'val2'}
-        try:
+        # ensure all custom parameters are mentioned in the error message,
+        # but they can be in any order
+        expected_regex = 'param1,param2|param2,param1'
+        with self.assertRaisesRegex(
+                exceptions.CloudifyClientError, expected_regex) as cm:
             self.client.executions.start(deployment_id,
                                          'install',
                                          parameters)
-        except exceptions.CloudifyClientError as e:
-            self.assertEquals(400, e.status_code)
-            expected_error = manager_exceptions.IllegalExecutionParametersError
-            self.assertEquals(
-                expected_error.ILLEGAL_EXECUTION_PARAMETERS_ERROR_CODE,
-                e.error_code)
-            self.assertIn('param1', e.message)
-            self.assertIn('param2', e.message)
-            # ensure all custom parameters are mentioned in the error message
+        self.assertEqual(
+            manager_exceptions.IllegalExecutionParametersError.
+            ILLEGAL_EXECUTION_PARAMETERS_ERROR_CODE,
+            cm.exception.error_code)
 
     def test_execute_with_mandatory_parameters_types(self):
         (blueprint_id, deployment_id, blueprint_response,
@@ -430,45 +429,40 @@ class ExecutionsTestCase(BaseServerTestCase):
              self.DEPLOYMENT_ID, 'blueprint_with_workflows.yaml')
 
         parameters = {'optional_param': 'some_value'}
-        try:
+        # ensure all custom parameters are mentioned in the error message,
+        # but they can be in any order
+        expected_regex = 'mandatory_param,mandatory_param2|'\
+            'mandatory_param2,mandatory_param'
+        with self.assertRaisesRegex(
+                exceptions.CloudifyClientError, expected_regex) as cm:
             self.client.executions.start(deployment_id,
                                          'mock_workflow',
                                          parameters)
-            self.fail()
-        except exceptions.CloudifyClientError as e:
-            self.assertEquals(400, e.status_code)
-            error = manager_exceptions.IllegalExecutionParametersError
-            self.assertEquals(
-                error.ILLEGAL_EXECUTION_PARAMETERS_ERROR_CODE,
-                e.error_code)
-            # ensure all missing mandatory parameters are mentioned in message
-            self.assertIn('mandatory_param', e.message)
-            self.assertIn('mandatory_param2', e.message)
+
+        self.assertEqual(
+            manager_exceptions.IllegalExecutionParametersError.
+            ILLEGAL_EXECUTION_PARAMETERS_ERROR_CODE,
+            cm.exception.error_code)
 
     def test_bad_execution_parameters(self):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(
              self.DEPLOYMENT_ID, 'blueprint_with_workflows.yaml')
-        try:
+        with self.assertRaises(exceptions.CloudifyClientError) as cm:
             self.client.executions.start(deployment_id,
                                          'mock_workflow',
                                          'not_a_dictionary')
-            self.fail()
-        except exceptions.CloudifyClientError as e:
-            self.assertEqual(400, e.status_code)
-            bad_params_error = manager_exceptions.BadParametersError
-            self.assertEqual(bad_params_error.BAD_PARAMETERS_ERROR_CODE,
-                             e.error_code)
-        try:
+        self.assertEqual(
+            manager_exceptions.BadParametersError.BAD_PARAMETERS_ERROR_CODE,
+            cm.exception.error_code)
+
+        with self.assertRaises(exceptions.CloudifyClientError) as cm:
             self.client.executions.start(deployment_id,
                                          'mock_workflow',
                                          '[still_not_a_dictionary]')
-            self.fail()
-        except exceptions.CloudifyClientError as e:
-            self.assertEqual(400, e.status_code)
-            bad_params_error = manager_exceptions.BadParametersError
-            self.assertEqual(bad_params_error.BAD_PARAMETERS_ERROR_CODE,
-                             e.error_code)
+        self.assertEqual(
+            manager_exceptions.BadParametersError.BAD_PARAMETERS_ERROR_CODE,
+            cm.exception.error_code)
 
     def test_passing_parameters_parameter_to_execute(self):
         (blueprint_id, deployment_id, blueprint_response,
@@ -478,20 +472,20 @@ class ExecutionsTestCase(BaseServerTestCase):
         # passing a None parameters value to the execution
         execution = self.client.executions.start(deployment_id, 'install')
         execution = self.client.executions.get(execution.id)
-        self.assertEquals('terminated', execution.status)
+        self.assertEqual('terminated', execution.status)
 
     def test_bad_parameters_on_update_execution_status(self):
         _, deployment_id, _, _ = self.put_deployment(self.DEPLOYMENT_ID)
 
         execution = self.client.executions.start(deployment_id, 'install')
         execution = self.client.executions.get(execution.id)
-        self.assertEquals('terminated', execution.status)
+        self.assertEqual('terminated', execution.status)
         # making a bad update request - not passing the required 'status'
         # parameter
         resp = self.patch('/executions/{0}'.format(execution['id']), {})
-        self.assertEquals(400, resp.status_code)
+        self.assertEqual(400, resp.status_code)
         self.assertTrue('status' in resp.json['message'])
-        self.assertEquals(
+        self.assertEqual(
             resp.json['error_code'],
             manager_exceptions.BadParametersError.BAD_PARAMETERS_ERROR_CODE)
 
@@ -573,7 +567,7 @@ class ExecutionsTestCase(BaseServerTestCase):
 
         execution = self.client.executions.start(deployment_id, 'install')
         execution = self.client.executions.get(execution.id)
-        self.assertEquals('terminated', execution.status)
+        self.assertEqual('terminated', execution.status)
         self._modify_execution_status_in_database(
             execution, ExecutionState.STARTED)
         self._modify_execution_status(execution.id, 'pending')
@@ -584,24 +578,24 @@ class ExecutionsTestCase(BaseServerTestCase):
 
         execution = self.client.executions.start(deployment_id, 'install')
         execution = self.client.executions.get(execution.id)
-        self.assertEquals('terminated', execution.status)
-        self.assertEquals('', execution.error)
+        self.assertEqual('terminated', execution.status)
+        self.assertEqual('', execution.error)
         self._modify_execution_status_in_database(
             execution, ExecutionState.STARTED)
 
         execution = self.client.executions.update(
             execution.id, 'pending', 'some error')
-        self.assertEquals('pending', execution.status)
-        self.assertEquals('some error', execution.error)
+        self.assertEqual('pending', execution.status)
+        self.assertEqual('some error', execution.error)
         # verifying that updating only the status field also resets the
         # error field to an empty string
         execution = self._modify_execution_status(
             execution.id, 'terminated')
-        self.assertEquals('', execution.error)
+        self.assertEqual('', execution.error)
 
     def test_update_nonexistent_execution(self):
         resp = self.patch('/executions/1234', {'status': 'new-status'})
-        self.assertEquals(404, resp.status_code)
+        self.assertEqual(404, resp.status_code)
 
     def test_cancel_execution_by_id(self):
         execution = self.test_get_execution_by_id()
@@ -660,17 +654,17 @@ class ExecutionsTestCase(BaseServerTestCase):
             action = 'force-cancel' if force else 'cancel'
             cancel_response = self.post(resource_path, {'action': action})
             if expect_failure:
-                self.assertEquals(400, cancel_response.status_code)
-                self.assertEquals(
+                self.assertEqual(400, cancel_response.status_code)
+                self.assertEqual(
                     manager_exceptions.IllegalActionError.
                     ILLEGAL_ACTION_ERROR_CODE,
                     cancel_response.json['error_code'])
             else:
-                self.assertEquals(200, cancel_response.status_code)
+                self.assertEqual(200, cancel_response.status_code)
                 expected_status = ExecutionState.FORCE_CANCELLING if force\
                     else ExecutionState.CANCELLING
-                self.assertEquals(expected_status,
-                                  cancel_response.json['status'])
+                self.assertEqual(expected_status,
+                                 cancel_response.json['status'])
 
         # end states - can't either cancel or force-cancel
         attempt_cancel_on_status(ExecutionState.TERMINATED)
@@ -699,8 +693,8 @@ class ExecutionsTestCase(BaseServerTestCase):
         cancel_response = self.post(resource_path, {
             'action': 'cancel'
         })
-        self.assertEquals(cancel_response.status_code, 404)
-        self.assertEquals(
+        self.assertEqual(cancel_response.status_code, 404)
+        self.assertEqual(
             cancel_response.json['error_code'],
             manager_exceptions.NotFoundError.NOT_FOUND_ERROR_CODE)
 
@@ -710,8 +704,8 @@ class ExecutionsTestCase(BaseServerTestCase):
         cancel_response = self.post(resource_path, {
             'action': 'not_really_cancel'
         })
-        self.assertEquals(cancel_response.status_code, 400)
-        self.assertEquals(
+        self.assertEqual(cancel_response.status_code, 400)
+        self.assertEqual(
             cancel_response.json['error_code'],
             manager_exceptions.BadParametersError.BAD_PARAMETERS_ERROR_CODE)
 
@@ -721,7 +715,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         cancel_response = self.post(resource_path, {
             'not_action': 'some_value'
         })
-        self.assertEquals(cancel_response.status_code, 400)
+        self.assertEqual(cancel_response.status_code, 400)
 
     def test_execute_more_than_one_workflow_fails(self):
         self._test_execute_more_than_one_workflow(False, 400)
@@ -776,10 +770,10 @@ class ExecutionsTestCase(BaseServerTestCase):
 
         execution = self.client.executions.start(deployment_id, 'install')
         get_execution = self.client.executions.get(execution.id)
-        self.assertEquals(get_execution.status, 'terminated')
-        self.assertEquals(get_execution['blueprint_id'], blueprint_id)
-        self.assertEquals(get_execution['deployment_id'],
-                          deployment_response['id'])
+        self.assertEqual(get_execution.status, 'terminated')
+        self.assertEqual(get_execution['blueprint_id'], blueprint_id)
+        self.assertEqual(get_execution['deployment_id'],
+                         deployment_response['id'])
 
     def _execution_resume_test(self, deployment, status):
         execution = self.sm.put(models.Execution(
@@ -939,7 +933,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         client = self.create_client(headers=headers)
 
         # Authentication will fail because of the invalid status
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             exceptions.UserUnauthorizedError,
             'Authentication failed, invalid Execution Token',
             client.executions.list
@@ -975,7 +969,7 @@ class ExecutionsTestCase(BaseServerTestCase):
     def _assert_invalid_execution_token(self, token='test_token'):
         headers = {CLOUDIFY_EXECUTION_TOKEN_HEADER: token}
         client = self.create_client(headers=headers)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             exceptions.UserUnauthorizedError,
             'Authentication failed, invalid Execution Token',
             client.blueprints.list
@@ -985,4 +979,4 @@ class ExecutionsTestCase(BaseServerTestCase):
         headers = {CLOUDIFY_EXECUTION_TOKEN_HEADER: token}
         client = self.create_client(headers=headers)
         executions = client.executions.list()
-        self.assertEquals(2, len(executions))
+        self.assertEqual(2, len(executions))

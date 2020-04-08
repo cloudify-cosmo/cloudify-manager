@@ -305,7 +305,7 @@ class NodesTest(base_test.BaseServerTestCase):
             )
 
         self.assertEqual(8, len(all_instances))
-        self.assertEquals(4, len(dep1_node_instances))
+        self.assertEqual(4, len(dep1_node_instances))
 
     def test_list_node_instances(self):
         put_node_instance(

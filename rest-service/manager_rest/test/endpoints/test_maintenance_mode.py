@@ -104,7 +104,7 @@ class MaintenanceModeTest(BaseServerTestCase):
         self._activate_maintenance_mode()
 
         internal_request_bypass_maintenance_client = self.create_client(
-                headers={'X-BYPASS-MAINTENANCE': 'true'})
+            headers={'X-BYPASS-MAINTENANCE': 'true'})
         with patch('manager_rest.utils._get_remote_addr',
                    new=self._get_remote_addr):
             with patch('manager_rest.utils._get_host',
@@ -115,7 +115,7 @@ class MaintenanceModeTest(BaseServerTestCase):
         self._activate_maintenance_mode()
 
         internal_request_client = self.create_client(
-                headers={'X-BYPASS-MAINTENANCE': 'true'})
+            headers={'X-BYPASS-MAINTENANCE': 'true'})
         with patch('manager_rest.utils._get_remote_addr',
                    new=self._get_remote_addr):
             self.assertRaises(exceptions.MaintenanceModeActiveError,
@@ -123,13 +123,9 @@ class MaintenanceModeTest(BaseServerTestCase):
 
     def test_multiple_maintenance_mode_activations(self):
         self._activate_maintenance_mode()
-        try:
+        with self.assertRaises(exceptions.NotModifiedError) as cm:
             self._activate_maintenance_mode()
-            self.fail('Expected the second start request to fail '
-                      'since maintenance mode is already started.')
-        except exceptions.NotModifiedError as e:
-            self.assertEqual(304, e.status_code)
-        self.assertIn('already on', e.message)
+        self.assertEqual(304, cm.exception.status_code)
 
     def test_transition_to_active(self):
         execution = self._start_maintenance_transition_mode()
@@ -238,13 +234,9 @@ class MaintenanceModeTest(BaseServerTestCase):
 
     def test_multiple_maintenance_mode_deactivations(self):
         self._activate_and_deactivate_maintenance_mode()
-        try:
+        with self.assertRaises(exceptions.NotModifiedError) as cm:
             self.client.maintenance_mode.deactivate()
-            self.fail('Expected the second stop request to fail '
-                      'since maintenance mode is not active.')
-        except exceptions.NotModifiedError as e:
-            self.assertEqual(304, e.status_code)
-        self.assertTrue('already off' in e.message)
+        self.assertEqual(304, cm.exception.status_code)
 
     def test_maintenance_mode_activated_error_raised(self):
         self._activate_maintenance_mode()
@@ -256,23 +248,23 @@ class MaintenanceModeTest(BaseServerTestCase):
 
     def test_pending_execution_maintenance_activating_error_raised(self):
         self._test_different_execution_status_in_activating_mode(
-                ExecutionState.PENDING)
+            ExecutionState.PENDING)
 
     def test_cancelling_execution_maintenance_activating_error_raised(self):
         self._test_different_execution_status_in_activating_mode(
-                ExecutionState.CANCELLING)
+            ExecutionState.CANCELLING)
 
     def test_force_cancelling_execution_maintenance_activating_error_raised(
             self):
         self._test_different_execution_status_in_activating_mode(
-                ExecutionState.FORCE_CANCELLING)
+            ExecutionState.FORCE_CANCELLING)
 
     def _test_different_execution_status_in_activating_mode(
             self,
             execution_status=None):
         self.client.blueprints.upload(self.get_mock_blueprint_path(), 'b1')
         self._start_maintenance_transition_mode(
-                execution_status=execution_status)
+            execution_status=execution_status)
         self.assertRaises(exceptions.MaintenanceModeActivatingError,
                           self.client.deployments.create,
                           blueprint_id='b1',
@@ -289,11 +281,11 @@ class MaintenanceModeTest(BaseServerTestCase):
             execution_status=ExecutionState.STARTED):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(
-                blueprint_id=bp_id,
-                deployment_id=dep_id)
+            blueprint_id=bp_id,
+            deployment_id=dep_id)
         execution = self.client.executions.start(deployment_id, 'install')
         execution = self.client.executions.get(execution.id)
-        self.assertEquals('terminated', execution.status)
+        self.assertEqual('terminated', execution.status)
         self._update_execution_status(execution.id, execution_status)
 
         self.client.maintenance_mode.activate()
