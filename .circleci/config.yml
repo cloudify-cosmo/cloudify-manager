@@ -252,6 +252,7 @@ workflows:
       - test_endpoints_36
       - test_amqp_postgres
       - py3_compat
+      - build-rpms
   nightly:
     triggers:
       - schedule:
