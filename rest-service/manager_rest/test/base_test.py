@@ -126,6 +126,11 @@ class TestClient(FlaskClient):
 
 @attr(client_min_version=1, client_max_version=LATEST_API_VERSION)
 class BaseServerTestCase(unittest.TestCase):
+    # hack for running tests with py2's unnitest, but using py3's
+    # assert method name; to be removed once we run unittests on py3 only
+    def assertRaisesRegex(self, *a, **kw):
+        return self.assertRaisesRegexp(*a, **kw)
+
     @classmethod
     def create_client_with_tenant(cls,
                                   username,
