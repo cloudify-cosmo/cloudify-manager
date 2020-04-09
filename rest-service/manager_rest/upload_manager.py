@@ -413,7 +413,7 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
 
         if 'application_file_name' in request.args:
             application_file_name = unquote(
-                request.args['application_file_name']).decode('utf-8')
+                request.args['application_file_name'])
             application_file = os.path.join(full_application_dir,
                                             application_file_name)
             if not os.path.isfile(application_file):
