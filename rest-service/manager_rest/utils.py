@@ -183,10 +183,13 @@ def create_auth_header(username=None, password=None, token=None, tenant=None):
     """
     headers = {}
     if username and password:
-        credentials = '{0}:{1}'.format(username, password)
-        headers = {constants.CLOUDIFY_AUTH_HEADER:
-                   constants.BASIC_AUTH_PREFIX + urlsafe_b64encode(credentials)
-                   }
+        credentials = urlsafe_b64encode(
+            '{0}:{1}'.format(username, password).encode('utf-8')
+        ).decode('ascii')
+        headers = {
+            constants.CLOUDIFY_AUTH_HEADER:
+            constants.BASIC_AUTH_PREFIX + credentials
+        }
     elif token:
         headers = {constants.CLOUDIFY_AUTH_TOKEN_HEADER: token}
     if tenant:

@@ -4,6 +4,8 @@ from functools import wraps
 from flask import request
 from flask_security import current_user
 
+from cloudify._compat import text_type
+
 from manager_rest import config, utils
 from manager_rest.storage.models import Tenant
 from manager_rest.storage import get_storage_manager
@@ -29,7 +31,7 @@ def authorize(action,
                 tenant_name = tenant_for_auth or kwargs['tenant_name']
             elif get_tenant_from == 'data':
                 tenant_name = tenant_for_auth or get_json_and_verify_params(
-                    {'tenant_name': {'type': unicode}}).get('tenant_name')
+                    {'tenant_name': {'type': text_type}}).get('tenant_name')
             else:
                 tenant_name = tenant_for_auth
 

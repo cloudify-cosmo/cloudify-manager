@@ -15,6 +15,7 @@
 
 from flask import request
 
+from cloudify._compat import text_type
 from cloudify.models_states import VisibilityState
 
 from manager_rest.rest import rest_decorators
@@ -95,8 +96,8 @@ class SitesName(SecuredResource):
             valid_values=VisibilityState.STATES,
         )
         request_dict = get_json_and_verify_params({
-            'location': {'type': unicode, 'optional': True},
-            'new_name': {'type': unicode, 'optional': True}
+            'location': {'type': text_type, 'optional': True},
+            'new_name': {'type': text_type, 'optional': True}
         })
         request_dict['visibility'] = visibility
         self._validate_location(request_dict)

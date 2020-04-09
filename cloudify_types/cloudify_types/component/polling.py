@@ -96,7 +96,6 @@ def redirect_logs(client, execution_id, instance_ctx=None):
                 instance_prompt if instance_prompt else "",
                 event.get('message', "")
             )
-            message = message.encode('utf-8')
             level = event.get('level')
 
             # If the event dict had a 'level' key, then the value is

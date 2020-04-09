@@ -19,7 +19,7 @@ from imp import find_module
 
 try:
     find_module('cloudify_premium')
-except ImportError as e:
+except ImportError:
     premium_enabled = False
 else:
     premium_enabled = True

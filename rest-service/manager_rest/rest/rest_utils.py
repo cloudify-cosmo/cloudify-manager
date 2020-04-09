@@ -25,7 +25,7 @@ from flask_security import current_user
 from flask import request, make_response, current_app
 from flask_restful.reqparse import Argument, RequestParser
 
-from cloudify._compat import urlquote
+from cloudify._compat import urlquote, text_type
 from cloudify.models_states import VisibilityState
 from cloudify.snapshots import SNAPSHOT_RESTORE_FLAG_FILE
 
@@ -89,7 +89,7 @@ def get_args_and_verify_arguments(arguments):
 def verify_and_convert_bool(attribute_name, str_bool):
     if isinstance(str_bool, bool):
         return str_bool
-    if isinstance(str_bool, basestring):
+    if isinstance(str_bool, text_type):
         if str_bool.lower() == 'true':
             return True
         if str_bool.lower() == 'false':
@@ -231,7 +231,7 @@ def get_visibility_parameter(optional=False,
         visibility = args.visibility
     else:
         request_dict = get_json_and_verify_params({
-            'visibility': {'optional': optional, 'type': unicode}
+            'visibility': {'optional': optional, 'type': text_type}
         })
         visibility = request_dict.get('visibility', None)
 

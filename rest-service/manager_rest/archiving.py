@@ -20,9 +20,8 @@ import zipfile
 
 
 TAR_MAGIC_DICT = {
-    "\x1f\x8b\x08": "tar.gz",
-    "\x42\x5a\x68": "tar.bz2",
-    # "\x75\x73\x74\x61\x72": "tar"
+    b"\x1f\x8b\x08": "tar.gz",
+    b"\x42\x5a\x68": "tar.bz2",
 }
 
 
@@ -33,7 +32,7 @@ def get_archive_type(archive_path):
     if tarfile.is_tarfile(archive_path):
         max_len = max(len(x) for x in TAR_MAGIC_DICT)
 
-        with open(archive_path) as f:
+        with open(archive_path, 'rb') as f:
             file_start = f.read(max_len)
         for magic, ext in TAR_MAGIC_DICT.items():
             if file_start.startswith(magic):

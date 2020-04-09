@@ -25,6 +25,7 @@ from sqlalchemy.ext.associationproxy import ASSOCIATION_PROXY
 from sqlalchemy.ext.hybrid import HYBRID_PROPERTY
 from sqlalchemy.orm.interfaces import NOT_EXTENSION
 
+from cloudify._compat import text_type
 from manager_rest.utils import classproperty
 
 
@@ -56,7 +57,7 @@ class UTCDateTime(db.TypeDecorator):
                 return '{0}.000Z'.format(value.isoformat())
 
     def process_bind_param(self, value, dialect):
-        if isinstance(value, basestring):
+        if isinstance(value, text_type):
             # SQLite only accepts datetime objects
             return date_parser.parse(value)
         else:
@@ -127,6 +128,7 @@ class SQLModelBase(db.Model):
         'Integer': flask_fields.Integer,
         'Text': flask_fields.String,
         'String': flask_fields.String,
+        'Unicode': flask_fields.String,
         'PickleType': flask_fields.Raw,
         'UTCDateTime': flask_fields.String,
         'Enum': flask_fields.String,

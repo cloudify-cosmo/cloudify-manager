@@ -36,8 +36,8 @@ def set_current_execution(execution):
 
 def get_current_execution_by_token(execution_token):
     sm = get_storage_manager()
-    token_filter = {models.Execution.token:
-                    hashlib.sha256(execution_token).hexdigest()}
+    hashed = hashlib.sha256(execution_token.encode('ascii')).hexdigest()
+    token_filter = {models.Execution.token: hashed}
     executions = sm.full_access_list(models.Execution, filters=token_filter)
     if len(executions) != 1:  # Only one execution should match the token
         return None

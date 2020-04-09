@@ -39,6 +39,7 @@ from voluptuous import (
     Range,
     Schema,
 )
+from cloudify._compat import text_type
 from ..security.authentication import authenticator
 from manager_rest import config, manager_exceptions
 from manager_rest.storage.models_base import SQLModelBase
@@ -284,7 +285,7 @@ def rangeable(func):
     schema = Schema(
         All(
             ExactSequence([
-                basestring,
+                text_type,
                 Any(valid_datetime, ''),
                 Any(valid_datetime, ''),
             ]),
