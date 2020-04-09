@@ -20,18 +20,17 @@ import uuid
 
 import wagon
 import yaml
-import urllib
 import shutil
 import zipfile
 import tempfile
-import contextlib
+import requests
 
 from setuptools import archive_util
-from urllib2 import urlopen, URLError
 from flask import request, current_app
 from flask_restful.reqparse import Argument
 from flask_restful.inputs import boolean
 
+from cloudify._compat import unquote
 from cloudify.models_states import SnapshotState
 from cloudify.plugins.install_utils import (INSTALLING_PREFIX,
                                             is_plugin_installing)
@@ -68,9 +67,9 @@ class UploadedDataManager(object):
         resource_target_path = tempfile.mktemp(dir=file_server_root)
         try:
             additional_inputs = self._save_file_locally_and_extract_inputs(
-                    resource_target_path,
-                    self._get_data_url_key(),
-                    self._get_kind())
+                resource_target_path,
+                self._get_data_url_key(),
+                self._get_kind())
             doc, dest_file_name = self._prepare_and_process_doc(
                 data_id,
                 file_server_root,
@@ -105,21 +104,21 @@ class UploadedDataManager(object):
                 archive_util.unpack_archive(archive_path, tempdir)
             except archive_util.UnrecognizedFormat:
                 raise manager_exceptions.BadParametersError(
-                        'Blueprint archive is of an unrecognized format. '
-                        'Supported formats are: {0}'.format(
-                                SUPPORTED_ARCHIVE_TYPES))
+                    'Blueprint archive is of an unrecognized format. '
+                    'Supported formats are: {0}'
+                    .format(SUPPORTED_ARCHIVE_TYPES))
             archive_file_list = os.listdir(tempdir)
             if len(archive_file_list) != 1 or not os.path.isdir(
                     os.path.join(tempdir, archive_file_list[0])):
                 raise manager_exceptions.BadParametersError(
-                        'archive must contain exactly 1 directory')
+                    'archive must contain exactly 1 directory')
             application_dir_base_name = archive_file_list[0]
             # generating temporary unique name for app dir, to allow multiple
             # uploads of apps with the same name (as it appears in the file
             # system, not the app name field inside the blueprint.
             # the latter is guaranteed to be unique).
             generated_app_dir_name = '{0}-{1}'.format(
-                    application_dir_base_name, uuid.uuid4())
+                application_dir_base_name, uuid.uuid4())
             temp_application_dir = os.path.join(tempdir,
                                                 application_dir_base_name)
             temp_application_target_dir = os.path.join(tempdir,
@@ -131,25 +130,23 @@ class UploadedDataManager(object):
             shutil.rmtree(tempdir)
 
     @staticmethod
-    def _save_file_from_url(archive_target_path, data_url, data_type):
-        if any([request.data,
-                'Transfer-Encoding' in request.headers,
-                'blueprint_archive' in request.files]):
+    def _save_file_from_url(archive_target_path, url, data_type):
+        if request.data or \
+                'Transfer-Encoding' in request.headers or \
+                'blueprint_archive' in request.files:
             raise manager_exceptions.BadParametersError(
                 "Can't pass both a {0} URL via query parameters, request body"
                 ", multi-form and chunked.".format(data_type))
         try:
-            with contextlib.closing(urlopen(data_url)) as urlf:
-                with open(archive_target_path, 'w') as f:
-                    f.write(urlf.read())
-        except URLError:
-            raise manager_exceptions.ParamUrlNotFoundError(
-                    "URL {0} not found - can't download {1} archive"
-                    .format(data_url, data_type))
-        except ValueError:
+            with requests.get(url, stream=True, timeout=(5, None)) as resp:
+                resp.raise_for_status()
+                with open(archive_target_path, 'wb') as f:
+                    for chunk in resp.iter_content(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
+        except requests.exceptions.RequestException as e:
             raise manager_exceptions.BadParametersError(
-                    "URL {0} is malformed - can't download {1} archive"
-                    .format(data_url, data_type))
+                "Cannot fetch {0}: {1}".format(url, e))
 
     @staticmethod
     def _save_file_from_chunks(archive_target_path, data_type):
@@ -345,11 +342,11 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
             file_server_root
         )
         return self._prepare_and_submit_blueprint(
-                file_server_root,
-                application_dir,
-                data_id,
-                additional_inputs,
-                runtime_only_evaluation), archive_target_path
+            file_server_root,
+            application_dir,
+            data_id,
+            additional_inputs,
+            runtime_only_evaluation), archive_target_path
 
     def _move_archive_to_uploaded_dir(self, *args, **kwargs):
         pass
@@ -369,12 +366,12 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
         try:
             cls._process_plugins(file_server_root, app_dir)
             update = get_deployment_updates_manager().stage_deployment_update(
-                    deployment_id,
-                    app_dir,
-                    app_file_name,
-                    additional_inputs=additional_inputs or {},
-                    runtime_only_evaluation=runtime_only_evaluation
-                )
+                deployment_id,
+                app_dir,
+                app_file_name,
+                additional_inputs=additional_inputs or {},
+                runtime_only_evaluation=runtime_only_evaluation
+            )
 
             # Moving the contents of the app dir to the dest dir, while
             # overwriting any file encountered
@@ -392,8 +389,7 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
                 # Creates a corresponding dir structure in the deployment dir
                 dest_rel_dir = os.path.relpath(root, app_root_dir)
                 dest_dir = os.path.abspath(
-                        os.path.join(file_server_deployment_root,
-                                     dest_rel_dir))
+                    os.path.join(file_server_deployment_root, dest_rel_dir))
                 mkdirs(dest_dir)
 
                 # Calculate source dir
@@ -417,14 +413,14 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
         full_application_dir = os.path.join(file_server_root, application_dir)
 
         if 'application_file_name' in request.args:
-            application_file_name = urllib.unquote(
-                    request.args['application_file_name']).decode('utf-8')
+            application_file_name = unquote(
+                request.args['application_file_name']).decode('utf-8')
             application_file = os.path.join(full_application_dir,
                                             application_file_name)
             if not os.path.isfile(application_file):
                 raise manager_exceptions.BadParametersError(
-                        '{0} does not exist in the application '
-                        'directory'.format(application_file_name)
+                    '{0} does not exist in the application '
+                    'directory'.format(application_file_name)
                 )
         else:
             application_file_name = CONVENTION_APPLICATION_BLUEPRINT_FILE
@@ -432,8 +428,8 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
                                             application_file_name)
             if not os.path.isfile(application_file):
                 raise manager_exceptions.BadParametersError(
-                        'application directory is missing blueprint.yaml and '
-                        'application_file_name query parameter was not passed')
+                    'application directory is missing blueprint.yaml and '
+                    'application_file_name query parameter was not passed')
 
         # return relative path from the file server root since this path
         # is appended to the file server base uri
@@ -490,9 +486,7 @@ class UploadedBlueprintsManager(UploadedDataManager):
                                  archive_target_path,
                                  **kwargs):
         application_dir = self._extract_file_to_file_server(
-                archive_target_path,
-                file_server_root
-            )
+            archive_target_path, file_server_root)
         visibility = kwargs.get(_VISIBILITY, None)
         return self._prepare_and_submit_blueprint(file_server_root,
                                                   application_dir,
@@ -583,7 +577,7 @@ class UploadedBlueprintsManager(UploadedDataManager):
         full_application_dir = os.path.join(file_server_root, application_dir)
 
         if application_file_name:
-            application_file_name = urllib.unquote(
+            application_file_name = unquote(
                 application_file_name).decode('utf-8')
             application_file = os.path.join(full_application_dir,
                                             application_file_name)
@@ -639,9 +633,9 @@ class UploadedBlueprintsValidator(UploadedBlueprintsManager):
         resource_target_path = tempfile.mktemp(dir=file_server_root)
         try:
             additional_inputs = self._save_file_locally_and_extract_inputs(
-                    resource_target_path,
-                    self._get_data_url_key(),
-                    self._get_kind())
+                resource_target_path,
+                self._get_data_url_key(),
+                self._get_kind())
             self._prepare_and_process_doc(
                 data_id,
                 file_server_root,
@@ -838,7 +832,7 @@ class UploadedCaravanManager(UploadedPluginsManager):
         def __iter__(self):
             for wgn_path, yaml_path in self._metadata.items():
                 yield os.path.join(self._cvn_dir, wgn_path), \
-                      os.path.join(self._cvn_dir, yaml_path)
+                    os.path.join(self._cvn_dir, yaml_path)
 
         def __getitem__(self, item):
             return os.path.join(self._cvn_dir, self._metadata[item])
@@ -867,9 +861,9 @@ class UploadedCaravanManager(UploadedPluginsManager):
         resource_target_path = tempfile.mktemp(dir=file_server_root)
         try:
             self._save_file_locally_and_extract_inputs(
-                    resource_target_path,
-                    self._get_data_url_key(),
-                    self._get_kind())
+                resource_target_path,
+                self._get_data_url_key(),
+                self._get_kind())
             with self.Caravan(resource_target_path) as caravan_instance:
                 caravan_instance.init_metadata()
                 plugins = self._prepare_and_process_doc(

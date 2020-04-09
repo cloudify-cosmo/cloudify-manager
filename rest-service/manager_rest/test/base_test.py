@@ -17,11 +17,9 @@ import os
 import json
 import time
 import uuid
-import urllib
 import shutil
 import logging
 import zipfile
-import urllib2
 import tarfile
 import unittest
 import tempfile
@@ -29,6 +27,7 @@ import sqlalchemy.exc
 
 import yaml
 import wagon
+import requests
 
 from flask_migrate import Migrate, upgrade
 from mock import MagicMock, patch
@@ -37,6 +36,7 @@ from flask.testing import FlaskClient
 from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.exceptions import CloudifyClientError
 
+from cloudify._compat import urlquote
 from cloudify.models_states import ExecutionState, VisibilityState
 from cloudify.constants import CLOUDIFY_EXECUTION_TOKEN_HEADER
 from cloudify.cluster_status import (
@@ -500,7 +500,7 @@ class BaseServerTestCase(unittest.TestCase):
 
     def post(self, resource_path, data, query_params=None):
         url = self._version_url(resource_path)
-        result = self.app.post(urllib.quote(url),
+        result = self.app.post(urlquote(url),
                                content_type='application/json',
                                data=json.dumps(data),
                                query_string=build_query_string(query_params))
@@ -510,7 +510,7 @@ class BaseServerTestCase(unittest.TestCase):
     def post_file(cls, resource_path, file_path, query_params=None):
         url = cls._version_url(resource_path)
         with open(file_path) as f:
-            result = cls.app.post(urllib.quote(url),
+            result = cls.app.post(urlquote(url),
                                   data=f.read(),
                                   query_string=build_query_string(
                                       query_params))
@@ -519,7 +519,7 @@ class BaseServerTestCase(unittest.TestCase):
     def put_file(self, resource_path, file_path, query_params=None):
         url = self._version_url(resource_path)
         with open(file_path) as f:
-            result = self.app.put(urllib.quote(url),
+            result = self.app.put(urlquote(url),
                                   data=f.read(),
                                   query_string=build_query_string(
                                       query_params))
@@ -527,7 +527,7 @@ class BaseServerTestCase(unittest.TestCase):
 
     def put(self, resource_path, data=None, query_params=None):
         url = self._version_url(resource_path)
-        result = self.app.put(urllib.quote(url),
+        result = self.app.put(urlquote(url),
                               content_type='application/json',
                               data=json.dumps(data) if data else None,
                               query_string=build_query_string(query_params))
@@ -535,26 +535,26 @@ class BaseServerTestCase(unittest.TestCase):
 
     def patch(self, resource_path, data):
         url = self._version_url(resource_path)
-        result = self.app.patch(urllib.quote(url),
+        result = self.app.patch(urlquote(url),
                                 content_type='application/json',
                                 data=json.dumps(data))
         return result
 
     def get(self, resource_path, query_params=None, headers=None):
         url = self._version_url(resource_path)
-        result = self.app.get(urllib.quote(url),
+        result = self.app.get(urlquote(url),
                               headers=headers,
                               query_string=build_query_string(query_params))
         return result
 
     def head(self, resource_path):
         url = self._version_url(resource_path)
-        result = self.app.head(urllib.quote(url))
+        result = self.app.head(urlquote(url))
         return result
 
     def delete(self, resource_path, query_params=None):
         url = self._version_url(resource_path)
-        result = self.app.delete(urllib.quote(url),
+        result = self.app.delete(urlquote(url),
                                  query_string=build_query_string(query_params))
         return result
 
@@ -565,9 +565,9 @@ class BaseServerTestCase(unittest.TestCase):
         url = 'http://localhost:{0}/{1}/{2}/{3}'.format(
             FILE_SERVER_PORT, folder, container_id, resource_path)
         try:
-            urllib2.urlopen(url)
+            requests.get(url).raise_for_status()
             return True
-        except urllib2.HTTPError:
+        except requests.exceptions.RequestException:
             return False
 
     def check_if_resource_on_fileserver(self, blueprint_id, resource_path):
@@ -735,10 +735,9 @@ class BaseServerTestCase(unittest.TestCase):
 
         while end >= time.time():
             try:
-                status = urllib.urlopen(url).getcode()
-                if status == 200:
+                if requests.get(url).status_code == 200:
                     return
-            except IOError:
+            except requests.exceptions.RequestException:
                 time.sleep(1)
 
         raise RuntimeError('Url {0} is not available (waited {1} '
