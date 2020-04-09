@@ -25,7 +25,7 @@ from cloudify_rest_client import exceptions
 from .test_utils import generate_progress_func
 
 TEST_PACKAGE_NAME = 'cloudify-script-plugin'
-TEST_PACKAGE_VERSION = '1.2'
+TEST_PACKAGE_VERSION = '1.3'
 TEST_PACKAGE_YAML_FILE = 'mock_blueprint/plugin.yaml'
 TEST_PACKAGE_NAME2 = 'cloudify-diamond-plugin'
 TEST_PACKAGE_VERSION2 = '1.3'
@@ -36,7 +36,7 @@ TEST_PACKAGE_EMPTY_YAML_FILE = 'mock_blueprint/plugin_empty.yaml'
 TEST_PACKAGE_INCONSISTENT_YAML_FILE = \
     'mock_blueprint/plugin_inconsistent_with_wagon.yaml'
 
-OLD_TEST_PACKAGE_VERSION = '1.1'
+OLD_TEST_PACKAGE_VERSION = '1.2'
 
 
 @attr(client_min_version=2, client_max_version=base_test.LATEST_API_VERSION)

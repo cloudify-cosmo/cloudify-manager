@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from functools import total_ordering
 from contextlib import contextmanager
 
 import networkx as nx
@@ -194,6 +195,7 @@ class DeploymentPlan(dict):
         return plugins_by_name
 
 
+@total_ordering
 class DeploymentUpdateStep(object):
     def __init__(self,
                  action,
@@ -226,34 +228,29 @@ class DeploymentUpdateStep(object):
     def __repr__(self):
         return self.__str__()
 
-    def __cmp__(self, other):
+    def __lt__(self, other):
+        """Is this step considered "smaller" than the other step?
+
+        This is used for sorting the steps, ie. steps that are smaller
+        come earlier, and will be executed first.
+        """
         if self.action != other.action:
             # the order is 'remove' < 'add' < 'modify'
-            if self.action == 'remove' and other.action != 'remove':
-                return -1
-            elif self.action == 'add':
-                return -1 if other.action == 'modify' else 1
-            else:
-                return 1
-        else:
-            if self.action == 'add':
-                if self.entity_type == NODE:
-                    if other.entity_type == RELATIONSHIP:
-                        # add node before adding relationships
-                        return -1
-                    if other.entity_type == NODE:
-                        # higher topology order before lower topology order
-                        if self.topology_order > other.topology_order:
-                            return -1
-                        else:
-                            return 1
-            elif self.action == 'remove':
-                if (self.entity_type == RELATIONSHIP
-                        and other.entity_type == NODE):
-                    # remove relationships before removing nodes
-                    return -1
-        # other comparisons don't matter
-        return 0
+            actions = ['remove', 'add', 'modify']
+            return actions.index(self.action) < actions.index(other.action)
+        if self.action == 'add':
+            if self.entity_type == NODE:
+                if other.entity_type == RELATIONSHIP:
+                    # add node before adding relationships
+                    return True
+                if other.entity_type == NODE:
+                    # higher topology order before lower topology order
+                    return self.topology_order > other.topology_order
+        if self.action =='remove':
+            # remove relationships before removing nodes
+            if self.entity_type == RELATIONSHIP and other.entity_type == NODE:
+                return True
+        return False
 
 
 class StepExtractor(object):

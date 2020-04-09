@@ -78,43 +78,35 @@ class AttributesTestCase(base_test.BaseServerTestCase):
         payload = {
             'node1': {'get_attribute': ['SELF', 'key1']},
         }
-        try:
+        with self.assertRaisesRegex(
+                FunctionsEvaluationError, 'SELF is missing'):
             self.client.evaluate.functions(self.id_, {}, payload)
-            self.fail()
-        except FunctionsEvaluationError as e:
-            self.assertIn('SELF is missing', e.message)
 
     def test_missing_source(self):
         payload = {
             'node2': {'get_attribute': ['SOURCE', 'key2']},
         }
-        try:
+        with self.assertRaisesRegex(
+                FunctionsEvaluationError, 'SOURCE is missing'):
             self.client.evaluate.functions(self.id_, {}, payload)
-            self.fail()
-        except FunctionsEvaluationError as e:
-            self.assertIn('SOURCE is missing', e.message)
 
     def test_missing_target(self):
         payload = {
             'node3': {'get_attribute': ['TARGET', 'key3']},
         }
-        try:
+        with self.assertRaisesRegex(
+                FunctionsEvaluationError, 'TARGET is missing') as cm:
             self.client.evaluate.functions(self.id_, {}, payload)
-            self.fail()
-        except FunctionsEvaluationError as e:
-            self.assertEqual(e.status_code, 400)
-            self.assertEqual(e.error_code, 'functions_evaluation_error')
-            self.assertIn('TARGET is missing', e.message)
+
+        self.assertEqual(cm.exception.status_code, 400)
+        self.assertEqual(cm.exception.error_code, 'functions_evaluation_error')
 
     def test_ambiguous_multi_instance(self):
         payload = {
             'node5': {'get_attribute': ['node5', 'key5']},
         }
-        try:
+        with self.assertRaisesRegex(FunctionsEvaluationError, 'unambiguously'):
             self.client.evaluate.functions(self.id_, {}, payload)
-            self.fail()
-        except FunctionsEvaluationError as e:
-            self.assertIn('unambiguously', e.message)
 
 
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)

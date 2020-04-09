@@ -56,18 +56,18 @@ class AgentsTest(base_test.BaseServerTestCase):
 
     def test_get_invalid_agent_name(self):
         error_message = '400: The `name` argument contains illegal characters'
-        self.assertRaisesRegexp(CloudifyClientError,
-                                error_message,
-                                self.client.agents.get,
-                                'agent@')
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_message,
+                               self.client.agents.get,
+                               'agent@')
 
     def test_get_nonexisting_agent(self):
         error_message = '404: Requested `Agent` with ID `agent_1` ' \
                         'was not found'
-        self.assertRaisesRegexp(CloudifyClientError,
-                                error_message,
-                                self.client.agents.get,
-                                'agent_1')
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_message,
+                               self.client.agents.get,
+                               'agent_1')
 
     @patch('manager_rest.amqp_manager.RabbitMQClient')
     def test_create_agent(self, create_rabbitmq_user_mock):
@@ -102,20 +102,20 @@ class AgentsTest(base_test.BaseServerTestCase):
 
     def test_create_invalid_agent_name(self):
         error_message = '400: The `name` argument contains illegal characters'
-        self.assertRaisesRegexp(CloudifyClientError,
-                                error_message,
-                                self.client.agents.create,
-                                'agent@',
-                                'node_instance_1')
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_message,
+                               self.client.agents.create,
+                               'agent@',
+                               'node_instance_1')
 
     def test_create_invalid_state(self):
         error_message = '400: Invalid agent state: `test_state`'
-        self.assertRaisesRegexp(CloudifyClientError,
-                                error_message,
-                                self.client.agents.create,
-                                'agent_1',
-                                'node_instance_1',
-                                'test_state')
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_message,
+                               self.client.agents.create,
+                               'agent_1',
+                               'node_instance_1',
+                               'test_state')
 
     def test_create_agent_already_exists(self):
         self._get_or_create_node_instance()
@@ -131,11 +131,11 @@ class AgentsTest(base_test.BaseServerTestCase):
     def test_create_agent_invalid_node_instance(self):
         error_message = '404: Requested `NodeInstance` with ID ' \
                         '`node_instance_2` was not found'
-        self.assertRaisesRegexp(CloudifyClientError,
-                                error_message,
-                                self.client.agents.create,
-                                'agent_1',
-                                'node_instance_2')
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_message,
+                               self.client.agents.create,
+                               'agent_1',
+                               'node_instance_2')
 
     def test_update_agent(self):
         self.put_agent()
@@ -154,11 +154,11 @@ class AgentsTest(base_test.BaseServerTestCase):
     def test_update_invalid_state(self):
         self.put_agent()
         error_message = '400: Invalid agent state: `test_state`'
-        self.assertRaisesRegexp(CloudifyClientError,
-                                error_message,
-                                self.client.agents.update,
-                                'agent_1',
-                                'test_state')
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_message,
+                               self.client.agents.update,
+                               'agent_1',
+                               'test_state')
 
     def test_agent_deleted_following_instance_deletion(self):
         self.put_agent()
@@ -169,10 +169,10 @@ class AgentsTest(base_test.BaseServerTestCase):
         self.sm.delete(node_instance)
         error_message = '404: Requested `Agent` with ID `agent_1` ' \
                         'was not found'
-        self.assertRaisesRegexp(CloudifyClientError,
-                                error_message,
-                                self.client.agents.get,
-                                'agent_1')
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_message,
+                               self.client.agents.get,
+                               'agent_1')
 
     def test_instance_exist_after_deleting_agent(self):
         self.put_agent()

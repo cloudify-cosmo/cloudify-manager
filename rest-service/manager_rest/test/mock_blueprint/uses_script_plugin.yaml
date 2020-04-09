@@ -14,4 +14,4 @@ plugins:
   plugin:
     executor: central_deployment_agent
     package_name: cloudify-script-plugin
-    package_version: '1.2'
+    package_version: '1.3'

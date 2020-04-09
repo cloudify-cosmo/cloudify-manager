@@ -22,8 +22,8 @@ from manager_rest.test import base_test
 from manager_rest.test.infrastructure.base_list_test import BaseListTest
 
 TEST_PACKAGE_NAME = 'cloudify-script-plugin'
-TEST_PACKAGE_VERSION = '1.2'
-OLD_TEST_PACKAGE_VERSION = '1.1'
+TEST_PACKAGE_VERSION = '1.3'
+OLD_TEST_PACKAGE_VERSION = '1.2'
 
 
 @attr(client_min_version=2, client_max_version=base_test.LATEST_API_VERSION)

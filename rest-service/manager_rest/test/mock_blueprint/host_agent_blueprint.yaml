@@ -22,4 +22,4 @@ plugins:
   plugin:
     executor: host_agent
     package_name: cloudify-script-plugin
-    package_version: '1.2'
+    package_version: '1.3'
