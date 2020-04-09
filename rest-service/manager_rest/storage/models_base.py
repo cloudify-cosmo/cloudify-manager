@@ -127,6 +127,7 @@ class SQLModelBase(db.Model):
         'Integer': flask_fields.Integer,
         'Text': flask_fields.String,
         'String': flask_fields.String,
+        'Unicode': flask_fields.String,
         'PickleType': flask_fields.Raw,
         'UTCDateTime': flask_fields.String,
         'Enum': flask_fields.String,
