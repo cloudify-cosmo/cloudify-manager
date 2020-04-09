@@ -335,7 +335,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         tmpfile_path = os.path.join(tmp_dir, 'tmp_file')
         with open(tmpfile_path, 'wb') as big_file:
             big_file.seek(32 * 1024 * 1024 - 1)
-            big_file.write('\0')
+            big_file.write(b'\0')
         return blueprint_path
 
     @attr(client_min_version=2,
