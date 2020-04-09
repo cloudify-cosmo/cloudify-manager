@@ -13,7 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import json
 import types
 from datetime import datetime
 
@@ -145,8 +144,7 @@ class MockHTTPClient(HTTPClient):
 
         if expected_status_code == 204:
             return None
-
-        return json.loads(response.data)
+        return response.get_json()
 
 
 class MockStreamedResponse(object):
