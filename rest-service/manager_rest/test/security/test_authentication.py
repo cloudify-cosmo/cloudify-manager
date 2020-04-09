@@ -60,17 +60,19 @@ class AuthenticationTests(SecurityTestBase):
 
     def test_invalid_three_part_header(self):
         credentials = 'alice:alice_password:extra'
+        encoded = urlsafe_b64encode(credentials.encode()).decode()
         header = {
             CLOUDIFY_AUTH_HEADER:
-                BASIC_AUTH_PREFIX + urlsafe_b64encode(credentials)
+                BASIC_AUTH_PREFIX + encoded
         }
         self._assert_user_unauthorized(headers=header)
 
     def test_invalid_one_part_header(self):
         credentials = 'alice'
+        encoded = urlsafe_b64encode(credentials.encode()).decode()
         header = {
             CLOUDIFY_AUTH_HEADER:
-                BASIC_AUTH_PREFIX + urlsafe_b64encode(credentials)
+                BASIC_AUTH_PREFIX + encoded
         }
         self._assert_user_unauthorized(headers=header)
 
