@@ -110,7 +110,7 @@ def generate_progress_func(total_size, assert_equal,
     """
     # Wrap the integer in a list, to allow mutating it inside the inner func
     iteration = [0]
-    max_iterations = total_size / buffer_size
+    max_iterations = total_size // buffer_size
 
     def print_progress(read, total):
         i = iteration[0]
