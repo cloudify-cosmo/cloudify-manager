@@ -22,7 +22,6 @@ import zipfile
 TAR_MAGIC_DICT = {
     b"\x1f\x8b\x08": "tar.gz",
     b"\x42\x5a\x68": "tar.bz2",
-    # "\x75\x73\x74\x61\x72": "tar"
 }
 
 
