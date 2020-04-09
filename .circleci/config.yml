@@ -138,7 +138,14 @@ jobs:
       - run: sudo apt-get install libldap-dev libsasl2-dev
       - run: pip install --user tox
       - clone_premium
-
+      - run: virtualenv ~/venv
+      - run: |
+          pushd rest-service
+            ~/venv/bin/pip install -Ur dev-requirements.txt
+            ~/venv/bin/pip install -Ur test-requirements.txt
+            ~/venv/bin/pip install -e .
+            ~/venv/bin/pip install -e ~/cloudify-premium
+          popd
       # Replace the cloudify-manager URL in dev-requirements.txt with the local path to this checkout
       - run: sed -i "s:^.*cloudify-manager.*\(rest-service\)$:-e ${HOME}/project/\1/:" ~/cloudify-premium/dev-requirements.txt
       - run: |
