@@ -1,4 +1,4 @@
-git+https://github.com/cloudify-cosmo/cloudify-common@compat-urlencode-1#egg=cloudify-common==compat-urlencode-1
+git+https://github.com/cloudify-cosmo/cloudify-common@master#egg=cloudify-common==master
 -e ../rest-service
 mock
 pytest
