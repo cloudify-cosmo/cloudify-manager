@@ -20,6 +20,7 @@ from cloudify.deployment_dependencies import (create_deployment_dependency,
                                               DEPENDENCY_CREATOR,
                                               SOURCE_DEPLOYMENT,
                                               TARGET_DEPLOYMENT)
+from cloudify._compat import text_type
 
 from manager_rest.security import SecuredResource
 from manager_rest import utils, manager_exceptions
@@ -134,9 +135,9 @@ class InterDeploymentDependencies(SecuredResource):
     @staticmethod
     def _verify_dependency_params():
         return rest_utils.get_json_and_verify_params({
-            DEPENDENCY_CREATOR: {'type': unicode},
-            SOURCE_DEPLOYMENT: {'type': unicode},
-            TARGET_DEPLOYMENT: {'type': unicode}
+            DEPENDENCY_CREATOR: {'type': text_type},
+            SOURCE_DEPLOYMENT: {'type': text_type},
+            TARGET_DEPLOYMENT: {'type': text_type}
         })
 
     @staticmethod
