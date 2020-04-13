@@ -641,10 +641,17 @@ class TestDeploymentDependencies(unittest.TestCase):
                 sm_func.assert_not_called()
             else:
                 sm_func.assert_has_calls(calls, any_order=True)
-
+        self._remove_unnecessary_keys_from_put()
         assert_function_calls(self.mock_sm.put, put_calls)
         assert_function_calls(self.mock_sm.update, update_calls)
         assert_function_calls(self.mock_sm.delete, delete_calls)
+
+    def _remove_unnecessary_keys_from_put(self):
+        for call_args in self.mock_sm.put.call_args_list:
+            for call_obj in call_args.args:
+                if all(k in call_obj for k in ('id', 'created_at')):
+                    call_obj.pop('id')
+                    call_obj.pop('created_at')
 
     @staticmethod
     def _as_calls(_list):
@@ -691,6 +698,7 @@ class TestDeploymentDependencies(unittest.TestCase):
         dependency_creating_functions = {'creator_1': 'target_1'}
         self.mock_dep_update.deployment_plan[
             INTER_DEPLOYMENT_FUNCTIONS] = dependency_creating_functions
+        self.mock_sm.get.side_effect = ['target_1', 'test_deployment_id']
         self.handler._handle_dependency_changes(self.mock_dep_update,
                                                 {},
                                                 dep_plan_filter_func=_true)
@@ -705,6 +713,7 @@ class TestDeploymentDependencies(unittest.TestCase):
         dependency_creating_functions = {'creator_2': 'target_1'}
         self.mock_dep_update.deployment_plan[
             INTER_DEPLOYMENT_FUNCTIONS] = dependency_creating_functions
+        self.mock_sm.get.side_effect = ['target_1', 'test_deployment_id']
         self.handler._handle_dependency_changes(self.mock_dep_update,
                                                 {},
                                                 dep_plan_filter_func=_true)
@@ -737,6 +746,9 @@ class TestDeploymentDependencies(unittest.TestCase):
             common_dependency_updated.dependency_creator: 'target_new',
             common_dependency_isnt_updated.dependency_creator: 'target_old'
         }
+        self.mock_sm.get.side_effect = ['target_1', 'test_deployment_id',
+                                        'target_new', 'test_deployment_id',
+                                        'target_1', 'test_deployment_id']
         self.mock_dep_update.deployment_plan[
             INTER_DEPLOYMENT_FUNCTIONS] = dependency_creating_functions
         self.handler._handle_dependency_changes(
@@ -780,6 +792,8 @@ class TestDeploymentDependencies(unittest.TestCase):
         }
         self.mock_dep_update.deployment_plan[
             INTER_DEPLOYMENT_FUNCTIONS] = dependency_creating_functions
+        self.mock_sm.get.side_effect = ['target_1_new', 'test_deployment_id',
+                                        'target_2_new', 'test_deployment_id']
         self.handler._handle_dependency_changes(self.mock_dep_update,
                                                 {},
                                                 dep_plan_filter_func=_true)
