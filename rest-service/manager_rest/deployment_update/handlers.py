@@ -18,8 +18,10 @@ from sqlalchemy import and_, cast
 from sqlalchemy.dialects.postgresql import JSON
 
 
-from cloudify.workflows import tasks as cloudify_tasks
 from cloudify.models_states import ExecutionState
+from cloudify.workflows import tasks as cloudify_tasks
+from cloudify.deployment_dependencies import (SOURCE_DEPLOYMENT,
+                                              DEPENDENCY_CREATOR)
 from cloudify.constants import (
     COMPONENT,
     COMPUTE_NODE_TYPE,
@@ -943,9 +945,9 @@ class DeploymentDependencies(UpdateHandler):
         self._handle_dependency_changes(
             dep_update,
             query_filters={
-                'filters': {'source_deployment': source_deployment},
+                'filters': {SOURCE_DEPLOYMENT: source_deployment},
                 'notlike_filters': {
-                    'dependency_creator':
+                    DEPENDENCY_CREATOR:
                         ['{0}.%'.format(NODES),
                          '{0}.%'.format(COMPONENT),
                          '{0}.%'.format(SHARED_RESOURCE)]
@@ -959,9 +961,9 @@ class DeploymentDependencies(UpdateHandler):
         source_deployment = self.sm.get(models.Deployment,
                                         dep_update.deployment_id)
         query_filters = {
-            'filters': {'source_deployment': source_deployment},
+            'filters': {SOURCE_DEPLOYMENT: source_deployment},
             'like_filters': {
-                'dependency_creator': '{0}.%'.format(NODES)
+                DEPENDENCY_CREATOR: '{0}.%'.format(NODES)
             }
         }
         self._handle_dependency_changes(

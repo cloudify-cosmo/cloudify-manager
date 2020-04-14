@@ -1,4 +1,4 @@
-# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
+# Copyright (c) 2020 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@ from cloudify import manager, ctx
 from cloudify.constants import SHARED_RESOURCE
 from cloudify.exceptions import NonRecoverableError
 from cloudify_rest_client.client import CloudifyClient
+from cloudify.deployment_dependencies import (dependency_creator_generator,
+                                              create_deployment_dependency)
 
 from cloudify_types.utils import get_deployment_by_id
 from cloudify_types.component.utils import (
@@ -50,12 +52,12 @@ class SharedResource(object):
 
         self.deployment = self.config.get('deployment', '')
         self.deployment_id = self.deployment.get('id', '')
-        self._inter_deployment_dependency = {
-            'dependency_creator': '{0}.{1}'.format(SHARED_RESOURCE,
-                                                   ctx.instance.id),
-            'source_deployment': ctx.deployment.id,
-            'target_deployment': self.deployment_id
-        }
+        self._inter_deployment_dependency = create_deployment_dependency(
+            dependency_creator_generator(SHARED_RESOURCE,
+                                         ctx.instance.id),
+            ctx.deployment.id,
+            self.deployment_id
+        )
 
     def _mark_verified_shared_resource_node(self):
         """

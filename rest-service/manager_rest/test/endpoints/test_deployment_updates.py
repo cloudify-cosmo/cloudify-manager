@@ -27,6 +27,10 @@ from dsl_parser import exceptions as parser_exceptions, constants
 
 from cloudify.models_states import ExecutionState
 from cloudify_rest_client.exceptions import CloudifyClientError
+from cloudify.deployment_dependencies import (DEPENDENCY_CREATOR,
+                                              SOURCE_DEPLOYMENT,
+                                              TARGET_DEPLOYMENT,
+                                              create_deployment_dependency)
 
 from manager_rest.test import base_test
 from manager_rest.storage import models
@@ -595,19 +599,19 @@ class TestDeploymentDependencies(unittest.TestCase):
 
         @property
         def dependency_creator(self):
-            return self['dependency_creator']
+            return self[DEPENDENCY_CREATOR]
 
         @property
         def source_deployment(self):
-            return self['source_deployment']
+            return self[SOURCE_DEPLOYMENT]
 
         @property
         def target_deployment(self):
-            return self['target_deployment']
+            return self[TARGET_DEPLOYMENT]
 
         @target_deployment.setter
         def target_deployment(self, value):
-            self['target_deployment'] = value
+            self[TARGET_DEPLOYMENT] = value
 
     def setUp(self):
         self.mock_get_rm = patch('manager_rest.deployment_update.handlers'
@@ -649,11 +653,10 @@ class TestDeploymentDependencies(unittest.TestCase):
     def _build_mock_dependency(self,
                                dependency_creator,
                                target_deployment=None):
-        return self.MockDependency({
-            'dependency_creator': dependency_creator,
-            'target_deployment': target_deployment,
-            'source_deployment': self.mock_dep_update.deployment_id
-        })
+        return self.MockDependency(
+            create_deployment_dependency(dependency_creator,
+                                         self.mock_dep_update.deployment_id,
+                                         target_deployment))
 
     def test_does_nothing_with_empty_new_and_old_dependencies(self):
         curr_dependencies = []

@@ -1,4 +1,4 @@
-# Copyright (c) 2017-2019 Cloudify Platform Ltd. All rights reserved
+# Copyright (c) 2017-2020 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,6 +15,11 @@ import uuid
 
 from flask_restful_swagger import swagger
 from flask_restful.reqparse import Argument
+
+from cloudify.deployment_dependencies import (create_deployment_dependency,
+                                              DEPENDENCY_CREATOR,
+                                              SOURCE_DEPLOYMENT,
+                                              TARGET_DEPLOYMENT)
 
 from manager_rest.security import SecuredResource
 from manager_rest import utils, manager_exceptions
@@ -40,21 +45,19 @@ class InterDeploymentDependency(SecuredResource):
     def get(self, _include=None):
         """Get an inter-deployment dependency by id"""
         args = get_args_and_verify_arguments([
-            Argument('dependency_creator', required=True),
-            Argument('source_deployment', required=True),
-            Argument('target_deployment', required=True)
+            Argument(DEPENDENCY_CREATOR, required=True),
+            Argument(SOURCE_DEPLOYMENT, required=True),
+            Argument(TARGET_DEPLOYMENT, required=True)
         ])
         sm = get_storage_manager()
-        dependency_creator = args['dependency_creator']
+        dependency_creator = args[DEPENDENCY_CREATOR]
         source_deployment = sm.get(models.Deployment,
-                                   args.get('source_deployment'))
+                                   args[SOURCE_DEPLOYMENT])
         target_deployment = sm.get(models.Deployment,
-                                   args.get('target_deployment'))
-        filters = {
-            'dependency_creator': args.get('dependency_creator'),
-            'source_deployment': source_deployment,
-            'target_deployment': target_deployment,
-        }
+                                   args[TARGET_DEPLOYMENT])
+        filters = create_deployment_dependency(dependency_creator,
+                                               source_deployment,
+                                               target_deployment)
         list_of_dependencies = sm.list(
             models.InterDeploymentDependencies,
             filters=filters,
@@ -100,9 +103,9 @@ class InterDeploymentDependencies(SecuredResource):
         now = utils.get_formatted_timestamp()
         deployment_dependency = models.InterDeploymentDependencies(
             id=str(uuid.uuid4()),
-            dependency_creator=params['dependency_creator'],
-            source_deployment=params['source_deployment'],
-            target_deployment=params['target_deployment'],
+            dependency_creator=params[DEPENDENCY_CREATOR],
+            source_deployment=params[SOURCE_DEPLOYMENT],
+            target_deployment=params[TARGET_DEPLOYMENT],
             created_at=now)
         return sm.put(deployment_dependency)
 
@@ -131,9 +134,9 @@ class InterDeploymentDependencies(SecuredResource):
     @staticmethod
     def _verify_dependency_params():
         return rest_utils.get_json_and_verify_params({
-            'dependency_creator': {'type': unicode},
-            'source_deployment': {'type': unicode},
-            'target_deployment': {'type': unicode}
+            DEPENDENCY_CREATOR: {'type': unicode},
+            SOURCE_DEPLOYMENT: {'type': unicode},
+            TARGET_DEPLOYMENT: {'type': unicode}
         })
 
     @staticmethod
@@ -142,13 +145,11 @@ class InterDeploymentDependencies(SecuredResource):
         source_deployment, target_deployment = InterDeploymentDependencies. \
             _verify_and_get_source_and_target_deployments(
                 sm,
-                request_dict.get('source_deployment'),
-                request_dict.get('target_deployment'))
-        dependency_params = {
-            'dependency_creator': request_dict.get('dependency_creator'),
-            'source_deployment': source_deployment,
-            'target_deployment': target_deployment
-        }
+                request_dict.get(SOURCE_DEPLOYMENT),
+                request_dict.get(TARGET_DEPLOYMENT))
+        dependency_params = create_deployment_dependency(request_dict.get(DEPENDENCY_CREATOR),
+                                                         source_deployment,
+                                                         target_deployment)
         return dependency_params
 
     @swagger.operation(
@@ -176,14 +177,13 @@ class InterDeploymentDependencies(SecuredResource):
         """
         sm = get_storage_manager()
         params = self._get_delete_dependency_params(sm)
+        filters = create_deployment_dependency(params[DEPENDENCY_CREATOR],
+                                               params[SOURCE_DEPLOYMENT],
+                                               params[TARGET_DEPLOYMENT])
         dependency = sm.get(
             models.InterDeploymentDependencies,
             None,
-            filters={
-                'dependency_creator': params['dependency_creator'],
-                'source_deployment': params['source_deployment'],
-                'target_deployment': params['target_deployment']
-            },
+            filters=filters,
             # Locking to make sure to fail here and not during the deletion
             # (for the purpose of clarifying the error in case one occurs).
             locking=True,
@@ -198,14 +198,11 @@ class InterDeploymentDependencies(SecuredResource):
         source_deployment, target_deployment = InterDeploymentDependencies. \
             _verify_and_get_source_and_target_deployments(
                 sm,
-                request_dict.get('source_deployment'),
-                request_dict.get('target_deployment'))
-
-        dependency_params = {
-            'dependency_creator': request_dict.get('dependency_creator'),
-            'source_deployment': source_deployment,
-            'target_deployment': target_deployment
-        }
+                request_dict.get(SOURCE_DEPLOYMENT),
+                request_dict.get(TARGET_DEPLOYMENT))
+        dependency_params = create_deployment_dependency(request_dict.get(DEPENDENCY_CREATOR),
+                                                         source_deployment,
+                                                         target_deployment)
         return dependency_params
 
     @swagger.operation(

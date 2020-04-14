@@ -22,6 +22,8 @@ from dsl_parser import exceptions as parser_exceptions
 from dsl_parser.constants import CAPABILITIES, EVAL_FUNCS_PATH_PREFIX_KEY
 
 from cloudify import cryptography_utils
+from cloudify.deployment_dependencies import (create_deployment_dependency,
+                                              TARGET_DEPLOYMENT)
 
 from manager_rest import utils
 from manager_rest.storage import (get_storage_manager,
@@ -189,12 +191,10 @@ class FunctionEvaluationStorage(object):
         @retry(retry_on_exception=lambda e: isinstance(e, SQLStorageException),
                stop_max_attempt_number=3)
         def create_dependency():
-            filters = {
-                'dependency_creator': function_identifier,
-                'source_deployment': source_deployment_instance,
-            }
+            filters = create_deployment_dependency(function_identifier,
+                                                   source_deployment_instance)
             init_kwargs = {
-                'target_deployment': target_deployment_instance,
+                TARGET_DEPLOYMENT: target_deployment_instance,
                 'created_at': utils.get_formatted_timestamp(),
                 'id': dependency_id
             }

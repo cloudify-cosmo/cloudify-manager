@@ -22,6 +22,8 @@ from cloudify.constants import COMPONENT
 from cloudify.exceptions import NonRecoverableError
 from cloudify_rest_client.client import CloudifyClient
 from cloudify_rest_client.exceptions import CloudifyClientError
+from cloudify.deployment_dependencies import (dependency_creator_generator,
+                                              create_deployment_dependency)
 
 from .constants import (
     EXECUTIONS_TIMEOUT,
@@ -114,11 +116,10 @@ class Component(object):
         self.timeout = operation_inputs.get('timeout', EXECUTIONS_TIMEOUT)
 
         # Inter-Deployment Dependency identifier
-        self._inter_deployment_dependency = {
-            'dependency_creator': '{0}.{1}'.format(COMPONENT,
-                                                   ctx.instance.id),
-            'source_deployment': ctx.deployment.id
-        }
+        self._inter_deployment_dependency = create_deployment_dependency(
+            dependency_creator_generator(COMPONENT,
+                                         ctx.instance.id),
+            ctx.deployment.id)
 
     def _http_client_wrapper(self,
                              option,

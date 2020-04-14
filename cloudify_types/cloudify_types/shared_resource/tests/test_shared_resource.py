@@ -1,4 +1,4 @@
-# Copyright (c) 2017-2019 Cloudify Platform Ltd. All rights reserved
+# Copyright (c) 2017-2020 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,6 +14,7 @@
 
 import mock
 
+from cloudify.deployment_dependencies import dependency_creator_generator
 from cloudify.constants import SHARED_RESOURCE
 from cloudify.exceptions import NonRecoverableError
 
@@ -65,7 +66,7 @@ class TestSharedResource(TestSharedResourceBase):
 
         self.cfy_mock_client.inter_deployment_dependencies.create \
             .assert_called_with(
-                dependency_creator='{0}.{1}'.format(
+                dependency_creator=dependency_creator_generator(
                     SHARED_RESOURCE, self._ctx.instance.id),
                 source_deployment=self._ctx.deployment.id,
                 target_deployment='test_deployment'
@@ -92,7 +93,7 @@ class TestSharedResource(TestSharedResourceBase):
 
         self.cfy_mock_client.inter_deployment_dependencies.delete \
             .assert_called_with(
-                dependency_creator='{0}.{1}'.format(
+                dependency_creator=dependency_creator_generator(
                     SHARED_RESOURCE, self._ctx.instance.id),
                 source_deployment=self._ctx.deployment.id,
                 target_deployment='test_deployment'
