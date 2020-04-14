@@ -100,3 +100,4 @@ class MockCloudifyRestClient(object):
         self.events = MockEventsClient()
         self.secrets = MockSecretsClient()
         self.plugins = MagicMock()
+        self.inter_deployment_dependencies = MagicMock()

@@ -12,15 +12,16 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+from functools import wraps
 
 import psutil
 from collections import OrderedDict
 from flask_security import current_user
-from sqlalchemy import or_ as sql_or, func
-from sqlalchemy.exc import SQLAlchemyError
 from flask import current_app, has_request_context
 from sqlite3 import DatabaseError as SQLiteDBError
+from sqlalchemy import or_ as sql_or, func, inspect
 from sqlalchemy.orm.attributes import flag_modified
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 
 from cloudify._compat import text_type
 from cloudify.models_states import VisibilityState
@@ -39,19 +40,45 @@ except ImportError:
     Psycopg2DBError = None
 
 
+def no_autoflush(f):
+    @wraps(f)
+    def wrapper(*args, **kwrags):
+        with db.session.no_autoflush:
+            return f(*args, **kwrags)
+
+    return wrapper
+
+
 class SQLStorageManager(object):
     @staticmethod
-    def _safe_commit():
+    def _is_unique_constraint_violation(e):
+        return isinstance(e, IntegrityError) \
+               and 'violates unique constraint' in str(e)
+
+    def _safe_commit(self):
         """Try to commit changes in the session. Roll back if exception raised
         Excepts SQLAlchemy errors and rollbacks if they're caught
         """
         try:
             db.session.commit()
         except sql_errors as e:
-            db.session.rollback()
-            raise manager_exceptions.SQLStorageException(
+            exception_to_raise = manager_exceptions.SQLStorageException(
                 'SQL Storage error: {0}'.format(str(e))
             )
+            db.session.rollback()
+            if SQLStorageManager._is_unique_constraint_violation(e):
+                problematic_instance_id = e.params['id']
+                # Session has been rolled back at this point
+                self.refresh(self.current_tenant)
+                exception_to_raise = manager_exceptions.ConflictError(
+                    'Instance with ID {0} cannot be added on {1} or with '
+                    'global visibility'
+                    ''.format(
+                        problematic_instance_id,
+                        self.current_tenant
+                    )
+                )
+            raise exception_to_raise
 
     def _get_base_query(self, model_class, include, joins):
         """Create the initial query from the model class and included columns
@@ -98,7 +125,9 @@ class SQLStorageManager(object):
                       model_class,
                       filters,
                       substr_filters,
-                      all_tenants):
+                      all_tenants,
+                      like_filters,
+                      notlike_filters):
         """Add filter clauses to the query
 
         :param query: Base SQL query
@@ -106,12 +135,21 @@ class SQLStorageManager(object):
         filter by, and values are values applicable for those columns (or lists
         of such values). Each value can also be a callable which returns
         a SQLAlchemy filter
+        :param substr_filters: An optional dictionary similar to filters,
+                       when the results are filtered by substrings
+        :param like_filters: An optional dictionary similar to filters,
+         the ilike operator is applied to the given values. If a list/tuple is
+         passed, then all the items are AND-ed.
+        :param notilike_filters: An optional dictionary similar to filters,
+         the notilike operator is applied to the given values.
         :return: An SQLAlchemy AppenderQuery object
         """
         query = self._add_tenant_filter(query, model_class, all_tenants)
         query = self._add_permissions_filter(query, model_class)
         query = self._add_value_filter(query, filters)
         query = self._add_substr_filter(query, substr_filters)
+        query = self._add_like_filter(query, like_filters)
+        query = self._add_notlike_filter(query, notlike_filters)
         return query
 
     def _add_value_filter(self, query, filters):
@@ -133,6 +171,38 @@ class SQLStorageManager(object):
             else:
                 raise manager_exceptions.BadParametersError(
                     'Substring filtering is only supported for strings'
+                )
+        return query
+
+    @staticmethod
+    def _add_like_filter(query, filters):
+        for column, value in filters.items():
+            if isinstance(value, string_types):
+                query = query.filter(column.ilike(value))
+            elif isinstance(value, (list, tuple)):
+                criteria = (column.ilike(expression)
+                            for expression in value)
+                query = query.filter(*criteria)
+            else:
+                raise manager_exceptions.BadParametersError(
+                    'Like filtering is only supported for strings and '
+                    'lists/tuples'
+                )
+        return query
+
+    @staticmethod
+    def _add_notlike_filter(query, filters):
+        for column, value in filters.items():
+            if isinstance(value, string_types):
+                query = query.filter(column.notilike(value))
+            elif isinstance(value, (list, tuple)):
+                criteria = (column.notilike(expression)
+                            for expression in value)
+                query = query.filter(*criteria)
+            else:
+                raise manager_exceptions.BadParametersError(
+                    'Notlike filtering is only supported for strings and '
+                    'lists/tuples'
                 )
         return query
 
@@ -256,7 +326,9 @@ class SQLStorageManager(object):
                                          include,
                                          filters,
                                          substr_filters,
-                                         sort):
+                                         sort,
+                                         like_filters,
+                                         notlike_filters):
         """Get a list of tables on which we need to join and the converted
         `include`, `filters` and `sort` arguments (converted to actual SQLA
         column/label objects instead of column names)
@@ -265,17 +337,24 @@ class SQLStorageManager(object):
         filters = filters or dict()
         substr_filters = substr_filters or dict()
         sort = sort or OrderedDict()
+        like_filters = like_filters or dict()
+        notlike_filters = notlike_filters or dict()
 
         all_columns = set(include) | set(filters.keys()) | set(sort.keys())
+        all_columns |= set(substr_filters.keys()) | set(like_filters)
+        all_columns |= set(notlike_filters)
         joins = self._get_joins(model_class, all_columns)
 
-        include, filters, substr_filters, sort = \
-            self._get_columns_from_field_names(model_class,
-                                               include,
-                                               filters,
-                                               substr_filters,
-                                               sort)
-        return include, filters, substr_filters, sort, joins
+        (include, filters, substr_filters, sort, like_filters,
+         notlike_filters) = self._get_columns_from_field_names(model_class,
+                                                               include,
+                                                               filters,
+                                                               substr_filters,
+                                                               sort,
+                                                               like_filters,
+                                                               notlike_filters)
+        return (include, filters, substr_filters, sort, joins, like_filters,
+                notlike_filters)
 
     def _get_query(self,
                    model_class,
@@ -283,7 +362,9 @@ class SQLStorageManager(object):
                    filters=None,
                    substr_filters=None,
                    sort=None,
-                   all_tenants=None):
+                   all_tenants=None,
+                   like_filters=None,
+                   notlike_filters=None):
         """Get an SQL query object based on the params passed
 
         :param model_class: SQL DB table class
@@ -291,24 +372,36 @@ class SQLStorageManager(object):
         :param filters: An optional dictionary where keys are column names to
         filter by, and values are values applicable for those columns (or lists
         of such values)
+        :param substr_filters: An optional dictionary similar to filters,
+                               when the results are filtered by substrings
         :param sort: An optional dictionary where keys are column names to
         sort by, and values are the order (asc/desc)
+        :param like_filters: An optional dictionary similar to filters,
+         the ilike operator is applied to the given values. If a list/tuple is
+         passed, then all the items are AND-ed.
+        :param notilike_filters: An optional dictionary similar to filters,
+         the notilike operator is applied to the given values.
         :return: A sorted and filtered query with only the relevant
         columns
         """
-        include, filters, substr_filters, sort, joins = \
-            self._get_joins_and_converted_columns(model_class,
-                                                  include,
-                                                  filters,
-                                                  substr_filters,
-                                                  sort)
+        (include, filters, substr_filters, sort, joins, like_filters,
+         notlike_filters) = self._get_joins_and_converted_columns(
+            model_class,
+            include,
+            filters,
+            substr_filters,
+            sort,
+            like_filters,
+            notlike_filters)
 
         query = self._get_base_query(model_class, include, joins)
         query = self._filter_query(query,
                                    model_class,
                                    filters,
                                    substr_filters,
-                                   all_tenants)
+                                   all_tenants,
+                                   like_filters,
+                                   notlike_filters)
         query = self._sort_query(query, model_class, sort)
         return query
 
@@ -317,19 +410,29 @@ class SQLStorageManager(object):
                                       include,
                                       filters,
                                       substr_filters,
-                                      sort):
+                                      sort,
+                                      like_filters,
+                                      notlike_filters):
         """Go over the optional parameters (include, filters, sort), and
         replace column names with actual SQLA column objects
         """
-        include = [self._get_column(model_class, c) for c in include]
-        filters = {self._get_column(model_class, c): filters[c]
-                   for c in filters}
-        substr_filters = {self._get_column(model_class, c): substr_filters[c]
-                          for c in substr_filters}
+
+        def get_columns_for_list(l):
+            return [self._get_column(model_class, c) for c in l]
+
+        def get_columns_for_dict(d):
+            return {self._get_column(model_class, key): d[key] for key in d}
+
+        include = get_columns_for_list(include)
+        filters = get_columns_for_dict(filters)
+        substr_filters = get_columns_for_dict(substr_filters)
         sort = OrderedDict((self._get_column(model_class, c), sort[c])
                            for c in sort)
+        like_filters = get_columns_for_dict(like_filters)
+        notlike_filters = get_columns_for_dict(notlike_filters)
 
-        return include, filters, substr_filters, sort
+        return (include, filters, substr_filters, sort, like_filters,
+                notlike_filters)
 
     @staticmethod
     def _get_column(model_class, column_name):
@@ -382,6 +485,7 @@ class SQLStorageManager(object):
                 )
             )
 
+    @no_autoflush
     def _validate_unique_resource_id_per_tenant(self, instance):
         """Assert that only a single resource exists with a given id in a
         given tenant
@@ -396,11 +500,13 @@ class SQLStorageManager(object):
                                                    instance.tenant)
         results = query.all()
 
-        # There should be only one instance with this id on this tenant or
-        # in another tenant if the resource is global
-        if len(results) != 1:
-            # Delete the newly added instance, and raise an error
-            db.session.delete(instance)
+        instance_flushed = inspect(instance).persistent
+        num_of_allowed_entries = 1 if instance_flushed else 0
+        if len(results) != num_of_allowed_entries:
+            if instance_flushed:
+                db.session.delete(instance)
+            else:
+                db.session.expunge(instance)
             self._safe_commit()
 
             raise manager_exceptions.ConflictError(
@@ -458,7 +564,8 @@ class SQLStorageManager(object):
             include=None,
             filters=None,
             locking=False,
-            all_tenants=None):
+            all_tenants=None,
+            doesnt_exist_ok=False):
         """Return a single result based on the model class and element ID
         """
         current_app.logger.debug(
@@ -471,7 +578,7 @@ class SQLStorageManager(object):
             query = query.with_for_update()
         result = query.first()
 
-        if not result:
+        if not result and not doesnt_exist_ok:
             if filters and set(filters.keys()) != {'id'}:
                 filters_message = ' (filters: {0})'.format(filters)
             else:
@@ -506,7 +613,9 @@ class SQLStorageManager(object):
              sort=None,
              all_tenants=None,
              substr_filters=None,
-             get_all_results=False):
+             get_all_results=False,
+             like_filters=None,
+             notlike_filters=None):
         """Return a list of `model_class` results
 
         :param model_class: SQL DB table class
@@ -524,6 +633,11 @@ class SQLStorageManager(object):
         :param get_all_results: Get all the results without the limitation of
                                 size or pagination. Use it carefully to
                                 prevent consumption of too much memory
+        :param like_filters: An optional dictionary similar to filters,
+         the ilike operator is applied to the given values. If a list/tuple is
+         passed, then all the items are AND-ed.
+        :param notlike_filters: An optional dictionary similar to filters,
+         the notilike operator is applied to the given values.
         :return: A (possibly empty) list of `model_class` results
         """
         self._validate_available_memory()
@@ -540,7 +654,9 @@ class SQLStorageManager(object):
                                 filters,
                                 substr_filters,
                                 sort,
-                                all_tenants)
+                                all_tenants,
+                                like_filters,
+                                notlike_filters)
 
         results, total, size, offset = self._paginate(query,
                                                       pagination,
@@ -673,15 +789,57 @@ class SQLStorageManager(object):
         self._load_relationships(instance)
         return instance
 
+    def upsert(self,
+               model_class,
+               filters,
+               init_kwargs,
+               update_func,
+               all_tenants=None):
+        """Updates the first instance that matches the given init_kwargs, or
+        inserts one if none exist.
+        Since this isn't race-condition-failsafe, IntegrityError may be raised
+        when the session is flushed or SQLStorageException if the commit fails.
+
+        :param model_class: SQL DB table class.
+        :param filters: A dictionary where keys are column names to filter by,
+         and values are values applicable for those columns (or lists of such
+         values). This should identify the instance.
+        :param init_kwargs: kwargs to initialize the instance with, if no
+         instance was found in the query.
+        :param update_func: "(instance) -> None" function that performs an
+         update on the instance that is returned by the query.
+        :param all_tenants: Include resources from all tenants associated
+         with the user.
+        :return: The updated or inserted instance.
+        """
+        current_app.logger.debug(
+            'Update or Insert `{0}` with init kwargs '
+            '`{1}`'.format(model_class.__name__, init_kwargs))
+        query = self._get_query(
+            model_class, filters=filters, all_tenants=all_tenants)
+        query = query.with_for_update()
+        result = query.first()
+
+        if not result:
+            init_kwargs_str = ','.join('{0}={1}'.format(k, v)
+                                       for k, v in init_kwargs.items())
+            current_app.logger.debug(
+                'No such instance found, inserting {0}({1})...'.format(
+                    model_class.__name__, init_kwargs_str))
+            return self.put(model_class(**init_kwargs))
+
+        update_func(result)
+        return self.update(result)
+
 
 class ReadOnlyStorageManager(SQLStorageManager):
     def put(self, instance):
         return instance
 
-    def delete(self, instance):
+    def delete(self, instance, *_, **__):
         return instance
 
-    def update(self, instance, log=True, modified_attrs=()):
+    def update(self, instance, *_, **__):
         return instance
 
 

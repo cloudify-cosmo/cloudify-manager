@@ -14,9 +14,11 @@
 
 import os
 import time
+from urlparse import urlparse
 
 from cloudify import manager, ctx
 from cloudify._compat import urlparse
+from cloudify.constants import COMPONENT
 from cloudify.exceptions import NonRecoverableError
 from cloudify_rest_client.client import CloudifyClient
 from cloudify_rest_client.exceptions import CloudifyClientError
@@ -111,10 +113,17 @@ class Component(object):
         self.state = operation_inputs.get('state', 'terminated')
         self.timeout = operation_inputs.get('timeout', EXECUTIONS_TIMEOUT)
 
+        # Inter-Deployment Dependency identifier
+        self._inter_deployment_dependency = {
+            'dependency_creator': '{0}.{1}'.format(COMPONENT,
+                                                   ctx.instance.id),
+            'source_deployment': ctx.deployment.id
+        }
+
     def _http_client_wrapper(self,
                              option,
                              request_action,
-                             request_args={}):
+                             request_args=None):
         """
         wrapper for http client requests with CloudifyClientError custom
         handling.
@@ -123,6 +132,7 @@ class Component(object):
         :param request_args: args for the actual call.
         :return: The http response.
         """
+        request_args = request_args or dict()
         generic_client = getattr(self.client, option)
         option_client = getattr(generic_client, request_action)
 
@@ -301,6 +311,8 @@ class Component(object):
                 'Component\'s deployment ID "{0}" already exists, '
                 'please verify the chosen name.'.format(
                     self.deployment_id))
+        self._inter_deployment_dependency['target_deployment'] = \
+            self.deployment_id
 
         update_runtime_properties('deployment', 'id', self.deployment_id)
         ctx.logger.info('Creating "{0}" component deployment.'
@@ -311,6 +323,10 @@ class Component(object):
             'deployment_id': self.deployment_id,
             'inputs': self.deployment_inputs
         })
+
+        self._http_client_wrapper('inter_deployment_dependencies',
+                                  'create',
+                                  self._inter_deployment_dependency)
 
         # Prepare executions list fields
         execution_list_fields = ['workflow_id', 'id']

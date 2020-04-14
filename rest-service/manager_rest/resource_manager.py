@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2018 Cloudify Platform Ltd. All rights reserved
+# Copyright (c) 2017-2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -35,6 +35,7 @@ from cloudify.models_states import (SnapshotState,
 
 from dsl_parser import constants, tasks
 from dsl_parser import exceptions as parser_exceptions
+from dsl_parser.constants import INTER_DEPLOYMENT_FUNCTIONS
 
 from manager_rest import premium_enabled
 from manager_rest.constants import (DEFAULT_TENANT_NAME,
@@ -1391,6 +1392,9 @@ class ResourceManager(object):
             deployment_id,
             dsl_node_instances=deployment_plan['node_instances'])
 
+        self._create_deployment_initial_dependencies(
+            deployment_plan, new_deployment)
+
         try:
             self._create_deployment_environment(new_deployment,
                                                 deployment_plan,
@@ -2183,6 +2187,25 @@ class ResourceManager(object):
         }
 
         send_event(event, 'hook')
+
+    def _create_deployment_initial_dependencies(self,
+                                                deployment_plan,
+                                                source_deployment):
+        new_dependencies = deployment_plan.setdefault(
+            INTER_DEPLOYMENT_FUNCTIONS, {})
+
+        for func_id, target_deployment in new_dependencies.items():
+            target_deployment_instance = None
+            if target_deployment:
+                target_deployment_instance = self.sm.get(models.Deployment,
+                                                         target_deployment)
+            now = utils.get_formatted_timestamp()
+            self.sm.put(models.InterDeploymentDependencies(
+                id=str(uuid.uuid4()),
+                dependency_creator=func_id,
+                source_deployment=source_deployment,
+                target_deployment=target_deployment_instance,
+                created_at=now))
 
 
 # What we need to access this manager in Flask

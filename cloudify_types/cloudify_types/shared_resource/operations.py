@@ -28,6 +28,12 @@ def connect_deployment(operation, **_):
 
 
 @operation(resumable=True)
+@proxy_operation('remove_inter_deployment_dependency')
+def disconnect_deployment(operation, **_):
+    return getattr(SharedResource(_), operation)()
+
+
+@operation(resumable=True)
 def execute_workflow(workflow_id,
                      parameters,
                      timeout=WORKFLOW_EXECUTION_TIMEOUT,

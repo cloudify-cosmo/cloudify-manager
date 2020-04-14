@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2016 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2020 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -92,4 +92,9 @@ from .cluster_status import (                    # NOQA
 
 from .snapshots import ( # noqa
     SnapshotsStatus
+)
+
+from .inter_deployment_dependencies import (           # NOQA
+    InterDeploymentDependency,
+    InterDeploymentDependencies
 )
