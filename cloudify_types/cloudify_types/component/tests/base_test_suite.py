@@ -51,9 +51,14 @@ class ComponentTestBase(unittest.TestCase):
         self._ctx.logger.info = mock.MagicMock(return_value=None)
         current_ctx.set(self._ctx)
         self.cfy_mock_client = MockCloudifyRestClient()
+        self.mock_client_patcher = mock.patch(
+            'cloudify.manager.get_rest_client')
+        mock_client = self.mock_client_patcher.start()
+        mock_client.return_value = self.cfy_mock_client
 
     def tearDown(self):
         current_ctx.clear()
+        self.mock_client_patcher.stop()
         super(ComponentTestBase, self).tearDown()
 
     @staticmethod
