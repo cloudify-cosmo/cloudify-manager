@@ -44,21 +44,16 @@ MOCK_TIMEOUT = .0001
 
 class ComponentTestBase(unittest.TestCase):
 
-    def setUp(self):
+    def setUp(self, context_data=COMPONENT_PROPS):
         super(ComponentTestBase, self).setUp()
         self._ctx = self.get_mock_ctx('test', COMPONENT_PROPS)
         self._ctx.logger.log = mock.MagicMock(return_value=None)
         self._ctx.logger.info = mock.MagicMock(return_value=None)
         current_ctx.set(self._ctx)
         self.cfy_mock_client = MockCloudifyRestClient()
-        self.mock_client_patcher = mock.patch(
-            'cloudify.manager.get_rest_client')
-        mock_client = self.mock_client_patcher.start()
-        mock_client.return_value = self.cfy_mock_client
 
     def tearDown(self):
         current_ctx.clear()
-        self.mock_client_patcher.stop()
         super(ComponentTestBase, self).tearDown()
 
     @staticmethod
@@ -69,8 +64,8 @@ class ComponentTestBase(unittest.TestCase):
             'retry_number': retry_number
         }
         ctx = MockCloudifyContext(
-            node_id='node_id-{0}'.format(test_name),
-            deployment_id='deployment_id-{0}'.format(test_name),
+            node_id=test_name,
+            deployment_id=test_name,
             operation=operation,
             properties=context
         )
