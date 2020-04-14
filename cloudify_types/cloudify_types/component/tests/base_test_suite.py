@@ -44,7 +44,7 @@ MOCK_TIMEOUT = .0001
 
 class ComponentTestBase(unittest.TestCase):
 
-    def setUp(self, context_data=COMPONENT_PROPS):
+    def setUp(self):
         super(ComponentTestBase, self).setUp()
         self._ctx = self.get_mock_ctx('test', COMPONENT_PROPS)
         self._ctx.logger.log = mock.MagicMock(return_value=None)
@@ -64,8 +64,8 @@ class ComponentTestBase(unittest.TestCase):
             'retry_number': retry_number
         }
         ctx = MockCloudifyContext(
-            node_id=test_name,
-            deployment_id=test_name,
+            node_id='node_id-{0}'.format(test_name),
+            deployment_id='deployment_id-{0}'.format(test_name),
             operation=operation,
             properties=context
         )
