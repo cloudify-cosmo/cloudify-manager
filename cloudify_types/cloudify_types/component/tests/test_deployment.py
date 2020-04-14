@@ -15,9 +15,7 @@
 import mock
 from collections import namedtuple
 
-from cloudify.constants import COMPONENT
 from cloudify.exceptions import NonRecoverableError
-from cloudify.deployment_dependencies import dependency_creator_generator
 
 from ..operations import create, delete
 from cloudify_types.component.component import Component, CloudifyClientError
@@ -142,13 +140,6 @@ class TestDeployment(TestDeploymentBase):
                         resource_config={'deployment': deployment},
                         timeout=MOCK_TIMEOUT)
         self.assertTrue(output)
-        self.cfy_mock_client.inter_deployment_dependencies.create \
-            .assert_called_with(
-                dependency_creator=dependency_creator_generator(
-                    COMPONENT, self._ctx.instance.id),
-                source_deployment=self._ctx.deployment.id,
-                target_deployment='target_dep'
-            )
 
     @mock.patch('cloudify_types.component.polling.poll_with_timeout',
                 return_value=True)
