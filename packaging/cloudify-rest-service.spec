@@ -1,4 +1,5 @@
 %define _manager_env /opt/manager/env
+%define __python %_manager_env/bin/python
 
 %define dbus_glib_version 0.100
 %define dbus_version 1.6
@@ -15,14 +16,14 @@ URL:            https://github.com/cloudify-cosmo/cloudify-manager
 Vendor:         Cloudify Platform Ltd.
 Packager:       Cloudify Platform Ltd.
 
-BuildRequires:  python >= 2.7, python-virtualenv
+BuildRequires:  python3 >= 3.6, python-virtualenv
 BuildRequires:  openssl-devel, openldap-devel, libffi-devel, postgresql-devel
 BuildRequires:  git, sudo
 BuildRequires: dbus-devel >= %{dbus_version}
 BuildRequires: dbus-glib-devel >= %{dbus_glib_version}
-BuildRequires: python-devel
+BuildRequires: python3-devel
 
-Requires:       python >= 2.7, postgresql-libs, sudo, dbus >= 1.6
+Requires:       python3 >= 3.6, postgresql-libs, sudo, dbus >= 1.6
 Requires(pre):  shadow-utils
 
 %description
@@ -31,18 +32,12 @@ Cloudify's REST Service.
 
 %build
 
-virtualenv %_manager_env
+python3 -m venv %_manager_env
 
 %_manager_env/bin/pip install --upgrade pip"<20.0" setuptools
 %_manager_env/bin/pip install -r "${RPM_SOURCE_DIR}/rest-service/dev-requirements.txt"
 %_manager_env/bin/pip install "${RPM_SOURCE_DIR}/rest-service"[dbus]
 %_manager_env/bin/pip install "${RPM_SOURCE_DIR}/amqp-postgres"
-
-# Jinja2 includes 2 files which will only be imported if async is available,
-# but rpmbuild's brp-python-bytecompile falls over when it finds them. Here
-# we remove them.
-rm -f %_manager_env/lib/python2.7/site-packages/jinja2/async*.py
-
 
 %install
 
