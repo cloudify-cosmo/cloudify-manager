@@ -202,11 +202,11 @@ class DeploymentUpdate(SecuredResource):
 
 class DeploymentUpdateId(SecuredResource):
     @swagger.operation(
-            responseClass=models.DeploymentUpdate,
-            nickname="DeploymentUpdate",
-            notes='Return a single deployment update',
-            parameters=create_filter_params_list_description(
-                models.DeploymentUpdate.response_fields, 'deployment update')
+        responseClass=models.DeploymentUpdate,
+        nickname="DeploymentUpdate",
+        notes='Return a single deployment update',
+        parameters=create_filter_params_list_description(
+            models.DeploymentUpdate.response_fields, 'deployment update')
     )
     @authorize('deployment_update_get')
     @rest_decorators.marshal_with(models.DeploymentUpdate)
@@ -219,13 +219,13 @@ class DeploymentUpdateId(SecuredResource):
 
 class DeploymentUpdates(SecuredResource):
     @swagger.operation(
-            responseClass='List[{0}]'.format(models.DeploymentUpdate.__name__),
-            nickname="listDeploymentUpdates",
-            notes='Returns a list of deployment updates',
-            parameters=create_filter_params_list_description(
-                    models.DeploymentUpdate.response_fields,
-                    'deployment updates'
-            )
+        responseClass='List[{0}]'.format(models.DeploymentUpdate.__name__),
+        nickname="listDeploymentUpdates",
+        notes='Returns a list of deployment updates',
+        parameters=create_filter_params_list_description(
+            models.DeploymentUpdate.response_fields,
+            'deployment updates'
+        )
     )
     @authorize('deployment_update_list')
     @rest_decorators.marshal_with(models.DeploymentUpdate)
