@@ -1447,6 +1447,9 @@ class ResourceManager(object):
                                       deployment_id,
                                       modified_nodes,
                                       context):
+        if context.get('abort_starting', False):
+            self.abort_started_modifications(deployment_id)
+
         deployment = self.sm.get(models.Deployment, deployment_id)
 
         deployment_id_filter = self.create_filters_dict(
@@ -1554,6 +1557,18 @@ class ResourceManager(object):
         self._create_deployment_node_instances(deployment_id,
                                                added_node_instances)
         return modification
+
+    def abort_started_modifications(self, deployment_id):
+        started_deployment_filter = self.create_filters_dict(
+            deployment_id=deployment_id,
+            status=DeploymentModificationState.STARTED)
+
+        started_modifications = self.sm.list(
+            models.DeploymentModification,
+            filters=started_deployment_filter
+        )
+        for m in started_modifications:
+            self.rollback_deployment_modification(m.id)
 
     def finish_deployment_modification(self, modification_id):
         modification = self.sm.get(

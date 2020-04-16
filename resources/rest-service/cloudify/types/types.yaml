@@ -797,6 +797,11 @@ workflows:
             occurs during the workflow, otherwise the rollback will be
             triggered.
         default: true
+      abort_starting:
+        description: >
+          Remove any starting nodes and deployment modifications created prior
+          to the interrupted scaling workflow.
+        default: false
         type: boolean
 
   install_new_agents:
