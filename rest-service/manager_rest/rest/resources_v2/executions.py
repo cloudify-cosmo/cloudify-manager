@@ -60,7 +60,7 @@ class Executions(resources_v1.Executions):
         """
         is_include_system_workflows = rest_utils.verify_and_convert_bool(
             '_include_system_workflows',
-            request.args.get('_include_system_workflows', 'false'))
+            request.args.get('_include_system_workflows', False))
         get_all_results = rest_utils.verify_and_convert_bool(
             '_get_all_results',
             request.args.get('_get_all_results', False)

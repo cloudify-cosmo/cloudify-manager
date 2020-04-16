@@ -98,19 +98,19 @@ class SnapshotsId(SecuredResource):
         request_dict = rest_utils.get_json_and_verify_params()
         include_credentials = rest_utils.verify_and_convert_bool(
             'include_credentials',
-            request_dict.get('include_credentials', 'true')
+            request_dict.get('include_credentials', True)
         )
         include_logs = rest_utils.verify_and_convert_bool(
             'include_logs',
-            request_dict.get('include_logs', 'true')
+            request_dict.get('include_logs', True)
         )
         include_events = rest_utils.verify_and_convert_bool(
             'include_events',
-            request_dict.get('include_events', 'true')
+            request_dict.get('include_events', True)
         )
         queue = rest_utils.verify_and_convert_bool(
             'queue',
-            request_dict.get('queue', 'false')
+            request_dict.get('queue', False)
         )
         execution = get_resource_manager().create_snapshot(
             snapshot_id,
@@ -236,16 +236,16 @@ class SnapshotsIdRestore(SecuredResource):
         )
         restore_certificates = rest_utils.verify_and_convert_bool(
             'restore_certificates',
-            request_dict.get('restore_certificates', 'false')
+            request_dict.get('restore_certificates', False)
         )
         no_reboot = rest_utils.verify_and_convert_bool(
             'no_reboot',
-            request_dict.get('no_reboot', 'false')
+            request_dict.get('no_reboot', False)
         )
         ignore_plugin_failure = \
             rest_utils.verify_and_convert_bool(
                 'ignore_plugin_failure',
-                request_dict.get('ignore_plugin_failure', 'false')
+                request_dict.get('ignore_plugin_failure', False)
             )
         if no_reboot and not restore_certificates:
             raise manager_exceptions.BadParametersError(
