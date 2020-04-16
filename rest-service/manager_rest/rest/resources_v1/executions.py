@@ -89,16 +89,16 @@ class Executions(SecuredResource):
 
         allow_custom_parameters = verify_and_convert_bool(
             'allow_custom_parameters',
-            request_dict.get('allow_custom_parameters', 'false'))
+            request_dict.get('allow_custom_parameters', False))
         force = verify_and_convert_bool(
             'force',
-            request_dict.get('force', 'false'))
+            request_dict.get('force', False))
         dry_run = verify_and_convert_bool(
             'dry_run',
-            request_dict.get('dry_run', 'false'))
+            request_dict.get('dry_run', False))
         queue = verify_and_convert_bool(
             'queue',
-            request_dict.get('queue', 'false'))
+            request_dict.get('queue', False))
 
         deployment_id = request_dict['deployment_id']
         workflow_id = request_dict['workflow_id']

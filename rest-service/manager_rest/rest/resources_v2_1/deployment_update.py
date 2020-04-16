@@ -158,32 +158,32 @@ class DeploymentUpdate(SecuredResource):
     def _parse_args(deployment_id, request_json, using_post_request=False):
         skip_install = verify_and_convert_bool(
             'skip_install',
-            request_json.get('skip_install', 'false'))
+            request_json.get('skip_install', False))
         skip_uninstall = verify_and_convert_bool(
             'skip_uninstall',
-            request_json.get('skip_uninstall', 'false'))
+            request_json.get('skip_uninstall', False))
         skip_reinstall = verify_and_convert_bool(
             'skip_reinstall',
             request_json.get('skip_reinstall', using_post_request))
         force = verify_and_convert_bool(
             'force',
-            request_json.get('force', 'false'))
+            request_json.get('force', False))
         ignore_failure = verify_and_convert_bool(
             'ignore_failure',
-            request_json.get('ignore_failure', 'false'))
+            request_json.get('ignore_failure', False))
         install_first = verify_and_convert_bool(
             'install_first',
             request_json.get('install_first', using_post_request))
         preview = not using_post_request and verify_and_convert_bool(
             'preview',
-            request_json.get('preview', 'false'))
+            request_json.get('preview', False))
         workflow_id = request_json.get('workflow_id', None)
         update_plugins = verify_and_convert_bool(
             'update_plugins',
-            request_json.get('update_plugins', 'true'))
+            request_json.get('update_plugins', True))
         runtime_only_evaluation = verify_and_convert_bool(
             'runtime_only_evaluation',
-            request_json.get('runtime_only_evaluation', 'false')
+            request_json.get('runtime_only_evaluation', False)
         )
         manager = get_deployment_updates_manager(preview)
         manager.validate_no_active_updates_per_deployment(deployment_id,
