@@ -579,6 +579,12 @@ workflows:
       ignore_failure:
         default: false
         type: boolean
+      abort_started:
+        description: >
+          Remove any started deployment modifications created prior to the
+          scaling workflow.
+        default: false
+        type: boolean
 
   install_new_agents:
     mapping: default_workflows.cloudify.plugins.workflows.install_new_agents
