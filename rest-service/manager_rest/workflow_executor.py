@@ -204,9 +204,9 @@ def _execute_task(execution_id, execution_parameters,
     sm = get_storage_manager()
     managers = sm.list(models.Manager)
     # Get the rest host from manager networks
-    context['rest_host'] = [
+    context['rest_host'] = list(set([
         net for manager in managers for net in manager.networks.values()
-    ]
+    ]))
     context['rest_token'] = execution_creator.get_auth_token()
     context['tenant'] = _get_tenant_dict()
     context['task_target'] = MGMTWORKER_QUEUE
