@@ -126,9 +126,7 @@ class SQLStorageManager(object):
                       model_class,
                       filters,
                       substr_filters,
-                      all_tenants,
-                      like_filters,
-                      notlike_filters):
+                      all_tenants):
         """Add filter clauses to the query
 
         :param query: Base SQL query
@@ -138,19 +136,12 @@ class SQLStorageManager(object):
         a SQLAlchemy filter
         :param substr_filters: An optional dictionary similar to filters,
                        when the results are filtered by substrings
-        :param like_filters: An optional dictionary similar to filters,
-         the ilike operator is applied to the given values. If a list/tuple is
-         passed, then all the items are AND-ed.
-        :param notilike_filters: An optional dictionary similar to filters,
-         the notilike operator is applied to the given values.
         :return: An SQLAlchemy AppenderQuery object
         """
         query = self._add_tenant_filter(query, model_class, all_tenants)
         query = self._add_permissions_filter(query, model_class)
         query = self._add_value_filter(query, filters)
         query = self._add_substr_filter(query, substr_filters)
-        query = self._add_like_filter(query, like_filters)
-        query = self._add_notlike_filter(query, notlike_filters)
         return query
 
     def _add_value_filter(self, query, filters):
@@ -172,38 +163,6 @@ class SQLStorageManager(object):
             else:
                 raise manager_exceptions.BadParametersError(
                     'Substring filtering is only supported for strings'
-                )
-        return query
-
-    @staticmethod
-    def _add_like_filter(query, filters):
-        for column, value in filters.items():
-            if isinstance(value, text_type):
-                query = query.filter(column.ilike(value))
-            elif isinstance(value, (list, tuple)):
-                criteria = (column.ilike(expression)
-                            for expression in value)
-                query = query.filter(*criteria)
-            else:
-                raise manager_exceptions.BadParametersError(
-                    'Like filtering is only supported for strings and '
-                    'lists/tuples'
-                )
-        return query
-
-    @staticmethod
-    def _add_notlike_filter(query, filters):
-        for column, value in filters.items():
-            if isinstance(value, text_type):
-                query = query.filter(column.notilike(value))
-            elif isinstance(value, (list, tuple)):
-                criteria = (column.notilike(expression)
-                            for expression in value)
-                query = query.filter(*criteria)
-            else:
-                raise manager_exceptions.BadParametersError(
-                    'Notlike filtering is only supported for strings and '
-                    'lists/tuples'
                 )
         return query
 
@@ -327,9 +286,7 @@ class SQLStorageManager(object):
                                          include,
                                          filters,
                                          substr_filters,
-                                         sort,
-                                         like_filters,
-                                         notlike_filters):
+                                         sort):
         """Get a list of tables on which we need to join and the converted
         `include`, `filters` and `sort` arguments (converted to actual SQLA
         column/label objects instead of column names)
@@ -338,24 +295,17 @@ class SQLStorageManager(object):
         filters = filters or dict()
         substr_filters = substr_filters or dict()
         sort = sort or OrderedDict()
-        like_filters = like_filters or dict()
-        notlike_filters = notlike_filters or dict()
 
         all_columns = set(include) | set(filters.keys()) | set(sort.keys())
-        all_columns |= set(substr_filters.keys()) | set(like_filters)
-        all_columns |= set(notlike_filters)
         joins = self._get_joins(model_class, all_columns)
 
-        (include, filters, substr_filters, sort, like_filters,
-         notlike_filters) = self._get_columns_from_field_names(model_class,
-                                                               include,
-                                                               filters,
-                                                               substr_filters,
-                                                               sort,
-                                                               like_filters,
-                                                               notlike_filters)
-        return (include, filters, substr_filters, sort, joins, like_filters,
-                notlike_filters)
+        include, filters, substr_filters, sort = \
+            self._get_columns_from_field_names(model_class,
+                                               include,
+                                               filters,
+                                               substr_filters,
+                                               sort)
+        return include, filters, substr_filters, sort, joins
 
     def _get_query(self,
                    model_class,
@@ -363,9 +313,7 @@ class SQLStorageManager(object):
                    filters=None,
                    substr_filters=None,
                    sort=None,
-                   all_tenants=None,
-                   like_filters=None,
-                   notlike_filters=None):
+                   all_tenants=None):
         """Get an SQL query object based on the params passed
 
         :param model_class: SQL DB table class
@@ -377,32 +325,22 @@ class SQLStorageManager(object):
                                when the results are filtered by substrings
         :param sort: An optional dictionary where keys are column names to
         sort by, and values are the order (asc/desc)
-        :param like_filters: An optional dictionary similar to filters,
-         the ilike operator is applied to the given values. If a list/tuple is
-         passed, then all the items are AND-ed.
-        :param notilike_filters: An optional dictionary similar to filters,
-         the notilike operator is applied to the given values.
         :return: A sorted and filtered query with only the relevant
         columns
         """
-        (include, filters, substr_filters, sort, joins, like_filters,
-         notlike_filters) = self._get_joins_and_converted_columns(
-            model_class,
-            include,
-            filters,
-            substr_filters,
-            sort,
-            like_filters,
-            notlike_filters)
+        include, filters, substr_filters, sort, joins = \
+            self._get_joins_and_converted_columns(model_class,
+                                                  include,
+                                                  filters,
+                                                  substr_filters,
+                                                  sort)
 
         query = self._get_base_query(model_class, include, joins)
         query = self._filter_query(query,
                                    model_class,
                                    filters,
                                    substr_filters,
-                                   all_tenants,
-                                   like_filters,
-                                   notlike_filters)
+                                   all_tenants)
         query = self._sort_query(query, model_class, sort)
         return query
 
@@ -411,29 +349,19 @@ class SQLStorageManager(object):
                                       include,
                                       filters,
                                       substr_filters,
-                                      sort,
-                                      like_filters,
-                                      notlike_filters):
+                                      sort):
         """Go over the optional parameters (include, filters, sort), and
         replace column names with actual SQLA column objects
         """
-
-        def get_columns_for_list(l):
-            return [self._get_column(model_class, c) for c in l]
-
-        def get_columns_for_dict(d):
-            return {self._get_column(model_class, key): d[key] for key in d}
-
-        include = get_columns_for_list(include)
-        filters = get_columns_for_dict(filters)
-        substr_filters = get_columns_for_dict(substr_filters)
+        include = [self._get_column(model_class, c) for c in include]
+        filters = {self._get_column(model_class, c): filters[c]
+                   for c in filters}
+        substr_filters = {self._get_column(model_class, c): substr_filters[c]
+                          for c in substr_filters}
         sort = OrderedDict((self._get_column(model_class, c), sort[c])
                            for c in sort)
-        like_filters = get_columns_for_dict(like_filters)
-        notlike_filters = get_columns_for_dict(notlike_filters)
 
-        return (include, filters, substr_filters, sort, like_filters,
-                notlike_filters)
+        return include, filters, substr_filters, sort
 
     @staticmethod
     def _get_column(model_class, column_name):
@@ -614,9 +542,7 @@ class SQLStorageManager(object):
              sort=None,
              all_tenants=None,
              substr_filters=None,
-             get_all_results=False,
-             like_filters=None,
-             notlike_filters=None):
+             get_all_results=False):
         """Return a list of `model_class` results
 
         :param model_class: SQL DB table class
@@ -634,11 +560,6 @@ class SQLStorageManager(object):
         :param get_all_results: Get all the results without the limitation of
                                 size or pagination. Use it carefully to
                                 prevent consumption of too much memory
-        :param like_filters: An optional dictionary similar to filters,
-         the ilike operator is applied to the given values. If a list/tuple is
-         passed, then all the items are AND-ed.
-        :param notlike_filters: An optional dictionary similar to filters,
-         the notilike operator is applied to the given values.
         :return: A (possibly empty) list of `model_class` results
         """
         self._validate_available_memory()
@@ -655,9 +576,7 @@ class SQLStorageManager(object):
                                 filters,
                                 substr_filters,
                                 sort,
-                                all_tenants,
-                                like_filters,
-                                notlike_filters)
+                                all_tenants)
 
         results, total, size, offset = self._paginate(query,
                                                       pagination,

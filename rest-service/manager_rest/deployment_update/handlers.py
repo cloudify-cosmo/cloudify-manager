@@ -17,7 +17,6 @@ from copy import deepcopy
 from sqlalchemy import and_, cast
 from sqlalchemy.dialects.postgresql import JSON
 
-
 from cloudify.models_states import ExecutionState
 from cloudify.workflows import tasks as cloudify_tasks
 from cloudify.deployment_dependencies import (SOURCE_DEPLOYMENT,
@@ -887,7 +886,7 @@ class DeploymentDependencies(UpdateHandler):
             for dependency in self.sm.list(
                 models.InterDeploymentDependencies,
                 get_all_results=True,
-                **query_filters)
+                filters=query_filters)
         }
         new_dependencies = dep_update.deployment_plan.setdefault(
             INTER_DEPLOYMENT_FUNCTIONS, {})
@@ -945,13 +944,11 @@ class DeploymentDependencies(UpdateHandler):
         self._handle_dependency_changes(
             dep_update,
             query_filters={
-                'filters': {SOURCE_DEPLOYMENT: source_deployment},
-                'notlike_filters': {
-                    DEPENDENCY_CREATOR:
-                        ['{0}.%'.format(NODES),
-                         '{0}.%'.format(COMPONENT),
-                         '{0}.%'.format(SHARED_RESOURCE)]
-                }
+                SOURCE_DEPLOYMENT: source_deployment,
+                DEPENDENCY_CREATOR: (lambda col: col.notilike(
+                    '{0}.%'.format(NODES),
+                    '{0}.%'.format(COMPONENT),
+                    '{0}.%'.format(SHARED_RESOURCE)))
             },
             dep_plan_filter_func=is_non_node)
 
@@ -960,15 +957,14 @@ class DeploymentDependencies(UpdateHandler):
             return dependency_creator.startswith(NODES)
         source_deployment = self.sm.get(models.Deployment,
                                         dep_update.deployment_id)
-        query_filters = {
-            'filters': {SOURCE_DEPLOYMENT: source_deployment},
-            'like_filters': {
-                DEPENDENCY_CREATOR: '{0}.%'.format(NODES)
-            }
-        }
+
         self._handle_dependency_changes(
             dep_update,
-            query_filters=query_filters,
+            query_filters={
+                SOURCE_DEPLOYMENT: source_deployment,
+                DEPENDENCY_CREATOR: (lambda col: col.ilike(
+                    '{0}.%'.format(NODES)))
+            },
             keep_outdated_dependencies=dep_update.
             keep_old_deployment_dependencies,
             dep_plan_filter_func=is_node)
