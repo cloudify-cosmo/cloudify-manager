@@ -945,10 +945,12 @@ class DeploymentDependencies(UpdateHandler):
             dep_update,
             query_filters={
                 SOURCE_DEPLOYMENT: source_deployment,
-                DEPENDENCY_CREATOR: (lambda col: col.notilike(
-                    '{0}.%'.format(NODES),
-                    '{0}.%'.format(COMPONENT),
-                    '{0}.%'.format(SHARED_RESOURCE)))
+                DEPENDENCY_CREATOR:
+                [
+                    lambda col: col.notilike('{0}.%'.format(NODES)),
+                    lambda col: col.notilike('{0}.%'.format(COMPONENT)),
+                    lambda col: col.notilike('{0}.%'.format(SHARED_RESOURCE))
+                ]
             },
             dep_plan_filter_func=is_non_node)
 

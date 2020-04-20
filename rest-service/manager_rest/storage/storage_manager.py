@@ -150,7 +150,12 @@ class SQLStorageManager(object):
             if callable(value):
                 query = query.filter(value(column))
             elif isinstance(value, (list, tuple)):
-                query = query.filter(column.in_(value))
+                if all(callable(item) for item in value):
+                    operations_filter = (operation(column)
+                                         for operation in value)
+                    query = query.filter(*operations_filter)
+                else:
+                    query = query.filter(column.in_(value))
             else:
                 query = query.filter(column == value)
         return query
