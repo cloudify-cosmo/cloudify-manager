@@ -714,48 +714,6 @@ class SQLStorageManager(object):
         self._load_relationships(instance)
         return instance
 
-    def upsert(self,
-               model_class,
-               filters,
-               init_kwargs,
-               update_func,
-               all_tenants=None):
-        """Updates the first instance that matches the given init_kwargs, or
-        inserts one if none exist.
-        Since this isn't race-condition-failsafe, IntegrityError may be raised
-        when the session is flushed or SQLStorageException if the commit fails.
-
-        :param model_class: SQL DB table class.
-        :param filters: A dictionary where keys are column names to filter by,
-         and values are values applicable for those columns (or lists of such
-         values). This should identify the instance.
-        :param init_kwargs: kwargs to initialize the instance with, if no
-         instance was found in the query.
-        :param update_func: "(instance) -> None" function that performs an
-         update on the instance that is returned by the query.
-        :param all_tenants: Include resources from all tenants associated
-         with the user.
-        :return: The updated or inserted instance.
-        """
-        current_app.logger.debug(
-            'Update or Insert `{0}` with init kwargs '
-            '`{1}`'.format(model_class.__name__, init_kwargs))
-        query = self._get_query(
-            model_class, filters=filters, all_tenants=all_tenants)
-        query = query.with_for_update()
-        result = query.first()
-
-        if not result:
-            init_kwargs_str = ','.join('{0}={1}'.format(k, v)
-                                       for k, v in init_kwargs.items())
-            current_app.logger.debug(
-                'No such instance found, inserting {0}({1})...'.format(
-                    model_class.__name__, init_kwargs_str))
-            return self.put(model_class(**init_kwargs))
-
-        update_func(result)
-        return self.update(result)
-
 
 class ReadOnlyStorageManager(SQLStorageManager):
     def put(self, instance):
