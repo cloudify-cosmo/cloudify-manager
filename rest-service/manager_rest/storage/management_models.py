@@ -589,7 +589,7 @@ class _WithCACert(object):
         if not self.ca_cert_content:
             return
 
-        with tempfile.NamedTemporaryFile(delete=False) as f:
+        with tempfile.NamedTemporaryFile(delete=False, mode='w') as f:
             f.write(self.ca_cert_content)
         return f.name
 
