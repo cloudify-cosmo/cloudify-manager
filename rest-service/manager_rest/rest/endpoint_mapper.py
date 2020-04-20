@@ -49,8 +49,6 @@ def setup_resources(api):
                                     'set-visibility',
         'InterDeploymentDependencies':
             'deployments/inter-deployment-dependencies',
-        'InterDeploymentDependency':
-            'deployments/inter-deployment-dependencies/id',
         'DeploymentModifications': 'deployment-modifications',
         'DeploymentModificationsId': 'deployment-modifications/'
                                      '<string:modification_id>',

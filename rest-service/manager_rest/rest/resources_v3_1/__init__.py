@@ -56,7 +56,6 @@ from .deployments import (                       # NOQA
     DeploymentsSetSite,
     DeploymentsSetVisibility,
     DeploymentsIdCapabilities,
-    InterDeploymentDependency,
     InterDeploymentDependencies
 )
 

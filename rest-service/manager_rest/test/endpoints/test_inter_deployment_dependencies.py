@@ -19,6 +19,7 @@ from cloudify.deployment_dependencies import create_deployment_dependency
 
 from manager_rest import utils
 from manager_rest.storage import models
+from manager_rest.manager_exceptions import NotFoundError
 
 from manager_rest.test import base_test
 from manager_rest.test.attribute import attr
@@ -74,9 +75,11 @@ class InterDeploymentDependenciesTest(BaseServerTestCase):
     def test_adds_dependency_and_retrieves_it(self):
         dependency = self.client.inter_deployment_dependencies.create(
             **self.dependency)
-        response = self.client.inter_deployment_dependencies.get(
-            **self.dependency)
-        self.assertDictEqual(dependency, response)
+        response = self.client.inter_deployment_dependencies.list()
+        if response:
+            self.assertDictEqual(dependency, response[0])
+        else:
+            raise NotFoundError(**self.dependency)
 
     def test_fails_to_add_duplicate_dependency(self):
         self.client.inter_deployment_dependencies.create(
@@ -106,17 +109,6 @@ class InterDeploymentDependenciesTest(BaseServerTestCase):
                           'with ID `None` was not found \\(filters:'
         with self.assertRaisesRegexp(CloudifyClientError, error_msg_regex):
             self.client.inter_deployment_dependencies.delete(
-                **self.dependency)
-
-    def test_fails_to_get_non_existing_dependency(self):
-        error_msg_regex = \
-            '404: Requested Inter-deployment Dependency ' \
-            'with params `dependency_creator: {dependency_creator}, ' \
-            'source_deployment: {source_deployment}, ' \
-            'target_deployment: {target_deployment}` was not ' \
-            'found'.format(**self.dependency)
-        with self.assertRaisesRegexp(CloudifyClientError, error_msg_regex):
-            self.client.inter_deployment_dependencies.get(
                 **self.dependency)
 
     def test_list_dependencies_returns_empty_list(self):

@@ -159,50 +159,6 @@ def _get_site_name(request_dict):
     return site_name
 
 
-class InterDeploymentDependency(SecuredResource):
-
-    @swagger.operation(
-        responseClass=models.InterDeploymentDependencies,
-        nickname="InterDeploymentDependency",
-        notes='Return a single inter-deployment dependency',
-        parameters=utils.create_filter_params_list_description(
-            models.InterDeploymentDependencies.response_fields,
-            'inter-deployment dependency')
-    )
-    @authorize('inter_deployment_dependency_get')
-    @rest_decorators.marshal_with(models.InterDeploymentDependencies)
-    def get(self, _include=None):
-        """Get an inter-deployment dependency by its attributes"""
-        args = rest_utils.get_args_and_verify_arguments([
-            Argument(DEPENDENCY_CREATOR, required=True),
-            Argument(SOURCE_DEPLOYMENT, required=True),
-            Argument(TARGET_DEPLOYMENT, required=True)
-        ])
-        sm = get_storage_manager()
-        dependency_creator = args[DEPENDENCY_CREATOR]
-        source_deployment = sm.get(models.Deployment,
-                                   args[SOURCE_DEPLOYMENT])
-        target_deployment = sm.get(models.Deployment,
-                                   args[TARGET_DEPLOYMENT])
-        filters = create_deployment_dependency(dependency_creator,
-                                               source_deployment,
-                                               target_deployment)
-        list_of_dependencies = sm.list(
-            models.InterDeploymentDependencies,
-            filters=filters,
-            include=_include).items
-        if not list_of_dependencies:
-            raise manager_exceptions.NotFoundError(
-                'Requested Inter-deployment Dependency with params '
-                '`dependency_creator: {0}, source_deployment: {1}, '
-                'target_deployment: {2}` was not found.'
-                ''.format(dependency_creator,
-                          source_deployment.id,
-                          target_deployment.id)
-            )
-        return list_of_dependencies[0]
-
-
 class InterDeploymentDependencies(SecuredResource):
     @swagger.operation(
         responseClass=models.InterDeploymentDependencies,
@@ -247,16 +203,16 @@ class InterDeploymentDependencies(SecuredResource):
                                    fail_silently=True)
         if not source_deployment:
             raise manager_exceptions.NotFoundError(
-                'Given source deployment with ID `{0}` does not exist.'
-                ''.format(source_deployment_id)
+                'Given source deployment with ID `{0}` does not exist.'.format(
+                    source_deployment_id)
             )
         target_deployment = sm.get(models.Deployment,
                                    target_deployment_id,
                                    fail_silently=True)
         if not target_deployment:
             raise manager_exceptions.NotFoundError(
-                'Given target deployment with ID `{0}` does not exist.'
-                ''.format(target_deployment_id)
+                'Given target deployment with ID `{0}` does not exist.'.format(
+                    target_deployment_id)
             )
         return source_deployment, target_deployment
 
