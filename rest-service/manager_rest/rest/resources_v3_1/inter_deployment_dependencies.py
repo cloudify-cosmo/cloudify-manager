@@ -44,7 +44,7 @@ class InterDeploymentDependency(SecuredResource):
     @authorize('inter_deployment_dependency_get')
     @rest_decorators.marshal_with(models.InterDeploymentDependencies)
     def get(self, _include=None):
-        """Get an inter-deployment dependency by id"""
+        """Get an inter-deployment dependency by its attributes"""
         args = get_args_and_verify_arguments([
             Argument(DEPENDENCY_CREATOR, required=True),
             Argument(SOURCE_DEPLOYMENT, required=True),

@@ -14,9 +14,13 @@
 
 import mock
 
+from cloudify.deployment_dependencies import dependency_creator_generator
+from cloudify.constants import SHARED_RESOURCE
+from cloudify.exceptions import NonRecoverableError
+
 from cloudify_types.component.constants import CAPABILITIES
 
-from ..operations import connect_deployment
+from ..operations import connect_deployment, disconnect_deployment
 from .base_test_suite import TestSharedResourceBase
 
 
@@ -45,7 +49,34 @@ class TestSharedResource(TestSharedResourceBase):
                 self.assertIn('deployment',
                               self._ctx.instance.runtime_properties)
                 self.assertEqual(self._ctx.instance.runtime_properties[
-                                     'deployment']['id'], 'test')
+                                     'deployment']['id'], 'test_deployment')
                 self.assertEqual(
                     {'test': 1},
                     (self._ctx.instance.runtime_properties[CAPABILITIES]))
+
+    @mock.patch('cloudify_types.shared_resource.shared_resource'
+                '.get_deployment_by_id',
+                return_value=False)
+    def test_validate_deployment_fails_when_deployment_doesnt_exist(self, _):
+        self.assertRaisesRegexp(NonRecoverableError,
+                                r'SharedResource\'s deployment ID '
+                                r'"test_deployment" does not exist.',
+                                connect_deployment)
+        self.assertNotIn('deployment',
+                         self._ctx.instance.runtime_properties)
+        self.cfy_mock_client.inter_deployment_dependencies.create \
+            .assert_not_called()
+
+    @mock.patch('cloudify_types.shared_resource.shared_resource'
+                '.get_deployment_by_id',
+                return_value=True)
+    def test_disconnecting_deployment_removes_deployment_dependency(self, _):
+        disconnect_deployment()
+
+        self.cfy_mock_client.inter_deployment_dependencies.delete \
+            .assert_called_with(
+                dependency_creator=dependency_creator_generator(
+                    SHARED_RESOURCE, self._ctx.instance.id),
+                source_deployment=self._ctx.deployment.id,
+                target_deployment='test_deployment'
+            )

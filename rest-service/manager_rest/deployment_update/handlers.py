@@ -891,13 +891,13 @@ class DeploymentDependencies(UpdateHandler):
         }
         new_dependencies = dep_update.deployment_plan.setdefault(
             INTER_DEPLOYMENT_FUNCTIONS, {})
-        new_dependencies = {
+        new_dependencies_dict = {
             creator: target
             for creator, target in new_dependencies.items()
             if dep_plan_filter_func(creator)
         }
         for dependency_creator, target_deployment_id \
-                in new_dependencies.items():
+                in new_dependencies_dict.items():
             target_deployment = self.sm.get(
                 models.Deployment, target_deployment_id) \
                 if target_deployment_id else None
@@ -931,7 +931,7 @@ class DeploymentDependencies(UpdateHandler):
 
         dependencies_to_remove = (dependency for creator, dependency
                                   in curr_dependencies.items()
-                                  if creator not in new_dependencies)
+                                  if creator not in new_dependencies_dict)
         for dependency in dependencies_to_remove:
             self.sm.delete(dependency)
 

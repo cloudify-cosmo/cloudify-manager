@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import unittest
+from mock import patch
 
 from cloudify.state import current_ctx
 from cloudify.mocks import MockCloudifyContext
@@ -25,7 +26,7 @@ from ..constants import SHARED_RESOURCE_TYPE
 NODE_PROPS = {
     'resource_config': {
         'deployment': {
-            'id': 'test',
+            'id': 'test_deployment',
             'inputs': {}
         }
     }
@@ -39,9 +40,13 @@ class TestSharedResourceBase(unittest.TestCase):
         self._ctx = self.get_mock_ctx('test', SHARED_RESOURCE_TYPE)
         current_ctx.set(self._ctx)
         self.cfy_mock_client = MockCloudifyRestClient()
+        self.mock_client_patcher = patch('cloudify.manager.get_rest_client')
+        mock_client = self.mock_client_patcher.start()
+        mock_client.return_value = self.cfy_mock_client
 
     def tearDown(self):
         current_ctx.clear()
+        self.mock_client_patcher.stop()
         super(TestSharedResourceBase, self).tearDown()
 
     @staticmethod
@@ -54,10 +59,10 @@ class TestSharedResourceBase(unittest.TestCase):
         }
 
         ctx = MockCloudifyContext(
-            node_id=test_name,
-            node_name=test_name,
+            node_id='node_id-{0}'.format(test_name),
+            node_name='node_name-{0}'.format(test_name),
             node_type=mock_node_type,
-            deployment_id=test_name,
+            deployment_id='deployment_id-{0}'.format(test_name),
             operation=operation,
             properties=node_props
         )
