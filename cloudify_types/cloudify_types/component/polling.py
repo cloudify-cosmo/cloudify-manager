@@ -16,6 +16,7 @@ import time
 import logging
 
 from cloudify import ctx
+from cloudify.models_states import ExecutionState
 from cloudify.exceptions import NonRecoverableError
 
 from cloudify_types.utils import handle_client_exception
@@ -195,11 +196,15 @@ def is_deployment_execution_at_state(client,
         ctx.logger.debug(
             'The status for execution'
             ' "%s" is %s', execution_id, state)
-
         return True
-    elif execution_status == 'failed':
+    elif execution_status == ExecutionState.FAILED:
         raise NonRecoverableError(
             'Execution {0} failed.'.format(str(execution)))
+    elif execution_status in ExecutionState.END_STATES:
+        ctx.logger.info(
+            'The status for execution'
+            ' "%s" is %s, nothing to do', execution_id, execution_status)
+        return True
 
     return False
 

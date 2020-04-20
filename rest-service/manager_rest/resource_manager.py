@@ -1130,6 +1130,8 @@ class ResourceManager(object):
         graceful termination, in which case it might simply continue
         regardless and end up with a 'terminated' status)
 
+        If the execution is already complete or cancelled, nothing will be done
+
         :param execution_id: The execution id
         :param force: A boolean describing whether to force cancellation
         :param kill: A boolean describing whether to kill cancellation
@@ -1145,6 +1147,9 @@ class ResourceManager(object):
                                 ExecutionState.SCHEDULED):
             kill = True
             force = True
+        if execution.status in (ExecutionState.CANCELLED,
+                                ExecutionState.TERMINATED):
+            return
         if execution.status not in (ExecutionState.PENDING,
                                     ExecutionState.STARTED,
                                     ExecutionState.SCHEDULED) and \
