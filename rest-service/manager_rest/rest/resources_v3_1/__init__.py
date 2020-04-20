@@ -56,6 +56,8 @@ from .deployments import (                       # NOQA
     DeploymentsSetSite,
     DeploymentsSetVisibility,
     DeploymentsIdCapabilities,
+    InterDeploymentDependency,
+    InterDeploymentDependencies
 )
 
 from .blueprints import (                        # NOQA
@@ -92,9 +94,4 @@ from .cluster_status import (                    # NOQA
 
 from .snapshots import ( # noqa
     SnapshotsStatus
-)
-
-from .inter_deployment_dependencies import (           # NOQA
-    InterDeploymentDependency,
-    InterDeploymentDependencies
 )
