@@ -1130,8 +1130,6 @@ class ResourceManager(object):
         graceful termination, in which case it might simply continue
         regardless and end up with a 'terminated' status)
 
-        If the execution is already complete or cancelled, nothing will be done
-
         :param execution_id: The execution id
         :param force: A boolean describing whether to force cancellation
         :param kill: A boolean describing whether to kill cancellation
@@ -1147,9 +1145,6 @@ class ResourceManager(object):
                                 ExecutionState.SCHEDULED):
             kill = True
             force = True
-        if execution.status in (ExecutionState.CANCELLED,
-                                ExecutionState.TERMINATED):
-            return
         if execution.status not in (ExecutionState.PENDING,
                                     ExecutionState.STARTED,
                                     ExecutionState.SCHEDULED) and \
@@ -1173,11 +1168,13 @@ class ResourceManager(object):
         if kill:
             workflow_executor.cancel_execution(execution_id)
 
-        # Dealing with the inner Component-s deployments
+        # Dealing with the inner Components' deployments
         components_executions = self._find_all_components_executions(
             execution.deployment_id)
         for exec_id in components_executions:
-            self.cancel_execution(exec_id, force, kill)
+            execution = self.sm.get(models.Execution, exec_id)
+            if execution.status not in ExecutionState.END_STATES:
+                self.cancel_execution(exec_id, force, kill)
 
         return self.sm.update(execution)
 
