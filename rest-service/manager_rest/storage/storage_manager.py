@@ -13,16 +13,15 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import psutil
 from functools import wraps
 from collections import OrderedDict
-
-import psutil
 from flask_security import current_user
+from sqlalchemy import or_ as sql_or, func, inspect
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from flask import current_app, has_request_context
 from sqlite3 import DatabaseError as SQLiteDBError
-from sqlalchemy import or_ as sql_or, func, inspect
 from sqlalchemy.orm.attributes import flag_modified
-from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 
 from cloudify._compat import text_type
 from cloudify.models_states import VisibilityState
@@ -53,8 +52,7 @@ def no_autoflush(f):
 class SQLStorageManager(object):
     @staticmethod
     def _is_unique_constraint_violation(e):
-        return isinstance(e, IntegrityError) \
-               and 'violates unique constraint' in str(e)
+        return isinstance(e, IntegrityError) and e.orig.pgcode == '23505'
 
     def _safe_commit(self):
         """Try to commit changes in the session. Roll back if exception raised
