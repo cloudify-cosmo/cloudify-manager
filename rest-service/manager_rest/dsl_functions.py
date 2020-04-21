@@ -186,28 +186,24 @@ class FunctionEvaluationStorage(object):
                                         target_deployment,
                                         function_identifier):
 
-        @retry(retry_on_exception=lambda e: isinstance(e, SQLStorageException),
-               stop_max_attempt_number=3)
-        def create_dependency():
-            filters = create_deployment_dependency(function_identifier,
-                                                   source_deployment_instance)
-            init_kwargs = {
-                TARGET_DEPLOYMENT: target_deployment_instance,
-                'created_at': utils.get_formatted_timestamp(),
-                'id': dependency_id
-            }
-            init_kwargs.update(filters)
-            dependencies_list = self.sm.list(InterDeploymentDependencies,
-                                             filters=filters)
-            if dependencies_list:
-                first_dependency = dependencies_list[0]
-                first_dependency.target_deployment = target_deployment_instance
-                self.sm.update(first_dependency)
-            else:
-                self.sm.put(InterDeploymentDependencies(**init_kwargs))
-
         dependency_id = str(uuid.uuid4())
         source_deployment_instance = self.sm.get(
             Deployment, self._deployment_id)
         target_deployment_instance = self.sm.get(Deployment, target_deployment)
-        create_dependency()
+
+        filters = create_deployment_dependency(function_identifier,
+                                               source_deployment_instance)
+        init_kwargs = {
+            TARGET_DEPLOYMENT: target_deployment_instance,
+            'created_at': utils.get_formatted_timestamp(),
+            'id': dependency_id
+        }
+        init_kwargs.update(filters)
+        dependencies_list = self.sm.list(InterDeploymentDependencies,
+                                         filters=filters)
+        if dependencies_list:
+            first_dependency = dependencies_list[0]
+            first_dependency.target_deployment = target_deployment_instance
+            self.sm.update(first_dependency)
+        else:
+            self.sm.put(InterDeploymentDependencies(**init_kwargs))
