@@ -48,7 +48,7 @@ class ProviderContext(SQLModelBase):
 
     id = db.Column(db.Text, primary_key=True)
     name = db.Column(db.Text, nullable=False)
-    context = db.Column(db.PickleType, nullable=False)
+    context = db.Column(db.PickleType(protocol=2), nullable=False)
 
 
 class Role(SQLModelBase, RoleMixin):
