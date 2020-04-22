@@ -41,7 +41,8 @@ install_requires = [
     'packaging==17.1',
     'jsonschema==3.0.0',
     'SQLAlchemy==1.2.18',
-    'cachetools==3.1.0'
+    'cachetools==3.1.0',
+    'email-validator>1.0.0,<2.0.0'
 ]
 
 
