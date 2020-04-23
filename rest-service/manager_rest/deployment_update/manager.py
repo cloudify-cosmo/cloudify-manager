@@ -1,5 +1,5 @@
 ########
-# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
+# Copyright (c) 2017-2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -44,10 +44,10 @@ from manager_rest.deployment_update.constants import (
     DEFAULT_DEPLOYMENT_UPDATE_WORKFLOW
 )
 from manager_rest.deployment_update.handlers import (
+    DeploymentDependencies,
     DeploymentUpdateNodeHandler,
-    DeploymentUpdateNodeInstanceHandler,
-    DeploymentUpdateDeploymentHandler
-)
+    DeploymentUpdateDeploymentHandler,
+    DeploymentUpdateNodeInstanceHandler)
 
 
 class DeploymentUpdateManager(object):
@@ -57,6 +57,7 @@ class DeploymentUpdateManager(object):
         self._node_handler = DeploymentUpdateNodeHandler(sm)
         self._node_instance_handler = DeploymentUpdateNodeInstanceHandler(sm)
         self._deployment_handler = DeploymentUpdateDeploymentHandler(sm)
+        self._deployment_dependency_handler = DeploymentDependencies(sm)
         self._step_validator = StepValidator(sm)
 
     def get_deployment_update(self, deployment_update_id, include=None):
@@ -196,8 +197,12 @@ class DeploymentUpdateManager(object):
                                  reinstall_list=None,
                                  update_plugins=True):
         # Mark deployment update as committing
+        dep_update.keep_old_deployment_dependencies = skip_uninstall
         dep_update.state = STATES.UPDATING
         self.sm.update(dep_update)
+
+        # Handle inter-deployment dependencies changes
+        self._deployment_dependency_handler.handle(dep_update)
 
         # Handle any deployment related changes. i.e. workflows and deployments
         modified_deployment_entities, raw_updated_deployment = \
@@ -560,10 +565,10 @@ class DeploymentUpdateManager(object):
         self.sm.update(dep_update)
 
         # The order of these matter
-        for finalize in [self._deployment_handler.finalize,
-                         self._node_instance_handler.finalize,
-                         self._node_handler.finalize]:
-            finalize(dep_update)
+        self._deployment_handler.finalize(dep_update)
+        self._node_instance_handler.finalize(dep_update)
+        self._node_handler.finalize(dep_update)
+        self._deployment_dependency_handler.finalize(dep_update)
 
         # mark deployment update as successful
         dep_update.state = STATES.SUCCESSFUL

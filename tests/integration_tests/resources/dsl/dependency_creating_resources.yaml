@@ -1,0 +1,54 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - cloudify/types/types.yaml
+
+node_templates:
+
+  dual_component_node:
+    type: cloudify.nodes.Component
+    properties:
+      resource_config:
+        blueprint:
+          external_resource: true
+          id: component_blueprint
+        deployment:
+          id: dual_component_deployment
+          auto_inc_suffix: true
+    capabilities:
+      scalable:
+        properties:
+          default_instances: 2
+
+  single_component_node:
+    type: cloudify.nodes.Component
+    properties:
+      resource_config:
+        blueprint:
+          external_resource: true
+          id: component_blueprint
+        deployment:
+          id: single_component_deployment
+
+  shared_resource_node:
+    type: cloudify.nodes.SharedResource
+    properties:
+      resource_config:
+        deployment:
+          id: shared_resource_deployment
+
+  compute_node:
+    type: test_compute
+    properties:
+      install_agent: false
+      property_static: { get_capability: [shared_resource_deployment, capability1] }
+      property_runtime: { get_capability: [{ get_secret: shared_resource_deployment_key }, capability1] }
+
+node_types:
+  test_compute:
+    derived_from: cloudify.nodes.Compute
+    properties:
+      property_static:
+        default: ''
+      property_runtime:
+        default: ''

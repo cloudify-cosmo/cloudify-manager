@@ -1,0 +1,64 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - cloudify/types/types.yaml
+
+node_templates:
+
+  single_component_node:
+    type: cloudify.nodes.Component
+    properties:
+      resource_config:
+        blueprint:
+          external_resource: true
+          id: component_blueprint
+        deployment:
+          id: single_component_deployment1
+
+  shared_resource_node:
+    type: cloudify.nodes.SharedResource
+    properties:
+      resource_config:
+        deployment:
+          id: shared_resource_deployment1
+
+  compute_node:
+    type: test_compute
+    properties:
+      install_agent: false
+      static_changed_to_static: &static_get_capability { get_capability: [shared_resource_deployment1, capability1] }
+      static_changed_to_runtime: *static_get_capability
+      runtime_changed_to_runtime: &runtime_get_capability { get_capability: [{ get_secret: shared_resource_deployment1_key }, capability1] }
+      runtime_changed_to_static: *runtime_get_capability
+      might_be_deleted: *static_get_capability
+
+outputs:
+
+  should_be_deleted:
+    value: *static_get_capability
+  static_changed_to_static:
+    value: *static_get_capability
+  static_changed_to_runtime:
+    value: *static_get_capability
+  runtime_changed_to_runtime:
+    value: *runtime_get_capability
+  runtime_changed_to_static:
+    value: *runtime_get_capability
+
+node_types:
+
+  test_compute:
+    derived_from: cloudify.nodes.Compute
+    properties:
+      might_be_deleted:
+        description: This should be deleted if the 'skip_uninstall' flag is
+         False, otherwise it won't be deleted.
+        default: ''
+      static_changed_to_static:
+        default: ''
+      static_changed_to_runtime:
+        default: ''
+      runtime_changed_to_runtime:
+        default: ''
+      runtime_changed_to_static:
+        default: ''

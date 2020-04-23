@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2013 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,10 +14,11 @@
 #  * limitations under the License.
 
 import psutil
+from functools import wraps
 from collections import OrderedDict
 from flask_security import current_user
-from sqlalchemy import or_ as sql_or, func
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import or_ as sql_or, func, inspect
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from flask import current_app, has_request_context
 from sqlite3 import DatabaseError as SQLiteDBError
 from sqlalchemy.orm.attributes import flag_modified
@@ -39,19 +40,44 @@ except ImportError:
     Psycopg2DBError = None
 
 
+def no_autoflush(f):
+    @wraps(f)
+    def wrapper(*args, **kwrags):
+        with db.session.no_autoflush:
+            return f(*args, **kwrags)
+
+    return wrapper
+
+
 class SQLStorageManager(object):
     @staticmethod
-    def _safe_commit():
+    def _is_unique_constraint_violation(e):
+        return isinstance(e, IntegrityError) and e.orig.pgcode == '23505'
+
+    def _safe_commit(self):
         """Try to commit changes in the session. Roll back if exception raised
         Excepts SQLAlchemy errors and rollbacks if they're caught
         """
         try:
             db.session.commit()
         except sql_errors as e:
-            db.session.rollback()
-            raise manager_exceptions.SQLStorageException(
+            exception_to_raise = manager_exceptions.SQLStorageException(
                 'SQL Storage error: {0}'.format(str(e))
             )
+            db.session.rollback()
+            if SQLStorageManager._is_unique_constraint_violation(e):
+                problematic_instance_id = e.params['id']
+                # Session has been rolled back at this point
+                self.refresh(self.current_tenant)
+                exception_to_raise = manager_exceptions.ConflictError(
+                    'Instance with ID {0} cannot be added on {1} or with '
+                    'global visibility'
+                    ''.format(
+                        problematic_instance_id,
+                        self.current_tenant
+                    )
+                )
+            raise exception_to_raise
 
     def _get_base_query(self, model_class, include, joins):
         """Create the initial query from the model class and included columns
@@ -106,6 +132,8 @@ class SQLStorageManager(object):
         filter by, and values are values applicable for those columns (or lists
         of such values). Each value can also be a callable which returns
         a SQLAlchemy filter
+        :param substr_filters: An optional dictionary similar to filters,
+                       when the results are filtered by substrings
         :return: An SQLAlchemy AppenderQuery object
         """
         query = self._add_tenant_filter(query, model_class, all_tenants)
@@ -120,7 +148,12 @@ class SQLStorageManager(object):
             if callable(value):
                 query = query.filter(value(column))
             elif isinstance(value, (list, tuple)):
-                query = query.filter(column.in_(value))
+                if all(callable(item) for item in value):
+                    operations_filter = (operation(column)
+                                         for operation in value)
+                    query = query.filter(*operations_filter)
+                else:
+                    query = query.filter(column.in_(value))
             else:
                 query = query.filter(column == value)
         return query
@@ -291,6 +324,8 @@ class SQLStorageManager(object):
         :param filters: An optional dictionary where keys are column names to
         filter by, and values are values applicable for those columns (or lists
         of such values)
+        :param substr_filters: An optional dictionary similar to filters,
+                               when the results are filtered by substrings
         :param sort: An optional dictionary where keys are column names to
         sort by, and values are the order (asc/desc)
         :return: A sorted and filtered query with only the relevant
@@ -382,6 +417,7 @@ class SQLStorageManager(object):
                 )
             )
 
+    @no_autoflush
     def _validate_unique_resource_id_per_tenant(self, instance):
         """Assert that only a single resource exists with a given id in a
         given tenant
@@ -396,11 +432,13 @@ class SQLStorageManager(object):
                                                    instance.tenant)
         results = query.all()
 
-        # There should be only one instance with this id on this tenant or
-        # in another tenant if the resource is global
-        if len(results) != 1:
-            # Delete the newly added instance, and raise an error
-            db.session.delete(instance)
+        instance_flushed = inspect(instance).persistent
+        num_of_allowed_entries = 1 if instance_flushed else 0
+        if len(results) != num_of_allowed_entries:
+            if instance_flushed:
+                db.session.delete(instance)
+            else:
+                db.session.expunge(instance)
             self._safe_commit()
 
             raise manager_exceptions.ConflictError(
@@ -458,7 +496,8 @@ class SQLStorageManager(object):
             include=None,
             filters=None,
             locking=False,
-            all_tenants=None):
+            all_tenants=None,
+            fail_silently=False):
         """Return a single result based on the model class and element ID
         """
         current_app.logger.debug(
@@ -471,7 +510,7 @@ class SQLStorageManager(object):
             query = query.with_for_update()
         result = query.first()
 
-        if not result:
+        if not result and not fail_silently:
             if filters and set(filters.keys()) != {'id'}:
                 filters_message = ' (filters: {0})'.format(filters)
             else:
@@ -678,10 +717,10 @@ class ReadOnlyStorageManager(SQLStorageManager):
     def put(self, instance):
         return instance
 
-    def delete(self, instance):
+    def delete(self, instance, *_, **__):
         return instance
 
-    def update(self, instance, log=True, modified_attrs=()):
+    def update(self, instance, *_, **__):
         return instance
 
 

@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2015 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2020 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -47,6 +47,8 @@ def setup_resources(api):
             'deployments/<string:deployment_id>/capabilities',
         'DeploymentsSetVisibility': 'deployments/<string:deployment_id>/'
                                     'set-visibility',
+        'InterDeploymentDependencies':
+            'deployments/inter-deployment-dependencies',
         'DeploymentModifications': 'deployment-modifications',
         'DeploymentModificationsId': 'deployment-modifications/'
                                      '<string:modification_id>',

@@ -1,15 +1,37 @@
+# Copyright (c) 2017-2019 Cloudify Platform Ltd. All rights reserved
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#        http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import uuid
 from copy import deepcopy
 from sqlalchemy import and_, cast
 from sqlalchemy.dialects.postgresql import JSON
 
-
-from cloudify.constants import COMPUTE_NODE_TYPE
-from cloudify.workflows import tasks as cloudify_tasks
 from cloudify.models_states import ExecutionState
+from cloudify.workflows import tasks as cloudify_tasks
+from cloudify.deployment_dependencies import (SOURCE_DEPLOYMENT,
+                                              DEPENDENCY_CREATOR)
+from cloudify.constants import (
+    COMPONENT,
+    COMPUTE_NODE_TYPE,
+    SHARED_RESOURCE,
+)
 
-from dsl_parser.constants import (HOST_AGENT,
+from dsl_parser.constants import (NODES,
+                                  HOST_AGENT,
                                   PLUGIN_INSTALL_KEY,
-                                  PLUGIN_EXECUTOR_KEY)
+                                  PLUGIN_EXECUTOR_KEY,
+                                  INTER_DEPLOYMENT_FUNCTIONS)
 
 from manager_rest import utils
 from manager_rest.storage import models, get_node
@@ -836,6 +858,118 @@ class DeploymentUpdateDeploymentHandler(UpdateHandler):
         deployment = dep_update.deployment
         deployment.updated_at = utils.get_formatted_timestamp()
         self.sm.update(deployment)
+
+
+class DeploymentDependencies(UpdateHandler):
+    def _handle_dependency_changes(self,
+                                   dep_update,
+                                   query_filters,
+                                   dep_plan_filter_func,
+                                   keep_outdated_dependencies=False):
+        """Handles the dependency changes between what's currently in the DB
+        and what's in the new plan.
+
+        :param dep_update: a Deployment Update object.
+        :param query_filters: filters to use when querying about the current DB
+         dependencies. This function performs the changes on those queried
+         dependencies. These must match the filters arguments names of the
+         StorageManager.list(..) method.
+        :param dep_plan_filter_func: a function to filter the dependencies
+         registered in the deployment plan. The function gets a dependency
+         creator and outputs True if the dependency with that creator should
+         be handled.
+        :param keep_outdated_dependencies: if to remove dependencies that
+         aren't found in the new plan.
+        """
+        curr_dependencies = {
+            dependency.dependency_creator: dependency
+            for dependency in self.sm.list(
+                models.InterDeploymentDependencies,
+                get_all_results=True,
+                filters=query_filters)
+        }
+        new_dependencies = dep_update.deployment_plan.setdefault(
+            INTER_DEPLOYMENT_FUNCTIONS, {})
+        new_dependencies_dict = {
+            creator: target
+            for creator, target in new_dependencies.items()
+            if dep_plan_filter_func(creator)
+        }
+        for dependency_creator, target_deployment_id \
+                in new_dependencies_dict.items():
+            target_deployment = self.sm.get(
+                models.Deployment, target_deployment_id) \
+                if target_deployment_id else None
+            source_deployment = self.sm.get(
+                models.Deployment, dep_update.deployment_id)
+            if dependency_creator not in curr_dependencies:
+                now = utils.get_formatted_timestamp()
+                self.sm.put(models.InterDeploymentDependencies(
+                    dependency_creator=dependency_creator,
+                    source_deployment=source_deployment,
+                    target_deployment=target_deployment,
+                    created_at=now,
+                    id=str(uuid.uuid4())
+                ))
+                continue
+            if not target_deployment_id:
+                # New target deployment is unknown, keep the current value
+                continue
+
+            curr_target_deployment = \
+                curr_dependencies[dependency_creator].target_deployment
+            if curr_target_deployment == target_deployment_id:
+                continue
+
+            curr_dependencies[dependency_creator].target_deployment = \
+                target_deployment
+            self.sm.update(curr_dependencies[dependency_creator])
+
+        if keep_outdated_dependencies:
+            return
+
+        dependencies_to_remove = (dependency for creator, dependency
+                                  in curr_dependencies.items()
+                                  if creator not in new_dependencies_dict)
+        for dependency in dependencies_to_remove:
+            self.sm.delete(dependency)
+
+    def handle(self, dep_update):
+        def is_non_node(dependency_creator):
+            prefixes = [NODES, COMPONENT, SHARED_RESOURCE]
+            return all(not dependency_creator.startswith(prefix)
+                       for prefix in prefixes)
+        source_deployment = self.sm.get(models.Deployment,
+                                        dep_update.deployment_id)
+        self._handle_dependency_changes(
+            dep_update,
+            query_filters={
+                SOURCE_DEPLOYMENT: source_deployment,
+                DEPENDENCY_CREATOR:
+                [
+                    lambda col: col.notilike('{0}.%'.format(NODES)),
+                    lambda col: col.notilike('{0}.%'.format(COMPONENT)),
+                    lambda col: col.notilike('{0}.%'.format(SHARED_RESOURCE))
+                ]
+            },
+            dep_plan_filter_func=is_non_node)
+
+    def finalize(self, dep_update):
+        def is_node(dependency_creator):
+            return dependency_creator.startswith(NODES)
+        source_deployment = self.sm.get(models.Deployment,
+                                        dep_update.deployment_id)
+
+        self._handle_dependency_changes(
+            dep_update,
+            query_filters={
+                SOURCE_DEPLOYMENT: source_deployment,
+                DEPENDENCY_CREATOR: (lambda col: col.ilike(
+                    '{0}.%'.format(NODES)))
+            },
+            keep_outdated_dependencies=dep_update.
+            keep_old_deployment_dependencies,
+            dep_plan_filter_func=is_node)
 
 
 def _handle_version(version):

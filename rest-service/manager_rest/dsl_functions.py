@@ -1,32 +1,39 @@
-#########
-# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2017-2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#       http://www.apache.org/licenses/LICENSE-2.0
+#        http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
+import uuid
 from collections import namedtuple
 
 from dsl_parser import functions
 from dsl_parser import exceptions as parser_exceptions
+from dsl_parser.constants import CAPABILITIES, EVAL_FUNCS_PATH_PREFIX_KEY
 
 from cloudify import cryptography_utils
+from cloudify.deployment_dependencies import (create_deployment_dependency,
+                                              TARGET_DEPLOYMENT)
 
-from manager_rest.storage import get_storage_manager
-from manager_rest.storage import get_node as get_storage_node
-from manager_rest.storage.models import NodeInstance, Deployment, Secret
+from manager_rest import utils
+from manager_rest.storage import (get_storage_manager,
+                                  get_node as get_storage_node)
+from manager_rest.storage.models import (InterDeploymentDependencies,
+                                         NodeInstance,
+                                         Deployment,
+                                         Secret)
 from manager_rest.manager_exceptions import (
     FunctionsEvaluationError,
     DeploymentOutputsEvaluationError,
-    DeploymentCapabilitiesEvaluationError
+    DeploymentCapabilitiesEvaluationError,
 )
 
 SecretType = namedtuple('Secret', 'key value')
@@ -156,7 +163,8 @@ class FunctionEvaluationStorage(object):
         # instead of the current deployment, so we manually call the function
         capability = evaluate_intrinsic_functions(
             payload=capability,
-            deployment_id=shared_dep_id
+            deployment_id=shared_dep_id,
+            context={EVAL_FUNCS_PATH_PREFIX_KEY: CAPABILITIES}
         )
 
         # If it's a nested property of the capability
@@ -170,3 +178,28 @@ class FunctionEvaluationStorage(object):
                 raise FunctionsEvaluationError(str(e))
 
         return capability['value']
+
+    def set_inter_deployment_dependency(self,
+                                        target_deployment,
+                                        function_identifier):
+        dependency_id = str(uuid.uuid4())
+        source_deployment_instance = self.sm.get(
+            Deployment, self._deployment_id)
+        target_deployment_instance = self.sm.get(Deployment, target_deployment)
+
+        filters = create_deployment_dependency(function_identifier,
+                                               source_deployment_instance)
+        init_kwargs = {
+            TARGET_DEPLOYMENT: target_deployment_instance,
+            'created_at': utils.get_formatted_timestamp(),
+            'id': dependency_id
+        }
+        init_kwargs.update(filters)
+        dependencies_list = self.sm.list(InterDeploymentDependencies,
+                                         filters=filters)
+        if dependencies_list:
+            first_dependency = dependencies_list[0]
+            first_dependency.target_deployment = target_deployment_instance
+            self.sm.update(first_dependency)
+        else:
+            self.sm.put(InterDeploymentDependencies(**init_kwargs))

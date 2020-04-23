@@ -14,7 +14,7 @@
 
 import datetime
 
-from mock import MagicMock
+from mock import MagicMock, Mock
 
 from cloudify_rest_client.responses import ListResponse
 
@@ -100,3 +100,4 @@ class MockCloudifyRestClient(object):
         self.events = MockEventsClient()
         self.secrets = MockSecretsClient()
         self.plugins = MagicMock()
+        self.inter_deployment_dependencies = Mock()

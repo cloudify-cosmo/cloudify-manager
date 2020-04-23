@@ -53,8 +53,9 @@ from integration_tests.framework.constants import (PLUGIN_STORAGE_DIR,
 from integration_tests.framework.wagon_build import (WagonBuilderMixin,
                                                      WagonBuildError)
 from integration_tests.tests.utils import (
+    get_resource,
     wait_for_deployment_creation_to_complete,
-    wait_for_deployment_deletion_to_complete
+    wait_for_deployment_deletion_to_complete,
 )
 
 from cloudify_rest_client.executions import Execution
@@ -330,20 +331,46 @@ class BaseTestCase(unittest.TestCase):
         return execution
 
     @staticmethod
-    def deploy(dsl_path, blueprint_id=None, deployment_id=None,
-               inputs=None, wait=True, client=None,
-               runtime_only_evaluation=False):
+    def deploy(dsl_path=None,
+               blueprint_id=None,
+               deployment_id=None,
+               inputs=None,
+               wait=True,
+               client=None,
+               runtime_only_evaluation=False,
+               blueprint_visibility=None,
+               deployment_visibility=None):
+        if not (dsl_path or blueprint_id):
+            raise RuntimeWarning('Please supply blueprint path '
+                                 'or blueprint id for deploying')
+
         client = client or test_utils.create_rest_client()
         resource_id = uuid.uuid4()
         blueprint_id = blueprint_id or 'blueprint_{0}'.format(resource_id)
-        blueprint = client.blueprints.upload(dsl_path, blueprint_id)
+        if dsl_path:
+            blueprint_upload_kw = {
+                'path': dsl_path,
+                'entity_id': blueprint_id
+            }
+            # If not provided, use the client's default
+            if blueprint_visibility:
+                blueprint_upload_kw['visibility'] = blueprint_visibility
+            blueprint = client.blueprints.upload(**blueprint_upload_kw)
+        else:
+            blueprint = None
+
         deployment_id = deployment_id or 'deployment_{0}'.format(resource_id)
-        deployment = client.deployments.create(
-            blueprint.id,
-            deployment_id,
-            inputs=inputs,
-            skip_plugins_validation=True,
-            runtime_only_evaluation=runtime_only_evaluation)
+        deployment_create_kw = {
+            'blueprint_id': blueprint.id if blueprint else blueprint_id,
+            'deployment_id': deployment_id,
+            'inputs': inputs,
+            'skip_plugins_validation': True,
+            'runtime_only_evaluation': runtime_only_evaluation
+        }
+        # If not provided, use the client's default
+        if deployment_visibility:
+            deployment_create_kw['visibility'] = deployment_visibility
+        deployment = client.deployments.create(**deployment_create_kw)
         if wait:
             wait_for_deployment_creation_to_complete(deployment_id,
                                                      client=client)
@@ -580,6 +607,14 @@ class BaseTestCase(unittest.TestCase):
             except (CloudifyClientError, ConnectionError):
                 if not allow_connection_error:
                     raise
+
+    @staticmethod
+    def upload_blueprint_resource(dsl_resource_path,
+                                  blueprint_id,
+                                  client=None):
+        client = client or test_utils.create_rest_client()
+        blueprint = get_resource(dsl_resource_path)
+        client.blueprints.upload(blueprint, entity_id=blueprint_id)
 
 
 class AgentlessTestCase(BaseTestCase):
