@@ -1,4 +1,4 @@
-git+https://github.com/cloudify-cosmo/cloudify-common@CY-2610-updating-inter-deployment-dependencies-endpoint#egg=cloudify-common[dispatcher]==CY-2610-updating-inter-deployment-dependencies-endpoint
+git+https://github.com/cloudify-cosmo/cloudify-common@CY-1534-component-and-shared-resource-infra#egg=cloudify-common[dispatcher]==CY-1534-component-and-shared-resource-infra
 -e ../rest-service
 mock
 pytest
