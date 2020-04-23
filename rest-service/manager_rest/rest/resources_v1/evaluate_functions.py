@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2017 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2017-2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-#
 
 from flask_restful_swagger import swagger
 
@@ -33,12 +32,13 @@ class EvaluateFunctions(SecuredResource):
         responseClass=responses.EvaluatedFunctions,
         nickname='evaluateFunctions',
         notes="Evaluate provided payload for intrinsic functions",
-        parameters=[{'name': 'body',
-                     'description': '',
-                     'required': True,
-                     'allowMultiple': False,
-                     'dataType': requests_schema.EvaluateFunctionsRequest.__name__,  # noqa
-                     'paramType': 'body'}],
+        parameters=[
+            {'name': 'body',
+             'description': '',
+             'required': True,
+             'allowMultiple': False,
+             'dataType': requests_schema.EvaluateFunctionsRequest.__name__,
+             'paramType': 'body'}],
         consumes=[
             "application/json"
         ]

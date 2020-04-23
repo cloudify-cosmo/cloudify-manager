@@ -47,6 +47,8 @@ def setup_resources(api):
             'deployments/<string:deployment_id>/capabilities',
         'DeploymentsSetVisibility': 'deployments/<string:deployment_id>/'
                                     'set-visibility',
+        'InterDeploymentDependencies':
+            'deployments/inter-deployment-dependencies',
         'DeploymentModifications': 'deployment-modifications',
         'DeploymentModificationsId': 'deployment-modifications/'
                                      '<string:modification_id>',
@@ -127,10 +129,7 @@ def setup_resources(api):
         'ClusterStatus': 'cluster-status',
         'ManagerClusterStatus': 'cluster-status/manager/<string:node_id>',
         'DBClusterStatus': 'cluster-status/db/<string:node_id>',
-        'BrokerClusterStatus': 'cluster-status/broker/<string:node_id>',
-        'InterDeploymentDependency':
-            'inter-deployment-dependencies/id',
-        'InterDeploymentDependencies': 'inter-deployment-dependencies'
+        'BrokerClusterStatus': 'cluster-status/broker/<string:node_id>'
     }
 
     # Set version endpoint as a non versioned endpoint
