@@ -1169,11 +1169,13 @@ class ResourceManager(object):
         if kill:
             workflow_executor.cancel_execution(execution_id)
 
-        # Dealing with the inner Component-s deployments
+        # Dealing with the inner Components' deployments
         components_executions = self._find_all_components_executions(
             execution.deployment_id)
         for exec_id in components_executions:
-            self.cancel_execution(exec_id, force, kill)
+            execution = self.sm.get(models.Execution, exec_id)
+            if execution.status not in ExecutionState.END_STATES:
+                self.cancel_execution(exec_id, force, kill)
 
         return self.sm.update(execution)
 
