@@ -18,7 +18,6 @@ from shutil import copytree, rmtree
 
 from flask import request
 from flask_restful_swagger import swagger
-from werkzeug.datastructures import MultiDict
 
 from manager_rest.security import SecuredResource
 from manager_rest import manager_exceptions, config
@@ -82,12 +81,11 @@ class DeploymentUpdate(SecuredResource):
         Note: the blueprint id of the deployment will be updated to the given
         blueprint id.
         """
-        request_json = MultiDict(request.json)
         manager, skip_install, skip_uninstall, skip_reinstall, workflow_id, \
             ignore_failure, install_first, preview, \
-            update_plugins, runtime_eval = self._parse_args(id, request_json)
+            update_plugins, runtime_eval = self._parse_args(id, request.json)
         blueprint, inputs, reinstall_list = \
-            self._get_and_validate_blueprint_and_inputs(id, request_json)
+            self._get_and_validate_blueprint_and_inputs(id, request.json)
         blueprint_dir_abs = _get_plugin_update_blueprint_abs_path(
             config.instance.file_server_root, blueprint)
         deployment_dir = join(FILE_SERVER_DEPLOYMENTS_FOLDER,
