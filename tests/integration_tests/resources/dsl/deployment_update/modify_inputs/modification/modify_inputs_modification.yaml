@@ -1,0 +1,23 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - https://cloudify.co/spec/cloudify/5.0.5/types.yaml
+
+inputs:
+  test_list:
+    - update_input1
+    - update_input2
+
+node_types:
+
+  test:
+    derived_from: cloudify.nodes.ApplicationServer
+    properties:
+      test_list:
+        default: []
+
+node_templates:
+  test:
+    type: test
+    properties:
+      test_list: { get_input: test_list }

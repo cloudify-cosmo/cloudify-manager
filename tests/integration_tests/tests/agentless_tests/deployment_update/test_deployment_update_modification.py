@@ -12,6 +12,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import re
+
 from . import DeploymentUpdateBase, BLUEPRINT_ID
 
 
@@ -388,3 +390,45 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
 
         deployment = self.client.deployments.get(dep_update.deployment_id)
         self.assertRegexpMatches(deployment['description'], 'new description')
+
+    def test_modify_inputs_ops_order(self):
+        """Verify that update workflow executes uninstall and install."""
+        deployment, _ = \
+            self._deploy_and_get_modified_bp_path('modify_inputs')
+        self.assertEquals(deployment['inputs'], {
+                          u'test_list': u'initial_input'})
+
+        dep_update = \
+            self.client.deployment_updates.update_with_existing_blueprint(
+                deployment.id,
+                inputs={u'test_list': [u'update_input1', u'update_input2']},
+            )
+        # assert that 'update' workflow was executed
+        self._wait_for_execution_to_terminate(deployment.id, 'update')
+        self._wait_for_successful_state(dep_update.id)
+        execution_ids = [en.id for en in self.client.executions.list(
+            deployment_id=deployment.id,
+            workflow_id='update',
+            status='terminated',
+        )]
+        self.assertEquals(len(execution_ids), 1)
+
+        # verify if inputs have been updated
+        deployment = self.client.deployments.get(dep_update.deployment_id)
+        self.assertEquals(deployment['inputs'], {
+                          u'test_list': [u'update_input1', u'update_input2']})
+
+        # verify steps that have been logged
+        event_messages = [re.match(r'^(\ ?\w+)+', et['message']).
+                          group() for et in self.client.events.list(
+            execution_id=execution_ids[0],
+            event_type='workflow_node_event',
+            sort='reported_timestamp',
+        )]
+        self.assertEquals(event_messages[0], u'Stopping node instance')
+        self.assertIn(u'Validating node instance after deletion',
+                      event_messages[1:-1])
+        self.assertIn(u'Stopped node instance', event_messages[1:-1])
+        self.assertIn(u'Deleting node instance', event_messages[1:-1])
+        self.assertIn(u'Deleted node instance', event_messages[1:-1])
+        self.assertEquals(event_messages[-1], u'Node instance started')
