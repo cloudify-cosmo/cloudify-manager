@@ -72,8 +72,8 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         modified_source_node_instance = modified_node_instances['modified'][0]
 
         # assert there are 2 relationships total
-        self.assertEquals(2, len(modified_source_node.relationships))
-        self.assertEquals(2, len(modified_source_node_instance.relationships))
+        self.assertEqual(2, len(modified_source_node.relationships))
+        self.assertEqual(2, len(modified_source_node_instance.relationships))
 
         self.assertEqual(modified_source_node.relationships[0],
                          base_source_node.relationships[1])
@@ -247,18 +247,18 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         )
 
         # Check that there is only 1 from each
-        self.assertEquals(1, len(modified_nodes['target']))
-        self.assertEquals(1, len(modified_node_instances['target']))
-        self.assertEquals(1, len(modified_nodes['source']))
-        self.assertEquals(1, len(modified_node_instances['source']))
+        self.assertEqual(1, len(modified_nodes['target']))
+        self.assertEqual(1, len(modified_node_instances['target']))
+        self.assertEqual(1, len(modified_nodes['source']))
+        self.assertEqual(1, len(modified_node_instances['source']))
 
         # get the nodes and node instances
         source_node = modified_nodes['source'][0]
         source_node_instance = modified_node_instances['source'][0]
 
         # assert there are 1 relationships
-        self.assertEquals(1, len(source_node.relationships))
-        self.assertEquals(1, len(source_node_instance.relationships))
+        self.assertEqual(1, len(source_node.relationships))
+        self.assertEqual(1, len(source_node_instance.relationships))
 
         # check the new relationship between site2 and site1 is in place
         self._assert_relationship(
@@ -395,13 +395,13 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         """Verify that update workflow executes uninstall and install."""
         deployment, _ = \
             self._deploy_and_get_modified_bp_path('modify_inputs')
-        self.assertEquals(deployment['inputs'], {
-                          u'test_list': u'initial_input'})
+        self.assertEqual(deployment['inputs'], {
+            u'test_list': u'initial_input'})
 
+        new_test_list = [u'update_input1', u'update_input2']
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id,
-                inputs={u'test_list': [u'update_input1', u'update_input2']},
+                deployment.id, inputs={u'test_list': new_test_list},
             )
         # assert that 'update' workflow was executed
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -411,12 +411,17 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
             workflow_id='update',
             status='terminated',
         )]
-        self.assertEquals(len(execution_ids), 1)
+        self.assertEqual(len(execution_ids), 1)
 
         # verify if inputs have been updated
         deployment = self.client.deployments.get(dep_update.deployment_id)
-        self.assertEquals(deployment['inputs'], {
-                          u'test_list': [u'update_input1', u'update_input2']})
+        self.assertEqual(deployment['inputs'], {u'test_list': new_test_list})
+
+        # verify reinstall-(un)install tasks graphs were generated
+        self.assertEqual(len(self.client.tasks_graphs.list(
+            execution_ids[0], 'reinstall-uninstall')), 1)
+        self.assertEqual(len(self.client.tasks_graphs.list(
+            execution_ids[0], 'reinstall-install')), 1)
 
         # verify steps that have been logged
         event_messages = [re.match(r'^(\ ?\w+)+', et['message']).
@@ -425,10 +430,10 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
             event_type='workflow_node_event',
             sort='reported_timestamp',
         )]
-        self.assertEquals(event_messages[0], u'Stopping node instance')
+        self.assertEqual(event_messages[0], u'Stopping node instance')
         self.assertIn(u'Validating node instance after deletion',
                       event_messages[1:-1])
         self.assertIn(u'Stopped node instance', event_messages[1:-1])
         self.assertIn(u'Deleting node instance', event_messages[1:-1])
         self.assertIn(u'Deleted node instance', event_messages[1:-1])
-        self.assertEquals(event_messages[-1], u'Node instance started')
+        self.assertEqual(event_messages[-1], u'Node instance started')
