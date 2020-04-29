@@ -430,10 +430,10 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
             event_type='workflow_node_event',
             sort='reported_timestamp',
         )]
-        self.assertEqual(event_messages[0], u'Stopping node instance')
-        self.assertIn(u'Validating node instance after deletion',
-                      event_messages[1:-1])
-        self.assertIn(u'Stopped node instance', event_messages[1:-1])
-        self.assertIn(u'Deleting node instance', event_messages[1:-1])
-        self.assertIn(u'Deleted node instance', event_messages[1:-1])
-        self.assertEqual(event_messages[-1], u'Node instance started')
+        self.assertIn(u'Stopping node instance', event_messages)
+        self.assertIn(u'Deleted node instance', event_messages)
+        self.assertIn(u'Node instance started', event_messages)
+        self.assertLess(event_messages.index(u'Stopping node instance'),
+                        event_messages.index(u'Deleted node instance'))
+        self.assertLess(event_messages.index(u'Deleted node instance'),
+                        event_messages.index(u'Node instance started'))
