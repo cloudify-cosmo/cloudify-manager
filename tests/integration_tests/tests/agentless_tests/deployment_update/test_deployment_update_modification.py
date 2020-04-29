@@ -12,6 +12,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import re
+
 from . import DeploymentUpdateBase, BLUEPRINT_ID
 
 
@@ -70,8 +72,8 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         modified_source_node_instance = modified_node_instances['modified'][0]
 
         # assert there are 2 relationships total
-        self.assertEquals(2, len(modified_source_node.relationships))
-        self.assertEquals(2, len(modified_source_node_instance.relationships))
+        self.assertEqual(2, len(modified_source_node.relationships))
+        self.assertEqual(2, len(modified_source_node_instance.relationships))
 
         self.assertEqual(modified_source_node.relationships[0],
                          base_source_node.relationships[1])
@@ -245,18 +247,18 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         )
 
         # Check that there is only 1 from each
-        self.assertEquals(1, len(modified_nodes['target']))
-        self.assertEquals(1, len(modified_node_instances['target']))
-        self.assertEquals(1, len(modified_nodes['source']))
-        self.assertEquals(1, len(modified_node_instances['source']))
+        self.assertEqual(1, len(modified_nodes['target']))
+        self.assertEqual(1, len(modified_node_instances['target']))
+        self.assertEqual(1, len(modified_nodes['source']))
+        self.assertEqual(1, len(modified_node_instances['source']))
 
         # get the nodes and node instances
         source_node = modified_nodes['source'][0]
         source_node_instance = modified_node_instances['source'][0]
 
         # assert there are 1 relationships
-        self.assertEquals(1, len(source_node.relationships))
-        self.assertEquals(1, len(source_node_instance.relationships))
+        self.assertEqual(1, len(source_node.relationships))
+        self.assertEqual(1, len(source_node_instance.relationships))
 
         # check the new relationship between site2 and site1 is in place
         self._assert_relationship(
@@ -388,3 +390,50 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
 
         deployment = self.client.deployments.get(dep_update.deployment_id)
         self.assertRegexpMatches(deployment['description'], 'new description')
+
+    def test_modify_inputs_ops_order(self):
+        """Verify that update workflow executes uninstall and install."""
+        deployment, _ = \
+            self._deploy_and_get_modified_bp_path('modify_inputs')
+        self.assertEqual(deployment['inputs'], {
+            u'test_list': u'initial_input'})
+
+        new_test_list = [u'update_input1', u'update_input2']
+        dep_update = \
+            self.client.deployment_updates.update_with_existing_blueprint(
+                deployment.id, inputs={u'test_list': new_test_list},
+            )
+        # assert that 'update' workflow was executed
+        self._wait_for_execution_to_terminate(deployment.id, 'update')
+        self._wait_for_successful_state(dep_update.id)
+        execution_ids = [en.id for en in self.client.executions.list(
+            deployment_id=deployment.id,
+            workflow_id='update',
+            status='terminated',
+        )]
+        self.assertEqual(len(execution_ids), 1)
+
+        # verify if inputs have been updated
+        deployment = self.client.deployments.get(dep_update.deployment_id)
+        self.assertEqual(deployment['inputs'], {u'test_list': new_test_list})
+
+        # verify reinstall-(un)install tasks graphs were generated
+        self.assertEqual(len(self.client.tasks_graphs.list(
+            execution_ids[0], 'reinstall-uninstall')), 1)
+        self.assertEqual(len(self.client.tasks_graphs.list(
+            execution_ids[0], 'reinstall-install')), 1)
+
+        # verify steps that have been logged
+        event_messages = [re.match(r'^(\ ?\w+)+', et['message']).
+                          group() for et in self.client.events.list(
+            execution_id=execution_ids[0],
+            event_type='workflow_node_event',
+            sort='reported_timestamp',
+        )]
+        self.assertIn(u'Stopping node instance', event_messages)
+        self.assertIn(u'Deleted node instance', event_messages)
+        self.assertIn(u'Node instance started', event_messages)
+        self.assertLess(event_messages.index(u'Stopping node instance'),
+                        event_messages.index(u'Deleted node instance'))
+        self.assertLess(event_messages.index(u'Deleted node instance'),
+                        event_messages.index(u'Node instance started'))
