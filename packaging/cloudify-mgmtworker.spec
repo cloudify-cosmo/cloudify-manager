@@ -14,6 +14,7 @@ Packager:       Cloudify Platform Ltd.
 
 BuildRequires:  python3 >= 3.6, openssl-devel, git
 BuildRequires:  postgresql-devel
+BuildRequires: python3-devel
 Requires:       python3 >= 3.6, postgresql-libs
 Requires(pre):  shadow-utils
 
