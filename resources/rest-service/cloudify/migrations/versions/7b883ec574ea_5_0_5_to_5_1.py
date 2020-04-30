@@ -2,10 +2,12 @@
 
 - Add usage_collector table
 - Adding inter deployment dependencies table
+- Add unique indexes
 
-Revision ID: 212993f69df7
+Revision ID: 7b883ec574ea
 Revises: 62a8d746d13b
 Create Date: 2020-03-30 06:27:26.747213
+Updated Date: 2020-04-30 08:45:11.833636
 
 """
 
@@ -17,7 +19,7 @@ from sqlalchemy.dialects import postgresql
 from cloudify.models_states import VisibilityState
 
 # revision identifiers, used by Alembic.
-revision = '212993f69df7'
+revision = '7b883ec574ea'
 down_revision = '62a8d746d13b'
 branch_labels = None
 depends_on = None
@@ -32,11 +34,13 @@ VISIBILITY_ENUM = postgresql.ENUM(VisibilityState.PRIVATE,
 def upgrade():
     _create_usage_collector_table()
     _create_inter_deployment_dependencies_table()
+    _create_unique_indexes()
 
 
 def downgrade():
     _drop_usage_collector_table()
     _drop_inter_deployment_dependencies_table()
+    _drop_unique_indexes()
 
 
 def _create_usage_collector_table():
@@ -136,3 +140,63 @@ def _drop_inter_deployment_dependencies_table():
     op.drop_index(op.f('inter_deployment_dependencies__tenant_id_idx'),
                   table_name='inter_deployment_dependencies')
     op.drop_table('inter_deployment_dependencies')
+
+
+def _create_unique_indexes():
+    op.create_index('blueprints_id__tenant_id_idx',
+                    'blueprints',
+                    ['id', '_tenant_id'],
+                    unique=True)
+    op.create_index('deployments__site_fk_visibility_idx',
+                    'deployments',
+                    ['_blueprint_fk', '_site_fk', 'visibility', '_tenant_id'],
+                    unique=False)
+    op.create_index('deployments_id__tenant_id_idx',
+                    'deployments',
+                    ['id', '_tenant_id'],
+                    unique=True)
+    op.drop_index('deployments__sife_fk_visibility_idx',
+                  table_name='deployments')
+    op.create_index('plugins_name_version__tenant_id_idx',
+                    'plugins',
+                    ['package_name', 'package_version', '_tenant_id'],
+                    unique=True)
+    op.create_index('secrets_id_tenant_id_idx',
+                    'secrets',
+                    ['id', '_tenant_id'],
+                    unique=True)
+    op.create_index('site_name__tenant_id_idx',
+                    'sites',
+                    ['name', '_tenant_id'],
+                    unique=True)
+    op.create_index('snapshots_id__tenant_id_idx',
+                    'snapshots',
+                    ['id', '_tenant_id'],
+                    unique=True)
+    op.drop_index('tasks_graphs__execution_fk_name_visibility_idx',
+                  table_name='tasks_graphs')
+    op.create_index('tasks_graphs__execution_fk_name_visibility_idx',
+                    'tasks_graphs',
+                    ['_execution_fk', 'name', 'visibility'],
+                    unique=True)
+
+
+def _drop_unique_indexes():
+    op.drop_index('tasks_graphs__execution_fk_name_visibility_idx',
+                  table_name='tasks_graphs')
+    op.create_index('tasks_graphs__execution_fk_name_visibility_idx',
+                    'tasks_graphs',
+                    ['_execution_fk', 'name', 'visibility'],
+                    unique=False)
+    op.drop_index('snapshots_id__tenant_id_idx', table_name='snapshots')
+    op.drop_index('site_name__tenant_id_idx', table_name='sites')
+    op.drop_index('secrets_id_tenant_id_idx', table_name='secrets')
+    op.drop_index('plugins_name_version__tenant_id_idx', table_name='plugins')
+    op.create_index('deployments__sife_fk_visibility_idx',
+                    'deployments',
+                    ['_blueprint_fk', '_site_fk', 'visibility', '_tenant_id'],
+                    unique=False)
+    op.drop_index('deployments_id__tenant_id_idx', table_name='deployments')
+    op.drop_index('deployments__site_fk_visibility_idx',
+                  table_name='deployments')
+    op.drop_index('blueprints_id__tenant_id_idx', table_name='blueprints')
