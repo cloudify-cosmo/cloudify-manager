@@ -16,7 +16,7 @@ URL:            https://github.com/cloudify-cosmo/cloudify-manager
 Vendor:         Cloudify Platform Ltd.
 Packager:       Cloudify Platform Ltd.
 
-BuildRequires:  python3 >= 3.6, python-virtualenv
+BuildRequires:  python3 >= 3.6
 BuildRequires:  openssl-devel, openldap-devel, libffi-devel, postgresql-devel
 BuildRequires:  git, sudo
 BuildRequires: dbus-devel >= %{dbus_version}
