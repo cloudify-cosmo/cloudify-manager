@@ -33,6 +33,6 @@ setup(
         'awscli==1.11.14',
         'docl',
         'docker==4.0.2',
-        'requests>2.0.0,<3.0.0',
+        'requests>=2.18,<3.0.0',
     ]
 )
