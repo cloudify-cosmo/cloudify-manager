@@ -29,13 +29,6 @@ virtualenv /opt/mgmtworker/env
 %{PIP_INSTALL} --upgrade "${RPM_SOURCE_DIR}/workflows"
 %{PIP_INSTALL} --upgrade "${RPM_SOURCE_DIR}/cloudify_types"
 
-# Install stubs of cloudify packages that were merged into cloudify-common
-STUBS=${RPM_SOURCE_DIR}/packaging/mgmtworker/stub_packages
-%{PIP_INSTALL} --upgrade ${STUBS}/cloudify-rest-client/
-%{PIP_INSTALL} --upgrade ${STUBS}/cloudify-plugins-common/
-%{PIP_INSTALL} --upgrade ${STUBS}/cloudify-dsl-parser/
-%{PIP_INSTALL} --upgrade ${STUBS}/cloudify-script-plugin/
-
 %{PIP_INSTALL} --upgrade kerberos==1.3.0
 
 # Jinja2 includes 2 files which will only be imported if async is available,
