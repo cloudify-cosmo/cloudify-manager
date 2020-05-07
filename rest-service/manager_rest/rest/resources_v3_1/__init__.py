@@ -56,7 +56,8 @@ from .deployments import (                       # NOQA
     DeploymentsSetSite,
     DeploymentsSetVisibility,
     DeploymentsIdCapabilities,
-    InterDeploymentDependencies
+    InterDeploymentDependencies,
+    InterDeploymentDependenciesRestore
 )
 
 from .blueprints import (                        # NOQA
