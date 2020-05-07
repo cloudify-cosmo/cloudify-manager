@@ -12,7 +12,10 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
 import uuid
+from builtins import staticmethod
+from os.path import join
 
 from flask import request
 from flask_restful.inputs import boolean
@@ -40,6 +43,7 @@ from manager_rest.rest import (
     rest_decorators,
     responses_v3
 )
+from manager_rest.constants import FILE_SERVER_DEPLOYMENTS_FOLDER
 
 
 class DeploymentsId(resources_v1.DeploymentsId):
@@ -324,3 +328,36 @@ class InterDeploymentDependencies(SecuredResource):
                 substr_filters=search
             )
         return inter_deployment_dependencies
+
+
+class InterDeploymentDependenciesRestore(SecuredResource):
+    @authorize('inter_deployment_dependency_create')
+    def post(self):
+        """
+        Updating the inter deployment dependencies table from the specified
+        deployment during an upgrade
+
+        """
+        deployment_id, runtime_only_evaluation = self._get_request_data()
+        sm = get_storage_manager()
+        deployment = sm.get(models.Deployment, deployment_id)
+        blueprint = deployment.blueprint
+        app_dir = join(FILE_SERVER_DEPLOYMENTS_FOLDER,
+                       utils.current_tenant.name,
+                       deployment_id)
+        app_blueprint = blueprint.main_file_name
+        parsed_deployment = utils.get_parsed_deployment(blueprint,
+                                                        app_dir,
+                                                        app_blueprint)
+        deployment_plan = utils.get_deployment_plan(parsed_deployment,
+                                                    deployment.inputs,
+                                                    runtime_only_evaluation)
+        utils.update_deployment_dependencies_from_plan(deployment_id,
+                                                       deployment_plan,
+                                                       sm,
+                                                       lambda *_: True)
+
+    @staticmethod
+    def _get_request_data():
+        data = request.json
+        return data.get('deployment_id'), data.get('runtime_only_evaluation')

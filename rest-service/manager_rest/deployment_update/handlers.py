@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import uuid
 from copy import deepcopy
 from sqlalchemy import and_, cast
 from sqlalchemy.dialects.postgresql import JSON
@@ -30,12 +29,12 @@ from cloudify.constants import (
 from dsl_parser.constants import (NODES,
                                   HOST_AGENT,
                                   PLUGIN_INSTALL_KEY,
-                                  PLUGIN_EXECUTOR_KEY,
-                                  INTER_DEPLOYMENT_FUNCTIONS)
+                                  PLUGIN_EXECUTOR_KEY)
 
-from manager_rest import utils
 from manager_rest.storage import models, get_node
 from manager_rest.resource_manager import get_resource_manager
+from manager_rest.utils import (get_formatted_timestamp,
+                                update_deployment_dependencies_from_plan)
 
 from .entity_context import get_entity_context
 from .constants import ENTITY_TYPES, NODE_MOD_TYPES
@@ -856,7 +855,7 @@ class DeploymentUpdateDeploymentHandler(UpdateHandler):
 
     def finalize(self, dep_update):
         deployment = dep_update.deployment
-        deployment.updated_at = utils.get_formatted_timestamp()
+        deployment.updated_at = get_formatted_timestamp()
         self.sm.update(deployment)
 
 
@@ -888,42 +887,14 @@ class DeploymentDependencies(UpdateHandler):
                 get_all_results=True,
                 filters=query_filters)
         }
-        new_dependencies = dep_update.deployment_plan.setdefault(
-            INTER_DEPLOYMENT_FUNCTIONS, {})
-        new_dependencies_dict = {
-            creator: target
-            for creator, target in new_dependencies.items()
-            if dep_plan_filter_func(creator)
-        }
-        for dependency_creator, target_deployment_id \
-                in new_dependencies_dict.items():
-            target_deployment = self.sm.get(
-                models.Deployment, target_deployment_id) \
-                if target_deployment_id else None
-            source_deployment = self.sm.get(
-                models.Deployment, dep_update.deployment_id)
-            if dependency_creator not in curr_dependencies:
-                now = utils.get_formatted_timestamp()
-                self.sm.put(models.InterDeploymentDependencies(
-                    dependency_creator=dependency_creator,
-                    source_deployment=source_deployment,
-                    target_deployment=target_deployment,
-                    created_at=now,
-                    id=str(uuid.uuid4())
-                ))
-                continue
-            if not target_deployment_id:
-                # New target deployment is unknown, keep the current value
-                continue
 
-            curr_target_deployment = \
-                curr_dependencies[dependency_creator].target_deployment
-            if curr_target_deployment == target_deployment_id:
-                continue
-
-            curr_dependencies[dependency_creator].target_deployment = \
-                target_deployment
-            self.sm.update(curr_dependencies[dependency_creator])
+        new_dependencies_dict = update_deployment_dependencies_from_plan(
+            dep_update.deployment_id,
+            dep_update.deployment_plan,
+            self.sm,
+            curr_dependencies,
+            dep_plan_filter_func
+        )
 
         if keep_outdated_dependencies:
             return

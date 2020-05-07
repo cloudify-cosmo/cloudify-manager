@@ -13,7 +13,6 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-import os
 import copy
 import uuid
 
@@ -24,12 +23,8 @@ from cloudify.utils import extract_and_merge_plugins
 
 
 from dsl_parser import constants, tasks
-from dsl_parser import exceptions as parser_exceptions
 
-from manager_rest import utils
-from manager_rest import config
-from manager_rest.dsl_functions import get_secret_method
-from manager_rest import app_context, manager_exceptions
+from manager_rest import manager_exceptions
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.deployment_update import step_extractor
 from manager_rest.deployment_update.utils import extract_ids
@@ -48,6 +43,9 @@ from manager_rest.deployment_update.handlers import (
     DeploymentUpdateNodeHandler,
     DeploymentUpdateDeploymentHandler,
     DeploymentUpdateNodeInstanceHandler)
+from manager_rest.utils import (get_deployment_plan,
+                                get_parsed_deployment,
+                                get_formatted_timestamp)
 
 
 class DeploymentUpdateManager(object):
@@ -88,58 +86,30 @@ class DeploymentUpdateManager(object):
         # enables reverting to original blueprint resources
         deployment = self.sm.get(models.Deployment, deployment_id)
         old_blueprint = deployment.blueprint
-        file_server_root = config.instance.file_server_root
-        blueprint_resource_dir = os.path.join(file_server_root,
-                                              'blueprints',
-                                              old_blueprint.tenant_name,
-                                              old_blueprint.id)
-        runtime_only_evaluation = runtime_only_evaluation or \
-            deployment.runtime_only_evaluation
-        # The dsl parser expects a URL
-        blueprint_resource_dir_url = 'file:{0}'.format(blueprint_resource_dir)
-        app_path = os.path.join(file_server_root, app_dir, app_blueprint)
-
-        # parsing the blueprint from here
-        try:
-            plan = tasks.parse_dsl(
-                app_path,
-                resources_base_path=file_server_root,
-                additional_resources=[blueprint_resource_dir_url],
-                **app_context.get_parser_context()
-            )
-        except parser_exceptions.DSLParsingException as ex:
-            raise manager_exceptions.InvalidBlueprintError(
-                'Invalid blueprint - {0}'.format(ex))
+        runtime_only_evaluation = (runtime_only_evaluation or
+                                   deployment.runtime_only_evaluation)
+        parsed_deployment = get_parsed_deployment(old_blueprint,
+                                                  app_dir,
+                                                  app_blueprint)
 
         # Updating the new inputs with the deployment inputs
         # (overriding old values and adding new ones)
         old_inputs = copy.deepcopy(deployment.inputs)
         new_inputs = {k: old_inputs[k]
-                      for k in plan.inputs.keys() if k in old_inputs}
+                      for k in parsed_deployment.inputs.keys()
+                      if k in old_inputs}
         new_inputs.update(additional_inputs)
 
         # applying intrinsic functions
-        try:
-            prepared_plan = tasks.prepare_deployment_plan(
-                plan, get_secret_method, inputs=new_inputs,
-                runtime_only_evaluation=runtime_only_evaluation)
-        except parser_exceptions.MissingRequiredInputError as e:
-            raise manager_exceptions.MissingRequiredDeploymentInputError(
-                str(e))
-        except parser_exceptions.UnknownInputError as e:
-            raise manager_exceptions.UnknownDeploymentInputError(str(e))
-        except parser_exceptions.UnknownSecretError as e:
-            raise manager_exceptions.UnknownDeploymentSecretError(str(e))
-        except parser_exceptions.UnsupportedGetSecretError as e:
-            raise manager_exceptions.UnsupportedDeploymentGetSecretError(
-                str(e))
+        plan = get_deployment_plan(parsed_deployment, new_inputs,
+                                   runtime_only_evaluation)
 
         deployment_update_id = '{0}-{1}'.format(deployment.id, uuid.uuid4())
         deployment_update = models.DeploymentUpdate(
             id=deployment_update_id,
-            deployment_plan=prepared_plan,
+            deployment_plan=plan,
             runtime_only_evaluation=runtime_only_evaluation,
-            created_at=utils.get_formatted_timestamp()
+            created_at=get_formatted_timestamp()
         )
         deployment_update.set_deployment(deployment)
         deployment_update.preview = preview
