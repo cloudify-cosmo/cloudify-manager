@@ -1,4 +1,4 @@
-git+https://github.com/cloudify-cosmo/cloudify-common@master#egg=cloudify-common[dispatcher]==master
+git+https://github.com/cloudify-cosmo/cloudify-common@CY-2721-rest-endpoint-for-IDD-snapshot-restore#egg=cloudify-common[dispatcher]==CY-2721-rest-endpoint-for-IDD-snapshot-restore
 -e ../rest-service
 mock
 pytest
