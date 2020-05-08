@@ -44,3 +44,11 @@ class EventsTest(base_test.BaseServerTestCase):
         response = self.client.events.delete(
             '<deployment_id>', include_logs=True)
         self.assertEqual(response.items, [0])
+
+    @attr(client_min_version=3,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_delete_events_timestamp_range(self):
+        response = self.client.events.delete(
+            '<deployment_id>', include_logs=True,
+            from_datetime='2020-01-01', to_datetime='2020-02-02')
+        self.assertEqual(response.items, [0])
