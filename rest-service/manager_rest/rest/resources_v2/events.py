@@ -156,25 +156,17 @@ class Events(resources_v1.Events):
             'tenant_id': self.current_tenant.id
         }
 
-        delete_event_query = (
-            db.session.query(Event)
-            .filter(
-                Event._execution_fk.in_(executions_query),
-                Event._tenant_id == bindparam('tenant_id')
-            )
-            .params(**params)
-        )
+        delete_event_query = Events._apply_range_filters(
+            Events._build_delete_subquery(
+                Event, executions_query, params),
+            Event, range_filters)
         total = delete_event_query.delete(synchronize_session=False)
 
         if 'cloudify_log' in filters['type']:
-            delete_log_query = (
-                db.session.query(Log)
-                .filter(
-                    Log._execution_fk.in_(executions_query),
-                    Log._tenant_id == bindparam('tenant_id')
-                )
-                .params(**params)
-            )
+            delete_log_query = Events._apply_range_filters(
+                Events._build_delete_subquery(
+                    Log, executions_query, params),
+                Log, range_filters)
             total += delete_log_query.delete('fetch')
 
         metadata = {
@@ -187,3 +179,12 @@ class Events(resources_v1.Events):
         # We don't really want to return all of the deleted events,
         # so it's a bit of a hack to return the deleted element count.
         return ListResult([total], metadata)
+
+    @staticmethod
+    def _build_delete_subquery(model, execution_query, params):
+        """Build delete subquery."""
+        query = db.session.query(model).filter(
+            model._execution_fk.in_(execution_query),
+            model._tenant_id == bindparam('tenant_id'),
+        )
+        return query.params(**params)
