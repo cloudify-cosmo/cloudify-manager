@@ -43,7 +43,7 @@ from manager_rest.rest import (
     rest_decorators,
     responses_v3
 )
-from manager_rest.constants import FILE_SERVER_DEPLOYMENTS_FOLDER
+from manager_rest.constants import FILE_SERVER_BLUEPRINTS_FOLDER
 
 
 class DeploymentsId(resources_v1.DeploymentsId):
@@ -338,16 +338,13 @@ class InterDeploymentDependenciesRestore(SecuredResource):
         deployment during an upgrade
 
         """
-        # import pydevd;
-        # pydevd.settrace('192.168.8.43', port=53100, stdoutToServer=True,
-        #                 stderrToServer=True, suspend=True)
         deployment_id, runtime_only_evaluation = self._get_request_data()
         sm = get_storage_manager()
         deployment = sm.get(models.Deployment, deployment_id)
         blueprint = deployment.blueprint
-        app_dir = join(FILE_SERVER_DEPLOYMENTS_FOLDER,
+        app_dir = join(FILE_SERVER_BLUEPRINTS_FOLDER,
                        utils.current_tenant.name,
-                       deployment_id)
+                       blueprint.id)
         app_blueprint = blueprint.main_file_name
         parsed_deployment = rest_utils.get_parsed_deployment(
             blueprint, app_dir, app_blueprint)
