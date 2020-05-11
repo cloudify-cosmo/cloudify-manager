@@ -25,7 +25,7 @@ function set_manager_ip() {
   /usr/bin/sed -ri "s/"'"'"manager_addresses"'"'"[^]]+]/"'"'"manager_addresses"'"'": \\["'"'"${ip}"'"'"]/" /etc/cloudify/ssl/certificate_metadata
 
   echo "Creating internal SSL certificates.."
-  cfy_manager create-internal-certs --manager-hostname $(hostname -s)
+  cfy_manager create-internal-certs --manager-hostname cloudify
 
   if [[ -d "/opt/status-reporter" ]]; then
     echo "Updating status reporter initial IP..."
