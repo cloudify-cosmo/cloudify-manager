@@ -32,9 +32,10 @@ from dsl_parser.constants import (NODES,
                                   PLUGIN_EXECUTOR_KEY)
 
 from manager_rest.storage import models, get_node
+from manager_rest.utils import get_formatted_timestamp
 from manager_rest.resource_manager import get_resource_manager
-from manager_rest.utils import (get_formatted_timestamp,
-                                update_deployment_dependencies_from_plan)
+from manager_rest.rest.rest_utils import (
+    update_deployment_dependencies_from_plan)
 
 from .entity_context import get_entity_context
 from .constants import ENTITY_TYPES, NODE_MOD_TYPES
