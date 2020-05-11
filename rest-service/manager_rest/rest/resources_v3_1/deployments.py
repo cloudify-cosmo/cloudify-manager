@@ -338,6 +338,9 @@ class InterDeploymentDependenciesRestore(SecuredResource):
         deployment during an upgrade
 
         """
+        # import pydevd;
+        # pydevd.settrace('192.168.8.43', port=53100, stdoutToServer=True,
+        #                 stderrToServer=True, suspend=True)
         deployment_id, runtime_only_evaluation = self._get_request_data()
         sm = get_storage_manager()
         deployment = sm.get(models.Deployment, deployment_id)
@@ -346,16 +349,12 @@ class InterDeploymentDependenciesRestore(SecuredResource):
                        utils.current_tenant.name,
                        deployment_id)
         app_blueprint = blueprint.main_file_name
-        parsed_deployment = utils.get_parsed_deployment(blueprint,
-                                                        app_dir,
-                                                        app_blueprint)
-        deployment_plan = utils.get_deployment_plan(parsed_deployment,
-                                                    deployment.inputs,
-                                                    runtime_only_evaluation)
-        utils.update_deployment_dependencies_from_plan(deployment_id,
-                                                       deployment_plan,
-                                                       sm,
-                                                       lambda *_: True)
+        parsed_deployment = rest_utils.get_parsed_deployment(
+            blueprint, app_dir, app_blueprint)
+        deployment_plan = rest_utils.get_deployment_plan(
+            parsed_deployment, deployment.inputs,  runtime_only_evaluation)
+        rest_utils.update_deployment_dependencies_from_plan(
+            deployment_id, deployment_plan, sm, lambda *_: True)
 
     @staticmethod
     def _get_request_data():

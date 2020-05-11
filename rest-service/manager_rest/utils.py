@@ -14,7 +14,6 @@
 #  * limitations under the License.
 
 import os
-import uuid
 import glob
 import json
 import errno
@@ -32,19 +31,14 @@ from flask import request
 from werkzeug.local import LocalProxy
 from flask_security import current_user
 
-from dsl_parser import tasks
-from dsl_parser import exceptions as parser_exceptions
-from dsl_parser.constants import (INTER_DEPLOYMENT_FUNCTIONS,
-                                  HOST_AGENT_PLUGINS_TO_INSTALL)
+from dsl_parser.constants import HOST_AGENT_PLUGINS_TO_INSTALL
 
 from cloudify import logs
 from cloudify.constants import BROKER_PORT_SSL
 from cloudify.models_states import VisibilityState
 from cloudify.amqp_client import create_events_publisher, get_client
 
-from manager_rest.storage import models
-from manager_rest.dsl_functions import get_secret_method
-from manager_rest import constants, config, manager_exceptions, app_context
+from manager_rest import constants, config, manager_exceptions
 
 
 def check_allowed_endpoint(allowed_endpoints):
@@ -357,94 +351,3 @@ def get_amqp_client():
         ssl_cert_path=config.instance.amqp_ca_path,
         connect_timeout=3,
     )
-
-
-def get_parsed_deployment(blueprint,
-                          app_dir,
-                          app_blueprint):
-    file_server_root = config.instance.file_server_root
-    blueprint_resource_dir = os.path.join(file_server_root,
-                                          'blueprints',
-                                          blueprint.tenant_name,
-                                          blueprint.id)
-    # The dsl parser expects a URL
-    blueprint_resource_dir_url = 'file:{0}'.format(blueprint_resource_dir)
-    app_path = os.path.join(file_server_root, app_dir, app_blueprint)
-
-    try:
-        return tasks.parse_dsl(
-            app_path,
-            resources_base_path=file_server_root,
-            additional_resources=[blueprint_resource_dir_url],
-            **app_context.get_parser_context()
-        )
-    except parser_exceptions.DSLParsingException as ex:
-        raise manager_exceptions.InvalidBlueprintError(
-            'Invalid blueprint - {0}'.format(ex))
-
-
-def get_deployment_plan(parsed_deployment,
-                        inputs,
-                        runtime_only_evaluation=False):
-    try:
-        return tasks.prepare_deployment_plan(
-            parsed_deployment, get_secret_method, inputs=inputs,
-            runtime_only_evaluation=runtime_only_evaluation)
-    except parser_exceptions.MissingRequiredInputError as e:
-        raise manager_exceptions.MissingRequiredDeploymentInputError(
-            str(e))
-    except parser_exceptions.UnknownInputError as e:
-        raise manager_exceptions.UnknownDeploymentInputError(str(e))
-    except parser_exceptions.UnknownSecretError as e:
-        raise manager_exceptions.UnknownDeploymentSecretError(str(e))
-    except parser_exceptions.UnsupportedGetSecretError as e:
-        raise manager_exceptions.UnsupportedDeploymentGetSecretError(
-            str(e))
-
-
-def update_deployment_dependencies_from_plan(deployment_id,
-                                             deployment_plan,
-                                             storage_manager,
-                                             dep_plan_filter_func,
-                                             curr_dependencies=None):
-    curr_dependencies = {} if curr_dependencies is None else curr_dependencies
-
-    new_dependencies = deployment_plan.setdefault(
-        INTER_DEPLOYMENT_FUNCTIONS, {})
-    new_dependencies_dict = {
-        creator: target
-        for creator, target in new_dependencies.items()
-        if dep_plan_filter_func(creator)
-    }
-
-    for dependency_creator, target_deployment_id \
-            in new_dependencies_dict.items():
-        target_deployment = storage_manager.get(
-            models.Deployment, target_deployment_id) \
-            if target_deployment_id else None
-        source_deployment = storage_manager.get(
-            models.Deployment, deployment_id)
-        if dependency_creator not in curr_dependencies:
-            now = get_formatted_timestamp()
-            storage_manager.put(models.InterDeploymentDependencies(
-                dependency_creator=dependency_creator,
-                source_deployment=source_deployment,
-                target_deployment=target_deployment,
-                created_at=now,
-                id=str(uuid.uuid4())
-            ))
-            continue
-        if not target_deployment_id:
-            # New target deployment is unknown, keep the current value
-            continue
-
-        curr_target_deployment = \
-            curr_dependencies[dependency_creator].target_deployment
-        if curr_target_deployment == target_deployment_id:
-            continue
-
-        curr_dependencies[dependency_creator].target_deployment = \
-            target_deployment
-        storage_manager.update(curr_dependencies[dependency_creator])
-
-    return new_dependencies_dict

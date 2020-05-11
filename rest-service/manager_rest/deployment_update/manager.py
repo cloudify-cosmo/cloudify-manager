@@ -43,9 +43,10 @@ from manager_rest.deployment_update.handlers import (
     DeploymentUpdateNodeHandler,
     DeploymentUpdateDeploymentHandler,
     DeploymentUpdateNodeInstanceHandler)
-from manager_rest.utils import (get_deployment_plan,
-                                get_parsed_deployment,
-                                get_formatted_timestamp)
+from manager_rest.utils import get_formatted_timestamp
+
+from manager_rest.rest.rest_utils import (get_deployment_plan,
+                                          get_parsed_deployment)
 
 
 class DeploymentUpdateManager(object):
