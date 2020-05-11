@@ -893,8 +893,8 @@ class DeploymentDependencies(UpdateHandler):
             dep_update.deployment_id,
             dep_update.deployment_plan,
             self.sm,
-            curr_dependencies,
-            dep_plan_filter_func
+            dep_plan_filter_func,
+            curr_dependencies
         )
 
         if keep_outdated_dependencies:
