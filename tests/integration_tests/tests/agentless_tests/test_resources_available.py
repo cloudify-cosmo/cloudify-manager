@@ -35,7 +35,7 @@ class ResourcesAvailableTest(AgentlessTestCase):
         self.client.blueprints.upload(blueprint_path,
                                       entity_id=blueprint_id)
         invalid_resource_url = 'https://{0}:{1}/resources/blueprints/{1}/{2}' \
-            .format(container_ip, 53229, blueprint_id, blueprint_name)
+            .format(container_ip, 53229, blueprint_id)
         try:
             result = requests.head(invalid_resource_url)
             self.assertEqual(

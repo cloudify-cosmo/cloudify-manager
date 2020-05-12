@@ -614,7 +614,7 @@ class BaseServerTestCase(unittest.TestCase):
                            blueprint_dir='mock_blueprint'):
 
         resource_path = self._version_url(
-            '/blueprints/{1}'.format(CLIENT_API_VERSION, blueprint_id))
+            '/blueprints/{0}'.format(blueprint_id))
 
         result = [
             resource_path,

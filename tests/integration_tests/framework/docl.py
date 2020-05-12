@@ -148,8 +148,8 @@ def run_manager(label=None, tag=None):
     args = ['--mount']
     if tag:
         args += ['--tag', tag]
-    for l in label:
-        args += ['--label', l]
+    for label_item in label:
+        args += ['--label', label_item]
     with tempfile.NamedTemporaryFile() as f:
         args += ['--details-path', f.name]
         _docl.run(*args)
@@ -175,8 +175,8 @@ def upload_mock_license():
 def clean(label=None):
     label = label or []
     args = []
-    for l in label:
-        args += ['--label', l]
+    for label_item in label:
+        args += ['--label', label_item]
     _docl.clean(*args)
 
 
