@@ -83,8 +83,8 @@ def _start_container(image, label):
     docker_conf = _docker_conf()
     label.append(docker_conf['env_label'])
     args = ['--privileged', '--detach']
-    for l in label:
-        args += ['--label', l]
+    for label_item in label:
+        args += ['--label', label_item]
     args.append(image)
     container_id = _docker('run', ' '.join(args))
     ctx.instance.runtime_properties['container_id'] = container_id

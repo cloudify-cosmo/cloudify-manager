@@ -802,7 +802,7 @@ class AgentTestWithPlugins(AgentTestCase):
         time.sleep(500)
         self._wait_for_execution_by_wf_name('install_plugin')
         self.logger.info(
-            'Finished uploading {0}...'.format(plugin_name, plugin_path))
+            'Finished uploading {0}...'.format(plugin_name))
 
     def _wait_for_execution_by_wf_name(self, wf_name):
         executions = self.client.executions.list(
