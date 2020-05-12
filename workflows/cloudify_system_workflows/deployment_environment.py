@@ -115,7 +115,9 @@ def _delete_logs(ctx):
                     # will essentially be lost.
                     f.truncate()
             except IOError:
-                ctx.logger.warn('Failed truncating {0}.'.format(log_file_path))
+                ctx.logger.warn(
+                    'Failed truncating {0}.'.format(log_file_path),
+                    exc_info=True)
         for rotated_log_file_path in glob.glob('{0}.*'.format(
                 log_file_path)):
             try:
@@ -123,7 +125,7 @@ def _delete_logs(ctx):
             except IOError:
                 ctx.logger.exception(
                     'Failed removing rotated log file {0}.'.format(
-                        rotated_log_file_path))
+                        rotated_log_file_path), exc_info=True)
 
 
 def _ignore_task_on_fail_and_send_event(task, ctx):
@@ -176,7 +178,7 @@ def _delete_deployment_workdir(ctx):
         ctx.logger.warning('Failed deleting directory {0}. '
                            'Current directory content: {1}'.format(
                                 deployment_workdir,
-                                os.listdir(deployment_workdir)))
+                                os.listdir(deployment_workdir)), exc_info=True)
 
 
 def _workdir(deployment_id, tenant):
