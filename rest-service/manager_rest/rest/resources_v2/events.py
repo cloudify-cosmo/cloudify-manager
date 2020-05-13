@@ -207,8 +207,8 @@ class Events(resources_v1.Events):
     def _map_event_to_log_entry(event):
         return '{0}  {1}\n'.format(
             event.reported_timestamp,
-            str({k: v for k, v in event.to_response().items()
-                 if k != 'reported_timestamp'}))
+            {k: v for k, v in event.to_response().items()
+             if k != 'reported_timestamp'})
 
     @staticmethod
     def _create_logs_output_directory():
