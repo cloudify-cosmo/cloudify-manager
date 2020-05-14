@@ -13,7 +13,9 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 #
-
+import httplib
+import socket
+import xmlrpclib
 
 from flask import request
 from flask import current_app
@@ -21,6 +23,7 @@ from flask_restful_swagger import swagger
 
 from cloudify.cluster_status import ServiceStatus, NodeServiceStatus
 
+from manager_rest import config
 from manager_rest.rest import responses
 from manager_rest.utils import get_amqp_client
 from manager_rest.security import SecuredResource
@@ -61,6 +64,31 @@ OPTIONAL_SERVICES = {
     'cloudify-syncthing.service': 'File Sync Service'
 }
 
+SUPERVISORD_SERVICES = {
+    'AMQP-Postgres': 'cloudify-amqp-postgres',
+    'Cloudify Composer': 'cloudify-composer',
+    'Cloudify Console': 'cloudify-stage',
+    'Management Worker': 'cloudify-mgmtworker',
+    'Webserver': 'cloudify-nginx',
+    'Manager Rest-Service': 'cloudify-restservice',
+    'File Sync Service': 'cloudify-syncthing'
+}
+
+
+class UnixSocketHTTPConnection(httplib.HTTPConnection):
+    def connect(self):
+        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.sock.connect(self.host)
+
+
+class UnixSocketTransport(xmlrpclib.Transport, object):
+    def __init__(self, path):
+        super(UnixSocketTransport, self).__init__()
+        self._path = path
+
+    def make_connection(self, host):
+        return UnixSocketHTTPConnection(self._path)
+
 
 class Status(SecuredResource):
 
@@ -82,7 +110,10 @@ class Status(SecuredResource):
             return {'status': ServiceStatus.FAIL, 'services': {}}
 
         services = {}
-        systemd_statuses = self._check_systemd_services(services)
+        if config.instance.process_management == 'supervisord':
+            service_statuses = self._check_supervisord_services(services)
+        else:
+            service_statuses = self._check_systemd_services(services)
         rabbitmq_status = self._check_rabbitmq(services)
 
         # Passing our authentication implies PostgreSQL is healthy
@@ -93,14 +124,43 @@ class Status(SecuredResource):
         if ha_utils and ha_utils.is_clustered():
             syncthing_status = self._check_syncthing(services)
 
-        status = self._get_manager_status(systemd_statuses, rabbitmq_status,
-                                          syncthing_status)
+        status = self._get_manager_status(
+            service_statuses,
+            rabbitmq_status,
+            syncthing_status
+        )
 
         # If the response should be only the summary - mainly for LB
         if summary_response:
             return {'status': status, 'services': {}}
 
         return {'status': status, 'services': services}
+
+    def _check_supervisord_services(self, services):
+        server = xmlrpclib.Server(
+            'http://',
+            transport=UnixSocketTransport("/tmp/supervisor.sock"))
+        statuses = []
+        for display_name, name in SUPERVISORD_SERVICES.items():
+            try:
+                status_response = server.supervisor.getProcessInfo(name)
+            except xmlrpclib.Fault as e:
+                if e.faultCode == 10:  # bad service name
+                    service_status = 'failed'
+                else:
+                    raise
+            else:
+                if status_response['statename'] == 'RUNNING':
+                    service_status = NodeServiceStatus.ACTIVE
+                else:
+                    service_status = status_response['statename']
+            statuses.append(service_status)
+            services[display_name] = {
+                'status': service_status,
+                'is_remote': False,
+                'extra_info': {}
+            }
+        return statuses
 
     def _check_systemd_services(self, services):
         systemd_services = get_services(
