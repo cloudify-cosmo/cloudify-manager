@@ -13,7 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 #
-import httplib
 import socket
 import xmlrpclib
 
@@ -22,6 +21,7 @@ from flask import current_app
 from flask_restful_swagger import swagger
 
 from cloudify.cluster_status import ServiceStatus, NodeServiceStatus
+from cloudify._compat import httplib
 
 from manager_rest import config
 from manager_rest.rest import responses
