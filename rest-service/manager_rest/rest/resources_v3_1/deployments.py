@@ -346,7 +346,6 @@ class InterDeploymentDependenciesRestore(SecuredResource):
         data = self._get_request_data()
         deployment_id = data.get('deployment_id')
         runtime_only_evaluation = data.get('runtime_only_evaluation')
-        manager_version = data.get('manager_version')
         sm = get_storage_manager()
         deployment = sm.get(models.Deployment, deployment_id)
         blueprint = deployment.blueprint
@@ -360,7 +359,7 @@ class InterDeploymentDependenciesRestore(SecuredResource):
             parsed_deployment, deployment.inputs,  runtime_only_evaluation)
         rest_utils.update_deployment_dependencies_from_plan(
             deployment_id, deployment_plan, sm, lambda *_: True)
-        if manager_version >= '5.0.5':
+        if data.get('update_service_composition'):
             self._create_service_composition_dependencies(deployment_plan,
                                                           deployment,
                                                           sm)
@@ -369,7 +368,7 @@ class InterDeploymentDependenciesRestore(SecuredResource):
     def _get_request_data():
         return rest_utils.get_json_and_verify_params({
             'deployment_id': {'type': text_type},
-            'manager_version': {'type': text_type},
+            'update_service_composition': {'type': bool},
             'runtime_only_evaluation': {'type': bool, 'optional': True}
         })
 

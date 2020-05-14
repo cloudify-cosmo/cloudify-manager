@@ -71,6 +71,8 @@ from .constants import (
     V_4_2_0,
     V_4_3_0,
     V_4_4_0,
+    V_4_6_0,
+    V_5_0_5,
     SECURITY_FILE_LOCATION,
     SECURITY_FILENAME
 )
@@ -148,6 +150,7 @@ class SnapshotRestore(object):
                 self._restore_amqp_vhosts_and_users()
                 self._restore_deployment_envs(postgres)
                 self._restore_scheduled_executions()
+                self._restore_inter_deployment_dependencies()
 
                 if self._premium_enabled:
                     self._reconfigure_status_reporter(postgres)
@@ -351,6 +354,68 @@ class SnapshotRestore(object):
                                       ' details.'.format(deployments))
 
         self._log_final_information(deps_with_failed_plugins)
+
+    def _restore_inter_deployment_dependencies(self):
+        if (self._snapshot_version < V_4_6_0 or
+                self._snapshot_version > V_5_0_5):
+            return
+        deps = utils.get_dep_contexts(self._snapshot_version)
+        failed_deployments = queue.Queue()
+        threads = list()
+
+        for tenant, deployment in deps:
+            ctx.logger.info('Restoring inter deployment dependencies for '
+                            '{tenant}'.format(tenant=tenant))
+            tenant_client = get_rest_client(tenant=tenant)
+
+            for deployment_id, dep_ctx in deployment.items():
+                update_service_composition = self._snapshot_version == V_5_0_5
+                wf_ctx = current_workflow_ctx.get_ctx()
+                ctx_params = current_workflow_ctx.get_parameters()
+                self._semaphore.acquire()
+                t = threading.Thread(
+                    target=self._create_inter_deployment_dependencies,
+                    args=(deployment_id, tenant, tenant_client,
+                          update_service_composition, failed_deployments,
+                          wf_ctx, ctx_params)
+                )
+                t.setDaemon(True)
+                threads.append(t)
+                t.start()
+
+        for t in threads:
+            t.join()
+
+        if not failed_deployments.empty():
+            deployments = list(failed_deployments.queue)
+            raise NonRecoverableError('Failed to restore snapshot, could not '
+                                      'create the inter deployment '
+                                      'dependencies from the following '
+                                      'deployments {0}. See exception '
+                                      'tracebacks logged above for more '
+                                      'details'.format(deployments))
+
+    def _create_inter_deployment_dependencies(self,
+                                              deployment_id,
+                                              tenant,
+                                              tenant_client,
+                                              update_service_composition,
+                                              failed_deployments,
+                                              wf_ctx,
+                                              ctx_params):
+        try:
+            with current_workflow_ctx.push(wf_ctx, ctx_params):
+                try:
+                    tenant_client.inter_deployment_dependencies.restore(
+                        deployment_id, update_service_composition)
+                except Exception as err:
+                    failed_deployments.put(deployment_id, tenant)
+                    ctx.logger.info('Failed creating inter deployment '
+                                    'dependencies for deployment {0} from'
+                                    ' tenant {1}. {2}'.format(deployment_id,
+                                                              tenant, err))
+        finally:
+            self._semaphore.release()
 
     @staticmethod
     def _log_final_information(deps_with_failed_plugins):
