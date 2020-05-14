@@ -1,4 +1,4 @@
-git+https://github.com/cloudify-cosmo/cloudify-common@CY-2721-rest-endpoint-for-IDD-snapshot-restore#egg=cloudify-common[dispatcher]==CY-2721-rest-endpoint-for-IDD-snapshot-restore
+git+https://github.com/cloudify-cosmo/cloudify-common@CY-2702-update-IDD-table-during-upgrade#egg=cloudify-common[dispatcher]==CY-2702-update-IDD-table-during-upgrade
 
 # For dealing with the binary leftovers of psycopg2 in the 2.7.x version
 psycopg2==2.7.4 --no-binary psycopg2

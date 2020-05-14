@@ -1,4 +1,4 @@
-git+https://github.com/cloudify-cosmo/cloudify-common@CY-2721-rest-endpoint-for-IDD-snapshot-restore#egg=cloudify-common[dispatcher]==CY-2721-rest-endpoint-for-IDD-snapshot-restore
+git+https://github.com/cloudify-cosmo/cloudify-common@CY-2702-update-IDD-table-during-upgrade#egg=cloudify-common[dispatcher]==CY-2702-update-IDD-table-during-upgrade
 -e ../rest-service
 mock
 pytest
