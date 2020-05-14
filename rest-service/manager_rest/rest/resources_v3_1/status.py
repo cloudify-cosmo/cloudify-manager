@@ -110,7 +110,7 @@ class Status(SecuredResource):
             return {'status': ServiceStatus.FAIL, 'services': {}}
 
         services = {}
-        if config.instance.process_management == 'supervisord':
+        if config.instance.service_management == 'supervisord':
             service_statuses = self._check_supervisord_services(services)
         else:
             service_statuses = self._check_systemd_services(services)
