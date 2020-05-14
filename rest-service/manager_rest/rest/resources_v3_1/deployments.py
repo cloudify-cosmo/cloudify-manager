@@ -24,7 +24,9 @@ from flask_restful.reqparse import Argument
 
 from cloudify._compat import text_type
 from cloudify.models_states import VisibilityState
+from cloudify.constants import SHARED_RESOURCE, COMPONENT
 from cloudify.deployment_dependencies import (create_deployment_dependency,
+                                              dependency_creator_generator,
                                               DEPENDENCY_CREATOR,
                                               SOURCE_DEPLOYMENT,
                                               TARGET_DEPLOYMENT)
@@ -44,6 +46,9 @@ from manager_rest.rest import (
     responses_v3
 )
 from manager_rest.constants import FILE_SERVER_BLUEPRINTS_FOLDER
+
+SHARED_RESOURCE_TYPE = 'cloudify.nodes.SharedResource'
+COMPONENT_TYPE = 'cloudify.nodes.Component'
 
 
 class DeploymentsId(resources_v1.DeploymentsId):
@@ -338,7 +343,10 @@ class InterDeploymentDependenciesRestore(SecuredResource):
         deployment during an upgrade
 
         """
-        deployment_id, runtime_only_evaluation = self._get_request_data()
+        data = self._get_request_data()
+        deployment_id = data.get('deployment_id')
+        runtime_only_evaluation = data.get('runtime_only_evaluation')
+        manager_version = data.get('manager_version')
         sm = get_storage_manager()
         deployment = sm.get(models.Deployment, deployment_id)
         blueprint = deployment.blueprint
@@ -352,8 +360,56 @@ class InterDeploymentDependenciesRestore(SecuredResource):
             parsed_deployment, deployment.inputs,  runtime_only_evaluation)
         rest_utils.update_deployment_dependencies_from_plan(
             deployment_id, deployment_plan, sm, lambda *_: True)
+        if manager_version >= '5.0.5':
+            self._create_service_composition_dependencies(deployment_plan,
+                                                          deployment,
+                                                          sm)
 
     @staticmethod
     def _get_request_data():
-        data = request.json
-        return data.get('deployment_id'), data.get('runtime_only_evaluation')
+        return rest_utils.get_json_and_verify_params({
+            'deployment_id': {'type': text_type},
+            'manager_version': {'type': text_type},
+            'runtime_only_evaluation': {'type': bool, 'optional': True}
+        })
+
+    def _create_service_composition_dependencies(self, deployment_plan,
+                                                 deployment, sm):
+        for node in deployment_plan['nodes']:
+            node_type = node.get('type')
+            if node_type in (COMPONENT_TYPE, SHARED_RESOURCE_TYPE):
+                target_deployment_id = self._get_target_deployment_id(node)
+                prefix = (COMPONENT if node_type == COMPONENT_TYPE
+                          else SHARED_RESOURCE)
+                suffix = self._get_instance_id(deployment_plan, node)
+                target_deployment = sm.get(models.Deployment,
+                                           target_deployment_id)
+                dependency_creator = dependency_creator_generator(prefix,
+                                                                  suffix)
+                self._put_deployment_dependency(deployment,
+                                                target_deployment,
+                                                dependency_creator,
+                                                sm)
+
+    @staticmethod
+    def _get_target_deployment_id(node):
+        resource_config = node['properties']['resource_config']
+        return resource_config['deployment']['id']
+
+    @staticmethod
+    def _put_deployment_dependency(source_deployment, target_deployment,
+                                   dependency_creator, sm):
+        now = utils.get_formatted_timestamp()
+        deployment_dependency = models.InterDeploymentDependencies(
+            id=str(uuid.uuid4()),
+            dependency_creator=dependency_creator,
+            source_deployment=source_deployment,
+            target_deployment=target_deployment,
+            created_at=now)
+        sm.put(deployment_dependency)
+
+    @staticmethod
+    def _get_instance_id(deployment_plan, node):
+        for instance in deployment_plan['node_instances']:
+            if instance['node_id'] == node['id']:
+                return instance['id']
