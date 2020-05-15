@@ -115,6 +115,7 @@ class Plugin(SQLResourceBase):
     supported_py_versions = db.Column(db.PickleType(protocol=2))
     uploaded_at = db.Column(UTCDateTime, nullable=False, index=True)
     wheels = db.Column(db.PickleType(protocol=2), nullable=False)
+    title = db.Column(db.Text)
 
     def yaml_file_path(self):
         plugin_dir = path.join(config.instance.file_server_root,

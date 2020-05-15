@@ -8,6 +8,7 @@ Revision ID: 7b883ec574ea
 Revises: 62a8d746d13b
 Create Date: 2020-03-30 06:27:26.747213
 Updated Date: 2020-04-30 08:45:11.833636
+Updated Date: 2020-05-15 09:53:47.868905
 
 """
 
@@ -19,7 +20,7 @@ from sqlalchemy.dialects import postgresql
 from cloudify.models_states import VisibilityState
 
 # revision identifiers, used by Alembic.
-revision = '7b883ec574ea'
+revision = '387fcd049efb'
 down_revision = '62a8d746d13b'
 branch_labels = None
 depends_on = None
@@ -35,12 +36,14 @@ def upgrade():
     _create_usage_collector_table()
     _create_inter_deployment_dependencies_table()
     _create_unique_indexes()
+    _add_plugins_title_column()
 
 
 def downgrade():
     _drop_usage_collector_table()
     _drop_inter_deployment_dependencies_table()
     _drop_unique_indexes()
+    _drop_plugins_title_column()
 
 
 def _create_usage_collector_table():
@@ -200,3 +203,11 @@ def _drop_unique_indexes():
     op.drop_index('deployments__site_fk_visibility_idx',
                   table_name='deployments')
     op.drop_index('blueprints_id__tenant_id_idx', table_name='blueprints')
+
+
+def _add_plugins_title_column():
+    op.add_column(u'plugins', sa.Column('title', sa.Text(), nullable=True))
+
+
+def _drop_plugins_title_column():
+    op.drop_column(u'plugins', 'title')

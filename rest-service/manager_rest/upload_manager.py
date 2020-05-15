@@ -684,11 +684,13 @@ class UploadedPluginsManager(UploadedDataManager):
                 raise manager_exceptions.InvalidPluginError(re.message)
 
         args = get_args_and_verify_arguments([
+            Argument('title'),
             Argument('private_resource', type=boolean),
             Argument('visibility')])
 
         visibility = kwargs.get(_VISIBILITY, None)
         new_plugin = self._create_plugin_from_archive(data_id,
+                                                      args.title,
                                                       wagon_target_path,
                                                       args.private_resource,
                                                       visibility)
@@ -737,6 +739,7 @@ class UploadedPluginsManager(UploadedDataManager):
 
     def _create_plugin_from_archive(self,
                                     plugin_id,
+                                    plugin_title,
                                     archive_path,
                                     private_resource,
                                     visibility):
@@ -755,6 +758,7 @@ class UploadedPluginsManager(UploadedDataManager):
 
         return Plugin(
             id=plugin_id,
+            title=plugin_title,
             package_name=plugin.get('package_name'),
             package_version=plugin.get('package_version'),
             archive_name=plugin.get('archive_name'),
