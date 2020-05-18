@@ -44,8 +44,17 @@ class SharedResource(object):
 
         if self.client_config:
             self.client = CloudifyClient(**self.client_config)
+
+            # for determining an external client:
+            manager_ips = [mgr.private_ip for mgr in
+                           manager.get_rest_client().manager.get_managers()]
+            internal_hosts = ({'127.0.0.1', 'localhost'} | set(manager_ips))
+            host = {self.client.host} if type(self.client.host) == str \
+                else set(self.client.host)
+            self.is_external_host = not (host & internal_hosts)
         else:
             self.client = manager.get_rest_client()
+            self.is_external_host = False
 
         self.config = self._get_desired_operation_input(
             'resource_config', operation_inputs)
@@ -58,6 +67,19 @@ class SharedResource(object):
             ctx.deployment.id,
             self.deployment_id
         )
+        if self.is_external_host:
+            self._local_dependency_params = \
+                self._inter_deployment_dependency.copy()
+            self._local_dependency_params['target_deployment'] = ' '
+            self._local_dependency_params['external_target'] = {
+                'deployment': self.deployment_id,
+                'client_config': self.client_config
+            }
+            self._inter_deployment_dependency['external_source'] = {
+                'deployment': ctx.deployment.id,
+                'tenant': ctx.tenant_name,
+                'host': manager_ips
+            }
 
     def _mark_verified_shared_resource_node(self):
         """
@@ -71,6 +93,11 @@ class SharedResource(object):
     def validate_deployment(self):
         ctx.logger.info('Validating that "{0}" SharedResource\'s deployment '
                         'exists...'.format(self.deployment_id))
+
+        if self.is_external_host:
+            manager.get_rest_client().inter_deployment_dependencies.create(
+                **self._local_dependency_params)
+
         deployment = get_deployment_by_id(self.client, self.deployment_id)
         if not deployment:
             raise NonRecoverableError(
@@ -79,6 +106,7 @@ class SharedResource(object):
                     self.deployment_id))
         self._mark_verified_shared_resource_node()
         populate_runtime_with_wf_results(self.client, self.deployment_id)
+
         self.client.inter_deployment_dependencies.create(
             **self._inter_deployment_dependency)
         return True
@@ -95,6 +123,12 @@ class SharedResource(object):
                                   target_deployment))
         self._inter_deployment_dependency['target_deployment'] = \
             target_deployment
+
+        if self.is_external_host:
+            self._local_dependency_params['target_deployment'] = ' '
+            manager.get_rest_client().inter_deployment_dependencies.delete(
+                **self._local_dependency_params)
+
         self.client.inter_deployment_dependencies.delete(
             **self._inter_deployment_dependency)
         return True

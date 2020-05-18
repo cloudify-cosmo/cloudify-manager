@@ -106,14 +106,12 @@ def _create_inter_deployment_dependencies_table():
                   nullable=False),
         sa.Column('dependency_creator', sa.Text(), nullable=False),
         sa.Column('target_deployment_func', JSONString(), nullable=True),
-        sa.Column('_source_deployment',
-                  sa.Integer(),
-                  nullable=False),
-        sa.Column('_target_deployment',
-                  sa.Integer(),
-                  nullable=True),
+        sa.Column('_source_deployment', sa.Integer(), nullable=True),
+        sa.Column('_target_deployment', sa.Integer(), nullable=True),
         sa.Column('_tenant_id', sa.Integer(), nullable=False),
         sa.Column('_creator_id', sa.Integer(), nullable=False),
+        sa.Column('external_source', JSONString(), nullable=True),
+        sa.Column('external_target', JSONString(), nullable=True),
         sa.ForeignKeyConstraint(
             ['_creator_id'],
             [u'users.id'],
@@ -137,10 +135,6 @@ def _create_inter_deployment_dependencies_table():
         sa.PrimaryKeyConstraint(
             '_storage_id',
             name=op.f('inter_deployment_dependencies_pkey')),
-        sa.UniqueConstraint('dependency_creator',
-                            '_source_deployment',
-                            '_tenant_id',
-                            name='inter_deployment_uc')
     )
     op.create_index(op.f('inter_deployment_dependencies__tenant_id_idx'),
                     'inter_deployment_dependencies',
@@ -153,7 +147,7 @@ def _create_inter_deployment_dependencies_table():
     op.create_index(op.f('inter_deployment_dependencies_id_idx'),
                     'inter_deployment_dependencies',
                     ['id'],
-                    unique=False)
+                    unique=True)
     op.add_column(u'deployment_updates',
                   sa.Column('keep_old_deployment_dependencies',
                             sa.Boolean(),

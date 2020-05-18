@@ -16,6 +16,7 @@
 import os
 import uuid
 import yaml
+import json
 import shutil
 import itertools
 from copy import deepcopy
@@ -32,6 +33,7 @@ from cloudify.models_states import (SnapshotState,
                                     ExecutionState,
                                     VisibilityState,
                                     DeploymentModificationState)
+from cloudify_rest_client.client import CloudifyClient
 
 from dsl_parser import constants, tasks
 from dsl_parser import exceptions as parser_exceptions
@@ -126,7 +128,8 @@ class ResourceManager(object):
         dependencies_list = self.sm.list(models.InterDeploymentDependencies,
                                          filters={'target_deployment': None})
         for dependency in dependencies_list:
-            if dependency.target_deployment_func:
+            if (dependency.target_deployment_func and
+                    not dependency.external_target):
                 self._update_dependency_target_deployment(dependency)
 
     def _update_dependency_target_deployment(self, dependency):
@@ -580,7 +583,42 @@ class ResourceManager(object):
         # Delete deployment data  DB (should only happen AFTER the workflow
         # finished successfully, hence the delete_db_mode flag)
         else:
+            # check for external targets
+            deployment_dependencies = self.sm.list(
+                models.InterDeploymentDependencies,
+                filters={'source_deployment': deployment})
+            external_targets = set(
+                json.dumps(dependency.external_target) for dependency in
+                deployment_dependencies if dependency.external_target)
+
+            if external_targets:
+                self._clean_dependencies_from_external_targets(
+                    deployment, external_targets)
             return self.sm.delete(deployment)
+
+    def _clean_dependencies_from_external_targets(self,
+                                                  deployment,
+                                                  external_targets):
+        manager_ips = [manager.private_ip for manager in self.sm.list(
+            models.Manager)]
+        external_source = {
+            'deployment': deployment.id,
+            'tenant': deployment.tenant_name,
+            'host': manager_ips
+        }
+        for target in external_targets:
+            target_client_config = json.loads(target)['client_config']
+            external_client = CloudifyClient(**target_client_config)
+            dep = external_client.inter_deployment_dependencies.list()
+            dep_for_removal = [d for d in dep if
+                               d['external_source'] == external_source]
+            for d in dep_for_removal:
+                external_client.inter_deployment_dependencies.delete(
+                    dependency_creator=d['dependency_creator'],
+                    source_deployment=d['source_deployment_id'] or ' ',
+                    target_deployment=d['target_deployment_id'] or ' ',
+                    external_source=external_source
+                )
 
     def _reset_operations(self, execution, execution_token, from_states=None):
         """Force-resume the execution: restart failed operations.
@@ -2305,6 +2343,26 @@ class ResourceManager(object):
         new_dependencies = deployment_plan.setdefault(
             INTER_DEPLOYMENT_FUNCTIONS, {})
 
+        # handle external client for component and shared resource
+        client_config = None
+        target_deployment_config = None
+        for node in deployment_plan['nodes']:
+            if node['type'] in ['cloudify.nodes.Component',
+                                'cloudify.nodes.SharedResource']:
+                client_config = node['properties'].get('client')
+                target_deployment_config = node['properties'].get(
+                    'resource_config').get('deployment')
+                break
+        external_client = None
+        if client_config:
+            manager_ips = [manager.private_ip for manager in
+                           self.sm.list(models.Manager)]
+            internal_hosts = ({'127.0.0.1', 'localhost'} | set(manager_ips))
+            host = client_config['host']
+            host = {host} if type(host) == str else set(host)
+            if not (host & internal_hosts):
+                external_client = CloudifyClient(**client_config)
+
         dep_graph = RecursiveDeploymentDependencies(self.sm)
         dep_graph.create_dependencies_graph()
 
@@ -2317,13 +2375,37 @@ class ResourceManager(object):
                             fail_silently=True) if target_deployment else None
 
             now = utils.get_formatted_timestamp()
+            if external_client:
+                external_target = {
+                    'deployment': (target_deployment_config.get('id') if
+                                   target_deployment_config else None),
+                    'client_config': client_config
+                }
+
             self.sm.put(models.InterDeploymentDependencies(
                 id=str(uuid.uuid4()),
                 dependency_creator=func_id,
                 source_deployment=source_deployment,
-                target_deployment=target_deployment_instance,
+                target_deployment=(None if external_client else
+                                   target_deployment_instance),
                 target_deployment_func=target_deployment_func,
+                external_target=(external_target if external_client else None),
                 created_at=now))
+            if external_client:
+                dependency_params = {
+                    'dependency_creator': func_id,
+                    'source_deployment': source_deployment.id,
+                    'target_deployment': (target_deployment if
+                                          target_deployment else ' '),
+                    'external_source': {
+                        'deployment': source_deployment.id,
+                        'tenant': source_deployment.tenant_name,
+                        'host': manager_ips
+                    }
+                }
+                external_client.inter_deployment_dependencies.create(
+                    **dependency_params)
+
             if source_deployment and target_deployment_instance:
                 source_id = str(source_deployment.id)
                 target_id = str(target_deployment_instance.id)
