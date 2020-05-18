@@ -352,13 +352,26 @@ class PluginsTest(BaseServerTestCase):
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
     def test_plugin_upload_with_title(self):
+        response = self._upload_plugin_with_title('test')
+        self.assertRegexpMatches(
+            response.id,
+            r"[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[0-9a-f]{4}-[0-9a-f]{12}")
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_plugin_verify_uploaded_with_title(self):
+        uploaded_plugin = self._upload_plugin_with_title('test')
+        get_plugin_by_id_response = self.client.plugins.get(uploaded_plugin.id)
+        self.assertIsNotNone(get_plugin_by_id_response)
+        self.assertEqual(get_plugin_by_id_response.title, 'test')
+
+    def _upload_plugin_with_title(self, plugin_title):
         tmp_file_path = self.create_wheel(
             TEST_PACKAGE_NAME,
             TEST_PACKAGE_VERSION)
         yaml_path = self.get_full_path(TEST_PACKAGE_YAML_FILE)
         zip_path = self.zip_files([tmp_file_path, yaml_path])
-        response = self.client.plugins.upload(zip_path, plugin_title="test")
-        self.assertRegexpMatches(
-            response.id,
-            r"[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[0-9a-f]{4}-[0-9a-f]{12}")
+        response = self.client.plugins.upload(zip_path,
+                                              plugin_title=plugin_title)
         self.quiet_delete(tmp_file_path)
+        return response
