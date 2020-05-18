@@ -362,3 +362,15 @@ class PluginsTest(BaseServerTestCase):
         get_plugin_by_id_response = self.client.plugins.get(uploaded_plugin.id)
         self.assertIsNotNone(get_plugin_by_id_response)
         self.assertEqual(get_plugin_by_id_response.title, 'test')
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_plugin_upload_check_default_title(self):
+        uploaded_plugin = self.upload_plugin(TEST_PACKAGE_NAME,
+                                             TEST_PACKAGE_VERSION).json
+        plugin_id = uploaded_plugin.get('id')
+        self.assertIsNotNone(plugin_id)
+        self.assertEqual(uploaded_plugin.get('title'), TEST_PACKAGE_NAME)
+        get_plugin_by_id_response = self.client.plugins.get(plugin_id)
+        self.assertIsNotNone(get_plugin_by_id_response)
+        self.assertEqual(get_plugin_by_id_response.title, TEST_PACKAGE_NAME)

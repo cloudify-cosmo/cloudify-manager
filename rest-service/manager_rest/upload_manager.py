@@ -758,7 +758,7 @@ class UploadedPluginsManager(UploadedDataManager):
 
         return Plugin(
             id=plugin_id,
-            title=plugin_title,
+            title=plugin_title or plugin.get('package_name'),
             package_name=plugin.get('package_name'),
             package_version=plugin.get('package_version'),
             archive_name=plugin.get('archive_name'),
