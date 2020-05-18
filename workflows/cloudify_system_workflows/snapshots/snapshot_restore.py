@@ -356,9 +356,13 @@ class SnapshotRestore(object):
         self._log_final_information(deps_with_failed_plugins)
 
     def _restore_inter_deployment_dependencies(self):
+        # managers older than 4.6.0 didn't have the support get_capability.
+        # manager newer than 5.0.5 have the inter deployment dependencies as
+        # part of the database dump
         if (self._snapshot_version < V_4_6_0 or
                 self._snapshot_version > V_5_0_5):
             return
+
         ctx.logger.info('Restoring inter deployment dependencies')
         update_service_composition = (self._snapshot_version == V_5_0_5)
 
@@ -372,31 +376,15 @@ class SnapshotRestore(object):
         wf_context = current_workflow_ctx.get_ctx()
         context_params = current_workflow_ctx.get_parameters()
 
-        def _create_inter_deployment_dependencies():
-            while True:
-                try:
-                    tenant, deployment_id = deployments_queue.get_nowait()
-                except queue.Empty:
-                    break
-
-                with current_workflow_ctx.push(wf_context, context_params):
-                    try:
-                        tenant_client = get_rest_client(tenant=tenant)
-                        tenant_client.inter_deployment_dependencies.restore(
-                            deployment_id, update_service_composition)
-                    except RuntimeError as err:
-                        failed_deployments_queue.put((deployment_id, tenant))
-                        ctx.logger.info('Failed creating inter deployment '
-                                        'dependencies for deployment {0} from'
-                                        ' tenant {1}. {2}'
-                                        .format(deployment_id, tenant, err))
-
-        threads = list()
+        threads = []
         for i in range(min(self._config.snapshot_restore_threads,
                            deployments_queue.qsize())):
-            t = threading.Thread(target=_create_inter_deployment_dependencies)
+            t = threading.Thread(
+                target=self._create_inter_deployment_dependencies,
+                args=(deployments_queue, failed_deployments_queue, wf_context,
+                      context_params, update_service_composition)
+            )
             threads.append(t)
-            t.setDaemon(True)
             t.start()
 
         for t in threads:
@@ -410,6 +398,32 @@ class SnapshotRestore(object):
                                       'deployments {0}. See exception '
                                       'tracebacks logged above for more '
                                       'details'.format(deployments))
+
+        ctx.logger.info('Successfully restored inter deployment dependencies.')
+
+    @staticmethod
+    def _create_inter_deployment_dependencies(deployments_queue,
+                                              failed_deployments_queue,
+                                              wf_context,
+                                              context_params,
+                                              update_service_composition):
+        while True:
+            try:
+                tenant, deployment_id = deployments_queue.get_nowait()
+            except queue.Empty:
+                break
+
+            with current_workflow_ctx.push(wf_context, context_params):
+                try:
+                    tenant_client = get_rest_client(tenant=tenant)
+                    tenant_client.inter_deployment_dependencies.restore(
+                        deployment_id, update_service_composition)
+                except RuntimeError as err:
+                    failed_deployments_queue.put((deployment_id, tenant))
+                    ctx.logger.info('Failed creating inter deployment '
+                                    'dependencies for deployment %s from '
+                                    'tenant %s. %s',
+                                    deployment_id, tenant, err)
 
     @staticmethod
     def _log_final_information(deps_with_failed_plugins):

@@ -97,8 +97,7 @@ class DeploymentUpdateManager(object):
         # (overriding old values and adding new ones)
         old_inputs = copy.deepcopy(deployment.inputs)
         new_inputs = {k: old_inputs[k]
-                      for k in parsed_deployment.inputs.keys()
-                      if k in old_inputs}
+                      for k in parsed_deployment.inputs if k in old_inputs}
         new_inputs.update(additional_inputs)
 
         # applying intrinsic functions

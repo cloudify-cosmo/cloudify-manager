@@ -257,17 +257,14 @@ class TestSnapshot(AgentlessTestCase):
         assert (self._openstack_inter_deployment_dependencies()).issubset(
             set(inter_deployment_dependencies))
 
-        if not self._assert_component_listed(inter_deployment_dependencies):
-            raise AssertionError('component.infrastructure does not exist '
-                                 'as a dependency creator.')
+        self._assert_component_listed(inter_deployment_dependencies)
 
     @staticmethod
     def _assert_component_listed(inter_deployment_dependencies):
-        for dependency in inter_deployment_dependencies:
-            if dependency[2].startswith('component.infrastructure'):
-                return True
-
-        return False
+        if not any(d[2].startswith('component.infrastructure')
+                   for d in inter_deployment_dependencies):
+            raise AssertionError('component.infrastructure does not exist '
+                                 'as a dependency creator.')
 
     @staticmethod
     def _openstack_inter_deployment_dependencies():

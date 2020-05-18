@@ -338,14 +338,19 @@ class InterDeploymentDependencies(SecuredResource):
 class InterDeploymentDependenciesRestore(SecuredResource):
     @authorize('inter_deployment_dependency_create')
     def post(self):
-        """
-        Updating the inter deployment dependencies table from the specified
-        deployment during an upgrade
+        """Restoring inter-deployment-dependencies.
 
+        Updating the inter deployment dependencies table from the specified
+        deployment during an upgrade.
+
+        :param deployment_id: The deployment to restore the inter-deployment-
+        dependencies from.
+        :param update_service_composition: whether to update service
+        composition (comoponent, shared-resource) dependencies. True if the
+        manager version is 5.0.5.
         """
         data = self._get_request_data()
         deployment_id = data.get('deployment_id')
-        runtime_only_evaluation = data.get('runtime_only_evaluation')
         sm = get_storage_manager()
         deployment = sm.get(models.Deployment, deployment_id)
         blueprint = deployment.blueprint
@@ -356,7 +361,7 @@ class InterDeploymentDependenciesRestore(SecuredResource):
         parsed_deployment = rest_utils.get_parsed_deployment(
             blueprint, app_dir, app_blueprint)
         deployment_plan = rest_utils.get_deployment_plan(
-            parsed_deployment, deployment.inputs,  runtime_only_evaluation)
+            parsed_deployment, deployment.inputs)
         rest_utils.update_deployment_dependencies_from_plan(
             deployment_id, deployment_plan, sm, lambda *_: True)
         if data.get('update_service_composition'):
@@ -369,7 +374,6 @@ class InterDeploymentDependenciesRestore(SecuredResource):
         return rest_utils.get_json_and_verify_params({
             'deployment_id': {'type': text_type},
             'update_service_composition': {'type': bool},
-            'runtime_only_evaluation': {'type': bool, 'optional': True}
         })
 
     def _create_service_composition_dependencies(self, deployment_plan,
