@@ -174,6 +174,12 @@ class TestSnapshot(AgentlessTestCase):
         self.assertGreater(len(token_4), 10)
         self.assertEqual(result['all'][5][0], 'restore_snapshot')
 
+    def test_v_4_6_0_restore_snapshot_and_restart_services(self):
+        snapshot_path = self._get_snapshot('snap_4_6_0_hello_world.zip')
+        self._upload_and_restore_snapshot(snapshot_path)
+        docl.execute('cfy_manager restart --force')
+        self.assertTrue(self._all_services_restarted_properly())
+
     def test_v_5_0_5_restore_snapshot(self):
         """ Validate the restore of new DB fields added in 5.0 or 5.0.5 """
         snapshot_path = \
@@ -238,11 +244,55 @@ class TestSnapshot(AgentlessTestCase):
         self.assertListEqual(plugins_to_uninstall, [])
         self.assertFalse(runtime_only_evaluation)
 
-    def test_v_4_6_0_restore_snapshot_and_restart_services(self):
-        snapshot_path = self._get_snapshot('snap_4_6_0_hello_world.zip')
+    def test_v_5_0_5_restore_snapshot_and_inter_deployment_dependencies(self):
+        snapshot_path = self._get_snapshot(
+            'snap_5.0.5_with_component_openstack.zip')
         self._upload_and_restore_snapshot(snapshot_path)
-        docl.execute('cfy_manager restart --force')
-        self.assertTrue(self._all_services_restarted_properly())
+
+        inter_deployment_dependencies = postgresql.run_query(
+            "SELECT _source_deployment, _target_deployment,  "
+            "dependency_creator FROM inter_deployment_dependencies;"
+        )['all']
+
+        assert (self._openstack_inter_deployment_dependencies()).issubset(
+            set(inter_deployment_dependencies))
+
+        self._assert_component_listed(inter_deployment_dependencies)
+
+    @staticmethod
+    def _assert_component_listed(inter_deployment_dependencies):
+        if not any(d[2].startswith('component.infrastructure')
+                   for d in inter_deployment_dependencies):
+            raise AssertionError('component.infrastructure does not exist '
+                                 'as a dependency creator.')
+
+    @staticmethod
+    def _openstack_inter_deployment_dependencies():
+        dependency_creator_node = 'nodes.jboss.operations.cloudify.' \
+                                       'interfaces.lifecycle.{0}.inputs.' \
+                                       'fabric_env.{1}.get_capability'
+        dependency_creator_input = 'nodes.jboss.operations.configure.inputs.' \
+                                   'fabric_env.{0}.get_capability'
+
+        return {
+            (2, 3, dependency_creator_node.format('create', 'host_string')),
+            (2, 3, dependency_creator_node.format('create', 'user')),
+            (2, 3, dependency_creator_node.format('create', 'key')),
+            (2, 3, dependency_creator_input.format('host_string')),
+            (2, 3, dependency_creator_input.format('user')),
+            (2, 3, dependency_creator_input.format('key')),
+            (2, 3, dependency_creator_input.format('key')),
+            (2, 3, dependency_creator_node.format('configure', 'host_string')),
+            (2, 3, dependency_creator_node.format('configure', 'user')),
+            (2, 3, dependency_creator_node.format('configure', 'key')),
+            (2, 3, dependency_creator_node.format('start', 'host_string')),
+            (2, 3, dependency_creator_node.format('start', 'user')),
+            (2, 3, dependency_creator_node.format('start', 'key')),
+            (2, 3, dependency_creator_node.format('stop', 'host_string')),
+            (2, 3, dependency_creator_node.format('stop', 'user')),
+            (2, 3, dependency_creator_node.format('stop', 'key')),
+            (2, 3, 'outputs.admin_url.value.concat[1].get_capability'),
+        }
 
     def test_snapshot_status_returns_correct_status(self):
         self._assert_restore_marker_file_does_not_exist()
