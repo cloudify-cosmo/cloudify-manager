@@ -14,14 +14,13 @@
 #  * limitations under the License.
 #
 import socket
-import xmlrpclib
 
 from flask import request
 from flask import current_app
 from flask_restful_swagger import swagger
 
 from cloudify.cluster_status import ServiceStatus, NodeServiceStatus
-from cloudify._compat import httplib
+from cloudify._compat import httplib, xmlrpclib
 
 from manager_rest import config
 from manager_rest.rest import responses
