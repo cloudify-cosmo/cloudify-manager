@@ -422,7 +422,7 @@ def stage_db_schema_get_current_revision():
         return None
     output = subprocess.check_output([
         'sudo', '-u', snapshot_constants.STAGE_USER,
-        '/opt/nodejs/bin/node',
+        '/usr/bin/node',
         '/opt/cloudify-stage/backend/migration.js',
         'current',
     ])
@@ -443,7 +443,7 @@ def composer_db_schema_get_current_revision():
         return None
     output = subprocess.check_output([
         'sudo', '-u', snapshot_constants.COMPOSER_USER,
-        '/opt/nodejs/bin/npm',
+        '/usr/bin/npm',
         'run',
         '--prefix', snapshot_constants.COMPOSER_BASE_FOLDER,
         'db-migrate-current'

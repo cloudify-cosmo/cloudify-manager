@@ -18,7 +18,7 @@ import os
 from cloudify.workflows import ctx
 from .utils import sudo
 
-NPM_BIN = os.path.join('/opt', 'nodejs', 'bin', 'npm')
+NPM_BIN = os.path.join('/usr', 'bin', 'npm')
 
 
 def run(command, *args):
