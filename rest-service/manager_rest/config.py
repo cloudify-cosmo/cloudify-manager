@@ -63,6 +63,8 @@ class Config(object):
     # whether or not the config can be implicitly loaded from db on first use
     can_load_from_db = True
 
+    service_management = Setting('service_management', default='systemd')
+
     public_ip = Setting('public_ip')
 
     # database settings

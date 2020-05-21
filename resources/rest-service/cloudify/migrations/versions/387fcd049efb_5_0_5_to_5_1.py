@@ -14,10 +14,15 @@ Updated Date: 2020-05-15 09:53:47.868905
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import orm
 from manager_rest import storage
 from sqlalchemy.dialects import postgresql
+from sqlalchemy.ext.declarative import declarative_base
 
 from cloudify.models_states import VisibilityState
+
+from manager_rest.storage.models import User
+from manager_rest.storage.models_base import JSONString, UTCDateTime
 
 # revision identifiers, used by Alembic.
 revision = '387fcd049efb'
@@ -31,12 +36,45 @@ VISIBILITY_ENUM = postgresql.ENUM(VisibilityState.PRIVATE,
                                   name='visibility_states',
                                   create_type=False)
 
+Base = declarative_base()
+
+
+class Config(Base):
+    __tablename__ = 'config'
+
+    name = sa.Column(sa.Text, primary_key=True)
+    value = sa.Column(JSONString(), nullable=False)
+    schema = sa.Column(JSONString(), nullable=True)
+    is_editable = sa.Column(sa.Boolean, default=True)
+    updated_at = sa.Column(UTCDateTime())
+    scope = sa.Column(sa.Text, primary_key=True)
+    _updater_id = sa.Column(
+        sa.Integer,
+        sa.ForeignKey(User.id, ondelete='SET NULL'),
+        nullable=True,
+        index=False,
+        primary_key=False,
+    )
+
 
 def upgrade():
     _create_usage_collector_table()
     _create_inter_deployment_dependencies_table()
     _create_unique_indexes()
     _add_plugins_title_column()
+
+    bind = op.get_bind()
+    session = orm.Session(bind=bind)
+    session.add(
+        Config(
+            name='service_management',
+            value='systemd',
+            scope='rest',
+            schema={'type': 'string'},
+            is_editable=True
+        )
+    )
+    session.commit()
 
 
 def downgrade():
