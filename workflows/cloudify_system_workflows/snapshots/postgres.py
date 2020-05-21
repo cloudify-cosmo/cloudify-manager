@@ -498,8 +498,7 @@ class Postgres(object):
         return new_dump_file
 
     def run_query(self, query, vars=None, bulk_query=False):
-        str_query = query.decode(encoding='UTF-8', errors='replace')
-        str_query = str_query.replace(u"\uFFFD", "?")
+        str_query = query.replace(u"\uFFFD", "?")
         ctx.logger.debug('Running query: {0}'.format(str_query))
         with closing(self._connection.cursor()) as cur:
             try:
@@ -576,7 +575,7 @@ class Postgres(object):
 
         encrypted_values = []
         for value in values['all']:
-            encrypted_value = encrypt(bytes(value[1]), encryption_key)
+            encrypted_value = encrypt(value[1].encode('utf-8'), encryption_key)
             encrypted_values.append((value[0], encrypted_value))
 
         update_query = """UPDATE {0}
