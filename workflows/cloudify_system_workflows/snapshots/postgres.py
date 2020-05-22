@@ -575,7 +575,7 @@ class Postgres(object):
 
         encrypted_values = []
         for value in values['all']:
-            encrypted_value = encrypt(value[1].encode('utf-8'), encryption_key)
+            encrypted_value = encrypt(value[1], encryption_key)
             encrypted_values.append((value[0], encrypted_value))
 
         update_query = """UPDATE {0}
