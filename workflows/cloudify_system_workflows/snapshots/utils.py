@@ -255,9 +255,9 @@ def run(command, ignore_failures=False, redirect_output_path=None, cwd=None):
 
     proc.aggr_stdout, proc.aggr_stderr = proc.communicate()
     if proc.aggr_stdout is not None:
-        proc.aggr_stdout = proc.aggr_stdout.decode('utf-8')
+        proc.aggr_stdout = proc.aggr_stdout.decode('utf-8', 'replace')
     if proc.aggr_stderr is not None:
-        proc.aggr_stderr = proc.aggr_stderr.decode('utf-8')
+        proc.aggr_stderr = proc.aggr_stderr.decode('utf-8', 'replace')
     if proc and proc.returncode != 0:
         if not ignore_failures:
             raise RuntimeError(
