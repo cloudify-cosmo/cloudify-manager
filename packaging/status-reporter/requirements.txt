@@ -1,1 +1,1 @@
-git+https://github.com/cloudify-cosmo/cloudify-common@master#egg=cloudify-common==master
+git+https://github.com/cloudify-cosmo/cloudify-common@bump-flask-on-rest-service#egg=cloudify-common==bump-flask-on-rest-service
