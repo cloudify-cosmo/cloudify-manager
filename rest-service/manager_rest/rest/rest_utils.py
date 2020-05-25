@@ -339,6 +339,8 @@ def update_deployment_dependencies_from_plan(deployment_id,
         for creator, target in new_dependencies.items()
         if dep_plan_filter_func(creator)
     }
+    dep_graph = RecursiveDeploymentDependencies(storage_manager)
+    dep_graph.create_dependencies_graph()
 
     for dependency_creator, target_deployment_id \
             in new_dependencies_dict.items():
@@ -369,5 +371,101 @@ def update_deployment_dependencies_from_plan(deployment_id,
         curr_dependencies[dependency_creator].target_deployment = \
             target_deployment
         storage_manager.update(curr_dependencies[dependency_creator])
-
+        # verify that the new dependency doesn't create a cycle,
+        # and update the dependencies graph accordingly
+        if not hasattr(source_deployment, 'id'):
+            continue
+            # upcoming: handle the case of external dependencies
+        source_id = source_deployment.id
+        target_id = target_deployment.id
+        old_target_id = curr_target_deployment.id
+        dep_graph.assert_no_cyclic_dependencies(source_id, target_id)
+        if target_deployment not in new_dependencies_dict.values():
+            dep_graph.remove_dependency_from_graph(source_id, old_target_id)
+        dep_graph.add_dependency_to_graph(source_id, target_id)
     return new_dependencies_dict
+
+
+class RecursiveDeploymentDependencies(object):
+    def __init__(self, sm):
+        self.graph = None
+        self.sm = sm
+
+    def create_dependencies_graph(self):
+        if self.graph:
+            return
+        dependencies = self.sm.list(models.InterDeploymentDependencies)
+        self.graph = {}
+        for dependency in dependencies:
+            if not hasattr(dependency, 'source_deployment_id'):
+                continue
+                # upcoming: handle the case of external dependencies
+            source = dependency.source_deployment_id
+            target = dependency.target_deployment_id
+            if target:
+                self.add_dependency_to_graph(source, target)
+
+    def add_dependency_to_graph(self, source_deployment, target_deployment):
+        self.graph.setdefault(target_deployment, set()).add(source_deployment)
+
+    def remove_dependency_from_graph(self,
+                                     source_deployment, target_deployment):
+        if target_deployment in self.graph and \
+                source_deployment in self.graph[target_deployment]:
+            self.graph[target_deployment].remove(source_deployment)
+            if not self.graph[target_deployment]:
+                del self.graph[target_deployment]
+
+    def assert_no_cyclic_dependencies(self,
+                                      source_deployment, target_deployment):
+        graph = copy.deepcopy(self.graph)
+        graph.setdefault(target_deployment, set()).add(source_deployment)
+
+        # DFS to find cycles
+        v = list(graph)[0]
+        recursion_stack = [v]
+        while graph:
+            while v not in graph.keys():
+                recursion_stack.pop()
+                if recursion_stack:
+                    recursion_stack[-1]
+                else:
+                    v = list(graph)[0]
+                    recursion_stack = [v]
+            u = graph[v].pop()
+            if not graph[v]:
+                del graph[v]
+            v = u
+            if v in recursion_stack:
+                raise manager_exceptions.ConflictError(
+                    'Deployment creation results in cyclic inter-deployment '
+                    'dependencies.')
+            recursion_stack.append(v)
+
+    def retrieve_dependent_deployments(self, target_id):
+        # BFS to traverse all deployment IDs accessing the requested one
+        queue = {target_id}
+        sources = []
+        results = []
+        while queue:
+            v = queue.pop()
+            if v in self.graph:
+                queue |= self.graph[v]
+            if v not in sources and v != target_id:
+                sources.append(v)
+                dependencies = self.sm.list(
+                    models.InterDeploymentDependencies,
+                    filters={'source_deployment_id': v})
+                for dependency in dependencies:
+                    dep_creator = dependency.dependency_creator.split('.')
+                    dep_type = dep_creator[0] \
+                        if dep_creator[0] in ['component', 'sharedresource'] \
+                        else 'deployment'
+                    dep_node = dep_creator[1]
+                    results.append({
+                        'deployment': v,
+                        'dependency_type': dep_type,
+                        'dependent_node': dep_node,
+                        'tenant': dependency.tenant_name
+                    })
+        return results

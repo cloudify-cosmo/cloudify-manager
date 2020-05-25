@@ -48,7 +48,9 @@ from manager_rest.utils import (send_event,
                                 validate_deployment_and_site_visibility,
                                 extract_host_agent_plugins_from_plan)
 from manager_rest.plugins_update.constants import PLUGIN_UPDATE_WORKFLOW
-from manager_rest.rest.rest_utils import parse_datetime_string
+from manager_rest.rest.rest_utils import (parse_datetime_string,
+                                          RecursiveDeploymentDependencies)
+
 from manager_rest.storage import (db,
                                   get_storage_manager,
                                   models,
@@ -2203,6 +2205,9 @@ class ResourceManager(object):
         new_dependencies = deployment_plan.setdefault(
             INTER_DEPLOYMENT_FUNCTIONS, {})
 
+        dep_graph = RecursiveDeploymentDependencies(self.sm)
+        dep_graph.create_dependencies_graph()
+
         for func_id, target_deployment in new_dependencies.items():
             target_deployment_instance = \
                 self.sm.get(models.Deployment,
@@ -2216,6 +2221,11 @@ class ResourceManager(object):
                 source_deployment=source_deployment,
                 target_deployment=target_deployment_instance,
                 created_at=now))
+            if source_deployment and target_deployment_instance:
+                source_id = str(source_deployment.id)
+                target_id = str(target_deployment_instance.id)
+                dep_graph.assert_no_cyclic_dependencies(source_id, target_id)
+                dep_graph.add_dependency_to_graph(source_id, target_id)
 
 
 # What we need to access this manager in Flask
