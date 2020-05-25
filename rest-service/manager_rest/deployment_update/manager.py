@@ -46,7 +46,8 @@ from manager_rest.deployment_update.handlers import (
 from manager_rest.utils import get_formatted_timestamp
 
 from manager_rest.rest.rest_utils import (get_deployment_plan,
-                                          get_parsed_deployment)
+                                          get_parsed_deployment,
+                                          RecursiveDeploymentDependencies)
 
 
 class DeploymentUpdateManager(object):
@@ -217,6 +218,13 @@ class DeploymentUpdateManager(object):
         if dep_update.preview:
             dep_update.state = STATES.PREVIEW
             dep_update.id = None
+
+            # retrieving recursive dependencies for the updated deployment
+            dep_graph = RecursiveDeploymentDependencies(self.sm)
+            dep_graph.create_dependencies_graph()
+            deployment_dependencies = dep_graph.retrieve_dependent_deployments(
+                dep_update.deployment_id)
+            dep_update.set_recursive_dependencies(deployment_dependencies)
             return dep_update
 
         # Execute the default 'update' workflow or a custom workflow using

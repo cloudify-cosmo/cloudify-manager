@@ -552,23 +552,39 @@ class DeploymentUpdate(CreatedAtMixin, SQLResourceBase):
     old_blueprint_id = association_proxy('old_blueprint', 'id')
     new_blueprint_id = association_proxy('new_blueprint', 'id')
 
+    @declared_attr
+    def recursive_dependencies(cls):
+        return None
+
     @classproperty
     def response_fields(cls):
         fields = super(DeploymentUpdate, cls).response_fields
         fields['steps'] = flask_fields.List(
             flask_fields.Nested(DeploymentUpdateStep.response_fields)
         )
+        dependency_fields = {
+            'deployment': flask_fields.String,
+            'dependency_type': flask_fields.String,
+            'dependent_node': flask_fields.String,
+            'tenant': flask_fields.String
+        }
+        fields['recursive_dependencies'] = flask_fields.List(
+            flask_fields.Nested(dependency_fields))
         return fields
 
     def to_response(self, **kwargs):
         dep_update_dict = super(DeploymentUpdate, self).to_response()
         # Taking care of the fact the DeploymentSteps are objects
         dep_update_dict['steps'] = [step.to_dict() for step in self.steps]
+        dep_update_dict['recursive_dependencies'] = self.recursive_dependencies
         return dep_update_dict
 
     def set_deployment(self, deployment):
         self._set_parent(deployment)
         self.deployment = deployment
+
+    def set_recursive_dependencies(self, recursive_dependencies):
+        self.recursive_dependencies = recursive_dependencies
 
 
 class DeploymentUpdateStep(SQLResourceBase):
