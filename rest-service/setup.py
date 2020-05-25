@@ -29,7 +29,7 @@ install_requires = [
     'PyYAML==3.12',
     'psutil==3.3.0',
     'virtualenv==15.1.0',
-    'wagon==0.6.3',
+    'wagon>=0.9.1',
     'python-dateutil==2.5.3',
     'voluptuous==0.9.3',
     'toolz==0.8.2',
