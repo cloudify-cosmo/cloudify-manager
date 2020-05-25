@@ -16,13 +16,13 @@
 from setuptools import setup, find_packages
 
 install_requires = [
-    'Flask==1.0.2',
-    'flask-restful==0.3.6',
+    'Flask==1.1.2',
+    'flask-restful==0.3.8',
     'flask-restful-swagger==0.20.1',
-    'flask-sqlalchemy==2.3.2',
+    'flask-sqlalchemy==2.4.1',
     'flask-security==3.0.0',
-    'flask-login==0.4.1',
-    'flask-migrate==2.2.1',
+    'flask-login==0.5.0',
+    'flask-migrate==2.5.3',
     'cloudify-common==5.1.0.dev1',
     'requests>=2.7.0,<3.0.0',
     'gunicorn==18.0',
@@ -37,7 +37,6 @@ install_requires = [
     'cryptography==2.5.0',
     'psycopg2==2.7.4',
     'pytz==2018.4',
-    'click==6.7',
     'packaging==17.1',
     'jsonschema==3.0.0',
     'SQLAlchemy==1.2.18',
