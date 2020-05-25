@@ -195,6 +195,14 @@ class InterDeploymentDependencies(SecuredResource):
         sm = get_storage_manager()
         params = self._get_put_dependency_params(sm)
         now = utils.get_formatted_timestamp()
+
+        # assert no cyclic dependencies are created
+        dep_greph = rest_utils.RecursiveDeploymentDependencies(sm)
+        source_id = str(params[SOURCE_DEPLOYMENT].id)
+        target_id = str(params[TARGET_DEPLOYMENT].id)
+        dep_greph.create_dependencies_graph()
+        dep_greph.assert_no_cyclic_dependencies(source_id, target_id)
+
         deployment_dependency = models.InterDeploymentDependencies(
             id=str(uuid.uuid4()),
             dependency_creator=params[DEPENDENCY_CREATOR],
