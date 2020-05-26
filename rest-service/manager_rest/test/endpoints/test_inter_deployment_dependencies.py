@@ -273,6 +273,112 @@ class InterDeploymentDependenciesTest(BaseServerTestCase):
         self.assertEqual(dependencies[0]['dependency_type'], 'deployment')
         self.assertEqual(dependencies[0]['dependent_node'], 'ip')
 
+    def test_retrieve_dependencies_app_with_components(self):
+        # create an IDD system with the following:
+        # a central app `multi` depending on component `comp-top` and on
+        # shared resource `resource`.
+        # `comp-top` depends on `comp-bottom` which is shared with `sharing-1`
+        # `sharing-2` depends on `resource`, `sharing-3` depends on `sharing-1`
+        # and `capable` depends on `multi`.
+        self._put_mock_deployments('capable', 'multi')
+        self._put_mock_deployments('comp-top', 'comp-bottom')
+        self._put_mock_deployments('sharing-2', 'resource')
+        self._put_mock_deployments('sharing-3', 'sharing-1')
+        self.client.inter_deployment_dependencies.create(
+            **create_deployment_dependency('component.teiredcomponent',
+                                           'multi', 'comp-top'))
+        self.client.inter_deployment_dependencies.create(
+            **create_deployment_dependency('sharedresource.vm',
+                                           'multi', 'resource'))
+        self.client.inter_deployment_dependencies.create(
+            **create_deployment_dependency('sharedresource.vm',
+                                           'sharing-2', 'resource'))
+        self.client.inter_deployment_dependencies.create(
+            **create_deployment_dependency('component.infra',
+                                           'comp-top', 'comp-bottom'))
+        self.client.inter_deployment_dependencies.create(
+            **create_deployment_dependency('sharedresource.node1',
+                                           'sharing-1', 'comp-bottom'))
+        self.client.inter_deployment_dependencies.create(
+            **create_deployment_dependency('sharedresource.mynode',
+                                           'sharing-3', 'sharing-1'))
+        self.client.inter_deployment_dependencies.create(
+            **create_deployment_dependency('capability.ip',
+                                           'capable', 'multi'))
+        # if we try to uninstall/update/stop/delete `multi`,
+        # we should be alerted of both its and its components' dependencies
+        dep_graph = RecursiveDeploymentDependencies(self.sm)
+        dep_graph.create_dependencies_graph()
+        dependencies = dep_graph.retrieve_dependent_deployments('multi')
+        self.assertEqual(len(dependencies), 3)
+        self.assertEqual(set(x['deployment'] for x in dependencies),
+                         {'capable', 'sharing-1', 'sharing-3'})
+
+    def test_alerts_uninstall_deployment(self):
+        self._prepare_dependent_deployments()
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            '1] Deployment `app` uses a shared resource from the current '
+            'deployment in its node `vm`',
+            self.client.executions.start,
+            'infra',
+            'uninstall'
+        )
+
+    def test_alerts_update_deployment(self):
+        self._prepare_dependent_deployments()
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            '1] Deployment `app` uses a shared resource from the current '
+            'deployment in its node `vm`',
+            self.client.deployment_updates.update_with_existing_blueprint,
+            'infra',
+            inputs={'http_web_server_port': 8080}
+        )
+
+    def test_alerts_update_deployment_preview(self):
+        self._prepare_dependent_deployments()
+        update_result = \
+            self.client.deployment_updates.update_with_existing_blueprint(
+                'infra', inputs={'http_web_server_port': 8080}, preview=True)
+        deployment_dependencies = update_result['recursive_dependencies']
+        self.assertEqual(len(deployment_dependencies), 1)
+        self.assertEqual(deployment_dependencies[0],
+                         {'dependency_type': 'sharedresource',
+                          'dependent_node': 'vm',
+                          'tenant': 'default_tenant',
+                          'deployment': 'app'})
+
+    def test_alerts_delete_deployment(self):
+        self._prepare_dependent_deployments()
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            '1] Deployment `app` uses a shared resource from the current '
+            'deployment in its node `vm`',
+            self.client.deployments.delete,
+            'infra'
+        )
+
+    def test_alerts_force_uninstall_deployment_no_error(self):
+        self._prepare_dependent_deployments()
+        self.client.executions.start('infra', 'uninstall', force=True)
+
+    def _prepare_dependent_deployments(self):
+        self.put_deployment(
+            blueprint_file_name='blueprint_with_inputs.yaml',
+            blueprint_id='i{0}'.format(uuid.uuid4()),
+            deployment_id='infra',
+            inputs={'http_web_server_port': 80}
+        )
+        self.put_deployment(
+            blueprint_file_name='blueprint.yaml',
+            blueprint_id='i{0}'.format(uuid.uuid4()),
+            deployment_id='app')
+        self.client.inter_deployment_dependencies.create(
+            **create_deployment_dependency('sharedresource.vm',
+                                           'app',
+                                           'infra'))
+
     def _populate_dependencies_table(self):
         self._put_mock_deployments('0', '1')
         self._put_mock_deployments('2', '3')
