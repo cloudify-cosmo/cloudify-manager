@@ -434,7 +434,7 @@ class SQLStorageManager(object):
 
         instance_flushed = inspect(instance).persistent
         num_of_allowed_entries = 1 if instance_flushed else 0
-        if len(results) != num_of_allowed_entries:
+        if len(results) > num_of_allowed_entries:
             if instance_flushed:
                 db.session.delete(instance)
             else:
