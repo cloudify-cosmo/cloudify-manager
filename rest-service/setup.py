@@ -16,13 +16,13 @@
 from setuptools import setup, find_packages
 
 install_requires = [
-    'Flask==1.1.2',
-    'flask-restful==0.3.8',
+    'Flask>1,<2',
+    'flask-restful>0.3.5,<0.4.0',
     'flask-restful-swagger==0.20.1',
-    'flask-sqlalchemy==2.4.1',
+    'flask-sqlalchemy>2.3.1,<2.5.0',
     'flask-security==3.0.0',
     'flask-login==0.4.1',
-    'flask-migrate==2.5.3',
+    'flask-migrate>2.2.0,<2.6.0',
     'cloudify-common==5.1.0.dev1',
     'requests>=2.7.0,<3.0.0',
     'gunicorn==18.0',
