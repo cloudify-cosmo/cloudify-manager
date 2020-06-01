@@ -1,4 +1,4 @@
-git+https://github.com/cloudify-cosmo/cloudify-common@bump-flask-on-rest-service#egg=cloudify-common[dispatcher]==bump-flask-on-rest-service
+git+https://github.com/cloudify-cosmo/cloudify-common@CY-2911-bump-packages#egg=cloudify-common[dispatcher]==CY-2911-bump-packages
 
 # For dealing with the binary leftovers of psycopg2 in the 2.7.x version
 psycopg2==2.7.4 --no-binary psycopg2
