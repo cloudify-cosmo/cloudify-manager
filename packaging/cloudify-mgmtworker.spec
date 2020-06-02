@@ -1,4 +1,4 @@
-%global _python_bytecompile_errors_terminate_build 0
+%define __python /opt/mgmtworker/env/bin/python
 %define __jar_repack %{nil}
 %define PIP_INSTALL /opt/mgmtworker/env/bin/pip install -c "${RPM_SOURCE_DIR}/packaging/mgmtworker/constraints.txt"
 
@@ -12,9 +12,10 @@ URL:            https://github.com/cloudify-cosmo/cloudify-manager
 Vendor:         Cloudify Platform Ltd.
 Packager:       Cloudify Platform Ltd.
 
-BuildRequires:  python >= 2.7, python-virtualenv, openssl-devel, git
+BuildRequires:  python3 >= 3.6, openssl-devel, git
 BuildRequires:  postgresql-devel
-Requires:       python >= 2.7, postgresql-libs
+BuildRequires: python3-devel
+Requires:       python3 >= 3.6, postgresql-libs
 Requires(pre):  shadow-utils
 
 %description
@@ -22,7 +23,7 @@ Cloudify's Management worker
 
 
 %build
-virtualenv /opt/mgmtworker/env
+python3 -m venv /opt/mgmtworker/env
 %{PIP_INSTALL} --upgrade pip"<20.0" setuptools
 %{PIP_INSTALL} -r "${RPM_SOURCE_DIR}/packaging/mgmtworker/requirements.txt"
 %{PIP_INSTALL} --upgrade "${RPM_SOURCE_DIR}/mgmtworker"
@@ -31,10 +32,6 @@ virtualenv /opt/mgmtworker/env
 
 %{PIP_INSTALL} --upgrade kerberos==1.3.0
 
-# Jinja2 includes 2 files which will only be imported if async is available,
-# but rpmbuild's brp-python-bytecompile falls over when it finds them. Here
-# we remove them.
-rm -f /opt/mgmtworker/env/lib/python2.7/site-packages/jinja2/async*.py
 
 %install
 mkdir -p %{buildroot}/opt/mgmtworker
