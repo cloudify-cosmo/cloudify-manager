@@ -426,9 +426,11 @@ def stage_db_schema_get_current_revision():
         return None
     output = subprocess.check_output([
         'sudo', '-u', snapshot_constants.STAGE_USER,
-        '/usr/bin/node',
-        '/opt/cloudify-stage/backend/migration.js',
-        'current',
+        '/usr/bin/npm',
+        'run',
+        '--silent',
+        '--prefix', snapshot_constants.STAGE_BASE_FOLDER,
+        'db-migrate-current',
     ])
     revision = output.strip()
     return revision
@@ -449,12 +451,11 @@ def composer_db_schema_get_current_revision():
         'sudo', '-u', snapshot_constants.COMPOSER_USER,
         '/usr/bin/npm',
         'run',
+        '--silent',
         '--prefix', snapshot_constants.COMPOSER_BASE_FOLDER,
         'db-migrate-current'
     ])
-    # the revision is in the last line of the output
-    # (it's actually -2, because -1 is just an empty line)
-    revision = output.split('\n')[-2].strip()
+    revision = output.strip()
     return revision
 
 
