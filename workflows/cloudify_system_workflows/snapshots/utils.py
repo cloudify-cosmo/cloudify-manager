@@ -429,7 +429,7 @@ def stage_db_schema_get_current_revision():
         '/usr/bin/npm',
         'run',
         '--silent',
-        '--prefix', snapshot_constants.STAGE_BASE_FOLDER,
+        '--prefix', os.path.join(snapshot_constants.STAGE_BASE_FOLDER, 'backend'),
         'db-migrate-current',
     ])
     revision = output.strip()
