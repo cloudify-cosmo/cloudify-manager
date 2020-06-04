@@ -62,19 +62,7 @@ def upgrade():
     _create_inter_deployment_dependencies_table()
     _create_unique_indexes()
     _add_plugins_title_column()
-
-    bind = op.get_bind()
-    session = orm.Session(bind=bind)
-    session.add(
-        Config(
-            name='service_management',
-            value='systemd',
-            scope='rest',
-            schema={'type': 'string'},
-            is_editable=True
-        )
-    )
-    session.commit()
+    _add_service_management_column()
 
 
 def downgrade():
@@ -82,6 +70,7 @@ def downgrade():
     _drop_inter_deployment_dependencies_table()
     _drop_unique_indexes()
     _drop_plugins_title_column()
+    _drop_service_management_column()
 
 
 def _create_usage_collector_table():
@@ -249,3 +238,29 @@ def _add_plugins_title_column():
 
 def _drop_plugins_title_column():
     op.drop_column(u'plugins', 'title')
+
+
+def _add_service_management_column():
+    bind = op.get_bind()
+    session = orm.Session(bind=bind)
+    session.add(
+        Config(
+            name='service_management',
+            value='systemd',
+            scope='rest',
+            schema={'type': 'string'},
+            is_editable=True
+        )
+    )
+    session.commit()
+
+
+def _drop_service_management_column():
+    bind = op.get_bind()
+    session = orm.Session(bind=bind)
+    service_management = session.query(Config).filter_by(
+        name='service_management',
+        scope='rest',
+    ).one()
+    session.delete(service_management)
+    session.commit()
