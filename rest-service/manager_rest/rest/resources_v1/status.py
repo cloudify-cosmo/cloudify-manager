@@ -54,8 +54,8 @@ class Status(SecuredResource):
     def get(self, **kwargs):
         """Get the status of running system services"""
         if get_services:
-            services = get_systemd_manager_services(BASE_SERVICES,
-                                                    OPTIONAL_SERVICES)
+            services = get_system_manager_services(BASE_SERVICES,
+                                                   OPTIONAL_SERVICES)
             jobs = get_services(services)
             jobs = [
                 job for job in jobs
@@ -94,7 +94,7 @@ def should_be_in_services_output(job, optional_services):
     return False
 
 
-def get_systemd_manager_services(base_services, optional_services):
+def get_system_manager_services(base_services, optional_services):
     """Services the status of which we keep track of.
     :return: a dict of {service_name: label}
     """

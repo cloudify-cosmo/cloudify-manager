@@ -32,7 +32,7 @@ from manager_rest.rest.rest_utils import verify_and_convert_bool
 from manager_rest.cluster_status_manager import get_syncthing_status
 from manager_rest.rest.resources_v1.status import (
     should_be_in_services_output,
-    get_systemd_manager_services
+    get_system_manager_services
 )
 
 try:
@@ -50,27 +50,17 @@ except ImportError:
 
 
 BASE_SERVICES = {
-    'nginx.service': 'Webserver',
-    'cloudify-stage.service': 'Cloudify Console',
-    'cloudify-amqp-postgres.service': 'AMQP-Postgres',
-    'cloudify-mgmtworker.service': 'Management Worker',
-    'cloudify-restservice.service': 'Manager Rest-Service'
+    'nginx': 'Webserver',
+    'cloudify-stage': 'Cloudify Console',
+    'cloudify-amqp-postgres': 'AMQP-Postgres',
+    'cloudify-mgmtworker': 'Management Worker',
+    'cloudify-restservice': 'Manager Rest-Service'
 }
 OPTIONAL_SERVICES = {
-    'postgresql-9.5.service': 'PostgreSQL',
-    'cloudify-rabbitmq.service': 'RabbitMQ',
-    'cloudify-composer.service': 'Cloudify Composer',
-    'cloudify-syncthing.service': 'File Sync Service'
-}
-
-SUPERVISORD_SERVICES = {
-    'AMQP-Postgres': 'cloudify-amqp-postgres',
-    'Cloudify Composer': 'cloudify-composer',
-    'Cloudify Console': 'cloudify-stage',
-    'Management Worker': 'cloudify-mgmtworker',
-    'Webserver': 'cloudify-nginx',
-    'Manager Rest-Service': 'cloudify-restservice',
-    'File Sync Service': 'cloudify-syncthing'
+    'postgresql-9.5': 'PostgreSQL',
+    'cloudify-rabbitmq': 'RabbitMQ',
+    'cloudify-composer': 'Cloudify Composer',
+    'cloudify-syncthing': 'File Sync Service'
 }
 
 
@@ -136,42 +126,39 @@ class Status(SecuredResource):
         return {'status': status, 'services': services}
 
     def _check_supervisord_services(self, services):
-        server = xmlrpclib.Server(
-            'http://',
-            transport=UnixSocketTransport("/tmp/supervisor.sock"))
         statuses = []
-        for display_name, name in SUPERVISORD_SERVICES.items():
-            try:
-                status_response = server.supervisor.getProcessInfo(name)
-            except xmlrpclib.Fault as e:
-                if e.faultCode == 10:  # bad service name
-                    service_status = 'failed'
-                else:
-                    raise
-            else:
-                if status_response['statename'] == 'RUNNING':
-                    service_status = NodeServiceStatus.ACTIVE
-                else:
-                    service_status = status_response['statename']
-            statuses.append(service_status)
-            services[display_name] = {
-                'status': service_status,
-                'is_remote': False,
-                'extra_info': {}
-            }
+        supervisord_services = get_system_manager_services(
+            BASE_SERVICES,
+            OPTIONAL_SERVICES
+        )
+        for name, display_name in supervisord_services.items():
+            status = self._lookup_supervisor_service_status(name)
+            if status:
+                services[display_name] = {
+                    'status': status,
+                    'is_remote': False,
+                    'extra_info': {}
+                }
+                statuses.append(status)
         return statuses
 
     def _check_systemd_services(self, services):
-        systemd_services = get_services(
-            get_systemd_manager_services(BASE_SERVICES, OPTIONAL_SERVICES)
+        def _get_services_with_suffix(_services):
+            return {
+                '{0}.service'.format(k): v for (k, v) in _services.items()
+            }
+        all_services = get_system_manager_services(
+            BASE_SERVICES,
+            OPTIONAL_SERVICES
         )
+        all_services = _get_services_with_suffix(all_services)
+        systemd_services = get_services(all_services)
         statuses = []
         for service in systemd_services:
-            if should_be_in_services_output(service, OPTIONAL_SERVICES):
-                is_service_running = service['instances'] and (
-                        service['instances'][0]['state'] == 'running')
-                status = NodeServiceStatus.ACTIVE if is_service_running \
-                    else NodeServiceStatus.INACTIVE
+            status = self._lookup_systemd_service_status(
+                service, _get_services_with_suffix(OPTIONAL_SERVICES)
+            )
+            if status:
                 services[service['display_name']] = {
                     'status': status,
                     'is_remote': False,
@@ -181,6 +168,34 @@ class Status(SecuredResource):
                 }
                 statuses.append(status)
         return statuses
+
+    def _lookup_systemd_service_status(self, service, optional_services):
+        status = None
+        if should_be_in_services_output(service, optional_services):
+            is_service_running = service['instances'] and (
+                    service['instances'][0]['state'] == 'running')
+            status = NodeServiceStatus.ACTIVE if is_service_running \
+                else NodeServiceStatus.INACTIVE
+
+        return status
+
+    def _lookup_supervisor_service_status(self, service_name):
+        service_status = None
+        is_optional = True if service_name in OPTIONAL_SERVICES else False
+        server = xmlrpclib.Server(
+            'http://',
+            transport=UnixSocketTransport("/tmp/supervisor.sock"))
+        try:
+            status_response = server.supervisor.getProcessInfo(service_name)
+        except xmlrpclib.Fault as e:
+            if not (is_optional or e.faultCode == 10):
+                raise
+        else:
+            service_status = status_response['statename']
+            if service_status == 'RUNNING':
+                service_status = NodeServiceStatus.ACTIVE
+
+        return service_status
 
     def _check_rabbitmq(self, services):
         name = 'RabbitMQ'
