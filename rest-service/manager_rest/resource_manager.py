@@ -482,14 +482,36 @@ class ResourceManager(object):
         deployment = self.sm.get(models.Deployment, deployment_id)
 
         # Validate there are no running executions for this deployment
-        deplyment_id_filter = self.create_filters_dict(
+        deployment_id_filter = self.create_filters_dict(
             deployment_id=deployment_id,
             status=ExecutionState.ACTIVE_STATES + ExecutionState.QUEUED_STATE
         )
         executions = self.sm.list(
             models.Execution,
-            filters=deplyment_id_filter
+            filters=deployment_id_filter
         )
+
+        # Verify deleting the deployment won't affect dependent deployments
+        dep_graph = RecursiveDeploymentDependencies(self.sm)
+        excluded_id = self._excluded_component_creator_id(deployment)
+        deployment_dependencies = \
+            dep_graph.retrieve_and_display_dependencies(
+                deployment.id,
+                excluded_component_creator_id=excluded_id)
+        if deployment_dependencies:
+            if ignore_live_nodes:
+                current_app.logger.warning(
+                    "Force-deleting deployment {0} despite having the "
+                    "following existing dependent installations\n{1}".format(
+                        deployment.id, deployment_dependencies
+                    ))
+            else:
+                raise manager_exceptions.DependentExistsError(
+                    "Can't delete deployment {0} - the following existing "
+                    "installations depend on it:\n{1}".format(
+                        deployment_id, deployment_dependencies
+                    )
+                )
 
         if not delete_db_mode and self._any_running_executions(executions):
             raise manager_exceptions.DependentExistsError(
@@ -501,11 +523,11 @@ class ResourceManager(object):
                               executions if execution.status not
                               in ExecutionState.END_STATES])))
         if not ignore_live_nodes:
-            deplyment_id_filter = self.create_filters_dict(
+            deployment_id_filter = self.create_filters_dict(
                 deployment_id=deployment_id)
             node_instances = self.sm.list(
                 models.NodeInstance,
-                filters=deplyment_id_filter,
+                filters=deployment_id_filter,
                 get_all_results=True
             )
             # validate either all nodes for this deployment are still
@@ -689,6 +711,7 @@ class ResourceManager(object):
         blueprint = self.sm.get(models.Blueprint, blueprint_id)
         self._verify_workflow_in_deployment(workflow_id, deployment,
                                             deployment_id)
+        self._verify_dependencies_not_affected(workflow_id, deployment, force)
         workflow = deployment.workflows[workflow_id]
 
         if execution:
@@ -1243,11 +1266,11 @@ class ResourceManager(object):
         # node. It is used for serial operations on node instances of the
         # same node. First we get the list of current node instances for the
         # deployment.
-        deplyment_id_filter = self.create_filters_dict(
+        deployment_id_filter = self.create_filters_dict(
             deployment_id=deployment_id)
         all_deployment_node_instances = self.sm.list(
             models.NodeInstance,
-            filters=deplyment_id_filter,
+            filters=deployment_id_filter,
             get_all_results=True
         )
         # We build a dictionary in order to track the current index.
@@ -2165,6 +2188,52 @@ class ResourceManager(object):
                     current_user.username, deployment.id
                 )
             )
+
+    def _verify_dependencies_not_affected(self,
+                                          workflow_id, deployment, force):
+        if workflow_id not in ['stop', 'uninstall', 'update']:
+            return
+        dep_graph = RecursiveDeploymentDependencies(self.sm)
+
+        # if we're in the middle of an execution initiated by the component
+        # creator, we'd like to drop the component dependency from the list
+        excluded_id = self._excluded_component_creator_id(deployment)
+        deployment_dependencies = \
+            dep_graph.retrieve_and_display_dependencies(
+                deployment.id,
+                excluded_component_creator_id=excluded_id)
+        if not deployment_dependencies:
+            return
+        if force:
+            current_app.logger.warning(
+                "Force-executing workflow `{0}` on deployment {1} despite "
+                "having the following existing dependent installations\n"
+                "{2}".format(
+                    workflow_id, deployment.id, deployment_dependencies
+                ))
+            return
+        raise manager_exceptions.DependentExistsError(
+            "Can't execute workflow `{0}` on deployment {1} - the "
+            "following existing installations depend on it:\n{2}".format(
+                workflow_id, deployment.id, deployment_dependencies
+            )
+        )
+
+    def _excluded_component_creator_id(self, deployment):
+        component_creator_deployment = \
+            [x.source_deployment.id for x in
+             deployment.target_of_dependency_in if
+             'component' in x.dependency_creator.split('.')[0]]
+        if component_creator_deployment:
+            component_creator_executions = self.sm.list(
+                models.Execution, filters={
+                    'deployment_id': component_creator_deployment[0],
+                    'status': 'started',
+                    'workflow_id': ['stop', 'uninstall', 'update']}
+            )
+            if len(component_creator_executions) > 0:
+                return component_creator_deployment[0]
+        return None
 
     @staticmethod
     def _any_running_executions(executions):

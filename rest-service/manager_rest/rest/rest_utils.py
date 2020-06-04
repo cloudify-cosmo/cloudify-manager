@@ -405,6 +405,29 @@ class RecursiveDeploymentDependencies(object):
             if target:
                 self.add_dependency_to_graph(source, target)
 
+    def find_recursive_components(self, source_id):
+        inv_graph = {}  # invert dependencies graph
+        for key, val in self.graph.items():
+            for item in val:
+                inv_graph.setdefault(item, set()).add(key)
+        # BFS to find components
+        queue = {source_id}
+        results = set()
+        while queue:
+            v = queue.pop()
+            if v not in inv_graph:
+                continue
+            dependencies = self.sm.list(
+                models.InterDeploymentDependencies,
+                filters={'source_deployment_id': v})
+            for dependency in dependencies:
+                if (dependency.target_deployment_id in inv_graph[v] and
+                        dependency.dependency_creator.split('.')[0] ==
+                        'component'):
+                    queue.add(dependency.target_deployment_id)
+                    results.add(dependency.target_deployment_id)
+        return results
+
     def add_dependency_to_graph(self, source_deployment, target_deployment):
         self.graph.setdefault(target_deployment, set()).add(source_deployment)
 
@@ -444,28 +467,53 @@ class RecursiveDeploymentDependencies(object):
 
     def retrieve_dependent_deployments(self, target_id):
         # BFS to traverse all deployment IDs accessing the requested one
-        queue = {target_id}
-        sources = []
+        target_group = {target_id} | self.find_recursive_components(target_id)
+        queue = target_group.copy()
         results = []
         while queue:
             v = queue.pop()
-            if v in self.graph:
-                queue |= self.graph[v]
-            if v not in sources and v != target_id:
-                sources.append(v)
+            if v not in self.graph:
+                continue
+            queue |= self.graph[v]
+            for u in self.graph[v]:
+                if u in target_group:
+                    # don't add the target itself or its component deployments
+                    continue
                 dependencies = self.sm.list(
                     models.InterDeploymentDependencies,
-                    filters={'source_deployment_id': v})
+                    filters={'source_deployment_id': u})
                 for dependency in dependencies:
+                    if dependency.target_deployment_id != v:
+                        continue
                     dep_creator = dependency.dependency_creator.split('.')
                     dep_type = dep_creator[0] \
                         if dep_creator[0] in ['component', 'sharedresource'] \
                         else 'deployment'
                     dep_node = dep_creator[1]
-                    results.append({
-                        'deployment': v,
+                    dependency_data = {
+                        'deployment': u,
                         'dependency_type': dep_type,
                         'dependent_node': dep_node,
                         'tenant': dependency.tenant_name
-                    })
+                    }
+                    if dependency_data not in results:
+                        results.append(dependency_data)
         return results
+
+    def retrieve_and_display_dependencies(self, target_id,
+                                          excluded_component_creator_id=None):
+        self.create_dependencies_graph()
+        dependencies = self.retrieve_dependent_deployments(target_id)
+        dependencies = [d for d in dependencies if
+                        d['deployment'] != excluded_component_creator_id]
+        dependency_display = '  [{0}] Deployment `{1}` {2} the current ' \
+                             'deployment in its node `{3}`'
+        type_display = {'component': 'contains',
+                        'sharedresource': 'uses a shared resource from',
+                        'deployment': 'uses capabilities of'}
+        return '\n'.join(
+            [dependency_display.format(i+1,
+                                       d['deployment'],
+                                       type_display[d['dependency_type']],
+                                       d['dependent_node'])
+             for i, d in enumerate(dependencies)])
