@@ -50,28 +50,13 @@ except ImportError:
 
 
 BASE_SERVICES = {
-    'nginx.service': 'Webserver',
-    'cloudify-stage.service': 'Cloudify Console',
-    'cloudify-amqp-postgres.service': 'AMQP-Postgres',
-    'cloudify-mgmtworker.service': 'Management Worker',
-    'cloudify-restservice.service': 'Manager Rest-Service'
+    'nginx': 'Webserver',
+    'cloudify-stage': 'Cloudify Console',
+    'cloudify-amqp-postgres': 'AMQP-Postgres',
+    'cloudify-mgmtworker': 'Management Worker',
+    'cloudify-restservice': 'Manager Rest-Service'
 }
 OPTIONAL_SERVICES = {
-    'postgresql-9.5.service': 'PostgreSQL',
-    'cloudify-rabbitmq.service': 'RabbitMQ',
-    'cloudify-composer.service': 'Cloudify Composer',
-    'cloudify-syncthing.service': 'File Sync Service'
-}
-
-SUPERVISORD_BASE_SERVICES = {
-    'cloudify-amqp-postgres': 'AMQP-Postgres',
-    'cloudify-stage': 'Cloudify Console',
-    'cloudify-mgmtworker': 'Management Worker',
-    'nginx': 'Webserver',
-    'cloudify-restservice': 'Manager Rest-Service',
-}
-
-SUPERVISORD_OPTIONAL_SERVICES = {
     'postgresql-9.5': 'PostgreSQL',
     'cloudify-rabbitmq': 'RabbitMQ',
     'cloudify-composer': 'Cloudify Composer',
@@ -143,24 +128,60 @@ class Status(SecuredResource):
     def _check_supervisord_services(self, services):
         statuses = []
         supervisord_services = get_system_manager_services(
-            SUPERVISORD_BASE_SERVICES,
-            SUPERVISORD_OPTIONAL_SERVICES
+            BASE_SERVICES,
+            OPTIONAL_SERVICES
         )
         for name, display_name in supervisord_services.items():
-            service_status = self._lookup_supervisor_service_status(name)
-            if service_status:
-                statuses.append(service_status)
+            status = self._lookup_supervisor_service_status(name)
+            if status:
                 services[display_name] = {
-                    'status': service_status,
+                    'status': status,
                     'is_remote': False,
                     'extra_info': {}
                 }
+                statuses.append(status)
         return statuses
+
+    def _check_systemd_services(self, services):
+        def _get_services_with_suffix(_services):
+            return {
+                '{0}.service'.format(k): v for (k, v) in _services.items()
+            }
+        all_services = get_system_manager_services(
+            BASE_SERVICES,
+            OPTIONAL_SERVICES
+        )
+        all_services = _get_services_with_suffix(all_services)
+        systemd_services = get_services(all_services)
+        statuses = []
+        for service in systemd_services:
+            status = self._lookup_systemd_service_status(
+                service, _get_services_with_suffix(OPTIONAL_SERVICES)
+            )
+            if status:
+                services[service['display_name']] = {
+                    'status': status,
+                    'is_remote': False,
+                    'extra_info': {
+                        'systemd': service
+                    }
+                }
+                statuses.append(status)
+        return statuses
+
+    def _lookup_systemd_service_status(self, service, optional_services):
+        status = None
+        if should_be_in_services_output(service, optional_services):
+            is_service_running = service['instances'] and (
+                    service['instances'][0]['state'] == 'running')
+            status = NodeServiceStatus.ACTIVE if is_service_running \
+                else NodeServiceStatus.INACTIVE
+
+        return status
 
     def _lookup_supervisor_service_status(self, service_name):
         service_status = None
-        is_optional = \
-            True if service_name in SUPERVISORD_OPTIONAL_SERVICES else False
+        is_optional = True if service_name in OPTIONAL_SERVICES else False
         server = xmlrpclib.Server(
             'http://',
             transport=UnixSocketTransport("/tmp/supervisor.sock"))
@@ -175,27 +196,6 @@ class Status(SecuredResource):
                 service_status = NodeServiceStatus.ACTIVE
 
         return service_status
-
-    def _check_systemd_services(self, services):
-        systemd_services = get_services(
-            get_system_manager_services(BASE_SERVICES, OPTIONAL_SERVICES)
-        )
-        statuses = []
-        for service in systemd_services:
-            if should_be_in_services_output(service, OPTIONAL_SERVICES):
-                is_service_running = service['instances'] and (
-                        service['instances'][0]['state'] == 'running')
-                status = NodeServiceStatus.ACTIVE if is_service_running \
-                    else NodeServiceStatus.INACTIVE
-                services[service['display_name']] = {
-                    'status': status,
-                    'is_remote': False,
-                    'extra_info': {
-                        'systemd': service
-                    }
-                }
-                statuses.append(status)
-        return statuses
 
     def _check_rabbitmq(self, services):
         name = 'RabbitMQ'
