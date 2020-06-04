@@ -432,7 +432,7 @@ def stage_db_schema_get_current_revision():
         '--prefix', os.path.join(snapshot_constants.STAGE_BASE_FOLDER,
                                  'backend'),
         'db-migrate-current',
-    ])
+    ]).decode('utf-8')
     revision = output.strip()
     return revision
 
@@ -455,7 +455,7 @@ def composer_db_schema_get_current_revision():
         '--silent',
         '--prefix', snapshot_constants.COMPOSER_BASE_FOLDER,
         'db-migrate-current'
-    ])
+    ]).decode('utf-8')
     revision = output.strip()
     return revision
 
