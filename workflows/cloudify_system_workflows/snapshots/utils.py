@@ -410,7 +410,7 @@ def _schema(config, command):
             if value:
                 full_command += [arg, value]
     full_command += command
-    return subprocess.check_output(full_command)
+    return subprocess.check_output(full_command).decode('utf-8')
 
 
 def stage_db_schema_get_current_revision():
