@@ -639,11 +639,14 @@ class ResourceManager(object):
             execution_token=execution_token
         )
 
-        # Dealing with the inner Component-s deployments
+        # Dealing with the inner Components' deployments
         components_executions = self._find_all_components_executions(
             execution.deployment_id)
         for exec_id in components_executions:
-            self.resume_execution(exec_id, force)
+            execution = self.sm.get(models.Execution, exec_id)
+            if execution.status in [ExecutionState.CANCELLED,
+                                    ExecutionState.FAILED]:
+                self.resume_execution(exec_id, force)
 
         return execution
 
