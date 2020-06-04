@@ -4,7 +4,7 @@
 - Adding inter deployment dependencies table
 - Add unique indexes
 
-Revision ID: 387fcd049efb
+Revision ID: 7b883ec574ea
 Revises: 62a8d746d13b
 Create Date: 2020-03-30 06:27:26.747213
 Updated Date: 2020-04-30 08:45:11.833636
@@ -62,7 +62,7 @@ def upgrade():
     _create_inter_deployment_dependencies_table()
     _create_unique_indexes()
     _add_plugins_title_column()
-    _add_service_management_column()
+    # _add_service_management_column()
 
 
 def downgrade():

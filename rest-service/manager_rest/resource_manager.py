@@ -2280,18 +2280,23 @@ class ResourceManager(object):
         dep_graph = RecursiveDeploymentDependencies(self.sm)
         dep_graph.create_dependencies_graph()
 
-        for func_id, target_deployment in new_dependencies.items():
+        for func_id, target_deployment_attr in new_dependencies.items():
+            target_deployment = target_deployment_attr[0]
+            target_deployment_func = target_deployment_attr[1]
             target_deployment_instance = \
                 self.sm.get(models.Deployment,
                             target_deployment,
                             fail_silently=True) if target_deployment else None
 
+            target_deployment_func = (None if target_deployment
+                                      else target_deployment_func)
             now = utils.get_formatted_timestamp()
             self.sm.put(models.InterDeploymentDependencies(
                 id=str(uuid.uuid4()),
                 dependency_creator=func_id,
                 source_deployment=source_deployment,
                 target_deployment=target_deployment_instance,
+                target_deployment_func=target_deployment_func,
                 created_at=now))
             if source_deployment and target_deployment_instance:
                 source_id = str(source_deployment.id)
