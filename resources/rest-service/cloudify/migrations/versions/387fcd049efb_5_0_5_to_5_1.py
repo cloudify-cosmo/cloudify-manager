@@ -62,7 +62,7 @@ def upgrade():
     _create_inter_deployment_dependencies_table()
     _create_unique_indexes()
     _add_plugins_title_column()
-    # _add_service_management_column()
+    _add_service_management_column()
 
 
 def downgrade():

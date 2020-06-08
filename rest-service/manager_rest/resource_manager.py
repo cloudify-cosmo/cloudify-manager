@@ -119,9 +119,6 @@ class ResourceManager(object):
 
         res = self.sm.update(execution)
         if status in ExecutionState.END_STATES:
-            import pydevd;
-            pydevd.settrace('172.18.10.116', port=53100, stdoutToServer=True,
-                            stderrToServer=True, suspend=True)
             if execution.workflow_id == 'install':
                 self.update_inter_deployment_dependencies()
             self.start_queued_executions()
