@@ -1,6 +1,5 @@
 [Unit]
 Description=Cloudify AMQP PostgreSQL Broker Service
-Wants=postgresql-9.5.service cloudify-rabbitmq.service
 After=postgresql-9.5.service cloudify-rabbitmq.service
 
 [Service]
