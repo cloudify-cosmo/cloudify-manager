@@ -728,9 +728,6 @@ class TestDeploymentDependencies(unittest.TestCase):
         def ignores_ignore_me(dependency_creator):
             return dependency_creator != 'ignore_me'
 
-        import pydevd;
-        pydevd.settrace('172.18.10.116', port=53100, stdoutToServer=True,
-                        stderrToServer=True, suspend=True)
         common_dependency_updated = self._build_mock_dependency(
             'creator_common_updated', 'target_old')
         common_dependency_isnt_updated = self._build_mock_dependency(
