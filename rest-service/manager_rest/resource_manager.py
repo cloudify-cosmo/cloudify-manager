@@ -119,8 +119,7 @@ class ResourceManager(object):
 
         res = self.sm.update(execution)
         if status in ExecutionState.END_STATES:
-            if execution.workflow_id == 'install':
-                self.update_inter_deployment_dependencies()
+            self.update_inter_deployment_dependencies()
             self.start_queued_executions()
         return res
 

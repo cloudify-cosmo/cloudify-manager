@@ -728,6 +728,9 @@ class TestDeploymentDependencies(unittest.TestCase):
         def ignores_ignore_me(dependency_creator):
             return dependency_creator != 'ignore_me'
 
+        import pydevd;
+        pydevd.settrace('172.18.10.116', port=53100, stdoutToServer=True,
+                        stderrToServer=True, suspend=True)
         common_dependency_updated = self._build_mock_dependency(
             'creator_common_updated', 'target_old')
         common_dependency_isnt_updated = self._build_mock_dependency(
@@ -742,9 +745,10 @@ class TestDeploymentDependencies(unittest.TestCase):
         ]
         self.mock_sm.list.return_value = curr_dependencies
         dependency_creating_functions = {
-            'creator_2': 'target_1',
-            common_dependency_updated.dependency_creator: 'target_new',
-            common_dependency_isnt_updated.dependency_creator: 'target_old'
+            'creator_2': ('target_1', None),
+            common_dependency_updated.dependency_creator: ('target_new', None),
+            common_dependency_isnt_updated.dependency_creator:
+                ('target_old', None)
         }
         self.mock_sm.get.side_effect = ['target_1', 'test_deployment_id',
                                         'target_new', 'test_deployment_id',

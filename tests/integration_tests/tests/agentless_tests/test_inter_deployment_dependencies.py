@@ -50,16 +50,12 @@ class TestInterDeploymentDependenciesInfrastructure(AgentlessTestCase):
             static_target_deployment=SR_DEPLOYMENT,
             runtime_target_deployment=None)
 
-        self.client.nodes.get(MAIN_DEPLOYMENT,
-                              COMPUTE_NODE,
-                              evaluate_functions=True)
-        dependencies = self._assert_dependencies_count(2)
+        self._install_main_deployment()
         self._assert_compute_node_dependencies(
             dependencies,
             static_target_deployment=SR_DEPLOYMENT,
             runtime_target_deployment=SR_DEPLOYMENT)
 
-        self._install_main_deployment()
         node_instances = self.client.node_instances.list()
         shared_resource = self._get_shared_resource_instance(
             node_instances)
