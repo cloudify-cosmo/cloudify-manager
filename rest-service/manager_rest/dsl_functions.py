@@ -20,7 +20,8 @@ from dsl_parser import exceptions as parser_exceptions
 from dsl_parser.constants import CAPABILITIES, EVAL_FUNCS_PATH_PREFIX_KEY
 
 from cloudify import cryptography_utils
-from cloudify.deployment_dependencies import (create_deployment_dependency,
+from cloudify.deployment_dependencies import (DEPENDENCY_CREATOR,
+                                              SOURCE_DEPLOYMENT,
                                               TARGET_DEPLOYMENT)
 
 from manager_rest import utils
@@ -179,51 +180,51 @@ class FunctionEvaluationStorage(object):
 
         return capability['value']
 
-    def set_inter_deployment_dependency(self,
-                                        target_deployment,
-                                        function_identifier):
-        # import pydevd;
-        # pydevd.settrace('192.168.244.195', port=53100, stdoutToServer=True,
-        #                 stderrToServer=True, suspend=True)
-        dependency_id = str(uuid.uuid4())
+    def update_inter_deployment_dependency(self,
+                                           target_deployment):
         source_deployment_instance = self.sm.get(
             Deployment, self._deployment_id)
-        target_deployment_instance = self.sm.get(Deployment, target_deployment)
-        modified_function_identifier = function_identifier.replace('.', '%')
-        filters = {'source_deployment': source_deployment_instance,
-                   'dependency_creator': (lambda col: col.ilike(
-                    '%{0}%'.format(modified_function_identifier)))}
+        filters = {SOURCE_DEPLOYMENT: source_deployment_instance,
+                   TARGET_DEPLOYMENT: None}
 
-        init_kwargs = {
-            TARGET_DEPLOYMENT: target_deployment_instance,
-            'created_at': utils.get_formatted_timestamp(),
-            'id': dependency_id
-        }
-        init_kwargs.update(filters)
         dependencies_list = self.sm.list(InterDeploymentDependencies,
                                          filters=filters)
         if dependencies_list:
             for dependency in dependencies_list:
-                if dependency.target_deployment:
-                    continue
+                if dependency.target_deployment_func:
+                    self._update_dependency_target_deployment(
+                        dependency, target_deployment)
+
+    def _update_dependency_target_deployment(self,
+                                             dependency,
+                                             target_deployment):
+        if dependency.target_deployment_func:
+            if target_deployment == self._evaluate_target_func(dependency):
+                target_deployment_instance = self.sm.get(Deployment,
+                                                         target_deployment)
                 dependency.target_deployment = target_deployment_instance
                 self.sm.update(dependency)
-                return
-        else:
-            self.sm.put(InterDeploymentDependencies(**init_kwargs))
 
-    def _evaluate_target_deployments(self, deployment_id):
-        inter_deployment_dependencies = self.sm.list(
-            models.InterDeploymentDependencies)
-        for dependency in inter_deployment_dependencies:
-            if dependency.target_deployment is None:
-                if dependency.target_deployment_func and \
-                        deployment_id == dependency.source_deployment_id:
-                    evaluated_func = evaluate_intrinsic_functions(
-                        {'target_deployment': eval(dependency.target_deployment_func)},
-                        deployment_id)
-                    if evaluated_func.get('target_deployment'):
-                        target_deployment = self.sm.get(models.Deployment,
-                                                        evaluated_func.get('target'))
-                        dependency.target_deployment = target_deployment
-                        self.sm.update(dependency)
+    def _evaluate_target_func(self, dependency):
+        target_deployment_func = eval(dependency.target_deployment_func)
+        if functions.is_function(target_deployment_func):
+            evaluated_func = evaluate_intrinsic_functions(
+                {'target_deployment': target_deployment_func},
+                self._deployment_id)
+            return evaluated_func.get('target_deployment')
+        else:
+            return dependency.target_deployment_func
+
+    def _set_first_dependency(self,
+                              source_deployment,
+                              target_deployment,
+                              dependency_creator):
+        dependency = {
+            SOURCE_DEPLOYMENT: source_deployment,
+            TARGET_DEPLOYMENT: target_deployment,
+            DEPENDENCY_CREATOR: dependency_creator,
+            'created_at': utils.get_formatted_timestamp(),
+            'id': str(uuid.uuid4())
+        }
+
+        self.sm.put(InterDeploymentDependencies(**dependency))

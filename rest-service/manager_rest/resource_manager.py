@@ -2288,8 +2288,6 @@ class ResourceManager(object):
                             target_deployment,
                             fail_silently=True) if target_deployment else None
 
-            target_deployment_func = (None if target_deployment
-                                      else target_deployment_func)
             now = utils.get_formatted_timestamp()
             self.sm.put(models.InterDeploymentDependencies(
                 id=str(uuid.uuid4()),
