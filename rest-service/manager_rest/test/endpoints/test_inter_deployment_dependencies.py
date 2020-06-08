@@ -191,7 +191,7 @@ class InterDeploymentDependenciesTest(BaseServerTestCase):
             deployment_id=runtime_target_deployment)
         self.client.secrets.create('shared2_key', runtime_target_deployment)
         resource_id = 'i{0}'.format(uuid.uuid4())
-        self.put_deployment(
+        _, deployment_id, _, _ = self.put_deployment(
             blueprint_file_name='blueprint_with_static_and_runtime'
                                 '_get_capability.yaml',
             blueprint_id=resource_id,
@@ -204,9 +204,10 @@ class InterDeploymentDependenciesTest(BaseServerTestCase):
         assert_dependency_values(static_dependency, static_target_deployment)
         assert_dependency_values(runtime_dependency, None)
 
-        self.client.nodes.get(resource_id,
-                              'compute_node',
-                              evaluate_functions=True)
+        # self.client.nodes.get(resource_id,
+        #                       'compute_node',
+        #                       evaluate_functions=True)
+        self.client.executions.start(deployment_id, 'install')
         dependencies = self.client.inter_deployment_dependencies.list()
         self.assertEqual(2, len(dependencies))
         static_dependency, runtime_dependency = \

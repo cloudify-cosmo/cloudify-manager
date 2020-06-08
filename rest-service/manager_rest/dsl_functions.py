@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import uuid
 from collections import namedtuple
 
 from dsl_parser import functions
@@ -20,15 +19,10 @@ from dsl_parser import exceptions as parser_exceptions
 from dsl_parser.constants import CAPABILITIES, EVAL_FUNCS_PATH_PREFIX_KEY
 
 from cloudify import cryptography_utils
-from cloudify.deployment_dependencies import (DEPENDENCY_CREATOR,
-                                              SOURCE_DEPLOYMENT,
-                                              TARGET_DEPLOYMENT)
 
-from manager_rest import utils
 from manager_rest.storage import (get_storage_manager,
                                   get_node as get_storage_node)
-from manager_rest.storage.models import (InterDeploymentDependencies,
-                                         NodeInstance,
+from manager_rest.storage.models import (NodeInstance,
                                          Deployment,
                                          Secret)
 from manager_rest.manager_exceptions import (
@@ -179,52 +173,3 @@ class FunctionEvaluationStorage(object):
                 raise FunctionsEvaluationError(str(e))
 
         return capability['value']
-
-    def update_inter_deployment_dependency(self,
-                                           target_deployment):
-        source_deployment_instance = self.sm.get(
-            Deployment, self._deployment_id)
-        filters = {SOURCE_DEPLOYMENT: source_deployment_instance,
-                   TARGET_DEPLOYMENT: None}
-
-        dependencies_list = self.sm.list(InterDeploymentDependencies,
-                                         filters=filters)
-        if dependencies_list:
-            for dependency in dependencies_list:
-                if dependency.target_deployment_func:
-                    self._update_dependency_target_deployment(
-                        dependency, target_deployment)
-
-    def _update_dependency_target_deployment(self,
-                                             dependency,
-                                             target_deployment):
-        if dependency.target_deployment_func:
-            if target_deployment == self._evaluate_target_func(dependency):
-                target_deployment_instance = self.sm.get(Deployment,
-                                                         target_deployment)
-                dependency.target_deployment = target_deployment_instance
-                self.sm.update(dependency)
-
-    def _evaluate_target_func(self, dependency):
-        target_deployment_func = eval(dependency.target_deployment_func)
-        if functions.is_function(target_deployment_func):
-            evaluated_func = evaluate_intrinsic_functions(
-                {'target_deployment': target_deployment_func},
-                self._deployment_id)
-            return evaluated_func.get('target_deployment')
-        else:
-            return dependency.target_deployment_func
-
-    def _set_first_dependency(self,
-                              source_deployment,
-                              target_deployment,
-                              dependency_creator):
-        dependency = {
-            SOURCE_DEPLOYMENT: source_deployment,
-            TARGET_DEPLOYMENT: target_deployment,
-            DEPENDENCY_CREATOR: dependency_creator,
-            'created_at': utils.get_formatted_timestamp(),
-            'id': str(uuid.uuid4())
-        }
-
-        self.sm.put(InterDeploymentDependencies(**dependency))

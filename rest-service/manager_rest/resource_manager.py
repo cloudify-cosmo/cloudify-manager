@@ -19,6 +19,7 @@ import yaml
 import shutil
 import itertools
 from copy import deepcopy
+from ast import literal_eval
 from collections import defaultdict
 
 from flask import current_app
@@ -35,13 +36,15 @@ from cloudify.models_states import (SnapshotState,
 
 from dsl_parser import constants, tasks
 from dsl_parser import exceptions as parser_exceptions
+from dsl_parser.functions import is_function
 from dsl_parser.constants import INTER_DEPLOYMENT_FUNCTIONS
 
 from manager_rest import premium_enabled
 from manager_rest.constants import (DEFAULT_TENANT_NAME,
                                     FILE_SERVER_BLUEPRINTS_FOLDER,
                                     FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER)
-from manager_rest.dsl_functions import get_secret_method
+from manager_rest.dsl_functions import (get_secret_method,
+                                        evaluate_intrinsic_functions)
 from manager_rest.utils import (send_event,
                                 is_create_global_permitted,
                                 validate_global_modification,
@@ -116,8 +119,41 @@ class ResourceManager(object):
 
         res = self.sm.update(execution)
         if status in ExecutionState.END_STATES:
+            import pydevd;
+            pydevd.settrace('172.18.10.116', port=53100, stdoutToServer=True,
+                            stderrToServer=True, suspend=True)
+            if execution.workflow_id == 'install':
+                self.update_inter_deployment_dependencies()
             self.start_queued_executions()
         return res
+
+    def update_inter_deployment_dependencies(self):
+        dependencies_list = self.sm.list(models.InterDeploymentDependencies,
+                                         filters={'target_deployment': None})
+        for dependency in dependencies_list:
+            if dependency.target_deployment_func:
+                self._update_dependency_target_deployment(dependency)
+
+    def _update_dependency_target_deployment(self, dependency):
+        target_deployment_id = self._evaluate_target_func(dependency)
+        if target_deployment_id:
+            target_deployment_instance = self.sm.get(models.Deployment,
+                                                     target_deployment_id)
+            dependency.target_deployment = target_deployment_instance
+            self.sm.update(dependency)
+
+    @staticmethod
+    def _evaluate_target_func(dependency):
+        try:
+            target_deployment_func = literal_eval(
+                dependency.target_deployment_func)
+            if is_function(target_deployment_func):
+                evaluated_func = evaluate_intrinsic_functions(
+                    {'target_deployment': target_deployment_func},
+                    dependency.source_deployment_id)
+                return evaluated_func.get('target_deployment')
+        except ValueError:
+            return dependency.target_deployment_func
 
     def start_queued_executions(self):
         queued_executions = self._get_queued_executions()
