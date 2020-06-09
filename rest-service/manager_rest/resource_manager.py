@@ -19,7 +19,6 @@ import yaml
 import shutil
 import itertools
 from copy import deepcopy
-from ast import literal_eval
 from collections import defaultdict
 
 from flask import current_app
@@ -140,16 +139,13 @@ class ResourceManager(object):
 
     @staticmethod
     def _evaluate_target_func(dependency):
-        try:
-            target_deployment_func = literal_eval(
-                dependency.target_deployment_func)
-            if is_function(target_deployment_func):
-                evaluated_func = evaluate_intrinsic_functions(
-                    {'target_deployment': target_deployment_func},
-                    dependency.source_deployment_id)
-                return evaluated_func.get('target_deployment')
-        except ValueError:
-            return dependency.target_deployment_func
+        if is_function(dependency.target_deployment_func):
+            evaluated_func = evaluate_intrinsic_functions(
+                {'target_deployment': dependency.target_deployment_func},
+                dependency.source_deployment_id)
+            return evaluated_func.get('target_deployment')
+
+        return dependency.target_deployment_func
 
     def start_queued_executions(self):
         queued_executions = self._get_queued_executions()

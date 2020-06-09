@@ -186,7 +186,7 @@ class InterDeploymentDependenciesTest(BaseServerTestCase):
                                        static_target_deployment,
                                        resource_id)
         self.assertEqual(target_deployment_func,
-                         str(u"{u'get_secret': u'shared2_key'}"))
+                         {'get_secret': 'shared2_key'})
 
         mock_add_to_graph.assert_called()
         mock_assert_no_cycles.assert_called()

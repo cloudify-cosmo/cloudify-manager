@@ -4,11 +4,9 @@
 - Adding inter deployment dependencies table
 - Add unique indexes
 
-Revision ID: 7b883ec574ea
+Revision ID: 387fcd049efb
 Revises: 62a8d746d13b
 Create Date: 2020-03-30 06:27:26.747213
-Updated Date: 2020-04-30 08:45:11.833636
-Updated Date: 2020-05-15 09:53:47.868905
 
 """
 
@@ -107,7 +105,7 @@ def _create_inter_deployment_dependencies_table():
                   storage.models_base.UTCDateTime(),
                   nullable=False),
         sa.Column('dependency_creator', sa.Text(), nullable=False),
-        sa.Column('target_deployment_func', sa.Text(), nullable=True),
+        sa.Column('target_deployment_func', JSONString(), nullable=True),
         sa.Column('_source_deployment',
                   sa.Integer(),
                   nullable=False),
