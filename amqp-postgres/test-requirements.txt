@@ -1,4 +1,4 @@
-git+https://github.com/cloudify-cosmo/cloudify-common@CY-2683-populate-target-deployment-during-evaluation#egg=cloudify-common[dispatcher]==CY-2683-populate-target-deployment-during-evaluation
+git+https://github.com/cloudify-cosmo/cloudify-common@master#egg=cloudify-common[dispatcher]==master
 -e ../rest-service
 mock
 pytest
