@@ -45,24 +45,16 @@ class TestInterDeploymentDependenciesInfrastructure(AgentlessTestCase):
         self._assert_dependencies_count(0)
         self._prepare_creation_test_resources()
         dependencies = self._assert_dependencies_count(2)
-        self._assert_compute_node_dependencies(
-            dependencies,
-            static_target_deployment=SR_DEPLOYMENT,
-            runtime_target_deployment=None)
+        self._assert_initial_compute_node_dependencies(dependencies)
 
         self._install_main_deployment()
-        self._assert_compute_node_dependencies(
-            dependencies,
-            static_target_deployment=SR_DEPLOYMENT,
-            runtime_target_deployment=SR_DEPLOYMENT)
-
         node_instances = self.client.node_instances.list()
-        shared_resource = self._get_shared_resource_instance(
-            node_instances)
+        shared_resource = self._get_shared_resource_instance(node_instances)
         components = [i for i in node_instances if 'component' in i.node_id]
         # 6 = 3 components + 1 shared resource + 2 get_capability functions
         dependencies = self._assert_dependencies_count(6)
         dependencies = self._get_dependencies_dict(dependencies)
+
         for component in components:
             target_deployment = \
                 component.runtime_properties['deployment']['id']
@@ -99,10 +91,12 @@ class TestInterDeploymentDependenciesInfrastructure(AgentlessTestCase):
         self._prepare_dep_update_test_resources()
         base_expected_dependencies = self._get_dep_update_test_dependencies(
             is_first_state=True)
+
         base_dependencies = self._assert_dependencies_count(
             len(base_expected_dependencies))
         self._assert_dependencies_exist(base_expected_dependencies,
                                         base_dependencies)
+
         self._perform_update_on_main_deployment(skip_uninstall=skip_uninstall)
         mod_expected_dependencies = self._get_dep_update_test_dependencies(
             is_first_state=False, should_keep_old_dependencies=skip_uninstall)
@@ -110,6 +104,7 @@ class TestInterDeploymentDependenciesInfrastructure(AgentlessTestCase):
             len(mod_expected_dependencies))
         self._assert_dependencies_exist(mod_expected_dependencies,
                                         mod_dependencies)
+
         self.undeploy_application(MAIN_DEPLOYMENT, is_delete_deployment=True)
         self._assert_dependencies_count(0)
 
@@ -203,18 +198,21 @@ class TestInterDeploymentDependenciesInfrastructure(AgentlessTestCase):
                           dependency.target_deployment_id,
                           target_deployment))
 
-    def _assert_compute_node_dependencies(self,
-                                          dependencies,
-                                          static_target_deployment,
-                                          runtime_target_deployment):
+    def _assert_initial_compute_node_dependencies(self,
+                                                  dependencies):
         for dependency in dependencies:
             self.assertEqual(dependency.source_deployment_id, MAIN_DEPLOYMENT)
             if 'property_static' in dependency.dependency_creator:
                 self.assertEqual(dependency.target_deployment_id,
-                                 static_target_deployment)
+                                 SR_DEPLOYMENT)
+                self.assertEqual(dependency['target_deployment_func'],
+                                 'shared_resource_deployment')
             elif 'property_runtime' in dependency.dependency_creator:
                 self.assertEqual(dependency.target_deployment_id,
-                                 runtime_target_deployment)
+                                 SR_DEPLOYMENT)
+                secret_func = {'get_secret': 'shared_resource_deployment_key'}
+                self.assertEqual(dependency['target_deployment_func'],
+                                 secret_func)
             else:
                 self.fail('Unexpected dependency creator "{0}"'
                           ''.format(dependency.dependency_creator))
