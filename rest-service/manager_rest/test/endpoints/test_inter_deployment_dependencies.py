@@ -159,38 +159,18 @@ class InterDeploymentDependenciesTest(BaseServerTestCase):
            '.assert_no_cyclic_dependencies')
     @patch('manager_rest.rest.rest_utils.RecursiveDeploymentDependencies'
            '.add_dependency_to_graph')
-    def test_deployment_creation_creates_dependencies(
-            self, mock_add_to_graph, mock_assert_no_cycles):
-        def get_static_and_runtime_dependencies(_dependencies):
-            _static_dependency = None
-            _runtime_dependency = None
-            for _dependency in _dependencies:
-                if 'property_static' in _dependency.dependency_creator:
-                    _static_dependency = _dependency
-                elif 'property_runtime' in _dependency.dependency_creator:
-                    _runtime_dependency = _dependency
-                else:
-                    self.fail('Unexpected dependency creator "{0}".'
-                              ''.format(_dependency.dependency_creator))
-            return _static_dependency, _runtime_dependency
-
-        def assert_dependency_values(dependency, target_deployment_id):
-            self.assertEqual(dependency.source_deployment_id,
-                             resource_id)
-            self.assertEqual(dependency.target_deployment_id,
-                             target_deployment_id)
+    def test_deployment_creation_creates_dependencies(self,
+                                                      mock_add_to_graph,
+                                                      mock_assert_no_cycles):
         static_target_deployment = 'shared1'
-        runtime_target_deployment = 'shared2'
+        resource_id = 'i{0}'.format(uuid.uuid4())
+        self.client.secrets.create('shared2_key', 'secret')
+
         self.put_deployment(
             blueprint_file_name='blueprint_with_capabilities.yaml',
             blueprint_id='i{0}'.format(uuid.uuid4()),
             deployment_id=static_target_deployment)
-        self.put_deployment(
-            blueprint_file_name='blueprint_with_capabilities.yaml',
-            blueprint_id='i{0}'.format(uuid.uuid4()),
-            deployment_id=runtime_target_deployment)
-        self.client.secrets.create('shared2_key', runtime_target_deployment)
-        resource_id = 'i{0}'.format(uuid.uuid4())
+
         self.put_deployment(
             blueprint_file_name='blueprint_with_static_and_runtime'
                                 '_get_capability.yaml',
@@ -199,22 +179,36 @@ class InterDeploymentDependenciesTest(BaseServerTestCase):
 
         dependencies = self.client.inter_deployment_dependencies.list()
         self.assertEqual(2, len(dependencies))
-        static_dependency, runtime_dependency = \
-            get_static_and_runtime_dependencies(dependencies)
-        assert_dependency_values(static_dependency, static_target_deployment)
-        assert_dependency_values(runtime_dependency, None)
+        target_deployment_func = self._get_target_deployment_func(dependencies)
+        static_dependency = self._get_static_dependency(dependencies)
 
-        self.client.nodes.get(resource_id,
-                              'compute_node',
-                              evaluate_functions=True)
-        dependencies = self.client.inter_deployment_dependencies.list()
-        self.assertEqual(2, len(dependencies))
-        static_dependency, runtime_dependency = \
-            get_static_and_runtime_dependencies(dependencies)
-        assert_dependency_values(static_dependency, static_target_deployment)
-        assert_dependency_values(runtime_dependency, runtime_target_deployment)
+        self._assert_dependency_values(static_dependency,
+                                       static_target_deployment,
+                                       resource_id)
+        self.assertEqual(target_deployment_func,
+                         {'get_secret': 'shared2_key'})
+
         mock_add_to_graph.assert_called()
         mock_assert_no_cycles.assert_called()
+
+    @staticmethod
+    def _get_target_deployment_func(dependencies_list):
+        for dependency in dependencies_list:
+            if 'property_runtime' in dependency.dependency_creator:
+                return dependency['target_deployment_func']
+
+    @staticmethod
+    def _get_static_dependency(dependencies_list):
+        for dependency in dependencies_list:
+            if 'property_static' in dependency.dependency_creator:
+                return dependency
+
+    def _assert_dependency_values(self, dependency, target_deployment_id,
+                                  resource_id):
+        self.assertEqual(dependency.source_deployment_id,
+                         resource_id)
+        self.assertEqual(dependency.target_deployment_id,
+                         target_deployment_id)
 
     def test_create_dependencies_graph(self):
         self._populate_dependencies_table()

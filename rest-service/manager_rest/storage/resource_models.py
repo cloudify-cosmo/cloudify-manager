@@ -862,6 +862,8 @@ class InterDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
     _target_deployment = foreign_key(Deployment._storage_id,
                                      nullable=True,
                                      ondelete='SET NULL')
+    target_deployment_func = db.Column(JSONString, nullable=True)
+
     __table_args__ = (
         UniqueConstraint(
             'dependency_creator',

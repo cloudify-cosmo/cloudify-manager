@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import uuid
 from collections import namedtuple
 
 from dsl_parser import functions
@@ -20,14 +19,10 @@ from dsl_parser import exceptions as parser_exceptions
 from dsl_parser.constants import CAPABILITIES, EVAL_FUNCS_PATH_PREFIX_KEY
 
 from cloudify import cryptography_utils
-from cloudify.deployment_dependencies import (create_deployment_dependency,
-                                              TARGET_DEPLOYMENT)
 
-from manager_rest import utils
 from manager_rest.storage import (get_storage_manager,
                                   get_node as get_storage_node)
-from manager_rest.storage.models import (InterDeploymentDependencies,
-                                         NodeInstance,
+from manager_rest.storage.models import (NodeInstance,
                                          Deployment,
                                          Secret)
 from manager_rest.manager_exceptions import (
@@ -178,28 +173,3 @@ class FunctionEvaluationStorage(object):
                 raise FunctionsEvaluationError(str(e))
 
         return capability['value']
-
-    def set_inter_deployment_dependency(self,
-                                        target_deployment,
-                                        function_identifier):
-        dependency_id = str(uuid.uuid4())
-        source_deployment_instance = self.sm.get(
-            Deployment, self._deployment_id)
-        target_deployment_instance = self.sm.get(Deployment, target_deployment)
-
-        filters = create_deployment_dependency(function_identifier,
-                                               source_deployment_instance)
-        init_kwargs = {
-            TARGET_DEPLOYMENT: target_deployment_instance,
-            'created_at': utils.get_formatted_timestamp(),
-            'id': dependency_id
-        }
-        init_kwargs.update(filters)
-        dependencies_list = self.sm.list(InterDeploymentDependencies,
-                                         filters=filters)
-        if dependencies_list:
-            first_dependency = dependencies_list[0]
-            first_dependency.target_deployment = target_deployment_instance
-            self.sm.update(first_dependency)
-        else:
-            self.sm.put(InterDeploymentDependencies(**init_kwargs))

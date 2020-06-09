@@ -335,7 +335,7 @@ def update_deployment_dependencies_from_plan(deployment_id,
     new_dependencies = deployment_plan.setdefault(
         INTER_DEPLOYMENT_FUNCTIONS, {})
     new_dependencies_dict = {
-        creator: target
+        creator: target[0]
         for creator, target in new_dependencies.items()
         if dep_plan_filter_func(creator)
     }
