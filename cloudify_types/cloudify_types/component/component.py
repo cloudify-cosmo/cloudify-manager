@@ -436,6 +436,16 @@ class Component(object):
                                       'delete',
                                       dict(blueprint_id=self.blueprint_id))
 
+        ctx.logger.info('Removing inter-deployment dependency between this '
+                        'deployment ("{0}") and "{1}" the Component\'s '
+                        'creator deployment...'.format(self.deployment_id,
+                                                       ctx.deployment.id))
+        self._inter_deployment_dependency['target_deployment'] = \
+            self.deployment_id
+        self._inter_deployment_dependency['is_component_deletion'] = True
+        self.client.inter_deployment_dependencies.delete(
+            **self._inter_deployment_dependency)
+
         self._delete_plugins()
         self._delete_secrets()
         self._delete_runtime_properties()

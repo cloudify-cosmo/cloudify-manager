@@ -886,7 +886,8 @@ class InterDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
             cls,
             Deployment,
             cls._target_deployment,
-            backreference='target_of_dependency_in')
+            backreference='target_of_dependency_in',
+            cascade='save-update, merge, refresh-expire, expunge')
 
     source_deployment_id = association_proxy('source_deployment', 'id')
     target_deployment_id = association_proxy('target_deployment', 'id')

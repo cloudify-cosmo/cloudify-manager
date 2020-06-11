@@ -212,9 +212,11 @@ class InterDeploymentDependencies(SecuredResource):
         return sm.put(deployment_dependency)
 
     @staticmethod
-    def _verify_and_get_source_and_target_deployments(sm,
-                                                      source_deployment_id,
-                                                      target_deployment_id):
+    def _verify_and_get_source_and_target_deployments(
+            sm,
+            source_deployment_id,
+            target_deployment_id,
+            is_component_deletion=False):
         source_deployment = sm.get(models.Deployment,
                                    source_deployment_id,
                                    fail_silently=True)
@@ -226,7 +228,7 @@ class InterDeploymentDependencies(SecuredResource):
         target_deployment = sm.get(models.Deployment,
                                    target_deployment_id,
                                    fail_silently=True)
-        if not target_deployment:
+        if (not is_component_deletion) and (not target_deployment):
             raise manager_exceptions.NotFoundError(
                 'Given target deployment with ID `{0}` does not exist.'.format(
                     target_deployment_id)
@@ -275,6 +277,9 @@ class InterDeploymentDependencies(SecuredResource):
          deployment.
         :param target_deployment: the deployment that the source deployment
          depends on.
+        :param is_component_deletion: a special flag for allowing the
+         deletion of a Component inter-deployment dependency when the target
+         deployment is already deleted.
         :return: an InterDeploymentDependency object containing the information
          of the dependency.
         """
@@ -282,7 +287,7 @@ class InterDeploymentDependencies(SecuredResource):
         params = self._get_delete_dependency_params(sm)
         filters = create_deployment_dependency(params[DEPENDENCY_CREATOR],
                                                params[SOURCE_DEPLOYMENT],
-                                               params[TARGET_DEPLOYMENT])
+                                               params.get(TARGET_DEPLOYMENT))
         dependency = sm.get(
             models.InterDeploymentDependencies,
             None,
@@ -300,11 +305,15 @@ class InterDeploymentDependencies(SecuredResource):
             _verify_and_get_source_and_target_deployments(
                 sm,
                 request_dict.get(SOURCE_DEPLOYMENT),
-                request_dict.get(TARGET_DEPLOYMENT))
+                request_dict.get(TARGET_DEPLOYMENT),
+                is_component_deletion=request_dict['is_component_deletion']
+            )
         dependency_params = create_deployment_dependency(
             request_dict.get(DEPENDENCY_CREATOR),
             source_deployment,
             target_deployment)
+        dependency_params['is_component_deletion'] =\
+            request_dict['is_component_deletion']
         return dependency_params
 
     @swagger.operation(
