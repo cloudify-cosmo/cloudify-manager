@@ -10,7 +10,7 @@ URL:            https://github.com/cloudify-cosmo/cloudify-manager
 Vendor:         Cloudify Platform Ltd.
 Packager:       Cloudify Platform Ltd.
 
-Requires:       rabbitmq-server = 3.7.7
+Requires:       rabbitmq-server = 3.8.4
 
 
 %define _user rabbitmq
