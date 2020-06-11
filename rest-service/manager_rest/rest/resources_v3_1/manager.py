@@ -185,3 +185,10 @@ class DBNodes(SecuredResource):
     def get(self, pagination=None):
         """List DB nodes from database"""
         return get_storage_manager().list(models.DBNodes)
+
+
+class ReplaceCertificates(SecuredResource):
+    @authorize('replace_certificates')
+    def post(self):
+        """Replace certificates"""
+        pass
