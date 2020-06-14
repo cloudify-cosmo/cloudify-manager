@@ -188,8 +188,17 @@ class Status(SecuredResource):
         try:
             status_response = server.supervisor.getProcessInfo(service_name)
         except xmlrpclib.Fault as e:
-            if not (is_optional or e.faultCode == 10):
+            # If the error raise that means one of the two options:
+            # 1. The service is optional and not installed (faultCode=10)
+            # ignore the error
+            # 2. The service is either optional/required and return
+            # faultCode other than 10 that need to raise error
+            if e.faultCode == 10:
+                if not is_optional:
+                    service_status = NodeServiceStatus.INACTIVE
+            else:
                 raise
+
         else:
             service_status = status_response['statename']
             if service_status == 'RUNNING':

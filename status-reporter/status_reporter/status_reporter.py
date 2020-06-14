@@ -30,7 +30,12 @@ from cloudify_rest_client.client import (SECURED_PROTOCOL,
                                          DEFAULT_PROTOCOL,
                                          DEFAULT_PORT)
 
-from .utils import update_yaml_file, read_from_yaml_file
+from .utils import (
+    update_yaml_file,
+    read_from_yaml_file,
+    get_systemd_services,
+    get_supervisord_services
+)
 from .constants import CONFIGURATION_PATH, STATUS_REPORTER, INTERNAL_REST_PORT
 
 LOGFILE = '/var/log/cloudify/status-reporter/reporter.log'
@@ -60,6 +65,14 @@ class InitializationError(Exception):
 
 
 CA_DEFAULT_PATH = '/etc/cloudify/ssl/status_reporter_cert.pem'
+
+
+class ServiceManagementMixin(object):
+    def get_services(self, service_names):
+        if self.service_management == 'supervisord':
+            return get_supervisord_services(service_names)
+        else:
+            return get_systemd_services(service_names)
 
 
 class Reporter(object):

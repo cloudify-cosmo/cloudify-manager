@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import os
 
 from requests import get
 from requests.exceptions import RequestException
@@ -20,9 +21,13 @@ from requests.exceptions import RequestException
 from cloudify.cluster_status import (CloudifyNodeType, ServiceStatus,
                                      NodeServiceStatus)
 
-from .status_reporter import Reporter, logger
+from .status_reporter import (
+    Reporter,
+    logger,
+    ServiceManagementMixin
+)
 from .constants import STATUS_REPORTER_CONFIG_KEY, EXTRA_INFO
-from .utils import get_systemd_services, determine_node_status
+from .utils import determine_node_status
 
 NODE_STATUS = 'node_status'
 CLUSTER_STATUS = 'cluster_status'
@@ -30,15 +35,16 @@ RABBITMQ_SERVICE_KEY = 'RabbitMQ'
 HEALTH_CHECK_API = 'healthchecks/node'
 CA_PATH = '/etc/cloudify/ssl/rabbitmq-ca.pem'
 RABBITMQ_URL = 'https://localhost:15671/api/'
-RABBITMQ_SERVICE = {'cloudify-rabbitmq.service': RABBITMQ_SERVICE_KEY}
+RABBITMQ_SERVICE = {'cloudify-rabbitmq': RABBITMQ_SERVICE_KEY}
 
 
-class RabbitMQReporter(Reporter):
-    def __init__(self):
+class RabbitMQReporter(ServiceManagementMixin, Reporter):
+    def __init__(self, service_management):
+        self.service_management = service_management
         super(RabbitMQReporter, self).__init__(CloudifyNodeType.BROKER)
 
     def _collect_status(self):
-        services, statuses = get_systemd_services(RABBITMQ_SERVICE)
+        services, statuses = self.get_services(RABBITMQ_SERVICE)
         extra_config = self._config.get(STATUS_REPORTER_CONFIG_KEY)
         if self._is_rabbitmq_service_not_running(statuses) or not extra_config:
             return self._rabbitmq_status_failed(services)
@@ -113,5 +119,8 @@ class RabbitMQReporter(Reporter):
 
 
 def main():
-    reporter = RabbitMQReporter()
+    service_management = os.environ.setdefault(
+        'SERVICE_MANAGEMENT', 'systemd'
+    )
+    reporter = RabbitMQReporter(service_management)
     reporter.run()
