@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: python
+    image: circleci/python:3.6
+    resources:
+      requests:
+        cpu: 1.5
+    command:
+    - cat
+    tty: true
+    securityContext:
+      runAsUser: 0
+      privileged: true
+  - name: rpmbuild
+    image: rpmbuild/centos7
+    command:
+    - cat
+    tty: true
+    resources:
+      requests:
+        cpu: 1.5
+    securityContext:
+      runAsUser: 0
+      privileged: true
+  - name: python-old
+    image: circleci/python:2.7
+    command:
+    - cat
+    tty: true
+    securityContext:
+      runAsUser: 0
+      privileged: true
+  - name: rabbitmq
+    image: rabbitmq:3.7.7
+  - name: postgres
+    image: circleci/postgres:9.5-alpine
+    ports:
+      - containerPort: 5432
+    env:
+    - name: POSTGRES_USER
+      value: cloudify
+    - name: POSTGRES_PASSWORD
+      value: cloudify
+    - name: POSTGRES_DB
+      value: cloudify_db
+  nodeSelector:
+    instance-type: spot-xlarge
