@@ -1,29 +1,43 @@
 [Unit]
-Description=RabbitMQ Service
-Wants=network-online.target
-After=network-online.target
+Description=RabbitMQ broker
+After=syslog.target network.target
 
 [Service]
-Restart=on-failure
+Type=notify
+User=rabbitmq
+Group=rabbitmq
+UMask=0027
+NotifyAccess=all
+TimeoutStartSec=3600
+
 EnvironmentFile=/etc/sysconfig/cloudify-rabbitmq
 
-# avoid a race condition when creating the erlang cookie
-# see https://bugzilla.redhat.com/show_bug.cgi?id=1059913
-ExecStartPre=-/bin/sh -c "/usr/sbin/rabbitmqctl status > /dev/null 2>&1"
-
-ExecStart=/usr/sbin/rabbitmq-server
-ExecStartPost=/usr/sbin/rabbitmqctl wait /run/rabbitmq/rabbitmq.pid
-
-ExecStop=/usr/sbin/rabbitmqctl stop /run/rabbitmq/rabbitmq.pid
-ExecStopPost=-/usr/bin/rm /run/rabbitmq/rabbitmq.pid
+# To override LimitNOFILE, create the following file:
+#
+# /etc/systemd/system/rabbitmq-server.service.d/limits.conf
+#
+# with the following content:
+#
+# [Service]
+# LimitNOFILE=65536
 
 LimitNOFILE=102400
 
-User=rabbitmq
-Group=rabbitmq
-PermissionsStartOnly=True
-RuntimeDirectory=rabbitmq
-RuntimeDirectoryMode=0755
+# Note: systemd on CentOS 7 complains about in-line comments,
+# so only append them here
+#
+# Restart:
+# The following setting will automatically restart RabbitMQ
+# in the event of a failure. systemd service restarts are not a
+# replacement for service monitoring. Please see
+# https://www.rabbitmq.com/monitoring.html
+Restart=on-failure
+RestartSec=10
+WorkingDirectory=/var/lib/rabbitmq
+ExecStart=/usr/sbin/rabbitmq-server
+ExecStop=/usr/sbin/rabbitmqctl shutdown
+# See rabbitmq/rabbitmq-server-release#51
+SuccessExitStatus=69
 
 [Install]
 WantedBy=multi-user.target
