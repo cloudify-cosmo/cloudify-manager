@@ -13,36 +13,43 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import os
+
 from requests import get
 from requests.exceptions import RequestException
 
 from cloudify.cluster_status import CloudifyNodeType, NodeServiceStatus
 
-from .status_reporter import Reporter, logger
+from .status_reporter import (
+    Reporter,
+    logger,
+    ServiceManagementMixin
+)
 from .constants import STATUS_REPORTER_CONFIG_KEY, EXTRA_INFO
-from .utils import get_systemd_services, determine_node_status
+from .utils import determine_node_status
 
 
 PATRONI_URL = 'https://{private_ip}:8008'
 CA_PATH = '/etc/etcd/ca.crt'
 PATRONI_SERVICE_KEY = 'Patroni'
 POSTGRES_SERVICES = {
-    'patroni.service': PATRONI_SERVICE_KEY,
-    'etcd.service': 'Etcd'
+    'patroni': PATRONI_SERVICE_KEY,
+    'etcd': 'Etcd'
 }
 
 
-class PostgreSQLReporter(Reporter):
-    def __init__(self):
+class PostgreSQLReporter(ServiceManagementMixin, Reporter):
+    def __init__(self, service_management):
+        self.service_management = service_management
         super(PostgreSQLReporter, self).__init__(CloudifyNodeType.DB)
 
     def _collect_status(self):
-        services, systemd_statuses = get_systemd_services(POSTGRES_SERVICES)
+        services, statuses = self.get_services(POSTGRES_SERVICES)
         patroni_status, extra_info = self._get_patroni_status()
         services[PATRONI_SERVICE_KEY][EXTRA_INFO]['patroni_status'] = \
             extra_info
         services[PATRONI_SERVICE_KEY]['status'] = patroni_status
-        status = determine_node_status(systemd_statuses + [patroni_status])
+        status = determine_node_status(statuses + [patroni_status])
         return status, services
 
     def _get_patroni_status(self):
@@ -84,5 +91,8 @@ class PostgreSQLReporter(Reporter):
 
 
 def main():
-    reporter = PostgreSQLReporter()
+    service_management = os.environ.setdefault(
+        'SERVICE_MANAGEMENT', 'systemd'
+    )
+    reporter = PostgreSQLReporter(service_management)
     reporter.run()

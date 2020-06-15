@@ -14,11 +14,28 @@
 #  * limitations under the License.
 
 import os
+import socket
 
 import yaml
 
+from cloudify._compat import httplib, xmlrpclib
 from cloudify.systemddbus import get_services
 from cloudify.cluster_status import ServiceStatus, NodeServiceStatus
+
+
+class UnixSocketHTTPConnection(httplib.HTTPConnection):
+    def connect(self):
+        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.sock.connect(self.host)
+
+
+class UnixSocketTransport(xmlrpclib.Transport, object):
+    def __init__(self, path):
+        super(UnixSocketTransport, self).__init__()
+        self._path = path
+
+    def make_connection(self, host):
+        return UnixSocketHTTPConnection(self._path)
 
 
 def read_from_yaml_file(file_path):
@@ -54,9 +71,16 @@ def update_yaml_file(yaml_path, updated_content):
 def get_systemd_services(service_names):
     """
     :param service_names: {'service_unit_id': 'service_display_name'}
-    e.g., {'cloudify-rabbitmq.service': 'RabbitMQ'}
+    e.g., {'cloudify-rabbitmq': 'RabbitMQ'}
     """
-    systemd_services = get_services(service_names)
+
+    def _get_services_with_suffix(_services):
+        return {
+            '{0}.service'.format(k): v for (k, v) in _services.items()
+        }
+
+    all_services = _get_services_with_suffix(service_names)
+    systemd_services = get_services(all_services)
     statuses = []
     services = {}
     for service in systemd_services:
@@ -71,6 +95,39 @@ def get_systemd_services(service_names):
             }
         }
         statuses.append(status)
+    return services, statuses
+
+
+def get_supervisord_services(service_names):
+    """
+    :param service_names: {'service_id': 'service_display_name'}
+    e.g., {'cloudify-rabbitmq': 'RabbitMQ'}
+    """
+
+    server = xmlrpclib.Server(
+        'http://',
+        transport=UnixSocketTransport("/tmp/supervisor.sock"))
+    statuses = []
+    services = {}
+    for name, display_name in service_names.items():
+        try:
+            status_response = server.supervisor.getProcessInfo(name)
+        except xmlrpclib.Fault as e:
+            if e.faultCode == 10:
+                service_status = NodeServiceStatus.INACTIVE
+            else:
+                raise
+        else:
+            if status_response['statename'] == 'RUNNING':
+                service_status = NodeServiceStatus.ACTIVE
+            else:
+                service_status = NodeServiceStatus.INACTIVE
+        statuses.append(service_status)
+        services[display_name] = {
+            'status': service_status,
+            'is_remote': False,
+            'extra_info': {}
+        }
     return services, statuses
 
 
