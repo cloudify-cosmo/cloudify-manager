@@ -30,6 +30,8 @@ pipeline {
   stages {
     stage('prepare') {
       steps {
+        checkout([$class: 'GitSCM', branches: [[name: "${branch}"]], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: "${manager_dir}"]], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '9f6aca75-ebff-4045-9919-b8ec6b5ccf9d', url: 'https://github.com/cloudify-cosmo/cloudify-manager.git']]])
+        
         container('python'){
           sh '''
             apt-get update
@@ -39,14 +41,14 @@ pipeline {
         }
       }
     }
-    stage('Run Tests') {
+    stage('Run Tests & Builds') {
       parallel {
         stage('test_restservice') {
           steps {
             sh "mkdir -p ${workspace}/rest && cp -rf ${workspace}/${manager_dir}/. ${workspace}/rest"  
             
             container('python'){
-              dir("rest") {
+              dir("${workspace}/rest") {
                 dir("rest-service"){
                   sh '''
                     ~/venv/bin/pip install -Ur dev-requirements.txt
@@ -78,66 +80,6 @@ pipeline {
                       -sv \
                       cloudify_types
                 '''
-              }
-            }
-          }
-        }
-        stage('test_amqp_postgres') {
-          steps {
-            sh "mkdir -p ${workspace}/amqp_postgres && cp -rf ${workspace}/${manager_dir}/. ${workspace}/amqp_postgres"  
-
-            container('python'){
-              dir("amqp_postgres") {
-                dir("amqp-postgres"){
-                  sh '''
-                    ~/venv/bin/pip install -Ur test-requirements.txt
-                    ~/venv/bin/pip install -e .
-                  '''
-                }
-                
-                sh '~/venv/bin/pytest -sv amqp-postgres'
-              }
-            }
-          }
-        }
-        stage('test_premium') {
-          steps {
-            sh "mkdir -p ${workspace}/premium && cp -rf ${workspace}/${manager_dir}/. ${workspace}/premium"  
-
-            container('python'){
-              dir("premium") {
-                withVault([configuration: configuration, vaultSecrets: secrets]) {
-                  sh '''
-                    pip install --user tox
-                  '''
-                  
-                  sh """#!/bin/bash
-                    set -eux
-                    function clone {
-                      branch=\$1
-                      git clone \
-                        --branch "\$1" \
-                        --single-branch \
-                        --depth 1 \
-                        https://${env.PRIVATE_REPO_GITHUB_TOKEN}@github.com/cloudify-cosmo/cloudify-premium.git \
-                        ~/cloudify-premium
-                    }
-                    clone "${branch}" || clone master
-                    
-                  """
-                  
-                  dir("rest-service"){
-                    sh '''
-                      ~/venv/bin/pip install -Ur dev-requirements.txt
-                      ~/venv/bin/pip install -Ur test-requirements.txt
-                      ~/venv/bin/pip install -e .
-                      ~/venv/bin/pip install -e ~/cloudify-premium
-                    '''
-                  }
-                  echo 'Replace the cloudify-manager URL in dev-requirements.txt with the local path to this checkout'
-                  sh 'sed -i "s:^.*cloudify-manager.*(rest-service)$:-e ${HOME}/project/\1/:" ~/cloudify-premium/dev-requirements.txt'
-                  sh '~/venv/bin/pytest -sv ~/cloudify-premium/tests/unittests'
-                }
               }
             }
           }
@@ -182,7 +124,7 @@ pipeline {
             sh "mkdir -p ${workspace}/flake8 && cp -rf ${workspace}/${manager_dir}/. ${workspace}/flake8"
 
             container('python'){
-              dir("flake8") {
+              dir("${workspace}/flake8") {
                   sh '''
                     pip install --user flake8
                     python -m flake8
@@ -196,7 +138,7 @@ pipeline {
             sh "mkdir -p ${workspace}/py3_compat && cp -rf ${workspace}/${manager_dir}/. ${workspace}/py3_compat"  
 
             container('python-old'){
-              dir("py3_compat") {
+              dir("${workspace}/py3_compat") {
                 echo 'install futurize and find python3-incompatible code'
                 sh '''#!/bin/bash
                   pip install future --user
@@ -224,25 +166,88 @@ pipeline {
         }
       }
     }
+    stage('Run Tests') {
+      parallel {
+        stage('test_amqp_postgres') {
+          steps {
+            sh "mkdir -p ${workspace}/amqp_postgres && cp -rf ${workspace}/${manager_dir}/. ${workspace}/amqp_postgres"  
+
+            container('python'){
+              dir("${workspace}/amqp_postgres") {
+                dir("amqp-postgres"){
+                  sh '''
+                    ~/venv/bin/pip install -Ur test-requirements.txt
+                    ~/venv/bin/pip install -e .
+                  '''
+                }
+                
+                sh '~/venv/bin/pytest -sv amqp-postgres'
+              }
+            }
+          }
+        }
+        stage('test_premium') {
+          steps {
+            sh "mkdir -p ${workspace}/premium && cp -rf ${workspace}/${manager_dir}/. ${workspace}/premium"  
+
+            container('python'){
+              dir("${workspace}/premium") {
+                withVault([configuration: configuration, vaultSecrets: secrets]) {
+                  sh '''
+                    pip install --user tox
+                  '''
+                  
+                  sh """#!/bin/bash
+                    set -eux
+                    function clone {
+                      branch=\$1
+                      git clone \
+                        --branch "\$1" \
+                        --single-branch \
+                        --depth 1 \
+                        https://${env.PRIVATE_REPO_GITHUB_TOKEN}@github.com/cloudify-cosmo/cloudify-premium.git \
+                        ~/cloudify-premium
+                    }
+                    clone "${branch}" || clone master
+                  """
+                  
+                  dir("rest-service"){
+                    sh '''
+                      ~/venv/bin/pip install -Ur dev-requirements.txt
+                      ~/venv/bin/pip install -Ur test-requirements.txt
+                      ~/venv/bin/pip install -e .
+                      ~/venv/bin/pip install -e ~/cloudify-premium
+                    '''
+                  }
+                  echo 'Replace the cloudify-manager URL in dev-requirements.txt with the local path to this checkout'
+                  sh 'sed -i "s:^.*cloudify-manager.*(rest-service)$:-e ${HOME}/project/\1/:" ~/cloudify-premium/dev-requirements.txt'
+                  sh '~/venv/bin/pytest -sv ~/cloudify-premium/tests/unittests'
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   }
+}
   
-  def build_rpm(String spec_file){
-    echo 'Installing build dependencies for spec file and build a single component rpm'
-    sh """
-      cd ~/rpmbuild/SOURCES
-      yum-builddep -y packaging/${spec_file}
-      source packaging/version_info
+def build_rpm(String spec_file){
+  echo 'Installing build dependencies for spec file and build a single component rpm'
+  sh """
+    cd ~/rpmbuild/SOURCES
+    yum-builddep -y packaging/${spec_file}
+    source packaging/version_info
 
-      spectool \
-        -d "CLOUDIFY_VERSION \$CLOUDIFY_VERSION" \
-        -d "CLOUDIFY_PACKAGE_RELEASE \$CLOUDIFY_PACKAGE_RELEASE" \
-        -P packaging/${spec_file} \
-        -S -g
+    spectool \
+      -d "CLOUDIFY_VERSION \$CLOUDIFY_VERSION" \
+      -d "CLOUDIFY_PACKAGE_RELEASE \$CLOUDIFY_PACKAGE_RELEASE" \
+      -P packaging/${spec_file} \
+      -S -g
 
-      rpmbuild \
-        -D "CLOUDIFY_VERSION \$CLOUDIFY_VERSION" \
-        -D "CLOUDIFY_PACKAGE_RELEASE \$CLOUDIFY_PACKAGE_RELEASE" \
-        -bb packaging/${spec_file}
-    """
-  }
+    rpmbuild \
+      -D "CLOUDIFY_VERSION \$CLOUDIFY_VERSION" \
+      -D "CLOUDIFY_PACKAGE_RELEASE \$CLOUDIFY_PACKAGE_RELEASE" \
+      -bb packaging/${spec_file}
+  """
 }
