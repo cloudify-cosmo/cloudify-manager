@@ -51,6 +51,7 @@ cp -R ${RPM_SOURCE_DIR}/packaging/status-reporter/files/* %{buildroot}
 %pre
 
 groupadd -fr cfyuser
+getent passwd cfyuser >/dev/null || useradd -r -d /etc/cloudify -s /sbin/nologin cfyuser
 getent passwd cfyreporter >/dev/null || useradd -r -d /etc/cloudify -s /sbin/nologin cfyreporter
 
 %files
