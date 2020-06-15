@@ -131,8 +131,7 @@ def setup_resources(api):
         'ClusterStatus': 'cluster-status',
         'ManagerClusterStatus': 'cluster-status/manager/<string:node_id>',
         'DBClusterStatus': 'cluster-status/db/<string:node_id>',
-        'BrokerClusterStatus': 'cluster-status/broker/<string:node_id>',
-        'ReplaceCertificates': 'replace-certificates'
+        'BrokerClusterStatus': 'cluster-status/broker/<string:node_id>'
     }
 
     # Set version endpoint as a non versioned endpoint
