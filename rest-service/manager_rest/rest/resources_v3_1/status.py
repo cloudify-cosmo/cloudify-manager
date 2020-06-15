@@ -188,7 +188,7 @@ class Status(SecuredResource):
         try:
             status_response = server.supervisor.getProcessInfo(service_name)
         except xmlrpclib.Fault as e:
-            # If the error raise that means one of the two options:
+            # If the error is raised that means one of the two options:
             # 1. The service is optional and not installed (faultCode=10)
             # ignore the error
             # 2. The service is either optional/required and return
