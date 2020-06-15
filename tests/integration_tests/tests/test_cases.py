@@ -28,6 +28,7 @@ import unittest
 from contextlib import contextmanager
 
 import wagon
+import pytest
 from pytest import mark
 from retrying import retry
 import requests
@@ -44,7 +45,7 @@ from logging.handlers import RotatingFileHandler
 from manager_rest.utils import mkdirs
 from manager_rest.constants import CLOUDIFY_TENANT_HEADER
 
-from integration_tests.framework import utils, hello_world, docl, env
+from integration_tests.framework import utils, hello_world, docker, env
 from integration_tests.framework.flask_utils import reset_storage, \
     prepare_reset_storage_script
 from integration_tests.tests import utils as test_utils
@@ -62,20 +63,11 @@ from cloudify_rest_client.executions import Execution
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 
+@pytest.mark.usefixtures("test_environment")
 class BaseTestCase(unittest.TestCase):
     """
     A test case for cloudify integration tests.
     """
-
-    @classmethod
-    def setUpClass(cls):
-        env.create_env(cls.environment_type)
-        BaseTestCase.env = env.instance
-
-    @classmethod
-    def tearDownClass(cls):
-        env.destroy_env()
-
     def setUp(self):
         self.workdir = tempfile.mkdtemp(
             dir=self.env.test_working_dir,
@@ -175,8 +167,8 @@ class BaseTestCase(unittest.TestCase):
             self.logger = cloudify.utils.setup_logger(self._testMethodName)
             self.logger.debug('Framework logs are not saved into a file. '
                               'To allow logs saving, make sure the directory '
-                              '{0} exists with Permissions to edit.'.format(
-                                                                    logs_path))
+                              '{0} exists with Permissions to edit.'
+                              .format(logs_path))
             return
 
         self.logger = cloudify.utils.setup_logger(self._testMethodName,
@@ -188,29 +180,23 @@ class BaseTestCase(unittest.TestCase):
             self.id(), datetime.datetime.now()))
         self.logger.info('Framework logs are saved in {0}'.format(logs_path))
 
-    @staticmethod
-    def read_manager_file(file_path, no_strip=False):
-        """
-        Read a file from the cloudify manager filesystem.
-        """
-        return docl.read_file(file_path, no_strip=no_strip)
+    def read_manager_file(self, file_path, no_strip=False):
+        """Read a file from the cloudify manager filesystem."""
+        return docker.read_file(
+            self.env.container_id, file_path, no_strip=no_strip)
 
-    @staticmethod
-    def delete_manager_file(file_path, quiet=True):
-        """
-        Remove file from a cloudify manager
-        """
-        return docl.execute('rm -rf {0}'.format(file_path), quiet=quiet)
+    def delete_manager_file(self, file_path, quiet=True):
+        """Remove file from a cloudify manager"""
+        return docker.execute(
+            self.env.container_id, 'rm -rf {0}'.format(file_path))
 
-    @staticmethod
-    def execute_on_manager(command, quiet=True):
+    def execute_on_manager(self, command):
         """
         Execute a shell command on the cloudify manager container.
         """
-        return docl.execute(command, quiet)
+        return docker.execute(self.env.container_id, command)
 
-    @staticmethod
-    def clear_directory(dir_path, quiet=True):
+    def clear_directory(self, dir_path):
         """
         Remove all contents from a directory
         """
@@ -220,27 +206,24 @@ class BaseTestCase(unittest.TestCase):
         # Need to invoke a shell directly, because `docker exec` ignores
         # wildcards by default
         command = "sh -c '{0}'".format(command)
-        return docl.execute(command, quiet)
+        return docker.execute(command)
 
-    @staticmethod
-    def copy_file_to_manager(source, target, owner=None):
-        """
-        Copy a file to the cloudify manager filesystem
-
-        """
-        ret_val = docl.copy_file_to_manager(
+    def copy_file_to_manager(self, source, target, owner=None):
+        """Copy a file to the cloudify manager filesystem"""
+        ret_val = docker.copy_file_to_manager(
+            self.env.container_id,
             source=source, target=target)
         if owner:
             BaseTestCase.env.chown(owner, target)
         return ret_val
 
-    @staticmethod
-    def copy_file_from_manager(source, target, owner=None):
+    def copy_file_from_manager(self, source, target, owner=None):
         """
         Copy a file to the cloudify manager filesystem
 
         """
-        ret_val = docl.copy_file_from_manager(
+        ret_val = docker.copy_file_from_manager(
+            self.env.container_id,
             source=source, target=target)
         if owner:
             BaseTestCase.env.chown(owner, target)
@@ -258,22 +241,17 @@ class BaseTestCase(unittest.TestCase):
             f.flush()
             self.copy_file_to_manager(f.name, target_path, owner=owner)
 
-    @staticmethod
-    def restart_service(service_name):
-        """
-        restart service by name in the manager container
-
-        """
-        docl.execute('systemctl stop {0}'.format(service_name))
-        docl.execute('systemctl start {0}'.format(service_name))
+    def restart_service(self, service_name):
+        """restart service by name in the manager container"""
+        docker.execute(
+            self.env.container_id, 'systemctl stop {0}'.format(service_name))
+        docker.execute(
+            self.env.container_id, 'systemctl start {0}'.format(service_name))
 
     @staticmethod
     def get_docker_host():
-        """
-        returns the host IP
-
-        """
-        return docl.docker_host()
+        """returns the host IP"""
+        return 'localhost'
 
     def get_plugin_data(self, plugin_name, deployment_id):
         """
@@ -629,7 +607,7 @@ class AgentlessTestCase(BaseTestCase):
         super(AgentlessTestCase, self).setUp()
         self._setup_running_manager_attributes()
         reset_storage()
-        docl.upload_mock_license()
+        docker.upload_mock_license(self.env.container_id)
         self._reset_file_system()
         self.addCleanup(self._save_manager_logs_after_test)
 
@@ -663,13 +641,9 @@ class AgentlessTestCase(BaseTestCase):
 class BaseAgentTestCase(BaseTestCase):
     environment_type = env.AgentTestEnvironment
 
-    @classmethod
-    def setUpClass(cls):
-        super(BaseAgentTestCase, cls).setUpClass()
-
     def tearDown(self):
         self.logger.info('Removing leftover test containers')
-        docl.clean(label=['marker=test', self.env.env_label])
+        docker.clean(self.env.container_id)
         super(BaseAgentTestCase, self).tearDown()
 
     def read_host_file(self, file_path, deployment_id, node_id):
@@ -679,7 +653,7 @@ class BaseAgentTestCase(BaseTestCase):
         runtime_props = self._get_runtime_properties(
             deployment_id=deployment_id, node_id=node_id)
         container_id = runtime_props['container_id']
-        return docl.read_file(file_path, container_id=container_id)
+        return docker.read_file(container_id, file_path)
 
     def get_host_ip(self, deployment_id, node_id):
         """
@@ -1038,7 +1012,7 @@ class PluginTestContainerHosts(PluginsTest):
         self.client.node_instances.update(
             node_instance_id,
             runtime_properties={
-                'ip':  self.get_container_ip(container),
+                'ip': self.get_container_ip(container),
             })
 
     def deploy_and_execute_workflow_with_containers(self,

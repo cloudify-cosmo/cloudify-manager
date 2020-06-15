@@ -21,7 +21,7 @@ import sys
 import yaml
 import time
 import socket
-import tempfile
+import subprocess
 
 from functools import partial
 
@@ -142,69 +142,55 @@ def init(expose=None, resources=None):
     _save_docl_config(conf)
 
 
-def run_manager(label=None, tag=None):
-    start = time.time()
-    label = label or []
-    args = ['--mount']
-    if tag:
-        args += ['--tag', tag]
-    for label_item in label:
-        args += ['--label', label_item]
-    with tempfile.NamedTemporaryFile() as f:
-        args += ['--details-path', f.name]
-        _docl.run(*args)
-        with open(f.name) as f2:
-            container_details = yaml.safe_load(f2)
-    _set_container_id_and_ip(container_details)
-    utils.update_profile_context()
-    upload_mock_license()
-    _wait_for_services()
-    logger.info(
-        'Container start took {0} seconds'.format(time.time() - start))
-    logger.info(
-        'Container details: {0}'.format(container_details)
+def run_manager(image):
+    manager_id = subprocess.check_output([
+        'docker', 'run', '--privileged', '-d',
+        '-v', '/sys/fs/cgroup:/sys/fs/cgroup:ro',
+        '--tmpfs', '/run', '--tmpfs', '/run/lock',
+        image
+    ]).strip()
+    _wait_for_services(manager_id)
+    upload_mock_license(manager_id)
+    return manager_id
+
+
+def upload_mock_license(manager_id):
+    execute(
+        manager_id,
+        'sudo -u postgres psql cloudify_db -c "{0}"'
+        .format(INSERT_MOCK_LICENSE_QUERY)
     )
-    return container_details
 
 
-def upload_mock_license():
-    execute(('sudo -u postgres psql cloudify_db '
-             '-c "{0}"'.format(INSERT_MOCK_LICENSE_QUERY)))
+def clean(container_id):
+    subprocess.check_call(['docker', 'rm', '-f', container_id])
 
 
-def clean(label=None):
-    label = label or []
-    args = []
-    for label_item in label:
-        args += ['--label', label_item]
-    _docl.clean(*args)
-
-
-def read_file(file_path, no_strip=False, container_id=None):
-    container_id = container_id or default_container_id
-    result = _quiet_docl('exec', 'cat {0}'.format(file_path),
-                         container_id=container_id)
+def read_file(container_id, file_path, no_strip=False):
+    result = subprocess.check_output([
+        'docker', 'exec', container_id, 'cat', file_path
+    ])
     if not no_strip:
         result = result.strip()
     return result
 
 
-def execute(command, quiet=True, container_id=None):
-    container_id = container_id or default_container_id
-    proc = _quiet_docl if quiet else _docl
-    return proc('exec', command, container_id=container_id)
+def execute(container_id, command):
+    return subprocess.check_output([
+        'docker', 'exec', container_id, command
+    ])
 
 
-def copy_file_to_manager(source, target, container_id=None):
-    container_id = container_id or default_container_id
-    return _quiet_docl('cp', source, ':{0}'.format(target),
-                       container_id=container_id)
+def copy_file_to_manager(container_id, source, target):
+    subprocess.check_call([
+        'docker', 'cp', source, '{0}:{1}'.format(container_id, target)
+    ])
 
 
-def copy_file_from_manager(source, target, container_id=None):
-    container_id = container_id or default_container_id
-    return _quiet_docl('cp', ':{0}'.format(source), target,
-                       container_id=container_id)
+def copy_file_from_manager(container_id, source, target):
+    subprocess.check_call([
+        'docker', 'cp', '{0}:{1}'.format(container_id, source), target
+    ])
 
 
 def install_docker(container_id=None):
@@ -227,28 +213,36 @@ def _set_container_id_and_ip(container_details):
 
 
 def _retry(func, exceptions, cleanup=None):
-    for _ in range(600):
+    err = None
+    for _ in range(2600):
         try:
             res = func()
             if cleanup:
                 cleanup(res)
-            break
-        except exceptions:
+            return
+        except exceptions as e:
+            err = e
             time.sleep(0.1)
-    else:
-        raise RuntimeError()
+    raise err
 
 
-def _wait_for_services(container_ip=None):
-    if container_ip is None:
-        container_ip = utils.get_manager_ip()
+def get_manager_ip(container_id):
+    return subprocess.check_output([
+        'docker', 'inspect',
+        '--format={{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}',
+        container_id
+    ]).strip()
+
+
+def _wait_for_services(container_id):
+    container_ip = get_manager_ip(container_id)
     logger.info('Waiting for RabbitMQ')
-    _retry(func=utils.create_pika_connection,
+    _retry(func=lambda: utils.create_pika_connection(container_ip),
            exceptions=AMQPConnectionError,
            cleanup=lambda conn: conn.close())
     logger.info('Waiting for REST service and Storage')
-    rest_client = utils.create_rest_client()
-    _retry(func=rest_client.blueprints.list,
+    rest_client = utils.create_rest_client(container_ip)
+    _retry(func=rest_client.manager.get_status,
            exceptions=(requests.exceptions.ConnectionError,
                        cloudify_rest_client.exceptions.CloudifyClientError))
     logger.info('Waiting for postgres')

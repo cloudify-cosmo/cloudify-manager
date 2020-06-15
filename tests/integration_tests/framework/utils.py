@@ -90,7 +90,7 @@ def set_cfy_paths(new_workdir):
     )
 
 
-def create_rest_client(**kwargs):
+def create_rest_client(host, **kwargs):
     # Doing it with kwargs instead of arguments with default values to allow
     # not passing args (which will then use the default values), or explicitly
     # passing None (or False) which will then be passed as-is to the Client
@@ -109,7 +109,7 @@ def create_rest_client(**kwargs):
     headers = create_auth_header(username, password, token, tenant)
 
     return CloudifyClient(
-        host=get_manager_ip(),
+        host=host,
         port=rest_port,
         protocol=rest_protocol,
         headers=headers,
@@ -117,12 +117,12 @@ def create_rest_client(**kwargs):
         cert=cert_path)
 
 
-def create_pika_connection():
+def create_pika_connection(host):
     credentials = pika.credentials.PlainCredentials(
         username='cloudify',
         password='c10udify')
     return pika.BlockingConnection(
-        pika.ConnectionParameters(host=get_manager_ip(),
+        pika.ConnectionParameters(host=host,
                                   port=5671,
                                   ssl=True,
                                   credentials=credentials))
