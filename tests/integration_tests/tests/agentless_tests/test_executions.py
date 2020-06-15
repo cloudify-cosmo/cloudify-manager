@@ -22,8 +22,7 @@ from integration_tests import AgentlessTestCase
 from integration_tests.framework.postgresql import run_query
 from integration_tests.framework import (
     postgresql,
-    utils,
-    docl)
+    utils)
 from integration_tests.tests.utils import (
     verify_deployment_env_created,
     do_retries,
@@ -617,7 +616,7 @@ class ExecutionsTest(AgentlessTestCase):
         do_retries(verify_deployment_env_created, 30, deployment_id=dep.id)
         execution = self.client.executions.start(deployment_id=dep.id,
                                                  workflow_id='install')
-        pid = do_retries(docl.read_file, file_path='/tmp/pid.txt')
+        pid = do_retries(self.read_manager_file, file_path='/tmp/pid.txt')
         path = '/proc/{}/status'.format(pid)
         execution = self.client.executions.cancel(execution.id,
                                                   force=True, kill=True)
@@ -626,7 +625,7 @@ class ExecutionsTest(AgentlessTestCase):
         # We use do_retries to give the kill cancel operation time to kill
         # the process.
         do_retries(self.assertRaises, excClass=ErrorReturnCode,
-                   callableObj=docl.read_file,
+                   callableObj=self.read_manager_file,
                    file_path=path)
 
     def test_legacy_cancel_execution(self):
