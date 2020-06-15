@@ -122,8 +122,7 @@ class BaseTestEnvironment(object):
                         self.test_working_dir)
             shutil.rmtree(self.test_working_dir, ignore_errors=True)
 
-    @classmethod
-    def stop_dispatch_processes(cls):
+    def stop_dispatch_processes(self):
         logger.info('Shutting down all dispatch processes')
         try:
             docker.execute(
