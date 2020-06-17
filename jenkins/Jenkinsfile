@@ -27,7 +27,7 @@ pipeline {
   environment {
     branch = "${env.BRANCH_NAME}"
     workspace = "${env.WORKSPACE}"
-    manager_dir = "cloudify-manager"
+    project = "cloudify-manager"
     cloudify_version = get_version("${env.BRANCH_NAME}")
     cloudify_package_release = get_package_release("${env.BRANCH_NAME}")
   }
@@ -35,7 +35,7 @@ pipeline {
   stages {
     stage('prepare') {
       steps {
-        checkout([$class: 'GitSCM', branches: [[name: "${branch}"]], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: "${manager_dir}"]], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '9f6aca75-ebff-4045-9919-b8ec6b5ccf9d', url: 'https://github.com/cloudify-cosmo/cloudify-manager.git']]])
+        checkout([$class: 'GitSCM', branches: [[name: "${branch}"]], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: "${project}"]], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '9f6aca75-ebff-4045-9919-b8ec6b5ccf9d', url: 'https://github.com/cloudify-cosmo/cloudify-manager.git']]])
         
         container('python'){
           sh '''
@@ -50,7 +50,7 @@ pipeline {
       parallel {
         stage('test_restservice') {
           steps {
-            sh "mkdir -p ${workspace}/rest && cp -rf ${workspace}/${manager_dir}/. ${workspace}/rest"  
+            sh "mkdir -p ${workspace}/rest && cp -rf ${workspace}/${project}/. ${workspace}/rest"  
             
             container('python'){
               dir("${workspace}/rest") {
@@ -131,7 +131,7 @@ pipeline {
         }
         stage('flake8') {
           steps {
-            sh "mkdir -p ${workspace}/flake8 && cp -rf ${workspace}/${manager_dir}/. ${workspace}/flake8"
+            sh "mkdir -p ${workspace}/flake8 && cp -rf ${workspace}/${project}/. ${workspace}/flake8"
 
             container('python'){
               dir("${workspace}/flake8") {
@@ -145,7 +145,7 @@ pipeline {
         }
         stage('py3_compat') {
           steps {
-            sh "mkdir -p ${workspace}/py3_compat && cp -rf ${workspace}/${manager_dir}/. ${workspace}/py3_compat"  
+            sh "mkdir -p ${workspace}/py3_compat && cp -rf ${workspace}/${project}/. ${workspace}/py3_compat"  
 
             container('python-old'){
               dir("${workspace}/py3_compat") {
@@ -180,7 +180,7 @@ pipeline {
       parallel {
         stage('test_amqp_postgres') {
           steps {
-            sh "mkdir -p ${workspace}/amqp_postgres && cp -rf ${workspace}/${manager_dir}/. ${workspace}/amqp_postgres"  
+            sh "mkdir -p ${workspace}/amqp_postgres && cp -rf ${workspace}/${project}/. ${workspace}/amqp_postgres"  
 
             container('python'){
               dir("${workspace}/amqp_postgres") {
@@ -198,7 +198,7 @@ pipeline {
         }
         stage('test_premium') {
           steps {
-            sh "mkdir -p ${workspace}/premium && cp -rf ${workspace}/${manager_dir}/. ${workspace}/premium"  
+            sh "mkdir -p ${workspace}/premium && cp -rf ${workspace}/${project}/. ${workspace}/premium"  
 
             container('python'){
               dir("${workspace}/premium") {
