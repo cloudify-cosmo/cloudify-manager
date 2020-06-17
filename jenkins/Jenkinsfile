@@ -125,7 +125,7 @@ pipeline {
        
             echo 'Upload to S3'
             withVault([configuration: configuration, vaultSecrets: secrets]) {
-              upload_to_s3("${workspace}/rpm", "${cloudify_version}", "${cloudify_package_release}", "${env.project}")
+              upload_to_s3("${workspace}/rpm/", "${cloudify_version}", "${cloudify_package_release}", "${env.project}")
             }
           }
         }
@@ -268,12 +268,8 @@ def upload_to_s3(String rpm_upload_dir_path, String version, String package_rele
   }
   
   container('awscli'){
-    sh """
-      echo "s3://${env.S3_RELEASE_BUCKET}/cloudify/${version}/${package_release}-build/${project_name}/${env.branch}/${env.BUILD_NUMBER}"
-    """
-    // sh """
-    //   aws s3 cp ${rpm_upload_dir}/* s3://${env.S3_RELEASE_BUCKET}/cloudify/${version}/${package_release}-build/${project_name}/${env.GIT_COMMIT}"
-    // """
+    sh "aws s3 cp ${rpm_upload_dir}/* s3://${env.S3_RELEASE_BUCKET}/cloudify/${version}/${package_release}-build/${project_name}/${env.branch}/${env.BUILD_NUMBER}"
+    // aws s3 cp ${rpm_upload_dir}/* s3://${env.S3_RELEASE_BUCKET}/cloudify/${version}/${package_release}-build/${project_name}/${env.GIT_COMMIT}"
   }
 }
 
