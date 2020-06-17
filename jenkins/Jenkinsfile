@@ -1,6 +1,9 @@
 def secrets = [
   [path: 'secret/jenkins/github', engineVersion: 2, secretValues: [
     [envVar: 'PRIVATE_REPO_GITHUB_TOKEN', vaultKey: 'private_token']]],
+  [path: 'secret/jenkins/aws', engineVersion: 2, secretValues: [
+    [envVar: 'AWS_ACCESS_KEY_ID', vaultKey: 'aws_access_key_id'],
+    [envVar: 'AWS_SECRET_ACCESS_KEY', vaultKey: 'aws_secret_access_key']]],
 ]
 
 def configuration = [vaultUrl: "${env.VAULT_URL}",  vaultCredentialId: 'vault-app-role', engineVersion: 2]
@@ -25,6 +28,8 @@ pipeline {
     branch = "${env.BRANCH_NAME}"
     workspace = "${env.WORKSPACE}"
     manager_dir = "cloudify-manager"
+    cloudify_version = get_version("${env.BRANCH_NAME}")
+    cloudify_package_release = get_package_release("${env.BRANCH_NAME}")
   }
 
   stages {
@@ -96,19 +101,19 @@ pipeline {
               sh "yum install rpmdevtools -y"
 
               echo 'Build Rest Service RPM'
-              build_rpm('cloudify-rest-service.spec')
+              build_rpm('~/rpmbuild/SOURCES', 'cloudify-rest-service.spec', "${cloudify_version}", "${cloudify_package_release}")
               
               echo 'Build mgmtworker RPM'
-              build_rpm('cloudify-mgmtworker.spec')
+              build_rpm('~/rpmbuild/SOURCES', 'cloudify-mgmtworker.spec', "${cloudify_version}", "${cloudify_package_release}")
               
               echo 'Build rabbitmq RPM'
-              build_rpm('cloudify-rabbitmq.spec')
+              build_rpm('~/rpmbuild/SOURCES', 'cloudify-rabbitmq.spec', "${cloudify_version}", "${cloudify_package_release}")
               
               echo 'Build manager-ip-setter rpm'
-              build_rpm('cloudify-manager-ip-setter.spec')
+              build_rpm('~/rpmbuild/SOURCES', 'cloudify-manager-ip-setter.spec', "${cloudify_version}", "${cloudify_package_release}")
               
               echo 'Build status-reporter rpm'
-              build_rpm('cloudify-status-reporter.spec')
+              build_rpm('~/rpmbuild/SOURCES', 'cloudify-status-reporter.spec', "${cloudify_version}", "${cloudify_package_release}")
               
               echo 'Save Artifacts'
               sh("mkdir -p ${workspace}/rpm && cp -rf /root/rpmbuild/RPMS/x86_64/. ${workspace}/rpm")
@@ -116,6 +121,11 @@ pipeline {
               dir("${workspace}/rpm") {
                 archiveArtifacts artifacts: '*.rpm', onlyIfSuccessful: true
               }
+            }
+       
+            echo 'Upload to S3'
+            withVault([configuration: configuration, vaultSecrets: secrets]) {
+              upload_to_s3("${workspace}/rpm", "${cloudify_version}", "${cloudify_package_release}", "${env.project}")
             }
           }
         }
@@ -232,22 +242,59 @@ pipeline {
   }
 }
   
-def build_rpm(String spec_file){
+def build_rpm(String dir_path, String spec_file, String version, String package_release){
   echo 'Installing build dependencies for spec file and build a single component rpm'
   sh """
-    cd ~/rpmbuild/SOURCES
+    cd ${dir_path}
     yum-builddep -y packaging/${spec_file}
-    source packaging/version_info
 
     spectool \
-      -d "CLOUDIFY_VERSION \$CLOUDIFY_VERSION" \
-      -d "CLOUDIFY_PACKAGE_RELEASE \$CLOUDIFY_PACKAGE_RELEASE" \
+      -d "CLOUDIFY_VERSION ${version}" \
+      -d "CLOUDIFY_PACKAGE_RELEASE ${package_release}" \
       -P packaging/${spec_file} \
       -S -g
 
     rpmbuild \
-      -D "CLOUDIFY_VERSION \$CLOUDIFY_VERSION" \
-      -D "CLOUDIFY_PACKAGE_RELEASE \$CLOUDIFY_PACKAGE_RELEASE" \
+      -D "CLOUDIFY_VERSION ${version}" \
+      -D "CLOUDIFY_PACKAGE_RELEASE ${package_release}" \
       -bb packaging/${spec_file}
+  """
+}
+
+def upload_to_s3(String rpm_upload_dir_path, String version, String package_release, String project_name){
+  // vault must be connected and awscli container attached to pod_config
+  if (rpm_upload_dir_path.trim().isEmpty() || version.trim().isEmpty() || package_release.trim().isEmpty() || project_name.isEmpty()){
+    return
+  }
+  
+  container('awscli'){
+    sh """
+      aws s3 ls s3://${env.S3_RELEASE_BUCKET}
+      echo "s3://${env.S3_RELEASE_BUCKET}/cloudify/${version}/${package_release}-build/${project_name}/${env.branch}/${env.BUILD_NUMBER}"
+      echo sh(returnStdout: true, script: 'env')
+    """
+    // sh """
+    //   aws s3 cp ${rpm_upload_dir}/* s3://${env.S3_RELEASE_BUCKET}/cloudify/${version}/${package_release}-build/${project_name}/${env.branch}/${env.BUILD_NUMBER}"
+    // """
+  }
+}
+
+def get_version(String branch_name){
+  if (!branch_name?.trim()) {
+    version_branch = 'master'
+  }
+  sh returnStdout:true, script: """
+    eval "\$(curl 'https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/${branch_name}/packaging/version_info')"
+    echo "\$CLOUDIFY_VERSION"
+  """
+}
+
+def get_package_release(String branch_name){
+  if (!branch_name?.trim()) {
+    version_branch = 'master'
+  }
+  sh returnStdout:true, script: """
+    eval "\$(curl 'https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/${branch_name}/packaging/version_info')"
+    echo "\$CLOUDIFY_PACKAGE_RELEASE"
   """
 }
