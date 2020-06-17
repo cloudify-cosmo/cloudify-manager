@@ -263,7 +263,7 @@ def build_rpm(String dir_path, String spec_file, String version, String package_
 
 def upload_to_s3(String rpm_upload_dir_path, String version, String package_release, String project_name){
   // vault must be connected and awscli container attached to pod_config
-  if (rpm_upload_dir_path.trim().isEmpty() || version.trim().isEmpty() || package_release.trim().isEmpty() || project_name.isEmpty()){
+  if (!rpm_upload_dir_path?.trim() || !version?.trim() || !package_release?.trim() || !project_name?.trim()){
     return
   }
   
@@ -271,8 +271,9 @@ def upload_to_s3(String rpm_upload_dir_path, String version, String package_rele
     sh """
       aws s3 ls s3://${env.S3_RELEASE_BUCKET}
       echo "s3://${env.S3_RELEASE_BUCKET}/cloudify/${version}/${package_release}-build/${project_name}/${env.branch}/${env.BUILD_NUMBER}"
-      echo sh(returnStdout: true, script: 'env')
     """
+    echo sh(returnStdout: true, script: 'env')
+    
     // sh """
     //   aws s3 cp ${rpm_upload_dir}/* s3://${env.S3_RELEASE_BUCKET}/cloudify/${version}/${package_release}-build/${project_name}/${env.branch}/${env.BUILD_NUMBER}"
     // """
