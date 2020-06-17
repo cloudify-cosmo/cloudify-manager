@@ -269,13 +269,10 @@ def upload_to_s3(String rpm_upload_dir_path, String version, String package_rele
   
   container('awscli'){
     sh """
-      aws s3 ls s3://${env.S3_RELEASE_BUCKET}
       echo "s3://${env.S3_RELEASE_BUCKET}/cloudify/${version}/${package_release}-build/${project_name}/${env.branch}/${env.BUILD_NUMBER}"
     """
-    echo sh(returnStdout: true, script: 'env')
-    
     // sh """
-    //   aws s3 cp ${rpm_upload_dir}/* s3://${env.S3_RELEASE_BUCKET}/cloudify/${version}/${package_release}-build/${project_name}/${env.branch}/${env.BUILD_NUMBER}"
+    //   aws s3 cp ${rpm_upload_dir}/* s3://${env.S3_RELEASE_BUCKET}/cloudify/${version}/${package_release}-build/${project_name}/${env.GIT_COMMIT}"
     // """
   }
 }
