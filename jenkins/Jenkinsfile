@@ -28,8 +28,8 @@ pipeline {
     branch = "${env.BRANCH_NAME}"
     workspace = "${env.WORKSPACE}"
     project = "cloudify-manager"
-    cloudify_version = get_version("${env.BRANCH_NAME}")
-    cloudify_package_release = get_package_release("${env.BRANCH_NAME}")
+    cloudify_version = get_version("${env.BRANCH_NAME}").trim()
+    cloudify_package_release = get_package_release("${env.BRANCH_NAME}").trim()
   }
 
   stages {
