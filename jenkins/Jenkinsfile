@@ -8,6 +8,8 @@ def secrets = [
 
 def configuration = [vaultUrl: "${env.VAULT_URL}",  vaultCredentialId: 'vault-app-role', engineVersion: 2]
 
+@Library('pipeline-shared-library') _
+
 pipeline {
   agent {
     kubernetes {
@@ -240,55 +242,4 @@ pipeline {
       }
     }
   }
-}
-  
-def build_rpm(String dir_path, String spec_file, String version, String package_release){
-  echo 'Installing build dependencies for spec file and build a single component rpm'
-  sh """
-    cd ${dir_path}
-    yum-builddep -y packaging/${spec_file}
-
-    spectool \
-      -d "CLOUDIFY_VERSION ${version}" \
-      -d "CLOUDIFY_PACKAGE_RELEASE ${package_release}" \
-      -P packaging/${spec_file} \
-      -S -g
-
-    rpmbuild \
-      -D "CLOUDIFY_VERSION ${version}" \
-      -D "CLOUDIFY_PACKAGE_RELEASE ${package_release}" \
-      -bb packaging/${spec_file}
-  """
-}
-
-def upload_to_s3(String rpm_upload_dir_path, String version, String package_release, String project_name){
-  // vault must be connected and awscli container attached to pod_config
-  if (!rpm_upload_dir_path?.trim() || !version?.trim() || !package_release?.trim() || !project_name?.trim()){
-    return
-  }
-  
-  container('awscli'){
-    sh "aws s3 cp ${rpm_upload_dir_path} s3://${env.S3_RELEASE_BUCKET}/cloudify/${version}/${package_release}-build/${project_name}/${env.branch}/${env.BUILD_NUMBER} --recursive"
-    // aws s3 cp ${rpm_upload_dir} s3://${env.S3_RELEASE_BUCKET}/cloudify/${version}/${package_release}-build/${project_name}/${env.GIT_COMMIT} --recursive"
-  }
-}
-
-def get_version(String branch_name){
-  if (!branch_name?.trim()) {
-    version_branch = 'master'
-  }
-  sh returnStdout:true, script: """
-    eval "\$(curl 'https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/${branch_name}/packaging/version_info')"
-    echo "\$CLOUDIFY_VERSION"
-  """
-}
-
-def get_package_release(String branch_name){
-  if (!branch_name?.trim()) {
-    version_branch = 'master'
-  }
-  sh returnStdout:true, script: """
-    eval "\$(curl 'https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/${branch_name}/packaging/version_info')"
-    echo "\$CLOUDIFY_PACKAGE_RELEASE"
-  """
 }
