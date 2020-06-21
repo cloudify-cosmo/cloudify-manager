@@ -30,8 +30,8 @@ pipeline {
     branch = "${env.BRANCH_NAME}"
     workspace = "${env.WORKSPACE}"
     project = "cloudify-manager"
-    cloudify_version = get_version("${env.BRANCH_NAME}").trim()
-    cloudify_package_release = get_package_release("${env.BRANCH_NAME}").trim()
+    cloudify_version = getVersion("${env.BRANCH_NAME}").trim()
+    cloudify_package_release = getPackageRelease("${env.BRANCH_NAME}").trim()
   }
 
   stages {
@@ -103,19 +103,19 @@ pipeline {
               sh "yum install rpmdevtools -y"
 
               echo 'Build Rest Service RPM'
-              build_rpm('~/rpmbuild/SOURCES', 'cloudify-rest-service.spec', "${cloudify_version}", "${cloudify_package_release}")
+              buildRpm('~/rpmbuild/SOURCES', 'cloudify-rest-service.spec', "${cloudify_version}", "${cloudify_package_release}")
               
               echo 'Build mgmtworker RPM'
-              build_rpm('~/rpmbuild/SOURCES', 'cloudify-mgmtworker.spec', "${cloudify_version}", "${cloudify_package_release}")
+              buildRpm('~/rpmbuild/SOURCES', 'cloudify-mgmtworker.spec', "${cloudify_version}", "${cloudify_package_release}")
               
               echo 'Build rabbitmq RPM'
-              build_rpm('~/rpmbuild/SOURCES', 'cloudify-rabbitmq.spec', "${cloudify_version}", "${cloudify_package_release}")
+              buildRpm('~/rpmbuild/SOURCES', 'cloudify-rabbitmq.spec', "${cloudify_version}", "${cloudify_package_release}")
               
               echo 'Build manager-ip-setter rpm'
-              build_rpm('~/rpmbuild/SOURCES', 'cloudify-manager-ip-setter.spec', "${cloudify_version}", "${cloudify_package_release}")
+              buildRpm('~/rpmbuild/SOURCES', 'cloudify-manager-ip-setter.spec', "${cloudify_version}", "${cloudify_package_release}")
               
               echo 'Build status-reporter rpm'
-              build_rpm('~/rpmbuild/SOURCES', 'cloudify-status-reporter.spec', "${cloudify_version}", "${cloudify_package_release}")
+              buildRpm('~/rpmbuild/SOURCES', 'cloudify-status-reporter.spec', "${cloudify_version}", "${cloudify_package_release}")
               
               echo 'Save Artifacts'
               sh("mkdir -p ${workspace}/rpm && cp -rf /root/rpmbuild/RPMS/x86_64/. ${workspace}/rpm")
