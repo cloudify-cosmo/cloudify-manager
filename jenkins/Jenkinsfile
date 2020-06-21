@@ -127,7 +127,7 @@ pipeline {
        
             echo 'Upload to S3'
             withVault([configuration: configuration, vaultSecrets: secrets]) {
-              upload_to_s3("${workspace}/rpm/", "${cloudify_version}", "${cloudify_package_release}", "${env.project}")
+              uploadToS3("${workspace}/rpm/", "${cloudify_version}", "${cloudify_package_release}", "${env.project}")
             }
           }
         }
