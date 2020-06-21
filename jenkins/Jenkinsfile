@@ -125,7 +125,7 @@ pipeline {
               }
             }
        
-            echo 'Upload to S3'
+            echo 'Upload artifacts to S3'
             withVault([configuration: configuration, vaultSecrets: secrets]) {
               uploadToS3("${workspace}/rpm/", "${cloudify_version}", "${cloudify_package_release}", "${env.project}")
             }
