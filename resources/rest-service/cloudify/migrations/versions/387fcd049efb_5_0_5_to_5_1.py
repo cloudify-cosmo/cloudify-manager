@@ -182,7 +182,8 @@ def _create_unique_indexes():
                   table_name='deployments')
     op.create_index('plugins_name_version__tenant_id_idx',
                     'plugins',
-                    ['package_name', 'package_version', '_tenant_id'],
+                    ['package_name', 'package_version', '_tenant_id',
+                     'distribution'],
                     unique=True)
     op.create_index('secrets_id_tenant_id_idx',
                     'secrets',

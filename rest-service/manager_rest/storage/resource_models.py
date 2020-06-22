@@ -98,7 +98,7 @@ class Plugin(SQLResourceBase):
     __table_args__ = (
         db.Index(
             'plugins_name_version__tenant_id_idx',
-            'package_name', 'package_version', '_tenant_id',
+            'package_name', 'package_version', '_tenant_id', 'distribution',
             unique=True
         ),
     )
