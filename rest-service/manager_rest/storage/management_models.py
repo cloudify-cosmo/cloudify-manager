@@ -627,7 +627,6 @@ class Manager(_WithCACert, SQLModelBase, CloudifyNodeMixin):
     distro_release = db.Column(db.Text, nullable=False)
     fs_sync_node_id = db.Column(db.Text, nullable=True)
     networks = db.Column(JSONString)
-    node_id = db.Column(db.Text, unique=True, nullable=False)
     last_seen = db.Column(UTCDateTime, nullable=False, index=True)
     status_report_frequency = db.Column(db.Integer, nullable=True)
 
@@ -653,7 +652,6 @@ class RabbitMQBroker(_WithCACert, SQLModelBase, CloudifyNodeMixin):
     # additional params, as **kwargs to creating the connection
     params = db.Column(JSONString, nullable=True)
     networks = db.Column(JSONString)
-    node_id = db.Column(db.Text, unique=True, nullable=False)
     is_external = db.Column(db.Boolean, default=False, nullable=False)
 
     @classmethod
@@ -672,7 +670,6 @@ class DBNodes(SQLModelBase, CloudifyNodeMixin):
     __tablename__ = 'db_nodes'
 
     name = db.Column(db.Text, primary_key=True)
-    node_id = db.Column(db.Text, unique=True, nullable=False)
     host = db.Column(db.Text, unique=True, nullable=False)
     is_external = db.Column(db.Boolean, default=False, nullable=False)
 
