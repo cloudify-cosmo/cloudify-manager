@@ -108,6 +108,61 @@ class BaseTestEnvironment(object):
         self.chown(constants.CLOUDIFY_USER, constants.PLUGIN_STORAGE_DIR)
         self.start_events_printer()
 
+    def build_resource_mapping(self):
+        """
+        This function builds a list of resources to mount on the manager
+        container. Each entry is composed of the source directory on the host
+        machine (the client) and where it should be mounted on the container.
+        """
+
+        resources = []
+        # Import only for the sake of finding the module path on the file
+        # system
+        import integration_tests_plugins
+        import fasteners
+        plugins_dir = os.path.dirname(integration_tests_plugins.__file__)
+        fasteners_dir = os.path.dirname(fasteners.__file__)
+
+        # All code directories will be mapped to the management worker
+        # virtualenv and will also be included in the custom agent package
+        # created in the test suite setup
+        code_directories = [
+            # Plugins import integration_tests_plugins.utils.update_storage
+            # all over the place
+            plugins_dir,
+
+            # integration_tests_plugins.utils.update_storage makes use of the
+            # fasteners library
+            fasteners_dir
+        ]
+
+        # All plugins under integration_tests_plugins are mapped. These are
+        # mostly used as operations and workflows mapped in the different tests
+        # blueprints.
+        code_directories += [
+            os.path.join(plugins_dir, directory)
+            for directory in os.listdir(plugins_dir)
+        ]
+
+        for directory in code_directories:
+            basename = os.path.basename(directory)
+
+            # Only map directories (skips __init__.py and utils.py)
+            if not os.path.isdir(directory):
+                continue
+
+            # Each code directory is mounted in two places:
+            # 1. The management worker virtualenv
+            # 2. /opt/agent-template is a directory created by docl that
+            #    contains an extracted CentOS agent package.
+            #    in the AgentTestEnvironment setup, we override the CentOS
+            #    package with the content of this directory using the
+            #    `docl build-agent` command.
+            for dst in ['/opt/mgmtworker/env/lib/python3.6/site-packages/{0}'.format(basename),       # noqa
+                        '/opt/agent-template/env/lib/python3.6/site-packages/{0}'.format(basename)]:  # noqa
+                resources.append((directory, dst))
+        return resources
+
     def destroy(self):
         logger.info('Destroying test environment...')
         os.environ.pop('CFY_WORKDIR', None)
