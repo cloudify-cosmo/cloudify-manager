@@ -142,14 +142,28 @@ def init(expose=None, resources=None):
     _save_docl_config(conf)
 
 
-def run_manager(image):
-    manager_id = subprocess.check_output([
+def run_manager(image, resource_mapping=None):
+    with tempfile.NamedTemporaryFile(delete=False) as conf:
+        conf.write("""
+manager:
+    security:
+        admin_password: admin
+sanity:
+    skip_sanity: true
+
+""")
+    command = [
         'docker', 'run', '--privileged', '-d',
         '-v', '/sys/fs/cgroup:/sys/fs/cgroup:ro',
+        '-v', '{0}:/etc/cloudify/config.yaml:rw'.format(conf.name),
         '--tmpfs', '/run', '--tmpfs', '/run/lock',
-        image
-    ]).strip()
-    _wait_for_services(manager_id)
+    ]
+    if resource_mapping:
+        for src, dst in resource_mapping:
+            command += ['-v', '{0}:{1}:ro'.format(src, dst)]
+    command += [image]
+    manager_id = subprocess.check_output(command).strip()
+    execute(manager_id, ['cfy_manager', 'wait-for-starter'])
     upload_mock_license(manager_id)
     return manager_id
 
@@ -232,21 +246,3 @@ def get_manager_ip(container_id):
         '--format={{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}',
         container_id
     ]).strip()
-
-
-def _wait_for_services(container_id):
-    container_ip = get_manager_ip(container_id)
-    logger.info('Waiting for RabbitMQ')
-    _retry(func=lambda: utils.create_pika_connection(container_ip),
-           exceptions=AMQPConnectionError,
-           cleanup=lambda conn: conn.close())
-    logger.info('Waiting for REST service and Storage')
-    rest_client = utils.create_rest_client(container_ip)
-    _retry(func=rest_client.manager.get_status,
-           exceptions=(requests.exceptions.ConnectionError,
-                       cloudify_rest_client.exceptions.CloudifyClientError))
-    logger.info('Waiting for postgres')
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    _retry(func=lambda: sock.connect((container_ip, 5432)),
-           cleanup=lambda _: sock.close(),
-           exceptions=IOError)
