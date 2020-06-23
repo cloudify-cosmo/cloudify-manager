@@ -453,7 +453,8 @@ def composer_db_schema_get_current_revision():
         '/usr/bin/npm',
         'run',
         '--silent',
-        '--prefix', snapshot_constants.COMPOSER_BASE_FOLDER,
+        '--prefix', os.path.join(snapshot_constants.COMPOSER_BASE_FOLDER,
+                                 'backend'),
         'db-migrate-current'
     ]).decode('utf-8')
     revision = output.strip()
