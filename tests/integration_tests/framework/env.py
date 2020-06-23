@@ -18,6 +18,7 @@ import logging
 import os
 import shutil
 import tempfile
+import subprocess
 
 import sh
 
@@ -27,7 +28,8 @@ import cloudify.event
 
 from integration_tests.framework import constants, docker, utils
 from integration_tests.framework.amqp_events_printer import EventsPrinter
-
+from integration_tests.framework.flask_utils import \
+    prepare_reset_storage_script
 
 logger = cloudify.utils.setup_logger('TESTENV')
 cloudify.utils.setup_logger('cloudify.rest_client', logging.INFO)
@@ -48,6 +50,7 @@ class BaseTestEnvironment(object):
     # See _build_resource_mapping
     mock_cloudify_agent = None
     container_id = None
+    container_ip = None
 
     def __init__(self, test_working_dir, env_id, image_name):
         sh.ErrorReturnCode.truncate_cap = 1024 * 1024
@@ -65,7 +68,8 @@ class BaseTestEnvironment(object):
         self.image_name = image_name
 
     def start_events_printer(self):
-        self.amqp_events_printer_thread = EventsPrinter()
+        self.amqp_events_printer_thread = EventsPrinter(
+            docker.get_manager_ip(self.container_id))
         self.amqp_events_printer_thread.start()
 
     def create_environment(self):
@@ -97,7 +101,9 @@ class BaseTestEnvironment(object):
 
     def run_manager(self, tag=None, label=None):
         logger.info('Starting manager container')
-        self.container_id = docker.run_manager(self.image_name)
+        self.container_id = docker.run_manager(
+            self.image_name, resource_mapping=self.build_resource_mapping())
+        self.container_ip = docker.get_manager_ip(self.container_id)
         self.on_manager_created()
 
     def on_manager_created(self):
@@ -182,14 +188,15 @@ class BaseTestEnvironment(object):
         try:
             docker.execute(
                 self.container_id, 'pkill -9 -f cloudify/dispatch.py')
-        except sh.ErrorReturnCode as e:
-            if e.exit_code != 1:
+        except subprocess.CalledProcessError as e:
+            if e.returncode != 1:
                 raise
 
 
 class AgentlessTestEnvironment(BaseTestEnvironment):
     def on_environment_created(self):
         self.run_manager()
+        prepare_reset_storage_script(self.container_id)
 
 
 class AgentTestEnvironment(BaseTestEnvironment):

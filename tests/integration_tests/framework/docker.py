@@ -20,19 +20,16 @@ import sh
 import sys
 import yaml
 import time
-import socket
+import shlex
+import tempfile
 import subprocess
 
 from functools import partial
 
 import proxy_tools
-import requests.exceptions
-from pika.exceptions import AMQPConnectionError
-
-import cloudify_rest_client.exceptions
 import cloudify.utils
 
-from integration_tests.framework import utils, constants
+from integration_tests.framework import constants
 from integration_tests.framework.constants import INSERT_MOCK_LICENSE_QUERY
 
 
@@ -190,9 +187,9 @@ def read_file(container_id, file_path, no_strip=False):
 
 
 def execute(container_id, command):
-    return subprocess.check_output([
-        'docker', 'exec', container_id, command
-    ])
+    if not isinstance(command, list):
+        command = shlex.split(command)
+    return subprocess.check_output(['docker', 'exec', container_id] + command)
 
 
 def copy_file_to_manager(container_id, source, target):

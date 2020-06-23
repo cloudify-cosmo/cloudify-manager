@@ -46,8 +46,7 @@ from manager_rest.utils import mkdirs
 from manager_rest.constants import CLOUDIFY_TENANT_HEADER
 
 from integration_tests.framework import utils, hello_world, docker, env
-from integration_tests.framework.flask_utils import reset_storage, \
-    prepare_reset_storage_script
+from integration_tests.framework.flask_utils import reset_storage
 from integration_tests.tests import utils as test_utils
 from integration_tests.framework.constants import (PLUGIN_STORAGE_DIR,
                                                    CLOUDIFY_USER)
@@ -93,7 +92,7 @@ class BaseTestCase(unittest.TestCase):
         cls.restart_service('cloudify-restservice')
 
     def _setup_running_manager_attributes(self):
-        self.client = test_utils.create_rest_client()
+        self.client = test_utils.create_rest_client(host=self.env.container_ip)
 
     def tearDown(self):
         self.env.stop_dispatch_processes()
@@ -205,8 +204,7 @@ class BaseTestCase(unittest.TestCase):
 
         # Need to invoke a shell directly, because `docker exec` ignores
         # wildcards by default
-        command = "sh -c '{0}'".format(command)
-        return docker.execute(command)
+        return docker.execute(self.env.container_id, ['sh', '-c', command])
 
     def copy_file_to_manager(self, source, target, owner=None):
         """Copy a file to the cloudify manager filesystem"""
@@ -287,8 +285,9 @@ class BaseTestCase(unittest.TestCase):
                                      AssertionError,
                                      **kwargs)
 
-    @staticmethod
-    def execute_workflow(workflow_name, deployment_id,
+    def execute_workflow(self,
+                         workflow_name,
+                         deployment_id,
                          parameters=None,
                          timeout_seconds=240,
                          wait_for_execution=True,
@@ -297,19 +296,19 @@ class BaseTestCase(unittest.TestCase):
                          client=None,
                          **kwargs):
         """A blocking method which runs the requested workflow"""
-        client = client or test_utils.create_rest_client()
+        client = client or self.client
         execution = client.executions.start(deployment_id, workflow_name,
                                             parameters=parameters or {},
                                             force=force, queue=queue, **kwargs)
         if wait_for_execution:
-            BaseTestCase.wait_for_execution_to_end(
+            self.wait_for_execution_to_end(
                 execution,
                 client=client,
                 timeout_seconds=timeout_seconds)
         return execution
 
-    @staticmethod
-    def deploy(dsl_path=None,
+    def deploy(self,
+               dsl_path=None,
                blueprint_id=None,
                deployment_id=None,
                inputs=None,
@@ -322,7 +321,7 @@ class BaseTestCase(unittest.TestCase):
             raise RuntimeWarning('Please supply blueprint path '
                                  'or blueprint id for deploying')
 
-        client = client or test_utils.create_rest_client()
+        client = client or self.client
         resource_id = uuid.uuid4()
         blueprint_id = blueprint_id or 'blueprint_{0}'.format(resource_id)
         if dsl_path:
@@ -350,12 +349,12 @@ class BaseTestCase(unittest.TestCase):
             deployment_create_kw['visibility'] = deployment_visibility
         deployment = client.deployments.create(**deployment_create_kw)
         if wait:
-            wait_for_deployment_creation_to_complete(deployment_id,
-                                                     client=client)
+            wait_for_deployment_creation_to_complete(
+                self.env.container_id, deployment_id, client=client)
         return deployment
 
-    @staticmethod
-    def deploy_and_execute_workflow(dsl_path,
+    def deploy_and_execute_workflow(self,
+                                    dsl_path,
                                     workflow_name,
                                     timeout_seconds=240,
                                     blueprint_id=None,
@@ -369,17 +368,15 @@ class BaseTestCase(unittest.TestCase):
         A blocking method which deploys an application from
         the provided dsl path, and runs the requested workflows
         """
-        deployment = BaseTestCase.deploy(dsl_path,
-                                         blueprint_id,
-                                         deployment_id,
-                                         inputs)
-        execution = BaseTestCase.execute_workflow(
-                workflow_name, deployment.id, parameters,
-                timeout_seconds, wait_for_execution, queue=queue, **kwargs)
+        deployment = self.deploy(
+            dsl_path, blueprint_id, deployment_id, inputs)
+        execution = self.execute_workflow(
+            workflow_name, deployment.id, parameters,
+            timeout_seconds, wait_for_execution, queue=queue, **kwargs)
         return deployment, execution.id
 
-    @staticmethod
-    def deploy_application(dsl_path,
+    def deploy_application(self,
+                           dsl_path,
                            timeout_seconds=60,
                            blueprint_id=None,
                            deployment_id=None,
@@ -391,52 +388,51 @@ class BaseTestCase(unittest.TestCase):
         A blocking method which deploys an application
         from the provided dsl path.
         """
-        return BaseTestCase.deploy_and_execute_workflow(
-                dsl_path=dsl_path,
-                workflow_name='install',
-                timeout_seconds=timeout_seconds,
-                blueprint_id=blueprint_id,
-                deployment_id=deployment_id,
-                wait_for_execution=wait_for_execution,
-                inputs=inputs,
-                queue=queue,
-                **kwargs
+        return self.deploy_and_execute_workflow(
+            dsl_path=dsl_path,
+            workflow_name='install',
+            timeout_seconds=timeout_seconds,
+            blueprint_id=blueprint_id,
+            deployment_id=deployment_id,
+            wait_for_execution=wait_for_execution,
+            inputs=inputs,
+            queue=queue,
+            **kwargs
         )
 
-    @staticmethod
-    def undeploy_application(deployment_id,
+    def undeploy_application(self,
+                             deployment_id,
                              timeout_seconds=240,
                              is_delete_deployment=False,
-                             parameters=None):
+                             parameters=None,
+                             client=None):
         """
         A blocking method which undeploys an application from the provided dsl
         path.
         """
-        client = test_utils.create_rest_client()
+        client = client or self.client
         execution = client.executions.start(deployment_id,
                                             'uninstall',
                                             parameters=parameters)
-        BaseTestCase.wait_for_execution_to_end(
-                execution,
-                timeout_seconds=timeout_seconds)
+        self.wait_for_execution_to_end(
+            execution, timeout_seconds=timeout_seconds)
 
         if execution.error and execution.error != 'None':
             raise RuntimeError(
-                    'Workflow execution failed: {0}'.format(execution.error))
+                'Workflow execution failed: {0}'.format(execution.error))
         if is_delete_deployment:
-            BaseTestCase.delete_deployment(deployment_id, validate=True)
+            self.delete_deployment(deployment_id, validate=True)
         return execution.id
 
-    @staticmethod
-    def get_manager_ip():
-        return utils.get_manager_ip()
+    def get_manager_ip(self):
+        return docker.get_manager_ip(self.env.container_id)
 
-    @staticmethod
-    def delete_deployment(deployment_id,
+    def delete_deployment(self,
+                          deployment_id,
                           ignore_live_nodes=False,
                           validate=False,
                           client=None):
-        client = client or test_utils.create_rest_client()
+        client = client or self.client
         result = client.deployments.delete(deployment_id,
                                            ignore_live_nodes=ignore_live_nodes,
                                            with_logs=True)
@@ -445,16 +441,13 @@ class BaseTestCase(unittest.TestCase):
                                                      client=client)
         return result
 
-    @staticmethod
-    def is_node_started(node_id):
-        client = test_utils.create_rest_client()
-        node_instance = client.node_instances.get(node_id)
+    def is_node_started(self, node_id):
+        node_instance = self.client.node_instances.get(node_id)
         return node_instance['state'] == 'started'
 
-    @staticmethod
-    def wait_for_execution_to_end(execution, timeout_seconds=240, client=None):
-        if not client:
-            client = test_utils.create_rest_client()
+    def wait_for_execution_to_end(
+            self, execution, timeout_seconds=240, client=None):
+        client = client or self.client
         deadline = time.time() + timeout_seconds
         while execution.status not in Execution.END_STATES:
             assert execution.ended_at is None
@@ -462,13 +455,13 @@ class BaseTestCase(unittest.TestCase):
             execution = client.executions.get(execution.id)
             if time.time() > deadline:
                 raise utils.TimeoutException(
-                        'Execution timed out: \n{0}'
-                        .format(json.dumps(execution, indent=2)))
+                    'Execution timed out: \n{0}'
+                    .format(json.dumps(execution, indent=2)))
         if execution.status == Execution.FAILED:
             raise RuntimeError(
-                    'Workflow execution failed: {0} [{1}]'.format(
-                        execution.error,
-                        execution.status))
+                'Workflow execution failed: {0} [{1}]'.format(
+                    execution.error,
+                    execution.status))
         return execution
 
     def wait_for_snapshot_restore_to_end(self,
@@ -586,11 +579,11 @@ class BaseTestCase(unittest.TestCase):
                 if not allow_connection_error:
                     raise
 
-    @staticmethod
-    def upload_blueprint_resource(dsl_resource_path,
+    def upload_blueprint_resource(self,
+                                  dsl_resource_path,
                                   blueprint_id,
                                   client=None):
-        client = client or test_utils.create_rest_client()
+        client = client or self.client
         blueprint = get_resource(dsl_resource_path)
         client.blueprints.upload(blueprint, entity_id=blueprint_id)
 
@@ -598,15 +591,10 @@ class BaseTestCase(unittest.TestCase):
 class AgentlessTestCase(BaseTestCase):
     environment_type = env.AgentlessTestEnvironment
 
-    @classmethod
-    def setUpClass(cls):
-        super(AgentlessTestCase, cls).setUpClass()
-        prepare_reset_storage_script()
-
     def setUp(self):
         super(AgentlessTestCase, self).setUp()
         self._setup_running_manager_attributes()
-        reset_storage()
+        reset_storage(self.env.container_id)
         docker.upload_mock_license(self.env.container_id)
         self._reset_file_system()
         self.addCleanup(self._save_manager_logs_after_test)
@@ -1030,10 +1018,8 @@ class PluginTestContainerHosts(PluginsTest):
         node_ids = node_ids or []
         node_instances = []
 
-        deployment = BaseTestCase.deploy(dsl_path,
-                                         blueprint_id,
-                                         deployment_id,
-                                         inputs)
+        deployment = self.deploy(
+            dsl_path, blueprint_id, deployment_id, inputs)
 
         for node_id in node_ids:
             node_instances = self.client.node_instances.list(
@@ -1042,9 +1028,9 @@ class PluginTestContainerHosts(PluginsTest):
                 self.prepare_agent_host_container(node_instance.id)
 
         try:
-            execution = BaseTestCase.execute_workflow(
-                    'install', deployment.id, parameters,
-                    timeout_seconds, wait_for_execution, queue=queue, **kwargs)
+            execution = self.execute_workflow(
+                'install', deployment.id, parameters,
+                timeout_seconds, wait_for_execution, queue=queue, **kwargs)
         except Exception as e:
             self.logger.info('Deployment failed: {0}'.format(e.message))
             executions = [ex for ex in
