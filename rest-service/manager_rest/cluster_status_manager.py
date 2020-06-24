@@ -228,9 +228,9 @@ def _get_entire_cluster_status(cluster_services):
 def _is_all_in_one(cluster_structure):
     # During the installation of an all-in-one manager, the node_id of the
     # manager node is set to be also the node_id of the db and broker nodes.
-    return (cluster_structure[CloudifyNodeType.DB][0].node_id ==
-            cluster_structure[CloudifyNodeType.BROKER][0].node_id ==
-            cluster_structure[CloudifyNodeType.MANAGER][0].node_id)
+    return (cluster_structure[CloudifyNodeType.DB][0].host ==
+            cluster_structure[CloudifyNodeType.BROKER][0].host ==
+            cluster_structure[CloudifyNodeType.MANAGER][0].host)
 
 
 def _get_service_status(service_nodes):
