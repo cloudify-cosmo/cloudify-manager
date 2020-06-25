@@ -26,9 +26,10 @@ from manager_rest.constants import SECURITY_FILE_LOCATION
 from manager_rest.flask_utils import setup_flask_app as _setup_flask_app
 
 from integration_tests.framework import constants, utils
-from integration_tests.framework.docl import (execute,
-                                              copy_file_to_manager,
-                                              read_file as read_manager_file)
+from integration_tests.framework.docker import (execute,
+                                                copy_file_to_manager,
+                                                get_manager_ip,
+                                                read_file as read_manager_file)
 from integration_tests.tests.constants import (
     MANAGER_CONFIG,
     MANAGER_PYTHON,
@@ -43,9 +44,9 @@ SCRIPT_PATH = '/tmp/reset_storage.py'
 CONFIG_PATH = '/tmp/reset_storage_config.json'
 
 
-def prepare_reset_storage_script():
+def prepare_reset_storage_script(container_id):
     reset_script = get_resource('scripts/reset_storage.py')
-    copy_file_to_manager(reset_script, SCRIPT_PATH)
+    copy_file_to_manager(container_id, reset_script, SCRIPT_PATH)
     with tempfile.NamedTemporaryFile(delete=False) as f:
         json.dump({
             'config': {
@@ -53,14 +54,14 @@ def prepare_reset_storage_script():
                 'security': SECURITY_FILE_LOCATION,
                 'authorization': constants.AUTHORIZATION_FILE_LOCATION
             },
-            'ip': utils.get_manager_ip(),
-            'username': utils.get_manager_username(),
-            'password': utils.get_manager_password(),
+            'ip': get_manager_ip(container_id),
+            'username': 'admin',
+            'password': 'admin',
             'provider_context': PROVIDER_CONTEXT,
             'manager_config': MANAGER_CONFIG
         }, f)
     try:
-        copy_file_to_manager(f.name, CONFIG_PATH)
+        copy_file_to_manager(container_id, f.name, CONFIG_PATH)
     finally:
         os.unlink(f.name)
 
@@ -79,14 +80,12 @@ def setup_flask_app():
     )
 
 
-def reset_storage():
+def reset_storage(container_id):
     logger.info('Resetting PostgreSQL DB')
     # reset the storage by calling a script on the manager, to access
     # localhost-only APIs (rabbitmq management api)
-    execute("{manager_python} {script_path} --config {config_path}"
-            .format(manager_python=MANAGER_PYTHON,
-                    script_path=SCRIPT_PATH,
-                    config_path=CONFIG_PATH))
+    execute(container_id,
+            [MANAGER_PYTHON, SCRIPT_PATH, '--config', CONFIG_PATH])
 
 
 def set_ldap(config_data):

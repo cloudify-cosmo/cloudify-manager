@@ -21,7 +21,6 @@ import yaml
 from retrying import retry
 
 from integration_tests.tests import utils
-from integration_tests.framework import docl
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import upload_mock_plugin
 
@@ -147,9 +146,9 @@ test_hook:
         with tempfile.NamedTemporaryFile() as f:
             f.write(new_config)
             f.flush()
-            docl.copy_file_to_manager(source=f.name,
-                                      target=self.HOOKS_CONFIG_PATH)
-            docl.execute('chown cfyuser: {0}'.format(self.HOOKS_CONFIG_PATH))
+            self.copy_file_to_manager(source=f.name,
+                                      target=self.HOOKS_CONFIG_PATH,
+                                      owner='cfyuser:')
 
         self._start_a_workflow()
         workflow_started_error = "ERROR - The hook consumer received " \
@@ -296,7 +295,7 @@ hooks:
     @retry(wait_fixed=1000, stop_max_attempt_number=3)
     def _assert_messages_in_log(self, messages, log_path=LOG_PATH):
         tmp_log_path = os.path.join(self.workdir, 'test_log')
-        docl.copy_file_from_manager(log_path, tmp_log_path)
+        self.copy_file_from_manager(log_path, tmp_log_path)
         with open(tmp_log_path) as f:
             data = f.readlines()
         last_log_lines = str(data[-20:])
@@ -307,6 +306,6 @@ hooks:
         with tempfile.NamedTemporaryFile() as f:
             yaml.dump(yaml.load(new_config), f, default_flow_style=False)
             f.flush()
-            docl.copy_file_to_manager(source=f.name,
-                                      target=self.HOOKS_CONFIG_PATH)
-            docl.execute('chown cfyuser: {0}'.format(self.HOOKS_CONFIG_PATH))
+            self.copy_file_to_manager(source=f.name,
+                                      target=self.HOOKS_CONFIG_PATH,
+                                      owner='cfyuser:')
