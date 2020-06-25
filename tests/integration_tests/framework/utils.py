@@ -95,9 +95,9 @@ def create_rest_client(host, **kwargs):
     # not passing args (which will then use the default values), or explicitly
     # passing None (or False) which will then be passed as-is to the Client
 
-    username = kwargs.get('username', get_manager_username())
-    password = kwargs.get('password', get_manager_password())
-    tenant = kwargs.get('tenant', get_manager_tenant())
+    username = kwargs.get('username', 'admin')
+    password = kwargs.get('password', 'admin')
+    tenant = kwargs.get('tenant', 'default_tenant')
     token = kwargs.get('token')
     rest_port = kwargs.get('rest_port',
                            os.environ.get(constants.CLOUDIFY_REST_PORT, 80))

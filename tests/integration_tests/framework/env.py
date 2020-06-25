@@ -13,7 +13,6 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-import json
 import logging
 import os
 import shutil
@@ -100,10 +99,12 @@ class BaseTestEnvironment(object):
         raise NotImplementedError
 
     def run_manager(self, tag=None, label=None):
-        logger.info('Starting manager container')
+        logger.info('Starting manager container %s', self.image_name)
         self.container_id = docker.run_manager(
             self.image_name, resource_mapping=self.build_resource_mapping())
         self.container_ip = docker.get_manager_ip(self.container_id)
+        logger.info('Started container: %s (%s)',
+                    self.container_id, self.container_ip)
         self.on_manager_created()
 
     def on_manager_created(self):
@@ -202,38 +203,7 @@ class AgentlessTestEnvironment(BaseTestEnvironment):
 class AgentTestEnvironment(BaseTestEnvironment):
     def on_environment_created(self):
         self.run_manager()
-
-    def on_manager_created(self):
-        super(AgentTestEnvironment, self).on_manager_created()
-        logger.info('Installing docker on manager container (if required)')
-        docker.install_docker()
-        docker.build_agent()
-        self._copy_docker_conf_file()
-
-    def _copy_docker_conf_file(self):
-        # the docker_conf.json file is used to pass information
-        # to the dockercompute plugin. (see
-        # integration_tests_plugins/dockercompute)
-        docker.execute(
-            self.container_id,
-            'mkdir -p {0}'.format(constants.DOCKER_COMPUTE_DIR)
-        )
-        with tempfile.NamedTemporaryFile() as f:
-            json.dump({
-                # The dockercompute plugin needs to know where to find the
-                # docker host
-                'docker_host': docker.docker_host(),
-
-                # Used for cleanup purposes
-                'env_label': self.env_label
-            }, f)
-            f.flush()
-            docker.copy_file_to_manager(
-                self.container_id,
-                source=f.name,
-                target=os.path.join(constants.DOCKER_COMPUTE_DIR,
-                                    'docker_conf.json'))
-        self.chown(constants.CLOUDIFY_USER, constants.DOCKER_COMPUTE_DIR)
+        prepare_reset_storage_script(self.container_id)
 
 
 def create_env(env_cls, *env_args, **env_kwargs):
