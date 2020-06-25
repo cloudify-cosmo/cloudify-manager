@@ -30,28 +30,16 @@ class TimezoneTest(AgentTestWithPlugins):
 
     TIMEZONE = 'Asia/Jerusalem'
 
-    @classmethod
-    def setUpClass(cls):
-        """Configure database timezone."""
-        super(TimezoneTest, cls).setUpClass()
-
-        # Container is launched once per unittest.TestCase class.
-        # Timezone configuration just needs to updated at the class level.
-        # Between tests cases tables are re-created,
-        # but timezone configuration is preserved.
-        postgres_conf = get_postgres_conf()
-        run_query(
-            "ALTER USER {} SET TIME ZONE '{}'"
-            .format(postgres_conf.username, cls.TIMEZONE)
-        )
-
     def setUp(self):
         """Update postgres timezone and create a deployment."""
-        # Make sure that database timezone is correctly set
-        query_result = run_query('SHOW TIME ZONE')
-        self.assertEqual(query_result['all'][0][0], self.TIMEZONE)
-
         super(TimezoneTest, self).setUp()
+
+        postgres_conf = get_postgres_conf()
+        run_query(
+            self.env.container_id,
+            "ALTER USER {} SET TIME ZONE '{}'"
+            .format(postgres_conf.username, self.TIMEZONE)
+        )
 
     def test_event_timezone(self):
         """Check timestamp values in agent machine.

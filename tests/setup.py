@@ -31,8 +31,8 @@ setup(
         'fasteners==0.13.0',
         'sh==1.11',
         'awscli==1.11.14',
-        'docl',
         'docker==4.0.2',
         'requests>=2.18,<3.0.0',
+        'pytest'
     ]
 )

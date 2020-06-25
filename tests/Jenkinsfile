@@ -1,0 +1,62 @@
+pipeline {
+    agent {
+        node 'docker'
+    }
+    parameters {
+        string(name: 'IMAGE_BUILD_NUMBER')
+        booleanParam(name: 'FETCH_IMAGE', defaultValue: false)
+        text(name: 'PYTEST_ARGS', defaultValue: """-sv \\
+tests/integration_tests/tests/agentless_tests/test_workflow.py \\
+tests/integration_tests/tests/agentless_tests/test_resume.py""")
+    }
+    stages {
+        stage('Fetch the docker image'){
+            when {
+                expression { return params.FETCH_IMAGE }
+            }
+            steps {
+                sh '''
+                    docker rmi -f cloudify-manager-aio:latest
+                '''
+                copyArtifacts(
+                    projectName: '/dir_manager/build_docker_image_pipeline',
+                    selector: params.IMAGE_BUILD_NUMBER ? specific(params.IMAGE_BUILD_NUMBER) : lastSuccessful()
+                )
+                sh '''
+                    docker load -i cloudify*.tar
+                '''
+            }
+        }
+        stage('install the inte-tests package') {
+            steps {
+                sh '''
+                    virtualenv venv
+                    venv/bin/pip install 'https://github.com/cloudify-cosmo/cloudify-common/archive/master.zip#egg=cloudify-common[dispatcher]'
+                    venv/bin/pip install https://github.com/cloudify-cosmo/cloudify-cli/archive/master.zip
+                    venv/bin/pip install rest-service/
+                    venv/bin/pip install tests/
+                '''
+            }
+        }
+        stage('run tests'){
+            steps {
+                sh """
+                    export CI=no-color-logs
+                    source venv/bin/activate
+                    venv/bin/pytest \
+                        ${params.PYTEST_ARGS} \
+                        --junitxml=test-results.xml
+                """
+            }
+            post {
+                always {
+                    junit 'test-results.xml'
+                }
+                cleanup {
+
+                    cleanWs()
+                }
+            }
+        }
+    }
+}

@@ -32,9 +32,10 @@ logger = utils.setup_logger('events_printer')
 
 class EventsPrinter(threading.Thread):
 
-    def __init__(self):
+    def __init__(self, container_ip):
         super(EventsPrinter, self).__init__()
         self.daemon = True
+        self._container_ip = container_ip
 
     def run(self):
         """
@@ -46,7 +47,7 @@ class EventsPrinter(threading.Thread):
         Tests that need to assert on event should use the REST client events
         module.
         """
-        connection = utils.create_pika_connection()
+        connection = utils.create_pika_connection(self._container_ip)
         channel = connection.channel()
         queues = []
 
