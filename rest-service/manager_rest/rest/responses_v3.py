@@ -132,3 +132,10 @@ class License(BaseResponse):
         'capabilities': fields.Raw,
         'expired': fields.Boolean
     }
+
+
+@swagger.model
+class ItemsCount(BaseResponse):
+    resource_fields = {
+        'count': fields.Integer
+    }
