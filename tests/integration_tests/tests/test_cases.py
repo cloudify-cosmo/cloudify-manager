@@ -56,6 +56,8 @@ from integration_tests.tests.utils import (
     get_resource,
     wait_for_deployment_creation_to_complete,
     wait_for_deployment_deletion_to_complete,
+    verify_deployment_env_created,
+    do_retries
 )
 
 from cloudify_rest_client.executions import Execution
@@ -421,7 +423,7 @@ class BaseTestCase(unittest.TestCase):
             raise RuntimeError(
                 'Workflow execution failed: {0}'.format(execution.error))
         if is_delete_deployment:
-            self.delete_deployment(deployment_id, validate=True)
+            self.delete_deployment(deployment_id, validate=True, client=client)
         return execution.id
 
     def get_manager_ip(self):
@@ -586,6 +588,15 @@ class BaseTestCase(unittest.TestCase):
         client = client or self.client
         blueprint = get_resource(dsl_resource_path)
         client.blueprints.upload(blueprint, entity_id=blueprint_id)
+
+    def wait_for_deployment_environment(self, deployment_id):
+        do_retries(
+            verify_deployment_env_created,
+            container_id=self.env.container_id,
+            deployment_id=deployment_id,
+            client=self.client,
+            timeout_seconds=60
+        )
 
 
 class AgentlessTestCase(BaseTestCase):

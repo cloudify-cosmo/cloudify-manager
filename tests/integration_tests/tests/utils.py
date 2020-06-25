@@ -141,7 +141,7 @@ def wait_for_deployment_creation_to_complete(
 def verify_deployment_env_created(container_id, deployment_id, client=None):
     # A workaround for waiting for the deployment environment creation to
     # complete
-    client = client or create_rest_client()
+    client = client or create_rest_client(docker.get_manager_ip(container_id))
     execs = client.executions.list(deployment_id=deployment_id)
     if not execs \
             or execs[0].status != Execution.TERMINATED \
