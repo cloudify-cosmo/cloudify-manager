@@ -44,6 +44,8 @@ _STATUS_REPORTERS_IDS_QUERY_TUPLE = "'{0}', '{1}', '{2}'".format(
     DB_STATUS_REPORTER_ID,
     BROKER_STATUS_REPORTER_ID)
 
+SERVICE_MANAGEMENT = 'service_management'
+
 
 class Postgres(object):
     """Use as a context manager
@@ -684,5 +686,17 @@ class Postgres(object):
         FROM users
         WHERE username = '{0}'
         """.format(MANAGER_STATUS_REPORTER)
+        result = self.run_query(query)
+        return result['all'][0][0]
+
+    def get_service_management(self):
+        query = """
+        SELECT
+            json_build_object(
+                'value', value
+            )
+        FROM config
+        WHERE name = '{0}'
+        """.format(SERVICE_MANAGEMENT)
         result = self.run_query(query)
         return result['all'][0][0]

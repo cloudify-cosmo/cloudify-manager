@@ -134,7 +134,7 @@ def _ignore_stage_conf_directory_during_restore(stage_tempdir):
     shutil.rmtree(os.path.join(stage_tempdir, 'conf'))
 
 
-def restore_stage_files(archive_root, override=False):
+def restore_stage_files(archive_root, service_management, override=False):
     """Copy Cloudify Stage files from the snapshot archive to stage folder.
 
     Note that only the stage user can write into the stage directory,
@@ -164,8 +164,12 @@ def restore_stage_files(archive_root, override=False):
     finally:
         shutil.rmtree(stage_tempdir)
 
-    sudo(['/usr/bin/systemctl', 'restart', 'cloudify-stage'],
-         ignore_failures=True)
+    run_service(
+        service_management,
+        'restart',
+        'cloudify-stage',
+        ignore_failures=True
+    )
 
 
 def copy_composer_files(archive_root):
@@ -264,6 +268,19 @@ def run(command, ignore_failures=False, redirect_output_path=None, cwd=None):
                 'Failed running command: {0}\nstdout: {1}\nstderr: {2}'
                 .format(command_str, proc.aggr_stdout, proc.aggr_stderr))
     return proc
+
+
+def run_service(service_management,
+                action,
+                service_name,
+                ignore_failures=True):
+    prefix = '/usr/bin/'
+    if service_management == 'supervisord':
+        service_command = '{0}{1} -c /etc/supervisord.conf' \
+                          ''.format(prefix, service_management)
+    else:
+        service_command = '{0} systemctl'.format(prefix)
+    sudo([service_command, action, service_name], ignore_failures)
 
 
 def get_manager_version(client):

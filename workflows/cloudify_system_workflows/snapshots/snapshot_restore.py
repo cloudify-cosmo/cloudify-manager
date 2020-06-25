@@ -110,6 +110,7 @@ class SnapshotRestore(object):
         self._client = get_rest_client()
         self._manager_version = utils.get_manager_version(self._client)
         self._encryption_key = None
+        self._service_management = None
         self._semaphore = threading.Semaphore(
             self._config.snapshot_restore_threads)
 
@@ -136,6 +137,7 @@ class SnapshotRestore(object):
                 utils.sudo(ALLOW_DB_CLIENT_CERTS_SCRIPT)
                 self._restore_files_to_manager()
                 utils.sudo(DENY_DB_CLIENT_CERTS_SCRIPT)
+                self._service_management = postgres.get_service_management()
                 with self._pause_services():
                     self._restore_db(postgres, schema_revision, stage_revision)
                 self._restore_hash_salt()
@@ -176,14 +178,20 @@ class SnapshotRestore(object):
         # Also for manager's status reporter that uses manager's rest
         # endpoint and in turn uses the DB for auth, that could cause
         # failure for migration of the users table.
-        process_to_pause = ['cloudify-amqp-postgres']
-        utils.run('sudo systemctl stop {0}'.format(
-            ' '.join(process_to_pause)))
+        process_to_pause = 'cloudify-amqp-postgres'
+        utils.run_service(
+            self._service_management,
+            'stop',
+            process_to_pause
+        )
         try:
             yield
         finally:
-            utils.run('sudo systemctl start {0}'.format(
-             ' '.join(process_to_pause)))
+            utils.run_service(
+                self._service_management,
+                'start',
+                process_to_pause
+            )
 
     def _generate_new_rest_token(self):
         """
@@ -208,8 +216,11 @@ class SnapshotRestore(object):
         self._client = get_rest_client()
 
     def _restart_rest_service(self):
-        restart_command = 'sudo systemctl restart cloudify-restservice'
-        utils.run(restart_command)
+        utils.run_service(
+            self._service_management,
+            'restart',
+            'cloudify-restservice'
+        )
         self._wait_for_rest_to_restart()
 
     def _wait_for_rest_to_restart(self, timeout=60):
@@ -580,7 +591,11 @@ class SnapshotRestore(object):
         else:
             stage_restore_override = False
         self._restore_security_file()
-        utils.restore_stage_files(self._tempdir, stage_restore_override)
+        utils.restore_stage_files(
+            self._tempdir,
+            self._service_management,
+            stage_restore_override,
+        )
         utils.restore_composer_files(self._tempdir)
         ctx.logger.info('Successfully restored archive files')
 
