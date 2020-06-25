@@ -3,6 +3,7 @@ pipeline {
         node 'docker'
     }
     parameters {
+        string(name: 'BRANCH', defaultValue: 'master')
         string(name: 'IMAGE_BUILD_NUMBER')
         booleanParam(name: 'FETCH_IMAGE', defaultValue: false)
         text(name: 'PYTEST_ARGS', defaultValue: """-sv \\
