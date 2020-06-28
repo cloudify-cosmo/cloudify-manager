@@ -274,12 +274,10 @@ def run_service(service_management,
                 action,
                 service_name,
                 ignore_failures=True):
-    prefix = '/usr/bin/'
     if service_management == 'supervisord':
-        service_command = '{0}{1} -c /etc/supervisord.conf' \
-                          ''.format(prefix, service_management)
+        service_command = '/usr/bin/supervisorctl -c /etc/supervisord.conf'
     else:
-        service_command = '{0} systemctl'.format(prefix)
+        service_command = '/usr/bin/systemctl'
     sudo([service_command, action, service_name],
          ignore_failures=ignore_failures)
 
