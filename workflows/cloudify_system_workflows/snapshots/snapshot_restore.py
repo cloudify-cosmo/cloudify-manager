@@ -154,9 +154,6 @@ class SnapshotRestore(object):
                 self._restore_scheduled_executions()
                 self._restore_inter_deployment_dependencies()
 
-                if self._premium_enabled:
-                    self._reconfigure_status_reporter(postgres)
-
             if self._restore_certificates:
                 self._restore_certificate()
 
@@ -635,21 +632,11 @@ class SnapshotRestore(object):
         postgres.init_current_execution_data()
 
         config_dump_path = postgres.dump_config_tables(self._tempdir)
-
-        if self._premium_enabled:
-            status_reporter_roles_path, status_reporter_users_path = \
-                postgres.dump_status_reporters(self._tempdir)
-
         with utils.db_schema(schema_revision, config=self._config):
             admin_user_update_command = postgres.restore(
                 self._tempdir, premium_enabled=self._premium_enabled)
         postgres.restore_config_tables(config_dump_path)
         postgres.restore_current_execution()
-
-        if self._premium_enabled:
-            postgres.restore_status_reporters(status_reporter_roles_path,
-                                              status_reporter_users_path)
-
         try:
             self._restore_stage(postgres, self._tempdir, stage_revision)
         except Exception as e:
@@ -1004,16 +991,6 @@ class SnapshotRestore(object):
 
         prefix = self._get_encoded_user_id(token_info['uid'])
         return prefix + token_info['token']
-
-    def _reconfigure_status_reporter(self, postgres):
-        if not self._premium_enabled:
-            return
-        ctx.logger.debug("Reconfiguring the Manager's status reporter...")
-        reporter = postgres.get_manager_reporter_info()
-        encoded_id = self._get_encoded_user_id(reporter['id'])
-        token = encoded_id + reporter['api_token_key']
-        utils.run("sudo cfy_manager status-reporter configure --token '{0}'"
-                  "".format(token))
 
     def _get_encoded_user_id(self, user_id):
         return utils.run([
