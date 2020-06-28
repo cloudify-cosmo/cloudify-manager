@@ -280,7 +280,8 @@ def run_service(service_management,
                           ''.format(prefix, service_management)
     else:
         service_command = '{0} systemctl'.format(prefix)
-    sudo([service_command, action, service_name], ignore_failures)
+    sudo([service_command, action, service_name],
+         ignore_failures=ignore_failures)
 
 
 def get_manager_version(client):
