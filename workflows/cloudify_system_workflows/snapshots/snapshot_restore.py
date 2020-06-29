@@ -137,9 +137,7 @@ class SnapshotRestore(object):
                 utils.sudo(ALLOW_DB_CLIENT_CERTS_SCRIPT)
                 self._restore_files_to_manager()
                 utils.sudo(DENY_DB_CLIENT_CERTS_SCRIPT)
-                self._service_management = json.loads(
-                    postgres.get_service_management()
-                )
+                self._service_management = postgres.get_service_management()
                 with self._pause_services():
                     self._restore_db(postgres, schema_revision, stage_revision)
                 self._restore_hash_salt()
