@@ -271,13 +271,15 @@ def run(command, ignore_failures=False, redirect_output_path=None, cwd=None):
 def run_service(service_management,
                 action,
                 service_name,
-                ignore_failures=True):
+                ignore_failures=False):
     if service_management == 'supervisord':
         service_command = '/usr/bin/supervisorctl -c /etc/supervisord.conf'
     else:
         service_command = '/usr/bin/systemctl'
-    sudo([service_command, action, service_name],
-         ignore_failures=ignore_failures)
+    service_command = '{0} {1} {2}'.format(
+        service_command, action, service_name
+    )
+    sudo(service_command, ignore_failures=ignore_failures)
 
 
 def get_manager_version(client):
