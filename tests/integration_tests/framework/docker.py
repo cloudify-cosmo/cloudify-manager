@@ -23,7 +23,6 @@ import time
 import shlex
 import tempfile
 import subprocess
-
 from functools import partial
 
 import proxy_tools
@@ -31,7 +30,6 @@ import cloudify.utils
 
 from integration_tests.framework import constants
 from integration_tests.framework.constants import INSERT_MOCK_LICENSE_QUERY
-
 
 # All container specific docl commands that are executed with no explicit
 # container id will be executed on the default_container_id which is set
@@ -225,7 +223,7 @@ def _set_container_id_and_ip(container_details):
 
 def _retry(func, exceptions, cleanup=None):
     err = None
-    for _ in range(2600):
+    for _ in range(1200):
         try:
             res = func()
             if cleanup:
