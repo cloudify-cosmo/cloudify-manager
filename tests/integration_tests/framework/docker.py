@@ -145,9 +145,10 @@ def run_manager(image, resource_mapping=None):
 manager:
     security:
         admin_password: admin
+validations:
+    skip_validations: true
 sanity:
     skip_sanity: true
-
 """)
     command = [
         'docker', 'run', '--privileged', '-d',
