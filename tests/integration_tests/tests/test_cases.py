@@ -1,3 +1,4 @@
+
 ########
 # Copyright (c) 2016 GigaSpaces Technologies Ltd. All rights reserved
 #
@@ -45,8 +46,7 @@ from logging.handlers import RotatingFileHandler
 from manager_rest.utils import mkdirs
 from manager_rest.constants import CLOUDIFY_TENANT_HEADER
 
-from integration_tests.framework import utils, hello_world, docker, env
-from integration_tests.framework.flask_utils import reset_storage
+from integration_tests.framework import utils, hello_world, docker
 from integration_tests.tests import utils as test_utils
 from integration_tests.framework.constants import (PLUGIN_STORAGE_DIR,
                                                    CLOUDIFY_USER)
@@ -64,17 +64,14 @@ from cloudify_rest_client.executions import Execution
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 
-@pytest.mark.usefixtures("test_environment")
+@pytest.mark.usefixtures("manager_container")
+@pytest.mark.usefixtures("workdir")
 class BaseTestCase(unittest.TestCase):
     """
     A test case for cloudify integration tests.
     """
     def setUp(self):
-        self.workdir = tempfile.mkdtemp(
-            dir=self.env.test_working_dir,
-            prefix='{0}-'.format(self._testMethodName))
         self.cfy = test_utils.get_cfy()
-        self.addCleanup(shutil.rmtree, self.workdir, ignore_errors=True)
         self._set_tests_framework_logger()
         self.client = None
 
@@ -95,9 +92,6 @@ class BaseTestCase(unittest.TestCase):
 
     def _setup_running_manager_attributes(self):
         self.client = test_utils.create_rest_client(host=self.env.container_ip)
-
-    def tearDown(self):
-        self.env.stop_dispatch_processes()
 
     def _save_manager_logs_after_test(self, purge=True):
         self.logger.info("Attempting to save the manager's logs...")
@@ -600,25 +594,10 @@ class BaseTestCase(unittest.TestCase):
 
 
 class AgentlessTestCase(BaseTestCase):
-    environment_type = env.AgentlessTestEnvironment
-
     def setUp(self):
         super(AgentlessTestCase, self).setUp()
         self._setup_running_manager_attributes()
-        reset_storage(self.env.container_id)
-        docker.upload_mock_license(self.env.container_id)
-        self._reset_file_system()
         self.addCleanup(self._save_manager_logs_after_test)
-
-    def _reset_file_system(self):
-        """ Clean up any files left on the FS from the previous test """
-
-        self.logger.info('Cleaning up the file system...')
-
-        # Remove everything *inside* the folders
-        self.clear_directory('/opt/mgmtworker/work/deployments')
-        self.clear_directory('/opt/manager/resources/blueprints')
-        self.clear_directory('/opt/manager/resources/uploaded-blueprints')
 
     def _get_latest_execution(self, workflow_id):
         execution_list = self.client.executions.list(
@@ -638,8 +617,6 @@ class AgentlessTestCase(BaseTestCase):
 
 
 class BaseAgentTestCase(BaseTestCase):
-    environment_type = env.AgentTestEnvironment
-
     def tearDown(self):
         self.logger.info('Removing leftover test containers')
         docker.clean(self.env.container_id)

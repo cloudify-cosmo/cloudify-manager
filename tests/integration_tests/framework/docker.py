@@ -161,7 +161,6 @@ sanity:
     command += [image]
     manager_id = subprocess.check_output(command).strip()
     execute(manager_id, ['cfy_manager', 'wait-for-starter'])
-    upload_mock_license(manager_id)
     return manager_id
 
 
