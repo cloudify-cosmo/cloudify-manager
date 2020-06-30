@@ -19,11 +19,9 @@ import os
 import sh
 import sys
 import yaml
-import time
 import shlex
 import tempfile
 import subprocess
-
 from functools import partial
 
 import proxy_tools
@@ -31,7 +29,6 @@ import cloudify.utils
 
 from integration_tests.framework import constants
 from integration_tests.framework.constants import INSERT_MOCK_LICENSE_QUERY
-
 
 # All container specific docl commands that are executed with no explicit
 # container id will be executed on the default_container_id which is set
@@ -145,9 +142,10 @@ def run_manager(image, resource_mapping=None):
 manager:
     security:
         admin_password: admin
+validations:
+    skip_validations: true
 sanity:
     skip_sanity: true
-
 """)
     command = [
         'docker', 'run', '--privileged', '-d',
@@ -161,7 +159,6 @@ sanity:
     command += [image]
     manager_id = subprocess.check_output(command).strip()
     execute(manager_id, ['cfy_manager', 'wait-for-starter'])
-    upload_mock_license(manager_id)
     return manager_id
 
 
@@ -221,20 +218,6 @@ def _set_container_id_and_ip(container_details):
     os.environ[constants.DOCL_CONTAINER_IP] = container_details['ip']
     os.environ['DOCL_CONTAINER_ID'] = default_container_id
     _save_docl_container_details(container_details)
-
-
-def _retry(func, exceptions, cleanup=None):
-    err = None
-    for _ in range(2600):
-        try:
-            res = func()
-            if cleanup:
-                cleanup(res)
-            return
-        except exceptions as e:
-            err = e
-            time.sleep(0.1)
-    raise err
 
 
 def get_manager_ip(container_id):

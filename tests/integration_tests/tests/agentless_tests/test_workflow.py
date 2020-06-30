@@ -43,7 +43,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
         deployment, _ = self.deploy_application(
             dsl_path,
             blueprint_id=blueprint_id,
-            timeout_seconds=15
+            timeout_seconds=20
         )
         self.assertEqual(blueprint_id, deployment.blueprint_id)
         machines = self.get_plugin_data(
@@ -62,7 +62,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
         deployment, _ = self.deploy_application(
             dsl_path,
             blueprint_id=blueprint_id,
-            timeout_seconds=15
+            timeout_seconds=20
         )
         execution = self.execute_workflow('restart', deployment.id)
         # event storing is async, allow some time for them to be stored
