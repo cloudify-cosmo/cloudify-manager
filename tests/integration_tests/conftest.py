@@ -43,6 +43,7 @@ sources = [
     ('cloudify-common/cloudify', ['/opt/manager/env', '/opt/mgmtworker/env']),
     ('cloudify-common/dsl_parser', ['/opt/manager/env']),
     ('cloudify-common/script_runner', ['/opt/mgmtworker/env']),
+    ('cloudify-manager/mgmtworker/mgmtworker', ['/opt/mgmtworker/env']),
     ('cloudify-manager/rest-service/manager_rest', ['/opt/manager/env']),
     ('cloudify-manager/rest-service/manager_rest', ['/opt/manager/env']),
     ('cloudify-manager-install/cfy_manager', ['/opt/cloudify/cfy_manager'])
