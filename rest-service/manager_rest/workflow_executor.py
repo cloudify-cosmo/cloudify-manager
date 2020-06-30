@@ -237,10 +237,13 @@ def _get_time_to_live(scheduled_time):
 
 
 def cancel_execution(execution_id):
+    sm = get_storage_manager()
+    managers = sm.list(models.Manager)
     message = {
         'service_task': {
             'task_name': 'cancel-workflow',
             'kwargs': {
+                'rest_host': [manager.private_ip for manager in managers],
                 'execution_id': execution_id,
                 'rest_token': current_user.get_auth_token(),
                 'tenant': _get_tenant_dict(),
