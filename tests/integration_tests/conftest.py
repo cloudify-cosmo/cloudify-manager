@@ -29,6 +29,72 @@ def pytest_addoption(parser):
         default=False,
         action='store_true'
     )
+    parser.addoption(
+        '--tests-source-root',
+        help='Directory containing cloudify sources to mount',
+    )
+
+
+# items from tests-source-root to be mounted into the specified
+# on-manager virtualenvs
+# pairs of (source path, [list of target virtualenvs])
+# TODO fill this in as needed, when needed
+sources = [
+    ('cloudify-common/cloudify', ['/opt/manager/env', '/opt/mgmtworker/env']),
+    ('cloudify-common/dsl_parser', ['/opt/manager/env']),
+    ('cloudify-common/script_runner', ['/opt/mgmtworker/env']),
+    ('cloudify-manager/rest-service/manager_rest', ['/opt/manager/env']),
+    ('cloudify-manager/rest-service/manager_rest', ['/opt/manager/env']),
+    ('cloudify-manager-install/cfy_manager', ['/opt/cloudify/cfy_manager'])
+]
+
+
+def _sources_mounts(request):
+    """Mounts for the provided sources.
+
+    The caller can pass --tests-source-root and some directories from
+    there will be mounted into the appropriate on-manager venvs.
+    """
+    sources_root = request.config.getoption("--tests-source-root")
+    if not sources_root:
+        return
+    for src, target_venvs in sources:
+        src = os.path.abspath(os.path.join(sources_root, src))
+        if os.path.exists(src):
+            yield (src, target_venvs)
+
+
+def _plugin_mounts():
+    """Mounts for local plugins.
+
+    Plugins defined inside the integration-tests directories are
+    mounted to the container mgmtworker env, to be used in test
+    workflows.
+    """
+    venvs = ['/opt/mgmtworker/env', '/opt/agent-template/env']
+    plugins_dir = os.path.dirname(integration_tests_plugins.__file__)
+    fasteners_dir = os.path.dirname(fasteners.__file__)
+
+    for directory in os.listdir(plugins_dir):
+        directory = os.path.join(plugins_dir, directory)
+        if not os.path.isdir(directory):
+            continue
+        yield (directory, venvs)
+
+    yield (fasteners_dir, venvs)
+    yield (plugins_dir, venvs)
+
+
+@pytest.fixture(scope='session')
+def resource_mapping(request):
+    resources = []
+    for src, target_venvs in chain(_sources_mounts(request), _plugin_mounts()):
+        for venv in target_venvs:
+            dst = os.path.join(
+                venv, 'lib', 'python3.6', 'site-packages',
+                os.path.basename(src))
+            resources += [(src, dst)]
+    yield resources
 
 
 @pytest.fixture(scope='class')
