@@ -37,7 +37,7 @@ def update_storage(ctx, plugin_name=None):
         if ctx.task_name.startswith('cloudify_agent'):
             plugin_name = 'agent'
 
-    plugins_storage_dir = '/opt/integration-plugin-storage'
+    plugins_storage_dir = '/tmp/integration-plugin-storage'
     if not os.path.exists(plugins_storage_dir):
         os.makedirs(plugins_storage_dir)
     storage_file_path = os.path.join(

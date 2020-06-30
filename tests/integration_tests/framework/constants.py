@@ -24,7 +24,7 @@ BRANCH_NAME_CORE = 'BRANCH_NAME_CORE'
 DOCL_CONTAINER_IP = 'DOCL_CONTAINER_IP'
 CLOUDIFY_REST_PORT = 'CLOUDIFY_REST_PORT'
 
-PLUGIN_STORAGE_DIR = '/opt/integration-plugin-storage'
+PLUGIN_STORAGE_DIR = '/tmp/integration-plugin-storage'
 DOCKER_COMPUTE_DIR = '/etc/cloudify/dockercompute'
 
 CONFIG_FILE_LOCATION = '/opt/manager/cloudify-rest.conf'
