@@ -19,7 +19,6 @@ import os
 import sh
 import sys
 import yaml
-import time
 import shlex
 import tempfile
 import subprocess
@@ -219,20 +218,6 @@ def _set_container_id_and_ip(container_details):
     os.environ[constants.DOCL_CONTAINER_IP] = container_details['ip']
     os.environ['DOCL_CONTAINER_ID'] = default_container_id
     _save_docl_container_details(container_details)
-
-
-def _retry(func, exceptions, cleanup=None):
-    err = None
-    for _ in range(1200):
-        try:
-            res = func()
-            if cleanup:
-                cleanup(res)
-            return
-        except exceptions as e:
-            err = e
-            time.sleep(0.1)
-    raise err
 
 
 def get_manager_ip(container_id):
