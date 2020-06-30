@@ -118,7 +118,12 @@ def manager_container(request, resource_mapping):
 
 
 @pytest.fixture(autouse=True)
-def clean_manager_storage(request, manager_container):
+def prepare_manager_storage(request, manager_container):
+    """Make sure that for each test, the manager storage is the same.
+
+    This involves uploading the license before the tests, and
+    cleaning the db & storage directories between tests.
+    """
     container_id = manager_container.container_id
     dirs_to_clean = [
         '/opt/mgmtworker/work/deployments',
