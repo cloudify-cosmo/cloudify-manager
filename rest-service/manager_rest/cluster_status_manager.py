@@ -15,6 +15,7 @@
 
 import copy
 import json
+import re
 from os import path, makedirs
 from datetime import datetime, timedelta
 
@@ -155,12 +156,14 @@ def _generate_service_nodes_status(service_type, service_nodes,
                                    cloudify_version):
     formatted_nodes = {}
     missing_status_reports = {}
+    alerts = get_alerts()
     for node in service_nodes:
         node_status = _read_status_report(node,
                                           service_type,
                                           formatted_nodes,
                                           cloudify_version,
-                                          missing_status_reports)
+                                          missing_status_reports,
+                                          alerts,)
         if not node_status:
             continue
 
@@ -171,29 +174,24 @@ def _generate_service_nodes_status(service_type, service_nodes,
 
 
 def _read_status_report(node, service_type, formatted_nodes, cloudify_version,
-                        missing_status_reports):
-    _ = get_alerts()
-    # TODO mateusz this || won't work :]
-    status_file_path = get_report_path(service_type, node.node_id)
-    if not path.exists(status_file_path):
-        _add_missing_status_reports(node,
-                                    formatted_nodes,
-                                    service_type,
-                                    missing_status_reports,
-                                    cloudify_version)
-        return None
+                        missing_status_reports, alerts):
+    # alerts = get_alerts()
+    # status_file_path = get_report_path(service_type, node.node_id)
+    # if not path.exists(status_file_path):
+    #     _add_missing_status_reports(node,
+    #                                 formatted_nodes,
+    #                                 service_type,
+    #                                 missing_status_reports,
+    #                                 cloudify_version)
+    #     return None
 
-    try:
-        with open(status_file_path, 'r') as status_file:
-            node_status = json.load(status_file)
-
-        if _is_report_valid(node_status):
-            return node_status
-    except ValueError:
-        current_app.logger.error(
-            'Failed getting the node status from the report {0}, it is not '
-            'a valid json file'.format(status_file_path)
-        )
+    for alert in alerts:
+        instance_host = alert.get('labels', {}).get('instance')
+        m = re.search(r'(.+):\d+', instance_host)
+        if not m:
+            instance_host = m.group(1)
+        if node.host == instance_host:
+            return alert
 
     _generate_node_status(node, formatted_nodes, cloudify_version,
                           status=ServiceStatus.FAIL)
@@ -205,7 +203,6 @@ def _generate_node_status(node, formatted_nodes, cloudify_version,
     formatted_nodes[node.name] = {
         STATUS: status,
         SERVICES: node_services or {},
-        'node_id': node.node_id,
         'version': cloudify_version,
         'public_ip': node.public_ip,
         'private_ip': node.private_ip
