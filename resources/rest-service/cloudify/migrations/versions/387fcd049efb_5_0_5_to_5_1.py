@@ -247,7 +247,7 @@ def _add_service_management_column():
             name='service_management',
             value='systemd',
             scope='rest',
-            schema={'type': 'string'},
+            schema=None,
             is_editable=True
         )
     )
