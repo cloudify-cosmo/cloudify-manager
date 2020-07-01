@@ -74,15 +74,13 @@ class SSLConfig(SecuredResource):
     @staticmethod
     def _set_ssl_state(state):
         ssl_flag = '--ssl-enabled' if state else '--ssl-disabled'
-        service_management_flag = \
-            '--service-management' \
-            ' {0}'.format(config.instance.service_management)
         check_call(
             [
                 'sudo',
                 '/opt/manager/scripts/set-manager-ssl.py',
                 ssl_flag,
-                service_management_flag
+                '--service-management',
+                config.instance.service_management
             ]
         )
 
