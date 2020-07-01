@@ -155,7 +155,9 @@ class LdapAuthentication(SecuredResource):
 
         # Restart the rest service so that each the LDAP configuration
         # be loaded to all flask processes.
-        rest_utils.set_restart_task()
+        rest_utils.set_restart_task(
+            service_management=config.instance.service_management
+        )
 
         ldap_config.pop('ldap_password')
         return ldap_config

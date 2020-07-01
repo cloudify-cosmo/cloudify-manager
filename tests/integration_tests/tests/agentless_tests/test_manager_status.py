@@ -85,7 +85,13 @@ class TestManagerStatus(AgentlessTestCase):
         self._start_service('PostgreSQL')
 
     def _stop_service(self, service):
-        self.execute_on_manager('systemctl stop {}'.format(SERVICES[service]))
+        service_command = self.get_service_management_command()
+        self.execute_on_manager(
+            '{0} stop {1}'.format(
+                service_command,
+                SERVICES[service]
+            )
+        )
         time.sleep(1)
 
     def _test_service_inactive(self, service):
@@ -98,7 +104,13 @@ class TestManagerStatus(AgentlessTestCase):
         self._start_service(service)
 
     def _start_service(self, service):
-        self.execute_on_manager('systemctl start {}'.format(SERVICES[service]))
+        service_command = self.get_service_management_command()
+        self.execute_on_manager(
+            '{0} start {1}'.format(
+                service_command,
+                SERVICES[service]
+            )
+        )
         time.sleep(1)
         status = self.client.manager.get_status()
         self.assertEqual(status['status'], ServiceStatus.HEALTHY)

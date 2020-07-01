@@ -127,10 +127,13 @@ def make_streaming_response(res_id, res_path, content_length, archive_type):
     return response
 
 
-def set_restart_task(delay=1):
+def set_restart_task(delay=1, service_management='systemd'):
     current_app.logger.info('Restarting the rest service')
-    cmd = 'sleep {0}; sudo systemctl restart {1}' \
-        .format(delay, REST_SERVICE_NAME)
+    service_command = 'systemctl'
+    if service_management == 'supervisord':
+        service_command = 'supervisorctl -c /etc/supervisord.conf'
+    cmd = 'sleep {0}; sudo {1} restart {2}' \
+        .format(delay, service_command, REST_SERVICE_NAME)
 
     subprocess.Popen(cmd, shell=True)
 

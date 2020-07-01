@@ -32,7 +32,7 @@ class TestResumeMgmtworker(AgentlessTestCase):
     def _set_retries(self, retries, retry_interval=0):
         original_config = {
             c.name: c.value for c in
-            self.client.manager.get_config(scope='workflow')
+            self.get_config(scope='workflow')
         }
         self.client.manager.put_config('task_retries', retries)
         self.client.manager.put_config('subgraph_retries', retries)
@@ -75,7 +75,10 @@ class TestResumeMgmtworker(AgentlessTestCase):
 
     def _stop_mgmtworker(self):
         self.logger.info('Stopping mgmtworker')
-        self.execute_on_manager('systemctl stop cloudify-mgmtworker')
+        service_command = self.get_service_management_command()
+        self.execute_on_manager(
+            '{0} stop cloudify-mgmtworker'.format(service_command)
+        )
 
     def _unlock_operation(self, operation_name, node_ids=None, client=None):
         """Allow an operation to run.
@@ -114,8 +117,11 @@ class TestResumeMgmtworker(AgentlessTestCase):
         time.sleep(3)
 
     def _start_mgmtworker(self):
-        self.logger.info('Restarting mgmtworker')
-        self.execute_on_manager('systemctl start cloudify-mgmtworker')
+        self.logger.info('Starting mgmtworker')
+        service_command = self.get_service_management_command()
+        self.execute_on_manager(
+            '{0} start cloudify-mgmtworker'.format(service_command)
+        )
 
     def test_cancel_updates_operation(self):
         """When a workflow is cancelled, the operations that are actually
