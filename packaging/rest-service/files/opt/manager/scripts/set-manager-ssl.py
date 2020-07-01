@@ -51,7 +51,7 @@ def restart_nginx(service_management):
     if service_management == 'supervisord':
         subprocess.check_call([
             '/usr/bin/supervisorctl', '-c',
-            '/etc/supervisord.conf', 'restart', 'wait_on_restart'
+            '/etc/supervisord.conf', 'start', 'wait_on_restart'
         ])
     else:
         subprocess.check_call([
