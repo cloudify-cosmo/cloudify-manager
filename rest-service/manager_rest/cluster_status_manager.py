@@ -27,6 +27,7 @@ from cloudify.cluster_status import (ServiceStatus,
 from manager_rest import manager_exceptions
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.rest.rest_utils import parse_datetime_string
+from manager_rest.prometheus_client import get_alerts
 
 try:
     from cloudify_premium import syncthing_utils
@@ -171,6 +172,8 @@ def _generate_service_nodes_status(service_type, service_nodes,
 
 def _read_status_report(node, service_type, formatted_nodes, cloudify_version,
                         missing_status_reports):
+    _ = get_alerts()
+    # TODO mateusz this || won't work :]
     status_file_path = get_report_path(service_type, node.node_id)
     if not path.exists(status_file_path):
         _add_missing_status_reports(node,
@@ -458,13 +461,9 @@ def get_cluster_status():
     Generate the cluster status using:
     1. The DB tables (managers, rabbitmq_brokers, db_nodes) for the
        structure of the cluster.
-    2. The status reports (saved on the file system) each reporter sends
-       with the most updated status of the node.
+    2. The Prometheus monitoring service.
     """
     cluster_services = {}
-    if not path.isdir(CLUSTER_STATUS_PATH):
-        return {STATUS: ServiceStatus.DEGRADED, SERVICES: cluster_services}
-
     cluster_structure = _generate_cluster_status_structure()
     cloudify_version = cluster_structure[CloudifyNodeType.MANAGER][0].version
     missing_status_reports = {}
