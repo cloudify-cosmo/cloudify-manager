@@ -28,7 +28,7 @@ from cloudify.cluster_status import (ServiceStatus,
 from manager_rest import manager_exceptions
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.rest.rest_utils import parse_datetime_string
-from manager_rest.prometheus_client import get_alerts
+from manager_rest.prometheus_client import alerts as prometheus_alerts
 
 try:
     from cloudify_premium import syncthing_utils
@@ -156,7 +156,7 @@ def _generate_service_nodes_status(service_type, service_nodes,
                                    cloudify_version):
     formatted_nodes = {}
     missing_status_reports = {}
-    alerts = get_alerts()
+    alerts = prometheus_alerts()
     for node in service_nodes:
         node_status = _read_status_report(node,
                                           service_type,
@@ -175,23 +175,19 @@ def _generate_service_nodes_status(service_type, service_nodes,
 
 def _read_status_report(node, service_type, formatted_nodes, cloudify_version,
                         missing_status_reports, alerts):
-    # alerts = get_alerts()
-    # status_file_path = get_report_path(service_type, node.node_id)
-    # if not path.exists(status_file_path):
-    #     _add_missing_status_reports(node,
-    #                                 formatted_nodes,
-    #                                 service_type,
-    #                                 missing_status_reports,
-    #                                 cloudify_version)
-    #     return None
-
     for alert in alerts:
         instance_host = alert.get('labels', {}).get('instance')
         m = re.search(r'(.+):\d+', instance_host)
-        if not m:
+        if m:
             instance_host = m.group(1)
-        if node.host == instance_host:
-            return alert
+        if node.private_ip == instance_host:
+            return {
+                'alert': alert,
+                'report': {
+                    SERVICES: alert['annotations']['summary'],
+                    STATUS: alert['state'],
+                },
+            }
 
     _generate_node_status(node, formatted_nodes, cloudify_version,
                           status=ServiceStatus.FAIL)
@@ -228,20 +224,20 @@ def _get_entire_cluster_status(cluster_services):
 def _is_all_in_one(cluster_structure):
     # During the installation of an all-in-one manager, the node_id of the
     # manager node is set to be also the node_id of the db and broker nodes.
-    return (cluster_structure[CloudifyNodeType.DB][0].node_id ==
-            cluster_structure[CloudifyNodeType.BROKER][0].node_id ==
-            cluster_structure[CloudifyNodeType.MANAGER][0].node_id)
+    return (cluster_structure[CloudifyNodeType.DB][0].private_ip ==
+            cluster_structure[CloudifyNodeType.BROKER][0].private_ip ==
+            cluster_structure[CloudifyNodeType.MANAGER][0].private_ip)
 
 
-def _get_service_status(service_nodes):
-    service_statuses = {node[STATUS] for name, node in service_nodes.items()}
-
-    # Only one type of status - all the nodes are in Fail/OK/Uninitialized
-    if len(service_statuses) == 1:
-        return service_statuses.pop()
-
-    # Degraded is when at least one of the nodes is not OK
-    return ServiceStatus.DEGRADED
+# def _get_service_status(service_nodes):
+#     service_statuses = {node[STATUS] for name, node in service_nodes.items()}
+#
+#     # Only one type of status - all the nodes are in Fail/OK/Uninitialized
+#     if len(service_statuses) == 1:
+#         return service_statuses.pop()
+#
+#     # Degraded is when at least one of the nodes is not OK
+#     return ServiceStatus.DEGRADED
 
 
 def _is_status_report_updated(report):
@@ -460,25 +456,21 @@ def get_cluster_status():
        structure of the cluster.
     2. The Prometheus monitoring service.
     """
+    alerts = prometheus_alerts()
     cluster_services = {}
     cluster_structure = _generate_cluster_status_structure()
-    cloudify_version = cluster_structure[CloudifyNodeType.MANAGER][0].version
-    missing_status_reports = {}
+    # cloudify_version = cluster_structure[CloudifyNodeType.MANAGER][0].version
 
     for service_type, service_nodes in cluster_structure.items():
-        formatted_nodes, missing_reports = _generate_service_nodes_status(
-            service_type, service_nodes, cloudify_version
-        )
         cluster_services[service_type] = {
-            STATUS: _get_service_status(formatted_nodes),
+            STATUS: _get_service_status(service_type, alerts),
             IS_EXTERNAL: service_nodes[0].is_external,
-            'nodes': formatted_nodes
+            # 'nodes': formatted_nodes
+            'nodes': [],
         }
-        missing_status_reports.update(missing_reports)
 
     is_all_in_one = _is_all_in_one(cluster_structure)
-    _handle_missing_status_reports(missing_status_reports, cluster_services,
-                                   is_all_in_one)
+
     if not is_all_in_one:
         db_service = cluster_services[CloudifyNodeType.DB]
         db_service[STATUS] = _get_db_cluster_status(
@@ -491,6 +483,47 @@ def get_cluster_status():
         STATUS: _get_entire_cluster_status(cluster_services),
         SERVICES: cluster_services
     }
+
+
+def _get_service_status(service_type, alerts):
+    for alert in [a for a in alerts if
+                  a.get('labels', {}).get('severity') == 'critical']:
+        if _alert_service_type() == service_type:
+            alert_state = alert.get('state')
+            if alert_state == 'firing':
+                return ServiceStatus.FAIL
+            if alert_state == 'pending':
+                return ServiceStatus.DEGRADED
+    return ServiceStatus.HEALTHY
+
+
+def _alert_service_type(alert):
+    job = alert.get('labels', {}).get('job')
+    if job.find('postgres'):
+        return CloudifyNodeType.DB
+    if job.find('rabbit'):
+        return CloudifyNodeType.BROKER
+    if job.find('http'):
+        return CloudifyNodeType.MANAGER
+    # One day we may want to use other fields to check of service type, like
+    # alert['annotations']['summary'] or alert['labels']['alertname']
+
+
+def _alert_node_private_ip(alert):
+    alert_instance = alert.get('labels', {}).get('instance')
+    m = re.search(r'(.+):\d+', alert_instance)
+    if m:
+        alert_instance = m.group(1)
+    return alert_instance
+
+
+def _alert_status(alert):
+    state = alert.get('state')
+    if state == 'firing':
+        return ServiceStatus.FAIL
+    if state == 'pending':
+        return ServiceStatus.DEGRADED
+
 
 # region Write Status Report Helpers
 
