@@ -15,8 +15,8 @@
 
 import uuid
 import hashlib
-from datetime import datetime
 from itertools import dropwhile
+from datetime import datetime, timedelta
 
 import mock
 
@@ -955,6 +955,43 @@ class ExecutionsTestCase(BaseServerTestCase):
         self._create_execution_and_update_token('deployment_2', token)
         self._assert_invalid_execution_token(token)
 
+    @attr(client_min_version=3.1, client_max_version=LATEST_API_VERSION)
+    def test_delete_executions(self):
+        self.put_deployment('dep-1')
+        self._create_execution_and_update_token('dep-2', uuid.uuid4().hex)
+        self.client.executions.start('dep-1', 'install')
+        self.client.executions.start('dep-1', 'uninstall')
+        # now we have 5 executions: 2 of them are deployment creations,
+        # and one is not terminated -> so only 2 are eligible for deletion
+        self.client.executions.delete()
+        assert len(self.client.executions.list()) == 3
+
+    @attr(client_min_version=3.1, client_max_version=LATEST_API_VERSION)
+    def test_delete_executions_keep_last(self):
+        self.put_deployment('dep-1')
+        self.client.executions.start('dep-1', 'update')
+        self.client.executions.start('dep-1', 'update')
+        self.client.executions.start('dep-1', 'update')
+        # 4 executions of which 1 is deployment creation, so 3 are deletable
+        self.client.executions.delete(keep_last=2)
+        assert len(self.client.executions.list()) == 2
+
+    @attr(client_min_version=3.1, client_max_version=LATEST_API_VERSION)
+    def test_delete_executions_by_date(self):
+        self.put_deployment('dep-1')
+        exec1 = self.client.executions.start('dep-1', 'update')
+        exec2 = self.client.executions.start('dep-1', 'update')
+        self._update_execution_created_at(exec2, -60)
+        self._update_execution_created_at(exec1, -30)
+        self.client.executions.delete(
+            to_datetime=datetime.strptime('1970-1-1', '%Y-%m-%d'))  # no change
+        assert len(self.client.executions.list()) == 3
+        a45d_ago = datetime.utcnow() - timedelta(days=45)
+        self.client.executions.delete(to_datetime=a45d_ago)   # deletes exec_2
+        assert len(self.client.executions.list()) == 2
+        self.client.executions.delete(to_datetime=datetime.utcnow())
+        assert len(self.client.executions.list()) == 1
+
     def _create_execution_and_update_token(self, deployment_id, token):
         self.put_deployment(deployment_id, blueprint_id=deployment_id)
         execution = self.client.executions.start(deployment_id, 'install')
@@ -980,3 +1017,9 @@ class ExecutionsTestCase(BaseServerTestCase):
         client = self.create_client(headers=headers)
         executions = client.executions.list()
         self.assertEqual(2, len(executions))
+
+    def _update_execution_created_at(self, execution, days):
+        execution = self.sm.get(models.Execution, execution.id)
+        execution.created_at = timedelta(days=days) + \
+            datetime.strptime(execution.created_at, '%Y-%m-%dT%H:%M:%S.%fZ')
+        self.sm.update(execution)
