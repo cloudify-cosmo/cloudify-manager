@@ -551,19 +551,3 @@ def _verify_syncthing_status():
 
 
 # endregion
-
-
-def write_status_report(node_id, model, node_type, report):
-    current_app.logger.debug('Received new status report for '
-                             '{0} of type {1}...'.format(node_id, node_type))
-    _verify_syncthing_status()
-    _create_statues_folder_if_needed()
-    _verify_node_exists(node_id, model)
-    _verify_status_report_schema(node_id, report)
-    report_time = parse_datetime_string(report['timestamp'])
-    _verify_timestamp(node_id, report_time)
-    report_path = get_report_path(node_type, node_id)
-    _verify_report_newer_than_current(node_id, report_time, report_path)
-    _save_report(report_path, report)
-    current_app.logger.debug('Successfully updated the status report for '
-                             '{0} of type {1}'.format(node_id, node_type))
