@@ -23,8 +23,8 @@ from cloudify.cluster_status import (ServiceStatus,
                                      NodeServiceStatus)
 
 from manager_rest.storage import models, get_storage_manager
+from manager_rest import prometheus_client
 from manager_rest.rest.rest_utils import parse_datetime_string
-from manager_rest.prometheus_client import alerts as prometheus_alerts
 
 try:
     from cloudify_premium import syncthing_utils
@@ -32,7 +32,6 @@ try:
 except ImportError:
     syncthing_utils = None
     ha_utils = None
-
 
 STATUS = 'status'
 SERVICES = 'services'
@@ -235,7 +234,7 @@ def get_cluster_status():
        structure of the cluster.
     2. The Prometheus monitoring service.
     """
-    alerts = prometheus_alerts()
+    alerts = prometheus_client.alerts()
     cluster_services = {}
     cluster_structure = _generate_cluster_status_structure()
     cloudify_version = cluster_structure[CloudifyNodeType.MANAGER][0].version
@@ -247,15 +246,15 @@ def get_cluster_status():
             'nodes': _get_formatted_nodes(service_nodes, cloudify_version),
         }
 
-    is_all_in_one = _is_all_in_one(cluster_structure)
-
-    if not is_all_in_one:
-        db_service = cluster_services[CloudifyNodeType.DB]
-        db_service[STATUS] = _get_db_cluster_status(
-            db_service, len(cluster_structure[CloudifyNodeType.DB]))
-        broker_service = cluster_services[CloudifyNodeType.BROKER]
-        broker_service[STATUS] = _get_broker_cluster_status(
-            broker_service, len(cluster_structure[CloudifyNodeType.BROKER]))
+    # is_all_in_one = _is_all_in_one(cluster_structure)
+    #
+    # if not is_all_in_one:
+    #     db_service = cluster_services[CloudifyNodeType.DB]
+    #     db_service[STATUS] = _get_db_cluster_status(
+    #         db_service, len(cluster_structure[CloudifyNodeType.DB]))
+    #     broker_service = cluster_services[CloudifyNodeType.BROKER]
+    #     broker_service[STATUS] = _get_broker_cluster_status(
+    #         broker_service, len(cluster_structure[CloudifyNodeType.BROKER]))
 
     return {
         STATUS: _get_entire_cluster_status(cluster_services),
