@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
 from docker.errors import APIError as DockerAPIError
 
 from integration_tests.framework.docker_interface import DockerInterface

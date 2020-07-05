@@ -57,7 +57,6 @@ def copy_files_between_manager_and_snapshot(archive_root,
                                             tenant_name=None):
     """
     Copy files/dirs between snapshot/manager and manager/snapshot.
-
     :param archive_root: Path to the snapshot archive root.
     :param config: Config of manager.
     :param to_archive: If True then copying is from manager to snapshot,
@@ -134,9 +133,8 @@ def _ignore_stage_conf_directory_during_restore(stage_tempdir):
     shutil.rmtree(os.path.join(stage_tempdir, 'conf'))
 
 
-def restore_stage_files(archive_root, override=False):
+def restore_stage_files(archive_root, service_management, override=False):
     """Copy Cloudify Stage files from the snapshot archive to stage folder.
-
     Note that only the stage user can write into the stage directory,
     so we use sudo to run a script (created during bootstrap) that copies
     the restored files.
@@ -164,8 +162,12 @@ def restore_stage_files(archive_root, override=False):
     finally:
         shutil.rmtree(stage_tempdir)
 
-    sudo(['/usr/bin/systemctl', 'restart', 'cloudify-stage'],
-         ignore_failures=True)
+    run_service(
+        service_management,
+        'restart',
+        'cloudify-stage',
+        ignore_failures=True
+    )
 
 
 def copy_composer_files(archive_root):
@@ -266,6 +268,20 @@ def run(command, ignore_failures=False, redirect_output_path=None, cwd=None):
     return proc
 
 
+def run_service(service_management,
+                action,
+                service_name,
+                ignore_failures=False):
+    if service_management == 'supervisord':
+        service_command = '/usr/bin/supervisorctl -c /etc/supervisord.conf'
+    else:
+        service_command = '/usr/bin/systemctl'
+    service_command = '{0} {1} {2}'.format(
+        service_command, action, service_name
+    )
+    sudo(service_command, ignore_failures=ignore_failures)
+
+
 def get_manager_version(client):
     return ManagerVersion(client.manager.get_version()['version'])
 
@@ -302,24 +318,19 @@ def is_compute(node):
 
 def make_zip64_archive(zip_filename, directory):
     """Create zip64 archive that contains all files in a directory.
-
     zip64 is a set of extensions on top of the zip file format that allows to
     have files larger than 2GB. This is important in snapshots where the amount
     of data to backup might be huge.
-
     Note that `shutil` provides a method to register new formats based on the
     extension of the target file, since a `.zip` extension is still desired,
     using such an extension mechanism is not an option to avoid patching the
     already registered zip format.
-
     In any case, this function is heavily inspired in stdlib's
     `shutil._make_zipfile`.
-
     :param zip_filename: Path to the zip file to be created
     :type zip_filename: str
     :path directory: Path to directory where all files to compress are located
     :type directory: str
-
     """
     zip_context_manager = zipfile.ZipFile(
         zip_filename,
@@ -347,14 +358,11 @@ def make_zip64_archive(zip_filename, directory):
 @contextlib.contextmanager
 def db_schema(revision, config=None):
     """Downgrade schema to desired revision to perform operation and upgrade.
-
     Used when restoring a snapshot to make sure the restore operation happens
     with the same version of the schema that was used when the snapshot was
     created.
-
     :param revision: Revision to downgrade to before performing any operation.
     :type revision: str
-
     """
     db_schema_downgrade(revision, config=config)
     yield
@@ -363,35 +371,27 @@ def db_schema(revision, config=None):
 
 def db_schema_downgrade(revision='-1', config=None):
     """Downgrade database schema.
-
     Used before restoring a snapshot to make sure that the schema matches the
     one that was used when the snapshot was created.
-
     :param revision: Revision to downgrade to.
     :type revision: str
-
     """
     _schema(config, ['downgrade', revision])
 
 
 def db_schema_upgrade(revision='head', config=None):
     """Upgrade database schema.
-
     Used after restoring snapshot to get an up-to-date schema.
-
     :param revision: Revision to upgrade to.
     :type revision: str
-
     """
     _schema(config, ['upgrade', revision])
 
 
 def db_schema_get_current_revision(config=None):
     """Get database schema revision.
-
     :returns: Current revision
     :rtype: str
-
     """
     output = _schema(config, ['current'])
     revision = output.split(' ', 1)[0]
@@ -415,10 +415,8 @@ def _schema(config, command):
 
 def stage_db_schema_get_current_revision():
     """Get stage database schema revision.
-
     :returns: Current revision
     :rtype: str
-
     """
     client = manager.get_rest_client()
     version = client.manager.get_version()
@@ -439,10 +437,8 @@ def stage_db_schema_get_current_revision():
 
 def composer_db_schema_get_current_revision():
     """Get composer database schema revision.
-
     :returns: Current revision
     :rtype: str
-
     """
     client = manager.get_rest_client()
     version = client.manager.get_version()
@@ -453,7 +449,8 @@ def composer_db_schema_get_current_revision():
         '/usr/bin/npm',
         'run',
         '--silent',
-        '--prefix', snapshot_constants.COMPOSER_BASE_FOLDER,
+        '--prefix', os.path.join(snapshot_constants.COMPOSER_BASE_FOLDER,
+                                 'backend'),
         'db-migrate-current'
     ]).decode('utf-8')
     revision = output.strip()

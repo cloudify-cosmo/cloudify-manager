@@ -87,16 +87,6 @@ class InterDeploymentDependenciesTest(BaseServerTestCase):
         else:
             raise NotFoundError(**self.dependency)
 
-    def test_fails_to_add_duplicate_dependency(self):
-        self.client.inter_deployment_dependencies.create(
-            **self.dependency)
-
-        error_msg_regex = 'Instance with ID .* cannot be added on .* or ' \
-                          'with global visibility'
-        with self.assertRaisesRegex(CloudifyClientError, error_msg_regex):
-            self.client.inter_deployment_dependencies.create(
-                **self.dependency)
-
     def test_deletes_existing_dependency(self):
         self.client.inter_deployment_dependencies.create(
             **self.dependency)

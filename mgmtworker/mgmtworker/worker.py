@@ -117,13 +117,14 @@ class MgmtworkerServiceTaskConsumer(ServiceTaskConsumer):
         super(MgmtworkerServiceTaskConsumer, self).__init__(*args, **kwargs)
 
     def cancel_workflow_task(self, execution_id, rest_token, tenant,
-                             execution_token):
+                             execution_token, rest_host):
         logger.info('Cancelling workflow {0}'.format(execution_id))
 
         class CancelCloudifyContext(object):
             """A CloudifyContext that has just enough data to cancel workflows
             """
             def __init__(self):
+                self.rest_host = rest_host
                 self.tenant_name = tenant['name']
                 self.rest_token = rest_token
                 self.execution_token = execution_token

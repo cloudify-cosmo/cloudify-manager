@@ -49,6 +49,8 @@ from manager_rest.constants import FILE_SERVER_BLUEPRINTS_FOLDER
 
 SHARED_RESOURCE_TYPE = 'cloudify.nodes.SharedResource'
 COMPONENT_TYPE = 'cloudify.nodes.Component'
+EXTERNAL_SOURCE = 'external_source'
+EXTERNAL_TARGET = 'external_target'
 
 
 class DeploymentsId(resources_v1.DeploymentsId):
@@ -189,25 +191,35 @@ class InterDeploymentDependencies(SecuredResource):
          deployment.
         :param target_deployment: the deployment that the source deployment
          depends on.
+        :param external_source: metadata, in JSON format, of the source
+        deployment (deployment name, tenant name, and the manager host(s)),
+        in case it resides on an external manager. None otherwise
+        :param external_target: metadata, in JSON format, of the target
+        deployment (deployment name, tenant name, and the manager host(s)),
+        in case it resides on an external manager. None otherwise
         :return: an InterDeploymentDependency object containing the information
          of the dependency.
         """
         sm = get_storage_manager()
+
         params = self._get_put_dependency_params(sm)
         now = utils.get_formatted_timestamp()
 
-        # assert no cyclic dependencies are created
-        dep_greph = rest_utils.RecursiveDeploymentDependencies(sm)
-        source_id = str(params[SOURCE_DEPLOYMENT].id)
-        target_id = str(params[TARGET_DEPLOYMENT].id)
-        dep_greph.create_dependencies_graph()
-        dep_greph.assert_no_cyclic_dependencies(source_id, target_id)
+        if (EXTERNAL_SOURCE not in params) and (EXTERNAL_TARGET not in params):
+            # assert no cyclic dependencies are created
+            dep_greph = rest_utils.RecursiveDeploymentDependencies(sm)
+            source_id = str(params[SOURCE_DEPLOYMENT].id)
+            target_id = str(params[TARGET_DEPLOYMENT].id)
+            dep_greph.create_dependencies_graph()
+            dep_greph.assert_no_cyclic_dependencies(source_id, target_id)
 
         deployment_dependency = models.InterDeploymentDependencies(
             id=str(uuid.uuid4()),
             dependency_creator=params[DEPENDENCY_CREATOR],
             source_deployment=params[SOURCE_DEPLOYMENT],
-            target_deployment=params[TARGET_DEPLOYMENT],
+            target_deployment=params.get(TARGET_DEPLOYMENT),
+            external_source=params.get(EXTERNAL_SOURCE),
+            external_target=params.get(EXTERNAL_TARGET),
             created_at=now)
         return sm.put(deployment_dependency)
 
@@ -216,22 +228,29 @@ class InterDeploymentDependencies(SecuredResource):
             sm,
             source_deployment_id,
             target_deployment_id,
-            is_component_deletion=False):
-        source_deployment = sm.get(models.Deployment,
-                                   source_deployment_id,
-                                   fail_silently=True)
-        if not source_deployment:
-            raise manager_exceptions.NotFoundError(
-                'Given source deployment with ID `{0}` does not exist.'.format(
-                    source_deployment_id)
-            )
+            is_component_deletion=False,
+            external_source=None,
+            external_target=None):
+
+        if external_source:
+            source_deployment = None
+        else:
+            source_deployment = sm.get(models.Deployment,
+                                       source_deployment_id,
+                                       fail_silently=True)
+            if not source_deployment:
+                raise manager_exceptions.NotFoundError(
+                    'Given source deployment with ID `{0}` does not '
+                    'exist.'.format(source_deployment_id)
+                )
         target_deployment = sm.get(models.Deployment,
                                    target_deployment_id,
                                    fail_silently=True)
-        if (not is_component_deletion) and (not target_deployment):
+        if not (is_component_deletion or external_source or
+                external_target or target_deployment):
             raise manager_exceptions.NotFoundError(
-                'Given target deployment with ID `{0}` does not exist.'.format(
-                    target_deployment_id)
+                'Given target deployment with ID `{0}` does not '
+                'exist.'.format(target_deployment_id)
             )
         return source_deployment, target_deployment
 
@@ -240,21 +259,30 @@ class InterDeploymentDependencies(SecuredResource):
         return rest_utils.get_json_and_verify_params({
             DEPENDENCY_CREATOR: {'type': text_type},
             SOURCE_DEPLOYMENT: {'type': text_type},
-            TARGET_DEPLOYMENT: {'type': text_type}
+            TARGET_DEPLOYMENT: {'type': text_type},
+            EXTERNAL_SOURCE: {'optional': True, 'type': dict},
+            EXTERNAL_TARGET: {'optional': True, 'type': dict},
         })
 
     @staticmethod
     def _get_put_dependency_params(sm):
         request_dict = InterDeploymentDependencies._verify_dependency_params()
+        external_source = request_dict.get(EXTERNAL_SOURCE)
+        external_target = request_dict.get(EXTERNAL_TARGET)
         source_deployment, target_deployment = InterDeploymentDependencies. \
             _verify_and_get_source_and_target_deployments(
                 sm,
                 request_dict.get(SOURCE_DEPLOYMENT),
-                request_dict.get(TARGET_DEPLOYMENT))
+                request_dict.get(TARGET_DEPLOYMENT),
+                external_source=external_source,
+                external_target=external_target
+            )
         dependency_params = create_deployment_dependency(
             request_dict.get(DEPENDENCY_CREATOR),
             source_deployment,
-            target_deployment)
+            target_deployment,
+            external_source,
+            external_target)
         return dependency_params
 
     @swagger.operation(
@@ -280,14 +308,21 @@ class InterDeploymentDependencies(SecuredResource):
         :param is_component_deletion: a special flag for allowing the
          deletion of a Component inter-deployment dependency when the target
          deployment is already deleted.
+        :param external_source: metadata, in JSON format, of the source
+        deployment (deployment name, tenant name, and the manager host(s)),
+        in case it resides on an external manager. None otherwise
+        :param external_target: metadata, in JSON format, of the target
+        deployment (deployment name, tenant name, and the manager host(s)),
+        in case it resides on an external manager. None otherwise
         :return: an InterDeploymentDependency object containing the information
          of the dependency.
         """
         sm = get_storage_manager()
         params = self._get_delete_dependency_params(sm)
         filters = create_deployment_dependency(params[DEPENDENCY_CREATOR],
-                                               params[SOURCE_DEPLOYMENT],
-                                               params.get(TARGET_DEPLOYMENT))
+                                               params.get(SOURCE_DEPLOYMENT),
+                                               params.get(TARGET_DEPLOYMENT),
+                                               params.get(EXTERNAL_SOURCE))
         dependency = sm.get(
             models.InterDeploymentDependencies,
             None,
@@ -301,19 +336,23 @@ class InterDeploymentDependencies(SecuredResource):
     @staticmethod
     def _get_delete_dependency_params(sm):
         request_dict = InterDeploymentDependencies._verify_dependency_params()
+        external_source = request_dict.get(EXTERNAL_SOURCE)
+        external_target = request_dict.get(EXTERNAL_TARGET)
         source_deployment, target_deployment = InterDeploymentDependencies. \
             _verify_and_get_source_and_target_deployments(
                 sm,
                 request_dict.get(SOURCE_DEPLOYMENT),
                 request_dict.get(TARGET_DEPLOYMENT),
+                external_source=external_source,
+                external_target=external_target,
                 is_component_deletion=request_dict['is_component_deletion']
             )
         dependency_params = create_deployment_dependency(
             request_dict.get(DEPENDENCY_CREATOR),
             source_deployment,
-            target_deployment)
-        dependency_params['is_component_deletion'] =\
-            request_dict['is_component_deletion']
+            target_deployment,
+            external_source,
+            external_target)
         return dependency_params
 
     @swagger.operation(

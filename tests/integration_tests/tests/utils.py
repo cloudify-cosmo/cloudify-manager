@@ -30,7 +30,7 @@ from datetime import datetime, timedelta
 from .constants import SCHEDULED_TIME_FORMAT
 from cloudify.utils import setup_logger
 from cloudify_rest_client.executions import Execution
-from integration_tests.framework import utils, docl
+from integration_tests.framework import utils, docker
 from integration_tests.framework.constants import ADMIN_TOKEN_SCRIPT
 
 logger = setup_logger('testenv.utils')
@@ -110,10 +110,10 @@ def publish_event(queue, routing_key, event):
                                  auto_delete=True,
                                  internal=False)
         channel.queue_declare(
-                queue=queue,
-                auto_delete=True,
-                durable=False,
-                exclusive=False)
+            queue=queue,
+            auto_delete=True,
+            durable=False,
+            exclusive=False)
         channel.queue_bind(exchange=exchange_name,
                            queue=queue,
                            routing_key=routing_key)
@@ -130,29 +130,30 @@ def create_rest_client(**kwargs):
 
 
 def wait_for_deployment_creation_to_complete(
-        deployment_id, timeout_seconds=60, client=None):
+        container_id, deployment_id, timeout_seconds=60, client=None):
     do_retries(func=verify_deployment_env_created,
                exception_class=Exception,
                timeout_seconds=timeout_seconds,
+               container_id=container_id,
                deployment_id=deployment_id, client=client)
 
 
-def verify_deployment_env_created(deployment_id, client=None):
+def verify_deployment_env_created(container_id, deployment_id, client=None):
     # A workaround for waiting for the deployment environment creation to
     # complete
-    client = client or create_rest_client()
+    client = client or create_rest_client(docker.get_manager_ip(container_id))
     execs = client.executions.list(deployment_id=deployment_id)
     if not execs \
             or execs[0].status != Execution.TERMINATED \
             or execs[0].workflow_id != 'create_deployment_environment':
         log_path = '/var/log/cloudify/mgmtworker/mgmtworker.log'
-        logs = docl.execute('tail -n 100 {0}'.format(log_path))
+        logs = docker.execute(container_id, ['tail', '-n', '100', log_path])
         raise RuntimeError(
-                "Expected a single execution for workflow "
-                "'create_deployment_environment' with status 'terminated'; "
-                "Found these executions instead: {0}.\nLast 100 lines for "
-                "management worker log:\n{1}".format(
-                        json.dumps(execs.items, indent=2), logs))
+            "Expected a single execution for workflow "
+            "'create_deployment_environment' with status 'terminated'; "
+            "Found these executions instead: {0}.\nLast 100 lines for "
+            "management worker log:\n{1}"
+            .format(json.dumps(execs.items, indent=2), logs))
 
 
 def wait_for_deployment_deletion_to_complete(
@@ -182,7 +183,7 @@ def get_resource(resource):
     resource_path = path.join(resources_path, resource)
     if not path.exists(resource_path):
         raise RuntimeError("Resource '{0}' not found in: {1}".format(
-                resource, resource_path))
+            resource, resource_path))
     return resource_path
 
 
@@ -209,8 +210,8 @@ def do_retries_boolean(func, timeout_seconds=10, **kwargs):
         else:
             if time.time() > deadline:
                 raise RuntimeError(
-                        'function {0} did not return True in {1} seconds'
-                        .format(func.__name__, timeout_seconds)
+                    'function {0} did not return True in {1} seconds'
+                    .format(func.__name__, timeout_seconds)
                 )
             time.sleep(1)
 
@@ -225,11 +226,11 @@ def create_self_signed_certificate(target_certificate_path,
     # HTTPS (RFC 2818), including it here is probably best in case of SSL
     # library implementation 'fun'.
     openssl.req(
-            '-x509', '-newkey', 'rsa:2048', '-sha256',
-            '-keyout', target_key_path,
-            '-out', target_certificate_path,
-            '-days', '365', '-nodes',
-            '-subj', '/CN={0}'.format(common_name))
+        '-x509', '-newkey', 'rsa:2048', '-sha256',
+        '-keyout', target_key_path,
+        '-out', target_certificate_path,
+        '-days', '365', '-nodes',
+        '-subj', '/CN={0}'.format(common_name))
 
 
 def tar_blueprint(blueprint_path, dest_dir):
@@ -270,8 +271,8 @@ def patch_yaml(yaml_path, is_json=False, default_flow_style=True):
 
 
 def run_postgresql_command(cmd):
-    return docl.execute('sudo -u postgres psql cloudify_db '
-                        '-c "{0}"'.format(cmd))
+    return docker.execute('sudo -u postgres psql cloudify_db '
+                          '-c "{0}"'.format(cmd))
 
 
 def delete_provider_context():
@@ -294,7 +295,7 @@ def generate_scheduled_for_date():
 def create_api_token():
     """ Create a new valid API token """
     command = 'sudo {0}'.format(ADMIN_TOKEN_SCRIPT)
-    docl.execute(command)
+    docker.execute(command)
 
 
 def create_tenants_and_add_users(client, num_of_tenants):
@@ -319,7 +320,7 @@ def wait_for_rest(obj, timeout_sec):
 
 def assert_messages_in_log(workdir, messages, log_path):
     tmp_log_path = os.path.join(workdir, 'test_log')
-    docl.copy_file_from_manager(log_path, tmp_log_path)
+    docker.copy_file_from_manager(log_path, tmp_log_path)
     with open(tmp_log_path) as f:
         data = f.readlines()
     for message in messages:

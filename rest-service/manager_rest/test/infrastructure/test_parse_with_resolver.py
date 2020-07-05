@@ -126,7 +126,7 @@ class UploadBlueprintsWithImportResolverTests(BaseServerTestCase):
                 'dsl_parser.tasks.parse_dsl',
                 mock.MagicMock(return_value={})
         ) as mock_parse_dsl:
-            self.put_file(*self.put_blueprint_args())
+            self.put_file(*self.put_blueprint_args(blueprint_id='bp-2'))
             mock_parse_dsl.assert_called_once_with(
                 mock.ANY, mock.ANY,
                 resolver='mock resolver',

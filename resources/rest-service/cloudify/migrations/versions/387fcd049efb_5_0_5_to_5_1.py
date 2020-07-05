@@ -3,6 +3,7 @@
 - Add usage_collector table
 - Adding inter deployment dependencies table
 - Add unique indexes
+- Remove node_id column from Manager, RabbitMQBroker and DBNodes
 
 Revision ID: 387fcd049efb
 Revises: 62a8d746d13b
@@ -61,6 +62,8 @@ def upgrade():
     _create_unique_indexes()
     _add_plugins_title_column()
     _add_service_management_column()
+    _create_more_idd_indexes()
+    _remove_node_id_columns()
 
 
 def downgrade():
@@ -69,6 +72,8 @@ def downgrade():
     _drop_unique_indexes()
     _drop_plugins_title_column()
     _drop_service_management_column()
+    _drop_some_idd_indexes()
+    _create_node_id_columns()
 
 
 def _create_usage_collector_table():
@@ -106,14 +111,12 @@ def _create_inter_deployment_dependencies_table():
                   nullable=False),
         sa.Column('dependency_creator', sa.Text(), nullable=False),
         sa.Column('target_deployment_func', JSONString(), nullable=True),
-        sa.Column('_source_deployment',
-                  sa.Integer(),
-                  nullable=False),
-        sa.Column('_target_deployment',
-                  sa.Integer(),
-                  nullable=True),
+        sa.Column('_source_deployment', sa.Integer(), nullable=True),
+        sa.Column('_target_deployment', sa.Integer(), nullable=True),
         sa.Column('_tenant_id', sa.Integer(), nullable=False),
         sa.Column('_creator_id', sa.Integer(), nullable=False),
+        sa.Column('external_source', JSONString(), nullable=True),
+        sa.Column('external_target', JSONString(), nullable=True),
         sa.ForeignKeyConstraint(
             ['_creator_id'],
             [u'users.id'],
@@ -137,10 +140,6 @@ def _create_inter_deployment_dependencies_table():
         sa.PrimaryKeyConstraint(
             '_storage_id',
             name=op.f('inter_deployment_dependencies_pkey')),
-        sa.UniqueConstraint('dependency_creator',
-                            '_source_deployment',
-                            '_tenant_id',
-                            name='inter_deployment_uc')
     )
     op.create_index(op.f('inter_deployment_dependencies__tenant_id_idx'),
                     'inter_deployment_dependencies',
@@ -153,7 +152,7 @@ def _create_inter_deployment_dependencies_table():
     op.create_index(op.f('inter_deployment_dependencies_id_idx'),
                     'inter_deployment_dependencies',
                     ['id'],
-                    unique=False)
+                    unique=True)
     op.add_column(u'deployment_updates',
                   sa.Column('keep_old_deployment_dependencies',
                             sa.Boolean(),
@@ -188,7 +187,8 @@ def _create_unique_indexes():
                   table_name='deployments')
     op.create_index('plugins_name_version__tenant_id_idx',
                     'plugins',
-                    ['package_name', 'package_version', '_tenant_id'],
+                    ['package_name', 'package_version', '_tenant_id',
+                     'distribution'],
                     unique=True)
     op.create_index('secrets_id_tenant_id_idx',
                     'secrets',
@@ -247,7 +247,7 @@ def _add_service_management_column():
             name='service_management',
             value='systemd',
             scope='rest',
-            schema={'type': 'string'},
+            schema=None,
             is_editable=True
         )
     )
@@ -263,3 +263,111 @@ def _drop_service_management_column():
     ).one()
     session.delete(service_management)
     session.commit()
+
+
+def _create_more_idd_indexes():
+    op.create_index(
+        op.f('inter_deployment_dependencies__creator_id_idx'),
+        'inter_deployment_dependencies',
+        ['_creator_id'],
+        unique=False
+    )
+    op.create_index(
+        op.f('inter_deployment_dependencies__source_deployment_idx'),
+        'inter_deployment_dependencies',
+        ['_source_deployment'],
+        unique=False
+    )
+    op.create_index(
+        op.f('inter_deployment_dependencies__target_deployment_idx'),
+        'inter_deployment_dependencies',
+        ['_target_deployment'],
+        unique=False
+    )
+    op.create_index(
+        op.f('inter_deployment_dependencies_visibility_idx'),
+        'inter_deployment_dependencies',
+        ['visibility'],
+        unique=False
+    )
+    op.drop_index(
+        'inter_deployment_dependencies_id_idx',
+        table_name='inter_deployment_dependencies'
+    )
+    op.create_index(
+        op.f('inter_deployment_dependencies_id_idx'),
+        'inter_deployment_dependencies',
+        ['id'],
+        unique=False
+    )
+
+
+def _drop_some_idd_indexes():
+    op.drop_index(
+        op.f('inter_deployment_dependencies_id_idx'),
+        table_name='inter_deployment_dependencies'
+    )
+    op.create_index(
+        'inter_deployment_dependencies_id_idx',
+        'inter_deployment_dependencies',
+        ['id'],
+        unique=True
+    )
+    op.drop_index(
+        op.f('inter_deployment_dependencies_visibility_idx'),
+        table_name='inter_deployment_dependencies'
+    )
+    op.drop_index(
+        op.f('inter_deployment_dependencies__target_deployment_idx'),
+        table_name='inter_deployment_dependencies'
+    )
+    op.drop_index(
+        op.f('inter_deployment_dependencies__source_deployment_idx'),
+        table_name='inter_deployment_dependencies'
+    )
+    op.drop_index(
+        op.f('inter_deployment_dependencies__creator_id_idx'),
+        table_name='inter_deployment_dependencies'
+    )
+
+
+def _remove_node_id_columns():
+    op.drop_constraint(u'db_nodes_node_id_key', 'db_nodes', type_='unique')
+    op.drop_column('db_nodes', 'node_id')
+    op.drop_constraint(u'managers_node_id_key', 'managers', type_='unique')
+    op.drop_column('managers', 'node_id')
+    op.drop_constraint(
+        u'rabbitmq_brokers_node_id_key',
+        'rabbitmq_brokers',
+        type_='unique')
+    op.drop_column('rabbitmq_brokers', 'node_id')
+
+
+def _create_node_id_columns():
+    op.add_column(
+        u'rabbitmq_brokers',
+        sa.Column('node_id', sa.TEXT(), autoincrement=False, nullable=False)
+    )
+    op.create_unique_constraint(
+        'rabbitmq_brokers_node_id_key',
+        'rabbitmq_brokers',
+        ['node_id']
+    )
+    op.add_column(
+        u'managers',
+        sa.Column('node_id', sa.TEXT(), autoincrement=False, nullable=False)
+    )
+    op.create_unique_constraint(
+        'managers_node_id_key',
+        'managers',
+        ['node_id']
+    )
+    op.add_column(
+        u'db_nodes',
+        sa.Column('node_id', sa.TEXT(), autoincrement=False, nullable=False)
+    )
+    op.create_unique_constraint(
+        'db_nodes_node_id_key',
+        'db_nodes',
+        ['node_id']
+    )

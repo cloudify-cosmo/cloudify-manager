@@ -20,7 +20,6 @@ from requests.exceptions import ConnectionError
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 
-from integration_tests.framework import docl
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import create_rest_client
 
@@ -28,7 +27,7 @@ from integration_tests.tests.utils import create_rest_client
 class TestSsl(AgentlessTestCase):
     def test_ssl(self):
         local_cert_path = join(self.workdir, 'cert.pem')
-        docl.copy_file_from_manager(
+        self.copy_file_from_manager(
             '/etc/cloudify/ssl/cloudify_external_cert.pem', local_cert_path)
         ssl_client = create_rest_client(
             rest_port='443', cert_path=local_cert_path)

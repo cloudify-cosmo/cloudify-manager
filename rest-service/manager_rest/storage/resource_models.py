@@ -19,7 +19,7 @@ from datetime import datetime
 
 from flask_restful import fields as flask_fields
 
-from sqlalchemy import case, UniqueConstraint
+from sqlalchemy import case
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy import func, select, table, column
 from sqlalchemy.ext.declarative import declared_attr
@@ -98,7 +98,7 @@ class Plugin(SQLResourceBase):
     __table_args__ = (
         db.Index(
             'plugins_name_version__tenant_id_idx',
-            'package_name', 'package_version', '_tenant_id',
+            'package_name', 'package_version', '_tenant_id', 'distribution',
             unique=True
         ),
     )
@@ -858,19 +858,13 @@ class InterDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'inter_deployment_dependencies'
 
     dependency_creator = db.Column(db.Text, nullable=False)
-    _source_deployment = foreign_key(Deployment._storage_id)
+    _source_deployment = foreign_key(Deployment._storage_id, nullable=True)
     _target_deployment = foreign_key(Deployment._storage_id,
                                      nullable=True,
                                      ondelete='SET NULL')
     target_deployment_func = db.Column(JSONString, nullable=True)
-
-    __table_args__ = (
-        UniqueConstraint(
-            'dependency_creator',
-            '_source_deployment',
-            '_tenant_id',
-            name='inter_deployment_uc'),
-    )
+    external_source = db.Column(JSONString, nullable=True)
+    external_target = db.Column(JSONString, nullable=True)
 
     @declared_attr
     def source_deployment(cls):

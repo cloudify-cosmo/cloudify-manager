@@ -18,7 +18,7 @@ from contextlib import closing
 
 import psycopg2
 from cloudify.utils import setup_logger
-from integration_tests.framework import utils
+from integration_tests.framework import docker
 from manager_rest.flask_utils import get_postgres_conf
 from manager_rest.storage import db
 
@@ -26,9 +26,9 @@ logger = setup_logger('postgresql', logging.INFO)
 setup_logger('postgresql.trace', logging.INFO)
 
 
-def run_query(query, db_name=None, fetch_results=True):
+def run_query(container_id, query, db_name=None, fetch_results=True):
     conf = get_postgres_conf()
-    manager_ip = utils.get_manager_ip()
+    manager_ip = docker.get_manager_ip(container_id)
 
     db_name = db_name or conf.db_name
     with psycopg2.connect(database=db_name,

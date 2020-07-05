@@ -17,7 +17,7 @@ from .license import License                     # NOQA
 from .tokens import UserTokens                   # NOQA
 from .sites import Sites, SitesName              # NOQA
 from .agents import Agents, AgentsName           # NOQA
-from .executions import ExecutionsCheck          # NOQA
+from .executions import Executions, ExecutionsCheck   # NOQA
 
 from .manager import (                           # NOQA
     SSLConfig,

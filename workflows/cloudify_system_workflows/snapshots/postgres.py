@@ -686,3 +686,10 @@ class Postgres(object):
         """.format(MANAGER_STATUS_REPORTER)
         result = self.run_query(query)
         return result['all'][0][0]
+
+    def get_service_management(self):
+        result = self.run_query("SELECT value "
+                                "FROM config "
+                                "WHERE name = 'service_management';")
+
+        return result['all'][0][0]

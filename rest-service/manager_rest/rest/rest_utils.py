@@ -19,6 +19,7 @@ import pytz
 import copy
 import subprocess
 import dateutil.parser
+from ast import literal_eval
 from string import ascii_letters
 from contextlib import contextmanager
 
@@ -399,8 +400,10 @@ class RecursiveDeploymentDependencies(object):
         for dependency in dependencies:
             if not hasattr(dependency, 'source_deployment_id'):
                 continue
-                # upcoming: handle the case of external dependencies
-            source = dependency.source_deployment_id
+            if dependency.source_deployment_id:
+                source = dependency.source_deployment_id
+            else:
+                source = 'EXTERNAL::{}'.format(dependency.external_source)
             target = dependency.target_deployment_id
             if target:
                 self.add_dependency_to_graph(source, target)
@@ -479,9 +482,17 @@ class RecursiveDeploymentDependencies(object):
                 if u in target_group:
                     # don't add the target itself or its component deployments
                     continue
-                dependencies = self.sm.list(
-                    models.InterDeploymentDependencies,
-                    filters={'source_deployment_id': u})
+                source_metadata = None
+                if u.startswith('EXTERNAL::'):
+                    source_metadata = literal_eval(u.split('::')[1])
+                    dependencies = self.sm.list(
+                        models.InterDeploymentDependencies,
+                        filters={'external_source': source_metadata})
+                else:
+                    dependencies = self.sm.list(
+                        models.InterDeploymentDependencies,
+                        filters={'source_deployment_id': u})
+
                 for dependency in dependencies:
                     if dependency.target_deployment_id != v:
                         continue
@@ -490,11 +501,19 @@ class RecursiveDeploymentDependencies(object):
                         if dep_creator[0] in ['component', 'sharedresource'] \
                         else 'deployment'
                     dep_node = dep_creator[1]
+                    if source_metadata:
+                        deployment_name = '{0} on {1}'.format(
+                            source_metadata['deployment'],
+                            source_metadata['host'])
+                        tenant_name = source_metadata['tenant']
+                    else:
+                        deployment_name = u
+                        tenant_name = dependency.tenant_name
                     dependency_data = {
-                        'deployment': u,
+                        'deployment': deployment_name,
                         'dependency_type': dep_type,
                         'dependent_node': dep_node,
-                        'tenant': dependency.tenant_name
+                        'tenant': tenant_name
                     }
                     if dependency_data not in results:
                         results.append(dependency_data)
