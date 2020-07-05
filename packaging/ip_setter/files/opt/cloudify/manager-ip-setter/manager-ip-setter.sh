@@ -38,29 +38,29 @@ function set_manager_ip() {
 
 function set_manager_ip_supervisord() {
 
-# Stop required services
-/usr/bin/supervisorctl -c /etc/supervisord.conf stop \
-                        cloudify-mgmtworker \
-                        cloudify-restservice \
-                        cloudify-stage \
-                        nginx \
-                        cloudify-rabbitmq \
-                        cloudify-amqp-postgres
+  # Stop required services
+  /usr/bin/supervisorctl -c /etc/supervisord.conf stop \
+                          cloudify-mgmtworker \
+                          cloudify-restservice \
+                          cloudify-stage \
+                          nginx \
+                          cloudify-rabbitmq \
+                          cloudify-amqp-postgres
 
-# Call set manager ip
-set_manager_ip
+  # Call set manager ip
+  set_manager_ip
 
-echo "Update services"
-/usr/bin/supervisorctl -c /etc/supervisord.conf reread
+  echo "Update services"
+  /usr/bin/supervisorctl -c /etc/supervisord.conf reread
 
-echo "Starting All services"
-/usr/bin/supervisorctl -c /etc/supervisord.conf start \
-                        cloudify-mgmtworker \
-                        cloudify-restservice \
-                        cloudify-stage \
-                        nginx \
-                        cloudify-rabbitmq \
-                        cloudify-amqp-postgres
+  echo "Starting All services"
+  /usr/bin/supervisorctl -c /etc/supervisord.conf start \
+                          cloudify-restservice \
+                          cloudify-stage \
+                          nginx \
+                          cloudify-rabbitmq \
+                          cloudify-amqp-postgres \
+                          cloudify-mgmtworker
 
 }
 
@@ -68,13 +68,13 @@ echo "Starting All services"
 touched_file_path="/opt/cloudify/manager-ip-setter/touched"
 
 if [ ! -f ${touched_file_path} ]; then
-  supervisord=$(grep "service_management: supervisord" /etc/cloudify/config.yaml)
-  if [ ! -z "$supervisord" ]; then
-      set_manager_ip_supervisord
-  else
-      set_manager_ip
-  fi
-  touch ${touched_file_path}
+    supervisord=$(grep "service_management: supervisord" /etc/cloudify/config.yaml)
+    if [ ! -z "$supervisord" ]; then
+        set_manager_ip_supervisord
+    else
+        set_manager_ip
+    fi
+    touch ${touched_file_path}
 else
   echo "${touched_file_path} exists - not setting manager ip."
 fi
