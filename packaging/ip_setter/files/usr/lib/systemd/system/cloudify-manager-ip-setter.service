@@ -1,0 +1,15 @@
+[Unit]
+Description=Cloudify Manager IP Setter
+Before=cloudify-mgmtworker.service cloudify-restservice.service cloudify-stage.service nginx.service cloudify-rabbitmq.service cloudify-amqp-postgres.service
+Requires=postgresql-9.5.service
+After=network-online.target postgresql-9.5.service
+
+[Service]
+Type=oneshot
+TimeoutStartSec=0
+User=root
+Group=root
+ExecStart=/opt/cloudify/manager-ip-setter/manager-ip-setter.sh
+
+[Install]
+WantedBy=default.target
