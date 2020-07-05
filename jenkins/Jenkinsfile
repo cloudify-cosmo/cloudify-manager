@@ -1,9 +1,6 @@
 def secrets = [
   [path: 'secret/jenkins/github', engineVersion: 2, secretValues: [
     [envVar: 'PRIVATE_REPO_GITHUB_TOKEN', vaultKey: 'private_token']]],
-  [path: 'secret/jenkins/aws', engineVersion: 2, secretValues: [
-    [envVar: 'AWS_ACCESS_KEY_ID', vaultKey: 'aws_access_key_id'],
-    [envVar: 'AWS_SECRET_ACCESS_KEY', vaultKey: 'aws_secret_access_key']]],
 ]
 
 def configuration = [vaultUrl: "${env.VAULT_URL}",  vaultCredentialId: 'vault-app-role', engineVersion: 2]
@@ -27,17 +24,16 @@ pipeline {
   }
 
   environment {
-    branch = "${env.BRANCH_NAME}"
-    workspace = "${env.WORKSPACE}"
-    project = "cloudify-manager"
-    cloudify_version = getVersion("${env.BRANCH_NAME}").trim()
-    cloudify_package_release = getPackageRelease("${env.BRANCH_NAME}").trim()
+    BRANCH = "${env.BRANCH_NAME}"
+    PROJECT = "cloudify-manager"
+    VERSION = getVersion("${env.BRANCH_NAME}").trim()
+    PRERELEASE = getPreRelease("${env.BRANCH_NAME}").trim()
   }
 
   stages {
     stage('prepare') {
       steps {
-        checkout([$class: 'GitSCM', branches: [[name: "${branch}"]], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: "${project}"]], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '9f6aca75-ebff-4045-9919-b8ec6b5ccf9d', url: 'https://github.com/cloudify-cosmo/cloudify-manager.git']]])
+        repoCheckout('https://github.com/cloudify-cosmo/cloudify-manager.git',"${env.PROJECT}","${env.BRANCH}")
         
         container('python'){
           sh '''
@@ -52,10 +48,10 @@ pipeline {
       parallel {
         stage('test_restservice') {
           steps {
-            sh "mkdir -p ${workspace}/rest && cp -rf ${workspace}/${project}/. ${workspace}/rest"  
+            sh "mkdir -p ${env.WORKSPACE}/rest && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/rest"  
             
             container('python'){
-              dir("${workspace}/rest") {
+              dir("${env.WORKSPACE}/rest") {
                 dir("rest-service"){
                   sh '''
                     ~/venv/bin/pip install -Ur dev-requirements.txt
@@ -103,40 +99,34 @@ pipeline {
               sh "yum install rpmdevtools -y"
 
               echo 'Build Rest Service RPM'
-              buildRpm('~/rpmbuild/SOURCES', 'cloudify-rest-service.spec', "${cloudify_version}", "${cloudify_package_release}")
+              buildRpm('~/rpmbuild/SOURCES', 'cloudify-rest-service.spec', "${env.VERSION}", "${env.PRERELEASE}")
               
               echo 'Build mgmtworker RPM'
-              buildRpm('~/rpmbuild/SOURCES', 'cloudify-mgmtworker.spec', "${cloudify_version}", "${cloudify_package_release}")
+              buildRpm('~/rpmbuild/SOURCES', 'cloudify-mgmtworker.spec', "${env.VERSION}", "${env.PRERELEASE}")
               
               echo 'Build rabbitmq RPM'
-              buildRpm('~/rpmbuild/SOURCES', 'cloudify-rabbitmq.spec', "${cloudify_version}", "${cloudify_package_release}")
+              buildRpm('~/rpmbuild/SOURCES', 'cloudify-rabbitmq.spec', "${env.VERSION}", "${env.PRERELEASE}")
               
               echo 'Build manager-ip-setter rpm'
-              buildRpm('~/rpmbuild/SOURCES', 'cloudify-manager-ip-setter.spec', "${cloudify_version}", "${cloudify_package_release}")
+              buildRpm('~/rpmbuild/SOURCES', 'cloudify-manager-ip-setter.spec', "${env.VERSION}", "${env.PRERELEASE}")
               
               echo 'Build status-reporter rpm'
-              buildRpm('~/rpmbuild/SOURCES', 'cloudify-status-reporter.spec', "${cloudify_version}", "${cloudify_package_release}")
-              
-              echo 'Save Artifacts'
-              sh("mkdir -p ${workspace}/rpm && cp -rf /root/rpmbuild/RPMS/x86_64/. ${workspace}/rpm")
-              sh("cp -rf /root/rpmbuild/RPMS/noarch/. ${workspace}/rpm")
-              dir("${workspace}/rpm") {
-                archiveArtifacts artifacts: '*.rpm', onlyIfSuccessful: true
-              }
+              buildRpm('~/rpmbuild/SOURCES', 'cloudify-status-reporter.spec', "${env.VERSION}", "${env.PRERELEASE}")
             }
-       
-            echo 'Upload artifacts to S3'
-            withVault([configuration: configuration, vaultSecrets: secrets]) {
-              uploadToS3("${workspace}/rpm/", "${cloudify_version}", "${cloudify_package_release}", "${env.project}")
+          }
+          post {
+            success {
+              echo 'Upload artifacts to S3'
+              uploadToReleaseS3("${env.WORKSPACE}/rpm/", "${env.VERSION}", "${env.PRERELEASE}", "${env.PROJECT}", "${env.BRANCH}", "${env.BUILD_NUMBER}")
             }
           }
         }
         stage('flake8') {
           steps {
-            sh "mkdir -p ${workspace}/flake8 && cp -rf ${workspace}/${project}/. ${workspace}/flake8"
+            sh "mkdir -p ${env.WORKSPACE}/flake8 && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/flake8"
 
             container('python'){
-              dir("${workspace}/flake8") {
+              dir("${env.WORKSPACE}/flake8") {
                   sh '''
                     pip install --user flake8
                     python -m flake8
@@ -147,10 +137,10 @@ pipeline {
         }
         stage('py3_compat') {
           steps {
-            sh "mkdir -p ${workspace}/py3_compat && cp -rf ${workspace}/${project}/. ${workspace}/py3_compat"  
+            sh "mkdir -p ${env.WORKSPACE}/py3_compat && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/py3_compat"  
 
             container('python-old'){
-              dir("${workspace}/py3_compat") {
+              dir("${env.WORKSPACE}/py3_compat") {
                 echo 'install futurize and find python3-incompatible code'
                 sh '''#!/bin/bash
                   pip install future --user
@@ -182,10 +172,10 @@ pipeline {
       parallel {
         stage('test_amqp_postgres') {
           steps {
-            sh "mkdir -p ${workspace}/amqp_postgres && cp -rf ${workspace}/${project}/. ${workspace}/amqp_postgres"  
+            sh "mkdir -p ${env.WORKSPACE}/amqp_postgres && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/amqp_postgres"  
 
             container('python'){
-              dir("${workspace}/amqp_postgres") {
+              dir("${env.WORKSPACE}/amqp_postgres") {
                 dir("amqp-postgres"){
                   sh '''
                     ~/venv/bin/pip install -Ur test-requirements.txt
@@ -200,10 +190,10 @@ pipeline {
         }
         stage('test_premium') {
           steps {
-            sh "mkdir -p ${workspace}/premium && cp -rf ${workspace}/${project}/. ${workspace}/premium"  
+            sh "mkdir -p ${env.WORKSPACE}/premium && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/premium"  
 
             container('python'){
-              dir("${workspace}/premium") {
+              dir("${env.WORKSPACE}/premium") {
                 withVault([configuration: configuration, vaultSecrets: secrets]) {
                   sh '''
                     pip install --user tox
@@ -220,7 +210,7 @@ pipeline {
                         https://${env.PRIVATE_REPO_GITHUB_TOKEN}@github.com/cloudify-cosmo/cloudify-premium.git \
                         ~/cloudify-premium
                     }
-                    clone "${branch}" || clone master
+                    clone "${env.BRANCH}" || clone master
                   """
                   
                   dir("rest-service"){
