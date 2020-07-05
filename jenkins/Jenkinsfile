@@ -109,9 +109,6 @@ pipeline {
               
               echo 'Build manager-ip-setter rpm'
               buildRpm('~/rpmbuild/SOURCES', 'cloudify-manager-ip-setter.spec', "${env.VERSION}", "${env.PRERELEASE}")
-              
-              echo 'Build status-reporter rpm'
-              buildRpm('~/rpmbuild/SOURCES', 'cloudify-status-reporter.spec', "${env.VERSION}", "${env.PRERELEASE}")
             }
           }
           post {
