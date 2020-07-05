@@ -8,8 +8,13 @@ function set_manager_ip() {
   echo "Setting manager IP to: ${ip}"
 
   echo "Updating cloudify-mgmtworker.."
-  /usr/bin/sed -i -e "s/REST_HOST=.*/REST_HOST="'"'"${ip}"'"'"/" /etc/sysconfig/cloudify-mgmtworker
-  /usr/bin/sed -i -e "s#MANAGER_FILE_SERVER_URL="'"'"https://.*:53333/resources"'"'"#MANAGER_FILE_SERVER_URL="'"'"https://${ip}:53333/resources"'"'"#" /etc/sysconfig/cloudify-mgmtworker
+  mgtworker_config="/etc/sysconfig/cloudify-mgmtworker"
+  if [ ! -f "$mgtworker_config" ]; then
+      mgtworker_config="/etc/supervisord.d/rabbitmq.cloudify.conf"
+  fi
+
+  /usr/bin/sed -i -e "s/REST_HOST=.*/REST_HOST="'"'"${ip}"'"'"/" $mgtworker_config
+  /usr/bin/sed -i -e "s#MANAGER_FILE_SERVER_URL="'"'"https://.*:53333/resources"'"'"#MANAGER_FILE_SERVER_URL="'"'"https://${ip}:53333/resources"'"'"#" $mgtworker_config
 
   echo "Updating cloudify-manager (rest-service).."
   /usr/bin/sed -i -e "s#amqp_host: '.*'#amqp_host: '${ip}'#" /opt/manager/cloudify-rest.conf
