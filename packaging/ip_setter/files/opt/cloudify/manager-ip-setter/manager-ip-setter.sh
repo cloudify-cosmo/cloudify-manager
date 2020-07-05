@@ -77,4 +77,5 @@ if [ ! -f ${touched_file_path} ]; then
     touch ${touched_file_path}
 else
   echo "${touched_file_path} exists - not setting manager ip."
+  sleep 1
 fi
