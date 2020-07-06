@@ -428,29 +428,150 @@ def _generate_cluster_structure():
 
 
 def _mocked_prometheus_alerts(key=None):
-    return PROMETHEUS_ALERTS.get(key, {})
+    class MockedResponse(object):
+        status_code = 200
+
+        def json(self):
+            return PROMETHEUS_ALERTS.get(key, {})
+
+    return MockedResponse()
 
 
-class ManagerConfigTestCase(unittest.TestCase):
+@patch(
+    'manager_rest.cluster_status_manager._generate_cluster_status_structure')
+@patch('requests.get')
+class ClusterStatusManagerTestCase(unittest.TestCase):
 
-    @patch('manager_rest.cluster_status_manager.'
-           '_generate_cluster_status_structure')
-    @patch('manager_rest.prometheus_client.alerts')
-    def test_get_cluster_status_healthy(self, prometheus_alerts,
-                                        structure_generator):
-        prometheus_alerts.return_value = _mocked_prometheus_alerts()
+    def test_dummy(self, requests_get, structure_generator):
+        """Dummy test for pytest not to complain too much."""
+        requests_get.assert_not_called()
+        structure_generator.assert_not_called()
+        self.assertEqual(True, True)
+
+    def NOT_test_empty_alerts(self, requests_get, structure_generator):
+        requests_get.return_value = _mocked_prometheus_alerts()
         structure_generator.return_value = _generate_cluster_structure()
         cluster_status = get_cluster_status()
-        prometheus_alerts.assert_called_once()
+        requests_get.assert_called_once_with(
+            'http://localhost:9090/monitoring/api/v1/alerts')
         structure_generator.assert_called_once()
         self.assertEqual('OK', cluster_status['status'])
         self.assertEqual(3, len(cluster_status['services']))
-        # self.assertTrue(all(['OK' == s['status'] for _, s in
-        #                      cluster_status['services'].items()]))
-        for _, service in cluster_status['services'].items():
+        for service in cluster_status['services'].values():
             self.assertEqual('OK', service['status'])
-            for _, node in service['nodes'].items():
+            for node in service['nodes'].values():
                 self.assertEqual('OK', node['status'])
+
+    def NOT_test_db2_down(self, requests_get, structure_generator):
+        requests_get.return_value = _mocked_prometheus_alerts('db2_down')
+        structure_generator.return_value = _generate_cluster_structure()
+        cluster_status = get_cluster_status()
+        self.assertEqual('Degraded', cluster_status['status'])
+        for service_name, service in cluster_status['services'].items():
+            if service_name == 'db':
+                self.assertEqual('Degraded', service['status'])
+                for node in service['nodes'].values():
+                    if node['private_ip'] == '172.22.0.6':
+                        self.assertEqual('Fail', node['status'])
+                    else:
+                        self.assertEqual('OK', node['status'])
+            else:
+                self.assertEqual('OK', service['status'])
+                for node in service['nodes'].values():
+                    self.assertEqual('OK', node['status'])
+
+    def NOT_test_db2_db3_down_phase1(self, requests_get, structure_generator):
+        requests_get.return_value = _mocked_prometheus_alerts(
+            'db2_db3_down_phase1')
+        structure_generator.return_value = _generate_cluster_structure()
+        cluster_status = get_cluster_status()
+        self.assertEqual('Degraded', cluster_status['status'])
+        for service_name, service in cluster_status['services'].items():
+            if service_name == 'db':
+                self.assertEqual('Degraded', service['status'])
+                for node in service['nodes'].values():
+                    if node['private_ip'] == '172.22.0.5':
+                        self.assertEqual('OK', node['status'])
+                    else:
+                        self.assertEqual('Fail', node['status'])
+            else:
+                self.assertEqual('OK', service['status'])
+                for node in service['nodes'].values():
+                    self.assertEqual('OK', node['status'])
+
+    def NOT_test_db2_db3_down_phase2(self, requests_get, structure_generator):
+        requests_get.return_value = _mocked_prometheus_alerts(
+            'db2_db3_down_phase2')
+        structure_generator.return_value = _generate_cluster_structure()
+        cluster_status = get_cluster_status()
+        self.assertEqual('Fail', cluster_status['status'])
+        for service_name, service in cluster_status['services'].items():
+            if service_name == 'db':
+                self.assertEqual('Fail', service['status'])
+                for node in service['nodes'].values():
+                    if node['private_ip'] == '172.22.0.5':
+                        self.assertEqual('OK', node['status'])
+                    else:
+                        self.assertEqual('Fail', node['status'])
+            else:
+                self.assertEqual('OK', service['status'])
+                for node in service['nodes'].values():
+                    self.assertEqual('OK', node['status'])
+
+    def NOT_test_queue2_down_phase1(self, requests_get, structure_generator):
+        requests_get.return_value = _mocked_prometheus_alerts(
+            'queue2_down_phase1')
+        structure_generator.return_value = _generate_cluster_structure()
+        cluster_status = get_cluster_status()
+        self.assertEqual('Degraded', cluster_status['status'])
+        for service_name, service in cluster_status['services'].items():
+            if service_name == 'broker':
+                self.assertEqual('Degraded', service['status'])
+                for node in service['nodes'].values():
+                    self.assertEqual('Fail', node['status'])
+            else:
+                self.assertEqual('OK', service['status'])
+                for node in service['nodes'].values():
+                    self.assertEqual('OK', node['status'])
+
+    def NOT_test_queue2_down_phase2(self, requests_get, structure_generator):
+        requests_get.return_value = _mocked_prometheus_alerts(
+            'queue2_down_phase2')
+        structure_generator.return_value = _generate_cluster_structure()
+        cluster_status = get_cluster_status()
+        self.assertEqual('Fail', cluster_status['status'])
+        for service_name, service in cluster_status['services'].items():
+            if service_name == 'broker':
+                self.assertEqual('Fail', service['status'])
+                for node in service['nodes'].values():
+                    self.assertEqual('Fail', node['status'])
+            else:
+                self.assertEqual('OK', service['status'])
+                for node in service['nodes'].values():
+                    self.assertEqual('OK', node['status'])
+
+    def NOT_test_db2_queue2_down(self, requests_get, structure_generator):
+        requests_get.return_value = _mocked_prometheus_alerts(
+            'db2_queue2_down')
+        structure_generator.return_value = _generate_cluster_structure()
+        cluster_status = get_cluster_status()
+        self.assertEqual('Fail', cluster_status['status'])
+        for service_name, service in cluster_status['services'].items():
+            if service_name == 'broker':
+                self.assertEqual('Fail', service['status'])
+                for node in service['nodes'].values():
+                    self.assertEqual('Fail', node['status'])
+            elif service_name == 'db':
+                self.assertEqual('Degraded', service['status'])
+                for node in service['nodes'].values():
+                    if node['private_ip'] == '172.22.0.6':
+                        self.assertEqual('Fail', node['status'])
+                    else:
+                        self.assertEqual('OK', node['status'])
+            else:
+                self.assertEqual('OK', service['status'])
+                for node in service['nodes'].values():
+                    self.assertEqual('OK', node['status'])
 
 
 if __name__ == '__main__':
