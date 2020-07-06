@@ -425,12 +425,12 @@ class BaseTestCase(unittest.TestCase):
 
     def delete_deployment(self,
                           deployment_id,
-                          ignore_live_nodes=False,
+                          force=False,
                           validate=False,
                           client=None):
         client = client or self.client
         result = client.deployments.delete(deployment_id,
-                                           ignore_live_nodes=ignore_live_nodes,
+                                           force=force,
                                            with_logs=True)
         if validate:
             wait_for_deployment_deletion_to_complete(deployment_id,

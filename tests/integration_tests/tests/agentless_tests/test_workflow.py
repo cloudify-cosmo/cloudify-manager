@@ -258,7 +258,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
         self.wait_for_deployment_environment(deployment_id)
 
         self.delete_deployment(deployment_id,
-                               ignore_live_nodes=False,
+                               force=False,
                                validate=True)
         self.client.blueprints.delete(blueprint_id)
 
@@ -301,13 +301,13 @@ class BasicWorkflowsTest(AgentlessTestCase):
         with client_error_check(
                 failer_message='Deleted deployment {0} successfully even '
                                'though it should have had live nodes and the '
-                               'ignore_live_nodes flag was set to False'
+                               'force flag was set to False'
                                .format(deployment_id),
                 expect_in_error_message='live nodes'):
             self.delete_deployment(deployment_id)
 
         # deleting deployment - this time there's no execution running,
-        # and using the ignore_live_nodes parameter to force deletion
+        # and using the force parameter to force deletion
         deleted_deployment_id = self.delete_deployment(
             deployment_id, True, validate=True).id
         self.assertEqual(deployment_id, deleted_deployment_id)

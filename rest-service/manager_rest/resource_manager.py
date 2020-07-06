@@ -506,7 +506,7 @@ class ResourceManager(object):
     def delete_deployment(self,
                           deployment_id,
                           bypass_maintenance=None,
-                          ignore_live_nodes=False,
+                          force=False,
                           delete_db_mode=False,
                           delete_logs=False):
         # Verify deployment exists.
@@ -530,7 +530,7 @@ class ResourceManager(object):
                 deployment.id,
                 excluded_component_creator_id=excluded_id)
         if deployment_dependencies:
-            if ignore_live_nodes:
+            if force:
                 current_app.logger.warning(
                     "Force-deleting deployment {0} despite having the "
                     "following existing dependent installations\n{1}".format(
@@ -553,7 +553,7 @@ class ResourceManager(object):
                     ','.join([execution.id for execution in
                               executions if execution.status not
                               in ExecutionState.END_STATES])))
-        if not ignore_live_nodes:
+        if not force:
             deployment_id_filter = self.create_filters_dict(
                 deployment_id=deployment_id)
             node_instances = self.sm.list(
@@ -1497,7 +1497,7 @@ class ResourceManager(object):
                                                 bypass_maintenance)
         except manager_exceptions.ExistingRunningExecutionError as e:
             self.delete_deployment(deployment_id=deployment_id,
-                                   ignore_live_nodes=True,
+                                   force=True,
                                    delete_db_mode=True)
             raise e
 
