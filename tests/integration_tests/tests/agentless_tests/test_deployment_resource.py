@@ -73,7 +73,7 @@ class DeploymentResourceTest(AgentlessTestCase):
         self.assertEquals(RESOURCE_CONTENT,
                           self.read_manager_file(download_resource_path))
 
-        self.client.deployments.delete(deployment_id, ignore_live_nodes=True)
+        self.client.deployments.delete(deployment_id, force=True)
         wait_for_deployment_deletion_to_complete(deployment_id)
         self.assertRaises(
             sh.ErrorReturnCode,

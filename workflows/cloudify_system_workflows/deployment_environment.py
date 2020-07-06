@@ -95,7 +95,7 @@ def delete(ctx,
 def _send_request_to_delete_deployment_from_db(ctx):
     client = get_rest_client()
     client.deployments.delete(deployment_id=ctx.deployment.id,
-                              ignore_live_nodes=True,
+                              force=True,
                               delete_db_mode=True)
 
 
