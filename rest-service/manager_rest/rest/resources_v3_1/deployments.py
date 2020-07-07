@@ -207,11 +207,11 @@ class InterDeploymentDependencies(SecuredResource):
 
         if (EXTERNAL_SOURCE not in params) and (EXTERNAL_TARGET not in params):
             # assert no cyclic dependencies are created
-            dep_greph = rest_utils.RecursiveDeploymentDependencies(sm)
+            dep_graph = rest_utils.RecursiveDeploymentDependencies(sm)
             source_id = str(params[SOURCE_DEPLOYMENT].id)
             target_id = str(params[TARGET_DEPLOYMENT].id)
-            dep_greph.create_dependencies_graph()
-            dep_greph.assert_no_cyclic_dependencies(source_id, target_id)
+            dep_graph.create_dependencies_graph()
+            dep_graph.assert_no_cyclic_dependencies(source_id, target_id)
 
         deployment_dependency = models.InterDeploymentDependencies(
             id=str(uuid.uuid4()),
