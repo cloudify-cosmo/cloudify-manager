@@ -54,6 +54,7 @@ from manager_rest.utils import (send_event,
 from manager_rest.plugins_update.constants import PLUGIN_UPDATE_WORKFLOW
 from manager_rest.rest.rest_utils import (parse_datetime_string,
                                           RecursiveDeploymentDependencies)
+from manager_rest.deployment_update.constants import STATES as UpdateStates
 
 from manager_rest.storage import (db,
                                   get_storage_manager,
@@ -122,6 +123,17 @@ class ResourceManager(object):
         if status in ExecutionState.END_STATES:
             self.update_inter_deployment_dependencies()
             self.start_queued_executions()
+
+        # If the execution is a deployment update, and the status we're
+        # updating to is one which should cause the update to fail - do it here
+        if execution.workflow_id == 'update' and \
+                status in [ExecutionState.FAILED, ExecutionState.CANCELLED]:
+            dep_update = self.sm.get(models.DeploymentUpdate, None,
+                                     filters={'execution_id': execution_id})
+            if dep_update:
+                dep_update.state = UpdateStates.FAILED
+                self.sm.update(dep_update)
+
         return res
 
     def update_inter_deployment_dependencies(self):
@@ -2289,6 +2301,18 @@ class ResourceManager(object):
                     workflow_id, deployment.id, deployment_dependencies
                 ))
             return
+        # If part of a deployment update - mark the update as failed
+        if workflow_id == 'update':
+            dep_update = self.sm.get(
+                models.DeploymentUpdate,
+                None,
+                filters={'deployment_id': deployment.id,
+                         'state': UpdateStates.UPDATING}
+            )
+            if dep_update:
+                dep_update.state = UpdateStates.FAILED
+                self.sm.update(dep_update)
+
         raise manager_exceptions.DependentExistsError(
             "Can't execute workflow `{0}` on deployment {1} - the "
             "following existing installations depend on it:\n{2}".format(
