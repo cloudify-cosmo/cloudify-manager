@@ -138,6 +138,14 @@ class ResourceManager(object):
             target_deployment_instance = self.sm.get(models.Deployment,
                                                      target_deployment_id)
             dependency.target_deployment = target_deployment_instance
+
+            # check for cyclic dependencies
+            dep_graph = RecursiveDeploymentDependencies(self.sm)
+            source_id = str(dependency.source_deployment_id)
+            target_id = str(target_deployment_id)
+            dep_graph.create_dependencies_graph()
+            dep_graph.assert_no_cyclic_dependencies(source_id, target_id)
+
             self.sm.update(dependency)
 
     @staticmethod
