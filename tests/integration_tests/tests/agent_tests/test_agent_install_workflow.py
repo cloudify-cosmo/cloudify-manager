@@ -38,21 +38,6 @@ class TestWorkflow(AgentTestWithPlugins):
             uninstall_events
         )
 
-    def test_deploy_with_agent_worker_3_2(self):
-        install_events = [
-            "Task succeeded 'worker_installer.tasks.install'",
-            "Task succeeded 'worker_installer.tasks.start'"
-        ]
-        uninstall_events = [
-            "Task succeeded 'worker_installer.tasks.stop'",
-            "Task succeeded 'worker_installer.tasks.uninstall'"
-        ]
-        self._test_deploy_with_agent_worker(
-            'dsl/agent_tests/with_agent_3_2.yaml',
-            install_events,
-            uninstall_events
-        )
-
     def _test_deploy_with_agent_worker(self,
                                        blueprint,
                                        install_events,
