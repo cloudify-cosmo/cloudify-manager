@@ -1,13 +1,14 @@
 import os
 import pytest
 import logging
-from itertools import chain
+import wagon
 
 import integration_tests_plugins
-import fasteners
 
 from collections import namedtuple
+from integration_tests.tests import utils as test_utils
 from integration_tests.framework import docker
+from integration_tests.framework.utils import zip_files
 from integration_tests.framework.amqp_events_printer import EventsPrinter
 from integration_tests.framework.flask_utils import \
     prepare_reset_storage_script, reset_storage
@@ -65,31 +66,10 @@ def _sources_mounts(request):
             yield (src, target_venvs)
 
 
-def _plugin_mounts():
-    """Mounts for local plugins.
-
-    Plugins defined inside the integration-tests directories are
-    mounted to the container mgmtworker env, to be used in test
-    workflows.
-    """
-    venvs = ['/opt/mgmtworker/env', '/opt/agent-template/env']
-    plugins_dir = os.path.dirname(integration_tests_plugins.__file__)
-    fasteners_dir = os.path.dirname(fasteners.__file__)
-
-    for directory in os.listdir(plugins_dir):
-        directory = os.path.join(plugins_dir, directory)
-        if not os.path.isdir(directory):
-            continue
-        yield (directory, venvs)
-
-    yield (fasteners_dir, venvs)
-    yield (plugins_dir, venvs)
-
-
 @pytest.fixture(scope='session')
 def resource_mapping(request):
     resources = []
-    for src, target_venvs in chain(_sources_mounts(request), _plugin_mounts()):
+    for src, target_venvs in _sources_mounts(request):
         for venv in target_venvs:
             dst = os.path.join(
                 venv, 'lib', 'python3.6', 'site-packages',
@@ -148,4 +128,48 @@ def prepare_manager_storage(request, manager_container):
 @pytest.fixture(scope='function')
 def workdir(request, tmpdir):
     request.cls.workdir = tmpdir
-    yield
+
+
+def _make_wagon_fixture(plugin_name):
+    """Prepare a session-scoped fixture that creates a plugin wagon."""
+    @pytest.fixture(scope='session')
+    def _fixture(rest_client, tmp_path_factory):
+        plugins_dir = os.path.dirname(integration_tests_plugins.__file__)
+        wagon_path = wagon.create(
+            os.path.join(plugins_dir, plugin_name),
+            archive_destination_dir=str(tmp_path_factory.mktemp(plugin_name)),
+            force=True
+        )
+        yaml_path = os.path.join(plugins_dir, plugin_name, 'plugin.yaml')
+        with zip_files([wagon_path, yaml_path]) as zip_path:
+            yield zip_path
+    _fixture.__name__ = '{0}_wagon'.format(plugin_name)
+    return _fixture
+
+
+def _make_upload_plugin_fixture(plugin_name):
+    """Prepare a function-scoped fixture that uploads the plugin.
+
+    That fixture will use the scoped-session wagon fixture and upload it.
+    """
+    # use exec to be able to dynamically name the parameter. So that
+    # this fixture uses the right wagon fixture.
+    d = {}
+    exec("""
+def {0}_plugin(rest_client, {0}_wagon):
+    rest_client.plugins.upload({0}_wagon)
+""".format(plugin_name), d)
+    func = d['{0}_plugin'.format(plugin_name)]
+    return pytest.fixture()(func)
+
+
+cloudmock_wagon = _make_wagon_fixture('cloudmock')
+cloudmock_plugin = _make_upload_plugin_fixture('cloudmock')
+testmockoperations_wagon = _make_wagon_fixture('testmockoperations')
+testmockoperations_plugin = _make_upload_plugin_fixture('testmockoperations')
+get_attribute_wagon = _make_wagon_fixture('get_attribute')
+get_attribute_plugin = _make_upload_plugin_fixture('get_attribute')
+dockercompute_wagon = _make_wagon_fixture('dockercompute')
+dockercompute_plugin = _make_upload_plugin_fixture('dockercompute')
+target_aware_mock_wagon = _make_wagon_fixture('target_aware_mock')
+target_aware_mock_plugin = _make_upload_plugin_fixture('target_aware_mock')
