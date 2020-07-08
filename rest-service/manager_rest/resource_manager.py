@@ -324,32 +324,6 @@ class ResourceManager(object):
                 )
         return True
 
-    def install_plugin(self, plugin):
-        """Install the plugin if required.
-
-        The plugin will be installed if the declared platform/distro
-        is the same as the manager's.
-        """
-        if plugin.yaml_file_path():
-            self._validate_plugin_yaml(plugin)
-
-        if not utils.plugin_installable_on_current_platform(plugin):
-            return
-
-        self._execute_system_workflow(
-            wf_id='install_plugin',
-            task_mapping='cloudify_system_workflows.plugins.install',
-            execution_parameters={
-                'plugin': {
-                    'id': plugin.id,
-                    'name': plugin.package_name,
-                    'package_name': plugin.package_name,
-                    'package_version': plugin.package_version
-                }
-            },
-            verify_no_executions=False,
-            timeout=300)
-
     def update_plugins(self, plugins_update, no_changes_required=False):
         """Executes the plugin update workflow.
 
@@ -2460,7 +2434,6 @@ def _create_task_mapping():
     mapping = {
         'create_snapshot': 'cloudify_system_workflows.snapshot.create',
         'restore_snapshot': 'cloudify_system_workflows.snapshot.restore',
-        'install_plugin': 'cloudify_system_workflows.plugins.install',
         'uninstall_plugin': 'cloudify_system_workflows.plugins.uninstall',
         'create_deployment_environment':
             'cloudify_system_workflows.deployment_environment.create',
