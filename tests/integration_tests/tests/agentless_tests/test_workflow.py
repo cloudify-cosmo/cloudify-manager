@@ -31,7 +31,7 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 from cloudify_rest_client.executions import Execution
 
 from integration_tests import AgentlessTestCase
-from integration_tests.framework.utils import timeout, create_zip
+from integration_tests.framework.utils import create_zip
 from integration_tests.tests.utils import get_resource
 
 from manager_rest.constants import DEFAULT_TENANT_NAME
@@ -45,13 +45,11 @@ class BasicWorkflowsTest(AgentlessTestCase):
         deployment, _ = self.deploy_application(
             dsl_path,
             blueprint_id=blueprint_id,
-            timeout_seconds=20
+            timeout_seconds=30
         )
         self.assertEqual(blueprint_id, deployment.blueprint_id)
-        machines = self.get_plugin_data(
-            plugin_name='cloudmock',
-            deployment_id=deployment.id
-        )['machines']
+        ni = self.client.node_instances.list(node_id='webserver_host')[0]
+        machines = ni.runtime_properties['machines']
         self.assertEquals(1, len(machines))
 
         outputs = self.client.deployments.outputs.get(deployment.id).outputs
@@ -65,7 +63,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
         deployment, _ = self.deploy_application(
             dsl_path,
             blueprint_id=blueprint_id,
-            timeout_seconds=20
+            timeout_seconds=30
         )
         execution = self.execute_workflow('restart', deployment.id)
         # event storing is async, allow some time for them to be stored
@@ -90,44 +88,18 @@ class BasicWorkflowsTest(AgentlessTestCase):
 
         self.assertEquals(blueprint_id, deployment.blueprint_id)
 
-        states = self.get_plugin_data(
-            plugin_name='testmockoperations',
-            deployment_id=deployment.id
-        )['state']
-        self.assertEquals(2, len(states))
-        self.assertTrue('host_node' in states[0]['id'])
-        self.assertTrue('db_node' in states[1]['id'])
-
-    @timeout(seconds=120)
-    def test_execute_operation_failure(self):
-        deployment_id = 'd{0}'.format(uuid.uuid4())
-        dsl_path = get_resource("dsl/basic.yaml")
-        try:
-            self.deploy_application(dsl_path, deployment_id=deployment_id)
-            self.fail('expected exception')
-        except Exception as e:
-            if e.message:
-                self.logger.info(e.message)
-            pass
+        host_ni = self.client.node_instances.list(node_id='host_node')[0]
+        db_ni = self.client.node_instances.list(node_id='db_node')[0]
+        self.assertLess(host_ni.runtime_properties['time'],
+                        db_ni.runtime_properties['time'])
 
     @pytest.mark.usefixtures('testmockoperations_plugin')
     def test_cloudify_runtime_properties_injection(self):
         dsl_path = get_resource("dsl/dependencies_order_with_two_nodes.yaml")
         deployment, _ = self.deploy_application(dsl_path)
-        states = self.get_plugin_data(
-            plugin_name='testmockoperations',
-            deployment_id=deployment.id
-        )['state']
-        node_runtime_props = None
-        for k, v in states[1]['capabilities'].items():
-            if 'host_node' in k:
-                node_runtime_props = v
-                break
+        host_ni = self.client.node_instances.list(node_id='host_node')[0]
+        node_runtime_props = host_ni.runtime_properties
         self.assertEquals('value1', node_runtime_props['property1'])
-        self.assertEquals(1,
-                          len(node_runtime_props),
-                          msg='Expected 2 but contains: {0}'.format(
-                              node_runtime_props))
 
     @pytest.mark.usefixtures('testmockoperations_plugin')
     def test_non_existing_operation_exception(self):
@@ -138,27 +110,19 @@ class BasicWorkflowsTest(AgentlessTestCase):
     def test_inject_properties_to_operation(self):
         dsl_path = get_resource("dsl/hardcoded_operation_properties.yaml")
         deployment, _ = self.deploy_application(dsl_path)
-        states = self.get_plugin_data(
-            plugin_name='testmockoperations',
-            deployment_id=deployment.id
-        )['state']
-        invocations = self.get_plugin_data(
-            plugin_name='testmockoperations',
-            deployment_id=deployment.id
-        )['mock_operation_invocation']
+        ni = self.client.node_instances.list(node_id='single_node')[0]
+        invocations = ni.runtime_properties['mock_operation_invocation']
         self.assertEqual(1, len(invocations))
         invocation = invocations[0]
         self.assertEqual('mockpropvalue', invocation['mockprop'])
-        self.assertEqual(states[0]['id'], invocation['id'])
+        self.assertEqual(ni.id, invocation['id'])
 
     @pytest.mark.usefixtures('testmockoperations_plugin')
     def test_start_monitor_node_operation(self):
         dsl_path = get_resource("dsl/hardcoded_operation_properties.yaml")
         deployment, _ = self.deploy_application(dsl_path)
-        invocations = self.get_plugin_data(
-            plugin_name='testmockoperations',
-            deployment_id=deployment.id
-        )['monitoring_operations_invocation']
+        ni = self.client.node_instances.list(node_id='single_node')[0]
+        invocations = ni.runtime_properties['monitoring_operations_invocation']
         self.assertEqual(1, len(invocations))
         invocation = invocations[0]
         self.assertEqual('start_monitor', invocation['operation'])
@@ -167,10 +131,9 @@ class BasicWorkflowsTest(AgentlessTestCase):
     def test_plugin_get_resource(self):
         dsl_path = get_resource("dsl/get_resource_in_plugin.yaml")
         deployment, _ = self.deploy_application(dsl_path)
-        invocations = self.get_plugin_data(
-            plugin_name='testmockoperations',
-            deployment_id=deployment.id
-        )['get_resource_operation_invocation']
+        ni = self.client.node_instances.list(node_id='single_node')[0]
+        invocations = \
+            ni.runtime_properties['get_resource_operation_invocation']
         self.assertEquals(1, len(invocations))
         invocation = invocations[0]
         with open(get_resource("dsl/basic.yaml")) as f:
@@ -399,19 +362,15 @@ class BasicWorkflowsTest(AgentlessTestCase):
             dsl_path,
             blueprint_id=blueprint_id,
             deployment_id=deployment_id)
-        node_states = self.get_plugin_data(
-            plugin_name='testmockoperations',
-            deployment_id=deployment.id
-        )['node_states']
-        self.assertEquals(node_states, [
-            'creating', 'configuring', 'starting'
-        ])
-
         deployment_nodes = self.client.node_instances.list(
             deployment_id=deployment_id)
         self.assertEqual(1, len(deployment_nodes))
         node_id = deployment_nodes[0].id
         node_instance = self.client.node_instances.get(node_id)
+        node_states = node_instance.runtime_properties['node_states']
+        self.assertEquals(node_states, [
+            'creating', 'configuring', 'starting'
+        ])
         self.assertEqual('started', node_instance.state)
 
     def test_deployment_create_workflow_and_source_plugin(self):
@@ -444,9 +403,6 @@ class BasicWorkflowsTest(AgentlessTestCase):
             self._assert_path_exists_on_manager(plugin_path)
 
             self.undeploy_application(deployment.id, is_delete_deployment=True)
-
-            # Retry several times, because uninstalling plugins may take time
-            self._assert_paths_removed(deployment_folder, plugin_path)
 
         finally:
             shutil.rmtree(base_temp_dir)
@@ -490,12 +446,9 @@ class BasicWorkflowsTest(AgentlessTestCase):
         # assertion happens in operation get_attribute.tasks.assertion
         dsl_path = get_resource('dsl/get_attributes.yaml')
         deployment, _ = self.deploy_application(dsl_path)
-        data = self.get_plugin_data(plugin_name='get_attribute',
-                                    deployment_id=deployment.id)
-        invocations = data['invocations']
-        self.assertEqual(2, len([
-            i for i in invocations
-            if i == constants.RELATIONSHIP_INSTANCE]))
-        self.assertEqual(1, len([
-            i for i in invocations
-            if i == constants.NODE_INSTANCE]))
+        ni = self.client.node_instances.list(node_id='node1')[0]
+        invocations = ni.runtime_properties['invocations']
+        self.assertEqual(
+            2, sum(i == constants.RELATIONSHIP_INSTANCE for i in invocations))
+        self.assertEqual(
+            1, sum(i == constants.NODE_INSTANCE for i in invocations))

@@ -83,45 +83,32 @@ class TestWorkflow(AgentTestWithPlugins):
         # Make sure the uninstall events were called (in the correct order)
         self.assertListEqual(uninstall_events, filtered_events)
 
+    @pytest.mark.usefixtures('target_aware_mock_plugin')
     def test_deploy_with_operation_executor_override(self):
-        self.upload_mock_plugin('target-aware-mock')
-
-        self.setup_deployment_id = 'd{0}'.format(uuid.uuid4())
-        self.setup_node_id = 'webserver_host'
+        setup_deployment_id = 'd{0}'.format(uuid.uuid4())
         dsl_path = resource('dsl/agent_tests/operation_executor_override.yaml')
         _, execution_id = self.deploy_application(
             dsl_path,
-            deployment_id=self.setup_deployment_id,
+            deployment_id=setup_deployment_id,
             timeout_seconds=120
         )
 
-        deployment_nodes = self.client.node_instances.list(
-            deployment_id=self.setup_deployment_id
+        webserver_nodes = self.client.node_instances.list(
+            deployment_id=setup_deployment_id,
+            node_id='webserver'
         )
-
-        webserver_nodes = [
-            node for node in deployment_nodes
-            if 'host' not in node.node_id
-        ]
         self.assertEquals(1, len(webserver_nodes))
         webserver_node = webserver_nodes[0]
+
         webserver_host_node = self.client.node_instances.list(
-            deployment_id=self.setup_deployment_id,
+            deployment_id=setup_deployment_id,
             node_id='webserver_host'
         )[0]
-        create_invocation = self.get_plugin_data(
-            plugin_name='target_aware_mock',
-            deployment_id=self.setup_deployment_id
-        )[webserver_node.id]['create']
+
+        create_invocation = webserver_node.runtime_properties['create']
         expected_create_invocation = {'target': webserver_host_node.id}
         self.assertEqual(expected_create_invocation, create_invocation)
 
-        # Calling like this because "start" would be written on the manager
-        # as opposed to the host (hence the "override")
-        start_invocation = BaseTestCase.get_plugin_data(
-            self,
-            plugin_name='target_aware_mock',
-            deployment_id=self.setup_deployment_id
-        )[webserver_node.id]['start']
+        start_invocation = webserver_node.runtime_properties['start']
         expected_start_invocation = {'target': 'cloudify.management'}
         self.assertEqual(expected_start_invocation, start_invocation)
