@@ -15,6 +15,7 @@
 
 import json
 import os
+import subprocess
 import sys
 import tempfile
 import time
@@ -40,14 +41,11 @@ class SSHSetupExceededRetries(Exception):
 
 @operation
 def start(image=IMAGE, label=('marker=test',), install_agent=True, **_):
-    container_id = _start_container(image=image, label=label)
-    _extract_container_ip(container_id)
+    # container_id = _start_container(image=image, label=label)
+    # _extract_container_ip(container_id)
     if install_agent:
-        install_agent_script = ctx.agent.init_script({'user': 'root'})
-        if install_agent_script:
-            _init_script_agent_setup(container_id, install_agent_script)
-        else:
-            _remote_agent_setup(container_id)
+        install_agent_script = ctx.agent.init_script({'user': 'cfyuser'})
+        _init_script_agent_setup(install_agent_script)
     elif ctx.node.properties['agent_config']['install_method'] == \
             AGENT_INSTALL_METHOD_PLUGIN:
         _install_agent_from_download_link()
@@ -55,14 +53,7 @@ def start(image=IMAGE, label=('marker=test',), install_agent=True, **_):
 
 @operation
 def delete(**_):
-    container_id = ctx.instance.runtime_properties.pop('container_id', None)
     ctx.instance.runtime_properties.pop('ip', None)
-    if not container_id:
-        return
-    _delete_container(container_id)
-    key_path = _key_path()
-    if os.path.exists(key_path):
-        os.remove(key_path)
 
 
 def _install_agent_from_download_link(**_):
@@ -78,26 +69,6 @@ def _install_agent_from_download_link(**_):
         _docker_exec(container_id, './agent_installer.sh')
 
 
-def _start_container(image, label):
-    label = list(label or [])
-    docker_conf = _docker_conf()
-    label.append(docker_conf['env_label'])
-    args = ['--privileged', '--detach']
-    for label_item in label:
-        args += ['--label', label_item]
-    args.append(image)
-    container_id = _docker('run', ' '.join(args))
-    ctx.instance.runtime_properties['container_id'] = container_id
-    return container_id
-
-
-def _delete_container(container_id):
-    try:
-        _docker('rm', '-f {0}'.format(container_id))
-    except CommandExecutionException as e:
-        ctx.logger.warn('Failed removing container {0}: '.format(e))
-
-
 def _extract_container_ip(container_id):
     # we expect the container to have a single ip we care about
     # in this case
@@ -108,25 +79,25 @@ def _extract_container_ip(container_id):
     ctx.instance.runtime_properties['ip'] = container_ip
 
 
-def _init_script_agent_setup(container_id, install_agent_script):
-    container_install_agent_script_path = '/root/agent_install_script.sh'
-    with tempfile.NamedTemporaryFile() as f:
+def _init_script_agent_setup(install_agent_script):
+    # container_install_agent_script_path = '/root/agent_install_script.sh'
+    with tempfile.NamedTemporaryFile(mode='w', delete=False) as f:
         f.write(install_agent_script)
-        f.flush()
-        try:
-            _docker('cp', '{0} {1}:{2}'.format(
-                f.name,
-                container_id,
-                container_install_agent_script_path))
-            _docker_exec(container_id, 'chmod +x {0}'.format(
-                container_install_agent_script_path))
-            _docker_exec(container_id, container_install_agent_script_path)
-        except BaseException as e:
-            tpe, value, tb = sys.exc_info()
-            reraise(NonRecoverableError, NonRecoverableError(str(e)), tb)
+    subprocess.check_call(['bash', f.name])
+        # try:
+        #     _docker('cp', '{0} {1}:{2}'.format(
+        #         f.name,
+        #         container_id,
+        #         container_install_agent_script_path))
+        #     _docker_exec(container_id, 'chmod +x {0}'.format(
+        #         container_install_agent_script_path))
+        #     _docker_exec(container_id, container_install_agent_script_path)
+        # except BaseException as e:
+        #     tpe, value, tb = sys.exc_info()
+        #     reraise(NonRecoverableError, NonRecoverableError(str(e)), tb)
 
 
-def _remote_agent_setup(container_id):
+def _remote_agent_setup():
     _wait_for_ssh_setup(container_id)
     _docker_exec(container_id, 'mkdir -p /root/.ssh/')
     _docker_exec(container_id, 'cp {0} /root/.ssh/authorized_keys'.format(
