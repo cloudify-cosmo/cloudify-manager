@@ -20,7 +20,6 @@ from flask_security import current_user
 from sqlalchemy import or_ as sql_or, func, inspect
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from flask import current_app, has_request_context
-from sqlite3 import DatabaseError as SQLiteDBError
 from sqlalchemy.orm.attributes import flag_modified
 
 from cloudify._compat import text_type
@@ -32,12 +31,8 @@ from manager_rest.utils import (is_administrator,
                                 all_tenants_authorization,
                                 validate_global_modification)
 
-try:
-    from psycopg2 import DatabaseError as Psycopg2DBError
-    sql_errors = (SQLAlchemyError, SQLiteDBError, Psycopg2DBError)
-except ImportError:
-    sql_errors = (SQLAlchemyError, SQLiteDBError)
-    Psycopg2DBError = None
+from psycopg2 import DatabaseError as Psycopg2DBError
+sql_errors = (SQLAlchemyError, Psycopg2DBError)
 
 
 def no_autoflush(f):
