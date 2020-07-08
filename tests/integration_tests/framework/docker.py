@@ -202,16 +202,6 @@ def copy_file_from_manager(container_id, source, target):
     ])
 
 
-def install_docker(container_id=None):
-    container_id = container_id or default_container_id
-    return _docl('install-docker', container_id=container_id)
-
-
-def build_agent(container_id=None):
-    container_id = container_id or default_container_id
-    return _docl('build-agent', container_id=container_id)
-
-
 def _set_container_id_and_ip(container_details):
     logger.info('Setting container details')
     global default_container_id

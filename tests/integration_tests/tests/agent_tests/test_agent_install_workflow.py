@@ -30,7 +30,6 @@ class TestWorkflow(AgentTestWithPlugins):
             "Task succeeded 'cloudify_agent.installer.operations.create'"
         ]
         uninstall_events = [
-            "Task succeeded 'cloudify_agent.installer.operations.stop'",
             "Task succeeded 'cloudify_agent.installer.operations.delete'"
         ]
         self._test_deploy_with_agent_worker(

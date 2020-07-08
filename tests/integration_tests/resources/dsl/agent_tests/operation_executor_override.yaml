@@ -9,7 +9,8 @@ node_templates:
     webserver_host:
         type: cloudify.nodes.docker.Compute
         properties:
-            install_agent: true
+          agent_config:
+            install_method: plugin
     webserver:
         type: cloudify.nodes.WebServer
         relationships:

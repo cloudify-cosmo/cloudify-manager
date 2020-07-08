@@ -142,6 +142,69 @@ def prepare_manager_storage(request, manager_container):
                     ['sh', '-c', 'rm -rf {0}/*'.format(directory)])
 
 
+@pytest.fixture(scope='session')
+def allow_agent(manager_container, package_agent):
+    """Allow installing an agent on the manager container.
+
+    Agent installation scripts have all kinds of assumptions about
+    sudo and su, so those need to be available.
+    """
+    docker.execute(manager_container.container_id, [
+        'bash', '-c',
+        "echo 'cfyuser ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/cfyuser"
+    ])
+    docker.execute(manager_container.container_id, [
+        'sed', '-i',
+        "1iauth sufficient pam_succeed_if.so user = cfyuser",
+        '/etc/pam.d/su'
+    ])
+
+
+@pytest.fixture(scope='session')
+def package_agent(manager_container, request):
+    """Repackage the on-manager agent with the provided sources.
+
+    If the user provides sources (--tests-source-root), then
+    not only are those mounted into the mgmtworker and manager,
+    but they will also be put into the agent package that is used in
+    the tests.
+
+    All the sources that are mounted to the mgmtworker env, will
+    also be used for the agent.
+    """
+    # unpack the agent archive, overwrite files, repack it, copy back
+    # to the package location
+    mgmtworker_env = '/opt/mgmtworker/env/lib/python*/site-packages/'
+    agent_package = \
+        '/opt/manager/resources/packages/agents/centos-core-agent.tar.gz'
+    agent_source_path = 'cloudify/env/lib/python*/site-packages/'
+    sources = []
+    for src, target_venvs in _sources_mounts(request):
+        if '/opt/mgmtworker/env' in target_venvs:
+            sources.append(os.path.basename(src))
+    if not sources:
+        return
+    docker.execute(manager_container.container_id, [
+        'bash', '-c', 'cd /tmp && tar xvf {0}'.format(agent_package)
+    ])
+    for package in sources:
+        source = os.path.join(mgmtworker_env, package)
+        target = os.path.join('/tmp', agent_source_path)
+        docker.execute(manager_container.container_id, [
+            'bash', '-c',
+            'cp -fr {0} {1}'.format(source, target)
+        ])
+    docker.execute(manager_container.container_id, [
+        'bash', '-c',
+        'cd /tmp && tar czf centos-core-agent.tar.gz cloudify'
+    ])
+    docker.execute(manager_container.container_id, [
+        'mv', '-f',
+        '/tmp/centos-core-agent.tar.gz',
+        agent_package
+    ])
+
+
 @pytest.fixture(scope='function')
 def workdir(request, tmpdir):
     request.cls.workdir = tmpdir
