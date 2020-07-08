@@ -19,6 +19,7 @@ from flask import request
 from flask_restful.reqparse import Argument
 
 from cloudify._compat import text_type
+from manager_rest import config
 from manager_rest.security import SecuredResource, premium_only
 from manager_rest.rest import rest_utils
 from manager_rest.storage import get_storage_manager, models
@@ -72,9 +73,16 @@ class SSLConfig(SecuredResource):
 
     @staticmethod
     def _set_ssl_state(state):
-        flag = '--ssl-enabled' if state else '--ssl-disabled'
-        check_call(['sudo', '/opt/manager/scripts/set-manager-ssl.py',
-                    flag])
+        ssl_flag = '--ssl-enabled' if state else '--ssl-disabled'
+        check_call(
+            [
+                'sudo',
+                '/opt/manager/scripts/set-manager-ssl.py',
+                ssl_flag,
+                '--service-management',
+                config.instance.service_management
+            ]
+        )
 
 
 # community base classes for the managers and brokers endpoints:

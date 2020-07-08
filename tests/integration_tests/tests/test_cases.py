@@ -237,10 +237,15 @@ class BaseTestCase(unittest.TestCase):
 
     def restart_service(self, service_name):
         """restart service by name in the manager container"""
+        service_command = self.get_service_management_command()
         docker.execute(
-            self.env.container_id, 'systemctl stop {0}'.format(service_name))
+            self.env.container_id,
+            '{0} stop {1}'.format(service_command, service_name)
+        )
         docker.execute(
-            self.env.container_id, 'systemctl start {0}'.format(service_name))
+            self.env.container_id,
+            '{0} start {1}'.format(service_command, service_name)
+        )
 
     @staticmethod
     def get_docker_host():
@@ -591,6 +596,17 @@ class BaseTestCase(unittest.TestCase):
             client=self.client,
             timeout_seconds=60
         )
+
+    def get_config(self, name=None, scope=None, client=None):
+        client = client or self.client
+        return client.manager.get_config(name=name, scope=scope)
+
+    def get_service_management_command(self):
+        config = self.get_config('service_management')
+        service_command = 'systemctl'
+        if config.value == 'supervisord':
+            service_command = 'supervisorctl -c /etc/supervisord.conf'
+        return service_command
 
 
 class AgentlessTestCase(BaseTestCase):

@@ -38,11 +38,17 @@ class TestResumeMgmtworker(AgentTestCase):
 
     def _stop_mgmtworker(self):
         self.logger.info('Stopping mgmtworker')
-        self.execute_on_manager('systemctl stop cloudify-mgmtworker')
+        service_command = self.get_service_management_command()
+        self.execute_on_manager(
+            '{0} stop cloudify-mgmtworker'.format(service_command)
+        )
 
     def _start_mgmtworker(self):
-        self.logger.info('Restarting mgmtworker')
-        self.execute_on_manager('systemctl start cloudify-mgmtworker')
+        self.logger.info('Starting mgmtworker')
+        service_command = self.get_service_management_command()
+        self.execute_on_manager(
+            '{0} start cloudify-mgmtworker'.format(service_command)
+        )
 
     def test_resume_agent_op(self):
         # start a workflow

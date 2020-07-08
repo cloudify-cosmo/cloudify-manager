@@ -26,6 +26,11 @@ HTTPS_PATH = '/etc/nginx/conf.d/https-external-rest-server.cloudify'
 parser = argparse.ArgumentParser()
 parser.add_argument('--ssl-enabled', dest='ssl', action='store_true')
 parser.add_argument('--ssl-disabled', dest='ssl', action='store_false')
+parser.add_argument(
+    '--service-management',
+    dest='service_management',
+    default='systemd',
+)
 parser.set_defaults(ssl=True)
 
 
@@ -40,17 +45,23 @@ def set_nginx_ssl(enabled):
         f.write(config)
 
 
-def restart_nginx():
+def restart_nginx(service_management):
     # wait one second before restarting nginx so that the caller has a chance
     # to clean up (this is most likely to be called from the REST service)
-    subprocess.check_call([
-        '/usr/bin/systemd-run', '--on-active=1s',
-        '--timer-property=AccuracySec=100ms',
-        '/usr/bin/systemctl', 'restart', 'nginx'
-    ])
+    if service_management == 'supervisord':
+        subprocess.check_call([
+            '/usr/bin/supervisorctl', '-c',
+            '/etc/supervisord.conf', 'start', 'wait_on_restart'
+        ])
+    else:
+        subprocess.check_call([
+            '/usr/bin/systemd-run', '--on-active=1s',
+            '--timer-property=AccuracySec=100ms',
+            '/usr/bin/systemctl', 'restart', 'nginx'
+        ])
 
 
 if __name__ == '__main__':
     args = parser.parse_args()
     set_nginx_ssl(args.ssl)
-    restart_nginx()
+    restart_nginx(args.service_management)

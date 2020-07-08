@@ -8,8 +8,13 @@ function set_manager_ip() {
   echo "Setting manager IP to: ${ip}"
 
   echo "Updating cloudify-mgmtworker.."
-  /usr/bin/sed -i -e "s/REST_HOST=.*/REST_HOST="'"'"${ip}"'"'"/" /etc/sysconfig/cloudify-mgmtworker
-  /usr/bin/sed -i -e "s#MANAGER_FILE_SERVER_URL="'"'"https://.*:53333/resources"'"'"#MANAGER_FILE_SERVER_URL="'"'"https://${ip}:53333/resources"'"'"#" /etc/sysconfig/cloudify-mgmtworker
+  mgtworker_config="/etc/sysconfig/cloudify-mgmtworker"
+  if [ ! -f "$mgtworker_config" ]; then
+      mgtworker_config="/etc/supervisord.d/rabbitmq.cloudify.conf"
+  fi
+
+  /usr/bin/sed -i -e "s/REST_HOST=.*/REST_HOST="'"'"${ip}"'"'"/" $mgtworker_config
+  /usr/bin/sed -i -e "s#MANAGER_FILE_SERVER_URL="'"'"https://.*:53333/resources"'"'"#MANAGER_FILE_SERVER_URL="'"'"https://${ip}:53333/resources"'"'"#" $mgtworker_config
 
   echo "Updating cloudify-manager (rest-service).."
   /usr/bin/sed -i -e "s#amqp_host: '.*'#amqp_host: '${ip}'#" /opt/manager/cloudify-rest.conf
@@ -27,19 +32,49 @@ function set_manager_ip() {
   echo "Creating internal SSL certificates.."
   cfy_manager create-internal-certs --manager-hostname cloudify
 
-  if [[ -d "/opt/status-reporter" ]]; then
-    echo "Updating status reporter initial IP..."
-    cfy_manager status-reporter configure --managers-ip ${ip} --no-restart
-  fi
-
   echo "Done!"
 }
+
+
+function set_manager_ip_supervisord() {
+
+  # Stop required services
+  /usr/bin/supervisorctl -c /etc/supervisord.conf stop \
+                          cloudify-mgmtworker \
+                          cloudify-restservice \
+                          cloudify-stage \
+                          nginx \
+                          cloudify-rabbitmq \
+                          cloudify-amqp-postgres
+
+
+  set_manager_ip
+
+  echo "Update services"
+  /usr/bin/supervisorctl -c /etc/supervisord.conf reread
+
+  echo "Starting All services"
+  /usr/bin/supervisorctl -c /etc/supervisord.conf restart \
+                          cloudify-restservice \
+                          cloudify-stage \
+                          nginx \
+                          cloudify-rabbitmq \
+                          cloudify-amqp-postgres \
+                          cloudify-mgmtworker
+
+}
+
 
 touched_file_path="/opt/cloudify/manager-ip-setter/touched"
 
 if [ ! -f ${touched_file_path} ]; then
-  set_manager_ip
-  touch ${touched_file_path}
+    supervisord=$(grep "service_management: supervisord" /etc/cloudify/config.yaml)
+    if [ ! -z "$supervisord" ]; then
+        set_manager_ip_supervisord
+    else
+        set_manager_ip
+    fi
+    touch ${touched_file_path}
 else
   echo "${touched_file_path} exists - not setting manager ip."
 fi
