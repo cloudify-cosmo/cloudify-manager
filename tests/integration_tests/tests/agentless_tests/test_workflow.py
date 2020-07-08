@@ -18,6 +18,7 @@ import re
 import time
 import uuid
 import shutil
+import pytest
 import tarfile
 import tempfile
 import subprocess
@@ -37,6 +38,7 @@ from manager_rest.constants import DEFAULT_TENANT_NAME
 
 
 class BasicWorkflowsTest(AgentlessTestCase):
+    @pytest.mark.usefixtures('cloudmock_plugin')
     def test_execute_operation(self):
         dsl_path = get_resource('dsl/basic.yaml')
         blueprint_id = self.id()
@@ -55,6 +57,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
         outputs = self.client.deployments.outputs.get(deployment.id).outputs
         self.assertEquals(outputs['ip_address'], '')
 
+    @pytest.mark.usefixtures('cloudmock_plugin')
     def test_restart_workflow(self):
         """Check that the restart workflow runs stop, and then start"""
         dsl_path = get_resource('dsl/basic.yaml')
@@ -78,6 +81,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
         self.assertIn('stopping machine', seen_logs[0])
         self.assertIn('starting machine', seen_logs[1])
 
+    @pytest.mark.usefixtures('testmockoperations_plugin')
     def test_dependencies_order_with_two_nodes(self):
         dsl_path = get_resource("dsl/dependencies_order_with_two_nodes.yaml")
         blueprint_id = self.id()
@@ -106,6 +110,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
                 self.logger.info(e.message)
             pass
 
+    @pytest.mark.usefixtures('testmockoperations_plugin')
     def test_cloudify_runtime_properties_injection(self):
         dsl_path = get_resource("dsl/dependencies_order_with_two_nodes.yaml")
         deployment, _ = self.deploy_application(dsl_path)
@@ -124,10 +129,12 @@ class BasicWorkflowsTest(AgentlessTestCase):
                           msg='Expected 2 but contains: {0}'.format(
                               node_runtime_props))
 
+    @pytest.mark.usefixtures('testmockoperations_plugin')
     def test_non_existing_operation_exception(self):
         dsl_path = get_resource("dsl/wrong_operation_name.yaml")
         self.assertRaises(RuntimeError, self.deploy_application, dsl_path)
 
+    @pytest.mark.usefixtures('testmockoperations_plugin')
     def test_inject_properties_to_operation(self):
         dsl_path = get_resource("dsl/hardcoded_operation_properties.yaml")
         deployment, _ = self.deploy_application(dsl_path)
@@ -144,6 +151,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
         self.assertEqual('mockpropvalue', invocation['mockprop'])
         self.assertEqual(states[0]['id'], invocation['id'])
 
+    @pytest.mark.usefixtures('testmockoperations_plugin')
     def test_start_monitor_node_operation(self):
         dsl_path = get_resource("dsl/hardcoded_operation_properties.yaml")
         deployment, _ = self.deploy_application(dsl_path)
@@ -155,6 +163,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
         invocation = invocations[0]
         self.assertEqual('start_monitor', invocation['operation'])
 
+    @pytest.mark.usefixtures('testmockoperations_plugin')
     def test_plugin_get_resource(self):
         dsl_path = get_resource("dsl/get_resource_in_plugin.yaml")
         deployment, _ = self.deploy_application(dsl_path)
@@ -176,6 +185,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
         self.assertEquals(invocation['custom_filepath'],
                           invocation['res2_path'])
 
+    @pytest.mark.usefixtures('cloudmock_plugin')
     def test_get_blueprint(self):
         dsl_path = get_resource("dsl/basic.yaml")
         blueprint_id = 'b{0}'.format(uuid.uuid4())
@@ -187,6 +197,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
         self.assertEqual(blueprint_id, blueprint.id)
         self.assertTrue(len(blueprint['plan']) > 0)
 
+    @pytest.mark.usefixtures('cloudmock_plugin')
     def test_publish_tar_archive(self):
         archive_location = self._make_archive_file("dsl/basic.yaml")
 
@@ -205,6 +216,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
             tar.add(blueprint_dir, arcname=arcname)
         return archive_location
 
+    @pytest.mark.usefixtures('cloudmock_plugin')
     def test_delete_blueprint(self):
         dsl_path = get_resource("dsl/basic.yaml")
         blueprint_id = self.client.blueprints.upload(
@@ -231,6 +243,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
         except CloudifyClientError:
             pass
 
+    @pytest.mark.usefixtures('cloudmock_plugin')
     def test_delete_deployment(self):
         dsl_path = get_resource("dsl/basic.yaml")
         blueprint_id = self.id()
@@ -353,6 +366,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
                 expect_in_error_message='not found'):
             self.delete_deployment(deployment_id)
 
+    @pytest.mark.usefixtures('testmockoperations_plugin')
     def test_node_state_uninitialized(self):
         dsl_path = get_resource('dsl/node_states.yaml')
         _id = uuid.uuid1()
@@ -375,6 +389,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
         node_instance = self.client.node_instances.get(node_id)
         self.assertEqual('uninitialized', node_instance.state)
 
+    @pytest.mark.usefixtures('testmockoperations_plugin')
     def test_node_states(self):
         dsl_path = get_resource('dsl/node_states.yaml')
         _id = uuid.uuid1()
@@ -469,6 +484,8 @@ class BasicWorkflowsTest(AgentlessTestCase):
         flag = '-d' if directory else '-f'
         self.execute_on_manager('test {0} {1}'.format(flag, path))
 
+    @pytest.mark.usefixtures('testmockoperations_plugin')
+    @pytest.mark.usefixtures('get_attribute_plugin')
     def test_get_attribute(self):
         # assertion happens in operation get_attribute.tasks.assertion
         dsl_path = get_resource('dsl/get_attributes.yaml')

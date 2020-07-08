@@ -14,10 +14,14 @@
 #    * limitations under the License.
 
 import uuid
-from integration_tests import AgentTestWithPlugins, BaseTestCase
+import pytest
+
+from integration_tests import AgentTestWithPlugins
 from integration_tests.tests.utils import get_resource as resource
 
 
+@pytest.mark.usefixtures('dockercompute_plugin')
+@pytest.mark.usefixtures('allow_agent')
 class TestWorkflow(AgentTestWithPlugins):
     def test_deploy_with_agent_worker(self):
         # In 4.2, the default (remote) agent installation path only requires
