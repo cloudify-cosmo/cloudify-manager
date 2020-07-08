@@ -137,7 +137,7 @@ def init(expose=None, resources=None):
 
 
 def run_manager(image, resource_mapping=None):
-    with tempfile.NamedTemporaryFile(delete=False) as conf:
+    with tempfile.NamedTemporaryFile(delete=False, mode='w') as conf:
         conf.write("""
 manager:
     security:
@@ -157,7 +157,7 @@ sanity:
         for src, dst in resource_mapping:
             command += ['-v', '{0}:{1}:ro'.format(src, dst)]
     command += [image]
-    manager_id = subprocess.check_output(command).strip()
+    manager_id = subprocess.check_output(command).decode('utf-8').strip()
     execute(manager_id, ['cfy_manager', 'wait-for-starter'])
     return manager_id
 
@@ -177,7 +177,7 @@ def clean(container_id):
 def read_file(container_id, file_path, no_strip=False):
     result = subprocess.check_output([
         'docker', 'exec', container_id, 'cat', file_path
-    ])
+    ]).decode('utf-8')
     if not no_strip:
         result = result.strip()
     return result
@@ -186,7 +186,8 @@ def read_file(container_id, file_path, no_strip=False):
 def execute(container_id, command):
     if not isinstance(command, list):
         command = shlex.split(command)
-    return subprocess.check_output(['docker', 'exec', container_id] + command)
+    return subprocess.check_output(
+        ['docker', 'exec', container_id] + command).decode('utf-8')
 
 
 def copy_file_to_manager(container_id, source, target):
@@ -225,4 +226,4 @@ def get_manager_ip(container_id):
         'docker', 'inspect',
         '--format={{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}',
         container_id
-    ]).strip()
+    ]).decode('utf-8').strip()
