@@ -78,15 +78,15 @@ def resource_mapping(request):
     yield resources
 
 
-@pytest.fixture(scope='class')
+@pytest.fixture(scope='session')
 def manager_container(request, resource_mapping):
     image_name = request.config.getoption("--image-name")
     keep_container = request.config.getoption("--keep-container")
     container_id = docker.run_manager(
         image_name, resource_mapping=resource_mapping)
+    docker.upload_mock_license(container_id)
     container_ip = docker.get_manager_ip(container_id)
     container = Env(container_id, container_ip)
-    request.cls.env = container
     prepare_reset_storage_script(container_id)
     amqp_events_printer_thread = EventsPrinter(
         docker.get_manager_ip(container_id))
@@ -96,6 +96,24 @@ def manager_container(request, resource_mapping):
     finally:
         if not keep_container:
             docker.clean(container_id)
+
+
+@pytest.fixture(scope='session')
+def rest_client(manager_container):
+    client = test_utils.create_rest_client(host=manager_container.container_ip)
+    yield client
+
+
+@pytest.fixture(scope='class')
+def manager_class_fixtures(request, manager_container, rest_client):
+    """Just a hack to put some fixtures on the test class.
+
+    This is for compatibility with class-based tests, who don't have
+    a better way of using fixtures. Eventually, those old tests will
+    transition to be function-based, and they won't need to use this.
+    """
+    request.cls.env = manager_container
+    request.cls.client = rest_client
 
 
 @pytest.fixture(autouse=True)
@@ -111,7 +129,6 @@ def prepare_manager_storage(request, manager_container):
         '/opt/manager/resources/blueprints',
         '/opt/manager/resources/uploaded-blueprints'
     ]
-    docker.upload_mock_license(container_id)
     try:
         yield
     finally:

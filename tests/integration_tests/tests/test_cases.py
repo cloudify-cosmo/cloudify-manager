@@ -64,7 +64,7 @@ from cloudify_rest_client.executions import Execution
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 
-@pytest.mark.usefixtures("manager_container")
+@pytest.mark.usefixtures("manager_class_fixtures")
 @pytest.mark.usefixtures("workdir")
 class BaseTestCase(unittest.TestCase):
     """
@@ -73,7 +73,6 @@ class BaseTestCase(unittest.TestCase):
     def setUp(self):
         self.cfy = test_utils.get_cfy()
         self._set_tests_framework_logger()
-        self.client = None
 
     @classmethod
     def _update_config(cls, new_config):
@@ -89,9 +88,6 @@ class BaseTestCase(unittest.TestCase):
                 owner=CLOUDIFY_USER
             )
         cls.restart_service('cloudify-restservice')
-
-    def _setup_running_manager_attributes(self):
-        self.client = test_utils.create_rest_client(host=self.env.container_ip)
 
     def _save_manager_logs_after_test(self, purge=True):
         self.logger.info("Attempting to save the manager's logs...")
@@ -596,7 +592,6 @@ class BaseTestCase(unittest.TestCase):
 class AgentlessTestCase(BaseTestCase):
     def setUp(self):
         super(AgentlessTestCase, self).setUp()
-        self._setup_running_manager_attributes()
         self.addCleanup(self._save_manager_logs_after_test)
 
     def _get_latest_execution(self, workflow_id):
@@ -617,11 +612,6 @@ class AgentlessTestCase(BaseTestCase):
 
 
 class BaseAgentTestCase(BaseTestCase):
-    def tearDown(self):
-        self.logger.info('Removing leftover test containers')
-        docker.clean(self.env.container_id)
-        super(BaseAgentTestCase, self).tearDown()
-
     def read_host_file(self, file_path, deployment_id, node_id):
         """
         Read a file from a dockercompute node instance container filesystem.
@@ -702,7 +692,6 @@ class AgentTestCase(BaseAgentTestCase):
 
     def setUp(self):
         super(AgentTestCase, self).setUp()
-        self._setup_running_manager_attributes()
         self.addCleanup(self._save_manager_logs_after_test)
 
 
