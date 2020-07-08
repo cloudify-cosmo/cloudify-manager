@@ -14,6 +14,7 @@
 #    * limitations under the License.
 
 import time
+import pytest
 from contextlib import contextmanager
 
 from cloudify.workflows import tasks
@@ -27,6 +28,7 @@ from integration_tests.tests.utils import (
 )
 
 
+@pytest.mark.usefixtures('cloudmock_plugin')
 class TestResumeMgmtworker(AgentlessTestCase):
     @contextmanager
     def _set_retries(self, retries, retry_interval=0):

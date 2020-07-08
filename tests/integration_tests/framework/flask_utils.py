@@ -47,7 +47,7 @@ CONFIG_PATH = '/tmp/reset_storage_config.json'
 def prepare_reset_storage_script(container_id):
     reset_script = get_resource('scripts/reset_storage.py')
     copy_file_to_manager(container_id, reset_script, SCRIPT_PATH)
-    with tempfile.NamedTemporaryFile(delete=False) as f:
+    with tempfile.NamedTemporaryFile(delete=False, mode='w') as f:
         json.dump({
             'config': {
                 '': constants.CONFIG_FILE_LOCATION,

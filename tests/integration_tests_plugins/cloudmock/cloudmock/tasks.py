@@ -18,8 +18,6 @@ from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
 from cloudify import ctx
 
-from integration_tests_plugins.utils import update_storage
-
 
 RUNNING = 'running'
 NOT_RUNNING = 'not_running'
@@ -103,31 +101,30 @@ def mark_instance(ctx, **kwargs):
 
 
 @operation
-def provision(**kwargs):
-    with update_storage(ctx) as data:
-        machines = data.get('machines', {})
-        if ctx.instance.id in machines:
-            raise NonRecoverableError('machine with id [{0}] already exists'
-                                      .format(ctx.instance.id))
-        if ctx.node.properties.get('test_ip'):
-            ctx.instance.runtime_properties['ip'] = \
-                ctx.node.properties['test_ip']
-        machines[ctx.instance.id] = NOT_RUNNING
-        data['machines'] = machines
+def provision(ctx, **kwargs):
+    machines = ctx.instance.runtime_properties.get('machines', {})
+    if ctx.instance.id in machines:
+        raise NonRecoverableError('machine with id [{0}] already exists'
+                                  .format(ctx.instance.id))
+    if ctx.node.properties.get('test_ip'):
+        ctx.instance.runtime_properties['ip'] = \
+            ctx.node.properties['test_ip']
+    machines[ctx.instance.id] = NOT_RUNNING
+    ctx.instance.runtime_properties['machines'] = machines
 
 
 @operation
 def start(**kwargs):
-    with update_storage(ctx) as data:
-        machines = data.get('machines', {})
-        ctx.send_event('starting machine event')
-        ctx.logger.info('cloudmock start: [node_id={0}, machines={1}]'
-                        .format(ctx.instance.id, machines))
-        if ctx.instance.id not in machines:
-            raise NonRecoverableError('machine with id [{0}] does not exist'
-                                      .format(ctx.instance.id))
-        machines[ctx.instance.id] = RUNNING
-        ctx.instance.runtime_properties['id'] = ctx.instance.id
+    machines = ctx.instance.runtime_properties.get('machines', {})
+    ctx.send_event('starting machine event')
+    ctx.logger.info('cloudmock start: [node_id={0}, machines={1}]'
+                    .format(ctx.instance.id, machines))
+    if ctx.instance.id not in machines:
+        raise NonRecoverableError('machine with id [{0}] does not exist'
+                                  .format(ctx.instance.id))
+    machines[ctx.instance.id] = RUNNING
+    ctx.instance.runtime_properties['id'] = ctx.instance.id
+    ctx.instance.runtime_properties['machines'] = machines
 
 
 @operation
@@ -141,29 +138,31 @@ def stop_error(**kwargs):
 
 
 @operation
-def get_state(**kwargs):
-    with update_storage(ctx) as data:
-        return data['machines'][ctx.instance.id] == RUNNING
+def get_state(ctx, **kwargs):
+    machines = ctx.instance.runtime_properties['machines']
+    return machines[ctx.instance.id] == RUNNING
 
 
 @operation
 def stop(**kwargs):
-    with update_storage(ctx) as data:
-        ctx.logger.info('stopping machine: {0}'.format(ctx.instance.id))
-        if ctx.instance.id not in data['machines']:
-            raise RuntimeError('machine with id [{0}] does not exist'
-                               .format(ctx.instance.id))
-        data['machines'][ctx.instance.id] = NOT_RUNNING
+    machines = ctx.instance.runtime_properties.get('machines', {})
+    ctx.logger.info('stopping machine: {0}'.format(ctx.instance.id))
+    if ctx.instance.id not in machines:
+        raise RuntimeError('machine with id [{0}] does not exist'
+                           .format(ctx.instance.id))
+    machines[ctx.instance.id] = NOT_RUNNING
+    ctx.instance.runtime_properties['machines'] = machines
 
 
 @operation
 def terminate(**kwargs):
-    with update_storage(ctx) as data:
-        ctx.logger.info('terminating machine: {0}'.format(ctx.instance.id))
-        if ctx.instance.id not in data['machines']:
-            raise RuntimeError('machine with id [{0}] does not exist'
-                               .format(ctx.instance.id))
-        del data['machines'][ctx.instance.id]
+    machines = ctx.instance.runtime_properties.get('machines', {})
+    ctx.logger.info('terminating machine: {0}'.format(ctx.instance.id))
+    if ctx.instance.id not in machines:
+        raise RuntimeError('machine with id [{0}] does not exist'
+                           .format(ctx.instance.id))
+    del machines[ctx.instance.id]
+    ctx.instance.runtime_properties['machines'] = machines
 
 
 @operation

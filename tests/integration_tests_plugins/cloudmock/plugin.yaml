@@ -1,5 +1,4 @@
 plugins:
     cloudmock:
         executor: central_deployment_agent
-        source: cloudmock
-        install: false
+        package_name: cloudmock

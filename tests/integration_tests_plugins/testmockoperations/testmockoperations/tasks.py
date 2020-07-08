@@ -24,31 +24,23 @@ from cloudify.decorators import operation
 from cloudify.manager import get_node_instance_ip, get_rest_client
 from cloudify.exceptions import RecoverableError, NonRecoverableError
 
-from integration_tests_plugins.utils import update_storage
-
 
 @operation
 def make_reachable(ctx, **kwargs):
-    state_info = {
-        'id': ctx.instance.id,
-        'time': time.time(),
-        'capabilities': ctx.capabilities.get_all()
-    }
-    ctx.logger.info('Appending to state [node_id={0}, state={1}]'
-                    .format(ctx.instance.id, state_info))
-    with update_storage(ctx) as data:
-        data['state'] = data.get('state', [])
-        data['state'].append(state_info)
+    ctx.logger.info('Appending to state [node_id=%s]', ctx.instance.id)
+    ctx.instance.runtime_properties['time'] = time.time()
+    ctx.instance.runtime_properties['capabilities'] = \
+        ctx.capabilities.get_all()
 
 
 @operation
 def make_unreachable(ctx, **kwargs):
-    with update_storage(ctx) as data:
-        data['unreachable_call_order'] = data.get('unreachable_call_order', [])
-        data['unreachable_call_order'].append({
-            'id': ctx.instance.id,
-            'time': time.time()
-        })
+    order = ctx.instance.runtime_properties.get('unreachable_call_order', [])
+    order.append({
+        'id': ctx.instance.id,
+        'time': time.time()
+    })
+    ctx.instance.runtime_properties['unreachable_call_order'] = order
 
 
 @operation
@@ -70,49 +62,44 @@ def del_property(ctx, **kwargs):
 
 @operation
 def touch(ctx, **kwargs):
-    with update_storage(ctx) as data:
-        data['touched_time'] = data.get('touched_time', None)
-        data['touched_time'] = time.time()
+    ctx.instance.runtime_properties['touched_time'] = time.time()
 
 
 @operation
 def start_monitor(ctx, **kwargs):
-    with update_storage(ctx) as data:
-        data['monitoring_operations_invocation'] = data.get(
-            'monitoring_operations_invocation', []
-        )
-        data['monitoring_operations_invocation'].append({
-            'id': ctx.instance.id,
-            'operation': 'start_monitor'
-        })
+    invocations = ctx.instance.runtime_properties.get(
+        'monitoring_operations_invocation', [])
+    invocations.append({
+        'id': ctx.instance.id,
+        'operation': 'start_monitor'
+    })
+    ctx.instance.runtime_properties['monitoring_operations_invocation'] = \
+        invocations
 
 
 @operation
 def stop_monitor(ctx, **kwargs):
-    with update_storage(ctx) as data:
-        data['monitoring_operations_invocation'] = data.get(
-            'monitoring_operations_invocation', []
-        )
-        data['monitoring_operations_invocation'].append({
-            'id': ctx.instance.id,
-            'operation': 'stop_monitor'
-        })
+    invocations = ctx.instance.runtime_properties.get(
+        'monitoring_operations_invocation', [])
+    invocations.append({
+        'id': ctx.instance.id,
+        'operation': 'stop_monitor'
+    })
+    ctx.instance.runtime_properties['monitoring_operations_invocation'] = \
+        invocations
 
 
 @operation
 def mock_operation(ctx, **kwargs):
     mockprop = get_prop('mockprop', ctx, kwargs)
-    with update_storage(ctx) as data:
-        data['mock_operation_invocation'] = data.get(
-            'mock_operation_invocation', []
-        )
-        data['mock_operation_invocation'].append({
-            'id': ctx.instance.id,
-            'mockprop': mockprop,
-            'properties': {
-                key: value for (key, value) in ctx.node.properties.items()
-            }
-        })
+    invocations = ctx.instance.runtime_properties.get(
+        'mock_operation_invocation', [])
+    invocations.append({
+        'id': ctx.instance.id,
+        'mockprop': mockprop,
+        'properties': ctx.node.properties.copy()
+    })
+    ctx.instance.runtime_properties['mock_operation_invocation'] = invocations
 
 
 @operation
@@ -122,34 +109,35 @@ def mock_operation_from_custom_workflow(ctx, key, value, **kwargs):
 
 @operation
 def saving_multiple_params_op(ctx, params, **_):
-    with update_storage(ctx) as data:
-        invocations = data['mock_operation_invocation'] = data.get(
-            'mock_operation_invocation', []
-        )
-        invocations.append(params)
+    invocations = ctx.instance.runtime_properties.get(
+        'mock_operation_invocation', [])
+    invocations.append(params)
+    ctx.instance.runtime_properties['mock_operation_invocation'] = invocations
 
 
 def saving_operation_info(ctx, op, main_node, second_node=None, **_):
-    with update_storage(ctx) as data:
-        invocations = data.setdefault('mock_operation_invocation', [])
-        num = data.get('num', 0) + 1
-        data['num'] = num
+    invocations = ctx.instance.runtime_properties.get(
+        'mock_operation_invocation', [])
+    num = ctx.instance.runtime_properties.get('num', 0) + 1
 
-        op_info = {'operation': op, 'num': num}
-        if second_node is None:
-            op_info.update({
-                'node': main_node.node.name,
-                'id': main_node.instance.id,
-                'target_ids': [r.target.instance.id
-                               for r in main_node.instance.relationships]
-            })
-        else:
-            op_info.update({
-                'id': main_node.instance.id,
-                'source': main_node.node.name,
-                'target': second_node.node.name
-            })
-        invocations.append(op_info)
+    op_info = {'operation': op, 'num': num}
+    if second_node is None:
+        op_info.update({
+            'node': main_node.node.name,
+            'id': main_node.instance.id,
+            'target_ids': [r.target.instance.id
+                           for r in main_node.instance.relationships]
+        })
+    else:
+        op_info.update({
+            'id': main_node.instance.id,
+            'source': main_node.node.name,
+            'target': second_node.node.name
+        })
+    invocations.append(op_info)
+
+    ctx.instance.runtime_properties['num'] = num
+    ctx.instance.runtime_properties['mock_operation_invocation'] = invocations
 
     client = get_rest_client()
     fail_input = client.deployments.get(ctx.deployment.id).inputs.get(
@@ -250,44 +238,35 @@ def mock_restart(ctx, **kwargs):
 
 @operation
 def mock_operation_get_instance_ip(ctx, **kwargs):
-    with update_storage(ctx) as data:
-        data['mock_operation_invocation'] = data.get(
-            'mock_operation_invocation', []
-        )
-        data['mock_operation_invocation'].append((
-            ctx.node.name, get_node_instance_ip(ctx.instance.id)
-        ))
-
+    invocations = ctx.instance.runtime_properties.get(
+        'mock_operation_invocation', [])
+    invocations.append([ctx.node.name, get_node_instance_ip(ctx.instance.id)])
+    ctx.instance.runtime_properties['mock_operation_invocation'] = invocations
     return True
 
 
 @operation
 def mock_operation_get_instance_ip_from_context(ctx, **_):
-    with update_storage(ctx) as data:
-        data['mock_operation_invocation'] = data.get(
-            'mock_operation_invocation', []
-        )
-        data['mock_operation_invocation'].append((
-            ctx.node.name, ctx.instance.host_ip
-        ))
-
+    invocations = ctx.instance.runtime_properties.get(
+        'mock_operation_invocation', [])
+    invocations.append([ctx.node.name, ctx.instance.host_ip])
+    ctx.instance.runtime_properties['mock_operation_invocation'] = invocations
     return True
 
 
 @operation
 def get_instance_ip_of_source_and_target(ctx, **_):
-    with update_storage(ctx) as data:
-        data['mock_operation_invocation'] = data.get(
-            'mock_operation_invocation', []
-        )
-        data['mock_operation_invocation'].append((
-            '{}_source'.format(ctx.source.node.name),
-            ctx.source.instance.host_ip
-        ))
-        data['mock_operation_invocation'].append((
-            '{}_target'.format(ctx.target.node.name),
-            ctx.target.instance.host_ip
-        ))
+    invocations = ctx.instance.runtime_properties.get(
+        'mock_operation_invocation', [])
+    invocations.append([
+        '{}_source'.format(ctx.source.node.name),
+        ctx.source.instance.host_ip
+    ])
+    invocations.append([
+        '{}_target'.format(ctx.target.node.name),
+        ctx.target.instance.host_ip
+    ])
+    ctx.instance.runtime_properties['mock_operation_invocation'] = invocations
     return True
 
 
@@ -315,25 +294,26 @@ def get_resource_operation(ctx, **kwargs):
     finally:
         shutil.rmtree(tempdir)
 
-    with update_storage(ctx) as data:
-        data['get_resource_operation_invocation'] = data.get(
-            'get_resource_operation_invocation', []
-        )
-        data['get_resource_operation_invocation'].append({
-            'res1_data': res1_data,
-            'res2_data': res2_data,
-            'custom_filepath': filepath,
-            'res2_path': res2
-        })
+    invocations = ctx.instance.runtime_properties.get(
+        'get_resource_operation_invocation', [])
+    invocations.append({
+        'res1_data': res1_data,
+        'res2_data': res2_data,
+        'custom_filepath': filepath,
+        'res2_path': res2
+    })
+    ctx.instance.runtime_properties['get_resource_operation_invocation'] = \
+        invocations
 
 
 @operation
 def append_node_state(ctx, **kwargs):
     client = get_rest_client()
     instance = client.node_instances.get(ctx.instance.id)
-    with update_storage(ctx) as data:
-        data['node_states'] = data.get('node_states', [])
-        data['node_states'].append(instance.state)
+
+    states = ctx.instance.runtime_properties.get('node_states', [])
+    states.append(instance.state)
+    ctx.instance.runtime_properties['node_states'] = states
 
 
 @operation
@@ -347,11 +327,11 @@ def sleep(ctx, **kwargs):
 def fail(ctx, **kwargs):
     fail_count = get_prop('fail_count', ctx, kwargs, 1000000)
 
-    with update_storage(ctx) as data:
-        data['failure_invocation'] = data.get('failure_invocation', [])
-        data['failure_invocation'].append(time.time())
+    invocations = ctx.instance.runtime_properties.get('failure_invocation', [])
+    invocations.append(time.time())
+    ctx.instance.runtime_properties['failure_invocation'] = invocations
 
-    if len(data['failure_invocation']) > fail_count:
+    if len(invocations) > fail_count:
         return
 
     message = 'TEST_EXPECTED_FAIL'
@@ -371,13 +351,13 @@ def fail(ctx, **kwargs):
 
 @operation
 def retry(ctx, retry_count=1, retry_after=1, **kwargs):
-    with update_storage(ctx) as data:
-        invocations = data.get('retry_invocations', 0)
-        if invocations != ctx.operation.retry_number:
-            raise NonRecoverableError(
-                'invocations({0}) != ctx.operation.retry_number'
-                '({1})'.format(invocations, ctx.operation.retry_number))
-        data['retry_invocations'] = invocations + 1
+    invocations = ctx.instance.runtime_properties.get('retry_invocations', 0)
+    if invocations != ctx.operation.retry_number:
+        raise NonRecoverableError(
+            'invocations({0}) != ctx.operation.retry_number'
+            '({1})'.format(invocations, ctx.operation.retry_number))
+    ctx.instance.runtime_properties['retry_invocations'] = invocations + 1
+
     if ctx.operation.retry_number < retry_count:
         return ctx.operation.retry(message='Retrying operation',
                                    retry_after=retry_after)
@@ -385,31 +365,22 @@ def retry(ctx, retry_count=1, retry_after=1, **kwargs):
 
 @operation
 def host_get_state(ctx, **kwargs):
-    with update_storage(ctx) as data:
-        data['host_get_state_invocation'] = data.get(
-            'host_get_state_invocation', []
-        )
-        data['host_get_state_invocation'].append(time.time())
-
-    if len(data['host_get_state_invocation']) <= get_prop('false_count',
-                                                          ctx,
-                                                          kwargs):
-        return False
-    return True
+    invocations = ctx.instance.runtime_properties.get(
+        'host_get_state_invocation', [])
+    invocations.append(time.time())
+    ctx.instance.runtime_properties['host_get_state_invocation'] = invocations
+    return len(invocations) > get_prop('false_count', ctx, kwargs)
 
 
 @operation
-def put_workflow_node_instance(ctx,
-                               modification,
-                               relationships):
-    with update_storage(ctx) as data:
-        state = data.get('state', {})
-        data['state'] = state
-        state[ctx.instance.id] = {
-            'node_id': ctx.node.id,
-            'modification': modification,
-            'relationships': relationships
-        }
+def put_workflow_node_instance(ctx, modification, relationships):
+    state = ctx.instance.runtime_properties.get('state', {})
+    state[ctx.instance.id] = {
+        'node_id': ctx.node.id,
+        'modification': modification,
+        'relationships': relationships
+    }
+    ctx.instance.runtime_properties['state'] = state
 
 
 def get_prop(prop_name, ctx, kwargs, default=None):
@@ -430,9 +401,7 @@ def retrieve_template(ctx, rendering_tests_demo_conf, mode,
     else:
         resource = \
             ctx.download_resource_and_render(rendering_tests_demo_conf)
-
-    with update_storage(ctx) as data:
-        data[property_name] = resource
+    ctx.instance.runtime_properties[property_name] = resource
 
 
 @operation

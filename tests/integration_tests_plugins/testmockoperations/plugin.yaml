@@ -1,5 +1,4 @@
 plugins:
     testmockoperations:
         executor: central_deployment_agent
-        source: testmockoperations
-        install: false
+        package_name: testmockoperations

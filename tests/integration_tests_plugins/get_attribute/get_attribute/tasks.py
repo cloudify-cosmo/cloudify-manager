@@ -17,8 +17,6 @@ from cloudify.decorators import operation
 from cloudify import constants
 from cloudify import ctx
 
-from integration_tests_plugins.utils import update_storage
-
 
 @operation
 def setup(source, target, **_):
@@ -38,12 +36,15 @@ def assertion(a=None, b=None, c=None, d=None, **_):
         assertEqual(b, 'b_value')
         assertEqual(c, None)
         assertEqual(d, None)
+        invocations = ctx.instance.runtime_properties.get('invocations', [])
+        invocations.append(ctx.type)
+        ctx.instance.runtime_properties['invocations'] = invocations
     else:
         assertEqual(a, None)
         assertEqual(b, None)
         assertEqual(c, 'c_value')
         assertEqual(d, 'd_value')
-    with update_storage(ctx) as data:
-        invocations = data.get('invocations', [])
-        data['invocations'] = invocations
+        invocations = ctx.source.instance.runtime_properties.get(
+            'invocations', [])
         invocations.append(ctx.type)
+        ctx.source.instance.runtime_properties['invocations'] = invocations
