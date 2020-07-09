@@ -181,31 +181,35 @@ def get_cluster_status():
 
 
 def get_nodes_status(service_type, service_nodes):
+    status_func = _status_func_for_service(service_type)
+    metrics_select_func = _metrics_select_func_for_service(service_type)
+    if not status_func or not metrics_select_func:
+        return {}
     nodes, remote_node_names = \
-        get_status_locally(service_type, service_nodes)
+        get_status_locally(service_nodes, status_func, metrics_select_func)
     if remote_node_names:
-        remote_nodes = get_status_remotely(service_type, service_nodes,
+        remote_nodes = get_status_remotely(service_nodes, status_func,
+                                           metrics_select_func,
                                            remote_node_names)
         nodes.update(remote_nodes)
     return nodes
 
 
-def get_status_locally(service_type, service_nodes):
+def get_status_locally(service_nodes, status_func, metrics_select_func):
     """
     Get nodes' statuses from locally running Prometheus instance.
     :returns A list of node names that were not found in federated results.
     """
-    status_func = _status_func_for_service(service_type)
-    if not status_func:
-        return {}, []
     prometheus_response = status_func('http://localhost:9090/monitoring/')
-    nodes, not_avalable_nodes = \
-        _nodes_from_prometheus_response(prometheus_response, service_nodes,
-                                        _metrics_for_ip)
-    return nodes, not_avalable_nodes.keys()
+
+    nodes, not_available_nodes = \
+        _nodes_from_prometheus_response(prometheus_response,
+                                        metrics_select_func, service_nodes)
+    return nodes, not_available_nodes.keys()
 
 
-def get_status_remotely(service_type, service_nodes, remote_nodes):
+def get_status_remotely(service_nodes, status_func, metrics_select_func,
+                        remote_node_names):
     """
     Get nodes' statuses from remote Prometheus instances.
     """
@@ -214,17 +218,14 @@ def get_status_remotely(service_type, service_nodes, remote_nodes):
             if sn.name == sn_name:
                 return sn
 
-    status_func = _status_func_for_service(service_type)
-    if not status_func:
-        return {}
     nodes = {}
-    for service_node_name in remote_nodes:
+    for service_node_name in remote_node_names:
         service_node = get_service_node(service_node_name)
         prometheus_response = status_func(
             'https://{ip}:53333/monitoring/'.format(
                 ip=service_node.private_ip))
         node, not_available_nodes = _nodes_from_prometheus_response(
-            prometheus_response, service_nodes, _all_metrics)
+            prometheus_response, metrics_select_func, service_nodes)
         # As this is our last chance to get a valid status, combine those
         # received from Prometheus with unavailable.
         node.update(not_available_nodes)
@@ -241,6 +242,13 @@ def _status_func_for_service(service_type):
         return _get_manager_status
     return None
 
+
+def _metrics_select_func_for_service(service_type):
+    if service_type in ('db', 'broker', ):
+        return _metrics_for_instance_ip
+    if service_type == 'manager':
+        return _metrics_for_host
+    return None
 
 def _get_postgresql_status(monitoring_api_uri):
     # TODO what about ca_cert???
@@ -267,8 +275,9 @@ def _get_manager_status(monitoring_api_uri):
                             monitoring_api_uri)
 
 
-def _nodes_from_prometheus_response(prometheus_response, service_nodes,
-                                    select_node_metrics_func):
+def _nodes_from_prometheus_response(prometheus_response,
+                                    select_node_metrics_func,
+                                    service_nodes):
     nodes = {}
     nodes_not_available = {}
     for service_node in service_nodes.items:
@@ -291,24 +300,36 @@ def _nodes_from_prometheus_response(prometheus_response, service_nodes,
     return nodes, nodes_not_available
 
 
-def _metrics_for_ip(prometheus_results, ip):
-    def equal_ips(ip1, ip2):
-        if ip1 == ip2:
-            return True
-        if ip2 == 'localhost':
-            return equal_ips(ip2, ip1)
-        if ip1 == 'localhost' and (ip2 == '127.0.0.1' or
-                                   ip2 == '::1'):
-            return True
-        return False
-
-    for r in prometheus_results:
-        r_instance = r.get('metric', {}).get('instance', '')
-        m = re.search(r'(.*://)?(.+):\d+', r_instance)
+def _metrics_for_instance_ip(prometheus_results, ip):
+    metrics = []
+    for result in prometheus_results:
+        instance = result.get('metric', {}).get('instance', '')
+        m = re.search(r'(.*://)?(.+):\d+', instance)
         if m:
-            r_instance = m.group(2)
-        if equal_ips(r_instance, ip):
-            return r
+            instance = m.group(2)
+        if _equal_ips(instance, ip):
+            metrics.append(result)
+    return metrics
+
+
+def _metrics_for_host(prometheus_results, ip):
+    metrics = []
+    for result in prometheus_results:
+        instance = result.get('metric', {}).get('host', '')
+        if _equal_ips(instance, ip):
+            metrics.append(result)
+    return metrics
+
+
+def _equal_ips(ip1, ip2):
+    if ip1 == ip2:
+        return True
+    if ip2 == 'localhost':
+        return _equal_ips(ip2, ip1)
+    if ip1 == 'localhost' and (ip2 == '127.0.0.1' or
+                               ip2 == '::1'):
+        return True
+    return False
 
 
 def _all_metrics(prometheus_results, _):
