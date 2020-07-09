@@ -31,6 +31,8 @@ from manager_rest.execution_token import (current_execution,
 
 
 Authorization = namedtuple('Authorization', 'username password')
+failed_auth_message = 'Authentication failed for <User username=`{0}`>. ' \
+                      'Wrong credentials or locked account'
 
 
 class Authentication(object):
@@ -107,15 +109,9 @@ class Authentication(object):
     def _check_if_user_is_locked(self, user, auth):
         if self.external_auth_configured:
             return user
-        if not user:
+        if not user or user.is_locked:
             raise_unauthorized_user_error(
-                'Authentication failed for '
-                '<User username=`{0}`>'.format(auth.username)
-            )
-        if user.is_locked:
-            raise_unauthorized_user_error(
-                'Authentication failed for {0}.'
-                ' Bad credentials or locked account'.format(user))
+                failed_auth_message.format(auth.username))
 
     def _authenticate_password(self, user, auth):
         self.logger.debug('Authenticating username/password')
@@ -138,25 +134,18 @@ class Authentication(object):
         """
         self.logger.debug('Running basic HTTP authentication')
         if not user:
-            raise_unauthorized_user_error(
-                'Authentication failed for '
-                '<User username=`{0}`>'.format(username)
-            )
+            raise_unauthorized_user_error(failed_auth_message.format(username))
         if not verify_password(password, user.password):
             self._increment_failed_logins_counter(user)
-            raise_unauthorized_user_error(
-                'Authentication failed for {0}.'
-                ' Bad credentials or locked account'.format(user)
-            )
+            raise_unauthorized_user_error(failed_auth_message.format(username))
         return user
 
     def _verify_token(self, token, user):
         if not self.token_verified_cache.get_verify_hash_result(token,
                                                                 user.id):
             if not verify_hash(compare_data=user.password, hashed_data=token):
-                raise_unauthorized_user_error(
-                    'Authentication failed for {0}'.format(user)
-                )
+                raise_unauthorized_user_error(failed_auth_message.format(
+                    user.username))
             else:
                 self.token_verified_cache.cache_verify_hash_result(token,
                                                                    user.id)
