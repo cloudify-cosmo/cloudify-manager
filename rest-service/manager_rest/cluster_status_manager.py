@@ -13,9 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import copy
-import json
-from os import path, makedirs
+import re
 from datetime import datetime, timedelta
 
 from flask import current_app
@@ -24,7 +22,7 @@ from cloudify.cluster_status import (ServiceStatus,
                                      CloudifyNodeType,
                                      NodeServiceStatus)
 
-from manager_rest import manager_exceptions
+from manager_rest.prometheus_client import query as prometheus_query
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.rest.rest_utils import parse_datetime_string
 
@@ -34,7 +32,6 @@ try:
 except ImportError:
     syncthing_utils = None
     ha_utils = None
-
 
 STATUS = 'status'
 SERVICES = 'services'
@@ -127,12 +124,6 @@ def get_syncthing_status():
             {'connection_check': 'No device was seen recently'})
 
 
-def get_report_path(node_type, node_id):
-    return '{status_path}/{node_type}_{node_id}.json'.format(
-        status_path=CLUSTER_STATUS_PATH, node_type=node_type, node_id=node_id
-    )
-
-
 def _are_keys_in_dict(dictionary, keys):
     return all(key in dictionary for key in keys)
 
@@ -150,304 +141,12 @@ def _generate_cluster_status_structure():
     }
 
 
-def _generate_service_nodes_status(service_type, service_nodes,
-                                   cloudify_version):
-    formatted_nodes = {}
-    missing_status_reports = {}
-    for node in service_nodes:
-        node_status = _read_status_report(node,
-                                          service_type,
-                                          formatted_nodes,
-                                          cloudify_version,
-                                          missing_status_reports)
-        if not node_status:
-            continue
-
-        report = node_status['report']
-        _generate_node_status(node, formatted_nodes, cloudify_version,
-                              report[SERVICES], report[STATUS])
-    return formatted_nodes, missing_status_reports
-
-
-def _read_status_report(node, service_type, formatted_nodes, cloudify_version,
-                        missing_status_reports):
-    status_file_path = get_report_path(service_type, node.node_id)
-    if not path.exists(status_file_path):
-        _add_missing_status_reports(node,
-                                    formatted_nodes,
-                                    service_type,
-                                    missing_status_reports,
-                                    cloudify_version)
-        return None
-
-    try:
-        with open(status_file_path, 'r') as status_file:
-            node_status = json.load(status_file)
-
-        if _is_report_valid(node_status):
-            return node_status
-    except ValueError:
-        current_app.logger.error(
-            'Failed getting the node status from the report {0}, it is not '
-            'a valid json file'.format(status_file_path)
-        )
-
-    _generate_node_status(node, formatted_nodes, cloudify_version,
-                          status=ServiceStatus.FAIL)
-    return None
-
-
-def _generate_node_status(node, formatted_nodes, cloudify_version,
-                          node_services=None, status=UNINITIALIZED_STATUS):
-    formatted_nodes[node.name] = {
-        STATUS: status,
-        SERVICES: node_services or {},
-        'node_id': node.node_id,
-        'version': cloudify_version,
-        'public_ip': node.public_ip,
-        'private_ip': node.private_ip
-    }
-
-
-def _add_missing_status_reports(node, formatted_nodes, service_type,
-                                missing_status_reports, cloudify_version):
-    _generate_node_status(node, formatted_nodes, cloudify_version)
-    missing_status_reports.setdefault(service_type, [])
-    missing_status_reports[service_type].append(node)
-
-
-def _get_entire_cluster_status(cluster_services):
-    statuses = [service[STATUS] for service in cluster_services.values()]
-    if ServiceStatus.FAIL in statuses:
-        return ServiceStatus.FAIL
-    elif ServiceStatus.DEGRADED in statuses:
-        return ServiceStatus.DEGRADED
-    return ServiceStatus.HEALTHY
-
-
 def _is_all_in_one(cluster_structure):
     # During the installation of an all-in-one manager, the node_id of the
     # manager node is set to be also the node_id of the db and broker nodes.
-    return (cluster_structure[CloudifyNodeType.DB][0].node_id ==
-            cluster_structure[CloudifyNodeType.BROKER][0].node_id ==
-            cluster_structure[CloudifyNodeType.MANAGER][0].node_id)
-
-
-def _get_service_status(service_nodes):
-    service_statuses = {node[STATUS] for name, node in service_nodes.items()}
-
-    # Only one type of status - all the nodes are in Fail/OK/Uninitialized
-    if len(service_statuses) == 1:
-        return service_statuses.pop()
-
-    # Degraded is when at least one of the nodes is not OK
-    return ServiceStatus.DEGRADED
-
-
-def _is_status_report_updated(report):
-    """
-    The report is considered updated, if the time passed since the report was
-    sent is maximum twice the frequency interval (Nyquist sampling theorem).
-    """
-    reporting_delta = int(report['reporting_freq']) * 2
-    report_time = parse_datetime_string(report['timestamp'])
-    return (report_time + timedelta(seconds=reporting_delta) >
-            datetime.utcnow())
-
-
-def _is_report_content_valid(report):
-    return (
-        _are_keys_in_dict(report, ['reporting_freq', 'report', 'timestamp'])
-        and _are_keys_in_dict(report['report'], [STATUS, SERVICES])
-        and report['report'][STATUS] in [ServiceStatus.HEALTHY,
-                                         ServiceStatus.FAIL]
-    )
-
-
-def _is_report_valid(report):
-    return (_is_status_report_updated(report) and
-            _is_report_content_valid(report))
-
-
-def _handle_missing_status_reports(missing_status_reports, cluster_services,
-                                   is_all_in_one):
-    """Add status data to the nodes with missing status report"""
-    if not missing_status_reports:
-        return
-
-    manager_service = cluster_services[CloudifyNodeType.MANAGER]
-    _handle_missing_manager_report(missing_status_reports, manager_service)
-
-    services_types = [(CloudifyNodeType.DB, DB_SERVICE_KEY),
-                      (CloudifyNodeType.BROKER, BROKER_SERVICE_KEY)]
-    for service_type, service_key in services_types:
-        _handle_missing_non_manager_report(service_type,
-                                           service_key,
-                                           manager_service['nodes'],
-                                           missing_status_reports,
-                                           cluster_services,
-                                           is_all_in_one)
-
-
-def _handle_missing_manager_report(missing_status_reports, manager_service):
-    """Update the status of manager nodes without status report."""
-    missing_managers = missing_status_reports.get(CloudifyNodeType.MANAGER)
-    if not missing_managers:
-        return
-
-    manager_nodes = manager_service['nodes']
-    for manager in missing_managers:
-        # A manager's status report should not be missing
-        manager_nodes[manager.hostname][STATUS] = ServiceStatus.FAIL
-    manager_service[STATUS] = _get_service_status(manager_nodes)
-
-
-def _handle_missing_non_manager_report(service_type,
-                                       service_key,
-                                       managers,
-                                       missing_status_reports,
-                                       cluster_services,
-                                       is_all_in_one):
-    """Add status data to the nodes with missing status report.
-
-    A node's status report could be missing, due to it being an external
-    service (user-provided) or all-in-one manager or it's status reporter
-    didn't send a report.
-    """
-    missing_nodes = missing_status_reports.get(service_type)
-    if not missing_nodes:
-        return
-
-    service = cluster_services[service_type]
-    for missing_node in missing_nodes:
-        node_status = ServiceStatus.FAIL
-
-        if missing_node.is_external:
-            service_statuses = [
-                node[SERVICES].get(service_key, {}).get(STATUS)
-                for name, node in managers.items()
-            ]
-            # The service is healthy if one of the managers is able
-            # to connect
-            if NodeServiceStatus.ACTIVE in service_statuses:
-                node_status = ServiceStatus.HEALTHY
-
-        node_service = {}
-        node_name = missing_node.name
-
-        if is_all_in_one:
-            # In all-in-one the node name is identical for all nodes
-            node_service[service_key] = copy.deepcopy(
-                managers[node_name][SERVICES].get(service_key, {})
-            )
-            if (node_service[service_key].get(STATUS) ==
-                    NodeServiceStatus.ACTIVE):
-                node_status = ServiceStatus.HEALTHY
-        service['nodes'][node_name].update({STATUS: node_status,
-                                            SERVICES: node_service})
-    service[STATUS] = _get_service_status(service['nodes'])
-
-
-def _get_db_master_replications(db_service):
-    for node_name, node in db_service['nodes'].items():
-        if not node[SERVICES]:
-            continue
-        patroni_service = node[SERVICES][PATRONI_SERVICE_KEY]
-        patroni_status = patroni_service[EXTRA_INFO]['patroni_status']
-        if patroni_status.get('role') == 'master':
-            return patroni_status.get('replications_state')
-    return None
-
-
-def _get_db_cluster_status(db_service, expected_nodes_number):
-    """
-    Get the status of the db cluster. At least one replica should be in
-    sync state so the cluster will function. Healthy cluster has all the other
-    replicas in streaming state.
-    """
-    if _should_not_validate_cluster_status(db_service):
-        return db_service[STATUS]
-
-    master_replications_state = _get_db_master_replications(db_service)
-    if not master_replications_state:
-        return ServiceStatus.FAIL
-
-    sync_replica = False
-    all_replicas_streaming = True
-
-    for replica in master_replications_state:
-        if replica['state'] != 'streaming':
-            all_replicas_streaming = False
-        elif replica['sync_state'] == 'sync':
-            sync_replica = True
-
-    if not sync_replica:
-        return ServiceStatus.FAIL
-
-    if (len(master_replications_state) < expected_nodes_number - 1 or
-            not all_replicas_streaming):
-        return ServiceStatus.DEGRADED
-
-    return db_service[STATUS]
-
-
-def _should_not_validate_cluster_status(service):
-    return service[STATUS] == ServiceStatus.FAIL or service[IS_EXTERNAL]
-
-
-def _get_broker_cluster_status(broker_service, expected_nodes_number):
-    if _should_not_validate_cluster_status(broker_service):
-        return broker_service[STATUS]
-
-    broker_nodes = broker_service['nodes']
-    active_broker_nodes = {name: node for name, node in broker_nodes.items()
-                           if node[STATUS] == ServiceStatus.HEALTHY}
-
-    if not _verify_identical_broker_cluster_status(active_broker_nodes):
-        return ServiceStatus.FAIL
-
-    if expected_nodes_number != len(active_broker_nodes):
-        # This should happen only on broker setup
-        current_app.logger.error(
-            'There are {0} active broker nodes, but there are {1} broker nodes'
-            ' registered in the DB.'.format(active_broker_nodes,
-                                            expected_nodes_number))
-        return ServiceStatus.DEGRADED
-
-    return broker_service[STATUS]
-
-
-def _extract_broker_cluster_status(broker_node):
-    broker_service = broker_node[SERVICES][BROKER_SERVICE_KEY]
-    return broker_service[EXTRA_INFO]['cluster_status']
-
-
-def _log_different_cluster_status(node_name_a, cluster_status_a,
-                                  node_name_b, cluster_status_b):
-    current_app.logger.error('{node_name_a} recognizes the cluster: '
-                             '{cluster_status_a},\nbut {node_name_b} '
-                             'recognizes the cluster {cluster_status_b}.'.
-                             format(node_name_a=node_name_a,
-                                    cluster_status_a=cluster_status_a,
-                                    node_name_b=node_name_b,
-                                    cluster_status_b=cluster_status_b))
-
-
-def _verify_identical_broker_cluster_status(active_nodes):
-    are_cluster_statuses_identical = True
-    active_nodes_iter = iter(active_nodes.items())
-    first_node_name, first_node = next(active_nodes_iter)
-    first_node_cluster_status = _extract_broker_cluster_status(first_node)
-
-    for curr_node_name, curr_node in active_nodes_iter:
-        curr_node_cluster_status = _extract_broker_cluster_status(curr_node)
-        if curr_node_cluster_status != first_node_cluster_status:
-            are_cluster_statuses_identical = False
-            _log_different_cluster_status(
-                first_node_name, first_node_cluster_status,
-                curr_node_name, curr_node_cluster_status)
-
-    return are_cluster_statuses_identical
+    return (cluster_structure[CloudifyNodeType.DB][0].private_ip ==
+            cluster_structure[CloudifyNodeType.BROKER][0].private_ip ==
+            cluster_structure[CloudifyNodeType.MANAGER][0].private_ip)
 
 
 # endregion
@@ -458,116 +157,210 @@ def get_cluster_status():
     Generate the cluster status using:
     1. The DB tables (managers, rabbitmq_brokers, db_nodes) for the
        structure of the cluster.
-    2. The status reports (saved on the file system) each reporter sends
-       with the most updated status of the node.
+    2. The Prometheus monitoring service.
     """
     cluster_services = {}
-    if not path.isdir(CLUSTER_STATUS_PATH):
-        return {STATUS: ServiceStatus.DEGRADED, SERVICES: cluster_services}
-
     cluster_structure = _generate_cluster_status_structure()
     cloudify_version = cluster_structure[CloudifyNodeType.MANAGER][0].version
-    missing_status_reports = {}
 
     for service_type, service_nodes in cluster_structure.items():
-        formatted_nodes, missing_reports = _generate_service_nodes_status(
-            service_type, service_nodes, cloudify_version
-        )
+        nodes = _get_nodes_with_status(service_type, service_nodes)
+        # It's enough if only one manager is available in a cluster
+        quorum = 1 if service_type == 'manager' else -1
         cluster_services[service_type] = {
-            STATUS: _get_service_status(formatted_nodes),
-            IS_EXTERNAL: service_nodes[0].is_external,
-            'nodes': formatted_nodes
+            STATUS:
+                _service_status([n[STATUS] for n in nodes.values()], quorum),
+            IS_EXTERNAL:
+                service_nodes[0].is_external,
+            'nodes':
+                # inject `version` key to all nodes
+                {node_name: dict(node, version=cloudify_version) for
+                 node_name, node in nodes.items()},
         }
-        missing_status_reports.update(missing_reports)
-
-    is_all_in_one = _is_all_in_one(cluster_structure)
-    _handle_missing_status_reports(missing_status_reports, cluster_services,
-                                   is_all_in_one)
-    if not is_all_in_one:
-        db_service = cluster_services[CloudifyNodeType.DB]
-        db_service[STATUS] = _get_db_cluster_status(
-            db_service, len(cluster_structure[CloudifyNodeType.DB]))
-        broker_service = cluster_services[CloudifyNodeType.BROKER]
-        broker_service[STATUS] = _get_broker_cluster_status(
-            broker_service, len(cluster_structure[CloudifyNodeType.BROKER]))
 
     return {
-        STATUS: _get_entire_cluster_status(cluster_services),
+        STATUS: _simple_status(set([s['status'] for s in
+                                    cluster_services.values()])),
         SERVICES: cluster_services
     }
 
-# region Write Status Report Helpers
+
+def _get_nodes_with_status(service_type, service_nodes):
+    status_func = _status_func_for_service(service_type)
+    metrics_select_func = _metrics_select_func_for_service(service_type)
+    if not status_func or not metrics_select_func:
+        return {}
+    nodes, remote_node_names = \
+        _get_nodes_status_locally(service_nodes, status_func,
+                                  metrics_select_func)
+    if remote_node_names:
+        remote_nodes = _get_nodes_status_remotely(service_nodes, status_func,
+                                                  metrics_select_func,
+                                                  remote_node_names)
+        nodes.update(remote_nodes)
+    return nodes
 
 
-def _verify_status_report_schema(node_id, report):
-    if not (_are_keys_in_dict(report['report'], [STATUS, SERVICES])
-            and report['report'][STATUS] in [ServiceStatus.HEALTHY,
-                                             ServiceStatus.FAIL]):
-        raise manager_exceptions.BadParametersError(
-            'The status report for {0} is malformed and discarded'.format(
-                node_id))
+def _get_nodes_status_locally(service_nodes, status_func, metrics_select_func):
+    """
+    Get nodes' statuses from locally running Prometheus instance.
+    :returns dict of nodes' statuses and a list of node names that were not
+             found in the locally available metrics.
+    """
+    prometheus_response = status_func('http://localhost:9090/monitoring/')
+
+    nodes, not_available_nodes = \
+        _nodes_from_prometheus_response(prometheus_response,
+                                        metrics_select_func, service_nodes)
+    return nodes, not_available_nodes.keys()
 
 
-def _verify_report_newer_than_current(node_id, report_time, status_path):
-    if not (path.exists(status_path) and path.isfile(status_path)):
-        # Nothing to do if the file does not exists
-        return
-    with open(status_path) as current_report_file:
-        current_report = json.load(current_report_file)
-    if report_time < parse_datetime_string(current_report['timestamp']):
-        current_app.logger.error('The status report for {0} at {1} is before'
-                                 ' the latest report'.
-                                 format(node_id, report_time))
+def _get_nodes_status_remotely(service_nodes, status_func, metrics_select_func,
+                               remote_node_names):
+    """
+    Get nodes' statuses from remote Prometheus instances.
+    :returns dict of nodes' statuses
+    """
+    def get_service_node(sn_name):
+        for sn in service_nodes:
+            if sn.name == sn_name:
+                return sn
+
+    nodes = {}
+    for service_node_name in remote_node_names:
+        service_node = get_service_node(service_node_name)
+        prometheus_response = status_func(
+            'https://{ip}:53333/monitoring/'.format(
+                ip=service_node.private_ip))
+        node, not_available_nodes = _nodes_from_prometheus_response(
+            prometheus_response, metrics_select_func, service_nodes)
+        # If the remote metrics are not available, assume service_node is down
+        # and combine not_available_nodes with those available.
+        node.update(not_available_nodes)
+        nodes[service_node_name] = node[service_node_name]
+    return nodes
 
 
-def _verify_timestamp(node_id, report_time):
-    if report_time > datetime.utcnow():
-        raise manager_exceptions.BadParametersError(
-            'The status report for {0} is in the future at `{1}`'.
-            format(node_id, report_time))
+def _status_func_for_service(service_type):
+    if service_type == 'db':
+        return _get_postgresql_status
+    if service_type == 'broker':
+        return _get_rabbitmq_status
+    if service_type == 'manager':
+        return _get_manager_status
+    return None
 
 
-def _verify_node_exists(node_id, model):
-    if not get_storage_manager().exists(model,
-                                        filters={'node_id': node_id}):
-        raise manager_exceptions.BadParametersError(
-            'The given node id {0} is invalid'.format(node_id))
+def _get_postgresql_status(monitoring_api_uri):
+    # TODO mateusz add credentials and ca_cert
+    #  it lives in /etc/cloudify/config.yaml,
+    #  is not defined in service_nodes
+    return prometheus_query('up{job=~".*postgresql"}', monitoring_api_uri)
 
 
-def _create_statues_folder_if_needed():
-    if not path.exists(CLUSTER_STATUS_PATH):
-        makedirs(CLUSTER_STATUS_PATH)
+def _get_rabbitmq_status(monitoring_api_uri):
+    # TODO mateusz add credentials and ca_cert
+    #  it lives in /etc/cloudify/config.yaml,
+    #  also is defined in service_nodes
+    return prometheus_query('up{job=~".*rabbitmq"}', monitoring_api_uri)
 
 
-def _save_report(report_path, report_dict):
-    with open(report_path, 'w') as report_file:
-        json.dump(report_dict, report_file)
+def _get_manager_status(monitoring_api_uri):
+    # TODO mateusz add credentials and ca_cert
+    #  it lives in /etc/cloudify/config.yaml,
+    return prometheus_query('probe_success{job=~".*http_.+"}',
+                            monitoring_api_uri)
 
 
-def _verify_syncthing_status():
-    if not (ha_utils and ha_utils.is_clustered()):
-        return
-    syncthing_status, _ = get_syncthing_status()
-    if syncthing_status == NodeServiceStatus.INACTIVE:
-        raise manager_exceptions.FileSyncServiceError(
-            "Can't update the status report when Syncthing is not healthy"
-        )
+def _metrics_select_func_for_service(service_type):
+    if service_type in ('db', 'broker', ):
+        return _metrics_for_instance
+    if service_type == 'manager':
+        return _metrics_for_host
+    return None
 
 
-# endregion
+def _metrics_for_instance(prometheus_results, ip):
+    metrics = []
+    for result in prometheus_results:
+        instance = result.get('metric', {}).get('instance', '')
+        m = re.search(r'(.*://)?(.+):\d+', instance)
+        if m:
+            instance = m.group(2)
+        if _equal_ips(instance, ip):
+            metrics.append(result)
+    return metrics
 
 
-def write_status_report(node_id, model, node_type, report):
-    current_app.logger.debug('Received new status report for '
-                             '{0} of type {1}...'.format(node_id, node_type))
-    _verify_syncthing_status()
-    _create_statues_folder_if_needed()
-    _verify_node_exists(node_id, model)
-    _verify_status_report_schema(node_id, report)
-    report_time = parse_datetime_string(report['timestamp'])
-    _verify_timestamp(node_id, report_time)
-    report_path = get_report_path(node_type, node_id)
-    _verify_report_newer_than_current(node_id, report_time, report_path)
-    _save_report(report_path, report)
-    current_app.logger.debug('Successfully updated the status report for '
-                             '{0} of type {1}'.format(node_id, node_type))
+def _metrics_for_host(prometheus_results, ip):
+    metrics = []
+    for result in prometheus_results:
+        instance = result.get('metric', {}).get('host', '')
+        if _equal_ips(instance, ip):
+            metrics.append(result)
+    return metrics
+
+
+def _equal_ips(ip1, ip2):
+    if ip1 == ip2:
+        return True
+    if ip2 == 'localhost':
+        return _equal_ips(ip2, ip1)
+    if ip1 == 'localhost' and (ip2 == '127.0.0.1' or
+                               ip2 == '::1'):
+        return True
+    return False
+
+
+def _nodes_from_prometheus_response(prometheus_response,
+                                    select_node_metrics_func,
+                                    service_nodes):
+    nodes = {}
+    nodes_not_available = {}
+    for service_node in service_nodes.items:
+        node_metrics = select_node_metrics_func(prometheus_response,
+                                                service_node.private_ip)
+        if node_metrics:
+            nodes[service_node.name] = {
+                STATUS: _simple_status(set(
+                    [_status_from_metric(node_metric) for node_metric in
+                     node_metrics])),
+                'public_ip': service_node.public_ip,
+                'private_ip': service_node.private_ip,
+            }
+        else:
+            nodes_not_available[service_node.name] = {
+                STATUS: ServiceStatus.FAIL,
+                'public_ip': service_node.public_ip,
+                'private_ip': service_node.private_ip,
+            }
+    return nodes, nodes_not_available
+
+
+def _status_from_metric(metric, healthy_value=1):
+    if 'value' in metric and len(metric['value']) == 2:
+        if float(metric['value'][1]) == healthy_value:
+            return ServiceStatus.HEALTHY
+    return ServiceStatus.FAIL
+
+
+def _simple_status(set_of_statuses):
+    if not set_of_statuses or ServiceStatus.FAIL in set_of_statuses:
+        return ServiceStatus.FAIL
+    if ServiceStatus.DEGRADED in set_of_statuses:
+        return ServiceStatus.DEGRADED
+    return ServiceStatus.HEALTHY
+
+
+def _service_status(list_of_statuses, quorum=-1):
+    if not list_of_statuses:
+        return ServiceStatus.FAIL
+    number_of_nodes = len(list_of_statuses)
+    healthy = len([s for s in list_of_statuses if s == ServiceStatus.HEALTHY])
+    if healthy == number_of_nodes:
+        return ServiceStatus.HEALTHY
+    if quorum < 0:
+        quorum = int(number_of_nodes / 2) + 1
+    if healthy >= quorum:
+        return ServiceStatus.DEGRADED
+    return ServiceStatus.FAIL
