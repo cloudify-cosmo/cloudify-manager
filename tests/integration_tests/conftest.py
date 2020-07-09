@@ -91,6 +91,7 @@ def manager_container(request, resource_mapping):
     container_id = request.config.getoption("--container-id")
     if container_id:
         _clean_manager(container_id)
+        keep_container = True
     else:
         container_id = docker.run_manager(
             image_name, resource_mapping=resource_mapping)
