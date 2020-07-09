@@ -62,7 +62,6 @@ def upgrade():
     _create_unique_indexes()
     _add_plugins_title_column()
     _add_service_management_column()
-    _create_more_idd_indexes()
     _remove_node_id_columns()
 
 
@@ -72,7 +71,6 @@ def downgrade():
     _drop_unique_indexes()
     _drop_plugins_title_column()
     _drop_service_management_column()
-    _drop_some_idd_indexes()
     _create_node_id_columns()
 
 
@@ -153,6 +151,26 @@ def _create_inter_deployment_dependencies_table():
                     'inter_deployment_dependencies',
                     ['id'],
                     unique=True)
+    op.create_index(op.f('inter_deployment_dependencies__creator_id_idx'),
+                    'inter_deployment_dependencies',
+                    ['_creator_id'],
+                    unique=False)
+    op.create_index(op.f('inter_deployment_dependencies_visibility_idx'),
+                    'inter_deployment_dependencies',
+                    ['visibility'],
+                    unique=False)
+    op.create_index(
+        op.f('inter_deployment_dependencies__source_deployment_idx'),
+        'inter_deployment_dependencies',
+        ['_source_deployment'],
+        unique=False
+    )
+    op.create_index(
+        op.f('inter_deployment_dependencies__target_deployment_idx'),
+        'inter_deployment_dependencies',
+        ['_target_deployment'],
+        unique=False
+    )
     op.add_column(u'deployment_updates',
                   sa.Column('keep_old_deployment_dependencies',
                             sa.Boolean(),
@@ -161,6 +179,14 @@ def _create_inter_deployment_dependencies_table():
 
 def _drop_inter_deployment_dependencies_table():
     op.drop_column(u'deployment_updates', 'keep_old_deployment_dependencies')
+    op.drop_index(op.f('inter_deployment_dependencies_visibility_idx'),
+                  table_name='inter_deployment_dependencies')
+    op.drop_index(op.f('inter_deployment_dependencies__target_deployment_idx'),
+                  table_name='inter_deployment_dependencies')
+    op.drop_index(op.f('inter_deployment_dependencies__source_deployment_idx'),
+                  table_name='inter_deployment_dependencies')
+    op.drop_index(op.f('inter_deployment_dependencies__creator_id_idx'),
+                  table_name='inter_deployment_dependencies')
     op.drop_index(op.f('inter_deployment_dependencies_id_idx'),
                   table_name='inter_deployment_dependencies')
     op.drop_index(op.f('inter_deployment_dependencies_created_at_idx'),
@@ -265,72 +291,6 @@ def _drop_service_management_column():
     session.commit()
 
 
-def _create_more_idd_indexes():
-    op.create_index(
-        op.f('inter_deployment_dependencies__creator_id_idx'),
-        'inter_deployment_dependencies',
-        ['_creator_id'],
-        unique=False
-    )
-    op.create_index(
-        op.f('inter_deployment_dependencies__source_deployment_idx'),
-        'inter_deployment_dependencies',
-        ['_source_deployment'],
-        unique=False
-    )
-    op.create_index(
-        op.f('inter_deployment_dependencies__target_deployment_idx'),
-        'inter_deployment_dependencies',
-        ['_target_deployment'],
-        unique=False
-    )
-    op.create_index(
-        op.f('inter_deployment_dependencies_visibility_idx'),
-        'inter_deployment_dependencies',
-        ['visibility'],
-        unique=False
-    )
-    op.drop_index(
-        'inter_deployment_dependencies_id_idx',
-        table_name='inter_deployment_dependencies'
-    )
-    op.create_index(
-        op.f('inter_deployment_dependencies_id_idx'),
-        'inter_deployment_dependencies',
-        ['id'],
-        unique=False
-    )
-
-
-def _drop_some_idd_indexes():
-    op.drop_index(
-        op.f('inter_deployment_dependencies_id_idx'),
-        table_name='inter_deployment_dependencies'
-    )
-    op.create_index(
-        'inter_deployment_dependencies_id_idx',
-        'inter_deployment_dependencies',
-        ['id'],
-        unique=True
-    )
-    op.drop_index(
-        op.f('inter_deployment_dependencies_visibility_idx'),
-        table_name='inter_deployment_dependencies'
-    )
-    op.drop_index(
-        op.f('inter_deployment_dependencies__target_deployment_idx'),
-        table_name='inter_deployment_dependencies'
-    )
-    op.drop_index(
-        op.f('inter_deployment_dependencies__source_deployment_idx'),
-        table_name='inter_deployment_dependencies'
-    )
-    op.drop_index(
-        op.f('inter_deployment_dependencies__creator_id_idx'),
-        table_name='inter_deployment_dependencies'
-    )
-
-
 def _remove_node_id_columns():
     op.drop_constraint(u'db_nodes_node_id_key', 'db_nodes', type_='unique')
     op.drop_column('db_nodes', 'node_id')
@@ -344,9 +304,12 @@ def _remove_node_id_columns():
 
 
 def _create_node_id_columns():
+    #  The columns are added here with nullable=True. It's different from the
+    #  declared table, but necessary since we can't create IDs when downgrading
+    #  (and these IDs aren't gonna be used anyway after manager-update)
     op.add_column(
         u'rabbitmq_brokers',
-        sa.Column('node_id', sa.TEXT(), autoincrement=False, nullable=False)
+        sa.Column('node_id', sa.TEXT(), autoincrement=False, nullable=True)
     )
     op.create_unique_constraint(
         'rabbitmq_brokers_node_id_key',
@@ -355,7 +318,7 @@ def _create_node_id_columns():
     )
     op.add_column(
         u'managers',
-        sa.Column('node_id', sa.TEXT(), autoincrement=False, nullable=False)
+        sa.Column('node_id', sa.TEXT(), autoincrement=False, nullable=True)
     )
     op.create_unique_constraint(
         'managers_node_id_key',
@@ -364,7 +327,7 @@ def _create_node_id_columns():
     )
     op.add_column(
         u'db_nodes',
-        sa.Column('node_id', sa.TEXT(), autoincrement=False, nullable=False)
+        sa.Column('node_id', sa.TEXT(), autoincrement=False, nullable=True)
     )
     op.create_unique_constraint(
         'db_nodes_node_id_key',
