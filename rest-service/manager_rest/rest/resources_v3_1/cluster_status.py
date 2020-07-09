@@ -62,15 +62,3 @@ class ClusterStatus(SecuredResourceBannedSnapshotRestore):
             return {'status': short_status, 'services': {}}, status_code
 
         return cluster_status
-
-
-class ManagerClusterStatus(ClusterStatus):
-    pass
-
-
-class DBClusterStatus(ClusterStatus):
-    pass
-
-
-class BrokerClusterStatus(ClusterStatus):
-    pass

@@ -164,7 +164,8 @@ def get_cluster_status():
     cloudify_version = cluster_structure[CloudifyNodeType.MANAGER][0].version
 
     for service_type, service_nodes in cluster_structure.items():
-        nodes = get_nodes_status(service_type, service_nodes)
+        nodes = _get_nodes_with_status(service_type, service_nodes)
+        # It's enough if only one manager is available in a cluster
         quorum = 1 if service_type == 'manager' else -1
         cluster_services[service_type] = {
             STATUS:
@@ -179,27 +180,28 @@ def get_cluster_status():
 
     return {
         STATUS: _simple_status(set([s['status'] for s in
-                                  cluster_services.values()])),
+                                    cluster_services.values()])),
         SERVICES: cluster_services
     }
 
 
-def get_nodes_status(service_type, service_nodes):
+def _get_nodes_with_status(service_type, service_nodes):
     status_func = _status_func_for_service(service_type)
     metrics_select_func = _metrics_select_func_for_service(service_type)
     if not status_func or not metrics_select_func:
         return {}
     nodes, remote_node_names = \
-        get_status_locally(service_nodes, status_func, metrics_select_func)
+        _get_nodes_status_locally(service_nodes, status_func,
+                                  metrics_select_func)
     if remote_node_names:
-        remote_nodes = get_status_remotely(service_nodes, status_func,
-                                           metrics_select_func,
-                                           remote_node_names)
+        remote_nodes = _get_nodes_status_remotely(service_nodes, status_func,
+                                                  metrics_select_func,
+                                                  remote_node_names)
         nodes.update(remote_nodes)
     return nodes
 
 
-def get_status_locally(service_nodes, status_func, metrics_select_func):
+def _get_nodes_status_locally(service_nodes, status_func, metrics_select_func):
     """
     Get nodes' statuses from locally running Prometheus instance.
     :returns dict of nodes' statuses and a list of node names that were not
@@ -213,8 +215,8 @@ def get_status_locally(service_nodes, status_func, metrics_select_func):
     return nodes, not_available_nodes.keys()
 
 
-def get_status_remotely(service_nodes, status_func, metrics_select_func,
-                        remote_node_names):
+def _get_nodes_status_remotely(service_nodes, status_func, metrics_select_func,
+                               remote_node_names):
     """
     Get nodes' statuses from remote Prometheus instances.
     :returns dict of nodes' statuses
@@ -232,8 +234,8 @@ def get_status_remotely(service_nodes, status_func, metrics_select_func,
                 ip=service_node.private_ip))
         node, not_available_nodes = _nodes_from_prometheus_response(
             prometheus_response, metrics_select_func, service_nodes)
-        # As this is the last chance to get a valid status, combine those
-        # received from Prometheus with the unavailable.
+        # If the remote metrics are not available, assume service_node is down
+        # and combine not_available_nodes with those available.
         node.update(not_available_nodes)
         nodes[service_node_name] = node[service_node_name]
     return nodes
@@ -246,14 +248,6 @@ def _status_func_for_service(service_type):
         return _get_rabbitmq_status
     if service_type == 'manager':
         return _get_manager_status
-    return None
-
-
-def _metrics_select_func_for_service(service_type):
-    if service_type in ('db', 'broker', ):
-        return _metrics_for_instance
-    if service_type == 'manager':
-        return _metrics_for_host
     return None
 
 
@@ -278,29 +272,12 @@ def _get_manager_status(monitoring_api_uri):
                             monitoring_api_uri)
 
 
-def _nodes_from_prometheus_response(prometheus_response,
-                                    select_node_metrics_func,
-                                    service_nodes):
-    nodes = {}
-    nodes_not_available = {}
-    for service_node in service_nodes.items:
-        node_metrics = select_node_metrics_func(prometheus_response,
-                                                service_node.private_ip)
-        if node_metrics:
-            nodes[service_node.name] = {
-                STATUS: _simple_status(set(
-                    [_status_from_metric(node_metric) for node_metric in
-                     node_metrics])),
-                'public_ip': service_node.public_ip,
-                'private_ip': service_node.private_ip,
-            }
-        else:
-            nodes_not_available[service_node.name] = {
-                STATUS: ServiceStatus.FAIL,
-                'public_ip': service_node.public_ip,
-                'private_ip': service_node.private_ip,
-            }
-    return nodes, nodes_not_available
+def _metrics_select_func_for_service(service_type):
+    if service_type in ('db', 'broker', ):
+        return _metrics_for_instance
+    if service_type == 'manager':
+        return _metrics_for_host
+    return None
 
 
 def _metrics_for_instance(prometheus_results, ip):
@@ -333,6 +310,31 @@ def _equal_ips(ip1, ip2):
                                ip2 == '::1'):
         return True
     return False
+
+
+def _nodes_from_prometheus_response(prometheus_response,
+                                    select_node_metrics_func,
+                                    service_nodes):
+    nodes = {}
+    nodes_not_available = {}
+    for service_node in service_nodes.items:
+        node_metrics = select_node_metrics_func(prometheus_response,
+                                                service_node.private_ip)
+        if node_metrics:
+            nodes[service_node.name] = {
+                STATUS: _simple_status(set(
+                    [_status_from_metric(node_metric) for node_metric in
+                     node_metrics])),
+                'public_ip': service_node.public_ip,
+                'private_ip': service_node.private_ip,
+            }
+        else:
+            nodes_not_available[service_node.name] = {
+                STATUS: ServiceStatus.FAIL,
+                'public_ip': service_node.public_ip,
+                'private_ip': service_node.private_ip,
+            }
+    return nodes, nodes_not_available
 
 
 def _status_from_metric(metric, healthy_value=1):
