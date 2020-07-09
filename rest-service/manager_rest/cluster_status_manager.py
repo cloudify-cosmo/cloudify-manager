@@ -165,17 +165,21 @@ def get_cluster_status():
 
     for service_type, service_nodes in cluster_structure.items():
         nodes = get_nodes_status(service_type, service_nodes)
+        quorum = 1 if service_type == 'manager' else -1
         cluster_services[service_type] = {
-            STATUS: _clustered_status([n[STATUS] for n in nodes.values()]),
-            IS_EXTERNAL: service_nodes[0].is_external,
-            # inject `version` key to all nodes
-            'nodes': {node_name: dict(node, version=cloudify_version) for
-                      node_name, node in nodes.items()},
+            STATUS:
+                _service_status([n[STATUS] for n in nodes.values()], quorum),
+            IS_EXTERNAL:
+                service_nodes[0].is_external,
+            'nodes':
+                # inject `version` key to all nodes
+                {node_name: dict(node, version=cloudify_version) for
+                 node_name, node in nodes.items()},
         }
 
     return {
-        STATUS: _decide_on_status(set([s['status'] for s in
-                                       cluster_services.values()])),
+        STATUS: _simple_status(set([s['status'] for s in
+                                  cluster_services.values()])),
         SERVICES: cluster_services
     }
 
@@ -198,7 +202,8 @@ def get_nodes_status(service_type, service_nodes):
 def get_status_locally(service_nodes, status_func, metrics_select_func):
     """
     Get nodes' statuses from locally running Prometheus instance.
-    :returns A list of node names that were not found in federated results.
+    :returns dict of nodes' statuses and a list of node names that were not
+             found in the locally available metrics.
     """
     prometheus_response = status_func('http://localhost:9090/monitoring/')
 
@@ -212,6 +217,7 @@ def get_status_remotely(service_nodes, status_func, metrics_select_func,
                         remote_node_names):
     """
     Get nodes' statuses from remote Prometheus instances.
+    :returns dict of nodes' statuses
     """
     def get_service_node(sn_name):
         for sn in service_nodes:
@@ -226,8 +232,8 @@ def get_status_remotely(service_nodes, status_func, metrics_select_func,
                 ip=service_node.private_ip))
         node, not_available_nodes = _nodes_from_prometheus_response(
             prometheus_response, metrics_select_func, service_nodes)
-        # As this is our last chance to get a valid status, combine those
-        # received from Prometheus with unavailable.
+        # As this is the last chance to get a valid status, combine those
+        # received from Prometheus with the unavailable.
         node.update(not_available_nodes)
         nodes[service_node_name] = node[service_node_name]
     return nodes
@@ -245,32 +251,29 @@ def _status_func_for_service(service_type):
 
 def _metrics_select_func_for_service(service_type):
     if service_type in ('db', 'broker', ):
-        return _metrics_for_instance_ip
+        return _metrics_for_instance
     if service_type == 'manager':
         return _metrics_for_host
     return None
 
+
 def _get_postgresql_status(monitoring_api_uri):
-    # TODO what about ca_cert???
+    # TODO mateusz add credentials and ca_cert
     #  it lives in /etc/cloudify/config.yaml,
     #  is not defined in service_nodes
-    # return prometheus_query(
-    #     'up{job=~".*postgresql"} and pg_up{job=~".*postgresql"}',
-    #     monitoring_api_uri)
     return prometheus_query('up{job=~".*postgresql"}', monitoring_api_uri)
 
 
 def _get_rabbitmq_status(monitoring_api_uri):
-    # TODO remember about about ca_cert???
+    # TODO mateusz add credentials and ca_cert
     #  it lives in /etc/cloudify/config.yaml,
     #  also is defined in service_nodes
     return prometheus_query('up{job=~".*rabbitmq"}', monitoring_api_uri)
 
 
 def _get_manager_status(monitoring_api_uri):
-    # TODO what about ca_cert???
+    # TODO mateusz add credentials and ca_cert
     #  it lives in /etc/cloudify/config.yaml,
-    #  is not defined in service_nodes
     return prometheus_query('probe_success{job=~".*http_.+"}',
                             monitoring_api_uri)
 
@@ -285,7 +288,7 @@ def _nodes_from_prometheus_response(prometheus_response,
                                                 service_node.private_ip)
         if node_metrics:
             nodes[service_node.name] = {
-                STATUS: _decide_on_status(set(
+                STATUS: _simple_status(set(
                     [_status_from_metric(node_metric) for node_metric in
                      node_metrics])),
                 'public_ip': service_node.public_ip,
@@ -300,7 +303,7 @@ def _nodes_from_prometheus_response(prometheus_response,
     return nodes, nodes_not_available
 
 
-def _metrics_for_instance_ip(prometheus_results, ip):
+def _metrics_for_instance(prometheus_results, ip):
     metrics = []
     for result in prometheus_results:
         instance = result.get('metric', {}).get('instance', '')
@@ -332,10 +335,6 @@ def _equal_ips(ip1, ip2):
     return False
 
 
-def _all_metrics(prometheus_results, _):
-    return prometheus_results
-
-
 def _status_from_metric(metric, healthy_value=1):
     if 'value' in metric and len(metric['value']) == 2:
         if float(metric['value'][1]) == healthy_value:
@@ -343,20 +342,7 @@ def _status_from_metric(metric, healthy_value=1):
     return ServiceStatus.FAIL
 
 
-def _clustered_status(list_of_statuses):
-    if not list_of_statuses:
-        return ServiceStatus.FAIL
-    number_of_nodes = len(list_of_statuses)
-    healthy = len([s for s in list_of_statuses if s == ServiceStatus.HEALTHY])
-    if healthy == number_of_nodes:
-        return ServiceStatus.HEALTHY
-    quorum = int(number_of_nodes / 2) + 1
-    if healthy >= quorum:
-        return ServiceStatus.DEGRADED
-    return ServiceStatus.FAIL
-
-
-def _decide_on_status(set_of_statuses):
+def _simple_status(set_of_statuses):
     if not set_of_statuses or ServiceStatus.FAIL in set_of_statuses:
         return ServiceStatus.FAIL
     if ServiceStatus.DEGRADED in set_of_statuses:
@@ -364,74 +350,15 @@ def _decide_on_status(set_of_statuses):
     return ServiceStatus.HEALTHY
 
 
-# OLD STUFF (delete me?) ||
-
-
-def _get_formatted_nodes(service_nodes, cloudify_version, alerts):
-    return {
-        node.name: {
-            STATUS: _node_status_from_alerts(node, alerts),
-            'version': cloudify_version,
-            'public_ip': node.public_ip,
-            'private_ip': node.private_ip,
-            'services': {}
-        } for node in service_nodes.items
-    }
-
-
-def _get_service_status(service_type, alerts):
-    statuses = set()
-    for alert in [a for a in alerts if
-                  a.get('labels', {}).get('severity') == 'critical' and
-                  a.get('labels', {}).get('instance') is None and
-                  _alert_service_type(a) == service_type]:
-        statuses.add(_status_from_alert(alert))
-    return _decide_on_status(statuses)
-
-
-def _node_status_from_alerts(node, alerts):
-    statuses = set()
-    for alert in [a for a in alerts if
-                  _alert_node_private_ip(a) == node.private_ip]:
-        statuses.add(_status_from_alert(alert))
-    return _decide_on_status(statuses)
-
-
-def _status_from_alert(alert):
-    alert_name = alert.get('labels', {}).get('alertname', '')
-    if alert_name.endswith('Degraded'):
-        return ServiceStatus.DEGRADED
-    if alert_name.endswith('Down'):
+def _service_status(list_of_statuses, quorum=-1):
+    if not list_of_statuses:
         return ServiceStatus.FAIL
-    return ServiceStatus.HEALTHY
-
-
-def _alert_service_type(alert):
-    job = alert.get('labels', {}).get('job')
-    if job.find('postgres') != -1:
-        return CloudifyNodeType.DB
-    if job.find('rabbit') != -1:
-        return CloudifyNodeType.BROKER
-    if job.find('http') != -1:
-        return CloudifyNodeType.MANAGER
-    # One day we may want to use other fields to check of service type, like
-    # alert['annotations']['summary'] or alert['labels']['alertname']
-
-
-def _alert_node_private_ip(alert):
-    alert_instance = alert.get('labels', {}).get('instance', '')
-    m = re.search(r'(.+):\d+', alert_instance)
-    if m:
-        alert_instance = m.group(1)
-    return alert_instance
-
-
-# TODO mateumann would that be useful?
-def _alert_status(alert):
-    state = alert.get('state')
-    if state == 'firing':
-        return ServiceStatus.FAIL
-    if state == 'pending':
+    number_of_nodes = len(list_of_statuses)
+    healthy = len([s for s in list_of_statuses if s == ServiceStatus.HEALTHY])
+    if healthy == number_of_nodes:
+        return ServiceStatus.HEALTHY
+    if quorum < 0:
+        quorum = int(number_of_nodes / 2) + 1
+    if healthy >= quorum:
         return ServiceStatus.DEGRADED
-
-# region Write Status Report Helpers
+    return ServiceStatus.FAIL
