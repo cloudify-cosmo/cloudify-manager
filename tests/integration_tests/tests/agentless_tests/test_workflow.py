@@ -50,10 +50,10 @@ class BasicWorkflowsTest(AgentlessTestCase):
         self.assertEqual(blueprint_id, deployment.blueprint_id)
         ni = self.client.node_instances.list(node_id='webserver_host')[0]
         machines = ni.runtime_properties['machines']
-        self.assertEquals(1, len(machines))
+        self.assertEqual(1, len(machines))
 
         outputs = self.client.deployments.outputs.get(deployment.id).outputs
-        self.assertEquals(outputs['ip_address'], '')
+        self.assertEqual(outputs['ip_address'], '')
 
     @pytest.mark.usefixtures('cloudmock_plugin')
     def test_restart_workflow(self):
@@ -86,7 +86,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
         deployment, _ = self.deploy_application(dsl_path,
                                                 blueprint_id=blueprint_id)
 
-        self.assertEquals(blueprint_id, deployment.blueprint_id)
+        self.assertEqual(blueprint_id, deployment.blueprint_id)
 
         host_ni = self.client.node_instances.list(node_id='host_node')[0]
         db_ni = self.client.node_instances.list(node_id='db_node')[0]
@@ -99,7 +99,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
         deployment, _ = self.deploy_application(dsl_path)
         host_ni = self.client.node_instances.list(node_id='host_node')[0]
         node_runtime_props = host_ni.runtime_properties
-        self.assertEquals('value1', node_runtime_props['property1'])
+        self.assertEqual('value1', node_runtime_props['property1'])
 
     @pytest.mark.usefixtures('testmockoperations_plugin')
     def test_non_existing_operation_exception(self):
@@ -134,19 +134,19 @@ class BasicWorkflowsTest(AgentlessTestCase):
         ni = self.client.node_instances.list(node_id='single_node')[0]
         invocations = \
             ni.runtime_properties['get_resource_operation_invocation']
-        self.assertEquals(1, len(invocations))
+        self.assertEqual(1, len(invocations))
         invocation = invocations[0]
         with open(get_resource("dsl/basic.yaml")) as f:
             basic_data = f.read()
 
         # checking the resources are the correct data
-        self.assertEquals(basic_data, invocation['res1_data'])
-        self.assertEquals(basic_data, invocation['res2_data'])
+        self.assertEqual(basic_data, invocation['res1_data'])
+        self.assertEqual(basic_data, invocation['res2_data'])
 
         # checking the custom filepath provided is indeed where the second
         # resource was saved
-        self.assertEquals(invocation['custom_filepath'],
-                          invocation['res2_path'])
+        self.assertEqual(invocation['custom_filepath'],
+                         invocation['res2_path'])
 
     @pytest.mark.usefixtures('cloudmock_plugin')
     def test_get_blueprint(self):
@@ -368,7 +368,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
         node_id = deployment_nodes[0].id
         node_instance = self.client.node_instances.get(node_id)
         node_states = node_instance.runtime_properties['node_states']
-        self.assertEquals(node_states, [
+        self.assertEqual(node_states, [
             'creating', 'configuring', 'starting'
         ])
         self.assertEqual('started', node_instance.state)

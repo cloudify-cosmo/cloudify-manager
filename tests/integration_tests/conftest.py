@@ -34,6 +34,10 @@ def pytest_addoption(parser):
         '--tests-source-root',
         help='Directory containing cloudify sources to mount',
     )
+    parser.addoption(
+        '--container-id',
+        help='Run integration tests on this container',
+    )
 
 
 # items from tests-source-root to be mounted into the specified
@@ -84,9 +88,13 @@ def resource_mapping(request):
 def manager_container(request, resource_mapping):
     image_name = request.config.getoption("--image-name")
     keep_container = request.config.getoption("--keep-container")
-    container_id = docker.run_manager(
-        image_name, resource_mapping=resource_mapping)
-    docker.upload_mock_license(container_id)
+    container_id = request.config.getoption("--container-id")
+    if container_id:
+        _clean_manager(container_id)
+    else:
+        container_id = docker.run_manager(
+            image_name, resource_mapping=resource_mapping)
+        docker.upload_mock_license(container_id)
     container_ip = docker.get_manager_ip(container_id)
     container = Env(container_id, container_ip)
     prepare_reset_storage_script(container_id)
@@ -118,6 +126,19 @@ def manager_class_fixtures(request, manager_container, rest_client):
     request.cls.client = rest_client
 
 
+def _clean_manager(container_id):
+    dirs_to_clean = [
+        '/opt/mgmtworker/work/deployments',
+        '/opt/manager/resources/blueprints',
+        '/opt/manager/resources/uploaded-blueprints'
+    ]
+    reset_storage(container_id)
+    for directory in dirs_to_clean:
+        docker.execute(
+            container_id,
+            ['sh', '-c', 'rm -rf {0}/*'.format(directory)])
+
+
 @pytest.fixture(autouse=True)
 def prepare_manager_storage(request, manager_container):
     """Make sure that for each test, the manager storage is the same.
@@ -126,22 +147,13 @@ def prepare_manager_storage(request, manager_container):
     cleaning the db & storage directories between tests.
     """
     container_id = manager_container.container_id
-    dirs_to_clean = [
-        '/opt/mgmtworker/work/deployments',
-        '/opt/manager/resources/blueprints',
-        '/opt/manager/resources/uploaded-blueprints'
-    ]
     try:
         yield
     finally:
         request.session.testsfinished = \
             getattr(request.session, 'testsfinished', 0) + 1
         if request.session.testsfinished != request.session.testscollected:
-            reset_storage(container_id)
-            for directory in dirs_to_clean:
-                docker.execute(
-                    container_id,
-                    ['sh', '-c', 'rm -rf {0}/*'.format(directory)])
+            _clean_manager(container_id)
 
 
 @pytest.fixture(scope='session')
