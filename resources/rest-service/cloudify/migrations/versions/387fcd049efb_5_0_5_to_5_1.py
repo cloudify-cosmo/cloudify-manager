@@ -64,6 +64,26 @@ def upgrade():
     _add_service_management_column()
     _remove_node_id_columns()
 
+    bind = op.get_bind()
+    session = orm.Session(bind=bind)
+    session.add_all([
+        Config(
+            name='blueprint_folder_max_size_mb',
+            value=50,
+            scope='rest',
+            schema={'type': 'number', 'minimum': 0},
+            is_editable=True
+        ),
+        Config(
+            name='blueprint_folder_max_files',
+            value=10000,
+            scope='rest',
+            schema={'type': 'number', 'minimum': 0},
+            is_editable=True
+        )
+    ])
+    session.commit()
+
 
 def downgrade():
     _drop_usage_collector_table()
@@ -72,6 +92,20 @@ def downgrade():
     _drop_plugins_title_column()
     _drop_service_management_column()
     _create_node_id_columns()
+
+    bind = op.get_bind()
+    session = orm.Session(bind=bind)
+    blueprint_folder_max_size = session.query(Config).filter_by(
+        name='blueprint_folder_max_size_mb',
+        scope='rest',
+    ).one()
+    blueprint_folder_max_files = session.query(Config).filter_by(
+        name='blueprint_folder_max_files',
+        scope='rest',
+    ).one()
+    session.delete(blueprint_folder_max_size)
+    session.delete(blueprint_folder_max_files)
+    session.commit()
 
 
 def _create_usage_collector_table():
