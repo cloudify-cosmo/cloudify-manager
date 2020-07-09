@@ -15,19 +15,14 @@
 #
 
 import os
-import sys
 
 from uuid import uuid4
 
 from flask_restful_swagger import swagger
 
 from cloudify.plugins.install_utils import INSTALLING_PREFIX
-from cloudify._compat import reraise
 
-from manager_rest import (
-    manager_exceptions,
-    utils,
-)
+from manager_rest import utils
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.rest import (
     rest_decorators,
@@ -129,32 +124,6 @@ class Plugins(SecuredResource):
                 **kwargs
             )
             plugins = [plugin]
-        for plugin in plugins:
-            try:
-                get_resource_manager().install_plugin(plugin)
-                installed_plugins.append(plugin)
-            except manager_exceptions.ExecutionTimeout:
-                tp, ex, tb = sys.exc_info()
-                if not is_caravan:
-                    reraise(
-                        manager_exceptions.PluginInstallationTimeout,
-                        manager_exceptions.PluginInstallationTimeout(
-                            'Timed out during plugin installation. '
-                            '({0}: {1})'.format(tp.__name__, ex)
-                        ),
-                        tb)
-            except Exception:
-                get_resource_manager().remove_plugin(plugin_id=plugin.id,
-                                                     force=True)
-                tp, ex, tb = sys.exc_info()
-                if not is_caravan:
-                    reraise(
-                        manager_exceptions.PluginInstallationError,
-                        manager_exceptions.PluginInstallationError(
-                            'Failed during plugin installation. '
-                            '({0}: {1})'.format(tp.__name__, ex)
-                        ),
-                        tb)
 
         if is_caravan:
             storage_plugins = storage_manager.list(

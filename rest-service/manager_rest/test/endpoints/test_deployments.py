@@ -653,16 +653,6 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
-    def test_creation_success_when_install_plugin_is_false(self):
-        id_ = 'i{0}'.format(uuid.uuid4())
-        self.put_deployment(
-            blueprint_file_name='deployment_with_'
-                                'install_plugin_false.yaml',
-            blueprint_id=id_,
-            deployment_id=id_)
-
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_creation_success_without_site(self):
         self._put_deployment_without_site()
 

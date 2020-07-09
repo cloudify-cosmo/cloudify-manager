@@ -126,34 +126,6 @@ class PluginsTest(BaseServerTestCase):
         self.assertNotEqual(response_a.json.get('archive_name'),
                             response_b.json.get('archive_name'))
 
-    @attr(client_min_version=2,
-          client_max_version=base_test.LATEST_API_VERSION)
-    def test_upload_and_delete_installation_workflows(self):
-        self.upload_plugin(TEST_PACKAGE_NAME, TEST_PACKAGE_VERSION)
-        executions = self.client.executions.list(
-            include_system_workflows=True).items
-        self.assertEqual(1, len(executions))
-        execution = executions[0]
-        self.assertDictContainsSubset({
-            'deployment_id': None,
-            'is_system_workflow': True,
-            'workflow_id': 'install_plugin'
-        }, execution)
-        plugin_id = self.client.plugins.list()[0].id
-        self.client.plugins.delete(plugin_id=plugin_id)
-        executions = self.client.executions.list(
-            include_system_workflows=True).items
-        self.assertEqual(2, len(executions))
-        if executions[0] != execution:
-            execution = executions[0]
-        else:
-            execution = executions[1]
-        self.assertDictContainsSubset({
-            'deployment_id': None,
-            'is_system_workflow': True,
-            'workflow_id': 'uninstall_plugin'
-        }, execution)
-
     @attr(client_min_version=2.1,
           client_max_version=base_test.LATEST_API_VERSION)
     def test_delete_force_with_cda_plugin(self):
@@ -179,36 +151,6 @@ class PluginsTest(BaseServerTestCase):
         self.assertEqual(1, len(self.client.plugins.list()))
         self.client.plugins.delete(plugin_id=plugin.id, force=True)
         self.assertEqual(0, len(self.client.plugins.list()))
-
-    @attr(client_min_version=2,
-          client_max_version=base_test.LATEST_API_VERSION)
-    def test_install_failure_rollback(self):
-        def raises(*args, **kwargs):
-            raise RuntimeError('RAISES')
-        patch_path = ('manager_rest.resource_manager.ResourceManager.'
-                      'install_plugin')
-        with patch(patch_path, raises):
-            response = self.upload_plugin(TEST_PACKAGE_NAME,
-                                          TEST_PACKAGE_VERSION)
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json['error_code'],
-                         'plugin_installation_error')
-        self.assertEqual(0, len(self.client.plugins.list()))
-
-    @attr(client_min_version=2,
-          client_max_version=base_test.LATEST_API_VERSION)
-    def test_install_timeout(self):
-        def raises(*args, **kwargs):
-            raise manager_exceptions.ExecutionTimeout('TIMEOUT')
-        patch_path = ('manager_rest.resource_manager.ResourceManager.'
-                      'install_plugin')
-        with patch(patch_path, raises):
-            response = self.upload_plugin(TEST_PACKAGE_NAME,
-                                          TEST_PACKAGE_VERSION)
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json['error_code'],
-                         'plugin_installation_timeout')
-        self.assertEqual(1, len(self.client.plugins.list()))
 
     @attr(client_min_version=2.1,
           client_max_version=base_test.LATEST_API_VERSION)
@@ -305,49 +247,6 @@ class PluginsTest(BaseServerTestCase):
         )
         plugins_list = self.client.plugins.list()
         self.assertEqual(len(plugins_list), 2)
-
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
-    def test_plugin_upload_fails_with_empty_yaml(self):
-        tmp_file_path = self.create_wheel(
-            TEST_PACKAGE_NAME,
-            TEST_PACKAGE_VERSION)
-        yaml_path = self.get_full_path(TEST_PACKAGE_EMPTY_YAML_FILE)
-        zip_path = self.zip_files([tmp_file_path, yaml_path])
-
-        with self.assertRaises(exceptions.PluginInstallationError):
-            self.client.plugins.upload(zip_path)
-
-        self.quiet_delete(tmp_file_path)
-
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
-    def test_plugin_upload_fails_with_bad_yaml(self):
-        tmp_file_path = self.create_wheel(
-            TEST_PACKAGE_NAME,
-            TEST_PACKAGE_VERSION)
-        yaml_path = self.get_full_path(TEST_PACKAGE_BAD_YAML_FILE)
-        zip_path = self.zip_files([tmp_file_path, yaml_path])
-
-        with self.assertRaises(exceptions.PluginInstallationError):
-            self.client.plugins.upload(zip_path)
-
-        self.quiet_delete(tmp_file_path)
-
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
-    def test_plugin_upload_fails_with_inconsistent_with_wagon_yaml(self):
-        tmp_file_path = self.create_wheel(
-            TEST_PACKAGE_NAME,
-            TEST_PACKAGE_VERSION)
-        yaml_path = self.get_full_path(
-            TEST_PACKAGE_INCONSISTENT_YAML_FILE)
-        zip_path = self.zip_files([tmp_file_path, yaml_path])
-
-        with self.assertRaises(exceptions.PluginInstallationError):
-            self.client.plugins.upload(zip_path)
-
-        self.quiet_delete(tmp_file_path)
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
