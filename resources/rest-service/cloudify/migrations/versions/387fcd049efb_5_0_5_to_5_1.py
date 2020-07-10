@@ -63,6 +63,7 @@ def upgrade():
     _add_plugins_title_column()
     _add_service_management_column()
     _remove_node_id_columns()
+    _add_monitoring_credentials_columns()
 
     bind = op.get_bind()
     session = orm.Session(bind=bind)
@@ -86,6 +87,7 @@ def upgrade():
 
 
 def downgrade():
+    _remove_monitoring_credentials_columns()
     _drop_usage_collector_table()
     _drop_inter_deployment_dependencies_table()
     _drop_unique_indexes()
@@ -368,3 +370,39 @@ def _create_node_id_columns():
         'db_nodes',
         ['node_id']
     )
+
+
+def _add_monitoring_credentials_columns():
+    op.add_column(
+        'db_nodes',
+        sa.Column('monitoring_password', sa.Text(), nullable=True)
+    )
+    op.add_column(
+        'db_nodes',
+        sa.Column('monitoring_username', sa.Text(), nullable=True)
+    )
+    op.add_column(
+        'managers',
+        sa.Column('monitoring_password', sa.Text(), nullable=True)
+    )
+    op.add_column(
+        'managers',
+        sa.Column('monitoring_username', sa.Text(), nullable=True)
+    )
+    op.add_column(
+        'rabbitmq_brokers',
+        sa.Column('monitoring_password', sa.Text(), nullable=True)
+    )
+    op.add_column(
+        'rabbitmq_brokers',
+        sa.Column('monitoring_username', sa.Text(), nullable=True)
+    )
+
+
+def _remove_monitoring_credentials_columns():
+    op.drop_column('rabbitmq_brokers', 'monitoring_username')
+    op.drop_column('rabbitmq_brokers', 'monitoring_password')
+    op.drop_column('managers', 'monitoring_username')
+    op.drop_column('managers', 'monitoring_password')
+    op.drop_column('db_nodes', 'monitoring_username')
+    op.drop_column('db_nodes', 'monitoring_password')
