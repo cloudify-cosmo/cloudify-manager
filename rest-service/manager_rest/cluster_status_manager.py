@@ -291,11 +291,11 @@ def _get_nodes_status_remotely(service_nodes, status_func, metrics_select_func,
 
 
 def _status_func_for_service(service_type):
-    if service_type == 'db':
+    if service_type == CloudifyNodeType.DB:
         return _get_postgresql_status
-    if service_type == 'broker':
+    if service_type == CloudifyNodeType.BROKER:
         return _get_rabbitmq_status
-    if service_type == 'manager':
+    if service_type == CloudifyNodeType.MANAGER:
         return _get_manager_status
     return None
 
@@ -322,9 +322,9 @@ def _get_manager_status(monitoring_api_uri, auth=None, ca_path=None):
 
 
 def _metrics_select_func_for_service(service_type):
-    if service_type in ('db', 'broker', ):
+    if service_type in (CloudifyNodeType.DB, CloudifyNodeType.BROKER, ):
         return _metrics_for_instance
-    if service_type == 'manager':
+    if service_type == CloudifyNodeType.MANAGER:
         return _metrics_for_host
     return None
 
