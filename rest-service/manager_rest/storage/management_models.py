@@ -630,6 +630,10 @@ class Manager(_WithCACert, SQLModelBase, CloudifyNodeMixin):
     last_seen = db.Column(UTCDateTime, nullable=False, index=True)
     status_report_frequency = db.Column(db.Integer, nullable=True)
 
+    # Monitoring access parameters
+    monitoring_username = db.Column(db.Text, nullable=True)
+    monitoring_password = db.Column(db.Text, nullable=True)
+
     @property
     def name(self):
         return self.hostname
@@ -654,6 +658,10 @@ class RabbitMQBroker(_WithCACert, SQLModelBase, CloudifyNodeMixin):
     networks = db.Column(JSONString)
     is_external = db.Column(db.Boolean, default=False, nullable=False)
 
+    # Monitoring access parameters
+    monitoring_username = db.Column(db.Text, nullable=True)
+    monitoring_password = db.Column(db.Text, nullable=True)
+
     @classmethod
     def unique_id(cls):
         return 'name'
@@ -672,6 +680,10 @@ class DBNodes(SQLModelBase, CloudifyNodeMixin):
     name = db.Column(db.Text, primary_key=True)
     host = db.Column(db.Text, unique=True, nullable=False)
     is_external = db.Column(db.Boolean, default=False, nullable=False)
+
+    # Monitoring access parameters
+    monitoring_username = db.Column(db.Text, nullable=True)
+    monitoring_password = db.Column(db.Text, nullable=True)
 
     @classmethod
     def unique_id(cls):

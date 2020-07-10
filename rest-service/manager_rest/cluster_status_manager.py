@@ -208,7 +208,6 @@ def _get_nodes_status_locally(service_nodes, status_func, metrics_select_func):
              found in the locally available metrics.
     """
     prometheus_response = status_func('http://localhost:9090/monitoring/')
-
     nodes, not_available_nodes = \
         _nodes_from_prometheus_response(prometheus_response,
                                         metrics_select_func, service_nodes)
