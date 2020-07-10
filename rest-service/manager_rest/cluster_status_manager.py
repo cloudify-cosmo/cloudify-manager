@@ -52,13 +52,14 @@ class Credentials(object):
     struct = namedtuple('CredentialsStruct', 'username password ca_path')
     data = {}
 
-    def update(self, cluster_structure):
+    @classmethod
+    def update(cls, cluster_structure):
         for service_type, service_nodes in cluster_structure.items():
             for service_node in service_nodes:
                 if (service_type, service_node.private_ip) in Credentials.data:
                     continue
-                ca_path = self._get_ca_path(service_type) or \
-                    self._store_ca(service_type, service_node)
+                ca_path = cls._get_ca_path(service_type) or \
+                    cls._store_ca(service_type, service_node)
                 Credentials.data[(service_type, service_node.private_ip)] = \
                     Credentials.struct(
                         username=service_node.monitoring_username,
@@ -66,15 +67,18 @@ class Credentials(object):
                         ca_path=ca_path,
                     )
 
-    def get(self, service_type, service_node_ip):
+    @classmethod
+    def get(cls, service_type, service_node_ip):
         return Credentials.data[(service_type, service_node_ip)]
 
-    def _get_ca_path(self, service_type):
+    @classmethod
+    def _get_ca_path(cls, service_type):
         for key, creds in Credentials.data.items():
             if key[0] == service_type and creds.ca_path:
                 return creds.ca_path
 
-    def _store_ca(self, service_type, service_node):
+    @classmethod
+    def _store_ca(cls, service_type, service_node):
         if service_type in (CloudifyNodeType.MANAGER, CloudifyNodeType.BROKER):
             ca_path = service_node.write_ca_cert()
             atexit.register(os.unlink, ca_path)
@@ -84,8 +88,6 @@ class Credentials(object):
             ca_path = None
         return ca_path
 
-
-monitoring_credentials = Credentials()
 
 # region Syncthing Status Helpers
 
@@ -204,7 +206,7 @@ def get_cluster_status():
     """
     cluster_services = {}
     cluster_structure = _generate_cluster_status_structure()
-    monitoring_credentials.update(cluster_structure)
+    Credentials.update(cluster_structure)
     cloudify_version = cluster_structure[CloudifyNodeType.MANAGER][0].version
 
     for service_type, service_nodes in cluster_structure.items():
@@ -273,8 +275,7 @@ def _get_nodes_status_remotely(service_nodes, status_func, metrics_select_func,
     nodes = {}
     for service_node_name in remote_node_names:
         service_node = get_service_node(service_node_name)
-        creds = monitoring_credentials.get(service_type,
-                                           service_node.private_ip)
+        creds = Credentials.get(service_type, service_node.private_ip)
         prometheus_response = status_func(
             'https://{ip}:53333/monitoring/'.format(
                 ip=service_node.private_ip),
