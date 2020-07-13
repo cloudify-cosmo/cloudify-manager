@@ -97,12 +97,13 @@ class ConcurrentStatusChecker(object):
     def __init__(self, number_of_threads=3):
         self._number_of_threads = number_of_threads
         self._in_queue = queue.Queue()
+        self._in_queue_len = 0
         self._out_queue = queue.Queue()
+        self._result_cache = {}
         self._threads = [
             threading.Thread(target=self._worker)
             for _ in range(self._number_of_threads)
         ]
-        self._in_queue_len = 0
 
     def _worker(self):
         while True:
@@ -129,23 +130,25 @@ class ConcurrentStatusChecker(object):
         self._in_queue.put((service_type, service_node, service_node_name,
                             status_func,))
         self._in_queue_len += 1
+        self._result_cache[service_node_name] = []
         for thread in [t for t in self._threads if t.is_alive()]:
             thread.daemon = True
             thread.start()
 
     def get_responses(self):
-        results = {}
+        result = self._result_cache.copy()
         for _ in range(self._in_queue_len):
             try:
                 service_node_name, prometheus_response = \
                     self._out_queue.get(
                         timeout=config.monitoring_timeout + 1)
             except queue.Empty:
-                results[service_node_name] = []
+                pass
             else:
-                results[service_node_name] = prometheus_response
+                result[service_node_name] = prometheus_response
         self._in_queue_len = 0
-        return results
+        self._result_cache = {}
+        return result
 
 
 def get_concurrent_status_checker():
