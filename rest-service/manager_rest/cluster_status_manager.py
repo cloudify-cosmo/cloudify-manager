@@ -131,7 +131,7 @@ class ConcurrentStatusChecker(object):
                             status_func,))
         self._in_queue_len += 1
         self._result_cache[service_node_name] = []
-        for thread in [t for t in self._threads if t.is_alive()]:
+        for thread in [t for t in self._threads if not t.is_alive()]:
             thread.daemon = True
             thread.start()
 
