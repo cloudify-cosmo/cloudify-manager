@@ -117,7 +117,7 @@ class Config(object):
     rest_service_log_files_backup_count = Setting(
         'rest_service_log_files_backup_count')
 
-    rest_monitoring_timeout = Setting('monitoring_timeout')
+    monitoring_timeout = Setting('monitoring_timeout')
 
     test_mode = Setting('test_mode', default=False)
 
