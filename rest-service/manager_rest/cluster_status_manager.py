@@ -138,7 +138,8 @@ class ConcurrentStatusChecker(object):
         for _ in range(self._in_queue_len):
             try:
                 service_node_name, prometheus_response = \
-                    self._out_queue.get(5)
+                    self._out_queue.get(
+                        timeout=config.rest_monitoring_timeout + 1)
             except queue.Empty:
                 results[service_node_name] = []
             else:
@@ -368,21 +369,24 @@ def _get_postgresql_status(monitoring_api_uri, auth=None, ca_path=None):
     return prometheus_query(monitoring_api_uri,
                             query_string='up{job=~".*postgresql"}',
                             auth=auth,
-                            ca_path=ca_path)
+                            ca_path=ca_path,
+                            timeout=config.rest_monitoring_timeout)
 
 
 def _get_rabbitmq_status(monitoring_api_uri, auth=None, ca_path=None):
     return prometheus_query(monitoring_api_uri,
                             'up{job=~".*rabbitmq"}',
                             auth=auth,
-                            ca_path=ca_path)
+                            ca_path=ca_path,
+                            timeout=config.rest_monitoring_timeout)
 
 
 def _get_manager_status(monitoring_api_uri, auth=None, ca_path=None):
     return prometheus_query(monitoring_api_uri,
                             'probe_success{job=~".*http_.+"}',
                             auth=auth,
-                            ca_path=ca_path)
+                            ca_path=ca_path,
+                            timeout=config.rest_monitoring_timeout)
 
 
 def _metrics_select_func_for_service(service_type):

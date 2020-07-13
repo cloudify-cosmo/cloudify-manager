@@ -16,14 +16,15 @@
 import requests
 
 
-def query(root_uri, query_string, auth=None, ca_path=None):
+def query(root_uri, query_string, auth=None, ca_path=None, timeout=None):
     query_uri = '{0}api/v1/query'.format(root_uri)
     params = {'query': query_string}
     try:
         r = requests.get(query_uri,
                          params=params,
                          auth=auth,
-                         verify=ca_path if ca_path else True)
+                         verify=ca_path if ca_path else True,
+                         timeout=timeout)
     except requests.exceptions.ConnectionError:
         return []
     return _format_prometheus_response(r) or []
