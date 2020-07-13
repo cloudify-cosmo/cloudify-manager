@@ -16,6 +16,8 @@
 import re
 import os
 import atexit
+import threading
+import queue
 from collections import namedtuple
 from datetime import datetime, timedelta
 
@@ -87,6 +89,59 @@ class Credentials(object):
         else:
             ca_path = None
         return ca_path
+
+
+class ConcurrentStatusChecker(object):
+    STOP_THE_WORKER = 'STOP THE WORKER'
+
+    def __init__(self, number_of_threads=3):
+        self._number_of_threads = number_of_threads
+        self._in_queue = queue.Queue()
+        self._out_queue = queue.Queue()
+        self._threads = [
+            threading.Thread(target=self._worker)
+            for _ in range(self._number_of_threads)
+        ]
+        self._in_queue_len = 0
+        for t in self._threads:
+            t.daemon = True
+            t.start()
+
+    def _worker(self):
+        while True:
+            service_type, service_node, service_node_name, status_func = \
+                self._in_queue.get()
+            if service_type == ConcurrentStatusChecker.STOP_THE_WORKER:
+                break
+            creds = Credentials.get(service_type, service_node.private_ip)
+            prometheus_response = status_func(
+                'https://{ip}:53333/monitoring/'.format(
+                    ip=service_node.private_ip),
+                auth=(creds.username, creds.password),
+                ca_path=creds.ca_path
+            )
+            self._out_queue.put(
+                (service_node_name, prometheus_response,)
+            )
+
+    def append(self, service_type, service_node, service_node_name,
+               status_func):
+        self._in_queue.put((service_type, service_node, service_node_name,
+                            status_func,))
+        self._in_queue_len += 1
+
+    def get_responses(self):
+        results = {}
+        for _ in range(self._in_queue_len):
+            service_node_name, prometheus_response = self._out_queue.get()
+            results[service_node_name] = prometheus_response
+        return results
+
+
+def get_concurrent_status_checker():
+    if not hasattr(current_app, 'concurrent_status_checker'):
+        current_app.concurrent_status_checker = ConcurrentStatusChecker()
+    return current_app.concurrent_status_checker
 
 
 # region Syncthing Status Helpers
@@ -273,14 +328,14 @@ def _get_nodes_status_remotely(service_nodes, status_func, metrics_select_func,
                 return sn
 
     nodes = {}
+    status_getter = get_concurrent_status_checker()
     for service_node_name in remote_node_names:
         service_node = get_service_node(service_node_name)
-        creds = Credentials.get(service_type, service_node.private_ip)
-        prometheus_response = status_func(
-            'https://{ip}:53333/monitoring/'.format(
-                ip=service_node.private_ip),
-            auth=(creds.username, creds.password),
-            ca_path=creds.ca_path)
+        status_getter.append(
+            service_type, service_node, service_node_name, status_func
+        )
+    for service_node_name, prometheus_response in \
+            status_getter.get_responses().items():
         node, not_available_nodes = _nodes_from_prometheus_response(
             prometheus_response, metrics_select_func, service_nodes)
         # If the remote metrics are not available, assume service_node is down
