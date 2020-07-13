@@ -111,15 +111,18 @@ class ConcurrentStatusChecker(object):
             if service_type == ConcurrentStatusChecker.STOP_THE_WORKER:
                 break
             creds = Credentials.get(service_type, service_node.private_ip)
-            prometheus_response = status_func(
-                'https://{ip}:53333/monitoring/'.format(
-                    ip=service_node.private_ip),
-                auth=(creds.username, creds.password),
-                ca_path=creds.ca_path
-            )
-            self._out_queue.put(
-                (service_node_name, prometheus_response,)
-            )
+            try:
+                prometheus_response = status_func(
+                    'https://{ip}:53333/monitoring/'.format(
+                        ip=service_node.private_ip),
+                    auth=(creds.username, creds.password),
+                    ca_path=creds.ca_path,
+                )
+            except Exception:
+                self._out_queue.put((service_node_name, [],))
+            else:
+                self._out_queue.put((service_node_name,
+                                     prometheus_response,))
 
     def append(self, service_type, service_node, service_node_name,
                status_func):
@@ -133,8 +136,14 @@ class ConcurrentStatusChecker(object):
     def get_responses(self):
         results = {}
         for _ in range(self._in_queue_len):
-            service_node_name, prometheus_response = self._out_queue.get()
-            results[service_node_name] = prometheus_response
+            try:
+                service_node_name, prometheus_response = \
+                    self._out_queue.get(5)
+            except queue.Empty:
+                results[service_node_name] = []
+            else:
+                results[service_node_name] = prometheus_response
+        self._in_queue_len = 0
         return results
 
 
