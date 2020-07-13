@@ -103,9 +103,6 @@ class ConcurrentStatusChecker(object):
             for _ in range(self._number_of_threads)
         ]
         self._in_queue_len = 0
-        for t in self._threads:
-            t.daemon = True
-            t.start()
 
     def _worker(self):
         while True:
@@ -129,6 +126,9 @@ class ConcurrentStatusChecker(object):
         self._in_queue.put((service_type, service_node, service_node_name,
                             status_func,))
         self._in_queue_len += 1
+        for thread in [t for t in self._threads if t.is_alive()]:
+            thread.daemon = True
+            thread.start()
 
     def get_responses(self):
         results = {}
