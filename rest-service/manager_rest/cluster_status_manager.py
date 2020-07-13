@@ -14,6 +14,9 @@
 #  * limitations under the License.
 
 import re
+import os
+import atexit
+from collections import namedtuple
 from datetime import datetime, timedelta
 
 from flask import current_app
@@ -22,6 +25,7 @@ from cloudify.cluster_status import (ServiceStatus,
                                      CloudifyNodeType,
                                      NodeServiceStatus)
 
+from manager_rest.config import instance as config
 from manager_rest.prometheus_client import query as prometheus_query
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.rest.rest_utils import parse_datetime_string
@@ -42,6 +46,47 @@ BROKER_SERVICE_KEY = 'RabbitMQ'
 PATRONI_SERVICE_KEY = 'Patroni'
 UNINITIALIZED_STATUS = 'Uninitialized'
 CLUSTER_STATUS_PATH = '/opt/manager/cluster_statuses'
+
+
+class Credentials(object):
+    struct = namedtuple('CredentialsStruct', 'username password ca_path')
+    data = {}
+
+    @classmethod
+    def update(cls, cluster_structure):
+        for service_type, service_nodes in cluster_structure.items():
+            for service_node in service_nodes:
+                if (service_type, service_node.private_ip) in Credentials.data:
+                    continue
+                ca_path = cls._get_ca_path(service_type) or \
+                    cls._store_ca(service_type, service_node)
+                Credentials.data[(service_type, service_node.private_ip)] = \
+                    Credentials.struct(
+                        username=service_node.monitoring_username,
+                        password=service_node.monitoring_password,
+                        ca_path=ca_path,
+                    )
+
+    @classmethod
+    def get(cls, service_type, service_node_ip):
+        return Credentials.data[(service_type, service_node_ip)]
+
+    @classmethod
+    def _get_ca_path(cls, service_type):
+        for key, creds in Credentials.data.items():
+            if key[0] == service_type and creds.ca_path:
+                return creds.ca_path
+
+    @classmethod
+    def _store_ca(cls, service_type, service_node):
+        if service_type in (CloudifyNodeType.MANAGER, CloudifyNodeType.BROKER):
+            ca_path = service_node.write_ca_cert()
+            atexit.register(os.unlink, ca_path)
+        elif service_type == CloudifyNodeType.DB:
+            ca_path = config.postgresql_ca_cert_path
+        else:
+            ca_path = None
+        return ca_path
 
 
 # region Syncthing Status Helpers
@@ -161,6 +206,7 @@ def get_cluster_status():
     """
     cluster_services = {}
     cluster_structure = _generate_cluster_status_structure()
+    Credentials.update(cluster_structure)
     cloudify_version = cluster_structure[CloudifyNodeType.MANAGER][0].version
 
     for service_type, service_nodes in cluster_structure.items():
@@ -196,7 +242,8 @@ def _get_nodes_with_status(service_type, service_nodes):
     if remote_node_names:
         remote_nodes = _get_nodes_status_remotely(service_nodes, status_func,
                                                   metrics_select_func,
-                                                  remote_node_names)
+                                                  remote_node_names,
+                                                  service_type)
         nodes.update(remote_nodes)
     return nodes
 
@@ -208,7 +255,6 @@ def _get_nodes_status_locally(service_nodes, status_func, metrics_select_func):
              found in the locally available metrics.
     """
     prometheus_response = status_func('http://localhost:9090/monitoring/')
-
     nodes, not_available_nodes = \
         _nodes_from_prometheus_response(prometheus_response,
                                         metrics_select_func, service_nodes)
@@ -216,7 +262,7 @@ def _get_nodes_status_locally(service_nodes, status_func, metrics_select_func):
 
 
 def _get_nodes_status_remotely(service_nodes, status_func, metrics_select_func,
-                               remote_node_names):
+                               remote_node_names, service_type):
     """
     Get nodes' statuses from remote Prometheus instances.
     :returns dict of nodes' statuses
@@ -229,9 +275,12 @@ def _get_nodes_status_remotely(service_nodes, status_func, metrics_select_func,
     nodes = {}
     for service_node_name in remote_node_names:
         service_node = get_service_node(service_node_name)
+        creds = Credentials.get(service_type, service_node.private_ip)
         prometheus_response = status_func(
             'https://{ip}:53333/monitoring/'.format(
-                ip=service_node.private_ip))
+                ip=service_node.private_ip),
+            auth=(creds.username, creds.password),
+            ca_path=creds.ca_path)
         node, not_available_nodes = _nodes_from_prometheus_response(
             prometheus_response, metrics_select_func, service_nodes)
         # If the remote metrics are not available, assume service_node is down
@@ -242,40 +291,40 @@ def _get_nodes_status_remotely(service_nodes, status_func, metrics_select_func,
 
 
 def _status_func_for_service(service_type):
-    if service_type == 'db':
+    if service_type == CloudifyNodeType.DB:
         return _get_postgresql_status
-    if service_type == 'broker':
+    if service_type == CloudifyNodeType.BROKER:
         return _get_rabbitmq_status
-    if service_type == 'manager':
+    if service_type == CloudifyNodeType.MANAGER:
         return _get_manager_status
     return None
 
 
-def _get_postgresql_status(monitoring_api_uri):
-    # TODO mateusz add credentials and ca_cert
-    #  it lives in /etc/cloudify/config.yaml,
-    #  is not defined in service_nodes
-    return prometheus_query('up{job=~".*postgresql"}', monitoring_api_uri)
+def _get_postgresql_status(monitoring_api_uri, auth=None, ca_path=None):
+    return prometheus_query(monitoring_api_uri,
+                            query_string='up{job=~".*postgresql"}',
+                            auth=auth,
+                            ca_path=ca_path)
 
 
-def _get_rabbitmq_status(monitoring_api_uri):
-    # TODO mateusz add credentials and ca_cert
-    #  it lives in /etc/cloudify/config.yaml,
-    #  also is defined in service_nodes
-    return prometheus_query('up{job=~".*rabbitmq"}', monitoring_api_uri)
+def _get_rabbitmq_status(monitoring_api_uri, auth=None, ca_path=None):
+    return prometheus_query(monitoring_api_uri,
+                            'up{job=~".*rabbitmq"}',
+                            auth=auth,
+                            ca_path=ca_path)
 
 
-def _get_manager_status(monitoring_api_uri):
-    # TODO mateusz add credentials and ca_cert
-    #  it lives in /etc/cloudify/config.yaml,
-    return prometheus_query('probe_success{job=~".*http_.+"}',
-                            monitoring_api_uri)
+def _get_manager_status(monitoring_api_uri, auth=None, ca_path=None):
+    return prometheus_query(monitoring_api_uri,
+                            'probe_success{job=~".*http_.+"}',
+                            auth=auth,
+                            ca_path=ca_path)
 
 
 def _metrics_select_func_for_service(service_type):
-    if service_type in ('db', 'broker', ):
+    if service_type in (CloudifyNodeType.DB, CloudifyNodeType.BROKER, ):
         return _metrics_for_instance
-    if service_type == 'manager':
+    if service_type == CloudifyNodeType.MANAGER:
         return _metrics_for_host
     return None
 
