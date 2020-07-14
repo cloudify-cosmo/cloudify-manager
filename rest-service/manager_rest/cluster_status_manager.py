@@ -94,20 +94,14 @@ class Credentials(object):
 class ConcurrentStatusChecker(object):
     STOP_THE_WORKER = 'STOP THE WORKER'
 
-    def __init__(self, number_of_threads=3):
-        self._number_of_threads = number_of_threads
+    def __init__(self):
         self._in_queue = queue.Queue()
-        self._in_queue_len = 0
         self._out_queue = queue.Queue()
-        self._result_cache = {}
-        self._threads = [
-            threading.Thread(target=self._worker)
-            for _ in range(self._number_of_threads)
-        ]
+        self._threads = None
 
     def _worker(self):
         while True:
-            service_type, service_node, service_node_name, status_func = \
+            service_node_name, service_node, service_type, status_func = \
                 self._in_queue.get()
             if service_type == ConcurrentStatusChecker.STOP_THE_WORKER:
                 break
@@ -125,19 +119,24 @@ class ConcurrentStatusChecker(object):
                 self._out_queue.put((service_node_name,
                                      prometheus_response,))
 
-    def append(self, service_type, service_node, service_node_name,
-               status_func):
-        self._in_queue.put((service_type, service_node, service_node_name,
-                            status_func,))
-        self._in_queue_len += 1
-        self._result_cache[service_node_name] = []
-        for thread in [t for t in self._threads if not t.is_alive()]:
+    def _initialize_threads(self, number_of_threads):
+        self._threads = [
+            threading.Thread(target=self._worker)
+            for _ in range(number_of_threads)
+        ]
+        for thread in self._threads:
             thread.daemon = True
             thread.start()
 
-    def get_responses(self):
-        result = self._result_cache.copy()
-        for _ in range(self._in_queue_len):
+    def get(self, named_service_nodes, service_type, status_func):
+        if self._threads is None:
+            self._initialize_threads(len(named_service_nodes))
+        result = {}
+        for service_node_name, service_node in named_service_nodes:
+            result[service_node_name] = []
+            self._in_queue.put((service_node_name, service_node, service_type,
+                                status_func,))
+        for _ in range(len(result)):
             try:
                 service_node_name, prometheus_response = \
                     self._out_queue.get(
@@ -146,8 +145,6 @@ class ConcurrentStatusChecker(object):
                 pass
             else:
                 result[service_node_name] = prometheus_response
-        self._in_queue_len = 0
-        self._result_cache = {}
         return result
 
 
@@ -342,13 +339,10 @@ def _get_nodes_status_remotely(service_nodes, status_func, metrics_select_func,
 
     nodes = {}
     status_getter = get_concurrent_status_checker()
-    for service_node_name in remote_node_names:
-        service_node = get_service_node(service_node_name)
-        status_getter.append(
-            service_type, service_node, service_node_name, status_func
-        )
-    for service_node_name, prometheus_response in \
-            status_getter.get_responses().items():
+    named_service_nodes = [(name, get_service_node(name))
+                           for name in remote_node_names]
+    for service_node_name, prometheus_response in status_getter.get(
+            named_service_nodes, service_type, status_func).items():
         node, not_available_nodes = _nodes_from_prometheus_response(
             prometheus_response, metrics_select_func, service_nodes)
         # If the remote metrics are not available, assume service_node is down
