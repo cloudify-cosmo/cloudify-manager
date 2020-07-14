@@ -81,6 +81,13 @@ def upgrade():
             scope='rest',
             schema={'type': 'number', 'minimum': 0},
             is_editable=True
+        ),
+        Config(
+            name='monitoring_timeout',
+            value=4,
+            scope='rest',
+            schema={'type': 'number', 'minimum': 0},
+            is_editable=True
         )
     ])
     session.commit()
@@ -105,8 +112,13 @@ def downgrade():
         name='blueprint_folder_max_files',
         scope='rest',
     ).one()
+    monitoring_timeout = session.query(Config).filter_by(
+        name='monitoring_timeout',
+        scope='rest',
+    ).one()
     session.delete(blueprint_folder_max_size)
     session.delete(blueprint_folder_max_files)
+    session.delete(monitoring_timeout)
     session.commit()
 
 
