@@ -387,9 +387,9 @@ def _get_manager_status(monitoring_api_uri, auth=None, ca_path=None):
 
 
 def _metrics_select_func_for_service(service_type):
-    if service_type in (CloudifyNodeType.DB, CloudifyNodeType.BROKER, ):
-        return _metrics_for_instance
-    if service_type == CloudifyNodeType.MANAGER:
+    if service_type in (CloudifyNodeType.DB,
+                        CloudifyNodeType.BROKER,
+                        CloudifyNodeType.MANAGER):
         return _metrics_for_host
     return None
 
