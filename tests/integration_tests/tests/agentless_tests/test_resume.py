@@ -240,6 +240,7 @@ class TestResumeMgmtworker(AgentlessTestCase):
         password = 'test-password'
         self._create_user(username, password, 'default_tenant')
         user_client = create_rest_client(
+            host=self.env.container_ip,
             username=username, password=password, tenant='default_tenant'
         )
         self._resume_no_duplicates_test(user_client)
