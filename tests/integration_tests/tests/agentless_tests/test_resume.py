@@ -282,53 +282,6 @@ class TestResumeMgmtworker(AgentlessTestCase):
         self.assertTrue(client.node_instances.get(instance2.id)
                         .runtime_properties['marked'])
 
-    def test_resume_cancelled_resumable(self):
-        dep = self._create_deployment()
-        instance = self.client.node_instances.list(
-            deployment_id=dep.id, node_id='node1')[0]
-        instance2 = self.client.node_instances.list(
-            deployment_id=dep.id, node_id='node2')[0]
-        execution = self._start_execution(dep, 'interface1.op_resumable')
-        self.wait_for_event(execution, 'WAITING')
-        self.client.executions.cancel(execution.id, kill=True)
-        self.logger.info('Waiting for the execution to fail')
-        execution = self.wait_for_execution_to_end(execution)
-        self.assertEqual(execution.status, 'cancelled')
-
-        self._unlock_operation('interface1.op_resumable')
-        execution = self.client.executions.resume(execution.id)
-        execution = self.wait_for_execution_to_end(execution)
-        self.assertEqual(execution.status, 'terminated')
-
-        self.assertTrue(self.client.node_instances.get(instance.id)
-                        .runtime_properties['resumed'])
-        self.assertTrue(self.client.node_instances.get(instance2.id)
-                        .runtime_properties['marked'])
-
-    def test_resume_cancelled_nonresumable(self):
-        dep = self._create_deployment()
-        instance = self.client.node_instances.list(
-            deployment_id=dep.id, node_id='node1')[0]
-        instance2 = self.client.node_instances.list(
-            deployment_id=dep.id, node_id='node2')[0]
-        execution = self._start_execution(dep, 'interface1.op_nonresumable')
-        self.wait_for_event(execution, 'WAITING')
-        self.client.executions.cancel(execution.id, kill=True)
-        self.logger.info('Waiting for the execution to fail')
-        execution = self.wait_for_execution_to_end(execution)
-        self.assertEqual(execution.status, 'cancelled')
-
-        self._unlock_operation('interface1.op_nonresumable')
-        execution = self.client.executions.resume(execution.id)
-        self.assertRaises(RuntimeError,
-                          self.wait_for_execution_to_end, execution)
-
-        self.assertFalse(self.client.node_instances.get(instance.id)
-                         .runtime_properties['resumed'])
-        self.assertNotIn('marked',
-                         self.client.node_instances.get(instance2.id)
-                         .runtime_properties)
-
     def test_force_resume_cancelled_nonresumable(self):
         dep = self._create_deployment()
         instance = self.client.node_instances.list(
