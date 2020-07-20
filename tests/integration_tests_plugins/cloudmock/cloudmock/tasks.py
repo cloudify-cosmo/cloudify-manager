@@ -51,6 +51,11 @@ def _resumable_task_base(ctx):
         ctx.logger.info('{0} WAITING'.format(ctx.operation.name))
         time.sleep(1)
     ctx.instance.runtime_properties['resumed'] = True
+
+    # fetch some file, any file, to see if downloading works aftter a resume
+    downloaded_data = ctx.download_resource('resumable_mgmtworker.yaml')
+    ctx.logger.info('Downloaded data: %s bytes', len(downloaded_data))
+
     ctx.instance.update(_merge_handler)
 
 
