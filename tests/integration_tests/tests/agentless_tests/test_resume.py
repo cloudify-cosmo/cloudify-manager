@@ -147,7 +147,7 @@ class TestResumeMgmtworker(AgentlessTestCase):
         self._unlock_operation('interface1.op_resumable', node_ids=['node1'])
 
         task = self._find_remote_operation(graphs[0].id)
-        self.assertEqual(task.state, tasks.TASK_SUCCEEDED)
+        self.assertEqual(task.state, tasks.TASK_RESPONSE_SENT)
 
     def test_resumable_mgmtworker_op(self):
         # start a workflow, stop mgmtworker, restart mgmtworker, check that
