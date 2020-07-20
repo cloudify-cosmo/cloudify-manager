@@ -96,7 +96,7 @@ def nonresumable(**kwargs):
 @operation
 def failing(ctx, **kwargs):
     if not _is_unlocked():
-        raise ValueError('Error')
+        raise NonRecoverableError('Error')
     ctx.instance.runtime_properties['resumed'] = True
 
 
