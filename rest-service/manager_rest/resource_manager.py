@@ -1499,6 +1499,49 @@ class ResourceManager(object):
 
         return new_deployment
 
+    def install_plugin(self, plugin, manager_names=None, agent_names=None):
+        """Send the plugin install task to the given managers or agents."""
+        if manager_names:
+            managers = self.sm.list(
+                models.Manager, filters={'hostname': manager_names})
+            existing_manager_names = {m.hostname for m in managers}
+            if existing_manager_names != set(manager_names):
+                missing_managers = set(manager_names) - existing_manager_names
+                raise manager_exceptions.NotFoundError(
+                    "Cannot install: requested managers do not exist: {0}"
+                    .format(', '.join(missing_managers)))
+
+            for name in existing_manager_names:
+                manager = self.sm.get(
+                    models.Manager, None, filters={'hostname': name})
+                self.sm.put(models._PluginState(
+                    _plugin_fk=plugin._storage_id,
+                    _manager_fk=manager.id,
+                    state=PluginInstallationState.PENDING,
+                ))
+
+        if agent_names:
+            agents = self.sm.list(models.Agent, filters={'name': agent_names})
+            existing_agent_names = {a.name for a in agents}
+            if existing_agent_names != set(agent_names):
+                missing_agents = set(agent_names) - existing_agent_names
+                raise manager_exceptions.NotFoundError(
+                    "Cannot install: requested agents do not exist: {0}"
+                    .format(', '.join(missing_agents)))
+
+            for name in existing_agent_names:
+                agent = self.sm.get(
+                    models.Agent, None, filters={'name': name})
+                self.sm.put(models._PluginState(
+                    _plugin_fk=plugin._storage_id,
+                    _agent_fk=agent._storage_id,
+                    state=PluginInstallationState.PENDING,
+                ))
+
+        if agent_names or manager_names:
+            workflow_executor.install_plugin(plugin)
+        return plugin
+
     def validate_plugin_is_installed(self, plugin):
         """
         This method checks if a plugin is already installed on the manager,
