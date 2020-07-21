@@ -56,31 +56,42 @@ sources = [
     ('cloudify-manager-install/cfy_manager', ['/opt/cloudify/cfy_manager'])
 ]
 
+# like sources, but just static files, not in a venv. Provide target
+# directory directly.
+sources_static = [
+    (
+        'cloudify-manager/resources/rest-service/cloudify/migrations',
+        ['/opt/manager/resources/cloudify/migrations']),
+]
 
-def _sources_mounts(request):
+
+@pytest.fixture(scope='session')
+def resource_mapping(request):
     """Mounts for the provided sources.
 
     The caller can pass --tests-source-root and some directories from
     there will be mounted into the appropriate on-manager venvs.
     """
     sources_root = request.config.getoption("--tests-source-root")
-    if not sources_root:
-        return
-    for src, target_venvs in sources:
-        src = os.path.abspath(os.path.join(sources_root, src))
-        if os.path.exists(src):
-            yield (src, target_venvs)
-
-
-@pytest.fixture(scope='session')
-def resource_mapping(request):
     resources = []
-    for src, target_venvs in _sources_mounts(request):
-        for venv in target_venvs:
-            dst = os.path.join(
-                venv, 'lib', 'python3.6', 'site-packages',
-                os.path.basename(src))
-            resources += [(src, dst)]
+    if sources_root:
+        for src, target_venvs in sources:
+            src = os.path.abspath(os.path.join(sources_root, src))
+            if not os.path.exists(src):
+                continue
+            for venv in target_venvs:
+                dst = os.path.join(
+                    venv, 'lib', 'python3.6', 'site-packages',
+                    os.path.basename(src))
+                resources += [(src, dst)]
+
+        for src, targets in sources_static:
+            src = os.path.abspath(os.path.join(sources_root, src))
+            if not os.path.exists(src):
+                continue
+            for dst in targets:
+                resources += [(src, dst)]
+
     yield resources
 
 
@@ -187,6 +198,7 @@ def package_agent(manager_container, request):
     All the sources that are mounted to the mgmtworker env, will
     also be used for the agent.
     """
+    sources_root = request.config.getoption("--tests-source-root")
     # unpack the agent archive, overwrite files, repack it, copy back
     # to the package location
     mgmtworker_env = '/opt/mgmtworker/env/lib/python*/site-packages/'
@@ -194,7 +206,10 @@ def package_agent(manager_container, request):
         '/opt/manager/resources/packages/agents/centos-core-agent.tar.gz'
     agent_source_path = 'cloudify/env/lib/python*/site-packages/'
     sources = []
-    for src, target_venvs in _sources_mounts(request):
+    for src, target_venvs in sources:
+        src = os.path.abspath(os.path.join(sources_root, src))
+        if not os.path.exists(src):
+            continue
         if '/opt/mgmtworker/env' in target_venvs:
             sources.append(os.path.basename(src))
     if not sources:
