@@ -13,6 +13,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import pytest
+
 from cloudify.plugins.install_utils import INSTALLING_PREFIX
 
 from cloudify_rest_client.exceptions import CloudifyClientError
@@ -44,14 +46,12 @@ class TestPlugins(AgentlessTestCase):
                 self.client.plugins.delete(plugin_id)
 
     def test_get_plugin_not_found(self):
-        try:
+        with pytest.raises(
+                CloudifyClientError,
+                match='Requested `Plugin` with ID `DUMMY_PLUGIN_ID` '
+                'was not found') as e:
             self.client.plugins.get('DUMMY_PLUGIN_ID')
-        except CloudifyClientError as e:
-            self.assertEquals(
-                'Requested `Plugin` with ID `DUMMY_PLUGIN_ID` was not found',
-                e._message
-            )
-            self.assertEquals(404, e.status_code)
+        assert e.value.status_code == 404
 
     def test_delete_plugin(self):
         put_response = test_utils.upload_mock_plugin(
@@ -75,14 +75,12 @@ class TestPlugins(AgentlessTestCase):
                          'got {0}'.format(len(plugins_list)))
 
     def test_delete_plugin_not_found(self):
-        try:
+        with pytest.raises(
+                CloudifyClientError,
+                match='Requested `Plugin` with ID `DUMMY_PLUGIN_ID` '
+                'was not found') as e:
             self.client.plugins.delete('DUMMY_PLUGIN_ID')
-        except CloudifyClientError as e:
-            self.assertEquals(
-                'Requested `Plugin` with ID `DUMMY_PLUGIN_ID` was not found',
-                e._message
-            )
-            self.assertEquals(404, e.status_code)
+        assert e.value.status_code == 404
 
     def test_install_uninstall_workflows_execution(self):
         test_utils.upload_mock_plugin(self.client,
