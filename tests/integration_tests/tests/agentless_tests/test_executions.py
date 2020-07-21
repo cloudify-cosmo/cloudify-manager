@@ -560,7 +560,7 @@ class ExecutionsTest(AgentlessTestCase):
         # Create snapshot and make sure it's state remains 'started'
         self._create_snapshot_and_modify_execution_status(Execution.STARTED)
         try:
-            upload_mock_plugin('cloudify-script-plugin', '1.2')
+            upload_mock_plugin(self.client, 'cloudify-script-plugin', '1.2')
         except CloudifyClientError as e:
             self.assertIn('You cannot start an execution that modifies DB'
                           ' state while a `create_snapshot`', e.message)
@@ -568,7 +568,7 @@ class ExecutionsTest(AgentlessTestCase):
 
     def test_fail_to_delete_plugin_while_creating_snapshot(self):
         # Upload plugin
-        upload_mock_plugin('cloudify-script-plugin', '1.2')
+        upload_mock_plugin(self.client, 'cloudify-script-plugin', '1.2')
         plugins_list = self.client.plugins.list()
         self.assertEqual(1, len(plugins_list),
                          'expecting 1 plugin result, '

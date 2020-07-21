@@ -181,9 +181,11 @@ class TestRestServiceListFilters(AgentlessTestCase):
 
     def test_plugins_list_with_filters(self):
         test_utils.upload_mock_plugin(
+                self.client,
                 TEST_PACKAGE_NAME,
                 TEST_PACKAGE_VERSION)
         sec_plugin_id = test_utils.upload_mock_plugin(
+            self.client,
             TEST_PACKAGE_NAME,
             OLD_TEST_PACKAGE_VERSION)['id']
         filter_field = {'id': sec_plugin_id}
@@ -198,9 +200,11 @@ class TestRestServiceListFilters(AgentlessTestCase):
 
     def test_plugins_list_no_filters(self):
         test_utils.upload_mock_plugin(
+                self.client,
                 TEST_PACKAGE_NAME,
                 TEST_PACKAGE_VERSION)
         test_utils.upload_mock_plugin(
+                self.client,
                 TEST_PACKAGE_NAME,
                 OLD_TEST_PACKAGE_VERSION)
         response = self.client.plugins.list()

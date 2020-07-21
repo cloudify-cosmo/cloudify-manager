@@ -1,4 +1,0 @@
-plugins:
-    testmockoperations:
-        executor: host_agent
-        install: false

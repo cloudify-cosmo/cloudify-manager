@@ -32,23 +32,12 @@ class TestPlugins(AgentlessTestCase):
         plugin_id = None
         try:
             put_plugin_response = test_utils.upload_mock_plugin(
+                    self.client,
                     TEST_PACKAGE_NAME,
-                    TEST_PACKAGE_VERSION)
-            execution = self._get_latest_execution('install_plugin')
-            self.wait_for_execution_to_end(execution)
-            put_plugin_response['archive_name'] = \
-                put_plugin_response['archive_name'][len(INSTALLING_PREFIX):]
-
-            self.logger.info('Plugin test execution ID is '
-                             '{0}.'.format(execution.id))
+                    TEST_PACKAGE_VERSION
+            )
             plugin_id = put_plugin_response.get('id')
-            self.assertIsNotNone(plugin_id)
-            self.assertEquals(put_plugin_response.get('package_name'),
-                              TEST_PACKAGE_NAME)
-            self.assertEquals(put_plugin_response.get('package_version'),
-                              TEST_PACKAGE_VERSION)
             get_plugin_by_id_response = self.client.plugins.get(plugin_id)
-
             self.assertEquals(put_plugin_response, get_plugin_by_id_response)
         finally:
             if plugin_id:
@@ -59,13 +48,14 @@ class TestPlugins(AgentlessTestCase):
             self.client.plugins.get('DUMMY_PLUGIN_ID')
         except CloudifyClientError as e:
             self.assertEquals(
-                u'Requested `Plugin` with ID `DUMMY_PLUGIN_ID` was not found',
-                e.message
+                'Requested `Plugin` with ID `DUMMY_PLUGIN_ID` was not found',
+                e._message
             )
             self.assertEquals(404, e.status_code)
 
     def test_delete_plugin(self):
         put_response = test_utils.upload_mock_plugin(
+                self.client,
                 TEST_PACKAGE_NAME,
                 TEST_PACKAGE_VERSION)
 
@@ -89,23 +79,18 @@ class TestPlugins(AgentlessTestCase):
             self.client.plugins.delete('DUMMY_PLUGIN_ID')
         except CloudifyClientError as e:
             self.assertEquals(
-                u'Requested `Plugin` with ID `DUMMY_PLUGIN_ID` was not found',
-                e.message
+                'Requested `Plugin` with ID `DUMMY_PLUGIN_ID` was not found',
+                e._message
             )
             self.assertEquals(404, e.status_code)
 
     def test_install_uninstall_workflows_execution(self):
-        test_utils.upload_mock_plugin(TEST_PACKAGE_NAME, TEST_PACKAGE_VERSION)
-
-        execution = self._get_latest_execution('install_plugin')
-        self.wait_for_execution_to_end(execution)
+        test_utils.upload_mock_plugin(self.client,
+                                      TEST_PACKAGE_NAME,
+                                      TEST_PACKAGE_VERSION)
 
         plugin = self.client.plugins.list()[0]
         self.client.plugins.delete(plugin.id)
-
-        execution = self._get_latest_execution('uninstall_plugin')
-        self.wait_for_execution_to_end(execution)
-
         plugins = self.client.plugins.list()
         self.assertEqual(len(plugins), 0)
 
@@ -135,6 +120,7 @@ class TestPluginsSystemState(AgentlessTestCase):
                                          wagon_files_count,
                                          corrupt_plugin=False):
         plugin = test_utils.upload_mock_plugin(
+            self.client,
             package_name,
             package_version,
             corrupt_plugin=corrupt_plugin)

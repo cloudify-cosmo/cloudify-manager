@@ -14,8 +14,9 @@
 #    * limitations under the License.
 
 import uuid
-
 from datetime import datetime, timedelta
+
+import pytest
 
 from integration_tests import AgentTestWithPlugins
 from integration_tests.framework.postgresql import run_query
@@ -24,6 +25,7 @@ from integration_tests.tests.utils import get_resource as resource
 from manager_rest.flask_utils import get_postgres_conf
 
 
+@pytest.mark.usefixtures('dockercompute_plugin')
 class TimezoneTest(AgentTestWithPlugins):
 
     """Events test cases using an alternative timezone (Asia/Jerusalem)."""
