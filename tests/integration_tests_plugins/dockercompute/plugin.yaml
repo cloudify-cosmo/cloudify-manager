@@ -10,6 +10,9 @@ node_types:
       agent_config:
         default:
           install_method: plugin
+          process_management:
+            name: detach
+
     interfaces:
       cloudify.interfaces.lifecycle:
         start: dockercompute.dockercompute.operations.start

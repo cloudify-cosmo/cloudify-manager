@@ -122,8 +122,11 @@ node_templates:
 """
 
     def test_not_loading_existing_plugin(self):
-        mock_id = upload_mock_plugin(self.TEST_PACKAGE_NAME,
-                                     self.TEST_PACKAGE_VERSION)['id']
+        mock_id = upload_mock_plugin(
+            self.client,
+            self.TEST_PACKAGE_NAME,
+            self.TEST_PACKAGE_VERSION
+        )['id']
         self.wait_for_all_executions_to_end()
         basic_blueprint_path = resource('dsl/empty_blueprint.yaml')
         self.client.blueprints.upload(basic_blueprint_path,
@@ -149,6 +152,7 @@ node_templates:
 
     def test_uploading_different_version_plugin_than_existing(self):
         mock_id = upload_mock_plugin(
+            self.client,
             self.TEST_PACKAGE_NAME,
             self.TEST_PACKAGE_VERSION)['id']
         self.wait_for_all_executions_to_end()

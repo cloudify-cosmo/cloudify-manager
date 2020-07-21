@@ -40,8 +40,10 @@ def get_cfy():
     return utils.get_cfy()
 
 
-def upload_mock_plugin(package_name, package_version, corrupt_plugin=False):
-    client = create_rest_client()
+def upload_mock_plugin(client,
+                       package_name,
+                       package_version,
+                       corrupt_plugin=False):
     temp_file_path = _create_mock_wagon(package_name, package_version)
 
     if corrupt_plugin:
