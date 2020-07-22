@@ -108,7 +108,7 @@ class ConcurrentStatusChecker(object):
             creds = Credentials.get(service_type, service_node.private_ip)
             try:
                 prometheus_response = status_func(
-                    'https://{ip}:9443/monitoring/'.format(
+                    'https://{ip}:8009/monitoring/'.format(
                         ip=service_node.private_ip),
                     auth=(creds.username, creds.password),
                     ca_path=creds.ca_path,
