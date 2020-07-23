@@ -8,7 +8,11 @@ pipeline {
         booleanParam(name: 'FETCH_IMAGE', defaultValue: false)
         text(name: 'PYTEST_ARGS', defaultValue: """-sv \\
 tests/integration_tests/tests/agentless_tests/test_workflow.py \\
-tests/integration_tests/tests/agentless_tests/test_resume.py""")
+tests/integration_tests/tests/agentless_tests/test_resume.py \\
+tests/integration_tests/tests/agentless_tests/test_rest_api.py \\
+tests/integration_tests/tests/agentless_tests/test_rest_service_list_filters.py \\
+tests/integration_tests/tests/agentless_tests/test_rest_service_pagination.py \\
+tests/integration_tests/tests/agentless_tests/test_rest_service_sort.py""")
     }
     stages {
         stage('Fetch the docker image'){
