@@ -13,6 +13,8 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import pytest
+
 from integration_tests import AgentlessTestCase
 from integration_tests.tests import utils as test_utils
 from integration_tests.tests.utils import get_resource as resource
@@ -22,8 +24,9 @@ TEST_PACKAGE_VERSION = '1.2'
 OLD_TEST_PACKAGE_VERSION = '1.1'
 
 
+@pytest.mark.usefixtures('mock_workflows_plugin')
+@pytest.mark.usefixtures('testmockoperations_plugin')
 class TestRestServiceListFilters(AgentlessTestCase):
-
     def setUp(self):
         super(TestRestServiceListFilters, self).setUp()
         self.first_deployment_id, \
@@ -181,9 +184,9 @@ class TestRestServiceListFilters(AgentlessTestCase):
 
     def test_plugins_list_with_filters(self):
         test_utils.upload_mock_plugin(
-                self.client,
-                TEST_PACKAGE_NAME,
-                TEST_PACKAGE_VERSION)
+            self.client,
+            TEST_PACKAGE_NAME,
+            TEST_PACKAGE_VERSION)
         sec_plugin_id = test_utils.upload_mock_plugin(
             self.client,
             TEST_PACKAGE_NAME,
@@ -200,15 +203,15 @@ class TestRestServiceListFilters(AgentlessTestCase):
 
     def test_plugins_list_no_filters(self):
         test_utils.upload_mock_plugin(
-                self.client,
-                TEST_PACKAGE_NAME,
-                TEST_PACKAGE_VERSION)
+            self.client,
+            TEST_PACKAGE_NAME,
+            TEST_PACKAGE_VERSION)
         test_utils.upload_mock_plugin(
-                self.client,
-                TEST_PACKAGE_NAME,
-                OLD_TEST_PACKAGE_VERSION)
-        response = self.client.plugins.list()
+            self.client,
+            TEST_PACKAGE_NAME,
+            OLD_TEST_PACKAGE_VERSION)
+        plugins = [(p.package_name, p.package_version)
+                   for p in self.client.plugins.list()]
 
-        self.assertEqual(len(response), 2, 'expecting 2 plugin results, '
-                                           'got {0}'.format(len(response)))
-        self.assertNotEquals(response[0].id, response[1].id)
+        assert (TEST_PACKAGE_NAME, TEST_PACKAGE_VERSION) in plugins
+        assert (TEST_PACKAGE_NAME, OLD_TEST_PACKAGE_VERSION) in plugins

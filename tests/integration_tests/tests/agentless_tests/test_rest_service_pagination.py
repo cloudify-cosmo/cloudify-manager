@@ -28,14 +28,6 @@ MAX_RESULT_FOR_TESTING = 9
 
 
 class TestRestServiceListPagination(AgentlessTestCase):
-    @classmethod
-    def setUpClass(cls):
-        super(TestRestServiceListPagination, cls).setUpClass()
-
-    @classmethod
-    def tearDownClass(cls):
-        super(TestRestServiceListPagination, cls).tearDownClass()
-
     def test_blueprints_pagination(self):
         for i in range(10):
             self.client.blueprints.upload(resource('dsl/pagination.yaml'),
@@ -79,7 +71,7 @@ class TestRestServiceListPagination(AgentlessTestCase):
 
     def test_node_instances_pagination(self):
         deployment = self.deploy(
-                resource('dsl/pagination-node-instances.yaml'))
+            resource('dsl/pagination-node-instances.yaml'))
         partial_obj = partial(
             self.client.node_instances.list,
             deployment_id=deployment.id)
