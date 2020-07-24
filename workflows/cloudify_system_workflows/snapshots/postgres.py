@@ -90,12 +90,18 @@ class Postgres(object):
         # Make foreign keys for the `roles` table deferrable
         deferrable_roles_constraints = self._get_roles_constraints(
             'DEFERRABLE INITIALLY DEFERRED')
-        dump_file = self._prepend_dump(dump_file, clear_tables_queries +
-                                       deferrable_roles_constraints)
+        # Perpend also BEGIN; to start a transaction (with deferrable constr.)
+        dump_file = self._prepend_dump(dump_file,
+                                       clear_tables_queries +
+                                       deferrable_roles_constraints +
+                                       ["BEGIN;"])
 
         # Remove users/roles associated with 5.0.5 status reporter
         delete_status_reporter = self._get_status_reporter_deletes()
         self._append_dump(dump_file, '\n'.join(delete_status_reporter))
+
+        # Finish transaction (status-reporter users/roles no longer exist)
+        self._append_dump(dump_file, 'COMMIT;\n')
 
         # Make foreign keys for the `roles` table immediate (as they were)
         immediate_roles_constraints = self._get_roles_constraints(
@@ -645,6 +651,8 @@ class Postgres(object):
 
     def _get_status_reporter_deletes(self):
         return [
+            "DELETE FROM users_roles WHERE user_id IN ( "
+            "SELECT id FROM users WHERE username='manager_status_reporter');",
             "DELETE FROM users WHERE username='manager_status_reporter';",
         ]
 
