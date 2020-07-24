@@ -76,7 +76,7 @@ class Postgres(object):
         # Make foreign keys for the `roles` table deferrable
         deferrable_roles_constraints = self._get_roles_constraints(
             'DEFERRABLE INITIALLY DEFERRED')
-        # Perpend also BEGIN; to start a transaction (with deferrable constr.)
+        # Prepend also BEGIN; to start a transaction (with deferrable constr.)
         dump_file = self._prepend_dump(dump_file,
                                        clear_tables_queries +
                                        deferrable_roles_constraints +
