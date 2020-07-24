@@ -85,9 +85,23 @@ class Postgres(object):
         ctx.logger.info('Restoring DB from postgres dump')
         dump_file = os.path.join(tempdir, self._POSTGRES_DUMP_FILENAME)
 
+        # Make foreign keys for the `roles` table deferrable
+        deferrable_roles_constraints = self._get_roles_constraints(
+            'DEFERRABLE INITIALLY DEFERRED')
+        dump_file = self._prepend_dump(dump_file, deferrable_roles_constraints)
+
         # Add to the beginning of the dump queries that recreate the schema
         clear_tables_queries = self._get_clear_tables_queries()
         dump_file = self._prepend_dump(dump_file, clear_tables_queries)
+
+        # Remove users/roles associated with 5.0.5 status reporter
+        delete_status_reporter = self._get_status_reporter_deletes()
+        self._append_dump(dump_file, delete_status_reporter)
+
+        # Make foreign keys for the `roles` table immediate (as they were)
+        immediate_roles_constraints = self._get_roles_constraints(
+            'NOT DEFERRABLE')
+        self._append_dump(dump_file, immediate_roles_constraints)
 
         # Don't change admin user during the restore or the workflow will
         # fail to correctly execute (the admin user update query reverts it
@@ -617,6 +631,23 @@ class Postgres(object):
         if preserve_defaults:
             self._add_preserve_defaults_queries(queries)
         return queries
+
+    def _get_roles_constraints(self, constraint='IMMEDIATE'):
+        tables = (
+            'groups_roles',
+            'groups_tenants',
+            'users_roles',
+            'users_tenants',
+        )
+        return [
+            "ALTER TABLE {0} ALTER CONSTRAINT {0}_role_id_fkey {1};".format(
+                t, constraint) for t in tables
+        ]
+
+    def _get_status_reporter_deletes(self):
+        return [
+            "DELETE FROM users WHERE username='manager_status_reporter';",
+        ]
 
     def _add_preserve_defaults_queries(self, queries):
         """Replace regular truncate queries for users/tenants with ones that
