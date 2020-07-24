@@ -14,38 +14,44 @@
 #    * limitations under the License.
 
 import time
+import pytest
 
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 
 
+@pytest.mark.usefixtures('cloudmock_plugin')
+@pytest.mark.usefixtures('testmockoperations_plugin')
 class TestMultiInstanceApplication(AgentlessTestCase):
 
     def test_deploy_multi_instance_application(self):
         dsl_path = resource("dsl/multi_instance.yaml")
         deployment, _ = self.deploy_application(dsl_path)
-        machines = set(self.get_plugin_data(
-            plugin_name='cloudmock',
-            deployment_id=deployment.id
-        )['machines'])
-        self.assertEquals(2, len(machines))
-        apps_state = self.get_plugin_data(
-            plugin_name='testmockoperations',
-            deployment_id=deployment.id
-        )['state']
-        machines_with_apps = set([])
-        for app_state in apps_state:
-            host_id = list(app_state['capabilities'].keys())[0]
-            machines_with_apps.add(host_id)
-        self.assertEquals(machines, machines_with_apps)
+
+        machines = set()
+        for host_ni in self.client.node_instances.list(node_id='host'):
+            machines.update(
+                host_id for host_id, state
+                in host_ni.runtime_properties.get('machines', {}).items()
+                if state == 'running'
+            )
+        machines_with_apps = set()
+        for app_ni in self.client.node_instances.list(node_id='app_module'):
+            machines_with_apps.update(
+                app_ni.runtime_properties.get('capabilities', {})
+            )
+        assert machines == machines_with_apps
 
     def test_deploy_multi_instance_many_different_hosts(self):
         dsl_path = resource('dsl/multi_instance_many_different_hosts.yaml')
         deployment, _ = self.deploy_application(dsl_path, timeout_seconds=180)
-        machines = set(self.get_plugin_data(
-            plugin_name='cloudmock',
-            deployment_id=deployment.id
-        )['machines'])
+        machines = set()
+        for host_ni in self.client.node_instances.list():
+            machines.update(
+                host_id for host_id, state
+                in host_ni.runtime_properties.get('machines', {}).items()
+                if state == 'running'
+            )
         self.assertEquals(15, len(machines))
         self.assertEquals(
             5, len([ma for ma in machines if ma.startswith('host1')]))
@@ -58,5 +64,5 @@ class TestMultiInstanceApplication(AgentlessTestCase):
         dsl_path = resource('dsl/multi_instance_large_scale.yaml')
         start = time.time()
         deployment, _ = self.deploy_application(dsl_path, timeout_seconds=3600)
-        self.logger.info('All done! execution took {} seconds'
-                         .format(time.time() - start))
+        self.logger.info('All done! execution took %s seconds',
+                         time.time() - start)
