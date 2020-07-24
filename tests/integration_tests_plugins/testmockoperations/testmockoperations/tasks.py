@@ -116,9 +116,9 @@ def saving_multiple_params_op(ctx, params, **_):
 
 
 def saving_operation_info(ctx, op, main_node, second_node=None, **_):
-    invocations = ctx.instance.runtime_properties.get(
+    invocations = main_node.instance.runtime_properties.get(
         'mock_operation_invocation', [])
-    num = ctx.instance.runtime_properties.get('num', 0) + 1
+    num = main_node.instance.runtime_properties.get('num', 0) + 1
 
     op_info = {'operation': op, 'num': num}
     if second_node is None:
@@ -136,8 +136,9 @@ def saving_operation_info(ctx, op, main_node, second_node=None, **_):
         })
     invocations.append(op_info)
 
-    ctx.instance.runtime_properties['num'] = num
-    ctx.instance.runtime_properties['mock_operation_invocation'] = invocations
+    main_node.instance.runtime_properties['num'] = num
+    main_node.instance.runtime_properties['mock_operation_invocation'] = \
+        invocations
 
     client = get_rest_client()
     fail_input = client.deployments.get(ctx.deployment.id).inputs.get(
