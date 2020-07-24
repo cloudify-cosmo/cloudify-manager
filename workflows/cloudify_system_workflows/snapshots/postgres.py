@@ -85,23 +85,22 @@ class Postgres(object):
         ctx.logger.info('Restoring DB from postgres dump')
         dump_file = os.path.join(tempdir, self._POSTGRES_DUMP_FILENAME)
 
+        # Add to the beginning of the dump queries that recreate the schema
+        clear_tables_queries = self._get_clear_tables_queries()
         # Make foreign keys for the `roles` table deferrable
         deferrable_roles_constraints = self._get_roles_constraints(
             'DEFERRABLE INITIALLY DEFERRED')
-        dump_file = self._prepend_dump(dump_file, deferrable_roles_constraints)
-
-        # Add to the beginning of the dump queries that recreate the schema
-        clear_tables_queries = self._get_clear_tables_queries()
-        dump_file = self._prepend_dump(dump_file, clear_tables_queries)
+        dump_file = self._prepend_dump(dump_file, clear_tables_queries +
+                                       deferrable_roles_constraints)
 
         # Remove users/roles associated with 5.0.5 status reporter
         delete_status_reporter = self._get_status_reporter_deletes()
-        self._append_dump(dump_file, delete_status_reporter)
+        self._append_dump(dump_file, '\n'.join(delete_status_reporter))
 
         # Make foreign keys for the `roles` table immediate (as they were)
         immediate_roles_constraints = self._get_roles_constraints(
             'NOT DEFERRABLE')
-        self._append_dump(dump_file, immediate_roles_constraints)
+        self._append_dump(dump_file, '\n'.join(immediate_roles_constraints))
 
         # Don't change admin user during the restore or the workflow will
         # fail to correctly execute (the admin user update query reverts it
