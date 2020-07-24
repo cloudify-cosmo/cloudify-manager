@@ -24,25 +24,11 @@ from psycopg2.extras import execute_values
 from cloudify.workflows import ctx
 from cloudify.cryptography_utils import encrypt
 from cloudify.exceptions import NonRecoverableError
-from cloudify.cluster_status import (
-    STATUS_REPORTER_USERS,
-    MANAGER_STATUS_REPORTER,
-    MANAGER_STATUS_REPORTER_ID,
-    BROKER_STATUS_REPORTER_ID,
-    DB_STATUS_REPORTER_ID
-)
 
 from .constants import ADMIN_DUMP_FILE, LICENSE_DUMP_FILE
 from .utils import run as run_shell
 
 POSTGRESQL_DEFAULT_PORT = 5432
-_STATUS_REPORTERS_QUERY_TUPLE = ', '.join(
-    "'{0}'".format(reporter) for reporter in STATUS_REPORTER_USERS)
-
-_STATUS_REPORTERS_IDS_QUERY_TUPLE = "'{0}', '{1}', '{2}'".format(
-    MANAGER_STATUS_REPORTER_ID,
-    DB_STATUS_REPORTER_ID,
-    BROKER_STATUS_REPORTER_ID)
 
 
 class Postgres(object):
@@ -100,7 +86,7 @@ class Postgres(object):
         delete_status_reporter = self._get_status_reporter_deletes()
         self._append_dump(dump_file, '\n'.join(delete_status_reporter))
 
-        # Finish transaction (status-reporter users/roles no longer exist)
+        # Finish transaction (status reporter users/roles no longer exist)
         self._append_dump(dump_file, 'COMMIT;\n')
 
         # Make foreign keys for the `roles` table immediate (as they were)
@@ -223,80 +209,6 @@ class Postgres(object):
         return (base_query.format(username, password),
                 base_query.format('*'*8, '*'*8))
 
-    @staticmethod
-    def _find_reporter_role(roles_mapping, reporter_id):
-        if reporter_id not in roles_mapping:
-            raise NonRecoverableError('Illegal state - '
-                                      'missing status reporter user\'s {0}'
-                                      'roles in mapping {1}'.format(
-                                        reporter_id,
-                                        roles_mapping))
-        return roles_mapping[reporter_id]
-
-    def upsert_status_reporters_users(self, reporters, reporters_roles):
-        """
-        Handles the insertion/update of status reporters users to the manager,
-        which will maintain their current api token (and not from the
-        snapshot).
-        :param reporters Needed user info for the current status reporter
-         users.
-        :param reporters_roles Mapping between user id an role id.
-        """
-        create_user_query = """
-        INSERT INTO users (username, password, api_token_key, active, id)
-        VALUES
-           (
-              '{0}',
-              '{1}',
-              '{2}',
-              TRUE,
-              {3}
-           )
-        ON CONFLICT (username) DO
-        UPDATE SET password='{1}', api_token_key='{2}', active=TRUE, id={3}
-        WHERE users.username = '{0}';"""
-
-        create_user_role_query = """
-        INSERT INTO users_roles (user_id, role_id)
-        VALUES ({0}, {1})
-        ON CONFLICT (user_id, role_id)
-        DO NOTHING;
-        """
-
-        create_user_tenant_query = """
-        INSERT INTO users_tenants (user_id, tenant_id, role_id)
-        VALUES ({0}, 0, {1})
-        ON CONFLICT (user_id, tenant_id)
-        DO NOTHING;
-        """
-        reporters_roles = {r['user_id']: r['role_id'] for r in reporters_roles}
-        queries = []
-        for reporter in reporters:
-            username = reporter['username']
-            password = reporter['password']
-            api_token_key = reporter['api_token_key']
-            reporter_id = reporter['id']
-            queries.append(
-                create_user_query.format(username,
-                                         password,
-                                         api_token_key,
-                                         reporter_id))
-            role_id = self._find_reporter_role(reporters_roles, reporter_id)
-            queries.append(
-                create_user_role_query.format(
-                    reporter_id,
-                    role_id
-                ))
-
-            queries.append(
-                create_user_tenant_query.format(
-                    reporter_id,
-                    role_id
-                ))
-
-        full_query = '\n'.join(queries)
-        self.run_query(full_query)
-
     def _get_execution_restore_query(self):
         """Return a query that creates an execution to the DB with the ID (and
         other data) from the snapshot restore execution
@@ -332,44 +244,6 @@ class Postgres(object):
             for table in self._CONFIG_TABLES
         ])
         self._restore_dump(new_dump_file, self._db_name)
-
-    def dump_status_reporter_users(self, tempdir):
-        ctx.logger.debug('Dumping status reporter users...')
-        path = os.path.join(tempdir, 'status_reporter_users.dump')
-        command = self.get_psql_command(self._db_name)
-
-        query = (
-            'select array_to_json(array_agg(row)) from ('
-            'select * from users where id in ({0})'
-            ') row;'.format(_STATUS_REPORTERS_IDS_QUERY_TUPLE)
-        )
-        command.extend([
-            '-c', query,
-            '-t',  # Dump just the data, without extra headers, etc
-            '-o', path,
-        ])
-        run_shell(command)
-        ctx.logger.debug('Dumped status reporter users to {}'.format(path))
-        return path
-
-    def dump_status_reporter_roles(self, tempdir):
-        ctx.logger.debug('Dumping status reporter users\' roles')
-        path = os.path.join(tempdir, 'status_reporter_roles.dump')
-        command = self.get_psql_command(self._db_name)
-
-        query = (
-            'select array_to_json(array_agg(row)) from ('
-            'select * from users_roles where user_id in ({0})'
-            ') row;'.format(_STATUS_REPORTERS_IDS_QUERY_TUPLE)
-        )
-        command.extend([
-            '-c', query,
-            '-t',  # Dump just the data, without extra headers, etc
-            '-o', path,
-        ])
-        run_shell(command)
-        ctx.logger.debug('Dumped status reporter roles to {}'.format(path))
-        return path
 
     @staticmethod
     def _restore_json_dump_file(dump_path):
@@ -663,9 +537,6 @@ class Postgres(object):
         :param queries: List of truncate queries
         """
         queries.remove(self._TRUNCATE_QUERY.format('users'))
-        queries.append('DELETE FROM users CASCADE '
-                       'WHERE id != 0 AND username NOT IN ({0});'
-                       ''.format(_STATUS_REPORTERS_QUERY_TUPLE))
         queries.remove(self._TRUNCATE_QUERY.format('tenants'))
         queries.append('DELETE FROM tenants CASCADE WHERE id != 0;')
 
@@ -685,16 +556,6 @@ class Postgres(object):
                                       'missing admin user in db')
         return response['all'][0]
 
-    def _get_status_reporters_credentials(self):
-        response = self.run_query(
-            "SELECT username, password, api_token_key, id "
-            "FROM users WHERE username IN ({0})"
-            "".format(_STATUS_REPORTERS_QUERY_TUPLE))
-        if not response['all']:
-            raise NonRecoverableError('Illegal state - '
-                                      'missing status reporter users in db')
-        return response['all']
-
     def dump_license_to_file(self, tmp_dir):
         destination = os.path.join(tmp_dir, LICENSE_DUMP_FILE)
         self._dump_to_file(destination, self._db_name, table='licenses')
@@ -711,19 +572,6 @@ class Postgres(object):
         ctx.logger.debug('Init Postgres config: {0}'.format(config))
         config.postgresql_password, config.postgresql_username = \
             postgres_password, postgres_username
-
-    def get_manager_reporter_info(self):
-        query = """
-        SELECT
-            json_build_object(
-                'id', id,
-                'api_token_key', api_token_key
-            )
-        FROM users
-        WHERE username = '{0}'
-        """.format(MANAGER_STATUS_REPORTER)
-        result = self.run_query(query)
-        return result['all'][0][0]
 
     def get_service_management(self):
         result = self.run_query("SELECT value "
