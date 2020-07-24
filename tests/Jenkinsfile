@@ -12,7 +12,8 @@ tests/integration_tests/tests/agentless_tests/test_resume.py \\
 tests/integration_tests/tests/agentless_tests/test_rest_api.py \\
 tests/integration_tests/tests/agentless_tests/test_rest_service_list_filters.py \\
 tests/integration_tests/tests/agentless_tests/test_rest_service_pagination.py \\
-tests/integration_tests/tests/agentless_tests/test_rest_service_sort.py""")
+tests/integration_tests/tests/agentless_tests/test_rest_service_sort.py \\
+tests/integration_tests/tests/agentless_tests/test_n_instances.py""")
     }
     stages {
         stage('Fetch the docker image'){
