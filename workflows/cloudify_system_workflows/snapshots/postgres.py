@@ -526,8 +526,10 @@ class Postgres(object):
     def _get_status_reporter_deletes(self):
         return [
             "DELETE FROM users_roles WHERE user_id IN ( "
-            "SELECT id FROM users WHERE username='manager_status_reporter');",
-            "DELETE FROM users WHERE username='manager_status_reporter';",
+            "SELECT id FROM users WHERE username IN ('db_status_reporter', "
+            "'broker_status_reporter', 'manager_status_reporter'));",
+            "DELETE FROM users WHERE username IN ('db_status_reporter', "
+            "'broker_status_reporter', 'manager_status_reporter');",
         ]
 
     def _add_preserve_defaults_queries(self, queries):
