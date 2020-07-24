@@ -68,8 +68,7 @@ function set_manager_ip_supervisord() {
 touched_file_path="/opt/cloudify/manager-ip-setter/touched"
 
 if [ ! -f ${touched_file_path} ]; then
-    supervisord=$(grep "service_management: supervisord" /etc/cloudify/config.yaml)
-    if [ ! -z "$supervisord" ]; then
+    if  grep -E 'service_management:\s+supervisord' /etc/cloudify/config.yaml; then
         set_manager_ip_supervisord
     else
         set_manager_ip
