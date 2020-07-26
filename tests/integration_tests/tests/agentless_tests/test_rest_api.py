@@ -45,7 +45,9 @@ class RestAPITest(AgentlessTestCase):
                                        skip_plugins_validation=True)
         wait_for_deployment_creation_to_complete(
             self.env.container_id,
-            deployment_id=deployment_id)
+            deployment_id,
+            self.client
+        )
 
     def _deploy_basic_blueprint(self):
         self.deploy_application(self.dsl_path,

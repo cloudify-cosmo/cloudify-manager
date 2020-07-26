@@ -1,3 +1,6 @@
 from setuptools import setup
 
-setup(name='testmockoperations', packages=['testmockoperations'])
+setup(
+    name='testmockoperations',
+    packages=['testmockoperations']
+)

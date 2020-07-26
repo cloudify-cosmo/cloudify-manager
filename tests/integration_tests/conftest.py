@@ -245,8 +245,9 @@ def _make_wagon_fixture(plugin_name):
     @pytest.fixture(scope='session')
     def _fixture(rest_client, tmp_path_factory):
         plugins_dir = os.path.dirname(integration_tests_plugins.__file__)
+        plugin_source = os.path.join(plugins_dir, plugin_name)
         wagon_path = wagon.create(
-            os.path.join(plugins_dir, plugin_name),
+            plugin_source,
             archive_destination_dir=str(tmp_path_factory.mktemp(plugin_name)),
             force=True
         )

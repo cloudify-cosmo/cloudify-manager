@@ -148,7 +148,7 @@ sanity:
     skip_sanity: true
 """)
     command = [
-        'docker', 'run', '--privileged', '-d',
+        'docker', 'run', '-d',
         '-v', '/sys/fs/cgroup:/sys/fs/cgroup:ro',
         '-v', '{0}:/etc/cloudify/config.yaml:rw'.format(conf.name),
         '--tmpfs', '/run', '--tmpfs', '/run/lock',

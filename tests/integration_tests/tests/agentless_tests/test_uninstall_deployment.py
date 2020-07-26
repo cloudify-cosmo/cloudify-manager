@@ -13,11 +13,14 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import pytest
 
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 
 
+@pytest.mark.usefixtures('testmockoperations_plugin')
+@pytest.mark.usefixtures('cloudmock_plugin')
 class TestUninstallDeployment(AgentlessTestCase):
 
     def test_uninstall_application_single_node_no_host(self):
@@ -26,22 +29,18 @@ class TestUninstallDeployment(AgentlessTestCase):
         deployment_id = deployment.id
         self.undeploy_application(deployment_id)
 
-        states = self.get_plugin_data(
-            plugin_name='testmockoperations',
-            deployment_id=deployment_id
-        )['state']
-        node_id = states[0]['id']
-        unreachable_call_order = self.get_plugin_data(
-            plugin_name='testmockoperations',
-            deployment_id=deployment_id
-        )['unreachable_call_order']
+        node_id = self.client.node_instances.list(
+            deployment_id=deployment_id)[0].id
+        node_instance = self.client.node_instances.get(node_id)
+        unreachable_call_order = node_instance.runtime_properties[
+            'unreachable_call_order'
+        ]
 
         unreachable_called = is_unreachable_called(
             node_id,
             unreachable_call_order)
         self.assertTrue(unreachable_called)
 
-        node_instance = self.client.node_instances.get(node_id)
         self.assertEqual('deleted', node_instance['state'])
 
     def test_uninstall_application_single_host_node(self):
@@ -51,12 +50,12 @@ class TestUninstallDeployment(AgentlessTestCase):
         deployment_id = deployment.id
 
         self.undeploy_application(deployment_id)
-
-        machines = self.get_plugin_data(
-            plugin_name='cloudmock',
-            deployment_id=deployment_id
-        )['machines']
-
+        node_id = self.client.node_instances.list(
+            deployment_id=deployment_id)[0].id
+        node_instance = self.client.node_instances.get(node_id)
+        machines = node_instance.runtime_properties[
+            'machines'
+        ]
         self.assertEquals(0, len(machines))
 
     def test_uninstall_with_dependency_order(self):
@@ -65,37 +64,44 @@ class TestUninstallDeployment(AgentlessTestCase):
         deployment, _ = self.deploy_application(dsl_path)
         deployment_id = deployment.id
         self.undeploy_application(deployment_id)
-        # Checking that uninstall wasn't called on the contained node
-        states = self.get_plugin_data(
-            plugin_name='testmockoperations',
-            deployment_id=deployment_id
-        )['state']
-        node1_id = states[0]['id']
-        node2_id = states[1]['id']
-        node3_id = states[2]['id']
 
-        unreachable_call_order = self.get_plugin_data(
-            plugin_name='testmockoperations',
-            deployment_id=deployment_id
-        )['unreachable_call_order']
-        self.assertEquals(3, len(unreachable_call_order))
-        self.assertEquals(node3_id, unreachable_call_order[0]['id'])
-        self.assertEquals(node2_id, unreachable_call_order[1]['id'])
-        self.assertEquals(node1_id, unreachable_call_order[2]['id'])
+        node1 = self.client.node_instances.list(
+            deployment_id=deployment.id,
+            node_id='containing_node')[0]
+        node2 = self.client.node_instances.list(
+            deployment_id=deployment.id,
+            node_id='contained_in_node1')[0]
+        node3 = self.client.node_instances.list(
+            deployment_id=deployment.id,
+            node_id='contained_in_node2')[0]
 
-        configurer_state = self.get_plugin_data(
-            plugin_name='connection_configurer_mock',
-            deployment_id=deployment_id
-        )['state']
-        self.assertEquals(2, len(configurer_state))
-        self.assertTrue(
-            configurer_state[0]['source_id'].startswith('contained_in_node2'))
-        self.assertTrue(
-            configurer_state[0]['target_id'].startswith('contained_in_node1'))
-        self.assertTrue(
-            configurer_state[1]['target_id'].startswith('containing_node'))
-        self.assertTrue(
-            configurer_state[1]['source_id'].startswith('contained_in_node1'))
+        # The installation order for node instances based on timestamp
+        self.assertLess(
+            node1.runtime_properties['time'],
+            node2.runtime_properties['time']
+        )
+        self.assertLess(
+            node1.runtime_properties['time'],
+            node3.runtime_properties['time']
+        )
+        self.assertLess(
+            node2.runtime_properties['time'],
+            node3.runtime_properties['time']
+        )
+
+        # The un-installation order for node instances based on timestamp
+        self.assertLess(
+            node3.runtime_properties['unreachable_call_order'][0]['time'],
+            node2.runtime_properties['unreachable_call_order'][0]['time']
+        )
+        self.assertLess(
+            node3.runtime_properties['unreachable_call_order'][0]['time'],
+            node1.runtime_properties['unreachable_call_order'][0]['time']
+        )
+        self.assertLess(
+            node2.runtime_properties['unreachable_call_order'][0]['time'],
+            node1.runtime_properties['unreachable_call_order'][0]['time']
+        )
 
     def test_stop_monitor_node_operation(self):
         dsl_path = resource(
@@ -103,11 +109,13 @@ class TestUninstallDeployment(AgentlessTestCase):
         deployment, _ = self.deploy_application(dsl_path)
         deployment_id = deployment.id
         self.undeploy_application(deployment_id)
-        # test stop monitor invocations
-        invocations = self.get_plugin_data(
-            plugin_name='testmockoperations',
-            deployment_id=deployment_id
-        )['monitoring_operations_invocation']
+        # test monitor invocations
+        node_id = self.client.node_instances.list(
+            deployment_id=deployment_id)[0].id
+        node_instance = self.client.node_instances.get(node_id)
+        invocations = node_instance.runtime_properties[
+            'monitoring_operations_invocation'
+        ]
         self.assertEqual(2, len(invocations))
         self.assertTrue('single_node' in invocations[0]['id'])
         self.assertEquals('start_monitor', invocations[0]['operation'])
@@ -121,10 +129,12 @@ class TestUninstallDeployment(AgentlessTestCase):
         self.undeploy_application(deployment_id,
                                   parameters={'ignore_failure': True})
 
-        machines = self.get_plugin_data(
-            plugin_name='cloudmock',
-            deployment_id=deployment_id
-        )['machines']
+        node_id = self.client.node_instances.list(
+            deployment_id=deployment_id)[0].id
+        node_instance = self.client.node_instances.get(node_id)
+        machines = node_instance.runtime_properties[
+            'machines'
+        ]
 
         self.assertEquals(0, len(machines))
 

@@ -132,7 +132,7 @@ def create_rest_client(**kwargs):
 
 
 def wait_for_deployment_creation_to_complete(
-        container_id, deployment_id, timeout_seconds=60, client=None):
+        container_id, deployment_id, client, timeout_seconds=60):
     do_retries(func=verify_deployment_env_created,
                exception_class=Exception,
                timeout_seconds=timeout_seconds,
@@ -140,11 +140,9 @@ def wait_for_deployment_creation_to_complete(
                deployment_id=deployment_id, client=client)
 
 
-def verify_deployment_env_created(container_id, deployment_id, client=None):
+def verify_deployment_env_created(container_id, deployment_id, client):
     # A workaround for waiting for the deployment environment creation to
     # complete
-    client = client or create_rest_client(
-        host=docker.get_manager_ip(container_id))
     execs = client.executions.list(deployment_id=deployment_id)
     if not execs \
             or execs[0].status != Execution.TERMINATED \
@@ -160,15 +158,14 @@ def verify_deployment_env_created(container_id, deployment_id, client=None):
 
 
 def wait_for_deployment_deletion_to_complete(
-        deployment_id, timeout_seconds=60, client=None):
+        deployment_id, client, timeout_seconds=60):
     do_retries(func=verify_deployment_delete_complete,
                timeout_seconds=timeout_seconds,
                deployment_id=deployment_id,
                client=client)
 
 
-def verify_deployment_delete_complete(deployment_id, client=None):
-    client = client or create_rest_client()
+def verify_deployment_delete_complete(deployment_id, client):
     deployment = client.deployments.list(id=deployment_id)
     if deployment:
         raise RuntimeError('Deployment with id {0} was not deleted yet.'

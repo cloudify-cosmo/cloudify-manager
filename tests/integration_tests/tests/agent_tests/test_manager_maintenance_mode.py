@@ -40,7 +40,11 @@ class ManagerMaintenanceModeTest(AgentTestCase):
                                       entity_id=blueprint_id)
         self.client.deployments.create(blueprint_id=blueprint_id,
                                        deployment_id=deployment_id)
-        wait_for_deployment_creation_to_complete(deployment_id=deployment_id)
+        wait_for_deployment_creation_to_complete(
+            self.env.container_id,
+            deployment_id,
+            self.client
+        )
 
         # Running none blocking installation
         execution = self.client.executions.start(deployment_id=deployment_id,
