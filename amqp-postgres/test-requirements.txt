@@ -1,4 +1,4 @@
-git+https://github.com/cloudify-cosmo/cloudify-common@CY-3111-replace-certificates-on-agents#egg=cloudify-common[dispatcher]==CY-3111-replace-certificates-on-agents
+git+https://github.com/cloudify-cosmo/cloudify-common@master#egg=cloudify-common[dispatcher]==master
 -e ../rest-service
 mock
 pytest
