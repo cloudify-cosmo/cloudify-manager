@@ -17,13 +17,15 @@ from flask import current_app, request
 
 from cloudify._compat import text_type
 from cloudify.models_states import AgentState
+from cloudify.constants import BROKER_PORT_SSL
 from cloudify.cryptography_utils import encrypt, decrypt
+from cloudify.amqp_client import SendHandler, get_client
 
 from manager_rest.config import instance
 from manager_rest.rest import rest_decorators
 from manager_rest.security import SecuredResource
 from manager_rest.amqp_manager import AMQPManager
-from manager_rest import utils, manager_exceptions
+from manager_rest import utils, manager_exceptions, config
 from manager_rest.rest.responses_v3 import AgentResponse
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager
@@ -57,6 +59,82 @@ class Agents(SecuredResource):
             all_tenants=all_tenants,
             get_all_results=get_all_results
         )
+
+    @authorize('agent_replace_certs')
+    def patch(self):
+        """Replace CA certificates on running agents."""
+        data = request.json
+        broker_ca_cert = data.get('broker_ca_cert')
+        manager_ca_cert = data.get('manager_ca_cert')
+        bundle = data.get('bundle')
+        sm = get_storage_manager()
+
+        new_broker_ca, new_manager_ca = self._get_new_ca_certs(sm,
+                                                               bundle,
+                                                               broker_ca_cert,
+                                                               manager_ca_cert)
+
+        all_tenants = sm.list(models.Tenant, get_all_results=True)
+        for tenant in all_tenants:
+            tenant_agents = sm.list(
+                models.Agent,
+                get_all_results=True,
+                all_tenants=True,
+                filters={'tenant': tenant}
+            )
+
+            amqp_client = self._get_amqp_client(
+                amqp_vhost=tenant.rabbitmq_vhost)
+            to_send = []
+            for agent in tenant_agents:
+                message = {
+                    'service_task': {
+                        'task_name': 'replace-ca-certs',
+                        'kwargs': {
+                            'new_broker_ca': new_broker_ca,
+                            'new_manager_ca': new_manager_ca
+                        }
+                    }
+                }
+                handler = SendHandler(
+                    agent.rabbitmq_exchange,
+                    exchange_type='direct',
+                    routing_key='service')
+                to_send.append((handler, message))
+                amqp_client.add_handler(handler)
+
+            with amqp_client:
+                for handler, message in to_send:
+                    handler.publish(message)
+
+    @staticmethod
+    def _get_amqp_client(amqp_vhost='/'):
+        client = get_client(
+            amqp_host=config.instance.amqp_host,
+            amqp_user=config.instance.amqp_username,
+            amqp_pass=config.instance.amqp_password,
+            amqp_port=BROKER_PORT_SSL,
+            amqp_vhost=amqp_vhost,
+            ssl_enabled=True,
+            ssl_cert_path=config.instance.amqp_ca_path
+        )
+        return client
+
+    @staticmethod
+    def _get_new_ca_certs(sm, bundle, broker_ca_cert, manager_ca_cert):
+        if not bundle:
+            return broker_ca_cert, manager_ca_cert
+
+        new_manager_ca_cert, new_broker_ca_cert = None, None
+        certificates = sm.list(models.Certificate)
+        for cert in certificates:
+            if 'manager' in cert.name and manager_ca_cert:
+                new_manager_ca_cert = manager_ca_cert + '\n' + cert.value
+
+            if 'rabbitmq' in cert.name and broker_ca_cert:
+                new_broker_ca_cert = broker_ca_cert + '\n' + cert.value
+
+        return new_broker_ca_cert, new_manager_ca_cert
 
 
 class AgentsName(SecuredResource):
