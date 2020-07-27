@@ -70,8 +70,11 @@ specs="%{buildroot}/opt/manager/resources/spec/cloudify"
 types_yaml="${specs}/5.1.0.dev1/types.yaml"
 mkdir -p $(dirname "$types_yaml")
 cp "${RPM_SOURCE_DIR}/resources/rest-service/cloudify/types/types.yaml" "$types_yaml"
-
-cp -r "${RPM_SOURCE_DIR}/resources/rest-service/cloudify/types/cache" "${specs}"
+cache_root="${RPM_SOURCE_DIR}/resources/rest-service/cloudify/types/cache"
+# This would be better as a glob, but then we end up fighting rpm build
+for ver in ${cache_root}/*; do
+    cp -r "${ver}" "${specs}"
+done
 
 
 %pre
