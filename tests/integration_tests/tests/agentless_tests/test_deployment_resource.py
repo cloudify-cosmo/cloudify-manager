@@ -15,6 +15,7 @@
 
 import tempfile
 import uuid
+from subprocess import CalledProcessError
 from os.path import join
 
 import pytest
@@ -41,24 +42,28 @@ class DeploymentResourceTest(AgentlessTestCase):
         deployment_id = blueprint_id
         blueprint_path = resource('dsl/deployment_resource.yaml')
         base_dep_dir = '/opt/manager/resources/deployments'
-        dep_dir = join(base_dep_dir, DEFAULT_TENANT_NAME, deployment_id)
+        dep_resources_dir = join(
+            base_dep_dir,
+            DEFAULT_TENANT_NAME,
+            deployment_id,
+            'resources'
+        )
         full_resource_path = join(base_dep_dir,
                                   DEFAULT_TENANT_NAME,
                                   deployment_id,
                                   RESOURCE_PATH)
-        self.execute_on_manager('mkdir -p {0}/resources'.format(dep_dir))
-
+        self.execute_on_manager('mkdir -p {0}'.format(dep_resources_dir))
+        self.execute_on_manager(
+            'chown -R {0}. {1}'
+            ''.format(CLOUDIFY_USER, base_dep_dir)
+        )
         with tempfile.NamedTemporaryFile() as f:
             f.write(RESOURCE_CONTENT)
             f.flush()
             self.copy_file_to_manager(source=f.name,
                                       target=full_resource_path)
-            self.execute_on_manager('chmod +r {0}'.format(full_resource_path))
-
-        # Everything under /opt/manager should be owned be the rest service
-        self.execute_on_manager(
-            'chown -R {0}. {1}'.format(CLOUDIFY_USER, dep_dir)
-        )
+            self.execute_on_manager('chmod +rx {0}'.format(
+                full_resource_path))
 
         deployment, _ = self.deploy_application(
             blueprint_path,
@@ -79,13 +84,11 @@ class DeploymentResourceTest(AgentlessTestCase):
         self.assertEquals(resource_content,
                           self.read_manager_file(download_resource_path))
 
-        self.client.deployments.delete(deployment_id, force=True)
+        self.client.deployments.delete(
+            deployment_id,
+            force=True,
+            delete_db_mode=True
+        )
         wait_for_deployment_deletion_to_complete(deployment_id, self.client)
-        # TODO there is a bug when trying to delete deployment using
-        #  --force flag where the main directory of current deployment
-        #  `/opt/manager/resources/deployments/default_tenant/DEPLOYMENT_ID`
-        #  still there where it should be deleted
-        # self.assertRaises(
-        #     sh.ErrorReturnCode,
-        #     self.execute_on_manager,
-        #     'test -d {0}'.format(dep_dir))
+        with pytest.raises(CalledProcessError):
+            self.execute_on_manager('test -d {0}'.format(dep_resources_dir))
