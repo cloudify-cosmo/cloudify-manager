@@ -22,7 +22,7 @@ import itertools
 from copy import deepcopy
 from collections import defaultdict
 
-from flask import current_app
+from flask import current_app, request
 from flask_security import current_user
 
 from cloudify._compat import StringIO, text_type
@@ -347,6 +347,7 @@ class ResourceManager(object):
         # Verify plugin exists and can be removed
         plugin = self.sm.get(models.Plugin, plugin_id)
         validate_global_modification(plugin)
+        bypass_maintenance = utils.is_bypass_maintenance_mode(request)
 
         # Uninstall (if applicable)
         if utils.plugin_installable_on_current_platform(plugin):
@@ -382,6 +383,7 @@ class ResourceManager(object):
                         'wagon': True
                     }
                 },
+                bypass_maintenance=bypass_maintenance,
                 verify_no_executions=False,
                 timeout=300)
 
