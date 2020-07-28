@@ -18,7 +18,6 @@ import uuid
 from os.path import join
 
 import pytest
-import sh
 
 from integration_tests import AgentlessTestCase
 from integration_tests.framework.constants import CLOUDIFY_USER
