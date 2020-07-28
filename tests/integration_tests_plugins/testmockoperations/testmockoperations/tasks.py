@@ -27,7 +27,6 @@ from cloudify.exceptions import RecoverableError, NonRecoverableError
 
 @operation
 def make_reachable(ctx, **kwargs):
-    ctx.logger.info('Appending to state [node_id=%s]', ctx.instance.id)
     ctx.instance.runtime_properties['time'] = time.time()
     ctx.instance.runtime_properties['capabilities'] = \
         ctx.capabilities.get_all()
@@ -398,7 +397,8 @@ def retrieve_template(ctx, rendering_tests_demo_conf, mode,
                       property_name='rendered_resource', **_):
     if mode == 'get':
         resource = \
-            ctx.get_resource_and_render(rendering_tests_demo_conf)
+            ctx.get_resource_and_render(rendering_tests_demo_conf).decode(
+                'utf-8')
     else:
         resource = \
             ctx.download_resource_and_render(rendering_tests_demo_conf)

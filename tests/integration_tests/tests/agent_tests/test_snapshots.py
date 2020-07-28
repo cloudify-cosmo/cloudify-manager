@@ -117,7 +117,10 @@ class TestSnapshots(AgentTestCase):
 
     def test_snapshot_with_agents_multitenant(self):
         self.client.tenants.create('mike')
-        mike_client = create_rest_client(tenant='mike')
+        mike_client = create_rest_client(
+            host=self.env.container_ip,
+            tenant='mike'
+        )
         self._deploy_with_agents_multitenant(mike_client)
         snapshot_id = self._create_snapshot()
         self._undeploy_multitenant(mike_client)

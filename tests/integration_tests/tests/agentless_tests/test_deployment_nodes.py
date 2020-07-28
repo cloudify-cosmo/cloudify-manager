@@ -13,10 +13,14 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import pytest
+
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 
 
+@pytest.mark.usefixtures('testmockoperations_plugin')
+@pytest.mark.usefixtures('cloudmock_plugin')
 class TestDeploymentNodes(AgentlessTestCase):
 
     def test_get_deployment_nodes(self):
@@ -52,7 +56,7 @@ class TestDeploymentNodes(AgentlessTestCase):
         # Initial assertions
         self.assertEquals('started', node_instance.state)
         self.assertIsNotNone(node_instance.version)
-        self.assertEquals(2, len(node_instance.runtime_properties))
+        self.assertEquals(3, len(node_instance.runtime_properties))
 
         # Updating only the state
         node_instance = self.client.node_instances.update(
@@ -63,7 +67,7 @@ class TestDeploymentNodes(AgentlessTestCase):
         # Verifying the node's state has changed
         self.assertEquals('new_state', node_instance.state)
         # Verifying the node's runtime properties remained without a change
-        self.assertEquals(2, len(node_instance.runtime_properties))
+        self.assertEquals(3, len(node_instance.runtime_properties))
 
         # Updating only the runtime properties
         node_instance = self.client.node_instances.update(
@@ -118,7 +122,7 @@ class TestDeploymentNodes(AgentlessTestCase):
 
         # Initial assertions
         self.assertIsNotNone(node_instance.version)
-        self.assertEquals(2, len(node_instance.runtime_properties))
+        self.assertEquals(3, len(node_instance.runtime_properties))
 
         # Updating the runtime properties with a new key
         node_instance = self.client.node_instances.update(

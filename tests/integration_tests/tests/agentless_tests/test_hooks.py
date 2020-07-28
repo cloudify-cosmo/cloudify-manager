@@ -288,7 +288,11 @@ hooks:
         self.client.blueprints.upload(dsl_path, blueprint_id)
         self.client.deployments.create(blueprint_id,
                                        deployment_id)
-        utils.wait_for_deployment_creation_to_complete(deployment_id)
+        utils.wait_for_deployment_creation_to_complete(
+            self.env.container_id,
+            deployment_id,
+            self.client
+        )
         return deployment_id
 
     @retry(wait_fixed=1000, stop_max_attempt_number=3)

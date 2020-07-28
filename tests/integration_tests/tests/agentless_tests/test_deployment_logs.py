@@ -13,13 +13,15 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import pytest
+import retrying
+
 
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 
-import retrying
 
-
+@pytest.mark.usefixtures('testmockoperations_plugin')
 class TestDeploymentLogs(AgentlessTestCase):
 
     # retrying is needed as the delete_deployment_environment workflow

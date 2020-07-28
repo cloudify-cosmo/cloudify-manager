@@ -17,6 +17,8 @@
 import uuid
 import dateutil.parser
 
+import pytest
+
 from cloudify_rest_client.deployment_modifications import (
     DeploymentModification)
 
@@ -24,6 +26,8 @@ from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 
 
+@pytest.mark.usefixtures('testmockoperations_plugin')
+@pytest.mark.usefixtures('mock_workflows_plugin')
 class TestDeploymentModification(AgentlessTestCase):
 
     def test_modification_operations(self):

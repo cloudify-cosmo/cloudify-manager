@@ -219,18 +219,6 @@ class BaseTestCase(unittest.TestCase):
             BaseTestCase.env.chown(owner, target)
         return ret_val
 
-    def write_data_to_file_on_manager(self,
-                                      data,
-                                      target_path,
-                                      to_json=False,
-                                      owner=None):
-        with tempfile.NamedTemporaryFile() as f:
-            if to_json:
-                data = json.dumps(data)
-            f.write(data)
-            f.flush()
-            self.copy_file_to_manager(f.name, target_path, owner=owner)
-
     def restart_service(self, service_name):
         """restart service by name in the manager container"""
         service_command = self.get_service_management_command()
@@ -347,7 +335,8 @@ class BaseTestCase(unittest.TestCase):
         deployment = client.deployments.create(**deployment_create_kw)
         if wait:
             wait_for_deployment_creation_to_complete(
-                self.env.container_id, deployment_id, client=client)
+                self.env.container_id, deployment_id, self.client
+            )
         return deployment
 
     def deploy_and_execute_workflow(self,
@@ -434,8 +423,10 @@ class BaseTestCase(unittest.TestCase):
                                            force=force,
                                            with_logs=True)
         if validate:
-            wait_for_deployment_deletion_to_complete(deployment_id,
-                                                     client=client)
+            wait_for_deployment_deletion_to_complete(
+                deployment_id,
+                client
+            )
         return result
 
     def is_node_started(self, node_id):

@@ -208,7 +208,11 @@ class TestPluginUpdate(AgentTestWithPlugins):
             entity_id=self.base_blueprint_id)
         for dep_id in self.setup_deployment_ids:
             self.client.deployments.create(blueprint.id, dep_id)
-            wait_for_deployment_creation_to_complete(dep_id)
+            wait_for_deployment_creation_to_complete(
+                self.env.container_id,
+                dep_id,
+                self.client
+            )
             BaseTestCase.execute_workflow('install', dep_id)
         self._upload_v_2_plugin()
 

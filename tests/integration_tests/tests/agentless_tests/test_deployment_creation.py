@@ -16,10 +16,13 @@
 
 import uuid
 
+import pytest
+
 from integration_tests import AgentlessTestCase
 from integration_tests.tests import utils
 
 
+@pytest.mark.usefixtures('cloudmock_plugin')
 class TestDeploymentCreation(AgentlessTestCase):
 
     """Create multiple deployments."""
@@ -41,6 +44,12 @@ class TestDeploymentCreation(AgentlessTestCase):
         for _ in range(self.DEPLOYMENTS_COUNT):
             self.client.deployments.create(
                 blueprint_id, deployment_id, skip_plugins_validation=True)
-            utils.wait_for_deployment_creation_to_complete(deployment_id)
+            utils.wait_for_deployment_creation_to_complete(
+                 self.env.container_id,
+                 deployment_id,
+                 self.client
+            )
             self.client.deployments.delete(deployment_id)
-            utils.wait_for_deployment_deletion_to_complete(deployment_id)
+            utils.wait_for_deployment_deletion_to_complete(
+                deployment_id, self.client
+            )

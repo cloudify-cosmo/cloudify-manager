@@ -12,9 +12,9 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
-
 import uuid
-import os
+
+import pytest
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 
@@ -25,10 +25,11 @@ from integration_tests.tests.utils import (
     wait_for_deployment_deletion_to_complete
     )
 from integration_tests.tests.utils import do_retries
-from integration_tests.framework.constants import (PLUGIN_STORAGE_DIR,
-                                                   CLOUDIFY_USER)
 
 
+@pytest.mark.usefixtures('testmockoperations_plugin')
+@pytest.mark.usefixtures('cloudmock_plugin')
+@pytest.mark.usefixtures('mock_workflows_plugin')
 class TestDeploymentWorkflows(AgentlessTestCase):
 
     def test_deployment_workflows(self):
@@ -59,15 +60,19 @@ class TestDeploymentWorkflows(AgentlessTestCase):
         self.client.deployments.create(blueprint_id, deployment_id,
                                        skip_plugins_validation=True)
         do_retries(verify_deployment_env_created, 30,
+                   container_id=self.env.container_id,
+                   client=self.client,
                    deployment_id=deployment_id)
         execution = self.client.executions.start(deployment_id,
                                                  'custom_execute_operation')
         self.wait_for_execution_to_end(execution)
 
-        invocations = self.get_plugin_data(
-            plugin_name='testmockoperations',
-            deployment_id=deployment_id
-        )['mock_operation_invocation']
+        node_id = self.client.node_instances.list(
+            deployment_id=deployment_id)[0].id
+        node_instance = self.client.node_instances.get(node_id)
+        invocations = node_instance.runtime_properties[
+            'mock_operation_invocation'
+        ]
         self.assertEqual(1, len(invocations))
         self.assertDictEqual(invocations[0], {'test_key': 'test_value'})
 
@@ -101,15 +106,6 @@ class TestDeploymentWorkflows(AgentlessTestCase):
         blueprint_id = 'blueprint_{0}'.format(_id)
         deployment_id = 'deployment_{0}'.format(_id)
 
-        data = {deployment_id: {'raise_exception_on_delete': True}}
-        agent_json_path = os.path.join(PLUGIN_STORAGE_DIR, 'agent.json')
-        self.write_data_to_file_on_manager(
-            data,
-            agent_json_path,
-            to_json=True,
-            owner=CLOUDIFY_USER
-        )
-
         self.client.blueprints.upload(dsl_path, blueprint_id)
         self.client.deployments.create(blueprint_id, deployment_id,
                                        skip_plugins_validation=True)
@@ -117,7 +113,7 @@ class TestDeploymentWorkflows(AgentlessTestCase):
         self.wait_for_execution_to_end(execution)
 
         self.client.deployments.delete(deployment_id)
-        wait_for_deployment_deletion_to_complete(deployment_id)
+        wait_for_deployment_deletion_to_complete(deployment_id, self.client)
         try:
             self.client.deployments.get(deployment_id)
             self.fail("Expected deployment to be deleted")

@@ -13,11 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from os.path import join
 import tempfile
 import uuid
+from subprocess import CalledProcessError
+from os.path import join
 
-import sh
+import pytest
 
 from integration_tests import AgentlessTestCase
 from integration_tests.framework.constants import CLOUDIFY_USER
@@ -30,32 +31,39 @@ from manager_rest.constants import DEFAULT_TENANT_NAME
 
 
 RESOURCE_PATH = 'resources/resource.txt'
-RESOURCE_CONTENT = 'this is a deployment resource'
+RESOURCE_CONTENT = b'this is a deployment resource'
 
 
+@pytest.mark.usefixtures('testmockoperations_plugin')
 class DeploymentResourceTest(AgentlessTestCase):
 
-    def get_and_download_deployment_resource_test(self):
+    def test_get_and_download_deployment_resource(self):
         blueprint_id = 'b{0}'.format(uuid.uuid4())
         deployment_id = blueprint_id
         blueprint_path = resource('dsl/deployment_resource.yaml')
         base_dep_dir = '/opt/manager/resources/deployments'
-        dep_dir = join(base_dep_dir, DEFAULT_TENANT_NAME, deployment_id)
+        dep_resources_dir = join(
+            base_dep_dir,
+            DEFAULT_TENANT_NAME,
+            deployment_id,
+            'resources'
+        )
         full_resource_path = join(base_dep_dir,
                                   DEFAULT_TENANT_NAME,
                                   deployment_id,
                                   RESOURCE_PATH)
-        self.execute_on_manager('mkdir -p {0}/resources'.format(dep_dir))
-
+        self.execute_on_manager('mkdir -p {0}'.format(dep_resources_dir))
+        self.execute_on_manager(
+            'chown -R {0}. {1}'
+            ''.format(CLOUDIFY_USER, base_dep_dir)
+        )
         with tempfile.NamedTemporaryFile() as f:
             f.write(RESOURCE_CONTENT)
             f.flush()
             self.copy_file_to_manager(source=f.name,
                                       target=full_resource_path)
-            self.execute_on_manager('chmod +r {0}'.format(full_resource_path))
-
-        # Everything under /opt/manager should be owned be the rest service
-        self.env.chown(CLOUDIFY_USER, base_dep_dir)
+            self.execute_on_manager('chmod +rx {0}'.format(
+                full_resource_path))
 
         deployment, _ = self.deploy_application(
             blueprint_path,
@@ -63,19 +71,24 @@ class DeploymentResourceTest(AgentlessTestCase):
             deployment_id=deployment_id,
             inputs={'resource_path': RESOURCE_PATH})
 
-        plugin_data = self.get_plugin_data(plugin_name='testmockoperations',
-                                           deployment_id=deployment.id)
+        node_instance = self.client.node_instances.list(
+            deployment_id=deployment.id)[0]
 
-        get_resource_content = plugin_data['get_resource']
-        download_resource_path = plugin_data['download_resource']
+        get_resource_content = node_instance.runtime_properties['get_resource']
+        download_resource_path = \
+            node_instance.runtime_properties['download_resource']
 
-        self.assertEquals(RESOURCE_CONTENT, get_resource_content)
-        self.assertEquals(RESOURCE_CONTENT,
+        resource_content = RESOURCE_CONTENT.decode('utf-8')
+        self.assertEquals(resource_content,
+                          get_resource_content)
+        self.assertEquals(resource_content,
                           self.read_manager_file(download_resource_path))
 
-        self.client.deployments.delete(deployment_id, force=True)
-        wait_for_deployment_deletion_to_complete(deployment_id)
-        self.assertRaises(
-            sh.ErrorReturnCode,
-            self.execute_on_manager,
-            'test -d {0}'.format(dep_dir))
+        self.client.deployments.delete(
+            deployment_id,
+            force=True,
+            delete_db_mode=True
+        )
+        wait_for_deployment_deletion_to_complete(deployment_id, self.client)
+        with pytest.raises(CalledProcessError):
+            self.execute_on_manager('test -d {0}'.format(dep_resources_dir))
