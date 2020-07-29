@@ -19,7 +19,12 @@ tests/integration_tests/tests/agentless_tests/test_deployment_logs.py \\
 tests/integration_tests/tests/agentless_tests/test_deployment_nodes.py \\
 tests/integration_tests/tests/agentless_tests/test_deployment_resource.py \\
 tests/integration_tests/tests/agentless_tests/test_deployment_workflows.py \\
-tests/integration_tests/tests/agentless_tests/test_uninstall_deployment.py""")
+tests/integration_tests/tests/agentless_tests/test_uninstall_deployment.py \\
+tests/integration_tests/tests/agentless_tests/deployment_update/test_deployment_update_addition.py \\
+tests/integration_tests/tests/agentless_tests/deployment_update/test_deployment_update_misc.py \\
+tests/integration_tests/tests/agentless_tests/deployment_update/test_deployment_update_mixed_operations.py \\
+tests/integration_tests/tests/agentless_tests/deployment_update/test_deployment_update_modification.py \\
+tests/integration_tests/tests/agentless_tests/deployment_update/test_deployment_update_removal.py""")
     }
     stages {
         stage('Fetch the docker image'){
