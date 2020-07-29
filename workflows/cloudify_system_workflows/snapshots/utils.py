@@ -153,13 +153,6 @@ def restore_stage_files(archive_root, service_management, override=False):
     finally:
         shutil.rmtree(stage_tempdir)
 
-    run_service(
-        service_management,
-        'restart',
-        'cloudify-stage',
-        ignore_failures=True
-    )
-
 
 def copy_composer_files(archive_root):
     """Copy Cloudify Composer files into the snapshot"""

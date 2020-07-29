@@ -147,6 +147,7 @@ class SnapshotRestore(object):
                 self._possibly_update_encryption_key()
                 self._generate_new_rest_token()
                 self._restart_rest_service()
+                self._restart_stage_service()
                 self._restore_plugins(existing_plugins)
                 self._restore_credentials(postgres)
                 self._restore_agents()
@@ -220,6 +221,13 @@ class SnapshotRestore(object):
             'cloudify-restservice'
         )
         self._wait_for_rest_to_restart()
+
+    def _restart_stage_service(self):
+        utils.run_service(
+            self._service_management,
+            'restart',
+            'cloudify-stage'
+        )
 
     def _wait_for_rest_to_restart(self, timeout=60):
         deadline = time.time() + timeout
