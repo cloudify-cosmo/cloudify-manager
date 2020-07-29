@@ -317,3 +317,43 @@ def install_plugin(plugin):
                         routing_key='service')
                     tenant_client.add_handler(send_handler)
                     send_handler.publish(agent_message)
+
+
+def uninstall_plugin(plugin):
+    sm = get_storage_manager()
+    pstates = sm.list(models._PluginState, filters={
+        '_plugin_fk': plugin._storage_id,
+        'state': [
+            PluginInstallationState.INSTALLED,
+            PluginInstallationState.INSTALLING,
+            PluginInstallationState.ERROR
+        ]
+    })
+    agents_per_tenant = {}
+    managers = []
+    for pstate in pstates:
+        if pstate.manager:
+            managers.append(pstate.manager.hostname)
+        if pstate.agent:
+            agents_per_tenant.setdefault(
+                pstate.agent.tenant, []).append(pstate.agent)
+    if managers:
+        _send_mgmtworker_task(
+            _get_plugin_message(
+                plugin, target_names=managers, task='uninstall-plugin'),
+            routing_key='service')
+
+    agent_message = _get_plugin_message(plugin, task='uninstall-plugin')
+    if agents_per_tenant:
+        for tenant, agents in agents_per_tenant.items():
+            # amqp client for the given tenant's vhost.
+            # Still use the manager's creds.
+            tenant_client = _get_amqp_client(tenant)
+            with tenant_client:
+                for agent in agents:
+                    send_handler = SendHandler(
+                        agent.name,
+                        exchange_type='direct',
+                        routing_key='service')
+                    tenant_client.add_handler(send_handler)
+                    send_handler.publish(agent_message)

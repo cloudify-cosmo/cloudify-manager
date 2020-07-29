@@ -22,7 +22,7 @@ import itertools
 from copy import deepcopy
 from collections import defaultdict
 
-from flask import current_app, request
+from flask import current_app
 from flask_security import current_user
 
 from cloudify._compat import StringIO, text_type
@@ -32,7 +32,8 @@ from cloudify.plugins.install_utils import INSTALLING_PREFIX
 from cloudify.models_states import (SnapshotState,
                                     ExecutionState,
                                     VisibilityState,
-                                    DeploymentModificationState)
+                                    DeploymentModificationState,
+                                    PluginInstallationState)
 from cloudify_rest_client.client import CloudifyClient
 
 from dsl_parser import constants, tasks
@@ -347,7 +348,6 @@ class ResourceManager(object):
         # Verify plugin exists and can be removed
         plugin = self.sm.get(models.Plugin, plugin_id)
         validate_global_modification(plugin)
-        bypass_maintenance = utils.is_bypass_maintenance_mode(request)
 
         # Uninstall (if applicable)
         if utils.plugin_installable_on_current_platform(plugin):
@@ -372,20 +372,7 @@ class ResourceManager(object):
                             plugin.id,
                             ', '.join(blueprint
                                       for blueprint in used_blueprints)))
-            self._execute_system_workflow(
-                wf_id='uninstall_plugin',
-                task_mapping='cloudify_system_workflows.plugins.uninstall',
-                execution_parameters={
-                    'plugin': {
-                        'name': plugin.package_name,
-                        'package_name': plugin.package_name,
-                        'package_version': plugin.package_version,
-                        'wagon': True
-                    }
-                },
-                bypass_maintenance=bypass_maintenance,
-                verify_no_executions=False,
-                timeout=300)
+            workflow_executor.uninstall_plugin(plugin)
 
         # Remove from storage
         self.sm.delete(plugin)
