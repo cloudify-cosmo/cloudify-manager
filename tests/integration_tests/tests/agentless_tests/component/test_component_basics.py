@@ -15,6 +15,8 @@
 
 import uuid
 
+import pytest
+
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from integration_tests import AgentlessTestCase
@@ -22,6 +24,7 @@ from integration_tests.tests.utils import (get_resource as resource,
                                            upload_mock_plugin)
 
 
+@pytest.mark.usefixtures('cloudmock_plugin')
 class ComponentTypeTest(AgentlessTestCase):
     component_name = 'component'
 
@@ -179,6 +182,7 @@ node_templates:
         self.client.plugins.delete(mock_id)
 
 
+@pytest.mark.usefixtures('cloudmock_plugin')
 class ComponentSecretsTypesTest(AgentlessTestCase):
     def test_basic_types_creation(self):
         basic_blueprint_path = resource('dsl/basic.yaml')

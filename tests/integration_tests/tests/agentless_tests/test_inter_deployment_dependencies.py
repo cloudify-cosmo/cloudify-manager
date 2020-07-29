@@ -13,6 +13,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import pytest
+
 from cloudify.models_states import VisibilityState
 from cloudify.constants import COMPONENT, SHARED_RESOURCE
 
@@ -39,6 +41,7 @@ BLUEPRINT_BASE = 'dsl/inter_deployment_dependency_dep_base.yaml'
 BLUEPRINT_MOD = 'dsl/inter_deployment_dependency_dep_modified.yaml'
 
 
+@pytest.mark.usefixtures('cloudmock_plugin')
 class TestInterDeploymentDependenciesInfrastructure(AgentlessTestCase):
 
     def test_dependencies_are_created(self):
@@ -306,13 +309,13 @@ class TestInterDeploymentDependenciesInfrastructure(AgentlessTestCase):
 
     @staticmethod
     def _get_shared_resource_instance(node_instances):
-        return filter(
-            lambda i: 'shared_resource_node' == i.node_id, node_instances)[0]
+        return list(filter(
+            lambda i: 'shared_resource_node' == i.node_id, node_instances))[0]
 
     @staticmethod
     def _get_component_instance(node_instances):
-        return filter(
-            lambda i: 'single_component_node' == i.node_id, node_instances)[0]
+        return list(filter(
+            lambda i: 'single_component_node' == i.node_id, node_instances))[0]
 
     @staticmethod
     def _get_dependencies_dict(dependencies_list):

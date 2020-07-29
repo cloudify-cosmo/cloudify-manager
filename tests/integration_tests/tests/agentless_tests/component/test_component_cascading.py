@@ -16,6 +16,8 @@
 import uuid
 import time
 
+import pytest
+
 from cloudify_rest_client.executions import Execution
 from cloudify_rest_client.exceptions import CloudifyClientError
 
@@ -27,6 +29,7 @@ from integration_tests.tests.utils import (
     generate_scheduled_for_date)
 
 
+@pytest.mark.usefixtures('testmockoperations_plugin')
 class ComponentCascadingCancelAndResume(AgentlessTestCase):
     def _wait_for_component_install(self, deployment_id):
         # waiting for component to create it's deployment
@@ -275,18 +278,19 @@ node_templates:
         self._resume_and_verify_executions_end(main_execution, 3)
 
 
+@pytest.mark.usefixtures('mock_workflows_plugin')
 class ComponentCascadingWorkflows(AgentlessTestCase):
     component_blueprint_with_nothing_workflow = """
 tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
     - cloudify/types/types.yaml
-    - workflow--blueprint:mock_workflows
+    - plugin:mock_workflows
 
 
 workflows:
     nothing_workflow:
-        mapping: workflow--mock_workflows.mock_workflows.workflows.do_nothing
+        mapping: mock_workflows.mock_workflows.workflows.do_nothing
         is_cascading: true
 """
 
@@ -298,7 +302,7 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
     - cloudify/types/types.yaml
-    - workflow--blueprint:mock_workflows
+    - plugin:mock_workflows
 
 node_templates:
     component_node:
@@ -313,15 +317,9 @@ node_templates:
 
 workflows:
     nothing_workflow:
-        mapping: workflow--mock_workflows.mock_workflows.workflows.do_nothing
+        mapping: mock_workflows.mock_workflows.workflows.do_nothing
         is_cascading: true
 """.format(blueprint_id, deployment_id)
-
-    def setUp(self):
-        super(ComponentCascadingWorkflows, self).setUp()
-        self.client.blueprints.upload(
-            resource('dsl/plugins/mock_workflows.yaml'),
-            entity_id='mock_workflows')
 
     def test_default_workflow_cascading_flag(self):
         basic_blueprint_path = self.make_yaml_file(
@@ -335,7 +333,7 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
     - cloudify/types/types.yaml
-    - workflow--blueprint:mock_workflows
+    - plugin:mock_workflows
 
 node_templates:
     component_node:
@@ -350,7 +348,7 @@ node_templates:
 
 workflows:
     nothing_workflow:
-        mapping: workflow--mock_workflows.mock_workflows.workflows.do_nothing
+        mapping: mock_workflows.mock_workflows.workflows.do_nothing
 """
         main_blueprint_path = self.make_yaml_file(main_blueprint)
 
@@ -414,7 +412,7 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
     - cloudify/types/types.yaml
-    - workflow--blueprint:mock_workflows
+    - plugin:mock_workflows
 
 node_templates:
     component_node:
@@ -429,7 +427,7 @@ node_templates:
 
 workflows:
     other_nothing_workflow:
-        mapping: workflow--mock_workflows.mock_workflows.workflows.do_nothing
+        mapping: mock_workflows.mock_workflows.workflows.do_nothing
         is_cascading: false
 """
         main_blueprint_path = self.make_yaml_file(main_blueprint)
@@ -456,7 +454,7 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
     - cloudify/types/types.yaml
-    - workflow--blueprint:mock_workflows
+    - plugin:mock_workflows
 
 node_templates:
     component_node:
@@ -472,7 +470,7 @@ node_templates:
 
 workflows:
     nothing_workflow:
-        mapping: workflow--mock_workflows.mock_workflows.workflows.do_nothing
+        mapping: mock_workflows.mock_workflows.workflows.do_nothing
         is_cascading: false
 """
         layer_2_path = self.make_yaml_file(layer_2)
@@ -527,12 +525,12 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
     - cloudify/types/types.yaml
-    - ns--blueprint:mock_workflows
+    - plugin:mock_workflows
 
 
 workflows:
     nothing_workflow:
-        mapping: ns--mock_workflows.mock_workflows.workflows.non_recoverable
+        mapping: mock_workflows.mock_workflows.workflows.non_recoverable
         is_cascading: true
 """
         component_1_path = self.make_yaml_file(component_1)
@@ -550,7 +548,7 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
     - cloudify/types/types.yaml
-    - workflow--blueprint:mock_workflows
+    - plugin:mock_workflows
 
 node_templates:
     component_1:
@@ -575,7 +573,7 @@ node_templates:
 
 workflows:
     nothing_workflow:
-        mapping: workflow--mock_workflows.mock_workflows.workflows.do_nothing
+        mapping: mock_workflows.mock_workflows.workflows.do_nothing
         is_cascading: true
 """
         main_blueprint_path = self.make_yaml_file(main_blueprint)
@@ -661,16 +659,16 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
     - cloudify/types/types.yaml
-    - wf--blueprint:mock_workflows
+    - plugin:mock_workflows
 
 
 workflows:
     nothing_workflow:
-        mapping: wf--mock_workflows.mock_workflows.workflows.simple_sleep
+        mapping: mock_workflows.mock_workflows.workflows.simple_sleep
         is_cascading: true
 
     other_workflow:
-        mapping: wf--mock_workflows.mock_workflows.workflows.do_nothing
+        mapping: mock_workflows.mock_workflows.workflows.do_nothing
         is_cascading: true
 """
         basic_blueprint_path = self.make_yaml_file(basic_blueprint)
