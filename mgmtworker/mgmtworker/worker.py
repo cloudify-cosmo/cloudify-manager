@@ -120,7 +120,7 @@ class MgmtworkerServiceTaskConsumer(ServiceTaskConsumer):
         super(MgmtworkerServiceTaskConsumer, self).__init__(*args, **kwargs)
 
     def delete_source_plugins_task(self, deployment_id, tenant_name):
-        dep_dir = os.path.join(sys.prefix, 'plugins', 'source',
+        dep_dir = os.path.join(sys.prefix, 'source_plugins',
                                tenant_name, deployment_id)
         shutil.rmtree(dep_dir, ignore_errors=True)
 
