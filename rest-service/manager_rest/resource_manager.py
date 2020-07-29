@@ -2105,6 +2105,7 @@ class ResourceManager(object):
                     constants.WORKFLOW_PLUGINS_TO_INSTALL],
                 'delete_logs': delete_logs
             })
+        workflow_executor.delete_source_plugins(deployment.id)
 
     def _check_for_active_executions(self, deployment_id, force,
                                      queue, schedule):

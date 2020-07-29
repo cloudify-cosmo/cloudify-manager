@@ -357,3 +357,18 @@ def uninstall_plugin(plugin):
                         routing_key='service')
                     tenant_client.add_handler(send_handler)
                     send_handler.publish(agent_message)
+
+
+def delete_source_plugins(deployment_id):
+    _send_mgmtworker_task(
+        message={
+            'service_task': {
+                'task_name': 'delete-source-plugins',
+                'kwargs': {
+                    'deployment_id': deployment_id,
+                    'tenant_name': utils.current_tenant.name
+                }
+            }
+        },
+        routing_key='service'
+    )
