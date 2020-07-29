@@ -97,6 +97,7 @@ class TestInterDeploymentDependenciesInfrastructure(AgentlessTestCase):
 
         base_dependencies = self._assert_dependencies_count(
             len(base_expected_dependencies))
+
         self._assert_dependencies_exist(base_expected_dependencies,
                                         base_dependencies)
 
@@ -158,10 +159,12 @@ class TestInterDeploymentDependenciesInfrastructure(AgentlessTestCase):
         self.client.secrets.create(SR_DEPLOYMENT2 + '_key',
                                    SR_DEPLOYMENT2)
         self._deploy_shared_resource(SR_DEPLOYMENT1)
+
         self._deploy_shared_resource(
             SR_DEPLOYMENT2,
             upload_blueprint=False,
             resource_visibility=VisibilityState.PRIVATE)
+
         self._upload_component_blueprint()
         self.upload_blueprint_resource(BLUEPRINT_MOD,
                                        MOD_BLUEPRINT_ID,
@@ -235,15 +238,17 @@ class TestInterDeploymentDependenciesInfrastructure(AgentlessTestCase):
     def _get_dep_update_test_dependencies(self,
                                           is_first_state,
                                           should_keep_old_dependencies=False):
-        static_changed_to_static = SR_DEPLOYMENT1 if is_first_state \
-            else SR_DEPLOYMENT2
-        static_changed_to_runtime = SR_DEPLOYMENT1
-        runtime_changed_to_runtime = None
-        runtime_changed_to_static = None if is_first_state else SR_DEPLOYMENT2
-        shared_resource_target_id = SR_DEPLOYMENT1 if is_first_state \
-            else SR_DEPLOYMENT2
-        comp_target_id = COMP_DEPLOYMENT1 if is_first_state \
-            else COMP_DEPLOYMENT2
+        shared_deployment_target = SR_DEPLOYMENT1
+        comp_target_id = COMP_DEPLOYMENT1
+        if not is_first_state:
+            shared_deployment_target = SR_DEPLOYMENT2
+            comp_target_id = COMP_DEPLOYMENT2
+
+        static_changed_to_static = shared_deployment_target
+        static_changed_to_runtime = shared_deployment_target
+        runtime_changed_to_runtime = shared_deployment_target
+        runtime_changed_to_static = shared_deployment_target
+        shared_resource_target_id = shared_deployment_target
         node_instances = self.client.node_instances.list()
         shared_resource = self._get_shared_resource_instance(
             node_instances)
@@ -296,13 +301,13 @@ class TestInterDeploymentDependenciesInfrastructure(AgentlessTestCase):
                     SR_DEPLOYMENT2,
                 '{0}.should_be_created_runtime.value.get_capability'
                 ''.format(OUTPUTS):
-                    None,
+                    SR_DEPLOYMENT2,
                 '{0}.{1}.{2}.should_be_created_static.get_capability'
                 ''.format(NODES, COMPUTE_NODE, PROPERTIES):
                     SR_DEPLOYMENT2,
                 '{0}.{1}.{2}.should_be_created_runtime.get_capability'
                 ''.format(NODES, COMPUTE_NODE, PROPERTIES):
-                    None,
+                    SR_DEPLOYMENT2,
             })
 
         return dependencies
