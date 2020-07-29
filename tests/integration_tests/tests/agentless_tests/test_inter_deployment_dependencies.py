@@ -309,13 +309,13 @@ class TestInterDeploymentDependenciesInfrastructure(AgentlessTestCase):
 
     @staticmethod
     def _get_shared_resource_instance(node_instances):
-        return list(filter(
-            lambda i: 'shared_resource_node' == i.node_id, node_instances))[0]
+        return [i for i in node_instances
+                if 'shared_resource_node' == i.node_id][0]
 
     @staticmethod
     def _get_component_instance(node_instances):
-        return list(filter(
-            lambda i: 'single_component_node' == i.node_id, node_instances))[0]
+        return [i for i in node_instances
+                if 'single_component_node' == i.node_id][0]
 
     @staticmethod
     def _get_dependencies_dict(dependencies_list):
