@@ -136,6 +136,8 @@ class MgmtworkerServiceTaskConsumer(ServiceTaskConsumer):
                 self.tenant_name = tenant['name']
                 self.rest_token = rest_token
                 self.execution_token = execution_token
+                # always bypass - this is a kill, as forceful as we can get
+                self.bypass_maintenance = True
 
         with current_workflow_ctx.push(CancelCloudifyContext()):
             self._workflow_registry.cancel(execution_id)
