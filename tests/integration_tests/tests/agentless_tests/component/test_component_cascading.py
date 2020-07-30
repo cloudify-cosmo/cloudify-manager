@@ -89,9 +89,12 @@ class ComponentCascadingCancelAndResume(AgentlessTestCase):
         self.client.blueprints.upload(main_blueprint, blueprint_id)
         self.client.deployments.create(blueprint_id, deployment_id,
                                        skip_plugins_validation=True)
-        do_retries(verify_deployment_env_created,
-                   30,
-                   deployment_id=deployment_id)
+        do_retries(
+            verify_deployment_env_created,
+            container_id=self.env.container_id,
+            deployment_id=deployment_id,
+            client=self.client,
+        )
         execution = self.client.executions.start(deployment_id, 'install')
 
         if wait_for_component:
