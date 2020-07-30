@@ -14,7 +14,6 @@
 import pytest
 
 from integration_tests import AgentlessTestCase
-from integration_tests.tests.utils import get_resource as resource
 
 
 @pytest.mark.usefixtures('mock_workflows_plugin')
