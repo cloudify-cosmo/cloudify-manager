@@ -33,9 +33,13 @@ from integration_tests.tests.utils import (
 class ComponentCascadingCancelAndResume(AgentlessTestCase):
     def _wait_for_component_install(self, deployment_id):
         # waiting for component to create it's deployment
-        do_retries(verify_deployment_env_created,
-                   30,
-                   deployment_id=deployment_id)
+        do_retries(
+            verify_deployment_env_created,
+            container_id=self.env.container_id,
+            deployment_id=deployment_id,
+            client=self.client,
+            timeout_seconds=30
+        )
         # Waiting for the sleep node to start
         node_instance_id = self.client.node_instances.list(
             deployment_id=deployment_id)[0].id
@@ -94,6 +98,7 @@ class ComponentCascadingCancelAndResume(AgentlessTestCase):
             container_id=self.env.container_id,
             deployment_id=deployment_id,
             client=self.client,
+            timeout_seconds=30
         )
         execution = self.client.executions.start(deployment_id, 'install')
 
@@ -206,9 +211,13 @@ node_templates:
         self.client.blueprints.upload(layer_2_path, blueprint_id)
         self.client.deployments.create(blueprint_id, deployment_id,
                                        skip_plugins_validation=True)
-        do_retries(verify_deployment_env_created,
-                   30,
-                   deployment_id=deployment_id)
+        do_retries(
+            verify_deployment_env_created,
+            container_id=self.env.container_id,
+            deployment_id=deployment_id,
+            client=self.client,
+            timeout_seconds=30
+        )
         main_execution = self.client.executions.start(deployment_id, 'install')
         self._wait_for_component_install(deployment_id='component')
         main_execution = self.client.executions.cancel(main_execution.id)
@@ -272,9 +281,13 @@ node_templates:
         self.client.blueprints.upload(layer_2_path, blueprint_id)
         self.client.deployments.create(blueprint_id, deployment_id,
                                        skip_plugins_validation=True)
-        do_retries(verify_deployment_env_created,
-                   30,
-                   deployment_id=deployment_id)
+        do_retries(
+            verify_deployment_env_created,
+            container_id=self.env.container_id,
+            deployment_id=deployment_id,
+            client=self.client,
+            timeout_seconds=30
+        )
         main_execution = self.client.executions.start(deployment_id, 'install')
         main_execution = self.client.executions.cancel(main_execution.id)
         self._verify_cancel_install_execution(main_execution, False, False)
