@@ -38,7 +38,7 @@ class ComponentCascadingCancelAndResume(AgentlessTestCase):
             container_id=self.env.container_id,
             deployment_id=deployment_id,
             client=self.client,
-            timeout_seconds=30
+            timeout_seconds=60
         )
         # Waiting for the sleep node to start
         node_instance_id = self.client.node_instances.list(
@@ -98,7 +98,7 @@ class ComponentCascadingCancelAndResume(AgentlessTestCase):
             container_id=self.env.container_id,
             deployment_id=deployment_id,
             client=self.client,
-            timeout_seconds=30
+            timeout_seconds=60
         )
         execution = self.client.executions.start(deployment_id, 'install')
 
@@ -216,7 +216,7 @@ node_templates:
             container_id=self.env.container_id,
             deployment_id=deployment_id,
             client=self.client,
-            timeout_seconds=30
+            timeout_seconds=60
         )
         main_execution = self.client.executions.start(deployment_id, 'install')
         self._wait_for_component_install(deployment_id='component')
@@ -286,7 +286,7 @@ node_templates:
             container_id=self.env.container_id,
             deployment_id=deployment_id,
             client=self.client,
-            timeout_seconds=30
+            timeout_seconds=60
         )
         main_execution = self.client.executions.start(deployment_id, 'install')
         main_execution = self.client.executions.cancel(main_execution.id)
