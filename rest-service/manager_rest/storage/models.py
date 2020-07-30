@@ -50,4 +50,5 @@ from .resource_models import (Blueprint,
                               TasksGraph,
                               Site,
                               PluginsUpdate,
-                              InterDeploymentDependencies)
+                              InterDeploymentDependencies,
+                              _PluginState)

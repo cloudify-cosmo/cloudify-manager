@@ -91,6 +91,29 @@ def upgrade():
         )
     ])
     session.commit()
+    plugins_states = op.create_table(
+        'plugins_states',
+        sa.Column(
+            '_storage_id',
+            sa.Integer(),
+            autoincrement=True,
+            nullable=False),
+        sa.Column('_plugin_fk', sa.Integer()),
+        sa.Column('_manager_fk', sa.Integer(), nullable=True),
+        sa.Column('_agent_fk', sa.Integer(), nullable=True),
+        sa.Column('state', sa.TEXT()),
+        sa.Column('error', sa.TEXT(), nullable=True),
+        sa.ForeignKeyConstraint(['_plugin_fk'], ['plugins._storage_id'], ),
+        sa.ForeignKeyConstraint(['_manager_fk'], ['managers.id'], ),
+        sa.ForeignKeyConstraint(['_agent_fk'], ['agents._storage_id'], ),
+        sa.PrimaryKeyConstraint('_storage_id')
+    )
+    op.create_check_constraint(
+        'plugins_states_manager_or_agent',
+        'plugins_states',
+        plugins_states.c._agent_fk.is_(None) !=
+        plugins_states.c._manager_fk.is_(None)
+    )
 
 
 def downgrade():

@@ -22,7 +22,7 @@ import itertools
 from copy import deepcopy
 from collections import defaultdict
 
-from flask import current_app, request
+from flask import current_app
 from flask_security import current_user
 
 from cloudify._compat import StringIO, text_type
@@ -32,7 +32,8 @@ from cloudify.plugins.install_utils import INSTALLING_PREFIX
 from cloudify.models_states import (SnapshotState,
                                     ExecutionState,
                                     VisibilityState,
-                                    DeploymentModificationState)
+                                    DeploymentModificationState,
+                                    PluginInstallationState)
 from cloudify_rest_client.client import CloudifyClient
 
 from dsl_parser import constants, tasks
@@ -347,7 +348,6 @@ class ResourceManager(object):
         # Verify plugin exists and can be removed
         plugin = self.sm.get(models.Plugin, plugin_id)
         validate_global_modification(plugin)
-        bypass_maintenance = utils.is_bypass_maintenance_mode(request)
 
         # Uninstall (if applicable)
         if utils.plugin_installable_on_current_platform(plugin):
@@ -372,20 +372,7 @@ class ResourceManager(object):
                             plugin.id,
                             ', '.join(blueprint
                                       for blueprint in used_blueprints)))
-            self._execute_system_workflow(
-                wf_id='uninstall_plugin',
-                task_mapping='cloudify_system_workflows.plugins.uninstall',
-                execution_parameters={
-                    'plugin': {
-                        'name': plugin.package_name,
-                        'package_name': plugin.package_name,
-                        'package_version': plugin.package_version,
-                        'wagon': True
-                    }
-                },
-                bypass_maintenance=bypass_maintenance,
-                verify_no_executions=False,
-                timeout=300)
+            workflow_executor.uninstall_plugin(plugin)
 
         # Remove from storage
         self.sm.delete(plugin)
@@ -1499,6 +1486,49 @@ class ResourceManager(object):
 
         return new_deployment
 
+    def install_plugin(self, plugin, manager_names=None, agent_names=None):
+        """Send the plugin install task to the given managers or agents."""
+        if manager_names:
+            managers = self.sm.list(
+                models.Manager, filters={'hostname': manager_names})
+            existing_manager_names = {m.hostname for m in managers}
+            if existing_manager_names != set(manager_names):
+                missing_managers = set(manager_names) - existing_manager_names
+                raise manager_exceptions.NotFoundError(
+                    "Cannot install: requested managers do not exist: {0}"
+                    .format(', '.join(missing_managers)))
+
+            for name in existing_manager_names:
+                manager = self.sm.get(
+                    models.Manager, None, filters={'hostname': name})
+                self.sm.put(models._PluginState(
+                    _plugin_fk=plugin._storage_id,
+                    _manager_fk=manager.id,
+                    state=PluginInstallationState.PENDING,
+                ))
+
+        if agent_names:
+            agents = self.sm.list(models.Agent, filters={'name': agent_names})
+            existing_agent_names = {a.name for a in agents}
+            if existing_agent_names != set(agent_names):
+                missing_agents = set(agent_names) - existing_agent_names
+                raise manager_exceptions.NotFoundError(
+                    "Cannot install: requested agents do not exist: {0}"
+                    .format(', '.join(missing_agents)))
+
+            for name in existing_agent_names:
+                agent = self.sm.get(
+                    models.Agent, None, filters={'name': name})
+                self.sm.put(models._PluginState(
+                    _plugin_fk=plugin._storage_id,
+                    _agent_fk=agent._storage_id,
+                    state=PluginInstallationState.PENDING,
+                ))
+
+        if agent_names or manager_names:
+            workflow_executor.install_plugin(plugin)
+        return plugin
+
     def validate_plugin_is_installed(self, plugin):
         """
         This method checks if a plugin is already installed on the manager,
@@ -2075,6 +2105,7 @@ class ResourceManager(object):
                     constants.WORKFLOW_PLUGINS_TO_INSTALL],
                 'delete_logs': delete_logs
             })
+        workflow_executor.delete_source_plugins(deployment.id)
 
     def _check_for_active_executions(self, deployment_id, force,
                                      queue, schedule):
