@@ -14,13 +14,10 @@
 #  * limitations under the License.
 #
 
-import os
-
 from uuid import uuid4
 
 from flask_restful_swagger import swagger
 
-from manager_rest import utils
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.rest import (
     rest_decorators,
@@ -159,7 +156,6 @@ class PluginsArchive(SecuredResource):
         return rest_utils.make_streaming_response(
             plugin_id,
             plugin_path,
-            os.path.getsize(local_path),
             'tar.gz'
         )
 

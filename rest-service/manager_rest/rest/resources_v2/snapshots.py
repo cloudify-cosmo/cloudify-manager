@@ -194,11 +194,6 @@ class SnapshotsIdArchive(SecuredResource):
                 'Failed snapshot cannot be downloaded'
             )
 
-        snapshot_path = os.path.join(
-            _get_snapshot_path(snapshot_id),
-            '{0}.zip'.format(snapshot_id)
-        )
-
         snapshot_uri = '{0}/{1}/{2}/{2}.zip'.format(
             FILE_SERVER_RESOURCES_FOLDER,
             FILE_SERVER_SNAPSHOTS_FOLDER,
@@ -208,7 +203,6 @@ class SnapshotsIdArchive(SecuredResource):
         return rest_utils.make_streaming_response(
             snapshot_id,
             snapshot_uri,
-            os.path.getsize(snapshot_path),
             'zip'
         )
 

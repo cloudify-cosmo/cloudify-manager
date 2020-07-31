@@ -72,7 +72,6 @@ class BlueprintsIdArchive(SecuredResource):
         return make_streaming_response(
             blueprint.id,
             blueprint_path,
-            os.path.getsize(local_path),
             archive_type
         )
 
