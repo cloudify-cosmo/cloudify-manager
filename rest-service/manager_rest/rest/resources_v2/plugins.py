@@ -14,15 +14,10 @@
 #  * limitations under the License.
 #
 
-import os
-
 from uuid import uuid4
 
 from flask_restful_swagger import swagger
 
-from cloudify.plugins.install_utils import INSTALLING_PREFIX
-
-from manager_rest import utils
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.rest import (
     rest_decorators,
@@ -152,28 +147,15 @@ class PluginsArchive(SecuredResource):
         """
         # Verify plugin exists.
         plugin = get_storage_manager().get(models.Plugin, plugin_id)
-        # While installing a plugin we add an `installing` prefix to the
-        # archive_name, since the archive is saved without this prefix we
-        # remove it before searching for the archive in the file system.
-        archive_name = (plugin.archive_name[11:] if
-                        plugin.archive_name.startswith(INSTALLING_PREFIX)
-                        else plugin.archive_name)
-        # attempting to find the archive file on the file system
-        local_path = utils.get_plugin_archive_path(plugin_id, archive_name)
-        if not os.path.isfile(local_path):
-            raise RuntimeError("Could not find plugins archive; "
-                               "Plugin ID: {0}".format(plugin_id))
-
         plugin_path = '{0}/{1}/{2}/{3}'.format(
             FILE_SERVER_RESOURCES_FOLDER,
             FILE_SERVER_PLUGINS_FOLDER,
             plugin_id,
-            archive_name)
+            plugin.archive_name)
 
         return rest_utils.make_streaming_response(
             plugin_id,
             plugin_path,
-            os.path.getsize(local_path),
             'tar.gz'
         )
 

@@ -114,14 +114,13 @@ def convert_to_int(value):
             'invalid parameter, should be int, got: {0}'.format(value))
 
 
-def make_streaming_response(res_id, res_path, content_length, archive_type):
+def make_streaming_response(res_id, res_path, archive_type):
     response = make_response()
     response.headers['Content-Description'] = 'File Transfer'
     response.headers['Cache-Control'] = 'no-cache'
     response.headers['Content-Type'] = 'application/octet-stream'
     response.headers['Content-Disposition'] = \
         'attachment; filename={0}.{1}'.format(res_id, archive_type)
-    response.headers['Content-Length'] = content_length
     response.headers['X-Accel-Redirect'] = res_path
     response.headers['X-Accel-Buffering'] = 'yes'
     return response
@@ -534,7 +533,7 @@ class RecursiveDeploymentDependencies(object):
                         'sharedresource': 'uses a shared resource from',
                         'deployment': 'uses capabilities of'}
         return '\n'.join(
-            [dependency_display.format(i+1,
+            [dependency_display.format(i + 1,
                                        d['deployment'],
                                        type_display[d['dependency_type']],
                                        d['dependent_node'])

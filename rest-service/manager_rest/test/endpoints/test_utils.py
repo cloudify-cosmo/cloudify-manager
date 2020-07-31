@@ -97,13 +97,10 @@ class TestUtils(base_test.BaseServerTestCase):
                     plugin_installable_on_current_platform(plugin))
 
 
-def generate_progress_func(total_size, assert_equal,
-                           assert_almost_equal, buffer_size=8192):
-    """
-    Generate a function that helps to predictably test upload/download progress
+def generate_progress_func(total_size, buffer_size=8192):
+    """Generate a function that helps test upload/download progress
+
     :param total_size: Total size of the file to upload/download
-    :param assert_equal: The unittest.TestCase assertEqual method
-    :param assert_almost_equal: The unittest.TestCase assertAlmostEqual method
     :param buffer_size: Size of chunk
     :return: A function that receives 2 ints - number of bytes read so far,
     and the total size in bytes
@@ -114,15 +111,13 @@ def generate_progress_func(total_size, assert_equal,
 
     def print_progress(read, total):
         i = iteration[0]
-        # tar.gz sizes are a bit inconsistent - tend to be a few bytes off
-        assert_almost_equal(total, total_size, delta=5)
+        assert total == total_size
 
         expected_read_value = buffer_size * (i + 1)
         if i < max_iterations:
-            assert_equal(read, expected_read_value)
+            assert read == expected_read_value
         else:
-            # On the last iteration, we face the same problem
-            assert_almost_equal(read, total_size, delta=5)
+            assert read == total_size
 
         iteration[0] += 1
 

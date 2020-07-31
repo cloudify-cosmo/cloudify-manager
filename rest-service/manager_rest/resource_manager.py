@@ -28,7 +28,6 @@ from flask_security import current_user
 from cloudify._compat import StringIO, text_type
 from cloudify.cryptography_utils import encrypt
 from cloudify.workflows import tasks as cloudify_tasks
-from cloudify.plugins.install_utils import INSTALLING_PREFIX
 from cloudify.models_states import (SnapshotState,
                                     ExecutionState,
                                     VisibilityState,
@@ -2259,8 +2258,7 @@ class ResourceManager(object):
             archive_name = plugin_info['archive_name']
             unique_filter = {
                 model_class.package_name: plugin_info['package_name'],
-                model_class.archive_name: [archive_name, '{0}{1}'.format(
-                    INSTALLING_PREFIX, archive_name)]
+                model_class.archive_name: archive_name
             }
         else:
             unique_filter = {model_class.id: resource_id}
