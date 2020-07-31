@@ -20,8 +20,6 @@ from uuid import uuid4
 
 from flask_restful_swagger import swagger
 
-from cloudify.plugins.install_utils import INSTALLING_PREFIX
-
 from manager_rest import utils
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.rest import (
