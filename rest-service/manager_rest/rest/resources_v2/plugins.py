@@ -150,12 +150,6 @@ class PluginsArchive(SecuredResource):
         """
         # Verify plugin exists.
         plugin = get_storage_manager().get(models.Plugin, plugin_id)
-        # attempting to find the archive file on the file system
-        local_path = utils.get_plugin_archive_path(plugin_id, plugin.archive_name)
-        if not os.path.isfile(local_path):
-            raise RuntimeError("Could not find plugins archive; "
-                               "Plugin ID: {0}".format(plugin_id))
-
         plugin_path = '{0}/{1}/{2}/{3}'.format(
             FILE_SERVER_RESOURCES_FOLDER,
             FILE_SERVER_PLUGINS_FOLDER,
