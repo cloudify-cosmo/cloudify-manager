@@ -35,10 +35,7 @@ class SnapshotsTest(BaseServerTestCase):
         tmp_file_path = self.create_wheel('wagon', '0.6.2')
         total_size = os.path.getsize(tmp_file_path)
 
-        progress_func = generate_progress_func(
-            total_size=total_size,
-            assert_equal=self.assertEqual,
-            assert_almost_equal=self.assertAlmostEqual)
+        progress_func = generate_progress_func(total_size=total_size)
 
         try:
             self.client.snapshots.upload(tmp_file_path,
@@ -57,10 +54,7 @@ class SnapshotsTest(BaseServerTestCase):
         try:
             self.client.snapshots.upload(tmp_file_path, '0')
 
-            progress_func = generate_progress_func(
-                total_size=total_size,
-                assert_equal=self.assertEqual,
-                assert_almost_equal=self.assertAlmostEqual)
+            progress_func = generate_progress_func(total_size=total_size)
             self.client.snapshots.download('0',
                                            tmp_local_path,
                                            progress_callback=progress_func)

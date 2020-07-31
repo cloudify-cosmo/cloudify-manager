@@ -188,10 +188,7 @@ class PluginsTest(BaseServerTestCase):
         zip_path = self.zip_files([tmp_file_path, yaml_path])
         total_size = os.path.getsize(zip_path)
 
-        progress_func = generate_progress_func(
-            total_size=total_size,
-            assert_equal=self.assertEqual,
-            assert_almost_equal=self.assertAlmostEqual)
+        progress_func = generate_progress_func(total_size=total_size)
 
         try:
             self.client.plugins.upload(zip_path,
@@ -222,10 +219,7 @@ class PluginsTest(BaseServerTestCase):
             response = self.client.plugins.upload(zip_path)
             total_size = os.path.getsize(tmp_file_path)
 
-            progress_func = generate_progress_func(
-                total_size=total_size,
-                assert_equal=self.assertEqual,
-                assert_almost_equal=self.assertAlmostEqual)
+            progress_func = generate_progress_func(total_size=total_size)
 
             self.client.plugins.download(response.id,
                                          tmp_local_path,
