@@ -65,13 +65,35 @@ function set_manager_ip_supervisord() {
 }
 
 
+function set_prometheus_ip() {
+  prometheus_yml="/etc/prometheus/prometheus.yml"
+  if [ ! -f ${prometheus_yml} ]; then
+    return
+  fi
+
+  if [ "$1" == "supervisord" ]; then
+    /usr/bin/supervisorctl -c /etc/supervisord.conf stop prometheus
+  fi
+
+  echo "Updating the host label in the Prometheus configuration..."
+  /usr/bin/sed -ri "s/^(\s+host:\s*).*$/\1${ip}/" ${prometheus_yml}
+
+  if [ "$1" == "supervisord" ]; then
+    echo "Starting Prometheus service"
+    /usr/bin/supervisorctl -c /etc/supervisord.conf restart prometheus
+  fi
+}
+
+
 touched_file_path="/opt/cloudify/manager-ip-setter/touched"
 
 if [ ! -f ${touched_file_path} ]; then
     if  grep -E 'service_management:\s+supervisord' /etc/cloudify/config.yaml; then
         set_manager_ip_supervisord
+        set_prometheus_ip supervisord
     else
         set_manager_ip
+        set_prometheus_ip
     fi
     touch ${touched_file_path}
 else
