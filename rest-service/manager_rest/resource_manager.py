@@ -37,23 +37,22 @@ from cloudify_rest_client.client import CloudifyClient
 
 from dsl_parser import constants, tasks
 from dsl_parser import exceptions as parser_exceptions
-from dsl_parser.functions import is_function
 from dsl_parser.constants import INTER_DEPLOYMENT_FUNCTIONS
 
 from manager_rest import premium_enabled
 from manager_rest.constants import (DEFAULT_TENANT_NAME,
                                     FILE_SERVER_BLUEPRINTS_FOLDER,
                                     FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER)
-from manager_rest.dsl_functions import (get_secret_method,
-                                        evaluate_intrinsic_functions)
+from manager_rest.dsl_functions import get_secret_method
 from manager_rest.utils import (send_event,
                                 is_create_global_permitted,
                                 validate_global_modification,
                                 validate_deployment_and_site_visibility,
                                 extract_host_agent_plugins_from_plan)
 from manager_rest.plugins_update.constants import PLUGIN_UPDATE_WORKFLOW
-from manager_rest.rest.rest_utils import (parse_datetime_string,
-                                          RecursiveDeploymentDependencies)
+from manager_rest.rest.rest_utils import (
+    parse_datetime_string, RecursiveDeploymentDependencies,
+    update_inter_deployment_dependencies)
 from manager_rest.deployment_update.constants import STATES as UpdateStates
 from manager_rest.plugins_update.constants import STATES as PluginsUpdateStates
 
@@ -122,7 +121,7 @@ class ResourceManager(object):
 
         res = self.sm.update(execution)
         if status in ExecutionState.END_STATES:
-            self.update_inter_deployment_dependencies()
+            update_inter_deployment_dependencies(self.sm)
             self.start_queued_executions()
 
         # If the execution is a deployment update, and the status we're
@@ -146,40 +145,6 @@ class ResourceManager(object):
                 self.sm.update(plugin_update)
 
         return res
-
-    def update_inter_deployment_dependencies(self):
-        dependencies_list = self.sm.list(models.InterDeploymentDependencies,
-                                         filters={'target_deployment': None})
-        for dependency in dependencies_list:
-            if (dependency.target_deployment_func and
-                    not dependency.external_target):
-                self._update_dependency_target_deployment(dependency)
-
-    def _update_dependency_target_deployment(self, dependency):
-        target_deployment_id = self._evaluate_target_func(dependency)
-        if target_deployment_id:
-            target_deployment_instance = self.sm.get(models.Deployment,
-                                                     target_deployment_id)
-            dependency.target_deployment = target_deployment_instance
-
-            # check for cyclic dependencies
-            dep_graph = RecursiveDeploymentDependencies(self.sm)
-            source_id = str(dependency.source_deployment_id)
-            target_id = str(target_deployment_id)
-            dep_graph.create_dependencies_graph()
-            dep_graph.assert_no_cyclic_dependencies(source_id, target_id)
-
-            self.sm.update(dependency)
-
-    @staticmethod
-    def _evaluate_target_func(dependency):
-        if is_function(dependency.target_deployment_func):
-            evaluated_func = evaluate_intrinsic_functions(
-                {'target_deployment': dependency.target_deployment_func},
-                dependency.source_deployment_id)
-            return evaluated_func.get('target_deployment')
-
-        return dependency.target_deployment_func
 
     def start_queued_executions(self):
         queued_executions = self._get_queued_executions()
