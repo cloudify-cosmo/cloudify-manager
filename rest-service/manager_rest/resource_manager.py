@@ -55,6 +55,7 @@ from manager_rest.plugins_update.constants import PLUGIN_UPDATE_WORKFLOW
 from manager_rest.rest.rest_utils import (parse_datetime_string,
                                           RecursiveDeploymentDependencies)
 from manager_rest.deployment_update.constants import STATES as UpdateStates
+from manager_rest.plugins_update.constants import STATES as PluginsUpdateStates
 
 from manager_rest.storage import (db,
                                   get_storage_manager,
@@ -133,6 +134,16 @@ class ResourceManager(object):
             if dep_update:
                 dep_update.state = UpdateStates.FAILED
                 self.sm.update(dep_update)
+
+        # Similarly for a plugin update
+        if execution.workflow_id == 'update_plugin' and \
+                status in [ExecutionState.FAILED,
+                           ExecutionState.CANCELLED]:
+            plugin_update = self.sm.get(models.PluginsUpdate, None,
+                                        filters={'execution_id': execution_id})
+            if plugin_update:
+                plugin_update.state = PluginsUpdateStates.FAILED
+                self.sm.update(plugin_update)
 
         return res
 
