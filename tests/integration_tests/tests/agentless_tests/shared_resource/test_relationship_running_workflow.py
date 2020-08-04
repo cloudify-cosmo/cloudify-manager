@@ -14,6 +14,7 @@
 import pytest
 
 from integration_tests import AgentlessTestCase
+from integration_tests.tests.utils import get_resource as resource
 
 
 @pytest.mark.usefixtures('mock_workflows_plugin')
@@ -23,13 +24,13 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
     - cloudify/types/types.yaml
-    - plugin:mock_workflows
+    - wf--blueprint:mock_workflows
 
 workflows:
     test_wf:
-        mapping: mock_workflows.mock_workflows.workflows.do_nothing
+        mapping: wf--mock_workflows.mock_workflows.workflows.do_nothing
     failing:
-        mapping: mock_workflows.mock_workflows.workflows.non_recoverable
+        mapping: wf--mock_workflows.mock_workflows.workflows.non_recoverable
 
 capabilities:
     test:
@@ -38,6 +39,9 @@ capabilities:
 
     def setUp(self):
         super(TestRelationshipRunningRemoteWorkflow, self).setUp()
+        self.client.blueprints.upload(
+            resource('dsl/mock_workflows.yaml'),
+            entity_id='mock_workflows')
         self._create_shared_resource_deployment()
 
     @staticmethod

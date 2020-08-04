@@ -86,10 +86,12 @@ capabilities:
         self.deploy_application(dsl_path, deployment_id=deployment_id)
         self.assertTrue(self.client.deployments.get(self.component_name))
         self.assertEqual(self.client.secrets.get('secret1')['value'], 'test')
-        plugins_list = self.client.plugins.list()
-        self.assertEqual(len(plugins_list), 2)
-        self.assertTrue(plugins_list[1]['package_name'],
+        plugins_list = self.client.plugins.list(
+            package_name='cloudify-openstack-plugin')
+        self.assertEqual(len(plugins_list), 1)
+        self.assertTrue(plugins_list[0]['package_name'],
                         'cloudify-openstack-plugin')
+
         self.undeploy_application(deployment_id, is_delete_deployment=True)
         self.assertRaises(CloudifyClientError,
                           self.client.deployments.get,

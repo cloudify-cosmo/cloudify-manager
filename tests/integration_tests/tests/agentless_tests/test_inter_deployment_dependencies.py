@@ -243,12 +243,6 @@ class TestInterDeploymentDependenciesInfrastructure(AgentlessTestCase):
         if not is_first_state:
             shared_deployment_target = SR_DEPLOYMENT2
             comp_target_id = COMP_DEPLOYMENT2
-
-        static_changed_to_static = shared_deployment_target
-        static_changed_to_runtime = shared_deployment_target
-        runtime_changed_to_runtime = shared_deployment_target
-        runtime_changed_to_static = shared_deployment_target
-        shared_resource_target_id = shared_deployment_target
         node_instances = self.client.node_instances.list()
         shared_resource = self._get_shared_resource_instance(
             node_instances)
@@ -256,31 +250,31 @@ class TestInterDeploymentDependenciesInfrastructure(AgentlessTestCase):
         dependencies = {
             '{0}.{1}.{2}.static_changed_to_static.get_capability'
             ''.format(NODES, COMPUTE_NODE, PROPERTIES):
-                static_changed_to_static,
+                shared_deployment_target,
             '{0}.{1}.{2}.static_changed_to_runtime.get_capability'
             ''.format(NODES, COMPUTE_NODE, PROPERTIES):
-                static_changed_to_runtime,
+                shared_deployment_target,
             '{0}.{1}.{2}.runtime_changed_to_runtime.get_capability'
             ''.format(NODES, COMPUTE_NODE, PROPERTIES):
-                runtime_changed_to_runtime,
+                shared_deployment_target,
             '{0}.{1}.{2}.runtime_changed_to_static.get_capability'
             ''.format(NODES, COMPUTE_NODE, PROPERTIES):
-                runtime_changed_to_static,
+                shared_deployment_target,
             '{0}.static_changed_to_static.value.get_capability'
             ''.format(OUTPUTS):
-                static_changed_to_static,
+                shared_deployment_target,
             '{0}.static_changed_to_runtime.value.get_capability'
             ''.format(OUTPUTS):
-                static_changed_to_runtime,
+                shared_deployment_target,
             '{0}.runtime_changed_to_runtime.value.get_capability'
             ''.format(OUTPUTS):
-                runtime_changed_to_runtime,
+                shared_deployment_target,
             '{0}.runtime_changed_to_static.value.get_capability'
             ''.format(OUTPUTS):
-                runtime_changed_to_static,
+                shared_deployment_target,
             self._get_shared_resource_dependency_creator(
                 shared_resource.id):
-                shared_resource_target_id,
+                shared_deployment_target,
             self._get_component_dependency_creator(component.id):
                 comp_target_id,
         }
