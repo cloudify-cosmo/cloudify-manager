@@ -15,12 +15,15 @@
 
 import uuid
 
+import pytest
+
 from cloudify_rest_client.executions import Execution
 
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 
 
+@pytest.mark.usefixtures('cloudmock_plugin')
 class ComponentScaleCreation(AgentlessTestCase):
     component_name = 'component'
 

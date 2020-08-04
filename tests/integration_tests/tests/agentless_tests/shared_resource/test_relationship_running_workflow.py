@@ -11,11 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import pytest
 
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 
 
+@pytest.mark.usefixtures('mock_workflows_plugin')
 class TestRelationshipRunningRemoteWorkflow(AgentlessTestCase):
     shared_resource_blueprint = """
 tosca_definitions_version: cloudify_dsl_1_3
@@ -38,7 +40,7 @@ capabilities:
     def setUp(self):
         super(TestRelationshipRunningRemoteWorkflow, self).setUp()
         self.client.blueprints.upload(
-            resource('dsl/plugins/mock_workflows.yaml'),
+            resource('dsl/mock_workflows.yaml'),
             entity_id='mock_workflows')
         self._create_shared_resource_deployment()
 

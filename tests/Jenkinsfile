@@ -24,7 +24,14 @@ tests/integration_tests/tests/agentless_tests/deployment_update/test_deployment_
 tests/integration_tests/tests/agentless_tests/deployment_update/test_deployment_update_misc.py \\
 tests/integration_tests/tests/agentless_tests/deployment_update/test_deployment_update_mixed_operations.py \\
 tests/integration_tests/tests/agentless_tests/deployment_update/test_deployment_update_modification.py \\
-tests/integration_tests/tests/agentless_tests/deployment_update/test_deployment_update_removal.py""")
+tests/integration_tests/tests/agentless_tests/deployment_update/test_deployment_update_removal.py \\
+tests/integration_tests/tests/agentless_tests/component/test_component_auto_inc_suffix.py \\
+tests/integration_tests/tests/agentless_tests/component/test_component_basics.py \\
+tests/integration_tests/tests/agentless_tests/component/test_component_cascading.py \\
+tests/integration_tests/tests/agentless_tests/shared_resource/test_relationship_running_workflow.py \\
+tests/integration_tests/tests/agentless_tests/shared_resource/test_shared_resource_type.py \\
+tests/integration_tests/tests/agent_tests/test_agent_install_from_plugin.py \\
+tests/integration_tests/tests/agent_tests/test_agent_install_workflow.py""")
     }
     stages {
         stage('Fetch the docker image'){
