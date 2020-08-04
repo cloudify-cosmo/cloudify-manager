@@ -20,8 +20,6 @@ from mock import patch
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 
-from cloudify.models_states import ExecutionState
-
 from dsl_parser.constants import (PLUGIN_NAME_KEY,
                                   WORKFLOW_PLUGINS_TO_INSTALL,
                                   DEPLOYMENT_PLUGINS_TO_INSTALL,
@@ -36,6 +34,7 @@ from manager_rest.manager_exceptions import NotFoundError
 from manager_rest.storage import get_storage_manager, models
 from manager_rest.plugins_update.manager import \
     _did_plugins_to_install_change as plugins_to_install_change_detector
+from manager_rest.plugins_update.constants import STATES as PluginsUpdateStates
 
 
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
@@ -65,15 +64,19 @@ class PluginsUpdatesTest(PluginsUpdatesBaseTest):
         self.wait_for_deployment_creation(self.client, 'd123')
         plugins_update1 = self.client.plugins_update.update_plugins(
             'hello_world')
+
+        sm = get_storage_manager()
+        update_entry = sm.get(models.PluginsUpdate, plugins_update1.id)
+        update_entry.state = PluginsUpdateStates.FAILED
+        sm.update(update_entry)
+
         plugins_update2 = self.client.plugins_update.update_plugins(
-            'hello_world', force=True)
+            'hello_world')
         plugins_update_set = set(p.id for p in self.client.plugins_update
                                  .list(_include=['id']).items)
         self.assertEqual(2, len(plugins_update_set))
         self.assertIn(plugins_update1.id, plugins_update_set)
-        self.assertFalse(plugins_update1.forced)
         self.assertIn(plugins_update2.id, plugins_update_set)
-        self.assertTrue(plugins_update2.forced)
 
     def test_returns_empty_list_with_no_plugins_updates(self):
         self.assertEqual(0, len(self.client.plugins_update.list().items))
@@ -188,29 +191,6 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
         self._sm.update(plugins_update)
 
         self.client.plugins_update.update_plugins('hello_world')
-
-    def test_doesnt_raise_while_plugins_updates_are_active_and_forced(self):
-        self.put_file(*self.put_blueprint_args(blueprint_id='hello_world'))
-        self.client.deployments.create('hello_world', 'd123')
-        self.wait_for_deployment_creation(self.client, 'd123')
-        self.client.plugins_update.update_plugins('hello_world')
-        self.client.plugins_update.update_plugins('hello_world', True)
-
-    def test_raises_with_real_active_plugins_updates_and_forced(self):
-        self.put_file(*self.put_blueprint_args(blueprint_id='hello_world'))
-        self.client.deployments.create('hello_world', 'd123')
-        self.wait_for_deployment_creation(self.client, 'd123')
-        plugins_update = self.client.plugins_update.update_plugins(
-            'hello_world')
-        execution = self._sm.get(models.Execution, plugins_update.execution_id)
-        execution.status = ExecutionState.STARTED
-        self._sm.update(execution)
-        with self.assertRaisesRegex(
-                CloudifyClientError,
-                'There are plugins updates still active; the "force" flag '
-                'was used yet these updates have actual executions running '
-                'update IDs: {0}'.format(plugins_update.id)):
-            self.client.plugins_update.update_plugins('hello_world', True)
 
     def test_no_changes_required_when_no_plugin_change_detected(self):
         self.plugin_change_patcher.stop()

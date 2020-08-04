@@ -13,9 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from flask_restful.inputs import boolean
 from flask_restful_swagger import swagger
-from flask_restful.reqparse import Argument
 
 from cloudify._compat import text_type
 from cloudify.models_states import VisibilityState
@@ -100,11 +98,8 @@ class PluginsUpdate(SecuredResource):
         :param phase: either PHASES.INITIAL or PHASES.FINAL (internal).
         """
         if phase == PHASES.INITIAL:
-            args = rest_utils.get_args_and_verify_arguments([
-                Argument('force', type=boolean, required=False, default=False)
-            ])
             return get_plugins_updates_manager().initiate_plugins_update(
-                blueprint_id=id, force=args.get('force'))
+                blueprint_id=id)
         elif phase == PHASES.FINAL:
             return get_plugins_updates_manager().finalize(
                 plugins_update_id=id)

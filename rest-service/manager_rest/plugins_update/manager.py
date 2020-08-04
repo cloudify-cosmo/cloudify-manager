@@ -41,44 +41,16 @@ class PluginsUpdateManager(object):
         self.sm = sm
         self.rm = get_resource_manager(self.sm)
 
-    def validate_no_active_updates_per_blueprint(self,
-                                                 blueprint_id,
-                                                 force=False):
+    def validate_no_active_updates_per_blueprint(self, blueprint_id):
         active_updates = self.list_plugins_updates(
             filters={'blueprint_id': blueprint_id,
                      'state': ACTIVE_STATES}).items
         if not active_updates:
             return
 
-        if not force:
-            raise ConflictError(
-                'There are plugins updates still active, update IDs: '
-                '{0}'.format(', '.join(u.id for u in active_updates)))
-
-        execs_to_updates = {u.execution_id: u for u in active_updates
-                            if u.execution_id}
-        running_updates = [
-            execs_to_updates[execution.id]
-            for execution in self.sm.list(
-                models.Execution,
-                filters={'id': list(execs_to_updates.keys())}
-            ).items
-            if execution.status not in ExecutionState.END_STATES]
-
-        if running_updates:
-            raise ConflictError(
-                'There are plugins updates still active; the "force" flag '
-                'was used yet these updates have actual executions running '
-                'update IDs: {0}'.format(', '.join(
-                    u.id for u in running_updates)))
-        else:
-            # the active updates aren't really active - either their
-            # executions were failed/cancelled, or the update failed at
-            # the finalizing stage.
-            # updating their states to failed and continuing.
-            for plugins_update in active_updates:
-                plugins_update.state = STATES.FAILED
-                self.sm.update(plugins_update)
+        raise ConflictError(
+            'There are plugins updates still active, update IDs: '
+            '{0}'.format(', '.join(u.id for u in active_updates)))
 
     def _create_temp_blueprint_from(self, blueprint, temp_plan):
         temp_blueprint_id = str(uuid.uuid4())
@@ -99,20 +71,20 @@ class PluginsUpdateManager(object):
         temp_blueprint.is_hidden = True
         return self.sm.update(temp_blueprint)
 
-    def _stage_plugin_update(self, blueprint, force):
+    def _stage_plugin_update(self, blueprint):
         update_id = str(uuid.uuid4())
         plugins_update = models.PluginsUpdate(
             id=update_id,
             created_at=utils.get_formatted_timestamp(),
-            forced=force)
+            forced=False)
         plugins_update.set_blueprint(blueprint)
         return self.sm.put(plugins_update)
 
-    def initiate_plugins_update(self, blueprint_id, force=False):
+    def initiate_plugins_update(self, blueprint_id):
         """Creates a temporary blueprint and executes the plugins update
         workflow.
         """
-        self.validate_no_active_updates_per_blueprint(blueprint_id, force)
+        self.validate_no_active_updates_per_blueprint(blueprint_id)
         blueprint = self.sm.get(models.Blueprint, blueprint_id)
         temp_plan = self.get_reevaluated_plan(blueprint)
         no_changes_required = not _did_plugins_to_install_change(
@@ -123,7 +95,7 @@ class PluginsUpdateManager(object):
                                  self._get_deployments_to_update(blueprint_id)]
         no_changes_required |= not deployments_to_update
 
-        plugins_update = self._stage_plugin_update(blueprint, force)
+        plugins_update = self._stage_plugin_update(blueprint)
         if not no_changes_required:
             plugins_update.deployments_to_update = deployments_to_update
             self.sm.update(plugins_update)
