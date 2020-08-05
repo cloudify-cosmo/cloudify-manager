@@ -380,7 +380,8 @@ def update_deployment_dependencies_from_plan(deployment_id,
         storage_manager.update(curr_dependencies[dependency_creator])
         # verify that the new dependency doesn't create a cycle,
         # and update the dependencies graph accordingly
-        if (not hasattr(source_deployment, 'id')) or (not target_deployment):
+        if ((not hasattr(source_deployment, 'id')) or (not target_deployment)
+                or not hasattr(curr_target_deployment, 'id')):
             continue
             # upcoming: handle the case of external dependencies
         source_id = source_deployment.id
