@@ -35,7 +35,8 @@ from manager_rest.storage import models, get_node
 from manager_rest.utils import get_formatted_timestamp
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.rest.rest_utils import (
-    update_deployment_dependencies_from_plan)
+    update_deployment_dependencies_from_plan,
+    update_inter_deployment_dependencies)
 
 from .entity_context import get_entity_context
 from .constants import ENTITY_TYPES, NODE_MOD_TYPES
@@ -942,6 +943,8 @@ class DeploymentDependencies(UpdateHandler):
             keep_outdated_dependencies=dep_update.
             keep_old_deployment_dependencies,
             dep_plan_filter_func=is_node)
+
+        update_inter_deployment_dependencies(self.sm)
 
 
 def _handle_version(version):

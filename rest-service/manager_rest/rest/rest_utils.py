@@ -29,6 +29,7 @@ from flask_restful.reqparse import Argument, RequestParser
 
 from dsl_parser import tasks
 from dsl_parser import exceptions as parser_exceptions
+from dsl_parser.functions import is_function
 from dsl_parser.constants import INTER_DEPLOYMENT_FUNCTIONS
 
 from cloudify._compat import urlquote, text_type
@@ -37,7 +38,8 @@ from cloudify.snapshots import SNAPSHOT_RESTORE_FLAG_FILE
 
 from manager_rest.storage import models
 from manager_rest.constants import REST_SERVICE_NAME
-from manager_rest.dsl_functions import get_secret_method
+from manager_rest.dsl_functions import (get_secret_method,
+                                        evaluate_intrinsic_functions)
 from manager_rest import manager_exceptions, config, app_context
 from manager_rest.utils import is_administrator, get_formatted_timestamp
 
@@ -338,32 +340,32 @@ def update_deployment_dependencies_from_plan(deployment_id,
     new_dependencies = deployment_plan.setdefault(
         INTER_DEPLOYMENT_FUNCTIONS, {})
     new_dependencies_dict = {
-        creator: target[0]
+        creator: (target[0], target[1])
         for creator, target in new_dependencies.items()
         if dep_plan_filter_func(creator)
     }
     dep_graph = RecursiveDeploymentDependencies(storage_manager)
     dep_graph.create_dependencies_graph()
 
-    for dependency_creator, target_deployment_id \
+    source_deployment = storage_manager.get(models.Deployment, deployment_id)
+    for dependency_creator, target_deployment_attr \
             in new_dependencies_dict.items():
+        target_deployment_id = target_deployment_attr[0]
+        target_deployment_func = target_deployment_attr[1]
         target_deployment = storage_manager.get(
             models.Deployment, target_deployment_id) \
             if target_deployment_id else None
-        source_deployment = storage_manager.get(
-            models.Deployment, deployment_id)
+
         if dependency_creator not in curr_dependencies:
             now = get_formatted_timestamp()
             storage_manager.put(models.InterDeploymentDependencies(
                 dependency_creator=dependency_creator,
                 source_deployment=source_deployment,
                 target_deployment=target_deployment,
+                target_deployment_func=target_deployment_func,
                 created_at=now,
                 id=str(uuid.uuid4())
             ))
-            continue
-        if not target_deployment_id:
-            # New target deployment is unknown, keep the current value
             continue
 
         curr_target_deployment = \
@@ -373,10 +375,13 @@ def update_deployment_dependencies_from_plan(deployment_id,
 
         curr_dependencies[dependency_creator].target_deployment = \
             target_deployment
+        curr_dependencies[dependency_creator].target_deployment_func = \
+            target_deployment_func
         storage_manager.update(curr_dependencies[dependency_creator])
         # verify that the new dependency doesn't create a cycle,
         # and update the dependencies graph accordingly
-        if not hasattr(source_deployment, 'id'):
+        if ((not hasattr(source_deployment, 'id')) or (not target_deployment)
+                or not hasattr(curr_target_deployment, 'id')):
             continue
             # upcoming: handle the case of external dependencies
         source_id = source_deployment.id
@@ -538,3 +543,39 @@ class RecursiveDeploymentDependencies(object):
                                        type_display[d['dependency_type']],
                                        d['dependent_node'])
              for i, d in enumerate(dependencies)])
+
+
+def update_inter_deployment_dependencies(sm):
+    dependencies_list = sm.list(models.InterDeploymentDependencies,
+                                filters={'target_deployment': None})
+    for dependency in dependencies_list:
+        if (dependency.target_deployment_func and
+                not dependency.external_target):
+            _update_dependency_target_deployment(sm, dependency)
+
+
+def _update_dependency_target_deployment(sm, dependency):
+    target_deployment_id = _evaluate_target_func(dependency)
+    if target_deployment_id:
+        target_deployment_instance = sm.get(models.Deployment,
+                                            target_deployment_id)
+        dependency.target_deployment = target_deployment_instance
+
+        # check for cyclic dependencies
+        dep_graph = RecursiveDeploymentDependencies(sm)
+        source_id = str(dependency.source_deployment_id)
+        target_id = str(target_deployment_id)
+        dep_graph.create_dependencies_graph()
+        dep_graph.assert_no_cyclic_dependencies(source_id, target_id)
+
+        sm.update(dependency)
+
+
+def _evaluate_target_func(dependency):
+    if is_function(dependency.target_deployment_func):
+        evaluated_func = evaluate_intrinsic_functions(
+            {'target_deployment': dependency.target_deployment_func},
+            dependency.source_deployment_id)
+        return evaluated_func.get('target_deployment')
+
+    return dependency.target_deployment_func
