@@ -364,8 +364,8 @@ def _status_func_for_service(service_type):
 
 def _get_postgresql_status(monitoring_api_uri, auth=None, ca_path=None):
     return prometheus_query(monitoring_api_uri,
-                            query_string='up{job=~".*postgresql"} and ' +
-                                         'pg_up{job=~".*postgresql"}',
+                            query_string='up{job=~".*postgresql"} == 1 and ' +
+                                         'pg_up{job=~".*postgresql"} == 1',
                             auth=auth,
                             ca_path=ca_path,
                             timeout=config.monitoring_timeout)
