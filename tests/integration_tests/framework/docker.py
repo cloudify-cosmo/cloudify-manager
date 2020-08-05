@@ -183,11 +183,19 @@ def read_file(container_id, file_path, no_strip=False):
     return result
 
 
-def execute(container_id, command):
+def execute(container_id, command, env=None):
     if not isinstance(command, list):
         command = shlex.split(command)
-    return subprocess.check_output(
-        ['docker', 'exec', container_id] + command).decode('utf-8')
+    args = ['docker', 'exec']
+    if not env:
+        env = {}
+    # assume utf-8 - for decoding the output, and so ask the executables
+    # to use utf-8 indeed
+    env.setdefault('LC_ALL', 'en_US.UTF-8')
+    for k, v in env.items():
+        args += ['-e', '{0}={1}'.format(k, v)]
+    args.append(container_id)
+    return subprocess.check_output(args + command).decode('utf-8')
 
 
 def copy_file_to_manager(container_id, source, target):
