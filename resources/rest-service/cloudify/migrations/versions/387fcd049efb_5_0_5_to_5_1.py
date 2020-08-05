@@ -117,6 +117,7 @@ def upgrade():
 
 
 def downgrade():
+    op.drop_table('plugins_states')
     _remove_monitoring_credentials_columns()
     _drop_usage_collector_table()
     _drop_inter_deployment_dependencies_table()
