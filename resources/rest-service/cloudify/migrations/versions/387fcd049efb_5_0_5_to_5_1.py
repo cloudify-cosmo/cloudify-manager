@@ -246,7 +246,8 @@ def _create_inter_deployment_dependencies_table():
     op.add_column(u'deployment_updates',
                   sa.Column('keep_old_deployment_dependencies',
                             sa.Boolean(),
-                            nullable=False))
+                            nullable=False,
+                            default=False))
 
 
 def _drop_inter_deployment_dependencies_table():
