@@ -171,9 +171,6 @@ class DeploymentUpdateManager(object):
         dep_update.state = STATES.UPDATING
         self.sm.update(dep_update)
 
-        # Handle inter-deployment dependencies changes
-        self._deployment_dependency_handler.handle(dep_update)
-
         # Handle any deployment related changes. i.e. workflows and deployments
         modified_deployment_entities, raw_updated_deployment = \
             self._deployment_handler.handle(dep_update)
@@ -225,6 +222,9 @@ class DeploymentUpdateManager(object):
                 dep_update.deployment_id)
             dep_update.set_recursive_dependencies(deployment_dependencies)
             return dep_update
+
+        # Handle inter-deployment dependencies changes
+        self._deployment_dependency_handler.handle(dep_update)
 
         # Execute the default 'update' workflow or a custom workflow using
         # added and related instances. Any workflow executed should call
