@@ -49,6 +49,43 @@ PATRONI_SERVICE_KEY = 'Patroni'
 UNINITIALIZED_STATUS = 'Uninitialized'
 CLUSTER_STATUS_PATH = '/opt/manager/cluster_statuses'
 
+CloudifyService = namedtuple('CloudifyService', 'name description')
+SERVICE_DESCRIPTIONS = {
+    'blackbox_exporter': CloudifyService(
+        name='Blackbox Exporter',
+        description='Prometheus blackbox exporter (HTTP/HTTPS/TCP pings)'),
+    'haproxy': CloudifyService(
+        name='HA Proxy',
+        description='HAProxy Load Balancer'),
+    'node_exporter': CloudifyService(
+        name='Node Exporter',
+        description='Prometheus exporter for hardware and OS metrics'),
+    'prometheus': CloudifyService(
+        name='Prometheus',
+        description='Prometheus monitoring service'),
+    'cloudify-syncthing': CloudifyService(
+        name='Syncthing',
+        description='Syncthing Service'),
+    'cloudify-restservice': CloudifyService(
+        name='Manager REST Service',
+        description='Cloudify REST Service'),
+    'cloudify-amqp-postgres': CloudifyService(
+        name='AMQP-Postgres',
+        description='Cloudify AMQP PostgreSQL Broker Service'),
+    'nginx': CloudifyService(
+        name='Webserver',
+        description='nginx - high performance web server'),
+    'cloudify-composer': CloudifyService(  # TODO: premium != community
+        name='Cloudify Composer',
+        description='Cloudify Composer Service'),
+    'cloudify-mgmtworker': CloudifyService(
+        name='Management Worker',
+        description='Cloudify Management Worker Service'),
+    'cloudify-stage': CloudifyService(
+        name='Cloudify Console',
+        description='Cloudify Console Service'),
+}
+
 
 class Credentials(object):
     struct = namedtuple('CredentialsStruct', 'username password ca_path')
@@ -291,9 +328,10 @@ def get_cluster_status(detailed=False):
     if detailed:
         # report also detailed information on services running on the nodes
         ip_addresses = set(node['private_ip']
-                           for service in cluster_services.values()
-                           for node in service['nodes'].values())
-        _get_service_details(ip_addresses)
+                           for cluster_service in cluster_services.values()
+                           for node in cluster_service['nodes'].values())
+        services = _get_service_details(ip_addresses)
+        cluster_services = _update_cluster_services(cluster_services, services)
 
     return {
         STATUS: _simple_status(set([s[STATUS] for s in
@@ -501,21 +539,54 @@ def _get_service_details(ip_addresses):
     # check locally:
     prometheus_response = _get_services_status(
         'http://localhost:9090/monitoring/')
-    nodes, nodes_not_available = _services_from_prometheus_response(
+    services, services_not_available = _services_from_prometheus_response(
         prometheus_response, _metrics_for_host, ip_addresses)
-    return nodes
+    return services
 
 
 def _services_from_prometheus_response(prometheus_response,
                                        select_node_metrics_func,
                                        ip_addresses):
-    nodes = {}
-    nodes_not_available = {}
+    services = {}
+    services_not_available = {}
     for ip_address in ip_addresses:
         node_metrics = select_node_metrics_func(prometheus_response,
                                                 ip_address)
         if node_metrics:
-            nodes[ip_address] = node_metrics
+            services[ip_address] = _service_statuses(node_metrics)
         else:
-            nodes_not_available[ip_address] = {}
-    return nodes, nodes_not_available
+            services_not_available[ip_address] = {}
+    return services, services_not_available
+
+
+def _service_statuses(node_metrics):
+    reported_services = {}
+    for metric in node_metrics:
+        service = _get_cloudify_service_description(
+            metric.get('metric', {}).get('name'))
+        if not service:
+            continue
+        reported_services[service.name] = {
+            'status': (NodeServiceStatus.ACTIVE
+                       if metric.get('value')[1] == '1'
+                       else NodeServiceStatus.INACTIVE),
+            'display_name': service.description
+        }
+    return reported_services
+
+
+def _get_cloudify_service_description(metric_name):
+    if metric_name in SERVICE_DESCRIPTIONS:
+        return SERVICE_DESCRIPTIONS[metric_name]
+    elif metric_name.endswith('.service'):
+        return _get_cloudify_service_description(metric_name[:-8])
+    return None
+
+
+def _update_cluster_services(cluster_services, services):
+    for service_type, cluster_service in cluster_services.items():
+        for node_name, node in cluster_service.get('nodes', {}).items():
+            cluster_service['nodes'][node_name].update({
+                SERVICES: services.get(node['private_ip'])
+            })
+    return cluster_services
