@@ -262,7 +262,7 @@ def _is_all_in_one(cluster_structure):
 # endregion
 
 
-def get_cluster_status():
+def get_cluster_status(detailed=False):
     """
     Generate the cluster status using:
     1. The DB tables (managers, rabbitmq_brokers, db_nodes) for the
@@ -288,9 +288,15 @@ def get_cluster_status():
                 {node_name: dict(node, version=cloudify_version) for
                  node_name, node in nodes.items()},
         }
+    if detailed:
+        # report also detailed information on services running on the nodes
+        ip_addresses = set(node['private_ip']
+                           for service in cluster_services.values()
+                           for node in service['nodes'].values())
+        _get_service_details(ip_addresses)
 
     return {
-        STATUS: _simple_status(set([s['status'] for s in
+        STATUS: _simple_status(set([s[STATUS] for s in
                                     cluster_services.values()])),
         SERVICES: cluster_services
     }
@@ -387,6 +393,16 @@ def _get_manager_status(monitoring_api_uri, auth=None, ca_path=None):
                             timeout=config.monitoring_timeout)
 
 
+def _get_services_status(monitoring_api_uri, auth=None, ca_path=None):
+    return prometheus_query(
+        monitoring_api_uri,
+        query_string='node_systemd_unit_state{state="active"} or ' +
+                     'node_supervisord_up',
+        auth=auth,
+        ca_path=ca_path,
+        timeout=config.monitoring_timeout)
+
+
 def _metrics_select_func_for_service(service_type):
     if service_type in (CloudifyNodeType.DB,
                         CloudifyNodeType.BROKER,
@@ -479,3 +495,27 @@ def _service_status(list_of_statuses, quorum=-1):
     if healthy >= quorum:
         return ServiceStatus.DEGRADED
     return ServiceStatus.FAIL
+
+
+def _get_service_details(ip_addresses):
+    # check locally:
+    prometheus_response = _get_services_status(
+        'http://localhost:9090/monitoring/')
+    nodes, nodes_not_available = _services_from_prometheus_response(
+        prometheus_response, _metrics_for_host, ip_addresses)
+    return nodes
+
+
+def _services_from_prometheus_response(prometheus_response,
+                                       select_node_metrics_func,
+                                       ip_addresses):
+    nodes = {}
+    nodes_not_available = {}
+    for ip_address in ip_addresses:
+        node_metrics = select_node_metrics_func(prometheus_response,
+                                                ip_address)
+        if node_metrics:
+            nodes[ip_address] = node_metrics
+        else:
+            nodes_not_available[ip_address] = {}
+    return nodes, nodes_not_available
