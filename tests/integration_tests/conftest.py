@@ -199,25 +199,27 @@ def package_agent(manager_container, request):
     also be used for the agent.
     """
     sources_root = request.config.getoption("--tests-source-root")
+    if not sources_root:
+        return
     # unpack the agent archive, overwrite files, repack it, copy back
     # to the package location
     mgmtworker_env = '/opt/mgmtworker/env/lib/python*/site-packages/'
     agent_package = \
         '/opt/manager/resources/packages/agents/centos-core-agent.tar.gz'
     agent_source_path = 'cloudify/env/lib/python*/site-packages/'
-    sources = []
+    agent_sources = []
     for src, target_venvs in sources:
         src = os.path.abspath(os.path.join(sources_root, src))
         if not os.path.exists(src):
             continue
         if '/opt/mgmtworker/env' in target_venvs:
-            sources.append(os.path.basename(src))
-    if not sources:
+            agent_sources.append(os.path.basename(src))
+    if not agent_sources:
         return
     docker.execute(manager_container.container_id, [
         'bash', '-c', 'cd /tmp && tar xvf {0}'.format(agent_package)
     ])
-    for package in sources:
+    for package in agent_sources:
         source = os.path.join(mgmtworker_env, package)
         target = os.path.join('/tmp', agent_source_path)
         docker.execute(manager_container.container_id, [
