@@ -473,9 +473,16 @@ def _metrics_for_instance(prometheus_results, ip):
 def _metrics_for_host(prometheus_results, ip):
     metrics = []
     for result in prometheus_results:
-        instance = result.get('metric', {}).get('host', '')
-        if _equal_ips(instance, ip):
+        host = result.get('metric', {}).get('host', '')
+        if host and _equal_ips(host, ip):
             metrics.append(result)
+        elif not host:
+            instance = result.get('metric', {}).get('instance', '')
+            m = re.match(r"(.*[^:])(:\d+)", instance)
+            if m and _equal_ips(m.group(1), ip):
+                metrics.append(result)
+            elif instance and not m and _equal_ips(instance, ip):
+                metrics.append(result)
     return metrics
 
 
