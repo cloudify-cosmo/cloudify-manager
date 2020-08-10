@@ -206,6 +206,68 @@ def get_concurrent_status_checker():
     return current_app.concurrent_status_checker
 
 
+class ConcurrentServiceChecker(object):
+    STOP_THE_WORKER = 'STOP THE WORKER'
+
+    def __init__(self):
+        self._in_queue = queue.Queue()
+        self._out_queue = queue.Queue()
+        self._threads = None
+
+    def _worker(self):
+        while True:
+            ip_address, service_type = \
+                self._in_queue.get()
+            if service_type == ConcurrentServiceChecker.STOP_THE_WORKER:
+                break
+            creds = Credentials.get(service_type, ip_address)
+            try:
+                prometheus_response = _get_services_status(
+                    'https://{ip}:8009/monitoring/'.format(
+                        ip=ip_address),
+                    auth=(creds.username, creds.password),
+                    ca_path=creds.ca_path,
+                )
+            except Exception:
+                self._out_queue.put((ip_address, [],))
+            else:
+                self._out_queue.put((ip_address,
+                                     prometheus_response,))
+
+    def _initialize_threads(self, number_of_threads):
+        self._threads = [
+            threading.Thread(target=self._worker)
+            for _ in range(number_of_threads)
+        ]
+        for thread in self._threads:
+            thread.daemon = True
+            thread.start()
+
+    def get(self, node_tuples):
+        if self._threads is None:
+            self._initialize_threads(len(node_tuples))
+        result = {}
+        for node_tuple in node_tuples:
+            result[node_tuple[0]] = []
+            self._in_queue.put(node_tuple)
+        for _ in range(len(result)):
+            try:
+                ip_address, prometheus_response = \
+                    self._out_queue.get(
+                        timeout=config.monitoring_timeout + 1)
+            except queue.Empty:
+                pass
+            else:
+                result[ip_address] = prometheus_response
+        return result
+
+
+def get_concurrent_service_checker():
+    if not hasattr(current_app, 'concurrent_service_checker'):
+        current_app.concurrent_service_checker = ConcurrentServiceChecker()
+    return current_app.concurrent_service_checker
+
+
 # region Syncthing Status Helpers
 
 
@@ -342,8 +404,9 @@ def get_cluster_status(detailed=False):
         }
     if detailed:
         # report also detailed information on services running on the nodes
-        ip_addresses = set(node['private_ip']
-                           for cluster_service in cluster_services.values()
+        ip_addresses = set((node['private_ip'], cluster_service_type)
+                           for cluster_service_type, cluster_service in
+                           cluster_services.items()
                            for node in cluster_service['nodes'].values())
         services = _get_service_details(ip_addresses)
         cluster_services = _update_cluster_services(cluster_services, services)
@@ -557,27 +620,50 @@ def _service_status(list_of_statuses, quorum=-1):
     return ServiceStatus.FAIL
 
 
-def _get_service_details(ip_addresses):
-    # check locally:
+def _get_service_details(node_tuples):
+    services, nodes_not_available = _get_service_details_locally(node_tuples)
+    if nodes_not_available:
+        remote_services = _get_service_details_remotely(nodes_not_available)
+        services.update(remote_services)
+    return services
+
+
+def _get_service_details_locally(node_tuples):
     prometheus_response = _get_services_status(
         'http://localhost:9090/monitoring/')
     services, services_not_available = _services_from_prometheus_response(
-        prometheus_response, _metrics_for_host, ip_addresses)
-    return services
+        prometheus_response, _metrics_for_host, node_tuples)
+    return services, services_not_available
+
+
+def _get_service_details_remotely(node_tuples):
+    """Get status of the services on not federated nodes."""
+    all_services = {}
+    service_getter = get_concurrent_service_checker()
+    for ip_address, prometheus_reponse in service_getter.get(
+            node_tuples).items():
+        services, services_not_available = _services_from_prometheus_response(
+            prometheus_reponse, _metrics_for_host, node_tuples)
+        # If the remote metrics are not available, assume service_node is down
+        # and combine not_available_nodes with those available.
+        services.update(services_not_available)
+        all_services[ip_address] = services[ip_address]
+    return all_services
 
 
 def _services_from_prometheus_response(prometheus_response,
                                        select_node_metrics_func,
-                                       ip_addresses):
+                                       node_tuples):
+    # node_tuples is a list of two-element tuples: (private_ip, service_type)
     services = {}
-    services_not_available = {}
-    for ip_address in ip_addresses:
+    services_not_available = []
+    for node_tuple in node_tuples:
         node_metrics = select_node_metrics_func(prometheus_response,
-                                                ip_address)
+                                                node_tuple[0])
         if node_metrics:
-            services[ip_address] = _service_statuses(node_metrics)
+            services[node_tuple[0]] = _service_statuses(node_metrics)
         else:
-            services_not_available[ip_address] = {}
+            services_not_available.append(node_tuple)
     return services, services_not_available
 
 
