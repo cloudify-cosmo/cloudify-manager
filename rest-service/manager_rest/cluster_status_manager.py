@@ -615,7 +615,7 @@ def _get_service_status(service_id, service, process_manager, is_running):
                 'instances': [
                     {
                         'Description': service.description,
-                        'state': ('running' if is_running else 'not running'),
+                        'state': ('running' if is_running else 'stopped'),
                         'Id': service_id,
                     },
                 ],
