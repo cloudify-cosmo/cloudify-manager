@@ -35,6 +35,7 @@ from manager_rest.rest.rest_utils import (validate_inputs,
 
 
 class Agents(SecuredResource):
+
     @rest_decorators.marshal_with(AgentResponse)
     @rest_decorators.create_filters(models.Agent)
     @rest_decorators.paginate
@@ -68,6 +69,7 @@ class Agents(SecuredResource):
         manager_ca_cert = data.get('manager_ca_cert')
         bundle = data.get('bundle')
         sm = get_storage_manager()
+        num_of_updated_agents = 0
 
         new_broker_ca, new_manager_ca = self._get_new_ca_certs(sm,
                                                                bundle,
@@ -102,10 +104,13 @@ class Agents(SecuredResource):
                     routing_key='service')
                 to_send.append((handler, message))
                 amqp_client.add_handler(handler)
+                num_of_updated_agents += 1
 
             with amqp_client:
                 for handler, message in to_send:
                     handler.publish(message)
+
+        return {'number_of_updated_agents': num_of_updated_agents}
 
     @staticmethod
     def _get_amqp_client(amqp_vhost='/'):
