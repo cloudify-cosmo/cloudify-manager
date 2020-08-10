@@ -54,36 +54,45 @@ SERVICE_DESCRIPTIONS = {
     'blackbox_exporter': CloudifyService(
         name='Blackbox Exporter',
         description='Prometheus blackbox exporter (HTTP/HTTPS/TCP pings)'),
-    'haproxy': CloudifyService(
-        name='HA Proxy',
-        description='HAProxy Load Balancer'),
-    'node_exporter': CloudifyService(
-        name='Node Exporter',
-        description='Prometheus exporter for hardware and OS metrics'),
-    'prometheus': CloudifyService(
-        name='Prometheus',
-        description='Prometheus monitoring service'),
-    'cloudify-syncthing': CloudifyService(
-        name='Syncthing',
-        description='Syncthing Service'),
-    'cloudify-restservice': CloudifyService(
-        name='Manager REST Service',
-        description='Cloudify REST Service'),
     'cloudify-amqp-postgres': CloudifyService(
         name='AMQP-Postgres',
-        description='Cloudify AMQP PostgreSQL Broker Service'),
+        description='Cloudify AMQP PostgreSQL Broker service'),
+    'cloudify-composer': CloudifyService(
+        name='Cloudify Composer',
+        description='Cloudify Composer service'),
+    'cloudify-mgmtworker': CloudifyService(
+        name='Management Worker',
+        description='Cloudify Management Worker service'),
+    'cloudify-rabbitmq': CloudifyService(
+        name='RabbitMQ Broker',
+        description='RabbitMQ Broker service'),
+    'cloudify-restservice': CloudifyService(
+        name='Manager REST',
+        description='Cloudify REST service'),
+    'cloudify-stage': CloudifyService(
+        name='Cloudify Console',
+        description='Cloudify Console service'),
+    'cloudify-syncthing': CloudifyService(
+        name='Syncthing',
+        description='Syncthing service'),
+    'haproxy': CloudifyService(
+        name='HA Proxy',
+        description='HAProxy Load Balancer service'),
     'nginx': CloudifyService(
         name='Webserver',
         description='nginx - high performance web server'),
-    'cloudify-composer': CloudifyService(  # TODO: premium != community
-        name='Cloudify Composer',
-        description='Cloudify Composer Service'),
-    'cloudify-mgmtworker': CloudifyService(
-        name='Management Worker',
-        description='Cloudify Management Worker Service'),
-    'cloudify-stage': CloudifyService(
-        name='Cloudify Console',
-        description='Cloudify Console Service'),
+    'node_exporter': CloudifyService(
+        name='Node Exporter',
+        description='Prometheus exporter for hardware and OS metrics'),
+    'postgresql-9.5': CloudifyService(
+        name='PostgreSQL 9.5 database server',
+        description='PostgreSQL 9.5 database server'),
+    'postgres_exporter': CloudifyService(
+        name='Prometheus exporter for PostgreSQL',
+        description='Prometheus exporter for PostgreSQL service'),
+    'prometheus': CloudifyService(
+        name='Prometheus',
+        description='Prometheus monitoring service'),
 }
 
 
