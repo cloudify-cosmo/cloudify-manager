@@ -49,6 +49,58 @@ PATRONI_SERVICE_KEY = 'Patroni'
 UNINITIALIZED_STATUS = 'Uninitialized'
 CLUSTER_STATUS_PATH = '/opt/manager/cluster_statuses'
 
+CloudifyService = namedtuple('CloudifyService', 'name description')
+SERVICE_DESCRIPTIONS = {
+    'blackbox_exporter': CloudifyService(
+        name='Blackbox Exporter',
+        description='Prometheus blackbox exporter (HTTP/HTTPS/TCP pings)'),
+    'cloudify-amqp-postgres': CloudifyService(
+        name='AMQP-Postgres',
+        description='Cloudify AMQP PostgreSQL Broker service'),
+    'cloudify-composer': CloudifyService(
+        name='Cloudify Composer',
+        description='Cloudify Composer service'),
+    'cloudify-mgmtworker': CloudifyService(
+        name='Management Worker',
+        description='Cloudify Management Worker service'),
+    'cloudify-rabbitmq': CloudifyService(
+        name='RabbitMQ Broker',
+        description='RabbitMQ Broker service'),
+    'cloudify-restservice': CloudifyService(
+        name='Manager REST',
+        description='Cloudify REST service'),
+    'cloudify-stage': CloudifyService(
+        name='Cloudify Console',
+        description='Cloudify Console service'),
+    'cloudify-syncthing': CloudifyService(
+        name='Syncthing',
+        description='Syncthing service'),
+    'etcd': CloudifyService(
+        name='Etcd key-value store',
+        description='Etcd distributed key-value store service'),
+    'haproxy': CloudifyService(
+        name='HA Proxy',
+        description='HAProxy Load Balancer service'),
+    'nginx': CloudifyService(
+        name='Webserver',
+        description='nginx - high performance web server'),
+    'node_exporter': CloudifyService(
+        name='Node Exporter',
+        description='Prometheus exporter for hardware and OS metrics'),
+    'patroni': CloudifyService(
+        name='Patroni HA Template',
+        description='Patroni HA Template service'),
+    'postgresql-9.5': CloudifyService(
+        name='PostgreSQL 9.5 database server',
+        description='PostgreSQL 9.5 database server'),
+    'postgres_exporter': CloudifyService(
+        name='Prometheus exporter for PostgreSQL',
+        description='Prometheus exporter for PostgreSQL service'),
+    'prometheus': CloudifyService(
+        name='Prometheus',
+        description='Prometheus monitoring service'),
+}
+
 
 class Credentials(object):
     struct = namedtuple('CredentialsStruct', 'username password ca_path')
@@ -152,6 +204,68 @@ def get_concurrent_status_checker():
     if not hasattr(current_app, 'concurrent_status_checker'):
         current_app.concurrent_status_checker = ConcurrentStatusChecker()
     return current_app.concurrent_status_checker
+
+
+class ConcurrentServiceChecker(object):
+    STOP_THE_WORKER = 'STOP THE WORKER'
+
+    def __init__(self):
+        self._in_queue = queue.Queue()
+        self._out_queue = queue.Queue()
+        self._threads = None
+
+    def _worker(self):
+        while True:
+            ip_address, service_type = \
+                self._in_queue.get()
+            if service_type == ConcurrentServiceChecker.STOP_THE_WORKER:
+                break
+            creds = Credentials.get(service_type, ip_address)
+            try:
+                prometheus_response = _get_services_status(
+                    'https://{ip}:8009/monitoring/'.format(
+                        ip=ip_address),
+                    auth=(creds.username, creds.password),
+                    ca_path=creds.ca_path,
+                )
+            except Exception:
+                self._out_queue.put((ip_address, [],))
+            else:
+                self._out_queue.put((ip_address,
+                                     prometheus_response,))
+
+    def _initialize_threads(self, number_of_threads):
+        self._threads = [
+            threading.Thread(target=self._worker)
+            for _ in range(number_of_threads)
+        ]
+        for thread in self._threads:
+            thread.daemon = True
+            thread.start()
+
+    def get(self, node_tuples):
+        if self._threads is None:
+            self._initialize_threads(len(node_tuples))
+        result = {}
+        for node_tuple in node_tuples:
+            result[node_tuple[0]] = []
+            self._in_queue.put(node_tuple)
+        for _ in range(len(result)):
+            try:
+                ip_address, prometheus_response = \
+                    self._out_queue.get(
+                        timeout=config.monitoring_timeout + 1)
+            except queue.Empty:
+                pass
+            else:
+                result[ip_address] = prometheus_response
+        return result
+
+
+def get_concurrent_service_checker():
+    if not hasattr(current_app, 'concurrent_service_checker'):
+        current_app.concurrent_service_checker = ConcurrentServiceChecker()
+    return current_app.concurrent_service_checker
 
 
 # region Syncthing Status Helpers
@@ -262,7 +376,7 @@ def _is_all_in_one(cluster_structure):
 # endregion
 
 
-def get_cluster_status():
+def get_cluster_status(detailed=False):
     """
     Generate the cluster status using:
     1. The DB tables (managers, rabbitmq_brokers, db_nodes) for the
@@ -288,9 +402,17 @@ def get_cluster_status():
                 {node_name: dict(node, version=cloudify_version) for
                  node_name, node in nodes.items()},
         }
+    if detailed:
+        # report also detailed information on services running on the nodes
+        ip_addresses = set((node['private_ip'], cluster_service_type)
+                           for cluster_service_type, cluster_service in
+                           cluster_services.items()
+                           for node in cluster_service['nodes'].values())
+        services = _get_service_details(ip_addresses)
+        cluster_services = _update_cluster_services(cluster_services, services)
 
     return {
-        STATUS: _simple_status(set([s['status'] for s in
+        STATUS: _simple_status(set([s[STATUS] for s in
                                     cluster_services.values()])),
         SERVICES: cluster_services
     }
@@ -387,6 +509,16 @@ def _get_manager_status(monitoring_api_uri, auth=None, ca_path=None):
                             timeout=config.monitoring_timeout)
 
 
+def _get_services_status(monitoring_api_uri, auth=None, ca_path=None):
+    return prometheus_query(
+        monitoring_api_uri,
+        query_string='node_systemd_unit_state{state="active"} or ' +
+                     'node_supervisord_up',
+        auth=auth,
+        ca_path=ca_path,
+        timeout=config.monitoring_timeout)
+
+
 def _metrics_select_func_for_service(service_type):
     if service_type in (CloudifyNodeType.DB,
                         CloudifyNodeType.BROKER,
@@ -410,9 +542,16 @@ def _metrics_for_instance(prometheus_results, ip):
 def _metrics_for_host(prometheus_results, ip):
     metrics = []
     for result in prometheus_results:
-        instance = result.get('metric', {}).get('host', '')
-        if _equal_ips(instance, ip):
+        host = result.get('metric', {}).get('host', '')
+        if host and _equal_ips(host, ip):
             metrics.append(result)
+        elif not host:
+            instance = result.get('metric', {}).get('instance', '')
+            m = re.match(r"(.*[^:])(:\d+)", instance)
+            if m and _equal_ips(m.group(1), ip):
+                metrics.append(result)
+            elif instance and not m and _equal_ips(instance, ip):
+                metrics.append(result)
     return metrics
 
 
@@ -479,3 +618,117 @@ def _service_status(list_of_statuses, quorum=-1):
     if healthy >= quorum:
         return ServiceStatus.DEGRADED
     return ServiceStatus.FAIL
+
+
+def _get_service_details(node_tuples):
+    services, nodes_not_available = _get_service_details_locally(node_tuples)
+    if nodes_not_available:
+        remote_services = _get_service_details_remotely(nodes_not_available)
+        services.update(remote_services)
+    return services
+
+
+def _get_service_details_locally(node_tuples):
+    prometheus_response = _get_services_status(
+        'http://localhost:9090/monitoring/')
+    services, services_not_available = _services_from_prometheus_response(
+        prometheus_response, _metrics_for_host, node_tuples)
+    return services, services_not_available
+
+
+def _get_service_details_remotely(node_tuples):
+    """Get status of the services on not federated nodes."""
+    all_services = {}
+    service_getter = get_concurrent_service_checker()
+    for ip_address, prometheus_reponse in service_getter.get(
+            node_tuples).items():
+        services, services_not_available = _services_from_prometheus_response(
+            prometheus_reponse, _metrics_for_host, node_tuples)
+        # If the remote metrics are not available, assume service_node is down
+        # and combine not_available_nodes with those available.
+        services.update(services_not_available)
+        all_services[ip_address] = services[ip_address]
+    return all_services
+
+
+def _services_from_prometheus_response(prometheus_response,
+                                       select_node_metrics_func,
+                                       node_tuples):
+    # node_tuples is a list of two-element tuples: (private_ip, service_type)
+    services = {}
+    services_not_available = []
+    for node_tuple in node_tuples:
+        node_metrics = select_node_metrics_func(prometheus_response,
+                                                node_tuple[0])
+        if node_metrics:
+            services[node_tuple[0]] = _service_statuses(node_metrics)
+        else:
+            services_not_available.append(node_tuple)
+    return services, services_not_available
+
+
+def _service_statuses(node_metrics):
+    reported_services = {}
+    for node_metric in node_metrics:
+        service_id = node_metric.get('metric', {}).get('name')
+        service = _get_cloudify_service_description(service_id)
+        if not service:
+            continue
+        process_manager = _get_process_manager(node_metric.get('metric'))
+        service_status = _get_service_status(
+            service_id, service, process_manager,
+            node_metric.get('value')[1] == '1')
+        if reported_services.get(service.name, {}).get('extra_info', {}).get(
+                process_manager, {}).get('instances'):
+            reported_services[service.name]['extra_info'][process_manager][
+                'instances'].append(service_status['extra_info'][
+                                        process_manager]['instances'])
+        else:
+            reported_services[service.name] = service_status
+    return reported_services
+
+
+def _get_process_manager(metric):
+    if 'systemd' in metric.get('__name__'):
+        return 'systemd'
+    elif 'supervisord' in metric.get('__name__'):
+        return 'supervisord'
+    else:
+        return 'unknown'
+
+
+def _get_cloudify_service_description(metric_name):
+    if metric_name in SERVICE_DESCRIPTIONS:
+        return SERVICE_DESCRIPTIONS[metric_name]
+    elif metric_name.endswith('.service'):
+        return _get_cloudify_service_description(metric_name[:-8])
+    return None
+
+
+def _get_service_status(service_id, service, process_manager, is_running):
+    return {
+        'status': (NodeServiceStatus.ACTIVE if is_running
+                   else NodeServiceStatus.INACTIVE),
+        'extra_info': {
+            process_manager: {
+                'instances': [
+                    {
+                        'Description': service.description,
+                        'state': ('running' if is_running else 'stopped'),
+                        'Id': service_id,
+                    },
+                ],
+                'display_name': service.name,
+                'unit_id': service_id,
+            },
+        },
+    }
+
+
+def _update_cluster_services(cluster_services, services):
+    for service_type, cluster_service in cluster_services.items():
+        for node_name, node in cluster_service.get('nodes', {}).items():
+            cluster_service['nodes'][node_name].update({
+                SERVICES: services.get(node['private_ip'])
+            })
+    return cluster_services

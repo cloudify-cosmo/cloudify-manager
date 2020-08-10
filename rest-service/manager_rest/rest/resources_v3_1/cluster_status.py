@@ -53,7 +53,7 @@ class ClusterStatus(SecuredResourceBannedSnapshotRestore):
             'summary',
             request.args.get('summary', False)
         )
-        cluster_status = get_cluster_status()
+        cluster_status = get_cluster_status(detailed=not summary_response)
 
         # If the response should be only the summary
         if summary_response:
