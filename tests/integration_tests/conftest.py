@@ -45,12 +45,13 @@ def pytest_addoption(parser):
 # pairs of (source path, [list of target virtualenvs])
 # TODO fill this in as needed, when needed
 sources = [
+    ('cloudify-cli/cloudify_cli', ['/opt/cfy']),
     ('cloudify-common/cloudify', ['/opt/manager/env', '/opt/mgmtworker/env']),
+    ('cloudify-common/cloudify_rest_client', ['/opt/mgmtworker/env']),
     ('cloudify-common/dsl_parser', ['/opt/manager/env']),
     ('cloudify-common/script_runner', ['/opt/mgmtworker/env']),
     ('cloudify-agent/cloudify_agent', ['/opt/mgmtworker/env']),
     ('cloudify-manager/mgmtworker/mgmtworker', ['/opt/mgmtworker/env']),
-    ('cloudify-manager/rest-service/manager_rest', ['/opt/manager/env']),
     ('cloudify-manager/rest-service/manager_rest', ['/opt/manager/env']),
     ('cloudify-manager/workflows/cloudify_system_workflows', ['/opt/mgmtworker/env']),  # NOQA
     ('cloudify-manager-install/cfy_manager', ['/opt/cloudify/cfy_manager'])
@@ -140,6 +141,8 @@ def manager_class_fixtures(request, manager_container, rest_client):
 
 def _clean_manager(container_id):
     dirs_to_clean = [
+        '/opt/mgmtworker/env/plugins',
+        '/opt/mgmtworker/env/source_plugins',
         '/opt/mgmtworker/work/deployments',
         '/opt/manager/resources/blueprints',
         '/opt/manager/resources/uploaded-blueprints'
@@ -199,25 +202,27 @@ def package_agent(manager_container, request):
     also be used for the agent.
     """
     sources_root = request.config.getoption("--tests-source-root")
+    if not sources_root:
+        return
     # unpack the agent archive, overwrite files, repack it, copy back
     # to the package location
     mgmtworker_env = '/opt/mgmtworker/env/lib/python*/site-packages/'
     agent_package = \
         '/opt/manager/resources/packages/agents/centos-core-agent.tar.gz'
     agent_source_path = 'cloudify/env/lib/python*/site-packages/'
-    sources = []
+    agent_sources = []
     for src, target_venvs in sources:
         src = os.path.abspath(os.path.join(sources_root, src))
         if not os.path.exists(src):
             continue
         if '/opt/mgmtworker/env' in target_venvs:
-            sources.append(os.path.basename(src))
-    if not sources:
+            agent_sources.append(os.path.basename(src))
+    if not agent_sources:
         return
     docker.execute(manager_container.container_id, [
         'bash', '-c', 'cd /tmp && tar xvf {0}'.format(agent_package)
     ])
-    for package in sources:
+    for package in agent_sources:
         source = os.path.join(mgmtworker_env, package)
         target = os.path.join('/tmp', agent_source_path)
         docker.execute(manager_container.container_id, [
