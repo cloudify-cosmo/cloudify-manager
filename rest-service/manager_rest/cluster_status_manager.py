@@ -561,18 +561,32 @@ def _services_from_prometheus_response(prometheus_response,
 
 def _service_statuses(node_metrics):
     reported_services = {}
-    for metric in node_metrics:
-        service = _get_cloudify_service_description(
-            metric.get('metric', {}).get('name'))
+    for node_metric in node_metrics:
+        service_id = node_metric.get('metric', {}).get('name')
+        service = _get_cloudify_service_description(service_id)
         if not service:
             continue
-        reported_services[service.name] = {
-            'status': (NodeServiceStatus.ACTIVE
-                       if metric.get('value')[1] == '1'
-                       else NodeServiceStatus.INACTIVE),
-            'display_name': service.description
-        }
+        process_manager = _get_process_manager(node_metric.get('metric'))
+        service_status = _get_service_status(
+            service_id, service, process_manager,
+            node_metric.get('value')[1] == '1')
+        if reported_services.get(service.name, {}).get('extra_info', {}).get(
+                process_manager, {}).get('instances'):
+            reported_services[service.name]['extra_info'][process_manager][
+                'instances'].append(service_status['extra_info'][
+                                        process_manager]['instances'])
+        else:
+            reported_services[service.name] = service_status
     return reported_services
+
+
+def _get_process_manager(metric):
+    if 'systemd' in metric.get('__name__'):
+        return 'systemd'
+    elif 'supervisord' in metric.get('__name__'):
+        return 'supervisord'
+    else:
+        return 'unknown'
 
 
 def _get_cloudify_service_description(metric_name):
@@ -581,6 +595,26 @@ def _get_cloudify_service_description(metric_name):
     elif metric_name.endswith('.service'):
         return _get_cloudify_service_description(metric_name[:-8])
     return None
+
+
+def _get_service_status(service_id, service, process_manager, is_running):
+    return {
+        'status': (NodeServiceStatus.ACTIVE if is_running
+                   else NodeServiceStatus.INACTIVE),
+        'extra_info': {
+            process_manager: {
+                'instances': [
+                    {
+                        'Description': service.description,
+                        'state': ('running' if is_running else 'not running'),
+                        'Id': service_id,
+                    },
+                ],
+                'display_name': service.name,
+                'unit_id': service_id,
+            },
+        },
+    }
 
 
 def _update_cluster_services(cluster_services, services):
