@@ -42,7 +42,8 @@ node_templates:
     properties:
       install_agent: false
       property_static: { get_capability: [shared_resource_deployment, capability1] }
-      property_runtime: { get_capability: [{ get_secret: shared_resource_deployment_key }, capability1] }
+      property_function: { get_capability: [{ get_secret:
+                                          shared_resource_deployment_key }, capability1] }
 
 node_types:
   test_compute:
@@ -50,5 +51,5 @@ node_types:
     properties:
       property_static:
         default: ''
-      property_runtime:
+      property_function:
         default: ''

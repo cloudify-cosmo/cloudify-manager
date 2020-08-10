@@ -18,6 +18,7 @@ import pytest
 from cloudify.models_states import VisibilityState
 from cloudify.constants import COMPONENT, SHARED_RESOURCE
 
+from dsl_parser.functions import is_function
 from dsl_parser.constants import NODES, OUTPUTS, PROPERTIES
 
 from integration_tests import AgentlessTestCase
@@ -97,6 +98,10 @@ class TestInterDeploymentDependenciesInfrastructure(AgentlessTestCase):
 
         base_dependencies = self._assert_dependencies_count(
             len(base_expected_dependencies))
+
+        import pydevd
+        pydevd.settrace('192.168.43.135', port=53100, stdoutToServer=True,
+                        stderrToServer=True)
 
         self._assert_dependencies_exist(base_expected_dependencies,
                                         base_dependencies)
@@ -213,10 +218,11 @@ class TestInterDeploymentDependenciesInfrastructure(AgentlessTestCase):
                                  SR_DEPLOYMENT)
                 self.assertEqual(dependency['target_deployment_func'],
                                  'shared_resource_deployment')
-            elif 'property_runtime' in dependency.dependency_creator:
+            elif 'property_function' in dependency.dependency_creator:
                 self.assertEqual(dependency.target_deployment_id,
                                  SR_DEPLOYMENT)
                 secret_func = {'get_secret': 'shared_resource_deployment_key'}
+                assert is_function(dependency['target_deployment_func'])
                 self.assertEqual(dependency['target_deployment_func'],
                                  secret_func)
             else:
@@ -251,25 +257,25 @@ class TestInterDeploymentDependenciesInfrastructure(AgentlessTestCase):
             '{0}.{1}.{2}.static_changed_to_static.get_capability'
             ''.format(NODES, COMPUTE_NODE, PROPERTIES):
                 shared_deployment_target,
-            '{0}.{1}.{2}.static_changed_to_runtime.get_capability'
+            '{0}.{1}.{2}.static_changed_to_function.get_capability'
             ''.format(NODES, COMPUTE_NODE, PROPERTIES):
                 shared_deployment_target,
-            '{0}.{1}.{2}.runtime_changed_to_runtime.get_capability'
+            '{0}.{1}.{2}.function_changed_to_function.get_capability'
             ''.format(NODES, COMPUTE_NODE, PROPERTIES):
                 shared_deployment_target,
-            '{0}.{1}.{2}.runtime_changed_to_static.get_capability'
+            '{0}.{1}.{2}.function_changed_to_static.get_capability'
             ''.format(NODES, COMPUTE_NODE, PROPERTIES):
                 shared_deployment_target,
             '{0}.static_changed_to_static.value.get_capability'
             ''.format(OUTPUTS):
                 shared_deployment_target,
-            '{0}.static_changed_to_runtime.value.get_capability'
+            '{0}.static_changed_to_function.value.get_capability'
             ''.format(OUTPUTS):
                 shared_deployment_target,
-            '{0}.runtime_changed_to_runtime.value.get_capability'
+            '{0}.function_changed_to_function.value.get_capability'
             ''.format(OUTPUTS):
                 shared_deployment_target,
-            '{0}.runtime_changed_to_static.value.get_capability'
+            '{0}.function_changed_to_static.value.get_capability'
             ''.format(OUTPUTS):
                 shared_deployment_target,
             self._get_shared_resource_dependency_creator(
@@ -293,13 +299,13 @@ class TestInterDeploymentDependenciesInfrastructure(AgentlessTestCase):
                 '{0}.should_be_created_static.value.get_capability'
                 ''.format(OUTPUTS):
                     SR_DEPLOYMENT2,
-                '{0}.should_be_created_runtime.value.get_capability'
+                '{0}.should_be_created_function.value.get_capability'
                 ''.format(OUTPUTS):
                     SR_DEPLOYMENT2,
                 '{0}.{1}.{2}.should_be_created_static.get_capability'
                 ''.format(NODES, COMPUTE_NODE, PROPERTIES):
                     SR_DEPLOYMENT2,
-                '{0}.{1}.{2}.should_be_created_runtime.get_capability'
+                '{0}.{1}.{2}.should_be_created_function.get_capability'
                 ''.format(NODES, COMPUTE_NODE, PROPERTIES):
                     SR_DEPLOYMENT2,
             })

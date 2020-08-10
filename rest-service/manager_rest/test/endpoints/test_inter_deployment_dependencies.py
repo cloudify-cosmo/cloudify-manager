@@ -184,7 +184,7 @@ class InterDeploymentDependenciesTest(BaseServerTestCase):
     @staticmethod
     def _get_target_deployment_func(dependencies_list):
         for dependency in dependencies_list:
-            if 'property_runtime' in dependency.dependency_creator:
+            if 'property_function' in dependency.dependency_creator:
                 return dependency['target_deployment_func']
 
     @staticmethod
