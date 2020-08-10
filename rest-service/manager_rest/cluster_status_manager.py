@@ -75,6 +75,9 @@ SERVICE_DESCRIPTIONS = {
     'cloudify-syncthing': CloudifyService(
         name='Syncthing',
         description='Syncthing service'),
+    'etcd': CloudifyService(
+        name='Etcd key-value store',
+        description='Etcd distributed key-value store service'),
     'haproxy': CloudifyService(
         name='HA Proxy',
         description='HAProxy Load Balancer service'),
@@ -84,6 +87,9 @@ SERVICE_DESCRIPTIONS = {
     'node_exporter': CloudifyService(
         name='Node Exporter',
         description='Prometheus exporter for hardware and OS metrics'),
+    'patroni': CloudifyService(
+        name='Patroni HA Template',
+        description='Patroni HA Template service'),
     'postgresql-9.5': CloudifyService(
         name='PostgreSQL 9.5 database server',
         description='PostgreSQL 9.5 database server'),
