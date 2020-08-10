@@ -91,29 +91,7 @@ def upgrade():
         )
     ])
     session.commit()
-    plugins_states = op.create_table(
-        'plugins_states',
-        sa.Column(
-            '_storage_id',
-            sa.Integer(),
-            autoincrement=True,
-            nullable=False),
-        sa.Column('_plugin_fk', sa.Integer()),
-        sa.Column('_manager_fk', sa.Integer(), nullable=True),
-        sa.Column('_agent_fk', sa.Integer(), nullable=True),
-        sa.Column('state', sa.TEXT()),
-        sa.Column('error', sa.TEXT(), nullable=True),
-        sa.ForeignKeyConstraint(['_plugin_fk'], ['plugins._storage_id'], ),
-        sa.ForeignKeyConstraint(['_manager_fk'], ['managers.id'], ),
-        sa.ForeignKeyConstraint(['_agent_fk'], ['agents._storage_id'], ),
-        sa.PrimaryKeyConstraint('_storage_id')
-    )
-    op.create_check_constraint(
-        'plugins_states_manager_or_agent',
-        'plugins_states',
-        plugins_states.c._agent_fk.is_(None) !=
-        plugins_states.c._manager_fk.is_(None)
-    )
+    _create_plugins_states_table()
 
 
 def downgrade():
@@ -144,6 +122,7 @@ def downgrade():
     session.delete(blueprint_folder_max_files)
     session.delete(monitoring_timeout)
     session.commit()
+    op.drop_table('plugins_states')
 
 
 def _create_usage_collector_table():
@@ -163,6 +142,58 @@ def _create_usage_collector_table():
 
 def _drop_usage_collector_table():
     op.drop_table('usage_collector')
+
+
+def _create_plugins_states_table():
+    plugins_states = op.create_table(
+        'plugins_states',
+        sa.Column('_storage_id', sa.Integer(), autoincrement=True,
+                  nullable=False),
+        sa.Column('_plugin_fk', sa.Integer(), nullable=False),
+        sa.Column('_manager_fk', sa.Integer(), nullable=True),
+        sa.Column('_agent_fk', sa.Integer(), nullable=True),
+        sa.Column('state', sa.Text(), nullable=True),
+        sa.Column('error', sa.Text(), nullable=True),
+        sa.ForeignKeyConstraint(
+            ['_agent_fk'],
+            ['agents._storage_id'],
+            name=op.f('plugins_states__agent_fk_fkey'),
+            ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(
+            ['_manager_fk'],
+            ['managers.id'],
+            name=op.f('plugins_states__manager_fk_fkey'),
+            ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(
+            ['_plugin_fk'],
+            ['plugins._storage_id'],
+            name=op.f('plugins_states__plugin_fk_fkey'),
+            ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint(
+            '_storage_id',
+            name=op.f('plugins_states_pkey'))
+    )
+    op.create_index(
+        op.f('plugins_states__agent_fk_idx'),
+        'plugins_states',
+        ['_agent_fk'],
+        unique=False)
+    op.create_index(
+        op.f('plugins_states__manager_fk_idx'),
+        'plugins_states',
+        ['_manager_fk'],
+        unique=False)
+    op.create_index(
+        op.f('plugins_states__plugin_fk_idx'),
+        'plugins_states',
+        ['_plugin_fk'],
+        unique=False)
+    op.create_check_constraint(
+        'plugins_states_manager_or_agent',
+        'plugins_states',
+        plugins_states.c._agent_fk.is_(None) !=
+        plugins_states.c._manager_fk.is_(None)
+    )
 
 
 def _create_inter_deployment_dependencies_table():
