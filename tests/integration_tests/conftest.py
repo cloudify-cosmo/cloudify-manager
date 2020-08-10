@@ -140,6 +140,8 @@ def manager_class_fixtures(request, manager_container, rest_client):
 
 def _clean_manager(container_id):
     dirs_to_clean = [
+        '/opt/mgmtworker/env/plugins',
+        '/opt/mgmtworker/env/source_plugins',
         '/opt/mgmtworker/work/deployments',
         '/opt/manager/resources/blueprints',
         '/opt/manager/resources/uploaded-blueprints'
