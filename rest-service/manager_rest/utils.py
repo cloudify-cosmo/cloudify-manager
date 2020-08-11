@@ -20,12 +20,10 @@ import errno
 import shutil
 import zipfile
 import tempfile
-import platform
 from datetime import datetime
 from os import path, makedirs
 from base64 import urlsafe_b64encode
 
-import wagon
 from flask import g
 from flask import request
 from werkzeug.local import LocalProxy
@@ -132,24 +130,6 @@ def get_plugin_archive_path(plugin_id, archive_name):
     )
 
 
-def plugin_installable_on_current_platform(plugin):
-    dist, _, release = platform.linux_distribution(
-        full_distribution_name=False)
-    dist, release = dist.lower(), release.lower()
-
-    # Mac OSX is a special case, in which plugin.distribution and
-    # plugin.release will be None instead of ''
-    if 'macosx' in plugin.supported_platform:
-        dist = dist or None
-        release = release or None
-
-    return (plugin.supported_platform in ('any', 'manylinux1_x86_64') or all([
-        plugin.supported_platform == wagon.get_platform(),
-        plugin.distribution == dist,
-        plugin.distribution_release == release
-    ]))
-
-
 def get_formatted_timestamp():
     # Adding 'Z' to match ISO format
     return '{0}Z'.format(datetime.utcnow().isoformat()[:-3])
@@ -244,8 +224,8 @@ def can_execute_global_workflow(tenant):
     execute_global_roles = \
         config.instance.authorization_permissions['execute_global_workflow']
     return (
-            current_user.id == constants.BOOTSTRAP_ADMIN_ID or
-            current_user.has_role_in(tenant, execute_global_roles)
+        current_user.id == constants.BOOTSTRAP_ADMIN_ID or
+        current_user.has_role_in(tenant, execute_global_roles)
     )
 
 
