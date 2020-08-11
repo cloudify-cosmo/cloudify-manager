@@ -4,3 +4,5 @@ plugins:
     mock_workflows:
         executor: central_deployment_agent
         package_name: mock_workflows
+        source: mock_workflows
+        install: false

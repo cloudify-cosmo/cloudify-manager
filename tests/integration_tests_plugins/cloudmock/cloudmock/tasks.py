@@ -14,8 +14,9 @@
 #    * limitations under the License.
 
 import time
-from cloudify.decorators import operation
+from cloudify.decorators import operation, workflow
 from cloudify.exceptions import NonRecoverableError
+from cloudify.manager import get_rest_client
 from cloudify import ctx
 
 
@@ -175,3 +176,14 @@ def hook_task(context, **kwargs):
     with open('/tmp/hook_task.txt', 'a') as f:
         f.write("In hook_task, context: {0} kwargs: {1}"
                 .format(context, kwargs))
+
+
+@workflow
+def workflow1(ctx):
+    client = get_rest_client()
+    for ni in client.node_instances.list():
+        client.node_instances.update(
+            ni.id,
+            version=ni.version,
+            runtime_properties={'custom_workflow': True}
+        )

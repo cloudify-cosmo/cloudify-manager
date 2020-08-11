@@ -79,6 +79,20 @@ class BasicWorkflowsTest(AgentlessTestCase):
         self.assertIn('stopping machine', seen_logs[0])
         self.assertIn('starting machine', seen_logs[1])
 
+    @pytest.mark.usefixtures('cloudmock_plugin')
+    def test_custom_workflow(self):
+        dsl_path = get_resource('dsl/custom_workflow.yaml')
+        blueprint_id = self.id()
+        deployment, _ = self.deploy_application(
+            dsl_path,
+            blueprint_id=blueprint_id,
+            timeout_seconds=30
+        )
+        self.execute_workflow('custom', deployment.id)
+        instances = self.client.node_instances.list()
+        assert all(i.runtime_properties.get('custom_workflow')
+                   for i in instances)
+
     @pytest.mark.usefixtures('testmockoperations_plugin')
     def test_dependencies_order_with_two_nodes(self):
         dsl_path = get_resource("dsl/dependencies_order_with_two_nodes.yaml")
@@ -424,9 +438,10 @@ class BasicWorkflowsTest(AgentlessTestCase):
     @staticmethod
     def _get_plugin_path(deployment):
         return os.path.join(
-            '/opt/mgmtworker/env/plugins/',
+            '/opt/mgmtworker/env/source_plugins/',
             DEFAULT_TENANT_NAME,
-            '{0}-plugin1'.format(deployment.id),
+            deployment.id,
+            'mock-plugin', '0.1',
             'lib/python3.6/site-packages/',
             'mock_plugin/ops.py'
         )
