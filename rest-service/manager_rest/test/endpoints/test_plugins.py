@@ -14,10 +14,8 @@
 #  * limitations under the License.
 
 import os
-from mock import patch
 from manager_rest.test.attribute import attr
 
-from manager_rest import manager_exceptions
 from manager_rest.test import base_test
 from manager_rest.test.base_test import BaseServerTestCase
 
@@ -151,20 +149,6 @@ class PluginsTest(BaseServerTestCase):
         self.assertEqual(1, len(self.client.plugins.list()))
         self.client.plugins.delete(plugin_id=plugin.id, force=True)
         self.assertEqual(0, len(self.client.plugins.list()))
-
-    @attr(client_min_version=2.1,
-          client_max_version=base_test.LATEST_API_VERSION)
-    def test_uninstall_failure(self):
-        def raises(*args, **kwargs):
-            raise RuntimeError('RAISES')
-        self.upload_plugin(TEST_PACKAGE_NAME, TEST_PACKAGE_VERSION)
-        plugin_id = self.client.plugins.list()[0].id
-        patch_path = ('manager_rest.resource_manager.ResourceManager.'
-                      'remove_plugin')
-        with patch(patch_path, raises):
-            with self.assertRaises(exceptions.PluginInstallationError):
-                self.client.plugins.delete(plugin_id)
-        self.assertEqual(1, len(self.client.plugins.list()))
 
     @attr(client_min_version=3,
           client_max_version=base_test.LATEST_API_VERSION)
