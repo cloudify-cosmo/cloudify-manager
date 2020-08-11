@@ -9,7 +9,8 @@ node_templates:
     properties:
       install_agent: false
       property_static: { get_capability: [shared1, complex_capability] }
-      property_runtime: { get_capability: [{ get_secret: shared2_key }, complex_capability] }
+      property_function: { get_capability: [{ get_secret: shared2_key },
+                                     complex_capability] }
 
 node_types:
   test_compute:
@@ -17,5 +18,5 @@ node_types:
     properties:
       property_static:
         default: ''
-      property_runtime:
+      property_function:
         default: ''
