@@ -169,7 +169,8 @@ class Plugin(SQLResourceBase):
 
     @declared_attr
     def installation_state(cls):
-        return db.relationship('_PluginState')
+        return db.relationship('_PluginState', cascade='delete',
+                               passive_deletes=True)
 
 
 class _PluginState(SQLModelBase):
