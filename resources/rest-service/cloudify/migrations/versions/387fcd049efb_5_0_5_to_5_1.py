@@ -122,7 +122,6 @@ def downgrade():
     session.delete(blueprint_folder_max_files)
     session.delete(monitoring_timeout)
     session.commit()
-    op.drop_table('plugins_states')
 
 
 def _create_usage_collector_table():
