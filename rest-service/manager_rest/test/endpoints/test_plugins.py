@@ -166,20 +166,6 @@ class PluginsTest(BaseServerTestCase):
                 self.client.plugins.delete(plugin_id)
         self.assertEqual(1, len(self.client.plugins.list()))
 
-    @attr(client_min_version=2.1,
-          client_max_version=base_test.LATEST_API_VERSION)
-    def test_uninstall_timeout(self):
-        def raises(*args, **kwargs):
-            raise manager_exceptions.ExecutionTimeout('TIMEOUT')
-        self.upload_plugin(TEST_PACKAGE_NAME, TEST_PACKAGE_VERSION)
-        plugin_id = self.client.plugins.list()[0].id
-        patch_path = ('manager_rest.resource_manager.ResourceManager.'
-                      'remove_plugin')
-        with patch(patch_path, raises):
-            with self.assertRaises(exceptions.PluginInstallationTimeout):
-                self.client.plugins.delete(plugin_id)
-        self.assertEqual(1, len(self.client.plugins.list()))
-
     @attr(client_min_version=3,
           client_max_version=base_test.LATEST_API_VERSION)
     def test_plugin_upload_progress(self):
