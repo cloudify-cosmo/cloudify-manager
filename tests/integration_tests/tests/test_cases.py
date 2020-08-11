@@ -25,6 +25,7 @@ import logging
 import datetime
 import tempfile
 import unittest
+import subprocess
 from contextlib import contextmanager
 
 import wagon
@@ -175,6 +176,19 @@ class BaseTestCase(unittest.TestCase):
         """Remove file from a cloudify manager"""
         return docker.execute(
             self.env.container_id, 'rm -rf {0}'.format(file_path))
+
+    def _test_path(self, path, flag='-f'):
+        try:
+            self.execute_on_manager(['test', flag, path])
+            return True
+        except subprocess.CalledProcessError:
+            return False
+
+    def file_exists(self, path):
+        return self._test_path(path, flag='-f')
+
+    def directory_exists(self, path):
+        return self._test_path(path, flag='-d')
 
     def execute_on_manager(self, command):
         """
@@ -740,8 +754,6 @@ class AgentTestWithPlugins(AgentTestCase):
             yaml_path = os.path.join(plugin_path, 'plugin.yaml')
             with utils.zip_files([wagon_path, yaml_path]) as zip_path:
                 self.client.plugins.upload(zip_path)
-        time.sleep(500)
-        self._wait_for_execution_by_wf_name('install_plugin')
         self.logger.info(
             'Finished uploading {0}...'.format(plugin_name))
 
