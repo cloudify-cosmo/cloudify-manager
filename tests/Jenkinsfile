@@ -31,7 +31,8 @@ tests/integration_tests/tests/agentless_tests/component/test_component_cascading
 tests/integration_tests/tests/agentless_tests/shared_resource/test_relationship_running_workflow.py \\
 tests/integration_tests/tests/agentless_tests/shared_resource/test_shared_resource_type.py \\
 tests/integration_tests/tests/agent_tests/test_agent_install_from_plugin.py \\
-tests/integration_tests/tests/agent_tests/test_agent_install_workflow.py""")
+tests/integration_tests/tests/agent_tests/test_agent_install_workflow.py \\
+tests/integration_tests/tests/agent_tests/test_plugins.py""")
     }
     stages {
         stage('Fetch the docker image'){
