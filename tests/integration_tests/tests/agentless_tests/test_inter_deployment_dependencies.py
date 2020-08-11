@@ -99,10 +99,6 @@ class TestInterDeploymentDependenciesInfrastructure(AgentlessTestCase):
         base_dependencies = self._assert_dependencies_count(
             len(base_expected_dependencies))
 
-        import pydevd
-        pydevd.settrace('192.168.43.135', port=53100, stdoutToServer=True,
-                        stderrToServer=True)
-
         self._assert_dependencies_exist(base_expected_dependencies,
                                         base_dependencies)
 
