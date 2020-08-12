@@ -13,9 +13,10 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import time
 import pytest
-
 from cloudify.plugins.install_utils import INSTALLING_PREFIX
+from cloudify.models_states import PluginInstallationState
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 
@@ -91,6 +92,26 @@ class TestPlugins(AgentlessTestCase):
         self.client.plugins.delete(plugin.id)
         plugins = self.client.plugins.list()
         self.assertEqual(len(plugins), 0)
+
+    @pytest.mark.usefixtures('cloudmock_plugin')
+    def test_plugin_installation_state(self):
+        plugins = self.client.plugins.list(package_name='cloudmock')
+        states = self.client.plugins.get(plugins[0].id).installation_state
+        assert states == []
+        self.client.plugins.install(
+            plugins[0].id,
+            managers=[m.hostname for m in self.client.manager.get_managers()])
+        deadline = time.time() + 30
+        while time.time() < deadline:
+            states = self.client.plugins.get(plugins[0].id).installation_state
+            if not states:
+                time.sleep(0.5)
+                continue
+            state = states[0]['state']
+            if state == PluginInstallationState.INSTALLED:
+                break
+            time.sleep(0.5)
+        assert state == PluginInstallationState.INSTALLED
 
 
 class TestPluginsSystemState(AgentlessTestCase):

@@ -531,10 +531,11 @@ class ResourceManager(object):
 
         # Start delete_deployment_env workflow
         if not delete_db_mode:
+            dep = self.sm.get(models.Deployment, deployment_id)
             self._delete_deployment_environment(deployment,
                                                 bypass_maintenance,
                                                 delete_logs)
-            return self.sm.get(models.Deployment, deployment_id)
+            return dep
 
         # Delete deployment data  DB (should only happen AFTER the workflow
         # finished successfully, hence the delete_db_mode flag)
