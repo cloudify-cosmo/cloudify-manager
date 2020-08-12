@@ -208,6 +208,7 @@ def _execute_task(execution_id, execution_parameters,
     context['rest_token'] = execution_creator.get_auth_token()
     context['tenant'] = _get_tenant_dict()
     context['task_target'] = MGMTWORKER_QUEUE
+    context['execution_creator_username'] = current_user.username
     execution_parameters['__cloudify_context'] = context
     message = {
         'cloudify_task': {'kwargs': execution_parameters},
