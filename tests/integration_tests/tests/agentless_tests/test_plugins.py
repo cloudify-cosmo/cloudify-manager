@@ -105,6 +105,7 @@ class TestPlugins(AgentlessTestCase):
         while time.time() < deadline:
             states = self.client.plugins.get(plugins[0].id).installation_state
             if not states:
+                time.sleep(0.5)
                 continue
             state = states[0]['state']
             if state == PluginInstallationState.INSTALLED:
