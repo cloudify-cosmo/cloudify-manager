@@ -15,8 +15,6 @@ imports:
 node_templates:
   agent_host:
     type: cloudify.nodes.docker.Compute
-    properties:
-      install_agent: true
 
   timezone_configurator:
     type: cloudify.nodes.SoftwareComponent

@@ -30,7 +30,6 @@ from contextlib import contextmanager
 
 import wagon
 import pytest
-from pytest import mark
 from retrying import retry
 from requests.exceptions import ConnectionError
 
@@ -44,7 +43,7 @@ from logging.handlers import RotatingFileHandler
 from manager_rest.utils import mkdirs
 from manager_rest.constants import CLOUDIFY_TENANT_HEADER
 
-from integration_tests.framework import utils, hello_world, docker
+from integration_tests.framework import utils, docker
 from integration_tests.tests import utils as test_utils
 from integration_tests.framework.constants import (PLUGIN_STORAGE_DIR,
                                                    CLOUDIFY_USER)
@@ -248,32 +247,14 @@ class BaseTestCase(unittest.TestCase):
         """returns the host IP"""
         return 'localhost'
 
-    def get_plugin_data(self, plugin_name, deployment_id):
-        """
-        Retrieve the plugin state for a certain deployment.
-
-        :param deployment_id: the deployment id in question.
-        :param plugin_name: the plugin in question.
-        :return: plugin data relevant for the deployment.
-        :rtype dict
-        """
-        data = self.read_manager_file(
-            os.path.join(PLUGIN_STORAGE_DIR, '{0}.json'.format(plugin_name))
-        )
-        if not data:
-            return {}
-        data = json.loads(data)
-        return data.get(deployment_id, {})
-
-    def clear_plugin_data(self, plugin_name):
-        """
-        Clears plugin state.
-
-        :param plugin_name: the plugin in question.
-        """
-        self.delete_manager_file(
-            os.path.join(PLUGIN_STORAGE_DIR, '{0}.json'.format(plugin_name))
-        )
+    def get_runtime_property(self, deployment_id, property_name):
+        property_list = []
+        for inst in self.client.node_instances.list(
+                deployment_id=deployment_id):
+            inst_properties = inst['runtime_properties'].get(property_name)
+            if inst_properties:
+                property_list.append(inst_properties)
+        return property_list
 
     @staticmethod
     def do_assertions(assertions_func, timeout=10, **kwargs):
@@ -347,7 +328,7 @@ class BaseTestCase(unittest.TestCase):
         deployment = client.deployments.create(**deployment_create_kw)
         if wait:
             wait_for_deployment_creation_to_complete(
-                self.env.container_id, deployment_id, self.client
+                self.env.container_id, deployment_id, client
             )
         return deployment
 
@@ -631,18 +612,14 @@ class BaseAgentTestCase(BaseTestCase):
         """
         Read a file from a dockercompute node instance container filesystem.
         """
-        runtime_props = self._get_runtime_properties(
-            deployment_id=deployment_id, node_id=node_id)
-        container_id = runtime_props['container_id']
+        container_id = self.env.container_id
         return docker.read_file(container_id, file_path)
 
     def get_host_ip(self, deployment_id, node_id):
         """
         Get the ip of a dockercompute node instance container.
         """
-        runtime_props = self._get_runtime_properties(
-            deployment_id=deployment_id, node_id=node_id)
-        return runtime_props['ip']
+        return self.env.container_ip
 
     def get_host_key_path(self, deployment_id, node_id):
         """
@@ -659,37 +636,6 @@ class BaseAgentTestCase(BaseTestCase):
             node_id=node_id)[0]
         return instance.runtime_properties
 
-    @mark.skip("Basic test frame to be used in other tests")
-    def test_hello_world(self,
-                         use_cli=False,
-                         modify_blueprint_func=None,
-                         skip_uninstall=False):
-        """
-        Install the hello world example and perform basic assertion that things
-        work correctly. This method should be used by tests when a general
-        sanity blueprint is required. The main blueprint file used can be found
-        at resources/dockercompute_helloworld/blueprint.yaml. It is copied to
-        the hello world directory after it is fetched from github.
-
-        The modify_blueprint_func can be used in cases where there is need to
-        perform some modification to the base blueprint. The signature of this
-        function is (patcher, blueprint_dir) where patcher is a yaml patcher
-        that can be used to override the main blueprint file. blueprint dir
-        can be used in case the tests needs to modify other files in the the
-        blueprint directory.
-
-        :param use_cli: Not implemented yet. Current, installation uses the
-                        REST client directly
-        :param modify_blueprint_func: Modification function. (see above)
-        :param skip_uninstall: Should uninstall be skipped
-        :return:
-        """
-        return hello_world.test_hello_world(
-            test_case=self,
-            use_cli=use_cli,
-            modify_blueprint_func=modify_blueprint_func,
-            skip_uninstall=skip_uninstall)
-
     def _create_secrets(self, secrets):
         self.logger.info('Adding secrets...')
         for key, value in secrets.items():
@@ -703,6 +649,7 @@ class BaseAgentTestCase(BaseTestCase):
         self.logger.info('Finished adding secrets...')
 
 
+@pytest.mark.usefixtures('dockercompute_plugin')
 class AgentTestCase(BaseAgentTestCase):
 
     def setUp(self):
@@ -732,7 +679,7 @@ class AgentTestWithPlugins(AgentTestCase):
         return data.get(deployment_id, {})
 
     def _get_or_create_wagon(self, plugin_path):
-        target_dir = tempfile.mkdtemp(dir=self.workdir)
+        target_dir = tempfile.mkdtemp(dir=str(self.workdir))
         return [wagon.create(
             plugin_path,
             archive_destination_dir=target_dir,

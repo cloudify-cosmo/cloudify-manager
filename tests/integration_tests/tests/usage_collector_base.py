@@ -14,7 +14,7 @@
 #    * limitations under the License.
 
 from os.path import join
-from integration_tests.framework import docl
+from integration_tests.framework import docker
 from integration_tests.tests.constants import MANAGER_PYTHON
 from integration_tests.tests.utils import (assert_messages_in_log,
                                            get_resource as resource)
@@ -33,12 +33,15 @@ class TestUsageCollectorBase(object):
         self.undeploy_application(deployment.id)
 
     def run_collector_scripts_and_assert(self, messages):
-        docl.execute('mkdir -p {0}'.format(LOG_PATH))
-        docl.execute('echo > {0}'.format(join(LOG_PATH, LOG_FILE)))
+        docker.execute(self.env.container_id, 'mkdir -p {0}'.format(LOG_PATH))
+        docker.execute(self.env.container_id, 'echo > {0}'.format(
+            join(LOG_PATH, LOG_FILE)))
         for script in COLLECTOR_SCRIPTS:
-            docl.execute('{0} {1}.py'.format(MANAGER_PYTHON,
-                                             join(SCRIPTS_DESTINATION_PATH,
-                                                  script)))
-        assert_messages_in_log(self.workdir,
+            docker.execute(self.env.container_id, '{0} {1}.py'.format(
+                MANAGER_PYTHON,
+                join(SCRIPTS_DESTINATION_PATH, script))
+            )
+        assert_messages_in_log(self.env.container_id,
+                               self.workdir,
                                messages,
                                join(LOG_PATH, LOG_FILE))

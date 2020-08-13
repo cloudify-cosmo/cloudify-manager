@@ -19,8 +19,8 @@ from datetime import datetime, timedelta
 import pytest
 
 from integration_tests import AgentTestWithPlugins
-from integration_tests.framework.postgresql import run_query
 from integration_tests.tests.utils import get_resource as resource
+from integration_tests.tests.utils import run_postgresql_command
 
 from manager_rest.flask_utils import get_postgres_conf
 
@@ -37,7 +37,7 @@ class TimezoneTest(AgentTestWithPlugins):
         super(TimezoneTest, self).setUp()
 
         postgres_conf = get_postgres_conf()
-        run_query(
+        run_postgresql_command(
             self.env.container_id,
             "ALTER USER {} SET TIME ZONE '{}'"
             .format(postgres_conf.username, self.TIMEZONE)

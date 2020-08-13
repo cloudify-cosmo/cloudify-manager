@@ -2,22 +2,12 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
     - cloudify/types/types.yaml
+    - plugin:dockercompute
     - plugin:testmockoperations
-
-inputs:
-    ip: {}
-    agent_key: {}
 
 node_templates:
     host:
-        type: cloudify.nodes.Compute
-        properties:
-            ip: { get_input: ip }
-            agent_config:
-               key: { get_input: agent_key }
-               user: root
-               process_management:
-                   name: detach
+        type: cloudify.nodes.docker.Compute
     middle:
         type: cloudify.nodes.SoftwareComponent
         relationships:

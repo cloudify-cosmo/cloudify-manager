@@ -16,15 +16,18 @@
 import os
 import uuid
 import shutil
+import pytest
 
 from functools import wraps
 
+import integration_tests_plugins
 from manager_rest.plugins_update.constants import STATES
 
-from integration_tests import AgentTestWithPlugins, BaseTestCase
+from integration_tests import AgentTestWithPlugins
 from integration_tests.tests.utils import \
     (get_resource as resource,
      wait_for_deployment_creation_to_complete)
+from integration_tests.framework.utils import zip_files
 
 
 def setup_for_sourced_plugins(f):
@@ -32,7 +35,7 @@ def setup_for_sourced_plugins(f):
     def wrapper(self, *args, **kwargs):
         self.setup_deployment_id = 'd{0}'.format(uuid.uuid4())
         self.setup_node_id = 'node'
-        self.plugin_name = 'version-aware-plugin'
+        self.plugin_name = 'version_aware'
         self.plugin_dir_name_prefix = self.plugin_name + '_'
         self.base_name = 'base_sourced'
         self.base_blueprint_id = 'b{0}'.format(uuid.uuid4())
@@ -47,6 +50,7 @@ def setup_for_sourced_plugins(f):
 
 
 def setup_for_plugins_update(f):
+    @pytest.mark.usefixtures('version_aware_plugin')
     @wraps(f)
     def wrapper(self, *args, **kwargs):
         self.blueprint_name_prefix = 'plugins_update'
@@ -58,6 +62,8 @@ def setup_for_plugins_update(f):
 
 
 def uploads_mock_plugins(f):
+    @pytest.mark.usefixtures('version_aware_plugin')
+    @pytest.mark.usefixtures('version_aware_v2_plugin')
     @wraps(f)
     def wrapper(self, *args, **kwargs):
         self.addCleanup(self._clear_managed_plugins)
@@ -76,15 +82,11 @@ class TestPluginUpdate(AgentTestWithPlugins):
     def test_plugin_update(self):
         self.setup_deployment_id = 'd{0}'.format(uuid.uuid4())
         self.setup_node_id = 'node'
-        self.plugin_name = 'version-aware-plugin'
+        self.plugin_name = 'version_aware'
         self.base_name = 'base'
         self.base_blueprint_id = 'b{0}'.format(uuid.uuid4())
         self.mod_name = 'mod'
         self.mod_blueprint_id = 'b{0}'.format(uuid.uuid4())
-
-        # Upload V1.0 and V2.0 plugins
-        self.upload_mock_plugin(self.plugin_name)
-        self._upload_v_2_plugin()
 
         self._upload_blueprints_and_deploy_base()
 
@@ -111,15 +113,11 @@ class TestPluginUpdate(AgentTestWithPlugins):
             self.wait_for_execution_to_end(execution)
         self.setup_deployment_id = 'd{0}'.format(uuid.uuid4())
         self.setup_node_id = 'node'
-        self.plugin_name = 'version-aware-plugin'
+        self.plugin_name = 'version_aware'
         self.base_name = 'host_agent'
         self.base_blueprint_id = 'b{0}'.format(uuid.uuid4())
         self.mod_name = 'host_agent_mod'
         self.mod_blueprint_id = 'b{0}'.format(uuid.uuid4())
-
-        # Upload V1.0 and V2.0 plugins
-        self.upload_mock_plugin(self.plugin_name)
-        self._upload_v_2_plugin()
 
         self._upload_blueprints_and_deploy_base()
 
@@ -147,28 +145,12 @@ class TestPluginUpdate(AgentTestWithPlugins):
         self._execute_workflows()
         self._assert_on_values(self.versions[1])
 
-    @setup_for_sourced_plugins
-    def test_sourced_plugin_doesnt_update(self):
-        self._upload_blueprints_and_deploy_base()
-
-        # Execute base (V 1.0) workflows
-        self._execute_workflows()
-        self._assert_on_values(self.versions[0])
-
-        self._perform_update(update_plugins=False)
-
-        # Execute mod (V 1.0) workflows
-        self._execute_workflows()
-        self._assert_on_values(self.versions[0])
-
     @setup_for_plugins_update
     def test_single_deployment_is_updated(self):
         self.setup_deployment_id = 'd{0}'.format(uuid.uuid4())
         self.setup_node_id = 'node'
-        self.plugin_name = 'version-aware-plugin'
+        self.plugin_name = 'version_aware'
 
-        # Upload V1.0 and V2.0 plugins
-        self.upload_mock_plugin(self.plugin_name)
         self.deploy_application(
             dsl_path=self._get_dsl_blueprint_path(''),
             blueprint_id=self.base_blueprint_id,
@@ -195,14 +177,12 @@ class TestPluginUpdate(AgentTestWithPlugins):
         self._assert_host_values(self.versions[1])
 
     @setup_for_plugins_update
-    def test_many_deployments_are_updates(self):
+    def test_many_deployments_are_updated(self):
         self.setup_deployment_ids = ['d{0}'.format(uuid.uuid4())
                                      for _ in range(5)]
         self.setup_node_id = 'node'
-        self.plugin_name = 'version-aware-plugin'
+        self.plugin_name = 'version_aware'
 
-        # Upload V1.0 and V2.0 plugins
-        self.upload_mock_plugin(self.plugin_name)
         blueprint = self.client.blueprints.upload(
             path=self._get_dsl_blueprint_path(''),
             entity_id=self.base_blueprint_id)
@@ -213,7 +193,7 @@ class TestPluginUpdate(AgentTestWithPlugins):
                 dep_id,
                 self.client
             )
-            BaseTestCase.execute_workflow('install', dep_id)
+            self.execute_workflow('install', dep_id)
         self._upload_v_2_plugin()
 
         # Execute base (V 1.0) workflows
@@ -252,7 +232,8 @@ class TestPluginUpdate(AgentTestWithPlugins):
         target_dir = os.path.join(self.dsl_resources_path,
                                   'plugins',
                                   self.plugin_dir_name_prefix + version)
-        shutil.copytree(source_dir, target_dir)
+        if not os.path.exists(target_dir):
+            shutil.copytree(source_dir, target_dir)
         return target_dir
 
     def _remove_files(self):
@@ -274,23 +255,31 @@ class TestPluginUpdate(AgentTestWithPlugins):
         self.wait_for_execution_to_end(execution)
 
     def _get_work_dir_for_plugin(self):
-        return os.path.join(self.workdir, self.plugin_name)
+        return str(self.workdir / self.plugin_name)
 
     def _get_source_dir_for_plugin(self):
-        plugin_dir = '{0}'.format(self.plugin_name)
-        return resource(os.path.join('plugins', plugin_dir))
+        plugins_dir = os.path.dirname(integration_tests_plugins.__file__)
+        return os.path.join(plugins_dir, self.plugin_name)
 
     def _copy_plugin_files_to_work_dir(self):
         source_dir = self._get_source_dir_for_plugin()
         target_dir = self._get_work_dir_for_plugin()
-        shutil.copytree(source_dir, target_dir)
+        if not os.path.exists(target_dir):
+            shutil.copytree(source_dir, target_dir)
         return target_dir
 
     def _upload_v_2_plugin(self):
-        plugin_work_dir = self._copy_plugin_files_to_work_dir()
+        plugin_name = 'version_aware_v2'
+        plugins_dir = os.path.dirname(integration_tests_plugins.__file__)
+        plugin_source = os.path.join(plugins_dir, plugin_name)
 
-        self._replace_version(plugin_work_dir, *self.versions)
-        self.upload_mock_plugin(self.plugin_name, plugin_path=plugin_work_dir)
+        wagon_paths = self._get_or_create_wagon(plugin_source)
+        for wagon_path in wagon_paths:
+            yaml_path = os.path.join(plugin_source, 'plugin.yaml')
+            with zip_files([wagon_path, yaml_path]) as zip_path:
+                self.client.plugins.upload(zip_path, visibility='global')
+        self.logger.info(
+            'Finished uploading {0}...'.format(plugin_name))
 
     @staticmethod
     def _replace_version(target_dir, v1, v2):
@@ -306,19 +295,16 @@ class TestPluginUpdate(AgentTestWithPlugins):
                     f.write(s)
 
     def _assert_cda_values(self, version):
-        # Calling like this because "cda" (central deployment agent) op/wf
-        # would be written on the manager as opposed to the host
-        cda_data = BaseTestCase.get_plugin_data(
-            self,
-            plugin_name='cda',
-            deployment_id=self.setup_deployment_id
-        )
-        self.assertEqual(cda_data['cda_wf'], version)
-        self.assertEqual(cda_data['cda_op'], version)
+        cda_data = self.get_runtime_property(self.setup_deployment_id,
+                                             'cda_op')
+        self.assertEqual(len(cda_data), 1)
+        self.assertEqual(cda_data[0], version)
 
     def _assert_host_values(self, version):
-        host_data = self.get_plugin_data('host', self.setup_deployment_id)
-        self.assertEqual(host_data['host_op'], version)
+        host_data = self.get_runtime_property(self.setup_deployment_id,
+                                              'host_op')
+        self.assertEqual(len(host_data), 1)
+        self.assertEqual(host_data[0], version)
 
     def _assert_on_values(self, version):
         self._assert_cda_values(version)

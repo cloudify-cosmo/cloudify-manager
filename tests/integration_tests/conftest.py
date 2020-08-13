@@ -273,7 +273,7 @@ def _make_upload_plugin_fixture(plugin_name):
     d = {}
     exec("""
 def {0}_plugin(rest_client, {0}_wagon):
-    rest_client.plugins.upload({0}_wagon)
+    rest_client.plugins.upload({0}_wagon, visibility='global')
 """.format(plugin_name), d)
     func = d['{0}_plugin'.format(plugin_name)]
     return pytest.fixture()(func)
@@ -291,3 +291,7 @@ target_aware_mock_wagon = _make_wagon_fixture('target_aware_mock')
 target_aware_mock_plugin = _make_upload_plugin_fixture('target_aware_mock')
 mock_workflows_wagon = _make_wagon_fixture('mock_workflows')
 mock_workflows_plugin = _make_upload_plugin_fixture('mock_workflows')
+version_aware_wagon = _make_wagon_fixture('version_aware')
+version_aware_plugin = _make_upload_plugin_fixture('version_aware')
+version_aware_v2_wagon = _make_wagon_fixture('version_aware_v2')
+version_aware_v2_plugin = _make_upload_plugin_fixture('version_aware_v2')

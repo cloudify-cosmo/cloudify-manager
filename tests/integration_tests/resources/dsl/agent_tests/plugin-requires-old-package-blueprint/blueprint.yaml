@@ -2,6 +2,7 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
   - http://www.getcloudify.org/spec/cloudify/5.1.0.dev1/types.yaml
+  - plugin:dockercompute
 
 inputs:
   server_ip:
@@ -20,12 +21,7 @@ inputs:
 
 node_templates:
   my_host:
-    type: cloudify.nodes.Compute
-    properties:
-      ip: { get_input: server_ip }
-      agent_config:
-        user: { get_input: agent_user }
-        key: { get_input: agent_private_key_path }
+    type: cloudify.nodes.docker.Compute
 
   my_application:
     type: cloudify.nodes.Root
