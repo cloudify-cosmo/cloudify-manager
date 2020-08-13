@@ -99,6 +99,7 @@ class Plugin(SQLResourceBase):
         db.Index(
             'plugins_name_version__tenant_id_idx',
             'package_name', 'package_version', '_tenant_id', 'distribution',
+            'distribution_release', 'distribution_version',
             unique=True
         ),
     )
