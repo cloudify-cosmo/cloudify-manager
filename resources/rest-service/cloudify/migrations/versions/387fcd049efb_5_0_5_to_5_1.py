@@ -317,7 +317,8 @@ def _create_unique_indexes():
     op.create_index('plugins_name_version__tenant_id_idx',
                     'plugins',
                     ['package_name', 'package_version', '_tenant_id',
-                     'distribution'],
+                     'distribution', 'distribution_release',
+                     'distribution_version'],
                     unique=True)
     op.create_index('secrets_id_tenant_id_idx',
                     'secrets',
