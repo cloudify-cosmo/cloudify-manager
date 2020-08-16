@@ -1,0 +1,237 @@
+def secrets = [
+  [path: 'secret/jenkins/github', engineVersion: 2, secretValues: [
+    [envVar: 'PRIVATE_REPO_GITHUB_TOKEN', vaultKey: 'private_token']]],
+]
+
+def configuration = [vaultUrl: "${env.VAULT_URL}",  vaultCredentialId: 'vault-app-role', engineVersion: 2]
+
+@Library('pipeline-shared-library') _
+
+pipeline {
+  agent {
+    kubernetes {
+      label 'manager'
+      defaultContainer 'jnlp'
+      yamlFile 'jenkins/build-pod.yaml'
+    }
+  }
+
+  options {
+    checkoutToSubdirectory('cloudify-manager')
+    buildDiscarder(logRotator(numToKeepStr:'30'))
+    timeout(time: 60, unit: 'MINUTES')
+    timestamps()
+  }
+
+  environment {
+    BRANCH = "${env.BRANCH_NAME}"
+    PROJECT = "cloudify-manager"
+    VERSION = getVersion("${env.BRANCH_NAME}").trim()
+    PRERELEASE = getPreRelease("${env.BRANCH_NAME}").trim()
+  }
+
+  stages {
+    stage('prepare') {
+      steps {
+        repoCheckout('https://github.com/cloudify-cosmo/cloudify-manager.git',"${env.PROJECT}","${env.BRANCH}")
+        
+        container('python'){
+          sh '''
+            apt-get update
+            apt-get install libldap-dev libsasl2-dev
+            virtualenv ~/venv
+          '''
+        }
+      }
+    }
+    stage('Run Tests & Builds') {
+      parallel {
+        stage('test_restservice') {
+          steps {
+            sh "mkdir -p ${env.WORKSPACE}/rest && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/rest"  
+            
+            container('python'){
+              dir("${env.WORKSPACE}/rest") {
+                dir("rest-service"){
+                  sh '''
+                    ~/venv/bin/pip install -Ur dev-requirements.txt
+                    ~/venv/bin/pip install -Ur test-requirements.txt
+                    ~/venv/bin/pip install -e .
+                  '''
+                }
+                
+                sh '''
+                    ~/venv/bin/pytest \
+                      -sv \
+                      -a '(client_min_version is None or client_min_version <= 3.1) and (client_max_version is None or 3.1 <= client_max_version)' \
+                      rest-service/manager_rest/test/endpoints
+
+                    ~/venv/bin/pytest \
+                      -sv \
+                      -a '(client_min_version is None or client_min_version <= 3.1) and (client_max_version is None or 3.1 <= client_max_version)' \
+                      rest-service/manager_rest/test/infrastructure
+
+                    ~/venv/bin/pytest \
+                      -sv \
+                      rest-service/manager_rest/test/security
+
+                    ~/venv/bin/pytest \
+                      -sv \
+                      workflows
+
+                    ~/venv/bin/pytest \
+                      -sv \
+                      cloudify_types
+                '''
+              }
+            }
+          }
+        }
+        stage('build_rpms') {
+          steps {
+            container('rpmbuild'){
+              sh """
+                cd && mkdir rpmbuild && cd rpmbuild
+                git clone https://github.com/cloudify-cosmo/cloudify-manager.git SOURCES && cd SOURCES
+              """
+
+              echo 'Download sources for RPM spec file & Build RPM'
+              sh "yum install rpmdevtools -y"
+
+              echo 'Build Rest Service RPM'
+              buildRpm('~/rpmbuild/SOURCES', 'cloudify-rest-service.spec', "${env.VERSION}", "${env.PRERELEASE}")
+              
+              echo 'Build mgmtworker RPM'
+              buildRpm('~/rpmbuild/SOURCES', 'cloudify-mgmtworker.spec', "${env.VERSION}", "${env.PRERELEASE}")
+              
+              echo 'Build rabbitmq RPM'
+              buildRpm('~/rpmbuild/SOURCES', 'cloudify-rabbitmq.spec', "${env.VERSION}", "${env.PRERELEASE}")
+              
+              echo 'Build manager-ip-setter rpm'
+              buildRpm('~/rpmbuild/SOURCES', 'cloudify-manager-ip-setter.spec', "${env.VERSION}", "${env.PRERELEASE}")
+              
+              echo 'Copy RPMs to rpm folder'
+              sh("mkdir -p ${env.WORKSPACE}/rpm && cp -rf /root/rpmbuild/RPMS/x86_64/. ${env.WORKSPACE}/rpm")
+              sh("cp -rf /root/rpmbuild/RPMS/noarch/. ${env.WORKSPACE}/rpm")
+
+            }
+          }
+          post {
+            success {
+              echo 'Upload artifacts to S3'
+              uploadToReleaseS3("${env.WORKSPACE}/rpm/", "${env.VERSION}", "${env.PRERELEASE}", "${env.PROJECT}", "${env.BRANCH}", "${env.BUILD_NUMBER}")
+            }
+          }
+        }
+        stage('flake8') {
+          steps {
+            sh "mkdir -p ${env.WORKSPACE}/flake8 && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/flake8"
+
+            container('python'){
+              dir("${env.WORKSPACE}/flake8") {
+                  sh '''
+                    pip install --user flake8
+                    python -m flake8
+                  '''
+              }
+            }
+          }
+        }
+        stage('py3_compat') {
+          steps {
+            sh "mkdir -p ${env.WORKSPACE}/py3_compat && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/py3_compat"  
+
+            container('python-old'){
+              dir("${env.WORKSPACE}/py3_compat") {
+                echo 'install futurize and find python3-incompatible code'
+                sh '''#!/bin/bash
+                  pip install future --user
+                  PATH=$PATH:~/.local/bin
+                  
+                  FUTURIZE="futurize ."
+                  while read line; do
+                    [[ "$line" =~ ^#.* ]] && continue
+                    FUTURIZE="${FUTURIZE} ${line}"
+                  done<.circleci/py3fixers
+                  $FUTURIZE>futurize_diffs
+                '''
+                
+                echo 'name: check that there is no python3-incompatible code'
+                sh'''#!/bin/bash
+                  if [[ -s futurize_diffs ]]; then
+                    echo "Python-3-incompatible code found"
+                    cat futurize_diffs
+                    exit 1
+                  fi
+                '''
+              }
+            }
+          }
+        }
+      }
+    }
+    stage('Run Tests') {
+      parallel {
+        stage('test_amqp_postgres') {
+          steps {
+            sh "mkdir -p ${env.WORKSPACE}/amqp_postgres && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/amqp_postgres"  
+
+            container('python'){
+              dir("${env.WORKSPACE}/amqp_postgres") {
+                dir("amqp-postgres"){
+                  sh '''
+                    ~/venv/bin/pip install -Ur test-requirements.txt
+                    ~/venv/bin/pip install -e .
+                  '''
+                }
+                
+                sh '~/venv/bin/pytest -sv amqp-postgres'
+              }
+            }
+          }
+        }
+        stage('test_premium') {
+          steps {
+            sh "mkdir -p ${env.WORKSPACE}/premium && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/premium"  
+
+            container('python'){
+              dir("${env.WORKSPACE}/premium") {
+                withVault([configuration: configuration, vaultSecrets: secrets]) {
+                  sh '''
+                    pip install --user tox
+                  '''
+                  
+                  sh """#!/bin/bash
+                    set -eux
+                    function clone {
+                      branch=\$1
+                      git clone \
+                        --branch "\$1" \
+                        --single-branch \
+                        --depth 1 \
+                        https://${env.PRIVATE_REPO_GITHUB_TOKEN}@github.com/cloudify-cosmo/cloudify-premium.git \
+                        ~/cloudify-premium
+                    }
+                    clone "${env.BRANCH}" || clone master
+                  """
+                  
+                  dir("rest-service"){
+                    sh '''
+                      ~/venv/bin/pip install -Ur dev-requirements.txt
+                      ~/venv/bin/pip install -Ur test-requirements.txt
+                      ~/venv/bin/pip install -e .
+                      ~/venv/bin/pip install -e ~/cloudify-premium
+                    '''
+                  }
+                  echo 'Replace the cloudify-manager URL in dev-requirements.txt with the local path to this checkout'
+                  sh 'sed -i "s:^.*cloudify-manager.*(rest-service)$:-e ${HOME}/project/\1/:" ~/cloudify-premium/dev-requirements.txt'
+                  sh '~/venv/bin/pytest -sv ~/cloudify-premium/tests/unittests'
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
