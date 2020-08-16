@@ -13,13 +13,12 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from flask_restful.inputs import boolean
 from flask_restful_swagger import swagger
-from flask_restful.reqparse import Argument
 
+from cloudify._compat import text_type
 from cloudify.models_states import VisibilityState
-from cloudify.plugins.install_utils import remove_status_prefix
 
+from manager_rest import manager_exceptions
 from manager_rest.security import SecuredResource
 from manager_rest.plugins_update.constants import PHASES
 from manager_rest.security.authorization import authorize
@@ -99,11 +98,8 @@ class PluginsUpdate(SecuredResource):
         :param phase: either PHASES.INITIAL or PHASES.FINAL (internal).
         """
         if phase == PHASES.INITIAL:
-            args = rest_utils.get_args_and_verify_arguments([
-                Argument('force', type=boolean, required=False, default=False)
-            ])
             return get_plugins_updates_manager().initiate_plugins_update(
-                blueprint_id=id, force=args.get('force'))
+                blueprint_id=id)
         elif phase == PHASES.FINAL:
             return get_plugins_updates_manager().finalize(
                 plugins_update_id=id)
@@ -161,18 +157,90 @@ class PluginsUpdates(SecuredResource):
 
 
 class PluginsId(resources_v2_1.PluginsId):
+    @authorize('plugin_upload')
+    @rest_decorators.marshal_with(models.Plugin)
+    def post(self, plugin_id, **kwargs):
+        """Force plugin installation on the given managers or agents.
+
+        This method is for internal use only.
+        """
+        sm = get_storage_manager()
+        action_dict = rest_utils.get_json_and_verify_params({
+            'action': {'type': text_type},
+        })
+        plugin = sm.get(models.Plugin, plugin_id)
+        if action_dict.get('action') == 'install':
+            install_dict = rest_utils.get_json_and_verify_params({
+                'managers': {'type': list, 'optional': True},
+                'agents': {'type': list, 'optional': True},
+            })
+            get_resource_manager().install_plugin(
+                plugin,
+                manager_names=install_dict.get('managers'),
+                agent_names=install_dict.get('agents'),
+            )
+            return get_resource_manager().install_plugin(plugin)
+        else:
+            raise manager_exceptions.ManagerException(
+                400, 'Unknown action: {0}'.format(action_dict.get('action')))
 
     @authorize('plugin_upload')
     @rest_decorators.marshal_with(models.Plugin)
     def put(self, plugin_id, **kwargs):
+        """Update the plugin, specifically the installation state.
+
+        Only updating the state is supported right now.
+        This method is for internal use only.
         """
-        For internal use - updates the plugin's installation status.'
-        This method is called from the PluginInstaller after the plugin
-        installation has ended.
-        """
+        request_dict = rest_utils.get_json_and_verify_params({
+            'agent': {'type': text_type, 'optional': True},
+            'manager': {'type': text_type, 'optional': True},
+            'state': {'type': text_type},
+            'error': {'type': text_type, 'optional': True},
+        })
+        agent_name = request_dict.get('agent')
+        manager_name = request_dict.get('manager')
+        if agent_name and manager_name:
+            raise manager_exceptions.ConflictError(
+                'Expected agent or manager, got both')
+        elif not agent_name and not manager_name:
+            raise manager_exceptions.ConflictError(
+                'Expected agent or manager, got none')
 
         sm = get_storage_manager()
         plugin = sm.get(models.Plugin, plugin_id)
-        plugin = remove_status_prefix(plugin)
+        filters = {'_plugin_fk': plugin._storage_id}
+
+        if agent_name:
+            agent = sm.get(
+                models.Agent, None, filters={'name': agent_name})
+            agent_id = agent._storage_id
+            manager_id = None
+            filters['_agent_fk'] = agent_id
+        elif manager_name:
+            manager = sm.get(
+                models.Manager, None,
+                filters={'hostname': manager_name})
+            agent_id = None
+            manager_id = manager.id
+            filters['_manager_fk'] = manager_id
+
+        pstate = sm.get(
+            models._PluginState, None, filters=filters, fail_silently=True)
+
+        if pstate is None:
+            pstate = models._PluginState(
+                _plugin_fk=plugin._storage_id,
+                _agent_fk=agent_id,
+                _manager_fk=manager_id,
+                state=request_dict['state'],
+                error=request_dict['error']
+            )
+            sm.put(pstate)
+        else:
+            pstate.state = request_dict['state']
+            pstate.error = request_dict['error']
+            sm.update(pstate)
+
         if plugin:
             return sm.update(plugin)

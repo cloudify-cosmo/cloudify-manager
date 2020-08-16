@@ -24,9 +24,6 @@ from cloudify.decorators import workflow
 from cloudify.workflows import workflow_context
 from cloudify.workflows import tasks as workflow_tasks
 from cloudify.manager import get_rest_client
-from cloudify.utils import (add_plugins_to_install,
-                            add_plugins_to_uninstall,
-                            extract_and_merge_plugins)
 
 
 def generate_create_dep_tasks_graph(ctx,
@@ -35,11 +32,6 @@ def generate_create_dep_tasks_graph(ctx,
                                     policy_configuration=None):
     graph = ctx.graph_mode()
     sequence = graph.sequence()
-
-    plugins_to_install = extract_and_merge_plugins(
-        deployment_plugins_to_install, workflow_plugins_to_install)
-    add_plugins_to_install(ctx, plugins_to_install, sequence)
-
     sequence.add(
         ctx.send_event('Creating deployment work directory'),
         ctx.local_task(_create_deployment_workdir,
@@ -77,12 +69,6 @@ def delete(ctx,
             'Deleting deployment [{}] environment'.format(
                 ctx.deployment.id)))
 
-    plugins_to_uninstall = extract_and_merge_plugins(
-        deployment_plugins_to_uninstall,
-        workflow_plugins_to_uninstall,
-        with_repetition=True)
-    add_plugins_to_uninstall(ctx, plugins_to_uninstall, sequence)
-
     graph.execute()
     _delete_deployment_workdir(ctx)
     if delete_logs:
@@ -95,7 +81,7 @@ def delete(ctx,
 def _send_request_to_delete_deployment_from_db(ctx):
     client = get_rest_client()
     client.deployments.delete(deployment_id=ctx.deployment.id,
-                              ignore_live_nodes=True,
+                              force=True,
                               delete_db_mode=True)
 
 

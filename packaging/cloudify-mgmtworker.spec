@@ -40,6 +40,7 @@ mkdir -p %{buildroot}/var/log/cloudify/mgmtworker
 mkdir -p %{buildroot}/opt/mgmtworker/config
 mkdir -p %{buildroot}/opt/mgmtworker/work
 mkdir -p %{buildroot}/opt/mgmtworker/env/plugins
+mkdir -p %{buildroot}/opt/mgmtworker/env/source_plugins
 
 cp -R ${RPM_SOURCE_DIR}/packaging/mgmtworker/files/* %{buildroot}
 
@@ -57,5 +58,6 @@ getent passwd cfyuser >/dev/null || useradd -r -g cfyuser -d /etc/cloudify -s /s
 %attr(750,cfyuser,cfyuser) /opt/mgmtworker/config
 %attr(750,cfyuser,cfyuser) /opt/mgmtworker/work
 %attr(750,cfyuser,cfyuser) /opt/mgmtworker/env/plugins
+%attr(750,cfyuser,cfyuser) /opt/mgmtworker/env/source_plugins
 /opt/mgmtworker
 %attr(750,cfyuser,adm) /var/log/cloudify/mgmtworker

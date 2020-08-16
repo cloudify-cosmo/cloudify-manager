@@ -28,32 +28,33 @@ from flask_security import current_user
 from cloudify._compat import StringIO, text_type
 from cloudify.cryptography_utils import encrypt
 from cloudify.workflows import tasks as cloudify_tasks
-from cloudify.plugins.install_utils import INSTALLING_PREFIX
 from cloudify.models_states import (SnapshotState,
                                     ExecutionState,
                                     VisibilityState,
-                                    DeploymentModificationState)
+                                    DeploymentModificationState,
+                                    PluginInstallationState)
 from cloudify_rest_client.client import CloudifyClient
 
 from dsl_parser import constants, tasks
 from dsl_parser import exceptions as parser_exceptions
-from dsl_parser.functions import is_function
 from dsl_parser.constants import INTER_DEPLOYMENT_FUNCTIONS
 
 from manager_rest import premium_enabled
 from manager_rest.constants import (DEFAULT_TENANT_NAME,
                                     FILE_SERVER_BLUEPRINTS_FOLDER,
                                     FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER)
-from manager_rest.dsl_functions import (get_secret_method,
-                                        evaluate_intrinsic_functions)
+from manager_rest.dsl_functions import get_secret_method
 from manager_rest.utils import (send_event,
                                 is_create_global_permitted,
                                 validate_global_modification,
                                 validate_deployment_and_site_visibility,
                                 extract_host_agent_plugins_from_plan)
 from manager_rest.plugins_update.constants import PLUGIN_UPDATE_WORKFLOW
-from manager_rest.rest.rest_utils import (parse_datetime_string,
-                                          RecursiveDeploymentDependencies)
+from manager_rest.rest.rest_utils import (
+    parse_datetime_string, RecursiveDeploymentDependencies,
+    update_inter_deployment_dependencies)
+from manager_rest.deployment_update.constants import STATES as UpdateStates
+from manager_rest.plugins_update.constants import STATES as PluginsUpdateStates
 
 from manager_rest.storage import (db,
                                   get_storage_manager,
@@ -120,35 +121,30 @@ class ResourceManager(object):
 
         res = self.sm.update(execution)
         if status in ExecutionState.END_STATES:
-            self.update_inter_deployment_dependencies()
+            update_inter_deployment_dependencies(self.sm)
             self.start_queued_executions()
+
+        # If the execution is a deployment update, and the status we're
+        # updating to is one which should cause the update to fail - do it here
+        if execution.workflow_id == 'update' and \
+                status in [ExecutionState.FAILED, ExecutionState.CANCELLED]:
+            dep_update = self.sm.get(models.DeploymentUpdate, None,
+                                     filters={'execution_id': execution_id})
+            if dep_update:
+                dep_update.state = UpdateStates.FAILED
+                self.sm.update(dep_update)
+
+        # Similarly for a plugin update
+        if execution.workflow_id == 'update_plugin' and \
+                status in [ExecutionState.FAILED,
+                           ExecutionState.CANCELLED]:
+            plugin_update = self.sm.get(models.PluginsUpdate, None,
+                                        filters={'execution_id': execution_id})
+            if plugin_update:
+                plugin_update.state = PluginsUpdateStates.FAILED
+                self.sm.update(plugin_update)
+
         return res
-
-    def update_inter_deployment_dependencies(self):
-        dependencies_list = self.sm.list(models.InterDeploymentDependencies,
-                                         filters={'target_deployment': None})
-        for dependency in dependencies_list:
-            if (dependency.target_deployment_func and
-                    not dependency.external_target):
-                self._update_dependency_target_deployment(dependency)
-
-    def _update_dependency_target_deployment(self, dependency):
-        target_deployment_id = self._evaluate_target_func(dependency)
-        if target_deployment_id:
-            target_deployment_instance = self.sm.get(models.Deployment,
-                                                     target_deployment_id)
-            dependency.target_deployment = target_deployment_instance
-            self.sm.update(dependency)
-
-    @staticmethod
-    def _evaluate_target_func(dependency):
-        if is_function(dependency.target_deployment_func):
-            evaluated_func = evaluate_intrinsic_functions(
-                {'target_deployment': dependency.target_deployment_func},
-                dependency.source_deployment_id)
-            return evaluated_func.get('target_deployment')
-
-        return dependency.target_deployment_func
 
     def start_queued_executions(self):
         queued_executions = self._get_queued_executions()
@@ -304,32 +300,6 @@ class ResourceManager(object):
                 )
         return True
 
-    def install_plugin(self, plugin):
-        """Install the plugin if required.
-
-        The plugin will be installed if the declared platform/distro
-        is the same as the manager's.
-        """
-        if plugin.yaml_file_path():
-            self._validate_plugin_yaml(plugin)
-
-        if not utils.plugin_installable_on_current_platform(plugin):
-            return
-
-        self._execute_system_workflow(
-            wf_id='install_plugin',
-            task_mapping='cloudify_system_workflows.plugins.install',
-            execution_parameters={
-                'plugin': {
-                    'id': plugin.id,
-                    'name': plugin.package_name,
-                    'package_name': plugin.package_name,
-                    'package_version': plugin.package_version
-                }
-            },
-            verify_no_executions=False,
-            timeout=300)
-
     def update_plugins(self, plugins_update, no_changes_required=False):
         """Executes the plugin update workflow.
 
@@ -354,42 +324,28 @@ class ResourceManager(object):
         plugin = self.sm.get(models.Plugin, plugin_id)
         validate_global_modification(plugin)
 
-        # Uninstall (if applicable)
-        if utils.plugin_installable_on_current_platform(plugin):
-            if not force:
-                used_blueprints = list(set(
-                    d.blueprint_id for d in
-                    self.sm.list(models.Deployment, include=['blueprint_id'])))
-                plugins = [b.plan[constants.WORKFLOW_PLUGINS_TO_INSTALL] +
-                           b.plan[constants.DEPLOYMENT_PLUGINS_TO_INSTALL] +
-                           extract_host_agent_plugins_from_plan(b.plan)
-                           for b in
-                           self.sm.list(models.Blueprint,
-                                        include=['plan'],
-                                        filters={'id': used_blueprints},
-                                        get_all_results=True)]
-                plugins = set((p.get('package_name'), p.get('package_version'))
-                              for sublist in plugins for p in sublist)
-                if (plugin.package_name, plugin.package_version) in plugins:
-                    raise manager_exceptions.PluginInUseError(
-                        'Plugin "{0}" is currently in use in blueprints: {1}.'
-                        'You can "force" plugin removal if needed.'.format(
-                            plugin.id,
-                            ', '.join(blueprint
-                                      for blueprint in used_blueprints)))
-            self._execute_system_workflow(
-                wf_id='uninstall_plugin',
-                task_mapping='cloudify_system_workflows.plugins.uninstall',
-                execution_parameters={
-                    'plugin': {
-                        'name': plugin.package_name,
-                        'package_name': plugin.package_name,
-                        'package_version': plugin.package_version,
-                        'wagon': True
-                    }
-                },
-                verify_no_executions=False,
-                timeout=300)
+        if not force:
+            used_blueprints = list(set(
+                d.blueprint_id for d in
+                self.sm.list(models.Deployment, include=['blueprint_id'])))
+            plugins = [b.plan[constants.WORKFLOW_PLUGINS_TO_INSTALL] +
+                       b.plan[constants.DEPLOYMENT_PLUGINS_TO_INSTALL] +
+                       extract_host_agent_plugins_from_plan(b.plan)
+                       for b in
+                       self.sm.list(models.Blueprint,
+                                    include=['plan'],
+                                    filters={'id': used_blueprints},
+                                    get_all_results=True)]
+            plugins = set((p.get('package_name'), p.get('package_version'))
+                          for sublist in plugins for p in sublist)
+            if (plugin.package_name, plugin.package_version) in plugins:
+                raise manager_exceptions.PluginInUseError(
+                    'Plugin "{0}" is currently in use in blueprints: {1}.'
+                    'You can "force" plugin removal if needed.'.format(
+                        plugin.id,
+                        ', '.join(blueprint
+                                  for blueprint in used_blueprints)))
+        workflow_executor.uninstall_plugin(plugin)
 
         # Remove from storage
         self.sm.delete(plugin)
@@ -506,7 +462,7 @@ class ResourceManager(object):
     def delete_deployment(self,
                           deployment_id,
                           bypass_maintenance=None,
-                          ignore_live_nodes=False,
+                          force=False,
                           delete_db_mode=False,
                           delete_logs=False):
         # Verify deployment exists.
@@ -530,7 +486,7 @@ class ResourceManager(object):
                 deployment.id,
                 excluded_component_creator_id=excluded_id)
         if deployment_dependencies:
-            if ignore_live_nodes:
+            if force:
                 current_app.logger.warning(
                     "Force-deleting deployment {0} despite having the "
                     "following existing dependent installations\n{1}".format(
@@ -553,7 +509,7 @@ class ResourceManager(object):
                     ','.join([execution.id for execution in
                               executions if execution.status not
                               in ExecutionState.END_STATES])))
-        if not ignore_live_nodes:
+        if not force:
             deployment_id_filter = self.create_filters_dict(
                 deployment_id=deployment_id)
             node_instances = self.sm.list(
@@ -575,10 +531,11 @@ class ResourceManager(object):
 
         # Start delete_deployment_env workflow
         if not delete_db_mode:
+            dep = self.sm.get(models.Deployment, deployment_id)
             self._delete_deployment_environment(deployment,
                                                 bypass_maintenance,
                                                 delete_logs)
-            return self.sm.get(models.Deployment, deployment_id)
+            return dep
 
         # Delete deployment data  DB (should only happen AFTER the workflow
         # finished successfully, hence the delete_db_mode flag)
@@ -1497,11 +1454,54 @@ class ResourceManager(object):
                                                 bypass_maintenance)
         except manager_exceptions.ExistingRunningExecutionError as e:
             self.delete_deployment(deployment_id=deployment_id,
-                                   ignore_live_nodes=True,
+                                   force=True,
                                    delete_db_mode=True)
             raise e
 
         return new_deployment
+
+    def install_plugin(self, plugin, manager_names=None, agent_names=None):
+        """Send the plugin install task to the given managers or agents."""
+        if manager_names:
+            managers = self.sm.list(
+                models.Manager, filters={'hostname': manager_names})
+            existing_manager_names = {m.hostname for m in managers}
+            if existing_manager_names != set(manager_names):
+                missing_managers = set(manager_names) - existing_manager_names
+                raise manager_exceptions.NotFoundError(
+                    "Cannot install: requested managers do not exist: {0}"
+                    .format(', '.join(missing_managers)))
+
+            for name in existing_manager_names:
+                manager = self.sm.get(
+                    models.Manager, None, filters={'hostname': name})
+                self.sm.put(models._PluginState(
+                    _plugin_fk=plugin._storage_id,
+                    _manager_fk=manager.id,
+                    state=PluginInstallationState.PENDING,
+                ))
+
+        if agent_names:
+            agents = self.sm.list(models.Agent, filters={'name': agent_names})
+            existing_agent_names = {a.name for a in agents}
+            if existing_agent_names != set(agent_names):
+                missing_agents = set(agent_names) - existing_agent_names
+                raise manager_exceptions.NotFoundError(
+                    "Cannot install: requested agents do not exist: {0}"
+                    .format(', '.join(missing_agents)))
+
+            for name in existing_agent_names:
+                agent = self.sm.get(
+                    models.Agent, None, filters={'name': name})
+                self.sm.put(models._PluginState(
+                    _plugin_fk=plugin._storage_id,
+                    _agent_fk=agent._storage_id,
+                    state=PluginInstallationState.PENDING,
+                ))
+
+        if agent_names or manager_names:
+            workflow_executor.install_plugin(plugin)
+        return plugin
 
     def validate_plugin_is_installed(self, plugin):
         """
@@ -2079,6 +2079,7 @@ class ResourceManager(object):
                     constants.WORKFLOW_PLUGINS_TO_INSTALL],
                 'delete_logs': delete_logs
             })
+        workflow_executor.delete_source_plugins(deployment.id)
 
     def _check_for_active_executions(self, deployment_id, force,
                                      queue, schedule):
@@ -2232,8 +2233,7 @@ class ResourceManager(object):
             archive_name = plugin_info['archive_name']
             unique_filter = {
                 model_class.package_name: plugin_info['package_name'],
-                model_class.archive_name: [archive_name, '{0}{1}'.format(
-                    INSTALLING_PREFIX, archive_name)]
+                model_class.archive_name: archive_name
             }
         else:
             unique_filter = {model_class.id: resource_id}
@@ -2281,6 +2281,18 @@ class ResourceManager(object):
                     workflow_id, deployment.id, deployment_dependencies
                 ))
             return
+        # If part of a deployment update - mark the update as failed
+        if workflow_id == 'update':
+            dep_update = self.sm.get(
+                models.DeploymentUpdate,
+                None,
+                filters={'deployment_id': deployment.id,
+                         'state': UpdateStates.UPDATING}
+            )
+            if dep_update:
+                dep_update.state = UpdateStates.FAILED
+                self.sm.update(dep_update)
+
         raise manager_exceptions.DependentExistsError(
             "Can't execute workflow `{0}` on deployment {1} - the "
             "following existing installations depend on it:\n{2}".format(
@@ -2428,7 +2440,6 @@ def _create_task_mapping():
     mapping = {
         'create_snapshot': 'cloudify_system_workflows.snapshot.create',
         'restore_snapshot': 'cloudify_system_workflows.snapshot.restore',
-        'install_plugin': 'cloudify_system_workflows.plugins.install',
         'uninstall_plugin': 'cloudify_system_workflows.plugins.uninstall',
         'create_deployment_environment':
             'cloudify_system_workflows.deployment_environment.create',

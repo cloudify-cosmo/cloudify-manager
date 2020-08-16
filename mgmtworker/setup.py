@@ -17,7 +17,8 @@ from setuptools import setup, find_packages
 
 install_requires = [
     'cloudify-common==5.1.0.dev1',
-    'cloudify-agent==5.1.0.dev1'
+    'cloudify-agent==5.1.0.dev1',
+    'packaging==17.1',
 ]
 
 

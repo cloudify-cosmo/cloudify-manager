@@ -129,7 +129,7 @@ class DeploymentsId(SecuredResource):
         responseClass=models.Deployment,
         nickname="deleteById",
         notes="deletes a deployment by its id.",
-        parameters=[{'name': 'ignore_live_nodes',
+        parameters=[{'name': 'force',
                      'description': 'Specifies whether to ignore live nodes,'
                                     'or raise an error upon such nodes '
                                     'instead.',
@@ -146,7 +146,7 @@ class DeploymentsId(SecuredResource):
         Delete deployment by id
         """
         args = get_args_and_verify_arguments(
-            [Argument('ignore_live_nodes', type=boolean,
+            [Argument('force', type=boolean,
                       default=False),
              Argument('delete_db_mode', type=boolean,
                       default=False),
@@ -158,7 +158,7 @@ class DeploymentsId(SecuredResource):
         deployment = get_resource_manager().delete_deployment(
             deployment_id,
             bypass_maintenance,
-            args.ignore_live_nodes,
+            args.force,
             args.delete_db_mode,
             args.delete_logs)
 

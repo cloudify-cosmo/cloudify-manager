@@ -17,8 +17,8 @@
 import os
 import yaml
 import logging
-from distutils.version import StrictVersion
 
+from cloudify._compat import parse_version
 from cloudify.manager import get_rest_client
 from cloudify.utils import get_admin_api_token
 from cloudify.constants import EVENTS_EXCHANGE_NAME
@@ -138,7 +138,7 @@ class HookConsumer(CloudifyOperationConsumer):
         if not plugins:
             return {}
 
-        plugins.sort(key=lambda p: StrictVersion(p.package_version),
+        plugins.sort(key=lambda p: parse_version(p.package_version),
                      reverse=True)
         return {
             'package_name': package_name,

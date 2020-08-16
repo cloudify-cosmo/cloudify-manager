@@ -278,10 +278,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
 
         size = self.client.blueprints.calc_size(blueprint_path)
 
-        progress_func = generate_progress_func(
-            total_size=size,
-            assert_equal=self.assertEqual,
-            assert_almost_equal=self.assertAlmostEqual)
+        progress_func = generate_progress_func(total_size=size)
 
         try:
             self.client.blueprints.upload(blueprint_path, 'b',
@@ -302,10 +299,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
 
         try:
             self.client.blueprints.upload(blueprint_path, 'b')
-            progress_func = generate_progress_func(
-                total_size=size,
-                assert_equal=self.assertEqual,
-                assert_almost_equal=self.assertAlmostEqual)
+            progress_func = generate_progress_func(total_size=size)
 
             self.client.blueprints.download('b', tmp_local_path, progress_func)
         finally:

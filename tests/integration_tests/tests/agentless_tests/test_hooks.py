@@ -179,8 +179,7 @@ hooks:
       input2: input2_test
     description: test hook
 """
-        upload_mock_plugin('target-aware-mock',
-                           '1.0',)
+        upload_mock_plugin(self.client, 'target-aware-mock', '1.0',)
 
         self._update_hooks_config(new_config)
         self._start_a_workflow()
@@ -204,8 +203,8 @@ hooks:
         new_version = '1.33'
 
         # Upload the new one before the old, on purpose
-        upload_mock_plugin('target-aware-mock-v1_33', new_version)
-        upload_mock_plugin('target-aware-mock', old_version)
+        upload_mock_plugin(self.client, 'target-aware-mock-v1_33', new_version)
+        upload_mock_plugin(self.client, 'target-aware-mock', old_version)
 
         self._update_hooks_config(new_config)
         self._start_a_workflow()
@@ -289,7 +288,11 @@ hooks:
         self.client.blueprints.upload(dsl_path, blueprint_id)
         self.client.deployments.create(blueprint_id,
                                        deployment_id)
-        utils.wait_for_deployment_creation_to_complete(deployment_id)
+        utils.wait_for_deployment_creation_to_complete(
+            self.env.container_id,
+            deployment_id,
+            self.client
+        )
         return deployment_id
 
     @retry(wait_fixed=1000, stop_max_attempt_number=3)

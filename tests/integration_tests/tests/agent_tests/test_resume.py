@@ -14,6 +14,9 @@
 #    * limitations under the License.
 
 import uuid
+
+import pytest
+
 from integration_tests import AgentTestCase
 from integration_tests.tests.utils import get_resource as resource
 
@@ -24,6 +27,8 @@ BEFORE_MESSAGE = 'BEFORE SLEEP'
 AFTER_MESSAGE = 'AFTER SLEEP'
 
 
+@pytest.mark.usefixtures('cloudmock_plugin')
+@pytest.mark.usefixtures('dockercompute_plugin')
 class TestResumeMgmtworker(AgentTestCase):
     def _start_execution(self, deployment, operation, wait_seconds=20):
         return self.execute_workflow(
@@ -38,11 +43,17 @@ class TestResumeMgmtworker(AgentTestCase):
 
     def _stop_mgmtworker(self):
         self.logger.info('Stopping mgmtworker')
-        self.execute_on_manager('systemctl stop cloudify-mgmtworker')
+        service_command = self.get_service_management_command()
+        self.execute_on_manager(
+            '{0} stop cloudify-mgmtworker'.format(service_command)
+        )
 
     def _start_mgmtworker(self):
-        self.logger.info('Restarting mgmtworker')
-        self.execute_on_manager('systemctl start cloudify-mgmtworker')
+        self.logger.info('Starting mgmtworker')
+        service_command = self.get_service_management_command()
+        self.execute_on_manager(
+            '{0} start cloudify-mgmtworker'.format(service_command)
+        )
 
     def test_resume_agent_op(self):
         # start a workflow

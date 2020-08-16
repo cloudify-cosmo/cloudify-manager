@@ -2,14 +2,12 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
     - cloudify/types/types.yaml
-    - plugins/target_aware_mock.yaml
-    - plugins/dockercompute.yaml
+    - plugin:target_aware_mock
+    - plugin:dockercompute
 
 node_templates:
     webserver_host:
         type: cloudify.nodes.docker.Compute
-        properties:
-            install_agent: true
     webserver:
         type: cloudify.nodes.WebServer
         relationships:

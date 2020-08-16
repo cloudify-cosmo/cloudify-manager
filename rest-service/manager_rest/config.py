@@ -117,6 +117,8 @@ class Config(object):
     rest_service_log_files_backup_count = Setting(
         'rest_service_log_files_backup_count')
 
+    monitoring_timeout = Setting('monitoring_timeout')
+
     test_mode = Setting('test_mode', default=False)
 
     insecure_endpoints_disabled = Setting('insecure_endpoints_disabled')

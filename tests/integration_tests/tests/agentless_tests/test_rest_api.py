@@ -15,6 +15,7 @@
 
 
 import uuid
+import pytest
 
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
@@ -22,6 +23,7 @@ from integration_tests.tests.utils import \
     wait_for_deployment_creation_to_complete
 
 
+@pytest.mark.usefixtures('cloudmock_plugin')
 class RestAPITest(AgentlessTestCase):
 
     def setUp(self):
@@ -42,7 +44,10 @@ class RestAPITest(AgentlessTestCase):
         self.client.deployments.create(blueprint_id, deployment_id,
                                        skip_plugins_validation=True)
         wait_for_deployment_creation_to_complete(
-            deployment_id=deployment_id)
+            self.env.container_id,
+            deployment_id,
+            self.client
+        )
 
     def _deploy_basic_blueprint(self):
         self.deploy_application(self.dsl_path,

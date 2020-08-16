@@ -18,7 +18,6 @@ import uuid
 
 from flask import current_app
 
-from cloudify.models_states import ExecutionState
 from cloudify.utils import extract_and_merge_plugins
 
 
@@ -172,9 +171,6 @@ class DeploymentUpdateManager(object):
         dep_update.state = STATES.UPDATING
         self.sm.update(dep_update)
 
-        # Handle inter-deployment dependencies changes
-        self._deployment_dependency_handler.handle(dep_update)
-
         # Handle any deployment related changes. i.e. workflows and deployments
         modified_deployment_entities, raw_updated_deployment = \
             self._deployment_handler.handle(dep_update)
@@ -227,6 +223,9 @@ class DeploymentUpdateManager(object):
             dep_update.set_recursive_dependencies(deployment_dependencies)
             return dep_update
 
+        # Handle inter-deployment dependencies changes
+        self._deployment_dependency_handler.handle(dep_update)
+
         # Execute the default 'update' workflow or a custom workflow using
         # added and related instances. Any workflow executed should call
         # finalize_update, since removing entities should be done after the
@@ -265,42 +264,16 @@ class DeploymentUpdateManager(object):
         # Return the deployment update object
         return self.get_deployment_update(dep_update.id)
 
-    def validate_no_active_updates_per_deployment(self,
-                                                  deployment_id,
-                                                  force=False):
+    def validate_no_active_updates_per_deployment(self, deployment_id):
         existing_updates = self.list_deployment_updates(
             filters={'deployment_id': deployment_id}).items
         active_updates = [u for u in existing_updates
                           if u.state not in (STATES.SUCCESSFUL, STATES.FAILED)]
         if not active_updates:
             return
-
-        if not force:
-            raise manager_exceptions.ConflictError(
-                'there are deployment updates still active; update IDs: {0}'
-                .format(', '.join([u.id for u in active_updates])))
-
-        # real active updates are those with an execution in a running status
-        real_active_updates = [
-            u for u in active_updates if u.execution_id is not None
-            and self.sm.get(models.Execution, u.execution_id).status
-            not in ExecutionState.END_STATES
-        ]
-
-        if real_active_updates:
-            raise manager_exceptions.ConflictError(
-                'there are deployment updates still active; the "force" flag '
-                'was used yet these updates have actual executions running '
-                'update IDs: {0}'.format(', '.join(
-                    [u.id for u in real_active_updates])))
-        else:
-            # the active updates aren't really active - either their
-            # executions were failed/cancelled, or the update failed at
-            # the finalizing stage.
-            # updating their states to failed and continuing.
-            for dep_update in active_updates:
-                dep_update.state = STATES.FAILED
-                self.sm.update(dep_update)
+        raise manager_exceptions.ConflictError(
+            'there are deployment updates still active; update IDs: {0}'
+            .format(', '.join([u.id for u in active_updates])))
 
     def _extract_changes(self,
                          dep_update,

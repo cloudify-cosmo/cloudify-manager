@@ -237,7 +237,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             resp = self.get('/node-instances/{0}'.format(node_id))
             self.assertEqual(404, resp.status_code)
 
-    def test_delete_deployment_with_live_nodes_without_ignore_flag(self):
+    def test_delete_deployment_with_live_nodes_without_force_flag(self):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
@@ -296,7 +296,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         resp = self.get('/deployments/{0}'.format(deployment_id))
         self.assertEqual(404, resp.status_code)
 
-    def test_delete_deployment_with_live_nodes_and_ignore_flag(self):
+    def test_delete_deployment_with_live_nodes_and_force_flag(self):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
@@ -653,16 +653,6 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
-    def test_creation_success_when_install_plugin_is_false(self):
-        id_ = 'i{0}'.format(uuid.uuid4())
-        self.put_deployment(
-            blueprint_file_name='deployment_with_'
-                                'install_plugin_false.yaml',
-            blueprint_id=id_,
-            deployment_id=id_)
-
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_creation_success_without_site(self):
         self._put_deployment_without_site()
 
@@ -886,11 +876,11 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                                self.client.deployments.get,
                                resource_id)
 
-    def _delete_deployment(self, deployment_id, ignore_live_nodes=False):
+    def _delete_deployment(self, deployment_id, force=False):
 
-        ignore_live_nodes = 'true' if ignore_live_nodes else 'false'
+        force = 'true' if force else 'false'
         delete_db_mode = 'true'
-        params = {'ignore_live_nodes': ignore_live_nodes,
+        params = {'force': force,
                   'delete_db_mode': delete_db_mode}
         response = self.client._client.delete(
             '/deployments/{0}'.format(deployment_id), params=params)

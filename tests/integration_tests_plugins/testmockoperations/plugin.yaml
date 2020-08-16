@@ -1,0 +1,4 @@
+plugins:
+    testmockoperations:
+        executor: central_deployment_agent
+        package_name: testmockoperations

@@ -151,19 +151,27 @@ class MockStreamedResponse(object):
 
     def __init__(self, response, file_server):
         self._response = response
+        self._response.headers.pop('Content-Length', None)
         self._root = file_server.root_path
+        self.local_path = self._response.headers['X-Accel-Redirect'].replace(
+            '/resources',
+            self._root
+        )
 
     @property
     def headers(self):
+        if 'Content-Length' not in self._response.headers:
+            # in a real manager, the nginx fileserver figures out
+            # content-length, so let's mimic that behaviour as well
+            with open(self.local_path, 'rb') as f:
+                f.seek(0, 2)  # seek to end of file
+                length = f.tell()
+            self._response.headers['Content-Length'] = length
         return self._response.headers
 
     def bytes_stream(self, chunk_size=8192):
         # Calculate where the file resides *locally*
-        local_path = self._response.headers['X-Accel-Redirect'].replace(
-            '/resources',
-            self._root
-        )
-        return self._generate_stream(local_path, chunk_size)
+        return self._generate_stream(self.local_path, chunk_size)
 
     @staticmethod
     def _generate_stream(local_path, chunk_size):

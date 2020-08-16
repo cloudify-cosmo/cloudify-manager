@@ -110,7 +110,8 @@ def reset_storage(script_config):
 
     # Rebuild the DB
     safe_drop_all(keep_tables=['roles', 'config', 'rabbitmq_brokers',
-                               'certificates', 'managers', 'db_nodes'])
+                               'certificates', 'managers', 'db_nodes',
+                               'licenses'])
     upgrade(directory=migrations_dir)
 
     # Add default tenant, admin user and provider context

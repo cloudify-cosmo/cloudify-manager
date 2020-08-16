@@ -60,7 +60,8 @@ OPTIONAL_SERVICES = {
     'postgresql-9.5': 'PostgreSQL',
     'cloudify-rabbitmq': 'RabbitMQ',
     'cloudify-composer': 'Cloudify Composer',
-    'cloudify-syncthing': 'File Sync Service'
+    'cloudify-syncthing': 'File Sync Service',
+    'prometheus': 'Monitoring Service',
 }
 
 

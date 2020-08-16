@@ -2,7 +2,7 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
     - cloudify/types/types.yaml
-    - plugins/testmockoperations_agent.yaml
+    - plugin:testmockoperations
 
 inputs:
     ip: {}
@@ -13,9 +13,11 @@ node_templates:
         type: cloudify.nodes.Compute
         properties:
             ip: { get_input: ip }
-            cloudify_agent:
-                key: { get_input: agent_key }
-                user: root
+            agent_config:
+               key: { get_input: agent_key }
+               user: root
+               process_management:
+                   name: detach
     middle:
         type: cloudify.nodes.SoftwareComponent
         relationships:

@@ -2,15 +2,13 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
   - cloudify/types/types.yaml
-  - plugins/cloudmock.yaml
-  - agent_tests/plugins/dockercompute.yaml
+  - plugin:cloudmock
+  - plugin:dockercompute
 
 
 node_templates:
   agent_host:
     type: cloudify.nodes.docker.Compute
-    properties:
-      install_agent: true
     interfaces:
       interface1:
         op1:

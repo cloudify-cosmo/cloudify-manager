@@ -202,9 +202,17 @@ class EventsAlternativeTimezoneTest(EventsTest):
         )
         # restart all users of the db so that they get a new session which
         # uses the just-set timezone
+        service_command = cls.get_service_management_command()
         docker.execute(
             cls.env.container_id,
-            "systemctl restart cloudify-amqp-postgres cloudify-restservice")
+            "{0} restart cloudify-amqp-postgres "
+            "cloudify-restservice".format(service_command)
+        )
+        docker.execute(
+            cls.env.container_id,
+            "{0} restart cloudify-amqp-postgres "
+            "cloudify-restservice".format(service_command)
+        )
 
     def setUp(self):
         """Update postgres timezone and create a deployment."""

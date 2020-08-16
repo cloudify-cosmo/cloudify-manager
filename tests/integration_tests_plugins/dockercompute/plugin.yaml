@@ -1,0 +1,19 @@
+plugins:
+  dockercompute:
+    executor: central_deployment_agent
+    package_name: dockercompute
+
+node_types:
+  cloudify.nodes.docker.Compute:
+    derived_from: cloudify.nodes.Compute
+    properties:
+      agent_config:
+        default:
+          install_method: plugin
+          process_management:
+            name: detach
+
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        start: dockercompute.dockercompute.operations.start
+        delete: dockercompute.dockercompute.operations.delete

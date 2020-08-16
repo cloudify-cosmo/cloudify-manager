@@ -13,7 +13,10 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import time
+import pytest
 from cloudify.plugins.install_utils import INSTALLING_PREFIX
+from cloudify.models_states import PluginInstallationState
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 
@@ -32,40 +35,28 @@ class TestPlugins(AgentlessTestCase):
         plugin_id = None
         try:
             put_plugin_response = test_utils.upload_mock_plugin(
+                    self.client,
                     TEST_PACKAGE_NAME,
-                    TEST_PACKAGE_VERSION)
-            execution = self._get_latest_execution('install_plugin')
-            self.wait_for_execution_to_end(execution)
-            put_plugin_response['archive_name'] = \
-                put_plugin_response['archive_name'][len(INSTALLING_PREFIX):]
-
-            self.logger.info('Plugin test execution ID is '
-                             '{0}.'.format(execution.id))
+                    TEST_PACKAGE_VERSION
+            )
             plugin_id = put_plugin_response.get('id')
-            self.assertIsNotNone(plugin_id)
-            self.assertEquals(put_plugin_response.get('package_name'),
-                              TEST_PACKAGE_NAME)
-            self.assertEquals(put_plugin_response.get('package_version'),
-                              TEST_PACKAGE_VERSION)
             get_plugin_by_id_response = self.client.plugins.get(plugin_id)
-
             self.assertEquals(put_plugin_response, get_plugin_by_id_response)
         finally:
             if plugin_id:
                 self.client.plugins.delete(plugin_id)
 
     def test_get_plugin_not_found(self):
-        try:
+        with pytest.raises(
+                CloudifyClientError,
+                match='Requested `Plugin` with ID `DUMMY_PLUGIN_ID` '
+                'was not found') as e:
             self.client.plugins.get('DUMMY_PLUGIN_ID')
-        except CloudifyClientError as e:
-            self.assertEquals(
-                u'Requested `Plugin` with ID `DUMMY_PLUGIN_ID` was not found',
-                e.message
-            )
-            self.assertEquals(404, e.status_code)
+        assert e.value.status_code == 404
 
     def test_delete_plugin(self):
         put_response = test_utils.upload_mock_plugin(
+                self.client,
                 TEST_PACKAGE_NAME,
                 TEST_PACKAGE_VERSION)
 
@@ -85,29 +76,42 @@ class TestPlugins(AgentlessTestCase):
                          'got {0}'.format(len(plugins_list)))
 
     def test_delete_plugin_not_found(self):
-        try:
+        with pytest.raises(
+                CloudifyClientError,
+                match='Requested `Plugin` with ID `DUMMY_PLUGIN_ID` '
+                'was not found') as e:
             self.client.plugins.delete('DUMMY_PLUGIN_ID')
-        except CloudifyClientError as e:
-            self.assertEquals(
-                u'Requested `Plugin` with ID `DUMMY_PLUGIN_ID` was not found',
-                e.message
-            )
-            self.assertEquals(404, e.status_code)
+        assert e.value.status_code == 404
 
     def test_install_uninstall_workflows_execution(self):
-        test_utils.upload_mock_plugin(TEST_PACKAGE_NAME, TEST_PACKAGE_VERSION)
-
-        execution = self._get_latest_execution('install_plugin')
-        self.wait_for_execution_to_end(execution)
+        test_utils.upload_mock_plugin(self.client,
+                                      TEST_PACKAGE_NAME,
+                                      TEST_PACKAGE_VERSION)
 
         plugin = self.client.plugins.list()[0]
         self.client.plugins.delete(plugin.id)
-
-        execution = self._get_latest_execution('uninstall_plugin')
-        self.wait_for_execution_to_end(execution)
-
         plugins = self.client.plugins.list()
         self.assertEqual(len(plugins), 0)
+
+    @pytest.mark.usefixtures('cloudmock_plugin')
+    def test_plugin_installation_state(self):
+        plugins = self.client.plugins.list(package_name='cloudmock')
+        states = self.client.plugins.get(plugins[0].id).installation_state
+        assert states == []
+        self.client.plugins.install(
+            plugins[0].id,
+            managers=[m.hostname for m in self.client.manager.get_managers()])
+        deadline = time.time() + 30
+        while time.time() < deadline:
+            states = self.client.plugins.get(plugins[0].id).installation_state
+            if not states:
+                time.sleep(0.5)
+                continue
+            state = states[0]['state']
+            if state == PluginInstallationState.INSTALLED:
+                break
+            time.sleep(0.5)
+        assert state == PluginInstallationState.INSTALLED
 
 
 class TestPluginsSystemState(AgentlessTestCase):
@@ -135,6 +139,7 @@ class TestPluginsSystemState(AgentlessTestCase):
                                          wagon_files_count,
                                          corrupt_plugin=False):
         plugin = test_utils.upload_mock_plugin(
+            self.client,
             package_name,
             package_version,
             corrupt_plugin=corrupt_plugin)

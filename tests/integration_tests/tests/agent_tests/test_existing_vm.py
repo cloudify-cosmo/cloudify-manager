@@ -16,6 +16,8 @@
 import uuid
 from os.path import join
 
+import pytest
+
 from integration_tests.framework import utils
 from integration_tests import AgentTestWithPlugins
 from integration_tests.tests.utils import get_resource as resource
@@ -44,6 +46,8 @@ class BaseExistingVMTest(AgentTestWithPlugins):
         )
 
 
+@pytest.mark.usefixtures('testmockoperations_plugin')
+@pytest.mark.usefixtures('dockercompute_plugin')
 class ExistingVMTest(BaseExistingVMTest):
     def test_existing_vm(self):
         dsl_path = resource("dsl/agent_tests/existing-vm.yaml")

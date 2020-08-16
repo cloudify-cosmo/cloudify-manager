@@ -42,7 +42,7 @@ from .models_base import (
     JSONString,
     UTCDateTime,
 )
-from .resource_models_base import SQLResourceBase
+from .resource_models_base import SQLResourceBase, SQLModelBase
 from .relationships import foreign_key, one_to_many_relationship
 
 
@@ -99,9 +99,11 @@ class Plugin(SQLResourceBase):
         db.Index(
             'plugins_name_version__tenant_id_idx',
             'package_name', 'package_version', '_tenant_id', 'distribution',
+            'distribution_release', 'distribution_version',
             unique=True
         ),
     )
+    _extra_fields = {'installation_state': flask_fields.Raw}
 
     archive_name = db.Column(db.Text, nullable=False, index=True)
     distribution = db.Column(db.Text)
@@ -161,7 +163,49 @@ class Plugin(SQLResourceBase):
         plugin_dict = super(Plugin, self).to_response()
         if not get_data:
             plugin_dict['file_server_path'] = ''
+        if 'installation_state' in plugin_dict:
+            plugin_dict['installation_state'] = [
+                s.to_dict() for s in plugin_dict['installation_state']]
         return plugin_dict
+
+    @declared_attr
+    def installation_state(cls):
+        return db.relationship('_PluginState', cascade='delete',
+                               passive_deletes=True)
+
+
+class _PluginState(SQLModelBase):
+    __tablename__ = 'plugins_states'
+    _extra_fields = {'manager': flask_fields.Raw}
+
+    _storage_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    _plugin_fk = foreign_key(Plugin._storage_id)
+    _manager_fk = foreign_key('managers.id', nullable=True)
+    _agent_fk = foreign_key('agents._storage_id', nullable=True)
+    state = db.Column(db.Text)
+    error = db.Column(db.Text)
+
+    @classmethod
+    def unique_id(cls):
+        return '_storage_id'
+
+    def __repr__(self):
+        return '<PluginState plugin={0} state={1}>'.format(
+            self._plugin_fk, self.state)
+
+    def to_dict(self, suppress_error=False):
+        rv = super(_PluginState, self).to_dict(suppress_error)
+        rv['manager'] = self.manager.hostname if self.manager else None
+        rv['agent'] = self.agent.name if self.agent else None
+        return rv
+
+    @declared_attr
+    def manager(cls):
+        return db.relationship('Manager', lazy='joined')
+
+    @declared_attr
+    def agent(cls):
+        return db.relationship('Agent', lazy='joined')
 
 
 class Secret(CreatedAtMixin, SQLResourceBase):

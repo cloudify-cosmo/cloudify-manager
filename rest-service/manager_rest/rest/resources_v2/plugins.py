@@ -14,20 +14,10 @@
 #  * limitations under the License.
 #
 
-import os
-import sys
-
 from uuid import uuid4
 
 from flask_restful_swagger import swagger
 
-from cloudify.plugins.install_utils import INSTALLING_PREFIX
-from cloudify._compat import reraise
-
-from manager_rest import (
-    manager_exceptions,
-    utils,
-)
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.rest import (
     rest_decorators,
@@ -129,32 +119,6 @@ class Plugins(SecuredResource):
                 **kwargs
             )
             plugins = [plugin]
-        for plugin in plugins:
-            try:
-                get_resource_manager().install_plugin(plugin)
-                installed_plugins.append(plugin)
-            except manager_exceptions.ExecutionTimeout:
-                tp, ex, tb = sys.exc_info()
-                if not is_caravan:
-                    reraise(
-                        manager_exceptions.PluginInstallationTimeout,
-                        manager_exceptions.PluginInstallationTimeout(
-                            'Timed out during plugin installation. '
-                            '({0}: {1})'.format(tp.__name__, ex)
-                        ),
-                        tb)
-            except Exception:
-                get_resource_manager().remove_plugin(plugin_id=plugin.id,
-                                                     force=True)
-                tp, ex, tb = sys.exc_info()
-                if not is_caravan:
-                    reraise(
-                        manager_exceptions.PluginInstallationError,
-                        manager_exceptions.PluginInstallationError(
-                            'Failed during plugin installation. '
-                            '({0}: {1})'.format(tp.__name__, ex)
-                        ),
-                        tb)
 
         if is_caravan:
             storage_plugins = storage_manager.list(
@@ -183,28 +147,15 @@ class PluginsArchive(SecuredResource):
         """
         # Verify plugin exists.
         plugin = get_storage_manager().get(models.Plugin, plugin_id)
-        # While installing a plugin we add an `installing` prefix to the
-        # archive_name, since the archive is saved without this prefix we
-        # remove it before searching for the archive in the file system.
-        archive_name = (plugin.archive_name[11:] if
-                        plugin.archive_name.startswith(INSTALLING_PREFIX)
-                        else plugin.archive_name)
-        # attempting to find the archive file on the file system
-        local_path = utils.get_plugin_archive_path(plugin_id, archive_name)
-        if not os.path.isfile(local_path):
-            raise RuntimeError("Could not find plugins archive; "
-                               "Plugin ID: {0}".format(plugin_id))
-
         plugin_path = '{0}/{1}/{2}/{3}'.format(
             FILE_SERVER_RESOURCES_FOLDER,
             FILE_SERVER_PLUGINS_FOLDER,
             plugin_id,
-            archive_name)
+            plugin.archive_name)
 
         return rest_utils.make_streaming_response(
             plugin_id,
             plugin_path,
-            os.path.getsize(local_path),
             'tar.gz'
         )
 

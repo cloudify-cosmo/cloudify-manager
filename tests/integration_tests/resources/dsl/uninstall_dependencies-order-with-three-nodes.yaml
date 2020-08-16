@@ -2,8 +2,7 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
     - cloudify/types/types.yaml
-    - plugins/testmockoperations.yaml
-    - plugins/connectionconfigurermock.yaml
+    - plugin:testmockoperations
 
 node_templates:
     containing_node:
@@ -14,18 +13,12 @@ node_templates:
         relationships:
             - type: cloudify.relationships.contained_in
               target: contained_in_node1
-              source_interfaces:
-                  cloudify.interfaces.relationship_lifecycle:
-                      unlink: connection_configurer_mock.connection_configurer_mock.tasks.unconfigure_connection
 
     contained_in_node1:
         type: mock_type
         relationships:
             - type: cloudify.relationships.contained_in
               target: containing_node
-              target_interfaces:
-                  cloudify.interfaces.relationship_lifecycle:
-                      unlink: connection_configurer_mock.connection_configurer_mock.tasks.unconfigure_connection
 
 node_types:
     mock_type:

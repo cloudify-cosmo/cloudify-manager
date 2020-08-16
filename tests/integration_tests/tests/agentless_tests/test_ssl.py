@@ -30,7 +30,10 @@ class TestSsl(AgentlessTestCase):
         self.copy_file_from_manager(
             '/etc/cloudify/ssl/cloudify_external_cert.pem', local_cert_path)
         ssl_client = create_rest_client(
-            rest_port='443', cert_path=local_cert_path)
+            host=self.env.container_ip,
+            rest_port='443',
+            cert_path=local_cert_path
+        )
 
         # only non-ssl client works
         self.assertEquals('SSL disabled', self.client.manager.ssl_status())

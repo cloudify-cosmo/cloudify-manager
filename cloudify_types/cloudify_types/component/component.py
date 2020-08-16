@@ -98,7 +98,7 @@ class Component(object):
                               ctx.instance.id)
         self.deployment_inputs = self.deployment.get('inputs', {})
         self.deployment_capabilities = self.deployment.get('capabilities')
-        self.deployment_logs = self.deployment.get('logs', {})
+        self.deployment_log_redirect = self.deployment.get('logs', True)
         self.deployment_auto_suffix = self.deployment.get('auto_inc_suffix',
                                                           False)
 
@@ -488,13 +488,11 @@ class Component(object):
         populate_runtime_with_wf_results(self.client, self.deployment_id)
         return True
 
-    def verify_execution_successful(self,
-                                    execution_id):
-        log_redirect = self.deployment_logs.get('redirect', True)
+    def verify_execution_successful(self, execution_id):
         return verify_execution_state(self.client,
                                       execution_id,
                                       self.deployment_id,
-                                      log_redirect,
+                                      self.deployment_log_redirect,
                                       self.workflow_state,
                                       self.timeout,
                                       self.interval)

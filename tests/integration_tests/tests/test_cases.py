@@ -20,20 +20,18 @@ import json
 import time
 import uuid
 import yaml
-import shutil
 import tarfile
 import logging
 import datetime
 import tempfile
 import unittest
+import subprocess
 from contextlib import contextmanager
 
 import wagon
 import pytest
 from pytest import mark
 from retrying import retry
-import requests
-from zipfile import ZipFile
 from requests.exceptions import ConnectionError
 
 import cloudify.logs
@@ -50,8 +48,6 @@ from integration_tests.framework import utils, hello_world, docker
 from integration_tests.tests import utils as test_utils
 from integration_tests.framework.constants import (PLUGIN_STORAGE_DIR,
                                                    CLOUDIFY_USER)
-from integration_tests.framework.wagon_build import (WagonBuilderMixin,
-                                                     WagonBuildError)
 from integration_tests.tests.utils import (
     get_resource,
     wait_for_deployment_creation_to_complete,
@@ -64,7 +60,7 @@ from cloudify_rest_client.executions import Execution
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 
-@pytest.mark.usefixtures("manager_container")
+@pytest.mark.usefixtures("manager_class_fixtures")
 @pytest.mark.usefixtures("workdir")
 class BaseTestCase(unittest.TestCase):
     """
@@ -73,7 +69,6 @@ class BaseTestCase(unittest.TestCase):
     def setUp(self):
         self.cfy = test_utils.get_cfy()
         self._set_tests_framework_logger()
-        self.client = None
 
     @classmethod
     def _update_config(cls, new_config):
@@ -89,9 +84,6 @@ class BaseTestCase(unittest.TestCase):
                 owner=CLOUDIFY_USER
             )
         cls.restart_service('cloudify-restservice')
-
-    def _setup_running_manager_attributes(self):
-        self.client = test_utils.create_rest_client(host=self.env.container_ip)
 
     def _save_manager_logs_after_test(self, purge=True):
         self.logger.info("Attempting to save the manager's logs...")
@@ -185,6 +177,19 @@ class BaseTestCase(unittest.TestCase):
         return docker.execute(
             self.env.container_id, 'rm -rf {0}'.format(file_path))
 
+    def _test_path(self, path, flag='-f'):
+        try:
+            self.execute_on_manager(['test', flag, path])
+            return True
+        except subprocess.CalledProcessError:
+            return False
+
+    def file_exists(self, path):
+        return self._test_path(path, flag='-f')
+
+    def directory_exists(self, path):
+        return self._test_path(path, flag='-d')
+
     def execute_on_manager(self, command):
         """
         Execute a shell command on the cloudify manager container.
@@ -223,24 +228,17 @@ class BaseTestCase(unittest.TestCase):
             BaseTestCase.env.chown(owner, target)
         return ret_val
 
-    def write_data_to_file_on_manager(self,
-                                      data,
-                                      target_path,
-                                      to_json=False,
-                                      owner=None):
-        with tempfile.NamedTemporaryFile() as f:
-            if to_json:
-                data = json.dumps(data)
-            f.write(data)
-            f.flush()
-            self.copy_file_to_manager(f.name, target_path, owner=owner)
-
     def restart_service(self, service_name):
         """restart service by name in the manager container"""
+        service_command = self.get_service_management_command()
         docker.execute(
-            self.env.container_id, 'systemctl stop {0}'.format(service_name))
+            self.env.container_id,
+            '{0} stop {1}'.format(service_command, service_name)
+        )
         docker.execute(
-            self.env.container_id, 'systemctl start {0}'.format(service_name))
+            self.env.container_id,
+            '{0} start {1}'.format(service_command, service_name)
+        )
 
     @staticmethod
     def get_docker_host():
@@ -346,7 +344,8 @@ class BaseTestCase(unittest.TestCase):
         deployment = client.deployments.create(**deployment_create_kw)
         if wait:
             wait_for_deployment_creation_to_complete(
-                self.env.container_id, deployment_id, client=client)
+                self.env.container_id, deployment_id, self.client
+            )
         return deployment
 
     def deploy_and_execute_workflow(self,
@@ -425,16 +424,18 @@ class BaseTestCase(unittest.TestCase):
 
     def delete_deployment(self,
                           deployment_id,
-                          ignore_live_nodes=False,
+                          force=False,
                           validate=False,
                           client=None):
         client = client or self.client
         result = client.deployments.delete(deployment_id,
-                                           ignore_live_nodes=ignore_live_nodes,
+                                           force=force,
                                            with_logs=True)
         if validate:
-            wait_for_deployment_deletion_to_complete(deployment_id,
-                                                     client=client)
+            wait_for_deployment_deletion_to_complete(
+                deployment_id,
+                client
+            )
         return result
 
     def is_node_started(self, node_id):
@@ -592,11 +593,21 @@ class BaseTestCase(unittest.TestCase):
             timeout_seconds=60
         )
 
+    def get_config(self, name=None, scope=None, client=None):
+        client = client or self.client
+        return client.manager.get_config(name=name, scope=scope)
+
+    def get_service_management_command(self):
+        config = self.get_config('service_management')
+        service_command = 'systemctl'
+        if config.value == 'supervisord':
+            service_command = 'supervisorctl -c /etc/supervisord.conf'
+        return service_command
+
 
 class AgentlessTestCase(BaseTestCase):
     def setUp(self):
         super(AgentlessTestCase, self).setUp()
-        self._setup_running_manager_attributes()
         self.addCleanup(self._save_manager_logs_after_test)
 
     def _get_latest_execution(self, workflow_id):
@@ -617,11 +628,6 @@ class AgentlessTestCase(BaseTestCase):
 
 
 class BaseAgentTestCase(BaseTestCase):
-    def tearDown(self):
-        self.logger.info('Removing leftover test containers')
-        docker.clean(self.env.container_id)
-        super(BaseAgentTestCase, self).tearDown()
-
     def read_host_file(self, file_path, deployment_id, node_id):
         """
         Read a file from a dockercompute node instance container filesystem.
@@ -702,7 +708,6 @@ class AgentTestCase(BaseAgentTestCase):
 
     def setUp(self):
         super(AgentTestCase, self).setUp()
-        self._setup_running_manager_attributes()
         self.addCleanup(self._save_manager_logs_after_test)
 
 
@@ -749,8 +754,6 @@ class AgentTestWithPlugins(AgentTestCase):
             yaml_path = os.path.join(plugin_path, 'plugin.yaml')
             with utils.zip_files([wagon_path, yaml_path]) as zip_path:
                 self.client.plugins.upload(zip_path)
-        time.sleep(500)
-        self._wait_for_execution_by_wf_name('install_plugin')
         self.logger.info(
             'Finished uploading {0}...'.format(plugin_name))
 
@@ -762,272 +765,3 @@ class AgentTestWithPlugins(AgentTestCase):
         for execution in executions:
             if execution.status not in Execution.END_STATES:
                 self.wait_for_execution_to_end(execution)
-
-
-class PluginsTest(AgentTestWithPlugins, WagonBuilderMixin):
-    BLUEPRINT_EXAMPLES = (
-        "https://github.com/cloudify-community/"
-        "blueprint-examples/archive/master.zip"
-    )
-
-    @classmethod
-    def setUpClass(cls):
-        super(PluginsTest, cls).setUpClass()
-        cls.examples_basedir = tempfile.mkdtemp()
-        examples_zip = os.path.join(cls.examples_basedir, 'examples.zip')
-        with requests.get(cls.BLUEPRINT_EXAMPLES, stream=True) as resp:
-            resp.raise_for_status()
-            with open(examples_zip, 'wb') as f:
-                for part in resp.iter_content(chunk_size=8192):
-                    if not part:
-                        continue
-                    f.write(part)
-        zipped_examples = ZipFile(examples_zip)
-        zipped_examples.extractall(cls.examples_basedir)
-        cls.examples = os.path.join(
-            cls.examples_basedir, 'blueprint-examples-master')
-
-    @classmethod
-    def tearDownClass(cls):
-        super(PluginsTest, cls).tearDownClass()
-        shutil.rmtree(cls.examples_basedir, ignore_failure=True)
-
-    @staticmethod
-    def get_wagon_path(plugin_path):
-        wagons = []
-        for filename in os.listdir(plugin_path):
-            if filename.endswith('.wgn'):
-                wagons.append(os.path.join(plugin_path, filename))
-        if wagons:
-            return wagons
-        raise WagonBuildError(
-            'No wagon file was found in the plugin build directory.')
-
-    @property
-    def plugin_root_directory(self):
-        """ Path to the plugin root directory."""
-        raise NotImplementedError('Implemented by plugin test class.')
-
-    def _get_or_create_wagon(self, plugin_path):
-        """Overrides the inherited class _create_test_wagon."""
-        try:
-            return self.get_wagon_path(plugin_path)
-        except WagonBuildError:
-            self.build_wagon(self.logger)
-        return self.get_wagon_path(plugin_path)
-
-    def add_cleanup_deployment(self, deployment_id):
-        self.addCleanup(
-            self.undeploy_application,
-            deployment_id,
-            parameters={'ignore_failure': True}
-        )
-
-    def check_blueprint(self,
-                        blueprint_id,
-                        blueprint_path,
-                        deployment_inputs,
-                        timeout=None):
-
-        self.add_cleanup_deployment(blueprint_id)
-        self.deploy_application(
-            test_utils.get_resource(blueprint_path),
-            timeout_seconds=timeout,
-            blueprint_id=blueprint_id,
-            deployment_id=blueprint_id,
-            inputs=deployment_inputs)
-        self.undeploy_application(blueprint_id, timeout)
-
-    def check_hello_world_blueprint(self, iaas, inputs, timeout=400):
-        blueprint_path = os.path.join(
-            self.examples,
-            'hello-world-example', '{iaas}.yaml'.format(iaas=iaas))
-        blueprint_id = 'hello-world-{iaas}'.format(iaas=iaas)
-        self.check_blueprint(blueprint_id, blueprint_path, inputs, timeout)
-
-    def check_db_lb_app_blueprint(self,
-                                  iaas,
-                                  timeout,
-                                  network_inputs=None,
-                                  db_inputs_override=None,
-                                  lb_inputs_override=None,
-                                  app_inputs_override=None):
-
-        network_inputs = network_inputs or {}
-        db_inputs_override = db_inputs_override or {}
-        lb_inputs_override = lb_inputs_override or {}
-        app_inputs_override = app_inputs_override or {}
-
-        infrastructure_blueprint_path = os.path.join(
-            self.examples,
-            'db-lb-app/infrastructure/{iaas}.yaml'.format(iaas=iaas))
-        infrastructure_blueprint_id = 'infrastructure'
-
-        network_blueprint_id = iaas
-        network_blueprint_path = os.path.join(
-            self.examples,
-            '{iaas}-example-network'.format(iaas=iaas), 'blueprint.yaml')
-
-        db_blueprint_id = 'db'
-        db_blueprint_path = os.path.join(
-            self.examples,
-            'db-lb-app/db/application.yaml')
-        db_inputs = {'infrastructure--resource_name_prefix': 'db'}
-        db_inputs.update(db_inputs_override)
-
-        lb_blueprint_id = 'lb'
-        lb_blueprint_path = os.path.join(
-            self.examples,
-            'db-lb-app/lb/application.yaml')
-        lb_inputs = {'infrastructure--resource_name_prefix': 'lb'}
-        lb_inputs.update(lb_inputs_override)
-
-        app_blueprint_id = 'app'
-        app_blueprint_path = os.path.join(
-            self.examples,
-            'db-lb-app/app/application.yaml')
-        app_inputs = {'infrastructure--resource_name_prefix': 'app'}
-        app_inputs.update(app_inputs_override)
-
-        self.add_cleanup_deployment(network_blueprint_id)
-        self.deploy_application(
-            test_utils.get_resource(network_blueprint_path),
-            timeout_seconds=timeout,
-            blueprint_id=network_blueprint_id,
-            deployment_id=network_blueprint_id,
-            inputs=network_inputs
-        )
-
-        self.client.blueprints.upload(
-            test_utils.get_resource(infrastructure_blueprint_path),
-            infrastructure_blueprint_id)
-
-        self.add_cleanup_deployment(db_blueprint_id)
-        self.deploy_application(
-            test_utils.get_resource(db_blueprint_path),
-            timeout_seconds=timeout,
-            blueprint_id=db_blueprint_id,
-            deployment_id=db_blueprint_id,
-            inputs=db_inputs
-        )
-
-        self.add_cleanup_deployment(lb_blueprint_id)
-        self.deploy_application(
-            test_utils.get_resource(lb_blueprint_path),
-            timeout_seconds=timeout,
-            blueprint_id=lb_blueprint_id,
-            deployment_id=lb_blueprint_id,
-            inputs=lb_inputs
-        )
-
-        self.add_cleanup_deployment(app_blueprint_id)
-        self.deploy_application(
-            test_utils.get_resource(app_blueprint_path),
-            timeout_seconds=timeout,
-            blueprint_id=app_blueprint_id,
-            deployment_id=app_blueprint_id,
-            inputs=app_inputs
-        )
-
-        self.undeploy_application(app_blueprint_id, timeout)
-        self.undeploy_application(lb_blueprint_id, timeout)
-        self.undeploy_application(db_blueprint_id, timeout)
-        self.undeploy_application(network_blueprint_id, timeout)
-
-
-class PluginTestContainerHosts(PluginsTest):
-
-    def setUp(self):
-        super(PluginTestContainerHosts, self).setUp()
-
-    @property
-    def plugin_root_directory(self):
-        """ Path to the plugin root directory."""
-        raise NotImplementedError('Implemented by plugin test class.')
-
-    def prepare_agent_host_container(self,
-                                     node_instance_id,
-                                     agent_workdir='/root',
-                                     agent_tarname='centos-core-agent.tar.gz'):
-
-        self.logger.info(
-            'Setting up agent container for {0}'.format(node_instance_id))
-
-        agent_tarpath = os.path.join(agent_workdir, agent_tarname)
-        agent_ssl_dir = os.path.join(
-            agent_workdir, node_instance_id, 'cloudify/ssl')
-        manager_dir = '/opt/manager/resources/packages/agents'
-        internal_cert_name = 'cloudify_internal_cert.pem'
-        container = self.run_agent_container(
-            node_instance_id, self.get_manager_ip(), self.logger)
-        self.addCleanup(container.remove)
-        self.addCleanup(container.stop)
-        temp_agent = tempfile.NamedTemporaryFile()
-        temp_cert = tempfile.NamedTemporaryFile()
-        self.copy_file_from_manager(
-            os.path.join(manager_dir, agent_tarname), temp_agent.name)
-        self.copy_file_from_manager(
-            '/etc/cloudify/ssl/cloudify_internal_ca_cert.pem',
-            temp_cert.name
-        )
-        self.put_file_on_container(
-            open(temp_agent.name, 'rb').read(), agent_workdir, container.id)
-        self.extract_tar_on_container(
-            agent_tarpath, agent_workdir, container.id)
-        container.exec_run('mv {0}/agent-template {1}'.format(
-            agent_workdir, os.path.join(agent_workdir, node_instance_id)))
-        self.mkdirs_on_container(
-            os.path.join(agent_ssl_dir, internal_cert_name),
-            container.id)
-        self.put_file_on_container(
-            self.tar_file_content_for_put_archive(
-                open(temp_cert.name, 'r').read(), internal_cert_name),
-            agent_ssl_dir,
-            container.id
-        )
-        self.client.node_instances.update(
-            node_instance_id,
-            runtime_properties={
-                'ip': self.get_container_ip(container),
-            })
-
-    def deploy_and_execute_workflow_with_containers(self,
-                                                    dsl_path,
-                                                    timeout_seconds=240,
-                                                    blueprint_id=None,
-                                                    deployment_id=None,
-                                                    wait_for_execution=True,
-                                                    parameters=None,
-                                                    inputs=None,
-                                                    queue=False,
-                                                    node_ids=None,
-                                                    **kwargs):
-
-        node_ids = node_ids or []
-        node_instances = []
-
-        deployment = self.deploy(
-            dsl_path, blueprint_id, deployment_id, inputs)
-
-        for node_id in node_ids:
-            node_instances = self.client.node_instances.list(
-                deployment_id=deployment.id, node_id=node_id)
-            for node_instance in node_instances:
-                self.prepare_agent_host_container(node_instance.id)
-
-        try:
-            execution = self.execute_workflow(
-                'install', deployment.id, parameters,
-                timeout_seconds, wait_for_execution, queue=queue, **kwargs)
-        except Exception as e:
-            self.logger.info('Deployment failed: {0}'.format(e.message))
-            executions = [ex for ex in
-                          self.client.executions.list(
-                              deployment_id=deployment.id)
-                          if 'install' in ex.workflow_id]
-            if executions:
-                self.client.executions.cancel(executions[0].id, force=True)
-            self.undeploy_application(deployment.id)
-            raise e
-
-        return deployment, execution.id, node_instances

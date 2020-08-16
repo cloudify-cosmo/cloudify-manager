@@ -119,18 +119,10 @@ def copy_files_between_manager_and_snapshot(archive_root,
 
 def copy_stage_files(archive_root):
     """Copy Cloudify Stage files into the snapshot"""
-    stage_data = [
-        snapshot_constants.STAGE_CONFIG_FOLDER,
-        snapshot_constants.STAGE_USERDATA_FOLDER
-    ]
-    for folder in stage_data:
-        copy_snapshot_path(
-            os.path.join(snapshot_constants.STAGE_BASE_FOLDER, folder),
-            os.path.join(archive_root, 'stage', folder))
-
-
-def _ignore_stage_conf_directory_during_restore(stage_tempdir):
-    shutil.rmtree(os.path.join(stage_tempdir, 'conf'))
+    stage_data = snapshot_constants.STAGE_USERDATA_FOLDER
+    copy_snapshot_path(
+        os.path.join(snapshot_constants.STAGE_BASE_FOLDER, stage_data),
+        os.path.join(archive_root, 'stage', stage_data))
 
 
 def restore_stage_files(archive_root, service_management, override=False):
@@ -150,7 +142,6 @@ def restore_stage_files(archive_root, service_management, override=False):
     stage_tempdir = '{0}_stage'.format(archive_root)
     shutil.copytree(stage_archive, stage_tempdir,
                     ignore=shutil.ignore_patterns('.stfolder'))
-    _ignore_stage_conf_directory_during_restore(stage_tempdir)
     run(['/bin/chmod', 'a+r', '-R', stage_tempdir])
     try:
         restore_command = [snapshot_constants.STAGE_RESTORE_SCRIPT,
@@ -162,24 +153,13 @@ def restore_stage_files(archive_root, service_management, override=False):
     finally:
         shutil.rmtree(stage_tempdir)
 
-    run_service(
-        service_management,
-        'restart',
-        'cloudify-stage',
-        ignore_failures=True
-    )
-
 
 def copy_composer_files(archive_root):
     """Copy Cloudify Composer files into the snapshot"""
-    composer_data = [
-        snapshot_constants.COMPOSER_CONFIG_FOLDER,
-        snapshot_constants.COMPOSER_BLUEPRINTS_FOLDER,
-    ]
-    for folder in composer_data:
-        copy_snapshot_path(
-            os.path.join(snapshot_constants.COMPOSER_BASE_FOLDER, folder),
-            os.path.join(archive_root, 'composer', folder))
+    composer_data = snapshot_constants.COMPOSER_BLUEPRINTS_FOLDER
+    copy_snapshot_path(
+        os.path.join(snapshot_constants.COMPOSER_BASE_FOLDER, composer_data),
+        os.path.join(archive_root, 'composer', composer_data))
 
 
 def restore_composer_files(archive_root):

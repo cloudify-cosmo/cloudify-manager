@@ -115,6 +115,7 @@ class FunctionEvaluationStorage(object):
     def __init__(self, deployment_id, storage_manager):
         self.sm = storage_manager
         self._deployment_id = deployment_id
+        self.secret_method = get_secret_method
 
     def get_node_instances(self, node_id=None):
         filters = dict(deployment_id=self._deployment_id)

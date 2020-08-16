@@ -820,8 +820,10 @@ workflows:
         default: null
       validate:
         default: True
+        type: boolean
       install:
         default: True
+        type: boolean
       install_script:
         default: ''
       manager_ip:
@@ -833,6 +835,7 @@ workflows:
       stop_old_agent:
         description: Stop the old agent after the new agent is installed
         default: false
+        type: boolean
 
   validate_agents:
     mapping: default_workflows.cloudify.plugins.workflows.validate_agents

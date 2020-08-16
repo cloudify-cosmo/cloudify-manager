@@ -15,13 +15,10 @@
 
 import os
 
-from mock import patch
 from manager_rest.test.attribute import attr
 
 from manager_rest.utils import read_json_file, write_dict_to_json_file
-from manager_rest.utils import plugin_installable_on_current_platform
 from manager_rest.test import base_test
-from manager_rest.storage import models
 
 
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
@@ -40,70 +37,11 @@ class TestUtils(base_test.BaseServerTestCase):
         self.assertEqual(3, read_dict['test'])
         self.assertEqual(test_dict, read_dict)
 
-    @attr(client_min_version=2,
-          client_max_version=base_test.LATEST_API_VERSION)
-    def test_plugin_installable_on_current_platform(self):
-        def create_plugin(supported_platform=None,
-                          distribution=None,
-                          distribution_release=None):
-            # don't attempt to set read-only properties
-            fields_to_skip = [
-                'resource_availability',  # deprecated, proxies to .visibility
-                'private_resource',       # deprecated
-            ]
-            mock_data = {k: 'stub' for k in models.Plugin.resource_fields
-                         if k not in fields_to_skip}
-            mock_data.pop('tenant_name')
-            mock_data.pop('created_by')
-            if supported_platform:
-                mock_data['supported_platform'] = supported_platform
-            if distribution:
-                mock_data['distribution'] = distribution
-            if distribution_release:
-                mock_data['distribution_release'] = distribution_release
-            return models.Plugin(**mock_data)
 
-        plugin = create_plugin()
-        self.assertFalse(plugin_installable_on_current_platform(plugin))
+def generate_progress_func(total_size, buffer_size=8192):
+    """Generate a function that helps test upload/download progress
 
-        plugin = create_plugin(supported_platform='any')
-        self.assertTrue(plugin_installable_on_current_platform(plugin))
-
-        platform = 'platform1'
-        dist = 'dist1'
-        rel = 'rel1'
-
-        def mock_linux_dist(full_distribution_name):
-            return dist, '', rel
-
-        def mock_get_platform():
-            return platform
-
-        with patch('platform.linux_distribution', mock_linux_dist):
-            with patch('wagon.get_platform', mock_get_platform):
-                plugin = create_plugin(supported_platform=platform)
-                self.assertFalse(
-                    plugin_installable_on_current_platform(plugin))
-
-                plugin = create_plugin(distribution=dist,
-                                       distribution_release=rel)
-                self.assertFalse(
-                    plugin_installable_on_current_platform(plugin))
-
-                plugin = create_plugin(supported_platform=platform,
-                                       distribution=dist,
-                                       distribution_release=rel)
-                self.assertTrue(
-                    plugin_installable_on_current_platform(plugin))
-
-
-def generate_progress_func(total_size, assert_equal,
-                           assert_almost_equal, buffer_size=8192):
-    """
-    Generate a function that helps to predictably test upload/download progress
     :param total_size: Total size of the file to upload/download
-    :param assert_equal: The unittest.TestCase assertEqual method
-    :param assert_almost_equal: The unittest.TestCase assertAlmostEqual method
     :param buffer_size: Size of chunk
     :return: A function that receives 2 ints - number of bytes read so far,
     and the total size in bytes
@@ -114,15 +52,13 @@ def generate_progress_func(total_size, assert_equal,
 
     def print_progress(read, total):
         i = iteration[0]
-        # tar.gz sizes are a bit inconsistent - tend to be a few bytes off
-        assert_almost_equal(total, total_size, delta=5)
+        assert total == total_size
 
         expected_read_value = buffer_size * (i + 1)
         if i < max_iterations:
-            assert_equal(read, expected_read_value)
+            assert read == expected_read_value
         else:
-            # On the last iteration, we face the same problem
-            assert_almost_equal(read, total_size, delta=5)
+            assert read == total_size
 
         iteration[0] += 1
 

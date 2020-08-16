@@ -39,6 +39,7 @@ python3 -m venv %_manager_env
 %_manager_env/bin/pip install "${RPM_SOURCE_DIR}/rest-service"[dbus]
 %_manager_env/bin/pip install "${RPM_SOURCE_DIR}/amqp-postgres"
 
+
 %install
 
 mkdir -p %{buildroot}/opt/manager
@@ -64,12 +65,16 @@ cp -R ${RPM_SOURCE_DIR}/packaging/amqp-postgres/files/* %{buildroot}
 
 visudo -cf %{buildroot}/etc/sudoers.d/cloudify-restservice
 
-
-# Install local copies of specs for URL resolver
-specs="%{buildroot}/opt/manager/resources/spec"
-types_yaml="${specs}/cloudify/5.1.0.dev1/types.yaml"
+# Install local copies of types for URL resolver
+specs="%{buildroot}/opt/manager/resources/spec/cloudify"
+types_yaml="${specs}/5.1.0.dev1/types.yaml"
 mkdir -p $(dirname "$types_yaml")
 cp "${RPM_SOURCE_DIR}/resources/rest-service/cloudify/types/types.yaml" "$types_yaml"
+cache_root="${RPM_SOURCE_DIR}/resources/rest-service/cloudify/types/cache"
+# This would be better as a glob, but then we end up fighting rpm build
+for ver in ${cache_root}/*; do
+    cp -r "${ver}" "${specs}"
+done
 
 
 %pre

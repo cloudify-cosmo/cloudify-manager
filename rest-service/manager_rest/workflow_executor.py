@@ -23,7 +23,7 @@ from flask_security import current_user
 from cloudify.amqp_client import (get_client,
                                   SendHandler,
                                   ScheduledExecutionHandler)
-
+from cloudify.models_states import PluginInstallationState
 from cloudify.constants import (
     MGMTWORKER_QUEUE,
     BROKER_PORT_SSL
@@ -82,12 +82,12 @@ def execute_workflow(name,
             plugin['tenant_name'] = managed_plugins[0].tenant_name
 
         context['plugin'] = {
-                'name': plugin_name,
-                'package_name': plugin.get('package_name'),
-                'package_version': plugin.get('package_version'),
-                'visibility': plugin.get('visibility'),
-                'tenant_name': plugin.get('tenant_name')
-            }
+            'name': plugin_name,
+            'package_name': plugin.get('package_name'),
+            'package_version': plugin.get('package_version'),
+            'visibility': plugin.get('visibility'),
+            'tenant_name': plugin.get('tenant_name')
+        }
 
     return _execute_task(execution_id=execution_id,
                          execution_parameters=execution_parameters,
@@ -145,13 +145,14 @@ def _get_tenant_dict():
     return {'name': utils.current_tenant.name}
 
 
-def _get_amqp_client():
+def _get_amqp_client(tenant=None):
+    vhost = '/' if tenant is None else tenant.rabbitmq_vhost
     client = get_client(
         amqp_host=config.instance.amqp_host,
         amqp_user=config.instance.amqp_username,
         amqp_pass=config.instance.amqp_password,
         amqp_port=BROKER_PORT_SSL,
-        amqp_vhost='/',
+        amqp_vhost=vhost,
         ssl_enabled=True,
         ssl_cert_path=config.instance.amqp_ca_path
     )
@@ -207,6 +208,7 @@ def _execute_task(execution_id, execution_parameters,
     context['rest_token'] = execution_creator.get_auth_token()
     context['tenant'] = _get_tenant_dict()
     context['task_target'] = MGMTWORKER_QUEUE
+    context['execution_creator_username'] = current_user.username
     execution_parameters['__cloudify_context'] = context
     message = {
         'cloudify_task': {'kwargs': execution_parameters},
@@ -252,3 +254,122 @@ def cancel_execution(execution_id):
         }
     }
     _send_mgmtworker_task(message, routing_key='service')
+
+
+def _get_plugin_message(plugin, task='install-plugin', target_names=None):
+    """Make plugin-related service task message.
+
+    This is for creating plugin install/uninstall messages, to send to
+    the mgmtworkers/agents.
+    """
+    sm = get_storage_manager()
+    managers = sm.list(models.Manager)
+    message = {
+        'service_task': {
+            'task_name': task,
+            'kwargs': {
+                'plugin': plugin.to_dict(),
+                'rest_host': [manager.private_ip for manager in managers],
+                'rest_token': current_user.get_auth_token(),
+                'tenant': _get_tenant_dict(),
+            }
+        }
+    }
+    if target_names:
+        message['service_task']['kwargs']['target'] = target_names
+    return message
+
+
+def install_plugin(plugin):
+    """Send the install-plugin message to agents/mgmtworkers.
+
+    Send the install-plugin message to agents/mgmtworkers that are
+    in state==PENDING for that plugin.
+    """
+    sm = get_storage_manager()
+    pstates = sm.list(models._PluginState, filters={
+        '_plugin_fk': plugin._storage_id,
+        'state': PluginInstallationState.PENDING
+    })
+    agents_per_tenant = {}
+    managers = []
+    for pstate in pstates:
+        if pstate.manager:
+            managers.append(pstate.manager.hostname)
+        if pstate.agent:
+            agents_per_tenant.setdefault(
+                pstate.agent.tenant, []).append(pstate.agent)
+    if managers:
+        _send_mgmtworker_task(
+            _get_plugin_message(plugin, target_names=managers),
+            routing_key='service')
+
+    agent_message = _get_plugin_message(plugin)
+    if agents_per_tenant:
+        for tenant, agents in agents_per_tenant.items():
+            # amqp client for the given tenant's vhost.
+            # Still use the manager's creds.
+            tenant_client = _get_amqp_client(tenant)
+            with tenant_client:
+                for agent in agents:
+                    send_handler = SendHandler(
+                        agent.name,
+                        exchange_type='direct',
+                        routing_key='service')
+                    tenant_client.add_handler(send_handler)
+                    send_handler.publish(agent_message)
+
+
+def uninstall_plugin(plugin):
+    sm = get_storage_manager()
+    pstates = sm.list(models._PluginState, filters={
+        '_plugin_fk': plugin._storage_id,
+        'state': [
+            PluginInstallationState.INSTALLED,
+            PluginInstallationState.INSTALLING,
+            PluginInstallationState.ERROR
+        ]
+    })
+    agents_per_tenant = {}
+    managers = []
+    for pstate in pstates:
+        if pstate.manager:
+            managers.append(pstate.manager.hostname)
+        if pstate.agent:
+            agents_per_tenant.setdefault(
+                pstate.agent.tenant, []).append(pstate.agent)
+    if managers:
+        _send_mgmtworker_task(
+            _get_plugin_message(
+                plugin, target_names=managers, task='uninstall-plugin'),
+            routing_key='service')
+
+    agent_message = _get_plugin_message(plugin, task='uninstall-plugin')
+    if agents_per_tenant:
+        for tenant, agents in agents_per_tenant.items():
+            # amqp client for the given tenant's vhost.
+            # Still use the manager's creds.
+            tenant_client = _get_amqp_client(tenant)
+            with tenant_client:
+                for agent in agents:
+                    send_handler = SendHandler(
+                        agent.name,
+                        exchange_type='direct',
+                        routing_key='service')
+                    tenant_client.add_handler(send_handler)
+                    send_handler.publish(agent_message)
+
+
+def delete_source_plugins(deployment_id):
+    _send_mgmtworker_task(
+        message={
+            'service_task': {
+                'task_name': 'delete-source-plugins',
+                'kwargs': {
+                    'deployment_id': deployment_id,
+                    'tenant_name': utils.current_tenant.name
+                }
+            }
+        },
+        routing_key='service'
+    )

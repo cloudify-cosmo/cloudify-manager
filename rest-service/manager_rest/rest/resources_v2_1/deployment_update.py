@@ -163,9 +163,6 @@ class DeploymentUpdate(SecuredResource):
         skip_reinstall = verify_and_convert_bool(
             'skip_reinstall',
             request_json.get('skip_reinstall', using_post_request))
-        force = verify_and_convert_bool(
-            'force',
-            request_json.get('force', False))
         ignore_failure = verify_and_convert_bool(
             'ignore_failure',
             request_json.get('ignore_failure', False))
@@ -184,8 +181,7 @@ class DeploymentUpdate(SecuredResource):
             request_json.get('runtime_only_evaluation', False)
         )
         manager = get_deployment_updates_manager(preview)
-        manager.validate_no_active_updates_per_deployment(deployment_id,
-                                                          force=force)
+        manager.validate_no_active_updates_per_deployment(deployment_id)
         return (manager,
                 skip_install,
                 skip_uninstall,

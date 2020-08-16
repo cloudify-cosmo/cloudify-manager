@@ -15,7 +15,9 @@
 ############
 
 import os
+import sys
 import json
+import shutil
 import logging
 import argparse
 
@@ -111,10 +113,16 @@ class MgmtworkerServiceTaskConsumer(ServiceTaskConsumer):
 
     service_tasks = ServiceTaskConsumer.service_tasks.copy()
     service_tasks['cancel-workflow'] = 'cancel_workflow_task'
+    service_tasks['delete-source-plugins'] = 'delete_source_plugins_task'
 
     def __init__(self, *args, **kwargs):
         self._workflow_registry = kwargs.pop('workflow_registry')
         super(MgmtworkerServiceTaskConsumer, self).__init__(*args, **kwargs)
+
+    def delete_source_plugins_task(self, deployment_id, tenant_name):
+        dep_dir = os.path.join(sys.prefix, 'source_plugins',
+                               tenant_name, deployment_id)
+        shutil.rmtree(dep_dir, ignore_errors=True)
 
     def cancel_workflow_task(self, execution_id, rest_token, tenant,
                              execution_token, rest_host):
@@ -128,6 +136,8 @@ class MgmtworkerServiceTaskConsumer(ServiceTaskConsumer):
                 self.tenant_name = tenant['name']
                 self.rest_token = rest_token
                 self.execution_token = execution_token
+                # always bypass - this is a kill, as forceful as we can get
+                self.bypass_maintenance = True
 
         with current_workflow_ctx.push(CancelCloudifyContext()):
             self._workflow_registry.cancel(execution_id)

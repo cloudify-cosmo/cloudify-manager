@@ -25,18 +25,16 @@ from mock import patch, MagicMock, call
 from dsl_parser.constants import INTER_DEPLOYMENT_FUNCTIONS
 from dsl_parser import exceptions as parser_exceptions, constants
 
-from cloudify.models_states import ExecutionState
 from cloudify_rest_client.exceptions import CloudifyClientError
 from cloudify.deployment_dependencies import (DEPENDENCY_CREATOR,
                                               SOURCE_DEPLOYMENT,
                                               TARGET_DEPLOYMENT,
                                               create_deployment_dependency)
 
-from manager_rest.test import base_test
 from manager_rest.storage import models
+from manager_rest.test import base_test
 from manager_rest.test.attribute import attr
 from manager_rest.deployment_update import handlers
-from manager_rest.deployment_update.constants import STATES
 from manager_rest.test.utils import get_resource as resource
 
 
@@ -279,52 +277,6 @@ class DeploymentUpdatesTestCase(DeploymentUpdatesBase):
         self.assertEqual(response.json['error_code'], 'conflict_error')
         self.assertIn('there are deployment updates still active',
                       response.json['message'])
-
-    def test_one_active_update_per_deployment_force_flag(self):
-        deployment_id = 'dep'
-        self._deploy_base(deployment_id, 'no_output.yaml')
-        response = self._update(deployment_id, 'one_output.yaml')
-        first_update_id = response.json['id']
-        response = self._update(deployment_id,
-                                blueprint_name='one_output.yaml',
-                                force=True)
-        # the second update should be running because the force flag was used
-        self.assertEqual(STATES.EXECUTING_WORKFLOW, response.json['state'])
-        # the first update should be with failed state
-        # because the execution had terminated but the deployment update
-        # object wasn't in an end state
-        first_update = self.client.deployment_updates.get(first_update_id,
-                                                          _include=['state'])
-        self.assertEqual(STATES.FAILED, first_update.state)
-
-    def test_one_active_update_per_dep_force_flag_real_active_executions(self):
-        deployment_id = 'dep'
-        self._deploy_base(deployment_id, 'no_output.yaml')
-        response = self._update(deployment_id, 'one_output.yaml')
-        first_update_id = response.json['id']
-        first_execution_id = response.json['execution_id']
-
-        # updating the execution's status to started to make the first update
-        # really be active
-        execution = self.sm.get(models.Execution, first_execution_id)
-        execution.status = ExecutionState.STARTED
-        self.sm.update(execution)
-        self.client.executions.get(execution_id=first_execution_id)
-
-        response = self._update(deployment_id,
-                                blueprint_name='one_output.yaml',
-                                force=True)
-        # force flag is expected not to work because the first update is
-        # still really running
-        self.assertEqual(response.json['error_code'], 'conflict_error')
-        self.assertIn('there are deployment updates still active',
-                      response.json['message'])
-        self.assertIn('the "force" flag was used',
-                      response.json['message'])
-        # verifying the first update wasn't set with a failed state by the
-        # force flag call
-        first_update = self.client.deployment_updates.get(first_update_id)
-        self.assertEqual(STATES.EXECUTING_WORKFLOW, first_update.state)
 
     def _deploy_base(self,
                      deployment_id,
@@ -609,9 +561,17 @@ class TestDeploymentDependencies(unittest.TestCase):
         def target_deployment(self):
             return self[TARGET_DEPLOYMENT]
 
+        @property
+        def target_deployment_func(self):
+            return self['target_deployment_func']
+
         @target_deployment.setter
         def target_deployment(self, value):
             self[TARGET_DEPLOYMENT] = value
+
+        @target_deployment_func.setter
+        def target_deployment_func(self, value):
+            self['target_deployment_func'] = value
 
     def setUp(self):
         self.mock_get_rm = patch('manager_rest.deployment_update.handlers'
@@ -659,11 +619,17 @@ class TestDeploymentDependencies(unittest.TestCase):
 
     def _build_mock_dependency(self,
                                dependency_creator,
-                               target_deployment=None):
-        return self.MockDependency(
+                               target_deployment=None,
+                               target_deployment_func=None):
+        mock_dependency = self.MockDependency(
             create_deployment_dependency(dependency_creator,
                                          self.mock_dep_update.deployment_id,
                                          target_deployment))
+        if target_deployment_func:
+            mock_dependency.update(
+                {'target_deployment_func': target_deployment_func})
+
+        return mock_dependency
 
     def test_does_nothing_with_empty_new_and_old_dependencies(self):
         curr_dependencies = []
@@ -695,30 +661,30 @@ class TestDeploymentDependencies(unittest.TestCase):
     def test_only_adds_new_dependencies(self):
         curr_dependencies = []
         self.mock_sm.list.return_value = curr_dependencies
-        dependency_creating_functions = {'creator_1': 'target_1'}
+        dependency_creating_functions = {'creator_1': ('target_1', 'target_1')}
         self.mock_dep_update.deployment_plan[
             INTER_DEPLOYMENT_FUNCTIONS] = dependency_creating_functions
-        self.mock_sm.get.side_effect = ['target_1', 'test_deployment_id']
+        self.mock_sm.get.side_effect = ['test_deployment_id', 'target_1']
         self.handler._handle_dependency_changes(self.mock_dep_update,
                                                 {},
                                                 dep_plan_filter_func=_true)
         put_calls = self._as_calls(
-            [self._build_mock_dependency('creator_1', 'target_1')]
+            [self._build_mock_dependency('creator_1', 'target_1', 'target_1')]
         )
         self._assert_sm_calls(put_calls=put_calls)
 
     def test_creates_new_dependencies_and_deletes_current(self):
         curr_dependencies = [self._build_mock_dependency('creator_1')]
         self.mock_sm.list.return_value = curr_dependencies
-        dependency_creating_functions = {'creator_2': 'target_1'}
+        dependency_creating_functions = {'creator_2': ('target_1', 'target_1')}
         self.mock_dep_update.deployment_plan[
             INTER_DEPLOYMENT_FUNCTIONS] = dependency_creating_functions
-        self.mock_sm.get.side_effect = ['target_1', 'test_deployment_id']
+        self.mock_sm.get.side_effect = ['test_deployment_id', 'target_1']
         self.handler._handle_dependency_changes(self.mock_dep_update,
                                                 {},
                                                 dep_plan_filter_func=_true)
         put_calls = self._as_calls(
-            [self._build_mock_dependency('creator_2', 'target_1')]
+            [self._build_mock_dependency('creator_2', 'target_1', 'target_1')]
         )
         delete_calls = self._as_calls(curr_dependencies)
         self._assert_sm_calls(put_calls=put_calls,
@@ -734,22 +700,33 @@ class TestDeploymentDependencies(unittest.TestCase):
             'creator_common2', 'target_old')
         should_be_ignored = self._build_mock_dependency(
             'ignore_me', 'doesnt_matter')
+        should_be_deleted = self._build_mock_dependency(
+            'creator_1', 'target_old')
         curr_dependencies = [
-            self._build_mock_dependency('creator_1'),
             common_dependency_updated,
             common_dependency_isnt_updated,
-            should_be_ignored
+            should_be_ignored,
+            should_be_deleted
         ]
         self.mock_sm.list.return_value = curr_dependencies
         dependency_creating_functions = {
-            'creator_2': ('target_1', None),
-            common_dependency_updated.dependency_creator: ('target_new', None),
+            'creator_2': ('target_1', 'target_1'),
+            common_dependency_updated.dependency_creator: (
+                'target_new', 'target_new'),
             common_dependency_isnt_updated.dependency_creator:
-                ('target_old', None)
+                ('target_old', 'target_old')
         }
-        self.mock_sm.get.side_effect = ['target_1', 'test_deployment_id',
-                                        'target_new', 'test_deployment_id',
-                                        'target_1', 'test_deployment_id']
+        get_dict = {
+            (models.Deployment, 'test_deployment_id'): 'test_deployment_id',
+            (models.Deployment, 'target_1'): 'target_1',
+            (models.Deployment, 'target_new'): 'target_new',
+            (models.Deployment, 'target_old'): 'target_old',
+        }
+
+        def side_effect(*args):
+            return get_dict[args]
+
+        self.mock_sm.get = MagicMock(side_effect=side_effect)
         self.mock_dep_update.deployment_plan[
             INTER_DEPLOYMENT_FUNCTIONS] = dependency_creating_functions
         self.handler._handle_dependency_changes(
@@ -758,16 +735,18 @@ class TestDeploymentDependencies(unittest.TestCase):
             dep_plan_filter_func=ignores_ignore_me)
         put_calls = self._as_calls(
             [
-                self._build_mock_dependency('creator_2', 'target_1')
+                self._build_mock_dependency(
+                    'creator_2', 'target_1', 'target_1')
             ]
         )
         update_calls = self._as_calls(
             [
                 self._build_mock_dependency(
-                    common_dependency_updated.dependency_creator, 'target_new')
+                    common_dependency_updated.dependency_creator,
+                    'target_new', 'target_new')
             ]
         )
-        delete_calls = self._as_calls([curr_dependencies[0]])
+        delete_calls = self._as_calls([should_be_deleted])
         self._assert_sm_calls(put_calls=put_calls,
                               update_calls=update_calls,
                               delete_calls=delete_calls)
@@ -788,22 +767,35 @@ class TestDeploymentDependencies(unittest.TestCase):
         curr_dependencies = [common_dependency1, common_dependency2]
         self.mock_sm.list.return_value = curr_dependencies
         dependency_creating_functions = {
-            common_dependency1.dependency_creator: 'target_1_new',
-            common_dependency2.dependency_creator: 'target_2_new'
+            common_dependency1.dependency_creator: (
+                'target_1_new', 'target_1_new'),
+            common_dependency2.dependency_creator: (
+                'target_2_new', 'target_2_new')
         }
         self.mock_dep_update.deployment_plan[
             INTER_DEPLOYMENT_FUNCTIONS] = dependency_creating_functions
-        self.mock_sm.get.side_effect = ['target_1_new', 'test_deployment_id',
-                                        'target_2_new', 'test_deployment_id']
+
+        get_dict = {
+            (models.Deployment, 'test_deployment_id'): 'test_deployment_id',
+            (models.Deployment, 'target_1_new'): 'target_1_new',
+            (models.Deployment, 'target_2_new'): 'target_2_new',
+        }
+
+        def side_effect(*args):
+            return get_dict[args]
+
+        self.mock_sm.get = MagicMock(side_effect=side_effect)
         self.handler._handle_dependency_changes(self.mock_dep_update,
                                                 {},
                                                 dep_plan_filter_func=_true)
         update_calls = self._as_calls(
             [
                 self._build_mock_dependency(
-                    common_dependency1.dependency_creator, 'target_1_new'),
+                    common_dependency1.dependency_creator,
+                    'target_1_new', 'target_1_new'),
                 self._build_mock_dependency(
-                    common_dependency2.dependency_creator, 'target_2_new')
+                    common_dependency2.dependency_creator,
+                    'target_2_new', 'target_2_new')
             ]
         )
         self._assert_sm_calls(update_calls=update_calls)
