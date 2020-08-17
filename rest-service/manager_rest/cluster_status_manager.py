@@ -728,6 +728,13 @@ def _get_service_status(service_id, service, process_manager, is_running):
 def _update_cluster_services(cluster_services, services):
     for service_type, cluster_service in cluster_services.items():
         for node_name, node in cluster_service.get('nodes', {}).items():
+            node_services = services.get(node['private_ip'], {})
+            for service in node_services.values():
+                if service.get('status') != NodeServiceStatus.ACTIVE:
+                    cluster_service['nodes'][
+                        node_name]['status'] = ServiceStatus.DEGRADED
+                    if cluster_service['status'] == ServiceStatus.HEALTHY:
+                        cluster_service['status'] = ServiceStatus.DEGRADED
             cluster_service['nodes'][node_name].update({
                 SERVICES: services.get(node['private_ip'])
             })
