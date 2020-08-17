@@ -198,7 +198,7 @@ def create_zip(source, destination, include_folder=True):
 def download_file(file_url, tmp_file):
     logger.info('Retrieving file: {0}'.format(file_url))
     response = requests.get(file_url, stream=True)
-    with open(tmp_file, "w") as f:
+    with open(tmp_file, "wb") as f:
         for chunk in response.iter_content(chunk_size=8192):
             f.write(chunk)
     return tmp_file

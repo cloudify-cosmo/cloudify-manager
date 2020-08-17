@@ -213,7 +213,10 @@ class BaseTestCase(unittest.TestCase):
             self.env.container_id,
             source=source, target=target)
         if owner:
-            BaseTestCase.env.chown(owner, target)
+            docker.execute(
+                self.env.container_id,
+                ['chown', owner, target]
+            )
         return ret_val
 
     def copy_file_from_manager(self, source, target, owner=None):
@@ -496,19 +499,15 @@ class BaseTestCase(unittest.TestCase):
         exists = None
         while not exists:
             time.sleep(0.5)
-            exists = self._does_restore_marker_file_exists()
+            exists = self._restore_marker_file_exists()
             if time.time() > deadline:
                 self.fail("Timed out waiting for the restore marker file to "
                           "be created.")
         self.logger.debug("Snapshot restore marker file created.")
         return True
 
-    def _does_restore_marker_file_exists(self):
-        ls_exit_code = self.execute_on_manager(
-            "sh -c 'ls {0} &> /dev/null; echo $?'"
-            "".format(SNAPSHOT_RESTORE_FLAG_FILE)
-        ).stdout.strip()
-        return ls_exit_code == '0'
+    def _restore_marker_file_exists(self):
+        return self.file_exists(SNAPSHOT_RESTORE_FLAG_FILE)
 
     @contextmanager
     def client_using_tenant(self, client, tenant_name):

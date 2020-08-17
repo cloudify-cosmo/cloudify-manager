@@ -17,13 +17,13 @@ import os
 import time
 import json
 import pickle
+import binascii
 
 import requests
 from collections import Counter
 
-from integration_tests.framework import utils
+from integration_tests.framework import utils, docker
 from integration_tests import AgentlessTestCase
-from integration_tests.framework import postgresql
 
 from cloudify.snapshots import STATES
 from cloudify.models_states import AgentState
@@ -44,6 +44,19 @@ class TestSnapshot(AgentlessTestCase):
         super(TestSnapshot, self).setUp()
         self._save_security_config()
         self.addCleanup(self._restore_security_config)
+
+    def _select(self, query):
+        """Run a SELECT query on the manager.
+
+        Note that this will not parse the results, so the calling
+        functions must deal with strings as returned by psql
+        (eg. false is the string 'f', NULL is the empty string, etc.)
+        """
+        out = docker.execute(self.env.container_id, [
+            'sudo', '-upostgres', 'psql', '-t', '-F,', 'cloudify_db',
+            '-c', '\\copy ({0}) to stdout with csv'.format(query)
+        ])
+        return [line.split(',') for line in out.split('\n') if line.strip()]
 
     def test_4_4_snapshot_restore_with_bad_plugin_wgn_file(self):
         snapshot_path = \
@@ -154,24 +167,22 @@ class TestSnapshot(AgentlessTestCase):
                          len(self.client.blueprints.list(_include=['id'])))
 
     def test_v_4_5_5_restore_snapshot_with_executions(self):
-        """
-        Validate the restore of executions
-        """
         snapshot_path = self._get_snapshot('snap_4.5.5_with_executions.zip')
         self._upload_and_restore_snapshot(snapshot_path)
-        result = postgresql.run_query("SELECT workflow_id, token, "
-                                      "blueprint_id FROM executions;")
+        result = self._select(
+            'SELECT workflow_id, token, blueprint_id FROM executions '
+            'ORDER BY ended_at')
 
         # The executions from the snapshot don't have a token or a blueprint_id
-        for execution in result['all'][:3]:
-            self.assertIsNone(execution[1])
-            self.assertIsNone(execution[2])
+        for workflow_id, token, blueprint_id in result[:3]:
+            assert not token
+            assert not blueprint_id
 
         # The execution of the restore snapshot has a token
-        token_4 = result['all'][5][1]
-        self.assertIsNotNone(token_4)
-        self.assertGreater(len(token_4), 10)
-        self.assertEqual(result['all'][5][0], 'restore_snapshot')
+        workflow_id, token, _ = result[-1]
+        assert workflow_id == 'restore_snapshot'
+        assert token
+        assert len(token) > 10
 
     def test_v_4_6_0_restore_snapshot_and_restart_services(self):
         snapshot_path = self._get_snapshot('snap_4_6_0_hello_world.zip')
@@ -185,13 +196,13 @@ class TestSnapshot(AgentlessTestCase):
             self._get_snapshot('snap_5.0.5_with_updated_deployment.zip')
         self._upload_and_restore_snapshot(snapshot_path)
 
-        managers = postgresql.run_query("SELECT node_id FROM managers;")['all']
-        self.assertGreater(len(managers[0][0]), 10)
+        managers = self._select('SELECT id, hostname FROM managers')
+        assert managers[0][1]
 
-        brokers = postgresql.run_query("SELECT is_external, node_id "
-                                       "FROM rabbitmq_brokers;")['all']
-        self.assertFalse(brokers[0][0])
-        self.assertGreater(len(brokers[0][1]), 10)
+        brokers = self._select(
+            'SELECT is_external, name FROM rabbitmq_brokers')
+        assert brokers[0][0] == 'f'
+        assert brokers[0][1]
 
     def test_v_5_0_5_restore_snapshot_with_executions(self):
         """
@@ -200,25 +211,22 @@ class TestSnapshot(AgentlessTestCase):
         """
         snapshot_path = self._get_snapshot('snap_5.0.5_with_executions.zip')
         self._upload_and_restore_snapshot(snapshot_path)
-        deployments = postgresql.run_query(
-            "SELECT id, runtime_only_evaluation FROM deployments;"
-        )['all']
-        self.assertEqual(set(deployments[0]), {'hello-world', False})
+        deployments = self._select(
+            'SELECT id, runtime_only_evaluation FROM deployments')
+        assert deployments[0] == ['hello-world', 'f']
 
-        executions = postgresql.run_query("SELECT workflow_id, blueprint_id "
-                                          "FROM executions;")['all']
+        executions = self._select(
+            "SELECT workflow_id FROM executions "
+            "WHERE blueprint_id = 'hello-world'")
         # executions of `create_deployment_environment` and `install` have
         # blueprint ids
-        self.assertEqual(executions[0][0], 'install')
-        self.assertEqual(executions[0][1], 'hello-world')
-        self.assertEqual(executions[2][0], 'create_deployment_environment')
-        self.assertEqual(executions[2][1], 'hello-world')
+        assert set(line[0] for line in executions) \
+            == {'install', 'create_deployment_environment'}
 
         # index added in 5.0.5. with only one instance per node, all indexes=1
-        instances = postgresql.run_query("SELECT index "
-                                         "FROM node_instances;")['all']
-        for instance in instances:
-            self.assertEqual(instance[0], 1)
+        instances = self._select('SELECT index FROM node_instances')
+        for (instance,) in instances:
+            assert instance == '1'
 
     def test_v_5_0_5_restore_snapshot_with_updated_deployment(self):
         """
@@ -229,32 +237,39 @@ class TestSnapshot(AgentlessTestCase):
             self._get_snapshot('snap_5.0.5_with_updated_deployment.zip')
         self._upload_and_restore_snapshot(snapshot_path)
 
-        dep_updates = postgresql.run_query(
+        dep_updates = self._select(
             "SELECT central_plugins_to_install, central_plugins_to_uninstall,"
-            "runtime_only_evaluation FROM deployment_updates;"
-        )['all']
+            "runtime_only_evaluation FROM deployment_updates"
+        )
 
-        plugins_to_install = pickle.loads(dep_updates[0][0])
-        plugins_to_uninstall = pickle.loads(dep_updates[0][1])
+        def _unpickle(data):
+            """Load a pickle from a DB-selected string"""
+            return pickle.loads(binascii.unhexlify(data[2:]))
+
+        plugins_to_install = _unpickle(dep_updates[0][0])
+        plugins_to_uninstall = _unpickle(dep_updates[0][1])
         runtime_only_evaluation = dep_updates[0][2]
         for plug in plugins_to_install:
-            self.assertEqual(plug['package_name'], 'cloudify-utilities-plugin')
-            self.assertEqual(plug['package_version'], '1.14.0')
-        self.assertListEqual(plugins_to_uninstall, [])
-        self.assertFalse(runtime_only_evaluation)
+            assert plug['package_name'] == 'cloudify-utilities-plugin'
+            assert plug['package_version'] == '1.14.0'
+        assert plugins_to_uninstall == []
+        assert runtime_only_evaluation == 'f'
 
     def test_v_5_0_5_restore_snapshot_and_inter_deployment_dependencies(self):
         snapshot_path = self._get_snapshot(
             'snap_5.0.5_with_component_openstack.zip')
         self._upload_and_restore_snapshot(snapshot_path)
 
-        inter_deployment_dependencies = postgresql.run_query(
-            "SELECT _source_deployment, _target_deployment,  "
-            "dependency_creator FROM inter_deployment_dependencies;"
-        )['all']
-
+        inter_deployment_dependencies = self._select(
+            "SELECT _source_deployment, _target_deployment, "
+            "dependency_creator FROM inter_deployment_dependencies"
+        )
+        inter_deployment_dependencies = {
+            (int(source_id), int(target_id), creator)
+            for source_id, target_id, creator in inter_deployment_dependencies
+        }
         assert (self._openstack_inter_deployment_dependencies()).issubset(
-            set(inter_deployment_dependencies))
+            inter_deployment_dependencies)
 
         self._assert_component_listed(inter_deployment_dependencies)
 
@@ -268,8 +283,8 @@ class TestSnapshot(AgentlessTestCase):
     @staticmethod
     def _openstack_inter_deployment_dependencies():
         dependency_creator_node = 'nodes.jboss.operations.cloudify.' \
-                                       'interfaces.lifecycle.{0}.inputs.' \
-                                       'fabric_env.{1}.get_capability'
+                                  'interfaces.lifecycle.{0}.inputs.' \
+                                  'fabric_env.{1}.get_capability'
         dependency_creator_input = 'nodes.jboss.operations.configure.inputs.' \
                                    'fabric_env.{0}.get_capability'
 
@@ -294,7 +309,7 @@ class TestSnapshot(AgentlessTestCase):
         }
 
     def test_snapshot_status_returns_correct_status(self):
-        self._assert_restore_marker_file_does_not_exist()
+        assert not self._restore_marker_file_exists()
         self._assert_snapshot_restore_status(is_running=False)
 
         snapshot_id = "test_snapshot_id"
@@ -303,19 +318,15 @@ class TestSnapshot(AgentlessTestCase):
         self.wait_for_execution_to_end(snapshot_create_execution)
 
         snapshot_restore_execution_id = self.client.snapshots.restore(
-            snapshot_id).id
+            snapshot_id,).id
         self.client.maintenance_mode.activate()
         self._wait_for_restore_marker_file_to_be_created()
         self._assert_snapshot_restore_status(is_running=True)
         self.wait_for_snapshot_restore_to_end(snapshot_restore_execution_id)
         self.client.maintenance_mode.deactivate()
 
-        self._assert_restore_marker_file_does_not_exist()
+        assert not self._restore_marker_file_exists()
         self._assert_snapshot_restore_status(is_running=False)
-
-    def _assert_restore_marker_file_does_not_exist(self):
-        marker_file_exists = self._does_restore_marker_file_exists()
-        self.assertFalse(marker_file_exists)
 
     def _assert_snapshot_restore_status(self, is_running):
         status_msg = STATES.RUNNING if is_running else STATES.NOT_RUNNING
@@ -349,10 +360,9 @@ class TestSnapshot(AgentlessTestCase):
         assert 'test_mail' in secret_file.value
 
         # Validate the value is encrypted in the DB
-        result = postgresql.run_query("SELECT value "
-                                      "FROM secrets "
-                                      "WHERE id='sec1';")
-        secret_encrypted = result['all'][0][0]
+        result = self._select(
+            "SELECT value FROM secrets WHERE id='sec1';")
+        secret_encrypted = result[0][0]
         assert secret_encrypted != 'top_secret'
 
         # The secrets values are not hidden
@@ -480,7 +490,8 @@ class TestSnapshot(AgentlessTestCase):
         """Upload the snapshot and launch the restore workflow
         """
         snapshot_id = snapshot_id or self.SNAPSHOT_ID
-        rest_client = utils.create_rest_client(tenant=tenant_name)
+        rest_client = utils.create_rest_client(
+            tenant=tenant_name, host=self.env.container_ip)
         self._upload_and_validate_snapshot(snapshot_path,
                                            snapshot_id,
                                            rest_client)
@@ -552,10 +563,10 @@ class TestSnapshot(AgentlessTestCase):
           - install    at 2050-01-01 12:00:00+00:00
           - uninstall  at 2050-01-02 12:00:00+00:00
         """
-        SNAPSHOTS_DIR = os.path.join(
+        snapshots_dir = os.path.join(
             os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
             'resources', 'snapshots')
-        snapshot_path = os.path.join(SNAPSHOTS_DIR,
+        snapshot_path = os.path.join(snapshots_dir,
                                      'snap_with_scheduled_execs_20200310.zip')
         self._upload_and_restore_snapshot(snapshot_path)
 
