@@ -318,7 +318,7 @@ class TestSnapshot(AgentlessTestCase):
         self.wait_for_execution_to_end(snapshot_create_execution)
 
         snapshot_restore_execution_id = self.client.snapshots.restore(
-            snapshot_id,).id
+            snapshot_id).id
         self.client.maintenance_mode.activate()
         self._wait_for_restore_marker_file_to_be_created()
         self._assert_snapshot_restore_status(is_running=True)
