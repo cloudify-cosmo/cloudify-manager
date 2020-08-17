@@ -858,9 +858,9 @@ class SnapshotRestore(object):
                 ctx.logger.info('Removing failed plugin footprints')
                 client.plugins.delete(failed_plugin['id'], force=True)
             except Exception as ex:
-                ctx.logger.warning('Failed to delete plugin footprints {0} '
-                                   'with error: {1}. Proceeding...'
-                                   .format(failed_plugin, ex.message))
+                ctx.logger.warning('Failed to delete plugin footprints %s '
+                                   'with error: %s. Proceeding...',
+                                   failed_plugin, ex)
 
     @staticmethod
     def __log_message_for_plugin_restore(failed_plugins):
@@ -893,11 +893,11 @@ class SnapshotRestore(object):
                     except Exception as ex:
                         if self._ignore_plugin_failure:
                             ctx.logger.warning(
-                                'Failed to restore plugin: {0}, '
+                                'Failed to restore plugin: %s, '
                                 'ignore-plugin-failure flag '
-                                'used. Proceeding...'.format(plugin))
-                            ctx.logger.debug('Restore plugin failure error: '
-                                             '{0}'.format(ex))
+                                'used. Proceeding...', plugin)
+                            ctx.logger.debug(
+                                'Restore plugin failure error: %s', ex)
                             failed_plugins.append(plugin)
                         else:
                             raise ex
