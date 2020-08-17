@@ -13,7 +13,7 @@ Create Date: 2020-03-30 06:27:26.747213
 
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy import orm
+from sqlalchemy import orm, sql
 from manager_rest import storage
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.declarative import declarative_base
@@ -277,7 +277,7 @@ def _create_inter_deployment_dependencies_table():
                   sa.Column('keep_old_deployment_dependencies',
                             sa.Boolean(),
                             nullable=False,
-                            default=False))
+                            server_default=sql.expression.true()))
 
 
 def _drop_inter_deployment_dependencies_table():
