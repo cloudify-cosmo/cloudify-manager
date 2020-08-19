@@ -236,11 +236,6 @@ class SnapshotsIdRestore(SecuredResource):
             'no_reboot',
             request_dict.get('no_reboot', False)
         )
-        ignore_plugin_failure = \
-            rest_utils.verify_and_convert_bool(
-                'ignore_plugin_failure',
-                request_dict.get('ignore_plugin_failure', False)
-            )
         if no_reboot and not restore_certificates:
             raise manager_exceptions.BadParametersError(
                 '`no_reboot` is only relevant when `restore_certificates` is '
@@ -255,7 +250,6 @@ class SnapshotsIdRestore(SecuredResource):
             True,
             timeout,
             restore_certificates,
-            no_reboot,
-            ignore_plugin_failure
+            no_reboot
         )
         return execution, 200
