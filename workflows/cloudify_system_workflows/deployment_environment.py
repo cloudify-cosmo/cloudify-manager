@@ -26,10 +26,7 @@ from cloudify.workflows import tasks as workflow_tasks
 from cloudify.manager import get_rest_client
 
 
-def generate_create_dep_tasks_graph(ctx,
-                                    deployment_plugins_to_install,
-                                    workflow_plugins_to_install,
-                                    policy_configuration=None):
+def generate_create_dep_tasks_graph(ctx):
     graph = ctx.graph_mode()
     sequence = graph.sequence()
     sequence.add(
@@ -43,15 +40,8 @@ def generate_create_dep_tasks_graph(ctx,
 
 
 @workflow
-def create(ctx,
-           deployment_plugins_to_install,
-           workflow_plugins_to_install,
-           policy_configuration, **_):
-    graph = generate_create_dep_tasks_graph(
-        ctx,
-        deployment_plugins_to_install,
-        workflow_plugins_to_install,
-        policy_configuration)
+def create(ctx, **_):
+    graph = generate_create_dep_tasks_graph(ctx)
     return graph.execute()
 
 
@@ -143,9 +133,9 @@ def _create_deployment_workdir(deployment_id, logger, tenant):
             dir_content = os.listdir(deployment_workdir)
             # if dir exists and empty then no problem
             if dir_content:
-                logger.error('Failed creating directory {0}. '
-                             'Current directory content: {1}'.format(
-                                deployment_workdir, dir_content))
+                logger.error('Failed creating directory %s. '
+                             'Current directory content: %s',
+                             deployment_workdir, dir_content)
                 raise
             else:
                 logger.warn('Using existing empty deployment directory '
@@ -161,10 +151,9 @@ def _delete_deployment_workdir(ctx):
     try:
         shutil.rmtree(deployment_workdir)
     except os.error:
-        ctx.logger.warning('Failed deleting directory {0}. '
-                           'Current directory content: {1}'.format(
-                                deployment_workdir,
-                                os.listdir(deployment_workdir)), exc_info=True)
+        ctx.logger.warning(
+            'Failed deleting directory %s. Current directory content: %s',
+            deployment_workdir, os.listdir(deployment_workdir), exc_info=True)
 
 
 def _workdir(deployment_id, tenant):
