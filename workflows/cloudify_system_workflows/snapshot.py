@@ -47,7 +47,6 @@ def restore(snapshot_id,
             no_reboot,
             premium_enabled,
             user_is_bootstrap_admin,
-            ignore_plugin_failure,
             **kwargs):
     ctx.logger.info('Restoring snapshot `{0}`'.format(snapshot_id))
     ctx.logger.debug('Restoring snapshot config: {0}'.format(config))
@@ -62,7 +61,6 @@ def restore(snapshot_id,
         user_is_bootstrap_admin,
         restore_certificates,
         no_reboot,
-        ignore_plugin_failure
     )
     restore_snapshot.restore()
 
