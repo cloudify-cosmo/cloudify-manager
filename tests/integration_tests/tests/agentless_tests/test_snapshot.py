@@ -58,62 +58,22 @@ class TestSnapshot(AgentlessTestCase):
         ])
         return [line.split(',') for line in out.split('\n') if line.strip()]
 
-    def test_4_4_snapshot_restore_with_bad_plugin_wgn_file(self):
+    def test_4_4_snapshot_restore_with_bad_plugin(self):
+        """A bad plugin is still restored with a snapshot
+
+        It will only be installed on first use or on demand. In the
+        snapshot-restore itself, we don't care.
+        """
         snapshot_path = \
             self._get_snapshot('snap_4_4_0_bad_plugin_wgn_file.zip')
         self._upload_and_restore_snapshot(
             snapshot_path,
             desired_execution_status=Execution.TERMINATED,
-            error_execution_status=Execution.FAILED,
-            ignore_plugin_failure=True)
+            error_execution_status=Execution.FAILED)
 
         # Now make sure all the resources really exist in the DB
         # Assert snapshot restored
-        self._assert_4_4_0_snapshot_restored_bad_plugin()
-
-    def test_4_4_snapshot_restore_with_bad_plugin_no_directory(self):
-        snapshot_path = \
-            self._get_snapshot('snap_4_4_0_bad_plugin_no_directory.zip')
-        self._upload_and_restore_snapshot(
-            snapshot_path,
-            desired_execution_status=Execution.TERMINATED,
-            error_execution_status=Execution.FAILED,
-            ignore_plugin_failure=True)
-
-        # Now make sure all the resources really exist in the DB
-        # Assert snapshot restored
-        self._assert_4_4_0_snapshot_restored_bad_plugin()
-
-    def test_4_4_snapshot_restore_with_bad_plugin_with_deps(self):
-        snapshot_path = self._get_snapshot(
-            'snap_4_4_0_bad_plugin_no_directory_with_deps.zip')
-        self._upload_and_restore_snapshot(
-            snapshot_path,
-            desired_execution_status=Execution.TERMINATED,
-            error_execution_status=Execution.FAILED,
-            ignore_plugin_failure=True)
-
-        # Now make sure all the resources really exist in the DB
-        # Assert snapshot restored
-        self._assert_4_4_0_snapshot_restored_bad_plugin(
-            number_of_deployments=1)
-
-    def test_4_4_snapshot_restore_with_bad_plugin_fails(self):
-        snapshot_path = \
-            self._get_snapshot('snap_4_4_0_bad_plugin_no_directory.zip')
-        self._upload_and_restore_snapshot(
-            snapshot_path,
-            desired_execution_status=Execution.FAILED,
-            error_execution_status=Execution.CANCELLED)
-
-    def _assert_4_4_0_snapshot_restored_bad_plugin(
-            self,
-            tenant_name=DEFAULT_TENANT_NAME,
-            number_of_deployments=0):
-        self._assert_4_4_0_plugins_restored_bad_plugin(
-            tenant_name=tenant_name,
-            number_of_deployments=number_of_deployments
-        )
+        self._assert_4_4_0_plugins_restored_bad_plugin()
 
     def test_v_4_3_restore_snapshot_with_secrets(self):
         """
@@ -412,14 +372,10 @@ class TestSnapshot(AgentlessTestCase):
             self,
             tenant_name=DEFAULT_TENANT_NAME,
             number_of_deployments=0):
-        """
-        Validate only 7 of the 8 plugins in the snapshot are being restored.
-        Also, validating all deployments exist
-        """
         with self.client_using_tenant(self.client, tenant_name):
             plugins = self.client.plugins.list()
             deployments = self.client.deployments.list()
-        self.assertEqual(len(plugins), 7)
+        self.assertEqual(len(plugins), 8)
         self.assertEqual(len(deployments), number_of_deployments)
         package_names = [plugin.package_name for plugin in plugins]
         package_name_counts = Counter(package_names)
@@ -496,10 +452,10 @@ class TestSnapshot(AgentlessTestCase):
                                            snapshot_id,
                                            rest_client)
         self.logger.debug('Restoring snapshot...')
+        rest_client.maintenance_mode.activate()
         execution = rest_client.snapshots.restore(
             snapshot_id,
             ignore_plugin_failure=ignore_plugin_failure)
-        rest_client.maintenance_mode.activate()
         self.wait_for_snapshot_restore_to_end(execution.id, client=rest_client)
         rest_client.maintenance_mode.deactivate()
         execution = self._wait_for_restore_execution_to_end(
