@@ -133,7 +133,8 @@ class Agents(SecuredResource):
         new_manager_ca_cert, new_broker_ca_cert = None, None
         certificates = sm.list(models.Certificate)
         for cert in certificates:
-            if 'manager' in cert.name and manager_ca_cert:
+            if any(prefix in cert.name for prefix in ('manager', 'cloudify')) \
+                    and manager_ca_cert:
                 new_manager_ca_cert = manager_ca_cert + '\n' + cert.value
 
             if 'rabbitmq' in cert.name and broker_ca_cert:
