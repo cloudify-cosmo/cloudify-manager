@@ -131,14 +131,17 @@ class Agents(SecuredResource):
             return broker_ca_cert, manager_ca_cert
 
         new_manager_ca_cert, new_broker_ca_cert = None, None
-        certificates = sm.list(models.Certificate)
-        for cert in certificates:
-            if any(prefix in cert.name for prefix in ('manager', 'cloudify')) \
-                    and manager_ca_cert:
-                new_manager_ca_cert = manager_ca_cert + '\n' + cert.value
+        if manager_ca_cert:
+            manager_certs = {manager_ca_cert}
+            manager_certs.update({mgr.ca_cert_content for mgr
+                                  in sm.list(models.Manager)})
+            new_manager_ca_cert = '\n'.join(manager_certs)
 
-            if 'rabbitmq' in cert.name and broker_ca_cert:
-                new_broker_ca_cert = broker_ca_cert + '\n' + cert.value
+        if broker_ca_cert:
+            broker_certs = {broker_ca_cert}
+            broker_certs.update({broker.ca_cert_content for broker
+                                 in sm.list(models.RabbitMQBroker)})
+            new_broker_ca_cert = '\n'.join(broker_certs)
 
         return new_broker_ca_cert, new_manager_ca_cert
 
