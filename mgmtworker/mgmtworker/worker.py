@@ -17,6 +17,7 @@
 import os
 import sys
 import json
+import time
 import shutil
 import logging
 import argparse
@@ -263,9 +264,14 @@ def main():
     setup_agent_logger('mgmtworker')
     agent_worker.logger = logger
 
-    prepare_broker_config()
-    worker = make_amqp_worker(args)
-    worker.consume()
+    while True:
+        prepare_broker_config()
+        worker = make_amqp_worker(args)
+        try:
+            worker.consume()
+        except Exception:
+            logger.exception('Error while reading from rabbitmq')
+        time.sleep(1)
 
 
 if __name__ == '__main__':
