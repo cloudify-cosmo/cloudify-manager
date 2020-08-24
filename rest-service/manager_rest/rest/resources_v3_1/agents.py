@@ -64,10 +64,12 @@ class Agents(SecuredResource):
     @authorize('agent_replace_certs')
     def patch(self):
         """Replace CA certificates on running agents."""
-        data = request.json
-        broker_ca_cert = data.get('broker_ca_cert')
-        manager_ca_cert = data.get('manager_ca_cert')
-        bundle = data.get('bundle')
+        request_dict = get_json_and_verify_params({'bundle': {'type': bool}})
+        # broker_ca_cert or manager_ca_cert can be None so no need to
+        # specify their type
+        broker_ca_cert = request_dict.get('broker_ca_cert')
+        manager_ca_cert = request_dict.get('manager_ca_cert')
+        bundle = request_dict.get('bundle')
         sm = get_storage_manager()
         num_of_updated_agents = 0
 
@@ -130,6 +132,7 @@ class Agents(SecuredResource):
         if not bundle:
             return broker_ca_cert, manager_ca_cert
 
+        # Creating the CA bundle
         new_manager_ca_cert, new_broker_ca_cert = None, None
         if manager_ca_cert:
             manager_certs = {manager_ca_cert}
