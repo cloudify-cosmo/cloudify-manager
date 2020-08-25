@@ -144,7 +144,8 @@ class ResourceManager(object):
                 plugin_update.state = PluginsUpdateStates.FAILED
                 self.sm.update(plugin_update)
 
-        if execution.workflow_id == 'delete_deployment_environment':
+        if execution.workflow_id == 'delete_deployment_environment' and \
+                status == ExecutionState.TERMINATED:
             self.sm.delete(execution.deployment)
 
         return res
