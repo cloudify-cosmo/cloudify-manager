@@ -65,7 +65,6 @@ def delete(ctx,
         ctx.send_event(
             "Deleting management workers' logs for deployment")
         _delete_logs(ctx)
-    _send_request_to_delete_deployment_from_db(ctx)
 
 
 def _send_request_to_delete_deployment_from_db(ctx):
