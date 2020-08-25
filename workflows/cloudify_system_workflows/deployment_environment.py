@@ -22,8 +22,6 @@ from retrying import retry
 
 from cloudify.decorators import workflow
 from cloudify.workflows import workflow_context
-from cloudify.workflows import tasks as workflow_tasks
-from cloudify.manager import get_rest_client
 
 
 @workflow
@@ -43,13 +41,6 @@ def delete(ctx, delete_logs, **_):
         ctx.logger.info("Deleting management workers' logs for deployment %s",
                         ctx.deployment.id)
         _delete_logs(ctx)
-
-
-def _send_request_to_delete_deployment_from_db(ctx):
-    client = get_rest_client()
-    client.deployments.delete(deployment_id=ctx.deployment.id,
-                              force=True,
-                              delete_db_mode=True)
 
 
 def _delete_logs(ctx):
@@ -79,14 +70,6 @@ def _delete_logs(ctx):
                 ctx.logger.exception(
                     'Failed removing rotated log file {0}.'.format(
                         rotated_log_file_path), exc_info=True)
-
-
-def _ignore_task_on_fail_and_send_event(task, ctx):
-    def failure_handler(tsk):
-        ctx.send_event('Ignoring task {0} failure'.format(tsk.name))
-        return workflow_tasks.HandlerResult.ignore()
-
-    task.on_failure = failure_handler
 
 
 def _retry_if_file_already_exists(exception):
