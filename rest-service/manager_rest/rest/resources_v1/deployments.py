@@ -144,7 +144,7 @@ class DeploymentsId(SecuredResource):
         ])
 
         bypass_maintenance = is_bypass_maintenance_mode()
-        deployment = get_resource_manager().delete_deployment(
+        deployment = get_resource_manager().delete_deployment_environment(
             deployment_id,
             bypass_maintenance,
             args.force,

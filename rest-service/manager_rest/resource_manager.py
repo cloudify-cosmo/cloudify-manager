@@ -147,14 +147,7 @@ class ResourceManager(object):
 
         if execution.workflow_id == 'delete_deployment_environment' and \
                 status == ExecutionState.TERMINATED:
-            self.sm.delete(execution.deployment)
-            deployment_folder = os.path.join(
-                config.instance.file_server_root,
-                FILE_SERVER_DEPLOYMENTS_FOLDER,
-                utils.current_tenant.name,
-                execution.deployment.id)
-            if os.path.exists(deployment_folder):
-                shutil.rmtree(deployment_folder)
+            self.delete_deployment(execution.deployment)
 
         return res
 
@@ -468,12 +461,14 @@ class ResourceManager(object):
 
         return self.sm.delete(blueprint)
 
-    def delete_deployment(self,
-                          deployment_id,
-                          bypass_maintenance=None,
-                          force=False,
-                          delete_db_mode=False,
-                          delete_logs=False):
+    def delete_deployment_environment(self, deployment_id,
+                                      bypass_maintenance=False, force=False,
+                                      delete_logs=False):
+        """Schedule deployment for deletion - delete environment.
+
+        Do validations and send the delete-dep-env workflow. The deployment
+        will be really actually deleted once that finishes.
+        """
         # Verify deployment exists.
         deployment = self.sm.get(models.Deployment, deployment_id)
 
@@ -509,7 +504,7 @@ class ResourceManager(object):
                     )
                 )
 
-        if not delete_db_mode and self._any_running_executions(executions):
+        if self._any_running_executions(executions):
             raise manager_exceptions.DependentExistsError(
                 "Can't delete deployment {0} - There are running or queued "
                 "executions for this deployment. Running executions ids: {1}"
@@ -538,29 +533,48 @@ class ResourceManager(object):
                                      if node.state not in
                                      ('uninitialized', 'deleted')])))
 
-        # Start delete_deployment_env workflow
-        if not delete_db_mode:
-            dep = self.sm.get(models.Deployment, deployment_id)
-            self._delete_deployment_environment(deployment,
-                                                bypass_maintenance,
-                                                delete_logs)
-            return dep
+        dep = self.sm.get(models.Deployment, deployment_id)
 
-        # Delete deployment data  DB (should only happen AFTER the workflow
-        # finished successfully, hence the delete_db_mode flag)
-        else:
-            # check for external targets
-            deployment_dependencies = self.sm.list(
-                models.InterDeploymentDependencies,
-                filters={'source_deployment': deployment})
-            external_targets = set(
-                json.dumps(dependency.external_target) for dependency in
-                deployment_dependencies if dependency.external_target)
+        deployment_env_deletion_task_name = \
+            'cloudify_system_workflows.deployment_environment.delete'
+        self._execute_system_workflow(
+            wf_id='delete_deployment_environment',
+            task_mapping=deployment_env_deletion_task_name,
+            deployment=deployment,
+            bypass_maintenance=bypass_maintenance,
+            verify_no_executions=False,
+            execution_parameters={
+                'delete_logs': delete_logs
+            })
+        workflow_executor.delete_source_plugins(deployment.id)
 
-            if external_targets:
-                self._clean_dependencies_from_external_targets(
-                    deployment, external_targets)
-            return self.sm.delete(deployment)
+        return dep
+
+    def delete_deployment(self, deployment):
+        """Delete the deployment.
+
+        This is run when delete-dep-env finishes.
+        """
+        # check for external targets
+        deployment_dependencies = self.sm.list(
+            models.InterDeploymentDependencies,
+            filters={'source_deployment': deployment})
+        external_targets = set(
+            json.dumps(dependency.external_target) for dependency in
+            deployment_dependencies if dependency.external_target)
+        if external_targets:
+            self._clean_dependencies_from_external_targets(
+                deployment, external_targets)
+
+        deployment_folder = os.path.join(
+            config.instance.file_server_root,
+            FILE_SERVER_DEPLOYMENTS_FOLDER,
+            utils.current_tenant.name,
+            deployment.id)
+        if os.path.exists(deployment_folder):
+            shutil.rmtree(deployment_folder)
+
+        self.sm.delete(deployment)
 
     def _clean_dependencies_from_external_targets(self,
                                                   deployment,
@@ -1462,9 +1476,7 @@ class ResourceManager(object):
                                                 deployment_plan,
                                                 bypass_maintenance)
         except manager_exceptions.ExistingRunningExecutionError as e:
-            self.delete_deployment(deployment_id=deployment_id,
-                                   force=True,
-                                   delete_db_mode=True)
+            self.delete_deployment(new_deployment)
             raise e
 
         return new_deployment
@@ -2064,31 +2076,6 @@ class ResourceManager(object):
                 }
             }
         )
-
-    def _delete_deployment_environment(self,
-                                       deployment,
-                                       bypass_maintenance,
-                                       delete_logs):
-        blueprint = self.sm.get(models.Blueprint, deployment.blueprint_id)
-        wf_id = 'delete_deployment_environment'
-        deployment_env_deletion_task_name = \
-            'cloudify_system_workflows.deployment_environment.delete'
-
-        self._execute_system_workflow(
-            wf_id=wf_id,
-            task_mapping=deployment_env_deletion_task_name,
-            deployment=deployment,
-            bypass_maintenance=bypass_maintenance,
-            update_execution_status=False,
-            verify_no_executions=False,
-            execution_parameters={
-                'deployment_plugins_to_uninstall': blueprint.plan[
-                    constants.DEPLOYMENT_PLUGINS_TO_INSTALL],
-                'workflow_plugins_to_uninstall': blueprint.plan[
-                    constants.WORKFLOW_PLUGINS_TO_INSTALL],
-                'delete_logs': delete_logs
-            })
-        workflow_executor.delete_source_plugins(deployment.id)
 
     def _check_for_active_executions(self, deployment_id, force,
                                      queue, schedule):
