@@ -26,44 +26,22 @@ from cloudify.workflows import tasks as workflow_tasks
 from cloudify.manager import get_rest_client
 
 
-def generate_create_dep_tasks_graph(ctx):
-    graph = ctx.graph_mode()
-    sequence = graph.sequence()
-    sequence.add(
-        ctx.send_event('Creating deployment work directory'),
-        ctx.local_task(_create_deployment_workdir,
-                       kwargs={'deployment_id': ctx.deployment.id,
-                               'tenant': ctx.tenant_name,
-                               'logger': ctx.logger}))
-
-    return graph
-
-
 @workflow
 def create(ctx, **_):
-    graph = generate_create_dep_tasks_graph(ctx)
-    return graph.execute()
+    ctx.logger.info('Creating deployment work directory')
+    _create_deployment_workdir(
+        deployment_id=ctx.deployment.id,
+        tenant=ctx.tenant_name,
+        logger=ctx.logger)
 
 
 @workflow
-def delete(ctx,
-           deployment_plugins_to_uninstall,
-           workflow_plugins_to_uninstall,
-           delete_logs,
-           **_):
-    graph = ctx.graph_mode()
-    sequence = graph.sequence()
-
-    sequence.add(
-        ctx.send_event(
-            'Deleting deployment [{}] environment'.format(
-                ctx.deployment.id)))
-
-    graph.execute()
+def delete(ctx, delete_logs, **_):
+    ctx.logger.info('Deleting deployment environment: %s', ctx.deployment.id)
     _delete_deployment_workdir(ctx)
     if delete_logs:
-        ctx.send_event(
-            "Deleting management workers' logs for deployment")
+        ctx.logger.info("Deleting management workers' logs for deployment %s",
+                        ctx.deployment.id)
         _delete_logs(ctx)
 
 
