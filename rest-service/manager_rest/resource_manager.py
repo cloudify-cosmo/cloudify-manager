@@ -42,7 +42,8 @@ from dsl_parser.constants import INTER_DEPLOYMENT_FUNCTIONS
 from manager_rest import premium_enabled
 from manager_rest.constants import (DEFAULT_TENANT_NAME,
                                     FILE_SERVER_BLUEPRINTS_FOLDER,
-                                    FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER)
+                                    FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
+                                    FILE_SERVER_DEPLOYMENTS_FOLDER)
 from manager_rest.dsl_functions import get_secret_method
 from manager_rest.utils import (send_event,
                                 is_create_global_permitted,
@@ -147,6 +148,13 @@ class ResourceManager(object):
         if execution.workflow_id == 'delete_deployment_environment' and \
                 status == ExecutionState.TERMINATED:
             self.sm.delete(execution.deployment)
+            deployment_folder = os.path.join(
+                config.instance.file_server_root,
+                FILE_SERVER_DEPLOYMENTS_FOLDER,
+                utils.current_tenant.name,
+                execution.deployment.id)
+            if os.path.exists(deployment_folder):
+                shutil.rmtree(deployment_folder)
 
         return res
 
