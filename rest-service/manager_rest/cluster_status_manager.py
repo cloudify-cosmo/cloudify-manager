@@ -625,6 +625,14 @@ def _get_service_details(node_tuples):
     if nodes_not_available:
         remote_services = _get_service_details_remotely(nodes_not_available)
         services.update(remote_services)
+    for node_services in services.values():
+        # Cluster nodes will have postgres disabled so we should ignore it as
+        # patroni will be running it directly.
+        if (
+            "Patroni HA Template" in node_services
+            and "PostgreSQL 9.5 database server" in node_services
+        ):
+            node_services.pop("PostgreSQL 9.5 database server")
     return services
 
 
