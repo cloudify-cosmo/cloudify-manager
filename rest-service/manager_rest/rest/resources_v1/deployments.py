@@ -14,18 +14,13 @@
 #  * limitations under the License.
 #
 
-import os
-import shutil
-
 from flask_restful_swagger import swagger
 from flask_restful.reqparse import Argument
 from flask_restful.inputs import boolean
 
-from manager_rest import config, utils
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.maintenance import is_bypass_maintenance_mode
-from manager_rest.constants import FILE_SERVER_DEPLOYMENTS_FOLDER
 from manager_rest.dsl_functions import evaluate_deployment_outputs
 from manager_rest.rest import (requests_schema,
                                responses)
@@ -142,35 +137,19 @@ class DeploymentsId(SecuredResource):
     @authorize('deployment_delete')
     @marshal_with(models.Deployment)
     def delete(self, deployment_id, **kwargs):
-        """
-        Delete deployment by id
-        """
-        args = get_args_and_verify_arguments(
-            [Argument('force', type=boolean,
-                      default=False),
-             Argument('delete_db_mode', type=boolean,
-                      default=False),
-             Argument('delete_logs', type=boolean,
-                      default=False)]
-        )
+        """Delete deployment by id"""
+        args = get_args_and_verify_arguments([
+            Argument('force', type=boolean, default=False),
+            Argument('delete_logs', type=boolean, default=False)
+        ])
 
         bypass_maintenance = is_bypass_maintenance_mode()
-        deployment = get_resource_manager().delete_deployment(
+        deployment = get_resource_manager().delete_deployment_environment(
             deployment_id,
             bypass_maintenance,
             args.force,
-            args.delete_db_mode,
             args.delete_logs)
 
-        if args.delete_db_mode:
-            # Delete deployment resources from file server
-            deployment_folder = os.path.join(
-                config.instance.file_server_root,
-                FILE_SERVER_DEPLOYMENTS_FOLDER,
-                utils.current_tenant.name,
-                deployment.id)
-            if os.path.exists(deployment_folder):
-                shutil.rmtree(deployment_folder)
         return deployment, 200
 
 

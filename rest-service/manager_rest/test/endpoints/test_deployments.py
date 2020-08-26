@@ -26,7 +26,6 @@ from manager_rest.constants import (DEFAULT_TENANT_NAME,
                                     FILE_SERVER_DEPLOYMENTS_FOLDER)
 
 from cloudify_rest_client.exceptions import CloudifyClientError
-from cloudify_rest_client.deployments import Deployment
 
 
 TEST_PACKAGE_NAME = 'cloudify-script-plugin'
@@ -228,9 +227,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         self.assertTrue(len(nodes) > 0)
         nodes_ids = [node['id'] for node in nodes]
 
-        response = self._delete_deployment(deployment_id, True)
-
-        self.assertEqual(deployment_id, response['id'])
+        self.delete_deployment(deployment_id)
 
         # verifying deletion of deployment nodes and executions
         for node_id in nodes_ids:
@@ -255,7 +252,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         # are live nodes for the deployment
 
         try:
-            self._delete_deployment(deployment_id)
+            self.client.deployments.delete(deployment_id)
         except CloudifyClientError as e:
             self.assertEqual(e.status_code, 400)
             self.assertEqual(e.error_code, manager_exceptions.
@@ -287,25 +284,17 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             })
             self.assertEqual(200, resp.status_code)
 
-        # deleting the deployment
-        delete_deployment_response = self._delete_deployment(deployment_id)
+        delete_deployment_response = self.client.deployments.delete(
+            deployment_id)
         self.assertEqual(delete_deployment_response['id'],
                          deployment_id)
-
-        # verifying deletion of deployment
-        resp = self.get('/deployments/{0}'.format(deployment_id))
-        self.assertEqual(404, resp.status_code)
 
     def test_delete_deployment_with_live_nodes_and_force_flag(self):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
-        response = self._delete_deployment(deployment_id)
+        response = self.client.deployments.delete(deployment_id, force=True)
         self.assertEqual(deployment_id, response['id'])
-
-        # verifying deletion of deployment
-        resp = self.get('/deployments/{0}'.format(deployment_id))
-        self.assertEqual(404, resp.status_code)
 
     def test_delete_nonexistent_deployment(self):
         # trying to delete a nonexistent deployment
@@ -350,8 +339,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         with open(deployment_resource_path, 'w') as f:
             f.write('deployment resource')
 
-        self._delete_deployment(deployment_id)
-
+        self.delete_deployment(deployment_id)
         self.assertFalse(os.path.exists(deployment_folder))
 
     def test_inputs(self):
@@ -866,7 +854,9 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         resource_id = self._put_deployment_with_site()
 
         # Delete a deployment that is attached to a site
-        self.client.deployments.delete(resource_id, delete_db_mode=True)
+        self.delete_deployment(resource_id)
+
+        # self.client.deployments.delete(resource_id, delete_db_mode=True)
         site = self.client.sites.get(self.SITE_NAME)
         self.assertEqual(site.name, self.SITE_NAME)
         error_msg = '404: Requested `Deployment` with ID `{}` ' \
@@ -875,17 +865,6 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                                error_msg,
                                self.client.deployments.get,
                                resource_id)
-
-    def _delete_deployment(self, deployment_id, force=False):
-
-        force = 'true' if force else 'false'
-        delete_db_mode = 'true'
-        params = {'force': force,
-                  'delete_db_mode': delete_db_mode}
-        response = self.client._client.delete(
-            '/deployments/{0}'.format(deployment_id), params=params)
-
-        return Deployment(response)
 
     def _put_deployment_without_site(self):
         resource_id = 'i{0}'.format(uuid.uuid4())
