@@ -48,6 +48,7 @@ from cloudify.cluster_status import (
 from manager_rest import server
 from manager_rest.rest import rest_utils
 from manager_rest.test.attribute import attr
+from manager_rest.resource_manager import get_resource_manager
 from manager_rest.flask_utils import set_admin_current_user
 from manager_rest.test.security_utils import (get_admin_user,
                                               get_status_reporters)
@@ -207,6 +208,7 @@ class BaseServerTestCase(unittest.TestCase):
         cls._handle_flask_app_and_db()
         cls.client = cls.create_client()
         cls.sm = get_storage_manager()
+        cls.rm = get_resource_manager()
         cls._mock_verify_role()
 
         for patcher in cls._patchers:
@@ -652,6 +654,15 @@ class BaseServerTestCase(unittest.TestCase):
                                                     deployment_id,
                                                     **create_deployment_kwargs)
         return blueprint_id, deployment.id, blueprint_response, deployment
+
+    def delete_deployment(self, deployment_id):
+        """Delete the deployment from the database.
+
+        Delete via the resource manager, because otherwise deleting
+        deployments requires rabbitmq, which these tests don't have.
+        """
+        self.rm.delete_deployment(
+            self.sm.get(models.Deployment, deployment_id))
 
     def put_blueprint(self, blueprint_dir, blueprint_file_name, blueprint_id):
         blueprint_response = self.put_file(
