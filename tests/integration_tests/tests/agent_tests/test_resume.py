@@ -18,6 +18,7 @@ import uuid
 import pytest
 
 from integration_tests import AgentTestCase
+from integration_tests.framework import docker
 from integration_tests.tests.utils import get_resource as resource
 
 
@@ -41,6 +42,30 @@ class TestResumeMgmtworker(AgentTestCase):
                             'wait_seconds': wait_seconds
                         }})
 
+    def _detach_agents(self):
+        """Detach agents from the mgmtworker.
+
+        On systemd, agents spawned by the mgmtworker still belong to the
+        mgmtworker cgroup, and are also killed when the mgmtworker stops.
+        Detach them from that cgroup by attaching them to another one
+        so that they can stay up when we stop the mgmtworker.
+
+        To do that, figure out the agent PIDs, and put them into
+        the other-cgroup-dir/tasks file.
+        """
+        if self.get_service_management_command() != 'systemctl':
+            return
+        agent_pids = docker.execute(self.env.container_id, [
+            'pgrep', '-f', 'agent_host'
+        ]).splitlines()
+        for pid in agent_pids:
+            if not pid:
+                continue
+            docker.execute(self.env.container_id, [
+                'bash', '-c',
+                'echo {0} > /sys/fs/cgroup/systemd/tasks'.format(pid)
+            ])
+
     def _stop_mgmtworker(self):
         self.logger.info('Stopping mgmtworker')
         service_command = self.get_service_management_command()
@@ -61,6 +86,8 @@ class TestResumeMgmtworker(AgentTestCase):
         dsl_path = resource('dsl/resumable_agent.yaml')
         deployment, execution_id = self.deploy_application(
             dsl_path, deployment_id=deployment_id)
+        self._detach_agents()
+
         execution = self._start_execution(deployment, 'interface1.op1')
 
         # wait until the agent starts executing operations
@@ -85,6 +112,8 @@ class TestResumeMgmtworker(AgentTestCase):
         dsl_path = resource('dsl/resumable_agent.yaml')
         deployment, execution_id = self.deploy_application(
             dsl_path, deployment_id=deployment_id)
+        self._detach_agents()
+
         execution = self._start_execution(
             deployment, 'interface1.op1', wait_seconds=10)
 
