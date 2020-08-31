@@ -65,10 +65,8 @@ class ExecutionsTestCase(BaseServerTestCase):
         _, deployment_id, _, _ = self.put_deployment(self.DEPLOYMENT_ID)
         executions = self.client.executions.list(deployment_id=deployment_id)
 
-        # expecting 1 execution (create_deployment_environment)
-        self.assertEqual(1, len(executions))
-        self.assertEqual('create_deployment_environment',
-                         executions[0]['workflow_id'])
+        # expecting 0 execution
+        self.assertEqual(0, len(executions))
 
     def test_get_execution_by_id(self):
         (blueprint_id, deployment_id, _,
@@ -110,10 +108,8 @@ class ExecutionsTestCase(BaseServerTestCase):
         # listing only non-system workflow executions
         executions = self.client.executions.list(deployment_id=deployment_id)
 
-        # expecting 1 execution (create_deployment_environment)
-        self.assertEqual(1, len(executions))
-        self.assertEqual('create_deployment_environment',
-                         executions[0]['workflow_id'])
+        # expecting 0 execution
+        self.assertEqual(0, len(executions))
 
         # listing all executions
         executions = self.client.executions.list(deployment_id=deployment_id,
@@ -121,10 +117,8 @@ class ExecutionsTestCase(BaseServerTestCase):
         executions.sort(key=lambda e: e.created_at)
 
         # expecting 2 executions
-        self.assertEqual(2, len(executions))
-        self.assertEqual('create_deployment_environment',
-                         executions[0]['workflow_id'])
-        self.assertEqual(system_wf_id, executions[1]['workflow_id'])
+        self.assertEqual(1, len(executions))
+        self.assertEqual(system_wf_id, executions[0]['workflow_id'])
 
         return deployment_id, system_wf_id
 
@@ -155,9 +149,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         # explicitly listing only non-system executions
         executions = self.client.executions.list(deployment_id=deployment_id,
                                                  is_system_workflow=False)
-        self.assertEqual(1, len(executions))
-        self.assertEqual('create_deployment_environment',
-                         executions[0]['workflow_id'])
+        self.assertEqual(0, len(executions))
 
         # listing only system executions
         executions = self.client.executions.list(deployment_id=deployment_id,

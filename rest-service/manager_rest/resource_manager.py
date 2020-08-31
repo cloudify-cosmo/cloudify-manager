@@ -769,8 +769,6 @@ class ResourceManager(object):
             execution_id = execution.id
 
         else:
-            self._verify_deployment_environment_created_successfully(
-                deployment_id)
             execution_parameters = \
                 ResourceManager._merge_and_validate_execution_parameters(
                     workflow, workflow_id, parameters, allow_custom_parameters)
@@ -1470,15 +1468,6 @@ class ResourceManager(object):
 
         self._create_deployment_initial_dependencies(
             deployment_plan, new_deployment)
-
-        try:
-            self._create_deployment_environment(new_deployment,
-                                                deployment_plan,
-                                                bypass_maintenance)
-        except manager_exceptions.ExistingRunningExecutionError as e:
-            self.delete_deployment(new_deployment)
-            raise e
-
         return new_deployment
 
     def install_plugin(self, plugin, manager_names=None, agent_names=None):
@@ -1997,51 +1986,6 @@ class ResourceManager(object):
             prepared_relationships.append(relationship)
         return prepared_relationships
 
-    def _verify_deployment_environment_created_successfully(self,
-                                                            deployment_id):
-        deployment_id_filter = self.create_filters_dict(
-            deployment_id=deployment_id,
-            workflow_id='create_deployment_environment')
-        env_creation = next(
-            (execution for execution in
-             self.sm.list(models.Execution, filters=deployment_id_filter)
-             if execution.workflow_id == 'create_deployment_environment'),
-            None)
-
-        if not env_creation:
-            raise RuntimeError('Failed to find "create_deployment_environment"'
-                               ' execution for deployment {0}'.format(
-                                   deployment_id))
-        status = env_creation.status
-        if status == ExecutionState.TERMINATED:
-            return
-        elif status == ExecutionState.PENDING:
-            raise manager_exceptions \
-                .DeploymentEnvironmentCreationPendingError(
-                    'Deployment environment creation is still pending, '
-                    'try again in a minute')
-        elif status == ExecutionState.STARTED:
-            raise manager_exceptions\
-                .DeploymentEnvironmentCreationInProgressError(
-                    'Deployment environment creation is still in progress, '
-                    'try again in a minute')
-        elif status == ExecutionState.FAILED:
-            raise RuntimeError(
-                "Can't launch executions since environment creation for "
-                "deployment {0} has failed: {1}".format(
-                    deployment_id, env_creation.error))
-        elif status in (
-            ExecutionState.CANCELLED, ExecutionState.CANCELLING,
-                ExecutionState.FORCE_CANCELLING):
-            raise RuntimeError(
-                "Can't launch executions since the environment creation for "
-                "deployment {0} has been cancelled [status={1}]".format(
-                    deployment_id, status))
-        else:
-            raise RuntimeError(
-                'Unexpected deployment status for deployment {0} '
-                '[status={1}]'.format(deployment_id, status))
-
     @staticmethod
     def create_filters_dict(**kwargs):
         filters = {}
@@ -2049,33 +1993,6 @@ class ResourceManager(object):
             if val:
                 filters[key] = val
         return filters or None
-
-    def _create_deployment_environment(self,
-                                       deployment,
-                                       deployment_plan,
-                                       bypass_maintenance):
-        wf_id = 'create_deployment_environment'
-        deployment_env_creation_task_name = \
-            'cloudify_system_workflows.deployment_environment.create'
-        self._execute_system_workflow(
-            wf_id=wf_id,
-            task_mapping=deployment_env_creation_task_name,
-            deployment=deployment,
-            bypass_maintenance=bypass_maintenance,
-            execution_parameters={
-                'deployment_plugins_to_install': deployment_plan[
-                    constants.DEPLOYMENT_PLUGINS_TO_INSTALL],
-                'workflow_plugins_to_install': deployment_plan[
-                    constants.WORKFLOW_PLUGINS_TO_INSTALL],
-                'policy_configuration': {
-                    'policy_types': deployment_plan[constants.POLICY_TYPES],
-                    'policy_triggers':
-                        deployment_plan[constants.POLICY_TRIGGERS],
-                    'groups': deployment_plan[constants.GROUPS],
-                    'api_token': current_user.api_token
-                }
-            }
-        )
 
     def _check_for_active_executions(self, deployment_id, force,
                                      queue, schedule):
