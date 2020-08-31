@@ -76,6 +76,10 @@ class TestWorkflow(AgentTestWithPlugins):
 
         self.undeploy_application(deployment_id)
 
+        main_queues = self._get_queues()
+        main_exchanges = self._get_exchanges()
+        tenant_queues = self._get_queues(vhost)
+        agent_exchanges = self._get_exchanges(vhost) - tenant_exchanges
         # after uninstalling the agent, there's still no new queues on
         # the / vhost
         assert self._get_queues() == main_queues
