@@ -38,10 +38,10 @@ from cloudify.snapshots import SNAPSHOT_RESTORE_FLAG_FILE
 from cloudify.utils import ManagerVersion, get_local_rest_certificate
 
 from cloudify_rest_client.executions import Execution
-from cloudify_system_workflows.deployment_environment import \
-    generate_create_dep_tasks_graph
 
 from . import networks, utils
+from cloudify_system_workflows.deployment_environment import \
+    _create_deployment_workdir
 from cloudify_system_workflows.snapshots import npm
 from .agents import Agents
 from .postgres import Postgres
@@ -144,7 +144,7 @@ class SnapshotRestore(object):
                 self._restore_credentials(postgres)
                 self._restore_agents()
                 self._restore_amqp_vhosts_and_users()
-                self._restore_deployment_envs(postgres)
+                self._restore_deployment_envs()
                 self._restore_scheduled_executions()
                 self._restore_inter_deployment_dependencies()
 
@@ -250,30 +250,6 @@ class SnapshotRestore(object):
             new_token = f.read()
         return new_token
 
-    def _get_and_execute_task_graph(
-            self, deployment_id, dep_ctx, tenant, workflow_ctx, ctx_params,
-            failed_deployments):
-        """
-        While in the correct workflow context, this method
-        creates a `create_deployment_env` task graph and executes it.
-        Since this method is being executed by threads, it appends errors
-        to thread-safe queues, in order to handle them later outside of
-        this scope.
-        """
-        # The workflow context is thread local so we need to push it for
-        # each thread.
-        try:
-            with current_workflow_ctx.push(workflow_ctx, ctx_params):
-                try:
-                    tasks_graph = generate_create_dep_tasks_graph(dep_ctx)
-                    with dep_ctx:
-                        tasks_graph.execute()
-                except RuntimeError as re:
-                    failed_deployments.put((deployment_id, tenant))
-                    ctx.logger.info(re)
-        finally:
-            self._semaphore.release()
-
     def _possibly_update_encryption_key(self):
         with open(SECURITY_FILE_LOCATION) as security_conf_file:
             rest_security_conf = json.load(security_conf_file)
@@ -288,46 +264,17 @@ class SnapshotRestore(object):
                 '/opt/cloudify/encryption/update-encryption-key', '--commit'
             ])
 
-    def _restore_deployment_envs(self, postgres):
+    def _restore_deployment_envs(self):
         deps = utils.get_dep_contexts(self._snapshot_version)
-        failed_deployments = queue.Queue()
-        threads = list()
-
         for tenant, deployments in deps:
-            ctx.logger.info(
-                'Restoring deployment environments for {tenant}'.format(
+            ctx.logger.info('Creating deployment dirs for %s', tenant)
+            for deployment_id in deployments:
+                _create_deployment_workdir(
+                    deployment_id=deployment_id,
                     tenant=tenant,
+                    logger=self.logger,
                 )
-            )
-
-            for deployment_id, dep_ctx in deployments.items():
-                # Task graph is created and executed by threads to
-                # shorten restore time significantly
-                wf_ctx = current_workflow_ctx.get_ctx()
-                wf_parameters = current_workflow_ctx.get_parameters()
-                self._semaphore.acquire()
-                t = threading.Thread(target=self._get_and_execute_task_graph,
-                                     args=(deployment_id, dep_ctx,
-                                           tenant, wf_ctx,
-                                           wf_parameters,
-                                           failed_deployments)
-                                     )
-                t.setDaemon(True)
-                threads.append(t)
-                t.start()
-
-        for t in threads:
-            t.join()
-
-        if not failed_deployments.empty():
-            deployments = list(failed_deployments.queue)
-            raise NonRecoverableError('Failed to restore snapshot, the '
-                                      'following deployment environments were'
-                                      ' not restored: {0}. See exception'
-                                      ' tracebacks logged above for more'
-                                      ' details.'.format(deployments))
-
-        ctx.logger.info('Successfully restored deployment environments.')
+        ctx.logger.info('Successfully created deployment dirs.')
 
     def _restore_inter_deployment_dependencies(self):
         # managers older than 4.6.0 didn't have the support get_capability.
