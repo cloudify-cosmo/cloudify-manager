@@ -13,8 +13,9 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-import os
 import uuid
+import time
+import pytest
 import tempfile
 
 import yaml
@@ -25,6 +26,8 @@ from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import upload_mock_plugin
 
 
+@pytest.mark.usefixtures('cloudmock_plugin')
+@pytest.mark.usefixtures('target_aware_mock_plugin')
 class TestHooks(AgentlessTestCase):
     HOOKS_CONFIG_PATH = '/opt/mgmtworker/config/hooks.conf'
     LOG_PATH = '/var/log/cloudify/mgmtworker/mgmtworker.log'
@@ -68,7 +71,7 @@ hooks:
         new_config = """
 hooks:
   - event_type: workflow_started
-    implementation: cloudmock.tasks.test
+    implementation: cloudmock.cloudmock.tasks.test
     inputs:
       input1: bla
       input2: bla
@@ -77,6 +80,7 @@ hooks:
         self._update_hooks_config(new_config)
         self._start_a_workflow()
         invalid_task_msg = "cloudmock.tasks has no function named \\'test\\'"
+        time.sleep(2)   # so that the mgmtworker log has time to refresh
         self._assert_messages_in_log([invalid_task_msg])
 
     def test_missing_implementation(self):
@@ -90,8 +94,8 @@ hooks:
 """
         self._update_hooks_config(new_config)
         self._start_a_workflow()
-        error_msg = "ERROR - KeyError('implementation',), while running the " \
-                    "hook triggered by the event: workflow_started"
+        error_msg = "The hook consumer received `workflow_started` event and" \
+                    " the hook implementation is: `None`"
         workflow_succeeded_msg = "received `workflow_succeeded` event but " \
                                  "didn't find a compatible hook"
         self._assert_messages_in_log([error_msg,
@@ -108,6 +112,7 @@ hooks:
         self._start_a_workflow()
         event_type_msg = "workflow_started"
         kwargs_msg = "kwargs: {}"
+        time.sleep(2)  # so that the mgmtworker log has time to refresh
         self._assert_messages_in_log([event_type_msg, kwargs_msg],
                                      log_path=self.PLUGIN_LOG_PATH)
 
@@ -143,7 +148,7 @@ test_hook:
             invalid: true
 """
 
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w') as f:
             f.write(new_config)
             f.flush()
             self.copy_file_to_manager(source=f.name,
@@ -173,14 +178,12 @@ test_hook:
         new_config = """
 hooks:
   - event_type: workflow_started
-    implementation: target-aware-mock.target_aware_mock.tasks.hook_task
+    implementation: target_aware_mock.target_aware_mock.tasks.hook_task
     inputs:
       input1: input1_test
       input2: input2_test
     description: test hook
 """
-        upload_mock_plugin(self.client, 'target-aware-mock', '1.0',)
-
         self._update_hooks_config(new_config)
         self._start_a_workflow()
         event_type_msg = "workflow_started"
@@ -193,7 +196,7 @@ hooks:
         new_config = """
     hooks:
       - event_type: workflow_started
-        implementation: target-aware-mock.target_aware_mock.tasks.hook_task
+        implementation: target_aware_mock.target_aware_mock.tasks.hook_task
         inputs:
           input1: input1_test
           input2: input2_test
@@ -202,9 +205,7 @@ hooks:
         old_version = '1.0'
         new_version = '1.33'
 
-        # Upload the new one before the old, on purpose
         upload_mock_plugin(self.client, 'target-aware-mock-v1_33', new_version)
-        upload_mock_plugin(self.client, 'target-aware-mock', old_version)
 
         self._update_hooks_config(new_config)
         self._start_a_workflow()
@@ -224,7 +225,7 @@ hooks:
         # Verify that both versions of the plugin are installed on manager
         versions = [plugin['package_version'] for plugin in
                     self.client.plugins.list(
-                    package_name='target-aware-mock').items]
+                    package_name='target_aware_mock').items]
         assert (old_version in versions) and (new_version in versions)
 
     def test_implementation_function(self):
@@ -297,8 +298,11 @@ hooks:
 
     @retry(wait_fixed=1000, stop_max_attempt_number=3)
     def _assert_messages_in_log(self, messages, log_path=LOG_PATH):
-        tmp_log_path = os.path.join(self.workdir, 'test_log')
-        self.copy_file_from_manager(log_path, tmp_log_path)
+        tmp_log_path = str(self.workdir / 'test_log')
+        try:
+            self.copy_file_from_manager(log_path, tmp_log_path)
+        except Exception:
+            return
         with open(tmp_log_path) as f:
             data = f.readlines()
         last_log_lines = str(data[-20:])
@@ -306,7 +310,7 @@ hooks:
             assert message in last_log_lines
 
     def _update_hooks_config(self, new_config):
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w') as f:
             yaml.dump(yaml.load(new_config), f, default_flow_style=False)
             f.flush()
             self.copy_file_to_manager(source=f.name,

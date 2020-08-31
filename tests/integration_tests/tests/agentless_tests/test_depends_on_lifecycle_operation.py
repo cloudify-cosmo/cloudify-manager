@@ -14,17 +14,14 @@
 # limitations under the License.
 
 import uuid
+import pytest
 
 from integration_tests import AgentlessTestCase
-from integration_tests.tests.utils import get_resource as resource
+from integration_tests.tests import utils
 
 
+@pytest.mark.usefixtures('mock_workflows_plugin')
 class DependsOnLifecycleOperationTest(AgentlessTestCase):
-    def setUp(self):
-        super(DependsOnLifecycleOperationTest, self).setUp()
-        self.client.blueprints.upload(
-            resource('dsl/plugins/mock_workflows.yaml'),
-            entity_id='mock_workflows')
 
     @staticmethod
     def generate_blueprint(depended_on_operation):
@@ -63,6 +60,9 @@ node_templates:
     def _test_full_flow(self, expected_info, tested_operation):
         self.assertIsInstance(expected_info, list)
 
+        base_blueprint_path = utils.get_resource('dsl/mock_workflows.yaml')
+        self.client.blueprints.upload(base_blueprint_path, 'mock_workflows')
+
         deployment_id = 'd{0}'.format(uuid.uuid4())
         main_blueprint = self.generate_blueprint(tested_operation)
         main_blueprint_path = self.make_yaml_file(main_blueprint)
@@ -97,7 +97,7 @@ node_templates:
         next_tasks_info = [operations_id[dep]['info']
                            for dep in
                            operations_id[install_depends_id]['dependencies']]
-        self.assertItemsEqual(expected_info, next_tasks_info)
+        self.assertCountEqual(expected_info, next_tasks_info)
 
     def test_depends_on_precreate_operation(self):
         self._test_full_flow(['Node instance precreated'], 'precreate')
@@ -124,6 +124,9 @@ policies:
     properties:
       default_instances: 2
 """
+        base_blueprint_path = utils.get_resource('dsl/mock_workflows.yaml')
+        self.client.blueprints.upload(base_blueprint_path, 'mock_workflows')
+
         main_blueprint_path = self.make_yaml_file(main_blueprint)
         _, execution_id = self.deploy_application(main_blueprint_path,
                                                   deployment_id=deployment_id)
@@ -161,5 +164,5 @@ policies:
             next_tasks_info = [operations_id[dep]['info']
                                for dep in
                                operations_id[install_id]['dependencies']]
-            self.assertItemsEqual(['Node instance created', 'created'],
+            self.assertCountEqual(['Node instance created', 'created'],
                                   next_tasks_info)

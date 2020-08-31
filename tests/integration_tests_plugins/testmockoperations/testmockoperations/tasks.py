@@ -114,6 +114,24 @@ def saving_multiple_params_op(ctx, params, **_):
     ctx.instance.runtime_properties['mock_operation_invocation'] = invocations
 
 
+@operation
+def mock_source_operation_from_custom_workflow(ctx, key, value, **_):
+    invocations = ctx.source.instance.runtime_properties.get(
+        'mock_operation_invocation', [])
+    invocations.append({key: value})
+    ctx.source.instance.runtime_properties['mock_operation_invocation'] = \
+        invocations
+
+
+@operation
+def mock_target_operation_from_custom_workflow(ctx, key, value, **_):
+    invocations = ctx.target.instance.runtime_properties.get(
+        'mock_operation_invocation', [])
+    invocations.append({key: value})
+    ctx.target.instance.runtime_properties['mock_operation_invocation'] = \
+        invocations
+
+
 def saving_operation_info(ctx, op, main_node, second_node=None, **_):
     invocations = main_node.instance.runtime_properties.get(
         'mock_operation_invocation', [])
@@ -256,7 +274,7 @@ def mock_operation_get_instance_ip_from_context(ctx, **_):
 
 @operation
 def get_instance_ip_of_source_and_target(ctx, **_):
-    invocations = ctx.instance.runtime_properties.get(
+    invocations = ctx.source.instance.runtime_properties.get(
         'mock_operation_invocation', [])
     invocations.append([
         '{}_source'.format(ctx.source.node.name),
@@ -266,7 +284,8 @@ def get_instance_ip_of_source_and_target(ctx, **_):
         '{}_target'.format(ctx.target.node.name),
         ctx.target.instance.host_ip
     ])
-    ctx.instance.runtime_properties['mock_operation_invocation'] = invocations
+    ctx.source.instance.runtime_properties['mock_operation_invocation'] = \
+        invocations
     return True
 
 
@@ -500,3 +519,20 @@ def store_relationship_in_runtime_props(
 def maybe_fail(ctx, should_fail=False):
     if should_fail:
         raise NonRecoverableError('Operation failed!')
+
+
+@operation
+def configure_connection(ctx, **kwargs):
+    state = ctx.source.instance.runtime_properties.get('connection_state', {})
+    state.update({
+        'source_id': ctx.source.instance.id,
+        'target_id': ctx.target.instance.id,
+        'time': time.time(),
+        'source_properties': dict(ctx.source.node.properties),
+        'source_runtime_properties': dict(
+            ctx.source.instance.runtime_properties),
+        'target_properties': ctx.target.node.properties,
+        'target_runtime_properties':
+            ctx.target.instance.runtime_properties,
+    })
+    ctx.source.instance.runtime_properties['connection_state'] = state

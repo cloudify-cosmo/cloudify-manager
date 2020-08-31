@@ -13,10 +13,13 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import pytest
+from contextlib import contextmanager
 
 from . import TestScaleBase
 
 
+@pytest.mark.usefixtures('testmockoperations_plugin')
 class TestScaleOut(TestScaleBase):
 
     def test_compute_scale_out_compute(self):
@@ -140,23 +143,12 @@ class TestScaleOut(TestScaleBase):
         expectations['db']['new']['rel_install'] = 2
         self.deployment_assertions(expectations)
 
-        with self.assertRaises(RuntimeError) as e:
-            self.scale(parameters={'scalable_entity_name': 'compute'})
+        with self._set_retries(0):
+            with self.assertRaises(RuntimeError) as e:
+                self.scale(parameters={'scalable_entity_name': 'compute'})
         self.assertIn('TEST_EXPECTED_FAIL', str(e.exception))
         expectations = self.expectations()
-        expectations['compute']['new']['install'] = 1
-        expectations['compute']['new']['uninstall'] = 1
         expectations['compute']['existing']['install'] = 1
-        expectations['db']['new']['install'] = 1
-        expectations['db']['new']['rel_install'] = 2
-        # this is somewhat of a hack. scale_rel_install only considers
-        # establish, so we reuse this to decrease 2 from the expected establish
-        # invocation, as start is the one that fails.
-        # whoever you are that may be reading this. please don't hate me.
-        # i mean no harm
-        expectations['db']['new']['scale_rel_install'] = -2
-        expectations['db']['new']['uninstall'] = 1
-        expectations['db']['new']['rel_uninstall'] = 2
         expectations['db']['existing']['install'] = 1
         expectations['db']['existing']['rel_install'] = 2
         self.deployment_assertions(expectations, rollback=True)
@@ -175,16 +167,14 @@ class TestScaleOut(TestScaleBase):
         expectations['db']['new']['rel_install'] = 2
         self.deployment_assertions(expectations)
 
-        with self.assertRaises(RuntimeError) as e:
-            self.scale(parameters={'scalable_entity_name': 'compute'})
+        with self._set_retries(0):
+            with self.assertRaises(RuntimeError) as e:
+                self.scale(parameters={'scalable_entity_name': 'compute'})
         self.assertIn('TEST_EXPECTED_FAIL', str(e.exception))
         expectations = self.expectations()
-        expectations['compute']['new']['install'] = 1
-        expectations['compute']['new']['uninstall'] = 1
         expectations['compute']['existing']['install'] = 1
         expectations['db']['existing']['install'] = 1
         expectations['db']['existing']['rel_install'] = 2
-        expectations['db']['existing']['rel_uninstall'] = 2
         self.deployment_assertions(expectations, rollback=True)
 
     def test_compute_scale_out_compute_rollback(self):
@@ -199,12 +189,11 @@ class TestScaleOut(TestScaleBase):
         expectations['compute']['new']['install'] = 1
         self.deployment_assertions(expectations)
 
-        with self.assertRaises(RuntimeError) as e:
-            self.scale(parameters={'scalable_entity_name': 'compute'})
+        with self._set_retries(0):
+            with self.assertRaises(RuntimeError) as e:
+                self.scale(parameters={'scalable_entity_name': 'compute'})
         self.assertIn('TEST_EXPECTED_FAIL', str(e.exception))
         expectations = self.expectations()
-        expectations['compute']['new']['install'] = 1
-        expectations['compute']['new']['uninstall'] = 1
         expectations['compute']['existing']['install'] = 1
         self.deployment_assertions(expectations, rollback=True)
 
@@ -226,9 +215,10 @@ class TestScaleOut(TestScaleBase):
         expectations['db']['new']['rel_install'] = 2
         self.deployment_assertions(expectations)
 
-        with self.assertRaises(RuntimeError) as e:
-            self.scale(parameters={'scalable_entity_name': 'compute',
-                                   'rollback_if_failed': False})
+        with self._set_retries(0):
+            with self.assertRaises(RuntimeError) as e:
+                self.scale(parameters={'scalable_entity_name': 'compute',
+                                       'rollback_if_failed': False})
         self.assertIn('TEST_EXPECTED_FAIL', str(e.exception))
         expectations = self.expectations()
         expectations['compute']['new']['install'] = 1
@@ -266,9 +256,10 @@ class TestScaleOut(TestScaleBase):
         expectations['db']['new']['rel_install'] = 2
         self.deployment_assertions(expectations)
 
-        with self.assertRaises(RuntimeError) as e:
-            self.scale(parameters={'scalable_entity_name': 'compute',
-                                   'rollback_if_failed': False})
+        with self._set_retries(0):
+            with self.assertRaises(RuntimeError) as e:
+                self.scale(parameters={'scalable_entity_name': 'compute',
+                                       'rollback_if_failed': False})
         self.assertIn('TEST_EXPECTED_FAIL', str(e.exception))
         expectations = self.expectations()
         expectations['compute']['new']['install'] = 1
@@ -295,12 +286,28 @@ class TestScaleOut(TestScaleBase):
         expectations['compute']['new']['install'] = 1
         self.deployment_assertions(expectations)
 
-        with self.assertRaises(RuntimeError) as e:
-            self.scale(parameters={'scalable_entity_name': 'compute',
-                                   'rollback_if_failed': False})
+        with self._set_retries(0):
+            with self.assertRaises(RuntimeError) as e:
+                self.scale(parameters={'scalable_entity_name': 'compute',
+                                       'rollback_if_failed': False})
         self.assertIn('TEST_EXPECTED_FAIL', str(e.exception))
         expectations = self.expectations()
         expectations['compute']['new']['install'] = 1
         expectations['compute']['new']['uninstall'] = 0
         expectations['compute']['existing']['install'] = 1
         self.deployment_assertions(expectations)
+
+    @contextmanager
+    def _set_retries(self, retries, retry_interval=0):
+        original_config = {
+            c.name: c.value for c in
+            self.get_config(scope='workflow')
+        }
+        self.client.manager.put_config('task_retries', retries)
+        self.client.manager.put_config('subgraph_retries', retries)
+        self.client.manager.put_config('task_retry_interval', retry_interval)
+        try:
+            yield
+        finally:
+            for name, value in original_config.items():
+                self.client.manager.put_config(name, value)

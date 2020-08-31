@@ -2,9 +2,8 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
     - cloudify/types/types.yaml
-    - plugins/cloudmock.yaml
-    - plugins/connectionconfigurermock.yaml
-    - plugins/testmockoperations.yaml
+    - plugin:cloudmock
+    - plugin:testmockoperations
 
 node_templates:
     host:
@@ -31,7 +30,7 @@ node_templates:
                 source_interfaces:
                     cloudify.interfaces.relationship_lifecycle:
                         postconfigure:
-                            implementation: connection_configurer_mock.connection_configurer_mock.tasks.configure_connection
+                            implementation: testmockoperations.testmockoperations.tasks.configure_connection
                             inputs: {}
 
 

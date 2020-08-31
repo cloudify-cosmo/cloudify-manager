@@ -142,6 +142,7 @@ class HookConsumer(CloudifyOperationConsumer):
         plugins.sort(key=lambda p: parse_version(p.package_version),
                      reverse=True)
         return {
+            'name': package_name,
             'package_name': package_name,
             'package_version': plugins[0]['package_version'],
             'visibility': plugins[0]['visibility']

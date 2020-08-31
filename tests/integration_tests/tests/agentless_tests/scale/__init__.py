@@ -25,9 +25,10 @@ class TestScaleBase(AgentlessTestCase):
         self.previous_ids = []
         self.previous_instances = []
 
-    def deploy_app(self, resource_name, inputs=None):
+    def deploy_app(self, resource_name, inputs=None, timeout_seconds=60):
         deployment, _ = self.deploy_application(
                 resource('dsl/{0}.yaml'.format(resource_name)),
+                timeout_seconds=timeout_seconds,
                 inputs=inputs)
         self.deployment_id = deployment.id
         return self.expectations()
@@ -43,17 +44,14 @@ class TestScaleBase(AgentlessTestCase):
             'compute': {
                 'new': {},
                 'existing': {},
-                'removed': {}
             },
             'db': {
                 'new': {},
                 'existing': {},
-                'removed': {}
             },
             'webserver': {
                 'new': {},
                 'existing': {},
-                'removed': {}
             }
         }
 
@@ -85,13 +83,6 @@ class TestScaleBase(AgentlessTestCase):
             })
             return result
 
-        if rollback:
-            mod = self.client.deployment_modifications.list()[0]
-            rolledback = [i for i in mod.node_instances.added_and_related if
-                          i.get('modification') == 'added']
-        else:
-            rolledback = []
-
         instances = self.client.node_instances.list()
         instance_ids = [i.id for i in instances]
 
@@ -99,20 +90,12 @@ class TestScaleBase(AgentlessTestCase):
         for node_id, expectations in expected.items():
             new_expectation = expectations['new']
             existing_expectation = expectations['existing']
-            removed_expectation = expectations['removed']
+            # removed_expectation = expectations['removed']
             node_instances = [i for i in instances if i.node_id == node_id]
-            node_rolledback = [i for i in rolledback if i.node_id == node_id]
-
-            if rollback:
-                new_instances = node_rolledback
-            else:
-                new_instances = [i for i in node_instances
-                                 if i.id not in self.previous_ids]
+            new_instances = [i for i in node_instances
+                             if i.id not in self.previous_ids]
             existing_instances = [i for i in node_instances
                                   if i.id in self.previous_ids]
-            removed_instances = [i for i in self.previous_instances
-                                 if i.id not in instance_ids and
-                                 i.node_id == node_id]
             self.assertEqual(len(new_instances),
                              new_expectation.get('install') or 0,
                              'new_instances: {0}, install_expectations: {1}'
@@ -124,12 +107,6 @@ class TestScaleBase(AgentlessTestCase):
                              'install_expectations: {1}'
                              .format(existing_instances,
                                      existing_expectation.get('install')))
-            self.assertEqual(len(removed_instances),
-                             removed_expectation.get('uninstall') or 0,
-                             'removed_instances: {0}, '
-                             'uninstall_expectations: {1}'
-                             .format(removed_instances,
-                                     removed_expectation.get('uninstall')))
             for new_instance in new_instances:
                 calculated_expected.update({
                     new_instance.id: expected_invocations(
@@ -138,14 +115,8 @@ class TestScaleBase(AgentlessTestCase):
                 calculated_expected.update({
                     existing_instance.id: expected_invocations(
                             existing_expectation, len(existing_instances))})
-            for removed_instance in removed_instances:
-                calculated_expected.update({
-                    removed_instance.id: expected_invocations(
-                            removed_expectation, len(removed_instances))})
 
-        invocations = self.get_plugin_data(
-                'testmockoperations', self.deployment_id
-        ).get('mock_operation_invocation', [])
+        invocations = self._get_operation_invocations(self.deployment_id)
         total_expected_count = 0
         for instance_id, operations in calculated_expected.items():
             for operation, expected_count in operations.items():
@@ -161,3 +132,17 @@ class TestScaleBase(AgentlessTestCase):
         # set state for next deployment assertion
         self.previous_instances = instances
         self.previous_ids = instance_ids
+
+    def _get_operation_invocations(self, deployment_id):
+        invocation_lists = self.get_runtime_property(
+            deployment_id, 'mock_operation_invocation')
+        invocations = []
+        for lst in invocation_lists:
+            invocations.extend(lst)
+        return invocations
+
+    def _clear_operation_invocations(self, deployment_id):
+        for inst in self.client.node_instances.list(
+                deployment_id=deployment_id):
+            if 'mock_operation_invocation' in inst.runtime_properties:
+                inst.runtime_properties['mock_operation_invocation'] = {}

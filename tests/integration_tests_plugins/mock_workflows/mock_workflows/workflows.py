@@ -300,7 +300,7 @@ def operation_mapping3(ctx, value, **_):
                 'value': value
             }).get()
         except RuntimeError as e:
-            assert 'Duplicate' in e.message
+            assert 'Duplicate' in str(e)
 
     node1 = list(ctx.get_node('node1').instances)[0]
     node2_rel = list(list(ctx.get_node('node2').instances)[0].relationships)[0]

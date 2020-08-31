@@ -74,7 +74,7 @@ class BaseTestCase(unittest.TestCase):
         config_file_location = '/opt/manager/cloudify-rest.conf'
         config = yaml.load(cls.read_manager_file(config_file_location))
         config.update(new_config)
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w') as f:
             yaml.dump(config, f)
             f.flush()
             cls.copy_file_to_manager(
@@ -501,7 +501,7 @@ class BaseTestCase(unittest.TestCase):
 
     def make_file_with_name(self, content, filename, base_dir=None):
         base_dir = (os.path.join(self._temp_dir, base_dir)
-                    if base_dir else self.workdir)
+                    if base_dir else str(self.workdir))
         filename_path = os.path.join(base_dir, filename)
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)

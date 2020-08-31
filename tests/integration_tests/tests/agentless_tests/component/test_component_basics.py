@@ -221,7 +221,7 @@ node_templates:
         self.deploy_application(blueprint_path, deployment_id=deployment_id)
         self.assertEqual(self.client.secrets.get('integer')['value'], '1')
         self.assertEqual(self.client.secrets.get('list')['value'], '[1, 2]')
-        self.assertEqual(self.client.secrets.get('dict')['value'], "{u'a': 1}")
+        self.assertEqual(self.client.secrets.get('dict')['value'], u"{'a': 1}")
         self.assertEqual(self.client.secrets.get('string')['value'], u'a')
         self.assertEqual(self.client.secrets.get('float')['value'], '1.5')
         self.assertEqual(self.client.secrets.get('boolean')['value'], 'False')

@@ -2,8 +2,8 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
     - cloudify/types/types.yaml
-    - plugins/testmockoperations.yaml
-    - plugins/mock_workflows.yaml
+    - plugin:testmockoperations
+    - plugin:mock_workflows
 
 node_templates:
     node1:
@@ -23,7 +23,7 @@ node_templates:
                 source_interfaces:
                     test:
                         operation:
-                            implementation: testmockoperations.testmockoperations.tasks.mock_operation_from_custom_workflow
+                            implementation: testmockoperations.testmockoperations.tasks.mock_target_operation_from_custom_workflow
                             inputs:
                                 key: test_key
                                 value: test_value
@@ -35,7 +35,7 @@ node_templates:
                 target_interfaces:
                     test:
                         operation:
-                            implementation: testmockoperations.testmockoperations.tasks.mock_operation_from_custom_workflow
+                            implementation: testmockoperations.testmockoperations.tasks.mock_target_operation_from_custom_workflow
                             inputs:
                                 key: test_key
                                 value: test_value

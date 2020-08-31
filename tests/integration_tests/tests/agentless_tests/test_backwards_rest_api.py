@@ -36,7 +36,7 @@ class RestApiBackwardsCompatibilityTest(AgentlessTestCase):
     def _test_client(self, client_version, url_version_postfix):
         shell_script_path = resource('scripts/test_old_rest_client.sh')
         python_script_path = resource('scripts/test_old_rest_client.py')
-        result_path = os.path.join(self.workdir, 'result.json')
+        result_path = str(self.workdir / 'result.json')
         env = os.environ.copy()
         env.update({
             'python_script_path': python_script_path,
@@ -50,7 +50,7 @@ class RestApiBackwardsCompatibilityTest(AgentlessTestCase):
         })
         subprocess.check_call(shell_script_path,
                               shell=True,
-                              cwd=self.workdir,
+                              cwd=str(self.workdir),
                               env=env)
         with open(result_path) as f:
             result = json.load(f)

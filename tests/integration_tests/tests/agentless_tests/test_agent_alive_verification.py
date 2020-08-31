@@ -13,10 +13,14 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import pytest
+
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 
 
+@pytest.mark.usefixtures('mock_workflows_plugin')
+@pytest.mark.usefixtures('cloudmock_plugin')
 class TestAgentAliveVerification(AgentlessTestCase):
 
     AGENT_ALIVE_FAIL = "cloudmock.tasks has no function named 'non_existent'"

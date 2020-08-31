@@ -15,54 +15,11 @@
 
 import sh
 import os
-import tarfile
-import tempfile
-from contextlib import closing
 
 from integration_tests import AgentlessTestCase
 
 
 class MiscManagerTest(AgentlessTestCase):
-
-    def test_cfy_logs(self):
-        self.logger.info('Testing `cfy logs download`')
-        with tempfile.NamedTemporaryFile() as tempf:
-            self.cfy.logs.download(output_path=tempf.name)
-            with closing(tarfile.open(name=tempf.name)) as tar:
-                files = [f.name for f in tar.getmembers()]
-                self.assertIn('cloudify/journalctl.log', files)
-                self.assertIn('cloudify/nginx/cloudify.access.log', files)
-                self.logger.info('Success!')
-
-        self.logger.info('Testing `cfy logs backup`')
-        self.cfy.logs.backup(verbose=True)
-        output = self.execute_on_manager('ls /var/log')
-        self.assertIn('cloudify-manager-logs_', output)
-
-        self.logger.info('Testing `cfy logs purge`')
-        self.cfy.logs.purge(force=True)
-        self.execute_on_manager(
-            'test ! -s /var/log/cloudify/manager/cfy_manager.log')
-
-    def test_tmux_session(self):
-        self.logger.info('Test list without tmux installed...')
-        try:
-            self.cfy.ssh(list_sessions=True)
-        except sh.ErrorReturnCode_1 as ex:
-            self.assertIn('tmux executable not found on manager', ex.stdout)
-
-        self.logger.info('Installing tmux...')
-        self.execute_on_manager('yum install tmux -y')
-
-        self.logger.info('Test listing sessions when non are available..')
-        output = self.cfy.ssh(list_sessions=True)
-        self.assertIn('No sessions are available', output)
-
-        self.logger.info('Test running ssh command...')
-        content = 'yay'
-        remote_path = '/tmp/ssh_test_output_file'
-        self.cfy.ssh(command='echo {0} > {1}'.format(content, remote_path))
-        self.assertEqual(content, self.read_manager_file(remote_path))
 
     def test_logrotation(self):
         """Tests logrotation configuration on the manager.
@@ -76,15 +33,14 @@ class MiscManagerTest(AgentlessTestCase):
             'mgmtworker/mgmtworker.log',
             'mgmtworker/logs/test.log',
             'rabbitmq/rabbit@cloudifyman.log',
-            'rabbitmq/log/crash.log',
             'rest/cloudify-rest-service.log',
             'amqp-postgres/amqp_postgres.log',
             'nginx/cloudify.access.log',
-            'stage/app.log',
             'composer/app.log'
         ]
         # the mgmtworker doesn't create a log file upon loading so we're
         # generating one for him.
+        self.execute_on_manager('mkdir -p /var/log/cloudify/mgmtworker/logs')
         self.execute_on_manager(
             'touch /var/log/cloudify/mgmtworker/logs/test.log')
 
@@ -93,10 +49,9 @@ class MiscManagerTest(AgentlessTestCase):
         for logrotate_cfg in ['cloudify-amqp-postgres',
                               'cloudify-mgmtworker',
                               'cloudify-rabbitmq',
-                              'composer',
+                              'cloudify-composer',
                               'nginx',
-                              'restservice',
-                              'stage']:
+                              'restservice']:
             self.logger.info('Cancelling for %s', logrotate_cfg)
             sed_cmd = 'sed -i -e s/dateext.*/nodateext/ /etc/logrotate.d/' \
                       '{}'.format(logrotate_cfg)
@@ -112,7 +67,7 @@ class MiscManagerTest(AgentlessTestCase):
             except sh.ErrorReturnCode:
                 return False
 
-        for rotation in range(1, 9):
+        for rotation in range(1, 7):
             for log_file in test_log_files:
                 full_log_path = os.path.join(logs_dir, log_file)
                 self.logger.info('Allocating 101M in {0}...'.format(

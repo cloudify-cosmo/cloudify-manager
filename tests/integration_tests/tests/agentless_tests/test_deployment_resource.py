@@ -57,7 +57,7 @@ class DeploymentResourceTest(AgentlessTestCase):
             'chown -R {0}. {1}'
             ''.format(CLOUDIFY_USER, base_dep_dir)
         )
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(mode='w') as f:
             f.write(RESOURCE_CONTENT)
             f.flush()
             self.copy_file_to_manager(source=f.name,

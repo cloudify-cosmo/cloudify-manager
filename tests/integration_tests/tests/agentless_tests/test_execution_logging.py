@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import re
+import pytest
 
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
@@ -21,6 +22,7 @@ from integration_tests.tests.utils import get_resource as resource
 ansi_escape = re.compile(r'\x1b[^m]*m')
 
 
+@pytest.mark.usefixtures('testmockoperations_plugin')
 class ExecutionLoggingTest(AgentlessTestCase):
 
     def test_execution_logging(self):
@@ -48,50 +50,33 @@ class ExecutionLoggingTest(AgentlessTestCase):
                                           user_cause_ex_id],
                            timeout=120)
 
-        def assert_output(verbosity,
-                          expect_debug,
-                          expect_rest_logs):
-            events = self.cfy.events.list(
-                verbosity,
-                execution_id=no_user_cause_ex_id).stdout
-            # When running tests locally (not CI), events returned by the CLI
-            # maybe colored, depending on his configuration so we strip ansi
-            # escape sequences from retrieved events.
-            events = ansi_escape.sub('', events)
-            assert_in = self.assertIn
-            assert_not_in = self.assertNotIn
-            assert_in('INFO: INFO_MESSAGE', events)
-            assert_in('Task failed', events)
-            assert_in('ERROR_MESSAGE', events)
-            debug_assert = assert_in if expect_debug else assert_not_in
-            debug_assert('DEBUG: DEBUG_MESSAGE', events)
-            assert_in('NonRecoverableError: ERROR_MESSAGE', events)
-            assert_not_in('Causes', events)
-            assert_not_in('RuntimeError: ERROR_MESSAGE', events)
-            rest_assert = assert_in if expect_rest_logs else assert_not_in
-            rest_assert('Sending request:', events)
-            user_cause_events = self.cfy.events.list(
-                verbosity,
-                execution_id=user_cause_ex_id,
-            )
-            assert_in('Causes', user_cause_events)
-            assert_in('RuntimeError: ERROR_MESSAGE', user_cause_events)
+        def assert_output():
+            events = self._parse_events(no_user_cause_ex_id)
+            self.assertIn('INFO_MESSAGE', events)
+            self.assertIn('Task failed', events)
+            self.assertIn('ERROR_MESSAGE', events)
+            self.assertIn('DEBUG_MESSAGE', events)
+            self.assertIn('NonRecoverableError: ERROR_MESSAGE', events)
+            self.assertNotIn('RuntimeError: ERROR_MESSAGE', events)
 
-        assert_output(verbosity=[],  # sh handles '' as an argument, but not []
-                      expect_debug=False,
-                      expect_rest_logs=False)
-        assert_output(verbosity='-v',
-                      expect_debug=False,
-                      expect_rest_logs=False)
-        assert_output(verbosity='-vv',
-                      expect_debug=True,
-                      expect_rest_logs=False)
-        assert_output(verbosity='-vvv',
-                      expect_debug=True,
-                      expect_rest_logs=True)
+            user_cause_events = self._parse_events(user_cause_ex_id)
+            self.assertIn('RuntimeError: ERROR_MESSAGE', user_cause_events)
+
+        assert_output()
 
     def _wait_for_end_events(self, execution_ids):
         for execution_id in execution_ids:
             events = self.client.events.list(
                 execution_id=execution_id, event_type='workflow_failed').items
             self.assertGreater(len(events), 0)
+
+    def _parse_events(self, execution_id):
+        _events = self.client.events.list(execution_id=execution_id,
+                                          include_logs=True)
+        events = ''
+        for e in _events:
+            events += '{}\n'.format(e['message'])
+            if e['error_causes']:
+                for error_cause in e['error_causes']:
+                    events += '{}\n'.format(error_cause['traceback'])
+        return events

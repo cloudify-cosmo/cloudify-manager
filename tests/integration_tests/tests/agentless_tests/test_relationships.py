@@ -13,10 +13,14 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import pytest
+
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 
 
+@pytest.mark.usefixtures('cloudmock_plugin')
+@pytest.mark.usefixtures('testmockoperations_plugin')
 class TestRelationships(AgentlessTestCase):
 
     def test_pre_source_started_location_source(self):
@@ -40,17 +44,10 @@ class TestRelationships(AgentlessTestCase):
         source_node_id_prefix = 'mock_node_that_connects_to_host'
         target_node_id_prefix = 'host'
 
-        machines = self.get_plugin_data(
-            plugin_name='cloudmock',
-            deployment_id=deployment_id
-        )['machines']
+        machines = self.get_runtime_property(deployment_id, 'machines')[0]
         self.assertEquals(1, len(machines))
 
-        state = self.get_plugin_data(
-            plugin_name='connection_configurer_mock',
-            deployment_id=deployment_id
-        )['state'][0]
-
+        state = self.get_runtime_property(deployment_id, 'connection_state')[0]
         source_id = state['source_id']
         target_id = state['target_id']
 
@@ -80,17 +77,11 @@ class TestRelationships(AgentlessTestCase):
             self.fail('unhandled state')
 
         connector_timestamp = state['time']
+        reachable_timestamp = \
+            self.get_runtime_property(deployment_id, 'time')[0]
+        touched_timestamp = \
+            self.get_runtime_property(deployment_id, 'touched_time')[0]
 
-        state = self.get_plugin_data(
-            plugin_name='testmockoperations',
-            deployment_id=deployment_id
-        )['state'][0]
-        touched_timestamp = self.get_plugin_data(
-            plugin_name='testmockoperations',
-            deployment_id=deployment_id
-        )['touched_time']
-
-        reachable_timestamp = state['time']
         if hook == 'pre-init':
             self.assertLess(touched_timestamp, connector_timestamp)
             self.assertGreater(reachable_timestamp, connector_timestamp)

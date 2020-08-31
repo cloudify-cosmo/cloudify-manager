@@ -14,11 +14,13 @@
 #    * limitations under the License.
 
 import uuid
+import pytest
 
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 
 
+@pytest.mark.usefixtures('testmockoperations_plugin')
 class RetrieveResourceRenderingTest(AgentlessTestCase):
     dsl_path = resource('dsl/test-retrieve-resource-template.yaml')
     template_path = 'jinja_rendering/for_template_rendering_tests.conf'
@@ -40,9 +42,8 @@ class RetrieveResourceRenderingTest(AgentlessTestCase):
                 'mode': mode
             }
         )
-        rendered_resource = \
-            self.get_plugin_data('testmockoperations',
-                                 deployment.id)['rendered_resource']
+        rendered_resource = self.get_runtime_property(deployment.id,
+                                                      'rendered_resource')[0]
         expected = self._get_expected_template()
         return expected, rendered_resource
 

@@ -14,11 +14,13 @@
 #    * limitations under the License.
 
 import uuid
+import pytest
 
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 
 
+@pytest.mark.usefixtures('testmockoperations_plugin')
 class TaskRetriesTest(AgentlessTestCase):
     def test_subgraph_retries_config(self):
         self.client.manager.put_config('task_retries', 0)
@@ -28,8 +30,6 @@ class TaskRetriesTest(AgentlessTestCase):
         self.deploy_application(
             resource('dsl/workflow_subgraph_retries.yaml'),
             deployment_id=deployment_id)
-        invocations = self.get_plugin_data(
-            plugin_name='testmockoperations',
-            deployment_id=deployment_id
-        )['failure_invocation']
+        invocations = self.get_runtime_property(deployment_id,
+                                                'failure_invocation')[0]
         self.assertEqual(len(invocations), 3)

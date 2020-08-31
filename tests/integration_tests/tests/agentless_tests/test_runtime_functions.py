@@ -14,12 +14,14 @@
 #    * limitations under the License.
 
 import os
+import pytest
 
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.constants import MANAGER_PYTHON
 from integration_tests.tests.utils import get_resource as resource
 
 
+@pytest.mark.usefixtures('testmockoperations_plugin')
 class TestRuntimeFunctionEvaluation(AgentlessTestCase):
     """Tests for the runtime_only_evaluation feature.
 
@@ -121,6 +123,7 @@ class TestRuntimeFunctionEvaluation(AgentlessTestCase):
             runtime_only_evaluation=True)
         self.execute_workflow('install', deployment.id)
         self._assert_properties(deployment, self.BASE_VALUE)
+        self.execute_workflow('uninstall', deployment.id)
         self._manual_deployment_update(deployment)
         self.execute_workflow('install', deployment.id)
         self._assert_properties(deployment, self.CHANGED_VALUE)

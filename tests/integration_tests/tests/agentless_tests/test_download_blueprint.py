@@ -33,11 +33,9 @@ class DownloadBlueprintTest(AgentlessTestCase):
         super(DownloadBlueprintTest, self).setUp()
         self.blueprint_id = 'b{0}'.format(uuid.uuid4())
         self.blueprint_file = '{0}.tar.gz'.format(self.blueprint_id)
-        self.downloaded_archive_path = os.path.join(self.workdir,
-                                                    self.blueprint_file)
-        self.downloaded_extracted_dir = os.path.join(self.workdir,
-                                                     'extracted')
-        self.test_blueprint_dir = os.path.join(self.workdir, 'blueprint')
+        self.downloaded_archive_path = str(self.workdir / self.blueprint_file)
+        self.downloaded_extracted_dir = str(self.workdir / 'extracted')
+        self.test_blueprint_dir = str(self.workdir / 'blueprint')
         os.mkdir(self.test_blueprint_dir)
         self.large_file_location = os.path.join(self.test_blueprint_dir,
                                                 'just_a_large_file.img')
@@ -47,11 +45,12 @@ class DownloadBlueprintTest(AgentlessTestCase):
         shutil.copy(blueprint_src, self.original_blueprint_file)
         self._create_file('50M', self.large_file_location)
 
-    def download_blueprint_test(self):
-        self.cfy.blueprints.upload(self.original_blueprint_file,
-                                   blueprint_id=self.blueprint_id)
-        self.cfy.blueprints.download(self.blueprint_id,
-                                     output_path=self.downloaded_archive_path)
+    def test_download_blueprint(self):
+        self.client.blueprints.upload(self.original_blueprint_file,
+                                      self.blueprint_id)
+        self.client.blueprints.download(
+            self.blueprint_id,
+            output_file=self.downloaded_archive_path)
         self.assertTrue(os.path.exists(self.downloaded_archive_path))
         self._extract_tar_file()
         downloaded_blueprint_file = os.path.join(

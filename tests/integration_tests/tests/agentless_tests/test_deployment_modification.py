@@ -35,8 +35,7 @@ class TestDeploymentModification(AgentlessTestCase):
         deployment, _ = self.deploy_application(dsl_path)
         deployment_id = deployment.id
         self.execute_workflow('deployment_modification', deployment_id)
-        invocations = self.get_plugin_data(
-            'testmockoperations', deployment_id)['mock_operation_invocation']
+        invocations = self._get_operation_invocations(deployment_id)
         self.assertEqual(1, len([i for i in invocations
                                  if i['operation'] == 'create']))
         self.assertEqual(2, len([i for i in invocations
@@ -111,19 +110,19 @@ class TestDeploymentModification(AgentlessTestCase):
 
     def test_deployment_modification_remove_compute(self):
         deployment_id = self.test_deployment_modification_add_compute()
-        self.clear_plugin_data('testmockoperations')
+        self._clear_state(deployment_id)
         nodes = {'compute': {'instances': 1}}
         self._test_deployment_modification(
             deployment_id=deployment_id,
             modification_type='removed',
             modified_nodes=nodes,
-            expected_compute={'existence': 1,
-                              'modification': 1,
+            expected_compute={'existence': 0,
+                              'modification': 0,
                               'relationships': 0,
                               'total_relationships': 0},
-            expected_db={'existence': 1,
-                         'modification': 1,
-                         'relationships': 1,
+            expected_db={'existence': 0,
+                         'modification': 0,
+                         'relationships': 0,
                          'total_relationships': 1},
             expected_webserver={'existence': 1,
                                 'modification': 0,
@@ -136,17 +135,17 @@ class TestDeploymentModification(AgentlessTestCase):
         return self._test_deployment_modification(
             modification_type='added',
             modified_nodes=nodes,
-            expected_compute={'existence': 1,
-                              'modification': 1,
+            expected_compute={'existence': 0,
+                              'modification': 0,
                               'relationships': 0,
                               'total_relationships': 0},
-            expected_db={'existence': 1,
-                         'modification': 1,
-                         'relationships': 1,
+            expected_db={'existence': 0,
+                         'modification': 0,
+                         'relationships': 0,
                          'total_relationships': 1},
-            expected_webserver={'existence': 1,
+            expected_webserver={'existence': 0,
                                 'modification': 0,
-                                'relationships': 1,
+                                'relationships': 0,
                                 'total_relationships': 1},
             expected_total=3,
             rollback=True)
@@ -226,8 +225,7 @@ class TestDeploymentModification(AgentlessTestCase):
                 self.assertEqual(node.number_of_instances,
                                  modified_node['instances'])
 
-        state = self.get_plugin_data('testmockoperations',
-                                     deployment_id)['state']
+        state = self.get_runtime_property(deployment_id, 'state')
 
         compute_instances = self._get_instances(state, 'compute')
         db_instances = self._get_instances(state, 'db')
@@ -291,8 +289,10 @@ class TestDeploymentModification(AgentlessTestCase):
 
         return deployment_id
 
-    def _get_instances(self, state, node_id):
-        return [i for i in state.values() if i['node_id'] == node_id]
+    @staticmethod
+    def _get_instances(state, node_id):
+        state_values = [next(iter(i.values())) for i in state]
+        return [i for i in state_values if i['node_id'] == node_id]
 
     def test_group_deployment_modification(self):
         # this test specifically tests elasticsearch's implementation
@@ -311,3 +311,17 @@ class TestDeploymentModification(AgentlessTestCase):
         scaling_group = deployment['scaling_groups']['compute_and_ip']
         self.assertEqual(2, scaling_group['properties']['planned_instances'])
         self.assertEqual(2, scaling_group['properties']['current_instances'])
+
+    def _get_operation_invocations(self, deployment_id):
+        invocation_lists = self.get_runtime_property(
+            deployment_id, 'mock_operation_invocation')
+        invocations = []
+        for lst in invocation_lists:
+            invocations.extend(lst)
+        return invocations
+
+    def _clear_state(self, deployment_id):
+        for inst in self.client.node_instances.list(
+                deployment_id=deployment_id):
+            if 'state' in inst.runtime_properties:
+                inst.runtime_properties['state'] = {}

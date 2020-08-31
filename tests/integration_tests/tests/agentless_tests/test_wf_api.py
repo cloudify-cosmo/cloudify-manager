@@ -14,6 +14,7 @@
 #    * limitations under the License.
 
 import uuid
+import pytest
 
 from cloudify_rest_client.executions import Execution
 
@@ -21,6 +22,8 @@ from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 
 
+@pytest.mark.usefixtures('mock_workflows_plugin')
+@pytest.mark.usefixtures('testmockoperations_plugin')
 class WorkflowsAPITest(AgentlessTestCase):
 
     def setUp(self):
@@ -47,11 +50,9 @@ class WorkflowsAPITest(AgentlessTestCase):
                 parameters=parameters)
 
         # testing workflow remote task
-        invocation = self.get_plugin_data(
-            plugin_name='testmockoperations',
-            deployment_id=deployment.id
-        )['mock_operation_invocation'][0]
-        self.assertDictEqual(result_dict, invocation)
+        invocation = self.get_runtime_property(deployment.id,
+                                               'mock_operation_invocation')[0]
+        self.assertDictEqual(result_dict, invocation[0])
 
         # testing workflow local task
         instance = self.client.node_instances.list(
@@ -65,10 +66,8 @@ class WorkflowsAPITest(AgentlessTestCase):
                 parameters={'do_get': self.do_get})
 
         # testing workflow remote task
-        invocations = self.get_plugin_data(
-            plugin_name='testmockoperations',
-            deployment_id=deployment.id
-        )['failure_invocation']
+        invocations = self.get_runtime_property(deployment.id,
+                                                'failure_invocation')[0]
         self.assertEqual(3, len(invocations))
         for i in range(len(invocations) - 1):
             self.assertLessEqual(1, invocations[i+1] - invocations[i])
@@ -82,10 +81,8 @@ class WorkflowsAPITest(AgentlessTestCase):
                           parameters={'do_get': self.do_get})
 
         # testing workflow remote task
-        invocations = self.get_plugin_data(
-            plugin_name='testmockoperations',
-            deployment_id=deployment_id
-        )['failure_invocation']
+        invocations = self.get_runtime_property(deployment_id,
+                                                'failure_invocation')[0]
         self.assertEqual(3, len(invocations))
         for i in range(len(invocations) - 1):
             self.assertLessEqual(1, invocations[i+1] - invocations[i])

@@ -13,10 +13,12 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import pytest
 
 from . import TestScaleBase
 
 
+@pytest.mark.usefixtures('testmockoperations_plugin')
 class TestScaleCompute(TestScaleBase):
 
     def test_compute_scale_in_compute(self):
@@ -28,8 +30,6 @@ class TestScaleCompute(TestScaleBase):
             'scalable_entity_name': 'compute',
             'delta': -1})
         expectations['compute']['existing']['install'] = 2
-        expectations['compute']['removed']['install'] = 1
-        expectations['compute']['removed']['uninstall'] = 1
         self.deployment_assertions(expectations)
 
     def test_compute_scale_in_compute_ignore_failure_true(self):
@@ -42,8 +42,6 @@ class TestScaleCompute(TestScaleBase):
             'ignore_failure': True,
             'delta': -1})
         expectations['compute']['existing']['install'] = 2
-        expectations['compute']['removed']['install'] = 1
-        expectations['compute']['removed']['uninstall'] = 1
         self.deployment_assertions(expectations)
 
     def test_compute_scale_in_compute_ignore_failure_false(self):
@@ -79,8 +77,6 @@ class TestScaleCompute(TestScaleBase):
             'delta': -1})
         expectations['compute']['new']['install'] = 0
         expectations['compute']['existing']['install'] = 0
-        expectations['compute']['removed']['install'] = 1
-        expectations['compute']['removed']['uninstall'] = 1
         self.deployment_assertions(expectations)
 
     def test_compute_scale_in_2_compute(self):
@@ -92,12 +88,10 @@ class TestScaleCompute(TestScaleBase):
             'scalable_entity_name': 'compute',
             'delta': -2})
         expectations['compute']['existing']['install'] = 1
-        expectations['compute']['removed']['install'] = 2
-        expectations['compute']['removed']['uninstall'] = 2
         self.deployment_assertions(expectations)
 
     def test_db_contained_in_compute_scale_in_compute(self):
-        expectations = self.deploy_app('scale5')
+        expectations = self.deploy_app('scale5', timeout_seconds=120)
         expectations['compute']['new']['install'] = 2
         expectations['db']['new']['install'] = 4
         expectations['db']['new']['rel_install'] = 8
@@ -107,14 +101,8 @@ class TestScaleCompute(TestScaleBase):
             'scalable_entity_name': 'compute',
             'delta': -1})
         expectations['compute']['existing']['install'] = 1
-        expectations['compute']['removed']['install'] = 1
-        expectations['compute']['removed']['uninstall'] = 1
         expectations['db']['existing']['install'] = 2
         expectations['db']['existing']['rel_install'] = 4
-        expectations['db']['removed']['install'] = 2
-        expectations['db']['removed']['uninstall'] = 2
-        expectations['db']['removed']['rel_install'] = 4
-        expectations['db']['removed']['rel_uninstall'] = 4
         self.deployment_assertions(expectations)
 
     def test_db_connected_to_compute_scale_in_db(self):
@@ -130,10 +118,6 @@ class TestScaleCompute(TestScaleBase):
         expectations['compute']['existing']['install'] = 2
         expectations['db']['existing']['install'] = 1
         expectations['db']['existing']['rel_install'] = 4
-        expectations['db']['removed']['install'] = 1
-        expectations['db']['removed']['uninstall'] = 1
-        expectations['db']['removed']['rel_install'] = 4
-        expectations['db']['removed']['rel_uninstall'] = 4
         self.deployment_assertions(expectations)
 
     def test_db_connected_to_compute_scale_in_compute(self):
@@ -147,8 +131,6 @@ class TestScaleCompute(TestScaleBase):
             'scalable_entity_name': 'compute',
             'delta': -1})
         expectations['compute']['existing']['install'] = 1
-        expectations['compute']['removed']['install'] = 1
-        expectations['compute']['removed']['uninstall'] = 1
         expectations['db']['existing']['install'] = 2
         expectations['db']['existing']['rel_install'] = 8
         expectations['db']['existing']['rel_uninstall'] = 4
@@ -176,15 +158,13 @@ class TestScaleCompute(TestScaleBase):
             'delta': -1})
         expectations['compute']['new']['install'] = 0
         expectations['compute']['existing']['install'] = 0
-        expectations['compute']['removed']['install'] = 1
-        expectations['compute']['removed']['uninstall'] = 1
         expectations['db']['existing']['install'] = 1
         expectations['db']['existing']['scale_rel_install'] = 2
         expectations['db']['existing']['rel_uninstall'] = 2
         self.deployment_assertions(expectations)
 
     def test_db_contained_in_compute_scale_in_db_scale_db(self):
-        expectations = self.deploy_app('scale5')
+        expectations = self.deploy_app('scale5', timeout_seconds=120)
         expectations['compute']['new']['install'] = 2
         expectations['db']['new']['install'] = 4
         expectations['db']['new']['rel_install'] = 8
@@ -197,14 +177,10 @@ class TestScaleCompute(TestScaleBase):
         expectations['compute']['existing']['install'] = 2
         expectations['db']['existing']['install'] = 2
         expectations['db']['existing']['rel_install'] = 4
-        expectations['db']['removed']['install'] = 2
-        expectations['db']['removed']['uninstall'] = 2
-        expectations['db']['removed']['rel_install'] = 4
-        expectations['db']['removed']['rel_uninstall'] = 4
         self.deployment_assertions(expectations)
 
     def test_db_contained_in_compute_scale_in_db(self):
-        expectations = self.deploy_app('scale5')
+        expectations = self.deploy_app('scale5', timeout_seconds=120)
         expectations['compute']['new']['install'] = 2
         expectations['db']['new']['install'] = 4
         expectations['db']['new']['rel_install'] = 8
@@ -215,12 +191,6 @@ class TestScaleCompute(TestScaleBase):
             'delta': -1,
             'scale_compute': True})
         expectations['compute']['existing']['install'] = 1
-        expectations['compute']['removed']['install'] = 1
-        expectations['compute']['removed']['uninstall'] = 1
         expectations['db']['existing']['install'] = 2
         expectations['db']['existing']['rel_install'] = 4
-        expectations['db']['removed']['install'] = 2
-        expectations['db']['removed']['uninstall'] = 2
-        expectations['db']['removed']['rel_install'] = 4
-        expectations['db']['removed']['rel_uninstall'] = 4
         self.deployment_assertions(expectations)

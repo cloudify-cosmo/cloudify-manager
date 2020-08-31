@@ -321,7 +321,7 @@ class TestSnapshot(AgentlessTestCase):
 
         # Validate the value is encrypted in the DB
         result = self._select(
-            "SELECT value FROM secrets WHERE id='sec1';")
+            "SELECT value FROM secrets WHERE id='sec1'")
         secret_encrypted = result[0][0]
         assert secret_encrypted != 'top_secret'
 
@@ -432,7 +432,7 @@ class TestSnapshot(AgentlessTestCase):
     def _get_snapshot(self, name):
         snapshot_url = os.path.join(SNAPSHOTS, name)
         self.logger.info('Retrieving snapshot: {0}'.format(snapshot_url))
-        tmp_file = os.path.join(self.workdir, name)
+        tmp_file = str(self.workdir / name)
         return utils.download_file(snapshot_url, tmp_file)
 
     def _upload_and_restore_snapshot(
@@ -456,6 +456,9 @@ class TestSnapshot(AgentlessTestCase):
         execution = rest_client.snapshots.restore(
             snapshot_id,
             ignore_plugin_failure=ignore_plugin_failure)
+        # give the database some time to downgrade/upgrade before running
+        # requests to avoid the deadlock described in CY-1455
+        time.sleep(10)
         self.wait_for_snapshot_restore_to_end(execution.id, client=rest_client)
         rest_client.maintenance_mode.deactivate()
         execution = self._wait_for_restore_execution_to_end(
@@ -499,11 +502,11 @@ class TestSnapshot(AgentlessTestCase):
         return execution
 
     def _save_security_config(self):
-        tmp_config_path = os.path.join(self.workdir, 'rest-security.conf')
+        tmp_config_path = str(self.workdir / 'rest-security.conf')
         self.copy_file_from_manager(self.REST_SEC_CONFIG_PATH, tmp_config_path)
 
     def _restore_security_config(self):
-        tmp_config_path = os.path.join(self.workdir, 'rest-security.conf')
+        tmp_config_path = str(self.workdir / 'rest-security.conf')
         self.copy_file_to_manager(tmp_config_path,
                                   self.REST_SEC_CONFIG_PATH,
                                   owner='cfyuser:')
