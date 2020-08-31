@@ -100,6 +100,36 @@ SERVICE_DESCRIPTIONS = {
         name='Prometheus',
         description='Prometheus monitoring service'),
 }
+SERVICE_ASSIGNMENTS = {
+    CloudifyNodeType.DB: [
+        'etcd',
+        'haproxy',
+        'nginx',
+        'node_exporter',
+        'patroni',
+        'postgres_exporter',
+        'postgresql-9.5',
+        'prometheus',
+    ],
+    CloudifyNodeType.BROKER: [
+        'cloudify-rabbitmq',
+        'nginx',
+        'node_exporter',
+        'prometheus',
+    ],
+    CloudifyNodeType.MANAGER: [
+        'blackbox_exporter',
+        'cloudify-amqp-postgres',
+        'cloudify-composer',
+        'cloudify-mgmtworker',
+        'cloudify-restservice',
+        'cloudify-stage',
+        'cloudify-syncthing',
+        'nginx',
+        'node_exporter',
+        'prometheus',
+    ]
+}
 
 
 class Credentials(object):
@@ -750,6 +780,23 @@ def _update_cluster_services(cluster_services, services):
                 if cluster_service['status'] == ServiceStatus.HEALTHY:
                     cluster_service['status'] = ServiceStatus.DEGRADED
             cluster_service['nodes'][node_name].update({
-                SERVICES: services.get(node['private_ip'])
+                SERVICES: _system_services_for_service_type(
+                    service_type,
+                    services.get(node['private_ip'])
+                )
             })
     return cluster_services
+
+
+def _system_services_for_service_type(service_type, node_services):
+    """Filter services assigned to given service_type."""
+    filtered_services = {}
+    for service_name, service_details in node_services.items():
+        extra_info = service_details['extra_info']
+        process_manager = list(extra_info)[0]
+        service_unit_id = extra_info[process_manager]['unit_id']
+        if service_unit_id.endswith('.service'):
+            service_unit_id = service_unit_id[:-8]
+        if service_unit_id in SERVICE_ASSIGNMENTS[service_type]:
+            filtered_services[service_name] = service_details
+    return filtered_services
