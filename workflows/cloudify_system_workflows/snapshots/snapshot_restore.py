@@ -272,7 +272,7 @@ class SnapshotRestore(object):
                 _create_deployment_workdir(
                     deployment_id=deployment_id,
                     tenant=tenant,
-                    logger=self.logger,
+                    logger=ctx.logger,
                 )
         ctx.logger.info('Successfully created deployment dirs.')
 
