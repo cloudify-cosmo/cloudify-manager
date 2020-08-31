@@ -100,6 +100,36 @@ SERVICE_DESCRIPTIONS = {
         name='Prometheus',
         description='Prometheus monitoring service'),
 }
+SERVICE_ASSIGNMENTS = {
+    CloudifyNodeType.DB: [
+        'etcd',
+        'haproxy',
+        'nginx',
+        'node_exporter'
+        'patroni',
+        'postgres_exporter',
+        'postgresql-9.5',
+        'prometheus',
+    ],
+    CloudifyNodeType.BROKER: [
+        'cloudify-rabbitmq',
+        'nginx',
+        'node_exporter'
+        'prometheus',
+    ],
+    CloudifyNodeType.MANAGER: [
+        'blackbox_exporter',
+        'cloudify-amqp-postgres',
+        'cloudify-composer',
+        'cloudify-mgmtworker',
+        'cloudify-restservice',
+        'cloudify-stage',
+        'cloudify-syncthing',
+        'nginx',
+        'node_exporter',
+        'prometheus',
+    ]
+}
 
 
 class Credentials(object):
@@ -749,6 +779,11 @@ def _update_cluster_services(cluster_services, services):
             if degraded:
                 if cluster_service['status'] == ServiceStatus.HEALTHY:
                     cluster_service['status'] = ServiceStatus.DEGRADED
+            # TODO mateumann remove me
+            current_app.logger.debug(
+                'Services {0}\nSERVICE_ASSIGNMENTS {1}'.format(
+                    services.get(node['private_ip']), SERVICE_ASSIGNMENTS)
+            )
             cluster_service['nodes'][node_name].update({
                 SERVICES: services.get(node['private_ip'])
             })
