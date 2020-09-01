@@ -103,7 +103,6 @@ SERVICE_DESCRIPTIONS = {
 SERVICE_ASSIGNMENTS = {
     CloudifyNodeType.DB: [
         'etcd',
-        'haproxy',
         'nginx',
         'node_exporter',
         'patroni',
@@ -125,6 +124,7 @@ SERVICE_ASSIGNMENTS = {
         'cloudify-restservice',
         'cloudify-stage',
         'cloudify-syncthing',
+        'haproxy',
         'nginx',
         'node_exporter',
         'prometheus',
