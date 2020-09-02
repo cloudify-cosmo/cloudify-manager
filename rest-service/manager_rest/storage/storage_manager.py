@@ -400,7 +400,11 @@ class SQLStorageManager(object):
             offset = 0
 
         total = query.order_by(None).count()  # Fastest way to count
-        results = query.limit(size).offset(offset).all()
+        if get_all_results:
+            results = query.all()
+        else:
+            results = query.limit(size).offset(offset).all()
+
         return results, total, size, offset
 
     @staticmethod
