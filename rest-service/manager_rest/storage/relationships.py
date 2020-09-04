@@ -42,7 +42,7 @@ def one_to_many_relationship(child_class,
                              parent_class,
                              foreign_key_column,
                              parent_class_primary_key='_storage_id',
-                             backreference=None,
+                             backref=None,
                              cascade='all',
                              **relationship_kwargs):
     """Return a one-to-many SQL relationship object
@@ -52,17 +52,16 @@ def one_to_many_relationship(child_class,
     :param child_class: Class of the child table
     :param foreign_key_column: The column of the foreign key
     :param parent_class_primary_key: The name of the parent's primary key
-    :param backreference: The name to give to the reference to the child
+    :param backref: A sqlalchemy backref for this relationship
     :param cascade: in what cases to cascade changes from parent to child
     """
-    backreference = backreference or child_class.__tablename__
+    if backref is None:
+        backref = db.backref(child_class.__tablename__, cascade=cascade)
     parent_primary_key = getattr(parent_class, parent_class_primary_key)
     return db.relationship(
         parent_class,
         primaryjoin=lambda: parent_primary_key == foreign_key_column,
-        # The following line makes sure that when the *parent* is
-        # deleted, all its connected children are deleted as well
-        backref=db.backref(backreference, cascade=cascade),
+        backref=backref,
         **relationship_kwargs
     )
 
