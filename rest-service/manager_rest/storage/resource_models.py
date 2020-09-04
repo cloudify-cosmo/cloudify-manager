@@ -524,15 +524,15 @@ class PluginsUpdate(CreatedAtMixin, SQLResourceBase):
             cls,
             Blueprint,
             cls._original_blueprint_fk,
-            backreference='original_of_plugins_update')
+            backref=db.backref('original_of_plugins_update')
+        )
 
     @declared_attr
     def temp_blueprint(cls):
-        return one_to_many_relationship(cls,
-                                        Blueprint,
-                                        cls._temp_blueprint_fk,
-                                        backreference='temp_of_plugins_update',
-                                        cascade=False)
+        return one_to_many_relationship(
+            cls, Blueprint, cls._temp_blueprint_fk,
+            backref=db.backref('temp_of_plugins_update', cascade=False),
+            cascade=False)
 
     blueprint_id = association_proxy('blueprint', 'id')
     temp_blueprint_id = association_proxy('temp_blueprint', 'id')
@@ -577,19 +577,17 @@ class DeploymentUpdate(CreatedAtMixin, SQLResourceBase):
 
     @declared_attr
     def old_blueprint(cls):
-        return one_to_many_relationship(cls,
-                                        Blueprint,
-                                        cls._old_blueprint_fk,
-                                        backreference='update_from',
-                                        cascade=False)
+        return one_to_many_relationship(
+            cls, Blueprint, cls._old_blueprint_fk,
+            backref=db.backref('update_from', cascade=False),
+            cascade=False)
 
     @declared_attr
     def new_blueprint(cls):
-        return one_to_many_relationship(cls,
-                                        Blueprint,
-                                        cls._new_blueprint_fk,
-                                        backreference='update_to',
-                                        cascade=False)
+        return one_to_many_relationship(
+            cls, Blueprint, cls._new_blueprint_fk,
+            backref=db.backref('update_to', cascade=False),
+            cascade=False)
 
     deployment_id = association_proxy('deployment', 'id')
     execution_id = association_proxy('execution', 'id')
@@ -645,7 +643,7 @@ class DeploymentUpdateStep(SQLResourceBase):
         return one_to_many_relationship(cls,
                                         DeploymentUpdate,
                                         cls._deployment_update_fk,
-                                        backreference='steps')
+                                        backref=db.backref('steps'))
 
     deployment_update_id = association_proxy('deployment_update', 'id')
 
@@ -673,7 +671,7 @@ class DeploymentModification(CreatedAtMixin, SQLResourceBase):
         return one_to_many_relationship(cls,
                                         Deployment,
                                         cls._deployment_fk,
-                                        backreference='modifications')
+                                        backref=db.backref('modifications'))
 
     deployment_id = association_proxy('deployment', 'id')
 
@@ -916,7 +914,8 @@ class InterDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
             cls,
             Deployment,
             cls._source_deployment,
-            backreference='source_of_dependency_in')
+            backref=db.backref('source_of_dependency_in')
+        )
 
     @declared_attr
     def target_deployment(cls):
@@ -924,7 +923,10 @@ class InterDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
             cls,
             Deployment,
             cls._target_deployment,
-            backreference='target_of_dependency_in',
+            backref=db.backref(
+                'target_of_dependency_in',
+                cascade='save-update, merge, refresh-expire, expunge'
+            ),
             cascade='save-update, merge, refresh-expire, expunge')
 
     source_deployment_id = association_proxy('source_deployment', 'id')
