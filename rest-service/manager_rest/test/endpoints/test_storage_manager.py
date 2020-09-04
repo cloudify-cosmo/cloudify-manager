@@ -13,6 +13,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import mock
+
 from cloudify.models_states import VisibilityState
 
 from manager_rest import utils
@@ -200,9 +202,12 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         self.assertFalse(hasattr(blueprint_restored, 'plan'))
         self.assertFalse(hasattr(blueprint_restored, 'main_file_name'))
 
+    @mock.patch('manager_rest.storage.storage_manager.'
+                'config.instance.default_page_size',
+                10)
     def test_all_results_query(self):
         now = utils.get_formatted_timestamp()
-        for i in range(1, 1002):
+        for i in range(20):
             secret = models.Secret(id='secret_{}'.format(i),
                                    value='value',
                                    created_at=now,
@@ -212,7 +217,13 @@ class StorageManagerTests(base_test.BaseServerTestCase):
 
         secret_list = self.sm.list(
             models.Secret,
-            include=['id', 'created_at'],
+            include=['id'],
+        )
+        self.assertEqual(10, len(secret_list))
+
+        secret_list = self.sm.list(
+            models.Secret,
+            include=['id'],
             get_all_results=True
         )
-        self.assertEqual(1000, len(secret_list))
+        self.assertEqual(20, len(secret_list))
