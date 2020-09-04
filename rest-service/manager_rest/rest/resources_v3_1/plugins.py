@@ -82,7 +82,7 @@ class PluginsUpdate(SecuredResource):
 
     @authorize('plugins_update_create')
     @rest_decorators.marshal_with(models.PluginsUpdate)
-    def post(self, id, phase):
+    def post(self, id, phase, **kwargs):
         """
         Supports two stages of a plugin update.
         Phases:
@@ -97,6 +97,12 @@ class PluginsUpdate(SecuredResource):
         update ID.
         :param phase: either PHASES.INITIAL or PHASES.FINAL (internal).
         """
+        data = rest_utils.get_json_and_verify_params({
+            'plugin_name': {'type': list, 'optional': True},
+            'minor': {'type': bool, 'optional': True},
+            'minor_except': {'type': list, 'optional': True},
+        })
+
         if phase == PHASES.INITIAL:
             return get_plugins_updates_manager().initiate_plugins_update(
                 blueprint_id=id)
