@@ -14,6 +14,7 @@
 #  * limitations under the License.
 
 from flask_restful_swagger import swagger
+from werkzeug.exceptions import BadRequest
 
 from cloudify._compat import text_type
 from cloudify.models_states import VisibilityState
@@ -97,12 +98,14 @@ class PluginsUpdate(SecuredResource):
         update ID.
         :param phase: either PHASES.INITIAL or PHASES.FINAL (internal).
         """
-        data = rest_utils.get_json_and_verify_params({
-            'plugin_name': {'type': list, 'optional': True},
-            'minor': {'type': bool, 'optional': True},
-            'minor_except': {'type': list, 'optional': True},
-        })
-
+        try:
+            _ = rest_utils.get_json_and_verify_params({
+                'plugin_name': {'type': list, 'optional': True},
+                'minor': {'type': bool, 'optional': True},
+                'minor_except': {'type': list, 'optional': True},
+            })
+        except BadRequest:
+            pass
         if phase == PHASES.INITIAL:
             return get_plugins_updates_manager().initiate_plugins_update(
                 blueprint_id=id)
