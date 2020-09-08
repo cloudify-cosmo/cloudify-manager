@@ -14,23 +14,18 @@
 #    * limitations under the License.
 
 import uuid
+import pytest
 
 from cloudify_rest_client import exceptions
 
 from integration_tests import AgentTestCase
-from integration_tests.framework.constants import CLOUDIFY_USER
 from integration_tests.tests.utils import get_resource as resource
 from integration_tests.tests.utils import \
     wait_for_deployment_creation_to_complete
 
 
+@pytest.mark.usefixtures('testmockoperations_plugin')
 class ManagerMaintenanceModeTest(AgentTestCase):
-    def setUp(self):
-        super(ManagerMaintenanceModeTest, self).setUp()
-        # Only chowning the /opt/manager folder to allow creating the
-        # maintenance folder. Not doing chown -R to avoid touching the
-        # read-only /opt/manager/env folder
-        self.env.chown(CLOUDIFY_USER, '/opt/manager', recursive=False)
 
     def test_maintenance_mode(self):
         blueprint_id = 'b{0}'.format(uuid.uuid4())
@@ -64,7 +59,7 @@ class ManagerMaintenanceModeTest(AgentTestCase):
                            status='activating')
 
         self.logger.info('cancelling installation')
-        self.cfy.executions.cancel(execution['id'])
+        self.client.executions.cancel(execution['id'])
 
         self.logger.info(
             "checking if maintenance status has changed to 'activated'")

@@ -272,13 +272,15 @@ def patch_yaml(yaml_path, is_json=False, default_flow_style=True):
         yield patch
 
 
-def run_postgresql_command(cmd):
-    return docker.execute('sudo -u postgres psql cloudify_db '
-                          '-c "{0}"'.format(cmd))
+def run_postgresql_command(container_id, cmd):
+    return docker.execute(
+        container_id,
+        'sudo -u postgres psql cloudify_db -c "{0}"'.format(cmd)
+    )
 
 
-def delete_provider_context():
-    run_postgresql_command('DELETE from provider_context')
+def delete_provider_context(container_id):
+    run_postgresql_command(container_id, 'DELETE from provider_context')
 
 
 def generate_scheduled_for_date():
@@ -320,9 +322,9 @@ def wait_for_rest(obj, timeout_sec):
     return False
 
 
-def assert_messages_in_log(workdir, messages, log_path):
-    tmp_log_path = os.path.join(workdir, 'test_log')
-    docker.copy_file_from_manager(log_path, tmp_log_path)
+def assert_messages_in_log(container_id, workdir, messages, log_path):
+    tmp_log_path = str(workdir / 'test_log')
+    docker.copy_file_from_manager(container_id, log_path, tmp_log_path)
     with open(tmp_log_path) as f:
         data = f.readlines()
     for message in messages:

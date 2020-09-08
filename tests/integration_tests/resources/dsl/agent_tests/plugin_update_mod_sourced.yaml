@@ -7,29 +7,27 @@ imports:
 plugins:
   host:
     executor: host_agent
-    package_name: version-aware-plugin
+    package_name: version_aware
     package_version: '2.0'
-    source: version-aware-plugin_2.0
+    source: version_aware_2.0
 
   cda:
     executor: central_deployment_agent
-    package_name: version-aware-plugin
+    package_name: version_aware
     package_version: '2.0'
-    source: version-aware-plugin_2.0
+    source: version_aware_2.0
 
 node_templates:
   node:
     type: cloudify.nodes.docker.Compute
-    properties:
-      install_agent: true
     interfaces:
       test_cda:
-        cda_op: cda.version_aware_plugin.tasks.cda_op
+        cda_op: cda.version_aware.tasks.cda_op
       test_host:
-        host_op: host.version_aware_plugin.tasks.host_op
+        host_op: host.version_aware.tasks.host_op
 
 workflows:
-  test_cda_wf: cda.version_aware_plugin.tasks.cda_wf
+  test_cda_wf: cda.version_aware.tasks.cda_wf
 
-  test_cda_op: cda.version_aware_plugin.tasks.run_cda_op
-  test_host_op: host.version_aware_plugin.tasks.run_host_op
+  test_cda_op: cda.version_aware.tasks.run_cda_op
+  test_host_op: host.version_aware.tasks.run_host_op

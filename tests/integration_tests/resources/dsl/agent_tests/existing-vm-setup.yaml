@@ -7,6 +7,3 @@ imports:
 node_templates:
   setup_host:
     type: cloudify.nodes.docker.Compute
-    properties:
-      agent_config:
-        install_method: none

@@ -15,7 +15,6 @@
 
 import json
 import os
-import sys
 import threading
 
 from pika.exceptions import ConnectionClosed
@@ -73,7 +72,7 @@ class EventsPrinter(threading.Thread):
                 ev = json.loads(body)
                 output = cloudify.logs.create_event_message_prefix(ev)
                 if output:
-                    sys.stdout.write('{0}\n'.format(output))
+                    print(output)
             except Exception:
                 logger.error('event/log format error - output: {0}'
                              .format(body), exc_info=True)

@@ -33,10 +33,8 @@ class TestListAgents(AgentTestCase):
         self.assertEqual(agent_list.metadata['pagination']['total'], 2)
 
         self.assertIsNotNone(agent_list.items[0]['id'])
-        self.assertIsNotNone(agent_list.items[0]['ip'])
         self.assertIsNotNone(agent_list.items[0]['version'])
-        self.assertEqual(agent_list.items[0]['system'], 'centos core')
-        self.assertEqual(agent_list.items[0]['install_method'], 'remote')
+        self.assertEqual(agent_list.items[0]['install_method'], 'plugin')
         self.assertEqual(agent_list.items[0]['tenant_name'], 'default_tenant')
         self.assertEqual({agent['deployment']
                          for agent in agent_list.items}, {'d1', 'd2'})

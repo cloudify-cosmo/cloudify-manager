@@ -24,9 +24,9 @@ class TestUsageCollectorWithAgent(AgentTestCase, TestUsageCollectorBase):
             "Uptime script finished running",
             "Usage script finished running",
             "'customer_id': 'mock_customer'",
-            "'node_instances_count': 1L",
-            "'compute_count': 1L",
-            "'agents_count': 1L",
+            "'node_instances_count': 1",
+            "'compute_count': 1",
+            "'agents_count': 1",
             "'premium_edition': True"
         ]
         self.run_scripts_with_deployment("dsl/agent_tests/with_agent.yaml",

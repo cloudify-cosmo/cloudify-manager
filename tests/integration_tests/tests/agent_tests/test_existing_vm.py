@@ -14,11 +14,9 @@
 #    * limitations under the License.
 
 import uuid
+import pytest
 from os.path import join
 
-import pytest
-
-from integration_tests.framework import utils
 from integration_tests import AgentTestWithPlugins
 from integration_tests.tests.utils import get_resource as resource
 
@@ -33,11 +31,10 @@ class BaseExistingVMTest(AgentTestWithPlugins):
                                 deployment_id=self.setup_deployment_id)
 
     def _get_ssh_key_content(self):
-        ssh_key_path = self.get_host_key_path(
+        return self.get_host_key(
             node_id=self.setup_node_id,
             deployment_id=self.setup_deployment_id
         )
-        return self.read_manager_file(ssh_key_path)
 
     def _get_host_ip(self):
         return self.get_host_ip(
@@ -47,31 +44,13 @@ class BaseExistingVMTest(AgentTestWithPlugins):
 
 
 @pytest.mark.usefixtures('testmockoperations_plugin')
-@pytest.mark.usefixtures('dockercompute_plugin')
 class ExistingVMTest(BaseExistingVMTest):
     def test_existing_vm(self):
         dsl_path = resource("dsl/agent_tests/existing-vm.yaml")
-        inputs = {
-            'ip': self._get_host_ip(),
-            'agent_key': self.get_host_key_path(
-                node_id=self.setup_node_id,
-                deployment_id=self.setup_deployment_id),
-        }
-        deployment, _ = self.deploy_application(dsl_path, inputs=inputs)
-        plugin_data = self.get_plugin_data('testmockoperations', deployment.id)
-        self.assertEqual(1, len(plugin_data['mock_operation_invocation']))
-
-
-class SecretAgentKeyTest(BaseExistingVMTest):
-    def test_secret_ssh_key_in_existing_vm(self):
-        ssh_key_content = self._get_ssh_key_content()
-        self.client.secrets.create('agent_key', ssh_key_content)
-        dsl_path = resource(
-            'dsl/agent_tests/secret-ssh-key-in-existing-vm.yaml'
-        )
-        inputs = {'ip': self._get_host_ip()}
-        deployment, _ = self.deploy_application(dsl_path, inputs=inputs)
-        plugin_data = self.get_plugin_data('testmockoperations', deployment.id)
+        self.deploy_application(dsl_path)
+        plugin_ops_instance = [i for i in self.client.node_instances.list()
+                               if i.node_id == 'middle'][0]
+        plugin_data = plugin_ops_instance['runtime_properties']
         self.assertEqual(1, len(plugin_data['mock_operation_invocation']))
 
 
@@ -83,37 +62,7 @@ class HostPluginTest(BaseExistingVMTest):
             join(self.BLUEPRINTS, 'source_plugin_blueprint.yaml')
         )
 
-    def test_wagon_plugin_requires_old_package(self):
-        wagon_path = self._get_plugin_wagon(
-            'requires_old_package_plugin-1.0-py27-none-any.wgn'
-        )
-        plugin_yaml = join(self.BLUEPRINTS,
-                           'plugins',
-                           'old_package_wagon_plugin.yaml')
-        yaml_path = resource(plugin_yaml)
-        with utils.zip_files([wagon_path, yaml_path]) as zip_path:
-            self.client.plugins.upload(zip_path)
-            self._wait_for_execution_by_wf_name('install_plugin')
-        self._test_host_plugin_requires_old_package(
-            join(self.BLUEPRINTS, 'wagon_plugin_blueprint.yaml')
-        )
-
     def _test_host_plugin_requires_old_package(self, blueprint_path):
         dsl_path = resource(blueprint_path)
-        inputs = {
-            'server_ip': self._get_host_ip(),
-            'agent_private_key_path': self.get_host_key_path(
-                node_id=self.setup_node_id,
-                deployment_id=self.setup_deployment_id),
-            'agent_user': 'root'
-        }
-        deployment, _ = self.deploy_application(dsl_path, inputs=inputs,
-                                                timeout_seconds=90)
+        deployment, _ = self.deploy_application(dsl_path, timeout_seconds=120)
         self.undeploy_application(deployment.id)
-
-    def _get_plugin_wagon(self, name):
-        aws_url = 'http://cloudify-tests-files.s3-eu-west-1.amazonaws.com/'
-        wagon_url = join(aws_url, 'plugins', name)
-        self.logger.info('Retrieving wagon: {0}'.format(wagon_url))
-        tmp_file = join(self.workdir, name)
-        return utils.download_file(wagon_url, tmp_file)

@@ -1,0 +1,10 @@
+plugins:
+  host:
+    executor: host_agent
+    package_name: version_aware
+    package_version: '1.0'
+
+  cda:
+    executor: central_deployment_agent
+    package_name: version_aware
+    package_version: '1.0'

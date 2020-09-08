@@ -14,11 +14,13 @@
 #    * limitations under the License.
 
 import os
+import pytest
 
 from integration_tests import AgentTestCase
 from integration_tests.tests.utils import get_resource as resource
 
 
+@pytest.mark.usefixtures('testmockoperations_plugin')
 class PluginWorkdirTest(AgentTestCase):
 
     def test_plugin_workdir(self):
@@ -39,9 +41,9 @@ class PluginWorkdirTest(AgentTestCase):
         host_instance_id = self.client.node_instances.list(
             deployment_id=deployment.id,
             node_id='host')[0].id
-        host_file = os.path.join(
-            '/root', host_instance_id, 'work/plugins/testmockoperations',
-            filename)
+        host_file = os.path.join('/etc/cloudify', host_instance_id,
+                                 'work/plugins/testmockoperations',
+                                 filename)
         out = self.read_manager_file(central_file)
         self.assertEqual(central_content, out)
         out = self.read_host_file(host_file,
