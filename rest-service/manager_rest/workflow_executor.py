@@ -86,7 +86,8 @@ def execute_workflow(name,
             'package_name': plugin.get('package_name'),
             'package_version': plugin.get('package_version'),
             'visibility': plugin.get('visibility'),
-            'tenant_name': plugin.get('tenant_name')
+            'tenant_name': plugin.get('tenant_name'),
+            'source': plugin.get('source')
         }
 
     return _execute_task(execution_id=execution_id,
