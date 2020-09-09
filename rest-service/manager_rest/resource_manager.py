@@ -357,8 +357,6 @@ class ResourceManager(object):
                                                      plugin.archive_name)
         shutil.rmtree(os.path.dirname(archive_path), ignore_errors=True)
 
-        return plugin
-
     def publish_blueprint(self,
                           application_dir,
                           application_file_name,

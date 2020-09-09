@@ -19,7 +19,7 @@ from manager_rest.storage import models
 from manager_rest.security.authorization import authorize
 from manager_rest.resource_manager import get_resource_manager
 
-from .. import rest_decorators, resources_v2
+from .. import resources_v2
 from ..rest_utils import verify_and_convert_bool, get_json_and_verify_params
 
 
@@ -31,7 +31,6 @@ class PluginsId(resources_v2.PluginsId):
         notes="deletes a plugin according to its ID."
     )
     @authorize('plugin_delete')
-    @rest_decorators.marshal_with(models.Plugin)
     def delete(self, plugin_id, **kwargs):
         """
         Delete plugin by ID
@@ -40,5 +39,5 @@ class PluginsId(resources_v2.PluginsId):
         force = verify_and_convert_bool(
             'force', request_dict.get('force', False)
         )
-        return get_resource_manager().remove_plugin(plugin_id=plugin_id,
-                                                    force=force)
+        get_resource_manager().remove_plugin(plugin_id=plugin_id, force=force)
+        return None, 204

@@ -668,7 +668,6 @@ class SQLStorageManager(object):
         if instance.is_resource and validate_global:
             validate_global_modification(instance)
         current_app.logger.debug('Delete {0}'.format(instance))
-        self._load_relationships(instance)
         db.session.delete(instance)
         self._safe_commit()
         return instance

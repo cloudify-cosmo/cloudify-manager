@@ -105,17 +105,16 @@ class BlueprintsId(resources_v2.BlueprintsId):
         notes="deletes a blueprint by its id."
     )
     @authorize('blueprint_delete')
-    @rest_decorators.marshal_with(models.Blueprint)
     def delete(self, blueprint_id, **kwargs):
         """
         Delete blueprint by id
         """
         query_args = get_args_and_verify_arguments(
             [Argument('force', type=boolean, default=False)])
-        blueprint = get_resource_manager().delete_blueprint(
+        get_resource_manager().delete_blueprint(
             blueprint_id,
             force=query_args.force)
-        return blueprint, 200
+        return None, 204
 
 
 class BlueprintsIdValidate(BlueprintsId):
