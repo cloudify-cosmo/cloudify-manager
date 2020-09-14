@@ -118,7 +118,8 @@ class HookConsumer(CloudifyOperationConsumer):
             task_target=self.queue,
             tenant_name=tenant_name,
             rest_token=hook_context.get('rest_token'),
-            plugin=self._get_plugin(tenant_name, implementation)
+            plugin=self._get_plugin(tenant_name, implementation),
+            execution_id=hook_context['execution_id']
         )
 
         if operation_context['plugin']:
