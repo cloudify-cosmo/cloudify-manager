@@ -174,7 +174,9 @@ class DeploymentsId(SecuredResource):
                 deployment.id)
             if os.path.exists(deployment_folder):
                 shutil.rmtree(deployment_folder)
-        return deployment, 200
+        return {
+            'id': deployment.id
+        }, 200
 
 
 class DeploymentModifications(SecuredResource):
