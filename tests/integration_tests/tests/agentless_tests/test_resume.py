@@ -179,6 +179,30 @@ class TestResumeMgmtworker(AgentlessTestCase):
         self.assertTrue(self.client.node_instances.get(instance2.id)
                         .runtime_properties['marked'])
 
+    def test_resume_operation_order(self):
+        # after resuming, the establish still runs after create
+        dep = self.deploy(
+            resource("dsl/resume_operation_order/resume_operation_order.yaml"))
+        instance = self.client.node_instances.list(
+            deployment_id=dep.id, node_id='node1')[0]
+        execution = self.execute_workflow(
+            'install', dep.id, wait_for_execution=False)
+        self.assertRaises(RuntimeError,
+                          self.wait_for_execution_to_end, execution)
+
+        self.assertNotIn(
+            'resumed',
+            self.client.node_instances.get(instance.id).runtime_properties)
+
+        self._unlock_operation('cloudify.interfaces.lifecycle.create')
+        execution = self.client.executions.resume(execution.id, force=True)
+        self.logger.info('Waiting for the execution to finish')
+        execution = self.wait_for_execution_to_end(execution)
+        self.assertEqual(execution.status, 'terminated')
+
+        self.assertTrue(self.client.node_instances.get(instance.id)
+                        .runtime_properties['resumed'])
+
     def test_nonresumable_mgmtworker_op(self):
         # start a workflow, stop mgmtworker, restart mgmtworker, check that
         # the operation which is nonresumable did not run again, and the

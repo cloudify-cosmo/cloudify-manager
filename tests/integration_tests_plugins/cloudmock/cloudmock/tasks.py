@@ -95,9 +95,11 @@ def nonresumable(**kwargs):
 
 
 @operation
-def failing(ctx, **kwargs):
+def failing(ctx, wait=0, **kwargs):
     if not _is_unlocked():
         raise NonRecoverableError('Error')
+    if wait:
+        time.sleep(wait)
     ctx.instance.runtime_properties['resumed'] = True
 
 
@@ -187,3 +189,9 @@ def workflow1(ctx):
             version=ni.version,
             runtime_properties={'custom_workflow': True}
         )
+
+
+@operation
+def ordered_establish(ctx):
+    if not ctx.source.instance.runtime_properties.get('resumed'):
+        raise NonRecoverableError('create should have run before this')

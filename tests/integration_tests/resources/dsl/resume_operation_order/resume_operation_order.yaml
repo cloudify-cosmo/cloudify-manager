@@ -1,0 +1,28 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - cloudify/types/types.yaml
+  - plugin:cloudmock
+
+
+node_templates:
+  node1:
+    type: cloudify.nodes.Compute
+    properties:
+      ip: 127.0.0.1
+      agent_config:
+        install_method: none
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          implementation: cloudmock.cloudmock.tasks.failing
+          inputs:
+            wait: 5
+    relationships:
+      - type: cloudify.relationships.connected_to
+        target: node2
+        source_interfaces:
+          cloudify.interfaces.relationship_lifecycle:
+            establish: cloudmock.cloudmock.tasks.ordered_establish
+  node2:
+    type: cloudify.nodes.Root
