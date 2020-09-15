@@ -29,7 +29,7 @@ from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.rest.rest_decorators import marshal_with
 from manager_rest.rest.rest_utils import verify_and_convert_bool
-from manager_rest.cluster_status_manager import get_syncthing_status
+from manager_rest.syncthing_status_manager import get_syncthing_status
 from manager_rest.rest.resources_v1.status import (
     should_be_in_services_output,
     get_system_manager_services
