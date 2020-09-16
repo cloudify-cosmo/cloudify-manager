@@ -26,6 +26,9 @@ from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.utils import create_filter_params_list_description
+from manager_rest.plugins_update.constants import (PLUGIN_NAME,
+                                                   MINOR,
+                                                   MINOR_EXCEPT)
 from manager_rest.plugins_update.manager import get_plugins_updates_manager
 from manager_rest.rest import (resources_v2,
                                resources_v2_1,
@@ -99,16 +102,16 @@ class PluginsUpdate(SecuredResource):
         :param phase: either PHASES.INITIAL or PHASES.FINAL (internal).
         """
         try:
-            _ = rest_utils.get_json_and_verify_params({
-                'plugin_name': {'type': list, 'optional': True},
-                'minor': {'type': bool, 'optional': True},
-                'minor_except': {'type': list, 'optional': True},
+            filters = rest_utils.get_json_and_verify_params({
+                PLUGIN_NAME: {'type': list, 'optional': True},
+                MINOR: {'type': bool, 'optional': True},
+                MINOR_EXCEPT: {'type': list, 'optional': True},
             })
         except BadRequest:
-            pass
+            filters = {'plugin_name': [], 'minor': False, 'minor_except': []}
         if phase == PHASES.INITIAL:
             return get_plugins_updates_manager().initiate_plugins_update(
-                blueprint_id=id)
+                blueprint_id=id, filters=filters)
         elif phase == PHASES.FINAL:
             return get_plugins_updates_manager().finalize(
                 plugins_update_id=id)

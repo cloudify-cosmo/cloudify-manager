@@ -23,21 +23,22 @@ from manager_rest.constants import PROVIDER_CONTEXT_ID
 from manager_rest.storage.models import ProviderContext
 
 
-def get_parser_context(sm=None):
+def get_parser_context(sm=None, resolver_parameters=None):
     sm = sm or get_storage_manager()
     if not hasattr(current_app, 'parser_context'):
-        update_parser_context(sm.get(
-            ProviderContext,
-            PROVIDER_CONTEXT_ID
-        ).context)
+        update_parser_context(
+            sm.get(ProviderContext, PROVIDER_CONTEXT_ID).context,
+            resolver_parameters
+        )
     return current_app.parser_context
 
 
-def update_parser_context(context):
-    current_app.parser_context = _extract_parser_context(context)
+def update_parser_context(context, resolver_parameters=None):
+    current_app.parser_context = _extract_parser_context(
+        context, resolver_parameters)
 
 
-def _extract_parser_context(context):
+def _extract_parser_context(context, resolver_parameters):
     context = context or {}
     cloudify_section = context.get(constants.CLOUDIFY, {})
     resolver_section = cloudify_section.get(
@@ -46,6 +47,10 @@ def _extract_parser_context(context):
         'implementation',
         'manager_rest.'
         'resolver_with_catalog_support:ResolverWithCatalogSupport')
+    if resolver_parameters:
+        if constants.PARAMETERS not in resolver_section:
+            resolver_section[constants.PARAMETERS] = {}
+        resolver_section[constants.PARAMETERS].update(resolver_parameters)
     resolver = dsl_parser_utils.create_import_resolver(resolver_section)
     return {
         'resolver': resolver,

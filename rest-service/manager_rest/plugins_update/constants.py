@@ -37,3 +37,7 @@ NOT_ACTIVE_STATES = (STATES.SUCCESSFUL,
 ACTIVE_STATES = [state for state in STATES if state not in NOT_ACTIVE_STATES]
 
 PLUGIN_UPDATE_WORKFLOW = 'cloudify_system_workflows.plugins.update'
+
+PLUGIN_NAME = 'plugin_name'
+MINOR = 'minor'
+MINOR_EXCEPT = 'minor_except'

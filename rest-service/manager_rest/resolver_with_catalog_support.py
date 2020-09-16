@@ -50,6 +50,12 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
     `file:///opt/manager/resources/<BLUEPRINTS_FOLDER>/<tenant>/<id>`,
     where <id> is the id of the blueprint looked up for the current tenant.
     """
+
+    def __init__(self, rules=None, fallback=True,
+                 plugin_version_constraints={}):
+        super(ResolverWithCatalogSupport, self).__init__(rules, fallback)
+        self.version_constraints = plugin_version_constraints
+
     @staticmethod
     def _is_plugin_url(import_url):
         return import_url.startswith(PLUGIN_PREFIX)

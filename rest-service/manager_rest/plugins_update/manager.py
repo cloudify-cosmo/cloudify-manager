@@ -23,13 +23,18 @@ from cloudify.models_states import ExecutionState
 from dsl_parser.constants import (PLUGIN_NAME_KEY,
                                   WORKFLOW_PLUGINS_TO_INSTALL,
                                   DEPLOYMENT_PLUGINS_TO_INSTALL,
-                                  HOST_AGENT_PLUGINS_TO_INSTALL)
+                                  HOST_AGENT_PLUGINS_TO_INSTALL,
+                                  PLUGIN_PACKAGE_NAME,
+                                  PLUGIN_PACKAGE_VERSION)
 
 from manager_rest import config, utils
 from manager_rest.storage import get_storage_manager, models
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.plugins_update.constants import (STATES,
-                                                   ACTIVE_STATES)
+                                                   ACTIVE_STATES,
+                                                   PLUGIN_NAME,
+                                                   MINOR,
+                                                   MINOR_EXCEPT)
 from manager_rest.manager_exceptions import (ConflictError,
                                              PluginsUpdateError,
                                              IllegalActionError)
@@ -80,13 +85,17 @@ class PluginsUpdateManager(object):
         plugins_update.set_blueprint(blueprint)
         return self.sm.put(plugins_update)
 
-    def initiate_plugins_update(self, blueprint_id):
+    def initiate_plugins_update(self, blueprint_id, filters):
         """Creates a temporary blueprint and executes the plugins update
         workflow.
         """
         self.validate_no_active_updates_per_blueprint(blueprint_id)
         blueprint = self.sm.get(models.Blueprint, blueprint_id)
-        temp_plan = self.get_reevaluated_plan(blueprint)
+        temp_plan = self.get_reevaluated_plan(
+            blueprint,
+            {'plugin_version_constraints':
+             _plugin_version_constraints(blueprint, filters)}
+        )
         no_changes_required = not _did_plugins_to_install_change(
             temp_plan, blueprint.plan)
 
@@ -185,7 +194,7 @@ class PluginsUpdateManager(object):
                             substr_filters=substr_filters,
                             sort=sort)
 
-    def get_reevaluated_plan(self, blueprint):
+    def get_reevaluated_plan(self, blueprint, resolver_parameters):
         blueprint_dir = os.path.join(
             config.instance.file_server_root,
             FILE_SERVER_BLUEPRINTS_FOLDER,
@@ -193,8 +202,52 @@ class PluginsUpdateManager(object):
             blueprint.id)
         temp_plan = self.rm.parse_plan(blueprint_dir,
                                        blueprint.main_file_name,
-                                       config.instance.file_server_root)
+                                       config.instance.file_server_root,
+                                       resolver_parameters=resolver_parameters)
         return temp_plan
+
+
+def _plugin_version_constraints(blueprint, filters):
+    """Prepare a list of plugin version constraints for the resolver."""
+
+    def plugins_in_a_plan(plan):
+        for executor in [DEPLOYMENT_PLUGINS_TO_INSTALL,
+                         WORKFLOW_PLUGINS_TO_INSTALL,
+                         HOST_AGENT_PLUGINS_TO_INSTALL]:
+            if executor not in plan:
+                continue
+            for a_plugin in plan[executor]:
+                if a_plugin[PLUGIN_PACKAGE_NAME] and \
+                        a_plugin[PLUGIN_PACKAGE_VERSION]:
+                    yield a_plugin
+
+    def prepare_constraint(plugin_name, plugin_version, filters):
+        # If filtering by plugin names are `plugin_name` is not listed as one
+        # of them, current version of the plugin is mandatory (no upgrade)
+        if filters.get(PLUGIN_NAME) and \
+                plugin_name not in filters[PLUGIN_NAME]:
+            return '=={0}'.format(plugin_version)
+        # If all plugins should be upgraded to the latest minor version or if
+        # some plugins should not be upgraded to the latest minor version but
+        # `plugin_name` is not one of them, return a minor version constraint
+        if filters.get(MINOR) or (filters.get(MINOR_EXCEPT) and
+                                  plugin_name not in filters[MINOR_EXCEPT]):
+            v = plugin_version.split('.')
+            return '>={0}.{1},<{2}'.format(v[0], v[1], int(v[0]) + 1)
+        # No constraint whatsoever
+        return None
+
+    constraints = {}
+    for plugin in plugins_in_a_plan(blueprint.plan):
+        if plugin[PLUGIN_PACKAGE_NAME] in constraints:
+            continue
+        constraint = prepare_constraint(plugin[PLUGIN_PACKAGE_NAME],
+                                        plugin[PLUGIN_PACKAGE_VERSION],
+                                        filters)
+        if constraint:
+            constraints[plugin[PLUGIN_PACKAGE_NAME]] = constraint
+
+    return constraints
 
 
 def _did_plugins_to_install_change(temp_plan, plan):
