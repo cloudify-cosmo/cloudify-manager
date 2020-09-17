@@ -14,7 +14,6 @@
 #    * limitations under the License.
 
 from time import sleep
-from os.path import join
 
 from requests.exceptions import ConnectionError
 
@@ -26,7 +25,7 @@ from integration_tests.tests.utils import create_rest_client
 
 class TestSsl(AgentlessTestCase):
     def test_ssl(self):
-        local_cert_path = join(self.workdir, 'cert.pem')
+        local_cert_path = str(self.workdir / 'cert.pem')
         self.copy_file_from_manager(
             '/etc/cloudify/ssl/cloudify_external_cert.pem', local_cert_path)
         ssl_client = create_rest_client(

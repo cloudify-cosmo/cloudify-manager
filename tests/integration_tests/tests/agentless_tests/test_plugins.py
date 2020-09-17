@@ -15,7 +15,6 @@
 
 import time
 import pytest
-from cloudify.plugins.install_utils import INSTALLING_PREFIX
 from cloudify.models_states import PluginInstallationState
 
 from cloudify_rest_client.exceptions import CloudifyClientError
@@ -143,15 +142,23 @@ class TestPluginsSystemState(AgentlessTestCase):
             package_name,
             package_version,
             corrupt_plugin=corrupt_plugin)
-        wagon_file = plugin.archive_name[len(INSTALLING_PREFIX):]
+        wagon_file = plugin.archive_name
 
-        execution = self._get_latest_execution('install_plugin')
+        self.client.plugins.install(
+            plugin.id,
+            managers=[m.hostname for m in self.client.manager.get_managers()])
+
         if corrupt_plugin:
-            with self.assertRaisesRegexp(
-                    RuntimeError, 'Workflow execution failed: .*'):
-                self.wait_for_execution_to_end(execution)
-            execution = self._get_latest_execution('uninstall_plugin')
-        self.wait_for_execution_to_end(execution)
+            time.sleep(2)   # give time for log to refresh
+            log_path = '/var/log/cloudify/mgmtworker/mgmtworker.log'
+            tmp_log_path = str(self.workdir / 'test_log')
+            self.copy_file_from_manager(log_path, tmp_log_path)
+            with open(tmp_log_path) as f:
+                data = f.readlines()
+            last_log_lines = str(data[-20:])
+            message = 'Failed installing managed plugin: {0}'.format(plugin.id)
+            assert message in last_log_lines
+            self.client.plugins.delete(plugin.id)
 
         find_output = self._find_file_on_manager(wagon_file)
         self.assertEqual(len(find_output), wagon_files_count)
@@ -161,15 +168,13 @@ class TestPluginsSystemState(AgentlessTestCase):
 
     def _find_file_on_manager(self, wagon_file):
         find_output = self.execute_on_manager(
-            "find / -name '{0}'".format(wagon_file)).stdout.split('\n')
+            "find / -name '{0}'".format(wagon_file)).split('\n')
         if find_output and not find_output[-1]:
             find_output.pop()
         return find_output
 
     def _uninstall_plugin_and_assert_values(self, plugin, plugins_count):
         self.client.plugins.delete(plugin.id)
-        execution = self._get_latest_execution('uninstall_plugin')
-        self.wait_for_execution_to_end(execution)
         plugins = self.client.plugins.list()
         self.assertEqual(len(plugins), plugins_count)
         self.assertNotIn(plugin.id, plugins)

@@ -2,7 +2,7 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
   - cloudify/types/types.yaml
-  - plugins/cloudmock.yaml
+  - plugin:cloudmock
 
 inputs:
   install_agent:

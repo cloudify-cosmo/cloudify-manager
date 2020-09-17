@@ -1,4 +1,4 @@
 plugins:
    cool:
      executor: central_deployment_agent
-     package_name: target-aware-mock
+     package_name: target_aware_mock

@@ -13,19 +13,21 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import pytest
+
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 
 
+@pytest.mark.usefixtures('mock_workflows_plugin')
+@pytest.mark.usefixtures('testmockoperations_plugin')
 class OperationMappingTest(AgentlessTestCase):
 
     def test_operation_mapping(self):
         dsl_path = resource("dsl/operation_mapping.yaml")
         deployment, _ = self.deploy_and_execute_workflow(dsl_path, 'workflow1')
-        invocations = self.get_plugin_data(
-            plugin_name='testmockoperations',
-            deployment_id=deployment.id
-        )['mock_operation_invocation']
+        invocations = self.get_runtime_property(deployment.id,
+                                                'mock_operation_invocation')[0]
         self.assertEqual(3, len(invocations))
         for invocation in invocations:
             self.assertEqual(1, len(invocation))
@@ -34,10 +36,8 @@ class OperationMappingTest(AgentlessTestCase):
     def test_operation_mapping_override(self):
         dsl_path = resource("dsl/operation_mapping.yaml")
         deployment, _ = self.deploy_and_execute_workflow(dsl_path, 'workflow2')
-        invocations = self.get_plugin_data(
-            plugin_name='testmockoperations',
-            deployment_id=deployment.id
-        )['mock_operation_invocation']
+        invocations = self.get_runtime_property(deployment.id,
+                                                'mock_operation_invocation')[0]
         self.assertEqual(3, len(invocations))
         for invocation in invocations:
             self.assertEqual(1, len(invocation))

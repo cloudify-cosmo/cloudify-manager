@@ -18,7 +18,6 @@ import os
 import tempfile
 
 from integration_tests import AgentlessTestCase
-from integration_tests.framework.constants import CLOUDIFY_USER
 from integration_tests.tests.utils import get_resource as resource
 
 from manager_rest.constants import DEFAULT_TENANT_NAME
@@ -31,10 +30,13 @@ class TestScriptMapping(AgentlessTestCase):
         deployment, _ = self.deploy_application(dsl_path)
         self.execute_workflow('workflow', deployment.id)
 
-        data = self.get_plugin_data(plugin_name='script',
-                                    deployment_id=deployment.id)
-        self.assertEqual(data['op1_called_with_property'], 'op2_called')
-        self.assertEqual(data['op2_prop'], 'op2_value')
+        self.assertEqual(
+            'op2_called',
+            self.get_runtime_property(deployment.id,
+                                      'op1_called_with_property')[0])
+        self.assertEqual(
+            'op2_value',
+            self.get_runtime_property(deployment.id, 'op2_prop')[0])
 
     def test_script_mapping_to_deployment_resource(self):
         dsl_path = resource('dsl/test_script_mapping.yaml')
@@ -58,7 +60,7 @@ class TestScriptMapping(AgentlessTestCase):
                 workflow_folder, 'workflow.py')
             self.logger.info('Writing workflow.py to: {0}'.format(
                     deployment_workflow_script_path))
-            with tempfile.NamedTemporaryFile() as f:
+            with tempfile.NamedTemporaryFile(mode='w') as f:
                 f.write(workflow_script_content)
                 f.write(os.linesep)
                 f.write("instance.execute_operation('test.op3')")
@@ -70,16 +72,17 @@ class TestScriptMapping(AgentlessTestCase):
                 self.execute_on_manager(
                     'chmod 644 {0}'.format(deployment_workflow_script_path))
 
-            # Everything under /opt/manager should be owned be the rest service
-            self.env.chown(CLOUDIFY_USER, base_dep_dir)
-
             self.execute_workflow('workflow', deployment.id)
 
-            data = self.get_plugin_data(plugin_name='script',
-                                        deployment_id=deployment.id)
-            self.assertEqual(data['op1_called_with_property'], 'op2_called')
-            self.assertEqual(data['op2_prop'], 'op2_value')
-            self.assertIn('op3_called', data)
+            self.assertEqual(
+                'op2_called',
+                self.get_runtime_property(deployment.id,
+                                          'op1_called_with_property')[0])
+            self.assertEqual(
+                'op2_value',
+                self.get_runtime_property(deployment.id, 'op2_prop')[0])
+            self.assertTrue(
+                self.get_runtime_property(deployment.id, 'op3_called')[0])
 
         finally:
             self.execute_on_manager('rm -rf {0}'.format(deployment_folder))

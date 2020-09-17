@@ -13,20 +13,21 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import pytest
+
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 
 
+@pytest.mark.usefixtures('cloudmock_plugin')
+@pytest.mark.usefixtures('testmockoperations_plugin')
 class GetInstanceIPTest(AgentlessTestCase):
 
     def test_get_instance_ip(self):
         dsl_path = resource("dsl/get_instance_ip.yaml")
         deployment, _ = self.deploy_application(dsl_path)
+        invocations = self._get_operation_invocations(deployment.id)
 
-        invocations = self.get_plugin_data(
-            plugin_name='testmockoperations',
-            deployment_id=deployment.id
-        )['mock_operation_invocation']
         mapping = {name: ip for name, ip in invocations}
         self.assertDictEqual({
             'host1_1': '1.1.1.1',
@@ -42,3 +43,11 @@ class GetInstanceIPTest(AgentlessTestCase):
             'contained2_in_host2_1_source': '3.3.3.3',
             'contained2_in_host2_2_source': '4.4.4.4'
         }, mapping)
+
+    def _get_operation_invocations(self, deployment_id):
+        invocation_lists = self.get_runtime_property(
+            deployment_id, 'mock_operation_invocation')
+        invocations = []
+        for lst in invocation_lists:
+            invocations.extend(lst)
+        return invocations

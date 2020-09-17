@@ -27,26 +27,26 @@ node_templates:
     properties:
       install_agent: false
       static_changed_to_static: &static_get_capability { get_capability: [shared_resource_deployment2, capability1] }
-      runtime_changed_to_runtime: &runtime_get_capability { get_capability: [{ get_secret: shared_resource_deployment2_key }, capability1] }
-      static_changed_to_runtime: *runtime_get_capability
-      runtime_changed_to_static: *static_get_capability
+      function_changed_to_function: &function_get_capability { get_capability: [{ get_secret: shared_resource_deployment2_key }, capability1] }
+      static_changed_to_function: *function_get_capability
+      function_changed_to_static: *static_get_capability
       should_be_created_static: *static_get_capability
-      should_be_created_runtime: *runtime_get_capability
+      should_be_created_function: *function_get_capability
 
 outputs:
 
   static_changed_to_static:
     value: *static_get_capability
-  static_changed_to_runtime:
-    value: *runtime_get_capability
-  runtime_changed_to_runtime:
-    value: *runtime_get_capability
-  runtime_changed_to_static:
+  static_changed_to_function:
+    value: *function_get_capability
+  function_changed_to_function:
+    value: *function_get_capability
+  function_changed_to_static:
     value: *static_get_capability
   should_be_created_static:
     value: *static_get_capability
-  should_be_created_runtime:
-    value: *runtime_get_capability
+  should_be_created_function:
+    value: *function_get_capability
 
 node_types:
 
@@ -55,13 +55,13 @@ node_types:
     properties:
       static_changed_to_static:
         default: ''
-      static_changed_to_runtime:
+      static_changed_to_function:
         default: ''
-      runtime_changed_to_runtime:
+      function_changed_to_function:
         default: ''
-      runtime_changed_to_static:
+      function_changed_to_static:
         default: ''
       should_be_created_static:
         default: ''
-      should_be_created_runtime:
+      should_be_created_function:
         default: ''

@@ -40,7 +40,7 @@ class TestManagerStatus(AgentlessTestCase):
         # Services for all-in-one premium manager
         services = ['Webserver', 'Cloudify Console', 'AMQP-Postgres',
                     'Management Worker', 'Manager Rest-Service', 'PostgreSQL',
-                    'RabbitMQ', 'Cloudify Composer']
+                    'RabbitMQ', 'Cloudify Composer', 'Monitoring Service']
         self.assertEqual(
             len(manager_status['services']),
             len(services))
@@ -74,18 +74,27 @@ class TestManagerStatus(AgentlessTestCase):
         self.assertIn('Broker check failed', log_file)
 
     def test_status_postgres_inactive(self):
-        self._stop_service('PostgreSQL')
+        service_command = self.get_service_management_command()
+        self._stop_service('PostgreSQL', service_command)
         error_msg = '500: Internal error occurred in manager REST server'
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             CloudifyClientError,
             error_msg,
             self.client.manager.get_status
         )
+        self._start_service('PostgreSQL', service_command)
 
-        self._start_service('PostgreSQL')
-
-    def _stop_service(self, service):
+    def _test_service_inactive(self, service):
         service_command = self.get_service_management_command()
+        self._stop_service(service, service_command)
+        status = self.client.manager.get_status()
+        self.assertEqual(status['status'], ServiceStatus.FAIL)
+        self.assertEqual(status['services'][service]['status'],
+                         NodeServiceStatus.INACTIVE)
+
+        self._start_service(service, service_command)
+
+    def _stop_service(self, service, service_command):
         self.execute_on_manager(
             '{0} stop {1}'.format(
                 service_command,
@@ -94,24 +103,14 @@ class TestManagerStatus(AgentlessTestCase):
         )
         time.sleep(1)
 
-    def _test_service_inactive(self, service):
-        self._stop_service(service)
-        status = self.client.manager.get_status()
-        self.assertEqual(status['status'], ServiceStatus.FAIL)
-        self.assertEqual(status['services'][service]['status'],
-                         NodeServiceStatus.INACTIVE)
-
-        self._start_service(service)
-
-    def _start_service(self, service):
-        service_command = self.get_service_management_command()
+    def _start_service(self, service, service_command):
         self.execute_on_manager(
             '{0} start {1}'.format(
                 service_command,
                 SERVICES[service]
             )
         )
-        time.sleep(1)
+        time.sleep(2)
         status = self.client.manager.get_status()
         self.assertEqual(status['status'], ServiceStatus.HEALTHY)
         self.assertEqual(status['services'][service]['status'],

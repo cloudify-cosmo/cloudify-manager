@@ -53,7 +53,7 @@ class SecretsTest(AgentlessTestCase):
         dsl_path = resource("dsl/basic_get_secret.yaml")
 
         # Fails to create deployment because the secret is missing
-        error_msg = "^400: Required secrets .*? don't exist in this tenant$"
+        error_msg = "400: Required secrets: .* don't exist in this tenant"
         self.assertRaisesRegexp(
             UnknownDeploymentSecretError,
             error_msg,
@@ -69,7 +69,8 @@ class SecretsTest(AgentlessTestCase):
         self.client.secrets.create('key', 'value')
         self.client.users.create('user', 'password', 'default')
         self.client.tenants.add_user('user', 'default_tenant', 'viewer')
-        viewer_client = utils.create_rest_client(username='user',
+        viewer_client = utils.create_rest_client(host=self.env.container_ip,
+                                                 username='user',
                                                  password='password',
                                                  tenant='default_tenant')
         self.assertRaisesRegexp(ForbiddenError,

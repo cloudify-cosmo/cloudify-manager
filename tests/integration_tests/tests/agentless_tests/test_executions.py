@@ -15,14 +15,12 @@
 
 import time
 import uuid
+import pytest
 
 from sh import ErrorReturnCode
 
 from integration_tests import AgentlessTestCase
-from integration_tests.framework.postgresql import run_query
-from integration_tests.framework import (
-    postgresql,
-    utils)
+from integration_tests.framework import utils
 from integration_tests.tests.utils import (
     verify_deployment_env_created,
     do_retries,
@@ -31,12 +29,15 @@ from integration_tests.tests.utils import (
     generate_scheduled_for_date,
     create_api_token,
     create_tenants_and_add_users)
-
+from integration_tests.tests.utils import run_postgresql_command
 
 from cloudify.models_states import ExecutionState as Execution
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 
+@pytest.mark.usefixtures('cloudmock_plugin')
+@pytest.mark.usefixtures('mock_workflows_plugin')
+@pytest.mark.usefixtures('testmockoperations_plugin')
 class ExecutionsTest(AgentlessTestCase):
 
     def _wait_for_exec_to_end_and_modify_status(self, execution, new_status):
@@ -83,10 +84,12 @@ class ExecutionsTest(AgentlessTestCase):
                                            _offset=0,
                                            _size=1000).items
 
-    @staticmethod
-    def _manually_update_execution_status(new_status, id):
-        run_query("UPDATE executions SET status = '{0}' WHERE id = '{1}'"
-                  .format(new_status, id))
+    def _manually_update_execution_status(self, new_status, id):
+        run_postgresql_command(
+            self.env.container_id,
+            "UPDATE executions SET status = '{0}' WHERE id = '{1}'"
+                .format(new_status, id)
+        )
 
     def _assert_execution_status(self, execution_id,
                                  wanted_status, client=None):
@@ -516,7 +519,7 @@ class ExecutionsTest(AgentlessTestCase):
         try:
             self.client.deployments.delete(deployment_1.id)
         except CloudifyClientError as e:
-            self.assertIn('There are running or queued', e.message)
+            self.assertIn('There are running or queued', str(e))
             self.assertEquals(e.status_code, 400)
             self.assertEquals(e.error_code, 'dependent_exists_error')
 
@@ -533,7 +536,7 @@ class ExecutionsTest(AgentlessTestCase):
             op(args)
         except CloudifyClientError as e:
             self.assertIn('You cannot start an execution that modifies DB'
-                          ' state while a `create_snapshot`', e.message)
+                          ' state while a `create_snapshot`', str(e))
             self.assertEquals(e.status_code, 400)
 
     def test_fail_to_create_deployment_while_creating_snapshot(self):
@@ -563,15 +566,16 @@ class ExecutionsTest(AgentlessTestCase):
             upload_mock_plugin(self.client, 'cloudify-script-plugin', '1.2')
         except CloudifyClientError as e:
             self.assertIn('You cannot start an execution that modifies DB'
-                          ' state while a `create_snapshot`', e.message)
+                          ' state while a `create_snapshot`', str(e))
             self.assertEquals(e.status_code, 400)
 
     def test_fail_to_delete_plugin_while_creating_snapshot(self):
         # Upload plugin
         upload_mock_plugin(self.client, 'cloudify-script-plugin', '1.2')
         plugins_list = self.client.plugins.list()
-        self.assertEqual(1, len(plugins_list),
-                         'expecting 1 plugin result, '
+        # 3 plugins were uploaded with the test class
+        self.assertEqual(4, len(plugins_list),
+                         'expecting 4 plugin results, '
                          'got {0}'.format(len(plugins_list)))
 
         # Create snapshot and make sure it's state remains 'started'
@@ -613,7 +617,10 @@ class ExecutionsTest(AgentlessTestCase):
         """
         dsl_path = resource('dsl/write_pid_node.yaml')
         dep = self.deploy(dsl_path, wait=False, client=self.client)
-        do_retries(verify_deployment_env_created, 30, deployment_id=dep.id)
+        do_retries(verify_deployment_env_created, 30,
+                   container_id=self.env.container_id,
+                   deployment_id=dep.id,
+                   client=self.client)
         execution = self.client.executions.start(deployment_id=dep.id,
                                                  workflow_id='install')
         pid = do_retries(self.read_manager_file, file_path='/tmp/pid.txt')
@@ -621,10 +628,11 @@ class ExecutionsTest(AgentlessTestCase):
         execution = self.client.executions.cancel(execution.id,
                                                   force=True, kill=True)
         self.assertEquals(Execution.KILL_CANCELLING, execution.status)
+
         # If the process is still running docl.read_file will raise an error.
         # We use do_retries to give the kill cancel operation time to kill
         # the process.
-        do_retries(self.assertRaises, excClass=ErrorReturnCode,
+        do_retries(self.assertRaises, expected_exception=ErrorReturnCode,
                    callableObj=self.read_manager_file,
                    file_path=path)
 
@@ -641,11 +649,9 @@ class ExecutionsTest(AgentlessTestCase):
         execution, deployment_id = self._execute_and_cancel_execution(
             'sleep_with_cancel_support', False, True, False)
         self.assertEquals(Execution.CANCELLED, execution.status)
-        data = self.get_plugin_data(
-            plugin_name='testmockoperations',
-            deployment_id=deployment_id
-        )
-        self.assertEqual(data, {})
+        data = self.get_runtime_property(deployment_id,
+                                         'mock_operation_invocation')
+        self.assertEqual(data, [])
 
     def test_sort_executions(self):
         dsl_path = resource("dsl/basic.yaml")
@@ -699,8 +705,11 @@ class ExecutionsTest(AgentlessTestCase):
         self.client.blueprints.upload(dsl_path, blueprint_id)
         self.client.deployments.create(blueprint_id, deployment_id,
                                        skip_plugins_validation=True)
+
         do_retries(verify_deployment_env_created, 60,
-                   deployment_id=deployment_id)
+                   container_id=self.env.container_id,
+                   deployment_id=deployment_id,
+                   client=self.client)
         execution_parameters = {
             'operation': 'test_interface.operation',
             'properties': {
@@ -709,15 +718,14 @@ class ExecutionsTest(AgentlessTestCase):
             },
             'custom-parameter': "doesn't matter"
         }
+
         execution = self.client.executions.start(
             deployment_id, 'another_execute_operation',
             parameters=execution_parameters,
             allow_custom_parameters=True)
         self.wait_for_execution_to_end(execution)
-        invocations = self.get_plugin_data(
-            plugin_name='testmockoperations',
-            deployment_id=deployment_id
-        )['mock_operation_invocation']
+        invocations = self.get_runtime_property(deployment_id,
+                                                'mock_operation_invocation')[0]
         self.assertEqual(1, len(invocations))
         self.assertDictEqual(invocations[0],
                              {'different-key': 'different-value'})
@@ -744,7 +752,8 @@ class ExecutionsTest(AgentlessTestCase):
 
         # Manually updating the status, because the client checks for
         # correct transitions
-        postgresql.run_query(
+        run_postgresql_command(
+            self.env.container_id,
             "UPDATE executions SET status='started' "
             "WHERE id='{0}'".format(execution_id)
         )
@@ -783,7 +792,9 @@ class ExecutionsTest(AgentlessTestCase):
         self.client.deployments.create(blueprint_id, deployment_id,
                                        skip_plugins_validation=True)
         do_retries(verify_deployment_env_created, 30,
-                   deployment_id=deployment_id)
+                   container_id=self.env.container_id,
+                   deployment_id=deployment_id,
+                   client=self.client)
         execution = self.client.executions.start(
             deployment_id, workflow_id, parameters=workflow_params)
         node_inst_id = self.client.node_instances.list(
@@ -813,10 +824,8 @@ class ExecutionsTest(AgentlessTestCase):
     def _assert_execution_cancelled(self, execution, deployment_id):
         self.assertEquals(Execution.CANCELLED, execution.status)
         self.assertIsNotNone(execution.ended_at)
-        invocations = self.get_plugin_data(
-            plugin_name='testmockoperations',
-            deployment_id=deployment_id
-        )['mock_operation_invocation']
+        invocations = self.get_runtime_property(deployment_id,
+                                                'mock_operation_invocation')[0]
         self.assertEqual(1, len(invocations))
         self.assertDictEqual(invocations[0], {'before-sleep': None})
 
@@ -838,7 +847,6 @@ class ExecutionsTest(AgentlessTestCase):
             "Sending task 'cloudmock.tasks.get_state'",
             "Task started 'cloudmock.tasks.get_state'",
             "Task succeeded 'cloudmock.tasks.get_state (dry run)'",
-            "Plugins installed",
             "Poststarting node instance: nothing to do",
             "Node instance started",
             "'install' workflow execution succeeded (dry run)"
@@ -864,11 +872,14 @@ class ExecutionsTest(AgentlessTestCase):
     def test_scheduled_execution(self):
 
         # The token in the container is invalid, create new valid one
-        create_api_token()
+        create_api_token(self.env.container_id)
         dsl_path = resource('dsl/basic.yaml')
         dep = self.deploy(dsl_path, wait=False, client=self.client)
         dep_id = dep.id
-        do_retries(verify_deployment_env_created, 30, deployment_id=dep_id)
+        do_retries(verify_deployment_env_created, 30,
+                   container_id=self.env.container_id,
+                   deployment_id=dep_id,
+                   client=self.client)
         scheduled_time = generate_scheduled_for_date()
 
         execution = self.client.executions.start(deployment_id=dep_id,
@@ -890,9 +901,10 @@ class ExecutionsTest(AgentlessTestCase):
 
         """
         # The token in the container is invalid, create new valid one
-        create_api_token()
+        create_api_token(self.env.container_id)
         create_tenants_and_add_users(client=self.client, num_of_tenants=1)
-        tenant_client = utils.create_rest_client(username='user_0',
+        tenant_client = utils.create_rest_client(host=self.env.container_ip,
+                                                 username='user_0',
                                                  password='password',
                                                  tenant='tenant_0')
         dsl_path = resource('dsl/sleep_workflows.yaml')
@@ -923,14 +935,20 @@ class ExecutionsTest(AgentlessTestCase):
         Schedule 2 executions to start a second apart.
         """
         # The token in the container is invalid, create new valid one
-        create_api_token()
+        create_api_token(self.env.container_id)
         dsl_path = resource('dsl/basic.yaml')
         dep1 = self.deploy(dsl_path, wait=False, client=self.client)
         dep2 = self.deploy(dsl_path, wait=False, client=self.client)
         dep1_id = dep1.id
         dep2_id = dep2.id
-        do_retries(verify_deployment_env_created, 30, deployment_id=dep1_id)
-        do_retries(verify_deployment_env_created, 30, deployment_id=dep2_id)
+        do_retries(verify_deployment_env_created, 30,
+                   container_id=self.env.container_id,
+                   deployment_id=dep1_id,
+                   client=self.client)
+        do_retries(verify_deployment_env_created, 30,
+                   container_id=self.env.container_id,
+                   deployment_id=dep2_id,
+                   client=self.client)
         scheduled_time = generate_scheduled_for_date()
         execution1 = self.client.executions.start(deployment_id=dep1_id,
                                                   workflow_id='install',
@@ -948,11 +966,14 @@ class ExecutionsTest(AgentlessTestCase):
     def test_schedule_execution_while_snapshot_running_same_tenant(self):
 
         # The token in the container is invalid, create new valid one
-        create_api_token()
+        create_api_token(self.env.container_id)
         dsl_path = resource('dsl/sleep_workflows.yaml')
         dep = self.deploy(dsl_path, wait=False, client=self.client)
         dep_id = dep.id
-        do_retries(verify_deployment_env_created, 30, deployment_id=dep_id)
+        do_retries(verify_deployment_env_created, 30,
+                   container_id=self.env.container_id,
+                   deployment_id=dep_id,
+                   client=self.client)
         # Create snapshot and keep it's status 'started'
         snapshot_1 = self._create_snapshot_and_modify_execution_status(
             Execution.STARTED)
@@ -975,11 +996,14 @@ class ExecutionsTest(AgentlessTestCase):
         'queued' and start when snapshot terminates.
         """
         # The token in the container is invalid, create new valid one
-        create_api_token()
+        create_api_token(self.env.container_id)
         dsl_path = resource('dsl/sleep_workflows.yaml')
         dep = self.deploy(dsl_path, wait=False, client=self.client)
         dep_id = dep.id
-        do_retries(verify_deployment_env_created, 30, deployment_id=dep_id)
+        do_retries(verify_deployment_env_created, 30,
+                   container_id=self.env.container_id,
+                   deployment_id=dep_id,
+                   client=self.client)
 
         # Create snapshot and keep it's status 'started'
         snapshot = self._create_snapshot_and_modify_execution_status(
@@ -1003,11 +1027,14 @@ class ExecutionsTest(AgentlessTestCase):
 
         """
         # The token in the container is invalid, create new valid one
-        create_api_token()
+        create_api_token(self.env.container_id)
         dsl_path = resource('dsl/sleep_workflows.yaml')
         dep = self.deploy(dsl_path, wait=False, client=self.client)
         dep_id = dep.id
-        do_retries(verify_deployment_env_created, 30, deployment_id=dep_id)
+        do_retries(verify_deployment_env_created, 30,
+                   container_id=self.env.container_id,
+                   deployment_id=dep_id,
+                   client=self.client)
         execution1 = self.client.executions.start(deployment_id=dep_id,
                                                   workflow_id='install')
         self._wait_for_exec_to_end_and_modify_status(execution1,

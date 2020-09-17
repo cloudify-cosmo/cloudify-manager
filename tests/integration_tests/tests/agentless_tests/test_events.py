@@ -15,13 +15,13 @@
 
 import uuid
 import time
+import pytest
+
 from datetime import datetime, timedelta
 from integration_tests.framework import docker
 from integration_tests import AgentlessTestCase
-from integration_tests.framework.postgresql import run_query
+from integration_tests.tests.utils import run_postgresql_command
 from integration_tests.tests.utils import get_resource as resource
-
-from manager_rest.flask_utils import get_postgres_conf
 
 CREATE_SNAPSHOT_SUCCESS_MSG =\
     "'create_snapshot' workflow execution succeeded"
@@ -29,6 +29,7 @@ RESTORE_SNAPSHOT_SUCCESS_MSG =\
     "'restore_snapshot' workflow execution succeeded"
 
 
+@pytest.mark.usefixtures('testmockoperations_plugin')
 class EventsTest(AgentlessTestCase):
 
     """Events test cases using the default database timezone (UTC)."""
@@ -186,40 +187,34 @@ class EventsAlternativeTimezoneTest(EventsTest):
 
     TIMEZONE = 'Asia/Jerusalem'
 
-    @classmethod
-    def setUpClass(cls):
-        """Configure database timezone."""
-        super(EventsAlternativeTimezoneTest, cls).setUpClass()
-
-        # Container is launched once per unittest.TestCase class.
-        # Timezone configuration just needs to updated at the class level.
-        # Between tests cases tables are re-created,
-        # but timezone configuration is preserved.
-        postgres_conf = get_postgres_conf()
-        run_query(
-            "ALTER USER {} SET TIME ZONE '{}'"
-            .format(postgres_conf.username, cls.TIMEZONE)
+    def setUp(self):
+        """Update postgres timezone and create a deployment."""
+        run_postgresql_command(
+            self.env.container_id,
+            "ALTER DATABASE cloudify_db  SET TIME ZONE '{}'"
+            .format(self.TIMEZONE)
         )
         # restart all users of the db so that they get a new session which
         # uses the just-set timezone
-        service_command = cls.get_service_management_command()
-        docker.execute(
-            cls.env.container_id,
-            "{0} restart cloudify-amqp-postgres "
-            "cloudify-restservice".format(service_command)
-        )
-        docker.execute(
-            cls.env.container_id,
-            "{0} restart cloudify-amqp-postgres "
-            "cloudify-restservice".format(service_command)
-        )
+        service_command = \
+            self.get_service_management_command()
 
-    def setUp(self):
-        """Update postgres timezone and create a deployment."""
+        docker.execute(
+            self.env.container_id,
+            "{0} restart cloudify-amqp-postgres "
+            "cloudify-restservice".format(service_command)
+        )
+        docker.execute(
+            self.env.container_id,
+            "{0} restart cloudify-amqp-postgres "
+            "cloudify-restservice".format(service_command)
+        )
         # Make sure that database timezone is correctly set
-        query_result = run_query('SHOW TIME ZONE')
-        self.assertEqual(query_result['all'][0][0], self.TIMEZONE)
+        query_result = run_postgresql_command(self.env.container_id,
+                                              'SHOW TIME ZONE')
+        self.assertEqual(query_result.split('\n')[2].strip(), self.TIMEZONE)
 
+        time.sleep(1)   # give time for services to restart
         self.start_timestamp = datetime.utcnow().isoformat()
         super(EventsAlternativeTimezoneTest, self).setUp()
         # log storing is async, add a few seconds to allow for that

@@ -15,7 +15,6 @@
 
 
 import uuid
-
 import pytest
 
 from integration_tests import AgentlessTestCase

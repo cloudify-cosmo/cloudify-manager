@@ -27,9 +27,9 @@ node_templates:
     properties:
       install_agent: false
       static_changed_to_static: &static_get_capability { get_capability: [shared_resource_deployment1, capability1] }
-      static_changed_to_runtime: *static_get_capability
-      runtime_changed_to_runtime: &runtime_get_capability { get_capability: [{ get_secret: shared_resource_deployment1_key }, capability1] }
-      runtime_changed_to_static: *runtime_get_capability
+      static_changed_to_function: *static_get_capability
+      function_changed_to_function: &function_get_capability { get_capability: [{ get_secret: shared_resource_deployment1_key }, capability1] }
+      function_changed_to_static: *function_get_capability
       might_be_deleted: *static_get_capability
 
 outputs:
@@ -38,12 +38,12 @@ outputs:
     value: *static_get_capability
   static_changed_to_static:
     value: *static_get_capability
-  static_changed_to_runtime:
+  static_changed_to_function:
     value: *static_get_capability
-  runtime_changed_to_runtime:
-    value: *runtime_get_capability
-  runtime_changed_to_static:
-    value: *runtime_get_capability
+  function_changed_to_function:
+    value: *function_get_capability
+  function_changed_to_static:
+    value: *function_get_capability
 
 node_types:
 
@@ -56,9 +56,9 @@ node_types:
         default: ''
       static_changed_to_static:
         default: ''
-      static_changed_to_runtime:
+      static_changed_to_function:
         default: ''
-      runtime_changed_to_runtime:
+      function_changed_to_function:
         default: ''
-      runtime_changed_to_static:
+      function_changed_to_static:
         default: ''

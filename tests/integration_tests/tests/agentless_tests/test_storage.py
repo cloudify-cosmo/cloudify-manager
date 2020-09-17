@@ -14,11 +14,13 @@
 #    * limitations under the License.
 
 import uuid
+import pytest
 
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 
 
+@pytest.mark.usefixtures('cloudmock_plugin')
 class TestStorage(AgentlessTestCase):
     def test_deployment_inputs(self):
         blueprint_id = 'b{0}'.format(uuid.uuid4())

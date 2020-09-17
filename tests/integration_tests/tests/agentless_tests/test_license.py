@@ -19,13 +19,13 @@ from datetime import datetime, timedelta
 import requests
 
 from integration_tests import AgentlessTestCase
-from integration_tests.framework import postgresql
 from integration_tests.tests.utils import get_resource
 from cloudify_rest_client.exceptions import (
     MissingCloudifyLicense,
     ExpiredCloudifyLicense,
     CloudifyClientError
 )
+from integration_tests.tests.utils import run_postgresql_command
 
 LICENSE_ENGINE_URL = 'https://us-central1-omer-tenant.cloudfunctions' \
                      '.net/LicenseEngineHubSpot'
@@ -35,7 +35,7 @@ class TestLicense(AgentlessTestCase):
 
     def setUp(self):
         super(TestLicense, self).setUp()
-        postgresql.run_query("DELETE FROM licenses")
+        run_postgresql_command(self.env.container_id, "DELETE FROM licenses")
 
     def test_error_when_no_license_on_manager(self):
         """
@@ -184,7 +184,7 @@ class TestLicense(AgentlessTestCase):
 
         response = requests.post(url=LICENSE_ENGINE_URL, json=json_data)
 
-        with tempfile.NamedTemporaryFile() as license_file:
+        with tempfile.NamedTemporaryFile(mode='w') as license_file:
             license_file.write(response.text)
             license_file.flush()
             self.client.license.upload(license_file.name)

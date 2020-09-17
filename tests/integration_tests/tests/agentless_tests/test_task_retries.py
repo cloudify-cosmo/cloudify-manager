@@ -14,6 +14,7 @@
 #    * limitations under the License.
 
 import uuid
+import pytest
 
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
@@ -21,6 +22,7 @@ from integration_tests.tests.utils import get_resource as resource
 INFINITY = -1
 
 
+@pytest.mark.usefixtures('testmockoperations_plugin')
 class TaskRetriesTest(AgentlessTestCase):
 
     def setUp(self):
@@ -98,10 +100,8 @@ class TaskRetriesTest(AgentlessTestCase):
         self.deploy_application(
             resource('dsl/test-operation-retry-blueprint.yaml'),
             deployment_id=deployment_id)
-        invocations = self.get_plugin_data(
-            plugin_name='testmockoperations',
-            deployment_id=deployment_id
-        )['retry_invocations']
+        invocations = self.get_runtime_property(deployment_id,
+                                                'retry_invocations')[0]
         self.assertEqual(4, invocations)
 
         # 1 asserting event messages reflect that the task has been rescheduled
@@ -135,6 +135,7 @@ class TaskRetriesTest(AgentlessTestCase):
                 'task_rescheduled': 2,
                 'task_succeeded': 3
             }
+            retry_events = [e for e in retry_events if 'event_type' in e]
             retry_events = sorted(
                 retry_events,
                 key=lambda e: (
@@ -174,10 +175,8 @@ class TaskRetriesTest(AgentlessTestCase):
             self.deploy_application(
                 resource(blueprint),
                 deployment_id=deployment_id)
-        invocations = self.get_plugin_data(
-            plugin_name='testmockoperations',
-            deployment_id=deployment_id
-        )[invocations_type]
+        invocations = self.get_runtime_property(deployment_id,
+                                                invocations_type)[0]
         self.assertEqual(expected_retries + 1, len(invocations))
         for i in range(len(invocations) - 1):
             self.assertLessEqual(expected_interval,
