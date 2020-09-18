@@ -351,7 +351,7 @@ def _get_cluster_service_state(cluster_nodes, cloudify_version, detailed,
 def _get_cluster_service_status(nodes, quorum):
     healthy_nodes_count = len([
         node for node in nodes.values()
-        if node['status'] == NodeServiceStatus.ACTIVE
+        if node['status'] == ServiceStatus.HEALTHY
     ])
 
     if healthy_nodes_count == len(nodes):
@@ -406,13 +406,13 @@ def _is_external(cluster_nodes, service_type):
 def _get_node_state(node):
     for service in node['services']:
         if service['status'] != NodeServiceStatus.ACTIVE:
-            return NodeServiceStatus.INACTIVE
+            return ServiceStatus.FAIL
 
     for metric in node['metrics']:
         if not metric['healthy']:
-            return NodeServiceStatus.INACTIVE
+            return ServiceStatus.FAIL
 
-    return NodeServiceStatus.ACTIVE
+    return ServiceStatus.HEALTHY
 
 
 def _parse_prometheus_results(prometheus_results):
