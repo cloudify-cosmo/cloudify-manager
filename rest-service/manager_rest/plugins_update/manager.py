@@ -32,9 +32,11 @@ from manager_rest.storage import get_storage_manager, models
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.plugins_update.constants import (STATES,
                                                    ACTIVE_STATES,
-                                                   PLUGIN_NAME,
-                                                   MINOR,
-                                                   MINOR_EXCEPT)
+                                                   PLUGIN_NAMES,
+                                                   TO_LATEST,
+                                                   ALL_TO_LATEST,
+                                                   TO_MINOR,
+                                                   ALL_TO_MINOR)
 from manager_rest.manager_exceptions import (ConflictError,
                                              PluginsUpdateError,
                                              IllegalActionError)
@@ -222,19 +224,31 @@ def _plugin_version_constraints(blueprint, filters):
                     yield a_plugin
 
     def prepare_constraint(plugin_name, plugin_version, filters):
+        def minor_version_constraint(version):
+            v = version.split('.')
+            return '>={0}.{1},<{2}'.format(v[0], v[1], int(v[0]) + 1)
+
         # If filtering by plugin names are `plugin_name` is not listed as one
         # of them, current version of the plugin is mandatory (no upgrade)
-        if filters.get(PLUGIN_NAME) and \
-                plugin_name not in filters[PLUGIN_NAME]:
+        if filters.get(PLUGIN_NAMES) and \
+                plugin_name not in filters[PLUGIN_NAMES]:
             return '=={0}'.format(plugin_version)
-        # If all plugins should be upgraded to the latest minor version or if
-        # some plugins should not be upgraded to the latest minor version but
-        # `plugin_name` is not one of them, return a minor version constraint
-        if filters.get(MINOR) or (filters.get(MINOR_EXCEPT) and
-                                  plugin_name not in filters[MINOR_EXCEPT]):
-            v = plugin_version.split('.')
-            return '>={0}.{1},<{2}'.format(v[0], v[1], int(v[0]) + 1)
-        # No constraint whatsoever
+        # If all plugins should be upgraded to the latest version and this
+        # particular plugin is listed in to_minor list, then return minor
+        # version constraints
+        if filters.get(ALL_TO_LATEST):
+            if plugin_name in filters[TO_MINOR]:
+                return minor_version_constraint(plugin_version)
+            else:
+                return None
+        # If all plugins should be upgraded to the latest minor version and
+        # this particular plugin is not listed in to_latest list, then return
+        # minor version constraints
+        if filters.get(ALL_TO_MINOR):
+            if plugin_name in filters[TO_LATEST]:
+                return None
+            else:
+                return minor_version_constraint(plugin_version)
         return None
 
     constraints = {}

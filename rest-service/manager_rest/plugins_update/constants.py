@@ -38,6 +38,8 @@ ACTIVE_STATES = [state for state in STATES if state not in NOT_ACTIVE_STATES]
 
 PLUGIN_UPDATE_WORKFLOW = 'cloudify_system_workflows.plugins.update'
 
-PLUGIN_NAME = 'plugin_name'
-MINOR = 'minor'
-MINOR_EXCEPT = 'minor_except'
+PLUGIN_NAMES = 'plugin_names'
+TO_LATEST = 'to_latest'
+ALL_TO_LATEST = 'all_to_latest'
+TO_MINOR = 'to_minor'
+ALL_TO_MINOR = 'all_to_minor'

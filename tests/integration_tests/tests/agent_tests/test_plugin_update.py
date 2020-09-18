@@ -229,20 +229,21 @@ class TestPluginUpdate(AgentTestWithPlugins):
         self._assert_host_values(self.versions[0])
 
         # Update a different (non-existent) plugin - nothing should change
-        plugins_update = self._perform_plugins_update(plugin_name=['asd'])
+        plugins_update = self._perform_plugins_update(plugin_names=['asd'])
         self.assertEqual(plugins_update.state, STATES.SUCCESSFUL)
         self._execute_workflows()
         self._assert_host_values(self.versions[0])
 
         # Update only minor version - nothing should change
-        plugins_update = self._perform_plugins_update(minor=True)
+        plugins_update = self._perform_plugins_update(all_to_minor=True,
+                                                      all_to_latest=False)
         self.assertEqual(plugins_update.state, STATES.SUCCESSFUL)
         self._execute_workflows()
         self._assert_host_values(self.versions[0])
 
         # This should do the update
         plugins_update = self._perform_plugins_update(
-            minor_except=[self.plugin_name])
+            to_latest=[self.plugin_name])
         self.assertEqual(plugins_update.state, STATES.SUCCESSFUL)
         self._execute_workflows()
         self._assert_host_values(self.versions[1])

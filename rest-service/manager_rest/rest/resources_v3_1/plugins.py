@@ -26,9 +26,11 @@ from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.utils import create_filter_params_list_description
-from manager_rest.plugins_update.constants import (PLUGIN_NAME,
-                                                   MINOR,
-                                                   MINOR_EXCEPT)
+from manager_rest.plugins_update.constants import (PLUGIN_NAMES,
+                                                   TO_LATEST,
+                                                   ALL_TO_LATEST,
+                                                   TO_MINOR,
+                                                   ALL_TO_MINOR)
 from manager_rest.plugins_update.manager import get_plugins_updates_manager
 from manager_rest.rest import (resources_v2,
                                resources_v2_1,
@@ -103,9 +105,11 @@ class PluginsUpdate(SecuredResource):
         """
         try:
             filters = rest_utils.get_json_and_verify_params({
-                PLUGIN_NAME: {'type': list, 'optional': True},
-                MINOR: {'type': bool, 'optional': True},
-                MINOR_EXCEPT: {'type': list, 'optional': True},
+                PLUGIN_NAMES: {'type': list, 'optional': True},
+                ALL_TO_LATEST: {'type': bool, 'optional': True},
+                TO_LATEST: {'type': list, 'optional': True},
+                ALL_TO_MINOR: {'type': bool, 'optional': True},
+                TO_MINOR: {'type': list, 'optional': True},
             })
         except BadRequest:
             filters = {'plugin_name': [], 'minor': False, 'minor_except': []}
