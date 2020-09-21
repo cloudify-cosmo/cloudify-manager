@@ -405,16 +405,20 @@ class ResourceManager(object):
             application_dir, application_file_name, resources_base)
 
     @staticmethod
-    def parse_plan(application_dir, application_file_name, resources_base):
+    def parse_plan(application_dir, application_file_name, resources_base,
+                   resolver_parameters=None):
         dsl_location = os.path.join(
             resources_base,
             application_dir,
             application_file_name
         )
         try:
-            return tasks.parse_dsl(dsl_location,
-                                   resources_base,
-                                   **app_context.get_parser_context())
+            return tasks.parse_dsl(
+                dsl_location,
+                resources_base,
+                **app_context.get_parser_context(
+                    resolver_parameters=resolver_parameters)
+            )
         except Exception as ex:
             raise manager_exceptions.DslParseException(str(ex))
 
