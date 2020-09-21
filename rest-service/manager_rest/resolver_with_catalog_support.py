@@ -39,6 +39,7 @@ BLUEPRINT_PREFIX = 'blueprint:'
 EXTRA_VERSION_CONSTRAINT = 'additional_version_constraint'
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 class ResolverWithCatalogSupport(DefaultImportResolver):
