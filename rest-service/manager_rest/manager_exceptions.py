@@ -146,10 +146,13 @@ class NoTokenGeneratorError(ManagerException):
 class UnauthorizedError(ManagerException):
     UNAUTHORIZED_ERROR_CODE = 'unauthorized_error'
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, extra_info, *args, **kwargs):
+        message = 'User unauthorized'
+        if extra_info:
+            message = '{0}: {1}'.format(message, extra_info)
         super(UnauthorizedError, self).__init__(
             401, UnauthorizedError.UNAUTHORIZED_ERROR_CODE,
-            *args, **kwargs)
+            message, *args, **kwargs)
 
 
 class ForbiddenError(ManagerException):

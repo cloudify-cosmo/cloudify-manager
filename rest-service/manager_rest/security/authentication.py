@@ -24,10 +24,12 @@ from cloudify.models_states import ExecutionState
 
 from manager_rest.security import user_handler
 from manager_rest.storage import user_datastore
-from manager_rest.app_logging import raise_unauthorized_user_error
 from manager_rest.security.hash_request_cache import HashVerifyRequestCache
-from manager_rest.execution_token import (current_execution,
-                                          get_execution_token_from_request)
+from manager_rest.execution_token import (
+    current_execution,
+    get_execution_token_from_request
+)
+from manager_rest.manager_exceptions import UnauthorizedError
 
 
 Authorization = namedtuple('Authorization', 'username password')
@@ -51,7 +53,7 @@ class Authentication(object):
     @property
     def external_auth_configured(self):
         return current_app.external_auth \
-               and current_app.external_auth.configured()
+            and current_app.external_auth.configured()
 
     @staticmethod
     def _increment_failed_logins_counter(user):
@@ -72,7 +74,7 @@ class Authentication(object):
                 return response
             user = response
         if not user:
-            raise_unauthorized_user_error('No authentication info provided')
+            raise UnauthorizedError('No authentication info provided')
         self.logger.debug('Authenticated user: {0}'.format(user))
 
         if request.authorization:
@@ -102,16 +104,14 @@ class Authentication(object):
         elif api_token:  # API token authentication
             user, user_token_key = user_handler.extract_api_token(api_token)
             if not user or user.api_token_key != user_token_key:
-                raise_unauthorized_user_error(
-                    'API token authentication failed')
+                raise UnauthorizedError('API token authentication failed')
         return user
 
     def _check_if_user_is_locked(self, user, auth):
         if self.external_auth_configured:
             return user
         if not user or user.is_locked:
-            raise_unauthorized_user_error(
-                failed_auth_message.format(auth.username))
+            raise UnauthorizedError(failed_auth_message.format(auth.username))
 
     def _authenticate_password(self, user, auth):
         self.logger.debug('Authenticating username/password')
@@ -134,18 +134,18 @@ class Authentication(object):
         """
         self.logger.debug('Running basic HTTP authentication')
         if not user:
-            raise_unauthorized_user_error(failed_auth_message.format(username))
+            raise UnauthorizedError(failed_auth_message.format(username))
         if not verify_password(password, user.password):
             self._increment_failed_logins_counter(user)
-            raise_unauthorized_user_error(failed_auth_message.format(username))
+            raise UnauthorizedError(failed_auth_message.format(username))
         return user
 
     def _verify_token(self, token, user):
         if not self.token_verified_cache.get_verify_hash_result(token,
                                                                 user.id):
             if not verify_hash(compare_data=user.password, hashed_data=token):
-                raise_unauthorized_user_error(failed_auth_message.format(
-                    user.username))
+                raise UnauthorizedError(
+                    failed_auth_message.format(user.username))
             else:
                 self.token_verified_cache.cache_verify_hash_result(token,
                                                                    user.id)
@@ -162,13 +162,13 @@ class Authentication(object):
             user_handler.get_token_status(token)
 
         if expired:
-            raise_unauthorized_user_error('Token is expired')
+            raise UnauthorizedError('Token is expired')
         elif invalid or (not isinstance(data, list) or len(data) != 2):
-            raise_unauthorized_user_error(
+            raise UnauthorizedError(
                 'Authentication token is invalid:\n{0}'.format(error)
             )
         elif not user:
-            raise_unauthorized_user_error('No authentication info provided')
+            raise UnauthorizedError('No authentication info provided')
         else:
             self._verify_token(token=data[1], user=user)
 
@@ -185,7 +185,7 @@ class Authentication(object):
         if not current_execution:
             self.logger.debug('{0}. Exactly one execution should match this '
                               'token'.format(error_msg))
-            raise_unauthorized_user_error(error_msg)
+            raise UnauthorizedError(error_msg)
 
         if current_execution.status not in ExecutionState.ACTIVE_STATES:
             if self._is_valid_scheduled_execution() or \
@@ -195,7 +195,7 @@ class Authentication(object):
             # Not an active execution
             self.logger.debug('{0}. The execution is not active'
                               .format(error_msg))
-            raise_unauthorized_user_error(error_msg)
+            raise UnauthorizedError(error_msg)
         return current_execution.creator
 
     @staticmethod
