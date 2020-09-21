@@ -147,8 +147,10 @@ class ResourceManager(object):
 
         if execution.workflow_id == 'delete_deployment_environment' and \
                 status == ExecutionState.TERMINATED:
+            # render the execution here, because immediately afterwards
+            # we'll delete it, and then we won't be able to render it anymore
+            res = res.to_response()
             self.delete_deployment(execution.deployment)
-
         return res
 
     def start_queued_executions(self):
