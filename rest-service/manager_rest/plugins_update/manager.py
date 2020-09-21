@@ -237,7 +237,7 @@ def _plugin_version_constraints(blueprint, filters):
         # particular plugin is listed in to_minor list, then return minor
         # version constraints
         if filters.get(ALL_TO_LATEST):
-            if plugin_name in filters[TO_MINOR]:
+            if plugin_name in filters.get(TO_MINOR, []):
                 return minor_version_constraint(plugin_version)
             else:
                 return None
@@ -245,7 +245,7 @@ def _plugin_version_constraints(blueprint, filters):
         # this particular plugin is not listed in to_latest list, then return
         # minor version constraints
         if filters.get(ALL_TO_MINOR):
-            if plugin_name in filters[TO_LATEST]:
+            if plugin_name in filters.get(TO_LATEST, []):
                 return None
             else:
                 return minor_version_constraint(plugin_version)
