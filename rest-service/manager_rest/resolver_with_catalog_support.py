@@ -38,7 +38,7 @@ PLUGIN_PREFIX = 'plugin:'
 BLUEPRINT_PREFIX = 'blueprint:'
 EXTRA_VERSION_CONSTRAINT = 'additional_version_constraint'
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('[RESOLVER]')
 logger.setLevel(logging.INFO)
 
 
