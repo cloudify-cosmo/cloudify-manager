@@ -1,5 +1,6 @@
 import sys
 import logging
+import warnings
 
 from flask import current_app, request
 from logging.handlers import WatchedFileHandler
@@ -75,6 +76,10 @@ def log_response(response):
 
 
 def raise_unauthorized_user_error(extra_info=None):
+    warnings.warn(
+        'raise_unauthorized_user_error is deprecated, raise an '
+        'UnauthorizedError directly instead',
+        DeprecationWarning)
     error = 'User unauthorized'
     if extra_info:
         error += ': {0}'.format(extra_info)
