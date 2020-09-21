@@ -155,6 +155,13 @@ class UnauthorizedError(ManagerException):
             message, *args, **kwargs)
 
 
+class NoAuthProvided(UnauthorizedError):
+    """Not authorized, because authentication was not provided."""
+    def __init__(self, *args, **kwargs):
+        super(NoAuthProvided, self).__init__(
+            'No authentication info provided', *args, **kwargs)
+
+
 class ForbiddenError(ManagerException):
     FORBIDDEN_ERROR_CODE = 'forbidden_error'
 

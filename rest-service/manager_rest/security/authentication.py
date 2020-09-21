@@ -29,7 +29,7 @@ from manager_rest.execution_token import (
     current_execution,
     get_execution_token_from_request
 )
-from manager_rest.manager_exceptions import UnauthorizedError
+from manager_rest.manager_exceptions import UnauthorizedError, NoAuthProvided
 
 
 Authorization = namedtuple('Authorization', 'username password')
@@ -74,7 +74,7 @@ class Authentication(object):
                 return response
             user = response
         if not user:
-            raise UnauthorizedError('No authentication info provided')
+            raise NoAuthProvided()
         self.logger.debug('Authenticated user: {0}'.format(user))
 
         if request.authorization:
@@ -168,7 +168,7 @@ class Authentication(object):
                 'Authentication token is invalid:\n{0}'.format(error)
             )
         elif not user:
-            raise UnauthorizedError('No authentication info provided')
+            raise NoAuthProvided()
         else:
             self._verify_token(token=data[1], user=user)
 
