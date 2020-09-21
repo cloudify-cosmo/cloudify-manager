@@ -113,8 +113,8 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
             plugin_spec, self.version_constraints)
         plugin = self._find_plugin(name, plugin_filters)
         if plugin:
-            logger.info('Will use {0} version {1}'.format(
-                plugin.package_name, plugin.package_version))
+            logger.info('Will use %s version %s',
+                        plugin.package_name, plugin.package_version)
         return self._make_plugin_yaml_url(plugin)
 
     @staticmethod
