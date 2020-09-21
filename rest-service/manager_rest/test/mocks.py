@@ -142,7 +142,7 @@ class MockHTTPClient(HTTPClient):
         if stream:
             return MockStreamedResponse(response, self._file_server)
 
-        if expected_status_code == 204:
+        if response.status_code == 204:
             return None
         return response.get_json()
 

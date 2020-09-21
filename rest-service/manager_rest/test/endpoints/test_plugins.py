@@ -70,11 +70,7 @@ class PluginsTest(BaseServerTestCase):
                          'expecting 1 plugin result, '
                          'got {0}'.format(len(plugins_list)))
 
-        delete_response = self.client.plugins.delete(put_response['id'])
-
-        # the yaml path should not be in the delete response
-        put_response['yaml_url_path'] = ''
-        self.assertEqual(put_response, delete_response)
+        self.client.plugins.delete(put_response['id'])
 
         plugins_list = self.client.plugins.list()
         self.assertEqual(0, len(plugins_list),

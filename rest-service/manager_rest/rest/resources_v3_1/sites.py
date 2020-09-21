@@ -79,7 +79,6 @@ class SitesName(SecuredResource):
             site.visibility = visibility
         return storage_manager.update(site, validate_global=True)
 
-    @rest_decorators.marshal_with(models.Site)
     @authorize('site_delete')
     def delete(self, name):
         """
@@ -87,7 +86,8 @@ class SitesName(SecuredResource):
         """
         storage_manager = get_storage_manager()
         site = storage_manager.get(models.Site, name)
-        return storage_manager.delete(site, validate_global=True)
+        storage_manager.delete(site, validate_global=True)
+        return None, 204
 
     def _validate_site_params(self, name):
         validate_inputs({'name': name})

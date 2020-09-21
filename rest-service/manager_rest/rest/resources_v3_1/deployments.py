@@ -294,7 +294,6 @@ class InterDeploymentDependencies(SecuredResource):
             'deployment_dependency')
     )
     @authorize('inter_deployment_dependency_delete')
-    @rest_decorators.marshal_with(models.InterDeploymentDependencies)
     def delete(self):
         """Deletes an inter-deployment dependency.
 
@@ -331,7 +330,8 @@ class InterDeploymentDependencies(SecuredResource):
             # (for the purpose of clarifying the error in case one occurs).
             locking=True)
 
-        return sm.delete(dependency)
+        sm.delete(dependency)
+        return None, 204
 
     @staticmethod
     def _get_delete_dependency_params(sm):

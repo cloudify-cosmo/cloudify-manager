@@ -460,7 +460,8 @@ class ModifyTests(base_test.BaseServerTestCase):
 
         assert_instances(**end_expectation)
 
-        deployment = self.client.deployments.delete(deployment.id)
+        deployment = self.client.deployments.get(deployment.id)
+        self.client.deployments.delete(deployment.id)
         assert_deployment_instances(deployment, **end_expectation)
 
     @attr(client_min_version=2,

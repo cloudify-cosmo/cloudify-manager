@@ -162,7 +162,6 @@ class BlueprintsId(SecuredResource):
         notes="deletes a blueprint by its id."
     )
     @authorize('blueprint_delete')
-    @marshal_with(models.Blueprint)
     def delete(self, blueprint_id, **kwargs):
         """
         Delete blueprint by id
@@ -171,6 +170,5 @@ class BlueprintsId(SecuredResource):
         # for the blueprint exists, the deletion operation will fail.
         # However, there is no handling of possible concurrency issue with
         # regard to that matter at the moment.
-        blueprint = get_resource_manager().delete_blueprint(blueprint_id,
-                                                            force=False)
-        return blueprint, 200
+        get_resource_manager().delete_blueprint(blueprint_id, force=False)
+        return None, 204

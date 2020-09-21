@@ -109,7 +109,6 @@ class SecretsKey(SecuredResource):
         return get_storage_manager().update(secret, validate_global=True)
 
     @authorize('secret_delete')
-    @rest_decorators.marshal_with(models.Secret)
     def delete(self, key):
         """
         Delete a secret
@@ -118,7 +117,8 @@ class SecretsKey(SecuredResource):
         storage_manager = get_storage_manager()
         secret = storage_manager.get(models.Secret, key)
         self._validate_secret_modification_permitted(secret)
-        return storage_manager.delete(secret, validate_global=True)
+        storage_manager.delete(secret, validate_global=True)
+        return None, 204
 
     def _validate_secret_modification_permitted(self, secret):
         if secret.is_hidden_value and \
