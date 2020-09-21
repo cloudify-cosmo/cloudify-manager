@@ -15,6 +15,7 @@
 
 import os
 import glob
+import logging
 from packaging.specifiers import SpecifierSet, InvalidSpecifier
 from packaging.version import parse as parse_version
 
@@ -36,6 +37,8 @@ from manager_rest.storage.models import (Plugin,
 PLUGIN_PREFIX = 'plugin:'
 BLUEPRINT_PREFIX = 'blueprint:'
 EXTRA_VERSION_CONSTRAINT = 'additional_version_constraint'
+
+logger = logging.getLogger(__name__)
 
 
 class ResolverWithCatalogSupport(DefaultImportResolver):
@@ -109,6 +112,9 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
         name, plugin_filters = self._make_plugin_filters(
             plugin_spec, self.version_constraints)
         plugin = self._find_plugin(name, plugin_filters)
+        if plugin:
+            logger.info('Will use {0} version {1}'.format(
+                plugin.package_name, plugin.package_version))
         return self._make_plugin_yaml_url(plugin)
 
     @staticmethod
