@@ -15,7 +15,7 @@
 
 import os
 import glob
-import logging
+from flask import current_app
 from packaging.specifiers import SpecifierSet, InvalidSpecifier
 from packaging.version import parse as parse_version
 
@@ -56,7 +56,6 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
     def __init__(self, rules=None, fallback=True,
                  plugin_version_constraints={}):
         super(ResolverWithCatalogSupport, self).__init__(rules, fallback)
-        self._setup_logging()
         self.version_constraints = plugin_version_constraints
 
     @staticmethod
@@ -112,8 +111,8 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
             plugin_spec, self.version_constraints)
         plugin = self._find_plugin(name, plugin_filters)
         if plugin:
-            self.logger.info('Will use %s==%s', plugin.package_name,
-                             plugin.package_version)
+            current_app.logger.info('Will use %s==%s', plugin.package_name,
+                                    plugin.package_version)
         return self._make_plugin_yaml_url(plugin)
 
     @staticmethod
@@ -231,14 +230,3 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
             blueprint.id)
         filename = os.path.join(blueprint_path, blueprint.main_file_name)
         return 'file://{0}'.format(filename)
-
-    def _setup_logging(self):
-        self.logger = logging.getLogger('RESOLVER')
-        self.logger.setLevel(logging.INFO)
-        log_handler = logging.StreamHandler()
-        log_handler.setFormatter(
-            logging.Formatter(fmt='[%(asctime)s] %(levelname)s in %(module)s: '
-                                  '%(message)s',
-                              datefmt='%Y-%m-%d %H:%M:%S,%03d')
-        )
-        self.logger.addHandler(log_handler)
