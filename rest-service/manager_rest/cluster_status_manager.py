@@ -404,6 +404,10 @@ def _is_external(cluster_nodes, service_type):
 
 
 def _get_node_state(node):
+    if not node['services'] or not node['metrics']:
+        # Absence of failure (and everything else) is not success
+        return ServiceStatus.FAIL
+
     for service in node['services']:
         if service['status'] != NodeServiceStatus.ACTIVE:
             return ServiceStatus.FAIL
