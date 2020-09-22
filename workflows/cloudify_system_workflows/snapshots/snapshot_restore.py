@@ -297,7 +297,11 @@ class SnapshotRestore(object):
         wf_context = current_workflow_ctx.get_ctx()
         context_params = current_workflow_ctx.get_parameters()
 
-        threads = []
+        ctx.logger.info('!! Queue = {0}'.format(deployments_queue.queue))
+        ctx.logger.info('!! Queue size = {0}'.format(deployments_queue.qsize()))
+        ctx.logger.info('!! # threads = {0}'.format(
+            self._config.snapshot_restore_threads))
+
         for i in range(min(self._config.snapshot_restore_threads,
                            deployments_queue.qsize())):
             t = threading.Thread(
@@ -305,11 +309,9 @@ class SnapshotRestore(object):
                 args=(deployments_queue, failed_deployments_queue, wf_context,
                       context_params, update_service_composition)
             )
-            threads.append(t)
             t.start()
 
-        for t in threads:
-            t.join()
+        deployments_queue.join()
 
         if not failed_deployments_queue.empty():
             deployments = list(failed_deployments_queue.queue)
@@ -329,6 +331,8 @@ class SnapshotRestore(object):
                                               context_params,
                                               update_service_composition):
         while True:
+            ctx.logger.info(
+                '# QUEUE SIZE={0}'.format(deployments_queue.qsize()))
             try:
                 tenant, deployment_id = deployments_queue.get_nowait()
             except queue.Empty:
@@ -345,6 +349,7 @@ class SnapshotRestore(object):
                                     'dependencies for deployment %s from '
                                     'tenant %s. %s',
                                     deployment_id, tenant, err)
+            deployments_queue.task_done()
 
     def _restore_amqp_vhosts_and_users(self):
         subprocess.check_call(
