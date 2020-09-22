@@ -15,7 +15,7 @@
 
 import os
 import glob
-import logging
+from flask import current_app
 from packaging.specifiers import SpecifierSet, InvalidSpecifier
 from packaging.version import parse as parse_version
 
@@ -37,8 +37,6 @@ from manager_rest.storage.models import (Plugin,
 PLUGIN_PREFIX = 'plugin:'
 BLUEPRINT_PREFIX = 'blueprint:'
 EXTRA_VERSION_CONSTRAINT = 'additional_version_constraint'
-
-logger = logging.getLogger(__name__)
 
 
 class ResolverWithCatalogSupport(DefaultImportResolver):
@@ -113,8 +111,9 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
             plugin_spec, self.version_constraints)
         plugin = self._find_plugin(name, plugin_filters)
         if plugin:
-            logger.info('Will use %s version %s',
-                        plugin.package_name, plugin.package_version)
+            current_app.logger.info('Plugin update: will use %s==%s',
+                                    plugin.package_name,
+                                    plugin.package_version)
         return self._make_plugin_yaml_url(plugin)
 
     @staticmethod
