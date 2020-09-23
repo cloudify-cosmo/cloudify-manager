@@ -29,17 +29,24 @@ REST_SECURITY_CONFIG_PATH = join(REST_HOME_DIR, 'rest-security.conf')
 REST_AUTHORIZATION_CONFIG_PATH = join(REST_HOME_DIR, 'authorization.conf')
 
 BLUEPRINT_LINE = 'blueprint_line'
+CURRENT_IMPORT_FROM = 'current_import_from'
+CURRENT_IS_PINNED = 'current_is_pinned'
 CURRENT_VERSION = 'current_version'
 EXECUTORS = [DEPLOYMENT_PLUGINS_TO_INSTALL,
              WORKFLOW_PLUGINS_TO_INSTALL,
              HOST_AGENT_PLUGINS_TO_INSTALL]
 FINE = 'fine'
+IMPORT_FROM_MANAGED = 'managed'
+IMPORT_FROM_SOURCE = 'source'
+IMPORT_FROM_URL = 'url'
 IMPORTS = 'imports'
 IS_PINNED = True
 IS_NOT_PINNED = False
 IS_UNKNOWN = True
 IS_NOT_UNKNOWN = False
 REPO = 'repository'
+SUGGESTED_IMPORT_FROM = 'suggested_import_from'
+SUGGESTED_IS_PINNED = 'suggested_is_pinned'
 SUGGESTED_VERSION = 'suggested_version'
 UNKNOWN = 'unknown'
 UPDATES = 'updates'
@@ -214,15 +221,17 @@ def plugin_spec(import_line: str) -> tuple:
     if import_line.startswith('http://') or \
             import_line.startswith('https://'):
         name, version = spec_from_url(import_line)
-        return IS_PINNED, IS_NOT_UNKNOWN, name, version
+        return IS_PINNED, IS_NOT_UNKNOWN, IMPORT_FROM_URL, name, version
     if import_line.startswith('plugin:'):
         name, version = spec_from_import(import_line)
         if version and version.startswith('>'):
-            return IS_NOT_PINNED, IS_NOT_UNKNOWN, name, version
+            return IS_NOT_PINNED, IS_NOT_UNKNOWN, IMPORT_FROM_MANAGED, \
+                   name, version
         if not version:
-            return IS_NOT_PINNED, IS_NOT_UNKNOWN, name, version
-        return IS_PINNED, IS_NOT_UNKNOWN, name, version
-    return IS_NOT_PINNED, IS_UNKNOWN, None, None
+            return IS_NOT_PINNED, IS_NOT_UNKNOWN, IMPORT_FROM_MANAGED, \
+                   name, version
+        return IS_PINNED, IS_NOT_UNKNOWN, IMPORT_FROM_MANAGED, name, version
+    return IS_NOT_PINNED, IS_UNKNOWN, IMPORT_FROM_SOURCE, None, None
 
 
 def plugins_in_a_plan(plan: Plan) -> collections.Iterable:
@@ -276,21 +285,56 @@ def scan_blueprint(blueprint: models.Blueprint,
             mappings[genre] = []
         mappings[genre].append(content)
 
+    def update_stats(current_import_from: str = None,
+                     suggested_import_from: str = None,
+                     current_is_pinned: bool = None,
+                     suggested_is_pinned: bool = None):
+        if current_import_from is not None:
+            if CURRENT_IMPORT_FROM not in stats:
+                stats[CURRENT_IMPORT_FROM] = {}
+            if current_import_from not in stats[CURRENT_IMPORT_FROM]:
+                stats[CURRENT_IMPORT_FROM][current_import_from] = 1
+            else:
+                stats[CURRENT_IMPORT_FROM][current_import_from] += 1
+        if suggested_import_from is not None:
+            if SUGGESTED_IMPORT_FROM not in stats:
+                stats[SUGGESTED_IMPORT_FROM] = {}
+            if suggested_import_from not in stats[SUGGESTED_IMPORT_FROM]:
+                stats[SUGGESTED_IMPORT_FROM][suggested_import_from] = 1
+            else:
+                stats[SUGGESTED_IMPORT_FROM][suggested_import_from] += 1
+        if current_is_pinned is not None:
+            if CURRENT_IS_PINNED not in stats:
+                stats[CURRENT_IS_PINNED] = int(current_is_pinned)
+            else:
+                stats[CURRENT_IS_PINNED] += int(current_is_pinned)
+        if suggested_is_pinned is not None:
+            if SUGGESTED_IS_PINNED not in stats:
+                stats[SUGGESTED_IS_PINNED] = int(suggested_is_pinned)
+            else:
+                stats[SUGGESTED_IS_PINNED] += int(suggested_is_pinned)
+
     try:
         imports = load_imports(blueprint)
     except UpdateException as ex:
         print(ex)
-        return None, None
+        return None, None, None
     mappings = {}
     plugins_install_suggestions = {}
+    stats = {}
     for import_line in imports:
-        is_pinned_version, is_unknown, plugin_name, _ = \
+        if import_line.endswith('/types.yaml'):
+            continue
+        is_pinned_version, is_unknown, import_from, plugin_name, _ = \
             plugin_spec(import_line)
         if plugin_names and plugin_name not in plugin_names:
             continue
+        update_stats(current_import_from=import_from,
+                     current_is_pinned=is_pinned_version)
         if is_unknown:
-            if not import_line.endswith('/types.yaml'):
-                add_mapping(UNKNOWN, import_line)
+            add_mapping(UNKNOWN, import_line)
+            update_stats(suggested_import_from=import_from,
+                         suggested_is_pinned=is_pinned_version)
             continue
         plugin_in_plan = find_plugin_in_a_plan(blueprint.plan, plugin_name)
         suggested_version = suggest_version(
@@ -298,11 +342,15 @@ def scan_blueprint(blueprint: models.Blueprint,
         )
         if not suggested_version:
             add_mapping(UNKNOWN, import_line)
+            update_stats(suggested_import_from=import_from,
+                         suggested_is_pinned=is_pinned_version)
             continue
         if plugin_name not in plugins_install_suggestions:
             plugins_install_suggestions[plugin_name] = suggested_version
         if not is_pinned_version:
             add_mapping(FINE, import_line)
+            update_stats(suggested_import_from=import_from,
+                         suggested_is_pinned=is_pinned_version)
             continue
         add_mapping(UPDATES, {
             plugin_name: {
@@ -311,16 +359,47 @@ def scan_blueprint(blueprint: models.Blueprint,
                 SUGGESTED_VERSION: suggested_version,
             }
         })
-    return mappings, plugins_install_suggestions
+        update_stats(suggested_import_from=IMPORT_FROM_MANAGED,
+                     suggested_is_pinned=False)
+    return mappings, stats, plugins_install_suggestions
 
 
-def update_suggestions(suggestions: dict, new_suggestion: dict) -> dict:
-    for plugin_name, plugin_version in new_suggestion.items():
-        if plugin_name not in suggestions:
-            suggestions[plugin_name] = []
-        if plugin_version not in suggestions[plugin_name]:
-            suggestions[plugin_name].append(plugin_version)
-    return suggestions
+def printout_scanning_stats(mappings: dict, stats: dict):
+    number_of_unknown_or_updates = len([b for b in mappings.values()
+                                        if UPDATES in b or UNKNOWN in b])
+    number_of_unknown = len([b for b in mappings.values()
+                             if UNKNOWN in b])
+    pinned = (sum([s.get(CURRENT_IS_PINNED) for s in stats.values()]),
+              sum([s.get(SUGGESTED_IS_PINNED) for s in stats.values()]))
+    url_import = (sum([s.get(CURRENT_IMPORT_FROM, {}).
+                      get(IMPORT_FROM_URL, 0) for s in stats.values()]),
+                  sum([s.get(SUGGESTED_IMPORT_FROM, {}).
+                      get(IMPORT_FROM_URL, 0) for s in stats.values()]))
+    source_import = (sum([s.get(CURRENT_IMPORT_FROM, {}).
+                         get(IMPORT_FROM_SOURCE, 0) for s in stats.values()]),
+                     sum([s.get(SUGGESTED_IMPORT_FROM, {}).
+                         get(IMPORT_FROM_SOURCE, 0) for s in stats.values()]))
+    print('\n\n                             SCANNING STATS')
+    print('----------------------------------------------+---------------')
+    print(' Number blueprints scanned                    | {0:14d}'.
+          format(len(mappings)))
+    print('                                              +---------------')
+    print('                                              | BEFORE | AFTER')
+    print('----------------------------------------------+--------+------')
+    print(' Number of blueprints with one or more issues | {0:6d} | {1:5d}'.
+          format(number_of_unknown_or_updates, number_of_unknown))
+    print(' Number of blueprints with version lock       | {0:6d} | {1:5d}'.
+          format(pinned[0], pinned[1]))
+    print(' Number of blueprints with URL import         | {0:6d} | {1:5d}'.
+          format(url_import[0], url_import[1]))
+    print(' Number of blueprints with source import      | {0:6d} | {1:5d}'.
+          format(source_import[0], source_import[1]))
+
+
+def printout_install_suggestions(install_suggestions: dict):
+    print('\n\nMake sure those plugins are installed (in suggested versions):')
+    for plugin_name, suggested_versions in install_suggestions.items():
+        print('  {0}: {1}'.format(plugin_name, ', '.join(suggested_versions)))
 
 
 @click.command()
@@ -353,24 +432,26 @@ def main(tenant, plugin_names, blueprint_ids, mapping_file, correct):
     _sm = get_storage_manager()
     filters = {'id': blueprint_ids} if blueprint_ids else None
     blueprints = _sm.list(models.Blueprint, filters=filters)
-    mappings, install_suggestions = {}, {}
+    mappings, stats, install_suggestions = {}, {}, {}
     for blueprint in blueprints.items:
         print('Processing {0} blueprint'.format(blueprint.id))
         try:
-            mapping, install_suggestion = scan_blueprint(blueprint,
-                                                         plugin_names)
+            blueprint_mappings, blueprint_stats, blueprint_suggestion = \
+                scan_blueprint(blueprint, plugin_names)
         except UpdateException as ex:
             print(ex)
             continue
-        if install_suggestion:
-            update_suggestions(install_suggestion)
-        if mapping:
-            mappings[blueprint.id] = mapping
+        if blueprint_mappings:
+            mappings[blueprint.id] = blueprint_mappings
+        if blueprint_stats:
+            stats[blueprint.id] = blueprint_stats
+        if blueprint_suggestion:
+            update_suggestions(blueprint_suggestion)
     with open(mapping_file, 'w') as output_file:
         yaml.dump(mappings, output_file, default_flow_style=False)
-    from pprint import pprint
-    print('Make sure those plugins are installed (in suggested versions):')
-    pprint(install_suggestions)
+    print('\nSaved mapping file to {0}'.format(mapping_file))
+    printout_scanning_stats(mappings, stats)
+    printout_install_suggestions(install_suggestions)
 
 
 if __name__ == '__main__':
