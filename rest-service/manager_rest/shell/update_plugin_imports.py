@@ -340,8 +340,8 @@ def scan_blueprint(blueprint: models.Blueprint,
                          suggested_is_pinned=is_pinned_version)
             continue
         add_mapping(UPDATES, {
-            plugin_name: {
-                'import_line': import_line,
+            import_line: {
+                'plugin_name': plugin_name,
                 CURRENT_VERSION: plugin_in_plan[PLUGIN_PACKAGE_VERSION],
                 SUGGESTED_VERSION: suggested_version,
             }
