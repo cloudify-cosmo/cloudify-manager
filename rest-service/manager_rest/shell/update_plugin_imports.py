@@ -33,7 +33,6 @@ CURRENT_VERSION = 'current_version'
 EXECUTORS = [DEPLOYMENT_PLUGINS_TO_INSTALL,
              WORKFLOW_PLUGINS_TO_INSTALL,
              HOST_AGENT_PLUGINS_TO_INSTALL]
-
 FINE = 'fine'
 IMPORTS = 'imports'
 IS_PINNED = True
@@ -45,6 +44,10 @@ SUGGESTED_VERSION = 'suggested_version'
 UNKNOWN = 'unknown'
 UPDATES = 'updates'
 VERSIONS = 'versions'
+
+
+class UpdateException(Exception):
+    pass
 
 
 def _version_to_key(version: str) -> float:
@@ -156,10 +159,10 @@ CLOUDIFY_PLUGINS = {
 
 def setup_environment():
     for value, envvar in [
-        (REST_CONFIG_PATH, 'MANAGER_REST_CONFIG_PATH'),
-        (REST_SECURITY_CONFIG_PATH, 'MANAGER_REST_SECURITY_CONFIG_PATH'),
-        (REST_AUTHORIZATION_CONFIG_PATH,
-         'MANAGER_REST_AUTHORIZATION_CONFIG_PATH'),
+            (REST_CONFIG_PATH, 'MANAGER_REST_CONFIG_PATH'),
+            (REST_SECURITY_CONFIG_PATH, 'MANAGER_REST_SECURITY_CONFIG_PATH'),
+            (REST_AUTHORIZATION_CONFIG_PATH,
+             'MANAGER_REST_AUTHORIZATION_CONFIG_PATH'),
     ]:
         if value is not None:
             environ[envvar] = value
@@ -185,7 +188,7 @@ def spec_from_url(url: str) -> tuple:
     try:
         plugin_yaml = yaml.safe_load(response.text)
     except yaml.YAMLError as ex:
-        print(f'Cannot load imports from {url}: {ex}')
+        print('Cannot load imports from {0}: {1}'.format(url, ex))
         return None, None
     for _, spec in plugin_yaml.get('plugins', {}).items():
         if spec.get(PLUGIN_PACKAGE_NAME) and \
@@ -251,49 +254,57 @@ def suggest_version(plugin_name: str, plugin_version: str) -> str:
     return plugin_version
 
 
+def load_imports(blueprint: models.Blueprint) -> list:
+    file_name = blueprint_file_name(blueprint)
+    try:
+        with open(file_name, 'r') as blueprint_file:
+            try:
+                imports = yaml.safe_load(blueprint_file)[IMPORTS]
+            except yaml.YAMLError as ex:
+                raise UpdateException(
+                    'Cannot load imports from {0}: {1}'.format(file_name, ex))
+    except FileNotFoundError:
+        raise UpdateException(
+            'Blueprint file {0} does not exist'.format(file_name))
+    return imports
+
+
 def scan_blueprint(blueprint: models.Blueprint,
                    plugin_names: tuple) -> tuple:
-    def add_mapping(mappings: dict, genre: str, content: object) -> dict:
+    def add_mapping(genre: str, content: object):
         if genre not in mappings:
             mappings[genre] = []
         mappings[genre].append(content)
-        return mappings
 
-    file_name = blueprint_file_name(blueprint)
     try:
-        with open(file_name, 'r') as f:
-            try:
-                imports = yaml.safe_load(f)[IMPORTS]
-            except yaml.YAMLError as ex:
-                print(f'Cannot load imports from {file_name}: {ex}')
-                return None, None
-    except FileNotFoundError:
-        print(f'Blueprint file {file_name} does not exist')
+        imports = load_imports(blueprint)
+    except UpdateException as ex:
+        print(ex)
         return None, None
     mappings = {}
     plugins_install_suggestions = {}
     for import_line in imports:
-        is_pinned_version, is_unknown, plugin_name, plugin_version = \
+        is_pinned_version, is_unknown, plugin_name, _ = \
             plugin_spec(import_line)
         if plugin_names and plugin_name not in plugin_names:
             continue
         if is_unknown:
             if not import_line.endswith('/types.yaml'):
-                mappings = add_mapping(mappings, UNKNOWN, import_line)
+                add_mapping(UNKNOWN, import_line)
             continue
         plugin_in_plan = find_plugin_in_a_plan(blueprint.plan, plugin_name)
         suggested_version = suggest_version(
             plugin_name, plugin_in_plan[PLUGIN_PACKAGE_VERSION]
         )
         if not suggested_version:
-            mappings = add_mapping(mappings, UNKNOWN, import_line)
+            add_mapping(UNKNOWN, import_line)
             continue
         if plugin_name not in plugins_install_suggestions:
             plugins_install_suggestions[plugin_name] = suggested_version
         if not is_pinned_version:
-            mappings = add_mapping(mappings, FINE, import_line)
+            add_mapping(FINE, import_line)
             continue
-        mappings = add_mapping(mappings, UPDATES, {
+        add_mapping(UPDATES, {
             plugin_name: {
                 'import_line': import_line,
                 CURRENT_VERSION: plugin_in_plan[PLUGIN_PACKAGE_VERSION],
@@ -326,10 +337,16 @@ def update_suggestions(suggestions: dict, new_suggestion: dict) -> dict:
 @click.option('--correct', is_flag=True, default=False,
               help='Update the blueprints using provided mapping file.')
 def main(tenant, plugin_names, blueprint_ids, mapping_file, correct):
-    # if correct and exists(mapping_file):
+    # if correct  and exists(mapping_file):
     #     raise Exception('Blueprints modification (--correct) is possible '
     #                     'only with an existing mapping file provided with '
     #                     '--mapping parameter.')
+    def update_suggestions(new_suggestion: dict):
+        for plugin_name, plugin_version in new_suggestion.items():
+            if plugin_name not in install_suggestions:
+                install_suggestions[plugin_name] = []
+            if plugin_version not in install_suggestions[plugin_name]:
+                install_suggestions[plugin_name].append(plugin_version)
 
     setup_environment()
     set_tenant_in_app(get_tenant_by_name(tenant))
@@ -337,16 +354,20 @@ def main(tenant, plugin_names, blueprint_ids, mapping_file, correct):
     filters = {'id': blueprint_ids} if blueprint_ids else None
     blueprints = _sm.list(models.Blueprint, filters=filters)
     mappings, install_suggestions = {}, {}
-    for b in blueprints.items:
-        print(f'Processing {b.id} blueprint')
-        mapping, install_suggestion = scan_blueprint(b, plugin_names)
+    for blueprint in blueprints.items:
+        print('Processing {0} blueprint'.format(blueprint.id))
+        try:
+            mapping, install_suggestion = scan_blueprint(blueprint,
+                                                         plugin_names)
+        except UpdateException as ex:
+            print(ex)
+            continue
         if install_suggestion:
-            install_suggestions = update_suggestions(install_suggestions,
-                                                     install_suggestion)
+            update_suggestions(install_suggestion)
         if mapping:
-            mappings[b.id] = mapping
-    with open(mapping_file, 'w') as f:
-        yaml.dump(mappings, f, default_flow_style=False)
+            mappings[blueprint.id] = mapping
+    with open(mapping_file, 'w') as output_file:
+        yaml.dump(mappings, output_file, default_flow_style=False)
     from pprint import pprint
     print('Make sure those plugins are installed (in suggested versions):')
     pprint(install_suggestions)
