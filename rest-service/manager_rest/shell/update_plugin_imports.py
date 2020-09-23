@@ -356,16 +356,16 @@ def printout_scanning_stats(mappings: dict, stats: dict):
                                         if UPDATES in b or UNKNOWN in b])
     number_of_unknown = len([b for b in mappings.values()
                              if UNKNOWN in b])
-    pinned = (sum([s.get(CURRENT_IS_PINNED) for s in stats.values()]),
-              sum([s.get(SUGGESTED_IS_PINNED) for s in stats.values()]))
-    url_import = (sum([s.get(CURRENT_IMPORT_FROM, {}).
-                      get(IMPORT_FROM_URL, 0) for s in stats.values()]),
-                  sum([s.get(SUGGESTED_IMPORT_FROM, {}).
-                      get(IMPORT_FROM_URL, 0) for s in stats.values()]))
-    source_import = (sum([s.get(CURRENT_IMPORT_FROM, {}).
-                         get(IMPORT_FROM_SOURCE, 0) for s in stats.values()]),
-                     sum([s.get(SUGGESTED_IMPORT_FROM, {}).
-                         get(IMPORT_FROM_SOURCE, 0) for s in stats.values()]))
+    pinned = (sum(s.get(CURRENT_IS_PINNED) for s in stats.values()),
+              sum(s.get(SUGGESTED_IS_PINNED) for s in stats.values()))
+    url_import = (sum(s.get(CURRENT_IMPORT_FROM, {}).
+                      get(IMPORT_FROM_URL, 0) for s in stats.values()),
+                  sum(s.get(SUGGESTED_IMPORT_FROM, {}).
+                      get(IMPORT_FROM_URL, 0) for s in stats.values()))
+    source_import = (sum(s.get(CURRENT_IMPORT_FROM, {}).
+                         get(IMPORT_FROM_SOURCE, 0) for s in stats.values()),
+                     sum(s.get(SUGGESTED_IMPORT_FROM, {}).
+                         get(IMPORT_FROM_SOURCE, 0) for s in stats.values()))
     print('\n\n                             SCANNING STATS')
     print('----------------------------------------------+---------------')
     print(' Number blueprints scanned                    | {0:14d}'.
