@@ -287,29 +287,13 @@ def scan_blueprint(blueprint: models.Blueprint,
                      current_is_pinned: bool = None,
                      suggested_is_pinned: bool = None):
         if current_import_from is not None:
-            if CURRENT_IMPORT_FROM not in stats:
-                stats[CURRENT_IMPORT_FROM] = {}
-            if current_import_from not in stats[CURRENT_IMPORT_FROM]:
-                stats[CURRENT_IMPORT_FROM][current_import_from] = 1
-            else:
-                stats[CURRENT_IMPORT_FROM][current_import_from] += 1
+            stats[CURRENT_IMPORT_FROM][current_import_from] += 1
         if suggested_import_from is not None:
-            if SUGGESTED_IMPORT_FROM not in stats:
-                stats[SUGGESTED_IMPORT_FROM] = {}
-            if suggested_import_from not in stats[SUGGESTED_IMPORT_FROM]:
-                stats[SUGGESTED_IMPORT_FROM][suggested_import_from] = 1
-            else:
-                stats[SUGGESTED_IMPORT_FROM][suggested_import_from] += 1
-        if current_is_pinned is not None:
-            if CURRENT_IS_PINNED not in stats:
-                stats[CURRENT_IS_PINNED] = int(current_is_pinned)
-            else:
-                stats[CURRENT_IS_PINNED] += int(current_is_pinned)
-        if suggested_is_pinned is not None:
-            if SUGGESTED_IS_PINNED not in stats:
-                stats[SUGGESTED_IS_PINNED] = int(suggested_is_pinned)
-            else:
-                stats[SUGGESTED_IS_PINNED] += int(suggested_is_pinned)
+            stats[SUGGESTED_IMPORT_FROM][suggested_import_from] += 1
+        if current_is_pinned:
+            stats[CURRENT_IS_PINNED] += 1
+        if suggested_is_pinned:
+            stats[SUGGESTED_IS_PINNED] += 1
 
     try:
         imports = load_imports(blueprint)
@@ -318,7 +302,13 @@ def scan_blueprint(blueprint: models.Blueprint,
         return None, None, None
     mappings = {}
     plugins_install_suggestions = {}
-    stats = {}
+    stats = {
+        CURRENT_IMPORT_FROM: collections.defaultdict(lambda: 0),
+        CURRENT_IS_PINNED: 0,
+        SUGGESTED_IMPORT_FROM: collections.defaultdict(lambda: 0),
+        SUGGESTED_IS_PINNED: 0,
+    }
+
     for import_line in imports:
         if import_line.endswith('/types.yaml'):
             continue
