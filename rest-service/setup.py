@@ -58,6 +58,12 @@ setup(
     description='Cloudify manager rest service',
     zip_safe=False,
     install_requires=install_requires,
+    entry_points={
+        'console_scripts': [
+            'update-plugin-imports = '
+            'manager_rest.shell.update_plugin_imports:main',
+        ]
+    },
     extras_require={
         'dbus': ['dbus-python==1.2.4'],
     }
