@@ -22,7 +22,7 @@ import zipfile
 import tempfile
 from datetime import datetime
 from os import path, makedirs
-from base64 import urlsafe_b64encode
+from base64 import b64encode
 
 from flask import g
 from flask import request
@@ -163,7 +163,7 @@ def create_auth_header(username=None, password=None, token=None, tenant=None):
     """
     headers = {}
     if username and password:
-        credentials = urlsafe_b64encode(
+        credentials = b64encode(
             '{0}:{1}'.format(username, password).encode('utf-8')
         ).decode('ascii')
         headers = {
