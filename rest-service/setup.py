@@ -27,7 +27,7 @@ install_requires = [
     'requests>=2.7.0,<3.0.0',
     'gunicorn==18.0',
     'PyYAML==3.12',
-    'psutil==3.3.0',
+    'psutil==5.6.6',
     'virtualenv==15.1.0',
     'wagon>=0.9.1',
     'python-dateutil==2.5.3',
