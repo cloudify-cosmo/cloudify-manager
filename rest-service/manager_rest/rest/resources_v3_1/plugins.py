@@ -250,12 +250,12 @@ class PluginsId(resources_v2_1.PluginsId):
                 _agent_fk=agent_id,
                 _manager_fk=manager_id,
                 state=request_dict['state'],
-                error=request_dict['error']
+                error=request_dict.get('error')
             )
             sm.put(pstate)
         else:
             pstate.state = request_dict['state']
-            pstate.error = request_dict['error']
+            pstate.error = request_dict.get('error')
             sm.update(pstate)
 
         if plugin:
