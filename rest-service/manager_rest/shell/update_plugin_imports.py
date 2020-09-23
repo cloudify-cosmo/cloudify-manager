@@ -196,7 +196,7 @@ CLOUDIFY_PLUGINS = {
         VERSIONS: sorted(['1.3.18', '1.3.17', '1.3.16', '1.3.15', '1.3.14',
                           '1.3.10', '1.3.9', '1.3.8', '1.3.7', '1.3.6',
                           '1.3.5', '1.3.4', '1.3.3', '1.3.2', '1.3.1', '1.3',
-                          '1.2.1', '1.2', '1.1',],
+                          '1.2.1', '1.2', '1.1'],
                          key=version_parse, reverse=True),
         REPO: 'https://github.com/cloudify-cosmo/cloudify-diamond-plugin',
     },
