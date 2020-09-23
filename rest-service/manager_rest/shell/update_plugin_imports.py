@@ -3,6 +3,7 @@
 import collections
 from os.path import join
 from os import environ
+from packaging.version import parse as version_parse
 
 import click
 import requests
@@ -58,11 +59,7 @@ class UpdateException(Exception):
 
 
 def _version_to_key(version: str) -> float:
-    vs = version.split('.')
-    while len(vs) < 4:
-        vs += '0'
-    return (float(vs[0]) * 10 ** 6) + (float(vs[1]) * 10 ** 3) + \
-        float(vs[2]) + (float(vs[3]) * 10 ** -3)
+    return version_parse(version)
 
 
 CLOUDIFY_PLUGINS = {
