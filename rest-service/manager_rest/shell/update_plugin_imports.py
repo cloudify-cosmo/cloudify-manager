@@ -381,6 +381,13 @@ def printout_scanning_stats(mappings: dict, stats: dict):
           format(url_import[0], url_import[1]))
     print(' Number of blueprints with source import      | {0:6d} | {1:5d}'.
           format(source_import[0], source_import[1]))
+    if source_import[1] > 0:
+        # There are some plugins that are imported from source
+        print('\nWARNING! There will be still some plugins imported from '
+              'source left.\n         Those are listed in mappings '
+              'file under the `unknown` nodes.\n         Please verify that '
+              'you can replace those with managed plugins\n         and edit '
+              'generated mappings file accordingly.')
 
 
 def printout_install_suggestions(install_suggestions: dict):
@@ -436,7 +443,7 @@ def main(tenant, plugin_names, blueprint_ids, mapping_file, correct):
             update_suggestions(blueprint_suggestion)
     with open(mapping_file, 'w') as output_file:
         yaml.dump(mappings, output_file, default_flow_style=False)
-    print('\nSaved mapping file to {0}'.format(mapping_file))
+    print('\nSaved mapping file to the {0}'.format(mapping_file))
     printout_scanning_stats(mappings, stats)
     printout_install_suggestions(install_suggestions)
 
