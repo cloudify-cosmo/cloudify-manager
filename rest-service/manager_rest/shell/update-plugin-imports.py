@@ -154,6 +154,21 @@ CLOUDIFY_PLUGINS = {
 }
 
 
+def setup_environment():
+    for value, envvar in [
+        (REST_CONFIG_PATH, 'MANAGER_REST_CONFIG_PATH'),
+        (REST_SECURITY_CONFIG_PATH, 'MANAGER_REST_SECURITY_CONFIG_PATH'),
+        (REST_AUTHORIZATION_CONFIG_PATH,
+         'MANAGER_REST_AUTHORIZATION_CONFIG_PATH'),
+    ]:
+        if value is not None:
+            environ[envvar] = value
+
+    config.instance.load_configuration()
+    app = setup_flask_app()
+    set_admin_current_user(app)
+
+
 def blueprint_file_name(blueprint: models.Blueprint) -> str:
     return join(
         config.instance.file_server_root,
@@ -316,6 +331,7 @@ def main(tenant, plugin_names, blueprint_ids, mapping_file, correct):
     #                     'only with an existing mapping file provided with '
     #                     '--mapping parameter.')
 
+    setup_environment()
     set_tenant_in_app(get_tenant_by_name(tenant))
     _sm = get_storage_manager()
     filters = {'id': blueprint_ids} if blueprint_ids else None
@@ -337,16 +353,4 @@ def main(tenant, plugin_names, blueprint_ids, mapping_file, correct):
 
 
 if __name__ == '__main__':
-    for value, envvar in [
-        (REST_CONFIG_PATH, 'MANAGER_REST_CONFIG_PATH'),
-        (REST_SECURITY_CONFIG_PATH, 'MANAGER_REST_SECURITY_CONFIG_PATH'),
-        (REST_AUTHORIZATION_CONFIG_PATH,
-         'MANAGER_REST_AUTHORIZATION_CONFIG_PATH'),
-    ]:
-        if value is not None:
-            environ[envvar] = value
-
-    config.instance.load_configuration()
-    app = setup_flask_app()
-    set_admin_current_user(app)
     main()
