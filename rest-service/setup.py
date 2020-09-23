@@ -61,7 +61,7 @@ setup(
     entry_points={
         'console_scripts': [
             'update-plugin-imports = '
-            'restmanager_rest.shell.update-plugin-imports:main',
+            'restmanager_rest.shell.update_plugin_imports:main',
         ]
     },
     extras_require={
