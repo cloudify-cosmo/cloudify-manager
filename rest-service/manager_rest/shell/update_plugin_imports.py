@@ -457,10 +457,6 @@ def printout_install_suggestions(install_suggestions: dict):
 @click.option('--correct', is_flag=True, default=False,
               help='Update the blueprints using provided mapping file.')
 def main(tenant, plugin_names, blueprint_ids, mapping_file, correct):
-    # if correct  and exists(mapping_file):
-    #     raise Exception('Blueprints modification (--correct) is possible '
-    #                     'only with an existing mapping file provided with '
-    #                     '--mapping parameter.')
     def update_suggestions(new_suggestion: dict):
         for plugin_name, plugin_version in new_suggestion.items():
             if plugin_name not in install_suggestions:
