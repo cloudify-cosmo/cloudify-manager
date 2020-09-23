@@ -207,25 +207,20 @@ def plugin_spec(import_line: str) -> tuple:
     return IS_NOT_PINNED, IS_UNKNOWN, None, None
 
 
-def plugins_in_a_plan(plan: Plan, plugin_names: tuple) -> collections.Iterable:
+def plugins_in_a_plan(plan: Plan) -> collections.Iterable:
     for executor in [DEPLOYMENT_PLUGINS_TO_INSTALL,
                      WORKFLOW_PLUGINS_TO_INSTALL,
                      HOST_AGENT_PLUGINS_TO_INSTALL]:
         if executor not in plan:
             continue
         for plugin in plan[executor]:
-            if plugin_names and \
-                    plugin[PLUGIN_PACKAGE_NAME] not in plugin_names:
-                continue
             if plugin[PLUGIN_PACKAGE_NAME] and \
                     plugin[PLUGIN_PACKAGE_VERSION]:
                 yield plugin
 
 
-def find_plugin_in_a_plan(plan: Plan,
-                          plugin_names: tuple,
-                          plugin_name: str) -> dict:
-    for plugin in plugins_in_a_plan(plan, plugin_names):
+def find_plugin_in_a_plan(plan: Plan, plugin_name: str) -> dict:
+    for plugin in plugins_in_a_plan(plan):
         if plugin[PLUGIN_PACKAGE_NAME] == plugin_name:
             return plugin
     return {}
@@ -234,7 +229,11 @@ def find_plugin_in_a_plan(plan: Plan,
 def suggest_version(plugin_name: str, plugin_version: str) -> str:
     if plugin_name not in CLOUDIFY_PLUGINS:
         return plugin_version
-    return CLOUDIFY_PLUGINS[plugin_name][VERSIONS][0]
+    plugin_major_version = plugin_version.split('.')[0]
+    for available_version in CLOUDIFY_PLUGINS[plugin_name][VERSIONS]:
+        if available_version.split('.')[0] == plugin_major_version:
+            return available_version
+    return plugin_version
 
 
 def scan_blueprint(blueprint: models.Blueprint,
@@ -267,7 +266,10 @@ def scan_blueprint(blueprint: models.Blueprint,
             if not import_line.endswith('/types.yaml'):
                 mappings = add_mapping(mappings, UNKNOWN, import_line)
             continue
-        suggested_version = suggest_version(plugin_name, plugin_version)
+        plugin_in_plan = find_plugin_in_a_plan(blueprint.plan, plugin_name)
+        suggested_version = suggest_version(
+            plugin_name, plugin_in_plan[PLUGIN_PACKAGE_VERSION]
+        )
         if not suggested_version:
             mappings = add_mapping(mappings, UNKNOWN, import_line)
             continue
@@ -276,9 +278,6 @@ def scan_blueprint(blueprint: models.Blueprint,
         if not is_pinned_version:
             mappings = add_mapping(mappings, FINE, import_line)
             continue
-        plugin_in_plan = find_plugin_in_a_plan(
-            blueprint.plan, plugin_names, plugin_name
-        )
         mappings = add_mapping(mappings, UPDATES, {
             plugin_name: {
                 'import_line': import_line,
@@ -287,6 +286,15 @@ def scan_blueprint(blueprint: models.Blueprint,
             }
         })
     return mappings, plugins_install_suggestions
+
+
+def update_suggestions(suggestions: dict, new_suggestion: dict) -> dict:
+    for plugin_name, plugin_version in new_suggestion.items():
+        if plugin_name not in suggestions:
+            suggestions[plugin_name] = []
+        if plugin_version not in suggestions[plugin_name]:
+            suggestions[plugin_name].append(plugin_version)
+    return suggestions
 
 
 @click.command()
@@ -317,7 +325,8 @@ def main(tenant, plugin_names, blueprint_ids, mapping_file, correct):
         print(f'Processing {b.id} blueprint')
         mapping, install_suggestion = scan_blueprint(b, plugin_names)
         if install_suggestion:
-            install_suggestions.update(install_suggestion)
+            install_suggestions = update_suggestions(install_suggestions,
+                                                     install_suggestion)
         if mapping:
             mappings[b.id] = mapping
     with open(mapping_file, 'w') as f:
