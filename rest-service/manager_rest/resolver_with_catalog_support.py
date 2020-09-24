@@ -108,7 +108,7 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
         # In case a mapping for package_version was provided, use it above
         # all other specs.
         if name in mappings:
-            filters['package_version'] = mappings.get(name)
+            filters['package_version'] = [mappings.get(name)]
         elif name in version_constraints:
             filters[EXTRA_VERSION_CONSTRAINT] = \
                 version_constraints.get(name)
