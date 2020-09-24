@@ -342,11 +342,7 @@ def scan_blueprint(blueprint: models.Blueprint,
         if suggested_is_pinned:
             stats[SUGGESTED_IS_PINNED] += 1
 
-    try:
-        imports = load_imports(blueprint)
-    except UpdateException as ex:
-        print(ex)
-        return None, None, None
+    imports = load_imports(blueprint)
     mappings = {}
     plugins_install_suggestions = {}
     stats = {
@@ -398,7 +394,9 @@ def scan_blueprint(blueprint: models.Blueprint,
     return mappings, stats, plugins_install_suggestions
 
 
-def printout_scanning_stats(mappings: dict, stats: dict):
+def printout_scanning_stats(total_blueprints: int,
+                            mappings: dict,
+                            stats: dict):
     number_of_unknown_or_updates = len([b for b in mappings.values()
                                         if UPDATES in b or UNKNOWN in b])
     number_of_unknown = len([b for b in mappings.values()
@@ -416,7 +414,7 @@ def printout_scanning_stats(mappings: dict, stats: dict):
     print('\n\n                             SCANNING STATS')
     print('----------------------------------------------+---------------')
     print(' Number blueprints scanned                    | {0:14d}'.
-          format(len(mappings)))
+          format(total_blueprints))
     print('                                              +---------------')
     print('                                              | BEFORE | AFTER')
     print('----------------------------------------------+--------+------')
@@ -470,6 +468,7 @@ def main(tenant, plugin_names, blueprint_ids, mapping_file, correct):
     filters = {'id': blueprint_ids} if blueprint_ids else None
     blueprints = _sm.list(models.Blueprint, filters=filters)
     mappings, stats, install_suggestions = {}, {}, {}
+    total_blueprints_scanned = 0
     for blueprint in blueprints.items:
         print('Processing {0} blueprint'.format(blueprint.id))
         try:
@@ -477,7 +476,8 @@ def main(tenant, plugin_names, blueprint_ids, mapping_file, correct):
                 scan_blueprint(blueprint, plugin_names)
         except UpdateException as ex:
             print(ex)
-            continue
+        else:
+            total_blueprints_scanned += 1
         if blueprint_mappings:
             mappings[blueprint.id] = blueprint_mappings
         if blueprint_stats:
@@ -487,7 +487,7 @@ def main(tenant, plugin_names, blueprint_ids, mapping_file, correct):
     with open(mapping_file, 'w') as output_file:
         yaml.dump(mappings, output_file, default_flow_style=False)
     print('\nSaved mapping file to the {0}'.format(mapping_file))
-    printout_scanning_stats(mappings, stats)
+    printout_scanning_stats(total_blueprints_scanned, mappings, stats)
     printout_install_suggestions(install_suggestions)
 
 
