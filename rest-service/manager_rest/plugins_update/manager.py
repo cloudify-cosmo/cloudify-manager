@@ -40,7 +40,6 @@ from manager_rest.plugins_update.constants import (STATES,
                                                    MAPPING,
                                                    UPDATES,
                                                    PLUGIN_NAME,
-                                                   CURRENT_VERSION,
                                                    SUGGESTED_VERSION)
 from manager_rest.manager_exceptions import (ConflictError,
                                              PluginsUpdateError,
@@ -284,7 +283,7 @@ def _plugin_version_constraints(blueprint, filters):
 def _plugin_mappings(blueprint, filters):
     """Prepare a list of plugin version mappings for the resolver."""
 
-    def prepare_mapping(plugin_name, plugin_version, mapping_updates):
+    def prepare_mapping(plugin_name, mapping_updates):
         # If there is one and only one mapping for a specific plugin
         # name/version then use the suggested version from the mapping file
         plugin_mappings = [m for mu in mapping_updates for m in mu.values()
@@ -300,7 +299,6 @@ def _plugin_mappings(blueprint, filters):
         if plugin[PLUGIN_PACKAGE_NAME] in mappings:
             continue
         mapping = prepare_mapping(plugin[PLUGIN_PACKAGE_NAME],
-                                  plugin[PLUGIN_PACKAGE_VERSION],
                                   filters.get(MAPPING).get(UPDATES))
         if mapping:
             mappings[plugin[PLUGIN_PACKAGE_NAME]] = mapping

@@ -47,5 +47,4 @@ MAPPING = 'mapping'
 
 UPDATES = 'updates'
 PLUGIN_NAME = 'plugin_name'
-CURRENT_VERSION = 'current_version'
 SUGGESTED_VERSION = 'suggested_version'
