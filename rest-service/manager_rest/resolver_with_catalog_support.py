@@ -142,8 +142,8 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
         filters['package_name'] = name
         version_specified = 'package_version' in filters
         versions = filters.pop('package_version', [])
-        extra_constraints_specified = EXTRA_VERSION_CONSTRAINT in filters
-        extra_constraints = filters.pop(EXTRA_VERSION_CONSTRAINT, None)
+        extra_constraint_specified = EXTRA_VERSION_CONSTRAINT in filters
+        extra_constraint = filters.pop(EXTRA_VERSION_CONSTRAINT, None)
         if not version_specified:
             specifier_set = SpecifierSet()
         else:
@@ -169,10 +169,10 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
             for i, p in enumerate(plugins))
         matching_versions = [(i, v)
                              for i, v in plugin_versions if v in specifier_set]
-        if extra_constraints_specified:
+        if extra_constraint_specified:
             matching_versions = [(i, v)
                                  for i, v in matching_versions
-                                 if v in SpecifierSet(extra_constraints)]
+                                 if v in SpecifierSet(extra_constraint)]
         if not matching_versions:
             raise InvalidPluginError('No matching version was found for '
                                      'plugin {0} and '
