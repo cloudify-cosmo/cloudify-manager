@@ -82,7 +82,7 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
         return super(ResolverWithCatalogSupport, self).fetch_import(import_url)
 
     @staticmethod
-    def _make_plugin_filters(plugin_spec, version_constraints):
+    def _make_plugin_filters(plugin_spec, version_constraints, mappings):
         """Parse the plugin spec to a dict of filters for the sql query
 
         >>> _make_plugin_filters('cloudify-openstack-plugin')
@@ -104,7 +104,12 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
                     'Error parsing spec for plugin {0}: invalid parameter {1}'
                     .format(name, filter_name))
             filters[renamed] = value
-        if name in version_constraints:
+
+        # In case a mapping for package_version was provided, use it above
+        # all other specs.
+        if name in mappings:
+            filters['package_version'] = mappings.get(name)
+        elif name in version_constraints:
             filters[EXTRA_VERSION_CONSTRAINT] = \
                 version_constraints.get(name)
         return name, filters
@@ -112,7 +117,7 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
     def _resolve_plugin_yaml_url(self, import_url):
         plugin_spec = import_url.replace(PLUGIN_PREFIX, '', 1).strip()
         name, plugin_filters = self._make_plugin_filters(
-            plugin_spec, self.version_constraints)
+            plugin_spec, self.version_constraints, self.mappings)
         plugin = self._find_plugin(name, plugin_filters)
         if plugin:
             current_app.logger.info('Plugin update: will use %s==%s',
