@@ -54,9 +54,13 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
     """
 
     def __init__(self, rules=None, fallback=True,
-                 plugin_version_constraints={}):
+                 plugin_version_constraints=None,
+                 plugin_mappings=None):
         super(ResolverWithCatalogSupport, self).__init__(rules, fallback)
-        self.version_constraints = plugin_version_constraints
+        self.version_constraints = plugin_version_constraints or {}
+        self.mappings = plugin_mappings or {}  # TODO mateumann - use this
+        current_app.logger.info('ResolverWithCatalogSupport mappings: {0}'.
+                                format(self.mappings))
 
     @staticmethod
     def _is_plugin_url(import_url):
