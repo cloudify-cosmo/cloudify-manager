@@ -287,9 +287,9 @@ def _plugin_mappings(blueprint, filters):
     def prepare_mapping(plugin_name, plugin_version, mapping_updates):
         # If there is one and only one mapping for a specific plugin
         # name/version then use the suggested version from the mapping file
-        plugin_mappings = [m for m in mapping_updates.values()
-                           if plugin_name == m.get(PLUGIN_NAME)
-                           and plugin_version == m.get(CURRENT_VERSION)]
+        plugin_mappings = [m for mu in mapping_updates for m in mu.values()
+                           if plugin_name == m.get(PLUGIN_NAME) and
+                           plugin_version == m.get(CURRENT_VERSION)]
         if plugin_mappings and len(plugin_mappings) == 1:
             return _exact_version_constraint(
                 plugin_mappings[0].get(SUGGESTED_VERSION))
