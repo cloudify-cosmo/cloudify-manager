@@ -58,9 +58,7 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
                  plugin_mappings=None):
         super(ResolverWithCatalogSupport, self).__init__(rules, fallback)
         self.version_constraints = plugin_version_constraints or {}
-        self.mappings = plugin_mappings or {}  # TODO mateumann - use this
-        current_app.logger.info('ResolverWithCatalogSupport mappings: {0}'.
-                                format(self.mappings))
+        self.mappings = plugin_mappings or {}
 
     @staticmethod
     def _is_plugin_url(import_url):
@@ -71,11 +69,22 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
         return import_url.startswith(BLUEPRINT_PREFIX)
 
     def fetch_import(self, import_url):
+        if self.mappings:
+            import_url = self._rewrite_from_mappings(import_url)
         if self._is_blueprint_url(import_url):
             return self._fetch_blueprint_import(import_url)
         elif self._is_plugin_url(import_url):
             return self._fetch_plugin_import(import_url)
         return super(ResolverWithCatalogSupport, self).fetch_import(import_url)
+
+    def _rewrite_from_mappings(self, import_url):
+        for plugin_name, mapping in self.mappings:
+            if import_url == mapping.get('import_url'):
+                return 'plugin:{0}?version={1}'.format(
+                    plugin_name,
+                    mapping.get('version')
+                )
+        return import_url
 
     def _fetch_plugin_import(self, import_url):
         import_url = self._resolve_plugin_yaml_url(import_url)
@@ -108,7 +117,7 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
         # In case a mapping for package_version was provided, use it above
         # all other specs.
         if name in mappings:
-            filters['package_version'] = [mappings.get(name)]
+            filters['package_version'] = [mappings.get(name).get('version')]
         elif name in version_constraints:
             filters[EXTRA_VERSION_CONSTRAINT] = \
                 version_constraints.get(name)
