@@ -54,9 +54,11 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
     """
 
     def __init__(self, rules=None, fallback=True,
-                 plugin_version_constraints={}):
+                 plugin_version_constraints=None,
+                 plugin_mappings=None):
         super(ResolverWithCatalogSupport, self).__init__(rules, fallback)
-        self.version_constraints = plugin_version_constraints
+        self.version_constraints = plugin_version_constraints or {}
+        self.mappings = plugin_mappings or {}
 
     @staticmethod
     def _is_plugin_url(import_url):
@@ -67,18 +69,29 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
         return import_url.startswith(BLUEPRINT_PREFIX)
 
     def fetch_import(self, import_url):
+        if self.mappings:
+            import_url = self._rewrite_from_mappings(import_url)
         if self._is_blueprint_url(import_url):
             return self._fetch_blueprint_import(import_url)
         elif self._is_plugin_url(import_url):
             return self._fetch_plugin_import(import_url)
         return super(ResolverWithCatalogSupport, self).fetch_import(import_url)
 
+    def _rewrite_from_mappings(self, import_url):
+        for plugin_name, mapping in self.mappings:
+            if import_url == mapping.get('import_url'):
+                return 'plugin:{0}?version={1}'.format(
+                    plugin_name,
+                    mapping.get('version')
+                )
+        return import_url
+
     def _fetch_plugin_import(self, import_url):
         import_url = self._resolve_plugin_yaml_url(import_url)
         return super(ResolverWithCatalogSupport, self).fetch_import(import_url)
 
     @staticmethod
-    def _make_plugin_filters(plugin_spec, version_constraints):
+    def _make_plugin_filters(plugin_spec, version_constraints, mappings):
         """Parse the plugin spec to a dict of filters for the sql query
 
         >>> _make_plugin_filters('cloudify-openstack-plugin')
@@ -100,7 +113,12 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
                     'Error parsing spec for plugin {0}: invalid parameter {1}'
                     .format(name, filter_name))
             filters[renamed] = value
-        if name in version_constraints:
+
+        # In case a mapping for package_version was provided, use it above
+        # all other specs.
+        if name in mappings:
+            filters['package_version'] = [mappings.get(name).get('version')]
+        elif name in version_constraints:
             filters[EXTRA_VERSION_CONSTRAINT] = \
                 version_constraints.get(name)
         return name, filters
@@ -108,7 +126,7 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
     def _resolve_plugin_yaml_url(self, import_url):
         plugin_spec = import_url.replace(PLUGIN_PREFIX, '', 1).strip()
         name, plugin_filters = self._make_plugin_filters(
-            plugin_spec, self.version_constraints)
+            plugin_spec, self.version_constraints, self.mappings)
         plugin = self._find_plugin(name, plugin_filters)
         if plugin:
             current_app.logger.info('Plugin update: will use %s==%s',
@@ -138,8 +156,8 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
         filters['package_name'] = name
         version_specified = 'package_version' in filters
         versions = filters.pop('package_version', [])
-        extra_constraints_specified = EXTRA_VERSION_CONSTRAINT in filters
-        extra_constraints = filters.pop(EXTRA_VERSION_CONSTRAINT, None)
+        extra_constraint_specified = EXTRA_VERSION_CONSTRAINT in filters
+        extra_constraint = filters.pop(EXTRA_VERSION_CONSTRAINT, None)
         if not version_specified:
             specifier_set = SpecifierSet()
         else:
@@ -165,10 +183,10 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
             for i, p in enumerate(plugins))
         matching_versions = [(i, v)
                              for i, v in plugin_versions if v in specifier_set]
-        if extra_constraints_specified:
+        if extra_constraint_specified:
             matching_versions = [(i, v)
                                  for i, v in matching_versions
-                                 if v in SpecifierSet(extra_constraints)]
+                                 if v in SpecifierSet(extra_constraint)]
         if not matching_versions:
             raise InvalidPluginError('No matching version was found for '
                                      'plugin {0} and '
