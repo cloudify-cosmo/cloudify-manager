@@ -220,12 +220,12 @@ class PluginsUpdateManager(object):
 
 
 def _plugins_in_a_plan(plan):
-    for executor in [DEPLOYMENT_PLUGINS_TO_INSTALL,
-                     WORKFLOW_PLUGINS_TO_INSTALL,
-                     HOST_AGENT_PLUGINS_TO_INSTALL]:
-        if executor not in plan:
+    for plugins_key in [DEPLOYMENT_PLUGINS_TO_INSTALL,
+                        WORKFLOW_PLUGINS_TO_INSTALL,
+                        HOST_AGENT_PLUGINS_TO_INSTALL]:
+        if plugins_key not in plan:
             continue
-        for a_plugin in plan[executor]:
+        for a_plugin in plan[plugins_key]:
             if a_plugin[PLUGIN_PACKAGE_NAME] and \
                     a_plugin[PLUGIN_PACKAGE_VERSION]:
                 yield a_plugin
