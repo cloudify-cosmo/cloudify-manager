@@ -78,7 +78,7 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
         return super(ResolverWithCatalogSupport, self).fetch_import(import_url)
 
     def _rewrite_from_mappings(self, import_url):
-        for plugin_name, mapping in self.mappings:
+        for plugin_name, mapping in self.mappings.items():
             if import_url == mapping.get('import_url'):
                 return 'plugin:{0}?version={1}'.format(
                     plugin_name,
