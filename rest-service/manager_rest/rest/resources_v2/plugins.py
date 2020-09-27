@@ -186,8 +186,6 @@ class PluginsId(SecuredResource):
     @authorize('plugin_delete')
     @rest_decorators.marshal_with(models.Plugin)
     def delete(self, plugin_id, **kwargs):
-        """
-        Delete plugin by ID
-        """
-        return get_resource_manager().remove_plugin(plugin_id=plugin_id,
-                                                    force=False)
+        """Delete plugin by ID"""
+        get_resource_manager().remove_plugin(plugin_id=plugin_id, force=False)
+        return None, 204

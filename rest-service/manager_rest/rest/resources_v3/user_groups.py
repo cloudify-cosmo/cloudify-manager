@@ -103,13 +103,13 @@ class UserGroupsId(SecuredMultiTenancyResource):
         return multi_tenancy.get_group(group_name)
 
     @authorize('user_group_delete')
-    @rest_decorators.marshal_with(GroupResponse)
     def delete(self, group_name, multi_tenancy):
         """
         Delete a user group
         """
         rest_utils.validate_inputs({'group_name': group_name})
-        return multi_tenancy.delete_group(group_name)
+        multi_tenancy.delete_group(group_name)
+        return None, 204
 
 
 class UserGroupsUsers(SecuredMultiTenancyResource):
@@ -135,7 +135,6 @@ class UserGroupsUsers(SecuredMultiTenancyResource):
         )
 
     @authorize('user_group_remove_user')
-    @rest_decorators.marshal_with(GroupResponse)
     @rest_decorators.no_external_authenticator('remove user from group')
     def delete(self, multi_tenancy):
         """
@@ -144,7 +143,8 @@ class UserGroupsUsers(SecuredMultiTenancyResource):
         request_dict = rest_utils.get_json_and_verify_params({'username',
                                                               'group_name'})
         rest_utils.validate_inputs(request_dict)
-        return multi_tenancy.remove_user_from_group(
+        multi_tenancy.remove_user_from_group(
             request_dict['username'],
             request_dict['group_name']
         )
+        return None, 204

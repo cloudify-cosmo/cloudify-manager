@@ -14,6 +14,7 @@
 #  * limitations under the License.
 
 from flask_restful_swagger import swagger
+from werkzeug.exceptions import BadRequest
 
 from cloudify._compat import text_type
 from cloudify.models_states import VisibilityState
@@ -25,6 +26,12 @@ from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.utils import create_filter_params_list_description
+from manager_rest.plugins_update.constants import (PLUGIN_NAMES,
+                                                   TO_LATEST,
+                                                   ALL_TO_LATEST,
+                                                   TO_MINOR,
+                                                   ALL_TO_MINOR,
+                                                   MAPPING)
 from manager_rest.plugins_update.manager import get_plugins_updates_manager
 from manager_rest.rest import (resources_v2,
                                resources_v2_1,
@@ -82,7 +89,7 @@ class PluginsUpdate(SecuredResource):
 
     @authorize('plugins_update_create')
     @rest_decorators.marshal_with(models.PluginsUpdate)
-    def post(self, id, phase):
+    def post(self, id, phase, **kwargs):
         """
         Supports two stages of a plugin update.
         Phases:
@@ -97,9 +104,20 @@ class PluginsUpdate(SecuredResource):
         update ID.
         :param phase: either PHASES.INITIAL or PHASES.FINAL (internal).
         """
+        try:
+            filters = rest_utils.get_json_and_verify_params({
+                PLUGIN_NAMES: {'type': list, 'optional': True},
+                ALL_TO_LATEST: {'type': bool, 'optional': True},
+                TO_LATEST: {'type': list, 'optional': True},
+                ALL_TO_MINOR: {'type': bool, 'optional': True},
+                TO_MINOR: {'type': list, 'optional': True},
+                MAPPING: {'type': dict, 'optional': True},
+            })
+        except BadRequest:
+            filters = {}
         if phase == PHASES.INITIAL:
             return get_plugins_updates_manager().initiate_plugins_update(
-                blueprint_id=id)
+                blueprint_id=id, filters=filters)
         elif phase == PHASES.FINAL:
             return get_plugins_updates_manager().finalize(
                 plugins_update_id=id)
@@ -234,12 +252,12 @@ class PluginsId(resources_v2_1.PluginsId):
                 _agent_fk=agent_id,
                 _manager_fk=manager_id,
                 state=request_dict['state'],
-                error=request_dict['error']
+                error=request_dict.get('error')
             )
             sm.put(pstate)
         else:
             pstate.state = request_dict['state']
-            pstate.error = request_dict['error']
+            pstate.error = request_dict.get('error')
             sm.update(pstate)
 
         if plugin:

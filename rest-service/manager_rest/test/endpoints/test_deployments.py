@@ -284,17 +284,13 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             })
             self.assertEqual(200, resp.status_code)
 
-        delete_deployment_response = self.client.deployments.delete(
-            deployment_id)
-        self.assertEqual(delete_deployment_response['id'],
-                         deployment_id)
+        self.client.deployments.delete(deployment_id)
 
     def test_delete_deployment_with_live_nodes_and_force_flag(self):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
-        response = self.client.deployments.delete(deployment_id, force=True)
-        self.assertEqual(deployment_id, response['id'])
+        self.client.deployments.delete(deployment_id, force=True)
 
     def test_delete_nonexistent_deployment(self):
         # trying to delete a nonexistent deployment

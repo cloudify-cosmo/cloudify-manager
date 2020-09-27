@@ -14,7 +14,7 @@
 #  * limitations under the License.
 
 import os
-from base64 import urlsafe_b64encode
+from base64 import b64encode
 
 from manager_rest.test.attribute import attr
 from manager_rest.storage import management_models
@@ -60,7 +60,7 @@ class AuthenticationTests(SecurityTestBase):
 
     def test_invalid_three_part_header(self):
         credentials = 'alice:alice_password:extra'
-        encoded = urlsafe_b64encode(credentials.encode()).decode()
+        encoded = b64encode(credentials.encode()).decode()
         header = {
             CLOUDIFY_AUTH_HEADER:
                 BASIC_AUTH_PREFIX + encoded
@@ -69,7 +69,7 @@ class AuthenticationTests(SecurityTestBase):
 
     def test_invalid_one_part_header(self):
         credentials = 'alice'
-        encoded = urlsafe_b64encode(credentials.encode()).decode()
+        encoded = b64encode(credentials.encode()).decode()
         header = {
             CLOUDIFY_AUTH_HEADER:
                 BASIC_AUTH_PREFIX + encoded

@@ -110,10 +110,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
                 post_blueprints_response['id'], 'blueprint.yaml'))
 
         # deleting the blueprint that was just uploaded
-        delete_blueprint_response = self.delete(
-            '/blueprints/{0}'.format(post_blueprints_response['id'])).json
-        self.assertEqual(post_blueprints_response['id'],
-                         delete_blueprint_response['id'])
+        self.delete('/blueprints/{0}'.format(post_blueprints_response['id']))
 
         # verifying deletion of blueprint
         resp = self.get('/blueprints/{0}'.format(post_blueprints_response[

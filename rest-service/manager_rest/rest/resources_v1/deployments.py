@@ -135,7 +135,6 @@ class DeploymentsId(SecuredResource):
                      'paramType': 'query'}]
     )
     @authorize('deployment_delete')
-    @marshal_with(models.Deployment)
     def delete(self, deployment_id, **kwargs):
         """Delete deployment by id"""
         args = get_args_and_verify_arguments([
@@ -144,13 +143,13 @@ class DeploymentsId(SecuredResource):
         ])
 
         bypass_maintenance = is_bypass_maintenance_mode()
-        deployment = get_resource_manager().delete_deployment_environment(
+        get_resource_manager().delete_deployment_environment(
             deployment_id,
             bypass_maintenance,
             args.force,
             args.delete_logs)
 
-        return deployment, 200
+        return None, 204
 
 
 class DeploymentModifications(SecuredResource):

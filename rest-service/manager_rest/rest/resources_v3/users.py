@@ -129,14 +129,14 @@ class UsersId(SecuredMultiTenancyResource):
         return multi_tenancy.get_user(username)
 
     @authorize('user_delete')
-    @rest_decorators.marshal_with(UserResponse)
     @rest_decorators.no_external_authenticator('delete user')
     def delete(self, username, multi_tenancy):
         """
         Delete a user
         """
         rest_utils.validate_inputs({'username': username})
-        return multi_tenancy.delete_user(username)
+        multi_tenancy.delete_user(username)
+        return None, 204
 
 
 class UsersActive(SecuredMultiTenancyResource):

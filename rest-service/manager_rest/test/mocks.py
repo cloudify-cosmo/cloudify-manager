@@ -14,6 +14,7 @@
 #  * limitations under the License.
 
 import types
+import numbers
 from datetime import datetime
 
 from functools import wraps
@@ -135,14 +136,16 @@ class MockHTTPClient(HTTPClient):
         else:
             raise NotImplementedError()
 
-        if response.status_code != expected_status_code:
+        if isinstance(expected_status_code, numbers.Number):
+            expected_status_code = [expected_status_code]
+        if response.status_code not in expected_status_code:
             response.content = response.data
             self._raise_client_error(MockClientResponse(response), request_url)
 
         if stream:
             return MockStreamedResponse(response, self._file_server)
 
-        if expected_status_code == 204:
+        if response.status_code == 204:
             return None
         return response.get_json()
 

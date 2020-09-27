@@ -125,13 +125,13 @@ class TenantsId(SecuredMultiTenancyResource):
             return tenant
 
     @authorize('tenant_delete')
-    @rest_decorators.marshal_with(TenantDetailsResponse)
     def delete(self, tenant_name, multi_tenancy):
         """
         Delete a tenant
         """
         rest_utils.validate_inputs({'tenant_name': tenant_name})
-        return multi_tenancy.delete_tenant(tenant_name)
+        multi_tenancy.delete_tenant(tenant_name)
+        return None, 204
 
 
 class TenantUsers(SecuredMultiTenancyResource):
@@ -196,7 +196,6 @@ class TenantUsers(SecuredMultiTenancyResource):
         )
 
     @authorize('tenant_remove_user', get_tenant_from='data')
-    @rest_decorators.marshal_with(TenantResponse)
     @rest_decorators.no_external_authenticator('remove user from tenant')
     def delete(self, multi_tenancy):
         """
@@ -205,10 +204,11 @@ class TenantUsers(SecuredMultiTenancyResource):
         request_dict = rest_utils.get_json_and_verify_params({'tenant_name',
                                                               'username'})
         rest_utils.validate_inputs(request_dict)
-        return multi_tenancy.remove_user_from_tenant(
+        multi_tenancy.remove_user_from_tenant(
             request_dict['username'],
             request_dict['tenant_name']
         )
+        return None, 204
 
 
 class TenantGroups(SecuredMultiTenancyResource):
@@ -270,7 +270,6 @@ class TenantGroups(SecuredMultiTenancyResource):
         )
 
     @authorize('tenant_remove_group', get_tenant_from='data')
-    @rest_decorators.marshal_with(TenantResponse)
     def delete(self, multi_tenancy):
         """
         Remove a group from a tenant
@@ -278,7 +277,8 @@ class TenantGroups(SecuredMultiTenancyResource):
         request_dict = rest_utils.get_json_and_verify_params({'tenant_name',
                                                               'group_name'})
         rest_utils.validate_inputs(request_dict)
-        return multi_tenancy.remove_group_from_tenant(
+        multi_tenancy.remove_group_from_tenant(
             request_dict['group_name'],
             request_dict['tenant_name']
         )
+        return None, 204

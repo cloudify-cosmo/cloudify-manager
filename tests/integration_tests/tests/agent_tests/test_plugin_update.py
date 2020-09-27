@@ -211,9 +211,46 @@ class TestPluginUpdate(AgentTestWithPlugins):
             self._execute_workflows()
             self._assert_host_values(self.versions[1])
 
-    def _perform_plugins_update(self):
+    @setup_for_plugins_update
+    def test_additional_constraints(self):
+        self.setup_deployment_id = 'd{0}'.format(uuid.uuid4())
+        self.setup_node_id = 'node'
+        self.plugin_name = 'version_aware'
+
+        self.deploy_application(
+            dsl_path=self._get_dsl_blueprint_path(''),
+            blueprint_id=self.base_blueprint_id,
+            deployment_id=self.setup_deployment_id
+        )
+        self._upload_v_2_plugin()
+
+        # Execute base (V 1.0) workflows
+        self._execute_workflows()
+        self._assert_host_values(self.versions[0])
+
+        # Update a different (non-existent) plugin - nothing should change
+        plugins_update = self._perform_plugins_update(plugin_names=['asd'])
+        self.assertEqual(plugins_update.state, STATES.SUCCESSFUL)
+        self._execute_workflows()
+        self._assert_host_values(self.versions[0])
+
+        # Update only minor version - nothing should change
+        plugins_update = self._perform_plugins_update(all_to_minor=True,
+                                                      all_to_latest=False)
+        self.assertEqual(plugins_update.state, STATES.SUCCESSFUL)
+        self._execute_workflows()
+        self._assert_host_values(self.versions[0])
+
+        # This should do the update
+        plugins_update = self._perform_plugins_update(
+            to_latest=[self.plugin_name])
+        self.assertEqual(plugins_update.state, STATES.SUCCESSFUL)
+        self._execute_workflows()
+        self._assert_host_values(self.versions[1])
+
+    def _perform_plugins_update(self, **kwargs):
         plugins_update = self.client.plugins_update.update_plugins(
-            self.base_blueprint_id)
+            self.base_blueprint_id, **kwargs)
         execution_id = plugins_update.execution_id
         execution = self.client.executions.get(execution_id)
         self.wait_for_execution_to_end(execution)

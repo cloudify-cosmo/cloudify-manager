@@ -50,7 +50,10 @@ app_errors = Blueprint('app_errors', __name__)
 
 @app_errors.app_errorhandler(manager_exceptions.ManagerException)
 def manager_exception(error):
-    current_app.logger.error(error)
+    if isinstance(error, manager_exceptions.NoAuthProvided):
+        current_app.logger.debug(error)
+    else:
+        current_app.logger.error(error)
     return jsonify(
         message=str(error),
         error_code=error.error_code,

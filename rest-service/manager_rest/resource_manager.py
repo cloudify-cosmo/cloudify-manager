@@ -147,8 +147,10 @@ class ResourceManager(object):
 
         if execution.workflow_id == 'delete_deployment_environment' and \
                 status == ExecutionState.TERMINATED:
+            # render the execution here, because immediately afterwards
+            # we'll delete it, and then we won't be able to render it anymore
+            res = res.to_response()
             self.delete_deployment(execution.deployment)
-
         return res
 
     def start_queued_executions(self):
@@ -357,8 +359,6 @@ class ResourceManager(object):
                                                      plugin.archive_name)
         shutil.rmtree(os.path.dirname(archive_path), ignore_errors=True)
 
-        return plugin
-
     def publish_blueprint(self,
                           application_dir,
                           application_file_name,
@@ -405,16 +405,20 @@ class ResourceManager(object):
             application_dir, application_file_name, resources_base)
 
     @staticmethod
-    def parse_plan(application_dir, application_file_name, resources_base):
+    def parse_plan(application_dir, application_file_name, resources_base,
+                   resolver_parameters=None):
         dsl_location = os.path.join(
             resources_base,
             application_dir,
             application_file_name
         )
         try:
-            return tasks.parse_dsl(dsl_location,
-                                   resources_base,
-                                   **app_context.get_parser_context())
+            return tasks.parse_dsl(
+                dsl_location,
+                resources_base,
+                **app_context.get_parser_context(
+                    resolver_parameters=resolver_parameters)
+            )
         except Exception as ex:
             raise manager_exceptions.DslParseException(str(ex))
 
