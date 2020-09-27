@@ -678,7 +678,7 @@ class UploadedPluginsManager(UploadedDataManager):
                 wagon_target_path, _ = \
                     self._verify_archive(archive_target_path)
             except RuntimeError as re:
-                raise manager_exceptions.InvalidPluginError(re.message)
+                raise manager_exceptions.InvalidPluginError(str(re))
 
         args = get_args_and_verify_arguments([
             Argument('title'),
@@ -775,7 +775,7 @@ class UploadedPluginsManager(UploadedDataManager):
         except wagon.WagonError as e:
             raise manager_exceptions.InvalidPluginError(
                 'The provided wagon archive can not be read.\n{0}'
-                .format(e.message))
+                .format(str(e)))
 
 
 class UploadedCaravanManager(UploadedPluginsManager):
