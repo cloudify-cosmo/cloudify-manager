@@ -1,15 +1,27 @@
-#!/opt/manager/env/bin/python3
+#########
+# Copyright (c) 2020 Cloudify Platform Ltd. All rights reserved
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  * See the License for the specific language governing permissions and
+#  * limitations under the License.
 
 import collections
 from os.path import join
 from os import environ
-from packaging.version import parse as version_parse
 
 import click
 import requests
 import yaml
 
-from cloudify._compat import parse_qs
+from cloudify._compat import parse_qs, parse_version
 
 from dsl_parser.constants import (WORKFLOW_PLUGINS_TO_INSTALL,
                                   DEPLOYMENT_PLUGINS_TO_INSTALL,
@@ -64,7 +76,7 @@ CLOUDIFY_PLUGINS = {
                           '2.3.1', '2.3.0', '2.2.1', '2.2.0', '2.1.0', '2.0.2',
                           '2.0.1', '2.0.0', '1.5.1.2', '1.5.1.1', '1.5.1',
                           '1.5'],
-                         key=version_parse, reverse=True),
+                         key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-cosmo/cloudify-aws-plugin',
     },
     'cloudify-azure-plugin': {
@@ -74,7 +86,7 @@ CLOUDIFY_PLUGINS = {
                           '1.8.0', '1.7.3', '1.7.2', '1.7.1', '1.7.0', '1.6.2',
                           '1.6.1', '1.6.0', '1.5.1.1', '1.5.1', '1.5.0',
                           '1.4.3', '1.4.2', '1.4'],
-                         key=version_parse, reverse=True),
+                         key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-cosmo/cloudify-azure-plugin',
     },
     'cloudify-gcp-plugin': {
@@ -82,7 +94,7 @@ CLOUDIFY_PLUGINS = {
                           '1.5.0', '1.4.5', '1.4.4', '1.4.3', '1.4.2', '1.4.1',
                           '1.4.0', '1.3.0.1', '1.3.0', '1.2.0', '1.1.0',
                           '1.0.1'],
-                         key=version_parse, reverse=True),
+                         key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-cosmo/cloudify-gcp-plugin',
     },
     'cloudify-openstack-plugin': {
@@ -102,7 +114,7 @@ CLOUDIFY_PLUGINS = {
                           '2.7.1', '2.7.0', '2.6.0', '2.5.3', '2.5.2', '2.5.1',
                           '2.5.0', '2.4.1.1', '2.4.1', '2.4.0', '2.3.0',
                           '2.2.0'],
-                         key=version_parse, reverse=True),
+                         key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-cosmo/cloudify-openstack-plugin',
     },
     'cloudify-vsphere-plugin': {
@@ -114,13 +126,13 @@ CLOUDIFY_PLUGINS = {
                           '2.9.2', '2.9.1', '2.9.0', '2.8.0', '2.7.0', '2.6.1',
                           '2.2.2', '2.6.0', '2.4.1', '2.5.0', '2.4.0',
                           '2.3.0'],
-                         key=version_parse, reverse=True),
+                         key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-cosmo/cloudify-vsphere-plugin',
     },
     'cloudify-terraform-plugin': {
         VERSIONS: sorted(['0.13.4', '0.13.3', '0.13.2', '0.13.1', '0.13.0',
                           '0.12.0', '0.11.0', '0.10', '0.9', '0.7'],
-                         key=version_parse, reverse=True),
+                         key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-cosmo/cloudify-terraform-plugin',
     },
     'cloudify-ansible-plugin': {
@@ -128,7 +140,7 @@ CLOUDIFY_PLUGINS = {
                           '2.8.1', '2.8.0', '2.7.1', '2.7.0', '2.6.0', '2.5.0',
                           '2.4.0', '2.3.0', '2.2.0', '2.1.1', '2.1.0', '2.0.4',
                           '2.0.3', '2.0.2', '2.0.1', '2.0.0'],
-                         key=version_parse, reverse=True),
+                         key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-cosmo/cloudify-ansible-plugin',
     },
     'cloudify-kubernetes-plugin': {
@@ -138,19 +150,19 @@ CLOUDIFY_PLUGINS = {
                           '2.2.2', '2.2.1', '2.2.0', '2.1.0', '2.0.0.1',
                           '2.0.0', '1.4.0', '1.3.1.1', '1.3.1', '1.3.0',
                           '1.2.2', '1.2.1', '1.2.0', '1.1.0', '1.0.0'],
-                         key=version_parse, reverse=True),
+                         key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-cosmo/cloudify-kubernetes-plugin',
     },
     'cloudify-docker-plugin': {
         VERSIONS: sorted(['2.0.3', '2.0.2', '2.0.1', '2.0.0', '1.3.2', '1.2',
                           '1.1'],
-                         key=version_parse, reverse=True),
+                         key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-cosmo/cloudify-docker-plugin',
     },
     'cloudify-netconf-plugin': {
         VERSIONS: sorted(['0.4.4', '0.4.2', '0.4.1', '0.4.0', '0.3.1', '0.3.0',
                           '0.2.1', '0.2.0', '0.1.0'],
-                         key=version_parse, reverse=True),
+                         key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-cosmo/cloudify-netconf-plugin',
     },
     'cloudify-fabric-plugin': {
@@ -158,13 +170,13 @@ CLOUDIFY_PLUGINS = {
                           '2.0.0', '1.6.0', '1.5.3', '1.5.1', '1.5', '1.4.3',
                           '1.4.2', '1.4.1', '1.4', '1.3.1', '1.3', '1.2.1',
                           '1.2', '1.1'],
-                         key=version_parse, reverse=True),
+                         key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-cosmo/cloudify-fabric-plugin',
     },
     'cloudify-libvirt-plugin': {
         VERSIONS: sorted(['0.9.0', '0.8.1', '0.8.0', '0.7.0', '0.6.0', '0.5.0',
                           '0.4.1', '0.4', '0.3', '0.2', '0.1'],
-                         key=version_parse, reverse=True),
+                         key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-incubator/cloudify-libvirt-plugin',
     },
     'cloudify-utilities-plugin': {
@@ -183,12 +195,12 @@ CLOUDIFY_PLUGINS = {
                           '1.4.1.2', '1.4.1.1', '1.4.1', '1.3.1', '1.3.0',
                           '1.2.5', '1.2.4', '1.2.3', '1.2.2', '1.2.1', '1.2.0',
                           '1.1.1', '1.1.0', '1.0.0', ],
-                         key=version_parse, reverse=True),
+                         key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-incubator/cloudify-utilities-plugin'
     },
     'cloudify-host-pool-plugin': {
         VERSIONS: sorted(['1.5.2', '1.5.1', '1.5', '1.4', '1.2', ],
-                         key=version_parse, reverse=True),
+                         key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-cosmo/cloudify-host-pool-plugin',
 
     },
@@ -197,12 +209,12 @@ CLOUDIFY_PLUGINS = {
                           '1.3.10', '1.3.9', '1.3.8', '1.3.7', '1.3.6',
                           '1.3.5', '1.3.4', '1.3.3', '1.3.2', '1.3.1', '1.3',
                           '1.2.1', '1.2', '1.1'],
-                         key=version_parse, reverse=True),
+                         key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-cosmo/cloudify-diamond-plugin',
     },
     'tosca-vcloud-plugin': {
         VERSIONS: sorted(['1.6.1', '1.6.0', '1.5.1', '1.5.0', '1.4.1'],
-                         key=version_parse, reverse=True),
+                         key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-cosmo/tosca-vcloud-plugin',
     },
 }
