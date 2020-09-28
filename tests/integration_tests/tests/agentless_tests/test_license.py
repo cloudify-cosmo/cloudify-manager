@@ -77,25 +77,20 @@ class TestLicense(AgentlessTestCase):
         self.client.blueprints.list()
 
     def test_error_when_uploading_tampered_trial_license(self):
-        try:
+        with self.assertRaisesRegex(CloudifyClientError,
+                                    'could not be verified'):
             self._upload_license('test_tampered_trial_license.yaml')
-        except CloudifyClientError as e:
-            self.assertIn('The license could not be verified', e.message)
 
     def test_error_when_uploading_tampered_paying_license(self):
-        try:
+        with self.assertRaisesRegex(CloudifyClientError,
+                                    'could not be verified'):
             self._upload_license('test_tampered_paying_license.yaml')
-        except CloudifyClientError as e:
-            self.assertIn('The license could not be verified', e.message)
 
     def test_error_when_using_expired_trial_license(self):
         self._upload_license('test_expired_trial_license.yaml')
         self._verify_license(expired=True, trial=True)
-        try:
+        with self.assertRaisesRegex(ExpiredCloudifyLicense, 'expired'):
             self.client.blueprints.list()
-        except ExpiredCloudifyLicense as e:
-            self.assertIn('This Manager`s Cloudify license has expired',
-                          e.message)
 
     def test_using_expired_paying_license(self):
         self._upload_license('test_expired_paying_license.yaml')
@@ -120,10 +115,9 @@ class TestLicense(AgentlessTestCase):
         """
         self._upload_license('test_valid_paying_license.yaml')
         self._verify_license(expired=False, trial=False)
-        try:
+        with self.assertRaisesRegex(CloudifyClientError,
+                                    'could not be verified'):
             self._upload_license('test_tampered_paying_license.yaml')
-        except CloudifyClientError as e:
-            self.assertIn('The license could not be verified', e.message)
         self.client.blueprints.list()
 
     def test_valid_for_60_days_license(self):
@@ -156,11 +150,8 @@ class TestLicense(AgentlessTestCase):
         Try (and fail) to upload a Cloudify license that is valid for
         Cloudify 4.5.5
         """
-        try:
+        with self.assertRaisesRegex(CloudifyClientError, 'versions'):
             self._upload_license('test_version_4_5_5_license.yaml')
-        except CloudifyClientError as e:
-            self.assertIn('This license is valid for Cloudify Managers '
-                          'with versions', e.message)
 
     def test_license_with_no_expiration_date(self):
         """
