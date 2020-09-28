@@ -7,7 +7,7 @@ function set_manager_ip() {
 
   echo "Setting manager IP to: ${ip}"
 
-  echo "Updating cloudify-mgmtworker.."
+  echo "Updating cloudify-mgmtworker..."
   mgtworker_config="/etc/sysconfig/cloudify-mgmtworker"
   if [ ! -f "$mgtworker_config" ]; then
       mgtworker_config="/etc/supervisord.d/rabbitmq.cloudify.conf"
@@ -16,7 +16,7 @@ function set_manager_ip() {
   /usr/bin/sed -i -e "s/REST_HOST=.*/REST_HOST="'"'"${ip}"'"'"/" $mgtworker_config
   /usr/bin/sed -i -e "s#MANAGER_FILE_SERVER_URL="'"'"https://.*:53333/resources"'"'"#MANAGER_FILE_SERVER_URL="'"'"https://${ip}:53333/resources"'"'"#" $mgtworker_config
 
-  echo "Updating cloudify-manager (rest-service).."
+  echo "Updating cloudify-manager (rest-service)..."
   /usr/bin/sed -i -e "s#amqp_host: '.*'#amqp_host: '${ip}'#" /opt/manager/cloudify-rest.conf
 
   echo "Updating IPs stored in the database..."
@@ -29,8 +29,13 @@ function set_manager_ip() {
   /usr/bin/sed -ri "s/"'"'"broker_addresses"'"'"[^]]+]/"'"'"broker_addresses"'"'": \\["'"'"${ip}"'"'"]/" /etc/cloudify/ssl/certificate_metadata
   /usr/bin/sed -ri "s/"'"'"manager_addresses"'"'"[^]]+]/"'"'"manager_addresses"'"'": \\["'"'"${ip}"'"'"]/" /etc/cloudify/ssl/certificate_metadata
 
-  echo "Creating internal SSL certificates.."
+  echo "Creating internal SSL certificates..."
   cfy_manager create-internal-certs --manager-hostname cloudify
+
+  echo "Updating monitoring certificates..."
+  for cert_type in cert key; do
+    cp /etc/cloudify/ssl/cloudify_internal_${cert_type}.pem /etc/cloudify/ssl/monitoring_${cert_type}.pem
+  done
 
   echo "Done!"
 }
