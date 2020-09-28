@@ -427,7 +427,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
     @staticmethod
     def _get_deployment_folder(deployment):
         return os.path.join(
-            '/opt/mgmtworker/work/deployments',
+            '/opt/manager/resources/deployments',
             DEFAULT_TENANT_NAME,
             deployment.id
         )
