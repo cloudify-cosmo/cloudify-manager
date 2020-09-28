@@ -46,7 +46,8 @@ def pytest_addoption(parser):
 # TODO fill this in as needed, when needed
 sources = [
     ('cloudify-cli/cloudify_cli', ['/opt/cfy']),
-    ('cloudify-common/cloudify', ['/opt/manager/env', '/opt/mgmtworker/env']),
+    ('cloudify-common/cloudify', ['/opt/manager/env', '/opt/mgmtworker/env',
+                                  '/opt/cfy']),
     ('cloudify-common/cloudify_rest_client', ['/opt/mgmtworker/env']),
     ('cloudify-common/dsl_parser', ['/opt/manager/env']),
     ('cloudify-common/script_runner', ['/opt/mgmtworker/env']),
