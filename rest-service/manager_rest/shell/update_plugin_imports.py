@@ -367,6 +367,10 @@ def scan_blueprint(blueprint: models.Blueprint,
                          suggested_is_pinned=is_pinned_version)
             continue
         plugin_in_plan = find_plugin_in_a_plan(blueprint.plan, plugin_name)
+        if not plugin_in_plan:
+            update_stats(suggested_import_from=import_from,
+                         suggested_is_pinned=is_pinned_version)
+            continue
         suggested_version = suggest_version(
             plugin_name, plugin_in_plan[PLUGIN_PACKAGE_VERSION]
         )
