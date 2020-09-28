@@ -436,11 +436,29 @@ def scan_blueprint(blueprint: models.Blueprint,
 def make_correction(blueprint: models.Blueprint,
                     plugin_names: tuple,
                     mappings: dict) -> tuple:
-    # import pdb; pdb.set_trace()  # noqa
+    def get_mapping(a_line: str) -> tuple:
+        for mapping_updates in mappings.get(UPDATES, []):
+            for blueprint_line, spec in mapping_updates.items():
+                if blueprint_line == a_line:
+                    return spec
+
     if not mappings:
         return {}, {}
-
-    return {}, {}
+    blueprint_yaml = load_blueprint(blueprint)
+    correction_specs = {}
+    for idx, import_line in enumerate(blueprint_yaml.get(IMPORTS, [])):
+        mapping_spec = get_mapping(import_line)
+        if plugin_names and \
+                mapping_spec.get('plugin_name') not in plugin_names:
+            continue
+        if mapping_spec:
+            correction_specs[idx] = mapping_spec
+    for idx, mapping_spec in correction_specs.items():
+        blueprint_yaml[IMPORTS][idx] = 'plugin:{0}?version={1}'.format(
+                    mapping_spec.get('plugin_name'),
+                    mapping_spec.get('suggested_version'),
+                )
+    return blueprint_yaml
 
 
 def printout_scanning_stats(total_blueprints: int,
@@ -526,10 +544,18 @@ def main(tenant, plugin_names, blueprint_ids, mapping_file, correct):
     for blueprint in blueprints.items:
         try:
             if correct:
-                a_correction, a_statistic = \
+                blueprint_yaml = \
                     make_correction(blueprint,
                                     plugin_names,
                                     mappings.get(blueprint.id))
+                if blueprint_yaml:
+                    new_blueprint_file_name = '/tmp/bp-{0}.yaml'.format(
+                        blueprint.id)
+                    with open(new_blueprint_file_name, 'w') as output_file:
+                        yaml.dump(blueprint_yaml, output_file,
+                                  default_flow_style=False)
+                        print('\nSaved new blueprint file to the {0}'.format(
+                            new_blueprint_file_name))
             else:
                 print('Processing {0} blueprint'.format(blueprint.id))
                 a_mapping, a_statistic, a_suggestion = \
