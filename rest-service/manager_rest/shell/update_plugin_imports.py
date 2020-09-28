@@ -319,19 +319,42 @@ def suggest_version(plugin_name: str, plugin_version: str) -> str:
     return plugin_version
 
 
-def load_imports(blueprint: models.Blueprint) -> list:
+def load_blueprint(blueprint: models.Blueprint) -> dict:
     file_name = blueprint_file_name(blueprint)
     try:
         with open(file_name, 'r') as blueprint_file:
             try:
-                imports = yaml.safe_load(blueprint_file)[IMPORTS]
+                blueprint = yaml.safe_load(blueprint_file)
             except yaml.YAMLError as ex:
                 raise UpdateException(
-                    'Cannot load imports from {0}: {1}'.format(file_name, ex))
+                    'Cannot load blueprint from {0}: '
+                    '{1}'.format(file_name, ex))
     except FileNotFoundError:
         raise UpdateException(
             'Blueprint file {0} does not exist'.format(file_name))
-    return imports
+    return blueprint
+
+
+def load_imports(blueprint: models.Blueprint) -> list:
+    try:
+        return load_blueprint(blueprint)[IMPORTS]
+    except yaml.YAMLError as ex:
+        raise UpdateException(
+            'Cannot load imports from {0}: {1}'.format(blueprint, ex))
+
+
+def load_mappings(file_name: str) -> list:
+    try:
+        with open(file_name, 'r') as mapping_file:
+            try:
+                mappings = yaml.safe_load(mapping_file)
+            except yaml.YAMLError as ex:
+                raise UpdateException(
+                    'Cannot load mappings from {0}: {1}'.format(file_name, ex))
+    except FileNotFoundError:
+        raise UpdateException(
+            'Mappings file {0} does not exist'.format(file_name))
+    return mappings
 
 
 def scan_blueprint(blueprint: models.Blueprint,
@@ -410,6 +433,16 @@ def scan_blueprint(blueprint: models.Blueprint,
     return mappings, stats, plugins_install_suggestions
 
 
+def make_correction(blueprint: models.Blueprint,
+                    plugin_names: tuple,
+                    mappings: dict) -> tuple:
+    # import pdb; pdb.set_trace()  # noqa
+    if not mappings:
+        return {}, {}
+
+    return {}, {}
+
+
 def printout_scanning_stats(total_blueprints: int,
                             mappings: dict,
                             stats: dict):
@@ -478,33 +511,49 @@ def main(tenant, plugin_names, blueprint_ids, mapping_file, correct):
             if plugin_version not in install_suggestions[plugin_name]:
                 install_suggestions[plugin_name].append(plugin_version)
 
+    # Let's prepare
     setup_environment()
     set_tenant_in_app(get_tenant_by_name(tenant))
     _sm = get_storage_manager()
-    filters = {'id': blueprint_ids} if blueprint_ids else None
-    blueprints = _sm.list(models.Blueprint, filters=filters)
-    mappings, stats, install_suggestions = {}, {}, {}
-    total_blueprints_scanned = 0
+    mappings = load_mappings(mapping_file) if correct else {}
+    stats, install_suggestions, blueprints_processed = {}, {}, 0
+    blueprints = _sm.list(
+        models.Blueprint,
+        filters={'id': blueprint_ids} if blueprint_ids else None
+    )
+
+    # Do the heavy lifting
     for blueprint in blueprints.items:
-        print('Processing {0} blueprint'.format(blueprint.id))
         try:
-            blueprint_mappings, blueprint_stats, blueprint_suggestion = \
-                scan_blueprint(blueprint, plugin_names)
+            if correct:
+                a_correction, a_statistic = \
+                    make_correction(blueprint,
+                                    plugin_names,
+                                    mappings.get(blueprint.id))
+            else:
+                print('Processing {0} blueprint'.format(blueprint.id))
+                a_mapping, a_statistic, a_suggestion = \
+                    scan_blueprint(blueprint, plugin_names)
+                if a_mapping:
+                    mappings[blueprint.id] = a_mapping
+                if a_statistic:
+                    stats[blueprint.id] = a_statistic
+                if a_suggestion:
+                    update_suggestions(a_suggestion)
         except UpdateException as ex:
             print(ex)
         else:
-            total_blueprints_scanned += 1
-        if blueprint_mappings:
-            mappings[blueprint.id] = blueprint_mappings
-        if blueprint_stats:
-            stats[blueprint.id] = blueprint_stats
-        if blueprint_suggestion:
-            update_suggestions(blueprint_suggestion)
-    with open(mapping_file, 'w') as output_file:
-        yaml.dump(mappings, output_file, default_flow_style=False)
-    print('\nSaved mapping file to the {0}'.format(mapping_file))
-    printout_scanning_stats(total_blueprints_scanned, mappings, stats)
-    printout_install_suggestions(install_suggestions)
+            blueprints_processed += 1
+
+    # Wrap it up
+    if correct:
+        pass
+    else:
+        with open(mapping_file, 'w') as output_file:
+            yaml.dump(mappings, output_file, default_flow_style=False)
+        print('\nSaved mapping file to the {0}'.format(mapping_file))
+        printout_scanning_stats(blueprints_processed, mappings, stats)
+        printout_install_suggestions(install_suggestions)
 
 
 if __name__ == '__main__':
