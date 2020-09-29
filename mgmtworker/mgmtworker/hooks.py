@@ -57,9 +57,9 @@ class HookConsumer(CloudifyOperationConsumer):
             task = self._get_task(full_task, hook)
             result = super(HookConsumer, self).handle_task(task)
         except Exception as e:
-            result = {'ok': False, 'error': e.message}
-            logger.error('{0!r}, while running the hook triggered by the '
-                         'event: {1}'.format(e, event_type))
+            result = {'ok': False, 'error': str(e)}
+            logger.error('%r, while running the hook triggered by the '
+                         'event: %s', e, event_type)
         return result
 
     def _get_hook(self, event_type):
