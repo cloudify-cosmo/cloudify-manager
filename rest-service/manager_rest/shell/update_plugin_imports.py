@@ -272,6 +272,7 @@ def load_imports(blueprint: models.Blueprint) -> list:
 def get_imports_position(blueprint_file: typing.TextIO) -> tuple:
     level = 0
     imports_token, imports_next_sibling_token = None, None
+    import_lines = {}
     blueprint_file.seek(0, 0)
     for token in yaml.scan(blueprint_file):
         if isinstance(token, (yaml.tokens.BlockMappingStartToken,
@@ -283,17 +284,23 @@ def get_imports_position(blueprint_file: typing.TextIO) -> tuple:
                               yaml.tokens.FlowMappingEndToken,
                               yaml.tokens.FlowSequenceEndToken)):
             level -= 1
-        if level != 1:
-            continue
-        if isinstance(token, yaml.tokens.ScalarToken) and \
-                token.value == 'imports':
-            imports_token = token
-        elif imports_token and not imports_next_sibling_token and \
+        if level == 1:
+            if isinstance(token, yaml.tokens.ScalarToken) and \
+                    token.value == 'imports':
+                imports_token = token
+            elif imports_token and not imports_next_sibling_token and \
+                    isinstance(token, yaml.tokens.ScalarToken):
+                imports_next_sibling_token = token
+                return (imports_token.end_mark,
+                        imports_next_sibling_token.start_mark,
+                        import_lines)
+        elif imports_token and level == 2 and \
                 isinstance(token, yaml.tokens.ScalarToken):
-            imports_next_sibling_token = token
-            return (imports_token.end_mark,
-                    imports_next_sibling_token.start_mark)
-    return None, None
+            import_lines[token.value] = {
+                'start_pos': token.start_mark.index,
+                'end_pos': token.end_mark.index,
+            }
+    return None, None, []
 
 
 def load_mappings(file_name: str) -> list:
@@ -463,7 +470,7 @@ def scan_blueprint(blueprint: models.Blueprint,
 
 def get_imports_content(blueprint_file: typing.TextIO,
                         start: yaml.error.Mark, end: yaml.error.Mark) -> tuple:
-    lines_read, columns_read = 0, 0
+    lines_read = 0
     blueprint_file.seek(0, 0)
     while lines_read < start.line:
         line = blueprint_file.readline()
@@ -490,15 +497,20 @@ def get_imports_content(blueprint_file: typing.TextIO,
 
 
 def write_updated_blueprint(input_file_name: str, output_file_name: str,
-                            start_pos: int, end_pos: int, imports_update: str):
+                            import_updates: list):
     with open(input_file_name, 'r') as input_file:
         with open(output_file_name, 'w') as output_file:
-            content = input_file.read(start_pos)
-            output_file.write(content)
-            output_file.write(imports_update)
-            input_file.seek(end_pos)
-            content = input_file.read()
-            output_file.write(content)
+            for idx, update in enumerate(import_updates):
+                content = input_file.read(update['start_pos'] -
+                                          input_file.tell())
+                output_file.write(content)
+                output_file.write(update['replacement'])
+                content = input_file.read(update['end_pos'] -
+                                          update['start_pos'] + 1)
+                output_file.write('   # replaced from {0}'.format(content))
+                if idx == len(import_updates) - 1:
+                    content = input_file.read()
+                    output_file.write(content)
 
 
 def make_correction(blueprint: models.Blueprint,
@@ -508,23 +520,28 @@ def make_correction(blueprint: models.Blueprint,
         return {}
     file_name = blueprint_file_name(blueprint)
     with open(file_name, 'r') as blueprint_file:
-        start_mark, end_mark = get_imports_position(blueprint_file)
-        imports_from, imports_to, imports_content = \
-            get_imports_content(blueprint_file, start_mark, end_mark)
-    imports_updated = imports_content
+        start_mark, end_mark, import_lines = get_imports_position(
+            blueprint_file)
+    import_updates = []
     for mapping_updates in mappings.get(UPDATES, []):
-        for import_line, spec in mapping_updates.items():
+        for blueprint_line, spec in mapping_updates.items():
             if plugin_names and spec.get('plugin_name') not in plugin_names:
                 continue
-            if import_line in imports_content:
-                imports_updated = imports_updated.replace(
-                    import_line,
-                    'plugin:{0}?version={1}'.format(
-                        spec.get('plugin_name'),
-                        spec.get('suggested_version'))
-                )
+            if blueprint_line not in import_lines:
+                continue
+            next_major_version = int(
+                spec.get('suggested_version').split('.')[0]) + 1
+            import_updates.append({
+                'replacement': 'plugin:{0}?version=>={1},<{2}'.format(
+                    spec.get('plugin_name'),
+                    spec.get('suggested_version'),
+                    next_major_version),
+                'start_pos': import_lines[blueprint_line]['start_pos'],
+                'end_pos': import_lines[blueprint_line]['end_pos'],
+            })
     write_updated_blueprint(file_name, '/tmp/bp-{0}.yaml'.format(blueprint.id),
-                            imports_from, imports_to, imports_updated)
+                            sorted(import_updates,
+                                   key=lambda upd: upd['start_pos']))
 
 
 def printout_scanning_stats(total_blueprints: int,
@@ -610,10 +627,9 @@ def main(tenant, plugin_names, blueprint_ids, mapping_file, correct):
     for blueprint in blueprints.items:
         try:
             if correct:
-                blueprint_yaml = \
-                    make_correction(blueprint,
-                                    plugin_names,
-                                    mappings.get(blueprint.id))
+                make_correction(blueprint,
+                                plugin_names,
+                                mappings.get(blueprint.id))
             else:
                 print('Processing {0} blueprint'.format(blueprint.id))
                 a_mapping, a_statistic, a_suggestion = \
