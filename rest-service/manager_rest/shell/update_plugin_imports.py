@@ -269,10 +269,10 @@ def load_imports(blueprint: models.Blueprint) -> list:
             'Cannot load imports from {0}: {1}'.format(blueprint, ex))
 
 
-def get_imports_position(blueprint_file: typing.TextIO):
+def get_imports_position(blueprint_file: typing.TextIO) -> tuple:
     level = 0
-    imports_token = None
-    imports_next_sibling_token = None
+    imports_token, imports_next_sibling_token = None, None
+    blueprint_file.seek(0, 0)
     for token in yaml.scan(blueprint_file):
         if isinstance(token, (yaml.tokens.BlockMappingStartToken,
                               yaml.tokens.BlockSequenceStartToken,
@@ -461,38 +461,70 @@ def scan_blueprint(blueprint: models.Blueprint,
     return mappings, stats, plugins_install_suggestions
 
 
+def get_imports_content(blueprint_file: typing.TextIO,
+                        start: yaml.error.Mark, end: yaml.error.Mark) -> tuple:
+    lines_read, columns_read = 0, 0
+    blueprint_file.seek(0, 0)
+    while lines_read < start.line:
+        line = blueprint_file.readline()
+        if not line:
+            break
+        lines_read += 1
+    if lines_read != start.line:
+        return 0, 0, None
+    blueprint_file.read(start.column)
+    start_pos = blueprint_file.tell()
+    content = []
+    while lines_read < end.line:
+        line = blueprint_file.readline()
+        if not line:
+            break
+        content.append(line)
+        lines_read += 1
+    if lines_read != end.line:
+        return 0, 0, None
+    line = blueprint_file.read(end.column)
+    content.append(line)
+    end_pos = blueprint_file.tell()
+    return start_pos, end_pos, ''.join(content)
+
+
+def write_updated_blueprint(input_file_name: str, output_file_name: str,
+                            start_pos: int, end_pos: int, imports_update: str):
+    with open(input_file_name, 'r') as input_file:
+        with open(output_file_name, 'w') as output_file:
+            content = input_file.read(start_pos)
+            output_file.write(content)
+            output_file.write(imports_update)
+            input_file.seek(end_pos)
+            content = input_file.read()
+            output_file.write(content)
+
+
 def make_correction(blueprint: models.Blueprint,
                     plugin_names: tuple,
                     mappings: dict) -> dict:
-    def get_mapping(a_line: str) -> dict:
-        for mapping_updates in mappings.get(UPDATES, []):
-            for blueprint_line, spec in mapping_updates.items():
-                if blueprint_line == a_line:
-                    return spec
-
     if not mappings:
         return {}
-
     file_name = blueprint_file_name(blueprint)
     with open(file_name, 'r') as blueprint_file:
-        imports_from_to = get_imports_position(blueprint_file)
-    print('Imports from {0} to {1}'.format(
-        imports_from_to[0], imports_from_to[1]))
-    blueprint_yaml = load_blueprint(blueprint)
-    correction_specs = {}
-    for idx, import_line in enumerate(blueprint_yaml.get(IMPORTS, [])):
-        mapping_spec = get_mapping(import_line)
-        if plugin_names and \
-                mapping_spec.get('plugin_name') not in plugin_names:
-            continue
-        if mapping_spec:
-            correction_specs[idx] = mapping_spec
-    for idx, mapping_spec in correction_specs.items():
-        blueprint_yaml[IMPORTS][idx] = 'plugin:{0}?version={1}'.format(
-                    mapping_spec.get('plugin_name'),
-                    mapping_spec.get('suggested_version'),
+        start_mark, end_mark = get_imports_position(blueprint_file)
+        imports_from, imports_to, imports_content = \
+            get_imports_content(blueprint_file, start_mark, end_mark)
+    imports_updated = imports_content
+    for mapping_updates in mappings.get(UPDATES, []):
+        for import_line, spec in mapping_updates.items():
+            if plugin_names and spec.get('plugin_name') not in plugin_names:
+                continue
+            if import_line in imports_content:
+                imports_updated = imports_updated.replace(
+                    import_line,
+                    'plugin:{0}?version={1}'.format(
+                        spec.get('plugin_name'),
+                        spec.get('suggested_version'))
                 )
-    return blueprint_yaml
+    write_updated_blueprint(file_name, '/tmp/bp-{0}.yaml'.format(blueprint.id),
+                            imports_from, imports_to, imports_updated)
 
 
 def printout_scanning_stats(total_blueprints: int,
@@ -582,14 +614,6 @@ def main(tenant, plugin_names, blueprint_ids, mapping_file, correct):
                     make_correction(blueprint,
                                     plugin_names,
                                     mappings.get(blueprint.id))
-                if blueprint_yaml:
-                    new_blueprint_file_name = '/tmp/bp-{0}.yaml'.format(
-                        blueprint.id)
-                    with open(new_blueprint_file_name, 'w') as output_file:
-                        yaml.dump(blueprint_yaml, output_file,
-                                  default_flow_style=False)
-                        print('\nSaved new blueprint file to the {0}'.format(
-                            new_blueprint_file_name))
             else:
                 print('Processing {0} blueprint'.format(blueprint.id))
                 a_mapping, a_statistic, a_suggestion = \
