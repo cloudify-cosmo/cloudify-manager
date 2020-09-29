@@ -14,6 +14,7 @@
 #  * limitations under the License.
 
 import collections
+import typing
 from os.path import join
 from os import environ
 
@@ -268,32 +269,30 @@ def load_imports(blueprint: models.Blueprint) -> list:
             'Cannot load imports from {0}: {1}'.format(blueprint, ex))
 
 
-def get_imports_position(file_name: str):
+def get_imports_position(blueprint_file: typing.TextIO):
     level = 0
     imports_token = None
     imports_next_sibling_token = None
-    with open(file_name, 'r') as blueprint_file:
-        for token in yaml.scan(blueprint_file):
-            if isinstance(token, (yaml.tokens.BlockMappingStartToken,
-                                  yaml.tokens.BlockSequenceStartToken,
-                                  yaml.tokens.FlowMappingStartToken,
-                                  yaml.tokens.FlowSequenceStartToken)):
-                level += 1
-            if isinstance(token, (yaml.tokens.BlockEndToken,
-                                  yaml.tokens.FlowMappingEndToken,
-                                  yaml.tokens.FlowSequenceEndToken)):
-                level -= 1
-            if level == 1 and \
-                    isinstance(token, yaml.tokens.ScalarToken) and \
-                    token.value == 'imports':
-                imports_token = token
-            elif level == 1 and \
-                    imports_token and not imports_next_sibling_token and \
-                    isinstance(token, yaml.tokens.ScalarToken):
-                imports_next_sibling_token = token
-            if imports_token and imports_next_sibling_token:
-                return (imports_token.end_mark,
-                        imports_next_sibling_token.start_mark)
+    for token in yaml.scan(blueprint_file):
+        if isinstance(token, (yaml.tokens.BlockMappingStartToken,
+                              yaml.tokens.BlockSequenceStartToken,
+                              yaml.tokens.FlowMappingStartToken,
+                              yaml.tokens.FlowSequenceStartToken)):
+            level += 1
+        if isinstance(token, (yaml.tokens.BlockEndToken,
+                              yaml.tokens.FlowMappingEndToken,
+                              yaml.tokens.FlowSequenceEndToken)):
+            level -= 1
+        if level != 1:
+            continue
+        if isinstance(token, yaml.tokens.ScalarToken) and \
+                token.value == 'imports':
+            imports_token = token
+        elif imports_token and not imports_next_sibling_token and \
+                isinstance(token, yaml.tokens.ScalarToken):
+            imports_next_sibling_token = token
+            return (imports_token.end_mark,
+                    imports_next_sibling_token.start_mark)
     return None, None
 
 
@@ -464,18 +463,19 @@ def scan_blueprint(blueprint: models.Blueprint,
 
 def make_correction(blueprint: models.Blueprint,
                     plugin_names: tuple,
-                    mappings: dict) -> tuple:
-    def get_mapping(a_line: str) -> tuple:
+                    mappings: dict) -> dict:
+    def get_mapping(a_line: str) -> dict:
         for mapping_updates in mappings.get(UPDATES, []):
             for blueprint_line, spec in mapping_updates.items():
                 if blueprint_line == a_line:
                     return spec
 
     if not mappings:
-        return {}, {}
+        return {}
 
     file_name = blueprint_file_name(blueprint)
-    imports_from_to = get_imports_position(file_name)
+    with open(file_name, 'r') as blueprint_file:
+        imports_from_to = get_imports_position(blueprint_file)
     print('Imports from {0} to {1}'.format(
         imports_from_to[0], imports_from_to[1]))
     blueprint_yaml = load_blueprint(blueprint)
