@@ -244,6 +244,73 @@ def blueprint_file_name(blueprint: models.Blueprint) -> str:
         blueprint.main_file_name)
 
 
+def load_blueprint(blueprint: models.Blueprint) -> dict:
+    file_name = blueprint_file_name(blueprint)
+    try:
+        with open(file_name, 'r') as blueprint_file:
+            try:
+                blueprint = yaml.safe_load(blueprint_file)
+            except yaml.YAMLError as ex:
+                raise UpdateException(
+                    'Cannot load blueprint from {0}: '
+                    '{1}'.format(file_name, ex))
+    except FileNotFoundError:
+        raise UpdateException(
+            'Blueprint file {0} does not exist'.format(file_name))
+    return blueprint
+
+
+def load_imports(blueprint: models.Blueprint) -> list:
+    try:
+        return load_blueprint(blueprint)[IMPORTS]
+    except yaml.YAMLError as ex:
+        raise UpdateException(
+            'Cannot load imports from {0}: {1}'.format(blueprint, ex))
+
+
+def get_imports_position(file_name: str):
+    level = 0
+    imports_token = None
+    imports_next_sibling_token = None
+    with open(file_name, 'r') as blueprint_file:
+        for token in yaml.scan(blueprint_file):
+            if isinstance(token, (yaml.tokens.BlockMappingStartToken,
+                                  yaml.tokens.BlockSequenceStartToken,
+                                  yaml.tokens.FlowMappingStartToken,
+                                  yaml.tokens.FlowSequenceStartToken)):
+                level += 1
+            if isinstance(token, (yaml.tokens.BlockEndToken,
+                                  yaml.tokens.FlowMappingEndToken,
+                                  yaml.tokens.FlowSequenceEndToken)):
+                level -= 1
+            if level == 1 and \
+                    isinstance(token, yaml.tokens.ScalarToken) and \
+                    token.value == 'imports':
+                imports_token = token
+            elif level == 1 and \
+                    imports_token and not imports_next_sibling_token and \
+                    isinstance(token, yaml.tokens.ScalarToken):
+                imports_next_sibling_token = token
+            if imports_token and imports_next_sibling_token:
+                return (imports_token.end_mark,
+                        imports_next_sibling_token.start_mark)
+    return None, None
+
+
+def load_mappings(file_name: str) -> list:
+    try:
+        with open(file_name, 'r') as mapping_file:
+            try:
+                mappings = yaml.safe_load(mapping_file)
+            except yaml.YAMLError as ex:
+                raise UpdateException(
+                    'Cannot load mappings from {0}: {1}'.format(file_name, ex))
+    except FileNotFoundError:
+        raise UpdateException(
+            'Mappings file {0} does not exist'.format(file_name))
+    return mappings
+
+
 def spec_from_url(url: str) -> tuple:
     response = requests.get(url)
     if response.status_code != 200:
@@ -317,44 +384,6 @@ def suggest_version(plugin_name: str, plugin_version: str) -> str:
         if available_version.split('.')[0] == plugin_major_version:
             return available_version
     return plugin_version
-
-
-def load_blueprint(blueprint: models.Blueprint) -> dict:
-    file_name = blueprint_file_name(blueprint)
-    try:
-        with open(file_name, 'r') as blueprint_file:
-            try:
-                blueprint = yaml.safe_load(blueprint_file)
-            except yaml.YAMLError as ex:
-                raise UpdateException(
-                    'Cannot load blueprint from {0}: '
-                    '{1}'.format(file_name, ex))
-    except FileNotFoundError:
-        raise UpdateException(
-            'Blueprint file {0} does not exist'.format(file_name))
-    return blueprint
-
-
-def load_imports(blueprint: models.Blueprint) -> list:
-    try:
-        return load_blueprint(blueprint)[IMPORTS]
-    except yaml.YAMLError as ex:
-        raise UpdateException(
-            'Cannot load imports from {0}: {1}'.format(blueprint, ex))
-
-
-def load_mappings(file_name: str) -> list:
-    try:
-        with open(file_name, 'r') as mapping_file:
-            try:
-                mappings = yaml.safe_load(mapping_file)
-            except yaml.YAMLError as ex:
-                raise UpdateException(
-                    'Cannot load mappings from {0}: {1}'.format(file_name, ex))
-    except FileNotFoundError:
-        raise UpdateException(
-            'Mappings file {0} does not exist'.format(file_name))
-    return mappings
 
 
 def scan_blueprint(blueprint: models.Blueprint,
@@ -444,6 +473,11 @@ def make_correction(blueprint: models.Blueprint,
 
     if not mappings:
         return {}, {}
+
+    file_name = blueprint_file_name(blueprint)
+    imports_from_to = get_imports_position(file_name)
+    print('Imports from {0} to {1}'.format(
+        imports_from_to[0], imports_from_to[1]))
     blueprint_yaml = load_blueprint(blueprint)
     correction_specs = {}
     for idx, import_line in enumerate(blueprint_yaml.get(IMPORTS, [])):
