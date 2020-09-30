@@ -1972,6 +1972,17 @@ class StepExtractorTestCase(unittest.TestCase):
 
         self.assertEqual(expected_steps, steps)
 
+    def test_groups_member_order(self):
+        groups_old = {GROUPS: {'group1': {'members': ['a', 'b']}}}
+        groups_new = {GROUPS: {'group1': {'members': ['b', 'a']}}}
+
+        self.step_extractor.old_deployment_plan.update(groups_old)
+        self.step_extractor.new_deployment_plan.update(groups_new)
+
+        _, steps = self.step_extractor.extract_steps()
+
+        self.assertEqual([], steps)
+
     def test_cda_plugins_no_install(self):
 
         cda_plugins_new = {
