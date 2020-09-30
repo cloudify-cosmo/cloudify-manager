@@ -126,7 +126,8 @@ class DeploymentUpdateManager(object):
                 node[constants.PLUGINS] = new_blueprint.plan.get(
                     constants.DEPLOYMENT_PLUGINS_TO_INSTALL, [])
                 nodes.append(node)
-            deployment_update.deployment_plan['nodes'] = nodes
+            plan['nodes'] = nodes
+            deployment_update.deployment_plan = plan
 
         self.sm.put(deployment_update)
         return deployment_update
