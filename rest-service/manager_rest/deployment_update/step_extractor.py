@@ -519,8 +519,11 @@ class StepExtractor(object):
             for entity_name in new_entities:
                 with self.entity_id_builder.extend_id(entity_name):
                     if entity_name in old_entities:
-                        if old_entities[entity_name] != \
-                                new_entities[entity_name]:
+                        if self._has_changed(
+                            entities_name,
+                            old_entities[entity_name],
+                            new_entities[entity_name]
+                        ):
                             self._create_step(
                                 self.entity_id_segment_to_entity_type[
                                     entities_name],
@@ -533,6 +536,19 @@ class StepExtractor(object):
                                 entities_name],
                             supported
                         )
+    def _has_changed(self, entities_name, old, new):
+        """Is old different than new, if both are of kind entity_type?
+
+        Some entity kinds need a more complex comparison than just !=.
+        """
+        if entities_name == GROUPS:
+            # group's members is a list, but it should ignore order
+            old_clone = old.copy()
+            new_clone = new.copy()
+            old_members = set(old_clone.pop('members', ()))
+            new_members = set(new_clone.pop('members', ()))
+            return old_members != new_members or old_clone != new_clone
+        return old != new
 
     def _extract_steps(self, new, old):
         for entities_name, new_entities in new.items():

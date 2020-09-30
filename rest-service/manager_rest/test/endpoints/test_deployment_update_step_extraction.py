@@ -1907,7 +1907,7 @@ class StepExtractorTestCase(unittest.TestCase):
 
     def test_groups_no_change(self):
 
-        groups_old = {GROUPS: {'group1': 'group1_value'}}
+        groups_old = {GROUPS: {'group1': {}}}
         groups_new = groups_old
 
         self.step_extractor.old_deployment_plan.update(groups_old)
@@ -1918,7 +1918,7 @@ class StepExtractorTestCase(unittest.TestCase):
 
     def test_groups_add_group(self):
 
-        groups_new = {GROUPS: {'group1': 'group1_value'}}
+        groups_new = {GROUPS: {'group1': {}}}
 
         self.step_extractor.new_deployment_plan.update(groups_new)
 
@@ -1936,7 +1936,7 @@ class StepExtractorTestCase(unittest.TestCase):
 
     def test_groups_remove_group(self):
 
-        groups_old = {GROUPS: {'group1': 'group1_value'}}
+        groups_old = {GROUPS: {'group1': {}}}
 
         self.step_extractor.old_deployment_plan.update(groups_old)
 
@@ -1954,8 +1954,8 @@ class StepExtractorTestCase(unittest.TestCase):
 
     def test_groups_modify_group(self):
 
-        groups_old = {GROUPS: {'group1': 'group1_value'}}
-        groups_new = {GROUPS: {'group1': 'group1_modified_value'}}
+        groups_old = {GROUPS: {'group1': {'members': []}}}
+        groups_new = {GROUPS: {'group1': {'members': ['a']}}}
 
         self.step_extractor.old_deployment_plan.update(groups_old)
         self.step_extractor.new_deployment_plan.update(groups_new)
@@ -1971,6 +1971,17 @@ class StepExtractorTestCase(unittest.TestCase):
         ]
 
         self.assertEqual(expected_steps, steps)
+
+    def test_groups_member_order(self):
+        groups_old = {GROUPS: {'group1': {'members': ['a', 'b']}}}
+        groups_new = {GROUPS: {'group1': {'members': ['b', 'a']}}}
+
+        self.step_extractor.old_deployment_plan.update(groups_old)
+        self.step_extractor.new_deployment_plan.update(groups_new)
+
+        _, steps = self.step_extractor.extract_steps()
+
+        self.assertEqual([], steps)
 
     def test_cda_plugins_no_install(self):
 
