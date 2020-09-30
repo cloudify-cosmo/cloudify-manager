@@ -121,6 +121,8 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
         elif name in version_constraints:
             filters[EXTRA_VERSION_CONSTRAINT] = \
                 version_constraints.get(name)
+        current_app.logger.info('Plugin update: plugin filters for %s: %s',
+                                name, filters)
         return name, filters
 
     def _resolve_plugin_yaml_url(self, import_url):
@@ -183,10 +185,17 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
             for i, p in enumerate(plugins))
         matching_versions = [(i, v)
                              for i, v in plugin_versions if v in specifier_set]
+        current_app.logger.info('Plugin update: matching versions of %s: %s',
+                                name, matching_versions)
         if extra_constraint_specified:
             matching_versions = [(i, v)
                                  for i, v in matching_versions
                                  if v in SpecifierSet(extra_constraint)]
+            current_app.logger.info(
+                'Plugin update: with additional constraints matching versions '
+                'of %s: %s', name, matching_versions
+            )
+
         if not matching_versions:
             raise InvalidPluginError('No matching version was found for '
                                      'plugin {0} and '
