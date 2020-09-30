@@ -18,7 +18,7 @@ from datetime import datetime, timezone
 import difflib
 import typing
 from os.path import lexists, join
-from os import environ, stat, rename
+from os import chmod, environ, stat, rename
 
 import click
 import requests
@@ -688,6 +688,7 @@ def main(tenant, plugin_names, blueprint_ids, mapping_file, correct):
     else:
         with open(mapping_file, 'w') as output_file:
             yaml.dump(mappings, output_file, default_flow_style=False)
+        chmod(mapping_file, 0o644)
         print('\nSaved mapping file to the {0}'.format(mapping_file))
         printout_scanning_stats(blueprints_processed, mappings, stats)
         printout_install_suggestions(install_suggestions)
