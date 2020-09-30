@@ -57,6 +57,8 @@ BASE_SERVICES = {
     'cloudify-restservice': 'Manager Rest-Service'
 }
 OPTIONAL_SERVICES = {
+    'haproxy': 'Haproxy for DB HA',
+    'patroni': 'Patroni HA Postgres',
     'postgresql-9.5': 'PostgreSQL',
     'cloudify-rabbitmq': 'RabbitMQ',
     'cloudify-composer': 'Cloudify Composer',
@@ -109,6 +111,12 @@ class Status(SecuredResource):
         # Passing our authentication implies PostgreSQL is healthy
         self._add_or_update_service(services, 'PostgreSQL',
                                     NodeServiceStatus.ACTIVE)
+
+        if 'Haproxy for DB HA' in services:
+            services.pop('PostgreSQL')
+            service_statuses = [
+                service['status'] for service in services.values()
+            ]
 
         syncthing_status = NodeServiceStatus.ACTIVE
         if ha_utils and ha_utils.is_clustered():
