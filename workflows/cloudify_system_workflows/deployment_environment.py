@@ -86,22 +86,10 @@ def _retry_if_file_already_exists(exception):
        wait_fixed=2000)
 def _create_deployment_workdir(deployment_id, logger, tenant):
     deployment_workdir = _workdir(deployment_id, tenant)
-    try:
-        os.makedirs(deployment_workdir)
-    except OSError as e:
-        if e.errno == errno.EEXIST:
-            dir_content = os.listdir(deployment_workdir)
-            # if dir exists and empty then no problem
-            if dir_content:
-                logger.error('Failed creating directory %s. '
-                             'Current directory content: %s',
-                             deployment_workdir, dir_content)
-                raise
-            else:
-                logger.warn('Using existing empty deployment directory '
-                            '{0}'.format(deployment_workdir))
-        else:
-            raise
+    if os.path.exists(deployment_workdir):
+        # Otherwise we experience pain on snapshot restore
+        return
+    os.makedirs(deployment_workdir)
 
 
 def _delete_deployment_workdir(ctx):
