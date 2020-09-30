@@ -28,6 +28,7 @@ pipeline {
     PROJECT = "cloudify-manager"
     VERSION = getVersion("${env.BRANCH_NAME}").trim()
     PRERELEASE = getPreRelease("${env.BRANCH_NAME}").trim()
+    S3_BUILD_PATH = "${env.VERSION}/${env.PRERELEASE}-build/nightly/${env.BRANCH}/${env.BUILD_NUMBER}"
   }
 
   stages {
@@ -119,7 +120,7 @@ pipeline {
           post {
             success {
               echo 'Upload artifacts to S3'
-              uploadToReleaseS3("${env.WORKSPACE}/rpm/", "${env.VERSION}", "${env.PRERELEASE}", "${env.PROJECT}", "${env.BRANCH}", "${env.BUILD_NUMBER}")
+              uploadToReleaseS3("${env.WORKSPACE}/rpm/","${env.S3_BUILD_PATH}")
             }
           }
         }
