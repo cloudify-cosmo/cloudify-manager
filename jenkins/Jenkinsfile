@@ -46,47 +46,47 @@ pipeline {
     }
     stage('Run Tests & Builds') {
       parallel {
-        stage('test_restservice') {
-          steps {
-            sh script: "mkdir -p ${env.WORKSPACE}/rest && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/rest", label: "copying repo to seperate workspace"
+        // stage('test_restservice') {
+        //   steps {
+        //     sh script: "mkdir -p ${env.WORKSPACE}/rest && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/rest", label: "copying repo to seperate workspace"
             
-            container('python'){
-              dir("${env.WORKSPACE}/rest") {
-                dir("rest-service"){
-                  sh '''
-                    ~/venv/bin/pip install -Ur dev-requirements.txt
-                    ~/venv/bin/pip install -Ur test-requirements.txt
-                    ~/venv/bin/pip install -e .
-                  '''
-                }
+        //     container('python'){
+        //       dir("${env.WORKSPACE}/rest") {
+        //         dir("rest-service"){
+        //           sh '''
+        //             ~/venv/bin/pip install -Ur dev-requirements.txt
+        //             ~/venv/bin/pip install -Ur test-requirements.txt
+        //             ~/venv/bin/pip install -e .
+        //           '''
+        //         }
                 
-                sh '''
-                    ~/venv/bin/pytest \
-                      -sv \
-                      -a '(client_min_version is None or client_min_version <= 3.1) and (client_max_version is None or 3.1 <= client_max_version)' \
-                      rest-service/manager_rest/test/endpoints
+        //         sh '''
+        //             ~/venv/bin/pytest \
+        //               -sv \
+        //               -a '(client_min_version is None or client_min_version <= 3.1) and (client_max_version is None or 3.1 <= client_max_version)' \
+        //               rest-service/manager_rest/test/endpoints
 
-                    ~/venv/bin/pytest \
-                      -sv \
-                      -a '(client_min_version is None or client_min_version <= 3.1) and (client_max_version is None or 3.1 <= client_max_version)' \
-                      rest-service/manager_rest/test/infrastructure
+        //             ~/venv/bin/pytest \
+        //               -sv \
+        //               -a '(client_min_version is None or client_min_version <= 3.1) and (client_max_version is None or 3.1 <= client_max_version)' \
+        //               rest-service/manager_rest/test/infrastructure
 
-                    ~/venv/bin/pytest \
-                      -sv \
-                      rest-service/manager_rest/test/security
+        //             ~/venv/bin/pytest \
+        //               -sv \
+        //               rest-service/manager_rest/test/security
 
-                    ~/venv/bin/pytest \
-                      -sv \
-                      workflows
+        //             ~/venv/bin/pytest \
+        //               -sv \
+        //               workflows
 
-                    ~/venv/bin/pytest \
-                      -sv \
-                      cloudify_types
-                '''
-              }
-            }
-          }
-        }
+        //             ~/venv/bin/pytest \
+        //               -sv \
+        //               cloudify_types
+        //         '''
+        //       }
+        //     }
+        //   }
+        // }
         stage('build_rpms') {
           steps {
             container('rpmbuild'){
