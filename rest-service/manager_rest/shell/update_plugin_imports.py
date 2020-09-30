@@ -511,9 +511,8 @@ def write_updated_blueprint(input_file_name: str, output_file_name: str,
                 content = input_file.read(update[END_POS] -
                                           update[START_POS] + 1)
                 output_file.write(' # was: {0}'.format(content))
-                if idx == len(import_updates) - 1:
-                    content = input_file.read()
-                    output_file.write(content)
+            content = input_file.read()
+            output_file.write(content)
 
 
 def write_blueprint_diff(from_file_name: str, to_file_name: str,
@@ -538,12 +537,12 @@ def write_blueprint_diff(from_file_name: str, to_file_name: str,
     with open(diff_file_name, 'w') as diff_file:
         diff_file.writelines(diff)
     print('An diff file was generated for your change: {0}'.format(
-        diff_file_name))
+          diff_file_name))
 
 
 def make_correction(blueprint: models.Blueprint,
                     plugin_names: tuple,
-                    mappings: dict) -> dict:
+                    mappings: dict) -> str:
     def line_replacement(mapping_spec: dict) -> str:
         suggested_version = mapping_spec.get(SUGGESTED_VERSION)
         next_major_version = int(suggested_version.split('.')[0]) + 1
@@ -553,7 +552,10 @@ def make_correction(blueprint: models.Blueprint,
             next_major_version)
 
     if not mappings or not mappings.get(UPDATES):
-        return {}
+        if mappings.get(UNKNOWN):
+            return UNKNOWN
+        else:
+            return FINE
     file_name = blueprint_file_name(blueprint)
     new_file_name = blueprint_updated_file_name(blueprint)
     with open(file_name, 'r') as blueprint_file:
@@ -579,6 +581,7 @@ def make_correction(blueprint: models.Blueprint,
                          blueprint_diff_file_name(blueprint))
     rename(new_file_name, file_name)
     print('An updated blueprint has been saved: {0}'.format(file_name))
+    return UPDATES
 
 
 def printout_scanning_stats(total_blueprints: int,
@@ -628,6 +631,34 @@ def printout_install_suggestions(install_suggestions: dict):
         print('  {0}: {1}'.format(plugin_name, ', '.join(suggested_versions)))
 
 
+def printout_correction_stats(stats):
+    total_blueprints_scanned = sum([len(s) for s in stats.values()])
+    number_of_unknown = len(stats.get(UNKNOWN, []))
+
+    # Collect: the number of blueprints scanned,
+    #          the number of blueprints corrected,
+    #          the number of blueprints that are now valid (total)
+    #          the number of blueprints that still require manual attention !!!
+
+    print('\n\n                   CORRECTION STATS')
+    print('----------------------------------------------+-------')
+    print(' Number blueprints scanned                    | {0:5d}'.
+          format(total_blueprints_scanned))
+    print('----------------------------------------------+-------')
+    print(' Number of blueprints corrected               | {0:5d}'.
+          format(len(stats.get(UPDATES, []))))
+    print(' Number of blueprints that are valid          | {0:5d}'.
+          format(len(stats.get(UPDATES, [])) + len(stats.get(FINE, []))))
+    print(' Number of blueprints that require attention  | {0:5d}'.
+          format(number_of_unknown))
+    if number_of_unknown:
+        print('\n\nMake sure to manually attend to {0} more '
+              'blueprints'.format(number_of_unknown))
+        if number_of_unknown < 20:
+            print('These blueprints require manual attention: {0}'.format(
+                ', '.join(stats.get(UNKNOWN, []))))
+
+
 @click.command()
 @click.option('--tenant', default='default_tenant',
               help='Tenant name', )
@@ -664,9 +695,13 @@ def main(tenant, plugin_names, blueprint_ids, mapping_file, correct):
     for blueprint in blueprints.items:
         try:
             if correct:
-                make_correction(blueprint,
-                                plugin_names,
-                                mappings.get(blueprint.id))
+                result = make_correction(blueprint,
+                                         plugin_names,
+                                         mappings.get(blueprint.id))
+                if result not in stats:
+                    stats[result] = [blueprint.id]
+                else:
+                    stats[result].append(blueprint.id)
             else:
                 print('Processing blueprint: {0}'.format(blueprint.id))
                 a_mapping, a_statistic, a_suggestion = \
@@ -684,7 +719,7 @@ def main(tenant, plugin_names, blueprint_ids, mapping_file, correct):
 
     # Wrap it up
     if correct:
-        pass
+        printout_correction_stats(stats)
     else:
         with open(mapping_file, 'w') as output_file:
             yaml.dump(mappings, output_file, default_flow_style=False)
