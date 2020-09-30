@@ -14,9 +14,11 @@
 #  * limitations under the License.
 
 import collections
+from datetime import datetime, timezone
+import difflib
 import typing
-from os.path import join
-from os import environ
+from os.path import lexists, join
+from os import environ, stat, rename
 
 import click
 import requests
@@ -242,7 +244,40 @@ def blueprint_file_name(blueprint: models.Blueprint) -> str:
         FILE_SERVER_BLUEPRINTS_FOLDER,
         blueprint.tenant.name,
         blueprint.id,
-        blueprint.main_file_name)
+        blueprint.main_file_name
+    )
+
+
+def blueprint_updated_file_name(blueprint: models.Blueprint) -> str:
+    base_file_name = '.'.join(blueprint.main_file_name.split('.')[:-1])
+    index = 0
+    updated_file_name = '{0}-new.yaml'.format(base_file_name)
+    while lexists(updated_file_name):
+        updated_file_name = '{0}-{1:02d}.yaml'.format(base_file_name, index)
+        index += 1
+    return join(
+        config.instance.file_server_root,
+        FILE_SERVER_BLUEPRINTS_FOLDER,
+        blueprint.tenant.name,
+        blueprint.id,
+        updated_file_name
+    )
+
+
+def blueprint_diff_file_name(blueprint: models.Blueprint) -> str:
+    base_file_name = '.'.join(blueprint.main_file_name.split('.')[:-1])
+    index = 0
+    diff_file_name = '{0}.diff'.format(base_file_name)
+    while lexists(diff_file_name):
+        diff_file_name = '{0}-{1:02d}.diff'.format(base_file_name, index)
+        index += 1
+    return join(
+        config.instance.file_server_root,
+        FILE_SERVER_BLUEPRINTS_FOLDER,
+        blueprint.tenant.name,
+        blueprint.id,
+        diff_file_name
+    )
 
 
 def load_imports(blueprint: models.Blueprint) -> dict:
@@ -465,32 +500,58 @@ def write_updated_blueprint(input_file_name: str, output_file_name: str,
     with open(input_file_name, 'r') as input_file:
         with open(output_file_name, 'w') as output_file:
             for idx, update in enumerate(import_updates):
-                content = input_file.read(update['start_pos'] -
+                content = input_file.read(update[START_POS] -
                                           input_file.tell())
                 output_file.write(content)
-                output_file.write(update['replacement'])
-                content = input_file.read(update['end_pos'] -
-                                          update['start_pos'] + 1)
+                output_file.write(update[REPLACEMENT])
+                content = input_file.read(update[END_POS] -
+                                          update[START_POS] + 1)
                 output_file.write(' # was: {0}'.format(content))
                 if idx == len(import_updates) - 1:
                     content = input_file.read()
                     output_file.write(content)
 
 
+def write_blueprint_diff(from_file_name: str, to_file_name: str,
+                         diff_file_name: str):
+    def file_mtime(path):
+        t = datetime.fromtimestamp(stat(path).st_mtime,
+                                   timezone.utc)
+        return t.astimezone().isoformat()
+
+    with open(from_file_name, 'r') as from_file:
+        from_lines = from_file.readlines()
+    with open(to_file_name, 'r') as to_file:
+        to_lines = to_file.readlines()
+    diff = difflib.context_diff(
+        from_lines,
+        to_lines,
+        from_file_name,
+        to_file_name,
+        file_mtime(from_file_name),
+        file_mtime(to_file_name)
+    )
+    with open(diff_file_name, 'w') as diff_file:
+        diff_file.writelines(diff)
+    print('An diff file was generated for your change: {0}'.format(
+        diff_file_name))
+
+
 def make_correction(blueprint: models.Blueprint,
                     plugin_names: tuple,
                     mappings: dict) -> dict:
     def line_replacement(mapping_spec: dict) -> str:
-        suggested_version = mapping_spec.get('suggested_version')
+        suggested_version = mapping_spec.get(SUGGESTED_VERSION)
         next_major_version = int(suggested_version.split('.')[0]) + 1
         return 'plugin:{0}?version=>={1},<{2}'.format(
-            mapping_spec.get('plugin_name'),
+            mapping_spec.get(PLUGIN_NAME),
             suggested_version,
             next_major_version)
 
     if not mappings or not mappings.get(UPDATES):
         return {}
     file_name = blueprint_file_name(blueprint)
+    new_file_name = blueprint_updated_file_name(blueprint)
     with open(file_name, 'r') as blueprint_file:
         import_lines = get_imports(blueprint_file)
     import_updates = []
@@ -505,11 +566,15 @@ def make_correction(blueprint: models.Blueprint,
                 'start_pos': import_lines[blueprint_line]['start_pos'],
                 'end_pos': import_lines[blueprint_line]['end_pos'],
             })
+
     write_updated_blueprint(
-        file_name,
-        '/tmp/bp-{0}.yaml'.format(blueprint.id),
+        file_name, new_file_name,
         sorted(import_updates, key=lambda u: u['start_pos'])
     )
+    write_blueprint_diff(file_name, new_file_name,
+                         blueprint_diff_file_name(blueprint))
+    rename(new_file_name, file_name)
+    print('An updated blueprint has been saved: {0}'.format(file_name))
 
 
 def printout_scanning_stats(total_blueprints: int,
