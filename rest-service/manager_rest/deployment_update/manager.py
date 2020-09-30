@@ -119,6 +119,15 @@ class DeploymentUpdateManager(object):
             new_blueprint = self.sm.get(models.Blueprint, new_blueprint_id)
             deployment_update.old_blueprint = old_blueprint
             deployment_update.new_blueprint = new_blueprint
+
+            # New nodes' plugins should be based on a new blueprint plan
+            nodes = []
+            for node in plan['nodes']:
+                node[constants.PLUGINS] = new_blueprint.plan.get(
+                    constants.DEPLOYMENT_PLUGINS_TO_INSTALL, [])
+                nodes.append(node)
+            deployment_update.deployment_plan['nodes'] = nodes
+
         self.sm.put(deployment_update)
         return deployment_update
 
