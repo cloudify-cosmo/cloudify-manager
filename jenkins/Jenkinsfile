@@ -35,7 +35,6 @@ pipeline {
     stage('prepare') {
       steps {
         repoCheckout('https://github.com/cloudify-cosmo/cloudify-manager.git',"${env.PROJECT}","${env.BRANCH}")
-        echo "yuval test1"
         container('python'){
           sh '''
             apt-get update
