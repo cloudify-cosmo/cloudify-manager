@@ -48,6 +48,7 @@ BLUEPRINT_LINE = 'blueprint_line'
 CURRENT_IMPORT_FROM = 'current_import_from'
 CURRENT_IS_PINNED = 'current_is_pinned'
 CURRENT_VERSION = 'current_version'
+END_POS = 'end_pos'
 EXECUTORS = [DEPLOYMENT_PLUGINS_TO_INSTALL,
              WORKFLOW_PLUGINS_TO_INSTALL,
              HOST_AGENT_PLUGINS_TO_INSTALL]
@@ -60,7 +61,10 @@ IS_PINNED = True
 IS_NOT_PINNED = False
 IS_UNKNOWN = True
 IS_NOT_UNKNOWN = False
+PLUGIN_NAME = 'plugin_name'
+REPLACEMENT = 'replacement'
 REPO = 'repository'
+START_POS = 'start_pos'
 SUGGESTED_IMPORT_FROM = 'suggested_import_from'
 SUGGESTED_IS_PINNED = 'suggested_is_pinned'
 SUGGESTED_VERSION = 'suggested_version'
@@ -454,7 +458,7 @@ def scan_blueprint(blueprint: models.Blueprint,
             continue
         add_mapping(UPDATES, {
             import_line: {
-                'plugin_name': plugin_name,
+                PLUGIN_NAME: plugin_name,
                 CURRENT_VERSION: plugin_in_plan[PLUGIN_PACKAGE_VERSION],
                 SUGGESTED_VERSION: suggested_version,
             }
@@ -489,8 +493,8 @@ def get_imports(blueprint_file: typing.TextIO) -> dict:
         elif imports_token and level == 2 and \
                 isinstance(token, yaml.tokens.ScalarToken):
             import_lines[token.value] = {
-                'start_pos': token.start_mark.index,
-                'end_pos': token.end_mark.index,
+                START_POS: token.start_mark.index,
+                END_POS: token.end_mark.index,
             }
     return import_lines
 
@@ -559,17 +563,17 @@ def make_correction(blueprint: models.Blueprint,
         for blueprint_line, spec in mapping_updates.items():
             if blueprint_line not in import_lines:
                 continue
-            if plugin_names and spec.get('plugin_name') not in plugin_names:
+            if plugin_names and spec.get(PLUGIN_NAME) not in plugin_names:
                 continue
             import_updates.append({
-                'replacement': line_replacement(spec),
-                'start_pos': import_lines[blueprint_line]['start_pos'],
-                'end_pos': import_lines[blueprint_line]['end_pos'],
+                REPLACEMENT: line_replacement(spec),
+                START_POS: import_lines[blueprint_line][START_POS],
+                END_POS: import_lines[blueprint_line][END_POS],
             })
 
     write_updated_blueprint(
         file_name, new_file_name,
-        sorted(import_updates, key=lambda u: u['start_pos'])
+        sorted(import_updates, key=lambda u: u[START_POS])
     )
     write_blueprint_diff(file_name, new_file_name,
                          blueprint_diff_file_name(blueprint))
