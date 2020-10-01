@@ -48,6 +48,7 @@ BLUEPRINT_LINE = 'blueprint_line'
 CURRENT_IMPORT_FROM = 'current_import_from'
 CURRENT_IS_PINNED = 'current_is_pinned'
 CURRENT_VERSION = 'current_version'
+DEFAULT_TENANT = 'default_tenant'
 END_POS = 'end_pos'
 EXECUTORS = [DEPLOYMENT_PLUGINS_TO_INSTALL,
              WORKFLOW_PLUGINS_TO_INSTALL,
@@ -322,7 +323,8 @@ def spec_from_url(url: str) -> tuple:
         response = requests.get(url)
     except requests.exceptions.ConnectionError as ex:
         print('Cannot reach {0}: {1}'.format(url, ex))
-    if not response or response.status_code != 200:
+        return None, None
+    if response.status_code != 200:
         return None, None
     try:
         plugin_yaml = yaml.safe_load(response.text)
@@ -546,9 +548,9 @@ def write_blueprint_diff(from_file_name: str, to_file_name: str,
           diff_file_name))
 
 
-def make_correction(blueprint: models.Blueprint,
-                    plugin_names: tuple,
-                    mappings: dict) -> str:
+def correct_blueprint(blueprint: models.Blueprint,
+                      plugin_names: tuple,
+                      mappings: dict) -> str:
     def line_replacement(mapping_spec: dict) -> str:
         suggested_version = mapping_spec.get(SUGGESTED_VERSION)
         next_major_version = int(suggested_version.split('.')[0]) + 1
@@ -666,19 +668,22 @@ def printout_correction_stats(stats):
 
 
 @click.command()
-@click.option('--tenant', default='default_tenant',
-              help='Tenant name', )
+@click.option('-t', '--tenant-name', 'tenant_names', multiple=True,
+              help='Tenant name; mutually exclusivele with --all-tenants.', )
+@click.option('-a', '--all-tenants', is_flag=True,
+              help='Include resources from all tenants.', )
 @click.option('--plugin-name', 'plugin_names',
               multiple=True, help='Plugin(s) to update (you can provide '
                                   'multiple --plugin-name(s).')
-@click.option('--blueprint', 'blueprint_ids',
+@click.option('-b', '--blueprint', 'blueprint_ids',
               multiple=True, help='Blueprint(s) to update (you can provide '
                                   'multiple --blueprint(s).')
 @click.option('--mapping', 'mapping_file', multiple=False, required=True,
               help='Provide a mapping file generated with ')
 @click.option('--correct', is_flag=True, default=False,
               help='Update the blueprints using provided mapping file.')
-def main(tenant, plugin_names, blueprint_ids, mapping_file, correct):
+def main(tenant_names, all_tenants, plugin_names, blueprint_ids,
+         mapping_file, correct):
     def update_suggestions(new_suggestion: dict):
         for plugin_name, plugin_version in new_suggestion.items():
             if plugin_name not in install_suggestions:
@@ -686,42 +691,72 @@ def main(tenant, plugin_names, blueprint_ids, mapping_file, correct):
             if plugin_version not in install_suggestions[plugin_name]:
                 install_suggestions[plugin_name].append(plugin_version)
 
-    # Let's prepare
+    if all_tenants and tenant_names:
+        print('--all-tenants and --tenant-name options are mutually exclusive')
+        exit(1)
+    if not tenant_names:
+        tenant_names = (DEFAULT_TENANT,)
+
     setup_environment()
-    set_tenant_in_app(get_tenant_by_name(tenant))
-    _sm = get_storage_manager()
+    set_tenant_in_app(get_tenant_by_name(DEFAULT_TENANT))
+    sm = get_storage_manager()
+
+    if all_tenants:
+        tenants = sm.list(models.Tenant, get_all_results=True)
+    else:
+        tenants = [get_tenant_by_name(name) for name in tenant_names]
+    blueprint_filter = {'tenant': None}
+    if blueprint_ids:
+        blueprint_filter['id'] = blueprint_ids
+
     mappings = load_mappings(mapping_file) if correct else {}
     stats, install_suggestions, blueprints_processed = {}, {}, 0
-    blueprints = _sm.list(
-        models.Blueprint,
-        filters={'id': blueprint_ids} if blueprint_ids else None
-    )
 
-    # Do the heavy lifting
-    for blueprint in blueprints.items:
-        try:
+    for tenant in tenants:
+        set_tenant_in_app(get_tenant_by_name(tenant.name))
+        sm = get_storage_manager()
+        blueprint_filter['tenant'] = tenant
+        blueprints = sm.list(
+            models.Blueprint,
+            filters=blueprint_filter,
+            get_all_results=True
+        )
+
+        for blueprint in blueprints:
+            print('Processing blueprint of {0}: {1} '.format(tenant.name,
+                                                             blueprint.id))
+            blueprint_identifier = '{0}-{1}'.format(tenant.name, blueprint.id)
             if correct:
-                result = make_correction(blueprint,
-                                         plugin_names,
-                                         mappings.get(blueprint.id))
-                if result not in stats:
-                    stats[result] = [blueprint.id]
+                try:
+                    result = correct_blueprint(
+                        blueprint,
+                        plugin_names,
+                        mappings.get(tenant.name, {}).get(blueprint.id)
+                    )
+                except UpdateException as ex:
+                    print(ex)
                 else:
-                    stats[result].append(blueprint.id)
+                    blueprints_processed += 1
+                    if result not in stats:
+                        stats[result] = [blueprint_identifier]
+                    else:
+                        stats[result].append(blueprint_identifier)
             else:
-                print('Processing blueprint: {0}'.format(blueprint.id))
-                a_mapping, a_statistic, a_suggestion = \
-                    scan_blueprint(blueprint, plugin_names)
-                if a_mapping:
-                    mappings[blueprint.id] = a_mapping
-                if a_statistic:
-                    stats[blueprint.id] = a_statistic
-                if a_suggestion:
-                    update_suggestions(a_suggestion)
-        except UpdateException as ex:
-            print(ex)
-        else:
-            blueprints_processed += 1
+                try:
+                    a_mapping, a_statistic, a_suggestion = \
+                        scan_blueprint(blueprint, plugin_names)
+                except UpdateException as ex:
+                    print(ex)
+                else:
+                    blueprints_processed += 1
+                    if a_mapping:
+                        if tenant.name not in mappings:
+                            mappings[tenant.name] = {}
+                        mappings[tenant.name][blueprint.id] = a_mapping
+                    if a_statistic:
+                        stats[blueprint_identifier] = a_statistic
+                    if a_suggestion:
+                        update_suggestions(a_suggestion)
 
     # Wrap it up
     if correct:
