@@ -17,7 +17,7 @@ import collections
 from datetime import datetime, timezone
 import difflib
 import typing
-from os.path import lexists, join
+from os.path import exists, join
 from os import chmod, environ, stat, rename
 
 import click
@@ -257,7 +257,7 @@ def blueprint_updated_file_name(blueprint: models.Blueprint) -> str:
     base_file_name = '.'.join(blueprint.main_file_name.split('.')[:-1])
     index = 0
     updated_file_name = '{0}-new.yaml'.format(base_file_name)
-    while lexists(updated_file_name):
+    while exists(updated_file_name):
         updated_file_name = '{0}-{1:02d}.yaml'.format(base_file_name, index)
         index += 1
     return join(
@@ -273,7 +273,7 @@ def blueprint_diff_file_name(blueprint: models.Blueprint) -> str:
     base_file_name = '.'.join(blueprint.main_file_name.split('.')[:-1])
     index = 0
     diff_file_name = '{0}.diff'.format(base_file_name)
-    while lexists(diff_file_name):
+    while exists(diff_file_name):
         diff_file_name = '{0}-{1:02d}.diff'.format(base_file_name, index)
         index += 1
     return join(
