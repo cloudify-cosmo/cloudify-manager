@@ -318,12 +318,15 @@ def load_mappings(file_name: str) -> list:
 
 
 def spec_from_url(url: str) -> tuple:
-    response = requests.get(url)
-    if response.status_code != 200:
+    try:
+        response = requests.get(url)
+    except requests.exceptions.ConnectionError as ex:
+        print('Cannot reach {0}: {1}'.format(url, ex))
+    if not response or response.status_code != 200:
         return None, None
     try:
         plugin_yaml = yaml.safe_load(response.text)
-    except Exception as ex:
+    except yaml.YAMLError as ex:
         print('Cannot load imports from {0}: {1}'.format(url, ex))
         return None, None
     for _, spec in plugin_yaml.get('plugins', {}).items():
