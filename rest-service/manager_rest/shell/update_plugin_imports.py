@@ -669,7 +669,7 @@ def printout_correction_stats(stats):
 
 @click.command()
 @click.option('-t', '--tenant-name', multiple=False,
-              help='Tenant name; use exclusively with --all-tenants.', )
+              help='Tenant name; mutually exclusivele with --all-tenants.', )
 @click.option('-a', '--all-tenants', is_flag=True,
               help='Include resources from all tenants.', )
 @click.option('--plugin-name', 'plugin_names',
