@@ -13,7 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from flask import current_app
+from flask import g
 
 from dsl_parser import constants
 from dsl_parser import utils as dsl_parser_utils
@@ -25,16 +25,16 @@ from manager_rest.storage.models import ProviderContext
 
 def get_parser_context(sm=None, resolver_parameters=None):
     sm = sm or get_storage_manager()
-    if not hasattr(current_app, 'parser_context'):
+    if not hasattr(g, 'parser_context'):
         update_parser_context(
             sm.get(ProviderContext, PROVIDER_CONTEXT_ID).context,
             resolver_parameters
         )
-    return current_app.parser_context
+    return g.parser_context
 
 
 def update_parser_context(context, resolver_parameters=None):
-    current_app.parser_context = _extract_parser_context(
+    g.parser_context = _extract_parser_context(
         context, resolver_parameters)
 
 

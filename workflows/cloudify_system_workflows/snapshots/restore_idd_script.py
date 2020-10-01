@@ -156,46 +156,29 @@ def create_service_composition_dependencies(deployment_plan, deployment, sm):
 
             logger.info('{0}.{1}: creating service composition deps'.format(
                 deployment.id, node['id']))
-
-            target_deployment_id = get_target_deployment_id(
-                node, deployment.id)
-
             prefix = (COMPONENT if node_type == COMPONENT_TYPE
                       else SHARED_RESOURCE)
-            suffix = get_instance_id(deployment_plan, node)
-            target_deployment = None
-            if target_deployment_id:
-                target_deployment = sm.get(models.Deployment,
-                                           target_deployment_id)
-            dependency_creator = dependency_creator_generator(prefix,
-                                                              suffix)
-            put_deployment_dependency(deployment,
-                                      target_deployment,
-                                      dependency_creator,
-                                      sm)
 
-
-def get_target_deployment_id(node, deployment_id):
-    resource_config = node['properties']['resource_config']
-    if 'id' in resource_config['deployment']:
-        return resource_config['deployment']['id']
-    return get_runtime_deployment_id(node, deployment_id)
-
-
-def get_instance_id(deployment_plan, node):
-    for instance in deployment_plan['node_instances']:
-        if instance['node_id'] == node['id']:
-            return instance['id']
-
-
-def get_runtime_deployment_id(node, deployment_id):
-    sm = get_storage_manager()
-    instance = sm.list(
-        models.NodeInstance,
-        filters={'node_id': node['id'], 'deployment_id': deployment_id},
-        get_all_results=True
-    )[0]
-    return instance.runtime_properties['deployment']['id']
+            instances = sm.list(
+                models.NodeInstance,
+                filters={'node_id': node['id'],
+                         'deployment_id': deployment.id},
+                get_all_results=True
+            )
+            for instance in instances:
+                target_deployment_id =\
+                    instance.runtime_properties['deployment']['id']
+                suffix = instance.id
+                target_deployment = None
+                if target_deployment_id:
+                    target_deployment = sm.get(models.Deployment,
+                                               target_deployment_id)
+                dependency_creator = dependency_creator_generator(prefix,
+                                                                  suffix)
+                put_deployment_dependency(deployment,
+                                          target_deployment,
+                                          dependency_creator,
+                                          sm)
 
 
 def put_deployment_dependency(source_deployment, target_deployment,

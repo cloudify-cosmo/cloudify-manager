@@ -25,10 +25,8 @@ import threading
 import subprocess
 from contextlib import contextmanager
 
-from cloudify._compat import queue
 from cloudify.workflows import ctx
 from cloudify.manager import get_rest_client
-from cloudify.state import current_workflow_ctx
 from cloudify.exceptions import NonRecoverableError
 from cloudify.constants import (
     NEW_TOKEN_FILE_NAME,
@@ -304,31 +302,6 @@ class SnapshotRestore(object):
                                       'dependencies. See log {0} for more '
                                       'details'.format(restore_idd_log_path))
         ctx.logger.info('Successfully restored inter deployment dependencies.')
-
-    @staticmethod
-    def _create_inter_deployment_dependencies(deployments_queue,
-                                              failed_deployments_queue,
-                                              wf_context,
-                                              context_params,
-                                              update_service_composition):
-        while True:
-            try:
-                tenant, deployment_id = deployments_queue.get_nowait()
-            except queue.Empty:
-                break
-
-            with current_workflow_ctx.push(wf_context, context_params):
-                try:
-                    tenant_client = get_rest_client(tenant=tenant)
-                    tenant_client.inter_deployment_dependencies.restore(
-                        deployment_id, update_service_composition)
-                except RuntimeError as err:
-                    failed_deployments_queue.put((deployment_id, tenant))
-                    ctx.logger.info('Failed creating inter deployment '
-                                    'dependencies for deployment %s from '
-                                    'tenant %s. %s',
-                                    deployment_id, tenant, err)
-            deployments_queue.task_done()
 
     def _restore_amqp_vhosts_and_users(self):
         subprocess.check_call(
