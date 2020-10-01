@@ -165,7 +165,7 @@ pipeline {
                 '''
                 
                 echo 'check that there is no python3-incompatible code'
-                sh'''#!/bin/bash
+                sh '''#!/bin/bash
                   if [[ -s futurize_diffs ]]; then
                     echo "Python-3-incompatible code found"
                     cat futurize_diffs
