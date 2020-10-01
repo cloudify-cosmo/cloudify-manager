@@ -668,7 +668,7 @@ def printout_correction_stats(stats):
 
 
 @click.command()
-@click.option('-t', '--tenant-name', multiple=False,
+@click.option('-t', '--tenant-name', 'tenant_names', multiple=True,
               help='Tenant name; mutually exclusivele with --all-tenants.', )
 @click.option('-a', '--all-tenants', is_flag=True,
               help='Include resources from all tenants.', )
@@ -682,7 +682,7 @@ def printout_correction_stats(stats):
               help='Provide a mapping file generated with ')
 @click.option('--correct', is_flag=True, default=False,
               help='Update the blueprints using provided mapping file.')
-def main(tenant_name, all_tenants, plugin_names, blueprint_ids,
+def main(tenant_names, all_tenants, plugin_names, blueprint_ids,
          mapping_file, correct):
     def update_suggestions(new_suggestion: dict):
         for plugin_name, plugin_version in new_suggestion.items():
@@ -691,20 +691,20 @@ def main(tenant_name, all_tenants, plugin_names, blueprint_ids,
             if plugin_version not in install_suggestions[plugin_name]:
                 install_suggestions[plugin_name].append(plugin_version)
 
-    if all_tenants and tenant_name:
+    if all_tenants and tenant_names:
         print('--all-tenants and --tenant-name options are mutually exclusive')
         exit(1)
-    if not tenant_name:
-        tenant_name = DEFAULT_TENANT
+    if not tenant_names:
+        tenant_names = (DEFAULT_TENANT,)
 
     setup_environment()
-    set_tenant_in_app(get_tenant_by_name(tenant_name))
+    set_tenant_in_app(get_tenant_by_name(DEFAULT_TENANT))
     sm = get_storage_manager()
 
     if all_tenants:
         tenants = sm.list(models.Tenant, get_all_results=True)
     else:
-        tenants = [get_tenant_by_name(tenant_name)]
+        tenants = [get_tenant_by_name(name) for name in tenant_names]
     blueprint_filter = {'tenant': None}
     if blueprint_ids:
         blueprint_filter['id'] = blueprint_ids
