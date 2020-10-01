@@ -323,7 +323,7 @@ def spec_from_url(url: str) -> tuple:
         return None, None
     try:
         plugin_yaml = yaml.safe_load(response.text)
-    except yaml.YAMLError as ex:
+    except Exception as ex:
         print('Cannot load imports from {0}: {1}'.format(url, ex))
         return None, None
     for _, spec in plugin_yaml.get('plugins', {}).items():
@@ -350,7 +350,10 @@ def plugin_spec(import_line: str) -> tuple:
     if import_line.startswith('http://') or \
             import_line.startswith('https://'):
         name, version = spec_from_url(import_line)
-        return IS_PINNED, IS_NOT_UNKNOWN, IMPORT_FROM_URL, name, version
+        if name and version:
+            return IS_PINNED, IS_NOT_UNKNOWN, IMPORT_FROM_URL, name, version
+        else:
+            return IS_PINNED, IS_UNKNOWN, IMPORT_FROM_URL, None, None
     if import_line.startswith('plugin:'):
         name, version = spec_from_import(import_line)
         if version and version.startswith('>'):
