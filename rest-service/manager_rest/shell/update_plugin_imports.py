@@ -318,8 +318,11 @@ def load_mappings(file_name: str) -> list:
 
 
 def spec_from_url(url: str) -> tuple:
-    response = requests.get(url)
-    if response.status_code != 200:
+    try:
+        response = requests.get(url)
+    except requests.exceptions.ConnectionError as ex:
+        print('Cannot reach {0}: {1}'.format(url, ex))
+    if not response or response.status_code != 200:
         return None, None
     try:
         plugin_yaml = yaml.safe_load(response.text)
@@ -350,7 +353,10 @@ def plugin_spec(import_line: str) -> tuple:
     if import_line.startswith('http://') or \
             import_line.startswith('https://'):
         name, version = spec_from_url(import_line)
-        return IS_PINNED, IS_NOT_UNKNOWN, IMPORT_FROM_URL, name, version
+        if name and version:
+            return IS_PINNED, IS_NOT_UNKNOWN, IMPORT_FROM_URL, name, version
+        else:
+            return IS_PINNED, IS_UNKNOWN, IMPORT_FROM_URL, None, None
     if import_line.startswith('plugin:'):
         name, version = spec_from_import(import_line)
         if version and version.startswith('>'):
