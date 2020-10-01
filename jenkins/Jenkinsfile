@@ -28,7 +28,7 @@ pipeline {
     PROJECT = "cloudify-manager"
     VERSION = getVersion("${env.BRANCH_NAME}").trim()
     PRERELEASE = getPreRelease("${env.BRANCH_NAME}").trim()
-    S3_BUILD_PATH = "${env.VERSION}/${env.PRERELEASE}-build/nightly/${env.BRANCH}/${env.BUILD_NUMBER}"
+    S3_BUILD_PATH = "${env.VERSION}/${env.PRERELEASE}-build/${env.PROJECT}/${env.BRANCH}/${env.BUILD_NUMBER}"
   }
 
   stages {
