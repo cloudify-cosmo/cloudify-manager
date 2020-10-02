@@ -405,7 +405,12 @@ def find_plugin_in_a_plan(plan: Plan, plugin_name: str) -> dict:
 def suggest_version(plugin_name: str, plugin_version: str) -> str:
     if plugin_name not in CLOUDIFY_PLUGINS:
         return plugin_version
-    base_version = CLOUDIFY_PLUGINS[plugin_name].get(AT_LEAST, plugin_version)
+    if CLOUDIFY_PLUGINS[plugin_name].get(AT_LEAST) and \
+            (parse_version(CLOUDIFY_PLUGINS[plugin_name][AT_LEAST]) >
+             parse_version(plugin_version)):
+        base_version = CLOUDIFY_PLUGINS[plugin_name][AT_LEAST]
+    else:
+        base_version = plugin_version
     plugin_major_version = base_version.split('.')[0]
     for available_version in CLOUDIFY_PLUGINS[plugin_name][VERSIONS]:
         if available_version.split('.')[0] == plugin_major_version:
