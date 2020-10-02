@@ -180,7 +180,7 @@ CLOUDIFY_PLUGINS = {
                           '1.4.2', '1.4.1', '1.4', '1.3.1', '1.3', '1.2.1',
                           '1.2', '1.1'],
                          key=parse_version, reverse=True),
-        AT_LEAST: '2.0.3',
+        AT_LEAST: '2.0.6',
         REPO: 'https://github.com/cloudify-cosmo/cloudify-fabric-plugin',
     },
     'cloudify-libvirt-plugin': {
