@@ -44,6 +44,7 @@ REST_CONFIG_PATH = join(REST_HOME_DIR, 'cloudify-rest.conf')
 REST_SECURITY_CONFIG_PATH = join(REST_HOME_DIR, 'rest-security.conf')
 REST_AUTHORIZATION_CONFIG_PATH = join(REST_HOME_DIR, 'authorization.conf')
 
+AT_LEAST = 'at_least'
 BLUEPRINT_LINE = 'blueprint_line'
 CURRENT_IMPORT_FROM = 'current_import_from'
 CURRENT_IS_PINNED = 'current_is_pinned'
@@ -179,6 +180,7 @@ CLOUDIFY_PLUGINS = {
                           '1.4.2', '1.4.1', '1.4', '1.3.1', '1.3', '1.2.1',
                           '1.2', '1.1'],
                          key=parse_version, reverse=True),
+        AT_LEAST: '2.0.3',
         REPO: 'https://github.com/cloudify-cosmo/cloudify-fabric-plugin',
     },
     'cloudify-libvirt-plugin': {
@@ -403,11 +405,12 @@ def find_plugin_in_a_plan(plan: Plan, plugin_name: str) -> dict:
 def suggest_version(plugin_name: str, plugin_version: str) -> str:
     if plugin_name not in CLOUDIFY_PLUGINS:
         return plugin_version
-    plugin_major_version = plugin_version.split('.')[0]
+    base_version = CLOUDIFY_PLUGINS[plugin_name].get(AT_LEAST, plugin_version)
+    plugin_major_version = base_version.split('.')[0]
     for available_version in CLOUDIFY_PLUGINS[plugin_name][VERSIONS]:
         if available_version.split('.')[0] == plugin_major_version:
             return available_version
-    return plugin_version
+    return base_version
 
 
 def scan_blueprint(blueprint: models.Blueprint,
