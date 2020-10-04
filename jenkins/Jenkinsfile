@@ -18,7 +18,7 @@ pipeline {
 
   options {
     checkoutToSubdirectory('cloudify-manager')
-    buildDiscarder(logRotator(numToKeepStr:'30'))
+    buildDiscarder(logRotator(numToKeepStr:'10'))
     timeout(time: 60, unit: 'MINUTES')
     timestamps()
   }
@@ -28,13 +28,13 @@ pipeline {
     PROJECT = "cloudify-manager"
     VERSION = getVersion("${env.BRANCH_NAME}").trim()
     PRERELEASE = getPreRelease("${env.BRANCH_NAME}").trim()
+    S3_BUILD_PATH = "${env.VERSION}/${env.PRERELEASE}-build/${env.PROJECT}/${env.BRANCH}/${env.BUILD_NUMBER}"
   }
 
   stages {
     stage('prepare') {
       steps {
         repoCheckout('https://github.com/cloudify-cosmo/cloudify-manager.git',"${env.PROJECT}","${env.BRANCH}")
-        
         container('python'){
           sh '''
             apt-get update
@@ -48,40 +48,48 @@ pipeline {
       parallel {
         stage('test_restservice') {
           steps {
-            sh "mkdir -p ${env.WORKSPACE}/rest && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/rest"  
+            sh script: "mkdir -p ${env.WORKSPACE}/rest && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/rest", label: "copying repo to seperate workspace"
             
             container('python'){
               dir("${env.WORKSPACE}/rest") {
                 dir("rest-service"){
-                  sh '''
+                  sh script: '''
                     ~/venv/bin/pip install -Ur dev-requirements.txt
                     ~/venv/bin/pip install -Ur test-requirements.txt
                     ~/venv/bin/pip install -e .
-                  '''
+                  ''', label: "installing requirements for pytest"
                 }
-                
+                echo 'Running pytest <<rest-service/manager_rest/test/endpoints>>'
                 sh '''
-                    ~/venv/bin/pytest \
-                      -sv \
-                      -a '(client_min_version is None or client_min_version <= 3.1) and (client_max_version is None or 3.1 <= client_max_version)' \
-                      rest-service/manager_rest/test/endpoints
-
-                    ~/venv/bin/pytest \
-                      -sv \
-                      -a '(client_min_version is None or client_min_version <= 3.1) and (client_max_version is None or 3.1 <= client_max_version)' \
-                      rest-service/manager_rest/test/infrastructure
-
-                    ~/venv/bin/pytest \
-                      -sv \
-                      rest-service/manager_rest/test/security
-
-                    ~/venv/bin/pytest \
-                      -sv \
-                      workflows
-
-                    ~/venv/bin/pytest \
-                      -sv \
-                      cloudify_types
+                  ~/venv/bin/pytest \
+                    -sv \
+                    -a '(client_min_version is None or client_min_version <= 3.1) and (client_max_version is None or 3.1 <= client_max_version)' \
+                    rest-service/manager_rest/test/endpoints
+                '''
+                echo 'Running pytest <<rest-service/manager_rest/test/infrastructure>>'
+                sh '''
+                  ~/venv/bin/pytest \
+                    -sv \
+                    -a '(client_min_version is None or client_min_version <= 3.1) and (client_max_version is None or 3.1 <= client_max_version)' \
+                    rest-service/manager_rest/test/infrastructure
+                '''
+                echo 'Running pytest <<rest-service/manager_rest/test/security>>'
+                sh '''
+                  ~/venv/bin/pytest \
+                    -sv \
+                    rest-service/manager_rest/test/security
+                '''
+                echo 'Running pytest <<workflows>>'
+                sh '''
+                  ~/venv/bin/pytest \
+                    -sv \
+                    workflows
+                '''
+                echo 'Running pytest <<cloudify_types>>'
+                sh '''
+                  ~/venv/bin/pytest \
+                    -sv \
+                    cloudify_types
                 '''
               }
             }
@@ -119,13 +127,13 @@ pipeline {
           post {
             success {
               echo 'Upload artifacts to S3'
-              uploadToReleaseS3("${env.WORKSPACE}/rpm/", "${env.VERSION}", "${env.PRERELEASE}", "${env.PROJECT}", "${env.BRANCH}", "${env.BUILD_NUMBER}")
+              uploadToReleaseS3("${env.WORKSPACE}/rpm/","${env.S3_BUILD_PATH}")
             }
           }
         }
         stage('flake8') {
           steps {
-            sh "mkdir -p ${env.WORKSPACE}/flake8 && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/flake8"
+            sh script: "mkdir -p ${env.WORKSPACE}/flake8 && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/flake8", label: "copying repo to seperate workspace"
 
             container('python'){
               dir("${env.WORKSPACE}/flake8") {
@@ -139,7 +147,7 @@ pipeline {
         }
         stage('py3_compat') {
           steps {
-            sh "mkdir -p ${env.WORKSPACE}/py3_compat && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/py3_compat"  
+            sh script: "mkdir -p ${env.WORKSPACE}/py3_compat && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/py3_compat", label: "copying repo to seperate workspace"
 
             container('python-old'){
               dir("${env.WORKSPACE}/py3_compat") {
@@ -156,8 +164,8 @@ pipeline {
                   $FUTURIZE>futurize_diffs
                 '''
                 
-                echo 'name: check that there is no python3-incompatible code'
-                sh'''#!/bin/bash
+                echo 'check that there is no python3-incompatible code'
+                sh '''#!/bin/bash
                   if [[ -s futurize_diffs ]]; then
                     echo "Python-3-incompatible code found"
                     cat futurize_diffs
@@ -174,17 +182,17 @@ pipeline {
       parallel {
         stage('test_amqp_postgres') {
           steps {
-            sh "mkdir -p ${env.WORKSPACE}/amqp_postgres && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/amqp_postgres"  
+            sh script: "mkdir -p ${env.WORKSPACE}/amqp_postgres && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/amqp_postgres", label: "copying repo to seperate workspace"  
 
             container('python'){
               dir("${env.WORKSPACE}/amqp_postgres") {
                 dir("amqp-postgres"){
-                  sh '''
+                  sh script: '''
                     ~/venv/bin/pip install -Ur test-requirements.txt
                     ~/venv/bin/pip install -e .
-                  '''
+                  ''', label: "installing requirements for pytest"
                 }
-                
+                echo 'Running pytest <<amqp-postgres>>'
                 sh '~/venv/bin/pytest -sv amqp-postgres'
               }
             }
@@ -192,7 +200,7 @@ pipeline {
         }
         stage('test_premium') {
           steps {
-            sh "mkdir -p ${env.WORKSPACE}/premium && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/premium"  
+            sh script: "mkdir -p ${env.WORKSPACE}/premium && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/premium", label: "copying repo to seperate workspace" 
 
             container('python'){
               dir("${env.WORKSPACE}/premium") {
@@ -200,7 +208,7 @@ pipeline {
                   sh '''
                     pip install --user tox
                   '''
-                  
+                  echo 'cloning cloudify-premium'
                   sh """#!/bin/bash
                     set -eux
                     function clone {
@@ -216,15 +224,16 @@ pipeline {
                   """
                   
                   dir("rest-service"){
-                    sh '''
+                    sh script: '''
                       ~/venv/bin/pip install -Ur dev-requirements.txt
                       ~/venv/bin/pip install -Ur test-requirements.txt
                       ~/venv/bin/pip install -e .
                       ~/venv/bin/pip install -e ~/cloudify-premium
-                    '''
+                    ''', label: "installing requirements for pytest"
                   }
                   echo 'Replace the cloudify-manager URL in dev-requirements.txt with the local path to this checkout'
                   sh 'sed -i "s:^.*cloudify-manager.*(rest-service)$:-e ${HOME}/project/\1/:" ~/cloudify-premium/dev-requirements.txt'
+                  echo 'Running pytest <<~/cloudify-premium/tests/unittests>>'
                   sh '~/venv/bin/pytest -sv ~/cloudify-premium/tests/unittests'
                 }
               }
