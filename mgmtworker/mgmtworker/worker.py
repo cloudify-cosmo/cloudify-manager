@@ -121,7 +121,7 @@ class MgmtworkerServiceTaskConsumer(ServiceTaskConsumer):
     service_tasks['manager-added'] = 'manager_added'
     service_tasks['manager-removed'] = 'manager_removed'
 
-    def __init__(self, name, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         self._workflow_registry = kwargs.pop('workflow_registry')
         name = os.environ['MANAGER_NAME']
         queue_name = 'cloudify-mgmtworker-service-{0}'.format(name)
