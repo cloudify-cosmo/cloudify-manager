@@ -171,6 +171,17 @@ def _send_mgmtworker_task(message, exchange=MGMTWORKER_QUEUE,
         send_handler.publish(message)
 
 
+def _broadcast_mgmtworker_task(message, exchange='cloudify-mgmtworker-service',
+                               exchange_type='fanout', routing_key='service'):
+    """Broadcast a message to all mgmtworkers in a cluster."""
+    client = _get_amqp_client()
+    send_handler = SendHandler(exchange, exchange_type,
+                               routing_key=routing_key)
+    client.add_handler(send_handler)
+    with client:
+        send_handler.publish(message)
+
+
 def _send_task_to_dlx(message, message_ttl, routing_key='workflow'):
     """
     We use Rabbit's `Dead Letter Exchange` to achieve execution scheduling:
@@ -254,7 +265,7 @@ def cancel_execution(execution_id):
             }
         }
     }
-    _send_mgmtworker_task(message, routing_key='service')
+    _broadcast_mgmtworker_task(message)
 
 
 def _get_plugin_message(plugin, task='install-plugin', target_names=None):
@@ -301,9 +312,8 @@ def install_plugin(plugin):
             agents_per_tenant.setdefault(
                 pstate.agent.tenant, []).append(pstate.agent)
     if managers:
-        _send_mgmtworker_task(
-            _get_plugin_message(plugin, target_names=managers),
-            routing_key='service')
+        _broadcast_mgmtworker_task(
+            _get_plugin_message(plugin, target_names=managers))
 
     agent_message = _get_plugin_message(plugin)
     if agents_per_tenant:
@@ -340,10 +350,9 @@ def uninstall_plugin(plugin):
             agents_per_tenant.setdefault(
                 pstate.agent.tenant, []).append(pstate.agent)
     if managers:
-        _send_mgmtworker_task(
+        _broadcast_mgmtworker_task(
             _get_plugin_message(
-                plugin, target_names=managers, task='uninstall-plugin'),
-            routing_key='service')
+                plugin, target_names=managers, task='uninstall-plugin'))
 
     agent_message = _get_plugin_message(plugin, task='uninstall-plugin')
     if agents_per_tenant:
@@ -362,7 +371,7 @@ def uninstall_plugin(plugin):
 
 
 def delete_source_plugins(deployment_id):
-    _send_mgmtworker_task(
+    _broadcast_mgmtworker_task(
         message={
             'service_task': {
                 'task_name': 'delete-source-plugins',
@@ -371,6 +380,4 @@ def delete_source_plugins(deployment_id):
                     'tenant_name': utils.current_tenant.name
                 }
             }
-        },
-        routing_key='service'
-    )
+        })
