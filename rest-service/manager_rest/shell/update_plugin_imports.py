@@ -331,7 +331,7 @@ def load_mappings(file_name: str) -> list:
     return mappings
 
 
-@lru_cache
+@lru_cache(maxsize=2048)
 def spec_from_url(url: str) -> tuple:
     try:
         response = requests.get(url)
