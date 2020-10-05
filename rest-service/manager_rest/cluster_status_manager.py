@@ -420,8 +420,34 @@ def _get_node_state(node):
 
 
 def _parse_prometheus_results(prometheus_results):
-    service_results = []
+    service_results = {}
     metric_results = {}
+
+    def append_service_result(pm, res):
+        dm = res.get('extra_info', {}).get(pm, {}).get('display_name')
+        if not dm:
+            return
+
+        if dm not in service_results:
+            service_results[dm] = res
+            return
+
+        # If any instance is not active, report the service as such
+        if service_results[dm].get(
+                'status') == NodeServiceStatus.ACTIVE:
+            service_results[dm]['status'] = res['status']
+
+        # Upate the instances part
+        if pm in service_results[dm].get('extra_info', {}):
+            # res' process manager is already present in corresponding result
+            if 'instances' not in service_results[dm]['extra_info'][pm]:
+                service_results[dm]['extra_info'][pm]['instances'] = []
+            # ... append an instance to the list of instances
+            service_results[dm]['extra_info'][pm]['instances'].append(
+                res['extra_info'][pm].get('instances'))
+        else:
+            # if res' process manager is not present in corr. result
+            service_results[dm]['extra_info'][pm] = res['extra_info'][pm]
 
     for result in prometheus_results:
         metric = result.get('metric', {})
@@ -442,7 +468,7 @@ def _parse_prometheus_results(prometheus_results):
 
             # Only process services we care about
             if service:
-                service_results.append(_get_service_status(
+                append_service_result(process_manager, _get_service_status(
                     service_id=service_id,
                     service=service,
                     process_manager=process_manager,
