@@ -296,10 +296,11 @@ def _get_cluster_service_state(cluster_nodes, cloudify_version, detailed,
             'private_ip': service_node['private_ip'],
             'public_ip': service_node['public_ip'],
             'version': cloudify_version,
-            'services': [
-                service for service in service_node['service_results']
+            'services': {
+                name: service for name, service
+                in service_node['service_results'].items()
                 if _service_expected(service, service_type)
-            ],
+            },
             'metrics': service_node['metric_results'].get(service_type,
                                                           []),
         }
@@ -309,19 +310,13 @@ def _get_cluster_service_state(cluster_nodes, cloudify_version, detailed,
     node_count = len(nodes)
 
     if service_type == CloudifyNodeType.DB:
+        postgresql_name = SERVICE_DESCRIPTIONS['postgresql-9.5']['name']
         if node_count > 1:
             # This is a cluster, remove the postgresql service if present, as
             # patroni will manage it and it will just cause incorrect errors
             for node in nodes.values():
-                pg_idx = None
-                for idx, svc in enumerate(node['services']):
-                    if _get_unit_id(svc).startswith(
-                        'postgresql'
-                    ):
-                        pg_idx = idx
-                        break
-                if pg_idx is not None:
-                    node['services'].pop(pg_idx)
+                if postgresql_name in node['services']:
+                    node['services'].pop(postgresql_name)
 
     for node in nodes.values():
         node['status'] = _get_node_state(node)
@@ -408,7 +403,7 @@ def _get_node_state(node):
         # Absence of failure (and everything else) is not success
         return ServiceStatus.FAIL
 
-    for service in node['services']:
+    for service in node['services'].values():
         if service['status'] != NodeServiceStatus.ACTIVE:
             return ServiceStatus.FAIL
 
