@@ -14,12 +14,12 @@
 #  * limitations under the License.
 
 import collections
-from datetime import datetime, timezone
 import difflib
 import typing
-from os.path import exists, join
-from os import chmod, environ, stat, rename
+from datetime import datetime, timezone
 from functools import lru_cache
+from os import chmod, environ, stat, rename
+from os.path import exists, join
 
 import click
 import requests
