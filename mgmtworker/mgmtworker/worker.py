@@ -39,10 +39,13 @@ from cloudify_agent.worker import (
     ServiceTaskConsumer,
     CloudifyOperationConsumer
 )
-from .task_consumers.cluster_service_consumer import ClusterServiceConsumer
 from cloudify_agent import worker as agent_worker
 
 from .hooks import HookConsumer
+try:
+    from cloudify_premium import syncthing_utils
+except ImportError:
+    syncthing_utils = None
 
 
 DEFAULT_MAX_WORKERS = 10
@@ -115,10 +118,35 @@ class MgmtworkerServiceTaskConsumer(ServiceTaskConsumer):
     service_tasks = ServiceTaskConsumer.service_tasks.copy()
     service_tasks['cancel-workflow'] = 'cancel_workflow_task'
     service_tasks['delete-source-plugins'] = 'delete_source_plugins_task'
+    service_tasks['manager-added'] = 'manager_added'
+    service_tasks['manager-removed'] = 'manager_removed'
 
     def __init__(self, *args, **kwargs):
         self._workflow_registry = kwargs.pop('workflow_registry')
-        super(MgmtworkerServiceTaskConsumer, self).__init__(*args, **kwargs)
+        name = os.environ['MANAGER_NAME']
+        queue_name = 'cloudify-mgmtworker-service-{0}'.format(name)
+        kwargs['exchange_type'] = 'fanout'
+        super(MgmtworkerServiceTaskConsumer, self).__init__(
+            name, queue_name, *args, **kwargs)
+        self.exchange = 'cloudify-mgmtworker-service'
+
+    def manager_added(self):
+        logger.info('A manager has been added to the cluster, updating '
+                    'Syncthing')
+        syncthing_utils.mgmtworker_update_devices(
+            rest_client=get_rest_client(
+                tenant='default_tenant',
+                api_token=get_admin_api_token()
+            ))
+
+    def manager_removed(self):
+        logger.info('A manager has been removed from the cluster, updating '
+                    'Syncthing')
+        syncthing_utils.mgmtworker_update_devices(
+            rest_client=get_rest_client(
+                tenant='default_tenant',
+                api_token=get_admin_api_token()
+            ))
 
     def delete_source_plugins_task(self, deployment_id, tenant_name):
         dep_dir = os.path.join(sys.prefix, 'source_plugins',
@@ -213,10 +241,9 @@ def make_amqp_worker(args):
                                     registry=operation_registry),
         CloudifyWorkflowConsumer(args.queue, args.max_workers,
                                  registry=workflow_registry),
-        MgmtworkerServiceTaskConsumer(args.name, args.queue, args.max_workers,
+        MgmtworkerServiceTaskConsumer(args.max_workers,
                                       operation_registry=operation_registry,
                                       workflow_registry=workflow_registry),
-        ClusterServiceConsumer(args.cluster_service_queue, args.max_workers)
     ]
 
     if args.hooks_queue:
@@ -256,9 +283,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--queue')
     parser.add_argument('--max-workers', default=DEFAULT_MAX_WORKERS, type=int)
-    parser.add_argument('--name')
     parser.add_argument('--hooks-queue')
-    parser.add_argument('--cluster-service-queue')
     args = parser.parse_args()
 
     setup_agent_logger('mgmtworker')
