@@ -184,11 +184,11 @@ class Config(object):
             setattr(self, conf_value.name, conf_value.value)
 
         stored_brokers = session.query(models.RabbitMQBroker).all()
-        broker_hosts = [broker.host for broker in stored_brokers]
+        self.amqp_host = [b.host for b in stored_brokers]
+        self.amqp_management_host = [b.management_host for b in stored_brokers]
         for broker in stored_brokers:
-            # currently, there's going to be only one rabbitmq
-            self.amqp_host = broker_hosts
-            self.amqp_management_host = broker.management_host
+            # all brokers will use the same credentials
+            # (rabbitmq replicates users)
             self.amqp_username = broker.username
             self.amqp_password = broker.password
             self.amqp_ca_path = broker.write_ca_cert()
