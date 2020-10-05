@@ -346,6 +346,18 @@ class TestPluginUpdate(AgentTestWithPlugins):
     def _assert_on_values(self, version):
         self._assert_cda_values(version)
         self._assert_host_values(version)
+        plugins = self.client.plugins.list(package_name='version_aware')
+        if not plugins:
+            return
+        target_plugin = next(p for p in plugins
+                             if p.package_version == version)
+        other_plugins = [p for p in plugins if p.package_version != version]
+
+        assert all(pstate['state'] == 'installed'
+                   for pstate in target_plugin.installation_state)
+        for other_plugin in other_plugins:
+            assert all(pstate['state'] != 'installed'
+                       for pstate in other_plugin.installation_state)
 
     def _upload_blueprints_and_deploy_base(self):
         self.deploy_application(
