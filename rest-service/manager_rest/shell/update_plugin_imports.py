@@ -310,9 +310,9 @@ def load_imports(blueprint: models.Blueprint) -> dict:
             except KeyError:
                 raise UpdateException(
                     'Cannot find imports definition in {0}'.format(file_name))
-    except FileNotFoundError:
+    except (FileNotFoundError, PermissionError):
         raise UpdateException(
-            'Blueprint file {0} does not exist'.format(file_name))
+            'Blueprint file {0} cannot be read'.format(file_name))
     return []
 
 
@@ -324,9 +324,9 @@ def load_mappings(file_name: str) -> list:
             except yaml.YAMLError as ex:
                 raise UpdateException(
                     'Cannot load mappings from {0}: {1}'.format(file_name, ex))
-    except FileNotFoundError:
+    except (FileNotFoundError, PermissionError):
         raise UpdateException(
-            'Mappings file {0} does not exist'.format(file_name))
+            'Mappings file {0} cannot be read'.format(file_name))
     return mappings
 
 
@@ -527,18 +527,23 @@ def get_imports(blueprint_file: typing.TextIO) -> dict:
 
 def write_updated_blueprint(input_file_name: str, output_file_name: str,
                             import_updates: list):
-    with open(input_file_name, 'r') as input_file:
-        with open(output_file_name, 'w') as output_file:
-            for idx, update in enumerate(import_updates):
-                content = input_file.read(update[START_POS] -
-                                          input_file.tell())
+    try:
+        with open(input_file_name, 'r') as input_file:
+            with open(output_file_name, 'w') as output_file:
+                for idx, update in enumerate(import_updates):
+                    content = input_file.read(update[START_POS] -
+                                              input_file.tell())
+                    output_file.write(content)
+                    output_file.write(update[REPLACEMENT])
+                    content = input_file.read(update[END_POS] -
+                                              update[START_POS] + 1)
+                    output_file.write(' # was: {0}'.format(content))
+                content = input_file.read()
                 output_file.write(content)
-                output_file.write(update[REPLACEMENT])
-                content = input_file.read(update[END_POS] -
-                                          update[START_POS] + 1)
-                output_file.write(' # was: {0}'.format(content))
-            content = input_file.read()
-            output_file.write(content)
+    except (FileNotFoundError, PermissionError) as ex:
+        raise UpdateException('Cannot update blueprint file source {0}, '
+                              'destination {1}: {2}'.format(
+                                  input_file_name, output_file_name, ex))
 
 
 def write_blueprint_diff(from_file_name: str, to_file_name: str,
@@ -548,10 +553,18 @@ def write_blueprint_diff(from_file_name: str, to_file_name: str,
                                    timezone.utc)
         return t.astimezone().isoformat()
 
-    with open(from_file_name, 'r') as from_file:
-        from_lines = from_file.readlines()
-    with open(to_file_name, 'r') as to_file:
-        to_lines = to_file.readlines()
+    try:
+        with open(from_file_name, 'r') as from_file:
+            from_lines = from_file.readlines()
+    except (FileNotFoundError, PermissionError) as ex:
+        raise UpdateException('Cannot read a blueprint file {0}: {1}'.format(
+                              from_file_name, ex))
+    try:
+        with open(to_file_name, 'r') as to_file:
+            to_lines = to_file.readlines()
+    except (FileNotFoundError, PermissionError) as ex:
+        raise UpdateException('Cannot read a blueprint file {0}: {1}'.format(
+                              from_file_name, ex))
     diff = difflib.context_diff(
         from_lines,
         to_lines,
@@ -560,8 +573,12 @@ def write_blueprint_diff(from_file_name: str, to_file_name: str,
         file_mtime(from_file_name),
         file_mtime(to_file_name)
     )
-    with open(diff_file_name, 'w') as diff_file:
-        diff_file.writelines(diff)
+    try:
+        with open(diff_file_name, 'w') as diff_file:
+            diff_file.writelines(diff)
+    except (FileNotFoundError, PermissionError) as ex:
+        raise UpdateException('Cannot write a diff file {0}: {1}'.format(
+                              diff_file_name, ex))
     print('An diff file was generated for your change: {0}'.format(
           diff_file_name))
 
@@ -586,8 +603,12 @@ def correct_blueprint(blueprint: models.Blueprint,
             return FINE
     file_name = blueprint_file_name(blueprint)
     new_file_name = blueprint_updated_file_name(blueprint)
-    with open(file_name, 'r') as blueprint_file:
-        import_lines = get_imports(blueprint_file)
+    try:
+        with open(file_name, 'r') as blueprint_file:
+            import_lines = get_imports(blueprint_file)
+    except (FileNotFoundError, PermissionError) as ex:
+        raise UpdateException('Cannot load blueprint from {0}: {1}'.format(
+            file_name, ex))
     import_updates = []
     for mapping_updates in mappings.get(UPDATES):
         for blueprint_line, spec in mapping_updates.items():
