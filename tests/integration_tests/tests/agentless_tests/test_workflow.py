@@ -203,8 +203,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
         result = self.client.blueprints.get(blueprint_id)
         self.assertEqual(blueprint_id, result.id)
         # deleting blueprint
-        deleted_bp_id = self.client.blueprints.delete(blueprint_id).id
-        self.assertEqual(blueprint_id, deleted_bp_id)
+        self.client.blueprints.delete(blueprint_id)
         # verifying blueprint does no longer exist
         try:
             self.client.blueprints.get(blueprint_id)
@@ -298,9 +297,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
 
         # deleting deployment - this time there's no execution running,
         # and using the force parameter to force deletion
-        deleted_deployment_id = self.delete_deployment(
-            deployment_id, True, validate=True).id
-        self.assertEqual(deployment_id, deleted_deployment_id)
+        self.delete_deployment(deployment_id, True, validate=True)
 
         # verifying deployment does no longer exist
         with client_error_check(
@@ -430,7 +427,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
     @staticmethod
     def _get_deployment_folder(deployment):
         return os.path.join(
-            '/opt/mgmtworker/work/deployments',
+            '/opt/manager/resources/deployments',
             DEFAULT_TENANT_NAME,
             deployment.id
         )

@@ -75,6 +75,7 @@ class SnapshotCreate(object):
         except BaseException as e:
             self._update_snapshot_status(self._config.failed_status, str(e))
             ctx.logger.error('Snapshot creation failed: {0}'.format(str(e)))
+            raise
         finally:
             ctx.logger.debug('Removing temp dir: {0}'.format(self._tempdir))
             shutil.rmtree(self._tempdir)

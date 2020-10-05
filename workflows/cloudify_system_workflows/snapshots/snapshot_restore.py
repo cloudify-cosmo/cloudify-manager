@@ -25,10 +25,8 @@ import threading
 import subprocess
 from contextlib import contextmanager
 
-from cloudify._compat import queue
 from cloudify.workflows import ctx
 from cloudify.manager import get_rest_client
-from cloudify.state import current_workflow_ctx
 from cloudify.exceptions import NonRecoverableError
 from cloudify.constants import (
     NEW_TOKEN_FILE_NAME,
@@ -287,64 +285,23 @@ class SnapshotRestore(object):
         ctx.logger.info('Restoring inter deployment dependencies')
         update_service_composition = (self._snapshot_version == V_5_0_5)
 
-        deployment_contexts = utils.get_dep_contexts(self._snapshot_version)
-        deployments_queue = queue.Queue()
-        failed_deployments_queue = queue.Queue()
-        for tenant_name, deployments in deployment_contexts:
-            for dep_id in deployments:
-                deployments_queue.put((tenant_name, dep_id))
+        script_path = os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            'restore_idd_script.py'
+        )
+        cmd = ['/opt/manager/env/bin/python',
+               script_path,
+               ctx.tenant_name,
+               str(update_service_composition)]
+        restore_idd_script = subprocess.run(cmd)
 
-        wf_context = current_workflow_ctx.get_ctx()
-        context_params = current_workflow_ctx.get_parameters()
-
-        threads = []
-        for i in range(min(self._config.snapshot_restore_threads,
-                           deployments_queue.qsize())):
-            t = threading.Thread(
-                target=self._create_inter_deployment_dependencies,
-                args=(deployments_queue, failed_deployments_queue, wf_context,
-                      context_params, update_service_composition)
-            )
-            threads.append(t)
-            t.start()
-
-        for t in threads:
-            t.join()
-
-        if not failed_deployments_queue.empty():
-            deployments = list(failed_deployments_queue.queue)
+        if restore_idd_script.returncode:
+            restore_idd_log_path = 'mgmtworker/logs/restore_idd.log'
             raise NonRecoverableError('Failed to restore snapshot, could not '
                                       'create the inter deployment '
-                                      'dependencies from the following '
-                                      'deployments {0}. See exception '
-                                      'tracebacks logged above for more '
-                                      'details'.format(deployments))
-
+                                      'dependencies. See log {0} for more '
+                                      'details'.format(restore_idd_log_path))
         ctx.logger.info('Successfully restored inter deployment dependencies.')
-
-    @staticmethod
-    def _create_inter_deployment_dependencies(deployments_queue,
-                                              failed_deployments_queue,
-                                              wf_context,
-                                              context_params,
-                                              update_service_composition):
-        while True:
-            try:
-                tenant, deployment_id = deployments_queue.get_nowait()
-            except queue.Empty:
-                break
-
-            with current_workflow_ctx.push(wf_context, context_params):
-                try:
-                    tenant_client = get_rest_client(tenant=tenant)
-                    tenant_client.inter_deployment_dependencies.restore(
-                        deployment_id, update_service_composition)
-                except RuntimeError as err:
-                    failed_deployments_queue.put((deployment_id, tenant))
-                    ctx.logger.info('Failed creating inter deployment '
-                                    'dependencies for deployment %s from '
-                                    'tenant %s. %s',
-                                    deployment_id, tenant, err)
 
     def _restore_amqp_vhosts_and_users(self):
         subprocess.check_call(

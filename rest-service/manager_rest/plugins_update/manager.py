@@ -36,11 +36,19 @@ from manager_rest.plugins_update.constants import (STATES,
                                                    TO_LATEST,
                                                    ALL_TO_LATEST,
                                                    TO_MINOR,
-                                                   ALL_TO_MINOR)
+                                                   ALL_TO_MINOR,
+                                                   MAPPING,
+                                                   UPDATES,
+                                                   PLUGIN_NAME,
+                                                   SUGGESTED_VERSION)
 from manager_rest.manager_exceptions import (ConflictError,
                                              PluginsUpdateError,
                                              IllegalActionError)
 from manager_rest.constants import FILE_SERVER_BLUEPRINTS_FOLDER
+
+
+PLUGIN_VERSION_CONSTRAINTS = 'plugin_version_constraints'
+PLUGIN_MAPPINGS = 'plugin_mappings'
 
 
 class PluginsUpdateManager(object):
@@ -95,8 +103,10 @@ class PluginsUpdateManager(object):
         blueprint = self.sm.get(models.Blueprint, blueprint_id)
         temp_plan = self.get_reevaluated_plan(
             blueprint,
-            {'plugin_version_constraints':
-             _plugin_version_constraints(blueprint, filters)}
+            {PLUGIN_VERSION_CONSTRAINTS:
+             _plugin_version_constraints(blueprint, filters),
+             PLUGIN_MAPPINGS:
+             _plugin_mappings(blueprint, filters)}
         )
         no_changes_required = not _did_plugins_to_install_change(
             temp_plan, blueprint.plan)
@@ -209,36 +219,42 @@ class PluginsUpdateManager(object):
         return temp_plan
 
 
+def _plugins_in_a_plan(plan):
+    for plugins_key in [DEPLOYMENT_PLUGINS_TO_INSTALL,
+                        WORKFLOW_PLUGINS_TO_INSTALL,
+                        HOST_AGENT_PLUGINS_TO_INSTALL]:
+        if plugins_key not in plan:
+            continue
+        for a_plugin in plan[plugins_key]:
+            if a_plugin[PLUGIN_PACKAGE_NAME] and \
+                    a_plugin[PLUGIN_PACKAGE_VERSION]:
+                yield a_plugin
+
+
+def _exact_version_constraint(version):
+    return '=={0}'.format(version)
+
+
+def _minor_version_constraint(version):
+    v = version.split('.')
+    return '>={0}.{1},<{2}'.format(v[0], v[1], int(v[0]) + 1)
+
+
 def _plugin_version_constraints(blueprint, filters):
     """Prepare a list of plugin version constraints for the resolver."""
 
-    def plugins_in_a_plan(plan):
-        for executor in [DEPLOYMENT_PLUGINS_TO_INSTALL,
-                         WORKFLOW_PLUGINS_TO_INSTALL,
-                         HOST_AGENT_PLUGINS_TO_INSTALL]:
-            if executor not in plan:
-                continue
-            for a_plugin in plan[executor]:
-                if a_plugin[PLUGIN_PACKAGE_NAME] and \
-                        a_plugin[PLUGIN_PACKAGE_VERSION]:
-                    yield a_plugin
-
     def prepare_constraint(plugin_name, plugin_version, filters):
-        def minor_version_constraint(version):
-            v = version.split('.')
-            return '>={0}.{1},<{2}'.format(v[0], v[1], int(v[0]) + 1)
-
         # If filtering by plugin names are `plugin_name` is not listed as one
         # of them, current version of the plugin is mandatory (no upgrade)
         if filters.get(PLUGIN_NAMES) and \
                 plugin_name not in filters[PLUGIN_NAMES]:
-            return '=={0}'.format(plugin_version)
+            return _exact_version_constraint(plugin_version)
         # If all plugins should be upgraded to the latest version and this
         # particular plugin is listed in to_minor list, then return minor
         # version constraints
         if filters.get(ALL_TO_LATEST):
             if plugin_name in filters.get(TO_MINOR, []):
-                return minor_version_constraint(plugin_version)
+                return _minor_version_constraint(plugin_version)
             else:
                 return None
         # If all plugins should be upgraded to the latest minor version and
@@ -248,11 +264,11 @@ def _plugin_version_constraints(blueprint, filters):
             if plugin_name in filters.get(TO_LATEST, []):
                 return None
             else:
-                return minor_version_constraint(plugin_version)
+                return _minor_version_constraint(plugin_version)
         return None
 
     constraints = {}
-    for plugin in plugins_in_a_plan(blueprint.plan):
+    for plugin in _plugins_in_a_plan(blueprint.plan):
         if plugin[PLUGIN_PACKAGE_NAME] in constraints:
             continue
         constraint = prepare_constraint(plugin[PLUGIN_PACKAGE_NAME],
@@ -262,6 +278,35 @@ def _plugin_version_constraints(blueprint, filters):
             constraints[plugin[PLUGIN_PACKAGE_NAME]] = constraint
 
     return constraints
+
+
+def _plugin_mappings(blueprint, filters):
+    """Prepare a list of plugin version mappings for the resolver."""
+
+    def prepare_mapping(plugin_name, mapping_updates):
+        # If there is one and only one mapping for a specific plugin
+        # name/version then use the suggested version from the mapping file
+        for mapping_update in mapping_updates:
+            for blueprint_line, mapping in mapping_update.items():
+                if plugin_name == mapping.get(PLUGIN_NAME):
+                    return {
+                        'version': _exact_version_constraint(
+                            mapping.get(SUGGESTED_VERSION)),
+                        'import_url': blueprint_line,
+                    }
+
+    if not filters.get(MAPPING, {}).get(UPDATES):
+        return {}
+    mappings = {}
+    for plugin in _plugins_in_a_plan(blueprint.plan):
+        if plugin[PLUGIN_PACKAGE_NAME] in mappings:
+            continue
+        mapping = prepare_mapping(plugin[PLUGIN_PACKAGE_NAME],
+                                  filters.get(MAPPING).get(UPDATES))
+        if mapping:
+            mappings[plugin[PLUGIN_PACKAGE_NAME]] = mapping
+
+    return mappings
 
 
 def _did_plugins_to_install_change(temp_plan, plan):

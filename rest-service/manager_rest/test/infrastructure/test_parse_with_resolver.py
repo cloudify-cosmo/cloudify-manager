@@ -109,28 +109,25 @@ class UploadBlueprintsWithImportResolverTests(BaseServerTestCase):
         self.assertEqual(create_import_resolver_inputs[0]['rules'],
                          resolver_section['rules'])
 
-        self.assertEqual(self.app.application.parser_context['resolver'],
-                         'mock expected import resolver')
-
     def test_resolver_update_in_app(self):
         # upload blueprint
         self.test_upload_blueprint_with_resolver()
-        # update current app
-        self.app.application.parser_context = {
-            'resolver': 'mock resolver',
-            'validate_version': True
-        }
+
         # upload blueprint again and check that
         # the expected resolver passed to the parser
         with mock.patch(
-                'dsl_parser.tasks.parse_dsl',
-                mock.MagicMock(return_value={})
+            'manager_rest.app_context.get_parser_context',
+            return_value={'resolver': 'mock', 'validate_version': True}
+        ), mock.patch(
+            'dsl_parser.tasks.parse_dsl',
+            return_value={}
         ) as mock_parse_dsl:
             self.put_file(*self.put_blueprint_args(blueprint_id='bp-2'))
-            mock_parse_dsl.assert_called_once_with(
-                mock.ANY, mock.ANY,
-                resolver='mock resolver',
-                validate_version=mock.ANY)
+
+        mock_parse_dsl.assert_called_once_with(
+            mock.ANY, mock.ANY,
+            resolver='mock',
+            validate_version=mock.ANY)
 
     def test_failed_to_initialize_resolver(self):
 

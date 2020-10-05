@@ -72,6 +72,7 @@ def uploads_mock_plugins(f):
     return wrapper
 
 
+@pytest.mark.usefixtures('allow_agent')
 class TestPluginUpdate(AgentTestWithPlugins):
     versions = ['1.0', '2.0']
     dsl_resources_path = resource(os.path.join('dsl', 'agent_tests'))
@@ -230,14 +231,14 @@ class TestPluginUpdate(AgentTestWithPlugins):
 
         # Update a different (non-existent) plugin - nothing should change
         plugins_update = self._perform_plugins_update(plugin_names=['asd'])
-        self.assertEqual(plugins_update.state, STATES.SUCCESSFUL)
+        self.assertEqual(plugins_update.state, STATES.NO_CHANGES_REQUIRED)
         self._execute_workflows()
         self._assert_host_values(self.versions[0])
 
         # Update only minor version - nothing should change
         plugins_update = self._perform_plugins_update(all_to_minor=True,
                                                       all_to_latest=False)
-        self.assertEqual(plugins_update.state, STATES.SUCCESSFUL)
+        self.assertEqual(plugins_update.state, STATES.NO_CHANGES_REQUIRED)
         self._execute_workflows()
         self._assert_host_values(self.versions[0])
 
@@ -346,6 +347,18 @@ class TestPluginUpdate(AgentTestWithPlugins):
     def _assert_on_values(self, version):
         self._assert_cda_values(version)
         self._assert_host_values(version)
+        plugins = self.client.plugins.list(package_name='version_aware')
+        if not plugins:
+            return
+        target_plugin = next(p for p in plugins
+                             if p.package_version == version)
+        other_plugins = [p for p in plugins if p.package_version != version]
+
+        assert all(pstate['state'] == 'installed'
+                   for pstate in target_plugin.installation_state)
+        for other_plugin in other_plugins:
+            assert all(pstate['state'] != 'installed'
+                       for pstate in other_plugin.installation_state)
 
     def _upload_blueprints_and_deploy_base(self):
         self.deploy_application(

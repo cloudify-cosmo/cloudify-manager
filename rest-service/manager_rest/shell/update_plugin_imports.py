@@ -1,15 +1,30 @@
-#!/opt/manager/env/bin/python3
+#########
+# Copyright (c) 2020 Cloudify Platform Ltd. All rights reserved
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  * See the License for the specific language governing permissions and
+#  * limitations under the License.
 
 import collections
-from os.path import join
-from os import environ
-from packaging.version import parse as version_parse
+from datetime import datetime, timezone
+import difflib
+import typing
+from os.path import exists, join
+from os import chmod, environ, stat, rename
 
 import click
 import requests
 import yaml
 
-from cloudify._compat import parse_qs
+from cloudify._compat import parse_qs, parse_version
 
 from dsl_parser.constants import (WORKFLOW_PLUGINS_TO_INSTALL,
                                   DEPLOYMENT_PLUGINS_TO_INSTALL,
@@ -29,10 +44,13 @@ REST_CONFIG_PATH = join(REST_HOME_DIR, 'cloudify-rest.conf')
 REST_SECURITY_CONFIG_PATH = join(REST_HOME_DIR, 'rest-security.conf')
 REST_AUTHORIZATION_CONFIG_PATH = join(REST_HOME_DIR, 'authorization.conf')
 
+AT_LEAST = 'at_least'
 BLUEPRINT_LINE = 'blueprint_line'
 CURRENT_IMPORT_FROM = 'current_import_from'
 CURRENT_IS_PINNED = 'current_is_pinned'
 CURRENT_VERSION = 'current_version'
+DEFAULT_TENANT = 'default_tenant'
+END_POS = 'end_pos'
 EXECUTORS = [DEPLOYMENT_PLUGINS_TO_INSTALL,
              WORKFLOW_PLUGINS_TO_INSTALL,
              HOST_AGENT_PLUGINS_TO_INSTALL]
@@ -45,7 +63,10 @@ IS_PINNED = True
 IS_NOT_PINNED = False
 IS_UNKNOWN = True
 IS_NOT_UNKNOWN = False
+PLUGIN_NAME = 'plugin_name'
+REPLACEMENT = 'replacement'
 REPO = 'repository'
+START_POS = 'start_pos'
 SUGGESTED_IMPORT_FROM = 'suggested_import_from'
 SUGGESTED_IS_PINNED = 'suggested_is_pinned'
 SUGGESTED_VERSION = 'suggested_version'
@@ -64,7 +85,7 @@ CLOUDIFY_PLUGINS = {
                           '2.3.1', '2.3.0', '2.2.1', '2.2.0', '2.1.0', '2.0.2',
                           '2.0.1', '2.0.0', '1.5.1.2', '1.5.1.1', '1.5.1',
                           '1.5'],
-                         key=version_parse, reverse=True),
+                         key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-cosmo/cloudify-aws-plugin',
     },
     'cloudify-azure-plugin': {
@@ -74,7 +95,7 @@ CLOUDIFY_PLUGINS = {
                           '1.8.0', '1.7.3', '1.7.2', '1.7.1', '1.7.0', '1.6.2',
                           '1.6.1', '1.6.0', '1.5.1.1', '1.5.1', '1.5.0',
                           '1.4.3', '1.4.2', '1.4'],
-                         key=version_parse, reverse=True),
+                         key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-cosmo/cloudify-azure-plugin',
     },
     'cloudify-gcp-plugin': {
@@ -82,7 +103,7 @@ CLOUDIFY_PLUGINS = {
                           '1.5.0', '1.4.5', '1.4.4', '1.4.3', '1.4.2', '1.4.1',
                           '1.4.0', '1.3.0.1', '1.3.0', '1.2.0', '1.1.0',
                           '1.0.1'],
-                         key=version_parse, reverse=True),
+                         key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-cosmo/cloudify-gcp-plugin',
     },
     'cloudify-openstack-plugin': {
@@ -102,7 +123,7 @@ CLOUDIFY_PLUGINS = {
                           '2.7.1', '2.7.0', '2.6.0', '2.5.3', '2.5.2', '2.5.1',
                           '2.5.0', '2.4.1.1', '2.4.1', '2.4.0', '2.3.0',
                           '2.2.0'],
-                         key=version_parse, reverse=True),
+                         key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-cosmo/cloudify-openstack-plugin',
     },
     'cloudify-vsphere-plugin': {
@@ -114,13 +135,13 @@ CLOUDIFY_PLUGINS = {
                           '2.9.2', '2.9.1', '2.9.0', '2.8.0', '2.7.0', '2.6.1',
                           '2.2.2', '2.6.0', '2.4.1', '2.5.0', '2.4.0',
                           '2.3.0'],
-                         key=version_parse, reverse=True),
+                         key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-cosmo/cloudify-vsphere-plugin',
     },
     'cloudify-terraform-plugin': {
         VERSIONS: sorted(['0.13.4', '0.13.3', '0.13.2', '0.13.1', '0.13.0',
                           '0.12.0', '0.11.0', '0.10', '0.9', '0.7'],
-                         key=version_parse, reverse=True),
+                         key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-cosmo/cloudify-terraform-plugin',
     },
     'cloudify-ansible-plugin': {
@@ -128,7 +149,7 @@ CLOUDIFY_PLUGINS = {
                           '2.8.1', '2.8.0', '2.7.1', '2.7.0', '2.6.0', '2.5.0',
                           '2.4.0', '2.3.0', '2.2.0', '2.1.1', '2.1.0', '2.0.4',
                           '2.0.3', '2.0.2', '2.0.1', '2.0.0'],
-                         key=version_parse, reverse=True),
+                         key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-cosmo/cloudify-ansible-plugin',
     },
     'cloudify-kubernetes-plugin': {
@@ -138,19 +159,19 @@ CLOUDIFY_PLUGINS = {
                           '2.2.2', '2.2.1', '2.2.0', '2.1.0', '2.0.0.1',
                           '2.0.0', '1.4.0', '1.3.1.1', '1.3.1', '1.3.0',
                           '1.2.2', '1.2.1', '1.2.0', '1.1.0', '1.0.0'],
-                         key=version_parse, reverse=True),
+                         key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-cosmo/cloudify-kubernetes-plugin',
     },
     'cloudify-docker-plugin': {
         VERSIONS: sorted(['2.0.3', '2.0.2', '2.0.1', '2.0.0', '1.3.2', '1.2',
                           '1.1'],
-                         key=version_parse, reverse=True),
+                         key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-cosmo/cloudify-docker-plugin',
     },
     'cloudify-netconf-plugin': {
         VERSIONS: sorted(['0.4.4', '0.4.2', '0.4.1', '0.4.0', '0.3.1', '0.3.0',
                           '0.2.1', '0.2.0', '0.1.0'],
-                         key=version_parse, reverse=True),
+                         key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-cosmo/cloudify-netconf-plugin',
     },
     'cloudify-fabric-plugin': {
@@ -158,13 +179,14 @@ CLOUDIFY_PLUGINS = {
                           '2.0.0', '1.6.0', '1.5.3', '1.5.1', '1.5', '1.4.3',
                           '1.4.2', '1.4.1', '1.4', '1.3.1', '1.3', '1.2.1',
                           '1.2', '1.1'],
-                         key=version_parse, reverse=True),
+                         key=parse_version, reverse=True),
+        AT_LEAST: '2.0.6',
         REPO: 'https://github.com/cloudify-cosmo/cloudify-fabric-plugin',
     },
     'cloudify-libvirt-plugin': {
         VERSIONS: sorted(['0.9.0', '0.8.1', '0.8.0', '0.7.0', '0.6.0', '0.5.0',
                           '0.4.1', '0.4', '0.3', '0.2', '0.1'],
-                         key=version_parse, reverse=True),
+                         key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-incubator/cloudify-libvirt-plugin',
     },
     'cloudify-utilities-plugin': {
@@ -183,12 +205,12 @@ CLOUDIFY_PLUGINS = {
                           '1.4.1.2', '1.4.1.1', '1.4.1', '1.3.1', '1.3.0',
                           '1.2.5', '1.2.4', '1.2.3', '1.2.2', '1.2.1', '1.2.0',
                           '1.1.1', '1.1.0', '1.0.0', ],
-                         key=version_parse, reverse=True),
+                         key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-incubator/cloudify-utilities-plugin'
     },
     'cloudify-host-pool-plugin': {
         VERSIONS: sorted(['1.5.2', '1.5.1', '1.5', '1.4', '1.2', ],
-                         key=version_parse, reverse=True),
+                         key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-cosmo/cloudify-host-pool-plugin',
 
     },
@@ -197,12 +219,12 @@ CLOUDIFY_PLUGINS = {
                           '1.3.10', '1.3.9', '1.3.8', '1.3.7', '1.3.6',
                           '1.3.5', '1.3.4', '1.3.3', '1.3.2', '1.3.1', '1.3',
                           '1.2.1', '1.2', '1.1'],
-                         key=version_parse, reverse=True),
+                         key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-cosmo/cloudify-diamond-plugin',
     },
     'tosca-vcloud-plugin': {
         VERSIONS: sorted(['1.6.1', '1.6.0', '1.5.1', '1.5.0', '1.4.1'],
-                         key=version_parse, reverse=True),
+                         key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-cosmo/tosca-vcloud-plugin',
     },
 }
@@ -229,11 +251,91 @@ def blueprint_file_name(blueprint: models.Blueprint) -> str:
         FILE_SERVER_BLUEPRINTS_FOLDER,
         blueprint.tenant.name,
         blueprint.id,
-        blueprint.main_file_name)
+        blueprint.main_file_name
+    )
+
+
+def blueprint_updated_file_name(blueprint: models.Blueprint) -> str:
+    base_file_name = '.'.join(blueprint.main_file_name.split('.')[:-1])
+    index = 0
+    updated_file_name = '{0}-new.yaml'.format(base_file_name)
+    while exists(join(
+            config.instance.file_server_root,
+            FILE_SERVER_BLUEPRINTS_FOLDER,
+            blueprint.tenant.name,
+            blueprint.id,
+            updated_file_name)):
+        updated_file_name = '{0}-{1:02d}.yaml'.format(base_file_name, index)
+        index += 1
+    return join(
+        config.instance.file_server_root,
+        FILE_SERVER_BLUEPRINTS_FOLDER,
+        blueprint.tenant.name,
+        blueprint.id,
+        updated_file_name
+    )
+
+
+def blueprint_diff_file_name(blueprint: models.Blueprint) -> str:
+    base_file_name = '.'.join(blueprint.main_file_name.split('.')[:-1])
+    index = 0
+    diff_file_name = '{0}.diff'.format(base_file_name)
+    while exists(join(
+            config.instance.file_server_root,
+            FILE_SERVER_BLUEPRINTS_FOLDER,
+            blueprint.tenant.name,
+            blueprint.id,
+            diff_file_name)):
+        diff_file_name = '{0}-{1:02d}.diff'.format(base_file_name, index)
+        index += 1
+    return join(
+        config.instance.file_server_root,
+        FILE_SERVER_BLUEPRINTS_FOLDER,
+        blueprint.tenant.name,
+        blueprint.id,
+        diff_file_name
+    )
+
+
+def load_imports(blueprint: models.Blueprint) -> dict:
+    file_name = blueprint_file_name(blueprint)
+    try:
+        with open(file_name, 'r') as blueprint_file:
+            try:
+                return yaml.safe_load(blueprint_file)[IMPORTS]
+            except yaml.YAMLError as ex:
+                raise UpdateException(
+                    'Cannot load imports from {0}: '
+                    '{1}'.format(file_name, ex))
+            except KeyError:
+                raise UpdateException(
+                    'Cannot find imports definition in {0}'.format(file_name))
+    except (FileNotFoundError, PermissionError):
+        raise UpdateException(
+            'Blueprint file {0} cannot be read'.format(file_name))
+    return []
+
+
+def load_mappings(file_name: str) -> list:
+    try:
+        with open(file_name, 'r') as mapping_file:
+            try:
+                mappings = yaml.safe_load(mapping_file)
+            except yaml.YAMLError as ex:
+                raise UpdateException(
+                    'Cannot load mappings from {0}: {1}'.format(file_name, ex))
+    except (FileNotFoundError, PermissionError):
+        raise UpdateException(
+            'Mappings file {0} cannot be read'.format(file_name))
+    return mappings
 
 
 def spec_from_url(url: str) -> tuple:
-    response = requests.get(url)
+    try:
+        response = requests.get(url)
+    except requests.exceptions.ConnectionError as ex:
+        print('Cannot reach {0}: {1}'.format(url, ex))
+        return None, None
     if response.status_code != 200:
         return None, None
     try:
@@ -265,7 +367,10 @@ def plugin_spec(import_line: str) -> tuple:
     if import_line.startswith('http://') or \
             import_line.startswith('https://'):
         name, version = spec_from_url(import_line)
-        return IS_PINNED, IS_NOT_UNKNOWN, IMPORT_FROM_URL, name, version
+        if name and version:
+            return IS_PINNED, IS_NOT_UNKNOWN, IMPORT_FROM_URL, name, version
+        else:
+            return IS_PINNED, IS_UNKNOWN, IMPORT_FROM_URL, None, None
     if import_line.startswith('plugin:'):
         name, version = spec_from_import(import_line)
         if version and version.startswith('>'):
@@ -300,26 +405,17 @@ def find_plugin_in_a_plan(plan: Plan, plugin_name: str) -> dict:
 def suggest_version(plugin_name: str, plugin_version: str) -> str:
     if plugin_name not in CLOUDIFY_PLUGINS:
         return plugin_version
-    plugin_major_version = plugin_version.split('.')[0]
+    if CLOUDIFY_PLUGINS[plugin_name].get(AT_LEAST) and \
+            (parse_version(CLOUDIFY_PLUGINS[plugin_name][AT_LEAST]) >
+             parse_version(plugin_version)):
+        base_version = CLOUDIFY_PLUGINS[plugin_name][AT_LEAST]
+    else:
+        base_version = plugin_version
+    plugin_major_version = base_version.split('.')[0]
     for available_version in CLOUDIFY_PLUGINS[plugin_name][VERSIONS]:
         if available_version.split('.')[0] == plugin_major_version:
             return available_version
-    return plugin_version
-
-
-def load_imports(blueprint: models.Blueprint) -> list:
-    file_name = blueprint_file_name(blueprint)
-    try:
-        with open(file_name, 'r') as blueprint_file:
-            try:
-                imports = yaml.safe_load(blueprint_file)[IMPORTS]
-            except yaml.YAMLError as ex:
-                raise UpdateException(
-                    'Cannot load imports from {0}: {1}'.format(file_name, ex))
-    except FileNotFoundError:
-        raise UpdateException(
-            'Blueprint file {0} does not exist'.format(file_name))
-    return imports
+    return base_version
 
 
 def scan_blueprint(blueprint: models.Blueprint,
@@ -342,11 +438,7 @@ def scan_blueprint(blueprint: models.Blueprint,
         if suggested_is_pinned:
             stats[SUGGESTED_IS_PINNED] += 1
 
-    try:
-        imports = load_imports(blueprint)
-    except UpdateException as ex:
-        print(ex)
-        return None, None, None
+    imports = load_imports(blueprint)
     mappings = {}
     plugins_install_suggestions = {}
     stats = {
@@ -371,6 +463,10 @@ def scan_blueprint(blueprint: models.Blueprint,
                          suggested_is_pinned=is_pinned_version)
             continue
         plugin_in_plan = find_plugin_in_a_plan(blueprint.plan, plugin_name)
+        if not plugin_in_plan:
+            update_stats(suggested_import_from=import_from,
+                         suggested_is_pinned=is_pinned_version)
+            continue
         suggested_version = suggest_version(
             plugin_name, plugin_in_plan[PLUGIN_PACKAGE_VERSION]
         )
@@ -388,7 +484,7 @@ def scan_blueprint(blueprint: models.Blueprint,
             continue
         add_mapping(UPDATES, {
             import_line: {
-                'plugin_name': plugin_name,
+                PLUGIN_NAME: plugin_name,
                 CURRENT_VERSION: plugin_in_plan[PLUGIN_PACKAGE_VERSION],
                 SUGGESTED_VERSION: suggested_version,
             }
@@ -398,7 +494,148 @@ def scan_blueprint(blueprint: models.Blueprint,
     return mappings, stats, plugins_install_suggestions
 
 
-def printout_scanning_stats(mappings: dict, stats: dict):
+def get_imports(blueprint_file: typing.TextIO) -> dict:
+    level = 0
+    imports_token = None
+    import_lines = {}
+    blueprint_file.seek(0, 0)
+    for token in yaml.scan(blueprint_file):
+        if isinstance(token, (yaml.tokens.BlockMappingStartToken,
+                              yaml.tokens.BlockSequenceStartToken,
+                              yaml.tokens.FlowMappingStartToken,
+                              yaml.tokens.FlowSequenceStartToken)):
+            level += 1
+        if isinstance(token, (yaml.tokens.BlockEndToken,
+                              yaml.tokens.FlowMappingEndToken,
+                              yaml.tokens.FlowSequenceEndToken)):
+            level -= 1
+        if level == 1:
+            if isinstance(token, yaml.tokens.ScalarToken) and \
+                    token.value == 'imports':
+                imports_token = token
+            elif imports_token and \
+                    isinstance(token, yaml.tokens.ScalarToken):
+                break
+        elif imports_token and level == 2 and \
+                isinstance(token, yaml.tokens.ScalarToken):
+            import_lines[token.value] = {
+                START_POS: token.start_mark.index,
+                END_POS: token.end_mark.index,
+            }
+    return import_lines
+
+
+def write_updated_blueprint(input_file_name: str, output_file_name: str,
+                            import_updates: list):
+    try:
+        with open(input_file_name, 'r') as input_file:
+            with open(output_file_name, 'w') as output_file:
+                for idx, update in enumerate(import_updates):
+                    content = input_file.read(update[START_POS] -
+                                              input_file.tell())
+                    output_file.write(content)
+                    output_file.write(update[REPLACEMENT])
+                    content = input_file.read(update[END_POS] -
+                                              update[START_POS] + 1)
+                    output_file.write(' # was: {0}'.format(content))
+                content = input_file.read()
+                output_file.write(content)
+    except (FileNotFoundError, PermissionError) as ex:
+        raise UpdateException('Cannot update blueprint file source {0}, '
+                              'destination {1}: {2}'.format(
+                                  input_file_name, output_file_name, ex))
+
+
+def write_blueprint_diff(from_file_name: str, to_file_name: str,
+                         diff_file_name: str):
+    def file_mtime(path):
+        t = datetime.fromtimestamp(stat(path).st_mtime,
+                                   timezone.utc)
+        return t.astimezone().isoformat()
+
+    try:
+        with open(from_file_name, 'r') as from_file:
+            from_lines = from_file.readlines()
+    except (FileNotFoundError, PermissionError) as ex:
+        raise UpdateException('Cannot read a blueprint file {0}: {1}'.format(
+                              from_file_name, ex))
+    try:
+        with open(to_file_name, 'r') as to_file:
+            to_lines = to_file.readlines()
+    except (FileNotFoundError, PermissionError) as ex:
+        raise UpdateException('Cannot read a blueprint file {0}: {1}'.format(
+                              from_file_name, ex))
+    diff = difflib.context_diff(
+        from_lines,
+        to_lines,
+        from_file_name,
+        to_file_name,
+        file_mtime(from_file_name),
+        file_mtime(to_file_name)
+    )
+    try:
+        with open(diff_file_name, 'w') as diff_file:
+            diff_file.writelines(diff)
+    except (FileNotFoundError, PermissionError) as ex:
+        raise UpdateException('Cannot write a diff file {0}: {1}'.format(
+                              diff_file_name, ex))
+    print('An diff file was generated for your change: {0}'.format(
+          diff_file_name))
+
+
+def correct_blueprint(blueprint: models.Blueprint,
+                      plugin_names: tuple,
+                      mappings: dict) -> str:
+    def line_replacement(mapping_spec: dict) -> str:
+        suggested_version = mapping_spec.get(SUGGESTED_VERSION)
+        next_major_version = int(suggested_version.split('.')[0]) + 1
+        return 'plugin:{0}?version=>={1},<{2}'.format(
+            mapping_spec.get(PLUGIN_NAME),
+            suggested_version,
+            next_major_version)
+
+    if not mappings:
+        return UNKNOWN
+    if not mappings.get(UPDATES):
+        if mappings.get(UNKNOWN):
+            return UNKNOWN
+        else:
+            return FINE
+    file_name = blueprint_file_name(blueprint)
+    new_file_name = blueprint_updated_file_name(blueprint)
+    try:
+        with open(file_name, 'r') as blueprint_file:
+            import_lines = get_imports(blueprint_file)
+    except (FileNotFoundError, PermissionError) as ex:
+        raise UpdateException('Cannot load blueprint from {0}: {1}'.format(
+            file_name, ex))
+    import_updates = []
+    for mapping_updates in mappings.get(UPDATES):
+        for blueprint_line, spec in mapping_updates.items():
+            if blueprint_line not in import_lines:
+                continue
+            if plugin_names and spec.get(PLUGIN_NAME) not in plugin_names:
+                continue
+            import_updates.append({
+                REPLACEMENT: line_replacement(spec),
+                START_POS: import_lines[blueprint_line][START_POS],
+                END_POS: import_lines[blueprint_line][END_POS],
+            })
+
+    write_updated_blueprint(
+        file_name, new_file_name,
+        sorted(import_updates, key=lambda u: u[START_POS])
+    )
+    write_blueprint_diff(file_name, new_file_name,
+                         blueprint_diff_file_name(blueprint))
+    rename(new_file_name, file_name)
+    print('An updated blueprint has been saved: {0}'.format(file_name))
+    return UPDATES
+
+
+def printout_scanning_stats(total_blueprints: int,
+                            mappings: dict,
+                            stats: dict):
     number_of_unknown_or_updates = len([b for b in mappings.values()
                                         if UPDATES in b or UNKNOWN in b])
     number_of_unknown = len([b for b in mappings.values()
@@ -416,7 +653,7 @@ def printout_scanning_stats(mappings: dict, stats: dict):
     print('\n\n                             SCANNING STATS')
     print('----------------------------------------------+---------------')
     print(' Number blueprints scanned                    | {0:14d}'.
-          format(len(mappings)))
+          format(total_blueprints))
     print('                                              +---------------')
     print('                                              | BEFORE | AFTER')
     print('----------------------------------------------+--------+------')
@@ -443,20 +680,51 @@ def printout_install_suggestions(install_suggestions: dict):
         print('  {0}: {1}'.format(plugin_name, ', '.join(suggested_versions)))
 
 
+def printout_correction_stats(stats):
+    total_blueprints_scanned = sum([len(s) for s in stats.values()])
+    number_of_unknown = len(stats.get(UNKNOWN, []))
+
+    # Collect: the number of blueprints scanned,
+    #          the number of blueprints corrected,
+    #          the number of blueprints that are now valid (total)
+    #          the number of blueprints that still require manual attention !!!
+
+    print('\n\n                   CORRECTION STATS')
+    print('----------------------------------------------+-------')
+    print(' Number blueprints scanned                    | {0:5d}'.
+          format(total_blueprints_scanned))
+    print('----------------------------------------------+-------')
+    print(' Number of blueprints corrected               | {0:5d}'.
+          format(len(stats.get(UPDATES, []))))
+    print(' Number of blueprints that are valid          | {0:5d}'.
+          format(len(stats.get(UPDATES, [])) + len(stats.get(FINE, []))))
+    print(' Number of blueprints that require attention  | {0:5d}'.
+          format(number_of_unknown))
+    if number_of_unknown:
+        print('\n\nMake sure to manually attend to {0} more '
+              'blueprints'.format(number_of_unknown))
+        if number_of_unknown < 20:
+            print('These blueprints require manual attention: {0}'.format(
+                ', '.join(stats.get(UNKNOWN, []))))
+
+
 @click.command()
-@click.option('--tenant', default='default_tenant',
-              help='Tenant name', )
+@click.option('-t', '--tenant-name', 'tenant_names', multiple=True,
+              help='Tenant name; mutually exclusivele with --all-tenants.', )
+@click.option('-a', '--all-tenants', is_flag=True,
+              help='Include resources from all tenants.', )
 @click.option('--plugin-name', 'plugin_names',
               multiple=True, help='Plugin(s) to update (you can provide '
                                   'multiple --plugin-name(s).')
-@click.option('--blueprint', 'blueprint_ids',
+@click.option('-b', '--blueprint', 'blueprint_ids',
               multiple=True, help='Blueprint(s) to update (you can provide '
                                   'multiple --blueprint(s).')
 @click.option('--mapping', 'mapping_file', multiple=False, required=True,
               help='Provide a mapping file generated with ')
 @click.option('--correct', is_flag=True, default=False,
               help='Update the blueprints using provided mapping file.')
-def main(tenant, plugin_names, blueprint_ids, mapping_file, correct):
+def main(tenant_names, all_tenants, plugin_names, blueprint_ids,
+         mapping_file, correct):
     def update_suggestions(new_suggestion: dict):
         for plugin_name, plugin_version in new_suggestion.items():
             if plugin_name not in install_suggestions:
@@ -464,31 +732,83 @@ def main(tenant, plugin_names, blueprint_ids, mapping_file, correct):
             if plugin_version not in install_suggestions[plugin_name]:
                 install_suggestions[plugin_name].append(plugin_version)
 
+    if all_tenants and tenant_names:
+        print('--all-tenants and --tenant-name options are mutually exclusive')
+        exit(1)
+    if not tenant_names:
+        tenant_names = (DEFAULT_TENANT,)
+
     setup_environment()
-    set_tenant_in_app(get_tenant_by_name(tenant))
-    _sm = get_storage_manager()
-    filters = {'id': blueprint_ids} if blueprint_ids else None
-    blueprints = _sm.list(models.Blueprint, filters=filters)
-    mappings, stats, install_suggestions = {}, {}, {}
-    for blueprint in blueprints.items:
-        print('Processing {0} blueprint'.format(blueprint.id))
-        try:
-            blueprint_mappings, blueprint_stats, blueprint_suggestion = \
-                scan_blueprint(blueprint, plugin_names)
-        except UpdateException as ex:
-            print(ex)
-            continue
-        if blueprint_mappings:
-            mappings[blueprint.id] = blueprint_mappings
-        if blueprint_stats:
-            stats[blueprint.id] = blueprint_stats
-        if blueprint_suggestion:
-            update_suggestions(blueprint_suggestion)
-    with open(mapping_file, 'w') as output_file:
-        yaml.dump(mappings, output_file, default_flow_style=False)
-    print('\nSaved mapping file to the {0}'.format(mapping_file))
-    printout_scanning_stats(mappings, stats)
-    printout_install_suggestions(install_suggestions)
+    set_tenant_in_app(get_tenant_by_name(DEFAULT_TENANT))
+    sm = get_storage_manager()
+
+    if all_tenants:
+        tenants = sm.list(models.Tenant, get_all_results=True)
+    else:
+        tenants = [get_tenant_by_name(name) for name in tenant_names]
+    blueprint_filter = {'tenant': None}
+    if blueprint_ids:
+        blueprint_filter['id'] = blueprint_ids
+
+    mappings = load_mappings(mapping_file) if correct else {}
+    stats, install_suggestions, blueprints_processed = {}, {}, 0
+
+    for tenant in tenants:
+        set_tenant_in_app(get_tenant_by_name(tenant.name))
+        sm = get_storage_manager()
+        blueprint_filter['tenant'] = tenant
+        blueprints = sm.list(
+            models.Blueprint,
+            filters=blueprint_filter,
+            get_all_results=True
+        )
+
+        for blueprint in blueprints:
+            print('Processing blueprint of {0}: {1} '.format(tenant.name,
+                                                             blueprint.id))
+            blueprint_identifier = '{0}-{1}'.format(tenant.name, blueprint.id)
+            if correct:
+                try:
+                    result = correct_blueprint(
+                        blueprint,
+                        plugin_names,
+                        mappings.get(tenant.name, {}).get(blueprint.id)
+                    )
+                except UpdateException as ex:
+                    print(ex)
+                else:
+                    blueprints_processed += 1
+                    if result not in stats:
+                        stats[result] = [blueprint_identifier]
+                    else:
+                        stats[result].append(blueprint_identifier)
+            else:
+                try:
+                    a_mapping, a_statistic, a_suggestion = \
+                        scan_blueprint(blueprint, plugin_names)
+                except UpdateException as ex:
+                    print(ex)
+                else:
+                    blueprints_processed += 1
+                    if a_mapping:
+                        if tenant.name not in mappings:
+                            mappings[tenant.name] = {}
+                        mappings[tenant.name][blueprint.id] = a_mapping
+                    if a_statistic:
+                        stats[blueprint_identifier] = a_statistic
+                    if a_suggestion:
+                        update_suggestions(a_suggestion)
+
+    # Wrap it up
+    if correct:
+        printout_correction_stats(stats)
+    else:
+        with open(mapping_file, 'w') as output_file:
+            yaml.dump(mappings, output_file, default_flow_style=False)
+        chmod(mapping_file, 0o644)
+        print('\nSaved mapping file to the {0}'.format(mapping_file))
+        printout_scanning_stats(blueprints_processed, mappings, stats)
+        printout_install_suggestions(install_suggestions)
 
 
 if __name__ == '__main__':
