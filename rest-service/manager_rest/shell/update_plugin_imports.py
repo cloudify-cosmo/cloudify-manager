@@ -577,7 +577,9 @@ def correct_blueprint(blueprint: models.Blueprint,
             suggested_version,
             next_major_version)
 
-    if not mappings or not mappings.get(UPDATES):
+    if not mappings:
+        return UNKNOWN
+    if not mappings.get(UPDATES):
         if mappings.get(UNKNOWN):
             return UNKNOWN
         else:
