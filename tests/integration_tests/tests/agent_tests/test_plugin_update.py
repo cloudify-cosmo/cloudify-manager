@@ -72,6 +72,7 @@ def uploads_mock_plugins(f):
     return wrapper
 
 
+@pytest.mark.usefixtures('allow_agent')
 class TestPluginUpdate(AgentTestWithPlugins):
     versions = ['1.0', '2.0']
     dsl_resources_path = resource(os.path.join('dsl', 'agent_tests'))
