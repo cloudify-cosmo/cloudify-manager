@@ -19,6 +19,7 @@ import difflib
 import typing
 from os.path import exists, join
 from os import chmod, environ, stat, rename
+from functools import lru_cache
 
 import click
 import requests
@@ -330,6 +331,7 @@ def load_mappings(file_name: str) -> list:
     return mappings
 
 
+@lru_cache
 def spec_from_url(url: str) -> tuple:
     try:
         response = requests.get(url)
