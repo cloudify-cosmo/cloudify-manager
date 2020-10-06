@@ -25,7 +25,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from cloudify._compat import text_type
 from cloudify.models_states import VisibilityState
 
-from manager_rest.storage.models_base import db
+from manager_rest.storage.models_base import db, is_orm_attribute
 from manager_rest import manager_exceptions, config, utils
 from manager_rest.utils import (is_administrator,
                                 all_tenants_authorization,
@@ -267,7 +267,7 @@ class SQLStorageManager(object):
         joins = OrderedDict()
         for column_name in columns:
             column = getattr(model_class, column_name)
-            while not column.is_attribute:
+            while not is_orm_attribute(column):
                 join_attr = column.local_attr
 
                 # This is a hack, to deal with the fact that SQLA doesn't
@@ -368,12 +368,12 @@ class SQLStorageManager(object):
         or an association proxy linked to a relationship the class has
         """
         column = getattr(model_class, column_name)
-        if column.is_attribute:
+        if is_orm_attribute(column):
             return column
         else:
             # We need to get to the underlying attribute, so we move on to the
             # next remote_attr until we reach one
-            while not column.remote_attr.is_attribute:
+            while not is_orm_attribute(column.remote_attr):
                 column = column.remote_attr
             # Put a label on the remote attribute with the name of the column
             return column.remote_attr.label(column_name)

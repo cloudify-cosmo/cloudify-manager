@@ -21,7 +21,8 @@ from dateutil import parser as date_parser
 from flask_sqlalchemy import SQLAlchemy, inspect
 from flask_restful import fields as flask_fields
 from sqlalchemy import MetaData
-from sqlalchemy.ext.associationproxy import ASSOCIATION_PROXY
+from sqlalchemy.ext.associationproxy import (ASSOCIATION_PROXY,
+                                             AssociationProxyInstance)
 from sqlalchemy.ext.hybrid import HYBRID_PROPERTY
 from sqlalchemy.orm.interfaces import NOT_EXTENSION
 
@@ -100,7 +101,10 @@ def _get_extension_type(desc):
     This also handles proxy descriptors, looking up the extension type on
     the proxied-to descriptor.
     """
-    extension_type = desc.extension_type
+    if isinstance(desc, AssociationProxyInstance):
+        extension_type = desc.parent.extension_type
+    else:
+        extension_type = desc.extension_type
     if extension_type is NOT_EXTENSION:
         proxied_desc = getattr(desc, 'descriptor', None)
         if proxied_desc is not None:
@@ -202,7 +206,7 @@ class SQLModelBase(db.Model):
             extension_type = _get_extension_type(desc)
             if extension_type is ASSOCIATION_PROXY:
                 # Association proxies must be followed to get their type
-                while not desc.remote_attr.is_attribute:
+                while not is_orm_attribute(desc.remote_attr):
                     desc = desc.remote_attr
 
                 # Get the type of the remote attribute
@@ -239,3 +243,9 @@ class SQLModelBase(db.Model):
         class_name = self.__class__.__name__
         _repr = ' '.join('{0}=`{1}`'.format(k, v) for k, v in id_dict.items())
         return '<{0} {1}>'.format(class_name, _repr)
+
+
+def is_orm_attribute(item):
+    if isinstance(item, AssociationProxyInstance):
+        return False
+    return item.is_attribute
