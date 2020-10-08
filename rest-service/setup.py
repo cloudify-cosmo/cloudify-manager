@@ -25,9 +25,9 @@ install_requires = [
     'flask-migrate>2.2.0,<2.6.0',
     'cloudify-common==5.2.0.dev1',
     'requests>=2.7.0,<3.0.0',
-    'gunicorn==18.0',
-    'PyYAML==3.12',
-    'psutil==3.3.0',
+    'gunicorn==20.0.4',
+    'pyyaml==5.3.1',
+    'psutil==5.7.2',
     'virtualenv==15.1.0',
     'wagon>=0.9.1',
     'python-dateutil==2.5.3',
@@ -39,7 +39,7 @@ install_requires = [
     'pytz==2018.4',
     'packaging==17.1',
     'jsonschema==3.0.0',
-    'SQLAlchemy==1.2.18',
+    'SQLAlchemy==1.3.19',
     'cachetools==3.1.0',
     'email-validator>1.0.0,<2.0.0'
 ]
