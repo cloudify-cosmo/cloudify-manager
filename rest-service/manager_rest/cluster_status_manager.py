@@ -296,10 +296,11 @@ def _get_cluster_service_state(cluster_nodes, cloudify_version, detailed,
             'private_ip': service_node['private_ip'],
             'public_ip': service_node['public_ip'],
             'version': cloudify_version,
-            'services': [
-                service for service in service_node['service_results']
+            'services': {
+                name: service for name, service
+                in service_node['service_results'].items()
                 if _service_expected(service, service_type)
-            ],
+            },
             'metrics': service_node['metric_results'].get(service_type,
                                                           []),
         }
@@ -309,19 +310,13 @@ def _get_cluster_service_state(cluster_nodes, cloudify_version, detailed,
     node_count = len(nodes)
 
     if service_type == CloudifyNodeType.DB:
+        postgresql_name = SERVICE_DESCRIPTIONS['postgresql-9.5']['name']
         if node_count > 1:
             # This is a cluster, remove the postgresql service if present, as
             # patroni will manage it and it will just cause incorrect errors
             for node in nodes.values():
-                pg_idx = None
-                for idx, svc in enumerate(node['services']):
-                    if _get_unit_id(svc).startswith(
-                        'postgresql'
-                    ):
-                        pg_idx = idx
-                        break
-                if pg_idx is not None:
-                    node['services'].pop(pg_idx)
+                if postgresql_name in node['services']:
+                    node['services'].pop(postgresql_name)
 
     for node in nodes.values():
         node['status'] = _get_node_state(node)
@@ -408,7 +403,7 @@ def _get_node_state(node):
         # Absence of failure (and everything else) is not success
         return ServiceStatus.FAIL
 
-    for service in node['services']:
+    for service in node['services'].values():
         if service['status'] != NodeServiceStatus.ACTIVE:
             return ServiceStatus.FAIL
 
@@ -420,8 +415,34 @@ def _get_node_state(node):
 
 
 def _parse_prometheus_results(prometheus_results):
-    service_results = []
+    service_results = {}
     metric_results = {}
+
+    def append_service_result(pm, res):
+        dm = res.get('extra_info', {}).get(pm, {}).get('display_name')
+        if not dm:
+            return
+
+        if dm not in service_results:
+            service_results[dm] = res
+            return
+
+        # If any instance is not active, report the service as such
+        if service_results[dm].get(
+                'status') == NodeServiceStatus.ACTIVE:
+            service_results[dm]['status'] = res['status']
+
+        # Upate the instances part
+        if pm in service_results[dm].get('extra_info', {}):
+            # res' process manager is already present in corresponding result
+            if 'instances' not in service_results[dm]['extra_info'][pm]:
+                service_results[dm]['extra_info'][pm]['instances'] = []
+            # ... append an instance to the list of instances
+            service_results[dm]['extra_info'][pm]['instances'].append(
+                res['extra_info'][pm].get('instances'))
+        else:
+            # if res' process manager is not present in corr. result
+            service_results[dm]['extra_info'][pm] = res['extra_info'][pm]
 
     for result in prometheus_results:
         metric = result.get('metric', {})
@@ -442,7 +463,7 @@ def _parse_prometheus_results(prometheus_results):
 
             # Only process services we care about
             if service:
-                service_results.append(_get_service_status(
+                append_service_result(process_manager, _get_service_status(
                     service_id=service_id,
                     service=service,
                     process_manager=process_manager,
