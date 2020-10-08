@@ -31,6 +31,6 @@ setup(
     install_requires=[
         'cloudify-common==5.2.0.dev1',
         'requests==2.21.0',
-        'PyYAML==3.12'
+        'PyYAML==5.3.1'
     ]
 )
