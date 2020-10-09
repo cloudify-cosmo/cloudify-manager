@@ -114,7 +114,10 @@ class PluginsUpdateManager(object):
         deployments_to_update = [dep.id
                                  for dep in
                                  self._get_deployments_to_update(blueprint_id)]
-        # no_changes_required |= not deployments_to_update
+
+        # Update the blueprint's plan regardless of the deployments_to_update.
+        # Before that change if there were no deployments_to_update,
+        # no_changes_required = True
 
         plugins_update = self._stage_plugin_update(blueprint)
         if not no_changes_required:
