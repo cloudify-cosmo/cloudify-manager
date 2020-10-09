@@ -109,10 +109,6 @@ class PluginsUpdateManager(object):
              _plugin_mappings(blueprint, filters)}
         )
 
-        # Update the blueprint's plan regardless of the deployments_to_update.
-        # Before that change if there were no deployments_to_update,
-        # no_changes_required = True
-
         plugins_update = self._stage_plugin_update(blueprint)
         changes_required = _did_plugins_to_install_change(temp_plan, blueprint.plan)
         if changes_required:
