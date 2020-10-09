@@ -109,8 +109,9 @@ class PluginsUpdateManager(object):
              _plugin_mappings(blueprint, filters)}
         )
 
+        changes_required = _did_plugins_to_install_change(temp_plan,
+                                                          blueprint.plan)
         plugins_update = self._stage_plugin_update(blueprint)
-        changes_required = _did_plugins_to_install_change(temp_plan, blueprint.plan)
         if changes_required:
             plugins_update.deployments_to_update = [
                 dep.id for dep in self._get_deployments_to_update(blueprint_id)
