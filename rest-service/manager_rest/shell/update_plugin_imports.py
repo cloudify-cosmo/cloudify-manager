@@ -15,11 +15,13 @@
 
 import collections
 import difflib
+import shutil
 import typing
 from datetime import datetime, timezone
 from functools import lru_cache
 from os import chmod, environ, stat, rename
-from os.path import exists, join
+from os.path import exists, isfile, join
+from tempfile import TemporaryDirectory, mktemp
 
 import click
 import requests
@@ -34,7 +36,9 @@ from dsl_parser.constants import (WORKFLOW_PLUGINS_TO_INSTALL,
                                   PLUGIN_PACKAGE_VERSION)
 from dsl_parser.models import Plan
 
-from manager_rest.constants import FILE_SERVER_BLUEPRINTS_FOLDER
+from manager_rest.constants import (FILE_SERVER_BLUEPRINTS_FOLDER,
+                                    FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
+                                    SUPPORTED_ARCHIVE_TYPES)
 from manager_rest.flask_utils import (setup_flask_app, set_admin_current_user,
                                       get_tenant_by_name, set_tenant_in_app)
 from manager_rest.storage import models, get_storage_manager
@@ -253,6 +257,31 @@ def blueprint_file_name(blueprint: models.Blueprint) -> str:
         blueprint.tenant.name,
         blueprint.id,
         blueprint.main_file_name
+    )
+
+
+def archive_file_name(blueprint: models.Blueprint) -> str:
+    for arc_type in SUPPORTED_ARCHIVE_TYPES:
+        # attempting to find the archive file on the file system
+        local_path = join(
+            config.instance.file_server_root,
+            FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
+            blueprint.tenant.name,
+            blueprint.id,
+            '{0}.{1}'.format(blueprint.id, arc_type))
+
+        if isfile(local_path):
+            archive_type = arc_type
+            break
+    else:
+        raise UpdateException("Could not find blueprint's archive; "
+                              "Blueprint ID: {0}".format(blueprint.id))
+    return join(
+        config.instance.file_server_root,
+        FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
+        blueprint.tenant.name,
+        blueprint.id,
+        '{0}.{1}'.format(blueprint.id, archive_type)
     )
 
 
@@ -585,6 +614,42 @@ def write_blueprint_diff(from_file_name: str, to_file_name: str,
           diff_file_name))
 
 
+def update_archive(blueprint: models.Blueprint, updated_file_name: str):
+    def format_from_file_name(file_name: str) -> str:
+        file_name_split = file_name.split('.')
+        if file_name_split[-1].upper() == 'ZIP':
+            return 'zip'
+        if file_name_split[-1].upper() == 'TAR':
+            return 'tar'
+        if file_name_split[-1].upper() == 'TBZ2' or \
+                (file_name_split[-2].upper() == 'TAR' and
+                 file_name_split[-1].upper() == 'BZ2'):
+            return 'bztar'
+        if file_name_split[-1].upper() == 'TGZ' or \
+                (file_name_split[-2].upper() == 'TAR' and
+                 file_name_split[-1].upper() == 'GZ'):
+            return 'gztar'
+
+    blueprint_archive_file_name = archive_file_name(blueprint)
+    archive_format = format_from_file_name(blueprint_archive_file_name)
+    if not archive_format:
+        raise UpdateException('Unknown archive format: {0}'.format(
+            blueprint_archive_file_name))
+    archive_base_dir = '.'.join(blueprint.main_file_name.split('.')[:-1])
+    with TemporaryDirectory() as working_dir:
+        shutil.unpack_archive(blueprint_archive_file_name, working_dir)
+        shutil.copy(updated_file_name,
+                    join(working_dir,
+                         archive_base_dir,
+                         blueprint.main_file_name))
+        new_archive_base = mktemp()
+        new_archive_file_name = shutil.make_archive(new_archive_base,
+                                                    archive_format,
+                                                    base_dir=working_dir)
+        rename(new_archive_file_name, blueprint_archive_file_name)
+        chmod(blueprint_archive_file_name, 0o644)
+
+
 def correct_blueprint(blueprint: models.Blueprint,
                       plugin_names: tuple,
                       mappings: dict) -> str:
@@ -630,8 +695,9 @@ def correct_blueprint(blueprint: models.Blueprint,
     )
     write_blueprint_diff(file_name, new_file_name,
                          blueprint_diff_file_name(blueprint))
+    update_archive(blueprint, new_file_name)
     rename(new_file_name, file_name)
-    print('An updated blueprint has been saved: {0}'.format(file_name))
+    # print('An updated blueprint has been saved: {0}'.format(file_name))
     return UPDATES
 
 
