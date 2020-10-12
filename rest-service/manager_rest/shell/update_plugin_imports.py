@@ -697,7 +697,6 @@ def correct_blueprint(blueprint: models.Blueprint,
                          blueprint_diff_file_name(blueprint))
     update_archive(blueprint, new_file_name)
     rename(new_file_name, file_name)
-    # print('An updated blueprint has been saved: {0}'.format(file_name))
     return UPDATES
 
 
