@@ -100,7 +100,7 @@ pipeline {
             container('rpmbuild'){
               sh """
                 cd && mkdir rpmbuild && cd rpmbuild
-                git clone https://github.com/cloudify-cosmo/cloudify-manager.git SOURCES && cd SOURCES
+                git clone --single-branch --branch ${env.BRANCH} https://github.com/cloudify-cosmo/cloudify-manager.git SOURCES && cd SOURCES
               """
 
               echo 'Download sources for RPM spec file & Build RPM'
@@ -160,7 +160,7 @@ pipeline {
                   while read line; do
                     [[ "$line" =~ ^#.* ]] && continue
                     FUTURIZE="${FUTURIZE} ${line}"
-                  done<.circleci/py3fixers
+                  done<jenkins/py3fixers
                   $FUTURIZE>futurize_diffs
                 '''
                 
