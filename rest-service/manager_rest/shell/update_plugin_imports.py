@@ -15,6 +15,7 @@
 
 import collections
 import difflib
+import os
 import shutil
 import typing
 from datetime import datetime, timezone
@@ -637,6 +638,7 @@ def update_archive(blueprint: models.Blueprint, updated_file_name: str):
             blueprint_archive_file_name))
     archive_base_dir = '.'.join(blueprint.main_file_name.split('.')[:-1])
     with TemporaryDirectory() as working_dir:
+        os.chdir(working_dir)
         shutil.unpack_archive(blueprint_archive_file_name, working_dir)
         shutil.copy(updated_file_name,
                     join(working_dir,
@@ -645,7 +647,7 @@ def update_archive(blueprint: models.Blueprint, updated_file_name: str):
         new_archive_base = mktemp()
         new_archive_file_name = shutil.make_archive(new_archive_base,
                                                     archive_format,
-                                                    base_dir=working_dir)
+                                                    root_dir=working_dir)
         rename(new_archive_file_name, blueprint_archive_file_name)
         chmod(blueprint_archive_file_name, 0o644)
 
