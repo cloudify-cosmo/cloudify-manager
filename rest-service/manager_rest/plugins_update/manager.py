@@ -108,17 +108,14 @@ class PluginsUpdateManager(object):
              PLUGIN_MAPPINGS:
              _plugin_mappings(blueprint, filters)}
         )
-        no_changes_required = not _did_plugins_to_install_change(
-            temp_plan, blueprint.plan)
 
-        deployments_to_update = [dep.id
-                                 for dep in
-                                 self._get_deployments_to_update(blueprint_id)]
-        no_changes_required |= not deployments_to_update
-
+        changes_required = _did_plugins_to_install_change(temp_plan,
+                                                          blueprint.plan)
         plugins_update = self._stage_plugin_update(blueprint)
-        if not no_changes_required:
-            plugins_update.deployments_to_update = deployments_to_update
+        if changes_required:
+            plugins_update.deployments_to_update = [
+                dep.id for dep in self._get_deployments_to_update(blueprint_id)
+            ]
             self.sm.update(plugins_update)
 
             temp_blueprint = self._create_temp_blueprint_from(blueprint,
@@ -128,10 +125,9 @@ class PluginsUpdateManager(object):
             self.sm.update(plugins_update)
 
         plugins_update.execution = get_resource_manager(
-            self.sm).update_plugins(plugins_update, no_changes_required)
-        plugins_update.state = (STATES.NO_CHANGES_REQUIRED
-                                if no_changes_required
-                                else STATES.EXECUTING_WORKFLOW)
+            self.sm).update_plugins(plugins_update, not changes_required)
+        plugins_update.state = (STATES.EXECUTING_WORKFLOW if changes_required
+                                else STATES.NO_CHANGES_REQUIRED)
         return self.sm.update(plugins_update)
 
     def finalize(self, plugins_update_id):
