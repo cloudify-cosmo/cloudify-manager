@@ -23,10 +23,6 @@ from flask_restful import marshal
 from flask_restful.utils import unpack
 from flask import request
 from sqlalchemy.util._collections import _LW as sql_alchemy_collection
-from toolz import (
-    dicttoolz,
-    functoolz,
-)
 from voluptuous import (
     All,
     Any,
@@ -307,15 +303,13 @@ def rangeable(func):
             schema(range_arg.split(','))
             for range_arg in range_args
         ]
-        range_filters = {
-            range_param[0]: dicttoolz.valfilter(
-                functoolz.identity,
-                {
-                    'from': range_param[1],
-                    'to': range_param[2],
-                })
-            for range_param in range_params
-        }
+        range_filters = {}
+        for key, range_from, range_to in range_params:
+            range_filters[key] = {}
+            if range_from:
+                range_filters[key]['from'] = range_from
+            if range_to:
+                range_filters[key]['to'] = range_to
         return func(range_filters=range_filters, *args, **kw)
     return create_range_params
 
@@ -446,11 +440,8 @@ def paginate(func):
     @wraps(func)
     def verify_and_create_pagination_params(*args, **kw):
         """Validate pagination parameters and pass them to wrapped function."""
-        pagination_params = dicttoolz.keymap(
-            # Drop leading underscore from keys
-            lambda key: key.lstrip('_'),
-            schema(request.args),
-        )
+        pagination_params = {k.lstrip('_'): v
+                             for k, v in schema(request.args).items()}
         result = func(pagination=pagination_params, *args, **kw)
         return ListResponse(items=result.items, metadata=result.metadata)
 
