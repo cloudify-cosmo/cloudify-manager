@@ -23,8 +23,6 @@ from sqlalchemy import (
     literal_column,
     or_ as sql_or
 )
-from toolz import dicttoolz
-
 from cloudify.models_states import VisibilityState
 
 from manager_rest import manager_exceptions, utils
@@ -425,7 +423,7 @@ class Events(SecuredResource):
         # Keep only keys passed in the _include request argument
         # TBD: Do the projection at the database level
         if _include is not None:
-            event = dicttoolz.keyfilter(lambda key: key in _include, event)
+            event = {k: v for k, v in event.items() if k in _include}
 
         return event
 

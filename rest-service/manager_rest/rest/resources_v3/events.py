@@ -13,8 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from toolz import dicttoolz
-
 from ..resources_v2 import Events as v2_Events
 
 
@@ -63,6 +61,6 @@ class Events(v2_Events):
         # Keep only keys passed in the _include request argument
         # TBD: Do the projection at the database level
         if _include is not None:
-            event = dicttoolz.keyfilter(lambda key: key in _include, event)
+            event = {k: v for k, v in event.items() if k in _include}
 
         return event

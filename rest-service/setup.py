@@ -32,7 +32,6 @@ install_requires = [
     'wagon>=0.9.1',
     'python-dateutil==2.5.3',
     'voluptuous==0.9.3',
-    'toolz==0.8.2',
     'pika==0.11.2',
     'cryptography==2.5.0',
     'psycopg2==2.7.4',
