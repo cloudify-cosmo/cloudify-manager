@@ -13,17 +13,14 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name='cloudify-integration-tests',
-    version='5.0.5',
+    version='5.2.0.dev1',
     author='Cloudify',
     author_email='cosmo-admin@cloudify.co',
-    packages=[
-        'integration_tests',
-        'integration_tests_plugins',
-    ],
+    packages=find_packages(),
     description='Cloudify Integration Tests',
     zip_safe=False,
     install_requires=[
