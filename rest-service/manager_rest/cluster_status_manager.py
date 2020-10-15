@@ -127,10 +127,11 @@ def get_cluster_status(detailed=False):
 
 
 class ConcurrentStatusChecker(object):
-    def __init__(self):
+    def __init__(self, logger):
         self._in_queue = queue.Queue()
         self._out_queue = queue.Queue()
         self._threads = None
+        self.logger = logger
 
     def _worker(self):
         while True:
@@ -147,20 +148,16 @@ class ConcurrentStatusChecker(object):
 
             query_string = ' or '.join(query_parts)
 
-            try:
-                prometheus_response = prometheus_query(
-                    'https://{}:8009/monitoring/'.format(address),
-                    query_string=query_string,
-                    auth=(details['username'], details['password']),
-                    ca_path=details['ca_path'],
-                    timeout=config.monitoring_timeout,
-                )
-            except Exception:
-                # TODO: Log!
-                self._out_queue.put((address, [],))
-            else:
-                self._out_queue.put((address,
-                                     prometheus_response,))
+            prometheus_response = prometheus_query(
+                address,
+                query_string=query_string,
+                logger=self.logger,
+                auth=(details['username'], details['password']),
+                ca_path=details['ca_path'],
+                timeout=config.monitoring_timeout,
+            )
+            self._out_queue.put((address,
+                                 prometheus_response,))
 
     def _initialize_threads(self, number_of_threads):
         self._threads = [
@@ -191,7 +188,9 @@ class ConcurrentStatusChecker(object):
 
 def get_concurrent_status_checker():
     if not hasattr(current_app, 'concurrent_status_checker'):
-        current_app.concurrent_status_checker = ConcurrentStatusChecker()
+        current_app.concurrent_status_checker = ConcurrentStatusChecker(
+            logger=current_app.logger,
+        )
     return current_app.concurrent_status_checker
 
 
