@@ -22,6 +22,6 @@ setup(
     packages=['requires_old_package_plugin'],
     install_requires=[
         # The old repo/package before we merged it to cloudify-common
-        "cloudify-common==20.12.15.dev1"
+        "cloudify-common==5.2.0.dev1"
     ]
 )
