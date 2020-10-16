@@ -63,9 +63,8 @@ def _get_postgres_db_uri(manager_ip, driver):
     )
     if config.instance.postgresql_ssl_enabled:
         params = {}
-        ssl_mode = 'verify-ca'
+        ssl_mode = 'verify-full'
         if config.instance.postgresql_ssl_client_verification:
-            ssl_mode = 'verify-full'
             params.update({
                 'sslcert': config.instance.postgresql_ssl_cert_path,
                 'sslkey': config.instance.postgresql_ssl_key_path,
