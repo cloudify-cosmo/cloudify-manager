@@ -246,8 +246,9 @@ def setup_environment():
         if value is not None:
             environ[envvar] = value
 
-    config.instance.load_configuration()
     app = setup_flask_app()
+    with app.app_context():
+        config.instance.load_configuration()
     set_admin_current_user(app)
 
 

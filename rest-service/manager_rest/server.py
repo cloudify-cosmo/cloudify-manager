@@ -1,27 +1,16 @@
-#########
-# Copyright (c) 2013-2019 Cloudify Platform Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 import traceback
 import os
 import yaml
 from contextlib import contextmanager
+import time
 
 from flask_restful import Api
 from flask import Flask, jsonify, Blueprint, current_app
 from flask_security import Security
+from sqlalchemy import event
 from sqlalchemy.exc import OperationalError
+from sqlalchemy.orm.session import close_all_sessions
+from sqlalchemy.pool import Pool
 from werkzeug.exceptions import InternalServerError
 
 from cloudify._compat import StringIO
@@ -46,6 +35,11 @@ SQL_DIALECT = 'postgresql'
 
 
 app_errors = Blueprint('app_errors', __name__)
+
+
+@event.listens_for(Pool, 'close')
+def handle_db_failover(conn, conn_record):
+    current_app.update_db_uri()
 
 
 @app_errors.app_errorhandler(manager_exceptions.ManagerException)
@@ -77,26 +71,41 @@ def internal_error(e):
 
 
 def cope_with_db_failover():
-    try:
-        db.engine.execute('SELECT 1')
-    except OperationalError as err:
-        current_app.logger.warning(
-            'Database reconnection occurred. This is expected to happen when '
-            'there has been a recent failover or DB proxy restart. '
-            'Error was: {err}'.format(err=err)
-        )
+    max_attempts = 10
+    for attempt in range(1, max_attempts + 1):
+        try:
+            standby = db.engine.execute(
+                'SELECT pg_is_in_recovery()').fetchall()[0][0]
+            if standby:
+                # This is a hot standby, we need to fail over
+                current_app.logger.warning(
+                    'Connection to standby db connected, reconnecting. '
+                    'Attempt number %s/%s', attempt, max_attempts)
+                current_app.update_db_uri()
+                close_all_sessions()
+                time.sleep(0.2)
+            else:
+                break
+        except OperationalError as err:
+            current_app.logger.warning(
+                'Database reconnection occurred. This is expected to happen '
+                'when there has been a recent failover or DB proxy restart. '
+                'Attempt numer %s/%s. Error was: %s',
+                attempt, max_attempts, err,
+            )
 
 
 class CloudifyFlaskApp(Flask):
     def __init__(self, load_config=True):
         _detect_debug_environment()
         super(CloudifyFlaskApp, self).__init__(__name__)
-        if load_config:
-            config.instance.load_configuration()
-        self._set_sql_alchemy()
+        with self.app_context():
+            if load_config:
+                config.instance.load_configuration()
+            self._set_sql_alchemy()
 
         # This must be the first before_request, otherwise db access may break
-        # after db failovers or db proxy restarts
+        # after db failovers
         self.before_request(cope_with_db_failover)
 
         # These two need to be called after the configuration was loaded
@@ -137,13 +146,25 @@ class CloudifyFlaskApp(Flask):
         self.token_serializer = self.extensions[
             'security'].remember_token_serializer
 
+    def update_db_uri(self):
+        current = self.config.get('SQLALCHEMY_DATABASE_URI')
+        self.config['SQLALCHEMY_DATABASE_URI'] = config.instance.db_url
+        if current != self.config['SQLALCHEMY_DATABASE_URI']:
+            new_host = self.config['SQLALCHEMY_DATABASE_URI']\
+                .split('@')[1]\
+                .split('/')[0]
+            if current:
+                self.logger.warning('DB leader changed: %s', new_host)
+            else:
+                self.logger.info('DB leader set to %s', new_host)
+
     def _set_sql_alchemy(self):
         """
         Set SQLAlchemy specific configurations, init the db object and create
         the tables if necessary
         """
         self.config['SQLALCHEMY_POOL_SIZE'] = 1
-        self.config['SQLALCHEMY_DATABASE_URI'] = config.instance.db_url
+        self.update_db_uri()
         self.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
         db.init_app(self)  # Prepare the app for use with flask-sqlalchemy
 
