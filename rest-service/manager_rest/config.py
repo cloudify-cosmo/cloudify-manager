@@ -2,10 +2,13 @@ import os
 import yaml
 import atexit
 import jsonschema
+import time
+import requests
 
 from json import dump
 from datetime import datetime
 from flask_security import current_user
+from flask import current_app
 
 from manager_rest.manager_exceptions import (
     ConflictError,
@@ -243,6 +246,39 @@ class Config(object):
 
     @property
     def db_url(self):
+        if isinstance(self.postgresql_host, list):
+            host = None
+            while not host:
+                for candidate in self.postgresql_host:
+                    try:
+                        result = requests.get(
+                            'https://{}:8008'.format(candidate),
+                            verify=self.postgresql_ca_cert_path,
+                        )
+                        current_app.logger.debug(
+                            'Checking DB for leader selection. '
+                            '%s has status %s',
+                            candidate,
+                            result.status_code,
+                        )
+                        if result.status_code == 200:
+                            current_app.logger.debug(
+                                'Selected %s as DB leader.',
+                                candidate,
+                            )
+                            host = candidate
+                            break
+                    except Exception as err:
+                        current_app.logger.error(
+                            'Error trying to get state of DB %s: %s',
+                            candidate,
+                            err,
+                        )
+                # No healthy DB found, wait before trying again
+                time.sleep(1)
+        else:
+            host = self.postgresql_host
+
         params = {}
         params.update(self.postgresql_connection_options)
         if self.postgresql_ssl_enabled:
@@ -257,12 +293,12 @@ class Config(object):
                 'sslrootcert': self.postgresql_ca_cert_path
             })
 
-        db_url = '{0}://{1}:{2}@{3}/{4}'.format(
-            SQL_DIALECT,
-            self.postgresql_username,
-            self.postgresql_password,
-            self.postgresql_host,
-            self.postgresql_db_name
+        db_url = '{dialect}://{username}:{password}@{host}/{db_name}'.format(
+            dialect=SQL_DIALECT,
+            username=self.postgresql_username,
+            password=self.postgresql_password,
+            host=host,
+            db_name=self.postgresql_db_name
         )
         if any(params.values()):
             query = '&'.join('{0}={1}'.format(key, value)

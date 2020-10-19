@@ -1,20 +1,3 @@
-#########
-# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
-from collections import namedtuple
-
 from flask import Flask
 from flask_migrate import Migrate
 from flask_security import Security
@@ -38,8 +21,9 @@ def setup_flask_app(manager_ip='localhost',
     :return: A Flask app
     """
     app = Flask(__name__)
-    db_uri = _get_postgres_db_uri(manager_ip, driver)
-    app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
+    manager_config.load_configuration(from_db=False)
+    with app.app_context():
+        app.config['SQLALCHEMY_DATABASE_URI'] = manager_config.db_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['ENV'] = 'production'
     set_flask_security_config(app, hash_salt, secret_key)
@@ -48,52 +32,6 @@ def setup_flask_app(manager_ip='localhost',
     db.init_app(app)
     app.app_context().push()
     return app
-
-
-def _get_postgres_db_uri(manager_ip, driver):
-    """Get a valid SQLA DB URI"""
-    dialect = 'postgresql+{0}'.format(driver) if driver else 'postgres'
-    conf = get_postgres_conf(manager_ip)
-    conn_string = '{dialect}://{username}:{password}@{host}/{db_name}'.format(
-        dialect=dialect,
-        username=conf.username,
-        password=conf.password,
-        host=conf.host,
-        db_name=conf.db_name
-    )
-    if config.instance.postgresql_ssl_enabled:
-        params = {}
-        ssl_mode = 'verify-full'
-        if config.instance.postgresql_ssl_client_verification:
-            params.update({
-                'sslcert': config.instance.postgresql_ssl_cert_path,
-                'sslkey': config.instance.postgresql_ssl_key_path,
-            })
-        params.update({
-            'sslmode': ssl_mode,
-            'sslrootcert': config.instance.postgresql_ca_cert_path
-        })
-        if any(params.values()):
-            query = '&'.join('{0}={1}'.format(key, value)
-                             for key, value in params.items()
-                             if value)
-            conn_string = '{0}?{1}'.format(conn_string, query)
-    return conn_string
-
-
-def get_postgres_conf(manager_ip='localhost'):
-    """Return a namedtuple with info used to connect to cloudify's PG DB
-    """
-    # can't load from db yet - we're just loading the settings to connect to
-    # the db at all
-    manager_config.load_configuration(from_db=False)
-    conf = namedtuple('PGConf', 'host username password db_name')
-    return conf(
-        host=manager_config.postgresql_host or manager_ip,
-        username=manager_config.postgresql_username or 'cloudify',
-        password=manager_config.postgresql_password or 'cloudify',
-        db_name=manager_config.postgresql_db_name or 'cloudify_db',
-    )
 
 
 def set_flask_security_config(app, hash_salt=None, secret_key=None):
