@@ -227,38 +227,18 @@ class PluginsId(resources_v2_1.PluginsId):
 
         sm = get_storage_manager()
         plugin = sm.get(models.Plugin, plugin_id)
-        filters = {'_plugin_fk': plugin._storage_id}
 
+        agent, manager = None, None
         if agent_name:
             agent = sm.get(
                 models.Agent, None, filters={'name': agent_name})
-            agent_id = agent._storage_id
-            manager_id = None
-            filters['_agent_fk'] = agent_id
         elif manager_name:
             manager = sm.get(
-                models.Manager, None,
-                filters={'hostname': manager_name})
-            agent_id = None
-            manager_id = manager.id
-            filters['_manager_fk'] = manager_id
+                models.Manager, None, filters={'hostname': manager_name})
 
-        pstate = sm.get(
-            models._PluginState, None, filters=filters, fail_silently=True)
-
-        if pstate is None:
-            pstate = models._PluginState(
-                _plugin_fk=plugin._storage_id,
-                _agent_fk=agent_id,
-                _manager_fk=manager_id,
-                state=request_dict['state'],
-                error=request_dict.get('error')
-            )
-            sm.put(pstate)
-        else:
-            pstate.state = request_dict['state']
-            pstate.error = request_dict.get('error')
-            sm.update(pstate)
+        get_resource_manager().set_plugin_state(
+            plugin=plugin, manager=manager, agent=agent,
+            state=request_dict['state'], error=request_dict.get('error'))
 
         if plugin:
             return sm.update(plugin)
