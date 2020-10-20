@@ -94,8 +94,8 @@ class Config(object):
     ldap_timeout = Setting('ldap_timeout')
     ldap_ca_path = Setting('ldap_ca_path')
 
-    file_server_root = Setting('file_server_root')
-    file_server_url = Setting('file_server_url')
+    file_server_root = Setting('file_server_root', default=None)
+    file_server_url = Setting('file_server_url', default=None)
 
     maintenance_folder = Setting('maintenance_folder')
     rest_service_log_level = Setting('rest_service_log_level')
