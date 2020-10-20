@@ -1,7 +1,6 @@
 import json
-import tempfile
 
-from os import rename, sep
+from os import sep
 from os.path import join
 
 from cloudify.utils import get_manager_name, setup_logger
@@ -55,7 +54,6 @@ def _render_template(template, destination, **kwargs):
     :param destination: Destination file name.
     :param kwargs: Arguments for the template render."""
     content = template.format(**kwargs)
-    with tempfile.NamedTemporaryFile(delete=False) as f:
+    with open(destination, 'w') as f:
         f.write(content)
-    rename(f.name, destination)
     return destination
