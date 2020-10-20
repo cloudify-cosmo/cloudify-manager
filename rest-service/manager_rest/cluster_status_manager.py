@@ -320,9 +320,6 @@ def _get_cluster_service_state(cluster_nodes, cloudify_version, detailed,
     for node in nodes.values():
         node['status'] = _get_node_state(node)
 
-    for node in nodes.values():
-        node['status'] = _get_node_state(node)
-
     if service_type == CloudifyNodeType.MANAGER:
         quorum = 1
     else:
