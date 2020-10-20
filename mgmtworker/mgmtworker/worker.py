@@ -42,11 +42,11 @@ from cloudify_agent.worker import (
 from cloudify_agent import worker as agent_worker
 
 from .hooks import HookConsumer
+from .monitoring import update_manager_targets
 try:
     from cloudify_premium import syncthing_utils
 except ImportError:
     syncthing_utils = None
-
 
 DEFAULT_MAX_WORKERS = 10
 logger = logging.getLogger('mgmtworker')
@@ -132,21 +132,23 @@ class MgmtworkerServiceTaskConsumer(ServiceTaskConsumer):
 
     def manager_added(self):
         logger.info('A manager has been added to the cluster, updating '
-                    'Syncthing')
-        syncthing_utils.mgmtworker_update_devices(
-            rest_client=get_rest_client(
-                tenant='default_tenant',
-                api_token=get_admin_api_token()
-            ))
+                    'Cluster (Syncthing and Monitoring)')
+        rest_client = get_rest_client(
+            tenant='default_tenant',
+            api_token=get_admin_api_token()
+        )
+        syncthing_utils.mgmtworker_update_devices(rest_client=rest_client)
+        update_manager_targets(rest_client)
 
     def manager_removed(self):
         logger.info('A manager has been removed from the cluster, updating '
-                    'Syncthing')
-        syncthing_utils.mgmtworker_update_devices(
-            rest_client=get_rest_client(
-                tenant='default_tenant',
-                api_token=get_admin_api_token()
-            ))
+                    'Cluster (Syncthing and Monitoring)')
+        rest_client = get_rest_client(
+            tenant='default_tenant',
+            api_token=get_admin_api_token()
+        )
+        syncthing_utils.mgmtworker_update_devices(rest_client=rest_client)
+        update_manager_targets(rest_client)
 
     def delete_source_plugins_task(self, deployment_id, tenant_name):
         dep_dir = os.path.join(sys.prefix, 'source_plugins',
