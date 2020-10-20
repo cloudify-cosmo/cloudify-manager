@@ -1500,11 +1500,8 @@ class ResourceManager(object):
             for name in existing_manager_names:
                 manager = self.sm.get(
                     models.Manager, None, filters={'hostname': name})
-                self.sm.put(models._PluginState(
-                    _plugin_fk=plugin._storage_id,
-                    _manager_fk=manager.id,
-                    state=PluginInstallationState.PENDING,
-                ))
+                self.set_plugin_state(plugin, manager=manager,
+                                      state=PluginInstallationState.PENDING)
 
         if agent_names:
             agents = self.sm.list(models.Agent, filters={'name': agent_names})
@@ -1516,17 +1513,30 @@ class ResourceManager(object):
                     .format(', '.join(missing_agents)))
 
             for name in existing_agent_names:
-                agent = self.sm.get(
-                    models.Agent, None, filters={'name': name})
-                self.sm.put(models._PluginState(
-                    _plugin_fk=plugin._storage_id,
-                    _agent_fk=agent._storage_id,
-                    state=PluginInstallationState.PENDING,
-                ))
+                agent = self.sm.get(models.Agent, None, filters={'name': name})
+                self.set_plugin_state(plugin, agent=agent,
+                                      state=PluginInstallationState.PENDING)
 
         if agent_names or manager_names:
             workflow_executor.install_plugin(plugin)
         return plugin
+
+    def set_plugin_state(self, plugin, state,
+                         manager=None, agent=None, error=None):
+        filters = {
+            '_plugin_fk': plugin._storage_id,
+            '_agent_fk': agent._storage_id if agent else None,
+            '_manager_fk': manager.id if manager else None
+        }
+        pstate = self.sm.get(models._PluginState, None, filters=filters,
+                             fail_silently=True)
+        if pstate is None:
+            pstate = models._PluginState(state=state, error=error, **filters)
+            self.sm.put(pstate)
+        else:
+            pstate.state = state
+            pstate.error = error
+            self.sm.update(pstate)
 
     def validate_plugin_is_installed(self, plugin):
         """
