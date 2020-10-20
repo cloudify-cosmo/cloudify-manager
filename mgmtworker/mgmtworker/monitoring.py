@@ -1,19 +1,65 @@
-import logging
-logger = logging.getLogger('mgmtworker')
+import json
+
+from jinja2 import Template
+from os import close, rename, sep
+from os.path import join
+from tempfile import mkstemp
+
+from cloudify.utils import setup_logger
+
+logger = setup_logger('cloudify.monitoring')
+
+PRIVATE_IP = 'private_ip'
+PUBLIC_IP = 'public_ip'
+PROMETHEUS_CONFIG_DIR = join(sep, 'etc', 'prometheus', )
+PROMETHEUS_TARGETS_DIR = join(PROMETHEUS_CONFIG_DIR, 'targets')
+PROMETHEUS_TARGETS_TEMPLATE = '- targets: {{ target_addresses }}\n'\
+                              '  labels: {{ target_labels }}'
 
 
-def manager_added(rest_client=None):
-    manager_client = rest_client.manager
-    logger.info('ManagerClient (%s): %s', type(manager_client), manager_client)
+def update_manager_targets(rest_client):
+    """Update other managers in Prometheus target file."""
+    manager_targets = []
+    for private_ip in _other_managers_private_ips(rest_client.manager):
+        manager_targets.append('{0}:8009'.format(private_ip))
+    logger.info('Other managers will be monitored: %s', manager_targets)
+    file_name = _deploy_prometheus_targets('other_managers.yml',
+                                           manager_targets, {})
+    logger.debug('Prometheus configuration successfully deployed: %s',
+                 file_name)
+
+
+def _other_managers_private_ips(manager_client):
+    """Generate other managers' private_ips."""
+    public_ips = [c.value for c in manager_client.get_config()
+                  if c.name == PUBLIC_IP]
     for manager in manager_client.get_managers().items:
-        logger.info('Manager in DB: ', manager)
-    return "MANAGER is {0}:\n{1}\n".format(
-        type(manager_client), manager_client)
+        if manager[PUBLIC_IP] not in public_ips:
+            yield manager[PRIVATE_IP]
 
 
-def manager_removed():
-    pass
+def _deploy_prometheus_targets(destination, targets, labels):
+    """Deploy a target file for prometheus.
+    :param destination: Target file name in targets dir.
+    :param targets: List of targets for prometheus.
+    :param labels: Dict of labels with values for prometheus."""
+    return _render_template(
+        Template(PROMETHEUS_TARGETS_TEMPLATE),
+        join(PROMETHEUS_TARGETS_DIR, destination),
+        target_addresses=json.dumps(targets),
+        target_labels=json.dumps(labels),
+    )
 
 
-def _render_other_managers(ip_addresses):
-    pass
+def _render_template(template, destination, **kwargs):
+    """Render a Jinja2 template into a file destination.
+    :param template: A Jinja Template to be rendered
+    :param destination: Destination file name.
+    :param kwargs: Arguments for the template render."""
+    content = template.render(kwargs)
+    fd, file_path = mkstemp()
+    close(fd)
+    with open(file_path, 'w') as f:
+        f.write(content)
+    rename(file_path, destination)
+    return destination
