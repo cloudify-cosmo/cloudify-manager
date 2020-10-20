@@ -5,12 +5,12 @@ from os import close, rename, sep
 from os.path import join
 from tempfile import mkstemp
 
-from cloudify.utils import setup_logger
+from cloudify.utils import get_manager_name, setup_logger
 
 logger = setup_logger('cloudify.monitoring')
 
 PRIVATE_IP = 'private_ip'
-PUBLIC_IP = 'public_ip'
+HOSTNAME = 'hostname'
 PROMETHEUS_CONFIG_DIR = join(sep, 'etc', 'prometheus', )
 PROMETHEUS_TARGETS_DIR = join(PROMETHEUS_CONFIG_DIR, 'targets')
 PROMETHEUS_TARGETS_TEMPLATE = '- targets: {{ target_addresses }}\n'\
@@ -31,10 +31,9 @@ def update_manager_targets(rest_client):
 
 def _other_managers_private_ips(manager_client):
     """Generate other managers' private_ips."""
-    public_ips = [c.value for c in manager_client.get_config()
-                  if c.name == PUBLIC_IP]
+    my_hostname = get_manager_name()
     for manager in manager_client.get_managers().items:
-        if manager[PUBLIC_IP] not in public_ips:
+        if manager[HOSTNAME] != my_hostname:
             yield manager[PRIVATE_IP]
 
 
