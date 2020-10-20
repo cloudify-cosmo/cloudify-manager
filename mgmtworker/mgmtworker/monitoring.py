@@ -32,7 +32,7 @@ def update_manager_targets(rest_client):
 def _other_managers_private_ips(manager_client):
     """Generate other managers' private_ips."""
     my_hostname = get_manager_name()
-    for manager in manager_client.get_managers().items:
+    for manager in manager_client.get_managers():
         if manager[HOSTNAME] != my_hostname:
             yield manager[PRIVATE_IP]
 
