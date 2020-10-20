@@ -102,6 +102,8 @@ class CloudifyFlaskApp(Flask):
         with self.app_context():
             if load_config:
                 config.instance.load_configuration()
+            else:
+                config.instance.can_load_from_db = False
             self._set_sql_alchemy()
 
         # This must be the first before_request, otherwise db access may break
