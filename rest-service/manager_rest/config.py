@@ -1,9 +1,10 @@
-import os
-import yaml
 import atexit
+import itertools
 import jsonschema
-import time
+import os
 import requests
+import time
+import yaml
 
 from json import dump
 from datetime import datetime
@@ -94,8 +95,8 @@ class Config(object):
     ldap_timeout = Setting('ldap_timeout')
     ldap_ca_path = Setting('ldap_ca_path')
 
-    file_server_root = Setting('file_server_root')
-    file_server_url = Setting('file_server_url')
+    file_server_root = Setting('file_server_root', default=None)
+    file_server_url = Setting('file_server_url', default=None)
 
     maintenance_folder = Setting('maintenance_folder')
     rest_service_log_level = Setting('rest_service_log_level')
@@ -246,39 +247,7 @@ class Config(object):
 
     @property
     def db_url(self):
-        if isinstance(self.postgresql_host, list):
-            host = None
-            while not host:
-                for candidate in self.postgresql_host:
-                    try:
-                        result = requests.get(
-                            'https://{}:8008'.format(candidate),
-                            verify=self.postgresql_ca_cert_path,
-                        )
-                        current_app.logger.debug(
-                            'Checking DB for leader selection. '
-                            '%s has status %s',
-                            candidate,
-                            result.status_code,
-                        )
-                        if result.status_code == 200:
-                            current_app.logger.debug(
-                                'Selected %s as DB leader.',
-                                candidate,
-                            )
-                            host = candidate
-                            break
-                    except Exception as err:
-                        current_app.logger.error(
-                            'Error trying to get state of DB %s: %s',
-                            candidate,
-                            err,
-                        )
-                # No healthy DB found, wait before trying again
-                time.sleep(1)
-        else:
-            host = self.postgresql_host
-
+        host = self._find_db_host(self.postgresql_host)
         params = {}
         params.update(self.postgresql_connection_options)
         if self.postgresql_ssl_enabled:
@@ -306,6 +275,34 @@ class Config(object):
                              if value)
             db_url = '{0}?{1}'.format(db_url, query)
         return db_url
+
+    def _find_db_host(self, postgresql_host):
+        if not isinstance(postgresql_host, list):
+            return postgresql_host
+
+        for i, candidate in enumerate(itertools.cycle(postgresql_host)):
+            try:
+                result = requests.get(
+                    'https://{}:8008'.format(candidate),
+                    verify=self.postgresql_ca_cert_path,
+                )
+            except Exception as err:
+                current_app.logger.error(
+                    'Error trying to get state of DB %s: %s', candidate, err)
+                continue
+
+            current_app.logger.debug(
+                'Checking DB for leader selection. %s has status %s',
+                candidate,
+                result.status_code,
+            )
+            if result.status_code == 200:
+                current_app.logger.debug('Selected %s as DB leader', candidate)
+                return candidate
+
+            if i and i % len(postgresql_host) == 0:
+                # No DB found after trying all once, wait before trying again
+                time.sleep(1)
 
     def to_dict(self):
         config_dict = vars(self)
