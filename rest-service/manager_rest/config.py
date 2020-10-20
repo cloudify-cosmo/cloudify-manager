@@ -3,6 +3,7 @@ import itertools
 import jsonschema
 import os
 import requests
+import tempfile
 import time
 import yaml
 
@@ -172,15 +173,25 @@ class Config(object):
         for conf_value in stored_config:
             setattr(self, conf_value.name, conf_value.value)
 
-        stored_brokers = session.query(models.RabbitMQBroker).all()
+        stored_brokers = session.query(
+            models.RabbitMQBroker.host,
+            models.RabbitMQBroker.management_host,
+            models.RabbitMQBroker.username,
+            models.RabbitMQBroker.password,
+            models.Certificate.value.label('ca_cert_value')
+        ).join(models.Certificate).all()
         self.amqp_host = [b.host for b in stored_brokers]
         self.amqp_management_host = [b.management_host for b in stored_brokers]
+
+        # all brokers will use the same credentials and ca cert
+        # (rabbitmq replicates users)
         for broker in stored_brokers:
-            # all brokers will use the same credentials
-            # (rabbitmq replicates users)
             self.amqp_username = broker.username
             self.amqp_password = broker.password
-            self.amqp_ca_path = broker.write_ca_cert()
+        if stored_brokers:
+            with tempfile.NamedTemporaryFile(delete=False, mode='w') as f:
+                f.write(stored_brokers[0].ca_cert_value)
+            self.amqp_ca_path = f.name
             atexit.register(os.unlink, self.amqp_ca_path)
 
         session.close()
