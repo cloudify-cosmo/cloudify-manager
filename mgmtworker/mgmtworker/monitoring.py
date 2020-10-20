@@ -1,7 +1,6 @@
 import json
 import tempfile
 
-from jinja2 import Template
 from os import rename, sep
 from os.path import join
 
@@ -13,8 +12,8 @@ PRIVATE_IP = 'private_ip'
 HOSTNAME = 'hostname'
 PROMETHEUS_CONFIG_DIR = join(sep, 'etc', 'prometheus', )
 PROMETHEUS_TARGETS_DIR = join(PROMETHEUS_CONFIG_DIR, 'targets')
-PROMETHEUS_TARGETS_TEMPLATE = '- targets: {{ target_addresses }}\n'\
-                              '  labels: {{ target_labels }}'
+PROMETHEUS_TARGETS_TEMPLATE = '- targets: {target_addresses}\n'\
+                              '  labels: {target_labels}'
 
 
 def update_manager_targets(rest_client):
@@ -43,7 +42,7 @@ def _deploy_prometheus_targets(destination, targets, labels):
     :param targets: List of targets for prometheus.
     :param labels: Dict of labels with values for prometheus."""
     return _render_template(
-        Template(PROMETHEUS_TARGETS_TEMPLATE),
+        PROMETHEUS_TARGETS_TEMPLATE,
         join(PROMETHEUS_TARGETS_DIR, destination),
         target_addresses=json.dumps(targets),
         target_labels=json.dumps(labels),
@@ -51,11 +50,11 @@ def _deploy_prometheus_targets(destination, targets, labels):
 
 
 def _render_template(template, destination, **kwargs):
-    """Render a Jinja2 template into a file destination.
-    :param template: A Jinja Template to be rendered
+    """Render a template into a file destination.
+    :param template: A text template to be rendered
     :param destination: Destination file name.
     :param kwargs: Arguments for the template render."""
-    content = template.render(kwargs)
+    content = template.format(**kwargs)
     with tempfile.NamedTemporaryFile(delete=False) as f:
         f.write(content)
     rename(f.name, destination)
