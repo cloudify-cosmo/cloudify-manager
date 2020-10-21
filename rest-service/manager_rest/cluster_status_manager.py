@@ -98,7 +98,7 @@ SERVICE_ASSIGNMENTS = {
 
 QUERY_STRINGS = {
     CloudifyNodeType.DB:
-        '(up{job=~".*postgresql"} == 1 and pg_up{job=~".*postgresql"} == 1)',
+        '(pg_up{job=~".*postgresql"} == 1 and up{job=~".*postgresql"} == 1)',
     CloudifyNodeType.BROKER: '(up{job=~".*rabbitmq"})',
     CloudifyNodeType.MANAGER: '(probe_success{job=~".*http_.+"})',
 }
