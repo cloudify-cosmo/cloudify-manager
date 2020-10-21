@@ -298,7 +298,8 @@ def _get_cluster_service_state(cluster_nodes, cloudify_version, detailed,
             'services': {
                 name: service for name, service
                 in service_node['service_results'].items()
-                if _service_expected(service, service_type)
+                if _service_expected(service, service_type) and
+                _host_matches(service, service_node['private_ip'])
             },
             'metrics': [
                 metric for metric in
@@ -382,8 +383,11 @@ def _service_expected(service, service_type):
     return unit_id in SERVICE_ASSIGNMENTS[service_type]
 
 
-def _host_matches(metric, node_private_ip):
-    return metric.get('metric_name', '').endswith(node_private_ip)
+def _host_matches(struct, node_private_ip):
+    if struct.get('metric_name'):
+        return struct.get('metric_name').endswith(node_private_ip)
+    else:
+        return struct.get('host', '') == node_private_ip
 
 
 def _get_nodes_of_type(cluster_nodes, service_type):
@@ -440,9 +444,14 @@ def _parse_prometheus_results(prometheus_results):
             # res' process manager is already present in corresponding result
             if 'instances' not in service_results[dm]['extra_info'][pm]:
                 service_results[dm]['extra_info'][pm]['instances'] = []
-            # ... append an instance to the list of instances
-            service_results[dm]['extra_info'][pm]['instances'].extend(
-                res['extra_info'][pm].get('instances'))
+            # keep only one instance per host
+            for res_instance in res['extra_info'][pm].get('instances'):
+                if res_instance.get('host') not in [
+                        instance.get('host') for instance in
+                        service_results[dm]['extra_info'][pm]['instances']]:
+                    # ... append an instance to the list of instances
+                    service_results[dm]['extra_info'][pm]['instances'].append(
+                        res_instance)
         else:
             # if res' process manager is not present in corr. result
             service_results[dm]['extra_info'][pm] = res['extra_info'][pm]
@@ -471,6 +480,7 @@ def _parse_prometheus_results(prometheus_results):
                     service=service,
                     process_manager=process_manager,
                     is_running=healthy,
+                    host=metric.get('host'),
                 ))
         else:
             if metric.get('job'):
@@ -485,10 +495,13 @@ def _parse_prometheus_results(prometheus_results):
     return service_results, metric_results
 
 
-def _get_service_status(service_id, service, process_manager, is_running):
+def _get_service_status(service_id, service,
+                        process_manager, is_running, host):
+
     return {
         'status': (NodeServiceStatus.ACTIVE if is_running
                    else NodeServiceStatus.INACTIVE),
+        'host': host,
         'extra_info': {
             process_manager: {
                 'instances': [
