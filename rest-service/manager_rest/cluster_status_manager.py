@@ -98,7 +98,7 @@ SERVICE_ASSIGNMENTS = {
 
 QUERY_STRINGS = {
     CloudifyNodeType.DB:
-        '(up{job=~".*postgresql"} == 1 and pg_up{job=~".*postgresql"} == 1)',
+        '(pg_up{job=~".*postgresql"} == 1 and up{job=~".*postgresql"} == 1)',
     CloudifyNodeType.BROKER: '(up{job=~".*rabbitmq"})',
     CloudifyNodeType.MANAGER: '(probe_success{job=~".*http_.+"})',
 }
@@ -296,12 +296,16 @@ def _get_cluster_service_state(cluster_nodes, cloudify_version, detailed,
             'public_ip': service_node['public_ip'],
             'version': cloudify_version,
             'services': {
-                name: service for name, service
+                name: _strip_keys(service, 'host') for name, service
                 in service_node['service_results'].items()
-                if _service_expected(service, service_type)
+                if _service_expected(service, service_type) and
+                _host_matches(service, service_node['private_ip'])
             },
-            'metrics': service_node['metric_results'].get(service_type,
-                                                          []),
+            'metrics': [
+                _strip_keys(metric, 'host') for metric in
+                service_node['metric_results'].get(service_type, [])
+                if _host_matches(metric, service_node['private_ip'])
+            ],
         }
         for service_node in service_nodes.values()
     }
@@ -379,6 +383,20 @@ def _service_expected(service, service_type):
     return unit_id in SERVICE_ASSIGNMENTS[service_type]
 
 
+def _host_matches(struct, node_private_ip):
+    if struct.get('host'):
+        return struct.get('host') == node_private_ip
+    else:
+        return struct.get('metric_name', '').endswith(node_private_ip)
+
+
+def _strip_keys(struct, keys):
+    """Return copy of struct but without the keys listed"""
+    if not isinstance(keys, list):
+        keys = [keys]
+    return {k: v for k, v in struct.items() if k not in keys}
+
+
 def _get_nodes_of_type(cluster_nodes, service_type):
     requested_nodes = {}
     for node, details in cluster_nodes.items():
@@ -428,14 +446,21 @@ def _parse_prometheus_results(prometheus_results):
                 'status') == NodeServiceStatus.ACTIVE:
             service_results[dm]['status'] = res['status']
 
-        # Upate the instances part
+        # Update the instances part
         if pm in service_results[dm].get('extra_info', {}):
             # res' process manager is already present in corresponding result
             if 'instances' not in service_results[dm]['extra_info'][pm]:
                 service_results[dm]['extra_info'][pm]['instances'] = []
-            # ... append an instance to the list of instances
-            service_results[dm]['extra_info'][pm]['instances'].append(
-                res['extra_info'][pm].get('instances'))
+            # keep only one instance per host
+            instance_hosts = [
+                instance.get('host') for instance
+                in service_results[dm]['extra_info'][pm]['instances']
+            ]
+            for res_instance in res['extra_info'][pm].get('instances'):
+                if res_instance.get('host') not in instance_hosts:
+                    # ... append an instance to the list of instances
+                    service_results[dm]['extra_info'][pm]['instances'].append(
+                        res_instance)
         else:
             # if res' process manager is not present in corr. result
             service_results[dm]['extra_info'][pm] = res['extra_info'][pm]
@@ -464,6 +489,7 @@ def _parse_prometheus_results(prometheus_results):
                     service=service,
                     process_manager=process_manager,
                     is_running=healthy,
+                    host=metric.get('host'),
                 ))
         else:
             if metric.get('job'):
@@ -478,10 +504,12 @@ def _parse_prometheus_results(prometheus_results):
     return service_results, metric_results
 
 
-def _get_service_status(service_id, service, process_manager, is_running):
+def _get_service_status(service_id, service,
+                        process_manager, is_running, host):
     return {
         'status': (NodeServiceStatus.ACTIVE if is_running
                    else NodeServiceStatus.INACTIVE),
+        'host': host,
         'extra_info': {
             process_manager: {
                 'instances': [
@@ -517,13 +545,16 @@ def _process_metric(metric, timestamp, healthy):
 
     metric_name = job
     if metric.get('instance'):
-        metric_name += ' on {}'.format(metric.get('instance'))
+        metric_name += ' ({})'.format(metric.get('instance'))
+    if metric.get('host'):
+        metric_name += ' on {}'.format(metric.get('host'))
 
     return {
         'last_check': last_check,
         'healthy': healthy,
         'metric_type': metric.get('__name__', 'unknown'),
         'metric_name': metric_name,
+        'host': metric.get('host', 'localhost'),
     }, service_type
 
 
