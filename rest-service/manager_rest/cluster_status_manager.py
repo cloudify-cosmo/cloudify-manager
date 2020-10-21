@@ -546,6 +546,7 @@ def _process_metric(metric, timestamp, healthy):
         'healthy': healthy,
         'metric_type': metric.get('__name__', 'unknown'),
         'metric_name': metric_name,
+        'host': metric.get('host', 'localhost')
     }, service_type
 
 
