@@ -303,7 +303,7 @@ def _get_cluster_service_state(cluster_nodes, cloudify_version, detailed,
             },
             'metrics': [
                 _strip_keys(metric, 'host') for metric in
-                service_node['metric_results'].get(service_type,[])
+                service_node['metric_results'].get(service_type, [])
                 if _host_matches(metric, service_node['private_ip'])
             ],
         }
@@ -507,7 +507,6 @@ def _parse_prometheus_results(prometheus_results):
 
 def _get_service_status(service_id, service,
                         process_manager, is_running, host):
-
     return {
         'status': (NodeServiceStatus.ACTIVE if is_running
                    else NodeServiceStatus.INACTIVE),
