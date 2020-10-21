@@ -434,7 +434,7 @@ def _parse_prometheus_results(prometheus_results):
             if 'instances' not in service_results[dm]['extra_info'][pm]:
                 service_results[dm]['extra_info'][pm]['instances'] = []
             # ... append an instance to the list of instances
-            service_results[dm]['extra_info'][pm]['instances'].append(
+            service_results[dm]['extra_info'][pm]['instances'].extend(
                 res['extra_info'][pm].get('instances'))
         else:
             # if res' process manager is not present in corr. result
