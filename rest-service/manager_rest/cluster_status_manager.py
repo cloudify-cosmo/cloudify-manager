@@ -300,8 +300,11 @@ def _get_cluster_service_state(cluster_nodes, cloudify_version, detailed,
                 in service_node['service_results'].items()
                 if _service_expected(service, service_type)
             },
-            'metrics': service_node['metric_results'].get(service_type,
-                                                          []),
+            'metrics': [
+                metric for metric in
+                service_node['metric_results'].get(service_type, [])
+                if _host_matches(metric, service_node['private_ip'])
+            ],
         }
         for service_node in service_nodes.values()
     }
@@ -377,6 +380,10 @@ def _service_expected(service, service_type):
     if unit_id.endswith('.service'):
         unit_id = unit_id[:-len('.service')]
     return unit_id in SERVICE_ASSIGNMENTS[service_type]
+
+
+def _host_matches(metric, node_private_ip):
+    return metric.get('metric_name', '').endswith(node_private_ip)
 
 
 def _get_nodes_of_type(cluster_nodes, service_type):
