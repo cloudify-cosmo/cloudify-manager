@@ -14,11 +14,18 @@
 #  * limitations under the License.
 
 import argparse
+import os
 
 from sqlalchemy.orm.attributes import flag_modified
 
 from manager_rest.flask_utils import setup_flask_app
 from manager_rest.storage import get_storage_manager, models
+
+os.environ["MANAGER_REST_CONFIG_PATH"] = "/opt/manager/cloudify-rest.conf"
+os.environ["MANAGER_REST_SECURITY_CONFIG_PATH"] = \
+    "/opt/manager/rest-security.conf"
+os.environ["MANAGER_REST_AUTHORIZATION_CONFIG_PATH"] = \
+    "/opt/manager/authorization.conf"
 
 
 def update_provider_context(args):
