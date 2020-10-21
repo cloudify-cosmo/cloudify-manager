@@ -517,7 +517,9 @@ def _process_metric(metric, timestamp, healthy):
 
     metric_name = job
     if metric.get('instance'):
-        metric_name += ' on {}'.format(metric.get('instance'))
+        metric_name += ' ({})'.format(metric.get('instance'))
+    if metric.get('host'):
+        metric_name += ' on {}'.format(metric.get('host'))
 
     return {
         'last_check': last_check,
