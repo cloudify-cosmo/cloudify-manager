@@ -296,14 +296,14 @@ def _get_cluster_service_state(cluster_nodes, cloudify_version, detailed,
             'public_ip': service_node['public_ip'],
             'version': cloudify_version,
             'services': {
-                name: service for name, service
+                name: _strip_keys(service, 'host') for name, service
                 in service_node['service_results'].items()
                 if _service_expected(service, service_type) and
                 _host_matches(service, service_node['private_ip'])
             },
             'metrics': [
-                metric for metric in
-                service_node['metric_results'].get(service_type, [])
+                _strip_keys(metric, 'host') for metric in
+                service_node['metric_results'].get(service_type,[])
                 if _host_matches(metric, service_node['private_ip'])
             ],
         }
@@ -384,10 +384,20 @@ def _service_expected(service, service_type):
 
 
 def _host_matches(struct, node_private_ip):
-    if struct.get('metric_name'):
-        return struct.get('metric_name').endswith(node_private_ip)
+    if struct.get('host'):
+        return struct.get('host') == node_private_ip
     else:
-        return struct.get('host', '') == node_private_ip
+        return struct.get('metric_name', '').endswith(node_private_ip)
+
+
+def _strip_keys(struct, keys):
+    """Return copy of struct but without the keys listed"""
+    result = dict(struct)
+    if not isinstance(keys, list):
+        keys = [keys]
+    for key in keys:
+        result.pop(key, None)
+    return result
 
 
 def _get_nodes_of_type(cluster_nodes, service_type):
@@ -546,7 +556,7 @@ def _process_metric(metric, timestamp, healthy):
         'healthy': healthy,
         'metric_type': metric.get('__name__', 'unknown'),
         'metric_name': metric_name,
-        'host': metric.get('host', 'localhost')
+        'host': metric.get('host', 'localhost'),
     }, service_type
 
 
