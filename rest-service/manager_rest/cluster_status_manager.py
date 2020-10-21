@@ -392,12 +392,9 @@ def _host_matches(struct, node_private_ip):
 
 def _strip_keys(struct, keys):
     """Return copy of struct but without the keys listed"""
-    result = dict(struct)
     if not isinstance(keys, list):
         keys = [keys]
-    for key in keys:
-        result.pop(key, None)
-    return result
+    return {k: v for k, v in struct.items() if k not in keys}
 
 
 def _get_nodes_of_type(cluster_nodes, service_type):
@@ -455,10 +452,12 @@ def _parse_prometheus_results(prometheus_results):
             if 'instances' not in service_results[dm]['extra_info'][pm]:
                 service_results[dm]['extra_info'][pm]['instances'] = []
             # keep only one instance per host
+            instance_hosts = [
+                instance.get('host') for instance
+                in service_results[dm]['extra_info'][pm]['instances']
+            ]
             for res_instance in res['extra_info'][pm].get('instances'):
-                if res_instance.get('host') not in [
-                        instance.get('host') for instance in
-                        service_results[dm]['extra_info'][pm]['instances']]:
+                if res_instance.get('host') not in instance_hosts:
                     # ... append an instance to the list of instances
                     service_results[dm]['extra_info'][pm]['instances'].append(
                         res_instance)
