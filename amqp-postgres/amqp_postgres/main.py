@@ -1,25 +1,10 @@
-########
-# Copyright (c) 2014 Cloudify Platform Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#        http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-############
-
 import logging
 import argparse
 
 from cloudify._compat import queue
 from cloudify.amqp_client import get_client
 from manager_rest import config
+from manager_rest.flask_utils import setup_flask_app
 
 from .amqp_consumer import AMQPLogsEventsConsumer, AckingAMQPConnection
 from .postgres_publisher import DBLogEventPublisher
@@ -63,7 +48,8 @@ def main(args):
         filename=args.get('logfile', DEFAULT_LOG_PATH),
         format="%(asctime)s %(message)s")
     config.instance.load_from_file(args['config'])
-    config.instance.load_from_db()
+    with setup_flask_app().app_context():
+        config.instance.load_from_db()
     amqp_client, db_publisher = _create_connections()
 
     logger.info('Starting consuming...')
