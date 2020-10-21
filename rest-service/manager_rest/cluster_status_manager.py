@@ -439,7 +439,7 @@ def _parse_prometheus_results(prometheus_results):
                 'status') == NodeServiceStatus.ACTIVE:
             service_results[dm]['status'] = res['status']
 
-        # Upate the instances part
+        # Update the instances part
         if pm in service_results[dm].get('extra_info', {}):
             # res' process manager is already present in corresponding result
             if 'instances' not in service_results[dm]['extra_info'][pm]:
