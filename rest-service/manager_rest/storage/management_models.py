@@ -206,7 +206,10 @@ class Group(SQLModelBase):
 
     @property
     def role(self):
-        return self.roles[0].name
+        if self.roles:
+            return self.roles[0].name
+        else:
+            return
 
     def _get_identifier_dict(self):
         id_dict = OrderedDict({'name': self.name})

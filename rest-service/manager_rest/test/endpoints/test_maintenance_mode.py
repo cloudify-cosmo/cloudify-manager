@@ -90,34 +90,13 @@ class MaintenanceModeTest(BaseServerTestCase):
         self.client.manager.get_version()
         self.client.manager.get_status()
 
-    def test_internal_request_denial_in_maintenance_mode(self):
-        self._activate_maintenance_mode()
-
-        with patch('manager_rest.utils._get_remote_addr',
-                   new=self._get_remote_addr):
-            with patch('manager_rest.utils._get_host',
-                       new=self._get_host):
-                self.assertRaises(exceptions.MaintenanceModeActiveError,
-                                  self.client.blueprints.list)
-
-    def test_external_request_approval_in_maintenance_mode(self):
-        self._activate_maintenance_mode()
-
-        internal_request_bypass_maintenance_client = self.create_client(
-            headers={'X-BYPASS-MAINTENANCE': 'true'})
-        with patch('manager_rest.utils._get_remote_addr',
-                   new=self._get_remote_addr):
-            with patch('manager_rest.utils._get_host',
-                       new=self._get_host):
-                internal_request_bypass_maintenance_client.blueprints.list()
-
-    def test_external_bypass_maintenance_denial_in_maintenance_mode(self):
+    def test_unauthorized_bypass_maintenance_denial_in_maintenance_mode(self):
         self._activate_maintenance_mode()
 
         internal_request_client = self.create_client(
             headers={'X-BYPASS-MAINTENANCE': 'true'})
-        with patch('manager_rest.utils._get_remote_addr',
-                   new=self._get_remote_addr):
+        with patch('manager_rest.maintenance.is_user_action_allowed',
+                   return_value=False):
             self.assertRaises(exceptions.MaintenanceModeActiveError,
                               internal_request_client.blueprints.list)
 
