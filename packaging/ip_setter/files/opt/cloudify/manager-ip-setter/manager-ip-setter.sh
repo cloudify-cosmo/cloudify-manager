@@ -81,7 +81,10 @@ function set_prometheus_ip() {
   fi
 
   echo "Updating the host label in the Prometheus configuration..."
-  /usr/bin/sed -ri "s/^(\s+host:\s*).*$/\1${ip}/" ${prometheus_yml}
+  prometheus_targets="/etc/prometheus/targets/local_*.yml"
+  for target_file in ${prometheus_targets} ; do
+    /usr/bin/sed -ri "s/^(\s+labels:.+\"?host\"?:.*)127\.0\.0\.1(.*)$/\1${ip}\2/" "${target_file}"
+  done
 
   if [ "$1" == "supervisord" ]; then
     echo "Starting Prometheus service"
