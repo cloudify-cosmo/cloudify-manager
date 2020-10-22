@@ -223,7 +223,11 @@ class MgmtworkerServiceTaskConsumer(ServiceTaskConsumer):
             _get_all_results=True)
         for instance in node_instances:
             if self._is_agent(instance):
-                yield instance.runtime_properties['cloudify_agent']['queue']
+                try:
+                    yield instance.runtime_properties[
+                        'cloudify_agent']['queue']
+                except KeyError:
+                    pass
 
     def _is_agent(self, node_instance):
         """Does the node_instance have an agent?"""
