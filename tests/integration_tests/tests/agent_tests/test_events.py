@@ -22,8 +22,6 @@ from integration_tests import AgentTestWithPlugins
 from integration_tests.tests.utils import get_resource as resource
 from integration_tests.tests.utils import run_postgresql_command
 
-from manager_rest.flask_utils import get_postgres_conf
-
 
 @pytest.mark.usefixtures('dockercompute_plugin')
 class TimezoneTest(AgentTestWithPlugins):
@@ -35,12 +33,9 @@ class TimezoneTest(AgentTestWithPlugins):
     def setUp(self):
         """Update postgres timezone and create a deployment."""
         super(TimezoneTest, self).setUp()
-
-        postgres_conf = get_postgres_conf()
         run_postgresql_command(
             self.env.container_id,
-            "ALTER USER {} SET TIME ZONE '{}'"
-            .format(postgres_conf.username, self.TIMEZONE)
+            "ALTER USER cloudify SET TIME ZONE '{}'".format(self.TIMEZONE)
         )
 
     def test_event_timezone(self):
