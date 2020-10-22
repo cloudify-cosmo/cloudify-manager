@@ -32,6 +32,7 @@ from manager_rest.constants import (FORBIDDEN_METHODS,
                                     MAINTENANCE_MODE_ACTIVE_ERROR_CODE,
                                     MAINTENANCE_MODE_ACTIVATING_ERROR_CODE,
                                     ALLOWED_MAINTENANCE_ENDPOINTS)
+from manager_rest.security.authorization import is_user_action_allowed
 
 
 def get_maintenance_file_path():
@@ -60,8 +61,8 @@ def maintenance_mode_handler():
     if not request.endpoint:
         return
 
-    # enabling internal requests
-    if utils.is_internal_request() and is_bypass_maintenance_mode():
+    if is_user_action_allowed('maintenance_mode_set') and \
+            is_bypass_maintenance_mode():
         return
 
     # Removing v*/ from the endpoint
