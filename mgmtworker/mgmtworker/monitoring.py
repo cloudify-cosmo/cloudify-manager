@@ -27,12 +27,32 @@ def update_manager_targets(rest_client):
                  file_name)
 
 
+def update_broker_targets(rest_client):
+    """Update other rabbits in Prometheus target file."""
+    rabbit_targets = []
+    for private_ip in _other_rabbits_private_ips(rest_client.manager):
+        rabbit_targets.append('{0}:8009'.format(private_ip))
+    logger.info('Other rabbits will be monitored: %s', rabbit_targets)
+    file_name = _deploy_prometheus_targets('other_rabbits.yml',
+                                           rabbit_targets, {})
+    logger.debug('Prometheus configuration successfully deployed: %s',
+                 file_name)
+
+
 def _other_managers_private_ips(manager_client):
     """Generate other managers' private_ips."""
     my_hostname = get_manager_name()
     for manager in manager_client.get_managers():
         if manager[HOSTNAME] != my_hostname:
             yield manager[PRIVATE_IP]
+
+
+def _other_rabbits_private_ips(manager_client):
+    """Generate other brokers' private_ips."""
+    my_hostname = get_manager_name()
+    for broker in manager_client.get_brokers():
+        if broker[HOSTNAME] != my_hostname:
+            yield broker[PRIVATE_IP]
 
 
 def _deploy_prometheus_targets(destination, targets, labels):
