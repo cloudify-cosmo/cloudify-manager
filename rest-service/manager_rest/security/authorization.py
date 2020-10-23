@@ -75,6 +75,9 @@ def authorize(action,
 
 
 def get_current_user_roles(tenant_name=None, allow_all_tenants=False):
+    if not current_user.is_authenticated:
+        return []
+
     tenant_roles = []
 
     # extracting tenant roles for user in the tenant
