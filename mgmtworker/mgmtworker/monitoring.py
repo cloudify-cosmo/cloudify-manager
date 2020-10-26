@@ -7,8 +7,6 @@ from cloudify.utils import get_manager_name, setup_logger
 
 logger = setup_logger('cloudify.monitoring')
 
-PRIVATE_IP = 'private_ip'
-HOSTNAME = 'hostname'
 PROMETHEUS_CONFIG_DIR = join(sep, 'etc', 'prometheus', )
 PROMETHEUS_TARGETS_DIR = join(PROMETHEUS_CONFIG_DIR, 'targets')
 PROMETHEUS_TARGETS_TEMPLATE = '- targets: {target_addresses}\n'\
@@ -55,24 +53,32 @@ def _other_managers_private_ips(manager_client):
     """Generate other managers' private_ips."""
     my_hostname = get_manager_name()
     for manager in manager_client.get_managers():
-        if manager[HOSTNAME] != my_hostname:
-            yield manager[PRIVATE_IP]
+        if not _matches_my_hostname(manager['hostname'], my_hostname):
+            yield manager['private_ip']
 
 
 def _other_rabbits_private_ips(manager_client):
     """Generate other brokers' private_ips."""
     my_hostname = get_manager_name()
     for broker in manager_client.get_brokers():
-        if broker[HOSTNAME] != my_hostname:
-            yield broker[PRIVATE_IP]
+        if not _matches_my_hostname(broker['name'], my_hostname):
+            yield broker['host']
 
 
 def _other_postgres_private_ips(manager_client):
     """Generate other postgres' private_ips."""
     my_hostname = get_manager_name()
     for db_node in manager_client.get_db_nodes():
-        if db_node[HOSTNAME] != my_hostname:
-            yield db_node[PRIVATE_IP]
+        if not _matches_my_hostname(db_node['name'], my_hostname):
+            yield db_node['host']
+
+
+def _matches_my_hostname(a_hostname, my_hostname=None):
+    if my_hostname is None:
+        my_hostname = get_manager_name()
+    if '.' in a_hostname and '.' in my_hostname:
+        return a_hostname == my_hostname
+    return a_hostname.split('.')[0] == my_hostname.split('.')[0]
 
 
 def _deploy_prometheus_targets(destination, targets, labels):
