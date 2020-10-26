@@ -42,7 +42,11 @@ from cloudify_agent.worker import (
 from cloudify_agent import worker as agent_worker
 
 from .hooks import HookConsumer
-from .monitoring import update_broker_targets, update_manager_targets
+from .monitoring import (
+    update_broker_targets,
+    update_db_targets,
+    update_manager_targets,
+)
 try:
     from cloudify_premium import syncthing_utils
 except ImportError:
@@ -123,6 +127,7 @@ class MgmtworkerServiceTaskConsumer(ServiceTaskConsumer):
     service_tasks['broker-added'] = 'broker_added'
     service_tasks['broker-updated'] = 'broker_updated'
     service_tasks['broker-removed'] = 'broker_removed'
+    service_tasks['db-updated'] = 'db_updated'
 
     def __init__(self, *args, **kwargs):
         self._workflow_registry = kwargs.pop('workflow_registry')
@@ -170,6 +175,15 @@ class MgmtworkerServiceTaskConsumer(ServiceTaskConsumer):
             api_token=get_admin_api_token()
         )
         update_broker_targets(rest_client)
+
+    def db_updated(self):
+        logger.info('DB nodes were updated in the cluster, '
+                    'updating cluster monitoring')
+        rest_client = get_rest_client(
+            tenant='default_tenant',
+            api_token=get_admin_api_token()
+        )
+        update_db_targets(rest_client)
 
     def broker_removed(self):
         logger.info('A broker has been removed from the cluster, '

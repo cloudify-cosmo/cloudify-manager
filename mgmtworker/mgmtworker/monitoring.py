@@ -39,6 +39,18 @@ def update_broker_targets(rest_client):
                  file_name)
 
 
+def update_db_targets(rest_client):
+    """Update other postgtres in Prometheus target file."""
+    postgres_targets = []
+    for private_ip in _other_postgres_private_ips(rest_client.manager):
+        postgres_targets.append('{0}:8009'.format(private_ip))
+    logger.info('Other postgres will be monitored: %s', postgres_targets)
+    file_name = _deploy_prometheus_targets('other_postgres.yml',
+                                           postgres_targets, {})
+    logger.debug('Prometheus configuration successfully deployed: %s',
+                 file_name)
+
+
 def _other_managers_private_ips(manager_client):
     """Generate other managers' private_ips."""
     my_hostname = get_manager_name()
@@ -53,6 +65,14 @@ def _other_rabbits_private_ips(manager_client):
     for broker in manager_client.get_brokers():
         if broker[HOSTNAME] != my_hostname:
             yield broker[PRIVATE_IP]
+
+
+def _other_postgres_private_ips(manager_client):
+    """Generate other postgres' private_ips."""
+    my_hostname = get_manager_name()
+    for db_node in manager_client.get_db_nodes():
+        if db_node[HOSTNAME] != my_hostname:
+            yield db_node[PRIVATE_IP]
 
 
 def _deploy_prometheus_targets(destination, targets, labels):
