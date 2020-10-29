@@ -22,12 +22,12 @@ from integration_tests import AgentlessTestCase
 
 
 SERVICES = {
-    'Management Worker': 'cloudify-mgmtworker.service',
-    'PostgreSQL': 'postgresql-9.5.service',
-    'RabbitMQ': 'cloudify-rabbitmq.service',
-    'Cloudify Composer': 'cloudify-composer.service',
-    'Cloudify Console': 'cloudify-stage.service',
-    'AMQP-Postgres': 'cloudify-amqp-postgres.service'
+    'Management Worker': 'cloudify-mgmtworker',
+    'PostgreSQL': 'postgresql-9.5',
+    'RabbitMQ': 'cloudify-rabbitmq',
+    'Cloudify Composer': 'cloudify-composer',
+    'Cloudify Console': 'cloudify-stage',
+    'AMQP-Postgres': 'cloudify-amqp-postgres'
 }
 
 
