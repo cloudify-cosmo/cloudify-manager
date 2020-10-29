@@ -40,6 +40,8 @@ from manager_rest.utils import create_auth_header
 from cloudify_cli import env as cli_env
 from cloudify_cli.constants import CLOUDIFY_BASE_DIRECTORY_NAME
 
+from . import docker
+
 
 logger = setup_logger('testenv.utils')
 
@@ -58,24 +60,9 @@ def sh_bake(command):
         _err=lambda line: _write(sys.stderr, line))
 
 
-def get_manager_ip():
-    return os.environ[constants.DOCL_CONTAINER_IP]
-
-
-def get_manager_username():
-    return cli_env.get_username()
-
-
-def get_manager_password():
-    return cli_env.get_password()
-
-
-def get_manager_tenant():
-    return cli_env.get_tenant_name()
-
-
-def update_profile_context():
-    cli_env.profile = cli_env.get_profile_context(get_manager_ip())
+def get_profile_context(container_id):
+    profile_context_cmd = 'cat /root/.cloudify/profiles/localhost/context.json'
+    return json.loads(docker.execute(container_id, profile_context_cmd))
 
 
 def set_cfy_paths(new_workdir):
