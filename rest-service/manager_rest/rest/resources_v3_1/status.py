@@ -212,6 +212,8 @@ class Status(SecuredResource):
             service_status = status_response['statename']
             if service_status == 'RUNNING':
                 service_status = NodeServiceStatus.ACTIVE
+            else:
+                service_status = NodeServiceStatus.INACTIVE
 
         return service_status
 
