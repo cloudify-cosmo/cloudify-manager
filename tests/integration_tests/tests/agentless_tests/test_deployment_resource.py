@@ -31,7 +31,7 @@ from manager_rest.constants import DEFAULT_TENANT_NAME
 
 
 RESOURCE_PATH = 'resources/resource.txt'
-RESOURCE_CONTENT = b'this is a deployment resource'
+RESOURCE_CONTENT = 'this is a deployment resource'
 
 
 @pytest.mark.usefixtures('testmockoperations_plugin')
