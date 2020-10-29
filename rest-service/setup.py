@@ -23,6 +23,7 @@ install_requires = [
     'flask-security==3.0.0',
     'flask-login==0.4.1',
     'flask-migrate>2.2.0,<2.6.0',
+    'bcrypt==3.2.0',
     'cloudify-common==6.0.0.dev1',
     'requests>=2.7.0,<3.0.0',
     'gunicorn==20.0.4',
