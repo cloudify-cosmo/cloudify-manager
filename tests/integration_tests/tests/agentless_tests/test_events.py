@@ -76,7 +76,7 @@ class EventsTest(AgentlessTestCase):
     def test_sorted_events(self):
         events = self._events_list(_sort='-@timestamp')
         sorted_events = \
-            sorted(events, key=lambda x: x.get('@timestamp'), reverse=True)
+            sorted(events, key=lambda x: x.get('@timestamp', ''), reverse=True)
         self.assertListEqual(events.items, sorted_events)
 
     def test_filtered_events(self):
