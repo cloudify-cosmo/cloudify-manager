@@ -132,7 +132,7 @@ def create_rest_client(**kwargs):
 
 
 def wait_for_deployment_creation_to_complete(
-        container_id, deployment_id, client, timeout_seconds=60):
+        container_id, deployment_id, client, timeout_seconds=120):
     do_retries(func=verify_deployment_env_created,
                exception_class=Exception,
                timeout_seconds=timeout_seconds,
@@ -160,7 +160,7 @@ def verify_deployment_env_created(container_id, deployment_id, client):
 
 
 def wait_for_deployment_deletion_to_complete(
-        deployment_id, client, timeout_seconds=60):
+        deployment_id, client, timeout_seconds=120):
     do_retries(func=verify_deployment_delete_complete,
                timeout_seconds=timeout_seconds,
                deployment_id=deployment_id,

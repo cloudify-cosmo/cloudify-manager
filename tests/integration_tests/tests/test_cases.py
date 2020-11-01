@@ -356,7 +356,7 @@ class BaseTestCase(unittest.TestCase):
 
     def deploy_application(self,
                            dsl_path,
-                           timeout_seconds=60,
+                           timeout_seconds=240,
                            blueprint_id=None,
                            deployment_id=None,
                            wait_for_execution=True,
