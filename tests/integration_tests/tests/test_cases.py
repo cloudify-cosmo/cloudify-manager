@@ -520,7 +520,7 @@ class BaseTestCase(unittest.TestCase):
             if execution['status'] not in Execution.END_STATES:
                 self.wait_for_execution_to_end(execution)
 
-    def wait_for_event(self, execution, message, timeout_seconds=60,
+    def wait_for_event(self, execution, message, timeout_seconds=240,
                        allow_connection_error=True, client=None):
         """ Wait until a specific event is listed in the DB.
 

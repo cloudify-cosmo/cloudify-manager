@@ -55,10 +55,7 @@ class TestScaleCompute(TestScaleBase):
                 'ignore_failure': False,
                 'delta': -1})
         except RuntimeError as e:
-            self.assertIn(
-                    "RuntimeError: Workflow failed: Task failed "
-                    "'testmockoperations.tasks.mock_stop_failure'",
-                    str(e))
+            self.assertIn("Workflow execution failed:", str(e))
         else:
             self.fail()
 
@@ -180,7 +177,7 @@ class TestScaleCompute(TestScaleBase):
         self.deployment_assertions(expectations)
 
     def test_db_contained_in_compute_scale_in_db(self):
-        expectations = self.deploy_app('scale5', timeout_seconds=120)
+        expectations = self.deploy_app('scale5')
         expectations['compute']['new']['install'] = 2
         expectations['db']['new']['install'] = 4
         expectations['db']['new']['rel_install'] = 8
