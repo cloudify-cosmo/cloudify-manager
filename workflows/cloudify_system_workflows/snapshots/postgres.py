@@ -45,8 +45,8 @@ class Postgres(object):
                        'licenses']
     _CONFIG_TABLES = ['config', 'rabbitmq_brokers', 'certificates', 'managers',
                       'db_nodes']
-    _TABLES_TO_EXCLUDE_ON_DUMP = _TABLES_TO_KEEP + ['snapshots'] + \
-        _CONFIG_TABLES
+    _TABLES_TO_EXCLUDE_ON_DUMP = _TABLES_TO_KEEP + \
+        ['snapshots', 'plugins_states'] + _CONFIG_TABLES
     _TABLES_TO_RESTORE = ['users', 'tenants']
     _STAGE_TABLES_TO_EXCLUDE = ['"SequelizeMeta"']
     _COMPOSER_TABLES_TO_EXCLUDE = ['"SequelizeMeta"']
