@@ -54,8 +54,7 @@ class TestWorkflow(AgentTestWithPlugins):
 
         self.deploy_application(
             resource('dsl/agent_tests/with_agent.yaml'),
-            deployment_id=deployment_id,
-            timeout_seconds=120
+            deployment_id=deployment_id
         )
         # installing the agent does nothing for the / vhost
         assert self._get_queues() == main_queues
@@ -113,8 +112,8 @@ class TestWorkflow(AgentTestWithPlugins):
         dsl_path = resource(blueprint)
         _, execution_id = self.deploy_application(
             dsl_path,
-            deployment_id=deployment_id,
-            timeout_seconds=120)
+            deployment_id=deployment_id
+        )
 
         events = self.client.events.list(execution_id=execution_id,
                                          sort='timestamp')
@@ -140,8 +139,7 @@ class TestWorkflow(AgentTestWithPlugins):
         dsl_path = resource('dsl/agent_tests/operation_executor_override.yaml')
         _, execution_id = self.deploy_application(
             dsl_path,
-            deployment_id=setup_deployment_id,
-            timeout_seconds=120
+            deployment_id=setup_deployment_id
         )
 
         webserver_nodes = self.client.node_instances.list(

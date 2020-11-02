@@ -64,5 +64,5 @@ class HostPluginTest(BaseExistingVMTest):
 
     def _test_host_plugin_requires_old_package(self, blueprint_path):
         dsl_path = resource(blueprint_path)
-        deployment, _ = self.deploy_application(dsl_path, timeout_seconds=120)
+        deployment, _ = self.deploy_application(dsl_path)
         self.undeploy_application(deployment.id)

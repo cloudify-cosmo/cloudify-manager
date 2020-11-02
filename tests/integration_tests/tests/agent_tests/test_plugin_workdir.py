@@ -36,8 +36,8 @@ class PluginWorkdirTest(AgentTestCase):
                     'central_content': central_content
                     })
         central_file = os.path.join(
-            '/opt/mgmtworker/work', 'deployments', 'default_tenant',
-            deployment.id, 'plugins', 'testmockoperations', filename)
+            '/opt/mgmtworker/work', 'plugins', 'testmockoperations', filename
+        )
         host_instance_id = self.client.node_instances.list(
             deployment_id=deployment.id,
             node_id='host')[0].id
