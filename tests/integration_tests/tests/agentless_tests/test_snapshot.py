@@ -171,6 +171,7 @@ class TestSnapshot(AgentlessTestCase):
         """
         snapshot_path = self._get_snapshot('snap_5.0.5_with_executions.zip')
         self._upload_and_restore_snapshot(snapshot_path)
+        time.sleep(10)
         deployments = self._select(
             'SELECT id, runtime_only_evaluation FROM deployments')
         assert deployments[0] == ['hello-world', 'f']
