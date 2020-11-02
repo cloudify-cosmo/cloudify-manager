@@ -25,7 +25,7 @@ class TestScaleBase(AgentlessTestCase):
         self.previous_ids = []
         self.previous_instances = []
 
-    def deploy_app(self, resource_name, inputs=None, timeout_seconds=60):
+    def deploy_app(self, resource_name, inputs=None, timeout_seconds=240):
         deployment, _ = self.deploy_application(
                 resource('dsl/{0}.yaml'.format(resource_name)),
                 timeout_seconds=timeout_seconds,

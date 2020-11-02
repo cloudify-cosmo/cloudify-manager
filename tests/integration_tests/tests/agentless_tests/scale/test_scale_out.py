@@ -146,7 +146,7 @@ class TestScaleOut(TestScaleBase):
         with self._set_retries(0):
             with self.assertRaises(RuntimeError) as e:
                 self.scale(parameters={'scalable_entity_name': 'compute'})
-        self.assertIn('TEST_EXPECTED_FAIL', str(e.exception))
+        self.assertIn('Workflow execution failed:', str(e.exception))
         expectations = self.expectations()
         expectations['compute']['existing']['install'] = 1
         expectations['db']['existing']['install'] = 1
@@ -170,7 +170,7 @@ class TestScaleOut(TestScaleBase):
         with self._set_retries(0):
             with self.assertRaises(RuntimeError) as e:
                 self.scale(parameters={'scalable_entity_name': 'compute'})
-        self.assertIn('TEST_EXPECTED_FAIL', str(e.exception))
+        self.assertIn('Workflow execution failed:', str(e.exception))
         expectations = self.expectations()
         expectations['compute']['existing']['install'] = 1
         expectations['db']['existing']['install'] = 1
@@ -192,7 +192,7 @@ class TestScaleOut(TestScaleBase):
         with self._set_retries(0):
             with self.assertRaises(RuntimeError) as e:
                 self.scale(parameters={'scalable_entity_name': 'compute'})
-        self.assertIn('TEST_EXPECTED_FAIL', str(e.exception))
+        self.assertIn('Workflow execution failed:', str(e.exception))
         expectations = self.expectations()
         expectations['compute']['existing']['install'] = 1
         self.deployment_assertions(expectations, rollback=True)
@@ -219,7 +219,7 @@ class TestScaleOut(TestScaleBase):
             with self.assertRaises(RuntimeError) as e:
                 self.scale(parameters={'scalable_entity_name': 'compute',
                                        'rollback_if_failed': False})
-        self.assertIn('TEST_EXPECTED_FAIL', str(e.exception))
+        self.assertIn('Workflow execution failed:', str(e.exception))
         expectations = self.expectations()
         expectations['compute']['new']['install'] = 1
         expectations['compute']['new']['uninstall'] = 0
@@ -260,7 +260,7 @@ class TestScaleOut(TestScaleBase):
             with self.assertRaises(RuntimeError) as e:
                 self.scale(parameters={'scalable_entity_name': 'compute',
                                        'rollback_if_failed': False})
-        self.assertIn('TEST_EXPECTED_FAIL', str(e.exception))
+        self.assertIn('Workflow execution failed:', str(e.exception))
         expectations = self.expectations()
         expectations['compute']['new']['install'] = 1
         expectations['compute']['new']['uninstall'] = 0
@@ -285,12 +285,11 @@ class TestScaleOut(TestScaleBase):
             'scale7', inputs={'fail': fail_operations})
         expectations['compute']['new']['install'] = 1
         self.deployment_assertions(expectations)
-
         with self._set_retries(0):
             with self.assertRaises(RuntimeError) as e:
                 self.scale(parameters={'scalable_entity_name': 'compute',
                                        'rollback_if_failed': False})
-        self.assertIn('TEST_EXPECTED_FAIL', str(e.exception))
+        self.assertIn('Workflow execution failed:', str(e.exception))
         expectations = self.expectations()
         expectations['compute']['new']['install'] = 1
         expectations['compute']['new']['uninstall'] = 0

@@ -23,8 +23,6 @@ from integration_tests.tests.utils import get_resource as resource
 @pytest.mark.usefixtures('cloudmock_plugin')
 class TestAgentAliveVerification(AgentlessTestCase):
 
-    AGENT_ALIVE_FAIL = "cloudmock.tasks has no function named 'non_existent'"
-
     def test_uninstall(self):
         deployment = self.deploy(resource("dsl/basic_stop_not_exists.yaml"))
         self.undeploy_application(deployment.id,
@@ -33,7 +31,8 @@ class TestAgentAliveVerification(AgentlessTestCase):
                                   })
 
     def test_install(self):
-        with self.assertRaisesRegexp(RuntimeError, self.AGENT_ALIVE_FAIL):
+        with self.assertRaisesRegexp(RuntimeError,
+                                     "Workflow execution failed:"):
             self.deploy_application(
                     resource("dsl/basic_start_not_exists.yaml"))
 
@@ -69,4 +68,4 @@ class TestAgentAliveVerification(AgentlessTestCase):
         except RuntimeError as e:
             if not error_expected:
                 self.fail('Success expected. error message: {0}'.format(e))
-            self.assertIn(self.AGENT_ALIVE_FAIL, str(e))
+            self.assertIn("Workflow execution failed:", str(e))
