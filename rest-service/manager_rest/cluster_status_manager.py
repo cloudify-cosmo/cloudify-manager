@@ -201,7 +201,7 @@ def _add_monitoring_data(cluster_nodes):
     for address, results in status_getter.get(cluster_nodes).items():
         results = [
             metric for metric in results
-            if 'federate' not in metric.get('metric', {}).get('job', '')
+            if 'cloudify' not in metric.get('metric', {}).get('monitor', '')
         ]
         service_results, metric_results = _parse_prometheus_results(results)
 
