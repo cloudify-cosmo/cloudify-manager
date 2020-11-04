@@ -78,10 +78,9 @@ class DeploymentResourceTest(AgentlessTestCase):
         download_resource_path = \
             node_instance.runtime_properties['download_resource']
 
-        resource_content = RESOURCE_CONTENT.decode('utf-8')
-        self.assertEquals(resource_content,
+        self.assertEquals(RESOURCE_CONTENT,
                           get_resource_content)
-        self.assertEquals(resource_content,
+        self.assertEquals(RESOURCE_CONTENT,
                           self.read_manager_file(download_resource_path))
 
         self.client.deployments.delete(
