@@ -60,7 +60,6 @@ PLUGINS_TO_INSTALL = 'plugins_to_install'
 DESCRIPTION = 'description'
 CONTAINED_IN_RELATIONSHIP_TYPE = 'cloudify.relationships.contained_in'
 TYPE_HIERARCHY = 'type_hierarchy'
-# flake8: noqa
 
 
 class EntityIdBuilder(list):
@@ -246,7 +245,7 @@ class DeploymentUpdateStep(object):
                 if other.entity_type == NODE:
                     # higher topology order before lower topology order
                     return self.topology_order > other.topology_order
-        if self.action =='remove':
+        if self.action == 'remove':
             # remove relationships before removing nodes
             if self.entity_type == RELATIONSHIP and other.entity_type == NODE:
                 return True
@@ -335,9 +334,11 @@ class StepExtractor(object):
                                                    relationship[TARGET_ID])
         return added_nodes_graph
 
-    def _update_topology_order_of_add_node_steps(self,
-                                                 supported_steps,
-                                                 topologically_sorted_added_nodes):
+    def _update_topology_order_of_add_node_steps(
+        self,
+        supported_steps,
+        topologically_sorted_added_nodes
+    ):
         for i, node_name in enumerate(topologically_sorted_added_nodes):
             # Get the corresponding 'add node' step for this node name,
             # and assign it its topology_order order
@@ -393,7 +394,9 @@ class StepExtractor(object):
                                                                 old_plugins)
                         if old_plugin == new_plugin:
                             continue
-                        with self.entity_id_builder.extend_id(new_plugin['name']):
+                        with self.entity_id_builder.extend_id(
+                            new_plugin['name']
+                        ):
                             if not old_plugin:
                                 self._create_step(PLUGIN)
                             elif new_plugin != old_plugin:
@@ -481,8 +484,10 @@ class StepExtractor(object):
                 with self.entity_id_builder.extend_id(node_name):
                     if node_name in old_nodes:
                         old_node = old_nodes[node_name]
-                        if node[TYPE] != old_node[TYPE] or \
-                            _is_contained_in_changed(node, old_node):
+                        if (
+                            node[TYPE] != old_node[TYPE]
+                            or _is_contained_in_changed(node, old_node)
+                        ):
                             # a node that changed its type or its host_id
                             # counts as a different node
                             self._create_step(NODE,
@@ -536,6 +541,7 @@ class StepExtractor(object):
                                 entities_name],
                             supported
                         )
+
     def _has_changed(self, entities_name, old, new):
         """Is old different than new, if both are of kind entity_type?
 
