@@ -324,4 +324,7 @@ class TestDeploymentModification(AgentlessTestCase):
         for inst in self.client.node_instances.list(
                 deployment_id=deployment_id):
             if 'state' in inst.runtime_properties:
-                inst.runtime_properties['state'] = {}
+                self.client.node_instances.update(
+                    node_instance_id=inst.id,
+                    version=inst.version + 1,
+                    runtime_properties={'state': {}})
