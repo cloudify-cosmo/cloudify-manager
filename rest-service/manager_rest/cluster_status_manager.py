@@ -21,22 +21,22 @@ SERVICE_DESCRIPTIONS = {
         'description': 'Prometheus blackbox exporter (HTTP/HTTPS/TCP pings}'},
     'cloudify-amqp-postgres': {
         'name': 'AMQP-Postgres',
-        'description': 'Cloudify AMQP PostgreSQL Broker service'},
+        'description': 'AMQP PostgreSQL Broker service'},
     'cloudify-composer': {
-        'name': 'Cloudify Composer',
-        'description': 'Cloudify Composer service'},
+        'name': 'Composer',
+        'description': 'Composer service'},
     'cloudify-mgmtworker': {
         'name': 'Management Worker',
-        'description': 'Cloudify Management Worker service'},
+        'description': 'Management Worker service'},
     'cloudify-rabbitmq': {
         'name': 'RabbitMQ Broker',
         'description': 'RabbitMQ Broker service'},
     'cloudify-restservice': {
         'name': 'Manager REST',
-        'description': 'Cloudify REST service'},
+        'description': 'REST API service'},
     'cloudify-stage': {
-        'name': 'Cloudify Console',
-        'description': 'Cloudify Console service'},
+        'name': 'Management Console',
+        'description': 'Management Console service'},
     'cloudify-syncthing': {
         'name': 'Syncthing',
         'description': 'Syncthing service'},
