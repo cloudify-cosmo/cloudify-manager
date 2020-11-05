@@ -1,6 +1,7 @@
 
 # Copied from existing permission. WE SHOULD REALLY NOT DO THIS.
 cfyuser ALL=(root) NOPASSWD:/usr/bin/systemctl
+cfyuser ALL=(root) NOPASSWD:/usr/bin/supervisorctl
 
 # Needed so that we can reboot after restoring a snapshot
 cfyuser ALL=(root) NOPASSWD:/usr/sbin/shutdown
