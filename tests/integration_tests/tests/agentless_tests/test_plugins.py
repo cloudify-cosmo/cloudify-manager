@@ -28,8 +28,15 @@ TEST_PACKAGE2_NAME = 'cloudify-diamond-plugin'
 TEST_PACKAGE2_VERSION = '1.3'
 
 
-class TestPlugins(AgentlessTestCase):
+class BaseTestPlugins(AgentlessTestCase):
+    def tearDown(self):
+        wagon_file_paths = \
+            self.execute_on_manager("find / -name '*.wgn'").split('\n')
+        for file_path in wagon_file_paths:
+            self.delete_manager_file(file_path)
 
+
+class TestPlugins(BaseTestPlugins):
     def test_get_plugin_by_id(self):
         plugin_id = None
         try:
@@ -109,7 +116,7 @@ class TestPlugins(AgentlessTestCase):
         assert state == PluginInstallationState.INSTALLED
 
 
-class TestPluginsSystemState(AgentlessTestCase):
+class TestPluginsSystemState(BaseTestPlugins):
     def test_installing_corrupted_plugin_doesnt_affect_system_integrity(self):
         self._upload_plugin_and_assert_values(TEST_PACKAGE_NAME,
                                               TEST_PACKAGE_VERSION,
