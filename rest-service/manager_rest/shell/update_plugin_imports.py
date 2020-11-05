@@ -29,7 +29,9 @@ import yaml
 
 from cloudify._compat import parse_qs, parse_version
 
-from dsl_parser.constants import (WORKFLOW_PLUGINS_TO_INSTALL,
+from dsl_parser.constants import (CLOUDIFY,
+                                  IMPORT_RESOLVER_KEY,
+                                  WORKFLOW_PLUGINS_TO_INSTALL,
                                   DEPLOYMENT_PLUGINS_TO_INSTALL,
                                   HOST_AGENT_PLUGINS_TO_INSTALL,
                                   PLUGIN_PACKAGE_NAME,
@@ -40,9 +42,13 @@ from dsl_parser import utils as dsl_parser_utils
 
 from manager_rest.constants import (FILE_SERVER_BLUEPRINTS_FOLDER,
                                     FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
+                                    PROVIDER_CONTEXT_ID,
                                     SUPPORTED_ARCHIVE_TYPES)
 from manager_rest.flask_utils import (setup_flask_app, set_admin_current_user,
                                       get_tenant_by_name, set_tenant_in_app)
+from manager_rest.resolver_with_catalog_support import (
+    ResolverWithCatalogSupport
+)
 from manager_rest.storage import models, get_storage_manager
 from manager_rest import config
 
@@ -364,14 +370,9 @@ def load_mappings(file_name: str) -> list:
 
 
 @lru_cache(maxsize=2048)
-def spec_from_url(url: str) -> tuple:
-    resolver = dsl_parser_utils.create_import_resolver({
-        'implementation':
-            'manager_rest.resolver_with_catalog_support:'
-            'ResolverWithCatalogSupport',
-    })
+def spec_from_url(resolver: ResolverWithCatalogSupport, url: str) -> tuple:
     try:
-        response_text = resolver.fetch_import()
+        response_text = resolver.fetch_import(url)
     except dsl_parser_exceptions.DSLParsingLogicException as ex:
         print('Cannot retrieve {0}: {1}'.format(url, ex))
         return None, None
@@ -400,10 +401,11 @@ def spec_from_import(plugin_line: str) -> tuple:
     return name, None
 
 
-def plugin_spec(import_line: str) -> tuple:
+def plugin_spec(resolver: ResolverWithCatalogSupport,
+                import_line: str) -> tuple:
     if import_line.startswith('http://') or \
             import_line.startswith('https://'):
-        name, version = spec_from_url(import_line)
+        name, version = spec_from_url(resolver, import_line)
         if name and version:
             return IS_PINNED, IS_NOT_UNKNOWN, IMPORT_FROM_URL, name, version
         else:
@@ -455,7 +457,8 @@ def suggest_version(plugin_name: str, plugin_version: str) -> str:
     return base_version
 
 
-def scan_blueprint(blueprint: models.Blueprint,
+def scan_blueprint(resolver: ResolverWithCatalogSupport,
+                   blueprint: models.Blueprint,
                    plugin_names: tuple) -> tuple:
     def add_mapping(genre: str, content: object):
         if genre not in mappings:
@@ -489,7 +492,7 @@ def scan_blueprint(blueprint: models.Blueprint,
         if import_line.endswith('/types.yaml'):
             continue
         is_pinned_version, is_unknown, import_from, plugin_name, _ = \
-            plugin_spec(import_line)
+            plugin_spec(resolver, import_line)
         if plugin_names and plugin_name not in plugin_names:
             continue
         update_stats(current_import_from=import_from,
@@ -816,6 +819,16 @@ def main(tenant_names, all_tenants, plugin_names, blueprint_ids,
     set_tenant_in_app(get_tenant_by_name(DEFAULT_TENANT))
     sm = get_storage_manager()
 
+    # Prepare the resolver
+    cloudify_section = sm.get(models.ProviderContext, PROVIDER_CONTEXT_ID).\
+        context.get(CLOUDIFY, {})
+    resolver_section = cloudify_section.get(IMPORT_RESOLVER_KEY, {})
+    resolver_section.setdefault(
+        'implementation',
+        'manager_rest.'
+        'resolver_with_catalog_support:ResolverWithCatalogSupport')
+    resolver = dsl_parser_utils.create_import_resolver(resolver_section)
+
     if all_tenants:
         tenants = sm.list(models.Tenant, get_all_results=True)
     else:
@@ -859,7 +872,7 @@ def main(tenant_names, all_tenants, plugin_names, blueprint_ids,
             else:
                 try:
                     a_mapping, a_statistic, a_suggestion = \
-                        scan_blueprint(blueprint, plugin_names)
+                        scan_blueprint(resolver, blueprint, plugin_names)
                 except UpdateException as ex:
                     print(ex)
                 else:
