@@ -1,7 +1,10 @@
 import json
 
-from os import sep
+from os import rename, sep
 from os.path import join
+
+from jinja2 import Template
+from tempfile import NamedTemporaryFile
 
 from cloudify.utils import setup_logger
 
@@ -9,69 +12,106 @@ logger = setup_logger('cloudify.monitoring')
 
 PROMETHEUS_CONFIG_DIR = join(sep, 'etc', 'prometheus', )
 PROMETHEUS_TARGETS_DIR = join(PROMETHEUS_CONFIG_DIR, 'targets')
+PROMETHEUS_ALERTS_DIR = join(PROMETHEUS_CONFIG_DIR, 'alerts')
 PROMETHEUS_TARGETS_TEMPLATE = '- targets: {target_addresses}\n'\
                               '  labels: {target_labels}'
+PROMETHEUS_MISSING_ALERT = Template(
+    """groups:
+  - name: {{ name }}
+    rules:
+
+{% for host in hosts %}
+      - alert: {{ name }}_missing
+        expr: absent({{ name }}_healthy{host="{{ host }}"})
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ name|capitalize }} is missing on node {{ host }}"
+{% endfor %}""")
 
 
-def update_manager_targets(rest_client):
-    """Update other managers in Prometheus target file."""
-    manager_targets = []
-    for private_ip in _other_managers_private_ips(rest_client.manager):
-        manager_targets.append('{0}:8009'.format(private_ip))
-    logger.info('Other managers will be monitored: %s', manager_targets)
-    file_name = _deploy_prometheus_targets('other_managers.yml',
-                                           manager_targets, {})
-    logger.debug('Prometheus configuration successfully deployed: %s',
-                 file_name)
-
-
-def update_broker_targets(rest_client):
-    """Update other rabbits in Prometheus target file."""
-    rabbit_targets = []
-    for private_ip in _other_rabbits_private_ips(rest_client.manager):
-        rabbit_targets.append('{0}:8009'.format(private_ip))
-    logger.info('Other rabbits will be monitored: %s', rabbit_targets)
-    file_name = _deploy_prometheus_targets('other_rabbits.yml',
-                                           rabbit_targets, {})
-    logger.debug('Prometheus configuration successfully deployed: %s',
-                 file_name)
-
-
-def update_db_targets(rest_client):
-    """Update other postgtres in Prometheus target file."""
-    postgres_targets = []
-    for private_ip in _other_postgres_private_ips(rest_client.manager):
-        postgres_targets.append('{0}:8009'.format(private_ip))
-    logger.info('Other postgres will be monitored: %s', postgres_targets)
-    file_name = _deploy_prometheus_targets('other_postgres.yml',
-                                           postgres_targets, {})
-    logger.debug('Prometheus configuration successfully deployed: %s',
-                 file_name)
-
-
-def _other_managers_private_ips(manager_client):
+def get_manager_hosts(manager_client):
     """Generate other managers' private_ips."""
     for manager in manager_client.get_managers():
         yield manager['private_ip']
 
 
-def _other_rabbits_private_ips(manager_client):
+def get_broker_hosts(manager_client):
     """Generate other brokers' private_ips."""
     for broker in manager_client.get_brokers():
         yield broker['host']
 
 
-def _other_postgres_private_ips(manager_client):
+def get_db_hosts(manager_client):
     """Generate other postgres' private_ips."""
     for db_node in manager_client.get_db_nodes():
         yield db_node['host']
 
 
-def _deploy_prometheus_targets(destination, targets, labels):
+def update_manager_targets(hosts):
+    """Update other managers in Prometheus target file."""
+    manager_targets = ['{0}:8009'.format(host) for host in hosts]
+    logger.info('Other managers will be monitored: %s', manager_targets)
+    file_name = _deploy_prometheus_targets('other_managers.yml',
+                                           manager_targets)
+    logger.debug('Prometheus configuration successfully deployed: %s',
+                 file_name)
+
+
+def update_broker_targets(hosts):
+    """Update other rabbits in Prometheus target file."""
+    rabbit_targets = ['{0}:8009'.format(host) for host in hosts]
+    logger.info('Other rabbits will be monitored: %s', rabbit_targets)
+    file_name = _deploy_prometheus_targets('other_rabbits.yml',
+                                           rabbit_targets)
+    logger.debug('Prometheus configuration successfully deployed: %s',
+                 file_name)
+
+
+def update_db_targets(hosts):
+    """Update other postgtres in Prometheus target file."""
+    postgres_targets = ['{0}:8009'.format(host) for host in hosts]
+    logger.info('Other postgres will be monitored: %s', postgres_targets)
+    file_name = _deploy_prometheus_targets('other_postgres.yml',
+                                           postgres_targets)
+    logger.debug('Prometheus configuration successfully deployed: %s',
+                 file_name)
+
+
+def update_manager_alerts(hosts):
+    """Update Prometheus alerts for cluster managers."""
+    logger.info('Generating alerts for managers: %s', hosts)
+    file_name = _deploy_prometheus_missing_alerts('manager_missing.yml',
+                                                  'manager',
+                                                  hosts)
+    logger.debug('Prometheus alerts successfully deployed: %s', file_name)
+
+
+def update_broker_alerts(hosts):
+    """Update Prometheus alerts for cluster broker nodes."""
+    logger.info('Generating alerts for rabbits: %s', hosts)
+    file_name = _deploy_prometheus_missing_alerts('rabbitmq_missing.yml',
+                                                  'rabbitmq',
+                                                  hosts)
+    logger.debug('Prometheus alerts successfully deployed: %s', file_name)
+
+
+def update_db_alerts(hosts):
+    """Update Prometheus alerts for cluster db nodes."""
+    logger.info('Generating alerts for postgres: %s', hosts)
+    file_name = _deploy_prometheus_missing_alerts('postgres_missing.yml',
+                                                  'postgres',
+                                                  hosts)
+    logger.debug('Prometheus alerts successfully deployed: %s', file_name)
+
+
+def _deploy_prometheus_targets(destination, targets, labels=None):
     """Deploy a target file for prometheus.
     :param destination: Target file name in targets dir.
     :param targets: List of targets for prometheus.
     :param labels: Dict of labels with values for prometheus."""
+    labels = labels or {}
     return _render_template(
         PROMETHEUS_TARGETS_TEMPLATE,
         join(PROMETHEUS_TARGETS_DIR, destination),
@@ -88,4 +128,15 @@ def _render_template(template, destination, **kwargs):
     content = template.format(**kwargs)
     with open(destination, 'w') as f:
         f.write(content)
+    return destination
+
+
+def _deploy_prometheus_missing_alerts(destination, service_name, hosts):
+    template = PROMETHEUS_MISSING_ALERT.render(name=service_name, hosts=hosts)
+    with NamedTemporaryFile(mode='w+t', delete=False) as f:
+        f.write(template)
+        f.flush()
+        tmp_file_name = f.name
+    rename(tmp_file_name,
+           join(PROMETHEUS_ALERTS_DIR, destination))
     return destination
