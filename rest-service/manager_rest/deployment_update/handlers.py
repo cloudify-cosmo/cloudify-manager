@@ -69,7 +69,7 @@ class UpdateHandler(StorageClient):
         Each handler updated the dict of updated nodes, which enables
         accumulating changes.
         """
-        for step in dep_update.steps:
+        for step in sorted(dep_update.steps):
             if step.entity_type in supported_entity_types:
                 entity_handler = entity_handlers[step.entity_type]
                 entity_updater = getattr(entity_handler, step.action)

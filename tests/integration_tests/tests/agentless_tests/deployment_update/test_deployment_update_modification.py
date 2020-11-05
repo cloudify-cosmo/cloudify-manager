@@ -120,7 +120,7 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         base_nodes, base_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
 
-        self.assertDictContainsSubset(
+        self._assertDictContainsSubset(
                 {'source_ops_counter': '1'},
                 base_node_instances['modified'][0]['runtime_properties']
         )
@@ -190,7 +190,7 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
                 'cloudify.interfaces.lifecycle.create')
         self.assertIsNotNone(affected_lifecycle_operation)
 
-        self.assertDictContainsSubset(
+        self._assertDictContainsSubset(
                 {'source_ops_counter': '0'},
                 modified_node_instance['runtime_properties']
         )
@@ -273,7 +273,7 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         dict_to_check = self._create_dict(['inputs', 'script_path',
                                            'decrement.sh'])
 
-        self.assertDictContainsSubset(
+        self._assertDictContainsSubset(
                 {'source_ops_counter': '-1'},
                 source_node_instance['runtime_properties']
         )
@@ -281,8 +281,8 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         # check all operation have been executed
         source_operations = \
             source_node['relationships'][0]['source_operations']
-        self.assertDictContainsSubset(dict_to_check,
-                                      source_operations[operation_id])
+        self._assertDictContainsSubset(dict_to_check,
+                                       source_operations[operation_id])
 
     def test_modify_property(self):
         deployment, modified_bp_path = \
@@ -357,8 +357,8 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
             self._deploy_and_get_modified_bp_path('modify_output')
 
         deployment = self.client.deployments.get(deployment.id)
-        self.assertDictContainsSubset({'custom_output': {'value': 0}},
-                                      deployment.outputs)
+        self._assertDictContainsSubset({'custom_output': {'value': 0}},
+                                       deployment.outputs)
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
         dep_update = \
@@ -370,8 +370,8 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         self._wait_for_successful_state(dep_update.id)
 
         deployment = self.client.deployments.get(dep_update.deployment_id)
-        self.assertDictContainsSubset({'custom_output': {'value': 1}},
-                                      deployment.outputs)
+        self._assertDictContainsSubset({'custom_output': {'value': 1}},
+                                       deployment.outputs)
 
     def test_modify_description(self):
         deployment, modified_bp_path = \

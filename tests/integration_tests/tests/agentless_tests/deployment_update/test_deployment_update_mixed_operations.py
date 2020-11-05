@@ -45,7 +45,7 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
             self._map_node_and_node_instances(deployment.id, node_mapping)
 
         # check all operation have been executed
-        self.assertDictContainsSubset(
+        self._assertDictContainsSubset(
                 {'source_ops_counter': '3'},
                 base_node_instances['added_relationship'][0]
                 ['runtime_properties']
@@ -125,12 +125,12 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         # source_ops_counter was increased for each operation between site2 and
         # site1, and another source_ops_counter increasing operation was the
         # establish between site2 and site3
-        self.assertDictContainsSubset(
+        self._assertDictContainsSubset(
                 {'source_ops_counter': '4'},
                 added_relationship_node_instance['runtime_properties']
         )
 
-        self.assertDictContainsSubset(
+        self._assertDictContainsSubset(
                 {'source_ops_counter': '3'},
                 new_node_instance['runtime_properties']
         )
@@ -187,7 +187,7 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         # 6. unlink site0->site2: source_ops_counter=5
         # 7. establish site0->site6: source_ops_counter=6
         # 8. establish site0->site2B: source_ops_counter=7
-        self.assertDictContainsSubset(
+        self._assertDictContainsSubset(
                 {'source_ops_counter': '7'},
                 modified_node_instance['runtime_properties']
         )
@@ -247,20 +247,20 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
 
         # Assert that node a, b, c and d have started correctly
         for node in node_ids - root_node_ids:
-            self.assertDictContainsSubset(
+            self._assertDictContainsSubset(
                     {'{0}_ops_counter'.format(node): str(3)},
                     node_instances[node]['runtime_properties'])
 
         # Assert that b and d established relationships successfully
         # through source runtime properties
         for node in {'b', 'd'}:
-            self.assertDictContainsSubset(
+            self._assertDictContainsSubset(
                     {'source_ops_counter_{0}'.format(node):  str(1)},
                     node_instances[node]['runtime_properties'])
 
         # Assert that a and c  established relationships successfully
         # through target runtime properties of node e and c (respectively)
         for node in {'e', 'c'}:
-            self.assertDictContainsSubset(
+            self._assertDictContainsSubset(
                     {'target_ops_counter': str(1)},
                     node_instances[node]['runtime_properties'])

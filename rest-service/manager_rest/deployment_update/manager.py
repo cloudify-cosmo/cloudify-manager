@@ -126,11 +126,13 @@ class DeploymentUpdateManager(object):
                                       deployment_update,
                                       action,
                                       entity_type,
-                                      entity_id):
+                                      entity_id,
+                                      topology_order):
         step = models.DeploymentUpdateStep(id=str(uuid.uuid4()),
                                            action=action,
                                            entity_type=entity_type,
-                                           entity_id=entity_id)
+                                           entity_id=entity_id,
+                                           topology_order=topology_order)
         step.set_deployment_update(deployment_update)
         return self.sm.put(step)
 
@@ -154,7 +156,8 @@ class DeploymentUpdateManager(object):
             self.create_deployment_update_step(deployment_update,
                                                step.action,
                                                step.entity_type,
-                                               step.entity_id)
+                                               step.entity_id,
+                                               step.topology_order)
 
     def commit_deployment_update(self,
                                  dep_update,

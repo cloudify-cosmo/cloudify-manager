@@ -37,8 +37,8 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
                                                 blueprint_id='start')
         # assert initial deployment state
         deployment = self.client.deployments.get(deployment.id)
-        self.assertDictContainsSubset({'custom_output': {'value': 0}},
-                                      deployment.outputs)
+        self._assertDictContainsSubset({'custom_output': {'value': 0}},
+                                       deployment.outputs)
         self.assertNotIn('modified description', deployment.description)
 
         def update_deployment_wait_and_assert(dep,
@@ -57,7 +57,7 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
 
             # verify deployment output
             dep = self.client.deployments.get(dep_update.deployment_id)
-            self.assertDictContainsSubset(
+            self._assertDictContainsSubset(
                 {'custom_output': {'value': expected_output_value}},
                 dep.outputs)
             # verify deployment description
@@ -93,8 +93,8 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
         deployment, _ = self.deploy_application(base_bp_path)
         # assert initial deployment state
         deployment = self.client.deployments.get(deployment.id)
-        self.assertDictContainsSubset({'custom_output': {'value': '0.0.0.0'}},
-                                      deployment.outputs)
+        self._assertDictContainsSubset({'custom_output': {'value': '0.0.0.0'}},
+                                       deployment.outputs)
 
         def update_deployment_wait_and_assert(dep,
                                               bp_path,
@@ -170,7 +170,7 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
             self._map_node_and_node_instances(deployment.id, node_mapping)
 
         # check all operation have been executed
-        self.assertDictContainsSubset(
+        self._assertDictContainsSubset(
             {'source_ops_counter': '3'},
             base_node_instances['added_relationship'][0]
             ['runtime_properties']
@@ -199,12 +199,12 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
         # source_ops_counter was increased for each operation between site2 and
         # site1, and another site2.source_ops_counter should have
         # decreased once because of the resource override
-        self.assertDictContainsSubset(
-            {'source_ops_counter': '2'},
-            added_relationship_node_instance['runtime_properties']
+        self._assertDictContainsSubset(
+             {'source_ops_counter': '2'},
+             added_relationship_node_instance['runtime_properties']
         )
 
-        self.assertDictContainsSubset(
+        self._assertDictContainsSubset(
             {'source_ops_counter': '3'},
             new_node_instance['runtime_properties']
         )
@@ -309,7 +309,7 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
 
         intact_node_instance = modified_node_instances['intact'][0]
 
-        self.assertDictContainsSubset(
+        self._assertDictContainsSubset(
             {'update_id': dep_update.id},
             intact_node_instance.runtime_properties
         )
@@ -374,7 +374,7 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
         # assert not operation has affected target node
         add_related_instance = modified_node_instances['intact'][0]
 
-        self.assertDictContainsSubset(
+        self._assertDictContainsSubset(
             {'uninstall_op_counter': '1'},
             add_related_instance['runtime_properties']
         )
@@ -388,7 +388,7 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
 
     def test_skip_install_false(self):
         instance_to_check = self._test_skip_install(skip=False)
-        self.assertDictContainsSubset(
+        self._assertDictContainsSubset(
             {'install_op_counter': '3'},
             instance_to_check['runtime_properties']
         )
@@ -421,8 +421,8 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
         # assert all operations in 'update' ('install') workflow
         # are executed by making them increment a runtime property
         related_instance = modified_node_instances['remove_related'][0]
-        self.assertDictContainsSubset({'install_op_counter': '1'},
-                                      related_instance['runtime_properties'])
+        self._assertDictContainsSubset({'install_op_counter': '1'},
+                                       related_instance['runtime_properties'])
         return related_instance
 
     def test_skip_uninstall_true(self):
@@ -432,7 +432,7 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
 
     def test_skip_uninstall_false(self):
         instance_to_check = self._test_skip_uninstall(skip=False)
-        self.assertDictContainsSubset(
+        self._assertDictContainsSubset(
             {'uninstall_op_counter': '1'},
             instance_to_check['runtime_properties']
         )
@@ -476,11 +476,11 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
 
     def test_skip_install_and_uninstall_false(self):
         modified_instance = self._test_skip_install_and_uninstall(skip=False)
-        self.assertDictContainsSubset(
+        self._assertDictContainsSubset(
             {'install_op_counter': '1'},
             modified_instance['runtime_properties']
         )
-        self.assertDictContainsSubset(
+        self._assertDictContainsSubset(
             {'uninstall_op_counter': '1'},
             modified_instance['runtime_properties']
         )

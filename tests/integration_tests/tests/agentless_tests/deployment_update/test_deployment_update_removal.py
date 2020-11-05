@@ -111,7 +111,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         # assert all operations in 'update' ('install') workflow
         # are executed by making them increment a runtime property
         remove_related_instance = modified_node_instances['remove_related'][0]
-        self.assertDictContainsSubset(
+        self._assertDictContainsSubset(
                 {'target_ops_counter': '1'},
                 remove_related_instance['runtime_properties']
         )
@@ -139,7 +139,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         base_nodes, base_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
 
-        self.assertDictContainsSubset(
+        self._assertDictContainsSubset(
                 {'source_ops_counter': '1'},
                 base_node_instances['modified'][0]['runtime_properties']
         )
@@ -263,7 +263,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
                 exists=False)
 
         # check all operation have been executed
-        self.assertDictContainsSubset(
+        self._assertDictContainsSubset(
                 {'target_ops_counter': '1'},
                 target_node_instance['runtime_properties']
         )
