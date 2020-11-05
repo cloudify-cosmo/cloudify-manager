@@ -25,7 +25,6 @@ from os.path import exists, isfile, join
 from tempfile import TemporaryDirectory, mktemp
 
 import click
-import requests
 import yaml
 
 from cloudify._compat import parse_qs, parse_version
@@ -36,6 +35,8 @@ from dsl_parser.constants import (WORKFLOW_PLUGINS_TO_INSTALL,
                                   PLUGIN_PACKAGE_NAME,
                                   PLUGIN_PACKAGE_VERSION)
 from dsl_parser.models import Plan
+from dsl_parser import exceptions as dsl_parser_exceptions
+from dsl_parser import utils as dsl_parser_utils
 
 from manager_rest.constants import (FILE_SERVER_BLUEPRINTS_FOLDER,
                                     FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
@@ -364,15 +365,18 @@ def load_mappings(file_name: str) -> list:
 
 @lru_cache(maxsize=2048)
 def spec_from_url(url: str) -> tuple:
+    resolver = dsl_parser_utils.create_import_resolver({
+        'implementation':
+            'manager_rest.resolver_with_catalog_support:'
+            'ResolverWithCatalogSupport',
+    })
     try:
-        response = requests.get(url)
-    except requests.exceptions.ConnectionError as ex:
-        print('Cannot reach {0}: {1}'.format(url, ex))
-        return None, None
-    if response.status_code != 200:
+        response_text = resolver.fetch_import()
+    except dsl_parser_exceptions.DSLParsingLogicException as ex:
+        print('Cannot retrieve {0}: {1}'.format(url, ex))
         return None, None
     try:
-        plugin_yaml = yaml.safe_load(response.text)
+        plugin_yaml = yaml.safe_load(response_text)
     except yaml.YAMLError as ex:
         print('Cannot load imports from {0}: {1}'.format(url, ex))
         return None, None
