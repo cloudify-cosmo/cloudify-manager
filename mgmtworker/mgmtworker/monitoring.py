@@ -1,9 +1,10 @@
-import json
-
-from os import rename, sep
+from os import kill, rename, sep
 from os.path import join
+from signal import SIGHUP
+from subprocess import check_output
 
 from jinja2 import Template
+from json import dumps
 from tempfile import NamedTemporaryFile
 
 from cloudify.utils import setup_logger
@@ -85,6 +86,7 @@ def update_manager_alerts(hosts):
     file_name = _deploy_prometheus_missing_alerts('manager_missing.yml',
                                                   'manager',
                                                   hosts)
+    _reload_prometheus()
     logger.debug('Prometheus alerts successfully deployed: %s', file_name)
 
 
@@ -94,6 +96,7 @@ def update_broker_alerts(hosts):
     file_name = _deploy_prometheus_missing_alerts('rabbitmq_missing.yml',
                                                   'rabbitmq',
                                                   hosts)
+    _reload_prometheus()
     logger.debug('Prometheus alerts successfully deployed: %s', file_name)
 
 
@@ -103,6 +106,7 @@ def update_db_alerts(hosts):
     file_name = _deploy_prometheus_missing_alerts('postgres_missing.yml',
                                                   'postgres',
                                                   hosts)
+    _reload_prometheus()
     logger.debug('Prometheus alerts successfully deployed: %s', file_name)
 
 
@@ -115,8 +119,8 @@ def _deploy_prometheus_targets(destination, targets, labels=None):
     return _render_template(
         PROMETHEUS_TARGETS_TEMPLATE,
         join(PROMETHEUS_TARGETS_DIR, destination),
-        target_addresses=json.dumps(targets),
-        target_labels=json.dumps(labels),
+        target_addresses=dumps(targets),
+        target_labels=dumps(labels),
     )
 
 
@@ -140,3 +144,10 @@ def _deploy_prometheus_missing_alerts(destination, service_name, hosts):
     rename(tmp_file_name,
            join(PROMETHEUS_ALERTS_DIR, destination))
     return destination
+
+
+def _reload_prometheus():
+    # Send SIGHUP to the prometheus process to reload alerts configuration
+    pid = int(check_output(['pidof', 'prometheus']).strip())
+    logger.info('Reloading the Prometheus ({0}) configuration'.format(pid))
+    kill(pid, SIGHUP)
