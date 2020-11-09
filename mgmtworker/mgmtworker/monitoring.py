@@ -29,6 +29,14 @@ PROMETHEUS_MISSING_ALERT = Template(
           severity: critical
         annotations:
           summary: "{{ name|capitalize }} is missing on node {{ host }}"
+
+      - alert: prometheus_missing
+        expr: absent(up{host="{{ host }}", job="prometheus"})
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Prometheus is missing on node {{ host }}"
 {% endfor %}""")
 
 
