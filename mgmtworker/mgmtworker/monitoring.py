@@ -3,8 +3,9 @@ from os.path import join
 from signal import SIGHUP
 from subprocess import check_output
 
+import json
+
 from jinja2 import Template
-from json import dumps
 from tempfile import NamedTemporaryFile
 
 from cloudify.utils import setup_logger
@@ -127,8 +128,8 @@ def _deploy_prometheus_targets(destination, targets, labels=None):
     return _render_template(
         PROMETHEUS_TARGETS_TEMPLATE,
         join(PROMETHEUS_TARGETS_DIR, destination),
-        target_addresses=dumps(targets),
-        target_labels=dumps(labels),
+        target_addresses=json.dumps(targets),
+        target_labels=json.dumps(labels),
     )
 
 
@@ -147,7 +148,6 @@ def _deploy_prometheus_missing_alerts(destination, service_name, hosts):
     template = PROMETHEUS_MISSING_ALERT.render(name=service_name, hosts=hosts)
     with NamedTemporaryFile(mode='w+t', delete=False) as f:
         f.write(template)
-        f.flush()
         tmp_file_name = f.name
     rename(tmp_file_name,
            join(PROMETHEUS_ALERTS_DIR, destination))
