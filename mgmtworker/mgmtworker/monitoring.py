@@ -20,9 +20,7 @@ PROMETHEUS_TARGETS_TEMPLATE = '- targets: {target_addresses}\n'\
 PROMETHEUS_MISSING_ALERT = Template(
     """groups:
   - name: {{ name }}
-    rules:
-
-{% for host in hosts %}
+    rules:{% for host in hosts %}
       - alert: {{ name }}_missing
         expr: absent({{ name }}_healthy{host="{{ host }}"})
         for: 1m
