@@ -23,7 +23,7 @@ PROMETHEUS_MISSING_ALERT = Template(
     rules:{% for host in hosts %}
       - alert: {{ name }}_missing
         expr: absent({{ name }}_healthy{host="{{ host }}"})
-        for: 1m
+        for: 15s
         labels:
           severity: critical
         annotations:
@@ -31,7 +31,7 @@ PROMETHEUS_MISSING_ALERT = Template(
 
       - alert: prometheus_missing
         expr: absent(up{host="{{ host }}", job="prometheus"})
-        for: 1m
+        for: 15s
         labels:
           severity: critical
         annotations:
