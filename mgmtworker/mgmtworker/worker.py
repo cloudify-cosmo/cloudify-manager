@@ -43,9 +43,15 @@ from cloudify_agent import worker as agent_worker
 
 from .hooks import HookConsumer
 from .monitoring import (
+    get_broker_hosts,
+    get_db_hosts,
+    get_manager_hosts,
     update_broker_targets,
+    update_broker_alerts,
     update_db_targets,
+    update_db_alerts,
     update_manager_targets,
+    update_manager_alerts,
 )
 try:
     from cloudify_premium import syncthing_utils
@@ -146,7 +152,9 @@ class MgmtworkerServiceTaskConsumer(ServiceTaskConsumer):
             api_token=get_admin_api_token()
         )
         syncthing_utils.mgmtworker_update_devices(rest_client=rest_client)
-        update_manager_targets(rest_client)
+        manager_hosts = list(get_manager_hosts(rest_client.manager))
+        update_manager_targets(manager_hosts)
+        update_manager_alerts(manager_hosts)
 
     def manager_removed(self):
         logger.info('A manager has been removed from the cluster, updating '
@@ -156,7 +164,9 @@ class MgmtworkerServiceTaskConsumer(ServiceTaskConsumer):
             api_token=get_admin_api_token()
         )
         syncthing_utils.mgmtworker_update_devices(rest_client=rest_client)
-        update_manager_targets(rest_client)
+        manager_hosts = list(get_manager_hosts(rest_client.manager))
+        update_manager_targets(manager_hosts)
+        update_manager_alerts(manager_hosts)
 
     def broker_added(self):
         logger.info('A broker has been added to the cluster, '
@@ -165,7 +175,9 @@ class MgmtworkerServiceTaskConsumer(ServiceTaskConsumer):
             tenant='default_tenant',
             api_token=get_admin_api_token()
         )
-        update_broker_targets(rest_client)
+        broker_hosts = list(get_broker_hosts(rest_client.manager))
+        update_broker_targets(broker_hosts)
+        update_broker_alerts(broker_hosts)
 
     def broker_updated(self):
         logger.info('A broker has been updated in the cluster, '
@@ -174,16 +186,9 @@ class MgmtworkerServiceTaskConsumer(ServiceTaskConsumer):
             tenant='default_tenant',
             api_token=get_admin_api_token()
         )
-        update_broker_targets(rest_client)
-
-    def db_updated(self):
-        logger.info('DB nodes were updated in the cluster, '
-                    'updating cluster monitoring')
-        rest_client = get_rest_client(
-            tenant='default_tenant',
-            api_token=get_admin_api_token()
-        )
-        update_db_targets(rest_client)
+        broker_hosts = list(get_broker_hosts(rest_client.manager))
+        update_broker_targets(broker_hosts)
+        update_broker_alerts(broker_hosts)
 
     def broker_removed(self):
         logger.info('A broker has been removed from the cluster, '
@@ -192,7 +197,20 @@ class MgmtworkerServiceTaskConsumer(ServiceTaskConsumer):
             tenant='default_tenant',
             api_token=get_admin_api_token()
         )
-        update_broker_targets(rest_client)
+        broker_hosts = list(get_broker_hosts(rest_client.manager))
+        update_broker_targets(broker_hosts)
+        update_broker_alerts(broker_hosts)
+
+    def db_updated(self):
+        logger.info('DB nodes were updated in the cluster, '
+                    'updating cluster monitoring')
+        rest_client = get_rest_client(
+            tenant='default_tenant',
+            api_token=get_admin_api_token()
+        )
+        db_hosts = list(get_db_hosts(rest_client.manager))
+        update_db_targets(db_hosts)
+        update_db_alerts(db_hosts)
 
     def delete_source_plugins_task(self, deployment_id, tenant_name):
         dep_dir = os.path.join(sys.prefix, 'source_plugins',
