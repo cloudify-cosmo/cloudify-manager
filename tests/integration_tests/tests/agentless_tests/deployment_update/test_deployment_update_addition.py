@@ -137,14 +137,15 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
 
             # assert all operations in 'update' ('install') workflow
             # are executed by making them increment a runtime property
-            self.assertDictContainsSubset({'source_ops_counter': '6'},
-                                          added_instance['runtime_properties'])
+            self._assertDictContainsSubset(
+                {'source_ops_counter': '6'},
+                added_instance['runtime_properties'])
 
             # assert operations affected the target node as well
             add_related_instance = \
                 self.client.node_instances.list(deployment_id=deployment.id,
                                                 node_id='site1')[0]
-            self.assertDictContainsSubset(
+            self._assertDictContainsSubset(
                     {'target_ops_counter': '3'},
                     add_related_instance['runtime_properties']
             )
@@ -239,7 +240,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
             added_node['operations'].get(operation_id)
         self.assertIsNotNone(affected_lifecycle_operation)
 
-        self.assertDictContainsSubset(
+        self._assertDictContainsSubset(
                 {'source_ops_counter': '1'},
                 added_node_instance['runtime_properties']
         )
@@ -306,8 +307,9 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
 
             # assert all operations in 'update' ('install') workflow
             # are executed by making them increment a runtime property
-            self.assertDictContainsSubset({'source_ops_counter': '6'},
-                                          added_instance['runtime_properties'])
+            self._assertDictContainsSubset(
+                {'source_ops_counter': '6'},
+                added_instance['runtime_properties'])
 
     def test_add_relationship(self):
         deployment, modified_bp_path = \
@@ -324,7 +326,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
 
         # check that the relationship operation between site3 and site 1
         # ran only once (at bp)
-        self.assertDictContainsSubset(
+        self._assertDictContainsSubset(
                 {'target_ops_counter': '1'},
                 base_node_instances['related'][0]['runtime_properties']
         )
@@ -398,18 +400,18 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
 
         # check that the relationship operation between site3 and site 1
         # ran only once (at bp)
-        self.assertDictContainsSubset(
+        self._assertDictContainsSubset(
                 {'target_ops_counter': '1'},
                 related_node_instance['runtime_properties']
         )
 
         # check all operation have been executed
-        self.assertDictContainsSubset(
+        self._assertDictContainsSubset(
                 {'source_ops_counter': '1'},
                 source_node_instance['runtime_properties']
         )
 
-        self.assertDictContainsSubset(
+        self._assertDictContainsSubset(
                 {'target_ops_counter': '1'},
                 target_node_instance['runtime_properties']
         )
@@ -489,14 +491,14 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         # check all operation have been executed
         source_operations = \
             source_node['relationships'][0]['source_operations']
-        self.assertDictContainsSubset(dict_to_check,
-                                      source_operations[operation_id])
-        self.assertDictContainsSubset(
+        self._assertDictContainsSubset(dict_to_check,
+                                       source_operations[operation_id])
+        self._assertDictContainsSubset(
                 dict_to_check,
                 source_operations[operation_id]
         )
 
-        self.assertDictContainsSubset(
+        self._assertDictContainsSubset(
                 {'source_ops_counter': '1'},
                 modified_node_instances['source'][0]['runtime_properties']
         )
@@ -583,8 +585,8 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         self._wait_for_successful_state(dep_update.id)
 
         deployment = self.client.deployments.get(dep_update.deployment_id)
-        self.assertDictContainsSubset({'custom_output': {'value': 0}},
-                                      deployment.outputs)
+        self._assertDictContainsSubset({'custom_output': {'value': 0}},
+                                       deployment.outputs)
 
     @mark.skip
     def test_add_description(self):

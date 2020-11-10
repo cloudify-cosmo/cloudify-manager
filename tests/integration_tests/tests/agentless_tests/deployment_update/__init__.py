@@ -182,3 +182,7 @@ class DeploymentUpdateBase(AgentlessTestCase):
             return path[0]
         else:
             return {path[0]: self._create_dict(path[1:])}
+
+    @staticmethod
+    def _assertDictContainsSubset(subset, containing_dict):
+        subset.items() <= containing_dict.items()

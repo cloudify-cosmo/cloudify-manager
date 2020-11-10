@@ -45,6 +45,9 @@ from .models_base import (
 from .resource_models_base import SQLResourceBase, SQLModelBase
 from .relationships import foreign_key, one_to_many_relationship
 
+RELATIONSHIP = 'relationship'
+NODE = 'node'
+
 
 class CreatedAtMixin(object):
     created_at = db.Column(UTCDateTime, nullable=False, index=True)
@@ -638,6 +641,7 @@ class DeploymentUpdateStep(SQLResourceBase):
     action = db.Column(db.Enum(*ACTION_TYPES, name='action_type'))
     entity_id = db.Column(db.Text, nullable=False)
     entity_type = db.Column(db.Enum(*ENTITY_TYPES, name='entity_type'))
+    topology_order = db.Column(db.Integer, nullable=False)
 
     _deployment_update_fk = foreign_key(DeploymentUpdate._storage_id)
 
@@ -652,6 +656,30 @@ class DeploymentUpdateStep(SQLResourceBase):
     def set_deployment_update(self, deployment_update):
         self._set_parent(deployment_update)
         self.deployment_update = deployment_update
+
+    def __lt__(self, other):
+        """Is this step considered "smaller" than the other step?
+
+        This is used for sorting the steps, ie. steps that are smaller
+        come earlier, and will be executed first.
+        """
+        if self.action != other.action:
+            # the order is 'remove' < 'add' < 'modify'
+            actions = ['remove', 'add', 'modify']
+            return actions.index(self.action) < actions.index(other.action)
+        if self.action == 'add':
+            if self.entity_type == NODE:
+                if other.entity_type == RELATIONSHIP:
+                    # add node before adding relationships
+                    return True
+                if other.entity_type == NODE:
+                    # higher topology order before lower topology order
+                    return self.topology_order > other.topology_order
+        if self.action == 'remove':
+            # remove relationships before removing nodes
+            if self.entity_type == RELATIONSHIP and other.entity_type == NODE:
+                return True
+        return False
 
 
 class DeploymentModification(CreatedAtMixin, SQLResourceBase):
