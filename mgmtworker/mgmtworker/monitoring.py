@@ -4,6 +4,8 @@ from signal import SIGHUP
 from subprocess import check_output
 
 import json
+import re
+import yaml
 
 from jinja2 import Template
 from tempfile import NamedTemporaryFile
@@ -23,7 +25,7 @@ PROMETHEUS_MISSING_ALERT = Template(
     rules:{% for host in hosts %}
       - alert: {{ name }}_missing
         expr: absent({{ name }}_healthy{host="{{ host }}"})
-        for: 15s
+        for: {{ alert_for }}
         labels:
           severity: critical
         annotations:
@@ -31,7 +33,7 @@ PROMETHEUS_MISSING_ALERT = Template(
 
       - alert: prometheus_missing
         expr: absent(up{host="{{ host }}", job="prometheus"})
-        for: 15s
+        for: {{ alert_for }}
         labels:
           severity: critical
         annotations:
@@ -143,13 +145,41 @@ def _render_template(template, destination, **kwargs):
 
 
 def _deploy_prometheus_missing_alerts(destination, service_name, hosts):
-    template = PROMETHEUS_MISSING_ALERT.render(name=service_name, hosts=hosts)
+    prometheus_config = _read_prometheus_yml()
+    scrape_interval = prometheus_config.get('global', {}).\
+        get('scrape_interval', '15s')
+    template = PROMETHEUS_MISSING_ALERT.render(
+        name=service_name,
+        hosts=hosts,
+        alert_for=_calculate_alert_for(scrape_interval))
     with NamedTemporaryFile(mode='w+t', delete=False) as f:
         f.write(template)
         tmp_file_name = f.name
     rename(tmp_file_name,
            join(PROMETHEUS_ALERTS_DIR, destination))
     return destination
+
+
+def _calculate_alert_for(scrape_interval):
+    if scrape_interval:
+        scrape_interval = '{0}'.format(scrape_interval).lower()
+    m = re.match(r'^((\d+)s)?((\d+)ms)?', scrape_interval)
+    if not m or not m.lastindex or m.lastindex < 1:
+        return '15s'
+    scrape_seconds = int(m[2] or 0) + 0.001 * int(m[4] or 0)
+    if scrape_seconds >= 15.0:
+        return '15s'
+    else:
+        return m[0]
+
+
+def _read_prometheus_yml(config_file_name='/etc/prometheus/prometheus.yml'):
+    with open(config_file_name, 'r') as config_file:
+        try:
+            return yaml.safe_load(config_file)
+        except yaml.YAMLError as ex:
+            logger.exception('Error reading Prometheus configuration')
+            raise ex
 
 
 def _reload_prometheus():

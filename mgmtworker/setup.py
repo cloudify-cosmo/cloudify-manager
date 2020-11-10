@@ -19,6 +19,7 @@ install_requires = [
     'cloudify-common==5.1.1.dev1',
     'cloudify-agent==5.1.1.dev1',
     'packaging==17.1',
+    'pyyaml==5.3.1',
 ]
 
 
