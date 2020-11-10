@@ -76,10 +76,17 @@ function set_prometheus_ip() {
     return
   fi
 
-  echo "Updating the host label in the Prometheus configuration..."
+  echo "Updating the host label in the Prometheus local targets..."
   prometheus_targets="/etc/prometheus/targets/local_*.yml"
   for target_file in ${prometheus_targets} ; do
     /usr/bin/sed -ri "s/^(\s+labels:.+\"?host\"?:.*)127\.0\.0\.1(.*)$/\1${ip}\2/" "${target_file}"
+  done
+
+  echo "Updating the host labels in the Prometheus alerts..."
+  prometheus_alerts="/etc/prometheus/alerts/*_missing.yml"
+  for alert_file in ${prometheus_alerts} ; do
+      /usr/bin/sed -ri "s/host=\"127\.0\.0\.1\"/host=\"${ip}\"/" "${target_file}"
+      /usr/bin/sed -ri "s/on node 127\.0\.0\.1/on node ${ip}/" "${target_file}"
   done
 }
 
