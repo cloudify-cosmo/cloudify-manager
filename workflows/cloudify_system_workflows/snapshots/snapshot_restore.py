@@ -707,6 +707,8 @@ class SnapshotRestore(object):
     def _wait_for_plugin_executions(self, client):
         while True:
             executions = client.executions.list(
+                include=['id', 'workflow_id', 'status'],
+                workflow_id='install_plugin',
                 include_system_workflows=True,
                 _all_tenants=True,
                 _get_all_results=True
