@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import subprocess
 import tempfile
 
@@ -25,7 +26,21 @@ def start(ctx, **_):
     install_agent_script = ctx.agent.init_script({'user': 'cfyuser'})
     with tempfile.NamedTemporaryFile(mode='w', delete=False) as f:
         f.write(install_agent_script)
-    subprocess.check_call(['bash', f.name])
+
+    # daemonize the script, so that we're not a child of the mgmtworker,
+    # so the agent is not killed when the mgmtworker dies
+    if os.fork() == 0:
+        if not os.path.exists('/tmp/supervisor.sock'):
+            # under systemd, also escape the mgmtworker's cgroup
+            subprocess.check_call([
+                'sudo', '/usr/bin/bash', '-c',
+                'echo {0} > /sys/fs/cgroup/systemd/tasks'.format(os.getpid())
+            ])
+        os.chdir('/')
+        os.setsid()
+        os.umask(0)
+        if os.fork() == 0:
+            os.execv('/usr/bin/bash', ['/usr/bin/bash', f.name])
 
 
 @operation
