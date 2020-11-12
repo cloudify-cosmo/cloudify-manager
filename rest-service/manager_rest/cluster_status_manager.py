@@ -97,10 +97,9 @@ SERVICE_ASSIGNMENTS = {
 }
 
 QUERY_STRINGS = {
-    CloudifyNodeType.DB:
-        '(pg_up{job=~".*postgresql"} == 1 and up{job=~".*postgresql"} == 1)',
-    CloudifyNodeType.BROKER: '(up{job=~".*rabbitmq"})',
-    CloudifyNodeType.MANAGER: '(probe_success{job=~".*http_.+"})',
+    CloudifyNodeType.DB: '(postgres_healthy) or (postgres_service)',
+    CloudifyNodeType.BROKER: '(rabbitmq_healthy) or (rabbitmq_service)',
+    CloudifyNodeType.MANAGER: '(manager_healthy) or (manager_service)',
 }
 
 
@@ -141,10 +140,6 @@ class ConcurrentStatusChecker(object):
                 QUERY_STRINGS[service_type]
                 for service_type in details['services']
             ]
-            query_parts.extend([
-                'node_systemd_unit_state{state="active"}',
-                'node_supervisord_up',
-            ])
 
             query_string = ' or '.join(query_parts)
 
@@ -472,11 +467,7 @@ def _parse_prometheus_results(prometheus_results):
         timestamp, healthy = result.get('value', [0, ''])
         healthy = healthy == '1'
 
-        process_manager = None
-        if metric.get('__name__') == 'node_systemd_unit_state':
-            process_manager = 'systemd'
-        elif metric.get('__name__') == 'node_supervisord_up':
-            process_manager = 'supervisord'
+        process_manager = metric.get('process_manager')
 
         if process_manager:
             service_id = metric.get('name', '')
@@ -492,7 +483,7 @@ def _parse_prometheus_results(prometheus_results):
                     host=metric.get('host'),
                 ))
         else:
-            if metric.get('job'):
+            if metric.get('host'):
                 processed_data, service_type = _process_metric(
                     metric, timestamp, healthy)
                 if service_type not in metric_results:
@@ -528,6 +519,7 @@ def _get_service_status(service_id, service,
 
 def _process_metric(metric, timestamp, healthy):
     job = metric.get('job', '')
+    metric_name = job
 
     if job.endswith('postgresql'):
         service_type = CloudifyNodeType.DB
@@ -535,6 +527,7 @@ def _process_metric(metric, timestamp, healthy):
         service_type = CloudifyNodeType.BROKER
     else:
         service_type = CloudifyNodeType.MANAGER
+        metric_name = 'http endpoints'
 
     if timestamp:
         last_check = datetime.fromtimestamp(timestamp).strftime(
@@ -543,7 +536,6 @@ def _process_metric(metric, timestamp, healthy):
     else:
         last_check = 'unknown'
 
-    metric_name = job
     if metric.get('instance'):
         metric_name += ' ({})'.format(metric.get('instance'))
     if metric.get('host'):
