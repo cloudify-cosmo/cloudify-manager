@@ -52,7 +52,7 @@ class TestResumeMgmtworker(AgentTestCase):
         To do that, figure out the agent PIDs, and put them into
         the other-cgroup-dir/tasks file.
         """
-        if self.get_service_management_command() != 'systemctl':
+        if self._is_supervisord_command():
             return
         agent_pids = docker.execute(self.env.container_id, [
             'pgrep', '-f', 'agent_host'
@@ -64,6 +64,28 @@ class TestResumeMgmtworker(AgentTestCase):
                 'bash', '-c',
                 'echo {0} > /sys/fs/cgroup/systemd/tasks'.format(pid)
             ])
+
+    def _is_supervisord_command(self):
+        return self.get_service_management_command() != 'systemctl'
+
+    def _toggle_mgmtworker_stopasgroup_option(self, old_value, new_value):
+        self.execute_on_manager(
+            "sed -i 's/stopasgroup={0}/stopasgroup={1}/g' "
+            "/etc/supervisord.d/mgmtworker.cloudify.conf"
+            "".format(old_value, new_value)
+        )
+        self.execute_on_manager(
+            'supervisorctl -c /etc/supervisord.conf reread')
+        self.execute_on_manager(
+            'supervisorctl -c /etc/supervisord.conf update')
+
+    def _disable_stopasgroup_option(self):
+        if self._is_supervisord_command():
+            self._toggle_mgmtworker_stopasgroup_option('true', 'false')
+
+    def _enable_stopasgroup_option(self):
+        if self._is_supervisord_command():
+            self._toggle_mgmtworker_stopasgroup_option('false', 'true')
 
     def _stop_mgmtworker(self):
         self.logger.info('Stopping mgmtworker')
@@ -80,33 +102,46 @@ class TestResumeMgmtworker(AgentTestCase):
         )
 
     def test_resume_agent_op(self):
-        # start a workflow
+        # Disable the stopasgroup option from mgmtworker configuration so that
+        # we can avoid killing the host agent and task operation from being
+        # stopped since the host agent and mgmtworker running inside the
+        # same container. This is only relevant for supervisord
+        self._disable_stopasgroup_option()
         deployment_id = 'd{0}'.format(uuid.uuid4())
         dsl_path = resource('dsl/resumable_agent.yaml')
         deployment, execution_id = self.deploy_application(
             dsl_path, deployment_id=deployment_id)
         self._detach_agents()
-
         execution = self._start_execution(deployment, 'interface1.op1')
-
         # wait until the agent starts executing operations
         self.wait_for_event(execution, BEFORE_MESSAGE)
         instance = self.client.node_instances.list(
             node_id='agent_host', deployment_id=deployment.id)[0]
         self.assertFalse(instance.runtime_properties['resumed'])
 
-        # restart mgmtworker
+        # Stop mgmtworker while the operation is executed by host_agent
         self._stop_mgmtworker()
-        self._start_mgmtworker()
+        if self._is_supervisord_command():
+            # kill the execution operation process since its not going to be
+            # killed by the mgmtworker after we disable the stopasgroup option
+            self.execute_on_manager('pkill -f task-cloudify.execute_operation')
 
+        # Start mgmtworker
+        self._start_mgmtworker()
         # check that we resume waiting for the agent operation
         self.wait_for_event(execution, AFTER_MESSAGE)
         self.wait_for_execution_to_end(execution)
         instance = self.client.node_instances.get(instance.id)
         self.assertTrue(instance.runtime_properties['resumed'])
+        # Enable the stopasgroup again since this change is global
+        self._enable_stopasgroup_option()
 
     def test_resume_agent_op_finished(self):
-        # start a workflow
+        # Disable the stopasgroup option from mgmtworker configuration so that
+        # we can avoid killing the host agent and task operation from being
+        # stopped since the host agent and mgmtworker running inside the
+        # same container. This is only relevant for supervisord
+        self._disable_stopasgroup_option()
         deployment_id = 'd{0}'.format(uuid.uuid4())
         dsl_path = resource('dsl/resumable_agent.yaml')
         deployment, execution_id = self.deploy_application(
@@ -120,6 +155,10 @@ class TestResumeMgmtworker(AgentTestCase):
         self.wait_for_event(execution, BEFORE_MESSAGE)
 
         self._stop_mgmtworker()
+        if self._is_supervisord_command():
+            # kill the execution operation process since its not going to be
+            # killed by the mgmtworker after we disable the stopasgroup option
+            self.execute_on_manager('pkill -f task-cloudify.execute_operation')
         # wait for the agent to finish executing the operation
         while True:
             instance = self.client.node_instances.list(
@@ -128,6 +167,7 @@ class TestResumeMgmtworker(AgentTestCase):
                 break
 
         self._start_mgmtworker()
-
         # check that we resume waiting for the agent operation
         self.wait_for_execution_to_end(execution)
+        # Enable the stopasgroup again since this change is global
+        self._enable_stopasgroup_option()
