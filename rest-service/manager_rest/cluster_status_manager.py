@@ -190,16 +190,18 @@ def get_concurrent_status_checker():
 
 
 def _add_monitoring_data(cluster_nodes):
-    # We should try to make this be something that we just retrieve
-    # from the local (federated) prometheus, but we're not there yet
+    # We are taking a step towards using federated data from the local
+    # Prometheus only.
     status_getter = get_concurrent_status_checker()
+    global_results = []
     for address, results in status_getter.get(cluster_nodes).items():
-        results = [
-            metric for metric in results
-            if 'cloudify' not in metric.get('metric', {}).get('monitor', '')
-        ]
-        service_results, metric_results = _parse_prometheus_results(results)
+        global_results.extend(results or [])
 
+    for address in cluster_nodes.keys():
+        service_results, metric_results = _parse_prometheus_results([
+            result for result in global_results
+            if _host_matches(result.get('metric', {}), address)
+        ])
         cluster_nodes[address]['service_results'] = service_results
         cluster_nodes[address]['metric_results'] = metric_results
 
