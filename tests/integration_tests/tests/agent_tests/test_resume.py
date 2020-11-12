@@ -28,6 +28,7 @@ AFTER_MESSAGE = 'AFTER SLEEP'
 
 
 @pytest.mark.usefixtures('cloudmock_plugin')
+@pytest.mark.usefixtures('allow_agent')
 class TestResumeMgmtworker(AgentTestCase):
     def _start_execution(self, deployment, operation, wait_seconds=20):
         return self.execute_workflow(
