@@ -125,77 +125,15 @@ def get_cluster_status(detailed=False):
     return cluster_status
 
 
-class ConcurrentStatusChecker(object):
-    def __init__(self, logger):
-        self._in_queue = queue.Queue()
-        self._out_queue = queue.Queue()
-        self._threads = None
-        self.logger = logger
-
-    def _worker(self):
-        while True:
-            address, details = self._in_queue.get()
-
-            query_parts = [
-                QUERY_STRINGS[service_type]
-                for service_type in details['services']
-            ]
-
-            query_string = ' or '.join(query_parts)
-
-            prometheus_response = prometheus_query(
-                address,
-                query_string=query_string,
-                logger=self.logger,
-                auth=(details['username'], details['password']),
-                ca_path=details['ca_path'],
-                timeout=config.monitoring_timeout,
-            )
-            self._out_queue.put((address,
-                                 prometheus_response,))
-
-    def _initialize_threads(self, number_of_threads):
-        self._threads = [
-            threading.Thread(target=self._worker)
-            for _ in range(number_of_threads)
-        ]
-        for thread in self._threads:
-            thread.daemon = True
-            thread.start()
-
-    def get(self, cluster_nodes):
-        if self._threads is None:
-            self._initialize_threads(len(cluster_nodes))
-        result = {}
-        for address, details in cluster_nodes.items():
-            result[address] = None
-            self._in_queue.put((address, details))
-        for _ in range(len(result)):
-            try:
-                address, prometheus_response = self._out_queue.get(
-                    timeout=config.monitoring_timeout + 1)
-            except queue.Empty:
-                pass
-            else:
-                result[address] = prometheus_response
-        return result
-
-
-def get_concurrent_status_checker():
-    if not hasattr(current_app, 'concurrent_status_checker'):
-        current_app.concurrent_status_checker = ConcurrentStatusChecker(
-            logger=current_app.logger,
-        )
-    return current_app.concurrent_status_checker
-
-
 def _add_monitoring_data(cluster_nodes):
     # We are taking a step towards using federated data from the local
     # Prometheus only.
-    status_getter = get_concurrent_status_checker()
-    global_results = []
-    for address, results in status_getter.get(cluster_nodes).items():
-        global_results.extend(results or [])
+    query_string = ' or '.join(QUERY_STRINGS.values())
+    global_results = prometheus_query(
+        query_string=query_string,
+        logger=current_app.logger,
+        timeout=config.monitoring_timeout,
+    )
 
     for address in cluster_nodes.keys():
         service_results, metric_results = _parse_prometheus_results([
