@@ -1,5 +1,3 @@
-import threading
-import queue
 from datetime import datetime
 
 from flask import current_app
@@ -326,7 +324,7 @@ def _host_matches(struct, node_private_ip):
 
 
 def _strip_keys(struct, keys):
-    """Return copy of struct but without the keys listed"""
+    """Return copy of struct but without the keys listed."""
     if not isinstance(keys, list):
         keys = [keys]
     return {k: v for k, v in struct.items() if k not in keys}
