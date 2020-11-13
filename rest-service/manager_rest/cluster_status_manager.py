@@ -126,8 +126,8 @@ def get_cluster_status(detailed=False):
 
 
 def _add_monitoring_data(cluster_nodes):
-    # We are taking a step towards using federated data from the local
-    # Prometheus only.
+    # Get all the data in one fell swoop (thanks to the underlying Prometheus
+    # federation).
     query_string = ' or '.join(QUERY_STRINGS.values())
     global_results = prometheus_query(
         query_string=query_string,
