@@ -51,4 +51,5 @@ from .resource_models import (Blueprint,
                               Site,
                               PluginsUpdate,
                               InterDeploymentDependencies,
-                              _PluginState)
+                              _PluginState,
+                              DeploymentsLabels)

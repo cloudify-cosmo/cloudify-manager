@@ -93,9 +93,28 @@ class DeploymentsId(resources_v1.DeploymentsId):
                 request_dict),
             site_name=_get_site_name(request_dict),
             runtime_only_evaluation=request_dict.get(
-                'runtime_only_evaluation', False)
+                'runtime_only_evaluation', False),
+            labels=_get_labels(request_dict)
         )
         return deployment, 201
+
+
+def _get_labels(request_dict):
+    if 'labels' not in request_dict:
+        return None
+
+    labels_list = request_dict['labels']
+    for label in labels_list:
+        for key, value in label.items():
+            if ((not isinstance(key, text_type)) or
+                    (not isinstance(value, text_type)) or
+                    len(list(label.items())) > 1):
+                raise BadParametersError(
+                    'Labels are defined as a list of dictionaries of '
+                    'the form [{<key1>: <value1>}, {<key2>: <value2>}, ...]')
+            rest_utils.validate_inputs({'key': key, 'value': value})
+
+    return labels_list
 
 
 class DeploymentsSetVisibility(SecuredResource):
