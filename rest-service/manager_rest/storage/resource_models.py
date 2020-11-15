@@ -42,6 +42,7 @@ from .models_base import (
     JSONString,
     UTCDateTime,
 )
+from .management_models import Tenant, User
 from .resource_models_base import SQLResourceBase, SQLModelBase
 from .relationships import foreign_key, one_to_many_relationship
 
@@ -346,6 +347,42 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                          operation=wf.get('operation', ''),
                          parameters=wf.get('parameters', dict()))
                 for wf_name, wf in deployment_workflows.items()]
+
+
+class _Labels(CreatedAtMixin, SQLModelBase):
+    """An abstract class for the different labels models."""
+    __abstract__ = True
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    key = db.Column(db.Text, nullable=False, index=True)
+    value = db.Column(db.Text, nullable=False)
+
+    @declared_attr
+    def _tenant_id(cls):
+        return foreign_key(Tenant.id)
+
+    @declared_attr
+    def _creator_id(cls):
+        return foreign_key(User.id)
+
+    @declared_attr
+    def tenant(cls):
+        return one_to_many_relationship(cls, Tenant, cls._tenant_id, 'id')
+
+    @declared_attr
+    def creator(cls):
+        return one_to_many_relationship(cls, User, cls._creator_id, 'id')
+
+
+class DeploymentsLabels(_Labels):
+    __tablename__ = 'deployments_labels'
+    _deployment_fk = foreign_key(Deployment._storage_id)
+
+    @declared_attr
+    def deployment(cls):
+        return db.relationship(
+            'Deployment', lazy='joined',
+            backref=db.backref('labels', cascade='all, delete-orphan'))
 
 
 class Execution(CreatedAtMixin, SQLResourceBase):

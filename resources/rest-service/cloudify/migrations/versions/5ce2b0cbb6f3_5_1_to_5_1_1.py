@@ -10,6 +10,8 @@ Create Date: 2020-11-09 15:12:12.055532
 from alembic import op
 import sqlalchemy as sa
 
+from manager_rest.storage.models_base import UTCDateTime
+
 # revision identifiers, used by Alembic.
 revision = '5ce2b0cbb6f3'
 down_revision = '387fcd049efb'
@@ -24,7 +26,83 @@ def upgrade():
                   sa.Integer(),
                   nullable=False,
                   server_default="0"))
+    create_deployments_labels_table()
 
 
 def downgrade():
     op.drop_column('deployment_update_steps', 'topology_order')
+    drop_deployments_labels_table()
+
+
+def create_deployments_labels_table():
+    _create_labels_table('deployments_labels',
+                         '_deployment_fk',
+                         u'deployments._storage_id',
+                         '_deployment_idx')
+
+
+def drop_deployments_labels_table():
+    op.drop_table('deployments_labels')
+
+
+def _create_labels_table(table_name, fk_column, fk_refcolumn, fk_index):
+    """
+    This is an auxiliary function to create an object's labels table.
+
+    :param table_name: The table name. E.g. deployments_labels
+    :param fk_column: The object's foreign key column name. E.g. _deployment_fk
+    :param fk_refcolumn: The object's foreign key reference column. E.g.
+                         u'deployments._storage_id'
+    :param fk_index: The object's foreign key index name. E.g. _deployment_idx
+    """
+    op.create_table(
+        table_name,
+        sa.Column('id',
+                  sa.Integer(),
+                  autoincrement=True,
+                  nullable=False),
+        sa.Column('key', sa.Text(), nullable=False),
+        sa.Column('value', sa.Text(), nullable=False),
+        sa.Column(fk_column, sa.Integer(), nullable=False),
+        sa.Column('created_at', UTCDateTime(), nullable=False),
+        sa.Column('_tenant_id', sa.Integer(), nullable=False),
+        sa.Column('_creator_id', sa.Integer(), nullable=False),
+        sa.ForeignKeyConstraint(
+            [fk_column],
+            [fk_refcolumn],
+            name=op.f('{0}_{1}'.format(table_name, fk_column)),
+            ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(
+            ['_creator_id'],
+            [u'users.id'],
+            name=op.f('{0}__creator_id_fkey'.format(table_name)),
+            ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(
+            ['_tenant_id'],
+            [u'tenants.id'],
+            name=op.f('{0}__tenant_id_fkey'.format(table_name)),
+            ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint(
+            'id',
+            name=op.f('{0}_pkey'.format(table_name)))
+    )
+    op.create_index(op.f('{0}__tenant_id_idx'.format(table_name)),
+                    table_name,
+                    ['_tenant_id'],
+                    unique=False)
+    op.create_index(op.f('{0}_created_at_idx'.format(table_name)),
+                    table_name,
+                    ['created_at'],
+                    unique=False)
+    op.create_index(op.f('{0}__creator_id_idx'.format(table_name)),
+                    table_name,
+                    ['_creator_id'],
+                    unique=False)
+    op.create_index(op.f('{0}_key_idx'.format(table_name)),
+                    table_name,
+                    ['key'],
+                    unique=False)
+    op.create_index(op.f('{0}_{1}'.format(table_name, fk_index)),
+                    table_name,
+                    [fk_column],
+                    unique=False)
