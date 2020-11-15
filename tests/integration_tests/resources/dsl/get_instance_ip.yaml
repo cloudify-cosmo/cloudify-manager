@@ -71,11 +71,6 @@ node_types:
 relationships:
     contained_in:
         derived_from: cloudify.relationships.contained_in
-        source_interfaces:
-            cloudify.interfaces.relationship_lifecycle:
-                establish:
-                    implementation: testmockoperations.testmockoperations.tasks.get_instance_ip_of_source_and_target
-                    inputs: {}
         target_interfaces:
             cloudify.interfaces.relationship_lifecycle:
                 establish:
