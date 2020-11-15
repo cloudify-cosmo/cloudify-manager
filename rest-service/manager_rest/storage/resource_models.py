@@ -348,6 +348,36 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                 for wf_name, wf in deployment_workflows.items()]
 
 
+class _Labels(CreatedAtMixin, SQLModelBase):
+    """An abstract class for the different labels models."""
+    __abstract__ = True
+
+    _storage_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    key = db.Column(db.Text, nullable=False, index=True)
+    value = db.Column(db.Text, nullable=False)
+
+    @classmethod
+    def unique_id(cls):
+        return '_storage_id'
+
+    @declared_attr
+    def _tenant_id(cls):
+        return foreign_key('tenants.id')
+
+    @declared_attr
+    def _creator_id(cls):
+        return foreign_key('users.id')
+
+
+class DeploymentsLabels(_Labels):
+    __tablename__ = 'deployments_labels'
+    _deployment_fk = foreign_key(Deployment._storage_id)
+
+    @declared_attr
+    def deployment(cls):
+        return db.relationship('Deployment', lazy='joined', backref='labels')
+
+
 class Execution(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'executions'
     STATUS_DISPLAY_NAMES = {
