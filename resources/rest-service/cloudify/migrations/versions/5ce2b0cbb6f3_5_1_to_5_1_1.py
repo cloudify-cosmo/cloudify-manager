@@ -20,7 +20,10 @@ depends_on = None
 def upgrade():
     op.add_column(
         'deployment_update_steps',
-        sa.Column('topology_order', sa.Integer(), nullable=False))
+        sa.Column('topology_order',
+                  sa.Integer(),
+                  nullable=False,
+                  server_default="0"))
 
 
 def downgrade():
