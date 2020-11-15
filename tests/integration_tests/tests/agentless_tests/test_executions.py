@@ -636,15 +636,6 @@ class ExecutionsTest(AgentlessTestCase):
                    callableObj=self.read_manager_file,
                    file_path=path)
 
-    def test_legacy_cancel_execution(self):
-        # this tests cancellation of an execution where the workflow
-        # announces the cancel occurred by returning a value rather than by
-        # raising an error
-        execution, deployment_id = self._execute_and_cancel_execution(
-            'sleep_with_cancel_support',
-            workflow_params={'use_legacy_cancel': True})
-        self._assert_execution_cancelled(execution, deployment_id)
-
     def test_cancel_execution_before_it_started(self):
         execution, deployment_id = self._execute_and_cancel_execution(
             'sleep_with_cancel_support', False, True, False)

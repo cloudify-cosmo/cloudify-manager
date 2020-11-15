@@ -18,6 +18,3 @@ workflows:
     sleep_with_graph_usage: mock_workflows.mock_workflows.workflows.sleep_with_graph_usage
     sleep_with_cancel_support:
         mapping: mock_workflows.mock_workflows.workflows.sleep_with_cancel_support
-        parameters:
-            use_legacy_cancel:
-                default: false
