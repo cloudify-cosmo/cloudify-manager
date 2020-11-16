@@ -84,7 +84,9 @@ def _create_labels_table(table_name, fk_column, fk_refcolumn, fk_index):
             ondelete='CASCADE'),
         sa.PrimaryKeyConstraint(
             'id',
-            name=op.f('{0}_pkey'.format(table_name)))
+            name=op.f('{0}_pkey'.format(table_name))),
+        sa.UniqueConstraint(
+            'key', 'value', fk_column, name=op.f('{0}_key_value_key'))
     )
     op.create_index(op.f('{0}__tenant_id_idx'.format(table_name)),
                     table_name,

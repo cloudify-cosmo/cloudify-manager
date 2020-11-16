@@ -52,4 +52,4 @@ from .resource_models import (Blueprint,
                               PluginsUpdate,
                               InterDeploymentDependencies,
                               _PluginState,
-                              DeploymentsLabels)
+                              DeploymentLabel)

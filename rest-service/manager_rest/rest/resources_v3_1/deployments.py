@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import copy
 import uuid
 from builtins import staticmethod
 
@@ -105,16 +106,31 @@ def _get_labels(request_dict):
 
     labels_list = request_dict['labels']
     for label in labels_list:
-        for key, value in label.items():
-            if ((not isinstance(key, text_type)) or
-                    (not isinstance(value, text_type)) or
-                    len(list(label.items())) > 1):
-                raise BadParametersError(
-                    'Labels are defined as a list of dictionaries of '
-                    'the form [{<key1>: <value1>}, {<key2>: <value2>}, ...]')
-            rest_utils.validate_inputs({'key': key, 'value': value})
+        if (not isinstance(label, dict)) or len(label) != 1:
+            _raise_bad_labels_list()
 
+        [(key, value)] = label.items()
+        if ((not isinstance(key, text_type)) or
+                (not isinstance(value, text_type))):
+            _raise_bad_labels_list()
+        rest_utils.validate_inputs({'key': key, 'value': value})
+
+    _test_unique_labels(labels_list)
     return labels_list
+
+
+def _raise_bad_labels_list():
+    raise BadParametersError(
+        'Labels must be a list of 1-entry dictionaries: '
+        '[{<key1>: <value1>}, {<key2>: <value2>}, ...]')
+
+
+def _test_unique_labels(labels_list):
+    tmp_labels_list = copy.deepcopy(labels_list)
+    labels_set = {label.popitem() for label in tmp_labels_list}
+    if len(labels_set) != len(labels_list):
+        raise BadParametersError('You cannot define the same label twice '
+                                 'for a specific deployment.')
 
 
 class DeploymentsSetVisibility(SecuredResource):

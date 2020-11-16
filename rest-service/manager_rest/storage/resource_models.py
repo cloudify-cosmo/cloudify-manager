@@ -349,7 +349,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                 for wf_name, wf in deployment_workflows.items()]
 
 
-class _Labels(CreatedAtMixin, SQLModelBase):
+class _Label(CreatedAtMixin, SQLModelBase):
     """An abstract class for the different labels models."""
     __abstract__ = True
 
@@ -374,8 +374,13 @@ class _Labels(CreatedAtMixin, SQLModelBase):
         return one_to_many_relationship(cls, User, cls._creator_id, 'id')
 
 
-class DeploymentsLabels(_Labels):
+class DeploymentLabel(_Label):
     __tablename__ = 'deployments_labels'
+    __table_args__ = (
+        db.UniqueConstraint(
+            'key', 'value', '_deployment_fk'),
+    )
+
     _deployment_fk = foreign_key(Deployment._storage_id)
 
     @declared_attr

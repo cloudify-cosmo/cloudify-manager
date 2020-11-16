@@ -2448,9 +2448,9 @@ class ResourceManager(object):
         """
         current_time = utils.get_formatted_timestamp()
         for label in labels_list:
-            key, value = list(label.items())[0]
+            key, value = label.popitem()
             self.sm.put(
-                models.DeploymentsLabels(
+                models.DeploymentLabel(
                     key=key.lower(),
                     value=value.lower(),
                     created_at=current_time,
