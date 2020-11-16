@@ -101,7 +101,6 @@ pipeline {
               sh """
                 cd && mkdir rpmbuild && cd rpmbuild
                 git clone --single-branch --branch ${env.BRANCH} https://github.com/cloudify-cosmo/cloudify-manager.git SOURCES && cd SOURCES
-                rm /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo
               """
 
               echo 'Download sources for RPM spec file & Build RPM'
