@@ -101,6 +101,7 @@ pipeline {
               sh """
                 cd && mkdir rpmbuild && cd rpmbuild
                 git clone --single-branch --branch ${env.BRANCH} https://github.com/cloudify-cosmo/cloudify-manager.git SOURCES && cd SOURCES
+                rm /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo
               """
 
               echo 'Download sources for RPM spec file & Build RPM'
@@ -193,7 +194,7 @@ pipeline {
                   ''', label: "installing requirements for pytest"
                 }
                 echo 'Running pytest <<amqp-postgres>>'
-                sh '~/venv/bin/pytest -sv amqp-postgres'
+                sh 'pytest -sv amqp-postgres'
               }
             }
           }
@@ -234,7 +235,7 @@ pipeline {
                   echo 'Replace the cloudify-manager URL in dev-requirements.txt with the local path to this checkout'
                   sh 'sed -i "s:^.*cloudify-manager.*(rest-service)$:-e ${HOME}/project/\1/:" ~/cloudify-premium/dev-requirements.txt'
                   echo 'Running pytest <<~/cloudify-premium/tests/unittests>>'
-                  sh '~/venv/bin/pytest -sv ~/cloudify-premium/tests/unittests'
+                  sh 'pytest -sv ~/cloudify-premium/tests/unittests'
                 }
               }
             }
