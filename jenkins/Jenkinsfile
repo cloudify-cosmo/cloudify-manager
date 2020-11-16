@@ -188,8 +188,8 @@ pipeline {
               dir("${env.WORKSPACE}/amqp_postgres") {
                 dir("amqp-postgres"){
                   sh script: '''
-                    ~/venv/bin/pip install -Ur test-requirements.txt
-                    ~/venv/bin/pip install -e .
+                    pip install -Ur test-requirements.txt
+                    pip install -e .
                   ''', label: "installing requirements for pytest"
                 }
                 echo 'Running pytest <<amqp-postgres>>'
@@ -225,10 +225,10 @@ pipeline {
                   
                   dir("rest-service"){
                     sh script: '''
-                      ~/venv/bin/pip install -Ur dev-requirements.txt
-                      ~/venv/bin/pip install -Ur test-requirements.txt
-                      ~/venv/bin/pip install -e .
-                      ~/venv/bin/pip install -e ~/cloudify-premium
+                      pip install -Ur dev-requirements.txt
+                      pip install -Ur test-requirements.txt
+                      pip install -e .
+                      pip install -e ~/cloudify-premium
                     ''', label: "installing requirements for pytest"
                   }
                   echo 'Replace the cloudify-manager URL in dev-requirements.txt with the local path to this checkout'
