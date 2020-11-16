@@ -1,10 +1,9 @@
 import requests
-QUERY_URL_TEMPLATE = 'https://{address}:8009/monitoring/api/v1/query'
+LOCAL_QUERY_URL = 'http://127.0.0.1:9090/monitoring/api/v1/query'
 
 
-def query(address, query_string, logger, auth=None, ca_path=None,
-          timeout=None):
-    query_url = QUERY_URL_TEMPLATE.format(address=address)
+def query(query_string, logger, timeout=None):
+    query_url = LOCAL_QUERY_URL
     url_with_query_string = (
         query_url + '?query=' + requests.utils.quote(query_string)
     )
@@ -12,15 +11,11 @@ def query(address, query_string, logger, auth=None, ca_path=None,
     try:
         r = requests.get(query_url,
                          params=params,
-                         auth=auth,
-                         verify=ca_path if ca_path else True,
                          timeout=timeout)
     except Exception as err:
         logger.error(
-            "Error retrieving prometheus results from '%s' with ca '%s': "
-            "(%s) %s",
+            "Error retrieving prometheus results from '%s': (%s) %s",
             url_with_query_string,
-            ca_path,
             type(err),
             err,
         )
@@ -30,10 +25,9 @@ def query(address, query_string, logger, auth=None, ca_path=None,
 
         if not result:
             logger.error(
-                "Could not get prometheus results from '%s' with ca '%s'. "
+                "Could not get prometheus results from '%s'. "
                 'Response code %s.',
                 url_with_query_string,
-                ca_path,
                 r.status_code,
             )
     return result
