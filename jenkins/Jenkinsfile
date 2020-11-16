@@ -10,7 +10,7 @@ def configuration = [vaultUrl: "${env.VAULT_URL}",  vaultCredentialId: 'vault-ap
 pipeline {
   agent {
     kubernetes {
-      label 'manager'
+      label "manager-cfy-${env.BUILD_NUMBER}"
       defaultContainer 'jnlp'
       yamlFile 'jenkins/build-pod.yaml'
     }
