@@ -1476,8 +1476,7 @@ class ResourceManager(object):
         self._create_deployment_initial_dependencies(
             deployment_plan, new_deployment)
 
-        if labels:
-            self._create_deployment_labels(new_deployment, labels)
+        self.create_deployment_labels(new_deployment, labels)
 
         try:
             self._create_deployment_environment(new_deployment,
@@ -2438,7 +2437,7 @@ class ResourceManager(object):
                 dep_graph.assert_no_cyclic_dependencies(source_id, target_id)
                 dep_graph.add_dependency_to_graph(source_id, target_id)
 
-    def _create_deployment_labels(self, deployment, labels_list):
+    def create_deployment_labels(self, deployment, labels_list):
         """
         Populate the deployments_labels table.
 
@@ -2446,6 +2445,9 @@ class ResourceManager(object):
         :param labels_list: A list of labels of the form:
                             [(key1, value1), (key2, value2)]
         """
+        if not labels_list:
+            return
+
         current_time = utils.get_formatted_timestamp()
         for key, value in labels_list:
             self.sm.put(
