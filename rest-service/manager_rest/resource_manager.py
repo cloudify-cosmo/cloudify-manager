@@ -2444,11 +2444,10 @@ class ResourceManager(object):
 
         :param deployment: A deployment object
         :param labels_list: A list of labels of the form:
-                            [{key1: value1}, {key2: value2}]
+                            [(key1, value1), (key2, value2)]
         """
         current_time = utils.get_formatted_timestamp()
-        for label in labels_list:
-            key, value = label.popitem()
+        for key, value in labels_list:
             self.sm.put(
                 models.DeploymentLabel(
                     key=key.lower(),

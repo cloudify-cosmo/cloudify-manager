@@ -13,7 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import copy
 import uuid
 from builtins import staticmethod
 
@@ -104,8 +103,9 @@ def _get_labels(request_dict):
     if 'labels' not in request_dict:
         return None
 
-    labels_list = request_dict['labels']
-    for label in labels_list:
+    raw_labels_list = request_dict['labels']
+    labels_list = []
+    for label in raw_labels_list:
         if (not isinstance(label, dict)) or len(label) != 1:
             _raise_bad_labels_list()
 
@@ -114,6 +114,7 @@ def _get_labels(request_dict):
                 (not isinstance(value, text_type))):
             _raise_bad_labels_list()
         rest_utils.validate_inputs({'key': key, 'value': value})
+        labels_list.append((key, value))
 
     _test_unique_labels(labels_list)
     return labels_list
@@ -126,9 +127,7 @@ def _raise_bad_labels_list():
 
 
 def _test_unique_labels(labels_list):
-    tmp_labels_list = copy.deepcopy(labels_list)
-    labels_set = {label.popitem() for label in tmp_labels_list}
-    if len(labels_set) != len(labels_list):
+    if len(set(labels_list)) != len(labels_list):
         raise BadParametersError('You cannot define the same label twice '
                                  'for a specific deployment.')
 
