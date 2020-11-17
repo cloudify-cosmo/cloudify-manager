@@ -403,7 +403,7 @@ def _parse_prometheus_results(prometheus_results):
         # Technically the second element in the tuple is the metric value, but
         # we only use it to indicate health currently
         timestamp, healthy = result.get('value', [0, ''])
-        healthy = healthy == '1'
+        healthy = bool(int(healthy)) if healthy else False
 
         process_manager = metric.get('process_manager')
 
