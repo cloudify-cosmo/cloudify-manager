@@ -20,7 +20,9 @@ from manager_rest import constants
 from manager_rest.storage.models import Node
 from manager_rest.manager_exceptions import NotFoundError
 from manager_rest.storage import user_datastore, db, get_storage_manager
-from manager_rest.storage.management_models import Tenant, UserTenantAssoc
+from manager_rest.storage.management_models import (
+    Tenant, UserTenantAssoc, Role
+)
 
 
 def get_node(deployment_id, node_id):
@@ -40,15 +42,15 @@ def get_node(deployment_id, node_id):
 
 def create_default_user_tenant_and_roles(admin_username,
                                          admin_password,
-                                         amqp_manager,
-                                         authorization_file_path):
+                                         amqp_manager):
     """
     Create the bootstrap admin, the default tenant and the security roles,
     as well as a RabbitMQ vhost and user corresponding to the default tenant
 
     :return: The default tenant
     """
-    admin_role = _create_roles(authorization_file_path)
+    sm = get_storage_manager()
+    admin_role = sm.get(Role, None, filters={'name': 'sys_admin'})
     default_tenant = _create_default_tenant()
     amqp_manager.create_tenant_vhost_and_user(tenant=default_tenant)
 

@@ -27,11 +27,20 @@ def upgrade():
                   nullable=False,
                   server_default="0"))
     create_deployments_labels_table()
+    _create_permissions_table()
+    op.add_column(
+        'roles',
+        sa.Column('type',
+                  sa.Text(),
+                  nullable=False,
+                  server_default='tenant_role'))
 
 
 def downgrade():
     op.drop_column('deployment_update_steps', 'topology_order')
     drop_deployments_labels_table()
+    op.drop_table('permissions')
+    op.drop_column('roles', 'type')
 
 
 def create_deployments_labels_table():
@@ -98,3 +107,18 @@ def _create_labels_table(table_name, fk_column, fk_refcolumn, fk_index):
                     table_name,
                     [fk_column],
                     unique=False)
+
+
+def _create_permissions_table():
+    op.create_table(
+        'permissions',
+        sa.Column('id', sa.Integer(), nullable=False, autoincrement=True),
+        sa.Column('role_id', sa.Integer(), nullable=False),
+        sa.Column('name', sa.Text(), nullable=False),
+        sa.PrimaryKeyConstraint('id'),
+        sa.ForeignKeyConstraint(
+            ['role_id'],
+            [u'roles.id'],
+            ondelete='CASCADE',
+        ),
+    )

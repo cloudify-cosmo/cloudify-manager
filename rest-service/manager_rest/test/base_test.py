@@ -354,8 +354,7 @@ class BaseServerTestCase(unittest.TestCase):
             default_tenant = create_default_user_tenant_and_roles(
                 admin_username=admin_user['username'],
                 admin_password=admin_user['password'],
-                amqp_manager=MagicMock(),
-                authorization_file_path=temp_auth_file
+                amqp_manager=MagicMock()
             )
             default_tenant.rabbitmq_username = \
                 'rabbitmq_username_default_tenant'

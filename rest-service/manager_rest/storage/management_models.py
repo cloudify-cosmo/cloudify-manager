@@ -56,11 +56,18 @@ class Role(SQLModelBase, RoleMixin):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.Text, unique=True, nullable=False, index=True)
-
+    type = db.Column(db.Text)
     description = db.Column(db.Text)
 
     def _get_identifier_dict(self):
         return OrderedDict({'name': self.name})
+
+
+class Permission(SQLModelBase):
+    __tablename__ = 'permissions'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    role_id = foreign_key('roles.id')
+    name = db.Column(db.Text)
 
 
 class Tenant(SQLModelBase):
