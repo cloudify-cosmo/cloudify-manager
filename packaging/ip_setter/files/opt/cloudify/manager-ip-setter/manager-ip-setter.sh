@@ -76,6 +76,13 @@ function set_prometheus_ip() {
     return
   fi
 
+  echo "Stopping Prometheus service"
+  if [ "$1" == "supervisord" ]; then
+    /usr/bin/supervisorctl -c /etc/supervisord.conf stop prometheus
+  else
+    /usr/bin/systemctl stop prometheus
+  fi
+
   echo "Updating the host label in the Prometheus local targets..."
   prometheus_targets="/etc/prometheus/targets/local_*.yml"
   for target_file in ${prometheus_targets} ; do
@@ -85,9 +92,19 @@ function set_prometheus_ip() {
   echo "Updating the host labels in the Prometheus alerts..."
   prometheus_alerts="/etc/prometheus/alerts/*_missing.yml"
   for alert_file in ${prometheus_alerts} ; do
-      /usr/bin/sed -ri "s/host=\"127\.0\.0\.1\"/host=\"${ip}\"/" "${target_file}"
-      /usr/bin/sed -ri "s/on node 127\.0\.0\.1/on node ${ip}/" "${target_file}"
+      /usr/bin/sed -ri "s/host=\"127\.0\.0\.1\"/host=\"${ip}\"/" "${alert_file}"
+      /usr/bin/sed -ri "s/on node 127\.0\.0\.1/on node ${ip}/" "${alert_file}"
   done
+
+  echo "Cleaning up old Prometheus data"
+  rm -rf /var/lib/prometheus/*
+
+  echo "Starting Prometheus service"
+  if [ "$1" == "supervisord" ]; then
+    /usr/bin/supervisorctl -c /etc/supervisord.conf restart prometheus
+  else
+    /usr/bin/systemctl start prometheus
+  fi
 }
 
 
