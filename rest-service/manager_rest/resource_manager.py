@@ -2455,7 +2455,6 @@ class ResourceManager(object):
                     value=value.lower(),
                     created_at=current_time,
                     deployment=deployment,
-                    tenant=self.sm.current_tenant,
                     creator=current_user
                 )
             )

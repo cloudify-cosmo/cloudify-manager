@@ -31,7 +31,7 @@ from cloudify.models_states import (AgentState,
                                     DeploymentModificationState)
 
 from manager_rest import config
-from manager_rest.rest.responses import Workflow
+from manager_rest.rest.responses import Workflow, Label
 from manager_rest.utils import classproperty, files_in_folder
 from manager_rest.deployment_update.constants import ACTION_TYPES, ENTITY_TYPES
 from manager_rest.constants import (FILE_SERVER_PLUGINS_FOLDER,
@@ -42,7 +42,7 @@ from .models_base import (
     JSONString,
     UTCDateTime,
 )
-from .management_models import Tenant, User
+from .management_models import User
 from .resource_models_base import SQLResourceBase, SQLModelBase
 from .relationships import foreign_key, one_to_many_relationship
 
@@ -323,17 +323,26 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
 
     site_name = association_proxy('site', 'name')
 
+    @declared_attr
+    def labels(cls):
+        # labels are defined as `backref` in DeploymentsLabel model
+        return None
+
     @classproperty
     def response_fields(cls):
         fields = super(Deployment, cls).response_fields
         fields['workflows'] = flask_fields.List(
             flask_fields.Nested(Workflow.resource_fields)
         )
+        fields['labels'] = flask_fields.List(
+            flask_fields.Nested(Label.resource_fields))
         return fields
 
     def to_response(self, **kwargs):
         dep_dict = super(Deployment, self).to_response()
         dep_dict['workflows'] = self._list_workflows(self.workflows)
+        dep_dict['labels'] = self._list_labels(self.labels)
+
         return dep_dict
 
     @staticmethod
@@ -348,6 +357,17 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                          parameters=wf.get('parameters', dict()))
                 for wf_name, wf in deployment_workflows.items()]
 
+    @staticmethod
+    def _list_labels(deployment_labels):
+        if not deployment_labels:
+            return []
+
+        return [Label(key=label.key,
+                      value=label.value,
+                      created_at=label.created_at,
+                      creator_id=label.creator.id)
+                for label in deployment_labels]
+
 
 class _Label(CreatedAtMixin, SQLModelBase):
     """An abstract class for the different labels models."""
@@ -358,16 +378,8 @@ class _Label(CreatedAtMixin, SQLModelBase):
     value = db.Column(db.Text, nullable=False)
 
     @declared_attr
-    def _tenant_id(cls):
-        return foreign_key(Tenant.id)
-
-    @declared_attr
     def _creator_id(cls):
         return foreign_key(User.id)
-
-    @declared_attr
-    def tenant(cls):
-        return one_to_many_relationship(cls, Tenant, cls._tenant_id, 'id')
 
     @declared_attr
     def creator(cls):
