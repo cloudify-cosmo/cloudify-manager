@@ -32,7 +32,8 @@ from manager_rest import utils, manager_exceptions
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager
-from manager_rest.manager_exceptions import BadParametersError
+from manager_rest.manager_exceptions import (BadParametersError,
+                                             IllegalActionError)
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.maintenance import is_bypass_maintenance_mode
 from manager_rest.dsl_functions import evaluate_deployment_capabilities
@@ -98,6 +99,52 @@ class DeploymentsId(resources_v1.DeploymentsId):
         )
         return deployment, 201
 
+    @authorize('deployment_create')
+    @rest_decorators.marshal_with(models.Deployment)
+    def patch(self, deployment_id):
+        """
+        Update a deployment
+
+        Currently, this function only updates the deployment's labels.
+        """
+        if not request.json:
+            raise IllegalActionError('Update a deployment request must include'
+                                     ' at least one parameter to update')
+        sm = get_storage_manager()
+        deployment = sm.get(models.Deployment, deployment_id)
+
+        _update_labels(sm, deployment)
+
+        return deployment
+
+
+def _update_labels(sm, deployment):
+    """
+    Updating the deployment's labels.
+
+    This function replaces the existing deployment's lables with the new labels
+    that were passed in the request.
+    If a new label already exists, it won't be created again.
+    If an existing label is not in the new labels list, it will be deleted.
+    """
+    new_labels = _get_labels(request.json)
+    if new_labels is None:
+        return
+
+    rm = get_resource_manager()
+    new_labels_set = set(new_labels)
+    existing_labels = deployment.labels
+    existing_labels_tup = set(
+        (label.key, label.value) for label in existing_labels)
+
+    labels_to_create = new_labels_set - existing_labels_tup
+
+    for label in existing_labels:
+        if (label.key, label.value) not in new_labels_set:
+            sm.delete(label)
+
+    rm.create_deployment_labels(deployment, labels_to_create)
+
 
 def _get_labels(request_dict):
     if 'labels' not in request_dict:
@@ -114,7 +161,7 @@ def _get_labels(request_dict):
                 (not isinstance(value, text_type))):
             _raise_bad_labels_list()
         rest_utils.validate_inputs({'key': key, 'value': value})
-        labels_list.append((key, value))
+        labels_list.append((key.lower(), value.lower()))
 
     _test_unique_labels(labels_list)
     return labels_list
