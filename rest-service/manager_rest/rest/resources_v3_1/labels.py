@@ -1,5 +1,6 @@
 from flask import request
 
+from manager_rest.storage.models_base import db
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager
@@ -40,4 +41,4 @@ class DeploymnetsLabelsKey(SecuredResource):
             models.DeploymentLabel.key == key).distinct().all()
 
         values_list = [result.value for result in results]
-        return {'metadata': {}, 'items': values_list}
+        return {'metadata': {'total': len(values_list)}, 'items': values_list}
