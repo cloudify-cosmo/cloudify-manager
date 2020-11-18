@@ -1,15 +1,21 @@
+from manager_rest import utils
+from manager_rest.storage import models
+from manager_rest.storage.models_base import db
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
-from manager_rest.storage import models, get_storage_manager
 
 
 class DeploymentsLabels(SecuredResource):
 
-    @authorize('labels_keys_list')
+    @authorize('labels_list')
     def get(self):
         """Get all deployments labels' keys"""
-        raw_labels_list = get_storage_manager().list(models.DeploymentLabel,
-                                                     include=['key'],
-                                                     get_all_results=True)
-        keys_list = list(set(label.key for label in raw_labels_list))
+        current_tenant = utils.current_tenant._get_current_object()
+        results = (db.session.query(models.DeploymentLabel.key)
+                   .join(models.Deployment)
+                   .filter(models.Deployment._tenant_id == current_tenant.id)
+                   .distinct()
+                   .all())
+
+        keys_list = [result.key for result in results]
         return {'metadata': {}, 'items': keys_list}
