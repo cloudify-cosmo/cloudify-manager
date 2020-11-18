@@ -135,3 +135,20 @@ class Tokens(object):
         self.username = kwargs.get('username')
         self.value = kwargs.get('value')
         self.role = kwargs.get('role')
+
+
+@swagger.model
+class Label(object):
+
+    resource_fields = {
+        'key': fields.String,
+        'value': fields.String,
+        'created_at': fields.String,
+        'creator_id': fields.Integer
+    }
+
+    def __init__(self, **kwargs):
+        self.key = kwargs.get('key')
+        self.value = kwargs.get('value')
+        self.created_at = kwargs.get('created_at')
+        self.creator_id = kwargs.get('creator_id')

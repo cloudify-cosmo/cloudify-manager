@@ -1404,7 +1404,8 @@ class ResourceManager(object):
                           bypass_maintenance=None,
                           skip_plugins_validation=False,
                           site_name=None,
-                          runtime_only_evaluation=False):
+                          runtime_only_evaluation=False,
+                          labels=None):
         blueprint = self.sm.get(models.Blueprint, blueprint_id)
         plan = blueprint.plan
         site = self.sm.get(models.Site, site_name) if site_name else None
@@ -1474,6 +1475,9 @@ class ResourceManager(object):
 
         self._create_deployment_initial_dependencies(
             deployment_plan, new_deployment)
+
+        if labels:
+            self._create_deployment_labels(new_deployment, labels)
 
         try:
             self._create_deployment_environment(new_deployment,
@@ -2433,6 +2437,26 @@ class ResourceManager(object):
                 target_id = str(target_deployment_instance.id)
                 dep_graph.assert_no_cyclic_dependencies(source_id, target_id)
                 dep_graph.add_dependency_to_graph(source_id, target_id)
+
+    def _create_deployment_labels(self, deployment, labels_list):
+        """
+        Populate the deployments_labels table.
+
+        :param deployment: A deployment object
+        :param labels_list: A list of labels of the form:
+                            [(key1, value1), (key2, value2)]
+        """
+        current_time = utils.get_formatted_timestamp()
+        for key, value in labels_list:
+            self.sm.put(
+                models.DeploymentLabel(
+                    key=key.lower(),
+                    value=value.lower(),
+                    created_at=current_time,
+                    deployment=deployment,
+                    creator=current_user
+                )
+            )
 
 
 # What we need to access this manager in Flask

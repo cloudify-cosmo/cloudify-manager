@@ -65,7 +65,6 @@ def _create_labels_table(table_name, fk_column, fk_refcolumn, fk_index):
         sa.Column('value', sa.Text(), nullable=False),
         sa.Column(fk_column, sa.Integer(), nullable=False),
         sa.Column('created_at', UTCDateTime(), nullable=False),
-        sa.Column('_tenant_id', sa.Integer(), nullable=False),
         sa.Column('_creator_id', sa.Integer(), nullable=False),
         sa.ForeignKeyConstraint(
             [fk_column],
@@ -77,19 +76,12 @@ def _create_labels_table(table_name, fk_column, fk_refcolumn, fk_index):
             [u'users.id'],
             name=op.f('{0}__creator_id_fkey'.format(table_name)),
             ondelete='CASCADE'),
-        sa.ForeignKeyConstraint(
-            ['_tenant_id'],
-            [u'tenants.id'],
-            name=op.f('{0}__tenant_id_fkey'.format(table_name)),
-            ondelete='CASCADE'),
         sa.PrimaryKeyConstraint(
             'id',
-            name=op.f('{0}_pkey'.format(table_name)))
+            name=op.f('{0}_pkey'.format(table_name))),
+        sa.UniqueConstraint(
+            'key', 'value', fk_column, name=op.f('{0}_key_value_key'))
     )
-    op.create_index(op.f('{0}__tenant_id_idx'.format(table_name)),
-                    table_name,
-                    ['_tenant_id'],
-                    unique=False)
     op.create_index(op.f('{0}_created_at_idx'.format(table_name)),
                     table_name,
                     ['created_at'],

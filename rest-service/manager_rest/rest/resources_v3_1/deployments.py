@@ -93,9 +93,43 @@ class DeploymentsId(resources_v1.DeploymentsId):
                 request_dict),
             site_name=_get_site_name(request_dict),
             runtime_only_evaluation=request_dict.get(
-                'runtime_only_evaluation', False)
+                'runtime_only_evaluation', False),
+            labels=_get_labels(request_dict)
         )
         return deployment, 201
+
+
+def _get_labels(request_dict):
+    if 'labels' not in request_dict:
+        return None
+
+    raw_labels_list = request_dict['labels']
+    labels_list = []
+    for label in raw_labels_list:
+        if (not isinstance(label, dict)) or len(label) != 1:
+            _raise_bad_labels_list()
+
+        [(key, value)] = label.items()
+        if ((not isinstance(key, text_type)) or
+                (not isinstance(value, text_type))):
+            _raise_bad_labels_list()
+        rest_utils.validate_inputs({'key': key, 'value': value})
+        labels_list.append((key, value))
+
+    _test_unique_labels(labels_list)
+    return labels_list
+
+
+def _raise_bad_labels_list():
+    raise BadParametersError(
+        'Labels must be a list of 1-entry dictionaries: '
+        '[{<key1>: <value1>}, {<key2>: <value2>}, ...]')
+
+
+def _test_unique_labels(labels_list):
+    if len(set(labels_list)) != len(labels_list):
+        raise BadParametersError('You cannot define the same label twice '
+                                 'for a specific deployment.')
 
 
 class DeploymentsSetVisibility(SecuredResource):
