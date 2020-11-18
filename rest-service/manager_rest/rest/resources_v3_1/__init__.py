@@ -91,3 +91,7 @@ from .cluster_status import (                    # NOQA
 from .snapshots import ( # noqa
     SnapshotsStatus
 )
+
+from .labels import (                           # NOQA
+    DeploymentsLabels
+)
