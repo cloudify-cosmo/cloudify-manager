@@ -107,7 +107,6 @@ class DeploymentsId(resources_v1.DeploymentsId):
 
         Currently, this function only updates the deployment's labels.
         """
-        rest_utils.validate_inputs({'deployment_id': deployment_id})
         if not request.json:
             raise IllegalActionError('Update a deployment request must include'
                                      ' at least one parameter to update')
@@ -134,21 +133,15 @@ def _update_labels(sm, deployment):
 
     rm = get_resource_manager()
     new_labels_set = set(new_labels)
-    existing_labels = sm.list(
-        models.DeploymentLabel,
-        filters={'_deployment_fk': deployment._storage_id}
-    )
+    existing_labels = deployment.labels
     existing_labels_tup = set(
         (label.key, label.value) for label in existing_labels)
 
     labels_to_create = new_labels_set - existing_labels_tup
-    raw_labels_to_delete = existing_labels_tup - new_labels_set
-    labels_to_delete = [
-        label for label in existing_labels if
-        (label.key, label.value) in raw_labels_to_delete]
 
-    for label in labels_to_delete:
-        sm.delete(label)
+    for label in existing_labels:
+        if (label.key, label.value) not in new_labels_set:
+            sm.delete(label)
 
     rm.create_deployment_labels(deployment, labels_to_create)
 
@@ -168,7 +161,7 @@ def _get_labels(request_dict):
                 (not isinstance(value, text_type))):
             _raise_bad_labels_list()
         rest_utils.validate_inputs({'key': key, 'value': value})
-        labels_list.append((key, value))
+        labels_list.append((key.lower(), value.lower()))
 
     _test_unique_labels(labels_list)
     return labels_list

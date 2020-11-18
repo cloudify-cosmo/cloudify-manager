@@ -2452,8 +2452,8 @@ class ResourceManager(object):
         for key, value in labels_list:
             self.sm.put(
                 models.DeploymentLabel(
-                    key=key.lower(),
-                    value=value.lower(),
+                    key=key,
+                    value=value,
                     created_at=current_time,
                     deployment=deployment,
                     creator=current_user
