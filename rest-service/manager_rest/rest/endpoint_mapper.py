@@ -128,6 +128,7 @@ def setup_resources(api):
         'SitesName': 'sites/<string:name>',
         'ClusterStatus': 'cluster-status',
         'DeploymentsLabels': 'labels/deployments',
+        'DeploymnetsLabelsKey': 'labels/deployments/<string:key>'
     }
 
     # Set version endpoint as a non versioned endpoint
