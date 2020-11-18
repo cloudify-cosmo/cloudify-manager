@@ -28,3 +28,16 @@ class DeploymentsLabels(SecuredResource):
 
         results.items = [label.key for label in results]
         return results
+
+
+class DeploymnetsLabelsKey(SecuredResource):
+
+    @authorize('labels_keys_list')
+    def get(self, key):
+        """Get the labels' values of the specified key"""
+        raw_labels_list = get_storage_manager().list(models.DeploymentLabel,
+                                                     filters={'key': key},
+                                                     include=['value'],
+                                                     get_all_results=True)
+        values_list = list(set(label.value for label in raw_labels_list))
+        return {'metadata': {}, 'items': values_list}
