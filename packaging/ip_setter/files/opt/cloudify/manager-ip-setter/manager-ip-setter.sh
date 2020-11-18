@@ -79,8 +79,6 @@ function set_prometheus_ip() {
   echo "Stopping Prometheus service"
   if [ "$1" == "supervisord" ]; then
     /usr/bin/supervisorctl -c /etc/supervisord.conf stop prometheus
-  else
-    /usr/bin/systemctl stop prometheus
   fi
 
   echo "Updating the host label in the Prometheus local targets..."
@@ -102,8 +100,6 @@ function set_prometheus_ip() {
   echo "Starting Prometheus service"
   if [ "$1" == "supervisord" ]; then
     /usr/bin/supervisorctl -c /etc/supervisord.conf restart prometheus
-  else
-    /usr/bin/systemctl start prometheus
   fi
 }
 
