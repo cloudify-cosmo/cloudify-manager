@@ -247,8 +247,6 @@ def setup_environment():
     for value, envvar in [
             (REST_CONFIG_PATH, 'MANAGER_REST_CONFIG_PATH'),
             (REST_SECURITY_CONFIG_PATH, 'MANAGER_REST_SECURITY_CONFIG_PATH'),
-            (REST_AUTHORIZATION_CONFIG_PATH,
-             'MANAGER_REST_AUTHORIZATION_CONFIG_PATH'),
     ]:
         if value is not None:
             environ[envvar] = value
