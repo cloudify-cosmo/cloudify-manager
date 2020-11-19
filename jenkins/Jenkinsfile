@@ -122,10 +122,7 @@ pipeline {
               
               echo 'Build rabbitmq RPM'
               buildRpm('~/rpmbuild/SOURCES', 'cloudify-rabbitmq.spec', "${env.VERSION}", "${env.PRERELEASE}")
-              
-              echo 'Build manager-ip-setter rpm'
-              buildRpm('~/rpmbuild/SOURCES', 'cloudify-manager-ip-setter.spec', "${env.VERSION}", "${env.PRERELEASE}")
-              
+
               echo 'Copy RPMs to rpm folder'
               sh("mkdir -p ${env.WORKSPACE}/rpm && cp -rf /root/rpmbuild/RPMS/x86_64/. ${env.WORKSPACE}/rpm")
               sh("cp -rf /root/rpmbuild/RPMS/noarch/. ${env.WORKSPACE}/rpm")
