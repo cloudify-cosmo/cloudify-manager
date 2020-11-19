@@ -328,6 +328,21 @@ class BaseServerTestCase(unittest.TestCase):
         flask_app_context.push()
 
     @staticmethod
+    def _insert_default_permissions():
+        sess = server.db.session
+        for role in auth_dict['roles']:
+            sess.add(models.Role(type='system_role', **role))
+        roles = {r.name: r.id for r in sess.query(models.Role)}
+        for perm, perm_roles in auth_dict['permissions'].items():
+            for role_name in perm_roles:
+                if role_name not in roles:
+                    continue
+                sess.add(models.Permission(
+                    role_id=roles[role_name],
+                    name=perm))
+        sess.commit()
+
+    @staticmethod
     def _handle_default_db_config():
         Migrate(app=server.app, db=server.db)
         try:
@@ -344,40 +359,32 @@ class BaseServerTestCase(unittest.TestCase):
             raise
         admin_user = get_admin_user()
 
-        fd, temp_auth_file = tempfile.mkstemp()
-        os.close(fd)
-        with open(temp_auth_file, 'w') as f:
-            yaml.dump(auth_dict, f)
+        BaseServerTestCase._insert_default_permissions()
+        # We're mocking the AMQPManager, we aren't really using Rabbit here
+        default_tenant = create_default_user_tenant_and_roles(
+            admin_username=admin_user['username'],
+            admin_password=admin_user['password'],
+            amqp_manager=MagicMock()
+        )
+        default_tenant.rabbitmq_username = \
+            'rabbitmq_username_default_tenant'
+        default_tenant.rabbitmq_vhost = \
+            'rabbitmq_vhost_defualt_tenant'
+        default_tenant.rabbitmq_password = \
+            'gAAAAABb9p7U_Lnlmg7vyijjoxovyg215ThYi-VCTCzVYa1p-vpzi31WGko' \
+            'KD_hK1mQyKgjRss_Nz-3m-cgHpZChnVT4bxZIjnOnL6sF8RtozvlRoGHtnF' \
+            'G6jxqQDeEf5Heos0ia4Q5H  '
 
-        try:
-            # We're mocking the AMQPManager, we aren't really using Rabbit here
-            default_tenant = create_default_user_tenant_and_roles(
-                admin_username=admin_user['username'],
-                admin_password=admin_user['password'],
-                amqp_manager=MagicMock()
+        for reporter in get_status_reporters():
+            create_status_reporter_user_and_assign_role(
+                reporter['username'],
+                reporter['password'],
+                reporter['role'],
+                reporter['id']
             )
-            default_tenant.rabbitmq_username = \
-                'rabbitmq_username_default_tenant'
-            default_tenant.rabbitmq_vhost = \
-                'rabbitmq_vhost_defualt_tenant'
-            default_tenant.rabbitmq_password = \
-                'gAAAAABb9p7U_Lnlmg7vyijjoxovyg215ThYi-VCTCzVYa1p-vpzi31WGko' \
-                'KD_hK1mQyKgjRss_Nz-3m-cgHpZChnVT4bxZIjnOnL6sF8RtozvlRoGHtnF' \
-                'G6jxqQDeEf5Heos0ia4Q5H  '
-
-            for reporter in get_status_reporters():
-                create_status_reporter_user_and_assign_role(
-                    reporter['username'],
-                    reporter['password'],
-                    reporter['role'],
-                    reporter['id']
-                )
-            if premium_enabled:
-                # License is required only when working with Cloudify Premium
-                upload_mock_cloudify_license(get_storage_manager())
-
-        finally:
-            os.remove(temp_auth_file)
+        if premium_enabled:
+            # License is required only when working with Cloudify Premium
+            upload_mock_cloudify_license(get_storage_manager())
 
         utils.set_current_tenant(default_tenant)
 
