@@ -37,7 +37,7 @@ class DeploymentsLabelsKey(SecuredResource):
     @authorize('labels_list')
     def get(self, key):
         """Get the labels' values of the specified key"""
-        current_tenant = utils.current_tenant._get_current_object()
+        current_tenant = utils.current_tenant
         results = (db.session.query(models.DeploymentLabel.value)
                    .join(models.Deployment)
                    .filter(models.Deployment._tenant_id == current_tenant.id,
