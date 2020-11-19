@@ -1,7 +1,5 @@
 from flask import request
 
-from manager_rest import utils
-from manager_rest.storage.models_base import db
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager
@@ -33,17 +31,24 @@ class DeploymentsLabels(SecuredResource):
 
 
 class DeploymentsLabelsKey(SecuredResource):
-
     @authorize('labels_list')
-    def get(self, key):
-        """Get the labels' values of the specified key"""
-        current_tenant = utils.current_tenant
-        results = (db.session.query(models.DeploymentLabel.value)
-                   .join(models.Deployment)
-                   .filter(models.Deployment._tenant_id == current_tenant.id,
-                           models.DeploymentLabel.key == key)
-                   .distinct()
-                   .all())
+    @rest_decorators.marshel_list_response
+    @rest_decorators.paginate
+    def get(self, key, pagination=None):
+        """Get all deployments labels' keys in the current tenant"""
+        get_all_results = rest_utils.verify_and_convert_bool(
+            '_get_all_results',
+            request.args.get('_get_all_results', False)
+        )
+        results = get_storage_manager().list(
+            models.DeploymentLabel,
+            include=['value'],
+            pagination=pagination,
+            filters={'key': key,
+                     '_deployment_fk': models.Deployment._storage_id},
+            get_all_results=get_all_results,
+            distinct=['value']
+        )
 
-        values_list = [result.value for result in results]
-        return {'metadata': {'total': len(values_list)}, 'items': values_list}
+        results.items = [label.value for label in results]
+        return results
