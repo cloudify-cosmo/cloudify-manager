@@ -21,7 +21,6 @@ from manager_rest.manager_exceptions import (
 CONFIG_TYPES = [
     ('MANAGER_REST_CONFIG_PATH', ''),
     ('MANAGER_REST_SECURITY_CONFIG_PATH', 'security'),
-    ('MANAGER_REST_AUTHORIZATION_CONFIG_PATH', 'authorization')
 ]
 SKIP_RESET_WRITE = ['authorization']
 NOT_SET = object()
@@ -180,6 +179,7 @@ class Config(object):
             models.RabbitMQBroker.password,
             models.Certificate.value.label('ca_cert_value')
         ).join(models.Certificate).all()
+
         self.amqp_host = [b.host for b in stored_brokers]
         self.amqp_management_host = [b.management_host for b in stored_brokers]
 
@@ -193,6 +193,30 @@ class Config(object):
                 f.write(stored_brokers[0].ca_cert_value)
             self.amqp_ca_path = f.name
             atexit.register(os.unlink, self.amqp_ca_path)
+
+        stored_roles = session.query(
+            models.Role.id,
+            models.Role.name,
+            models.Role.type,
+            models.Role.description
+        ).all()
+        role_names = {r.id: r.name for r in stored_roles}
+        stored_permissions = session.query(
+            models.Permission.id,
+            models.Permission.role_id,
+            models.Permission.name
+        ).all()
+        self.authorization_roles = [
+            {'id': r.id, 'name': r.name, 'type': r.type,
+             'description': r.description}
+            for r in stored_roles
+        ]
+        self.authorization_permissions = {}
+        for perm in stored_permissions:
+            if perm.name not in self.authorization_permissions:
+                self.authorization_permissions[perm.name] = []
+            self.authorization_permissions[perm.name].append(
+                role_names[perm.role_id])
 
         session.close()
         engine.dispose()

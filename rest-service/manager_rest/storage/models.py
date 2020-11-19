@@ -29,7 +29,8 @@ from .management_models import (User,
                                 RabbitMQBroker,
                                 Certificate,
                                 DBNodes,
-                                UsageCollector)
+                                UsageCollector,
+                                Permission)
 
 from .resource_models import (Blueprint,
                               Snapshot,
