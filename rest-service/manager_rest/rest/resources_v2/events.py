@@ -50,7 +50,7 @@ class Events(resources_v1.Events):
         notes='Returns a list of events for optionally provided filters'
     )
     @authorize('event_list')
-    @rest_decorators.marshal_events
+    @rest_decorators.marshel_list_response
     @rest_decorators.create_filters()
     @rest_decorators.paginate
     @rest_decorators.rangeable
@@ -128,7 +128,7 @@ class Events(resources_v1.Events):
         notes='Deletes events according to a passed Deployment ID'
     )
     @authorize('event_delete')
-    @rest_decorators.marshal_events
+    @rest_decorators.marshel_list_response
     @rest_decorators.create_filters()
     @rest_decorators.paginate
     @rest_decorators.rangeable

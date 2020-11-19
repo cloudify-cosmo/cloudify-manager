@@ -393,7 +393,7 @@ def search(attribute):
     return search_dec
 
 
-def marshal_events(func):
+def marshel_list_response(func):
     """
     Decorator for marshalling raw event responses
     """
