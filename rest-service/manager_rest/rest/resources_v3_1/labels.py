@@ -1,5 +1,6 @@
 from flask import request
 
+from manager_rest import utils
 from manager_rest.storage.models_base import db
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
@@ -31,14 +32,18 @@ class DeploymentsLabels(SecuredResource):
         return results
 
 
-class DeploymnetsLabelsKey(SecuredResource):
+class DeploymentsLabelsKey(SecuredResource):
 
     @authorize('labels_list')
     def get(self, key):
         """Get the labels' values of the specified key"""
-        results = db.session.query(
-            models.DeploymentLabel.value).filter(
-            models.DeploymentLabel.key == key).distinct().all()
+        current_tenant = utils.current_tenant._get_current_object()
+        results = (db.session.query(models.DeploymentLabel.value)
+                   .join(models.Deployment)
+                   .filter(models.Deployment._tenant_id == current_tenant.id,
+                           models.DeploymentLabel.key == key)
+                   .distinct()
+                   .all())
 
         values_list = [result.value for result in results]
         return {'metadata': {'total': len(values_list)}, 'items': values_list}
