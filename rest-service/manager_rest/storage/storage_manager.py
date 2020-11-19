@@ -566,7 +566,7 @@ class SQLStorageManager(object):
         :param get_all_results: Get all the results without the limitation of
                                 size or pagination. Use it carefully to
                                 prevent consumption of too much memory
-        :param distinct: If True, distinct ressults will return
+        :param distinct: If True, distinct results will return
         :return: A (possibly empty) list of `model_class` results
         """
         self._validate_available_memory()
