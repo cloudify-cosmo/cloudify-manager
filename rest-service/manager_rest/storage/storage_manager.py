@@ -379,7 +379,7 @@ class SQLStorageManager(object):
             return column.remote_attr.label(column_name)
 
     @staticmethod
-    def _paginate(query, pagination, get_all_results=False):
+    def _paginate(query, pagination, get_all_results=False, distinct=False):
         """Paginate the query by size and offset
 
         :param query: Current SQLAlchemy query object
@@ -398,6 +398,9 @@ class SQLStorageManager(object):
         else:
             size = config.instance.default_page_size
             offset = 0
+
+        if distinct:
+            query = query.distinct()
 
         total = query.order_by(None).count()  # Fastest way to count
         if get_all_results:
@@ -544,7 +547,8 @@ class SQLStorageManager(object):
              sort=None,
              all_tenants=None,
              substr_filters=None,
-             get_all_results=False):
+             get_all_results=False,
+             distinct=False):
         """Return a list of `model_class` results
 
         :param model_class: SQL DB table class
@@ -562,6 +566,7 @@ class SQLStorageManager(object):
         :param get_all_results: Get all the results without the limitation of
                                 size or pagination. Use it carefully to
                                 prevent consumption of too much memory
+        :param distinct: If True, distinct ressults will return
         :return: A (possibly empty) list of `model_class` results
         """
         self._validate_available_memory()
@@ -582,7 +587,8 @@ class SQLStorageManager(object):
 
         results, total, size, offset = self._paginate(query,
                                                       pagination,
-                                                      get_all_results)
+                                                      get_all_results,
+                                                      distinct)
         pagination = {'total': total, 'size': size, 'offset': offset}
 
         current_app.logger.debug('Returning: {0}'.format(results))
