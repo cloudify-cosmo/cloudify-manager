@@ -37,6 +37,12 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
 
     DEPLOYMENT_ID = 'deployment'
     SITE_NAME = 'test_site'
+    LABELS = [{'env': 'aws'}, {'arch': 'k8s'}]
+    UPDATED_LABELS = [{'env': 'gcp'}, {'arch': 'k8s'}]
+    UPDATED_UPPERCASE_LABELS = [{'env': 'GCp'}, {'ArCh': 'k8s'}]
+    UPPERCASE_LABELS = [{'EnV': 'aWs'}, {'aRcH': 'k8s'}]
+    DUPLICATE_LABELS = [{'env': 'aws'}, {'env': 'aws'}]
+    INVALID_LABELS = [{'env': 'aws', 'aRcH': 'k8s'}]
 
     def test_get_empty(self):
         result = self.client.deployments.list()
@@ -881,3 +887,125 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         deployment = self.client.deployments.get(resource_id)
         self.assertEqual(deployment.site_name, self.SITE_NAME)
         return resource_id
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_creation_success_without_labels(self):
+        deployment = self._put_deployment_without_labels()
+        self.assertEmpty(deployment.labels)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_creation_success_with_labels(self):
+        deployment = self._put_deployment_with_labels(self.LABELS)
+        self._assert_deployment_labels(deployment.labels, self.LABELS)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_uppercase_labels_to_lowercase(self):
+        deployment = self._put_deployment_with_labels(self.UPPERCASE_LABELS)
+        self._assert_deployment_labels(deployment.labels, self.LABELS)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_creation_failure_with_invalid_labels(self):
+        resource_id = 'i{0}'.format(uuid.uuid4())
+        error_msg = '400: .*Labels must be a list of 1-entry dictionaries.*'
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_msg,
+                               self.put_deployment,
+                               blueprint_file_name='blueprint.yaml',
+                               blueprint_id=resource_id,
+                               deployment_id=resource_id,
+                               labels=self.INVALID_LABELS)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_creation_failure_with_duplicate_labels(self):
+        resource_id = 'i{0}'.format(uuid.uuid4())
+        error_msg = '400: .*You cannot define the same label twice.*'
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_msg,
+                               self.put_deployment,
+                               blueprint_file_name='blueprint.yaml',
+                               blueprint_id=resource_id,
+                               deployment_id=resource_id,
+                               labels=self.DUPLICATE_LABELS)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_update_deployments_labels(self):
+        deployment = self._put_deployment_with_labels(self.LABELS)
+        updated_dep = self.client.deployments.update_labels(
+            deployment.id, self.UPDATED_LABELS)
+        self._assert_deployment_labels(updated_dep.labels, self.UPDATED_LABELS)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_update_uppercase_deployments_labels(self):
+        deployment = self._put_deployment_with_labels(self.LABELS)
+        updated_dep = self.client.deployments.update_labels(
+            deployment.id, self.UPDATED_UPPERCASE_LABELS)
+        self._assert_deployment_labels(updated_dep.labels, self.UPDATED_LABELS)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_update_empty_deployments_labels(self):
+        deployment = self._put_deployment_with_labels(self.LABELS)
+        self._assert_deployment_labels(deployment.labels, self.LABELS)
+        updated_dep = self.client.deployments.update_labels(deployment.id, [])
+        self.assertEmpty(updated_dep.labels)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_update_failure_with_invalid_labels(self):
+        deployment = self._put_deployment_with_labels(self.LABELS)
+        error_msg = '400: .*Labels must be a list of 1-entry dictionaries.*'
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_msg,
+                               self.client.deployments.update_labels,
+                               deployment_id=deployment.id,
+                               labels=self.INVALID_LABELS)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_update_failure_with_duplicate_labels(self):
+        deployment = self._put_deployment_with_labels(self.LABELS)
+        error_msg = '400: .*You cannot define the same label twice.*'
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_msg,
+                               self.client.deployments.update_labels,
+                               deployment_id=deployment.id,
+                               labels=self.DUPLICATE_LABELS)
+
+    def _put_deployment_without_labels(self):
+        resource_id = 'i{0}'.format(uuid.uuid4())
+        _, _, _, deployment = self.put_deployment(
+            blueprint_file_name='blueprint.yaml',
+            blueprint_id=resource_id,
+            deployment_id=resource_id)
+
+        return deployment
+
+    def _put_deployment_with_labels(self, labels):
+        resource_id = 'i{0}'.format(uuid.uuid4())
+        _, _, _, deployment = self.put_deployment(
+            blueprint_file_name='blueprint.yaml',
+            blueprint_id=resource_id,
+            deployment_id=resource_id,
+            labels=labels)
+
+        return deployment
+
+    def _assert_deployment_labels(self, deployment_labels, compared_labels):
+        simplified_labels = set()
+        compared_labels_set = set()
+
+        for label in deployment_labels:
+            simplified_labels.add((label['key'], label['value']))
+
+        for compared_label in compared_labels:
+            [(key, value)] = compared_label.items()
+            compared_labels_set.add((key, value))
+
+        self.assertEqual(simplified_labels, compared_labels_set)
