@@ -13,30 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import os
-
-from manager_rest.test.attribute import attr
-
-from manager_rest.utils import read_json_file, write_dict_to_json_file
-from manager_rest.test import base_test
-
-
-@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
-class TestUtils(base_test.BaseServerTestCase):
-
-    def test_read_write_json_file(self):
-        test_dict = {'test': 1, 'dict': 2}
-        tmp_file_path = os.path.join(self.tmpdir, 'tmp_dict.json')
-        write_dict_to_json_file(tmp_file_path, test_dict)
-        read_dict = read_json_file(tmp_file_path)
-        self.assertEqual(test_dict, read_dict)
-
-        test_dict = {'test': 3, 'new': 2}
-        write_dict_to_json_file(tmp_file_path, test_dict)
-        read_dict = read_json_file(tmp_file_path)
-        self.assertEqual(3, read_dict['test'])
-        self.assertEqual(test_dict, read_dict)
-
 
 def generate_progress_func(total_size, buffer_size=8192):
     """Generate a function that helps test upload/download progress

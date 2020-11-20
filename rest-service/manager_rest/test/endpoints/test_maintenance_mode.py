@@ -13,32 +13,31 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import os
 from mock import patch
 
 from cloudify_rest_client import exceptions
 from cloudify.models_states import ExecutionState
 
-from manager_rest import utils
 from manager_rest.test import base_test
 from manager_rest.storage import models
 from manager_rest.test.attribute import attr
 from manager_rest.test.base_test import BaseServerTestCase
-from manager_rest.maintenance import get_maintenance_file_path
-from manager_rest.constants import (MAINTENANCE_MODE_ACTIVATED,
-                                    MAINTENANCE_MODE_ACTIVATING,
-                                    MAINTENANCE_MODE_DEACTIVATED,
-                                    MAINTENANCE_MODE_STATUS_FILE)
+from manager_rest.maintenance import (
+    get_maintenance_state,
+    remove_maintenance_state,
+)
+from manager_rest.constants import (
+    MAINTENANCE_MODE_ACTIVATED,
+    MAINTENANCE_MODE_ACTIVATING,
+    MAINTENANCE_MODE_DEACTIVATED,
+)
 
 
 @attr(client_min_version=2.1, client_max_version=base_test.LATEST_API_VERSION)
 class MaintenanceModeTest(BaseServerTestCase):
     def tearDown(self):
         super(MaintenanceModeTest, self).tearDown()
-        try:
-            os.remove(get_maintenance_file_path())
-        except OSError:
-            pass
+        remove_maintenance_state()
 
     def test_maintenance_mode_inactive(self):
         response = self.client.maintenance_mode.status()
@@ -65,17 +64,14 @@ class MaintenanceModeTest(BaseServerTestCase):
                           'b1')
         self.client.maintenance_mode.deactivate()
 
-        maintenance_file = os.path.join(self.maintenance_mode_dir,
-                                        MAINTENANCE_MODE_STATUS_FILE)
-
         execution = self._start_maintenance_transition_mode(
             bp_id='bp2',
             dep_id='dep2')
         self._terminate_execution(execution.id)
-        state = utils.read_json_file(maintenance_file)
+        state = get_maintenance_state()
         self.assertEqual(state['status'], MAINTENANCE_MODE_ACTIVATING)
         self.client.manager.get_version()
-        state = utils.read_json_file(maintenance_file)
+        state = get_maintenance_state()
         self.assertEqual(state['status'], MAINTENANCE_MODE_ACTIVATED)
 
     def test_request_denial_in_maintenance_mode(self):

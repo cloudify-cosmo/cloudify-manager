@@ -718,4 +718,27 @@ class UsageCollector(SQLModelBase):
     days_interval = db.Column(db.Integer, nullable=False)
 
 
+class MaintenanceMode(SQLModelBase):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    status = db.Column(db.Text, nullable=False)
+    activation_requested_at = db.Column(UTCDateTime, nullable=False)
+    activated_at = db.Column(UTCDateTime, nullable=True)
+
+    @declared_attr
+    def _requested_by(cls):
+        return foreign_key(User.id)
+
+    @declared_attr
+    def requested_by(cls):
+        return one_to_many_relationship(cls, User, cls._requested_by, 'id')
+
+    def to_dict(self):
+        return {
+            'status': self.status,
+            'activated_at': self.activated_at,
+            'requested_by': self.requested_by.username,
+            'activation_requested_at': self.activation_requested_at,
+        }
+
+
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)
