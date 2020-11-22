@@ -204,7 +204,7 @@ class SQLStorageManager(object):
         ancestor who has such a relationship)
         """
         # Users/Groups etc. don't have tenants
-        if not model_class.is_resource:
+        if not (model_class.is_resource or model_class.is_label):
             return query
 
         # not used from a request handler - no relevant user
@@ -230,9 +230,12 @@ class SQLStorageManager(object):
             tenant_ids = [current_tenant.id] if current_tenant else []
 
         # Match any of the applicable tenant ids or if it's a global resource
+        model = (model_class.labeled_model if model_class.is_label
+                 else model_class)
+
         tenant_filter = sql_or(
-            model_class.visibility == VisibilityState.GLOBAL,
-            model_class._tenant_id.in_(tenant_ids)
+            model.visibility == VisibilityState.GLOBAL,
+            model._tenant_id.in_(tenant_ids)
         )
         return query.filter(tenant_filter)
 
