@@ -372,7 +372,6 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
 class _Label(CreatedAtMixin, SQLModelBase):
     """An abstract class for the different labels models."""
     __abstract__ = True
-    is_label = True
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     key = db.Column(db.Text, nullable=False, index=True)

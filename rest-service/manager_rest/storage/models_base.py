@@ -122,8 +122,6 @@ class SQLModelBase(db.Model):
     # management table (User, Tenant, etc.), as they are handled differently
     is_resource = False
 
-    is_label = False
-
     # Can this resource be attached to tenants
     top_level_tenant = False
 
@@ -245,6 +243,10 @@ class SQLModelBase(db.Model):
         class_name = self.__class__.__name__
         _repr = ' '.join('{0}=`{1}`'.format(k, v) for k, v in id_dict.items())
         return '<{0} {1}>'.format(class_name, _repr)
+
+    @classproperty
+    def is_label(cls):
+        return hasattr(cls, 'labeled_model')
 
 
 def is_orm_attribute(item):
