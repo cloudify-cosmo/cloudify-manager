@@ -372,6 +372,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
 class _Label(CreatedAtMixin, SQLModelBase):
     """An abstract class for the different labels models."""
     __abstract__ = True
+    is_label = True
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     key = db.Column(db.Text, nullable=False, index=True)
@@ -392,6 +393,7 @@ class DeploymentLabel(_Label):
         db.UniqueConstraint(
             'key', 'value', '_deployment_fk'),
     )
+    labeled_model = Deployment
 
     _deployment_fk = foreign_key(Deployment._storage_id)
 

@@ -36,6 +36,8 @@ class SQLResourceBase(SQLModelBase):
     # table models (users, tenants, etc.)
     is_resource = True
 
+    is_label = False
+
     # Indicates whether the `id` column in this class should be unique
     is_id_unique = True
 

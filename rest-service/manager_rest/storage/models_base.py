@@ -122,6 +122,8 @@ class SQLModelBase(db.Model):
     # management table (User, Tenant, etc.), as they are handled differently
     is_resource = False
 
+    is_label = False
+
     # Can this resource be attached to tenants
     top_level_tenant = False
 
