@@ -28,3 +28,27 @@ class DeploymentsLabels(SecuredResource):
 
         results.items = [label.key for label in results]
         return results
+
+
+class DeploymentsLabelsKey(SecuredResource):
+    @authorize('labels_list')
+    @rest_decorators.marshal_list_response
+    @rest_decorators.paginate
+    def get(self, key, pagination=None):
+        """Get all deployments labels' keys in the current tenant"""
+        get_all_results = rest_utils.verify_and_convert_bool(
+            '_get_all_results',
+            request.args.get('_get_all_results', False)
+        )
+        results = get_storage_manager().list(
+            models.DeploymentLabel,
+            include=['value'],
+            pagination=pagination,
+            filters={'key': key,
+                     '_deployment_fk': models.Deployment._storage_id},
+            get_all_results=get_all_results,
+            distinct=['value']
+        )
+
+        results.items = [label.value for label in results]
+        return results

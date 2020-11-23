@@ -93,5 +93,6 @@ from .snapshots import ( # noqa
 )
 
 from .labels import (                           # NOQA
-    DeploymentsLabels
+    DeploymentsLabels,
+    DeploymentsLabelsKey,
 )
