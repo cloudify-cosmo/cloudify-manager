@@ -204,7 +204,7 @@ class SQLStorageManager(object):
         ancestor who has such a relationship)
         """
         # Users/Groups etc. don't have tenants
-        if not model_class.is_resource:
+        if not (model_class.is_resource or model_class.is_label):
             return query
 
         # not used from a request handler - no relevant user

@@ -244,6 +244,10 @@ class SQLModelBase(db.Model):
         _repr = ' '.join('{0}=`{1}`'.format(k, v) for k, v in id_dict.items())
         return '<{0} {1}>'.format(class_name, _repr)
 
+    @classproperty
+    def is_label(cls):
+        return hasattr(cls, 'labeled_model')
+
 
 def is_orm_attribute(item):
     if isinstance(item, AssociationProxyInstance):
