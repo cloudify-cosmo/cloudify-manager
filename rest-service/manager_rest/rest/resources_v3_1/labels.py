@@ -9,7 +9,7 @@ from .. import rest_decorators, rest_utils
 
 class DeploymentsLabels(SecuredResource):
     @authorize('labels_list')
-    @rest_decorators.marshel_list_response
+    @rest_decorators.marshal_list_response
     @rest_decorators.paginate
     def get(self, pagination=None):
         """Get all deployments labels' keys in the current tenant"""
