@@ -133,6 +133,10 @@ class BaseServerTestCase(unittest.TestCase):
     def assertRaisesRegex(self, *a, **kw):
         return self.assertRaisesRegexp(*a, **kw)
 
+    def assertEmpty(self, obj):
+        self.assertIsNotNone(obj)
+        self.assertFalse(obj)
+
     @classmethod
     def create_client_with_tenant(cls,
                                   username,
@@ -647,7 +651,8 @@ class BaseServerTestCase(unittest.TestCase):
                        inputs=None,
                        blueprint_dir='mock_blueprint',
                        skip_plugins_validation=None,
-                       site_name=None):
+                       site_name=None,
+                       labels=None):
         blueprint_response = self.put_blueprint(blueprint_dir,
                                                 blueprint_file_name,
                                                 blueprint_id)
@@ -655,6 +660,8 @@ class BaseServerTestCase(unittest.TestCase):
         create_deployment_kwargs = {'inputs': inputs}
         if site_name:
             create_deployment_kwargs['site_name'] = site_name
+        if labels:
+            create_deployment_kwargs['labels'] = labels
         if skip_plugins_validation is not None:
             create_deployment_kwargs['skip_plugins_validation'] =\
                 skip_plugins_validation
@@ -885,3 +892,13 @@ class BaseServerTestCase(unittest.TestCase):
             func,
             *args
         )
+
+    def put_deployment_with_labels(self, labels):
+        resource_id = 'i{0}'.format(uuid.uuid4())
+        _, _, _, deployment = self.put_deployment(
+            blueprint_file_name='blueprint.yaml',
+            blueprint_id=resource_id,
+            deployment_id=resource_id,
+            labels=labels)
+
+        return deployment
