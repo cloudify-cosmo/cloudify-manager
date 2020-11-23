@@ -30,7 +30,8 @@ from .management_models import (User,
                                 Certificate,
                                 DBNodes,
                                 UsageCollector,
-                                Permission)
+                                Permission,
+                                MaintenanceMode,)
 
 from .resource_models import (Blueprint,
                               Snapshot,

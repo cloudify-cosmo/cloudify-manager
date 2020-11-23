@@ -13,13 +13,12 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import os
 from base64 import b64encode
 
 from manager_rest.test.attribute import attr
 from manager_rest.storage import management_models
 from manager_rest.test.base_test import LATEST_API_VERSION
-from manager_rest.maintenance import get_maintenance_file_path
+from manager_rest.maintenance import remove_maintenance_state
 from manager_rest.constants import (CLOUDIFY_TENANT_HEADER,
                                     BASIC_AUTH_PREFIX,
                                     CLOUDIFY_AUTH_HEADER)
@@ -127,10 +126,7 @@ class AuthenticationTests(SecurityTestBase):
                 response = self.client.maintenance_mode.status()
             self.assertEqual(response.requested_by, 'alice')
         finally:
-            try:
-                os.remove(get_maintenance_file_path())
-            except OSError:
-                pass
+            remove_maintenance_state()
 
     def test_token_does_not_require_tenant_header(self):
         with self.use_secured_client(username='alice',

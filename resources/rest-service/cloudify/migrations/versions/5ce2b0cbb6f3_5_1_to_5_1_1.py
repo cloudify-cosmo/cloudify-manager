@@ -28,6 +28,7 @@ def upgrade():
                   server_default="0"))
     create_deployments_labels_table()
     _create_permissions_table()
+    _create_maintenance_mode_table()
     op.add_column(
         'roles',
         sa.Column('type',
@@ -41,6 +42,9 @@ def downgrade():
     drop_deployments_labels_table()
     op.drop_table('permissions')
     op.drop_column('roles', 'type')
+    op.drop_index(op.f('maintenance_mode__requested_by_idx'),
+                  table_name='maintenance_mode')
+    op.drop_table('maintenance_mode')
 
 
 def create_deployments_labels_table():
@@ -122,3 +126,25 @@ def _create_permissions_table():
             ondelete='CASCADE',
         ),
     )
+
+
+def _create_maintenance_mode_table():
+    op.create_table(
+        'maintenance_mode',
+        sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column('status', sa.Text(), nullable=False),
+        sa.Column('activation_requested_at', UTCDateTime(), nullable=False),
+        sa.Column('activated_at', UTCDateTime(), nullable=True),
+        sa.Column('_requested_by', sa.Integer(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ['_requested_by'],
+            ['users.id'],
+            name=op.f('maintenance_mode__requested_by_fkey'),
+            ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint('id', name=op.f('maintenance_mode_pkey'))
+    )
+    op.create_index(
+        op.f('maintenance_mode__requested_by_idx'),
+        'maintenance_mode',
+        ['_requested_by'],
+        unique=False)

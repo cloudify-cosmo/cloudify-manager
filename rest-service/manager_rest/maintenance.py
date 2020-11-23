@@ -14,7 +14,7 @@
 #  * limitations under the License.
 #
 
-import os
+from datetime import datetime
 import traceback
 
 from flask import jsonify, request
@@ -22,23 +22,17 @@ from flask import jsonify, request
 from cloudify._compat import StringIO
 from cloudify.models_states import ExecutionState
 
-from manager_rest import config
 from manager_rest import utils
 from manager_rest.storage import get_storage_manager, models
+from manager_rest.storage.models_base import db
 from manager_rest.constants import (FORBIDDEN_METHODS,
                                     MAINTENANCE_MODE_ACTIVATED,
-                                    MAINTENANCE_MODE_STATUS_FILE,
                                     MAINTENANCE_MODE_ACTIVATING,
+                                    MAINTENANCE_MODE_DEACTIVATED,
                                     MAINTENANCE_MODE_ACTIVE_ERROR_CODE,
                                     MAINTENANCE_MODE_ACTIVATING_ERROR_CODE,
                                     ALLOWED_MAINTENANCE_ENDPOINTS)
 from manager_rest.security.authorization import is_user_action_allowed
-
-
-def get_maintenance_file_path():
-    return os.path.join(
-            config.instance.maintenance_folder,
-            MAINTENANCE_MODE_STATUS_FILE)
 
 
 def prepare_maintenance_dict(status,
@@ -61,41 +55,33 @@ def maintenance_mode_handler():
     if not request.endpoint:
         return
 
-    if is_user_action_allowed('maintenance_mode_set') and \
-            is_bypass_maintenance_mode():
+    state = get_maintenance_state()
+    if not state:
         return
 
-    # Removing v*/ from the endpoint
-    index = request.endpoint.find('/')
-    request_endpoint = request.endpoint[index+1:]
-    maintenance_file = os.path.join(
-            config.instance.maintenance_folder,
-            MAINTENANCE_MODE_STATUS_FILE)
+    if is_bypass_maintenance_mode() and \
+            is_user_action_allowed('maintenance_mode_set'):
+        return
 
-    if os.path.isfile(maintenance_file):
-        state = utils.read_json_file(maintenance_file)
-        if state['status'] == MAINTENANCE_MODE_ACTIVATING:
-            running_executions = get_running_executions()
-            if not running_executions:
-                now = utils.get_formatted_timestamp()
-                state = prepare_maintenance_dict(
-                        MAINTENANCE_MODE_ACTIVATED,
-                        activated_at=now,
-                        remaining_executions=[],
-                        requested_by=state['requested_by'],
-                        activation_requested_at=state[
-                            'activation_requested_at'])
-                utils.write_dict_to_json_file(maintenance_file, state)
-            else:
-                return _handle_activating_mode(
-                       state=state,
-                       request_endpoint=request_endpoint)
+    if state['status'] == MAINTENANCE_MODE_ACTIVATING:
+        if not get_running_executions():
+            state = store_maintenance_state(
+                status=MAINTENANCE_MODE_ACTIVATED,
+                activated_at=datetime.utcnow()
+            )
+        else:
+            # Removing v*/ from the endpoint
+            index = request.endpoint.find('/')
+            request_endpoint = request.endpoint[index + 1:]
+            return _handle_activating_mode(
+                state=state,
+                request_endpoint=request_endpoint)
 
-        if utils.check_allowed_endpoint(ALLOWED_MAINTENANCE_ENDPOINTS):
-            return
+    if utils.check_allowed_endpoint(ALLOWED_MAINTENANCE_ENDPOINTS):
+        return
 
-        if state['status'] == MAINTENANCE_MODE_ACTIVATED:
-            return _maintenance_mode_error()
+    if state['status'] == MAINTENANCE_MODE_ACTIVATED:
+        return _maintenance_mode_error()
 
 
 def _handle_activating_mode(state, request_endpoint):
@@ -153,10 +139,11 @@ def _create_maintenance_error(error_code):
     error_message = 'Your request was rejected since Cloudify ' \
                     'manager is currently in maintenance mode'
 
-    response = jsonify(
-            {"message": error_message,
-             "error_code": error_code,
-             "server_traceback": s_traceback.getvalue()})
+    response = jsonify({
+        "message": error_message,
+        "error_code": error_code,
+        "server_traceback": s_traceback.getvalue()
+    })
     response.status_code = 503
     return response
 
@@ -167,3 +154,34 @@ def _maintenance_mode_error():
 
 def _activating_maintenance_mode_error():
     return _create_maintenance_error(MAINTENANCE_MODE_ACTIVATING_ERROR_CODE)
+
+
+def get_maintenance_state():
+    inst = db.session.query(models.MaintenanceMode).first()
+    if not inst:
+        return None
+    return inst.to_dict()
+
+
+def store_maintenance_state(**state):
+    inst = db.session.query(models.MaintenanceMode).first()
+    if inst:
+        for k, v in state.items():
+            setattr(inst, k, v)
+    else:
+        inst = models.MaintenanceMode(**state)
+    db.session.add(inst)
+    db.session.commit()
+    return inst.to_dict()
+
+
+def remove_maintenance_state():
+    inst = db.session.query(models.MaintenanceMode).first()
+    if inst:
+        state = inst.to_dict()
+        db.session.delete(inst)
+        db.session.commit()
+    else:
+        state = {}
+    state['status'] = MAINTENANCE_MODE_DEACTIVATED
+    return state

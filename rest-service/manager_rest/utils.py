@@ -15,7 +15,6 @@
 
 import os
 import glob
-import json
 import errno
 import shutil
 import zipfile
@@ -104,16 +103,6 @@ def create_filter_params_list_description(parameters, list_type):
              'dataType': 'string',
              'defaultValue': None,
              'paramType': 'query'} for filter_val in parameters]
-
-
-def read_json_file(file_path):
-    with open(file_path) as f:
-        return json.load(f)
-
-
-def write_dict_to_json_file(file_path, dictionary):
-    with open(file_path, 'w') as f:
-        json.dump(dictionary, f)
 
 
 def is_bypass_maintenance_mode(request):
