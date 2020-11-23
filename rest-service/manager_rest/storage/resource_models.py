@@ -377,6 +377,8 @@ class _Label(CreatedAtMixin, SQLModelBase):
     key = db.Column(db.Text, nullable=False, index=True)
     value = db.Column(db.Text, nullable=False)
 
+    labeled_model = None
+
     @declared_attr
     def _creator_id(cls):
         return foreign_key(User.id)
@@ -385,6 +387,14 @@ class _Label(CreatedAtMixin, SQLModelBase):
     def creator(cls):
         return one_to_many_relationship(cls, User, cls._creator_id, 'id')
 
+    @declared_attr
+    def visibility(cls):
+        return cls.labeled_model.visibility
+
+    @declared_attr
+    def _tenant_id(cls):
+        return cls.labeled_model._tenant_id
+
 
 class DeploymentLabel(_Label):
     __tablename__ = 'deployments_labels'
@@ -392,6 +402,7 @@ class DeploymentLabel(_Label):
         db.UniqueConstraint(
             'key', 'value', '_deployment_fk'),
     )
+    labeled_model = Deployment
 
     _deployment_fk = foreign_key(Deployment._storage_id)
 

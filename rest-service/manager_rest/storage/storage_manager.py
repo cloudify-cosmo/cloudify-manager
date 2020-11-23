@@ -230,12 +230,9 @@ class SQLStorageManager(object):
             tenant_ids = [current_tenant.id] if current_tenant else []
 
         # Match any of the applicable tenant ids or if it's a global resource
-        model = (model_class.labeled_model if model_class.is_label
-                 else model_class)
-
         tenant_filter = sql_or(
-            model.visibility == VisibilityState.GLOBAL,
-            model._tenant_id.in_(tenant_ids)
+            model_class.visibility == VisibilityState.GLOBAL,
+            model_class._tenant_id.in_(tenant_ids)
         )
         return query.filter(tenant_filter)
 
