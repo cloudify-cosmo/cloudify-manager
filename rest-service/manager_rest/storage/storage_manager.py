@@ -74,7 +74,7 @@ class SQLStorageManager(object):
                 )
             raise exception_to_raise
 
-    def _get_base_query(self, model_class, include, joins):
+    def _get_base_query(self, model_class, include, joins, distinct=None):
         """Create the initial query from the model class and included columns
 
         :param model_class: SQL DB table class
@@ -91,11 +91,14 @@ class SQLStorageManager(object):
             # If all columns should be returned, query directly from the model
             query = model_class.query
 
+        if distinct:
+            query = query.distinct(*distinct)
+
         query = query.outerjoin(*joins)
         return query
 
     @staticmethod
-    def _sort_query(query, model_class, sort=None):
+    def _sort_query(query, model_class, sort=None, distinct=None):
         """Add sorting clauses to the query
 
         :param query: Base SQL query
@@ -103,7 +106,9 @@ class SQLStorageManager(object):
         sort by, and values are the order (asc/desc)
         :return: An SQLAlchemy AppenderQuery object
         """
-        if sort:
+        if sort or distinct:
+            if distinct:
+                query = query.order_by(*distinct)
             for column, order in sort.items():
                 if order == 'desc':
                     column = column.desc()
@@ -284,7 +289,8 @@ class SQLStorageManager(object):
                                          include,
                                          filters,
                                          substr_filters,
-                                         sort):
+                                         sort,
+                                         distinct):
         """Get a list of tables on which we need to join and the converted
         `include`, `filters` and `sort` arguments (converted to actual SQLA
         column/label objects instead of column names)
@@ -293,17 +299,19 @@ class SQLStorageManager(object):
         filters = filters or dict()
         substr_filters = substr_filters or dict()
         sort = sort or OrderedDict()
+        distinct = distinct or []
 
         all_columns = set(include) | set(filters.keys()) | set(sort.keys())
         joins = self._get_joins(model_class, all_columns)
 
-        include, filters, substr_filters, sort = \
+        include, filters, substr_filters, sort, distinct = \
             self._get_columns_from_field_names(model_class,
                                                include,
                                                filters,
                                                substr_filters,
-                                               sort)
-        return include, filters, substr_filters, sort, joins
+                                               sort,
+                                               distinct)
+        return include, filters, substr_filters, sort, joins, distinct
 
     def _get_query(self,
                    model_class,
@@ -311,7 +319,8 @@ class SQLStorageManager(object):
                    filters=None,
                    substr_filters=None,
                    sort=None,
-                   all_tenants=None):
+                   all_tenants=None,
+                   distinct=None):
         """Get an SQL query object based on the params passed
 
         :param model_class: SQL DB table class
@@ -326,20 +335,21 @@ class SQLStorageManager(object):
         :return: A sorted and filtered query with only the relevant
         columns
         """
-        include, filters, substr_filters, sort, joins = \
+        include, filters, substr_filters, sort, joins, distinct = \
             self._get_joins_and_converted_columns(model_class,
                                                   include,
                                                   filters,
                                                   substr_filters,
-                                                  sort)
+                                                  sort,
+                                                  distinct)
 
-        query = self._get_base_query(model_class, include, joins)
+        query = self._get_base_query(model_class, include, joins, distinct)
         query = self._filter_query(query,
                                    model_class,
                                    filters,
                                    substr_filters,
                                    all_tenants)
-        query = self._sort_query(query, model_class, sort)
+        query = self._sort_query(query, model_class, sort, distinct)
         return query
 
     def _get_columns_from_field_names(self,
@@ -347,7 +357,8 @@ class SQLStorageManager(object):
                                       include,
                                       filters,
                                       substr_filters,
-                                      sort):
+                                      sort,
+                                      distinct):
         """Go over the optional parameters (include, filters, sort), and
         replace column names with actual SQLA column objects
         """
@@ -358,8 +369,9 @@ class SQLStorageManager(object):
                           for c in substr_filters}
         sort = OrderedDict((self._get_column(model_class, c), sort[c])
                            for c in sort)
+        distinct = [self._get_column(model_class, c) for c in distinct]
 
-        return include, filters, substr_filters, sort
+        return include, filters, substr_filters, sort, distinct
 
     @staticmethod
     def _get_column(model_class, column_name):
@@ -544,7 +556,8 @@ class SQLStorageManager(object):
              sort=None,
              all_tenants=None,
              substr_filters=None,
-             get_all_results=False):
+             get_all_results=False,
+             distinct=None):
         """Return a list of `model_class` results
 
         :param model_class: SQL DB table class
@@ -562,6 +575,8 @@ class SQLStorageManager(object):
         :param get_all_results: Get all the results without the limitation of
                                 size or pagination. Use it carefully to
                                 prevent consumption of too much memory
+        :param distinct: An optional list of columns names to get distinct
+                         results by.
         :return: A (possibly empty) list of `model_class` results
         """
         self._validate_available_memory()
@@ -578,7 +593,8 @@ class SQLStorageManager(object):
                                 filters,
                                 substr_filters,
                                 sort,
-                                all_tenants)
+                                all_tenants,
+                                distinct)
 
         results, total, size, offset = self._paginate(query,
                                                       pagination,
