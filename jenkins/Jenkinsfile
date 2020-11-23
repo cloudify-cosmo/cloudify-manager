@@ -176,12 +176,12 @@ pipeline {
                 dir("amqp-postgres"){
                   vEnv()
                   sh script: '''
-                    ~/venv/bin/pip install -Ur test-requirements.txt
-                    ~/venv/bin/pip install -e .
+                    pip install -Ur test-requirements.txt
+                    pip install -e .
                   ''', label: "installing requirements for pytest"
                 }
                 echo 'Running pytest <<amqp-postgres>>'
-                sh '~/venv/bin/pytest -sv amqp-postgres'
+                sh 'pytest -sv amqp-postgres'
               }
             }
           }
@@ -214,16 +214,16 @@ pipeline {
                   dir("rest-service"){
                     vEnv()
                     sh script: '''
-                      ~/venv/bin/pip install -Ur dev-requirements.txt
-                      ~/venv/bin/pip install -Ur test-requirements.txt
-                      ~/venv/bin/pip install -e .
-                      ~/venv/bin/pip install -e ~/cloudify-premium
+                      pip install -Ur dev-requirements.txt
+                      pip install -Ur test-requirements.txt
+                      pip install -e .
+                      pip install -e ~/cloudify-premium
                     ''', label: "installing requirements for pytest"
                   }
                   echo 'Replace the cloudify-manager URL in dev-requirements.txt with the local path to this checkout'
                   sh 'sed -i "s:^.*cloudify-manager.*(rest-service)$:-e ${HOME}/project/\1/:" ~/cloudify-premium/dev-requirements.txt'
                   echo 'Running pytest <<~/cloudify-premium/tests/unittests>>'
-                  sh '~/venv/bin/pytest -sv ~/cloudify-premium/tests/unittests'
+                  sh 'pytest -sv ~/cloudify-premium/tests/unittests'
                 }
               }
             }
