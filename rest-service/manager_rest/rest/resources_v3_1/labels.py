@@ -32,7 +32,7 @@ class DeploymentsLabels(SecuredResource):
 
 class DeploymentsLabelsKey(SecuredResource):
     @authorize('labels_list')
-    @rest_decorators.marshel_list_response
+    @rest_decorators.marshal_list_response
     @rest_decorators.paginate
     def get(self, key, pagination=None):
         """Get all deployments labels' keys in the current tenant"""
