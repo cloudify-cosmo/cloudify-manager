@@ -7,7 +7,7 @@ def configuration = [vaultUrl: "${env.VAULT_URL}",  vaultCredentialId: 'vault-ap
 
 def vEnv(){
   echo 'creating and sourcing virtualenv'
-  sh '''
+  sh '''#!/bin/bash
     virtualenv .venv
     source .venv/bin/activate
     '''
@@ -36,6 +36,7 @@ pipeline {
     VERSION = getVersion("${env.BRANCH_NAME}").trim()
     PRERELEASE = getPreRelease("${env.BRANCH_NAME}").trim()
     S3_BUILD_PATH = "${env.VERSION}/${env.PRERELEASE}-build/${env.PROJECT}/${env.BRANCH}/${env.BUILD_NUMBER}"
+    PATH = "/root/.local/bin:$PATH"
   }
 
   stages {
