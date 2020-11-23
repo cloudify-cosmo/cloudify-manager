@@ -52,7 +52,6 @@ def prepare_reset_storage_script(container_id):
             'config': {
                 '': constants.CONFIG_FILE_LOCATION,
                 'security': SECURITY_FILE_LOCATION,
-                'authorization': constants.AUTHORIZATION_FILE_LOCATION
             },
             'ip': get_manager_ip(container_id),
             'username': 'admin',

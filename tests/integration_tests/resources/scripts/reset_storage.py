@@ -79,8 +79,7 @@ def _add_defaults(app, amqp_manager, script_config):
     default_tenant = create_default_user_tenant_and_roles(
         admin_username=script_config['username'],
         admin_password=script_config['password'],
-        amqp_manager=amqp_manager,
-        authorization_file_path=script_config['config']['authorization']
+        amqp_manager=amqp_manager
     )
     for scope, configs in script_config['manager_config'].items():
         for name, value in configs.items():
@@ -111,7 +110,8 @@ def reset_storage(script_config):
     # Rebuild the DB
     safe_drop_all(keep_tables=['roles', 'config', 'rabbitmq_brokers',
                                'certificates', 'managers', 'db_nodes',
-                               'licenses', 'usage_collector'])
+                               'licenses', 'usage_collector',
+                               'permissions'])
     upgrade(directory=migrations_dir)
 
     # Add default tenant, admin user and provider context
