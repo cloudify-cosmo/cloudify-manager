@@ -203,7 +203,7 @@ jobs:
             while read line; do
               [[ "$line" =~ ^#.* ]] && continue
               FUTURIZE="${FUTURIZE} ${line}"
-            done<.circleci/py3circleFixers
+            done<.circleci/py3fixers
             $FUTURIZE>futurize_diffs
       - run:
           name: check that there is no python3-incompatible code

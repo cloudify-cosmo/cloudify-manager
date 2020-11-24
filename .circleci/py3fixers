@@ -1,43 +1,18 @@
-lib2to3.fixes.fix_apply
-lib2to3.fixes.fix_except
-lib2to3.fixes.fix_exitfunc
-lib2to3.fixes.fix_funcattrs
-lib2to3.fixes.fix_has_key
-lib2to3.fixes.fix_idioms
-lib2to3.fixes.fix_intern
-lib2to3.fixes.fix_isinstance
-lib2to3.fixes.fix_methodattrs
-lib2to3.fixes.fix_ne
-lib2to3.fixes.fix_numliterals
-lib2to3.fixes.fix_paren
-lib2to3.fixes.fix_reduce
-lib2to3.fixes.fix_renames
-lib2to3.fixes.fix_repr
-lib2to3.fixes.fix_standarderror
-lib2to3.fixes.fix_sys_exc
-lib2to3.fixes.fix_throw
-lib2to3.fixes.fix_tuple_params
-lib2to3.fixes.fix_types
-lib2to3.fixes.fix_ws_comma
-lib2to3.fixes.fix_xreadlines
-libfuturize.fixes.fix_absolute_import
-libfuturize.fixes.fix_next_call
-libfuturize.fixes.fix_print_with_import
-libfuturize.fixes.fix_raise
-lib2to3.fixes.fix_getcwdu
-lib2to3.fixes.fix_long
-lib2to3.fixes.fix_nonzero
-lib2to3.fixes.fix_input
-lib2to3.fixes.fix_raw_input
-lib2to3.fixes.fix_itertools
-lib2to3.fixes.fix_itertools_imports
-lib2to3.fixes.fix_exec
-lib2to3.fixes.fix_operator
-libfuturize.fixes.fix_execfile
-libpasteurize.fixes.fix_newstyle
-lib2to3.fixes.fix_filter
+--stage1
+-f lib2to3.fixes.fix_getcwdu
+-f lib2to3.fixes.fix_long
+-f lib2to3.fixes.fix_nonzero
+-f lib2to3.fixes.fix_input
+-f lib2to3.fixes.fix_raw_input
+-f lib2to3.fixes.fix_itertools
+-f lib2to3.fixes.fix_itertools_imports
+-f lib2to3.fixes.fix_exec
+-f lib2to3.fixes.fix_operator
+-f libfuturize.fixes.fix_execfile
+-f libpasteurize.fixes.fix_newstyle
+-f lib2to3.fixes.fix_filter
 # fix_dict is not idempotent
-# lib2to3.fixes.fix_dict
-lib2to3.fixes.fix_map
-lib2to3.fixes.fix_xrange
-lib2to3.fixes.fix_zip
+# -f lib2to3.fixes.fix_dict
+-f lib2to3.fixes.fix_map
+-f lib2to3.fixes.fix_xrange
+-f lib2to3.fixes.fix_zip
