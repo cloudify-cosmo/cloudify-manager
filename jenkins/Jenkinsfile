@@ -58,18 +58,16 @@ pipeline {
 
             container('python'){
               dir("${env.WORKSPACE}/rest") {
-                dir("rest-service"){
-                  vEnv()
-                  sh script: '''
+                vEnv()
+                sh script: '''
                     . .venv/bin/activate
-                    pip install -Ur dev-requirements.txt
-                    pip install -Ur test-requirements.txt
-                    pip install -e .
-                  ''', label: "installing requirements for pytest"
-                }
+                  pip install -Ur rest-service/dev-requirements.txt
+                  pip install -Ur rest-service/test-requirements.txt
+                  pip install -e rest-service/
+                ''', label: "installing requirements for pytest"
                 echo 'Running pytest <<rest-service/manager_rest/test/endpoints>>'
                 sh '''
-                  . rest-service/.venv/bin/activate
+                  . .venv/bin/activate
                   pytest \
                     -sv \
                     -a '(client_min_version is None or client_min_version <= 3.1) and (client_max_version is None or 3.1 <= client_max_version)' \
@@ -77,7 +75,7 @@ pipeline {
                 '''
                 echo 'Running pytest <<rest-service/manager_rest/test/infrastructure>>'
                 sh '''
-                  . rest-service/.venv/bin/activate
+                  . .venv/bin/activate
                   pytest \
                     -sv \
                     -a '(client_min_version is None or client_min_version <= 3.1) and (client_max_version is None or 3.1 <= client_max_version)' \
@@ -85,21 +83,21 @@ pipeline {
                 '''
                 echo 'Running pytest <<rest-service/manager_rest/test/security>>'
                 sh '''
-                  . rest-service/.venv/bin/activate
+                  . .venv/bin/activate
                   pytest \
                     -sv \
                     rest-service/manager_rest/test/security
                 '''
                 echo 'Running pytest <<workflows>>'
                 sh '''
-                  . rest-service/.venv/bin/activate
+                  . .venv/bin/activate
                   pytest \
                     -sv \
                     workflows
                 '''
                 echo 'Running pytest <<cloudify_types>>'
                 sh '''
-                  . rest-service/.venv/bin/activate
+                  . .venv/bin/activate
                   pytest \
                     -sv \
                     cloudify_types
