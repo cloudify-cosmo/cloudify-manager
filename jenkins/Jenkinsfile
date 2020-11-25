@@ -6,11 +6,9 @@ def secrets = [
 def configuration = [vaultUrl: "${env.VAULT_URL}",  vaultCredentialId: 'vault-app-role', engineVersion: 2]
 
 def vEnv(){
-  echo 'creating and sourcing virtualenv'
-  sh '''#!/bin/bash
-    virtualenv .venv
-    source .venv/bin/activate
-    '''
+  sh script: '''
+      virtualenv .venv
+    ''', label: "creating virtualenv"
 }
 @Library('pipeline-shared-library') _
 
@@ -56,19 +54,19 @@ pipeline {
         stage('test_restservice') {
           steps {
             sh script: "mkdir -p ${env.WORKSPACE}/rest && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/rest", label: "copying repo to seperate workspace"
-            
+
             container('python'){
               dir("${env.WORKSPACE}/rest") {
-                dir("rest-service"){
-                  vEnv()
-                  sh script: '''
-                    pip install -Ur dev-requirements.txt
-                    pip install -Ur test-requirements.txt
-                    pip install -e .
-                  ''', label: "installing requirements for pytest"
-                }
+                vEnv()
+                sh script: '''
+                    . .venv/bin/activate
+                  pip install -Ur rest-service/dev-requirements.txt
+                  pip install -Ur rest-service/test-requirements.txt
+                  pip install -e rest-service/
+                ''', label: "installing requirements for pytest"
                 echo 'Running pytest <<rest-service/manager_rest/test/endpoints>>'
                 sh '''
+                  . .venv/bin/activate
                   pytest \
                     -sv \
                     -a '(client_min_version is None or client_min_version <= 3.1) and (client_max_version is None or 3.1 <= client_max_version)' \
@@ -76,6 +74,7 @@ pipeline {
                 '''
                 echo 'Running pytest <<rest-service/manager_rest/test/infrastructure>>'
                 sh '''
+                  . .venv/bin/activate
                   pytest \
                     -sv \
                     -a '(client_min_version is None or client_min_version <= 3.1) and (client_max_version is None or 3.1 <= client_max_version)' \
@@ -83,18 +82,21 @@ pipeline {
                 '''
                 echo 'Running pytest <<rest-service/manager_rest/test/security>>'
                 sh '''
+                  . .venv/bin/activate
                   pytest \
                     -sv \
                     rest-service/manager_rest/test/security
                 '''
                 echo 'Running pytest <<workflows>>'
                 sh '''
+                  . .venv/bin/activate
                   pytest \
                     -sv \
                     workflows
                 '''
                 echo 'Running pytest <<cloudify_types>>'
                 sh '''
+                  . .venv/bin/activate
                   pytest \
                     -sv \
                     cloudify_types
@@ -116,12 +118,13 @@ pipeline {
 
               echo 'Build Rest Service RPM'
               buildRpm('~/rpmbuild/SOURCES', 'cloudify-rest-service.spec', "${env.VERSION}", "${env.PRERELEASE}")
-              
+
               echo 'Build mgmtworker RPM'
               buildRpm('~/rpmbuild/SOURCES', 'cloudify-mgmtworker.spec', "${env.VERSION}", "${env.PRERELEASE}")
-              
+
               echo 'Build rabbitmq RPM'
               buildRpm('~/rpmbuild/SOURCES', 'cloudify-rabbitmq.spec', "${env.VERSION}", "${env.PRERELEASE}")
+
 
               echo 'Copy RPMs to rpm folder'
               sh("mkdir -p ${env.WORKSPACE}/rpm && cp -rf /root/rpmbuild/RPMS/x86_64/. ${env.WORKSPACE}/rpm")
@@ -167,33 +170,34 @@ pipeline {
       parallel {
         stage('test_amqp_postgres') {
           steps {
-            sh script: "mkdir -p ${env.WORKSPACE}/amqp_postgres && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/amqp_postgres", label: "copying repo to seperate workspace"  
+            sh script: "mkdir -p ${env.WORKSPACE}/amqp_postgres && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/amqp_postgres", label: "copying repo to seperate workspace"
 
             container('python'){
               dir("${env.WORKSPACE}/amqp_postgres") {
                 dir("amqp-postgres"){
                   vEnv()
                   sh script: '''
+                    . .venv/bin/activate
                     pip install -Ur test-requirements.txt
                     pip install -e .
                   ''', label: "installing requirements for pytest"
+                  echo 'Running pytest <<amqp-postgres>>'
+                  sh script: '''
+                    . .venv/bin/activate
+                    pytest -sv amqp_postgres
+                  '''
                 }
-                echo 'Running pytest <<amqp-postgres>>'
-                sh 'pytest -sv amqp-postgres'
               }
             }
           }
         }
         stage('test_premium') {
           steps {
-            sh script: "mkdir -p ${env.WORKSPACE}/premium && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/premium", label: "copying repo to seperate workspace" 
+            sh script: "mkdir -p ${env.WORKSPACE}/premium && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/premium", label: "copying repo to seperate workspace"
 
             container('python'){
               dir("${env.WORKSPACE}/premium") {
                 withVault([configuration: configuration, vaultSecrets: secrets]) {
-                  sh '''
-                    pip install --user tox
-                  '''
                   echo 'cloning cloudify-premium'
                   sh """#!/bin/bash
                     set -eux
@@ -208,20 +212,22 @@ pipeline {
                     }
                     clone "${env.BRANCH}" || clone master
                   """
-                  
-                  dir("rest-service"){
-                    vEnv()
-                    sh script: '''
-                      pip install -Ur dev-requirements.txt
-                      pip install -Ur test-requirements.txt
-                      pip install -e .
-                      pip install -e ~/cloudify-premium
-                    ''', label: "installing requirements for pytest"
-                  }
+
+                  vEnv()
+                  sh script: '''
+                    . .venv/bin/activate
+                    pip install -Ur rest-service/dev-requirements.txt
+                    pip install -Ur rest-service/test-requirements.txt
+                    pip install -e rest-service/
+                    pip install -e ~/cloudify-premium
+                  ''', label: "installing requirements for pytest"
                   echo 'Replace the cloudify-manager URL in dev-requirements.txt with the local path to this checkout'
                   sh 'sed -i "s:^.*cloudify-manager.*(rest-service)$:-e ${HOME}/project/\1/:" ~/cloudify-premium/dev-requirements.txt'
                   echo 'Running pytest <<~/cloudify-premium/tests/unittests>>'
-                  sh 'pytest -sv ~/cloudify-premium/tests/unittests'
+                  sh script: '''
+                    . .venv/bin/activate
+                    pytest -sv ~/cloudify-premium/tests/unittests
+                  '''
                 }
               }
             }
