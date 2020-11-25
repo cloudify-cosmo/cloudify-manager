@@ -7,8 +7,8 @@ def configuration = [vaultUrl: "${env.VAULT_URL}",  vaultCredentialId: 'vault-ap
 
 def vEnv(){
   echo 'creating and sourcing virtualenv'
-  sh '''#!/bin/bash
-    virtualenv .venv
+  sh '''
+      virtualenv .venv
     '''
 }
 @Library('pipeline-shared-library') _
@@ -61,7 +61,7 @@ pipeline {
                 dir("rest-service"){
                   vEnv()
                   sh script: '''
-                    source .venv/bin/activate
+                    . .venv/bin/activate
                     pip install -Ur dev-requirements.txt
                     pip install -Ur test-requirements.txt
                     pip install -e .
@@ -69,7 +69,7 @@ pipeline {
                 }
                 echo 'Running pytest <<rest-service/manager_rest/test/endpoints>>'
                 sh '''
-                  source .venv/bin/activate
+                  . .venv/bin/activate
                   pytest \
                     -sv \
                     -a '(client_min_version is None or client_min_version <= 3.1) and (client_max_version is None or 3.1 <= client_max_version)' \
@@ -77,7 +77,7 @@ pipeline {
                 '''
                 echo 'Running pytest <<rest-service/manager_rest/test/infrastructure>>'
                 sh '''
-                  source .venv/bin/activate
+                  . .venv/bin/activate
                   pytest \
                     -sv \
                     -a '(client_min_version is None or client_min_version <= 3.1) and (client_max_version is None or 3.1 <= client_max_version)' \
@@ -85,21 +85,21 @@ pipeline {
                 '''
                 echo 'Running pytest <<rest-service/manager_rest/test/security>>'
                 sh '''
-                  source .venv/bin/activate
+                  . .venv/bin/activate
                   pytest \
                     -sv \
                     rest-service/manager_rest/test/security
                 '''
                 echo 'Running pytest <<workflows>>'
                 sh '''
-                  source .venv/bin/activate
+                  . .venv/bin/activate
                   pytest \
                     -sv \
                     workflows
                 '''
                 echo 'Running pytest <<cloudify_types>>'
                 sh '''
-                  source .venv/bin/activate
+                  . .venv/bin/activate
                   pytest \
                     -sv \
                     cloudify_types
@@ -180,7 +180,7 @@ pipeline {
                 dir("amqp-postgres"){
                   vEnv()
                   sh script: '''
-                    source .venv/bin/activate
+                    . .venv/bin/activate
                     pip install -Ur test-requirements.txt
                     pip install -e .
                   ''', label: "installing requirements for pytest"
@@ -219,7 +219,7 @@ pipeline {
                   dir("rest-service"){
                     vEnv()
                     sh script: '''
-                      source .venv/bin/activate
+                      . .venv/bin/activate
                       pip install -Ur dev-requirements.txt
                       pip install -Ur test-requirements.txt
                       pip install -e .
@@ -230,7 +230,7 @@ pipeline {
                   sh 'sed -i "s:^.*cloudify-manager.*(rest-service)$:-e ${HOME}/project/\1/:" ~/cloudify-premium/dev-requirements.txt'
                   echo 'Running pytest <<~/cloudify-premium/tests/unittests>>'
                   sh '''
-                    source .venv/bin/activate
+                    . .venv/bin/activate
                     pytest -sv ~/cloudify-premium/tests/unittests
                   '''
                 }
