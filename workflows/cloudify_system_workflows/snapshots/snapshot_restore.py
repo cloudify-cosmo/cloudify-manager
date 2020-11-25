@@ -488,10 +488,13 @@ class SnapshotRestore(object):
         postgres.init_current_execution_data()
 
         config_dump_path = postgres.dump_config_tables(self._tempdir)
+        permissions_dump_path = postgres.dump_permissions_table(self._tempdir)
         with utils.db_schema(schema_revision, config=self._config):
             admin_user_update_command = postgres.restore(
                 self._tempdir, premium_enabled=self._premium_enabled)
         postgres.restore_config_tables(config_dump_path)
+        if not self._permissions_exist(postgres):
+            postgres.restore_permissions_table(permissions_dump_path)
         postgres.restore_current_execution()
         try:
             self._restore_stage(postgres, self._tempdir, stage_revision)
@@ -510,7 +513,14 @@ class SnapshotRestore(object):
 
     def _license_exists(self, postgres):
         result = postgres.run_query('SELECT * FROM licenses;')
-        return False if '0' in result['status'] else True
+        return '0' not in result['status']
+
+    def _permissions_exist(self, postgres):
+        result = postgres.run_query('SELECT count(1) FROM permissions')
+        if not result['all']:
+            return False
+        count = result['all'][0][0]  # the only row's only column is the count
+        return count > 0
 
     def _encrypt_secrets(self, postgres):
         # The secrets are encrypted

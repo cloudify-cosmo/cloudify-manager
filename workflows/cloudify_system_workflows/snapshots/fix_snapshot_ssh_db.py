@@ -18,7 +18,7 @@ from __future__ import print_function
 import os
 import argparse
 
-from manager_rest import flask_utils
+from manager_rest import flask_utils, config
 from manager_rest.storage.models import Deployment
 from manager_rest.storage import get_storage_manager
 
@@ -146,6 +146,7 @@ def main(original_string, secret_name):
 
 def setup_flask_app(tenant_name):
     app = flask_utils.setup_flask_app()
+    config.instance.load_configuration()
     flask_utils.set_admin_current_user(app)
     tenant = flask_utils.get_tenant_by_name(tenant_name)
     flask_utils.set_tenant_in_app(tenant)
