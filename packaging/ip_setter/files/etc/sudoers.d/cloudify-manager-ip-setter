@@ -1,5 +1,0 @@
-# Run update provider context script
-cfyuser    ALL=(root) NOPASSWD:/opt/cloudify/manager-ip-setter/update-provider-context.py
-
-# Run manager IP setter script
-cfyuser    ALL=(root) NOPASSWD:/opt/cloudify/manager-ip-setter/manager-ip-setter.sh

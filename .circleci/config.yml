@@ -170,8 +170,6 @@ jobs:
           spec_file: cloudify-mgmtworker.spec
       - build_rpm:
           spec_file: cloudify-rabbitmq.spec
-      - build_rpm:
-          spec_file: cloudify-manager-ip-setter.spec
       - run: |
           mkdir result
           mv noarch/*.rpm result || true
