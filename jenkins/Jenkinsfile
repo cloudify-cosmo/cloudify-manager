@@ -6,10 +6,9 @@ def secrets = [
 def configuration = [vaultUrl: "${env.VAULT_URL}",  vaultCredentialId: 'vault-app-role', engineVersion: 2]
 
 def vEnv(){
-  echo 'creating and sourcing virtualenv'
-  sh '''
+  sh script: '''
       virtualenv .venv
-    '''
+    ''', label: "creating virtualenv"
 }
 @Library('pipeline-shared-library') _
 
