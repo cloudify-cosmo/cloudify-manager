@@ -214,16 +214,14 @@ pipeline {
                     clone "${env.BRANCH}" || clone master
                   """
 
-                  dir("rest-service"){
-                    vEnv()
-                    sh script: '''
-                      . .venv/bin/activate
-                      pip install -Ur dev-requirements.txt
-                      pip install -Ur test-requirements.txt
-                      pip install -e .
-                      pip install -e ~/cloudify-premium
-                    ''', label: "installing requirements for pytest"
-                  }
+                  vEnv()
+                  sh script: '''
+                    . .venv/bin/activate
+                    pip install -Ur rest-service/dev-requirements.txt
+                    pip install -Ur rest-service/test-requirements.txt
+                    pip install -e rest-service/
+                    pip install -e ~/cloudify-premium
+                  ''', label: "installing requirements for pytest"
                   echo 'Replace the cloudify-manager URL in dev-requirements.txt with the local path to this checkout'
                   sh 'sed -i "s:^.*cloudify-manager.*(rest-service)$:-e ${HOME}/project/\1/:" ~/cloudify-premium/dev-requirements.txt'
                   echo 'Running pytest <<~/cloudify-premium/tests/unittests>>'
