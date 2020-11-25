@@ -199,9 +199,6 @@ pipeline {
             container('python'){
               dir("${env.WORKSPACE}/premium") {
                 withVault([configuration: configuration, vaultSecrets: secrets]) {
-                  sh '''
-                    pip install --user tox
-                  '''
                   echo 'cloning cloudify-premium'
                   sh """#!/bin/bash
                     set -eux
