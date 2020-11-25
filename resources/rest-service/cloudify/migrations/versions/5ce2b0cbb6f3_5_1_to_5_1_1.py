@@ -135,7 +135,7 @@ def _create_maintenance_mode_table():
         sa.Column('status', sa.Text(), nullable=False),
         sa.Column('activation_requested_at', UTCDateTime(), nullable=False),
         sa.Column('activated_at', UTCDateTime(), nullable=True),
-        sa.Column('_requested_by', sa.Integer(), nullable=False),
+        sa.Column('_requested_by', sa.Integer(), nullable=True),
         sa.ForeignKeyConstraint(
             ['_requested_by'],
             ['users.id'],

@@ -221,6 +221,27 @@ class Postgres(object):
                                       self.current_execution_date,
                                       self.hashed_execution_token)
 
+    def dump_permissions_table(self, tempdir):
+        # store the permissions table separately from config tables,
+        # because it can be also present in the snapshot, and we're only
+        # going to restore it if it's missing
+        pg_dump_bin = os.path.join(self._bin_dir, 'pg_dump')
+        path = os.path.join(tempdir, 'permissions.dump')
+        command = [pg_dump_bin,
+                   '-a',
+                   '--host', self._host,
+                   '--port', self._port,
+                   '-U', self._username,
+                   self._db_name,
+                   '-f', path,
+                   '-t', 'permissions']
+
+        run_shell(command)
+        return path
+
+    def restore_permissions_table(self, permissions_path):
+        self._restore_dump(permissions_path, self._db_name)
+
     def dump_config_tables(self, tempdir):
         pg_dump_bin = os.path.join(self._bin_dir, 'pg_dump')
         path = os.path.join(tempdir, 'config.dump')
