@@ -182,9 +182,12 @@ pipeline {
                     pip install -Ur test-requirements.txt
                     pip install -e .
                   ''', label: "installing requirements for pytest"
+                  echo 'Running pytest <<amqp-postgres>>'
+                  sh script: '''
+                    . .venv/bin/activate
+                    pytest -sv amqp_postgres
+                  '''
                 }
-                echo 'Running pytest <<amqp-postgres>>'
-                sh 'pytest -sv amqp-postgres'
               }
             }
           }
