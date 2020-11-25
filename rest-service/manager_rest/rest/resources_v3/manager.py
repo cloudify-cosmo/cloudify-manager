@@ -17,7 +17,6 @@ from flask import request
 from flask import current_app
 
 from cloudify.models_states import VisibilityState
-from cloudify.cluster_status import STATUS_REPORTER_USERS
 
 from manager_rest.security import SecuredResource
 from manager_rest import config, premium_enabled, utils
@@ -166,20 +165,7 @@ class LdapAuthentication(SecuredResource):
     def get(self):
         return 'enabled' if config.instance.ldap_server else 'disabled'
 
-    @staticmethod
-    def _only_system_reserved_users_in_manager():
-        """
-        True if no users other than the system reserved user exists.
-        :return:
-        """
-        users = get_storage_manager().list(models.User)
-        return all(user.username in STATUS_REPORTER_USERS or user.id == 0
-                   for user in users)
-
     def _validate_set_ldap_request(self):
-        if not self._only_system_reserved_users_in_manager():
-            raise MethodNotAllowedError('LDAP Configuration may be set only on'
-                                        ' a clean manager.')
         if not premium_enabled:
             raise MethodNotAllowedError('LDAP is only supported in the '
                                         'Cloudify premium edition.')
