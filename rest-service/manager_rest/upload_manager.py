@@ -264,6 +264,7 @@ class UploadedDataManager(object):
         else:
             for item in os.listdir(archive_path):
                 shutil.copy(os.path.join(archive_path, item), uploaded_dir)
+            shutil.rmtree(archive_path)
 
     def _get_kind(self):
         raise NotImplementedError('Subclass responsibility')
