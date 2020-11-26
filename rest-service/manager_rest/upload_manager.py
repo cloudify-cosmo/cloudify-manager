@@ -274,6 +274,19 @@ class UploadedDataManager(object):
                 shutil.copy(os.path.join(archive_path, item), uploaded_dir)
             shutil.rmtree(archive_path)
 
+    @classmethod
+    def _zip_dir(cls, dir_to_zip, target_zip_path):
+        zipf = zipfile.ZipFile(target_zip_path, 'w', zipfile.ZIP_DEFLATED)
+        try:
+            plugin_dir_base_name = os.path.basename(dir_to_zip)
+            rootlen = len(dir_to_zip) - len(plugin_dir_base_name)
+            for base, dirs, files in os.walk(dir_to_zip):
+                for entry in files:
+                    fn = os.path.join(base, entry)
+                    zipf.write(fn, fn[rootlen:])
+        finally:
+            zipf.close()
+
     def _get_kind(self):
         raise NotImplementedError('Subclass responsibility')
 
@@ -455,19 +468,6 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
             target_zip_path = os.path.join(file_server_root, app_dir,
                                            'plugins', final_zip_name)
             cls._zip_dir(plugin_dir, target_zip_path)
-
-    @classmethod
-    def _zip_dir(cls, dir_to_zip, target_zip_path):
-        zipf = zipfile.ZipFile(target_zip_path, 'w', zipfile.ZIP_DEFLATED)
-        try:
-            plugin_dir_base_name = os.path.basename(dir_to_zip)
-            rootlen = len(dir_to_zip) - len(plugin_dir_base_name)
-            for base, dirs, files in os.walk(dir_to_zip):
-                for entry in files:
-                    fn = os.path.join(base, entry)
-                    zipf.write(fn, fn[rootlen:])
-        finally:
-            zipf.close()
 
 
 class UploadedBlueprintsManager(UploadedDataManager):
@@ -664,95 +664,66 @@ class UploadedBlueprintsManager(UploadedDataManager):
             target_zip_path = os.path.join(plugins_directory, final_zip_name)
             cls._zip_dir(plugin_dir, target_zip_path)
 
-    @classmethod
-    def _zip_dir(cls, dir_to_zip, target_zip_path):
-        zipf = zipfile.ZipFile(target_zip_path, 'w', zipfile.ZIP_DEFLATED)
-        try:
-            plugin_dir_base_name = os.path.basename(dir_to_zip)
-            rootlen = len(dir_to_zip) - len(plugin_dir_base_name)
-            for base, dirs, files in os.walk(dir_to_zip):
-                for entry in files:
-                    fn = os.path.join(base, entry)
-                    zipf.write(fn, fn[rootlen:])
-        finally:
-            zipf.close()
-
-    @classmethod
-    def _extract_application_file(cls,
-                                  file_server_root,
-                                  application_dir,
-                                  application_file_name):
-
-        full_application_dir = os.path.join(file_server_root, application_dir)
-
-        if application_file_name:
-            application_file_name = unquote(application_file_name)
-            application_file = os.path.join(full_application_dir,
-                                            application_file_name)
-            if not os.path.isfile(application_file):
-                raise manager_exceptions.BadParametersError(
-                    '{0} does not exist in the application '
-                    'directory'.format(application_file_name)
-                )
-        else:
-            application_file_name = CONVENTION_APPLICATION_BLUEPRINT_FILE
-            application_file = os.path.join(full_application_dir,
-                                            application_file_name)
-            if not os.path.isfile(application_file):
-                raise manager_exceptions.BadParametersError(
-                    'application directory is missing blueprint.yaml and '
-                    'application_file_name query parameter was not passed')
-
-        # return relative path from the file server root since this path
-        # is appended to the file server base uri
-        return application_file_name
-
 
 class UploadedBlueprintsValidator(UploadedBlueprintsManager):
 
-    @classmethod
-    def _prepare_and_submit_blueprint(cls,
-                                      file_server_root,
-                                      app_dir,
-                                      blueprint_id,
-                                      visibility):
-        args = get_args_and_verify_arguments([
-            Argument('application_file_name',
-                     default='')])
-
-        app_file_name = cls._extract_application_file(
-            file_server_root, app_dir, args.application_file_name)
-
-        # add to blueprints manager (will also dsl_parse it)
-        try:
-            get_resource_manager().validate_blueprint(
-                app_dir,
-                app_file_name,
-                file_server_root
-            )
-        except manager_exceptions.DslParseException as ex:
-            raise manager_exceptions.InvalidBlueprintError(
-                'Invalid blueprint - {0}'.format(ex))
-
-        return {}
-
     def receive_uploaded_data(self, data_id=None, **kwargs):
-        file_server_root = config.instance.file_server_root
-        resource_target_path = tempfile.mktemp(dir=file_server_root)
+        blueprint_url = None
+        # avoid clashing with existing blueprint names
+        blueprint_id = data_id + uuid.uuid4().hex[:16]
+        args = get_args_and_verify_arguments([
+            Argument('application_file_name', default='')
+        ])
+
+        # Handle importing blueprint through url
+        if self._get_data_url_key() in request.args:
+            if request.data or \
+                    'Transfer-Encoding' in request.headers or \
+                    'blueprint_archive' in request.files:
+                raise manager_exceptions.BadParametersError(
+                    "Can pass {0} as only one of: URL via query parameters, "
+                    "request body, multi-form or "
+                    "chunked.".format(self._get_kind()))
+            blueprint_url = request.args[self._get_data_url_key()]
+
+        self._prepare_and_process_doc(
+            blueprint_id,
+            blueprint_url,
+            application_file_name=args.application_file_name)
+        return "", 204
+
+    def _prepare_and_process_doc(self, data_id, blueprint_url,
+                                 application_file_name):
+        # Put a temporary blueprint entry in DB
+        rm = get_resource_manager()
+        now = get_formatted_timestamp()
+        temp_blueprint = rm.sm.put(Blueprint(
+            plan=None,
+            id=data_id,
+            description=None,
+            created_at=now,
+            updated_at=now,
+            main_file_name=None,
+            visibility=None,
+            state=BlueprintUploadState.VALIDATING
+        ))
+
+        if not blueprint_url:
+            self.upload_archive_to_file_server(data_id)
+
         try:
-            additional_inputs = self._save_file_locally_and_extract_inputs(
-                resource_target_path,
-                self._get_data_url_key(),
-                self._get_kind())
-            self._prepare_and_process_doc(
+            rm.upload_blueprint(
                 data_id,
-                file_server_root,
-                resource_target_path,
-                additional_inputs=additional_inputs,
-                **kwargs)
-            return "", 204
-        finally:
-            remove(resource_target_path)
+                application_file_name,
+                blueprint_url,
+                config.instance.file_server_root,   # for the import resolver
+                validate_only=True,
+            )
+        except manager_exceptions.ExistingRunningExecutionError:
+            rm.sm.delete(temp_blueprint)
+            self.cleanup_blueprint_archive_from_file_server(
+                data_id, current_tenant.name)
+            raise
 
 
 class UploadedPluginsManager(UploadedDataManager):

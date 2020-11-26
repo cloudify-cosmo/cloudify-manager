@@ -376,33 +376,6 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         self.assertEqual(1, len(blueprints))
         self.assertEqual(b0_id, blueprints[0].id)
 
-    # TODO: fixed as part of RD-686
-    # @attr(client_min_version=3.1,
-    #       client_max_version=base_test.LATEST_API_VERSION)
-    # def test_blueprint_validate_valid(self):
-    #     blueprint_id = 'blueprint_main_file_name'
-    #     blueprint_file = 'blueprint.yaml'
-    #     blueprint_path = os.path.join(
-    #         self.get_blueprint_path('mock_blueprint'),
-    #         blueprint_file)
-    #     self.client.blueprints.validate(blueprint_path, blueprint_id)
-    #     self.assertEqual(0, len(self.client.blueprints.list()))
-    #
-    # @attr(client_min_version=3.1,
-    #       client_max_version=base_test.LATEST_API_VERSION)
-    # def test_blueprint_validate_invalid_blueprint(self):
-    #     blueprint_id = 'blueprint_main_file_name'
-    #     blueprint_file = 'invalid_blueprint.yaml'
-    #     blueprint_path = os.path.join(
-    #         self.get_blueprint_path('mock_blueprint'),
-    #         blueprint_file)
-    #     self.assertEqual(0, len(self.client.blueprints.list()))
-    #     with self.assertRaises(exceptions.CloudifyClientError) as context:
-    #         self.client.blueprints.validate(blueprint_path, blueprint_id)
-    #     self.assertEqual(400, context.exception.status_code)
-    #     self.assertIn("Invalid blueprint - 'foo' is not in schema.",
-    #                   str(context.exception))
-
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
     def test_blueprint_validate_invalid_id(self):
