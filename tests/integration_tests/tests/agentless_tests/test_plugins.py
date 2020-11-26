@@ -114,16 +114,13 @@ class TestPluginsSystemState(AgentlessTestCase):
         self._upload_plugin_and_assert_values(TEST_PACKAGE_NAME,
                                               TEST_PACKAGE_VERSION,
                                               plugins_count=0,
-                                              wagon_files_count=0,
                                               corrupt_plugin=True)
         plugin = self._upload_plugin_and_assert_values(TEST_PACKAGE_NAME,
                                                        TEST_PACKAGE_VERSION,
-                                                       plugins_count=1,
-                                                       wagon_files_count=1)
+                                                       plugins_count=1)
         plugin2 = self._upload_plugin_and_assert_values(TEST_PACKAGE2_NAME,
                                                         TEST_PACKAGE2_VERSION,
-                                                        plugins_count=2,
-                                                        wagon_files_count=1)
+                                                        plugins_count=2)
         self._uninstall_plugin_and_assert_values(plugin, 1)
         self._uninstall_plugin_and_assert_values(plugin2, 0)
 
@@ -131,7 +128,6 @@ class TestPluginsSystemState(AgentlessTestCase):
                                          package_name,
                                          package_version,
                                          plugins_count,
-                                         wagon_files_count,
                                          corrupt_plugin=False):
         plugin = test_utils.upload_mock_plugin(
             self.client,
@@ -145,7 +141,7 @@ class TestPluginsSystemState(AgentlessTestCase):
 
         time.sleep(2)  # give time for log to refresh and plugin to install
         plugin_retrieved = self.client.plugins.get(plugin.id)
-        self.assertIn('installation_state', plugin_retrieved)
+        assert 'installation_state' in plugin_retrieved
 
         if corrupt_plugin:
             log_path = '/var/log/cloudify/mgmtworker/mgmtworker.log'
@@ -156,22 +152,18 @@ class TestPluginsSystemState(AgentlessTestCase):
             last_log_lines = str(data[-20:])
             message = 'Failed installing managed plugin: {0}'.format(plugin.id)
             assert message in last_log_lines
-            self.assertTrue(
-                all(s.get('state') == 'error'
-                    for s in plugin_retrieved['installation_state'])
-            )
+            assert all(s.get('state') == 'error'
+                       for s in plugin_retrieved['installation_state'])
             self.client.plugins.delete(plugin.id)
         else:
-            self.assertTrue(
-                all(s.get('state') == 'installed'
-                    for s in plugin_retrieved['installation_state'])
-            )
+            assert all(s.get('state') == 'installed'
+                       for s in plugin_retrieved['installation_state'])
         plugins = self.client.plugins.list()
-        self.assertEqual(len(plugins), plugins_count)
+        assert len(plugins) == plugins_count
         return plugin
 
     def _uninstall_plugin_and_assert_values(self, plugin, plugins_count):
         self.client.plugins.delete(plugin.id)
         plugins = self.client.plugins.list()
-        self.assertEqual(len(plugins), plugins_count)
-        self.assertNotIn(plugin.id, plugins)
+        assert len(plugins) == plugins_count
+        assert plugin.id not in plugins
