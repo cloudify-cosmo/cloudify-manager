@@ -138,7 +138,6 @@ class TestPluginsSystemState(AgentlessTestCase):
             package_name,
             package_version,
             corrupt_plugin=corrupt_plugin)
-        # wagon_file = plugin.archive_name
 
         self.client.plugins.install(
             plugin.id,
@@ -158,14 +157,14 @@ class TestPluginsSystemState(AgentlessTestCase):
             message = 'Failed installing managed plugin: {0}'.format(plugin.id)
             assert message in last_log_lines
             self.assertTrue(
-                all([s.get('state') == 'error'
-                     for s in plugin_retrieved['installation_state']])
+                all(s.get('state') == 'error'
+                    for s in plugin_retrieved['installation_state'])
             )
             self.client.plugins.delete(plugin.id)
         else:
             self.assertTrue(
-                all([s.get('state') == 'installed'
-                    for s in plugin_retrieved['installation_state']])
+                all(s.get('state') == 'installed'
+                    for s in plugin_retrieved['installation_state'])
             )
         plugins = self.client.plugins.list()
         self.assertEqual(len(plugins), plugins_count)
