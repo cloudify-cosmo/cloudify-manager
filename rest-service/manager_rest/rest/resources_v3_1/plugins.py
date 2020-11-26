@@ -14,7 +14,6 @@
 #  * limitations under the License.
 
 from flask_restful_swagger import swagger
-from sqlalchemy.orm.exc import StaleDataError
 from werkzeug.exceptions import BadRequest
 
 from cloudify._compat import text_type
@@ -241,7 +240,7 @@ class PluginsId(resources_v2_1.PluginsId):
             get_resource_manager().set_plugin_state(
                 plugin=plugin, manager=manager, agent=agent,
                 state=request_dict['state'], error=request_dict.get('error'))
-        except StaleDataError as e:
+        except manager_exceptions.SQLStorageException as e:
             # plugin was most likely deleted concurrently - refetch it
             # to confirm: the .get() will throw a 404
             plugin = sm.get(models.Plugin, plugin_id)
