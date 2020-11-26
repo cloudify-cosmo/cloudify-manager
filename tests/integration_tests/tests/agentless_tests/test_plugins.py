@@ -114,16 +114,16 @@ class TestPluginsSystemState(AgentlessTestCase):
         self._upload_plugin_and_assert_values(TEST_PACKAGE_NAME,
                                               TEST_PACKAGE_VERSION,
                                               plugins_count=0,
-                                              wagon_files_count=1,
+                                              wagon_files_count=0,
                                               corrupt_plugin=True)
         plugin = self._upload_plugin_and_assert_values(TEST_PACKAGE_NAME,
                                                        TEST_PACKAGE_VERSION,
                                                        plugins_count=1,
-                                                       wagon_files_count=3)
+                                                       wagon_files_count=1)
         plugin2 = self._upload_plugin_and_assert_values(TEST_PACKAGE2_NAME,
                                                         TEST_PACKAGE2_VERSION,
                                                         plugins_count=2,
-                                                        wagon_files_count=2)
+                                                        wagon_files_count=1)
         self._uninstall_plugin_and_assert_values(plugin, 1)
         self._uninstall_plugin_and_assert_values(plugin2, 0)
 
@@ -164,7 +164,7 @@ class TestPluginsSystemState(AgentlessTestCase):
 
     def _find_file_on_manager(self, wagon_file):
         find_output = self.execute_on_manager(
-            "find / -name '{0}'".format(wagon_file)).split('\n')
+            "find /tmp /opt -name '{0}'".format(wagon_file)).split('\n')
         if find_output and not find_output[-1]:
             find_output.pop()
         return find_output
