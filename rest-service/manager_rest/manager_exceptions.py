@@ -557,6 +557,10 @@ class DslParseException(Exception):
     pass
 
 
+class ArchiveTypeError(RuntimeError):
+    pass
+
+
 class BlueprintAlreadyExistsException(Exception):
     def __init__(self, blueprint_id, *args):
         Exception.__init__(self, args)

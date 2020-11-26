@@ -83,6 +83,7 @@ class Blueprint(CreatedAtMixin, SQLResourceBase):
     is_hidden = db.Column(db.Boolean, nullable=False, default=False)
     state = db.Column(db.Text)
     error = db.Column(db.Text)
+    error_traceback = db.Column(db.Text)
 
 
 class Snapshot(CreatedAtMixin, SQLResourceBase):

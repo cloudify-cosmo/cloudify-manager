@@ -44,6 +44,9 @@ class MockBlueprintsClient(BaseMockClient):
     def _upload(self, *_, **__):
         return MagicMock(return_value={'id': 'test'})
 
+    def get(self, *_, **__):
+        return {'state': 'uploaded'}
+
 
 class MockDeploymentsClient(BaseMockClient):
 

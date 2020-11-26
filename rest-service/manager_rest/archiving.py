@@ -18,6 +18,8 @@ import os
 import tarfile
 import zipfile
 
+from manager_rest.manager_exceptions import ArchiveTypeError
+
 
 TAR_MAGIC_DICT = {
     b"\x1f\x8b\x08": "tar.gz",
@@ -39,8 +41,8 @@ def get_archive_type(archive_path):
                 return ext
         return 'tar'
 
-    raise RuntimeError("Can't recognize archive type; Archive path {0}"
-                       .format(archive_path))
+    raise ArchiveTypeError("Can't recognize archive type; Archive path {0}"
+                           .format(archive_path))
 
 
 def make_tarfile(output_filename, source_dir):

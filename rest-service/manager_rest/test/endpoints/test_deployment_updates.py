@@ -73,21 +73,6 @@ class DeploymentUpdatesTestCase(DeploymentUpdatesBase):
         result = self.client.deployment_updates.list()
         self.assertEqual(0, len(result))
 
-    def test_invalid_blueprint_raises_invalid_blueprint_exception(self):
-        deployment_id = 'dep'
-        self._deploy_base(deployment_id, 'no_output.yaml')
-
-        with patch('dsl_parser.tasks.parse_dsl') as parse_dsl_mock:
-            parse_dsl_mock.side_effect = \
-                parser_exceptions.DSLParsingException('')
-            # # It doesn't matter that we are updating the deployment with the
-            # same blueprint, since we mocked the blueprint parsing process.
-            self.assertRaisesRegex(RuntimeError,
-                                   'invalid_blueprint_error',
-                                   self._update,
-                                   deployment_id,
-                                   'no_output.yaml')
-
     def test_missing_required_input_raises_missing_required_input_error(self):
         deployment_id = 'dep'
         self._deploy_base(deployment_id, 'no_output.yaml')
@@ -135,8 +120,14 @@ class DeploymentUpdatesTestCase(DeploymentUpdatesBase):
                              len(execution.parameters[param]))
 
         executions = self.client.executions.list()
-        self.assertEqual('first', executions[1]['blueprint_id'])
-        self.assertEqual('blueprint', executions[0]['blueprint_id'])
+        for ex in executions:
+            if ex['workflow_id'] == 'create_deployment_environment':
+                dep_create_execution = ex
+            elif ex['workflow_id'] == 'update':
+                dep_update_execution = ex
+
+        self.assertEqual('first', dep_update_execution['blueprint_id'])
+        self.assertEqual('blueprint', dep_create_execution['blueprint_id'])
 
     def test_remove_node_and_relationship(self):
         deployment_id = 'dep'

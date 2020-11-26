@@ -20,9 +20,9 @@ import shutil
 
 from manager_rest import archiving
 from manager_rest.test import base_test
-from manager_rest.storage import FileServer
 from manager_rest.test.attribute import attr
 from manager_rest.storage.resource_models import Blueprint
+from manager_rest.manager_exceptions import DslParseException
 
 from cloudify._compat import text_type
 from cloudify_rest_client import exceptions
@@ -57,44 +57,40 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
                                '0')
 
     def test_post_and_then_search(self):
-        post_blueprints_response = self.put_file(
-            *self.put_blueprint_args(blueprint_id='hello_world')).json
+        post_blueprints_response = self.put_blueprint(
+            blueprint_id='hello_world')
         self.assertEqual('hello_world', post_blueprints_response['id'])
         get_blueprints_response = self.client.blueprints.list()
         self.assertEqual(1, len(get_blueprints_response))
         self.assertEqual(post_blueprints_response, get_blueprints_response[0])
 
     def test_post_blueprint_already_exists(self):
-        self.put_file(*self.put_blueprint_args())
-        post_blueprints_response = self.put_file(*self.put_blueprint_args())
-        self.assertTrue('already exists' in
-                        post_blueprints_response.json['message'])
-        self.assertEqual(409, post_blueprints_response.status_code)
+        self.put_blueprint()
+        self.assertRaisesRegexp(
+            exceptions.CloudifyClientError,
+            '409: blueprint with id=blueprint already exists',
+            callable_obj=self.put_blueprint)
 
     def test_put_blueprint_archive(self):
         self._test_put_blueprint_archive(archiving.make_targzfile, 'tar.gz')
 
     def test_post_without_application_file_form_data(self):
-        post_blueprints_response = self.put_file(
-            *self.put_blueprint_args('blueprint_with_workflows.yaml',
-                                     blueprint_id='hello_world')).json
-        self.assertEqual('hello_world',
-                         post_blueprints_response['id'])
+        post_blueprints_response = self.put_blueprint(
+            blueprint_file_name='blueprint_with_workflows.yaml',
+            blueprint_id='hello_world')
+        self.assertEqual('hello_world', post_blueprints_response['id'])
 
     @attr(client_min_version=2,
           client_max_version=base_test.LATEST_API_VERSION)
     def test_blueprint_description(self):
-        post_blueprints_response = self.put_file(
-            *self.put_blueprint_args('blueprint.yaml',
-                                     blueprint_id='blueprint')).json
+        post_blueprints_response = self.put_blueprint()
         self.assertEqual('blueprint',
                          post_blueprints_response['id'])
         self.assertEqual("this is my blueprint's description",
                          post_blueprints_response['description'])
 
     def test_get_blueprint_by_id(self):
-        post_blueprints_response = self.put_file(
-            *self.put_blueprint_args()).json
+        post_blueprints_response = self.put_blueprint()
         get_blueprint_by_id_response = self.get(
             '/blueprints/{0}'.format(post_blueprints_response['id'])).json
         # setting 'source' field to be None as expected
@@ -102,8 +98,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
                          get_blueprint_by_id_response)
 
     def test_delete_blueprint(self):
-        post_blueprints_response = self.put_file(
-            *self.put_blueprint_args()).json
+        post_blueprints_response = self.put_blueprint()
 
         # testing if resources are on fileserver
         self.assertTrue(
@@ -132,50 +127,6 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         self.check_if_resource_on_fileserver('hello_world',
                                              'plugins/stub-installer.zip')
 
-    def test_put_blueprint_archive_from_url(self):
-        port = 53230
-        blueprint_id = 'new_blueprint_id'
-
-        archive_path = self.archive_mock_blueprint(
-            archive_func=archiving.make_tarbz2file)
-        archive_filename = os.path.basename(archive_path)
-        archive_dir = os.path.dirname(archive_path)
-
-        archive_url = 'http://localhost:{0}/{1}'.format(
-            port, archive_filename)
-
-        fs = FileServer(archive_dir, False, port)
-        fs.start()
-        try:
-            self.wait_for_url(archive_url)
-
-            blueprint_id = self.client.blueprints.publish_archive(
-                archive_url,
-                blueprint_id).id
-            # verifying blueprint exists
-            result = self.client.blueprints.get(blueprint_id)
-            self.assertEqual(blueprint_id, result.id)
-        finally:
-            fs.stop()
-
-    def test_put_blueprint_archive_from_unavailable_url(self):
-        blueprint_id = 'new_blueprint_id'
-        resource_path = '/blueprints/{0}'.format(blueprint_id)
-        response = self.put(
-            resource_path,
-            None,
-            {'blueprint_archive_url': 'http://www.fake.url/does/not/exist'})
-        self.assertEqual(400, response.status_code)
-
-    def test_put_blueprint_archive_from_malformed_url(self):
-        blueprint_id = 'new_blueprint_id'
-        resource_path = '/blueprints/{0}'.format(blueprint_id)
-        response = self.put(
-            resource_path,
-            None,
-            {'blueprint_archive_url': 'malformed/url_is.bad'})
-        self.assertEqual(400, response.status_code)
-
     def test_put_blueprint_archive_from_url_and_data(self):
         blueprint_id = 'new_blueprint_id'
         resource_path = '/blueprints/{0}'.format(blueprint_id)
@@ -183,7 +134,8 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
             resource_path,
             'data pretending to be the actual blueprint archive data',
             {'blueprint_archive_url': 'malformed/url_is.bad'})
-        self.assertIn("Can't pass both", response.json['message'])
+        self.assertIn("Can pass blueprint as only one of",
+                      response.json['message'])
         self.assertEqual(400, response.status_code)
 
     def test_put_zip_archive(self):
@@ -209,38 +161,32 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
 
     def test_put_blueprint_non_existing_filename(self):
         blueprint_id = 'new_blueprint_id'
-        put_blueprints_response = self.put_file(
-            *self.put_blueprint_args(blueprint_id=blueprint_id,
-                                     blueprint_file_name='non-existing'))
-
-        self.assertEqual(
-            put_blueprints_response.json['message'],
-            'non-existing does not exist in the application directory')
-        self.assertEqual(put_blueprints_response.status_code, 400)
+        self.assertRaisesRegexp(
+            DslParseException,
+            'No such file or directory: .*non-existing',
+            self.put_blueprint,
+            blueprint_id=blueprint_id,
+            blueprint_file_name='non-existing')
 
     def test_put_blueprint_no_default_yaml(self):
         blueprint_id = 'new_blueprint_id'
-        put_blueprints_response = self.put_file(
-            *self.put_blueprint_args(
-                blueprint_id=blueprint_id,
-                blueprint_dir='mock_blueprint_no_default'))
-        self.assertEqual(
-            put_blueprints_response.json['message'],
-            'application directory is missing blueprint.yaml and '
-            'application_file_name query parameter was not passed'
-        )
-        self.assertEqual(put_blueprints_response.status_code, 400)
+        self.assertRaisesRegexp(
+            DslParseException,
+            'No such file or directory: .*blueprint.yaml',
+            self.put_blueprint,
+            blueprint_id=blueprint_id,
+            blueprint_dir='mock_blueprint_no_default')
 
     @attr(client_min_version=2,
           client_max_version=base_test.LATEST_API_VERSION)
     def test_blueprint_main_file_name(self):
         blueprint_id = 'blueprint_main_file_name'
         blueprint_file = 'blueprint_with_inputs.yaml'
-        blueprint_path = os.path.join(
-            self.get_blueprint_path('mock_blueprint'),
-            blueprint_file)
-        response = self.client.blueprints.upload(blueprint_path, blueprint_id)
-        self.assertEqual(blueprint_file, response.main_file_name)
+        response = self.put_blueprint(
+            'mock_blueprint',
+            'blueprint_with_inputs.yaml',
+            'blueprint_main_file_name')
+        self.assertEqual(blueprint_file, response['main_file_name'])
         blueprint = self.client.blueprints.get(blueprint_id)
         self.assertEqual(blueprint_file, blueprint.main_file_name)
         blueprint = self.client.blueprints.list()[0]
@@ -335,39 +281,15 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
     def test_blueprint_default_main_file_name(self):
         blueprint_id = 'blueprint_default_main_file_name'
         blueprint_file = 'blueprint.yaml'
-        response = self.put_file(
-            *self.put_blueprint_args(blueprint_id=blueprint_id)).json
+        response = self.put_blueprint(
+            'mock_blueprint', blueprint_file, blueprint_id)
         self.assertEqual(blueprint_file, response['main_file_name'])
-
-    @attr(client_min_version=2,
-          client_max_version=base_test.LATEST_API_VERSION)
-    def test_publish_archive_blueprint_main_file_name(self):
-        port = 53230
-        blueprint_id = 'publish_archive_blueprint_main_file_name'
-        main_file_name = 'blueprint_with_workflows.yaml'
-        archive_path = self.archive_mock_blueprint()
-        archive_filename = os.path.basename(archive_path)
-        archive_dir = os.path.dirname(archive_path)
-        fs = FileServer(archive_dir, False, port)
-        fs.start()
-        try:
-            archive_url = 'http://localhost:{0}/{1}'.format(
-                port, archive_filename)
-            self.wait_for_url(archive_url)
-            response = self.client.blueprints.publish_archive(archive_url,
-                                                              blueprint_id,
-                                                              main_file_name)
-        finally:
-            fs.stop()
-        self.assertEqual(blueprint_id, response.id)
-        self.assertEqual(main_file_name, response.main_file_name)
 
     def _test_put_blueprint_archive(self, archive_func, archive_type):
         blueprint_id = 'b{0}'.format(str(uuid.uuid4()))
-        put_blueprints_response = self.put_file(
+        self.put_file(
             *self.put_blueprint_args(blueprint_id=blueprint_id,
                                      archive_func=archive_func)).json
-        self.assertEqual(blueprint_id, put_blueprints_response['id'])
 
         url = self._version_url(
             '/blueprints/{0}/archive'.format(blueprint_id))
@@ -454,31 +376,32 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         self.assertEqual(1, len(blueprints))
         self.assertEqual(b0_id, blueprints[0].id)
 
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
-    def test_blueprint_validate_valid(self):
-        blueprint_id = 'blueprint_main_file_name'
-        blueprint_file = 'blueprint.yaml'
-        blueprint_path = os.path.join(
-            self.get_blueprint_path('mock_blueprint'),
-            blueprint_file)
-        self.client.blueprints.validate(blueprint_path, blueprint_id)
-        self.assertEqual(0, len(self.client.blueprints.list()))
-
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
-    def test_blueprint_validate_invalid_blueprint(self):
-        blueprint_id = 'blueprint_main_file_name'
-        blueprint_file = 'invalid_blueprint.yaml'
-        blueprint_path = os.path.join(
-            self.get_blueprint_path('mock_blueprint'),
-            blueprint_file)
-        self.assertEqual(0, len(self.client.blueprints.list()))
-        with self.assertRaises(exceptions.CloudifyClientError) as context:
-            self.client.blueprints.validate(blueprint_path, blueprint_id)
-        self.assertEqual(400, context.exception.status_code)
-        self.assertIn("Invalid blueprint - 'foo' is not in schema.",
-                      str(context.exception))
+    # TODO: fixed as part of RD-686
+    # @attr(client_min_version=3.1,
+    #       client_max_version=base_test.LATEST_API_VERSION)
+    # def test_blueprint_validate_valid(self):
+    #     blueprint_id = 'blueprint_main_file_name'
+    #     blueprint_file = 'blueprint.yaml'
+    #     blueprint_path = os.path.join(
+    #         self.get_blueprint_path('mock_blueprint'),
+    #         blueprint_file)
+    #     self.client.blueprints.validate(blueprint_path, blueprint_id)
+    #     self.assertEqual(0, len(self.client.blueprints.list()))
+    #
+    # @attr(client_min_version=3.1,
+    #       client_max_version=base_test.LATEST_API_VERSION)
+    # def test_blueprint_validate_invalid_blueprint(self):
+    #     blueprint_id = 'blueprint_main_file_name'
+    #     blueprint_file = 'invalid_blueprint.yaml'
+    #     blueprint_path = os.path.join(
+    #         self.get_blueprint_path('mock_blueprint'),
+    #         blueprint_file)
+    #     self.assertEqual(0, len(self.client.blueprints.list()))
+    #     with self.assertRaises(exceptions.CloudifyClientError) as context:
+    #         self.client.blueprints.validate(blueprint_path, blueprint_id)
+    #     self.assertEqual(400, context.exception.status_code)
+    #     self.assertIn("Invalid blueprint - 'foo' is not in schema.",
+    #                   str(context.exception))
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)

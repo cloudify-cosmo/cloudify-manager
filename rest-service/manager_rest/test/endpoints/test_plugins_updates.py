@@ -59,7 +59,7 @@ class PluginsUpdatesBaseTest(BaseServerTestCase):
 class PluginsUpdatesTest(PluginsUpdatesBaseTest):
 
     def test_returns_relevant_plugins_updates(self):
-        self.put_file(*self.put_blueprint_args(blueprint_id='hello_world'))
+        self.put_blueprint(blueprint_id='hello_world')
         self.client.deployments.create('hello_world', 'd123')
         self.wait_for_deployment_creation(self.client, 'd123')
         plugins_update1 = self.client.plugins_update.update_plugins(
@@ -95,7 +95,7 @@ class PluginsUpdateIdTest(PluginsUpdatesBaseTest):
             self.assertEqual(404, e.exception.status_code)
 
     def test_returns_correct_plugins_update(self):
-        self.put_file(*self.put_blueprint_args(blueprint_id='hello_world'))
+        self.put_blueprint(blueprint_id='hello_world')
         self.client.deployments.create('hello_world', 'd1')
         self.wait_for_deployment_creation(self.client, 'd1')
         plugins_update = self.client.plugins_update.update_plugins(
@@ -122,13 +122,13 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
             self.assertEqual(404, e.exception.status_code)
 
     def test_plugins_update_runs_when_no_deployments_to_update(self):
-        self.put_file(*self.put_blueprint_args(blueprint_id='hello_world'))
+        self.put_blueprint(blueprint_id='hello_world')
         plugins_update = self.client.plugins_update.update_plugins(
             'hello_world')
         self.assertEqual(plugins_update.state, STATES.EXECUTING_WORKFLOW)
 
     def test_plugins_update_and_execution_parameters_are_correct(self):
-        self.put_file(*self.put_blueprint_args(blueprint_id='hello_world'))
+        self.put_blueprint(blueprint_id='hello_world')
         self.client.deployments.create('hello_world', 'd1')
         self.wait_for_deployment_creation(self.client, 'd1')
         self.client.deployments.create('hello_world', 'd2')
@@ -145,7 +145,7 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
              'temp_blueprint_id': plugins_update.temp_blueprint_id})
 
     def test_raises_while_plugins_updates_are_active(self):
-        self.put_file(*self.put_blueprint_args(blueprint_id='hello_world'))
+        self.put_blueprint(blueprint_id='hello_world')
         self.client.deployments.create('hello_world', 'd123')
         self.wait_for_deployment_creation(self.client, 'd123')
         plugins_update = self.client.plugins_update.update_plugins(
@@ -157,7 +157,7 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
             self.client.plugins_update.update_plugins('hello_world')
 
     def test_doesnt_raise_when_last_plugins_update_successful(self):
-        self.put_file(*self.put_blueprint_args(blueprint_id='hello_world'))
+        self.put_blueprint(blueprint_id='hello_world')
         self.client.deployments.create('hello_world', 'd123')
         self.wait_for_deployment_creation(self.client, 'd123')
         plugins_update_id = self.client.plugins_update.update_plugins(
@@ -169,7 +169,7 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
         self.client.plugins_update.update_plugins('hello_world')
 
     def test_doesnt_raise_when_last_plugins_update_failed(self):
-        self.put_file(*self.put_blueprint_args(blueprint_id='hello_world'))
+        self.put_blueprint(blueprint_id='hello_world')
         self.client.deployments.create('hello_world', 'd123')
         self.wait_for_deployment_creation(self.client, 'd123')
         plugins_update_id = self.client.plugins_update.update_plugins(
@@ -181,7 +181,7 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
         self.client.plugins_update.update_plugins('hello_world')
 
     def test_doesnt_raise_when_last_plugins_update_didnt_do_anything(self):
-        self.put_file(*self.put_blueprint_args(blueprint_id='hello_world'))
+        self.put_blueprint(blueprint_id='hello_world')
         self.client.deployments.create('hello_world', 'd123')
         self.wait_for_deployment_creation(self.client, 'd123')
         plugins_update_id = self.client.plugins_update.update_plugins(
@@ -195,14 +195,13 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
     def test_no_changes_required_when_no_plugin_change_detected(self):
         self.plugin_change_patcher.stop()
         self.plugin_change_patched = False
-        self.put_file(*self.put_blueprint_args(
-            blueprint_id='host_agent_blueprint'))
+        self.put_blueprint(blueprint_id='host_agent_blueprint')
         plugins_update = self.client.plugins_update.update_plugins(
             'host_agent_blueprint')
         self.assertEqual(plugins_update.state, STATES.NO_CHANGES_REQUIRED)
 
     def test_finalize_raises_plugins_update_with_not_compatible_state(self):
-        self.put_file(*self.put_blueprint_args(blueprint_id='hello_world'))
+        self.put_blueprint(blueprint_id='hello_world')
         self.client.deployments.create('hello_world', 'd123')
         self.wait_for_deployment_creation(self.client, 'd123')
         plugins_update_id = self.client.plugins_update.update_plugins(
@@ -218,7 +217,7 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
                 plugins_update_id)
 
     def test_finalize_updates_original_blueprint_plan(self):
-        self.put_file(*self.put_blueprint_args(blueprint_id='hello_world'))
+        self.put_blueprint(blueprint_id='hello_world')
         self.client.deployments.create('hello_world', 'd123')
         self.wait_for_deployment_creation(self.client, 'd123')
         plugins_update_id = self.client.plugins_update.update_plugins(
@@ -241,7 +240,7 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
                 .plan[DEPLOYMENT_PLUGINS_TO_INSTALL])
 
     def test_finalize_updates_plugins_update_state(self):
-        self.put_file(*self.put_blueprint_args(blueprint_id='hello_world'))
+        self.put_blueprint(blueprint_id='hello_world')
         self.client.deployments.create('hello_world', 'd123')
         self.wait_for_deployment_creation(self.client, 'd123')
         plugins_update = self.client.plugins_update.update_plugins(
@@ -252,7 +251,7 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
         self.assertEqual(plugins_update.state, STATES.SUCCESSFUL)
 
     def test_finalize_deletes_temp_blueprint(self):
-        self.put_file(*self.put_blueprint_args(blueprint_id='hello_world'))
+        self.put_blueprint(blueprint_id='hello_world')
         self.client.deployments.create('hello_world', 'd123')
         self.wait_for_deployment_creation(self.client, 'd123')
         plugins_update = self.client.plugins_update.update_plugins(

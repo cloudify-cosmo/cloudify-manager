@@ -359,6 +359,20 @@ class ResourceManager(object):
                                                      plugin.archive_name)
         shutil.rmtree(os.path.dirname(archive_path), ignore_errors=True)
 
+    def upload_blueprint(self, blueprint_id, app_file_name, blueprint_url,
+                         file_server_root):
+        self._execute_system_workflow(
+            wf_id='upload_blueprint',
+            task_mapping='cloudify_system_workflows.blueprint.upload',
+            verify_no_executions=False,
+            execution_parameters={
+                'blueprint_id': blueprint_id,
+                'app_file_name': app_file_name,
+                'url': blueprint_url,
+                'file_server_root': file_server_root,
+            },
+        )
+
     def publish_blueprint(self,
                           application_dir,
                           application_file_name,
@@ -1074,7 +1088,8 @@ class ResourceManager(object):
             # currently, deployment env creation/deletion are not set as
             # system workflows
             is_system_workflow = wf_id not in ('create_deployment_environment',
-                                               'delete_deployment_environment')
+                                               'delete_deployment_environment',
+                                               'upload_blueprint')
 
         should_queue = False
         if self._system_workflow_modifies_db(wf_id):
