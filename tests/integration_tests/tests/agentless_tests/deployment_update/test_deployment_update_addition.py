@@ -18,7 +18,8 @@ import tempfile
 
 from pytest import mark
 
-from integration_tests.tests.utils import tar_blueprint
+from integration_tests.tests.utils import (tar_blueprint,
+                                           wait_for_blueprint_upload)
 
 from . import DeploymentUpdateBase, BLUEPRINT_ID
 
@@ -61,6 +62,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
                                                            modified_bp_path))
             else:
                 self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+            wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
 
             # an update preview should have no effect
             self.client.deployment_updates.update_with_existing_blueprint(
@@ -156,6 +158,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('install_execution_order')
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
         self.client.deployment_updates.update_with_existing_blueprint(
             deployment.id, BLUEPRINT_ID)
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -178,6 +181,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
             self._map_node_and_node_instances(deployment.id, node_mapping)
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)
@@ -259,6 +263,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
             self._map_node_and_node_instances(deployment.id, node_mapping)
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)
@@ -332,6 +337,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         )
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)
@@ -430,6 +436,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
                     deployment.id, node_mapping)
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)
@@ -516,6 +523,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         base_node = base_nodes['affected_node'][0]
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)
@@ -545,6 +553,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('add_workflow')
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)
@@ -576,6 +585,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('add_output')
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)
@@ -594,6 +604,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
             self._deploy_and_get_modified_bp_path('add_description')
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)

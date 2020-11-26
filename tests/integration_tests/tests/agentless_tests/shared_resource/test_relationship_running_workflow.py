@@ -15,6 +15,7 @@ import pytest
 
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
+from integration_tests.tests.utils import wait_for_blueprint_upload
 
 
 @pytest.mark.usefixtures('mock_workflows_plugin')
@@ -42,6 +43,7 @@ capabilities:
         self.client.blueprints.upload(
             resource('dsl/mock_workflows.yaml'),
             entity_id='mock_workflows')
+        wait_for_blueprint_upload('mock_workflows', self.client)
         self._create_shared_resource_deployment()
 
     @staticmethod

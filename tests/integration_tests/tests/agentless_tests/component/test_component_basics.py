@@ -21,12 +21,14 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import (get_resource as resource,
-                                           upload_mock_plugin)
+                                           upload_mock_plugin,
+                                           wait_for_blueprint_upload)
 
 
 @pytest.mark.usefixtures('cloudmock_plugin')
 class ComponentTypeTest(AgentlessTestCase):
     component_name = 'component'
+    basic_blueprint_id = 'basic'
 
     def test_component_creation_with_blueprint_id(self):
         component_blueprint = """
@@ -41,7 +43,8 @@ capabilities:
 """
         blueprint_path = self.make_yaml_file(component_blueprint)
         self.client.blueprints.upload(blueprint_path,
-                                      entity_id='basic')
+                                      entity_id=self.basic_blueprint_id)
+        wait_for_blueprint_upload(self.basic_blueprint_id, self.client, True)
         deployment_id = 'd{0}'.format(uuid.uuid4())
         dsl_path = resource('dsl/component_with_blueprint_id.yaml')
         self.deploy_application(dsl_path, deployment_id=deployment_id)
@@ -80,7 +83,8 @@ capabilities:
     def test_component_creation_with_secrets_and_plugins(self):
         basic_blueprint_path = resource('dsl/basic.yaml')
         self.client.blueprints.upload(basic_blueprint_path,
-                                      entity_id='basic')
+                                      entity_id=self.basic_blueprint_id)
+        wait_for_blueprint_upload(self.basic_blueprint_id, self.client, True)
         deployment_id = 'd{0}'.format(uuid.uuid4())
         dsl_path = resource('dsl/component_with_plugins_and_secrets.yaml')
         self.deploy_application(dsl_path, deployment_id=deployment_id)
@@ -104,6 +108,7 @@ capabilities:
 class ComponentPluginsTest(AgentlessTestCase):
     TEST_PACKAGE_NAME = 'cloudify-script-plugin'
     TEST_PACKAGE_VERSION = '1.2'
+    basic_blueprint_id = 'basic'
     test_blueprint = """
 tosca_definitions_version: cloudify_dsl_1_3
 
@@ -135,7 +140,8 @@ node_templates:
         self.wait_for_all_executions_to_end()
         basic_blueprint_path = resource('dsl/empty_blueprint.yaml')
         self.client.blueprints.upload(basic_blueprint_path,
-                                      entity_id='basic')
+                                      entity_id=self.basic_blueprint_id)
+        wait_for_blueprint_upload(self.basic_blueprint_id, self.client, True)
 
         deployment_id = 'd{0}'.format(uuid.uuid4())
         main_blueprint = self.test_blueprint.format(
@@ -163,7 +169,8 @@ node_templates:
         self.wait_for_all_executions_to_end()
         basic_blueprint_path = resource('dsl/empty_blueprint.yaml')
         self.client.blueprints.upload(basic_blueprint_path,
-                                      entity_id='basic')
+                                      entity_id=self.basic_blueprint_id)
+        wait_for_blueprint_upload(self.basic_blueprint_id, self.client, True)
         deployment_id = 'd{0}'.format(uuid.uuid4())
         main_blueprint = self.test_blueprint.format(
             'https://cloudify-tests-files.s3-eu-west-1.amazonaws.com/plugins',
@@ -186,10 +193,13 @@ node_templates:
 
 @pytest.mark.usefixtures('cloudmock_plugin')
 class ComponentSecretsTypesTest(AgentlessTestCase):
+    basic_blueprint_id = 'basic'
+
     def test_basic_types_creation(self):
         basic_blueprint_path = resource('dsl/basic.yaml')
         self.client.blueprints.upload(basic_blueprint_path,
-                                      entity_id='basic')
+                                      entity_id=self.basic_blueprint_id)
+        wait_for_blueprint_upload(self.basic_blueprint_id, self.client, True)
         deployment_id = 'd{0}'.format(uuid.uuid4())
         main_blueprint = """
 tosca_definitions_version: cloudify_dsl_1_3
@@ -229,6 +239,8 @@ node_templates:
 
 
 class ComponentInputsTypesTest(AgentlessTestCase):
+    basic_blueprint_id = 'basic'
+
     def test_basic_types(self):
         component_blueprint = """
 tosca_definitions_version: cloudify_dsl_1_3
@@ -254,7 +266,8 @@ inputs:
 """
         blueprint_path = self.make_yaml_file(component_blueprint)
         self.client.blueprints.upload(blueprint_path,
-                                      entity_id='basic')
+                                      entity_id=self.basic_blueprint_id)
+        wait_for_blueprint_upload(self.basic_blueprint_id, self.client, True)
         deployment_id = 'd{0}'.format(uuid.uuid4())
         main_blueprint = """
 tosca_definitions_version: cloudify_dsl_1_3
@@ -303,7 +316,8 @@ inputs:
 """
         blueprint_path = self.make_yaml_file(component_blueprint)
         self.client.blueprints.upload(blueprint_path,
-                                      entity_id='basic')
+                                      entity_id=self.basic_blueprint_id)
+        wait_for_blueprint_upload(self.basic_blueprint_id, self.client)
         deployment_id = 'd{0}'.format(uuid.uuid4())
         main_blueprint = """
 tosca_definitions_version: cloudify_dsl_1_3

@@ -289,6 +289,7 @@ hooks:
         dsl_path = utils.get_resource('dsl/basic.yaml')
         blueprint_id = deployment_id = 'basic_{}'.format(uuid.uuid4())
         self.client.blueprints.upload(dsl_path, blueprint_id)
+        utils.wait_for_blueprint_upload(blueprint_id, self.client)
         self.client.deployments.create(blueprint_id,
                                        deployment_id)
         utils.wait_for_deployment_creation_to_complete(

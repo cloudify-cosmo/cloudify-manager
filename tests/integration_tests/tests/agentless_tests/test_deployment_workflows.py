@@ -22,6 +22,7 @@ from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 from integration_tests.tests.utils import (
     verify_deployment_env_created,
+    wait_for_blueprint_upload,
     wait_for_deployment_deletion_to_complete
 )
 from integration_tests.tests.utils import do_retries
@@ -57,6 +58,7 @@ class TestDeploymentWorkflows(AgentlessTestCase):
         blueprint_id = 'blueprint_{0}'.format(_id)
         deployment_id = 'deployment_{0}'.format(_id)
         self.client.blueprints.upload(dsl_path, blueprint_id)
+        wait_for_blueprint_upload(blueprint_id, self.client)
         self.client.deployments.create(blueprint_id, deployment_id,
                                        skip_plugins_validation=True)
         do_retries(verify_deployment_env_created, 30,
@@ -82,6 +84,7 @@ class TestDeploymentWorkflows(AgentlessTestCase):
         blueprint_id = 'blueprint_{0}'.format(_id)
         deployment_id = 'deployment_{0}'.format(_id)
         self.client.blueprints.upload(dsl_path, blueprint_id)
+        wait_for_blueprint_upload(blueprint_id, self.client)
         self.client.deployments.create(blueprint_id, deployment_id,
                                        skip_plugins_validation=True)
 
@@ -107,6 +110,7 @@ class TestDeploymentWorkflows(AgentlessTestCase):
         deployment_id = 'deployment_{0}'.format(_id)
 
         self.client.blueprints.upload(dsl_path, blueprint_id)
+        wait_for_blueprint_upload(blueprint_id, self.client)
         self.client.deployments.create(blueprint_id, deployment_id,
                                        skip_plugins_validation=True)
         execution = self.client.executions.list(deployment_id=deployment_id)[0]

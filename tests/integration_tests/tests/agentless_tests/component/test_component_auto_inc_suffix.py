@@ -21,16 +21,19 @@ from cloudify_rest_client.executions import Execution
 
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
+from integration_tests.tests.utils import wait_for_blueprint_upload
 
 
 @pytest.mark.usefixtures('cloudmock_plugin')
 class ComponentScaleCreation(AgentlessTestCase):
     component_name = 'component'
+    basic_blueprint_id = 'basic'
 
     def test_given_deployment_name_with_auto_inc_suffix_option(self):
         basic_blueprint_path = resource('dsl/basic.yaml')
         self.client.blueprints.upload(basic_blueprint_path,
-                                      entity_id='basic')
+                                      entity_id=self.basic_blueprint_id)
+        wait_for_blueprint_upload(self.basic_blueprint_id, self.client, True)
         deployment_id = 'd{0}'.format(uuid.uuid4())
         main_blueprint = """
 tosca_definitions_version: cloudify_dsl_1_3
@@ -66,7 +69,8 @@ node_templates:
     def test_auto_inc_suffix_option_with_deployment_name_collision(self):
         basic_blueprint_path = resource('dsl/basic.yaml')
         self.client.blueprints.upload(basic_blueprint_path,
-                                      entity_id='basic')
+                                      entity_id=self.basic_blueprint_id)
+        wait_for_blueprint_upload(self.basic_blueprint_id, self.client, True)
 
         # Creating collision with main blueprint's components
         self.deploy_application(basic_blueprint_path,
@@ -108,7 +112,8 @@ node_templates:
     def test_given_deployment_name_with_no_auto_inc_suffix_option(self):
         basic_blueprint_path = resource('dsl/basic.yaml')
         self.client.blueprints.upload(basic_blueprint_path,
-                                      entity_id='basic')
+                                      entity_id=self.basic_blueprint_id)
+        wait_for_blueprint_upload(self.basic_blueprint_id, self.client, True)
         deployment_id = 'd{0}'.format(uuid.uuid4())
         main_blueprint = """
 tosca_definitions_version: cloudify_dsl_1_3

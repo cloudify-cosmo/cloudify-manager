@@ -14,6 +14,8 @@
 
 from . import DeploymentUpdateBase, BLUEPRINT_ID
 
+from integration_tests.tests.utils import wait_for_blueprint_upload
+
 
 class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
 
@@ -52,6 +54,7 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         )
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)
@@ -151,6 +154,7 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         deployment, modified_bp_path = self._deploy_and_get_modified_bp_path(
                 'add_remove_and_modify_relationship')
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)
@@ -223,6 +227,7 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         root_node_ids = {'e', 'f'}
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)
