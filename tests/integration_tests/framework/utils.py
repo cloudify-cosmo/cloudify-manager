@@ -61,7 +61,9 @@ def sh_bake(command):
 
 
 def get_profile_context(container_id):
-    profile_context_cmd = 'cat /root/.cloudify/profiles/localhost/context.json'
+    container_ip = docker.get_manager_ip(container_id)
+    profile_context_cmd =\
+        'cat /root/.cloudify/profiles/{0}/context.json'.format(container_ip)
     return json.loads(docker.execute(container_id, profile_context_cmd))
 
 
