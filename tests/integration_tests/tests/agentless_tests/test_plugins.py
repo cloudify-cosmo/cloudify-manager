@@ -28,15 +28,8 @@ TEST_PACKAGE2_NAME = 'cloudify-diamond-plugin'
 TEST_PACKAGE2_VERSION = '1.3'
 
 
-class BaseTestPlugins(AgentlessTestCase):
-    def tearDown(self):
-        wagon_file_paths = \
-            self.execute_on_manager("find / -name '*.wgn'").split('\n')
-        for file_path in wagon_file_paths:
-            self.delete_manager_file(file_path)
+class TestPlugins(AgentlessTestCase):
 
-
-class TestPlugins(BaseTestPlugins):
     def test_get_plugin_by_id(self):
         plugin_id = None
         try:
@@ -116,21 +109,18 @@ class TestPlugins(BaseTestPlugins):
         assert state == PluginInstallationState.INSTALLED
 
 
-class TestPluginsSystemState(BaseTestPlugins):
+class TestPluginsSystemState(AgentlessTestCase):
     def test_installing_corrupted_plugin_doesnt_affect_system_integrity(self):
         self._upload_plugin_and_assert_values(TEST_PACKAGE_NAME,
                                               TEST_PACKAGE_VERSION,
                                               plugins_count=0,
-                                              wagon_files_count=1,
                                               corrupt_plugin=True)
         plugin = self._upload_plugin_and_assert_values(TEST_PACKAGE_NAME,
                                                        TEST_PACKAGE_VERSION,
-                                                       plugins_count=1,
-                                                       wagon_files_count=3)
+                                                       plugins_count=1)
         plugin2 = self._upload_plugin_and_assert_values(TEST_PACKAGE2_NAME,
                                                         TEST_PACKAGE2_VERSION,
-                                                        plugins_count=2,
-                                                        wagon_files_count=2)
+                                                        plugins_count=2)
         self._uninstall_plugin_and_assert_values(plugin, 1)
         self._uninstall_plugin_and_assert_values(plugin2, 0)
 
@@ -138,21 +128,22 @@ class TestPluginsSystemState(BaseTestPlugins):
                                          package_name,
                                          package_version,
                                          plugins_count,
-                                         wagon_files_count,
                                          corrupt_plugin=False):
         plugin = test_utils.upload_mock_plugin(
             self.client,
             package_name,
             package_version,
             corrupt_plugin=corrupt_plugin)
-        wagon_file = plugin.archive_name
 
         self.client.plugins.install(
             plugin.id,
             managers=[m.hostname for m in self.client.manager.get_managers()])
 
+        time.sleep(2)  # give time for log to refresh and plugin to install
+        plugin_retrieved = self.client.plugins.get(plugin.id)
+        assert 'installation_state' in plugin_retrieved
+
         if corrupt_plugin:
-            time.sleep(2)   # give time for log to refresh
             log_path = '/var/log/cloudify/mgmtworker/mgmtworker.log'
             tmp_log_path = str(self.workdir / 'test_log')
             self.copy_file_from_manager(log_path, tmp_log_path)
@@ -161,23 +152,18 @@ class TestPluginsSystemState(BaseTestPlugins):
             last_log_lines = str(data[-20:])
             message = 'Failed installing managed plugin: {0}'.format(plugin.id)
             assert message in last_log_lines
+            assert all(s.get('state') == 'error'
+                       for s in plugin_retrieved['installation_state'])
             self.client.plugins.delete(plugin.id)
-
-        find_output = self._find_file_on_manager(wagon_file)
-        self.assertEqual(len(find_output), wagon_files_count)
+        else:
+            assert all(s.get('state') == 'installed'
+                       for s in plugin_retrieved['installation_state'])
         plugins = self.client.plugins.list()
-        self.assertEqual(len(plugins), plugins_count)
+        assert len(plugins) == plugins_count
         return plugin
-
-    def _find_file_on_manager(self, wagon_file):
-        find_output = self.execute_on_manager(
-            "find / -name '{0}'".format(wagon_file)).split('\n')
-        if find_output and not find_output[-1]:
-            find_output.pop()
-        return find_output
 
     def _uninstall_plugin_and_assert_values(self, plugin, plugins_count):
         self.client.plugins.delete(plugin.id)
         plugins = self.client.plugins.list()
-        self.assertEqual(len(plugins), plugins_count)
-        self.assertNotIn(plugin.id, plugins)
+        assert len(plugins) == plugins_count
+        assert plugin.id not in plugins
