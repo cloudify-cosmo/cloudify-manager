@@ -76,11 +76,13 @@ class Blueprint(CreatedAtMixin, SQLResourceBase):
         v1=['main_file_name', 'description']
     )
 
-    main_file_name = db.Column(db.Text, nullable=False)
-    plan = db.Column(db.PickleType(protocol=2), nullable=False)
+    main_file_name = db.Column(db.Text)
+    plan = db.Column(db.PickleType(protocol=2))
     updated_at = db.Column(UTCDateTime)
     description = db.Column(db.Text)
     is_hidden = db.Column(db.Boolean, nullable=False, default=False)
+    state = db.Column(db.Text)
+    error = db.Column(db.Text)
 
 
 class Snapshot(CreatedAtMixin, SQLResourceBase):
