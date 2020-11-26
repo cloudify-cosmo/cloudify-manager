@@ -138,14 +138,17 @@ class TestPluginsSystemState(AgentlessTestCase):
             package_name,
             package_version,
             corrupt_plugin=corrupt_plugin)
-        wagon_file = plugin.archive_name
+        # wagon_file = plugin.archive_name
 
         self.client.plugins.install(
             plugin.id,
             managers=[m.hostname for m in self.client.manager.get_managers()])
 
+        time.sleep(2)  # give time for log to refresh and plugin to install
+        plugin_retrieved = self.client.plugins.get(plugin.id)
+        self.assertIn('installation_state', plugin_retrieved)
+
         if corrupt_plugin:
-            time.sleep(2)   # give time for log to refresh
             log_path = '/var/log/cloudify/mgmtworker/mgmtworker.log'
             tmp_log_path = str(self.workdir / 'test_log')
             self.copy_file_from_manager(log_path, tmp_log_path)
@@ -154,20 +157,19 @@ class TestPluginsSystemState(AgentlessTestCase):
             last_log_lines = str(data[-20:])
             message = 'Failed installing managed plugin: {0}'.format(plugin.id)
             assert message in last_log_lines
+            self.assertTrue(
+                all([s.get('state') == 'error'
+                     for s in plugin_retrieved['installation_state']])
+            )
             self.client.plugins.delete(plugin.id)
-
-        find_output = self._find_file_on_manager(wagon_file)
-        self.assertEqual(len(find_output), wagon_files_count)
+        else:
+            self.assertTrue(
+                all([s.get('state') == 'installed'
+                    for s in plugin_retrieved['installation_state']])
+            )
         plugins = self.client.plugins.list()
         self.assertEqual(len(plugins), plugins_count)
         return plugin
-
-    def _find_file_on_manager(self, wagon_file):
-        find_output = self.execute_on_manager(
-            "find /tmp /opt -name '{0}'".format(wagon_file)).split('\n')
-        if find_output and not find_output[-1]:
-            find_output.pop()
-        return find_output
 
     def _uninstall_plugin_and_assert_values(self, plugin, plugins_count):
         self.client.plugins.delete(plugin.id)
