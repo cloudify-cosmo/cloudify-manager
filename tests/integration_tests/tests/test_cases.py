@@ -15,9 +15,11 @@
 # limitations under the License.
 
 import os
+import sys
 import json
 import time
 import uuid
+import logging
 import tempfile
 import unittest
 import subprocess
@@ -28,6 +30,7 @@ import pytest
 from retrying import retry
 from requests.exceptions import ConnectionError
 
+import cloudify.utils
 from cloudify.snapshots import STATES, SNAPSHOT_RESTORE_FLAG_FILE
 
 from manager_rest.constants import CLOUDIFY_TENANT_HEADER
@@ -55,6 +58,16 @@ class BaseTestCase(unittest.TestCase):
     """
     def setUp(self):
         self.cfy = test_utils.get_cfy()
+        self._set_tests_framework_logger()
+
+    def _set_tests_framework_logger(self):
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setLevel(logging.INFO)
+        self.logger = cloudify.utils.setup_logger(
+            self._testMethodName,
+            logging.NOTSET,
+            handlers=[handler],
+        )
 
     def read_manager_file(self, file_path, no_strip=False):
         """Read a file from the cloudify manager filesystem."""
