@@ -40,7 +40,7 @@ class TestPlugins(AgentlessTestCase):
             )
             plugin_id = put_plugin_response.get('id')
             get_plugin_by_id_response = self.client.plugins.get(plugin_id)
-            self.assertEquals(put_plugin_response, get_plugin_by_id_response)
+            self.assertEqual(put_plugin_response, get_plugin_by_id_response)
         finally:
             if plugin_id:
                 self.client.plugins.delete(plugin_id)

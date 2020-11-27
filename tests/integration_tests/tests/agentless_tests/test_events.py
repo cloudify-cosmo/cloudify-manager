@@ -71,7 +71,7 @@ class EventsTest(AgentlessTestCase):
             skip_assertion=True,
         )
 
-        self.assertEquals(len(ranged_events), expected_event_count)
+        self.assertEqual(len(ranged_events), expected_event_count)
 
     def test_sorted_events(self):
         events = self._events_list(_sort='-@timestamp')
@@ -103,9 +103,9 @@ class EventsTest(AgentlessTestCase):
         offset = 3
         events = self._events_list(_offset=offset, _size=size)
         pagination_info = events.metadata.pagination
-        self.assertEquals(len(events), size)
-        self.assertEquals(pagination_info.offset, offset)
-        self.assertEquals(pagination_info.size, size)
+        self.assertEqual(len(events), size)
+        self.assertEqual(pagination_info.offset, offset)
+        self.assertEqual(pagination_info.size, size)
 
     def test_query_with_reserved_characters(self):
         message = '+ - = && || > < ! ( ) { } [ ] ^ " ~ * ? : \\ /'
@@ -226,9 +226,9 @@ class EventsAlternativeTimezoneTest(EventsTest):
         events = self._events_list()
         timestamps = [event['timestamp'] for event in events]
         out_of_range_timestamps = [
-                timestamp
-                for timestamp in timestamps
-                if not self.start_timestamp < timestamp < self.stop_timestamp
+            timestamp
+            for timestamp in timestamps
+            if not self.start_timestamp < timestamp < self.stop_timestamp
         ]
         self.assertFalse(
             out_of_range_timestamps,

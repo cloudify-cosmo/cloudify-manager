@@ -71,8 +71,8 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         )
 
         # assert that node and node instance were not removed from storage
-        self.assertEquals(1, len(unmodified_nodes['removed']))
-        self.assertEquals(1, len(unmodified_node_instances['removed']))
+        self.assertEqual(1, len(unmodified_nodes['removed']))
+        self.assertEqual(1, len(unmodified_node_instances['removed']))
 
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
@@ -101,12 +101,12 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         )
 
         # assert that node and node instance were removed from storage
-        self.assertEquals(0, len(modified_nodes['removed']))
-        self.assertEquals(0, len(modified_node_instances['removed']))
+        self.assertEqual(0, len(modified_nodes['removed']))
+        self.assertEqual(0, len(modified_node_instances['removed']))
 
         # assert relationship target remained intact
-        self.assertEquals(1, len(modified_nodes['remove_related']))
-        self.assertEquals(1, len(modified_node_instances['remove_related']))
+        self.assertEqual(1, len(modified_nodes['remove_related']))
+        self.assertEqual(1, len(modified_node_instances['remove_related']))
 
         # assert all operations in 'update' ('install') workflow
         # are executed by making them increment a runtime property
@@ -233,12 +233,12 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         )
 
         # Check that there is only 1 from each
-        self.assertEquals(1, len(modified_nodes['related']))
-        self.assertEquals(1, len(modified_node_instances['related']))
-        self.assertEquals(1, len(modified_nodes['target']))
-        self.assertEquals(1, len(modified_node_instances['target']))
-        self.assertEquals(1, len(modified_nodes['source']))
-        self.assertEquals(1, len(modified_node_instances['source']))
+        self.assertEqual(1, len(modified_nodes['related']))
+        self.assertEqual(1, len(modified_node_instances['related']))
+        self.assertEqual(1, len(modified_nodes['target']))
+        self.assertEqual(1, len(modified_node_instances['target']))
+        self.assertEqual(1, len(modified_nodes['source']))
+        self.assertEqual(1, len(modified_node_instances['source']))
 
         # get the nodes and node instances
         target_node_instance = modified_node_instances['target'][0]
@@ -246,8 +246,8 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         source_node_instance = modified_node_instances['source'][0]
 
         # assert there are 2 relationships total
-        self.assertEquals(1, len(source_node.relationships))
-        self.assertEquals(1, len(source_node_instance.relationships))
+        self.assertEqual(1, len(source_node.relationships))
+        self.assertEqual(1, len(source_node_instance.relationships))
 
         # check the relationship between site3 and site1 is intact
         self._assert_relationship(
@@ -350,18 +350,18 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         )
 
         # Check that there is only 1 from each
-        self.assertEquals(1, len(modified_nodes['target']))
-        self.assertEquals(1, len(modified_node_instances['target']))
-        self.assertEquals(1, len(modified_nodes['source']))
-        self.assertEquals(1, len(modified_node_instances['source']))
+        self.assertEqual(1, len(modified_nodes['target']))
+        self.assertEqual(1, len(modified_node_instances['target']))
+        self.assertEqual(1, len(modified_nodes['source']))
+        self.assertEqual(1, len(modified_node_instances['source']))
 
         # get the nodes and node instances
         source_node = modified_nodes['source'][0]
         source_node_instance = modified_node_instances['source'][0]
 
         # assert there are 0 relationships
-        self.assertEquals(1, len(source_node.relationships))
-        self.assertEquals(1, len(source_node_instance.relationships))
+        self.assertEqual(1, len(source_node.relationships))
+        self.assertEqual(1, len(source_node_instance.relationships))
 
         # check the new relationship between site2 and site1 is in place
         self._assert_relationship(

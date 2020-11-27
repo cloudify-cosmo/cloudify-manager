@@ -45,7 +45,7 @@ class TestRelationships(AgentlessTestCase):
         target_node_id_prefix = 'host'
 
         machines = self.get_runtime_property(deployment_id, 'machines')[0]
-        self.assertEquals(1, len(machines))
+        self.assertEqual(1, len(machines))
 
         state = self.get_runtime_property(deployment_id, 'connection_state')[0]
         source_id = state['source_id']
@@ -56,16 +56,16 @@ class TestRelationships(AgentlessTestCase):
 
         self.assertTrue(self.is_node_started(target_id))
 
-        self.assertEquals('source_property_value',
-                          state['source_properties']['source_property_key'])
-        self.assertEquals(
+        self.assertEqual('source_property_value',
+                         state['source_properties']['source_property_key'])
+        self.assertEqual(
             'target_property_value',
             state['target_properties']['target_property_key'])
-        self.assertEquals(
+        self.assertEqual(
             'source_runtime_property_value',
             state['source_runtime_properties']['source_runtime_property_key']
         )
-        self.assertEquals(
+        self.assertEqual(
             'target_runtime_property_value',
             state['target_runtime_properties']
                  ['target_runtime_property_key']

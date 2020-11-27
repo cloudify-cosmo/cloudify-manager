@@ -146,7 +146,7 @@ class TestWorkflow(AgentTestWithPlugins):
             deployment_id=setup_deployment_id,
             node_id='webserver'
         )
-        self.assertEquals(1, len(webserver_nodes))
+        self.assertEqual(1, len(webserver_nodes))
         webserver_node = webserver_nodes[0]
 
         webserver_host_node = self.client.node_instances.list(

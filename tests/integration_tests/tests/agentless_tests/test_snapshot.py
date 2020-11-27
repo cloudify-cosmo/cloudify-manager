@@ -293,7 +293,7 @@ class TestSnapshot(AgentlessTestCase):
         status_msg = STATES.RUNNING if is_running else STATES.NOT_RUNNING
         restore_status = self.client.snapshots.get_status()
         self.assertIn('status', restore_status)
-        self.assertEquals(restore_status['status'], status_msg)
+        self.assertEqual(restore_status['status'], status_msg)
 
     def _all_services_restarted_properly(self):
         manager_status = self.client.manager.get_status()
@@ -476,8 +476,8 @@ class TestSnapshot(AgentlessTestCase):
         rest_client.snapshots.upload(snapshot_path, snapshot_id)
         snapshot = rest_client.snapshots.get(snapshot_id)
         self.logger.debug('Retrieved snapshot: {0}'.format(snapshot))
-        self.assertEquals(snapshot['id'], snapshot_id)
-        self.assertEquals(snapshot['status'], 'uploaded')
+        self.assertEqual(snapshot['id'], snapshot_id)
+        self.assertEqual(snapshot['status'], 'uploaded')
         self.logger.info('Snapshot uploaded and validated')
 
     def _wait_for_restore_execution_to_end(

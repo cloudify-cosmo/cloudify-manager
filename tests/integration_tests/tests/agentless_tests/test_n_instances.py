@@ -52,12 +52,12 @@ class TestMultiInstanceApplication(AgentlessTestCase):
                 in host_ni.runtime_properties.get('machines', {}).items()
                 if state == 'running'
             )
-        self.assertEquals(15, len(machines))
-        self.assertEquals(
+        self.assertEqual(15, len(machines))
+        self.assertEqual(
             5, len([ma for ma in machines if ma.startswith('host1')]))
-        self.assertEquals(
+        self.assertEqual(
             5, len([ma for ma in machines if ma.startswith('host2')]))
-        self.assertEquals(
+        self.assertEqual(
             5, len([ma for ma in machines if ma.startswith('host3')]))
 
     def test_deploy_multi_large_scale(self):

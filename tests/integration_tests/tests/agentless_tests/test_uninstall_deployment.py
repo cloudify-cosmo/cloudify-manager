@@ -56,7 +56,7 @@ class TestUninstallDeployment(AgentlessTestCase):
         machines = node_instance.runtime_properties[
             'machines'
         ]
-        self.assertEquals(0, len(machines))
+        self.assertEqual(0, len(machines))
 
     def test_uninstall_with_dependency_order(self):
         dsl_path = resource(
@@ -118,9 +118,9 @@ class TestUninstallDeployment(AgentlessTestCase):
         ]
         self.assertEqual(2, len(invocations))
         self.assertTrue('single_node' in invocations[0]['id'])
-        self.assertEquals('start_monitor', invocations[0]['operation'])
+        self.assertEqual('start_monitor', invocations[0]['operation'])
         self.assertTrue('single_node' in invocations[1]['id'])
-        self.assertEquals('stop_monitor', invocations[1]['operation'])
+        self.assertEqual('stop_monitor', invocations[1]['operation'])
 
     def test_failed_uninstall_task(self):
         dsl_path = resource('dsl/basic_stop_error.yaml')
@@ -136,7 +136,7 @@ class TestUninstallDeployment(AgentlessTestCase):
             'machines'
         ]
 
-        self.assertEquals(0, len(machines))
+        self.assertEqual(0, len(machines))
 
 
 def is_unreachable_called(node_id,
