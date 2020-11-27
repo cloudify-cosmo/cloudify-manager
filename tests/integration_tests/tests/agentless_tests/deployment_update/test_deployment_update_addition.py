@@ -85,8 +85,8 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
             )
 
             # assert that node and node instance were not added to storage
-            self.assertEquals(0, len(unmodified_nodes['added']))
-            self.assertEquals(0, len(unmodified_node_instances['added']))
+            self.assertEqual(0, len(unmodified_nodes['added']))
+            self.assertEqual(0, len(unmodified_node_instances['added']))
 
             dep_update = \
                 self.client.deployment_updates.update_with_existing_blueprint(
@@ -115,21 +115,21 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
             )
 
             # assert that node and node instance were added to storage
-            self.assertEquals(1, len(modified_nodes['added']))
-            self.assertEquals(1, len(modified_node_instances['added']))
+            self.assertEqual(1, len(modified_nodes['added']))
+            self.assertEqual(1, len(modified_node_instances['added']))
 
             # assert that node has a relationship
             node = modified_nodes['added'][0]
-            self.assertEquals(1, len(node.relationships))
+            self.assertEqual(1, len(node.relationships))
             self._assert_relationship(
                     node.relationships,
                     target='site1',
                     expected_type='cloudify.relationships.contained_in')
-            self.assertEquals(node.type, 'cloudify.nodes.WebServer')
+            self.assertEqual(node.type, 'cloudify.nodes.WebServer')
 
             # assert that node instance has a relationship
             added_instance = modified_node_instances['added'][0]
-            self.assertEquals(1, len(added_instance.relationships))
+            self.assertEqual(1, len(added_instance.relationships))
             self._assert_relationship(
                     added_instance.relationships,
                     target='site1',
@@ -285,21 +285,21 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         )
 
         # assert that node and node instance were added to storage
-        self.assertEquals(1, len(modified_nodes['added']))
-        self.assertEquals(3, len(modified_node_instances['added']))
+        self.assertEqual(1, len(modified_nodes['added']))
+        self.assertEqual(3, len(modified_node_instances['added']))
 
         # assert that node has a relationship
         for node in modified_nodes['added']:
-            self.assertEquals(1, len(node.relationships))
+            self.assertEqual(1, len(node.relationships))
             self._assert_relationship(
                     node.relationships,
                     target='site1',
                     expected_type='cloudify.relationships.contained_in')
-            self.assertEquals(node.type, 'cloudify.nodes.WebServer')
+            self.assertEqual(node.type, 'cloudify.nodes.WebServer')
 
         # assert that node instance has a relationship
         for added_instance in modified_node_instances['added']:
-            self.assertEquals(1, len(added_instance.relationships))
+            self.assertEqual(1, len(added_instance.relationships))
             self._assert_relationship(
                     added_instance.relationships,
                     target='site1',
@@ -361,12 +361,12 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         )
 
         # Check that there is only 1 from each
-        self.assertEquals(1, len(modified_nodes['related']))
-        self.assertEquals(1, len(modified_node_instances['related']))
-        self.assertEquals(1, len(modified_nodes['target']))
-        self.assertEquals(1, len(modified_node_instances['target']))
-        self.assertEquals(1, len(modified_nodes['source']))
-        self.assertEquals(1, len(modified_node_instances['source']))
+        self.assertEqual(1, len(modified_nodes['related']))
+        self.assertEqual(1, len(modified_node_instances['related']))
+        self.assertEqual(1, len(modified_nodes['target']))
+        self.assertEqual(1, len(modified_node_instances['target']))
+        self.assertEqual(1, len(modified_nodes['source']))
+        self.assertEqual(1, len(modified_node_instances['source']))
 
         # get the nodes and node instances
         related_node_instance = modified_node_instances['related'][0]
@@ -375,8 +375,8 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         source_node_instance = modified_node_instances['source'][0]
 
         # assert there are 2 relationships total
-        self.assertEquals(2, len(source_node.relationships))
-        self.assertEquals(2, len(source_node_instance.relationships))
+        self.assertEqual(2, len(source_node.relationships))
+        self.assertEqual(2, len(source_node_instance.relationships))
 
         # check the relationship between site2 and site0 is intact
         self._assert_relationship(
@@ -462,18 +462,18 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         )
 
         # Check that there is only 1 from each
-        self.assertEquals(1, len(modified_nodes['target']))
-        self.assertEquals(1, len(modified_node_instances['target']))
-        self.assertEquals(1, len(modified_nodes['source']))
-        self.assertEquals(1, len(modified_node_instances['source']))
+        self.assertEqual(1, len(modified_nodes['target']))
+        self.assertEqual(1, len(modified_node_instances['target']))
+        self.assertEqual(1, len(modified_nodes['source']))
+        self.assertEqual(1, len(modified_node_instances['source']))
 
         # get the nodes and node instances
         source_node = modified_nodes['source'][0]
         source_node_instance = modified_node_instances['source'][0]
 
         # assert there are 1 relationships
-        self.assertEquals(1, len(source_node.relationships))
-        self.assertEquals(1, len(source_node_instance.relationships))
+        self.assertEqual(1, len(source_node.relationships))
+        self.assertEqual(1, len(source_node_instance.relationships))
 
         # check the new relationship between site2 and site1 is in place
         self._assert_relationship(

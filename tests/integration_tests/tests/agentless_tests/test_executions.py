@@ -95,7 +95,7 @@ class ExecutionsTest(AgentlessTestCase):
                                  wanted_status, client=None):
         client = client or self.client
         current_status = client.executions.get(execution_id).status
-        self.assertEquals(current_status, wanted_status)
+        self.assertEqual(current_status, wanted_status)
 
     def test_queue_execution_while_system_execution_is_running(self):
 
@@ -520,8 +520,8 @@ class ExecutionsTest(AgentlessTestCase):
             self.client.deployments.delete(deployment_1.id)
         except CloudifyClientError as e:
             self.assertIn('There are running or queued', str(e))
-            self.assertEquals(e.status_code, 400)
-            self.assertEquals(e.error_code, 'dependent_exists_error')
+            self.assertEqual(e.status_code, 400)
+            self.assertEqual(e.error_code, 'dependent_exists_error')
 
     def test_cancel_queued_execution(self):
         # Create snapshot and make sure it's state remains 'queued'
@@ -537,7 +537,7 @@ class ExecutionsTest(AgentlessTestCase):
         except CloudifyClientError as e:
             self.assertIn('You cannot start an execution that modifies DB'
                           ' state while a `create_snapshot`', str(e))
-            self.assertEquals(e.status_code, 400)
+            self.assertEqual(e.status_code, 400)
 
     def test_fail_to_create_deployment_while_creating_snapshot(self):
         # Create snapshot and make sure it's state remains 'started'
@@ -567,7 +567,7 @@ class ExecutionsTest(AgentlessTestCase):
         except CloudifyClientError as e:
             self.assertIn('You cannot start an execution that modifies DB'
                           ' state while a `create_snapshot`', str(e))
-            self.assertEquals(e.status_code, 400)
+            self.assertEqual(e.status_code, 400)
 
     def test_fail_to_delete_plugin_while_creating_snapshot(self):
         # Upload plugin
@@ -604,7 +604,7 @@ class ExecutionsTest(AgentlessTestCase):
 
         # cancel didn't work (unsupported) - use force-cancel instead
         execution = self.client.executions.cancel(execution.id, True)
-        self.assertEquals(Execution.FORCE_CANCELLING, execution.status)
+        self.assertEqual(Execution.FORCE_CANCELLING, execution.status)
         self.wait_for_execution_to_end(execution)
         execution = self.client.executions.get(execution.id)
 
@@ -627,7 +627,7 @@ class ExecutionsTest(AgentlessTestCase):
         path = '/proc/{}/status'.format(pid)
         execution = self.client.executions.cancel(execution.id,
                                                   force=True, kill=True)
-        self.assertEquals(Execution.KILL_CANCELLING, execution.status)
+        self.assertEqual(Execution.KILL_CANCELLING, execution.status)
 
         # If the process is still running docl.read_file will raise an error.
         # We use do_retries to give the kill cancel operation time to kill
@@ -648,7 +648,7 @@ class ExecutionsTest(AgentlessTestCase):
     def test_cancel_execution_before_it_started(self):
         execution, deployment_id = self._execute_and_cancel_execution(
             'sleep_with_cancel_support', False, True, False)
-        self.assertEquals(Execution.CANCELLED, execution.status)
+        self.assertEqual(Execution.CANCELLED, execution.status)
         data = self.get_runtime_property(deployment_id,
                                          'mock_operation_invocation')
         self.assertEqual(data, [])
@@ -684,16 +684,16 @@ class ExecutionsTest(AgentlessTestCase):
             # expecting 2 executions (1 for deployment environment
             # creation and 1 execution of 'install'). Checking the install
             # execution's status
-            self.assertEquals(2, len(deployments_executions))
+            self.assertEqual(2, len(deployments_executions))
             self.assertIn(execution_id, [deployments_executions[0].id,
                                          deployments_executions[1].id])
             install_execution = deployments_executions[0]\
                 if (execution_id == deployments_executions[0].id) \
                 else deployments_executions[1]
-            self.assertEquals(Execution.TERMINATED, install_execution.status)
+            self.assertEqual(Execution.TERMINATED, install_execution.status)
             self.assertIsNotNone(install_execution.created_at)
             self.assertIsNotNone(install_execution.ended_at)
-            self.assertEquals('', install_execution.error)
+            self.assertEqual('', install_execution.error)
 
         self.do_assertions(assertions, timeout=10)
 
@@ -748,7 +748,7 @@ class ExecutionsTest(AgentlessTestCase):
         _, execution_id = self.deploy_application(dsl_path,
                                                   wait_for_execution=True)
         execution = self.client.executions.get(execution_id)
-        self.assertEquals(Execution.TERMINATED, execution.status)
+        self.assertEqual(Execution.TERMINATED, execution.status)
 
         # Manually updating the status, because the client checks for
         # correct transitions
@@ -758,18 +758,18 @@ class ExecutionsTest(AgentlessTestCase):
             "WHERE id='{0}'".format(execution_id)
         )
         execution = self.client.executions.get(execution_id)
-        self.assertEquals(Execution.STARTED, execution.status)
+        self.assertEqual(Execution.STARTED, execution.status)
         execution = self.client.executions.update(execution_id,
                                                   'pending',
                                                   'some-error')
-        self.assertEquals(Execution.PENDING, execution.status)
-        self.assertEquals('some-error', execution.error)
+        self.assertEqual(Execution.PENDING, execution.status)
+        self.assertEqual('some-error', execution.error)
         # verifying that updating only the status field also resets the
         # error field to an empty string
         execution = self.client.executions.update(execution_id,
                                                   Execution.TERMINATED)
-        self.assertEquals(Execution.TERMINATED, execution.status)
-        self.assertEquals('', execution.error)
+        self.assertEqual(Execution.TERMINATED, execution.status)
+        self.assertEqual('', execution.error)
 
     def _check_node_instance_state(self, expected_state, node_inst_id):
         for retry in range(30):
@@ -815,14 +815,14 @@ class ExecutionsTest(AgentlessTestCase):
         execution = self.client.executions.cancel(execution.id, force)
         expected_status = (Execution.FORCE_CANCELLING if force else
                            Execution.CANCELLING)
-        self.assertEquals(expected_status, execution.status)
+        self.assertEqual(expected_status, execution.status)
         if wait_for_termination:
             self.wait_for_execution_to_end(execution)
             execution = self.client.executions.get(execution.id)
         return execution, deployment_id
 
     def _assert_execution_cancelled(self, execution, deployment_id):
-        self.assertEquals(Execution.CANCELLED, execution.status)
+        self.assertEqual(Execution.CANCELLED, execution.status)
         self.assertIsNotNone(execution.ended_at)
         invocations = self.get_runtime_property(deployment_id,
                                                 'mock_operation_invocation')[0]
@@ -863,7 +863,7 @@ class ExecutionsTest(AgentlessTestCase):
         events = self.client.events.list(execution_id=execution_id)
         event_messages = {event['message'] for event in events}
 
-        self.assertEquals(event_messages, expected_messages)
+        self.assertEqual(event_messages, expected_messages)
 
         # We expect the instances to remain unchaged after a dry run
         for instance in self.client.node_instances.list():
@@ -885,7 +885,7 @@ class ExecutionsTest(AgentlessTestCase):
         execution = self.client.executions.start(deployment_id=dep_id,
                                                  workflow_id='install',
                                                  schedule=scheduled_time)
-        self.assertEquals(Execution.SCHEDULED, execution.status)
+        self.assertEqual(Execution.SCHEDULED, execution.status)
 
         time.sleep(62)  # Wait for exec to 'wake up'
         self.wait_for_execution_to_end(execution)

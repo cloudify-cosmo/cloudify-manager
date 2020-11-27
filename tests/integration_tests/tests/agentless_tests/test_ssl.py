@@ -35,17 +35,17 @@ class TestSsl(AgentlessTestCase):
         )
 
         # only non-ssl client works
-        self.assertEquals('SSL disabled', self.client.manager.ssl_status())
+        self.assertEqual('SSL disabled', self.client.manager.ssl_status())
         self.assertRaises(ConnectionError, ssl_client.manager.ssl_status)
 
         # change to ssl - now only ssl client works
         self.client.manager.set_ssl(True)
         sleep(2)
         self.assertRaises(CloudifyClientError, self.client.manager.ssl_status)
-        self.assertEquals('SSL enabled', ssl_client.manager.ssl_status())
+        self.assertEqual('SSL enabled', ssl_client.manager.ssl_status())
 
         # change back to non-ssl - now only non-ssl client works
         ssl_client.manager.set_ssl(False)
         sleep(2)
-        self.assertEquals('SSL disabled', self.client.manager.ssl_status())
+        self.assertEqual('SSL disabled', self.client.manager.ssl_status())
         self.assertRaises(ConnectionError, ssl_client.manager.ssl_status)
