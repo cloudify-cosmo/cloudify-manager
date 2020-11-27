@@ -23,7 +23,7 @@ from integration_tests.tests.utils import get_resource as resource
 from integration_tests.tests.utils import (
     verify_deployment_env_created,
     wait_for_deployment_deletion_to_complete
-    )
+)
 from integration_tests.tests.utils import do_retries
 
 
@@ -118,4 +118,4 @@ class TestDeploymentWorkflows(AgentlessTestCase):
             self.client.deployments.get(deployment_id)
             self.fail("Expected deployment to be deleted")
         except CloudifyClientError as e:
-            self.assertEquals(404, e.status_code)
+            self.assertEqual(404, e.status_code)

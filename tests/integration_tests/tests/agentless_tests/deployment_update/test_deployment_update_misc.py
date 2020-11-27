@@ -61,8 +61,8 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
                 {'custom_output': {'value': expected_output_value}},
                 dep.outputs)
             # verify deployment description
-            self.assertEquals('modified description' in dep.description,
-                              is_description_modified)
+            self.assertEqual('modified description' in dep.description,
+                             is_description_modified)
 
         # modify output and verify
         update_deployment_wait_and_assert(
@@ -200,8 +200,8 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
         # site1, and another site2.source_ops_counter should have
         # decreased once because of the resource override
         self._assertDictContainsSubset(
-             {'source_ops_counter': '2'},
-             added_relationship_node_instance['runtime_properties']
+            {'source_ops_counter': '2'},
+            added_relationship_node_instance['runtime_properties']
         )
 
         self._assertDictContainsSubset(
@@ -347,21 +347,21 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
             self._map_node_and_node_instances(deployment.id, node_mapping)
 
         # assert that node and node instance were added to storage
-        self.assertEquals(1, len(modified_nodes['added']))
-        self.assertEquals(1, len(modified_node_instances['added']))
+        self.assertEqual(1, len(modified_nodes['added']))
+        self.assertEqual(1, len(modified_node_instances['added']))
 
         # assert that node has a relationship
         node = modified_nodes['added'][0]
-        self.assertEquals(1, len(node.relationships))
+        self.assertEqual(1, len(node.relationships))
         self._assert_relationship(
             node.relationships,
             target='site1',
             expected_type='cloudify.relationships.contained_in')
-        self.assertEquals(node.type, 'cloudify.nodes.WebServer')
+        self.assertEqual(node.type, 'cloudify.nodes.WebServer')
 
         # assert that node instance has a relationship
         added_instance = modified_node_instances['added'][0]
-        self.assertEquals(1, len(added_instance.relationships))
+        self.assertEqual(1, len(added_instance.relationships))
         self._assert_relationship(
             added_instance.relationships,
             target='site1',
@@ -530,8 +530,8 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
         )
 
         # Assert there are 2 deployment updates for del_deployment
-        self.assertEquals(len(deployment_update_list.items),
-                          len(del_depups_ids))
+        self.assertEqual(len(deployment_update_list.items),
+                         len(del_depups_ids))
         for i in deployment_update_list.items:
             self.assertIn(i['id'], del_depups_ids)
 
@@ -546,13 +546,13 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
             deployment_id=del_deployment.id,
             _include=['id']
         )
-        self.assertEquals(len(deployment_update_list.items), 0)
+        self.assertEqual(len(deployment_update_list.items), 0)
 
         # Assert no other deployment updates were deleted
         deployment_update_list = self.client.deployment_updates.list(
             deployment_id=undel_deployment.id,
             _include=['id']
         )
-        self.assertEquals(len(deployment_update_list), len(undel_depups_ids))
+        self.assertEqual(len(deployment_update_list), len(undel_depups_ids))
         for i in deployment_update_list.items:
             self.assertIn(i['id'], undel_depups_ids)

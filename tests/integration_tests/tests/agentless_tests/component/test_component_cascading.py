@@ -72,7 +72,7 @@ class ComponentCascadingCancelAndResume(AgentlessTestCase):
             expected_status = Execution.KILL_CANCELLING
 
         if verify_intermediate_state:
-            self.assertEquals(expected_status, execution.status)
+            self.assertEqual(expected_status, execution.status)
 
         executions = self.client.executions.list(workflow_id='install')
         for execution in executions:
@@ -81,7 +81,7 @@ class ComponentCascadingCancelAndResume(AgentlessTestCase):
         # Asserting all is finished in the correct state
         executions = self.client.executions.list(workflow_id='install')
         for execution in executions:
-            self.assertEquals(Execution.CANCELLED, execution.status)
+            self.assertEqual(Execution.CANCELLED, execution.status)
         return executions
 
     def _execute_and_cancel_execution(self,
@@ -123,14 +123,14 @@ class ComponentCascadingCancelAndResume(AgentlessTestCase):
         main_execution = self.client.executions.resume(main_execution.id,
                                                        force=True)
         main_execution = self.wait_for_execution_to_end(main_execution)
-        self.assertEquals(Execution.TERMINATED, main_execution.status)
+        self.assertEqual(Execution.TERMINATED, main_execution.status)
         executions = self.client.executions.list(workflow_id='install')
         for execution in executions:
             self.wait_for_execution_to_end(execution)
         # Asserting all is finished in the correct state
         executions = self.client.executions.list(workflow_id='install')
         for execution in executions:
-            self.assertEquals(Execution.TERMINATED, execution.status)
+            self.assertEqual(Execution.TERMINATED, execution.status)
 
         self.assertEqual(expected_number_executions, len(executions))
 
@@ -162,7 +162,7 @@ class ComponentCascadingCancelAndResume(AgentlessTestCase):
                                            verify_intermediate_state=False)
         executions = self.client.executions.list(workflow_id='install')
         for execution in executions:
-            self.assertEquals(Execution.CANCELLED, execution.status)
+            self.assertEqual(Execution.CANCELLED, execution.status)
 
     def test_three_level_cascading_cancel(self):
         sleep = resource('dsl/sleep_node.yaml')
@@ -379,8 +379,8 @@ workflows:
         executions = self.client.executions.list(
             workflow_id='nothing_workflow')
         for execution in executions:
-            self.assertEquals(Execution.TERMINATED, execution.status)
-            self.assertEquals(main_execution.created_by, execution.created_by)
+            self.assertEqual(Execution.TERMINATED, execution.status)
+            self.assertEqual(main_execution.created_by, execution.created_by)
 
     def test_3_layer_cascading_workflow(self):
         layer_3_path = self.make_yaml_file(
@@ -411,7 +411,7 @@ workflows:
         executions = self.client.executions.list(
             workflow_id='nothing_workflow')
         for execution in executions:
-            self.assertEquals(Execution.TERMINATED, execution.status)
+            self.assertEqual(Execution.TERMINATED, execution.status)
         self.assertEqual(len(executions), 3)
 
     def test_not_cascading_workflow_not_to_cascade(self):
@@ -508,7 +508,7 @@ workflows:
         executions = self.client.executions.list(
             workflow_id='nothing_workflow')
         for execution in executions:
-            self.assertEquals(Execution.TERMINATED, execution.status)
+            self.assertEqual(Execution.TERMINATED, execution.status)
         self.assertEqual(len(executions), 2)
 
     def test_not_defined_cascading_workflow(self):
@@ -636,7 +636,7 @@ workflows:
         executions = self.client.executions.list(
             workflow_id='nothing_workflow')
         for execution in executions:
-            self.assertEquals(Execution.TERMINATED, execution.status)
+            self.assertEqual(Execution.TERMINATED, execution.status)
             self.assertTrue(execution.is_dry_run)
 
     def test_cascading_workflow_with_parameters(self):
@@ -664,7 +664,7 @@ workflows:
         executions = self.client.executions.list(
             workflow_id='nothing_workflow')
         for execution in executions:
-            self.assertEquals(Execution.TERMINATED, execution.status)
+            self.assertEqual(Execution.TERMINATED, execution.status)
             self.assertTrue(execution.parameters, parameters)
 
     def test_cascading_queued_workflow_execution(self):
@@ -705,7 +705,7 @@ workflows:
             workflow_id='nothing_workflow',
             is_descending=True,
             sort='created_at')[0]
-        self.assertEquals(component_execution.status, Execution.QUEUED)
+        self.assertEqual(component_execution.status, Execution.QUEUED)
         executions = self.client.executions.list(
             workflow_id='nothing_workflow')
         self.assertEqual(len(executions), 4)
@@ -730,5 +730,5 @@ workflows:
         executions = self.client.executions.list(
             workflow_id='nothing_workflow')
         for execution in executions:
-            self.assertEquals(Execution.SCHEDULED, execution.status)
+            self.assertEqual(Execution.SCHEDULED, execution.status)
         self.assertEqual(len(executions), 2)

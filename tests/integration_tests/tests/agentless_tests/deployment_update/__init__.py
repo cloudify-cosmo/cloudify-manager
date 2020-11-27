@@ -173,9 +173,9 @@ class DeploymentUpdateBase(AgentlessTestCase):
                                             'Old: {0}, new: {1}'
                                             .format(d1[k], d2[k]))
                 else:
-                    self.assertEquals(d2.get(k, None), v,
-                                      '{0} has changed on {1}. {2}!={3}'
-                                      .format(d1, k, d1[k], d2[k]))
+                    self.assertEqual(d2.get(k, None), v,
+                                     '{0} has changed on {1}. {2}!={3}'
+                                     .format(d1, k, d1[k], d2[k]))
 
     def _create_dict(self, path):
         if len(path) == 1:

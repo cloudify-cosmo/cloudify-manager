@@ -84,13 +84,13 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         )
 
         # Check that there is only 1 from each
-        self.assertEquals(1, len(modified_nodes['stagnant']))
-        self.assertEquals(1, len(modified_node_instances['stagnant']))
-        self.assertEquals(1, len(modified_nodes['added_relationship']))
-        self.assertEquals(1,
-                          len(modified_node_instances['added_relationship']))
-        self.assertEquals(1, len(modified_nodes['new']))
-        self.assertEquals(1, len(modified_node_instances['new']))
+        self.assertEqual(1, len(modified_nodes['stagnant']))
+        self.assertEqual(1, len(modified_node_instances['stagnant']))
+        self.assertEqual(1, len(modified_nodes['added_relationship']))
+        self.assertEqual(1,
+                         len(modified_node_instances['added_relationship']))
+        self.assertEqual(1, len(modified_nodes['new']))
+        self.assertEqual(1, len(modified_node_instances['new']))
 
         # get the nodes and node instances
         added_relationship_node_instance = \
@@ -99,9 +99,9 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         new_node_instance = modified_node_instances['new'][0]
 
         # assert there are 2 relationships total
-        self.assertEquals(1, len(new_node.relationships))
-        self.assertEquals(2,
-                          len(added_relationship_node_instance.relationships))
+        self.assertEqual(1, len(new_node.relationships))
+        self.assertEqual(2,
+                         len(added_relationship_node_instance.relationships))
 
         # check the relationship between site2 and site1 is intact
         self._assert_relationship(
@@ -166,12 +166,12 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         # Assert relationship order
         rel_targets = ['site6', 'site4', 'site2B', 'site3']
         for index, rel_target in enumerate(rel_targets):
-            self.assertEquals(
+            self.assertEqual(
                     modified_node['relationships'][index]['target_id'],
                     rel_targets[index])
 
         for index, rel_target in enumerate(rel_targets):
-            self.assertEquals(
+            self.assertEqual(
                     modified_node_instance[
                         'relationships'][index]['target_name'],
                     rel_targets[index]
@@ -239,11 +239,11 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         # Assert that f isn't connected to any node, and all of the install
         # operation ran
         for node in root_node_ids:
-            self.assertEquals(0, len(node_instances[node]['relationships']))
+            self.assertEqual(0, len(node_instances[node]['relationships']))
 
         # Assert that each node instance had only 1 relationship
         for node in node_ids - root_node_ids:
-            self.assertEquals(1, len(node_instances[node]['relationships']))
+            self.assertEqual(1, len(node_instances[node]['relationships']))
 
         # Assert that node a, b, c and d have started correctly
         for node in node_ids - root_node_ids:

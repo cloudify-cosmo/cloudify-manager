@@ -54,9 +54,9 @@ class TestDeploymentNodes(AgentlessTestCase):
         node_instance = self.client.node_instances.get(node_id)
 
         # Initial assertions
-        self.assertEquals('started', node_instance.state)
+        self.assertEqual('started', node_instance.state)
         self.assertIsNotNone(node_instance.version)
-        self.assertEquals(3, len(node_instance.runtime_properties))
+        self.assertEqual(3, len(node_instance.runtime_properties))
 
         # Updating only the state
         node_instance = self.client.node_instances.update(
@@ -65,9 +65,9 @@ class TestDeploymentNodes(AgentlessTestCase):
             state='new_state')
 
         # Verifying the node's state has changed
-        self.assertEquals('new_state', node_instance.state)
+        self.assertEqual('new_state', node_instance.state)
         # Verifying the node's runtime properties remained without a change
-        self.assertEquals(3, len(node_instance.runtime_properties))
+        self.assertEqual(3, len(node_instance.runtime_properties))
 
         # Updating only the runtime properties
         node_instance = self.client.node_instances.update(
@@ -77,13 +77,13 @@ class TestDeploymentNodes(AgentlessTestCase):
 
         # Verifying the node's state remained the same despite the update to
         #  the runtime_properties
-        self.assertEquals('new_state', node_instance.state)
+        self.assertEqual('new_state', node_instance.state)
         # Verifying the new property is in the node's runtime properties
         self.assertTrue('new_key' in node_instance.runtime_properties)
-        self.assertEquals('new_value',
-                          node_instance.runtime_properties['new_key'])
+        self.assertEqual('new_value',
+                         node_instance.runtime_properties['new_key'])
         # Verifying the older runtime properties no longer exist
-        self.assertEquals(1, len(node_instance.runtime_properties))
+        self.assertEqual(1, len(node_instance.runtime_properties))
 
         # Updating both state and runtime properties (updating an existing
         # key in runtime properties)
@@ -94,11 +94,11 @@ class TestDeploymentNodes(AgentlessTestCase):
             state='final_state')
 
         # Verifying state has updated
-        self.assertEquals('final_state', node_instance.state)
+        self.assertEqual('final_state', node_instance.state)
         # Verifying the update to the runtime properties
-        self.assertEquals(1, len(node_instance.runtime_properties))
-        self.assertEquals('another_value',
-                          node_instance.runtime_properties['new_key'])
+        self.assertEqual(1, len(node_instance.runtime_properties))
+        self.assertEqual('another_value',
+                         node_instance.runtime_properties['new_key'])
 
         # Updating neither state nor runtime properties (empty update)
         node_instance = self.client.node_instances.update(
@@ -106,11 +106,11 @@ class TestDeploymentNodes(AgentlessTestCase):
             version=node_instance.version)
 
         # Verifying state hasn't changed
-        self.assertEquals('final_state', node_instance.state)
+        self.assertEqual('final_state', node_instance.state)
         # Verifying the runtime properties haven't changed
-        self.assertEquals(1, len(node_instance.runtime_properties))
-        self.assertEquals('another_value',
-                          node_instance.runtime_properties['new_key'])
+        self.assertEqual(1, len(node_instance.runtime_properties))
+        self.assertEqual('another_value',
+                         node_instance.runtime_properties['new_key'])
 
     def test_update_node_instance_runtime_properties(self):
         dsl_path = resource('dsl/set_property.yaml')
@@ -122,7 +122,7 @@ class TestDeploymentNodes(AgentlessTestCase):
 
         # Initial assertions
         self.assertIsNotNone(node_instance.version)
-        self.assertEquals(3, len(node_instance.runtime_properties))
+        self.assertEqual(3, len(node_instance.runtime_properties))
 
         # Updating the runtime properties with a new key
         node_instance = self.client.node_instances.update(
@@ -132,10 +132,10 @@ class TestDeploymentNodes(AgentlessTestCase):
 
         # Verifying the new property is in the node's runtime properties
         self.assertTrue('new_key' in node_instance.runtime_properties)
-        self.assertEquals('new_value',
-                          node_instance.runtime_properties['new_key'])
+        self.assertEqual('new_value',
+                         node_instance.runtime_properties['new_key'])
         # Verifying the older runtime properties no longer exist
-        self.assertEquals(1, len(node_instance.runtime_properties))
+        self.assertEqual(1, len(node_instance.runtime_properties))
 
         # Updating an existing key in runtime properties
         node_instance = self.client.node_instances.update(
@@ -144,9 +144,9 @@ class TestDeploymentNodes(AgentlessTestCase):
             runtime_properties={'new_key': 'another_value'})
 
         # Verifying the update to the runtime properties
-        self.assertEquals(1, len(node_instance.runtime_properties))
-        self.assertEquals('another_value',
-                          node_instance.runtime_properties['new_key'])
+        self.assertEqual(1, len(node_instance.runtime_properties))
+        self.assertEqual('another_value',
+                         node_instance.runtime_properties['new_key'])
 
         # Cleaning up the runtime properties
         node_instance = self.client.node_instances.update(
@@ -155,4 +155,4 @@ class TestDeploymentNodes(AgentlessTestCase):
             runtime_properties={})
 
         # Verifying the node no longer has any runtime properties
-        self.assertEquals(0, len(node_instance.runtime_properties))
+        self.assertEqual(0, len(node_instance.runtime_properties))

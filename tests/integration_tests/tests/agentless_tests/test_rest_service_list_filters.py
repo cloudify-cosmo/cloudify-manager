@@ -47,14 +47,14 @@ class TestRestServiceListFilters(AgentlessTestCase):
         filter_params = {'blueprint_id': self.first_blueprint_id,
                          'deployment_id': self.first_deployment_id}
         response = self.client.nodes.list(**filter_params)
-        self.assertEquals(len(response), 3, 'expecting 3 node results matching'
-                                            ' deployment_id {0} and '
-                                            'blueprint_id {1}'
-                                            .format(self.first_deployment_id,
-                                                    self.first_blueprint_id))
+        self.assertEqual(len(response), 3, 'expecting 3 node results matching'
+                                           ' deployment_id {0} and '
+                                           'blueprint_id {1}'
+                                           .format(self.first_deployment_id,
+                                                   self.first_blueprint_id))
         for node in response:
-            self.assertEquals(node.deployment_id, self.first_deployment_id)
-            self.assertEquals(node.blueprint_id, self.first_blueprint_id)
+            self.assertEqual(node.deployment_id, self.first_deployment_id)
+            self.assertEqual(node.blueprint_id, self.first_blueprint_id)
 
     def test_nodes_list_with_filters_and_include(self):
         filter_params = {'blueprint_id': self.first_blueprint_id,
@@ -62,11 +62,11 @@ class TestRestServiceListFilters(AgentlessTestCase):
         include = ['id']
 
         response = self.client.nodes.list(_include=include, **filter_params)
-        self.assertEquals(len(response), 3, 'expecting 3 node results matching'
-                                            ' deployment_id {0} and '
-                                            'blueprint_id {1}'
-                          .format(self.first_deployment_id,
-                                  self.first_blueprint_id))
+        self.assertEqual(len(response), 3, 'expecting 3 node results matching'
+                                           ' deployment_id {0} and '
+                                           'blueprint_id {1}'
+                         .format(self.first_deployment_id,
+                                 self.first_blueprint_id))
         for node in response:
             self.assertIsNone(node.deployment_id, 'Expecting deployment_id to '
                                                   'be None')
@@ -76,17 +76,17 @@ class TestRestServiceListFilters(AgentlessTestCase):
         filter_params = {'blueprint_id': self.first_blueprint_id,
                          'deployment_id': self.sec_deployment_id}
         response = self.client.nodes.list(**filter_params)
-        self.assertEquals(len(response), 0, 'expecting 0 node results matching'
-                                            ' deployment_id {0} and '
-                                            'blueprint_id {1}'
-                          .format(self.first_deployment_id,
-                                  self.first_blueprint_id))
+        self.assertEqual(len(response), 0, 'expecting 0 node results matching'
+                                           ' deployment_id {0} and '
+                                           'blueprint_id {1}'
+                         .format(self.first_deployment_id,
+                                 self.first_blueprint_id))
 
     def test_nodes_list_no_filters(self):
         response = self.client.nodes.list()
-        self.assertEquals(len(response), 6, 'expecting 6 node results matching'
-                                            ' deployment_id {id}'
-                          .format(id=self.first_deployment_id))
+        self.assertEqual(len(response), 6, 'expecting 6 node results matching'
+                                           ' deployment_id {id}'
+                         .format(id=self.first_deployment_id))
         for node in response:
             self.assertIn(node.deployment_id,
                           (self.first_deployment_id, self.sec_deployment_id))
@@ -95,12 +95,12 @@ class TestRestServiceListFilters(AgentlessTestCase):
 
     def test_node_instances_list_with_filters(self):
         res = self.client.node_instances.list(**self.deployment_id_filter)
-        self.assertEquals(len(res), 3, 'expecting 3 node instance results'
-                                       ' matching deployment_id {0}'
-                                       .format(self.first_deployment_id))
+        self.assertEqual(len(res), 3, 'expecting 3 node instance results'
+                                      ' matching deployment_id {0}'
+                                      .format(self.first_deployment_id))
         for node_instance in res:
-            self.assertEquals(node_instance.deployment_id,
-                              self.first_deployment_id)
+            self.assertEqual(node_instance.deployment_id,
+                             self.first_deployment_id)
 
     def test_node_instances_list_with_filters_multiple_values(self):
         self.multiple_value_filters = \
@@ -111,9 +111,9 @@ class TestRestServiceListFilters(AgentlessTestCase):
         res = \
             self.client.node_instances.list(
                 **self.multiple_value_filters)
-        self.assertEquals(len(res), 4, 'expecting 4 node instance results'
-                                       ' matching {0}'
-                          .format(self.multiple_value_filters))
+        self.assertEqual(len(res), 4, 'expecting 4 node instance results'
+                                      ' matching {0}'
+                         .format(self.multiple_value_filters))
         for node_instance in res:
             for key in self.multiple_value_filters:
                 self.assertIn(node_instance[key],
@@ -121,9 +121,9 @@ class TestRestServiceListFilters(AgentlessTestCase):
 
     def test_node_instances_list_no_filters(self):
         response = self.client.node_instances.list()
-        self.assertEquals(len(response), 6, 'expecting 6 node instance results'
-                                            ' matching deployment_id {0}'
-                                            .format(self.first_deployment_id))
+        self.assertEqual(len(response), 6, 'expecting 6 node instance results'
+                                           ' matching deployment_id {0}'
+                                           .format(self.first_deployment_id))
         for node_instance in response:
             self.assertIn(node_instance.deployment_id,
                           (self.first_deployment_id, self.sec_deployment_id))
@@ -131,35 +131,35 @@ class TestRestServiceListFilters(AgentlessTestCase):
     def test_deployments_list_with_filters(self):
         id_filter = {'id': self.first_deployment_id}
         response = self.client.deployments.list(**id_filter)
-        self.assertEquals(len(response), 1, 'expecting 1 deployment results'
-                                            ' matching deployment_id {0} {1}'
-                          .format(self.first_deployment_id, len(response)))
+        self.assertEqual(len(response), 1, 'expecting 1 deployment results'
+                                           ' matching deployment_id {0} {1}'
+                         .format(self.first_deployment_id, len(response)))
         deployment = response[0]
-        self.assertEquals(deployment['id'], self.first_deployment_id)
+        self.assertEqual(deployment['id'], self.first_deployment_id)
 
     def test_deployments_list_no_filters(self):
         response = self.client.deployments.list()
-        self.assertEquals(len(response), 2, 'expecting 2 deployment results'
-                                            ' matching deployment_id {0}'
-                          .format(self.first_deployment_id))
+        self.assertEqual(len(response), 2, 'expecting 2 deployment results'
+                                           ' matching deployment_id {0}'
+                         .format(self.first_deployment_id))
         for deployment in response:
             self.assertIn(deployment['id'],
                           (self.first_deployment_id, self.sec_deployment_id))
 
     def test_executions_list_with_filters(self):
         res = self.client.executions.list(**self.deployment_id_filter)
-        self.assertEquals(len(res), 2, 'expecting 2 execution results'
-                                       ' matching deployment_id {0} {1}'
-                          .format(self.first_deployment_id, len(res)))
+        self.assertEqual(len(res), 2, 'expecting 2 execution results'
+                                      ' matching deployment_id {0} {1}'
+                         .format(self.first_deployment_id, len(res)))
         for execution in res:
-            self.assertEquals(execution.deployment_id,
-                              self.first_deployment_id)
+            self.assertEqual(execution.deployment_id,
+                             self.first_deployment_id)
 
     def test_executions_list_no_filters(self):
         response = self.client.executions.list()
-        self.assertEquals(len(response), 4, 'expecting 4 execution results'
-                                            ' matching deployment_id {0} {1}'
-                          .format(self.first_deployment_id, len(response)))
+        self.assertEqual(len(response), 4, 'expecting 4 execution results'
+                                           ' matching deployment_id {0} {1}'
+                         .format(self.first_deployment_id, len(response)))
         for execution in response:
             self.assertIn(execution.deployment_id,
                           (self.first_deployment_id, self.sec_deployment_id))
@@ -167,17 +167,17 @@ class TestRestServiceListFilters(AgentlessTestCase):
     def test_blueprints_list_with_filters(self):
         id_filter = {'id': self.first_blueprint_id}
         res = self.client.blueprints.list(**id_filter)
-        self.assertEquals(len(res), 1, 'expecting 1 blueprint result'
-                                       ' matching blueprint_id {0} {1}'
-                          .format(self.first_blueprint_id, len(res)))
+        self.assertEqual(len(res), 1, 'expecting 1 blueprint result'
+                                      ' matching blueprint_id {0} {1}'
+                         .format(self.first_blueprint_id, len(res)))
         blueprint = res[0]
-        self.assertEquals(blueprint.id, self.first_blueprint_id)
+        self.assertEqual(blueprint.id, self.first_blueprint_id)
 
     def test_blueprints_list_no_filters(self):
         res = self.client.blueprints.list()
-        self.assertEquals(len(res), 2, 'expecting 2 blueprint results '
-                                       'matching blueprint_id {0} {1}'
-                          .format(self.first_blueprint_id, len(res)))
+        self.assertEqual(len(res), 2, 'expecting 2 blueprint results '
+                                      'matching blueprint_id {0} {1}'
+                         .format(self.first_blueprint_id, len(res)))
         for blueprint in res:
             self.assertIn(blueprint.id,
                           (self.first_blueprint_id, self.sec_blueprint_id))

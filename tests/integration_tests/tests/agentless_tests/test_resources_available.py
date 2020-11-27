@@ -71,7 +71,7 @@ class ResourcesAvailableTest(AgentlessTestCase):
                                     headers,
                                     path,
                                     expected_status_code):
-        self.assertEquals(
+        self.assertEqual(
             expected_status_code,
             requests.get(
                 'https://{0}:53333/resources{1}'.format(self.get_manager_ip(),
