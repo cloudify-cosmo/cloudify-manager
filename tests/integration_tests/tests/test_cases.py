@@ -15,14 +15,9 @@
 # limitations under the License.
 
 import os
-import sys
 import json
 import time
 import uuid
-import yaml
-import tarfile
-import logging
-import datetime
 import tempfile
 import unittest
 import subprocess
@@ -33,20 +28,13 @@ import pytest
 from retrying import retry
 from requests.exceptions import ConnectionError
 
-import cloudify.logs
-import cloudify.utils
-import cloudify.event
 from cloudify.snapshots import STATES, SNAPSHOT_RESTORE_FLAG_FILE
 
-from logging.handlers import RotatingFileHandler
-
-from manager_rest.utils import mkdirs
 from manager_rest.constants import CLOUDIFY_TENANT_HEADER
 
 from integration_tests.framework import utils, docker
 from integration_tests.tests import utils as test_utils
-from integration_tests.framework.constants import (PLUGIN_STORAGE_DIR,
-                                                   CLOUDIFY_USER)
+from integration_tests.framework.constants import PLUGIN_STORAGE_DIR
 from integration_tests.tests.utils import (
     get_resource,
     wait_for_deployment_creation_to_complete,
@@ -67,104 +55,6 @@ class BaseTestCase(unittest.TestCase):
     """
     def setUp(self):
         self.cfy = test_utils.get_cfy()
-        self._set_tests_framework_logger()
-
-    @classmethod
-    def _update_config(cls, new_config):
-        config_file_location = '/opt/manager/cloudify-rest.conf'
-        config = yaml.load(cls.read_manager_file(config_file_location))
-        config.update(new_config)
-        with tempfile.NamedTemporaryFile(mode='w') as f:
-            yaml.dump(config, f)
-            f.flush()
-            cls.copy_file_to_manager(
-                source=f.name,
-                target=config_file_location,
-                owner=CLOUDIFY_USER
-            )
-        cls.restart_service('cloudify-restservice')
-
-    def _save_manager_logs_after_test(self, purge=True):
-        self.logger.info("Attempting to save the manager's logs...")
-        try:
-            self._save_manager_logs_after_test_helper(purge)
-        except Exception as e:
-            self.logger.info(
-                "Unable to save logs due to exception: {}".format(str(e)))
-
-    @retry(stop_max_attempt_number=3, wait_fixed=5000)
-    def _save_manager_logs_after_test_helper(self, purge):
-        self.logger.debug('_save_manager_logs_after_test started')
-        logs_dir = os.environ.get('CFY_LOGS_PATH_REMOTE')
-        if not logs_dir:
-            self.logger.info("No Cloudify remote log saving path found. You "
-                             "can set one up with the OS env "
-                             "var CFY_LOGS_PATH_REMOTE")
-        else:
-            self.logger.info("Cloudify remote log saving path found: [{0}]."
-                             .format(logs_dir))
-        self.logger.info("If you're running via itest-runner, make sure to "
-                         "set a local path as well with CFY_LOGS_PATH_LOCAL.")
-        test_path = self.id().split('.')[-2:]
-        if not logs_dir:
-            self.logger.debug('not saving manager logs')
-            return
-        if os.environ.get('SKIP_LOG_SAVE_ON_SUCCESS') \
-                and sys.exc_info() == (None, None, None):
-            self.logger.info('Not saving manager logs for successful test:  '
-                             '{0}'.format(test_path[-1]))
-            return
-
-        self.logger.info(
-            'Saving manager logs for test:  {0}...'.format(test_path[-1]))
-        logs_dir = os.path.join(os.path.expanduser(logs_dir), *test_path)
-        mkdirs(logs_dir)
-        target = os.path.join(logs_dir, 'logs.tar.gz')
-        self.cfy.logs.download(output_path=target)
-        if purge:
-            self.cfy.logs.purge(force=True)
-
-        if not bool(os.environ.get('SKIP_LOGS_EXTRACTION')):
-            with tarfile.open(target) as tar:
-                self.logger.debug('Extracting tar.gz: {0}'.format(target))
-                tar.extractall(path=logs_dir)
-                self.logger.debug('Removing {0}'.format(target))
-                os.remove(target)
-
-        self.logger.debug('_save_manager_logs_after_test completed')
-
-    @staticmethod
-    def _set_file_handler(path):
-        mega = 1024 * 1024
-        if not os.path.isdir(path):
-            raise IOError('dir does not exist')
-        path = os.path.join(path, 'integration_tests_framework.log')
-        handler = RotatingFileHandler(path, maxBytes=5 * mega, backupCount=5)
-        handler.setLevel(logging.DEBUG)
-        return handler
-
-    def _set_tests_framework_logger(self):
-        handlers = [logging.StreamHandler(sys.stdout)]
-        handlers[0].setLevel(logging.INFO)
-        logs_path = '/var/log/cloudify'
-        try:
-            handlers.append(BaseTestCase._set_file_handler(logs_path))
-        except IOError:
-            self.logger = cloudify.utils.setup_logger(self._testMethodName)
-            self.logger.debug('Framework logs are not saved into a file. '
-                              'To allow logs saving, make sure the directory '
-                              '{0} exists with Permissions to edit.'
-                              .format(logs_path))
-            return
-
-        self.logger = cloudify.utils.setup_logger(self._testMethodName,
-                                                  logging.NOTSET,
-                                                  handlers=handlers)
-        separator = '\n\n\n' + ('=' * 100)
-        self.logger.debug(separator)
-        self.logger.debug('Starting test:  {0} on {1}'.format(
-            self.id(), datetime.datetime.now()))
-        self.logger.info('Framework logs are saved in {0}'.format(logs_path))
 
     def read_manager_file(self, file_path, no_strip=False):
         """Read a file from the cloudify manager filesystem."""
@@ -586,10 +476,6 @@ class BaseTestCase(unittest.TestCase):
 
 
 class AgentlessTestCase(BaseTestCase):
-    def setUp(self):
-        super(AgentlessTestCase, self).setUp()
-        self.addCleanup(self._save_manager_logs_after_test)
-
     def _get_latest_execution(self, workflow_id):
         execution_list = self.client.executions.list(
             include_system_workflows=True,
@@ -651,10 +537,7 @@ class BaseAgentTestCase(BaseTestCase):
 
 @pytest.mark.usefixtures('dockercompute_plugin')
 class AgentTestCase(BaseAgentTestCase):
-
-    def setUp(self):
-        super(AgentTestCase, self).setUp()
-        self.addCleanup(self._save_manager_logs_after_test)
+    pass
 
 
 class AgentTestWithPlugins(AgentTestCase):
