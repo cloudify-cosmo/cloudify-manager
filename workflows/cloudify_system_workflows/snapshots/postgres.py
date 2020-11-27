@@ -44,7 +44,7 @@ class Postgres(object):
     _TABLES_TO_KEEP = ['alembic_version', 'provider_context', 'roles',
                        'licenses']
     _CONFIG_TABLES = ['config', 'rabbitmq_brokers', 'certificates', 'managers',
-                      'db_nodes', 'maintenance_mode']
+                      'db_nodes', 'maintenance_mode', 'usage_collector']
     _TABLES_TO_EXCLUDE_ON_DUMP = _TABLES_TO_KEEP + \
         ['snapshots', 'plugins_states'] + _CONFIG_TABLES
     _TABLES_TO_RESTORE = ['users', 'tenants']
