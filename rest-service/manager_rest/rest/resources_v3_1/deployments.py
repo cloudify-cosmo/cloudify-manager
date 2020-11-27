@@ -122,7 +122,7 @@ def _update_labels(sm, deployment):
     """
     Updating the deployment's labels.
 
-    This function replaces the existing deployment's lables with the new labels
+    This function replaces the existing deployment's labels with the new labels
     that were passed in the request.
     If a new label already exists, it won't be created again.
     If an existing label is not in the new labels list, it will be deleted.
