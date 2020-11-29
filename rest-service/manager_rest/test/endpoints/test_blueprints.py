@@ -531,12 +531,13 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         self.put_blueprint('mock_blueprint',
                            'blueprint_with_inputs.yaml',
                            blueprint_id)
-
-        with self.assertRaises(exceptions.CloudifyClientError) as context:
-            self.client.blueprints.update(blueprint_id, {'state': new_state})
-        self.assertEqual(400, context.exception.status_code)
-        self.assertIn('Invalid state: `{0}`'.format(new_state),
-                      context.exception.message)
+        self.assertRaisesRegexp(
+            exceptions.CloudifyClientError,
+            'Invalid state: `{0}`'.format(new_state),
+            self.client.blueprints.update,
+            blueprint_id,
+            {'state': new_state}
+        )
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
@@ -545,11 +546,13 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         self.put_blueprint('mock_blueprint',
                            'blueprint_with_inputs.yaml',
                            blueprint_id)
-
-        with self.assertRaises(exceptions.CloudifyClientError) as context:
-            self.client.blueprints.update(blueprint_id, {'abc': 123})
-        self.assertEqual(400, context.exception.status_code)
-        self.assertIn('Unknown parameters: abc', context.exception.message)
+        self.assertRaisesRegexp(
+            exceptions.CloudifyClientError,
+            'Unknown parameters: abc',
+            self.client.blueprints.update,
+            blueprint_id,
+            {'abc': 123}
+        )
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
@@ -558,16 +561,18 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         self.put_blueprint('mock_blueprint',
                            'blueprint_with_inputs.yaml',
                            blueprint_id)
-
-        with self.assertRaises(exceptions.CloudifyClientError) as context:
-            self.client.blueprints.update(blueprint_id, {'visibility': 123})
-        self.assertEqual(400, context.exception.status_code)
-        self.assertIn('visibility parameter is expected to be of type {}'
-                      .format(text_type.__name__),
-                      context.exception.message)
-
-        with self.assertRaises(exceptions.CloudifyClientError) as context:
-            self.client.blueprints.update(blueprint_id, {'plan': 'abcd'})
-        self.assertEqual(400, context.exception.status_code)
-        self.assertIn('plan parameter is expected to be of type PickleType',
-                      context.exception.message)
+        self.assertRaisesRegexp(
+            exceptions.CloudifyClientError,
+            'visibility parameter is expected to be of type {}'.format(
+                text_type.__name__),
+            self.client.blueprints.update,
+            blueprint_id,
+            {'visibility': 123}
+        )
+        self.assertRaisesRegexp(
+            exceptions.CloudifyClientError,
+            'plan parameter is expected to be of type dict',
+            self.client.blueprints.update,
+            blueprint_id,
+            {'plan': 'abcd'}
+        )

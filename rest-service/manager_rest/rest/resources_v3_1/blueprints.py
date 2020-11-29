@@ -30,7 +30,6 @@ from manager_rest.upload_manager import (UploadedBlueprintsManager,
 from manager_rest.rest import (rest_utils,
                                resources_v2,
                                rest_decorators)
-from manager_rest.storage.models_base import db
 from manager_rest.utils import get_formatted_timestamp
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.rest.rest_utils import get_args_and_verify_arguments
@@ -128,7 +127,7 @@ class BlueprintsId(resources_v2.BlueprintsId):
         Update a blueprint.
 
         Used for updating the blueprint's state (and error) while uploading,
-        And updating the blueprint's other attributes upon a successful upload.
+        and updating the blueprint's other attributes upon a successful upload.
         This method is for internal use only.
         """
         if not request.json:
@@ -136,7 +135,7 @@ class BlueprintsId(resources_v2.BlueprintsId):
                                      ' at least one parameter to update')
 
         request_schema = {
-            'plan': {'type': db.PickleType, 'optional': True},
+            'plan': {'type': dict, 'optional': True},
             'description': {'type': text_type, 'optional': True},
             'main_file_name': {'type': text_type, 'optional': True},
             'visibility': {'type': text_type, 'optional': True},
@@ -154,8 +153,8 @@ class BlueprintsId(resources_v2.BlueprintsId):
         blueprint = sm.get(models.Blueprint, blueprint_id)
 
         # set blueprint state
-        state = request_dict.get('state', None)
-        if state is not None:
+        state = request_dict.get('state')
+        if state:
             if state not in BlueprintUploadState.STATES:
                 raise BadParametersError(
                     "Invalid state: `{0}`. Valid blueprint state values are: "
@@ -165,8 +164,8 @@ class BlueprintsId(resources_v2.BlueprintsId):
             blueprint.error = request_dict.get('error')
 
         # set blueprint visibility
-        visibility = request_dict.get('visibility', None)
-        if visibility is not None:
+        visibility = request_dict.get('visibility')
+        if visibility:
             if visibility not in VisibilityState.STATES:
                 raise BadParametersError(
                     "Invalid visibility: `{0}`. Valid visibility's values "
@@ -175,7 +174,6 @@ class BlueprintsId(resources_v2.BlueprintsId):
             blueprint.visibility = visibility
 
         # set other blueprint attributes.
-        # `plan` and `created at` types are validated at the DB level
         if 'plan' in request_dict:
             blueprint.plan = request_dict['plan']
         if 'description' in request_dict:
