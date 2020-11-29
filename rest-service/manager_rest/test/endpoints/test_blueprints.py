@@ -24,6 +24,7 @@ from manager_rest.storage import FileServer
 from manager_rest.test.attribute import attr
 from manager_rest.storage.resource_models import Blueprint
 
+from cloudify._compat import text_type
 from cloudify_rest_client import exceptions
 
 from .test_utils import generate_progress_func
@@ -493,3 +494,80 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         self.assertIn(
             "The `blueprint_id` argument contains illegal characters.",
             str(context.exception))
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_blueprint_update_state(self):
+        blueprint_id = 'blue_state'
+        new_state = 'failed_uploading'
+        new_error = 'Error: some message'
+        self.put_blueprint('mock_blueprint',
+                           'blueprint_with_inputs.yaml',
+                           blueprint_id)
+        blueprint = self.sm.get(Blueprint, blueprint_id, include=[
+            'plan', 'created_at', 'updated_at', 'visibility', 'state',
+            'error'])
+
+        self.client.blueprints.update(blueprint_id, {'state': new_state,
+                                                     'error': new_error})
+        updated_blueprint = self.sm.get(Blueprint, blueprint_id, include=[
+            'plan', 'created_at', 'updated_at', 'visibility', 'state',
+            'error'])
+
+        assert blueprint.created_at == updated_blueprint.created_at
+        assert blueprint.updated_at < updated_blueprint.updated_at
+        assert blueprint.plan == updated_blueprint.plan
+        assert blueprint.visibility == updated_blueprint.visibility
+        assert blueprint.state != updated_blueprint.state
+        assert blueprint.error != updated_blueprint.error
+        assert updated_blueprint.state == new_state
+        assert updated_blueprint.error == new_error
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_blueprint_update_invalid_state(self):
+        blueprint_id = 'blue_invalid_state'
+        new_state = 'nonsuch_state'
+        self.put_blueprint('mock_blueprint',
+                           'blueprint_with_inputs.yaml',
+                           blueprint_id)
+
+        with self.assertRaises(exceptions.CloudifyClientError) as context:
+            self.client.blueprints.update(blueprint_id, {'state': new_state})
+        self.assertEqual(400, context.exception.status_code)
+        self.assertIn('Invalid state: `{0}`'.format(new_state),
+                      context.exception.message)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_blueprint_update_invalid_param(self):
+        blueprint_id = 'blue_invalid_param'
+        self.put_blueprint('mock_blueprint',
+                           'blueprint_with_inputs.yaml',
+                           blueprint_id)
+
+        with self.assertRaises(exceptions.CloudifyClientError) as context:
+            self.client.blueprints.update(blueprint_id, {'abc': 123})
+        self.assertEqual(400, context.exception.status_code)
+        self.assertIn('Unknown parameters: abc', context.exception.message)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_blueprint_update_invalid_param_type(self):
+        blueprint_id = 'blue_invalid_param_type'
+        self.put_blueprint('mock_blueprint',
+                           'blueprint_with_inputs.yaml',
+                           blueprint_id)
+
+        with self.assertRaises(exceptions.CloudifyClientError) as context:
+            self.client.blueprints.update(blueprint_id, {'visibility': 123})
+        self.assertEqual(400, context.exception.status_code)
+        self.assertIn('visibility parameter is expected to be of type {}'
+                      .format(text_type.__name__),
+                      context.exception.message)
+
+        with self.assertRaises(exceptions.CloudifyClientError) as context:
+            self.client.blueprints.update(blueprint_id, {'plan': 'abcd'})
+        self.assertEqual(400, context.exception.status_code)
+        self.assertIn('plan parameter is expected to be of type PickleType',
+                      context.exception.message)
