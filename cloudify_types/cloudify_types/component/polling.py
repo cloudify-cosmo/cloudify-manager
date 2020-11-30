@@ -182,7 +182,7 @@ def is_deployment_execution_at_state(client,
 
     execution = client.executions.get(execution_id=execution_id,
                                       _include=execution_get_args)
-    ctx.logger.info(
+    ctx.logger.debug(
         'Execution "%s" of component "%s" state is %s',
         execution_id, dep_id, execution)
 
