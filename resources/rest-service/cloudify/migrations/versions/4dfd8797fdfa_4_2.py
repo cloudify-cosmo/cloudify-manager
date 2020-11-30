@@ -26,7 +26,7 @@ def upgrade():
     # Adding the enum resource_availability to postgres
     resource_availability = postgresql.ENUM('private', 'tenant', 'global',
                                             name='resource_availability')
-    resource_availability.create(op.get_bind())
+    op.execute(postgresql.base.CreateEnumType(resource_availability))
 
     # Update the resource_availability according to private_resource
     update_query = """UPDATE {0}
