@@ -1,4 +1,4 @@
-"""5_1_1 to 5_1_2
+"""5_1_1 to 5_2
 
 - Add columns state and error to blueprints table
 

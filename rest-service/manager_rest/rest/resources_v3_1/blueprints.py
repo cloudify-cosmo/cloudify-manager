@@ -19,7 +19,8 @@ from flask_restful.inputs import boolean
 from flask_restful.reqparse import Argument
 from flask_restful_swagger import swagger
 
-from cloudify.models_states import VisibilityState
+from cloudify._compat import text_type
+from cloudify.models_states import VisibilityState, BlueprintUploadState
 
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
@@ -29,9 +30,12 @@ from manager_rest.upload_manager import (UploadedBlueprintsManager,
 from manager_rest.rest import (rest_utils,
                                resources_v2,
                                rest_decorators)
+from manager_rest.utils import get_formatted_timestamp
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.rest.rest_utils import get_args_and_verify_arguments
-from manager_rest.manager_exceptions import ConflictError, IllegalActionError
+from manager_rest.manager_exceptions import (ConflictError,
+                                             IllegalActionError,
+                                             BadParametersError)
 
 
 class BlueprintsSetGlobal(SecuredResource):
@@ -115,6 +119,70 @@ class BlueprintsId(resources_v2.BlueprintsId):
             blueprint_id,
             force=query_args.force)
         return None, 204
+
+    @authorize('blueprint_upload')
+    @rest_decorators.marshal_with(models.Blueprint)
+    def patch(self, blueprint_id, **kwargs):
+        """
+        Update a blueprint.
+
+        Used for updating the blueprint's state (and error) while uploading,
+        and updating the blueprint's other attributes upon a successful upload.
+        This method is for internal use only.
+        """
+        if not request.json:
+            raise IllegalActionError('Update a blueprint request must include'
+                                     ' at least one parameter to update')
+
+        request_schema = {
+            'plan': {'type': dict, 'optional': True},
+            'description': {'type': text_type, 'optional': True},
+            'main_file_name': {'type': text_type, 'optional': True},
+            'visibility': {'type': text_type, 'optional': True},
+            'state': {'type': text_type, 'optional': True},
+            'error': {'type': text_type, 'optional': True},
+        }
+        request_dict = rest_utils.get_json_and_verify_params(request_schema)
+
+        invalid_params = set(request_dict.keys()) - set(request_schema.keys())
+        if invalid_params:
+            raise BadParametersError(
+                "Unknown parameters: {}".format(','.join(invalid_params))
+            )
+        sm = get_storage_manager()
+        blueprint = sm.get(models.Blueprint, blueprint_id)
+
+        # set blueprint state
+        state = request_dict.get('state')
+        if state:
+            if state not in BlueprintUploadState.STATES:
+                raise BadParametersError(
+                    "Invalid state: `{0}`. Valid blueprint state values are: "
+                    "{1}".format(state, BlueprintUploadState.STATES)
+                )
+            blueprint.state = state
+            blueprint.error = request_dict.get('error')
+
+        # set blueprint visibility
+        visibility = request_dict.get('visibility')
+        if visibility:
+            if visibility not in VisibilityState.STATES:
+                raise BadParametersError(
+                    "Invalid visibility: `{0}`. Valid visibility's values "
+                    "are: {1}".format(visibility, VisibilityState.STATES)
+                )
+            blueprint.visibility = visibility
+
+        # set other blueprint attributes.
+        if 'plan' in request_dict:
+            blueprint.plan = request_dict['plan']
+        if 'description' in request_dict:
+            blueprint.plan = request_dict['description']
+        if 'main_file_name' in request_dict:
+            blueprint.main_file_name = request_dict['main_file_name']
+
+        blueprint.updated_at = get_formatted_timestamp()
+        return sm.update(blueprint)
 
 
 class BlueprintsIdValidate(BlueprintsId):
