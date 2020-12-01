@@ -43,7 +43,7 @@ def update_system_role(from_role_id, to_role_id):
     """
     op.execute(
         users_roles.update()
-        .where(users_roles.c.role_id == from_role_id)
+        .where(users_roles.c.role_id == op.inline_literal(from_role_id))
         .values(role_id=to_role_id)
     )
 
@@ -52,7 +52,8 @@ def _get_role_id(role_name):
     """
     Return a SELECT statement that retrieves a role ID from a role name
     """
-    return sa.select([roles.c.id]).where(roles.c.name == role_name)
+    return sa.select([roles.c.id]).where(
+        roles.c.name == op.inline_literal(role_name))
 
 
 def upgrade():

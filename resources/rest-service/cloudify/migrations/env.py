@@ -18,9 +18,6 @@ logger = logging.getLogger('alembic.env')
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-config.set_main_option('sqlalchemy.url',
-                       current_app.config.get('SQLALCHEMY_DATABASE_URI'))
-target_metadata = current_app.extensions['migrate'].db.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -40,8 +37,7 @@ def run_migrations_offline():
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
-    context.configure(url=url)
+    context.configure(dialect_name='postgresql')
 
     with context.begin_transaction():
         context.run_migrations()
@@ -54,6 +50,10 @@ def run_migrations_online():
     and associate a connection with the context.
 
     """
+
+    config.set_main_option('sqlalchemy.url',
+                           current_app.config.get('SQLALCHEMY_DATABASE_URI'))
+    target_metadata = current_app.extensions['migrate'].db.metadata
 
     # this callback is used to prevent an auto-migration from being generated
     # when there are no changes to the schema
