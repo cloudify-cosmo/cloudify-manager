@@ -9,10 +9,8 @@ Create Date: 2019-08-23 13:36:03.985636
 """
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy import orm
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.sql import table, column
 
-from manager_rest.storage.models import User
 from manager_rest.storage.models_base import JSONString, UTCDateTime
 
 # revision identifiers, used by Alembic.
@@ -21,25 +19,16 @@ down_revision = '423a1643f365'
 branch_labels = None
 depends_on = None
 
-Base = declarative_base()
 
-
-class Config(Base):
-    __tablename__ = 'config'
-
-    name = sa.Column(sa.Text, primary_key=True)
-    value = sa.Column(JSONString(), nullable=False)
-    schema = sa.Column(JSONString(), nullable=True)
-    is_editable = sa.Column(sa.Boolean, default=True)
-    updated_at = sa.Column(UTCDateTime())
-    scope = sa.Column(sa.Text, primary_key=True)
-    _updater_id = sa.Column(
-        sa.Integer,
-        sa.ForeignKey(User.id, ondelete='SET NULL'),
-        nullable=True,
-        index=False,
-        primary_key=False,
-    )
+config_table = table(
+    'config',
+    column('name', sa.Text),
+    column('value', JSONString()),
+    column('schema', JSONString()),
+    column('is_editable', sa.Boolean),
+    column('updated_at', UTCDateTime()),
+    column('scope', sa.Text),
+)
 
 
 def upgrade():
@@ -56,18 +45,15 @@ def upgrade():
         'node_instances',
         sa.Column('index', sa.Integer(), nullable=True))
 
-    bind = op.get_bind()
-    session = orm.Session(bind=bind)
-    session.add(
-        Config(
+    op.bulk_insert(config_table, [
+        dict(
             name='ldap_ca_path',
             value=None,
             scope='rest',
             schema={'type': 'string'},
             is_editable=True
         )
-    )
-    session.commit()
+    ])
 
     _create_db_nodes_table()
     _update_managers_table()
@@ -680,16 +666,14 @@ def downgrade():
     op.drop_column('deployments', 'runtime_only_evaluation')
     op.drop_column('executions', 'blueprint_id')
     op.drop_column('node_instances', 'index')
-    bind = op.get_bind()
-    session = orm.Session(bind=bind)
-
-    ldap_ca_path = session.query(Config).filter_by(
-        name='ldap_ca_path',
-        scope='rest',
-    ).one()
-    session.delete(ldap_ca_path)
-    session.commit()
-
+    op.execute(
+        config_table
+        .delete()
+        .where(
+            config_table.c.name == op.inline_literal('ldap_ca_path'),
+            config_table.c.scope == op.inline_literal('rest')
+        )
+    )
     op.drop_constraint(
         op.f('rabbitmq_brokers_node_id_key'),
         'rabbitmq_brokers',

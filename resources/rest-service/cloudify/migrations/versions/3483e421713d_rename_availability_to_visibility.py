@@ -27,7 +27,7 @@ def upgrade():
     # to visibility
     visibility_enum = postgresql.ENUM(*visibility_states,
                                       name='visibility_states')
-    visibility_enum.create(op.get_bind())
+    op.execute(postgresql.base.CreateEnumType(visibility_enum))
     for table_name in resource_tables:
         op.alter_column(table_name,
                         'resource_availability',
@@ -45,7 +45,7 @@ def downgrade():
     # to resource_availability
     resource_availability = postgresql.ENUM(*visibility_states,
                                             name='resource_availability')
-    resource_availability.create(op.get_bind())
+    op.execute(postgresql.base.CreateEnumType(resource_availability))
     for table_name in resource_tables:
         op.alter_column(table_name,
                         'visibility',

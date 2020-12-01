@@ -50,7 +50,7 @@ def upgrade():
         groups_tenants.update()
         .values(role_id=(
             sa.select([roles.c.id])
-            .where(roles.c.name == 'user')
+            .where(roles.c.name == op.inline_literal('user'))
         ))
     )
     op.alter_column('groups_tenants', 'role_id', nullable=False)

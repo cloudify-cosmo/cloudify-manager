@@ -13,14 +13,12 @@ Create Date: 2020-03-30 06:27:26.747213
 
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy import orm, sql
+from sqlalchemy.sql import table, column, expression
 from manager_rest import storage
 from sqlalchemy.dialects import postgresql
-from sqlalchemy.ext.declarative import declarative_base
 
 from cloudify.models_states import VisibilityState
 
-from manager_rest.storage.models import User
 from manager_rest.storage.models_base import JSONString, UTCDateTime
 
 # revision identifiers, used by Alembic.
@@ -35,25 +33,15 @@ VISIBILITY_ENUM = postgresql.ENUM(VisibilityState.PRIVATE,
                                   name='visibility_states',
                                   create_type=False)
 
-Base = declarative_base()
-
-
-class Config(Base):
-    __tablename__ = 'config'
-
-    name = sa.Column(sa.Text, primary_key=True)
-    value = sa.Column(JSONString(), nullable=False)
-    schema = sa.Column(JSONString(), nullable=True)
-    is_editable = sa.Column(sa.Boolean, default=True)
-    updated_at = sa.Column(UTCDateTime())
-    scope = sa.Column(sa.Text, primary_key=True)
-    _updater_id = sa.Column(
-        sa.Integer,
-        sa.ForeignKey(User.id, ondelete='SET NULL'),
-        nullable=True,
-        index=False,
-        primary_key=False,
-    )
+config_table = table(
+    'config',
+    column('name', sa.Text),
+    column('value', JSONString()),
+    column('schema', JSONString()),
+    column('is_editable', sa.Boolean),
+    column('updated_at', UTCDateTime()),
+    column('scope', sa.Text),
+)
 
 
 def upgrade():
@@ -61,28 +49,32 @@ def upgrade():
     _create_inter_deployment_dependencies_table()
     _create_unique_indexes()
     _add_plugins_title_column()
-    _add_service_management_column()
     _remove_node_id_columns()
     _add_monitoring_credentials_columns()
 
-    bind = op.get_bind()
-    session = orm.Session(bind=bind)
-    session.add_all([
-        Config(
+    op.bulk_insert(config_table, [
+        dict(
+            name='service_management',
+            value='systemd',
+            scope='rest',
+            schema=None,
+            is_editable=True
+        ),
+        dict(
             name='blueprint_folder_max_size_mb',
             value=50,
             scope='rest',
             schema={'type': 'number', 'minimum': 0},
             is_editable=True
         ),
-        Config(
+        dict(
             name='blueprint_folder_max_files',
             value=10000,
             scope='rest',
             schema={'type': 'number', 'minimum': 0},
             is_editable=True
         ),
-        Config(
+        dict(
             name='monitoring_timeout',
             value=4,
             scope='rest',
@@ -90,7 +82,6 @@ def upgrade():
             is_editable=True
         )
     ])
-    session.commit()
     _create_plugins_states_table()
 
 
@@ -101,27 +92,40 @@ def downgrade():
     _drop_inter_deployment_dependencies_table()
     _drop_unique_indexes()
     _drop_plugins_title_column()
-    _drop_service_management_column()
     _create_node_id_columns()
 
-    bind = op.get_bind()
-    session = orm.Session(bind=bind)
-    blueprint_folder_max_size = session.query(Config).filter_by(
-        name='blueprint_folder_max_size_mb',
-        scope='rest',
-    ).one()
-    blueprint_folder_max_files = session.query(Config).filter_by(
-        name='blueprint_folder_max_files',
-        scope='rest',
-    ).one()
-    monitoring_timeout = session.query(Config).filter_by(
-        name='monitoring_timeout',
-        scope='rest',
-    ).one()
-    session.delete(blueprint_folder_max_size)
-    session.delete(blueprint_folder_max_files)
-    session.delete(monitoring_timeout)
-    session.commit()
+    op.execute(
+        config_table
+        .delete()
+        .where(
+            config_table.c.name == op.inline_literal('blueprint_folder_max_size_mb'),  # NOQA
+            config_table.c.scope == op.inline_literal('rest')
+        )
+    )
+    op.execute(
+        config_table
+        .delete()
+        .where(
+            config_table.c.name == op.inline_literal('blueprint_folder_max_files'),  # NOQA
+            config_table.c.scope == op.inline_literal('rest')
+        )
+    )
+    op.execute(
+        config_table
+        .delete()
+        .where(
+            config_table.c.name == op.inline_literal('service_management'),
+            config_table.c.scope == op.inline_literal('rest')
+        )
+    )
+    op.execute(
+        config_table
+        .delete()
+        .where(
+            config_table.c.name == op.inline_literal('monitoring_timeout'),
+            config_table.c.scope == op.inline_literal('rest')
+        )
+    )
 
 
 def _create_usage_collector_table():
@@ -277,7 +281,7 @@ def _create_inter_deployment_dependencies_table():
                   sa.Column('keep_old_deployment_dependencies',
                             sa.Boolean(),
                             nullable=False,
-                            server_default=sql.expression.true()))
+                            server_default=expression.true()))
 
 
 def _drop_inter_deployment_dependencies_table():
@@ -367,32 +371,6 @@ def _add_plugins_title_column():
 
 def _drop_plugins_title_column():
     op.drop_column(u'plugins', 'title')
-
-
-def _add_service_management_column():
-    bind = op.get_bind()
-    session = orm.Session(bind=bind)
-    session.add(
-        Config(
-            name='service_management',
-            value='systemd',
-            scope='rest',
-            schema=None,
-            is_editable=True
-        )
-    )
-    session.commit()
-
-
-def _drop_service_management_column():
-    bind = op.get_bind()
-    session = orm.Session(bind=bind)
-    service_management = session.query(Config).filter_by(
-        name='service_management',
-        scope='rest',
-    ).one()
-    session.delete(service_management)
-    session.commit()
 
 
 def _remove_node_id_columns():
