@@ -7,8 +7,10 @@ Revises: 387fcd049efb
 Create Date: 2020-11-09 15:12:12.055532
 
 """
+import yaml
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.sql import table, column, select
 
 from manager_rest.storage.models_base import UTCDateTime
 
@@ -27,7 +29,8 @@ def upgrade():
                   nullable=False,
                   server_default="0"))
     create_deployments_labels_table()
-    _create_permissions_table()
+    permissions_table = _create_permissions_table()
+    _load_permissions(permissions_table)
     _create_maintenance_mode_table()
     op.add_column(
         'roles',
@@ -114,7 +117,7 @@ def _create_labels_table(table_name, fk_column, fk_refcolumn, fk_index):
 
 
 def _create_permissions_table():
-    op.create_table(
+    return op.create_table(
         'permissions',
         sa.Column('id', sa.Integer(), nullable=False, autoincrement=True),
         sa.Column('role_id', sa.Integer(), nullable=False),
@@ -148,3 +151,29 @@ def _create_maintenance_mode_table():
         'maintenance_mode',
         ['_requested_by'],
         unique=False)
+
+
+def _load_permissions(permissions_table):
+    """Load permissions from the conf file, if it exists."""
+    try:
+        with open('/opt/manager/authorization.conf') as f:
+            data = yaml.safe_load(f)
+            permissions = data['permissions']
+    except (IOError, KeyError):
+        return
+    roles_table = table('roles', column('id'), column('name'))
+
+    for permission, roles in permissions.items():
+        for role in roles:
+            op.execute(
+                permissions_table.insert()
+                .from_select(
+                    ['name', 'role_id'],
+                    select([
+                        op.inline_literal(permission),
+                        roles_table.c.id
+                    ])
+                    .where(roles_table.c.name == op.inline_literal(role))
+                    .limit(op.inline_literal(1))
+                )
+            )
