@@ -30,7 +30,7 @@ class TestUsageCollectorWithAgent(AgentTestCase, TestUsageCollectorBase):
         messages = [
             "Uptime script finished running",
             "Usage script finished running",
-            "'customer_id': 'MockCustomer'",
+            "'customer_id': 'mock_customer'",
             "'node_instances_count': 1",
             "'compute_count': 1",
             "'agents_count': 1",

@@ -60,5 +60,11 @@ class TestUsageCollectorBase(BaseTestCase):
     def clean_usage_collector_log(self):
         # We need to clean the usage_collector log before each test, because
         # each test uses it for asserting different values.
-        command = 'cp /dev/null {0}'.format(join(LOG_PATH, LOG_FILE))
-        docker.execute(self.env.container_id, command)
+        test_usage_log = join(LOG_PATH, LOG_FILE)
+        complete_usage_log = join(LOG_PATH, 'complete_usage_collector.log')
+
+        docker.execute(self.env.container_id, 'cat {0} >> {1}'.format(
+            test_usage_log, complete_usage_log))
+
+        docker.execute(self.env.container_id,
+                       'cp /dev/null {0}'.format(test_usage_log))
