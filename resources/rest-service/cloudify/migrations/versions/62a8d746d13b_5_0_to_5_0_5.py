@@ -670,8 +670,8 @@ def downgrade():
         config_table
         .delete()
         .where(
-            config_table.c.name == op.inline_literal('ldap_ca_path'),
-            config_table.c.scope == op.inline_literal('rest')
+            (config_table.c.name == op.inline_literal('ldap_ca_path')) &
+            (config_table.c.scope == op.inline_literal('rest'))
         )
     )
     op.drop_constraint(
