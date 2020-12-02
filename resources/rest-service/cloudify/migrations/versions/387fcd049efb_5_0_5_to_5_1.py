@@ -98,32 +98,32 @@ def downgrade():
         config_table
         .delete()
         .where(
-            config_table.c.name == op.inline_literal('blueprint_folder_max_size_mb'),  # NOQA
-            config_table.c.scope == op.inline_literal('rest')
+            (config_table.c.name == op.inline_literal('blueprint_folder_max_size_mb')) & # NOQA
+            (config_table.c.scope == op.inline_literal('rest'))
         )
     )
     op.execute(
         config_table
         .delete()
         .where(
-            config_table.c.name == op.inline_literal('blueprint_folder_max_files'),  # NOQA
-            config_table.c.scope == op.inline_literal('rest')
+            (config_table.c.name == op.inline_literal('blueprint_folder_max_files')) &  # NOQA
+            (config_table.c.scope == op.inline_literal('rest'))
         )
     )
     op.execute(
         config_table
         .delete()
         .where(
-            config_table.c.name == op.inline_literal('service_management'),
-            config_table.c.scope == op.inline_literal('rest')
+            (config_table.c.name == op.inline_literal('service_management')) &
+            (config_table.c.scope == op.inline_literal('rest'))
         )
     )
     op.execute(
         config_table
         .delete()
         .where(
-            config_table.c.name == op.inline_literal('monitoring_timeout'),
-            config_table.c.scope == op.inline_literal('rest')
+            (config_table.c.name == op.inline_literal('monitoring_timeout')) &
+            (config_table.c.scope == op.inline_literal('rest'))
         )
     )
 
