@@ -170,7 +170,7 @@ def _load_permissions(permissions_table):
                 .from_select(
                     ['name', 'role_id'],
                     select([
-                        op.inline_literal(permission),
+                        op.inline_literal(permission).label('name'),
                         roles_table.c.id
                     ])
                     .where(roles_table.c.name == op.inline_literal(role))
