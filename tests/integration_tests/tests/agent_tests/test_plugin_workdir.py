@@ -21,6 +21,7 @@ from integration_tests.tests.utils import get_resource as resource
 
 
 @pytest.mark.usefixtures('testmockoperations_plugin')
+@pytest.mark.usefixtures('allow_agent')
 class PluginWorkdirTest(AgentTestCase):
 
     def test_plugin_workdir(self):
