@@ -115,6 +115,7 @@ def manager_container(request, resource_mapping):
     amqp_events_printer_thread = EventsPrinter(
         docker.get_manager_ip(container_id))
     amqp_events_printer_thread.start()
+    _disable_cron_jobs(container_id)
     try:
         yield container
     finally:
@@ -279,6 +280,11 @@ def {0}_plugin(rest_client, {0}_wagon):
 """.format(plugin_name), d)
     func = d['{0}_plugin'.format(plugin_name)]
     return pytest.fixture()(func)
+
+
+def _disable_cron_jobs(container_id):
+    if docker.file_exists(container_id, '/var/spool/cron/cfyuser'):
+        docker.execute(container_id, 'crontab -u cfyuser -r')
 
 
 cloudmock_wagon = _make_wagon_fixture('cloudmock')

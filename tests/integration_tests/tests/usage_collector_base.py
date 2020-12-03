@@ -14,6 +14,8 @@
 #    * limitations under the License.
 
 from os.path import join
+
+from integration_tests import BaseTestCase
 from integration_tests.framework import docker
 from integration_tests.tests.constants import MANAGER_PYTHON
 from integration_tests.tests.utils import (assert_messages_in_log,
@@ -26,18 +28,14 @@ LOG_PATH = '/var/log/cloudify/usage_collector'
 LOG_FILE = 'usage_collector.log'
 
 
-class TestUsageCollectorBase(object):
+class TestUsageCollectorBase(BaseTestCase):
     def run_scripts_with_deployment(self, yaml_path, messages):
         deployment, _ = self.deploy_application(resource(yaml_path),
                                                 timeout_seconds=120)
         self.run_collector_scripts_and_assert(messages)
         self.undeploy_application(deployment.id)
-        self.clean_timestamps()
 
     def run_collector_scripts_and_assert(self, messages):
-        docker.execute(self.env.container_id, 'mkdir -p {0}'.format(LOG_PATH))
-        docker.execute(self.env.container_id, 'echo > {0}'.format(
-            join(LOG_PATH, LOG_FILE)))
         for script in COLLECTOR_SCRIPTS:
             docker.execute(self.env.container_id, '{0} {1}.py'.format(
                 MANAGER_PYTHON,
@@ -49,9 +47,18 @@ class TestUsageCollectorBase(object):
                                join(LOG_PATH, LOG_FILE))
 
     def clean_timestamps(self):
-        # this is necessary for forcing the collector scripts to actually run
+        # This is necessary for forcing the collector scripts to actually run
         # in subsequent tests, despite not enough time passing since last run
         run_postgresql_command(
             self.env.container_id,
-            "UPDATE usage_collector SET hourly_timestamp=0, daily_timestamp=0 "
-            "WHERE id=0")
+            "UPDATE usage_collector SET hourly_timestamp=NULL, "
+            "daily_timestamp=NULL")
+
+    def clean_usage_collector_log(self):
+        # We need to clean the usage_collector log before each test, because
+        # each test uses it for asserting different values.
+        old_usage_log = join(LOG_PATH, self._testMethodName)
+        test_usage_log = join(LOG_PATH, LOG_FILE)
+
+        self.execute_on_manager(['mv', test_usage_log, old_usage_log])
+        self.execute_on_manager(['touch', test_usage_log])

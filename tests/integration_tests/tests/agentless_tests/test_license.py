@@ -20,6 +20,7 @@ import requests
 
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource
+from integration_tests.framework.constants import INSERT_MOCK_LICENSE_QUERY
 from cloudify_rest_client.exceptions import (
     MissingCloudifyLicense,
     ExpiredCloudifyLicense,
@@ -36,6 +37,12 @@ class TestLicense(AgentlessTestCase):
     def setUp(self):
         super(TestLicense, self).setUp()
         run_postgresql_command(self.env.container_id, "DELETE FROM licenses")
+
+    def tearDown(self):
+        super(TestLicense, self).setUp()
+        run_postgresql_command(self.env.container_id, "DELETE FROM licenses")
+        run_postgresql_command(self.env.container_id,
+                               INSERT_MOCK_LICENSE_QUERY)
 
     def test_error_when_no_license_on_manager(self):
         """
