@@ -60,8 +60,5 @@ class TestUsageCollectorBase(BaseTestCase):
         old_usage_log = join(LOG_PATH, self._testMethodName)
         test_usage_log = join(LOG_PATH, LOG_FILE)
 
-        docker.execute(self.env.container_id,
-                       'mv {0} {1}'.format(test_usage_log, old_usage_log))
-
-        docker.execute(self.env.container_id,
-                       'touch {0}'.format(test_usage_log))
+        self.execute_on_manager(['mv', test_usage_log, old_usage_log])
+        self.execute_on_manager(['touch', test_usage_log])
