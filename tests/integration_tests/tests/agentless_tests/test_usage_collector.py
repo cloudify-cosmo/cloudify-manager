@@ -26,6 +26,9 @@ class TestUsageCollector(AgentlessTestCase, TestUsageCollectorBase):
     def setUp(self):
         super(AgentlessTestCase, self).setUp()
         self.clean_timestamps()
+
+    def tearDown(self):
+        super(AgentlessTestCase, self).tearDown()
         self.clean_usage_collector_log()
 
     def test_collector_scripts(self):

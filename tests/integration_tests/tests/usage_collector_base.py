@@ -36,9 +36,6 @@ class TestUsageCollectorBase(BaseTestCase):
         self.undeploy_application(deployment.id)
 
     def run_collector_scripts_and_assert(self, messages):
-        docker.execute(self.env.container_id, 'mkdir -p {0}'.format(LOG_PATH))
-        docker.execute(self.env.container_id, 'echo > {0}'.format(
-            join(LOG_PATH, LOG_FILE)))
         for script in COLLECTOR_SCRIPTS:
             docker.execute(self.env.container_id, '{0} {1}.py'.format(
                 MANAGER_PYTHON,
@@ -60,11 +57,11 @@ class TestUsageCollectorBase(BaseTestCase):
     def clean_usage_collector_log(self):
         # We need to clean the usage_collector log before each test, because
         # each test uses it for asserting different values.
+        old_usage_log = join(LOG_PATH, self._testMethodName)
         test_usage_log = join(LOG_PATH, LOG_FILE)
-        complete_usage_log = join(LOG_PATH, 'complete_usage_collector.log')
-
-        docker.execute(self.env.container_id, 'cat {0} >> {1}'.format(
-            test_usage_log, complete_usage_log))
 
         docker.execute(self.env.container_id,
-                       'cp /dev/null {0}'.format(test_usage_log))
+                       'mv {0} {1}'.format(test_usage_log, old_usage_log))
+
+        docker.execute(self.env.container_id,
+                       'touch {0}'.format(test_usage_log))

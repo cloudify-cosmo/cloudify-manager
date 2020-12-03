@@ -35,5 +35,5 @@ ADMIN_TOKEN_SCRIPT = '/opt/cloudify/mgmtworker/create-admin-token.py'
 INSERT_MOCK_LICENSE_QUERY = "INSERT INTO licenses(customer_id, " \
                             "expiration_date, license_edition, trial," \
                             " cloudify_version, capabilities, signature)" \
-                            " VALUES('mock_customer', '2050-01-01', 'Spire'," \
+                            " VALUES('MockCustomer', '2050-01-01', 'Spire'," \
                             " false, '4.6', '{mock}', 'mock_signature');"

@@ -24,13 +24,16 @@ class TestUsageCollectorWithAgent(AgentTestCase, TestUsageCollectorBase):
     def setUp(self):
         super(AgentTestCase, self).setUp()
         self.clean_timestamps()
+
+    def tearDown(self):
+        super(AgentTestCase, self).tearDown()
         self.clean_usage_collector_log()
 
     def test_collector_scripts_with_agent(self):
         messages = [
             "Uptime script finished running",
             "Usage script finished running",
-            "'customer_id': 'mock_customer'",
+            "'customer_id': 'MockCustomer'",
             "'node_instances_count': 1",
             "'compute_count': 1",
             "'agents_count': 1",
