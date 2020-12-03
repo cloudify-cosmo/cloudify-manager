@@ -23,12 +23,19 @@ from integration_tests.tests.usage_collector_base import TestUsageCollectorBase
 @pytest.mark.usefixtures('cloudmock_plugin')
 @pytest.mark.usefixtures('testmockoperations_plugin')
 class TestUsageCollector(AgentlessTestCase, TestUsageCollectorBase):
+    def setUp(self):
+        super(AgentlessTestCase, self).setUp()
+        self.clean_timestamps()
+
+    def tearDown(self):
+        super(AgentlessTestCase, self).tearDown()
+        self.clean_usage_collector_log()
 
     def test_collector_scripts(self):
         messages = [
             "Uptime script finished running",
             "Usage script finished running",
-            "'customer_id': 'mock_customer'",
+            "'customer_id': 'MockCustomer'",
             "'node_instances_count': 1",
             "'compute_count': 1",
             "'agents_count': 0",
@@ -58,4 +65,3 @@ class TestUsageCollector(AgentlessTestCase, TestUsageCollectorBase):
         ]
         self.run_collector_scripts_and_assert(messages)
         self.delete_deployment(deployment.id, validate=True)
-        self.clean_timestamps()

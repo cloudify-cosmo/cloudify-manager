@@ -225,3 +225,12 @@ def get_manager_ip(container_id):
         '--format={{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}',
         container_id
     ]).decode('utf-8').strip()
+
+
+def file_exists(container_id, file_path):
+    try:
+        execute(container_id, 'test -e {0}'.format(file_path))
+    except subprocess.CalledProcessError:
+        return False
+
+    return True
