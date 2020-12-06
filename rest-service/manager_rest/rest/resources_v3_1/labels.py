@@ -12,7 +12,7 @@ class DeploymentsLabels(SecuredResource):
     @rest_decorators.marshal_list_response
     @rest_decorators.paginate
     def get(self, pagination=None):
-        """Get all deployments labels' keys in the current tenant"""
+        """Get all deployments' labels' keys in the current tenant"""
         get_all_results = rest_utils.verify_and_convert_bool(
             '_get_all_results',
             request.args.get('_get_all_results', False)
@@ -35,7 +35,7 @@ class DeploymentsLabelsKey(SecuredResource):
     @rest_decorators.marshal_list_response
     @rest_decorators.paginate
     def get(self, key, pagination=None):
-        """Get all deployments labels' keys in the current tenant"""
+        """Get all deployments' labels' values for the specified key."""
         get_all_results = rest_utils.verify_and_convert_bool(
             '_get_all_results',
             request.args.get('_get_all_results', False)
