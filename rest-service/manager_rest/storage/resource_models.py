@@ -413,12 +413,6 @@ class DeploymentLabel(_Label):
             backref=db.backref('labels', cascade='all, delete-orphan'))
 
 
-class Filter(CreatedAtMixin, SQLResourceBase):
-    __tablename__ = 'filters'
-
-    value = db.Column(JSONString, nullable=True)
-
-
 class Execution(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'executions'
     STATUS_DISPLAY_NAMES = {
