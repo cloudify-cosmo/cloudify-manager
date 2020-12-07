@@ -34,7 +34,7 @@ class TestHooks(AgentlessTestCase):
     PLUGIN_LOG_PATH = '/tmp/hook_task.txt'
 
     def tearDown(self):
-        self.execute_on_manager('rm -f {}'.format(self.PLUGIN_LOG_PATH))
+        self.execute_on_manager(['rm', '-f', self.PLUGIN_LOG_PATH])
 
     def test_missing_compatible_hook(self):
         new_config = """
