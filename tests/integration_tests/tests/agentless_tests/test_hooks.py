@@ -33,6 +33,9 @@ class TestHooks(AgentlessTestCase):
     LOG_PATH = '/var/log/cloudify/mgmtworker/mgmtworker.log'
     PLUGIN_LOG_PATH = '/tmp/hook_task.txt'
 
+    def tearDown(self):
+        self.execute_on_manager('rm -f {}'.format(self.PLUGIN_LOG_PATH))
+
     def test_missing_compatible_hook(self):
         new_config = """
 hooks:
@@ -112,7 +115,6 @@ hooks:
         self._start_a_workflow()
         event_type_msg = "workflow_started"
         kwargs_msg = "kwargs: {}"
-        time.sleep(2)  # so that the mgmtworker log has time to refresh
         self._assert_messages_in_log([event_type_msg, kwargs_msg],
                                      log_path=self.PLUGIN_LOG_PATH)
 
