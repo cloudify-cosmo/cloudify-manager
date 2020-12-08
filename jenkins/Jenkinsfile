@@ -44,7 +44,7 @@ pipeline {
         container('python'){
           sh '''
             apt-get update
-            apt-get install libldap-dev libsasl2-dev
+            apt-get install libldap-dev libsasl2-dev libldap2-dev
           '''
         }
       }
