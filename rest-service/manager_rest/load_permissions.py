@@ -29,21 +29,22 @@ def _update_roles(new_roles, keep):
         )
     logging.debug('Added roles: %s', roles_to_add)
     logging.info('Inserted %d new roles', len(roles_to_add))
-    if not keep:
+    if keep:
+        logging.debug('Not dropping roles!')
+    else:
         for r in roles_to_drop:
             db.session.execute('delete from roles where id=:id', {'id': r.id})
         logging.info('Deleted %d old roles', len(roles_to_drop))
         logging.debug('Dropping roles: %s', roles_to_drop)
-    else:
-        logging.debug('Not dropping roles!')
 
 
 def _update_permissions(new_permissions, keep):
     if not keep:
+        logging.debug('Not dropping permissions!')
+    else:
         count = db.session.execute('delete from permissions')
         logging.info('Deleted %d old permissions', count.rowcount)
-    else:
-        logging.debug('Not dropping permissions!')
+
     roles = {r.name: r for r in
              db.session.execute('select id, name from roles')}
 
