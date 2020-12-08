@@ -26,6 +26,7 @@ from manager_rest.storage import (
     get_storage_manager,
     models,
 )
+from manager_rest.storage.filters import LabelsFilters
 from manager_rest.security.authorization import authorize
 from manager_rest.utils import create_filter_params_list_description
 
@@ -66,7 +67,8 @@ class Deployments(resources_v1.Deployments):
             pagination=pagination,
             sort=sort,
             all_tenants=all_tenants,
-            get_all_results=get_all_results
+            get_all_results=get_all_results,
+            labels_filters=LabelsFilters(['env=aws', 'arch=k8s'])
         )
 
         if _include and 'workflows' in _include:

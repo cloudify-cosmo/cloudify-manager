@@ -31,6 +31,8 @@ from manager_rest.utils import (is_administrator,
                                 all_tenants_authorization,
                                 validate_global_modification)
 
+from .resource_models import DeploymentLabel
+
 from psycopg2 import DatabaseError as Psycopg2DBError
 sql_errors = (SQLAlchemyError, Psycopg2DBError)
 
@@ -124,7 +126,8 @@ class SQLStorageManager(object):
                       model_class,
                       filters,
                       substr_filters,
-                      all_tenants):
+                      all_tenants,
+                      labels_filters=None):
         """Add filter clauses to the query
 
         :param query: Base SQL query
@@ -140,6 +143,9 @@ class SQLStorageManager(object):
         query = self._add_permissions_filter(query, model_class)
         query = self._add_value_filter(query, filters)
         query = self._add_substr_filter(query, substr_filters)
+        if labels_filters:
+            query = labels_filters.add_labels_filters_to_query(query,
+                                                               DeploymentLabel)
         return query
 
     def _add_value_filter(self, query, filters):
@@ -320,7 +326,8 @@ class SQLStorageManager(object):
                    substr_filters=None,
                    sort=None,
                    all_tenants=None,
-                   distinct=None):
+                   distinct=None,
+                   labels_filters=None):
         """Get an SQL query object based on the params passed
 
         :param model_class: SQL DB table class
@@ -348,7 +355,8 @@ class SQLStorageManager(object):
                                    model_class,
                                    filters,
                                    substr_filters,
-                                   all_tenants)
+                                   all_tenants,
+                                   labels_filters)
         query = self._sort_query(query, model_class, sort, distinct)
         return query
 
@@ -557,7 +565,8 @@ class SQLStorageManager(object):
              all_tenants=None,
              substr_filters=None,
              get_all_results=False,
-             distinct=None):
+             distinct=None,
+             labels_filters=None):
         """Return a list of `model_class` results
 
         :param model_class: SQL DB table class
@@ -594,7 +603,8 @@ class SQLStorageManager(object):
                                 substr_filters,
                                 sort,
                                 all_tenants,
-                                distinct)
+                                distinct,
+                                labels_filters)
 
         results, total, size, offset = self._paginate(query,
                                                       pagination,
