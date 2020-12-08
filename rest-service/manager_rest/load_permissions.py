@@ -39,7 +39,7 @@ def _update_roles(new_roles, keep):
 
 
 def _update_permissions(new_permissions, keep):
-    if not keep:
+    if keep:
         logging.debug('Not dropping permissions!')
     else:
         count = db.session.execute('delete from permissions')
