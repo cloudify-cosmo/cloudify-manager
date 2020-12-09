@@ -20,6 +20,7 @@ import sh
 import sys
 import yaml
 import shlex
+import logging
 import tempfile
 import subprocess
 from functools import partial
@@ -157,7 +158,9 @@ sanity:
         for src, dst in resource_mapping:
             command += ['-v', '{0}:{1}:ro'.format(src, dst)]
     command += [image]
+    logging.info('Starting container: %s', ' '.join(command))
     manager_id = subprocess.check_output(command).decode('utf-8').strip()
+    logging.info('Started container %s', manager_id)
     execute(manager_id, ['cfy_manager', 'wait-for-starter'])
     return manager_id
 
