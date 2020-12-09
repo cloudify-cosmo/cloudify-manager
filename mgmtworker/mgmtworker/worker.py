@@ -37,7 +37,8 @@ from cloudify_rest_client.exceptions import InvalidExecutionUpdateStatus
 from cloudify_agent.worker import (
     ProcessRegistry,
     ServiceTaskConsumer,
-    CloudifyOperationConsumer
+    CloudifyOperationConsumer,
+    MetricsRegistry,
 )
 from cloudify_agent import worker as agent_worker
 
@@ -59,6 +60,7 @@ except ImportError:
     syncthing_utils = None
 
 DEFAULT_MAX_WORKERS = 10
+PUSHGATEWAY_ADDR = "127.0.0.1:9091"
 logger = logging.getLogger('mgmtworker')
 
 
@@ -304,20 +306,25 @@ class MgmtworkerServiceTaskConsumer(ServiceTaskConsumer):
 def make_amqp_worker(args):
     operation_registry = ProcessRegistry()
     workflow_registry = ProcessRegistry()
+    metrics_registry = MetricsRegistry.instance(args.push_gateway)
     handlers = [
         MgmtworkerOperationConsumer(args.queue, args.max_workers,
-                                    registry=operation_registry),
+                                    registry=operation_registry,
+                                    metrics_registry=metrics_registry),
         CloudifyWorkflowConsumer(args.queue, args.max_workers,
-                                 registry=workflow_registry),
+                                 registry=workflow_registry,
+                                 metrics_registry=metrics_registry),
         MgmtworkerServiceTaskConsumer(args.max_workers,
                                       operation_registry=operation_registry,
-                                      workflow_registry=workflow_registry),
+                                      workflow_registry=workflow_registry,
+                                      metrics_registry=metrics_registry),
     ]
 
     if args.hooks_queue:
         handlers.append(HookConsumer(args.hooks_queue,
                                      registry=operation_registry,
-                                     max_workers=args.max_workers))
+                                     max_workers=args.max_workers,
+                                     metrics_registry=metrics_registry))
 
     return AMQPConnection(handlers=handlers, connect_timeout=None)
 
@@ -352,6 +359,7 @@ def main():
     parser.add_argument('--queue')
     parser.add_argument('--max-workers', default=DEFAULT_MAX_WORKERS, type=int)
     parser.add_argument('--hooks-queue')
+    parser.add_argument('--push-gateway', default=PUSHGATEWAY_ADDR)
     args = parser.parse_args()
 
     setup_agent_logger('mgmtworker')
@@ -361,9 +369,13 @@ def main():
         prepare_broker_config()
         worker = make_amqp_worker(args)
         try:
+            # with c_ex.count_exceptions():
             worker.consume()
+            # c_ok.inc()
+            # g.set_to_current_time()
         except Exception:
             logger.exception('Error while reading from rabbitmq')
+        # push_to_gateway(PUSHGATEWAY_ADDR, job='mgmtworker', registry=registry)
         time.sleep(1)
 
 

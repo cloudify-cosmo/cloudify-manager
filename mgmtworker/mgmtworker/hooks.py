@@ -34,11 +34,12 @@ class HookConsumer(CloudifyOperationConsumer):
     routing_key = 'events.hooks'
     HOOKS_CONFIG_PATH = '/opt/mgmtworker/config/hooks.conf'
 
-    def __init__(self, queue_name, registry, max_workers=5):
+    def __init__(self, queue_name, registry, max_workers=5, **kwargs):
         super(HookConsumer, self).__init__(queue_name,
                                            exchange_type='topic',
                                            registry=registry,
-                                           threadpool_size=max_workers)
+                                           threadpool_size=max_workers,
+                                           **kwargs)
         self.queue = queue_name
         self.exchange = EVENTS_EXCHANGE_NAME
 
