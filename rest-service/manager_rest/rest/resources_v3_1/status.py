@@ -112,7 +112,7 @@ class Status(SecuredResource):
         self._add_or_update_service(services, 'PostgreSQL',
                                     NodeServiceStatus.ACTIVE)
 
-        if 'Haproxy for DB HA' in services:
+        if isinstance(config.instance.postgresql_host, list):
             services.pop('PostgreSQL')
             service_statuses = [
                 service['status'] for service in services.values()
