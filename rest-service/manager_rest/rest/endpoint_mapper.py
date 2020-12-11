@@ -96,7 +96,6 @@ def setup_resources(api):
         'UsersUnlock': 'users/unlock/<string:username>',
         'FileServerAuth': 'file-server-auth',
         'LdapAuthentication': 'ldap',
-        'SSLConfig': 'ssl',
         'Secrets': 'secrets',
         'SecretsExport': 'secrets/share/export',
         'SecretsImport': 'secrets/share/import',
