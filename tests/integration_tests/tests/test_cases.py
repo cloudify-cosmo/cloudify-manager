@@ -549,6 +549,7 @@ class BaseAgentTestCase(BaseTestCase):
 
 
 @pytest.mark.usefixtures('dockercompute_plugin')
+@pytest.mark.usefixtures('allow_agent')
 class AgentTestCase(BaseAgentTestCase):
     pass
 

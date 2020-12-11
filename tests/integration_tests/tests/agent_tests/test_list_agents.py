@@ -20,7 +20,6 @@ from integration_tests.tests.utils import (get_resource as resource,
                                            create_rest_client)
 
 
-@pytest.mark.usefixtures('allow_agent')
 class TestListAgents(AgentTestCase):
 
     def test_list_agents(self):
