@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
 import os
-import threading
+import json
+import time
 
 from pika.exceptions import ConnectionClosed
 
@@ -29,74 +29,67 @@ from integration_tests.framework import utils
 logger = utils.setup_logger('events_printer')
 
 
-class EventsPrinter(threading.Thread):
+def _consume_events(connection):
+    channel = connection.channel()
+    queues = []
 
-    def __init__(self, container_ip):
-        super(EventsPrinter, self).__init__()
-        self.daemon = True
-        self._container_ip = container_ip
+    # Binding the logs queue
+    _bind_queue_to_exchange(channel, LOGS_EXCHANGE_NAME, 'fanout', queues)
 
-    def run(self):
-        """
-        This function will consume logs and events directly from the
-        cloudify-logs and cloudify-events-topic exchanges. (As opposed to the
-        usual means of fetching events using the REST api).
+    # Binding the events queue
+    _bind_queue_to_exchange(channel, EVENTS_EXCHANGE_NAME, 'topic', queues,
+                            routing_key='events.#')
 
-        Note: This method is only used for events/logs printing.
-        Tests that need to assert on event should use the REST client events
-        module.
-        """
-        connection = utils.create_pika_connection(self._container_ip)
-        channel = connection.channel()
-        queues = []
+    if not os.environ.get('CI'):
+        cloudify.logs.EVENT_CLASS = ColorfulEvent
+    cloudify.logs.EVENT_VERBOSITY_LEVEL = cloudify.event.MEDIUM_VERBOSE
 
-        # Binding the logs queue
-        self._bind_queue_to_exchange(channel,
-                                     LOGS_EXCHANGE_NAME,
-                                     'fanout',
-                                     queues)
-
-        # Binding the events queue
-        self._bind_queue_to_exchange(channel,
-                                     EVENTS_EXCHANGE_NAME,
-                                     'topic',
-                                     queues,
-                                     routing_key='events.#')
-
-        if not os.environ.get('CI'):
-            cloudify.logs.EVENT_CLASS = ColorfulEvent
-        cloudify.logs.EVENT_VERBOSITY_LEVEL = cloudify.event.MEDIUM_VERBOSE
-
-        def callback(ch, method, properties, body):
-            try:
-                ev = json.loads(body)
-                output = cloudify.logs.create_event_message_prefix(ev)
-                if output:
-                    print(output)
-            except Exception:
-                logger.error('event/log format error - output: {0}'
-                             .format(body), exc_info=True)
-
-        channel.basic_consume(callback, queue=queues[0], no_ack=True)
-        channel.basic_consume(callback, queue=queues[1], no_ack=True)
+    def callback(ch, method, properties, body):
         try:
-            channel.start_consuming()
-        except ConnectionClosed:
-            pass
+            ev = json.loads(body)
+            output = cloudify.logs.create_event_message_prefix(ev)
+            if output:
+                print(output)
+        except Exception:
+            logger.error('event/log format error - output: {0}'
+                         .format(body), exc_info=True)
 
-    def _bind_queue_to_exchange(self,
-                                channel,
-                                exchange_name,
-                                exchange_type,
-                                queues,
-                                routing_key=None):
-        channel.exchange_declare(exchange=exchange_name,
-                                 exchange_type=exchange_type,
-                                 auto_delete=False,
-                                 durable=True)
-        result = channel.queue_declare(exclusive=True)
-        queue_name = result.method.queue
-        queues.append(queue_name)
-        channel.queue_bind(exchange=exchange_name,
-                           queue=queue_name,
-                           routing_key=routing_key)
+    channel.basic_consume(callback, queue=queues[0], no_ack=True)
+    channel.basic_consume(callback, queue=queues[1], no_ack=True)
+    channel.start_consuming()
+
+
+def _bind_queue_to_exchange(channel,
+                            exchange_name,
+                            exchange_type,
+                            queues,
+                            routing_key=None):
+    channel.exchange_declare(exchange=exchange_name,
+                             exchange_type=exchange_type,
+                             auto_delete=False,
+                             durable=True)
+    result = channel.queue_declare(exclusive=True)
+    queue_name = result.method.queue
+    queues.append(queue_name)
+    channel.queue_bind(exchange=exchange_name,
+                       queue=queue_name,
+                       routing_key=routing_key)
+
+
+def print_events(container_ip):
+    """Print logs and events from rabbitmq.
+
+    This consumes directly cloudify-logs and cloudify-events-topic exchanges.
+    (As opposed to the usual means of fetching events using the REST api).
+
+    Note: This method is only used for events/logs printing.
+    Tests that need to assert on event should use the REST client events
+    module.
+    """
+    while True:
+        try:
+            connection = utils.create_pika_connection(container_ip)
+            _consume_events(connection)
+        except ConnectionClosed as e:
+            logger.debug('print_events got: %s', e)
+            time.sleep(3)

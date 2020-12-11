@@ -1,6 +1,7 @@
 import os
-import pytest
 import logging
+import pytest
+import threading
 import wagon
 
 import integration_tests_plugins
@@ -9,7 +10,7 @@ from collections import namedtuple
 from integration_tests.tests import utils as test_utils
 from integration_tests.framework import docker
 from integration_tests.framework.utils import zip_files
-from integration_tests.framework.amqp_events_printer import EventsPrinter
+from integration_tests.framework.amqp_events_printer import print_events
 from integration_tests.framework.flask_utils import \
     prepare_reset_storage_script, reset_storage
 
@@ -115,8 +116,9 @@ def manager_container(request, resource_mapping):
     container_ip = docker.get_manager_ip(container_id)
     container = Env(container_id, container_ip)
     prepare_reset_storage_script(container_id)
-    amqp_events_printer_thread = EventsPrinter(
-        docker.get_manager_ip(container_id))
+    amqp_events_printer_thread = threading.Thread(
+        target=print_events, args=(docker.get_manager_ip(container_id), ))
+    amqp_events_printer_thread.daemon = True
     amqp_events_printer_thread.start()
     _disable_cron_jobs(container_id)
     try:
