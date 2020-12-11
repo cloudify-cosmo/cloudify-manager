@@ -25,7 +25,6 @@ from integration_tests.tests.utils import get_resource as resource
 
 @pytest.mark.usefixtures('dockercompute_plugin')
 @pytest.mark.usefixtures('cloudmock_plugin')
-@pytest.mark.usefixtures('allow_agent')
 class PluginInstallationTest(AgentTestCase):
     def _wait_for(self, for_what, how_long):
         for _ in range(how_long):
