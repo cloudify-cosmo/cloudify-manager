@@ -13,13 +13,9 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from subprocess import check_call
-
-from flask import request
 from flask_restful.reqparse import Argument
 
 from cloudify._compat import text_type
-from manager_rest import config
 from manager_rest.security import SecuredResource, premium_only
 from manager_rest.rest import rest_utils
 from manager_rest.storage import get_storage_manager, models
@@ -36,53 +32,6 @@ try:
     from cloudify_premium import manager as manager_premium
 except ImportError:
     manager_premium = None
-
-
-DEFAULT_CONF_PATH = '/etc/nginx/conf.d/cloudify.conf'
-HTTP_PATH = '/etc/nginx/conf.d/http-external-rest-server.cloudify'
-HTTPS_PATH = '/etc/nginx/conf.d/https-external-rest-server.cloudify'
-
-
-class SSLConfig(SecuredResource):
-    @authorize('ssl_set')
-    def post(self):
-        """
-        Enable/Disable SSL
-        """
-        request_dict = rest_utils.get_json_and_verify_params({'state'})
-        state = rest_utils.verify_and_convert_bool('state',
-                                                   request_dict.get('state'))
-        status = 'enabled' if state else 'disabled'
-        if state == SSLConfig._is_enabled():
-            return 'SSL is already {0} on the manager'.format(status)
-        else:
-            self._set_ssl_state(state)
-        return 'SSL is now {0} on the manager'.format(status)
-
-    @authorize('ssl_get')
-    def get(self):
-        """
-        Get ssl state (enabled/disabled)
-        """
-        return 'SSL {0}'.format(
-            'enabled' if SSLConfig._is_enabled() else 'disabled')
-
-    @staticmethod
-    def _is_enabled():
-        return request.scheme == 'https'
-
-    @staticmethod
-    def _set_ssl_state(state):
-        ssl_flag = '--ssl-enabled' if state else '--ssl-disabled'
-        check_call(
-            [
-                'sudo',
-                '/opt/manager/scripts/set-manager-ssl.py',
-                ssl_flag,
-                '--service-management',
-                config.instance.service_management
-            ]
-        )
 
 
 # community base classes for the managers and brokers endpoints:

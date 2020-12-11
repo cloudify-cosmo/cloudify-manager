@@ -20,7 +20,6 @@ from .agents import Agents, AgentsName           # NOQA
 from .executions import Executions, ExecutionsCheck   # NOQA
 
 from .manager import (                           # NOQA
-    SSLConfig,
     Managers,
     ManagersId,
     RabbitMQBrokers,
