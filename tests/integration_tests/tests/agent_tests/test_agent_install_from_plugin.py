@@ -22,7 +22,6 @@ from integration_tests.tests.utils import get_resource as resource
 
 
 @pytest.mark.usefixtures('dockercompute_plugin')
-@pytest.mark.usefixtures('allow_agent')
 class TestWorkflow(AgentTestWithPlugins):
     def test_agent_install_from_plugin(self):
         deployment_id = 'd{0}'.format(uuid.uuid4())

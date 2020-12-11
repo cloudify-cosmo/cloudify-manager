@@ -13,13 +13,10 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-import pytest
-
 from integration_tests import AgentTestCase
 from integration_tests.tests.usage_collector_base import TestUsageCollectorBase
 
 
-@pytest.mark.usefixtures('allow_agent')
 class TestUsageCollectorWithAgent(AgentTestCase, TestUsageCollectorBase):
     def setUp(self):
         super(AgentTestCase, self).setUp()

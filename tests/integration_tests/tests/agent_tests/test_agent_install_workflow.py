@@ -21,7 +21,6 @@ from integration_tests.tests.utils import get_resource as resource
 
 
 @pytest.mark.usefixtures('dockercompute_plugin')
-@pytest.mark.usefixtures('allow_agent')
 class TestWorkflow(AgentTestWithPlugins):
     def _get_queues(self, vhost=None):
         cmd = ['rabbitmqctl', 'list_queues', '-s']
