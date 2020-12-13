@@ -16,7 +16,7 @@ from integration_tests.framework.flask_utils import \
 
 
 logger = logging.getLogger('TESTENV')
-Env = namedtuple('Env', ['container_id', 'container_ip'])
+Env = namedtuple('Env', ['container_id', 'container_ip', 'service_management'])
 
 
 def pytest_addoption(parser):
@@ -122,7 +122,7 @@ def manager_container(request, resource_mapping):
             image_name, service_management, resource_mapping=resource_mapping)
         docker.upload_mock_license(container_id)
     container_ip = docker.get_manager_ip(container_id)
-    container = Env(container_id, container_ip)
+    container = Env(container_id, container_ip, service_management)
     prepare_reset_storage_script(container_id)
     amqp_events_printer_thread = threading.Thread(
         target=print_events, args=(docker.get_manager_ip(container_id), ))
