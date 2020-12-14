@@ -1,168 +1,130 @@
 import re
-import ast
-
-from sqlalchemy import and_ as sql_and
-
-from cloudify._compat import text_type
 
 from manager_rest import manager_exceptions
 from manager_rest.storage.models_base import db
 
 
-class LabelsFilters(object):
-    def __init__(self, raw_labels_filters_list):
-        self.labels_filters_list = self._create_labels_filters_list(
-            raw_labels_filters_list)
-
-    def _create_labels_filters_list(self, raw_labels_filters_list):
-        labels_filters_list = []
-        for labels_filter in raw_labels_filters_list:
-            try:
-                if '!=' in labels_filter:
-                    label_key, label_value = labels_filter.split('!=')
-                    if self._is_label_value_list(label_value):
-                        labels_filters_list.append(
-                            KeyNotEqualListValues(
-                                label_key, ast.literal_eval(label_value)
-                            ))
-                    else:
-                        labels_filters_list.append(
-                            KeyNotEqualValue(label_key, label_value))
-
-                elif '=' in labels_filter:
-                    label_key, label_value = labels_filter.split('=')
-                    if self._is_label_value_list(label_value):
-                        labels_filters_list.append(
-                            KeyEqualListValues(
-                                label_key, ast.literal_eval(label_value)
-                            ))
-                    else:
-                        labels_filters_list.append(
-                            KeyEqualValue(label_key, label_value))
-
-                elif 'null' in labels_filter:
-                    if re.match(r'\S+ is null', labels_filter):
-                        labels_filters_list.append(
-                            KeyNotExist(labels_filter.split()[0], None))
-                    elif re.match(r'\S+ is not null', labels_filter):
-                        labels_filters_list.append(
-                            KeyExist(labels_filter.split()[0], None))
-                    else:
-                        self.raise_bad_labels_filter(labels_filter)
-
-            except SyntaxError:
-                self.raise_bad_labels_filter(labels_filter)
-
-        return labels_filters_list
-
-    @staticmethod
-    def raise_bad_labels_filter_value(labels_filter_value):
-        raise manager_exceptions.BadParametersError(
-            'The labels filter value `{0}` must be a string or a list '
-            'of strings'.format(labels_filter_value)
-        )
-
-    @staticmethod
-    def raise_bad_labels_filter(labels_filter_value):
-        raise manager_exceptions.BadParametersError(
-            'The labels filter `{0}` is not in the right '
-            'format. It must be one of: <key>=<value>, '
-            '<key>=[<value1>, <value2>, ...], <key>!=<value>, '
-            '<key>!=[<value1>, <value2>, ...], <key> is null, '
-            '<key> is not null'.format(labels_filter_value)
-        )
-
-    def _is_label_value_list(self, raw_label_value):
+def add_labels_filters_to_query(query, labels_model, labels_filters):
+    query = query.join(labels_model)
+    for labels_filter in labels_filters:
         try:
-            label_value = ast.literal_eval(raw_label_value)
-            if isinstance(label_value, list):
-                return True
+            if '!=' in labels_filter:
+                label_key, raw_label_value = labels_filter.split('!=')
+                label_value = _get_label_value(raw_label_value)
+                if isinstance(label_value, list):
+                    query = query.filter(key_not_equal_list_values(
+                        labels_model, label_key, label_value))
+                else:
+                    query = query.filter(key_not_equal_value(
+                        labels_model, label_key, label_value))
+
+            elif '=' in labels_filter:
+                label_key, raw_label_value = labels_filter.split('=')
+                label_value = _get_label_value(raw_label_value)
+                if isinstance(label_value, list):
+                    query = query.filter(key_equal_list_values(
+                        labels_model, label_key, label_value))
+                else:
+                    query = query.filter(
+                        key_equal_value(labels_model, label_key, label_value))
+
+            elif 'null' in labels_filter:
+                match_null = re.match(r'(\S+) is null', labels_filter)
+                match_not_null = re.match(r'(\S+) is not null', labels_filter)
+                if match_null:
+                    query = query.filter(
+                        key_not_exist(labels_model, match_null.group(1)))
+                elif match_not_null:
+                    query = query.filter(
+                        key_exist(labels_model, match_not_null.group(1)))
+                else:
+                    _raise_bad_labels_filter(labels_filter)
+
             else:
-                self.raise_bad_labels_filter_value(raw_label_value)
-        except ValueError:
-            if isinstance(raw_label_value, text_type):
-                return False
-            else:
-                self.raise_bad_labels_filter_value(raw_label_value)
+                _raise_bad_labels_filter(labels_filter)
+
         except SyntaxError:
-            self.raise_bad_labels_filter_value(raw_label_value)
+            _raise_bad_labels_filter(labels_filter)
 
-    def add_labels_filters_to_query(self, query, labels_model):
-        query = query.join(labels_model)
-        for labels_filter in self.labels_filters_list:
-            query = query.filter(labels_filter.get_query_filter(labels_model))
-
-        return query
+    return query
 
 
-class LabelsFilter(object):
-    def __init__(self, label_key, label_value):
-        self.label_key = label_key
-        self.label_value = label_value
-
-    def get_query_filter(self, labels_model):
-        raise NotImplementedError()
+def _raise_bad_labels_filter_value(labels_filter_value):
+    raise manager_exceptions.BadParametersError(
+        'The labels filter value `{0}` must be a string or a list '
+        'of strings'.format(labels_filter_value)
+    )
 
 
-class KeyEqualValue(LabelsFilter):
+def _raise_bad_labels_filter(labels_filter_value):
+    raise manager_exceptions.BadParametersError(
+        'The labels filter `{0}` is not in the right '
+        'format. It must be one of: <key>=<value>, '
+        '<key>=[<value1>,<value2>,...], <key>!=<value>, '
+        '<key>!=[<value1>,<value2>,...], <key> is null, '
+        '<key> is not null'.format(labels_filter_value)
+    )
+
+
+def _get_label_value(raw_label_value):
+    # raw_label_value should be of the form [<value1>,<value2>,...]
+    # in order to count as a list
+    match_list = re.match(r'^\[(\S+)\]$', raw_label_value)
+    if match_list:
+        return match_list.group(1).split(',')
+
+    return raw_label_value
+
+
+def key_equal_value(labels_model, label_key, label_value):
     """ <key>=<value> """
-    def __init__(self, label_key, label_value):
-        super(KeyEqualValue, self).__init__(label_key, label_value)
+    return labels_model._deployment_fk.in_(
+        db.session.query(labels_model._deployment_fk)
+        .filter(labels_model.key == label_key,
+                labels_model.value == label_value)
+        .subquery())
 
-    def get_query_filter(self, labels_model):
-        return sql_and(labels_model.key == self.label_key,
-                       labels_model.value == self.label_value)
 
-
-class KeyEqualListValues(LabelsFilter):
+def key_equal_list_values(labels_model, label_key, label_value):
     """ <key>=[<val1>,<val2>] """
-    def __init__(self, label_key, label_value):
-        super(KeyEqualListValues, self).__init__(label_key, label_value)
+    return labels_model._deployment_fk.in_(
+        db.session.query(labels_model._deployment_fk)
+        .filter(labels_model.key == label_key,
+                labels_model.value.in_(label_value))
+        .subquery())
 
-    def get_query_filter(self, labels_model):
-        return sql_and(labels_model.key == self.label_key,
-                       labels_model.value.in_(self.label_value))
 
-
-class KeyNotEqualValue(LabelsFilter):
+def key_not_equal_value(labels_model, label_key, label_value):
     """ <key>!=<val> """
-    def __init__(self, label_key, label_value):
-        super(KeyNotEqualValue, self).__init__(label_key, label_value)
+    return labels_model._deployment_fk.in_(
+        db.session.query(labels_model._deployment_fk)
+        .filter(labels_model.key == label_key,
+                labels_model.value != label_value)
+        .subquery())
 
-    def get_query_filter(self, labels_model):
-        return sql_and(labels_model.key == self.label_key,
-                       labels_model.value != self.label_value)
 
-
-class KeyNotEqualListValues(LabelsFilter):
+def key_not_equal_list_values(labels_model, label_key, label_value):
     """ <key>!=[<val1>,<val1>] """
-    def __init__(self, label_key, label_value):
-        super(KeyNotEqualListValues, self).__init__(label_key, label_value)
+    return labels_model._deployment_fk.in_(
+        db.session.query(labels_model._deployment_fk)
+        .filter(labels_model.key == label_key,
+                ~labels_model.value.in_(label_value))
+        .subquery())
 
-    def get_query_filter(self, labels_model):
-        return sql_and(labels_model.key == self.label_key,
-                       ~labels_model.value.in_(self.label_value))
 
-
-class KeyNotExist(LabelsFilter):
+def key_not_exist(labels_model, label_key):
     """ <key> is null """
-    def __init__(self, label_key, label_value):
-        super(KeyNotExist, self).__init__(label_key, label_value)
-
-    def get_query_filter(self, labels_model):
-        subquery = (db.session.query(labels_model._deployment_fk)
-                    .filter(labels_model.key == self.label_key)
-                    .subquery())
-        return ~labels_model._deployment_fk.in_(subquery)
+    return ~labels_model._deployment_fk.in_(
+        _labels_key_subquery(labels_model, label_key))
 
 
-class KeyExist(LabelsFilter):
+def key_exist(labels_model, label_key):
     """ <key> is not null """
-    def __init__(self, label_key, label_value):
-        super(KeyExist, self).__init__(label_key, label_value)
+    return labels_model._deployment_fk.in_(
+        _labels_key_subquery(labels_model, label_key))
 
-    def get_query_filter(self, labels_model):
-        subquery = (db.session.query(labels_model._deployment_fk)
-                    .filter(labels_model.key == self.label_key)
-                    .subquery())
-        return labels_model._deployment_fk.in_(subquery)
+
+def _labels_key_subquery(labels_model, label_key):
+    return (db.session.query(labels_model._deployment_fk)
+            .filter(labels_model.key == label_key)
+            .subquery())
