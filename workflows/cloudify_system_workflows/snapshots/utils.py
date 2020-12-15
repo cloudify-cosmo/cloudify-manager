@@ -31,11 +31,6 @@ from .constants import SECURITY_FILE_LOCATION, SECURITY_FILENAME
 from cloudify.utils import ManagerVersion, get_local_rest_certificate
 from cloudify.utils import get_tenant_name, internal as internal_utils
 
-# Path to python binary in the manager environment
-PYTHON_MANAGER_ENV = '/opt/manager/env/bin/python'
-# Path to database migration script
-SCHEMA_SCRIPT = '/opt/manager/resources/cloudify/migrations/schema.py'
-
 
 class DictToAttributes(dict):
     def __init__(self, dictionary):
