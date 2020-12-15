@@ -1,10 +1,14 @@
 from __future__ import with_statement
 
 import logging
+import os
 
 from flask import current_app
 from alembic import context
 from sqlalchemy import engine_from_config, pool
+
+from manager_rest import config as manager_config
+from manager_rest.flask_utils import setup_flask_app
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -85,4 +89,10 @@ def run_migrations_online():
 if context.is_offline_mode():
     run_migrations_offline()
 else:
-    run_migrations_online()
+    os.environ.setdefault('MANAGER_REST_CONFIG_PATH',
+                          '/opt/manager/cloudify-rest.conf')
+    manager_config.instance.load_configuration(from_db=False)
+
+    app = setup_flask_app()
+    with app.app_context():
+        run_migrations_online()
