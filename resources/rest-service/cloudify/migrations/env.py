@@ -91,8 +91,10 @@ if context.is_offline_mode():
 else:
     os.environ.setdefault('MANAGER_REST_CONFIG_PATH',
                           '/opt/manager/cloudify-rest.conf')
-    manager_config.instance.load_configuration(from_db=False)
 
-    app = setup_flask_app()
-    with app.app_context():
-        run_migrations_online()
+    if os.path.exists(os.environ['MANAGER_REST_CONFIG_PATH']):
+        manager_config.instance.load_configuration(from_db=False)
+        app = setup_flask_app()
+        app.app_context().push()
+
+    run_migrations_online()
