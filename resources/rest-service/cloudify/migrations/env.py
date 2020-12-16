@@ -34,7 +34,7 @@ def default_config_path():
     try:
         yield
     finally:
-        del os.environ['MANAGER_REST_CONFIG_PATH']
+        os.environ.pop('MANAGER_REST_CONFIG_PATH', None)
         if original_env:
             os.environ['MANAGER_REST_CONFIG_PATH'] = original_env
 
@@ -101,7 +101,7 @@ if context.is_offline_mode():
 else:
 
     with default_config_path():
-        if os.path.exists(os.environ['MANAGER_REST_CONFIG_PATH']):
+        if os.environ.get('MANAGER_REST_CONFIG_PATH'):
             manager_config.instance.load_configuration(from_db=False)
             app = setup_flask_app()
             app.app_context().push()
