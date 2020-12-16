@@ -12,19 +12,13 @@ import sys
 import yaml
 
 
-def _copy_ca_cert():
-    """Copy the DB CA cert from the haproxy dir to cfyuser's dir.
-
-    Also chown to cfyuser.
-    """
-    ca_cert = '/etc/cloudify/ssl/db_ca.crt'
-    shutil.copyfile('/etc/haproxy/ca.crt', ca_cert)
-    logging.info('Copied the CA certificate to %s', ca_cert)
-
-    cfyuser_uid = pwd.getpwnam('cfyuser').pw_uid
-    cfyuser_gid = grp.getgrnam('cfyuser').gr_gid
-    os.chown(ca_cert, cfyuser_uid, cfyuser_gid)
-    return ca_cert
+def _copy(src, dest, username, groupname):
+    """Copy src to dest and chown to uid:gid"""
+    shutil.copyfile(src, dest)
+    uid = pwd.getpwnam(username).pw_uid
+    gid = grp.getgrnam(groupname).gr_gid
+    os.chown(dest, uid, gid)
+    return dest
 
 
 def _find_db_servers(haproxy_cfg):
@@ -43,6 +37,146 @@ def _find_db_servers(haproxy_cfg):
     return [addr.partition(':')[0] for addr in server_addrs]
 
 
+def _format_db_urls(rest_config, params, db):
+    params = '&'.join('{0}={1}'.format(k, v) for k, v in params.items() if v)
+    for db in rest_config['postgresql_host']:
+        yield (
+            'postgres://{username}:{password}@{host}:{port}/{db}?{params}'
+            .format(
+                username=rest_config['postgresql_username'],
+                password=rest_config['postgresql_password'],
+                host=db,
+                port=5432,
+                db=db,
+                params=params
+            )
+        )
+
+
+def _update_stage_conf(rest_config, commit):
+    logging.debug('Loading stage config...')
+    try:
+        with open('/opt/cloudify-stage/conf/app.json') as f:
+            stage_conf = json.load(f)
+    except IOError as e:
+        raise RuntimeError('Cannot open Stage config: {0}'.format(e))
+
+    postgres_ca = '/opt/cloudify-stage/conf/postgres_ca.crt'
+    if commit:
+        _copy(
+            rest_config['postgresql_ca_cert_path'],
+            postgres_ca,
+            'stage_user',
+            'cfyuser'
+        )
+    stage_conf['db']['options']['dialectOptions'].update({
+        'ssl': {
+            'rejectUnauthorized': True,
+            'ca': postgres_ca
+        }
+    })
+    if rest_config.get('postgresql_ssl_key_path'):
+        postgres_cert = '/opt/cloudify-stage/conf/postgres.crt'
+        postgres_key = '/opt/cloudify-stage/conf/postgres.key'
+        if commit:
+            _copy(
+                rest_config['postgresql_ssl_cert_path'],
+                postgres_cert,
+                'stage_user',
+                'cfyuser'
+            )
+            _copy(
+                rest_config['postgresql_ssl_key_path'],
+                postgres_key,
+                'stage_user',
+                'cfyuser'
+            )
+        stage_conf['db']['options']['dialectOptions']['ssl'].update({
+            'cert': postgres_cert,
+            'key': postgres_key,
+        })
+    else:
+        postgres_cert = None
+        postgres_key = None
+
+    url_params = {
+        'sslcert': postgres_cert,
+        'sslkey': postgres_key,
+        'sslmode': 'verify-full',
+        'sslrootcert': postgres_ca
+    }
+    stage_conf['db']['url'] = list(_format_db_urls(
+        rest_config, url_params, db='stage'))
+    serialized = json.dumps(stage_conf, indent=4, sort_keys=True)
+    logging.info('Stage config:')
+    print(serialized)
+    if commit:
+        with open('/opt/cloudify-stage/conf/app.json', 'w') as f:
+            f.write(serialized)
+
+
+def _update_composer_conf(rest_config, commit):
+    logging.debug('Loading composer config...')
+    try:
+        with open('/opt/cloudify-composer/backend/conf/prod.json') as f:
+            composer_conf = json.load(f)
+    except IOError as e:
+        raise RuntimeError('Cannot open Composer config: {0}'.format(e))
+
+    postgres_ca = '/opt/cloudify-composer/backend/conf/postgres_ca.crt'
+    if commit:
+        _copy(
+            rest_config['postgresql_ca_cert_path'],
+            postgres_ca,
+            'composer_user',
+            'cfyuser'
+        )
+    composer_conf['db']['options']['dialectOptions'].update({
+        'ssl': {
+            'rejectUnauthorized': True,
+            'ca': postgres_ca
+        }
+    })
+    if rest_config.get('postgresql_ssl_key_path'):
+        postgres_cert = '/opt/cloudify-composer/backend/conf/postgres.crt'
+        postgres_key = '/opt/cloudify-composer/backend/conf/postgres.key'
+        if commit:
+            _copy(
+                rest_config['postgresql_ssl_cert_path'],
+                postgres_cert,
+                'composer_user',
+                'cfyuser'
+            )
+            _copy(
+                rest_config['postgresql_ssl_key_path'],
+                postgres_key,
+                'composer_user',
+                'cfyuser'
+            )
+        composer_conf['db']['options']['dialectOptions']['ssl'].update({
+            'cert': postgres_cert,
+            'key': postgres_key,
+        })
+    else:
+        postgres_cert = None
+        postgres_key = None
+
+    url_params = {
+        'sslcert': postgres_cert,
+        'sslkey': postgres_key,
+        'sslmode': 'verify-full',
+        'sslrootcert': postgres_ca
+    }
+    composer_conf['db']['url'] = list(_format_db_urls(
+        rest_config, url_params, db='composer'))
+    serialized = json.dumps(composer_conf, indent=4, sort_keys=True)
+    logging.info('Composer config:')
+    print(serialized)
+    if commit:
+        with open('/opt/cloudify-composer/backend/conf/prod.json', 'w') as f:
+            f.write(serialized)
+
+
 def update_db_address(restservice_config_path, commit):
     logging.debug('Loading haproxy config...')
     try:
@@ -56,8 +190,19 @@ def update_db_address(restservice_config_path, commit):
         rest_config = yaml.safe_load(f)
     logging.debug('Loaded restservice config')
 
-    rest_config['postgresql_ca_cert_path'] = _copy_ca_cert()
+    db_ca = '/etc/cloudify/ssl/db_ca.crt'
+    rest_config['postgresql_ca_cert_path'] = db_ca
+    if commit:
+        _copy(
+            '/etc/haproxy/ca.crt',
+            db_ca,
+            'cfyuser',
+            'cfyuser'
+        )
     rest_config['postgresql_host'] = dbs
+
+    _update_stage_conf(rest_config, commit)
+    _update_composer_conf(rest_config, commit)
 
     serialized = json.dumps(rest_config, indent=4, sort_keys=True)
     print(serialized)
