@@ -1,5 +1,6 @@
 from __future__ import with_statement
 
+import contextlib
 import logging
 import os
 
@@ -18,15 +19,24 @@ config = context.config
 # This line sets up loggers basically.
 logger = logging.getLogger('alembic.env')
 
-# add your model's MetaData object here
-# for 'autogenerate' support
-# from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
 
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
+@contextlib.contextmanager
+def default_config_path():
+    """Set a default config path, and restore afterwards.
+
+    We must avoid leaking out the default path, because unittests
+    run this in-process, and that would taint them.
+    """
+    original_env = os.environ.get('MANAGER_REST_CONFIG_PATH')
+    if not original_env and os.path.exists('/opt/manager/cloudify-rest.conf'):
+        os.environ['MANAGER_REST_CONFIG_PATH'] = \
+            '/opt/manager/cloudify-rest.conf'
+    try:
+        yield
+    finally:
+        del os.environ['MANAGER_REST_CONFIG_PATH']
+        if original_env:
+            os.environ['MANAGER_REST_CONFIG_PATH'] = original_env
 
 
 def run_migrations_offline():
@@ -89,12 +99,11 @@ def run_migrations_online():
 if context.is_offline_mode():
     run_migrations_offline()
 else:
-    os.environ.setdefault('MANAGER_REST_CONFIG_PATH',
-                          '/opt/manager/cloudify-rest.conf')
 
-    if os.path.exists(os.environ['MANAGER_REST_CONFIG_PATH']):
-        manager_config.instance.load_configuration(from_db=False)
-        app = setup_flask_app()
-        app.app_context().push()
+    with default_config_path():
+        if os.path.exists(os.environ['MANAGER_REST_CONFIG_PATH']):
+            manager_config.instance.load_configuration(from_db=False)
+            app = setup_flask_app()
+            app.app_context().push()
 
-    run_migrations_online()
+        run_migrations_online()
