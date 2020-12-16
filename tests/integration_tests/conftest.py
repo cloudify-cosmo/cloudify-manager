@@ -1,6 +1,7 @@
 import os
 import logging
 import pytest
+import tempfile
 import threading
 import wagon
 
@@ -195,6 +196,24 @@ def allow_agent(manager_container, package_agent):
         "1iauth sufficient pam_succeed_if.so user = cfyuser",
         '/etc/pam.d/su'
     ])
+    yield
+    if docker.file_exists(manager_container.container_id,
+                          '/var/log/cloudify/agent-install.log'):
+        logger.warning('agent-install.log from container {0}'.format(
+            manager_container.container_id))
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            docker.copy_file_from_manager(
+                manager_container.container_id,
+                '/var/log/cloudify/agent-install.log',
+                f.name,
+            )
+            agent_install_log_file_name = f.name
+        with open(agent_install_log_file_name, 'rt') as f:
+            for agent_install_log_line in f.readlines():
+                logger.warning(agent_install_log_line.strip("\n"))
+        os.remove(agent_install_log_file_name)
+    else:
+        logger.warning("agent-install.log not found")
 
 
 @pytest.fixture(scope='session')
