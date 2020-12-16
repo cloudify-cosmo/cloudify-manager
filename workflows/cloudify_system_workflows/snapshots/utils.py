@@ -31,11 +31,6 @@ from .constants import SECURITY_FILE_LOCATION, SECURITY_FILENAME
 from cloudify.utils import ManagerVersion, get_local_rest_certificate
 from cloudify.utils import get_tenant_name, internal as internal_utils
 
-# Path to python binary in the manager environment
-PYTHON_MANAGER_ENV = '/opt/manager/env/bin/python'
-# Path to database migration script
-SCHEMA_SCRIPT = '/opt/manager/resources/cloudify/migrations/schema.py'
-
 
 class DictToAttributes(dict):
     def __init__(self, dictionary):
@@ -356,7 +351,7 @@ def db_schema_downgrade(revision='-1', config=None):
     :param revision: Revision to downgrade to.
     :type revision: str
     """
-    _schema(config, ['downgrade', revision])
+    _alembic(config, ['downgrade', revision])
 
 
 def db_schema_upgrade(revision='head', config=None):
@@ -365,7 +360,7 @@ def db_schema_upgrade(revision='head', config=None):
     :param revision: Revision to upgrade to.
     :type revision: str
     """
-    _schema(config, ['upgrade', revision])
+    _alembic(config, ['upgrade', revision])
 
 
 def db_schema_get_current_revision(config=None):
@@ -373,24 +368,16 @@ def db_schema_get_current_revision(config=None):
     :returns: Current revision
     :rtype: str
     """
-    output = _schema(config, ['current'])
+    output = _alembic(config, ['current'])
     revision = output.split(' ', 1)[0]
     return revision
 
 
-def _schema(config, command):
-    full_command = [PYTHON_MANAGER_ENV, SCHEMA_SCRIPT]
-    if config:
-        for arg, value in [
-            ('--postgresql-host', config.postgresql_host),
-            ('--postgresql-username', config.postgresql_username),
-            ('--postgresql-password', config.postgresql_password),
-            ('--postgresql-db-name', config.postgresql_db_name),
-        ]:
-            if value:
-                full_command += [arg, value]
-    full_command += command
-    return subprocess.check_output(full_command).decode('utf-8')
+def _alembic(config, command):
+    return subprocess.check_output(
+        ['/opt/manager/env/bin/alembic'] + command,
+        cwd='/opt/manager/resources/cloudify/migrations'
+    ).decode('utf-8')
 
 
 def stage_db_schema_get_current_revision():
