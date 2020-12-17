@@ -75,17 +75,6 @@ def log_response(response):
     return response
 
 
-def raise_unauthorized_user_error(extra_info=None):
-    warnings.warn(
-        'raise_unauthorized_user_error is deprecated, raise an '
-        'UnauthorizedError directly instead',
-        DeprecationWarning)
-    error = 'User unauthorized'
-    if extra_info:
-        error += ': {0}'.format(extra_info)
-    raise UnauthorizedError(error)
-
-
 def _setup_python_logger(
         logger,
         logger_level=logging.DEBUG,
