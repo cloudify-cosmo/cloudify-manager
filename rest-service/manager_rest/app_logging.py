@@ -1,12 +1,10 @@
 import sys
 import logging
-import warnings
 
 from flask import current_app, request
 from logging.handlers import WatchedFileHandler
 
 from manager_rest import config
-from manager_rest.manager_exceptions import UnauthorizedError
 
 
 def setup_logger(logger):
