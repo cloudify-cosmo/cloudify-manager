@@ -82,6 +82,45 @@ done
 groupadd -fr cfyuser
 getent passwd cfyuser >/dev/null || useradd -r -g cfyuser -d /etc/cloudify -s /sbin/nologin cfyuser
 
+%post
+if [ $1 -gt 1 ]; then
+    touch "%{_localstatedir}/lib/rpm-state/cloudify-upgraded-5-1-1"
+fi
+exit 0
+
+%posttrans
+if [ -f "%{_localstatedir}/lib/rpm-state/cloudify-upgraded-5-1-1" ]; then
+    rm "%{_localstatedir}/lib/rpm-state/cloudify-upgraded-5-1-1"
+
+    if [ -e "/tmp/supervisor.sock" ]; then
+        supervisorctl stop haproxy && supervisorctl remove haproxy || true
+    else
+        systemctl stop haproxy && systemctl disable haproxy || true
+    fi
+
+    /opt/manager/env/bin/python -m manager_rest.update_rest_db_config --commit
+    pushd /opt/manager/resources/cloudify/migrations
+        /opt/manager/env/bin/alembic upgrade head
+        CURRENT_DB=$(/opt/manager/env/bin/alembic current)
+    popd
+    echo "
+#############################################################
+
+Congratulations on upgrading Cloudify to %{CLOUDIFY_VERSION}!
+
+Update notes:
+ * Clustered DB no longer requires HAProxy. The config files at /opt/manager/cloudify-rest.conf,
+   /opt/cloudify-stage/conf/app.json and /opt/cloudify-composer/backend/conf/prod.json
+   have been updated. You can view them to confirm they contain the correct DB endpoint(s).
+ * RBAC & permissions configuration has been moved into the database. You can
+   load custom permissions configuration using: /opt/manager/env/bin/python -m manager_rest.load_permissions
+ * The database schema has been updated. Current database schema revision: ${CURRENT_DB}
+
+#############################################################
+"
+fi
+exit 0
+
 
 %files
 
