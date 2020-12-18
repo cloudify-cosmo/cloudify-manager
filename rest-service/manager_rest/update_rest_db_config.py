@@ -39,13 +39,13 @@ def _find_db_servers(haproxy_cfg):
 
 def _format_db_urls(rest_config, params, db):
     params = '&'.join('{0}={1}'.format(k, v) for k, v in params.items() if v)
-    for db in rest_config['postgresql_host']:
+    for host in rest_config['postgresql_host']:
         yield (
             'postgres://{username}:{password}@{host}:{port}/{db}?{params}'
             .format(
                 username=rest_config['postgresql_username'],
                 password=rest_config['postgresql_password'],
-                host=db,
+                host=host,
                 port=5432,
                 db=db,
                 params=params
