@@ -182,8 +182,13 @@ def update_db_address(restservice_config_path, commit):
     try:
         with open('/etc/haproxy/haproxy.cfg') as f:
             dbs = _find_db_servers(f)
-    except IOError as e:
-        raise RuntimeError('Cannot open HAProxy config: {0}'.format(e))
+    except IOError:
+        logging.info('Cannot open HAProxy config: nothing to do')
+        return
+
+    if not dbs:
+        logging.info("No DB addresses configured, nothing to do")
+        return
 
     logging.debug('Loading restservice config')
     with open(restservice_config_path) as f:
