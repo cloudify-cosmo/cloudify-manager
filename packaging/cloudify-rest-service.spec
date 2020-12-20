@@ -103,6 +103,8 @@ if [ -f "%{_localstatedir}/lib/rpm-state/cloudify-upgraded-5-1-1" ]; then
         /opt/manager/env/bin/alembic upgrade head
         CURRENT_DB=$(/opt/manager/env/bin/alembic current)
     popd
+    chown cfyuser: /opt/manager/resources
+
     echo "
 #############################################################
 
