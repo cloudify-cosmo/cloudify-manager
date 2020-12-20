@@ -557,27 +557,38 @@ def update_inter_deployment_dependencies(sm):
 
 
 def _update_dependency_target_deployment(sm, dependency):
-    target_deployment_id = _evaluate_target_func(dependency)
-    if target_deployment_id:
-        target_deployment_instance = sm.get(models.Deployment,
-                                            target_deployment_id)
-        dependency.target_deployment = target_deployment_instance
+    target_deployment = get_deployment_from_target_func(
+        sm, dependency.target_deployment_func, dependency.source_deployment_id)
+    if target_deployment:
+        dependency.target_deployment = target_deployment
 
         # check for cyclic dependencies
         dep_graph = RecursiveDeploymentDependencies(sm)
         source_id = str(dependency.source_deployment_id)
-        target_id = str(target_deployment_id)
+        target_id = str(target_deployment.id)
         dep_graph.create_dependencies_graph()
         dep_graph.assert_no_cyclic_dependencies(source_id, target_id)
 
         sm.update(dependency)
 
 
-def _evaluate_target_func(dependency):
-    if is_function(dependency.target_deployment_func):
+def _evaluate_target_func(target_dep_func, source_dep_id):
+    if is_function(target_dep_func):
         evaluated_func = evaluate_intrinsic_functions(
-            {'target_deployment': dependency.target_deployment_func},
-            dependency.source_deployment_id)
+            {'target_deployment': target_dep_func}, source_dep_id)
         return evaluated_func.get('target_deployment')
 
-    return dependency.target_deployment_func
+    return target_dep_func
+
+
+def get_deployment_from_target_func(sm, target_dep_func, source_dep_id):
+    target_dep_id = _evaluate_target_func(target_dep_func, source_dep_id)
+    if target_dep_id:
+        target_deployment = sm.get(models.Deployment, target_dep_id,
+                                   fail_silently=True)
+        if not target_deployment:
+            current_app.logger.info('Deployment %s does not exist',
+                                    target_dep_id)
+        return target_deployment
+
+    return None
