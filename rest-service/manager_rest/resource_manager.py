@@ -200,7 +200,7 @@ class ResourceManager(object):
             'postgresql_username': config_instance.postgresql_username,
             'postgresql_password': config_instance.postgresql_password,
             'postgresql_db_name': config_instance.postgresql_db_name,
-            'postgresql_host': config_instance.postgresql_host,
+            'db_host': config.instance.db_host,
             'default_tenant_name': DEFAULT_TENANT_NAME,
             'snapshot_restore_threads':
                 config_instance.snapshot_restore_threads
