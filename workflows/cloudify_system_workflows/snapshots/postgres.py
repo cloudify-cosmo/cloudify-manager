@@ -55,7 +55,7 @@ class Postgres(object):
         self._print_postgres_config(config)
         self._bin_dir = config.postgresql_bin_path
         self._db_name = config.postgresql_db_name
-        self._host = config.postgresql_host
+        self._host = config.db_host
         self._port = str(POSTGRESQL_DEFAULT_PORT)
         self._username = config.postgresql_username
         self._password = config.postgresql_password
