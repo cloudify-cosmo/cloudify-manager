@@ -311,6 +311,13 @@ class Config(object):
             db_url = '{0}?{1}'.format(db_url, query)
         return db_url
 
+    @property
+    def db_host(self):
+        # This is only to make cluster snapshots work
+        # Don't use it for anything else, it wants removing once snapshots
+        # improve.
+        return self._find_db_host(self.postgresql_host)
+
     def _find_db_host(self, postgresql_host):
         if not isinstance(postgresql_host, list):
             return postgresql_host
