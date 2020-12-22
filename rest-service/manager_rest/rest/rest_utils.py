@@ -128,7 +128,7 @@ def make_streaming_response(res_id, res_path, archive_type):
     return response
 
 
-def set_restart_task(delay=1, service_management='systemd'):
+def set_restart_task(delay=1, service_management='supervisord'):
     current_app.logger.info('Restarting the rest service')
     service_command = 'systemctl'
     if service_management == 'supervisord':
