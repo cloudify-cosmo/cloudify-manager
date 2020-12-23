@@ -42,11 +42,11 @@ class Postgres(object):
     _STAGE_DB_NAME = 'stage'
     _COMPOSER_DB_NAME = 'composer'
     _TABLES_TO_KEEP = ['alembic_version', 'provider_context', 'roles',
-                       'licenses']
-    _CONFIG_TABLES = ['config', 'rabbitmq_brokers', 'certificates', 'managers',
-                      'db_nodes', 'maintenance_mode', 'usage_collector']
-    _TABLES_TO_EXCLUDE_ON_DUMP = _TABLES_TO_KEEP + \
-        ['snapshots', 'plugins_states'] + _CONFIG_TABLES
+                       'licenses', 'managers', 'certificates']
+    _CONFIG_TABLES = ['config', 'rabbitmq_brokers', 'db_nodes',
+                      'maintenance_mode', 'usage_collector', 'plugins_states']
+    _TABLES_TO_EXCLUDE_ON_DUMP = _TABLES_TO_KEEP + ['snapshots'] + \
+        _CONFIG_TABLES
     _TABLES_TO_RESTORE = ['users', 'tenants']
     _STAGE_TABLES_TO_EXCLUDE = ['"SequelizeMeta"']
     _COMPOSER_TABLES_TO_EXCLUDE = ['"SequelizeMeta"']
@@ -527,7 +527,8 @@ class Postgres(object):
         all_tables = [table for table in all_tables if
                       table not in self._TABLES_TO_KEEP]
 
-        queries = [self._TRUNCATE_QUERY.format(table) for table in all_tables]
+        queries = [self._TRUNCATE_QUERY.format(table) for table in all_tables
+                   if table != 'users'] + ['DELETE FROM users;']
         if preserve_defaults:
             self._add_preserve_defaults_queries(queries)
         return queries
