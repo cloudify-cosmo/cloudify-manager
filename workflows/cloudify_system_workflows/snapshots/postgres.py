@@ -41,8 +41,9 @@ class Postgres(object):
     _POSTGRES_DUMP_FILENAME = 'pg_data'
     _STAGE_DB_NAME = 'stage'
     _COMPOSER_DB_NAME = 'composer'
+    _MANAGER_TABLES = ['managers', 'certificates']
     _TABLES_TO_KEEP = ['alembic_version', 'provider_context', 'roles',
-                       'licenses', 'managers', 'certificates']
+                       'licenses'] + _MANAGER_TABLES
     _CONFIG_TABLES = ['config', 'rabbitmq_brokers', 'db_nodes',
                       'maintenance_mode', 'usage_collector', 'plugins_states']
     _TABLES_TO_EXCLUDE_ON_DUMP = _TABLES_TO_KEEP + ['snapshots'] + \
@@ -259,12 +260,32 @@ class Postgres(object):
         run_shell(command)
         return path
 
+    def dump_manager_tables(self, tempdir):
+        pg_dump_bin = os.path.join(self._bin_dir, 'pg_dump')
+        path = os.path.join(tempdir, 'manager_tables.dump')
+        command = [pg_dump_bin,
+                   '-a',
+                   '--host', self._host,
+                   '--port', self._port,
+                   '-U', self._username,
+                   self._db_name,
+                   '-f', path]
+
+        for table in self._MANAGER_TABLES:
+            command += ['-t', table]
+
+        run_shell(command)
+        return path
+
     def restore_config_tables(self, config_path):
         new_dump_file = self._prepend_dump(config_path, [
             'delete from {0};'.format(table)
             for table in self._CONFIG_TABLES
         ])
         self._restore_dump(new_dump_file, self._db_name)
+
+    def restore_manager_tables(self, manager_tables_path):
+        self._restore_dump(manager_tables_path, self._db_name)
 
     @staticmethod
     def _restore_json_dump_file(dump_path):

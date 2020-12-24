@@ -488,10 +488,16 @@ class SnapshotRestore(object):
         postgres.init_current_execution_data()
 
         config_dump_path = postgres.dump_config_tables(self._tempdir)
+        # We dump and restore _MANAGER_TABLES separately for pre-5 Cloudify
+        # versions, otherwise they will get eaten by the schema downgrade
+        if self._snapshot_version <= V_4_6_0:
+            mgr_tables_dump_path = postgres.dump_manager_tables(self._tempdir)
         permissions_dump_path = postgres.dump_permissions_table(self._tempdir)
         with utils.db_schema(schema_revision, config=self._config):
             admin_user_update_command = postgres.restore(
                 self._tempdir, premium_enabled=self._premium_enabled)
+        if self._snapshot_version <= V_4_6_0:
+            postgres.restore_manager_tables(mgr_tables_dump_path)
         postgres.restore_config_tables(config_dump_path)
         if not self._permissions_exist(postgres):
             postgres.restore_permissions_table(permissions_dump_path)
