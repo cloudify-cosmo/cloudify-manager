@@ -31,8 +31,8 @@ pipeline {
   environment {
     BRANCH = "${env.BRANCH_NAME}"
     PROJECT = "cloudify-manager"
-    VERSION = getVersion("${env.BRANCH_NAME}").trim()
-    PRERELEASE = getPreRelease("${env.BRANCH_NAME}").trim()
+    VERSION = getVersion("${env.PROJECT}", "${env.BRANCH_NAME}").trim()
+    PRERELEASE = getPreRelease("${env.PROJECT}", "${env.BRANCH_NAME}").trim()
     S3_BUILD_PATH = "${env.VERSION}/${env.PRERELEASE}-build/${env.PROJECT}/${env.BRANCH}/${env.BUILD_NUMBER}"
     PATH = "/root/.local/bin:$PATH"
   }
