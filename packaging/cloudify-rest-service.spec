@@ -114,8 +114,6 @@ Update notes:
  * Clustered DB no longer requires HAProxy. The config files at /opt/manager/cloudify-rest.conf,
    /opt/cloudify-stage/conf/app.json and /opt/cloudify-composer/backend/conf/prod.json
    have been updated. You can view them to confirm they contain the correct DB endpoint(s).
- * RBAC & permissions configuration has been moved into the database. You can
-   load custom permissions configuration using: /opt/manager/env/bin/python -m manager_rest.load_permissions
  * The database schema has been updated. Current database schema revision: ${CURRENT_DB}
 
 #############################################################
@@ -136,6 +134,7 @@ exit 0
 /usr/lib/systemd/system/cloudify-restservice.service
 /usr/lib/systemd/system/cloudify-amqp-postgres.service
 
+%attr(750,cfyuser,adm) /opt/manager/scripts/load_permissions.py
 %attr(750,cfyuser,adm) /var/log/cloudify/rest
 %attr(750,cfyuser,adm) /opt/manager/snapshot_status
 %attr(750,cfyuser,adm) /var/log/cloudify/amqp-postgres
