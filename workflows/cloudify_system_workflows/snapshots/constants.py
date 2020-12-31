@@ -55,6 +55,7 @@ COMPOSER_BLUEPRINTS_FOLDER = 'backend/dev'
 COMPOSER_USER = 'composer_user'
 SECURITY_FILENAME = 'rest-security.conf'
 SECURITY_FILE_LOCATION = join('/opt/manager/', SECURITY_FILENAME)
+REST_AUTHORIZATION_CONFIG_PATH = '/opt/manager/authorization.conf'
 
 
 V_4_0_0 = ManagerVersion('4.0.0')
