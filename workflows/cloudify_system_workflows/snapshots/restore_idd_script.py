@@ -56,6 +56,7 @@ def get_storage_manager_instance():
     """
     try:
         with _get_flask_app().app_context():
+            config.instance.load_configuration()
             sm = get_storage_manager()
             yield sm
     finally:
@@ -70,7 +71,6 @@ def _get_flask_app():
         if value is not None:
             environ[envvar] = value
 
-    config.instance.load_configuration()
     app = setup_flask_app()
     set_admin_current_user(app)
     return app
