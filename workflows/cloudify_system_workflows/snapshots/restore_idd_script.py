@@ -26,7 +26,6 @@ from cloudify.deployment_dependencies import dependency_creator_generator
 REST_HOME_DIR = '/opt/manager'
 REST_CONFIG_PATH = join(REST_HOME_DIR, 'cloudify-rest.conf')
 REST_SECURITY_CONFIG_PATH = join(REST_HOME_DIR, 'rest-security.conf')
-REST_AUTHORIZATION_CONFIG_PATH = join(REST_HOME_DIR, 'authorization.conf')
 
 LOGFILE = '/var/log/cloudify/mgmtworker/logs/restore_idd.log'
 
