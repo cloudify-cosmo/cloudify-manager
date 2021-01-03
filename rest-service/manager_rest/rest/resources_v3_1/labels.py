@@ -11,7 +11,8 @@ class DeploymentsLabels(SecuredResource):
     @authorize('labels_list')
     @rest_decorators.marshal_list_response
     @rest_decorators.paginate
-    def get(self, pagination=None):
+    @rest_decorators.search('key')
+    def get(self, pagination=None, search=None):
         """Get all deployments' labels' keys in the current tenant"""
         get_all_results = rest_utils.verify_and_convert_bool(
             '_get_all_results',
@@ -23,7 +24,9 @@ class DeploymentsLabels(SecuredResource):
             pagination=pagination,
             filters={'_deployment_fk': models.Deployment._storage_id},
             get_all_results=get_all_results,
-            distinct=['key']
+            distinct=['key'],
+            substr_filters=search,
+            sort={'key': 'asc'}
         )
 
         results.items = [label.key for label in results]
@@ -34,7 +37,8 @@ class DeploymentsLabelsKey(SecuredResource):
     @authorize('labels_list')
     @rest_decorators.marshal_list_response
     @rest_decorators.paginate
-    def get(self, key, pagination=None):
+    @rest_decorators.search('value')
+    def get(self, key, pagination=None, search=None):
         """Get all deployments' labels' values for the specified key."""
         get_all_results = rest_utils.verify_and_convert_bool(
             '_get_all_results',
@@ -47,7 +51,9 @@ class DeploymentsLabelsKey(SecuredResource):
             filters={'key': key,
                      '_deployment_fk': models.Deployment._storage_id},
             get_all_results=get_all_results,
-            distinct=['value']
+            distinct=['value'],
+            substr_filters=search,
+            sort={'value': 'asc'}
         )
 
         results.items = [label.value for label in results]
