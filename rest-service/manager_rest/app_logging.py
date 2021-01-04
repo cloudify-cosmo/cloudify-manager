@@ -1,12 +1,10 @@
 import sys
 import logging
-import warnings
 
 from flask import current_app, request
 from logging.handlers import WatchedFileHandler
 
 from manager_rest import config
-from manager_rest.manager_exceptions import UnauthorizedError
 
 
 def setup_logger(logger):
@@ -73,17 +71,6 @@ def log_response(response):
         response.status,
     )
     return response
-
-
-def raise_unauthorized_user_error(extra_info=None):
-    warnings.warn(
-        'raise_unauthorized_user_error is deprecated, raise an '
-        'UnauthorizedError directly instead',
-        DeprecationWarning)
-    error = 'User unauthorized'
-    if extra_info:
-        error += ': {0}'.format(extra_info)
-    raise UnauthorizedError(error)
 
 
 def _setup_python_logger(
