@@ -1,18 +1,3 @@
-########
-# Copyright (c) 2015-2019 Cloudify Platform Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#        http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#    * See the License for the specific language governing permissions and
-#    * limitations under the License.
-
 import re
 import os
 import json
@@ -69,7 +54,8 @@ from .constants import (
     V_4_6_0,
     V_5_0_5,
     SECURITY_FILE_LOCATION,
-    SECURITY_FILENAME
+    SECURITY_FILENAME,
+    REST_AUTHORIZATION_CONFIG_PATH,
 )
 from .utils import is_later_than_now
 
@@ -145,6 +131,7 @@ class SnapshotRestore(object):
                 self._restore_deployment_envs()
                 self._restore_scheduled_executions()
                 self._restore_inter_deployment_dependencies()
+                self._update_roles_and_permissions()
 
             if self._restore_certificates:
                 self._restore_certificate()
@@ -231,6 +218,10 @@ class SnapshotRestore(object):
                 break
             except Exception:
                 pass
+
+    def _update_roles_and_permissions(self):
+        if os.path.exists(REST_AUTHORIZATION_CONFIG_PATH):
+            utils.run(['/opt/manager/scripts/load_permissions.py'])
 
     def _generate_new_token(self):
         dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -488,10 +479,16 @@ class SnapshotRestore(object):
         postgres.init_current_execution_data()
 
         config_dump_path = postgres.dump_config_tables(self._tempdir)
+        # We dump and restore _MANAGER_TABLES separately for pre-5 Cloudify
+        # versions, otherwise they will get eaten by the schema downgrade
+        if self._snapshot_version <= V_4_6_0:
+            mgr_tables_dump_path = postgres.dump_manager_tables(self._tempdir)
         permissions_dump_path = postgres.dump_permissions_table(self._tempdir)
         with utils.db_schema(schema_revision, config=self._config):
             admin_user_update_command = postgres.restore(
                 self._tempdir, premium_enabled=self._premium_enabled)
+        if self._snapshot_version <= V_4_6_0:
+            postgres.restore_manager_tables(mgr_tables_dump_path)
         postgres.restore_config_tables(config_dump_path)
         if not self._permissions_exist(postgres):
             postgres.restore_permissions_table(permissions_dump_path)

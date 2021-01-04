@@ -26,7 +26,6 @@ from cloudify.deployment_dependencies import dependency_creator_generator
 REST_HOME_DIR = '/opt/manager'
 REST_CONFIG_PATH = join(REST_HOME_DIR, 'cloudify-rest.conf')
 REST_SECURITY_CONFIG_PATH = join(REST_HOME_DIR, 'rest-security.conf')
-REST_AUTHORIZATION_CONFIG_PATH = join(REST_HOME_DIR, 'authorization.conf')
 
 LOGFILE = '/var/log/cloudify/mgmtworker/logs/restore_idd.log'
 
@@ -57,6 +56,7 @@ def get_storage_manager_instance():
     """
     try:
         with _get_flask_app().app_context():
+            config.instance.load_configuration()
             sm = get_storage_manager()
             yield sm
     finally:
@@ -71,7 +71,6 @@ def _get_flask_app():
         if value is not None:
             environ[envvar] = value
 
-    config.instance.load_configuration()
     app = setup_flask_app()
     set_admin_current_user(app)
     return app
