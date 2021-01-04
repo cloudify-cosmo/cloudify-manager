@@ -50,6 +50,7 @@ class TestInterDeploymentDependenciesInfrastructure(AgentlessTestCase):
         self._prepare_creation_test_resources()
         dependencies = self._assert_dependencies_count(2)
         self._assert_initial_compute_node_dependencies(dependencies)
+        assert True
 
         self._install_main_deployment()
         node_instances = self.client.node_instances.list()
