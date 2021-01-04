@@ -6,7 +6,7 @@ spec:
     image: circleci/python:3.6
     resources:
       requests:
-        cpu: 1
+        cpu: 0.8
     command:
     - cat
     tty: true
