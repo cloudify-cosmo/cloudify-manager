@@ -53,7 +53,7 @@ from manager_rest.utils import (send_event,
 from manager_rest.plugins_update.constants import PLUGIN_UPDATE_WORKFLOW
 from manager_rest.rest.rest_utils import (
     parse_datetime_string, RecursiveDeploymentDependencies,
-    update_inter_deployment_dependencies, get_deployment_from_target_func)
+    update_inter_deployment_dependencies)
 from manager_rest.deployment_update.constants import STATES as UpdateStates
 from manager_rest.plugins_update.constants import STATES as PluginsUpdateStates
 
@@ -144,12 +144,15 @@ class ResourceManager(object):
                 plugin_update.state = PluginsUpdateStates.FAILED
                 self.sm.update(plugin_update)
 
-        if execution.workflow_id == 'delete_deployment_environment' and \
-                status == ExecutionState.TERMINATED:
-            # render the execution here, because immediately afterwards
-            # we'll delete it, and then we won't be able to render it anymore
-            res = res.to_response()
-            self.delete_deployment(execution.deployment)
+        if status == ExecutionState.TERMINATED:
+            if execution.workflow_id == 'delete_deployment_environment':
+                # render the execution here, because immediately afterwards
+                # we'll delete it, and then we won't be able to render it
+                res = res.to_response()
+                self.delete_deployment(execution.deployment)
+
+            update_inter_deployment_dependencies(self.sm)
+
         return res
 
     def start_queued_executions(self):
@@ -1481,7 +1484,6 @@ class ResourceManager(object):
             self._create_deployment_environment(new_deployment,
                                                 deployment_plan,
                                                 bypass_maintenance)
-            update_inter_deployment_dependencies(self.sm)
         except manager_exceptions.ExistingRunningExecutionError as e:
             self.delete_deployment(new_deployment)
             raise e
@@ -2405,12 +2407,12 @@ class ResourceManager(object):
         dep_graph.create_dependencies_graph()
 
         for func_id, target_deployment_attr in new_dependencies.items():
-            # target_deployment_func is either a function or
-            # the target_deployment ID
+            target_deployment = target_deployment_attr[0]
             target_deployment_func = target_deployment_attr[1]
-            target_deployment = \
-                get_deployment_from_target_func(
-                    self.sm, target_deployment_func, source_deployment.id)
+            target_deployment_instance = \
+                self.sm.get(models.Deployment,
+                            target_deployment,
+                            fail_silently=True) if target_deployment else None
 
             now = utils.get_formatted_timestamp()
             if external_client:
@@ -2425,7 +2427,7 @@ class ResourceManager(object):
                 dependency_creator=func_id,
                 source_deployment=source_deployment,
                 target_deployment=(None if external_client else
-                                   target_deployment),
+                                   target_deployment_instance),
                 target_deployment_func=target_deployment_func,
                 external_target=(external_target if external_client else None),
                 created_at=now))
@@ -2433,7 +2435,7 @@ class ResourceManager(object):
                 dependency_params = {
                     'dependency_creator': func_id,
                     'source_deployment': source_deployment.id,
-                    'target_deployment': (target_deployment.id if
+                    'target_deployment': (target_deployment if
                                           target_deployment else ' '),
                     'external_source': {
                         'deployment': source_deployment.id,
@@ -2444,9 +2446,9 @@ class ResourceManager(object):
                 external_client.inter_deployment_dependencies.create(
                     **dependency_params)
 
-            if source_deployment and target_deployment:
+            if source_deployment and target_deployment_instance:
                 source_id = str(source_deployment.id)
-                target_id = str(target_deployment.id)
+                target_id = str(target_deployment_instance.id)
                 dep_graph.assert_no_cyclic_dependencies(source_id, target_id)
                 dep_graph.add_dependency_to_graph(source_id, target_id)
 
