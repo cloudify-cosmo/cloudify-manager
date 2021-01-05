@@ -2434,7 +2434,8 @@ class ResourceManager(object):
                 dependency_params = {
                     'dependency_creator': func_id,
                     'source_deployment': source_deployment.id,
-                    'target_deployment': target_deployment.id or ' ',
+                    'target_deployment': (target_deployment.id if
+                                          target_deployment else ' '),
                     'external_source': {
                         'deployment': source_deployment.id,
                         'tenant': source_deployment.tenant_name,

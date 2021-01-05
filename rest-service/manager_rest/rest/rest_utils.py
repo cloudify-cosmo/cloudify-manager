@@ -584,11 +584,6 @@ def _evaluate_target_func(target_dep_func, source_dep_id):
 def get_deployment_from_target_func(sm, target_dep_func, source_dep_id):
     target_dep_id = _evaluate_target_func(target_dep_func, source_dep_id)
     if target_dep_id:
-        target_deployment = sm.get(models.Deployment, target_dep_id,
-                                   fail_silently=True)
-        if not target_deployment:
-            current_app.logger.info('Deployment %s does not exist',
-                                    target_dep_id)
-        return target_deployment
+        return sm.get(models.Deployment, target_dep_id, fail_silently=True)
 
     return None
