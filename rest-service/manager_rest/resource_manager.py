@@ -144,14 +144,12 @@ class ResourceManager(object):
                 plugin_update.state = PluginsUpdateStates.FAILED
                 self.sm.update(plugin_update)
 
-        if status == ExecutionState.TERMINATED:
-            if execution.workflow_id == 'delete_deployment_environment':
-                # render the execution here, because immediately afterwards
-                # we'll delete it, and then we won't be able to render it
-                res = res.to_response()
-                self.delete_deployment(execution.deployment)
-            elif execution.workflow_id == 'install':
-                update_inter_deployment_dependencies(self.sm)
+        if execution.workflow_id == 'delete_deployment_environment' and \
+                status == ExecutionState.TERMINATED:
+            # render the execution here, because immediately afterwards
+            # we'll delete it, and then we won't be able to render it anymore
+            res = res.to_response()
+            self.delete_deployment(execution.deployment)
         return res
 
     def start_queued_executions(self):
@@ -1483,6 +1481,7 @@ class ResourceManager(object):
             self._create_deployment_environment(new_deployment,
                                                 deployment_plan,
                                                 bypass_maintenance)
+            update_inter_deployment_dependencies(self.sm)
         except manager_exceptions.ExistingRunningExecutionError as e:
             self.delete_deployment(new_deployment)
             raise e
