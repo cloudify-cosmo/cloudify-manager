@@ -139,7 +139,7 @@ def set_restart_task(delay=1, service_management='systemd'):
     subprocess.Popen(cmd, shell=True)
 
 
-def validate_inputs(input_dict):
+def validate_inputs(input_dict, len_input_value=256):
     for input_name, input_value in input_dict.items():
         prefix = 'The `{0}` argument'.format(input_name)
 
@@ -148,10 +148,10 @@ def validate_inputs(input_dict):
                 '{0} is empty'.format(prefix)
             )
 
-        if len(input_value) > 256:
+        if len(input_value) > len_input_value:
             raise manager_exceptions.BadParametersError(
-                '{0} is too long. Maximum allowed length is 256 '
-                'characters'.format(prefix)
+                '{0} is too long. Maximum allowed length is {1} '
+                'characters'.format(prefix, len_input_value)
             )
 
         # urllib.quote changes all chars except alphanumeric chars and _-.
