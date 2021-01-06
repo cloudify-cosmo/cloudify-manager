@@ -409,7 +409,7 @@ node_types:
             interval:
               description: Polling interval (seconds).
               type: integer
-              default: 10
+              default: 1
         stop:
           implementation: cfy_extensions.cloudify_types.component.execute_start
           inputs:
