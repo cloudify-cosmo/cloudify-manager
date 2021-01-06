@@ -527,11 +527,13 @@ class RecursiveDeploymentDependencies(object):
         return results
 
     def retrieve_and_display_dependencies(self, target_id,
-                                          excluded_component_creator_id=None):
+                                          excluded_component_creator_ids=None):
+        if excluded_component_creator_ids is None:
+            excluded_component_creator_ids = []
         self.create_dependencies_graph()
         dependencies = self.retrieve_dependent_deployments(target_id)
         dependencies = [d for d in dependencies if
-                        d['deployment'] != excluded_component_creator_id]
+                        d['deployment'] not in excluded_component_creator_ids]
         dependency_display = '  [{0}] Deployment `{1}` {2} the current ' \
                              'deployment in its node `{3}`'
         type_display = {'component': 'contains',
