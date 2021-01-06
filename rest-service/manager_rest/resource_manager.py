@@ -488,11 +488,11 @@ class ResourceManager(object):
 
         # Verify deleting the deployment won't affect dependent deployments
         dep_graph = RecursiveDeploymentDependencies(self.sm)
-        excluded_id = self._excluded_component_creator_id(deployment)
+        excluded_ids = self._excluded_component_creator_ids(deployment)
         deployment_dependencies = \
             dep_graph.retrieve_and_display_dependencies(
                 deployment.id,
-                excluded_component_creator_id=excluded_id)
+                excluded_component_creator_ids=excluded_ids)
         if deployment_dependencies:
             if force:
                 current_app.logger.warning(
@@ -2279,11 +2279,11 @@ class ResourceManager(object):
 
         # if we're in the middle of an execution initiated by the component
         # creator, we'd like to drop the component dependency from the list
-        excluded_id = self._excluded_component_creator_id(deployment)
+        excluded_ids = self._excluded_component_creator_ids(deployment)
         deployment_dependencies = \
             dep_graph.retrieve_and_display_dependencies(
                 deployment.id,
-                excluded_component_creator_id=excluded_id)
+                excluded_component_creator_ids=excluded_ids)
         if not deployment_dependencies:
             return
         if force:
@@ -2313,21 +2313,34 @@ class ResourceManager(object):
             )
         )
 
-    def _excluded_component_creator_id(self, deployment):
-        component_creator_deployment = \
-            [x.source_deployment.id for x in
-             deployment.target_of_dependency_in if
-             'component' in x.dependency_creator.split('.')[0]]
-        if component_creator_deployment:
+    def _excluded_component_creator_ids(self, deployment):
+        # collect all deployment which created this deployment as a
+        # component, accounting for nesting component creation
+        component_creator_deployments = []
+        component_deployment = deployment
+        while True:
+            creator_deployment = None
+            for d in component_deployment.target_of_dependency_in:
+                if 'component' in d.dependency_creator.split('.'):
+                    creator_deployment = d.source_deployment
+                    component_creator_deployments.append(creator_deployment)
+                    component_deployment = creator_deployment
+                    break  # a depl. can be a component for only one depl.
+            if not creator_deployment:
+                break
+
+        active_component_creator_deployment_ids = []
+        for deployment in component_creator_deployments:
             component_creator_executions = self.sm.list(
                 models.Execution, filters={
-                    'deployment_id': component_creator_deployment[0],
+                    'deployment_id': deployment.id,
                     'status': 'started',
                     'workflow_id': ['stop', 'uninstall', 'update']}
             )
-            if len(component_creator_executions) > 0:
-                return component_creator_deployment[0]
-        return None
+            if component_creator_executions:
+                active_component_creator_deployment_ids.append(deployment.id)
+
+        return active_component_creator_deployment_ids
 
     @staticmethod
     def _any_running_executions(executions):
