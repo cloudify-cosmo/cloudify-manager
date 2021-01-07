@@ -7,53 +7,42 @@ from manager_rest.storage.models_base import db
 def add_labels_filters_to_query(query, labels_model, labels_filters):
     query = query.join(labels_model)
     for labels_filter in labels_filters:
-        try:
-            if '!=' in labels_filter:
-                label_key, raw_label_value = labels_filter.split('!=')
-                label_value = _get_label_value(raw_label_value)
-                if isinstance(label_value, list):
-                    query = query.filter(key_not_equal_list_values(
-                        labels_model, label_key, label_value))
-                else:
-                    query = query.filter(key_not_equal_value(
-                        labels_model, label_key, label_value))
+        if '!=' in labels_filter:
+            label_key, raw_label_value = labels_filter.split('!=')
+            label_value = _get_label_value(raw_label_value)
+            if isinstance(label_value, list):
+                query = query.filter(key_not_equal_list_values(
+                    labels_model, label_key, label_value))
+            else:
+                query = query.filter(key_not_equal_value(
+                    labels_model, label_key, label_value))
 
-            elif '=' in labels_filter:
-                label_key, raw_label_value = labels_filter.split('=')
-                label_value = _get_label_value(raw_label_value)
-                if isinstance(label_value, list):
-                    query = query.filter(key_equal_list_values(
-                        labels_model, label_key, label_value))
-                else:
-                    query = query.filter(
-                        key_equal_value(labels_model, label_key, label_value))
+        elif '=' in labels_filter:
+            label_key, raw_label_value = labels_filter.split('=')
+            label_value = _get_label_value(raw_label_value)
+            if isinstance(label_value, list):
+                query = query.filter(key_equal_list_values(
+                    labels_model, label_key, label_value))
+            else:
+                query = query.filter(
+                    key_equal_value(labels_model, label_key, label_value))
 
-            elif 'null' in labels_filter:
-                match_null = re.match(r'(\S+) is null', labels_filter)
-                match_not_null = re.match(r'(\S+) is not null', labels_filter)
-                if match_null:
-                    query = query.filter(
-                        key_not_exist(labels_model, match_null.group(1)))
-                elif match_not_null:
-                    query = query.filter(
-                        key_exist(labels_model, match_not_null.group(1)))
-                else:
-                    _raise_bad_labels_filter(labels_filter)
-
+        elif 'null' in labels_filter:
+            match_null = re.match(r'(\S+) is null', labels_filter)
+            match_not_null = re.match(r'(\S+) is not null', labels_filter)
+            if match_null:
+                query = query.filter(
+                    key_not_exist(labels_model, match_null.group(1)))
+            elif match_not_null:
+                query = query.filter(
+                    key_exist(labels_model, match_not_null.group(1)))
             else:
                 _raise_bad_labels_filter(labels_filter)
 
-        except SyntaxError:
+        else:
             _raise_bad_labels_filter(labels_filter)
 
     return query
-
-
-def _raise_bad_labels_filter_value(labels_filter_value):
-    raise manager_exceptions.BadParametersError(
-        'The labels filter value `{0}` must be a string or a list '
-        'of strings'.format(labels_filter_value)
-    )
 
 
 def _raise_bad_labels_filter(labels_filter_value):
