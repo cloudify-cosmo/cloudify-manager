@@ -139,3 +139,11 @@ class ItemsCount(BaseResponse):
     resource_fields = {
         'count': fields.Integer
     }
+
+
+@swagger.model
+class PermissionResponse(BaseResponse):
+    resource_fields = {
+        'role': fields.String,
+        'permission': fields.String
+    }

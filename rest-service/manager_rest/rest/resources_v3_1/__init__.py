@@ -95,3 +95,8 @@ from .labels import (                           # NOQA
     DeploymentsLabels,
     DeploymentsLabelsKey,
 )
+from .permissions import (  # NOQA
+    Permissions,
+    PermissionsRole,
+    PermissionsRoleId
+)
