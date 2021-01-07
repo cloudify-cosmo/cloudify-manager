@@ -122,6 +122,7 @@ class ResourceManager(object):
 
         res = self.sm.update(execution)
         if status in ExecutionState.END_STATES:
+            update_inter_deployment_dependencies(self.sm)
             self.start_queued_executions()
 
         # If the execution is a deployment update, and the status we're
@@ -144,15 +145,12 @@ class ResourceManager(object):
                 plugin_update.state = PluginsUpdateStates.FAILED
                 self.sm.update(plugin_update)
 
-        if status == ExecutionState.TERMINATED:
-            if execution.workflow_id == 'delete_deployment_environment':
-                # render the execution here, because immediately afterwards
-                # we'll delete it, and then we won't be able to render it
-                res = res.to_response()
-                self.delete_deployment(execution.deployment)
-
-            update_inter_deployment_dependencies(self.sm)
-
+        if execution.workflow_id == 'delete_deployment_environment' and \
+                status == ExecutionState.TERMINATED:
+            # render the execution here, because immediately afterwards
+            # we'll delete it, and then we won't be able to render it anymore
+            res = res.to_response()
+            self.delete_deployment(execution.deployment)
         return res
 
     def start_queued_executions(self):
