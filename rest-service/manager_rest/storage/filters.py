@@ -7,39 +7,43 @@ from manager_rest.storage.models_base import db
 def add_labels_filters_to_query(query, labels_model, labels_filters):
     query = query.join(labels_model)
     for labels_filter in labels_filters:
-        if '!=' in labels_filter:
-            label_key, raw_label_value = labels_filter.split('!=')
-            label_value = _get_label_value(raw_label_value)
-            if isinstance(label_value, list):
-                query = query.filter(key_not_equal_list_values(
-                    labels_model, label_key, label_value))
-            else:
-                query = query.filter(key_not_equal_value(
-                    labels_model, label_key, label_value))
+        try:
+            if '!=' in labels_filter:
+                label_key, raw_label_value = labels_filter.split('!=')
+                label_value = _get_label_value(raw_label_value)
+                if isinstance(label_value, list):
+                    query = query.filter(key_not_equal_list_values(
+                        labels_model, label_key, label_value))
+                else:
+                    query = query.filter(key_not_equal_value(
+                        labels_model, label_key, label_value))
 
-        elif '=' in labels_filter:
-            label_key, raw_label_value = labels_filter.split('=')
-            label_value = _get_label_value(raw_label_value)
-            if isinstance(label_value, list):
-                query = query.filter(key_equal_list_values(
-                    labels_model, label_key, label_value))
-            else:
-                query = query.filter(
-                    key_equal_value(labels_model, label_key, label_value))
+            elif '=' in labels_filter:
+                label_key, raw_label_value = labels_filter.split('=')
+                label_value = _get_label_value(raw_label_value)
+                if isinstance(label_value, list):
+                    query = query.filter(key_equal_list_values(
+                        labels_model, label_key, label_value))
+                else:
+                    query = query.filter(
+                        key_equal_value(labels_model, label_key, label_value))
 
-        elif 'null' in labels_filter:
-            match_null = re.match(r'(\S+) is null', labels_filter)
-            match_not_null = re.match(r'(\S+) is not null', labels_filter)
-            if match_null:
-                query = query.filter(
-                    key_not_exist(labels_model, match_null.group(1)))
-            elif match_not_null:
-                query = query.filter(
-                    key_exist(labels_model, match_not_null.group(1)))
+            elif 'null' in labels_filter:
+                match_null = re.match(r'(\S+) is null', labels_filter)
+                match_not_null = re.match(r'(\S+) is not null', labels_filter)
+                if match_null:
+                    query = query.filter(
+                        key_not_exist(labels_model, match_null.group(1)))
+                elif match_not_null:
+                    query = query.filter(
+                        key_exist(labels_model, match_not_null.group(1)))
+                else:
+                    _raise_bad_labels_filter(labels_filter)
+
             else:
                 _raise_bad_labels_filter(labels_filter)
 
-        else:
+        except ValueError:
             _raise_bad_labels_filter(labels_filter)
 
     return query
@@ -56,9 +60,8 @@ def _raise_bad_labels_filter(labels_filter_value):
 
 
 def _get_label_value(raw_label_value):
-    # raw_label_value should be of the form [<value1>,<value2>,...]
-    # in order to count as a list
-    match_list = re.match(r'^\[(\S+)\]$', raw_label_value)
+    # This means `]` and `,` are not allowed in the labels
+    match_list = re.match(r'^\[([^]]+)\]$', raw_label_value)
     if match_list:
         return match_list.group(1).split(',')
 

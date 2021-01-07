@@ -1,5 +1,6 @@
 from manager_rest.test import base_test
 from manager_rest.storage.models_base import db
+from manager_rest.manager_exceptions import BadParametersError
 from manager_rest.storage.filters import add_labels_filters_to_query
 from manager_rest.storage.resource_models import Deployment, DeploymentLabel
 
@@ -19,6 +20,15 @@ class FiltersFunctionalityTest(base_test.BaseServerTestCase):
         self._assert_filters_applied(['e is null', 'a=b'], {dep1.id})
         self._assert_filters_applied(['a is null'], set())
         self._assert_filters_applied(['c!=[y,z]', 'a=b'], {dep1.id})
+
+    def test_filters_functionality_fails(self):
+        err_filters = ['a null', 'a', 'a!b']
+        for err_filter in err_filters:
+            with self.assertRaisesRegex(BadParametersError,
+                                        '.*not in the right format.*'):
+                query = db.session.query(Deployment)
+                add_labels_filters_to_query(
+                    query, DeploymentLabel, [err_filter])
 
     @staticmethod
     def _assert_filters_applied(filter_labels, deployments_ids_set):
