@@ -521,15 +521,19 @@ class SQLStorageManager(object):
             query = query.with_for_update()
         result = query.first()
 
-        if not result and not fail_silently:
+        if not result:
             if filters and set(filters.keys()) != {'id'}:
                 filters_message = ' (filters: {0})'.format(filters)
             else:
                 filters_message = ''
-            raise manager_exceptions.NotFoundError(
-                'Requested `{0}` with ID `{1}` was not found{2}'
-                .format(model_class.__name__, element_id, filters_message)
-            )
+            err_msg = 'Requested `{0}` with ID `{1}` was not found{2}'.format(
+                model_class.__name__, element_id, filters_message)
+
+            if fail_silently:
+                current_app.logger.debug(err_msg)
+            else:
+                raise manager_exceptions.NotFoundError(err_msg)
+
         current_app.logger.debug('Returning {0}'.format(result))
         return result
 
