@@ -13,6 +13,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from os.path import join
+
 from flask import request
 
 from flask_restful.inputs import boolean
@@ -31,12 +33,14 @@ from manager_rest.rest import (rest_utils,
                                resources_v1,
                                resources_v2,
                                rest_decorators)
-from manager_rest.utils import get_formatted_timestamp
 from manager_rest.storage import models, get_storage_manager
+from manager_rest.utils import get_formatted_timestamp, remove
 from manager_rest.rest.rest_utils import get_args_and_verify_arguments
 from manager_rest.manager_exceptions import (ConflictError,
                                              IllegalActionError,
                                              BadParametersError)
+from manager_rest import config
+from manager_rest.constants import FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER
 
 
 class BlueprintsSetGlobal(SecuredResource):
@@ -165,6 +169,18 @@ class BlueprintsId(resources_v2.BlueprintsId):
             )
         sm = get_storage_manager()
         blueprint = sm.get(models.Blueprint, blueprint_id)
+
+        # if finished blueprint validation - cleanup DB entry
+        # and uploaded blueprints folder
+        if blueprint.state == BlueprintUploadState.VALIDATING:
+            uploaded_blueprint_path = join(
+                config.instance.file_server_root,
+                FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
+                blueprint.tenant.name,
+                blueprint.id)
+            remove(uploaded_blueprint_path)
+            sm.delete(blueprint)
+            return blueprint
 
         # set blueprint state
         state = request_dict.get('state')

@@ -44,14 +44,16 @@ def upload(ctx, **kwargs):
     app_file_name = kwargs['app_file_name']
     url = kwargs['url']
     file_server_root = kwargs['file_server_root']
+    validate_only = kwargs['validate_only']
 
     # Download the archive, one way or the other
     archive_target_path = tempfile.mkdtemp()
     if url:
         # download the blueprint archive from URL using requests:
-        client.blueprints.update(
-            blueprint_id,
-            update_dict={'state': BlueprintUploadState.UPLOADING})
+        if not validate_only:
+            client.blueprints.update(
+                blueprint_id,
+                update_dict={'state': BlueprintUploadState.UPLOADING})
         try:
             with requests.get(url, stream=True, timeout=(5, None)) as resp:
                 resp.raise_for_status()
@@ -72,9 +74,10 @@ def upload(ctx, **kwargs):
             raise
 
         # Upload the downloaded archive to the manager
-        client.blueprints.upload_archive(
-            blueprint_id,
-            archive_path=archive_file_path)
+        if not validate_only:
+            client.blueprints.upload_archive(
+                blueprint_id,
+                archive_path=archive_file_path)
 
     else:
         # download the blueprint archive using REST
@@ -84,8 +87,10 @@ def upload(ctx, **kwargs):
     ctx.logger.info('Blueprint archive uploaded. Extracting...')
 
     # Extract the archive so we can parse it
-    client.blueprints.update(
-        blueprint_id, update_dict={'state': BlueprintUploadState.EXTRACTING})
+    if not validate_only:
+        client.blueprints.update(
+            blueprint_id,
+            update_dict={'state': BlueprintUploadState.EXTRACTING})
     try:
         archive_util.unpack_archive(archive_file_path, archive_target_path)
     except archive_util.UnrecognizedFormat:
@@ -129,8 +134,9 @@ def upload(ctx, **kwargs):
     ctx.logger.info('Blueprint archive extracted. Parsing...')
 
     # Parse plan
-    client.blueprints.update(
-        blueprint_id, update_dict={'state': BlueprintUploadState.PARSING})
+    if not validate_only:
+        client.blueprints.update(
+            blueprint_id, update_dict={'state': BlueprintUploadState.PARSING})
 
     dsl_location = os.path.join(app_dir, app_file_name)
 
@@ -155,11 +161,12 @@ def upload(ctx, **kwargs):
                                file_server_root,
                                **parser_context)
     except (InvalidBlueprintImport, DSLParsingException) as e:
-        ctx.logger.critical(str(e))
+        error_msg = 'Invalid blueprint - {}'.format(e)
+        ctx.logger.critical(error_msg)
         client.blueprints.update(
             blueprint_id,
             update_dict={'state': BlueprintUploadState.INVALID,
-                         'error': str(e),
+                         'error': error_msg,
                          'error_traceback': traceback.format_exc()})
         raise
     except Exception as e:
@@ -174,7 +181,10 @@ def upload(ctx, **kwargs):
     finally:
         remove(archive_target_path)
 
-    ctx.logger.info('Blueprint parsed. Updating DB with blueprint plan.')
+    if validate_only:
+        ctx.logger.info('Blueprint validated.')
+    else:
+        ctx.logger.info('Blueprint parsed. Updating DB with blueprint plan.')
 
     # Update DB with parsed plan
     update_dict = {
