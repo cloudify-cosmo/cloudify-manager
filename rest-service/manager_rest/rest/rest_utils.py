@@ -139,9 +139,9 @@ def set_restart_task(delay=1, service_management='systemd'):
     subprocess.Popen(cmd, shell=True)
 
 
-def validate_inputs(input_dict, len_input_value=256):
+def validate_inputs(input_dict, len_input_value=256, prefix=None):
     for input_name, input_value in input_dict.items():
-        prefix = 'The `{0}` argument'.format(input_name)
+        prefix = prefix or 'The `{0}` argument'.format(input_name)
 
         if not input_value:
             raise manager_exceptions.BadParametersError(
