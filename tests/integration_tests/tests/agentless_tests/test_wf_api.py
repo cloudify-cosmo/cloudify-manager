@@ -141,12 +141,6 @@ class WorkflowsAPITest(AgentlessTestCase):
                           resource('dsl/workflow_api.yaml'),
                           self._testMethodName)
 
-    def wait_for_execution_status(self, execution_id, status, timeout=30):
-        def assertion():
-            self.assertEqual(status,
-                             self.client.executions.get(execution_id).status)
-        self.do_assertions(assertion, timeout=timeout)
-
     def test_workflow_deployment_scaling_groups(self):
         deployment, _ = self.deploy_and_execute_workflow(
             resource('dsl/store-scaling-groups.yaml'),

@@ -18,14 +18,16 @@ import pytest
 
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
+from integration_tests.tests.utils import wait_for_blueprint_upload
 
 
 @pytest.mark.usefixtures('cloudmock_plugin')
 class TestStorage(AgentlessTestCase):
     def test_deployment_inputs(self):
         blueprint_id = 'b{0}'.format(uuid.uuid4())
-        blueprint = self.client.blueprints.upload(resource("dsl/basic.yaml"),
-                                                  blueprint_id)
+        self.client.blueprints.upload(resource("dsl/basic.yaml"), blueprint_id)
+        wait_for_blueprint_upload(blueprint_id, self.client)
+        blueprint = self.client.blueprints.get(blueprint_id)
         inputs = blueprint.plan['inputs']
         self.assertEqual(1, len(inputs))
         self.assertTrue('install_agent' in inputs)
@@ -45,9 +47,11 @@ class TestStorage(AgentlessTestCase):
         the same operation.
         """
         blueprint_id = 'b{0}'.format(uuid.uuid4())
-        blueprint = self.client.blueprints.upload(
+        self.client.blueprints.upload(
             resource("dsl/two_nodes_different_inputs.yaml"),
             blueprint_id)
+        wait_for_blueprint_upload(blueprint_id, self.client)
+        blueprint = self.client.blueprints.get(blueprint_id)
         deployment_id = 'd{0}'.format(uuid.uuid4())
         self.client.deployments.create(
             blueprint.id, deployment_id, skip_plugins_validation=True)

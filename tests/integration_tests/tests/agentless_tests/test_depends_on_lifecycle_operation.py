@@ -62,6 +62,7 @@ node_templates:
 
         base_blueprint_path = utils.get_resource('dsl/mock_workflows.yaml')
         self.client.blueprints.upload(base_blueprint_path, 'mock_workflows')
+        utils.wait_for_blueprint_upload('mock_workflows', self.client)
 
         deployment_id = 'd{0}'.format(uuid.uuid4())
         main_blueprint = self.generate_blueprint(tested_operation)
@@ -126,6 +127,7 @@ policies:
 """
         base_blueprint_path = utils.get_resource('dsl/mock_workflows.yaml')
         self.client.blueprints.upload(base_blueprint_path, 'mock_workflows')
+        utils.wait_for_blueprint_upload('mock_workflows', self.client)
 
         main_blueprint_path = self.make_yaml_file(main_blueprint)
         _, execution_id = self.deploy_application(main_blueprint_path,
