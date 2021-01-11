@@ -42,9 +42,14 @@ class PluginWorkdirTest(AgentTestCase):
         host_instance_id = self.client.node_instances.list(
             deployment_id=deployment.id,
             node_id='host')[0].id
-        host_file = os.path.join('/etc/cloudify', host_instance_id,
-                                 'work/plugins/testmockoperations',
-                                 filename)
+        # Get the version of manager
+        version = self.client.manager.get_version()['version']
+        host_file = os.path.join(
+            '/opt/cloudify-agent-{0}'.format(version),
+            host_instance_id,
+            'work/plugins/testmockoperations',
+            filename
+        )
         out = self.read_manager_file(central_file)
         self.assertEqual(central_content, out)
         out = self.read_host_file(host_file,
