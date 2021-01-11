@@ -360,7 +360,7 @@ class ResourceManager(object):
         shutil.rmtree(os.path.dirname(archive_path), ignore_errors=True)
 
     def upload_blueprint(self, blueprint_id, app_file_name, blueprint_url,
-                         file_server_root):
+                         file_server_root, validate_only=False):
         self._execute_system_workflow(
             wf_id='upload_blueprint',
             task_mapping='cloudify_system_workflows.blueprint.upload',
@@ -370,6 +370,7 @@ class ResourceManager(object):
                 'app_file_name': app_file_name,
                 'url': blueprint_url,
                 'file_server_root': file_server_root,
+                'validate_only': validate_only,
             },
         )
 
