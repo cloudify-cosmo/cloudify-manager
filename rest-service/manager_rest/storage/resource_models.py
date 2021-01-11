@@ -16,6 +16,8 @@
 
 from os import path
 from datetime import datetime
+import dateutil.rrule
+import dateutil.parser
 
 from flask_restful import fields as flask_fields
 
@@ -413,6 +415,38 @@ class DeploymentLabel(_Label):
         return db.relationship(
             'Deployment', lazy='joined',
             backref=db.backref('labels', cascade='all, delete-orphan'))
+
+
+class ExecutionSchedule(CreatedAtMixin, SQLResourceBase):
+    __tablename__ = 'execution_schedules'
+    name = db.Column(db.Text, nullable=False)
+    next_occurrence = db.Column(UTCDateTime, nullable=True, index=True)
+    since = db.Column(UTCDateTime, nullable=True)
+    until = db.Column(UTCDateTime, nullable=True)
+    rules = db.Column(db.ARRAY(db.Text))
+    _deployment_fk = foreign_key(Deployment._storage_id)
+    workflow_id = db.Column(db.Text, nullable=False)
+    slip = db.Column(db.Integer, nullable=False)
+    parameters = db.Column(JSONString())
+    execution_arguments = db.Column(JSONString())
+
+    deployment_id = association_proxy('deployment', 'id')
+
+    @declared_attr
+    def deployment(cls):
+        return db.relationship('Deployment')
+
+    def compute_next_occurrence(self):
+        return self.get_rruleset().after(datetime.now())
+
+    def get_rruleset(self):
+        rruleset = dateutil.rrule.rruleset(cache=True)
+        for rule in self.rules:
+            rruleset.rrule(self._get_rrule(rule))
+        return rruleset
+
+    def _get_rrule(self, rule):
+        return dateutil.rrule.rrulestr(rule)
 
 
 class Execution(CreatedAtMixin, SQLResourceBase):
