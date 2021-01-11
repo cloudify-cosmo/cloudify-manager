@@ -21,9 +21,7 @@ down_revision = '5ce2b0cbb6f3'
 branch_labels = None
 depends_on = None
 
-VISIBILITY_ENUM = postgresql.ENUM(VisibilityState.PRIVATE,
-                                  VisibilityState.TENANT,
-                                  VisibilityState.GLOBAL,
+VISIBILITY_ENUM = postgresql.ENUM(*VisibilityState.STATES,
                                   name='visibility_states',
                                   create_type=False)
 
