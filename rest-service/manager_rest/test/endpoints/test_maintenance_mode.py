@@ -142,7 +142,7 @@ class MaintenanceModeTest(BaseServerTestCase):
 
     def test_executions_denial_in_maintenance_transition_mode(self):
         self._start_maintenance_transition_mode()
-        self.client.blueprints.upload(self.get_mock_blueprint_path(), 'b1')
+        self.put_blueprint(blueprint_id='b1')
         self.assertRaises(exceptions.MaintenanceModeActivatingError,
                           self.client.executions.start,
                           deployment_id='d1',
@@ -204,7 +204,7 @@ class MaintenanceModeTest(BaseServerTestCase):
 
     def test_request_approval_after_maintenance_mode_deactivation(self):
         self._activate_and_deactivate_maintenance_mode()
-        self.client.blueprints.upload(self.get_mock_blueprint_path(), 'b1')
+        self.put_blueprint(blueprint_id='b1')
         self.client.deployments.create('b1', 'd1')
 
     def test_multiple_maintenance_mode_deactivations(self):
@@ -237,7 +237,7 @@ class MaintenanceModeTest(BaseServerTestCase):
     def _test_different_execution_status_in_activating_mode(
             self,
             execution_status=None):
-        self.client.blueprints.upload(self.get_mock_blueprint_path(), 'b1')
+        self.put_blueprint(blueprint_id='b1')
         self._start_maintenance_transition_mode(
             execution_status=execution_status)
         self.assertRaises(exceptions.MaintenanceModeActivatingError,

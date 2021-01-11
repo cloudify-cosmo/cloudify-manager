@@ -31,7 +31,8 @@ from .constants import (
 from .polling import (
     poll_with_timeout,
     is_all_executions_finished,
-    verify_execution_state
+    verify_execution_state,
+    wait_for_blueprint_to_upload
 )
 from .utils import (
     blueprint_id_exists,
@@ -154,6 +155,7 @@ class Component(object):
                 blueprint_id=self.blueprint_id,
                 archive_location=self.blueprint_archive,
                 application_file_name=self.blueprint_file_name)
+            wait_for_blueprint_to_upload(self.blueprint_id, self.client)
         except CloudifyClientError as ex:
             if 'already exists' not in str(ex):
                 raise NonRecoverableError(

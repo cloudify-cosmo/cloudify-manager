@@ -28,6 +28,7 @@ import sqlalchemy.exc
 import yaml
 import wagon
 import requests
+from setuptools import archive_util
 
 from flask_migrate import Migrate, upgrade
 from mock import MagicMock, patch
@@ -37,7 +38,9 @@ from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from cloudify._compat import urlquote
-from cloudify.models_states import ExecutionState, VisibilityState
+from cloudify.models_states import (ExecutionState,
+                                    VisibilityState,
+                                    BlueprintUploadState)
 from cloudify.constants import CLOUDIFY_EXECUTION_TOKEN_HEADER
 from cloudify.cluster_status import (
     DB_STATUS_REPORTER,
@@ -62,6 +65,8 @@ from manager_rest.constants import (
     DEFAULT_TENANT_NAME,
     CLOUDIFY_TENANT_HEADER,
     FILE_SERVER_BLUEPRINTS_FOLDER,
+    CONVENTION_APPLICATION_BLUEPRINT_FILE,
+    FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
 )
 from manager_rest import premium_enabled
 
@@ -610,6 +615,9 @@ class BaseServerTestCase(unittest.TestCase):
         client.blueprints.upload(path=bp_path,
                                  entity_id=blueprint_id,
                                  visibility=visibility)
+        self.parse_blueprint_plan(blueprint_id,
+                                  CONVENTION_APPLICATION_BLUEPRINT_FILE,
+                                  client)
         return blueprint_id
 
     def archive_mock_blueprint(self, archive_func=archiving.make_targzfile,
@@ -680,16 +688,18 @@ class BaseServerTestCase(unittest.TestCase):
         self.rm.delete_deployment(
             self.sm.get(models.Deployment, deployment_id))
 
-    def put_blueprint(self, blueprint_dir, blueprint_file_name, blueprint_id):
-        blueprint_response = self.put_file(
-            *self.put_blueprint_args(blueprint_file_name,
-                                     blueprint_id,
-                                     blueprint_dir=blueprint_dir)).json
-        if 'error_code' in blueprint_response:
-            raise RuntimeError(
-                '{}: {}'.format(blueprint_response['error_code'],
-                                blueprint_response['message']))
-        return blueprint_response
+    def put_blueprint(self,
+                      blueprint_dir='mock_blueprint',
+                      blueprint_file_name=None,
+                      blueprint_id='blueprint'):
+        if not blueprint_file_name:
+            blueprint_file_name = CONVENTION_APPLICATION_BLUEPRINT_FILE
+
+        blueprint_path = self.get_blueprint_path(
+            os.path.join(blueprint_dir, blueprint_file_name))
+        self.client.blueprints.upload(path=blueprint_path,
+                                      entity_id=blueprint_id)
+        return self.parse_blueprint_plan(blueprint_id, blueprint_file_name)
 
     @staticmethod
     def _create_wagon_and_yaml(package_name,
@@ -810,6 +820,47 @@ class BaseServerTestCase(unittest.TestCase):
             if execution.status in ExecutionState.END_STATES:
                 break
             time.sleep(3)
+
+    def parse_blueprint_plan(self, blueprint_id, app_file_name,
+                             client=None):
+        # complete blueprint parsing without running the upload workflow
+        if not client:
+            client = self.client
+
+        blueprint = client.blueprints.get(blueprint_id)
+        fs_root = self.server_configuration.file_server_root
+        archive_dir = os.path.join(
+            fs_root,
+            FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
+            blueprint['tenant_name'],
+            blueprint_id,
+        )
+        # The blueprints.upload endpoint puts the archive file in the
+        # appropriate dir under uploaded-blueprints in the file server.
+        # We expect the archive to be the only file there.
+        archive_file_name = os.listdir(archive_dir)[0]
+        archive_file_path = os.path.join(archive_dir, archive_file_name)
+
+        # extract the archive in-place, cleaning it up after parsing.
+        archive_util.unpack_archive(archive_file_path, archive_dir)
+
+        # archive dir now contains the archive file and the extracted app,
+        # which is supposed to consist of one folder.
+        archive_file_list = os.listdir(archive_dir)
+        archive_file_list.remove(os.path.basename(archive_file_name))
+        app_dir = os.path.join(archive_dir, archive_file_list[0])
+        plan = self.rm.parse_plan(app_dir, app_file_name, fs_root)
+        shutil.rmtree(app_dir)
+
+        # Update DB with parsed plan
+        update_dict = {
+            'plan': plan,
+            'main_file_name': app_file_name,
+            'state': BlueprintUploadState.UPLOADED,
+        }
+        if plan.get('description'):
+            update_dict['description'] = plan['description']
+        return client.blueprints.update(blueprint_id, update_dict=update_dict)
 
     def _add_blueprint(self, blueprint_id=None):
         if not blueprint_id:
