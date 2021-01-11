@@ -17,14 +17,17 @@ import uuid
 
 from integration_tests import AgentTestCase
 from integration_tests.tests.utils import get_resource as resource
+from integration_tests.tests.utils import wait_for_blueprint_upload
 
 
 class NamespacedScriptsTest(AgentTestCase):
     def test_success_deploy_namespaced_blueprint_with_scripts(self):
         basic_blueprint_path =\
             resource('dsl/agent_tests/blueprint_with_scripts.yaml')
+        blueprint_id = 'imported_scripts'
         self.client.blueprints.upload(basic_blueprint_path,
-                                      entity_id='imported_scripts')
+                                      entity_id=blueprint_id)
+        wait_for_blueprint_upload(blueprint_id, self.client)
         deployment_id = 'd{0}'.format(uuid.uuid4())
         dsl_path = resource(
             'dsl/agent_tests/blueprints/'

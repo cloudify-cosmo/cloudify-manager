@@ -21,6 +21,7 @@ import uuid
 
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
+from integration_tests.tests.utils import wait_for_blueprint_upload
 
 
 class DownloadBlueprintTest(AgentlessTestCase):
@@ -48,6 +49,7 @@ class DownloadBlueprintTest(AgentlessTestCase):
     def test_download_blueprint(self):
         self.client.blueprints.upload(self.original_blueprint_file,
                                       self.blueprint_id)
+        wait_for_blueprint_upload(self.blueprint_id, self.client)
         self.client.blueprints.download(
             self.blueprint_id,
             output_file=self.downloaded_archive_path)

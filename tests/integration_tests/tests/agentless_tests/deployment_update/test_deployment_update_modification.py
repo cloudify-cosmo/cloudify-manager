@@ -15,6 +15,7 @@
 import re
 
 from . import DeploymentUpdateBase, BLUEPRINT_ID
+from integration_tests.tests.utils import wait_for_blueprint_upload
 
 
 class TestDeploymentUpdateModification(DeploymentUpdateBase):
@@ -35,6 +36,7 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         base_source_node_instance = base_node_instances['modified'][0]
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
 
         # an update preview should have no effect (many times)
         for _ in range(5):
@@ -126,6 +128,7 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         )
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID, skip_reinstall=True)
@@ -216,6 +219,7 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
             self._map_node_and_node_instances(deployment.id, node_mapping)
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)
@@ -300,6 +304,7 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         self.assertEqual(modified_property, 1)
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)
@@ -328,6 +333,7 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('modify_workflow')
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)
@@ -361,6 +367,7 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
                                        deployment.outputs)
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)
@@ -380,6 +387,7 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         self.assertRegexpMatches(deployment['description'], 'old description')
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)

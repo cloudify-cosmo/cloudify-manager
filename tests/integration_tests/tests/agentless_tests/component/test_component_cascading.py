@@ -26,7 +26,8 @@ from integration_tests.tests.utils import (
     verify_deployment_env_created,
     do_retries,
     get_resource as resource,
-    generate_scheduled_for_date)
+    generate_scheduled_for_date,
+    wait_for_blueprint_upload)
 
 
 @pytest.mark.usefixtures('testmockoperations_plugin')
@@ -92,6 +93,7 @@ class ComponentCascadingCancelAndResume(AgentlessTestCase):
         # component's blueprint
         sleep_blueprint = resource('dsl/sleep_node.yaml')
         self.client.blueprints.upload(sleep_blueprint, entity_id='basic')
+        wait_for_blueprint_upload('basic', self.client)
 
         main_blueprint = resource(
             'dsl/component_with_blueprint_id.yaml')
@@ -99,6 +101,7 @@ class ComponentCascadingCancelAndResume(AgentlessTestCase):
         blueprint_id = 'blueprint_{0}'.format(test_id)
         deployment_id = 'deployment_{0}'.format(test_id)
         self.client.blueprints.upload(main_blueprint, blueprint_id)
+        wait_for_blueprint_upload(blueprint_id, self.client)
         self.client.deployments.create(blueprint_id, deployment_id,
                                        skip_plugins_validation=True)
 
@@ -167,6 +170,7 @@ class ComponentCascadingCancelAndResume(AgentlessTestCase):
     def test_three_level_cascading_cancel(self):
         sleep = resource('dsl/sleep_node.yaml')
         self.client.blueprints.upload(sleep, entity_id='sleep')
+        wait_for_blueprint_upload('sleep', self.client)
 
         layer_1 = """
 tosca_definitions_version: cloudify_dsl_1_3
@@ -188,6 +192,7 @@ node_templates:
 """
         layer_1_path = self.make_yaml_file(layer_1)
         self.client.blueprints.upload(layer_1_path, entity_id='layer_1')
+        wait_for_blueprint_upload('layer_1', self.client)
 
         layer_2 = """
 tosca_definitions_version: cloudify_dsl_1_3
@@ -212,6 +217,7 @@ node_templates:
         blueprint_id = 'blueprint_{0}'.format(test_id)
         deployment_id = 'deployment_{0}'.format(test_id)
         self.client.blueprints.upload(layer_2_path, blueprint_id)
+        wait_for_blueprint_upload(blueprint_id, self.client)
         self.client.deployments.create(blueprint_id, deployment_id,
                                        skip_plugins_validation=True)
 
@@ -232,6 +238,7 @@ node_templates:
         """
         dsl_path = resource('dsl/sleep_node.yaml')
         self.client.blueprints.upload(dsl_path, entity_id='sleep')
+        wait_for_blueprint_upload('sleep', self.client)
 
         layer_1 = """
 tosca_definitions_version: cloudify_dsl_1_3
@@ -253,6 +260,7 @@ node_templates:
 """
         layer_1_path = self.make_yaml_file(layer_1)
         self.client.blueprints.upload(layer_1_path, entity_id='layer_1')
+        wait_for_blueprint_upload('layer_1', self.client)
 
         layer_2 = """
 tosca_definitions_version: cloudify_dsl_1_3
@@ -277,6 +285,8 @@ node_templates:
         blueprint_id = 'blueprint_{0}'.format(test_id)
         deployment_id = 'deployment_{0}'.format(test_id)
         self.client.blueprints.upload(layer_2_path, blueprint_id)
+        wait_for_blueprint_upload(blueprint_id, self.client)
+
         self.client.deployments.create(blueprint_id, deployment_id,
                                        skip_plugins_validation=True)
         self._wait_for_component_deployment(deployment_id)
@@ -307,6 +317,7 @@ workflows:
         self.client.blueprints.upload(
             resource('dsl/mock_workflows.yaml'),
             entity_id='mock_workflows')
+        wait_for_blueprint_upload('mock_workflows', self.client)
 
     @staticmethod
     def generate_root_blueprint_with_component(blueprint_id='workflow',
@@ -340,6 +351,7 @@ workflows:
             self.component_blueprint_with_nothing_workflow)
         self.client.blueprints.upload(basic_blueprint_path,
                                       entity_id='workflow')
+        wait_for_blueprint_upload('workflow', self.client)
 
         deployment_id = 'd{0}'.format(uuid.uuid4())
         main_blueprint = """
@@ -387,12 +399,14 @@ workflows:
             self.component_blueprint_with_nothing_workflow)
         self.client.blueprints.upload(layer_3_path,
                                       entity_id='layer_3')
+        wait_for_blueprint_upload('layer_3', self.client)
 
         layer_2 = self.generate_root_blueprint_with_component(
             'layer_3', 'other_component')
         layer_2_path = self.make_yaml_file(layer_2)
         self.client.blueprints.upload(layer_2_path,
                                       entity_id='layer_2')
+        wait_for_blueprint_upload('layer_2', self.client)
 
         deployment_id = 'd{0}'.format(uuid.uuid4())
         main_blueprint = self.generate_root_blueprint_with_component(
@@ -419,6 +433,7 @@ workflows:
             self.component_blueprint_with_nothing_workflow)
         self.client.blueprints.upload(basic_blueprint_path,
                                       entity_id='workflow')
+        wait_for_blueprint_upload('workflow', self.client)
 
         deployment_id = 'd{0}'.format(uuid.uuid4())
         main_blueprint = """
@@ -462,6 +477,7 @@ workflows:
             self.component_blueprint_with_nothing_workflow)
         self.client.blueprints.upload(layer_3_path,
                                       entity_id='layer_3')
+        wait_for_blueprint_upload('layer_3', self.client)
 
         layer_2 = """
 tosca_definitions_version: cloudify_dsl_1_3
@@ -490,6 +506,7 @@ workflows:
         layer_2_path = self.make_yaml_file(layer_2)
         self.client.blueprints.upload(layer_2_path,
                                       entity_id='layer_2')
+        wait_for_blueprint_upload('layer_2', self.client)
 
         deployment_id = 'd{0}'.format(uuid.uuid4())
         main_blueprint = self.generate_root_blueprint_with_component(
@@ -521,6 +538,7 @@ imports:
         basic_blueprint_path = self.make_yaml_file(basic_blueprint)
         self.client.blueprints.upload(basic_blueprint_path,
                                       entity_id='workflow')
+        wait_for_blueprint_upload('workflow', self.client)
 
         deployment_id = 'd{0}'.format(uuid.uuid4())
         main_blueprint = self.generate_root_blueprint_with_component()
@@ -550,11 +568,13 @@ workflows:
         component_1_path = self.make_yaml_file(component_1)
         self.client.blueprints.upload(component_1_path,
                                       entity_id='component_1')
+        wait_for_blueprint_upload('component_1', self.client)
 
         component_2_path = self.make_yaml_file(
             self.component_blueprint_with_nothing_workflow)
         self.client.blueprints.upload(component_2_path,
                                       entity_id='component_2')
+        wait_for_blueprint_upload('component_2', self.client)
 
         deployment_id = 'd{0}'.format(uuid.uuid4())
         main_blueprint = """
@@ -618,6 +638,7 @@ workflows:
             self.component_blueprint_with_nothing_workflow)
         self.client.blueprints.upload(basic_blueprint_path,
                                       entity_id='workflow')
+        wait_for_blueprint_upload('workflow', self.client)
 
         deployment_id = 'd{0}'.format(uuid.uuid4())
         main_blueprint = self.generate_root_blueprint_with_component()
@@ -644,6 +665,7 @@ workflows:
             self.component_blueprint_with_nothing_workflow)
         self.client.blueprints.upload(basic_blueprint_path,
                                       entity_id='workflow')
+        wait_for_blueprint_upload('workflow', self.client)
 
         deployment_id = 'd{0}'.format(uuid.uuid4())
         main_blueprint = self.generate_root_blueprint_with_component()
@@ -688,6 +710,7 @@ workflows:
         basic_blueprint_path = self.make_yaml_file(basic_blueprint)
         self.client.blueprints.upload(basic_blueprint_path,
                                       entity_id='workflow')
+        wait_for_blueprint_upload('workflow', self.client)
 
         deployment_id = 'd{0}'.format(uuid.uuid4())
         main_blueprint = self.generate_root_blueprint_with_component(
@@ -715,6 +738,7 @@ workflows:
             self.component_blueprint_with_nothing_workflow)
         self.client.blueprints.upload(basic_blueprint_path,
                                       entity_id='workflow')
+        wait_for_blueprint_upload('workflow', self.client)
 
         deployment_id = 'd{0}'.format(uuid.uuid4())
         main_blueprint = self.generate_root_blueprint_with_component()

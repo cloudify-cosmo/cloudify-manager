@@ -29,6 +29,7 @@ from datetime import datetime, timedelta
 
 from .constants import SCHEDULED_TIME_FORMAT
 from cloudify.utils import setup_logger
+from cloudify.models_states import BlueprintUploadState
 from cloudify_rest_client.executions import Execution
 from integration_tests.framework import utils, docker
 from integration_tests.framework.constants import ADMIN_TOKEN_SCRIPT
@@ -167,11 +168,36 @@ def wait_for_deployment_deletion_to_complete(
                client=client)
 
 
+def wait_for_blueprint_upload(
+        blueprint_id, client, require_success=True, timeout_seconds=30):
+    func = (verify_blueprint_uploaded_successfully if require_success else
+            verify_blueprint_upload_ended)
+    do_retries(func=func,
+               timeout_seconds=timeout_seconds,
+               blueprint_id=blueprint_id,
+               client=client)
+
+
 def verify_deployment_delete_complete(deployment_id, client):
     deployment = client.deployments.list(id=deployment_id)
     if deployment:
         raise RuntimeError('Deployment with id {0} was not deleted yet.'
                            .format(deployment_id))
+
+
+def verify_blueprint_uploaded_successfully(blueprint_id, client):
+    blueprint = client.blueprints.get(blueprint_id)
+    if blueprint['state'] != BlueprintUploadState.UPLOADED:
+        raise RuntimeError('Blueprint with id {0} was not uploaded yet.'
+                           .format(blueprint_id))
+
+
+def verify_blueprint_upload_ended(blueprint_id, client):
+    # blueprint_upload can finish in any end state
+    blueprint = client.blueprints.get(blueprint_id)
+    if blueprint['state'] not in BlueprintUploadState.END_STATES:
+        raise RuntimeError('Blueprint with id {0} upload has not ended '
+                           'yet.'.format(blueprint_id))
 
 
 def get_resource(resource):
