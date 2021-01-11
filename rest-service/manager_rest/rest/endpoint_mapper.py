@@ -128,6 +128,10 @@ def setup_resources(api):
         'ClusterStatus': 'cluster-status',
         'DeploymentsLabels': 'labels/deployments',
         'DeploymentsLabelsKey': 'labels/deployments/<string:key>',
+        'Permissions': 'permissions',
+        'PermissionsRole': 'permissions/<string:role_name>',
+        'PermissionsRoleId':
+            'permissions/<string:role_name>/<string:permission_name>',
     }
 
     # Set version endpoint as a non versioned endpoint
