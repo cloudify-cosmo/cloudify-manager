@@ -60,6 +60,7 @@ from .deployments import (                       # NOQA
 
 from .blueprints import (                        # NOQA
     BlueprintsId,
+    BlueprintsIdArchive,
     BlueprintsIdValidate,
     BlueprintsSetGlobal,
     BlueprintsSetVisibility,

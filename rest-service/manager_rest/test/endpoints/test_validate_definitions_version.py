@@ -16,6 +16,7 @@
 from manager_rest.test.attribute import attr
 
 from manager_rest.test import base_test
+from manager_rest.manager_exceptions import DslParseException
 
 
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
@@ -23,19 +24,19 @@ class ValidateVersionTestCase(base_test.BaseServerTestCase):
 
     def test_validate_version_explicit_false(self):
         self._test(validate_version=False,
-                   expected_code=201)
+                   validation_passed=True)
 
     def test_validate_version_implicit(self):
         self._test(validate_version=None,
-                   expected_code=400)
+                   validation_passed=False)
 
     def test_validate_version_explicit_true(self):
         self._test(validate_version=True,
-                   expected_code=400)
+                   validation_passed=False)
 
-    def _test(self, validate_version, expected_code):
+    def _test(self, validate_version, validation_passed):
         self._create_context(validate_version=validate_version)
-        self.assertEqual(expected_code, self._upload_blueprint())
+        assert validation_passed == self._upload_blueprint()
 
     def _create_context(self, validate_version):
         context = {'cloudify': {}}
@@ -45,9 +46,12 @@ class ValidateVersionTestCase(base_test.BaseServerTestCase):
         self.client.manager.create_context('context', context)
 
     def _upload_blueprint(self):
-        response = self.put_file(*self.put_blueprint_args(
-            blueprint_file_name='blueprint_validate_definitions_version.yaml'))
-        return response.status_code
+        file_name = 'blueprint_validate_definitions_version.yaml'
+        try:
+            self.put_blueprint(blueprint_file_name=file_name)
+            return True
+        except DslParseException:
+            return False
 
     @classmethod
     def initialize_provider_context(cls):

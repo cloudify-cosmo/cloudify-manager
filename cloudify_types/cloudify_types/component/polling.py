@@ -16,8 +16,8 @@ import time
 import logging
 
 from cloudify import ctx
-from cloudify.models_states import ExecutionState
 from cloudify.exceptions import NonRecoverableError
+from cloudify.models_states import ExecutionState, BlueprintUploadState
 
 from cloudify_types.utils import handle_client_exception
 
@@ -231,4 +231,22 @@ def verify_execution_state(client,
     if not result:
         raise NonRecoverableError(
             'Execution timed out after: {0} seconds.'.format(timeout))
+    return True
+
+
+def verify_blueprint_uploaded(blueprint_id, client):
+    blueprint = client.blueprints.get(blueprint_id)
+    return blueprint['state'] == BlueprintUploadState.UPLOADED
+
+
+def wait_for_blueprint_to_upload(
+        blueprint_id, client, timeout_seconds=30):
+    result = poll_with_timeout(
+        lambda: verify_blueprint_uploaded(blueprint_id, client),
+        timeout=timeout_seconds,
+        interval=POLLING_INTERVAL)
+    if not result:
+        raise NonRecoverableError(
+            'Blueprint upload timed out after: {0} seconds.'.format(
+                timeout_seconds))
     return True

@@ -28,6 +28,7 @@ from manager_rest.resource_manager import get_resource_manager
 from manager_rest.upload_manager import (UploadedBlueprintsManager,
                                          UploadedBlueprintsValidator)
 from manager_rest.rest import (rest_utils,
+                               resources_v1,
                                resources_v2,
                                rest_decorators)
 from manager_rest.utils import get_formatted_timestamp
@@ -69,7 +70,6 @@ class BlueprintsSetVisibility(SecuredResource):
 
 class BlueprintsId(resources_v2.BlueprintsId):
     @authorize('blueprint_upload')
-    @rest_decorators.marshal_with(models.Blueprint)
     def put(self, blueprint_id, **kwargs):
         """
         Upload a blueprint (id specified)
@@ -80,28 +80,41 @@ class BlueprintsId(resources_v2.BlueprintsId):
             is_argument=True,
             valid_values=VisibilityState.STATES
         )
-        # Fail fast if trying to upload a duplicate blueprint
+        # Fail fast if trying to upload a duplicate blueprint.
+        # Allow overriding an existing blueprint which failed to upload
         current_tenant = request.headers.get('tenant')
+        override_failed = False
+
         if visibility == VisibilityState.GLOBAL:
             existing_duplicates = get_storage_manager().list(
                 models.Blueprint, filters={'id': blueprint_id})
             if existing_duplicates:
-                raise IllegalActionError(
-                    "Can't set or create the resource `{0}`, it's visibility "
-                    "can't be global because it also exists in other "
-                    "tenants".format(blueprint_id))
+                if existing_duplicates[0].state in \
+                        BlueprintUploadState.FAILED_STATES:
+                    override_failed = True
+                else:
+                    raise IllegalActionError(
+                        "Can't set or create the resource `{0}`, it's "
+                        "visibility can't be global because it also exists in "
+                        "other tenants".format(blueprint_id))
         else:
             existing_duplicates = get_storage_manager().list(
                 models.Blueprint, filters={'id': blueprint_id,
                                            'tenant_name': current_tenant})
             if existing_duplicates:
-                raise ConflictError(
-                    'blueprint with id={0} already exists on tenant {1} or '
-                    'with global visibility'.format(blueprint_id,
-                                                    current_tenant))
-        return UploadedBlueprintsManager().\
+                if existing_duplicates[0].state in \
+                        BlueprintUploadState.FAILED_STATES:
+                    override_failed = True
+                else:
+                    raise ConflictError(
+                        'blueprint with id={0} already exists on tenant {1} '
+                        'or with global visibility'.format(blueprint_id,
+                                                           current_tenant))
+        UploadedBlueprintsManager().\
             receive_uploaded_data(data_id=blueprint_id,
-                                  visibility=visibility)
+                                  visibility=visibility,
+                                  override_failed=override_failed)
+        return None, 201
 
     @swagger.operation(
         responseClass=models.Blueprint,
@@ -131,8 +144,8 @@ class BlueprintsId(resources_v2.BlueprintsId):
         This method is for internal use only.
         """
         if not request.json:
-            raise IllegalActionError('Update a blueprint request must include'
-                                     ' at least one parameter to update')
+            raise IllegalActionError('Update a blueprint request must include '
+                                     'at least one parameter to update')
 
         request_schema = {
             'plan': {'type': dict, 'optional': True},
@@ -141,6 +154,7 @@ class BlueprintsId(resources_v2.BlueprintsId):
             'visibility': {'type': text_type, 'optional': True},
             'state': {'type': text_type, 'optional': True},
             'error': {'type': text_type, 'optional': True},
+            'error_traceback': {'type': text_type, 'optional': True},
         }
         request_dict = rest_utils.get_json_and_verify_params(request_schema)
 
@@ -162,6 +176,7 @@ class BlueprintsId(resources_v2.BlueprintsId):
                 )
             blueprint.state = state
             blueprint.error = request_dict.get('error')
+            blueprint.error_traceback = request_dict.get('error_traceback')
 
         # set blueprint visibility
         visibility = request_dict.get('visibility')
@@ -177,9 +192,23 @@ class BlueprintsId(resources_v2.BlueprintsId):
         if 'plan' in request_dict:
             blueprint.plan = request_dict['plan']
         if 'description' in request_dict:
-            blueprint.plan = request_dict['description']
+            blueprint.description = request_dict['description']
         if 'main_file_name' in request_dict:
             blueprint.main_file_name = request_dict['main_file_name']
+
+        # On finalizing the blueprint upload, extract archive to file server
+        if request_dict['state'] == BlueprintUploadState.UPLOADED:
+            UploadedBlueprintsManager(). \
+                extract_blueprint_archive_to_file_server(
+                    blueprint_id=blueprint_id,
+                    tenant=blueprint.tenant.name)
+
+        # If failed for any reason, cleanup the blueprint archive from server
+        elif request_dict['state'] in BlueprintUploadState.FAILED_STATES:
+            UploadedBlueprintsManager(). \
+                cleanup_blueprint_archive_from_file_server(
+                    blueprint_id=blueprint_id,
+                    tenant=blueprint.tenant.name)
 
         blueprint.updated_at = get_formatted_timestamp()
         return sm.update(blueprint)
@@ -200,3 +229,17 @@ class BlueprintsIdValidate(BlueprintsId):
         return UploadedBlueprintsValidator().\
             receive_uploaded_data(data_id=blueprint_id,
                                   visibility=visibility)
+
+
+class BlueprintsIdArchive(resources_v1.BlueprintsIdArchive):
+    @authorize('blueprint_upload')
+    def put(self, blueprint_id, **kwargs):
+        """
+        Upload an archive for an existing a blueprint.
+
+        Used for uploading the blueprint's archive, downloaded from a URL using
+        a system workflow, to the manager's file server
+        This method is for internal use only.
+        """
+        UploadedBlueprintsManager(). \
+            upload_archive_to_file_server(blueprint_id=blueprint_id)

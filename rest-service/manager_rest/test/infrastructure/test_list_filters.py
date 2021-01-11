@@ -126,13 +126,13 @@ class ResourceListFiltersTestCase(BaseListTest):
     def test_executions_list_with_hybrid_field_filter(self):
         filter_params = {'status_display': 'completed'}
         response = self.client.executions.list(**filter_params)
-        self.assertEqual(2, len(response), 'expecting 2 execution results, '
+        self.assertEqual(4, len(response), 'expecting 4 execution results, '
                                            'got {0}'.format(len(response)))
-        self.assertEqual(response[0]['deployment_id'],
-                         self.first_deployment_id)
-        self.assertEqual(response[0]['status'], 'terminated')
-        self.assertEqual(response[1]['deployment_id'], self.sec_deployment_id)
-        self.assertEqual(response[1]['status'], 'terminated')
+        for execution in response:
+            self.assertEqual(execution['status'], 'terminated')
+        deployment_ids = [ex['deployment_id'] for ex in response]
+        self.assertIn(self.first_deployment_id, deployment_ids)
+        self.assertIn(self.sec_deployment_id, deployment_ids)
 
     def test_executions_list_with_filters_multiple_values(self):
         filter_params = {'deployment_id':
@@ -143,9 +143,11 @@ class ResourceListFiltersTestCase(BaseListTest):
 
     def test_executions_list_no_filters(self):
         response = self.client.executions.list()
-        self.assertEqual(2, len(response), 'expecting 2 executions results, '
+        self.assertEqual(4, len(response), 'expecting 4 executions results, '
                                            'got {0}'.format(len(response)))
-        for execution in response:
+        response_no_blueprint_upload = \
+            [ex for ex in response if ex['workflow_id'] != 'upload_blueprint']
+        for execution in response_no_blueprint_upload:
             self.assertIn(execution['deployment_id'],
                           (self.first_deployment_id, self.sec_deployment_id))
             self.assertIn(execution['blueprint_id'],
