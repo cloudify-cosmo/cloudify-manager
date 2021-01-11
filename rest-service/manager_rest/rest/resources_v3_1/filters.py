@@ -122,7 +122,7 @@ def _parse_labels_filter(labels_filter, sign):
              stripped of whitespaces
     """
     label_key, raw_label_value = labels_filter.split(sign)
-    label_value = filters.get_label_value(raw_label_value)
+    label_value = filters.get_label_value(raw_label_value.strip())
     if isinstance(label_value, list):
         value_msg_prefix = 'One of the filter values'
         label_values_list = label_value
@@ -135,7 +135,7 @@ def _parse_labels_filter(labels_filter, sign):
                 {'filter key': label_key.strip()}, len_input_value=LABEL_LEN)
             rest_utils.validate_inputs(
                 {'filter value': value.strip()}, len_input_value=LABEL_LEN,
-                prefix=value_msg_prefix)
+                err_prefix=value_msg_prefix)
         except manager_exceptions.BadParametersError as e:
             err_msg = 'The filter rule {0} is invalid. '.format(labels_filter)
             raise manager_exceptions.BadParametersError(err_msg + str(e))
