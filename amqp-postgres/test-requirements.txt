@@ -1,4 +1,4 @@
-git+https://github.com/cloudify-cosmo/cloudify-common@RD-377-filters#egg=cloudify-common[dispatcher]==RD-377-filters
+git+https://github.com/cloudify-cosmo/cloudify-common@RD-695-add-more-commands-to-filters#egg=cloudify-common[dispatcher]==RD-695-add-more-commands-to-filters
 -e ../rest-service
 mock
 pytest
