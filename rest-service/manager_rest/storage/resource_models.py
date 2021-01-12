@@ -420,6 +420,7 @@ class Filter(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'filters'
 
     value = db.Column(JSONString, nullable=True)
+    updated_at = db.Column(UTCDateTime)
 
 
 class Execution(CreatedAtMixin, SQLResourceBase):
