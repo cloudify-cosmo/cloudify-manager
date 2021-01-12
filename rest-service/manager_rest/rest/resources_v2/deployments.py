@@ -17,7 +17,10 @@
 from flask import request
 from flask_restful_swagger import swagger
 
+from cloudify._compat import text_type
+
 from .. import rest_utils
+from manager_rest import manager_exceptions
 from manager_rest.rest import (
     resources_v1,
     rest_decorators,
@@ -66,7 +69,8 @@ class Deployments(resources_v1.Deployments):
             pagination=pagination,
             sort=sort,
             all_tenants=all_tenants,
-            get_all_results=get_all_results
+            get_all_results=get_all_results,
+            filter_rules=_get_filter_rules()
         )
 
         if _include and 'workflows' in _include:
@@ -81,6 +85,29 @@ class Deployments(resources_v1.Deployments):
                 result.items[index] = r
 
         return result
+
+
+def _get_filter_rules():
+    request_dict = rest_utils.get_json_and_verify_params(
+        {'filter_rules': {'type': list, 'optional': True},
+         'filter_name': {'type': text_type, 'optional': True}})
+    filter_rules = request_dict.get('filter_rules')
+    filter_name = request_dict.get('filter_name')
+    if not filter_rules and not filter_name:
+        return
+
+    if filter_rules and filter_name:
+        raise manager_exceptions.BadParametersError(
+            'Filter rules and filter name cannot be provided together. '
+            'Please specify one of them or neither.'
+        )
+
+    if filter_rules:
+        return rest_utils.parse_labels_filters(filter_rules)
+
+    if filter_name:
+        filter_elem = get_storage_manager().get(models.Filter, filter_name)
+        return filter_elem.value.get('labels', [])
 
 
 class DeploymentModifications(resources_v1.DeploymentModifications):

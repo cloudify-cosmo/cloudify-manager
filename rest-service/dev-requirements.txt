@@ -1,4 +1,4 @@
-git+https://github.com/cloudify-cosmo/cloudify-common@RD-695-add-more-commands-to-filters#egg=cloudify-common[dispatcher]==RD-695-add-more-commands-to-filters
+git+https://github.com/cloudify-cosmo/cloudify-common@RD-694-filters-in-deployments-list#egg=cloudify-common[dispatcher]==RD-694-filters-in-deployments-list
 
 # For dealing with the binary leftovers of psycopg2 in the 2.7.x version
 psycopg2==2.7.4 --no-binary psycopg2

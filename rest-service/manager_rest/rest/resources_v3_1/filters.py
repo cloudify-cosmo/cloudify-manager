@@ -1,5 +1,3 @@
-import re
-
 from flask import request
 from flask_security import current_user
 
@@ -10,10 +8,8 @@ from manager_rest.security import SecuredResource
 from manager_rest.utils import get_formatted_timestamp
 from manager_rest.rest import rest_decorators, rest_utils
 from manager_rest.security.authorization import authorize
+from manager_rest.storage import models, get_storage_manager
 from manager_rest.resource_manager import get_resource_manager
-from manager_rest.storage import models, get_storage_manager, filters
-
-from .deployments import LABEL_LEN
 
 
 class Filters(SecuredResource):
@@ -55,7 +51,8 @@ class FiltersId(SecuredResource):
         rest_utils.validate_inputs({'filter_id': filter_id})
         request_dict = rest_utils.get_json_and_verify_params(
             {'filter_rules': {'type': list}})
-        labels_filters = _parse_labels_filters(request_dict['filter_rules'])
+        labels_filters = rest_utils.parse_labels_filters(
+            request_dict['filter_rules'])
         visibility = rest_utils.get_visibility_parameter(
             optional=True, valid_values=VisibilityState.STATES)
 
@@ -117,7 +114,8 @@ class FiltersId(SecuredResource):
                 models.Filter, filter_elem, visibility)
             filter_elem.visibility = visibility
         if labels_filters:
-            parsed_labels_filters = _parse_labels_filters(labels_filters)
+            parsed_labels_filters = rest_utils.parse_labels_filters(
+                labels_filters)
             filter_elem.value = {'labels': parsed_labels_filters}
         filter_elem.updated_at = get_formatted_timestamp()
 
@@ -131,82 +129,3 @@ def _validate_filter_modification_permitted(filter_elem):
             'User `{0}` is not permitted to modify the filter `{1}`'.format(
                 current_user.username, filter_elem.id)
         )
-
-
-def _parse_labels_filters(labels_filters_list):
-    """Validate and parse a list of labels filters
-
-    :param labels_filters_list: A list of labels filters. Labels filters must
-           be one of: <key>=<value>, <key>=[<value1>,<value2>,...],
-           <key>!=<value>, <key>!=[<value1>,<value2>,...], <key> is null,
-           <key> is not null
-
-    :return The labels filters list with the labels' keys and values in
-            lowercase and stripped of whitespaces
-    """
-    parsed_filter = None
-    parsed_labels_filters = []
-    for labels_filter in labels_filters_list:
-        try:
-            if '!=' in labels_filter:
-                parsed_filter = _parse_labels_filter(labels_filter, '!=')
-
-            elif '=' in labels_filter:
-                parsed_filter = _parse_labels_filter(labels_filter, '=')
-
-            elif 'null' in labels_filter:
-                match_null = re.match(r'(\S+) is null', labels_filter)
-                match_not_null = re.match(r'(\S+) is not null', labels_filter)
-                if match_null:
-                    parsed_filter = match_null.group(1).lower() + ' is null'
-                elif match_not_null:
-                    parsed_filter = (match_not_null.group(1).lower() +
-                                     ' is not null')
-                else:
-                    filters.raise_bad_labels_filter(labels_filter)
-
-            else:
-                filters.raise_bad_labels_filter(labels_filter)
-
-        except ValueError:
-            filters.raise_bad_labels_filter(labels_filter)
-
-        if parsed_filter:
-            parsed_labels_filters.append(parsed_filter)
-
-    return parsed_labels_filters
-
-
-def _parse_labels_filter(labels_filter, sign):
-    """Validate and parse a labels filter
-
-    :param labels_filter: One of <key>=<value>, <key>=[<value1>,<value2>,...],
-           <key>!=<value>, <key>!=[<value1>,<value2>,...]
-    :param sign: Either '=' or '!='
-    :return: The labels_filter, with its key and value(s) in lowercase and
-             stripped of whitespaces
-    """
-    label_key, raw_label_value = labels_filter.split(sign)
-    label_value = filters.get_label_value(raw_label_value.strip())
-    if isinstance(label_value, list):
-        value_msg_prefix = 'One of the filter values'
-        label_values_list = label_value
-    else:
-        value_msg_prefix = None
-        label_values_list = [label_value]
-    for value in label_values_list:
-        try:
-            rest_utils.validate_inputs(
-                {'filter key': label_key.strip()}, len_input_value=LABEL_LEN)
-            rest_utils.validate_inputs(
-                {'filter value': value.strip()}, len_input_value=LABEL_LEN,
-                err_prefix=value_msg_prefix)
-        except manager_exceptions.BadParametersError as e:
-            err_msg = 'The filter rule {0} is invalid. '.format(labels_filter)
-            raise manager_exceptions.BadParametersError(err_msg + str(e))
-
-    parsed_values_list = [value.strip().lower() for value in label_values_list]
-    parsed_value = (('[' + ','.join(parsed_values_list) + ']')
-                    if isinstance(label_value, list) else
-                    parsed_values_list[0])
-    return label_key.strip().lower() + sign + parsed_value

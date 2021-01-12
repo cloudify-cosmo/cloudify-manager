@@ -48,7 +48,6 @@ SHARED_RESOURCE_TYPE = 'cloudify.nodes.SharedResource'
 COMPONENT_TYPE = 'cloudify.nodes.Component'
 EXTERNAL_SOURCE = 'external_source'
 EXTERNAL_TARGET = 'external_target'
-LABEL_LEN = 56
 
 
 class DeploymentsId(resources_v1.DeploymentsId):
@@ -162,7 +161,7 @@ def _get_labels(request_dict):
                 (not isinstance(value, text_type))):
             _raise_bad_labels_list()
         rest_utils.validate_inputs({'key': key, 'value': value},
-                                   len_input_value=LABEL_LEN)
+                                   len_input_value=rest_utils.LABEL_LEN)
         labels_list.append((key.lower(), value.lower()))
 
     _test_unique_labels(labels_list)
