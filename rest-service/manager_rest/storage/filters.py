@@ -10,7 +10,7 @@ def add_labels_filters_to_query(query, labels_model, labels_filters):
         try:
             if '!=' in labels_filter:
                 label_key, raw_label_value = labels_filter.split('!=')
-                label_value = _get_label_value(raw_label_value)
+                label_value = get_label_value(raw_label_value)
                 if isinstance(label_value, list):
                     query = query.filter(key_not_equal_list_values(
                         labels_model, label_key, label_value))
@@ -20,7 +20,7 @@ def add_labels_filters_to_query(query, labels_model, labels_filters):
 
             elif '=' in labels_filter:
                 label_key, raw_label_value = labels_filter.split('=')
-                label_value = _get_label_value(raw_label_value)
+                label_value = get_label_value(raw_label_value)
                 if isinstance(label_value, list):
                     query = query.filter(key_equal_list_values(
                         labels_model, label_key, label_value))
@@ -38,18 +38,18 @@ def add_labels_filters_to_query(query, labels_model, labels_filters):
                     query = query.filter(
                         key_exist(labels_model, match_not_null.group(1)))
                 else:
-                    _raise_bad_labels_filter(labels_filter)
+                    raise_bad_labels_filter(labels_filter)
 
             else:
-                _raise_bad_labels_filter(labels_filter)
+                raise_bad_labels_filter(labels_filter)
 
         except ValueError:
-            _raise_bad_labels_filter(labels_filter)
+            raise_bad_labels_filter(labels_filter)
 
     return query
 
 
-def _raise_bad_labels_filter(labels_filter_value):
+def raise_bad_labels_filter(labels_filter_value):
     raise manager_exceptions.BadParametersError(
         'The labels filter `{0}` is not in the right '
         'format. It must be one of: <key>=<value>, '
@@ -59,7 +59,7 @@ def _raise_bad_labels_filter(labels_filter_value):
     )
 
 
-def _get_label_value(raw_label_value):
+def get_label_value(raw_label_value):
     # This means `]` and `,` are not allowed in the labels
     match_list = re.match(r'^\[([^]]+)\]$', raw_label_value)
     if match_list:

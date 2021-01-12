@@ -101,3 +101,8 @@ from .permissions import (  # NOQA
     PermissionsRole,
     PermissionsRoleId
 )
+
+from .filters import (                           # NOQA
+    Filters,
+    FiltersId,
+)
