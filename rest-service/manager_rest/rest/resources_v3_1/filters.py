@@ -53,11 +53,16 @@ class FiltersId(SecuredResource):
         Currently, this function only supports the creation of a labels filter
         """
         rest_utils.validate_inputs({'filter_id': filter_id})
-        parsed_labels_filters, visibility = _get_filter_rules_and_visibility()
+        request_dict = rest_utils.get_json_and_verify_params(
+            {'filter_rules': {'type': list}})
+        labels_filters = _parse_labels_filters(request_dict['filter_rules'])
+        visibility = rest_utils.get_visibility_parameter(
+            optional=True, valid_values=VisibilityState.STATES)
+
         now = get_formatted_timestamp()
         new_filter = models.Filter(
             id=filter_id,
-            value={'labels': parsed_labels_filters},
+            value={'labels': labels_filters},
             created_at=now,
             updated_at=now,
             visibility=visibility
@@ -97,7 +102,13 @@ class FiltersId(SecuredResource):
                 'Update a filter request must include at least one parameter '
                 'to update')
 
-        labels_filters, visibility = _get_filter_rules_and_visibility(True)
+        request_dict = rest_utils.get_json_and_verify_params(
+            {'filter_rules': {'type': list, 'optional': True}})
+
+        labels_filters = request_dict.get('filter_rules')
+        visibility = rest_utils.get_visibility_parameter(
+            optional=True, valid_values=VisibilityState.STATES)
+
         storage_manager = get_storage_manager()
         filter_elem = storage_manager.get(models.Filter, filter_id)
         _validate_filter_modification_permitted(filter_elem)
@@ -106,22 +117,11 @@ class FiltersId(SecuredResource):
                 models.Filter, filter_elem, visibility)
             filter_elem.visibility = visibility
         if labels_filters:
-            filter_elem.value = {'labels': labels_filters}
+            parsed_labels_filters = _parse_labels_filters(labels_filters)
+            filter_elem.value = {'labels': parsed_labels_filters}
         filter_elem.updated_at = get_formatted_timestamp()
 
         return storage_manager.update(filter_elem)
-
-
-def _get_filter_rules_and_visibility(filter_rules_optional=False):
-    request_dict = rest_utils.get_json_and_verify_params(
-        {'filter_rules': {'type': list, 'optional': filter_rules_optional}})
-
-    labels_filters = (_parse_labels_filters(request_dict['filter_rules'])
-                      if 'filter_rules' in request_dict else None)
-    visibility = rest_utils.get_visibility_parameter(
-        optional=True, valid_values=VisibilityState.STATES)
-
-    return labels_filters, visibility
 
 
 def _validate_filter_modification_permitted(filter_elem):
