@@ -21,7 +21,7 @@ setup(
     version='5.2.0-.dev1',
     author='Cloudify',
     author_email='cosmo-admin@cloudify.co',
-    packages=find_packages(include='cloudify_system_workflows'),
+    packages=find_packages(),
     license='LICENSE',
     description='Various Cloudify Workflows',
     install_requires=[
