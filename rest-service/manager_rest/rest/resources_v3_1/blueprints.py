@@ -74,6 +74,7 @@ class BlueprintsSetVisibility(SecuredResource):
 
 class BlueprintsId(resources_v2.BlueprintsId):
     @authorize('blueprint_upload')
+    @rest_decorators.marshal_with(models.Blueprint)
     def put(self, blueprint_id, **kwargs):
         """
         Upload a blueprint (id specified)
@@ -114,11 +115,10 @@ class BlueprintsId(resources_v2.BlueprintsId):
                         'blueprint with id={0} already exists on tenant {1} '
                         'or with global visibility'.format(blueprint_id,
                                                            current_tenant))
-        UploadedBlueprintsManager().\
+        return UploadedBlueprintsManager().\
             receive_uploaded_data(data_id=blueprint_id,
                                   visibility=visibility,
                                   override_failed=override_failed)
-        return None, 201
 
     @swagger.operation(
         responseClass=models.Blueprint,
