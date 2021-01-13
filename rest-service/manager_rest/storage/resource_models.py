@@ -314,6 +314,10 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                            nullable=True,
                            ondelete='SET NULL')
 
+    @classproperty
+    def labels_model(cls):
+        return DeploymentLabel
+
     @declared_attr
     def blueprint(cls):
         return one_to_many_relationship(cls, Blueprint, cls._blueprint_fk)
