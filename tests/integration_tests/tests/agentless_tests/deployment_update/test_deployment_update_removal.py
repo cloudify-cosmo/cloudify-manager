@@ -16,6 +16,7 @@ from pytest import mark
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from . import DeploymentUpdateBase, BLUEPRINT_ID
+from integration_tests.tests.utils import wait_for_blueprint_upload
 
 
 class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
@@ -24,6 +25,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('uninstall_execution_order')
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
         self.client.deployment_updates.update_with_existing_blueprint(
             deployment.id, BLUEPRINT_ID)
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -47,6 +49,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
             self._map_node_and_node_instances(deployment.id, node_mapping)
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
 
         # an update preview should have no effect
         self.client.deployment_updates.update_with_existing_blueprint(
@@ -145,6 +148,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         )
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)
@@ -205,6 +209,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
             self._map_node_and_node_instances(deployment.id, node_mapping)
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)
@@ -274,6 +279,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('remove_workflow')
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)
@@ -310,6 +316,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
             self._map_node_and_node_instances(deployment.id, node_mapping)
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)
@@ -389,6 +396,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         base_node = base_nodes['affected_node'][0]
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)
@@ -417,6 +425,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('remove_output')
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)
@@ -434,6 +443,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
             self._deploy_and_get_modified_bp_path('remove_description')
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)

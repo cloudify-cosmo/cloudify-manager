@@ -13,7 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 setup(
@@ -21,17 +21,14 @@ setup(
     version='5.2.0-.dev1',
     author='Cloudify',
     author_email='cosmo-admin@cloudify.co',
-    packages=[
-        'cloudify_system_workflows',
-        'cloudify_system_workflows.snapshots'
-    ],
+    packages=find_packages(),
     license='LICENSE',
     description='Various Cloudify Workflows',
     install_requires=[
         'cloudify-common==5.2.0-.dev1',
         'retrying==1.3.3',
         'psycopg2==2.7.4',
-        'cryptography==2.5.0',
+        'cryptography==3.3.1',
         'python-dateutil==2.5.3',
         'pytz==2018.4',
     ]

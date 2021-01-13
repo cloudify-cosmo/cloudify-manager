@@ -17,11 +17,14 @@ import uuid
 import pytest
 
 from cloudify_rest_client import exceptions
+from cloudify_rest_client.executions import Execution
 
 from integration_tests import AgentTestCase
 from integration_tests.tests.utils import get_resource as resource
-from integration_tests.tests.utils import \
+from integration_tests.tests.utils import (
+    wait_for_blueprint_upload,
     wait_for_deployment_creation_to_complete
+)
 
 
 @pytest.mark.usefixtures('testmockoperations_plugin')
@@ -33,6 +36,7 @@ class ManagerMaintenanceModeTest(AgentTestCase):
         blueprint_path = resource('dsl/agent_tests/maintenance_mode.yaml')
         self.client.blueprints.upload(blueprint_path,
                                       entity_id=blueprint_id)
+        wait_for_blueprint_upload(blueprint_id, self.client)
         self.client.deployments.create(blueprint_id=blueprint_id,
                                        deployment_id=deployment_id)
         wait_for_deployment_creation_to_complete(
@@ -44,6 +48,7 @@ class ManagerMaintenanceModeTest(AgentTestCase):
         # Running none blocking installation
         execution = self.client.executions.start(deployment_id=deployment_id,
                                                  workflow_id='install')
+        self.wait_for_execution_status(execution.id, status=Execution.STARTED)
 
         self.logger.info(
             "checking if maintenance status has status 'deactivated'")

@@ -23,6 +23,7 @@ from cloudify_cli.env import get_auth_header
 
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
+from integration_tests.tests.utils import wait_for_blueprint_upload
 
 
 class ResourcesAvailableTest(AgentlessTestCase):
@@ -47,6 +48,7 @@ class ResourcesAvailableTest(AgentlessTestCase):
     def test_resources_access(self):
         self.client.blueprints.upload(resource('dsl/empty_blueprint.yaml'),
                                       entity_id='blu')
+        wait_for_blueprint_upload('blu', self.client)
 
         # admin can the blueprint
         admin_headers = self.client._client.headers

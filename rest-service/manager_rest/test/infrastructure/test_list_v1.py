@@ -99,9 +99,11 @@ class TestResourceListV1(BaseListTest):
 
     def test_executions_list_no_params(self):
         response = self.client.executions.list()
-        self.assertEqual(2, len(response), 'expecting 2 executions results, '
+        self.assertEqual(4, len(response), 'expecting 4 executions results, '
                                            'got {0}'.format(len(response)))
-        for execution in response:
+        response_no_blueprint_upload = \
+            [ex for ex in response if ex['workflow_id'] != 'upload_blueprint']
+        for execution in response_no_blueprint_upload:
             self.assertIn(execution['deployment_id'],
                           (self.first_deployment_id, self.sec_deployment_id))
             self.assertIn(execution['blueprint_id'],

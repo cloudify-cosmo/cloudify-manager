@@ -33,8 +33,8 @@ from dsl_parser.functions import is_function
 from dsl_parser.constants import INTER_DEPLOYMENT_FUNCTIONS
 
 from cloudify._compat import urlquote, text_type
-from cloudify.models_states import VisibilityState
 from cloudify.snapshots import SNAPSHOT_RESTORE_FLAG_FILE
+from cloudify.models_states import VisibilityState, BlueprintUploadState
 
 from manager_rest.storage import models
 from manager_rest.constants import REST_SERVICE_NAME
@@ -587,3 +587,14 @@ def _get_deployment_from_target_func(sm, target_dep_func, source_dep_id):
         return sm.get(models.Deployment, target_dep_id, fail_silently=True)
 
     return None
+
+
+def verify_blueprint_uploaded_state(blueprint):
+    if blueprint.state in BlueprintUploadState.FAILED_STATES:
+        raise manager_exceptions.InvalidBlueprintError(
+            'Required blueprint `{}` has failed to upload. State: {}, '
+            'Error: {}'.format(blueprint.id, blueprint.state, blueprint.error))
+    elif blueprint.state != BlueprintUploadState.UPLOADED:
+        raise manager_exceptions.InvalidBlueprintError(
+            'Required blueprint `{}` is still {}.'
+            .format(blueprint.id, blueprint.state))

@@ -46,7 +46,8 @@ from manager_rest.utils import get_formatted_timestamp
 
 from manager_rest.rest.rest_utils import (get_deployment_plan,
                                           get_parsed_deployment,
-                                          RecursiveDeploymentDependencies)
+                                          RecursiveDeploymentDependencies,
+                                          verify_blueprint_uploaded_state)
 
 
 class DeploymentUpdateManager(object):
@@ -117,6 +118,7 @@ class DeploymentUpdateManager(object):
         deployment_update.new_inputs = new_inputs
         if new_blueprint_id:
             new_blueprint = self.sm.get(models.Blueprint, new_blueprint_id)
+            verify_blueprint_uploaded_state(new_blueprint)
             deployment_update.old_blueprint = old_blueprint
             deployment_update.new_blueprint = new_blueprint
         self.sm.put(deployment_update)

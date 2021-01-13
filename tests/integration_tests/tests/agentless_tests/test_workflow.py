@@ -32,7 +32,8 @@ from cloudify_rest_client.executions import Execution
 
 from integration_tests import AgentlessTestCase
 from integration_tests.framework.utils import create_zip
-from integration_tests.tests.utils import get_resource
+from integration_tests.tests.utils import (get_resource,
+                                           wait_for_blueprint_upload)
 
 from manager_rest.constants import DEFAULT_TENANT_NAME
 
@@ -178,8 +179,9 @@ class BasicWorkflowsTest(AgentlessTestCase):
     def test_publish_tar_archive(self):
         archive_location = self._make_archive_file("dsl/basic.yaml")
 
-        blueprint_id = self.client.blueprints.publish_archive(
-            archive_location, 'b{0}'.format(uuid.uuid4()), 'basic.yaml').id
+        blueprint_id = 'b{0}'.format(uuid.uuid4())
+        self.client.blueprints.publish_archive(
+            archive_location, blueprint_id, 'basic.yaml')
         # verifying blueprint exists
         result = self.client.blueprints.get(blueprint_id)
         self.assertEqual(blueprint_id, result.id)
@@ -196,9 +198,9 @@ class BasicWorkflowsTest(AgentlessTestCase):
     @pytest.mark.usefixtures('cloudmock_plugin')
     def test_delete_blueprint(self):
         dsl_path = get_resource("dsl/basic.yaml")
-        blueprint_id = self.client.blueprints.upload(
-            dsl_path, 'b{0}'.format(uuid.uuid4())).id
-
+        blueprint_id = 'b{0}'.format(uuid.uuid4())
+        self.client.blueprints.upload(dsl_path, blueprint_id)
+        wait_for_blueprint_upload(blueprint_id, self.client)
         # verifying blueprint exists
         result = self.client.blueprints.get(blueprint_id)
         self.assertEqual(blueprint_id, result.id)
@@ -242,6 +244,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
         # been installed yet, and therefore all its nodes are still in
         # 'uninitialized' state.
         self.client.blueprints.upload(dsl_path, blueprint_id)
+        wait_for_blueprint_upload(blueprint_id, self.client)
         self.client.deployments.create(blueprint_id, deployment_id,
                                        skip_plugins_validation=True)
         self.wait_for_deployment_environment(deployment_id)
@@ -347,6 +350,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
         blueprint_id = 'blueprint_{0}'.format(_id)
         deployment_id = 'deployment_{0}'.format(_id)
         self.client.blueprints.upload(dsl_path, blueprint_id)
+        wait_for_blueprint_upload(blueprint_id, self.client)
         self.client.deployments.create(blueprint_id, deployment_id,
                                        skip_plugins_validation=True)
 

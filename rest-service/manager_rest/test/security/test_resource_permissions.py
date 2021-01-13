@@ -41,6 +41,8 @@ class ResourcePermissionTests(SecurityTestBase):
                 blueprint_id,
                 visibility=visibility
             )
+            # parse plan on rest service side
+            self.parse_blueprint_plan(blueprint_id, 'blueprint.yaml')
 
         return blueprint_id
 

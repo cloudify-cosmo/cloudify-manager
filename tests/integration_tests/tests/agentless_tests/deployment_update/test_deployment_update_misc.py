@@ -15,6 +15,7 @@
 import os
 from uuid import uuid4
 from integration_tests.tests.utils import (
+    wait_for_blueprint_upload,
     wait_for_deployment_deletion_to_complete
 )
 from . import DeploymentUpdateBase, BLUEPRINT_ID
@@ -47,6 +48,7 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
                                               is_description_modified,
                                               blueprint_id):
             self.client.blueprints.upload(bp_path, blueprint_id)
+            wait_for_blueprint_upload(blueprint_id, self.client)
             dep_update = \
                 self.client.deployment_updates.update_with_existing_blueprint(
                     dep.id, blueprint_id)
@@ -71,7 +73,9 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
         update_deployment_wait_and_assert(
             deployment, remodification_bp_path, 2, True, 'second')
 
-        executions = self.client.executions.list(is_descending=False)
+        executions = [ex for ex in
+                      self.client.executions.list(is_descending=False)
+                      if ex.workflow_id != 'upload_blueprint']
         self.assertEqual('start', executions[0].blueprint_id)
         self.assertEqual('start', executions[1].blueprint_id)
         self.assertEqual('first', executions[2].blueprint_id)
@@ -102,6 +106,7 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
                                               expected_output_value):
             blueprint_id = 'b{0}'.format(uuid4())
             self.client.blueprints.upload(bp_path, blueprint_id)
+            wait_for_blueprint_upload(blueprint_id, self.client)
             dep_update = \
                 self.client.deployment_updates.update_with_existing_blueprint(
                     dep.id, blueprint_id)
@@ -177,6 +182,7 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
         )
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)
@@ -228,6 +234,7 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
             self._map_node_and_node_instances(deployment.id, node_mapping)
         base_node = base_nodes['affected_node'][0]
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id,
@@ -278,6 +285,7 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
             self._map_node_and_node_instances(deployment.id, node_mapping)
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id,
@@ -332,6 +340,7 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
         }
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id,
@@ -404,6 +413,7 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
         }
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id,
@@ -448,6 +458,7 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
         }
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
+        wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id,
@@ -501,11 +512,13 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
 
         blu_id = BLUEPRINT_ID + '-del-1'
         self.client.blueprints.upload(mod_del_dep_bp1, blu_id)
+        wait_for_blueprint_upload(blu_id, self.client)
         del_depups_ids = \
             [self.client.deployment_updates.update_with_existing_blueprint(
                 del_deployment.id, blu_id).id]
         blu_id = BLUEPRINT_ID + '-undel-1'
         self.client.blueprints.upload(mod_undel_dep_bp1, blu_id)
+        wait_for_blueprint_upload(blu_id, self.client)
         undel_depups_ids = \
             [self.client.deployment_updates.update_with_existing_blueprint(
                 undel_deployment.id, blu_id).id]
@@ -518,6 +531,7 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
         self._wait_for_successful_state(del_depups_ids[0])
         blu_id = BLUEPRINT_ID + '-del-2'
         self.client.blueprints.upload(mod_del_dep_bp2, blu_id)
+        wait_for_blueprint_upload(blu_id, self.client)
         del_depups_ids.append(
             self.client.deployment_updates.update_with_existing_blueprint(
                 del_deployment.id, blu_id).id)

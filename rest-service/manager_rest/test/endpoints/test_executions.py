@@ -945,7 +945,7 @@ class ExecutionsTestCase(BaseServerTestCase):
 
         # Authentication will succeed after updating the status
         executions = client.executions.list()
-        assert len(executions) == 2
+        assert len(executions) == 3   # bp upload + create dep.env + install
 
     @attr(client_min_version=3.1, client_max_version=LATEST_API_VERSION)
     def test_duplicate_execution_token(self):
@@ -978,19 +978,19 @@ class ExecutionsTestCase(BaseServerTestCase):
 
     @attr(client_min_version=3.1, client_max_version=LATEST_API_VERSION)
     def test_delete_executions_by_date(self):
-        self.put_deployment('dep-1')
+        self.put_deployment('dep-1')  # 2 execs: bp upload + dep.env.create
         exec1 = self.client.executions.start('dep-1', 'update')
         exec2 = self.client.executions.start('dep-1', 'update')
         self._update_execution_created_at(exec2, -60)
         self._update_execution_created_at(exec1, -30)
         self.client.executions.delete(
             to_datetime=datetime.strptime('1970-1-1', '%Y-%m-%d'))  # no change
-        assert len(self.client.executions.list()) == 3
+        assert len(self.client.executions.list()) == 4
         a45d_ago = datetime.utcnow() - timedelta(days=45)
         self.client.executions.delete(to_datetime=a45d_ago)   # deletes exec_2
-        assert len(self.client.executions.list()) == 2
+        assert len(self.client.executions.list()) == 3
         self.client.executions.delete(to_datetime=datetime.utcnow())
-        assert len(self.client.executions.list()) == 1
+        assert len(self.client.executions.list()) == 1   # skip ep.env.create
 
     def _create_execution_and_update_token(self, deployment_id, token):
         self.put_deployment(deployment_id, blueprint_id=deployment_id)
@@ -1016,7 +1016,8 @@ class ExecutionsTestCase(BaseServerTestCase):
         headers = {CLOUDIFY_EXECUTION_TOKEN_HEADER: token}
         client = self.create_client(headers=headers)
         executions = client.executions.list()
-        self.assertEqual(2, len(executions))
+        self.assertEqual(3, len(executions))
+        # bp upload + create dep.env + main execution
 
     def _update_execution_created_at(self, execution, days):
         execution = self.sm.get(models.Execution, execution.id)

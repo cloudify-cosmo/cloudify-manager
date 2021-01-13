@@ -24,9 +24,11 @@ import integration_tests_plugins
 from manager_rest.plugins_update.constants import STATES
 
 from integration_tests import AgentTestWithPlugins
-from integration_tests.tests.utils import \
-    (get_resource as resource,
-     wait_for_deployment_creation_to_complete)
+from integration_tests.tests.utils import (
+    get_resource as resource,
+    wait_for_blueprint_upload,
+    wait_for_deployment_creation_to_complete
+)
 from integration_tests.framework.utils import zip_files
 
 
@@ -183,9 +185,11 @@ class TestPluginUpdate(AgentTestWithPlugins):
         self.setup_node_id = 'node'
         self.plugin_name = 'version_aware'
 
-        blueprint = self.client.blueprints.upload(
+        self.client.blueprints.upload(
             path=self._get_dsl_blueprint_path(''),
             entity_id=self.base_blueprint_id)
+        wait_for_blueprint_upload(self.base_blueprint_id, self.client)
+        blueprint = self.client.blueprints.get(self.base_blueprint_id)
         for dep_id in self.setup_deployment_ids:
             self.client.deployments.create(blueprint.id, dep_id)
             wait_for_deployment_creation_to_complete(
@@ -370,6 +374,7 @@ class TestPluginUpdate(AgentTestWithPlugins):
             path=self._get_dsl_blueprint_path(self.mod_name),
             entity_id=self.mod_blueprint_id
         )
+        wait_for_blueprint_upload(self.mod_blueprint_id, self.client)
 
     def _get_dsl_blueprint_path(self, name):
         plugin_path = '{0}{1}.yaml'.format(self.blueprint_name_prefix, name)

@@ -53,7 +53,8 @@ from manager_rest.utils import (send_event,
 from manager_rest.plugins_update.constants import PLUGIN_UPDATE_WORKFLOW
 from manager_rest.rest.rest_utils import (
     parse_datetime_string, RecursiveDeploymentDependencies,
-    update_inter_deployment_dependencies)
+    update_inter_deployment_dependencies,
+    verify_blueprint_uploaded_state)
 from manager_rest.deployment_update.constants import STATES as UpdateStates
 from manager_rest.plugins_update.constants import STATES as PluginsUpdateStates
 
@@ -358,6 +359,21 @@ class ResourceManager(object):
         archive_path = utils.get_plugin_archive_path(plugin_id,
                                                      plugin.archive_name)
         shutil.rmtree(os.path.dirname(archive_path), ignore_errors=True)
+
+    def upload_blueprint(self, blueprint_id, app_file_name, blueprint_url,
+                         file_server_root, validate_only=False):
+        self._execute_system_workflow(
+            wf_id='upload_blueprint',
+            task_mapping='cloudify_system_workflows.blueprint.upload',
+            verify_no_executions=False,
+            execution_parameters={
+                'blueprint_id': blueprint_id,
+                'app_file_name': app_file_name,
+                'url': blueprint_url,
+                'file_server_root': file_server_root,
+                'validate_only': validate_only,
+            },
+        )
 
     def publish_blueprint(self,
                           application_dir,
@@ -1074,7 +1090,8 @@ class ResourceManager(object):
             # currently, deployment env creation/deletion are not set as
             # system workflows
             is_system_workflow = wf_id not in ('create_deployment_environment',
-                                               'delete_deployment_environment')
+                                               'delete_deployment_environment',
+                                               'upload_blueprint')
 
         should_queue = False
         if self._system_workflow_modifies_db(wf_id):
@@ -1407,6 +1424,7 @@ class ResourceManager(object):
                           runtime_only_evaluation=False,
                           labels=None):
         blueprint = self.sm.get(models.Blueprint, blueprint_id)
+        verify_blueprint_uploaded_state(blueprint)
         plan = blueprint.plan
         site = self.sm.get(models.Site, site_name) if site_name else None
 

@@ -60,6 +60,7 @@ from .deployments import (                       # NOQA
 
 from .blueprints import (                        # NOQA
     BlueprintsId,
+    BlueprintsIdArchive,
     BlueprintsIdValidate,
     BlueprintsSetGlobal,
     BlueprintsSetVisibility,
@@ -94,4 +95,9 @@ from .snapshots import ( # noqa
 from .labels import (                           # NOQA
     DeploymentsLabels,
     DeploymentsLabelsKey,
+)
+from .permissions import (  # NOQA
+    Permissions,
+    PermissionsRole,
+    PermissionsRoleId
 )

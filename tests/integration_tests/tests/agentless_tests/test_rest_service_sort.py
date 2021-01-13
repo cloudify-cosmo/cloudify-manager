@@ -54,15 +54,18 @@ class TestRestServiceListSort(AgentlessTestCase):
 
         sorted_list = self.client.executions.list(_sort=['-workflow_id',
                                                          'status'])
-        self.assertGreater(len(sorted_list), 10)
 
-        for i in range(5):
+        self.assertGreater(len(sorted_list), 11)
+
+        self.assertEqual(sorted_list[0]['workflow_id'], 'upload_blueprint')
+
+        for i in range(1, 6):
             self.assertEqual(sorted_list[i]['workflow_id'], 'uninstall')
 
-        for i in range(5, 10):
+        for i in range(6, 11):
             self.assertEqual(sorted_list[i]['workflow_id'], 'install')
 
-        self.assertEqual(sorted_list[10]['workflow_id'],
+        self.assertEqual(sorted_list[11]['workflow_id'],
                          'create_deployment_environment')
 
     def test_nodes_sort(self):

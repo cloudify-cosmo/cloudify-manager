@@ -69,6 +69,15 @@ class Permission(SQLModelBase):
     role_id = foreign_key('roles.id')
     name = db.Column(db.Text)
 
+    role = db.relationship(Role)
+    role_name = association_proxy('role', 'name')
+
+    def to_response(self, get_data=False):
+        return {
+            'role': self.role_name,
+            'permission': self.name
+        }
+
 
 class Tenant(SQLModelBase):
     __tablename__ = 'tenants'

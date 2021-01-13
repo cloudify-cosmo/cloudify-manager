@@ -40,6 +40,7 @@ from integration_tests.tests import utils as test_utils
 from integration_tests.framework.constants import PLUGIN_STORAGE_DIR
 from integration_tests.tests.utils import (
     get_resource,
+    wait_for_blueprint_upload,
     wait_for_deployment_creation_to_complete,
     wait_for_deployment_deletion_to_complete,
     verify_deployment_env_created,
@@ -166,6 +167,12 @@ class BaseTestCase(unittest.TestCase):
                                      AssertionError,
                                      **kwargs)
 
+    def wait_for_execution_status(self, execution_id, status, timeout=30):
+        def assertion():
+            self.assertEqual(status,
+                             self.client.executions.get(execution_id).status)
+        self.do_assertions(assertion, timeout=timeout)
+
     def execute_workflow(self,
                          workflow_name,
                          deployment_id,
@@ -213,7 +220,9 @@ class BaseTestCase(unittest.TestCase):
             # If not provided, use the client's default
             if blueprint_visibility:
                 blueprint_upload_kw['visibility'] = blueprint_visibility
-            blueprint = client.blueprints.upload(**blueprint_upload_kw)
+            client.blueprints.upload(**blueprint_upload_kw)
+            wait_for_blueprint_upload(blueprint_id, client, True)
+            blueprint = client.blueprints.get(blueprint_id)
         else:
             blueprint = None
 
@@ -466,6 +475,7 @@ class BaseTestCase(unittest.TestCase):
         client = client or self.client
         blueprint = get_resource(dsl_resource_path)
         client.blueprints.upload(blueprint, entity_id=blueprint_id)
+        wait_for_blueprint_upload(blueprint_id, self.client, True)
 
     def wait_for_deployment_environment(self, deployment_id):
         do_retries(
