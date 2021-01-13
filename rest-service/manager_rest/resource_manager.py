@@ -53,7 +53,8 @@ from manager_rest.utils import (send_event,
 from manager_rest.plugins_update.constants import PLUGIN_UPDATE_WORKFLOW
 from manager_rest.rest.rest_utils import (
     parse_datetime_string, RecursiveDeploymentDependencies,
-    update_inter_deployment_dependencies)
+    update_inter_deployment_dependencies,
+    verify_blueprint_uploaded_state)
 from manager_rest.deployment_update.constants import STATES as UpdateStates
 from manager_rest.plugins_update.constants import STATES as PluginsUpdateStates
 
@@ -1423,6 +1424,7 @@ class ResourceManager(object):
                           runtime_only_evaluation=False,
                           labels=None):
         blueprint = self.sm.get(models.Blueprint, blueprint_id)
+        verify_blueprint_uploaded_state(blueprint)
         plan = blueprint.plan
         site = self.sm.get(models.Site, site_name) if site_name else None
 
