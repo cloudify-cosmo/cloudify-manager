@@ -17,8 +17,6 @@
 from flask import request
 from flask_restful_swagger import swagger
 
-from cloudify._compat import text_type
-
 from .. import rest_utils
 from manager_rest import manager_exceptions
 from manager_rest.rest import (
@@ -88,11 +86,9 @@ class Deployments(resources_v1.Deployments):
 
 
 def _get_filter_rules():
-    request_dict = rest_utils.get_json_and_verify_params(
-        {'filter_rules': {'type': list, 'optional': True},
-         'filter_name': {'type': text_type, 'optional': True}})
-    filter_rules = request_dict.get('filter_rules')
-    filter_name = request_dict.get('filter_name')
+    filter_rules = request.args.get('_filter_rules')
+    filter_name = request.args.get('_filter_name')
+
     if not filter_rules and not filter_name:
         return
 
@@ -103,7 +99,7 @@ def _get_filter_rules():
         )
 
     if filter_rules:
-        return rest_utils.parse_labels_filters(filter_rules)
+        return rest_utils.parse_labels_filters(filter_rules.split(','))
 
     if filter_name:
         filter_elem = get_storage_manager().get(models.Filter, filter_name)
