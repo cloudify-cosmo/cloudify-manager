@@ -29,6 +29,7 @@ from manager_rest.storage import (
 )
 from manager_rest.security.authorization import authorize
 from manager_rest.utils import create_filter_params_list_description
+from manager_rest.rest.filters_utils import create_labels_filters_mapping
 
 
 class Deployments(resources_v1.Deployments):
@@ -99,11 +100,11 @@ def _get_filter_rules():
         )
 
     if filter_rules:
-        return rest_utils.parse_labels_filters(filter_rules.split(','))
+        return create_labels_filters_mapping(filter_rules.split(','))
 
     if filter_name:
         filter_elem = get_storage_manager().get(models.Filter, filter_name)
-        return filter_elem.value.get('labels', [])
+        return filter_elem.value.get('labels', {})
 
 
 class DeploymentModifications(resources_v1.DeploymentModifications):

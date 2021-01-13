@@ -10,6 +10,7 @@ from manager_rest.rest import rest_decorators, rest_utils
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.resource_manager import get_resource_manager
+from manager_rest.rest.filters_utils import create_labels_filters_mapping
 
 
 class Filters(SecuredResource):
@@ -51,7 +52,7 @@ class FiltersId(SecuredResource):
         rest_utils.validate_inputs({'filter_id': filter_id})
         request_dict = rest_utils.get_json_and_verify_params(
             {'filter_rules': {'type': list}})
-        labels_filters = rest_utils.parse_labels_filters(
+        labels_filters_mapping = create_labels_filters_mapping(
             request_dict['filter_rules'])
         visibility = rest_utils.get_visibility_parameter(
             optional=True, valid_values=VisibilityState.STATES)
@@ -59,7 +60,7 @@ class FiltersId(SecuredResource):
         now = get_formatted_timestamp()
         new_filter = models.Filter(
             id=filter_id,
-            value={'labels': labels_filters},
+            value={'labels': labels_filters_mapping},
             created_at=now,
             updated_at=now,
             visibility=visibility
@@ -114,9 +115,9 @@ class FiltersId(SecuredResource):
                 models.Filter, filter_elem, visibility)
             filter_elem.visibility = visibility
         if labels_filters:
-            parsed_labels_filters = rest_utils.parse_labels_filters(
+            labels_filters_mapping = create_labels_filters_mapping(
                 labels_filters)
-            filter_elem.value = {'labels': parsed_labels_filters}
+            filter_elem.value = {'labels': labels_filters_mapping}
         filter_elem.updated_at = get_formatted_timestamp()
 
         return storage_manager.update(filter_elem)

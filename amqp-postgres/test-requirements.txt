@@ -1,4 +1,4 @@
-git+https://github.com/cloudify-cosmo/cloudify-common@RD-694-filters-in-deployments-list#egg=cloudify-common[dispatcher]==RD-694-filters-in-deployments-list
+git+https://github.com/cloudify-cosmo/cloudify-common@update-filters-mechanism#egg=cloudify-common[dispatcher]==update-filters-mechanism
 -e ../rest-service
 mock
 pytest
