@@ -327,11 +327,10 @@ def get_filters_list_from_mapping(filters_mapping):
     """ Returns a filters list based on the filters mapping """
     filters_list = []
     for item in EQUAL, NOT_EQUAL:
-        label_keys = list(filters_mapping.get(item, {}).keys())
-        label_keys.sort()  # For consistency of the returned value
-        for label_key in label_keys:
+        labels = sorted(filters_mapping.get(item, {}).items())
+        for label_key, label_value in labels:
             filters_list.append(_get_label_filter_rule(
-                item, label_key, filters_mapping[item][label_key]))
+                item, label_key, label_value))
 
     for item in IS_NULL, IS_NOT_NULL:
         for label_key in filters_mapping.get(item, []):
