@@ -4,8 +4,8 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 from manager_rest.test import base_test
 from manager_rest.test.attribute import attr
 from manager_rest.storage.models_base import db
+from manager_rest.rest.rest_utils import LABEL_LEN
 from manager_rest.manager_exceptions import BadParametersError
-from manager_rest.rest.resources_v3_1.deployments import LABEL_LEN
 from manager_rest.storage.filters import add_labels_filters_to_query
 from manager_rest.storage.resource_models import Deployment, DeploymentLabel
 
@@ -58,11 +58,6 @@ class FiltersTestCase(base_test.BaseServerTestCase):
     SIMPLE_RULE = ['a=b']
     LEGAL_RULES = ['a=b', 'c!=d', 'e=[f,g]', 'h!=[i,j]',
                    'k is null', 'l is not null']
-
-    def create_filter(self, filter_name, filter_rules,
-                      visibility=VisibilityState.TENANT):
-        return self.client.filters.create(
-            filter_name, filter_rules, visibility)
 
     def list_filters(self, **kwargs):
         return self.client.filters.list(**kwargs)
