@@ -201,6 +201,7 @@ class BaseServerTestCase(unittest.TestCase):
                         client.inter_deployment_dependencies.api = \
                             mock_http_client
                         client.deployments_labels.api = mock_http_client
+                        client.filters.api = mock_http_client
 
         return client
 
@@ -954,3 +955,8 @@ class BaseServerTestCase(unittest.TestCase):
             labels=labels)
 
         return deployment
+
+    def create_filter(self, filter_name, filter_rules,
+                      visibility=VisibilityState.TENANT):
+        return self.client.filters.create(
+            filter_name, filter_rules, visibility)
