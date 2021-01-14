@@ -132,6 +132,8 @@ def setup_resources(api):
         'PermissionsRole': 'permissions/<string:role_name>',
         'PermissionsRoleId':
             'permissions/<string:role_name>/<string:permission_name>',
+        'Filters': 'filters',
+        'FiltersId': 'filters/<string:filter_id>',
     }
 
     # Set version endpoint as a non versioned endpoint
