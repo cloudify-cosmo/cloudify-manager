@@ -36,6 +36,7 @@ from cloudify.models_states import VisibilityState
 from cloudify.amqp_client import create_events_publisher, get_client
 
 from manager_rest import constants, config, manager_exceptions
+from manager_rest.constants import EQUAL, NOT_EQUAL, IS_NULL, IS_NOT_NULL
 
 
 def check_allowed_endpoint(allowed_endpoints):
@@ -320,3 +321,33 @@ def get_amqp_client():
         ssl_cert_path=config.instance.amqp_ca_path,
         connect_timeout=3,
     )
+
+
+def get_filters_list_from_mapping(filters_mapping):
+    """ Returns a filters list based on the filters mapping """
+    filters_list = []
+    for item in EQUAL, NOT_EQUAL:
+        labels = sorted(filters_mapping.get(item, {}).items())
+        for label_key, label_value in labels:
+            filters_list.append(_get_label_filter_rule(
+                item, label_key, label_value))
+
+    for item in IS_NULL, IS_NOT_NULL:
+        for label_key in filters_mapping.get(item, []):
+            filters_list.append(_get_label_filter_rule(item, label_key))
+
+    return filters_list
+
+
+def _get_label_filter_rule(mapping_key, label_key, label_values_list=None):
+    mapping = {EQUAL: '=', NOT_EQUAL: '!=',
+               IS_NULL: ' is null', IS_NOT_NULL: ' is not null'}
+
+    if mapping_key in (EQUAL, NOT_EQUAL):
+        label_values_str = (label_values_list[0] if len(label_values_list) == 1
+                            else '[' + ','.join(label_values_list) + ']')
+
+        return label_key + mapping[mapping_key] + label_values_str
+
+    else:  # mapping_key in (IS_NULL, IS_NOT_NULL)
+        return label_key + mapping[mapping_key]

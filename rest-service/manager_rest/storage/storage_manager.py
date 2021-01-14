@@ -31,6 +31,8 @@ from manager_rest.utils import (is_administrator,
                                 all_tenants_authorization,
                                 validate_global_modification)
 
+from .filters import add_labels_filters_to_query
+
 from psycopg2 import DatabaseError as Psycopg2DBError
 sql_errors = (SQLAlchemyError, Psycopg2DBError)
 
@@ -124,7 +126,8 @@ class SQLStorageManager(object):
                       model_class,
                       filters,
                       substr_filters,
-                      all_tenants):
+                      all_tenants,
+                      filter_rules):
         """Add filter clauses to the query
 
         :param query: Base SQL query
@@ -140,6 +143,16 @@ class SQLStorageManager(object):
         query = self._add_permissions_filter(query, model_class)
         query = self._add_value_filter(query, filters)
         query = self._add_substr_filter(query, substr_filters)
+        query = self._add_filter_rules(query, model_class, filter_rules)
+        return query
+
+    @staticmethod
+    def _add_filter_rules(query, model_class, filter_rules):
+        if filter_rules:
+            if hasattr(model_class, 'labels_model'):
+                return add_labels_filters_to_query(
+                    query, model_class.labels_model, filter_rules)
+
         return query
 
     def _add_value_filter(self, query, filters):
@@ -320,7 +333,8 @@ class SQLStorageManager(object):
                    substr_filters=None,
                    sort=None,
                    all_tenants=None,
-                   distinct=None):
+                   distinct=None,
+                   filter_rules=None):
         """Get an SQL query object based on the params passed
 
         :param model_class: SQL DB table class
@@ -348,7 +362,8 @@ class SQLStorageManager(object):
                                    model_class,
                                    filters,
                                    substr_filters,
-                                   all_tenants)
+                                   all_tenants,
+                                   filter_rules)
         query = self._sort_query(query, model_class, sort, distinct)
         return query
 
@@ -561,7 +576,8 @@ class SQLStorageManager(object):
              all_tenants=None,
              substr_filters=None,
              get_all_results=False,
-             distinct=None):
+             distinct=None,
+             filter_rules=None):
         """Return a list of `model_class` results
 
         :param model_class: SQL DB table class
@@ -581,6 +597,10 @@ class SQLStorageManager(object):
                                 prevent consumption of too much memory
         :param distinct: An optional list of columns names to get distinct
                          results by.
+        :param filter_rules: A dictionary of filter rules. The keys in the
+                             dictionary specify the relevant filters, and
+                             the values are lists of rules.
+                             E.g. {'labels': ['a=b', 'c!=d']}
         :return: A (possibly empty) list of `model_class` results
         """
         self._validate_available_memory()
@@ -598,7 +618,8 @@ class SQLStorageManager(object):
                                 substr_filters,
                                 sort,
                                 all_tenants,
-                                distinct)
+                                distinct,
+                                filter_rules)
 
         results, total, size, offset = self._paginate(query,
                                                       pagination,

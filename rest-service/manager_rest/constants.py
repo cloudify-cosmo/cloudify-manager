@@ -73,3 +73,10 @@ MODELS_TO_PERMISSIONS = {
 }
 FORBIDDEN_METHODS = ['POST', 'PATCH', 'PUT']
 SANITY_MODE_FILE_PATH = '/opt/manager/sanity_mode'
+
+LABEL_LEN = 56
+
+EQUAL = 'equal'
+NOT_EQUAL = 'not_equal'
+IS_NULL = 'is_null'
+IS_NOT_NULL = 'is_not_null'
