@@ -32,7 +32,9 @@ from cloudify.models_states import (AgentState,
 
 from manager_rest import config
 from manager_rest.rest.responses import Workflow, Label
-from manager_rest.utils import classproperty, files_in_folder
+from manager_rest.utils import (classproperty,
+                                files_in_folder,
+                                get_filters_list_from_mapping)
 from manager_rest.deployment_update.constants import ACTION_TYPES, ENTITY_TYPES
 from manager_rest.constants import (FILE_SERVER_PLUGINS_FOLDER,
                                     FILE_SERVER_RESOURCES_FOLDER)
@@ -422,9 +424,14 @@ class DeploymentLabel(_Label):
 
 class Filter(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'filters'
+    _extra_fields = {'labels_filters': flask_fields.Raw}
 
     value = db.Column(JSONString, nullable=True)
     updated_at = db.Column(UTCDateTime)
+
+    @property
+    def labels_filters(self):
+        return get_filters_list_from_mapping(self.value.get('labels', {}))
 
 
 class Execution(CreatedAtMixin, SQLResourceBase):

@@ -2,40 +2,77 @@ from cloudify.models_states import VisibilityState
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from manager_rest.test import base_test
+from manager_rest.constants import (LABEL_LEN, EQUAL, NOT_EQUAL, IS_NULL,
+                                    IS_NOT_NULL)
 from manager_rest.test.attribute import attr
 from manager_rest.storage.models_base import db
-from manager_rest.rest.rest_utils import LABEL_LEN
+from manager_rest.utils import get_filters_list_from_mapping
 from manager_rest.manager_exceptions import BadParametersError
 from manager_rest.storage.filters import add_labels_filters_to_query
+from manager_rest.rest.filters_utils import (BadLabelsFilter,
+                                             create_labels_filters_mapping)
 from manager_rest.storage.resource_models import Deployment, DeploymentLabel
 
 FILTER_ID = 'filter'
+LEGAL_RULES = ['a=b', 'e=[f,g]', 'c!=d', 'h!=[i,j]',
+               'k is null', 'l is not null']
 
 
 class FiltersFunctionalityTest(base_test.BaseServerTestCase):
 
     LABELS = [{'a': 'b'}, {'a': 'z'}, {'c': 'd'}]
     LABELS_2 = [{'a': 'b'}, {'c': 'z'}, {'e': 'f'}]
+    FILTER_RULES = ['a=b', 'p is not null', 'f!=g', 'f!=h', 'c=[d,e]',
+                    'f!=[i,j]', 'k!=l', 'm is null', 'n is not null',
+                    'o is null']
 
-    def test_filters_functionality(self):
+    def test_create_filters_mapping(self):
+        expected_filters_mapping = {
+            EQUAL: {
+                'a': ['b'],
+                'c': ['d', 'e']
+            },
+            NOT_EQUAL: {
+                'f': ['g', 'h', 'i', 'j'],
+                'k': ['l']
+            },
+            IS_NULL: ['m', 'o'],
+            IS_NOT_NULL: ['p', 'n']
+        }
+        filters_mapping = create_labels_filters_mapping(self.FILTER_RULES)
+        self.assertEqual(filters_mapping, expected_filters_mapping)
+
+    def test_create_filters_mapping_fails(self):
+        with self.assertRaisesRegex(BadParametersError,
+                                    '.*have the same key.*'):
+            create_labels_filters_mapping(['a=b', 'b!=c', 'a=c'])
+
+    def test_create_filters_list(self):
+        created_filters_list = get_filters_list_from_mapping(
+            create_labels_filters_mapping(LEGAL_RULES))
+        self.assertEqual(set(created_filters_list), set(LEGAL_RULES))
+
+    def test_filters_applied(self):
         dep1 = self.put_deployment_with_labels(self.LABELS)
         dep2 = self.put_deployment_with_labels(self.LABELS_2)
-        self._assert_filters_applied(['a=b'], {dep1.id, dep2.id})
-        self._assert_filters_applied(['c!=z'], {dep1.id})
-        self._assert_filters_applied(['a=[y,z]', 'c=d'], {dep1.id})
-        self._assert_filters_applied(['e is not null', 'a=b'], {dep2.id})
-        self._assert_filters_applied(['e is null', 'a=b'], {dep1.id})
-        self._assert_filters_applied(['a is null'], set())
-        self._assert_filters_applied(['c!=[y,z]', 'a=b'], {dep1.id})
+        self._assert_filters_applied({EQUAL: {'a': ['b']}}, {dep1.id, dep2.id})
+        self._assert_filters_applied({NOT_EQUAL: {'c': ['z']}}, {dep1.id})
+        self._assert_filters_applied({EQUAL: {'a': ['y', 'z'], 'c': ['d']}},
+                                     {dep1.id})
+        self._assert_filters_applied({EQUAL: {'a': ['b']}, IS_NOT_NULL: ['e']},
+                                     {dep2.id})
+        self._assert_filters_applied({EQUAL: {'a': ['b']}, IS_NULL: ['e']},
+                                     {dep1.id})
+        self._assert_filters_applied({IS_NULL: ['a']}, set())
+        self._assert_filters_applied(
+            {EQUAL: {'a': ['b']}, NOT_EQUAL: {'c': ['y', 'z']}}, {dep1.id})
 
     def test_filters_functionality_fails(self):
         err_filters = ['a null', 'a', 'a!b']
         for err_filter in err_filters:
-            with self.assertRaisesRegex(BadParametersError,
+            with self.assertRaisesRegex(BadLabelsFilter,
                                         '.*not in the right format.*'):
-                query = db.session.query(Deployment)
-                add_labels_filters_to_query(
-                    query, DeploymentLabel, [err_filter])
+                create_labels_filters_mapping([err_filter])
 
     @staticmethod
     def _assert_filters_applied(filter_labels, deployments_ids_set):
@@ -56,8 +93,6 @@ class FiltersFunctionalityTest(base_test.BaseServerTestCase):
 @attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
 class FiltersTestCase(base_test.BaseServerTestCase):
     SIMPLE_RULE = ['a=b']
-    LEGAL_RULES = ['a=b', 'c!=d', 'e=[f,g]', 'h!=[i,j]',
-                   'k is null', 'l is not null']
 
     def list_filters(self, **kwargs):
         return self.client.filters.list(**kwargs)
@@ -67,8 +102,8 @@ class FiltersTestCase(base_test.BaseServerTestCase):
             filter_name, new_filter_rules, new_visibility)
 
     def test_create_legal_filter(self):
-        new_filter = self.create_filter(FILTER_ID, self.LEGAL_RULES)
-        self.assertEqual(new_filter.labels_filter, self.LEGAL_RULES)
+        new_filter = self.create_filter(FILTER_ID, LEGAL_RULES)
+        self.assertEqual(new_filter.labels_filter, LEGAL_RULES)
 
     def test_list_filters(self):
         for i in range(3):
@@ -95,16 +130,16 @@ class FiltersTestCase(base_test.BaseServerTestCase):
 
     def test_filter_create_lowercase(self):
         legal_rules_uppercase = (
-                [rule.upper() for rule in self.LEGAL_RULES[:4]] +
+                [rule.upper() for rule in LEGAL_RULES[:4]] +
                 ['K is null', 'L is not null'])
         new_filter = self.create_filter(FILTER_ID, legal_rules_uppercase)
-        self.assertEqual(new_filter.labels_filter, self.LEGAL_RULES)
+        self.assertEqual(new_filter.labels_filter, LEGAL_RULES)
 
     def test_filter_create_strip(self):
         legal_rules_whitespace = ['a = b', 'c != d', 'e= [f , g]',
                                   'h !=[ i,j ]', 'k is null', 'l is not null']
         new_filter = self.create_filter(FILTER_ID, legal_rules_whitespace)
-        self.assertEqual(new_filter.labels_filter, self.LEGAL_RULES)
+        self.assertEqual(new_filter.labels_filter, LEGAL_RULES)
 
     def test_filter_create_fails(self):
         err_rules = [
