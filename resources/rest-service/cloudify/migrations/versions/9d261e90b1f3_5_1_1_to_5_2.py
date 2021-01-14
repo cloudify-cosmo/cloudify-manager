@@ -12,7 +12,6 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 from cloudify.models_states import VisibilityState
-
 from manager_rest.storage.models_base import JSONString, UTCDateTime
 
 # revision identifiers, used by Alembic.
@@ -29,9 +28,11 @@ VISIBILITY_ENUM = postgresql.ENUM(*VisibilityState.STATES,
 def upgrade():
     upgrade_blueprints_table()
     create_filters_table()
+    create_deployment_groups_table()
 
 
 def downgrade():
+    drop_deployment_groups_table()
     downgrade_blueprints_table()
     drop_filters_table()
 
@@ -130,3 +131,96 @@ def drop_filters_table():
     op.drop_index(op.f('filters_value_idx'),
                   table_name='filters')
     op.drop_table('filters')
+
+
+def create_deployment_groups_table():
+    op.create_table(
+        'deployment_group',
+        sa.Column(
+            '_storage_id', sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column('id', sa.Text(), nullable=True),
+        sa.Column(
+            'visibility',
+            postgresql.ENUM(
+                'private', 'tenant', 'global', name='visibility_states',
+                create_type=False),
+            nullable=True
+        ),
+        sa.Column('created_at', UTCDateTime(), nullable=False),
+        sa.Column('description', sa.Text(), nullable=True),
+        sa.Column('_tenant_id', sa.Integer(), nullable=False),
+        sa.Column('_creator_id', sa.Integer(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ['_creator_id'], ['users.id'],
+            name=op.f('deployment_group__creator_id_fkey'),
+            ondelete='CASCADE'
+        ),
+        sa.ForeignKeyConstraint(
+            ['_tenant_id'], ['tenants.id'],
+            name=op.f('deployment_group__tenant_id_fkey'),
+            ondelete='CASCADE'
+        ),
+        sa.PrimaryKeyConstraint(
+            '_storage_id', name=op.f('deployment_group_pkey'))
+    )
+    op.create_index(
+        op.f('deployment_group__creator_id_idx'),
+        'deployment_group',
+        ['_creator_id'],
+        unique=False
+    )
+    op.create_index(
+        op.f('deployment_group__tenant_id_idx'),
+        'deployment_group',
+        ['_tenant_id'],
+        unique=False
+    )
+    op.create_index(
+        op.f('deployment_group_created_at_idx'),
+        'deployment_group',
+        ['created_at'],
+        unique=False
+    )
+    op.create_index(
+        op.f('deployment_group_id_idx'),
+        'deployment_group',
+        ['id'],
+        unique=False
+    )
+    op.create_index(
+        op.f('deployment_group_visibility_idx'),
+        'deployment_group',
+        ['visibility'],
+        unique=False
+    )
+    op.create_table(
+        'deployment_group_deployments',
+        sa.Column('deployment_grou_id', sa.Integer(), nullable=True),
+        sa.Column('deployment_id', sa.Integer(), nullable=True),
+        sa.ForeignKeyConstraint(
+            ['deployment_grou_id'],
+            ['deployment_group._storage_id'],
+            name=op.f('deployment_group_deployments_deployment_grou_id_fkey')
+        ),
+        sa.ForeignKeyConstraint(
+            ['deployment_id'],
+            ['deployments._storage_id'],
+            name=op.f('deployment_group_deployments_deployment_id_fkey')
+        )
+    )
+
+
+def drop_deployment_groups_table():
+    op.drop_table('deployment_group_deployments')
+    op.drop_index(
+        op.f('deployment_group_visibility_idx'), table_name='deployment_group')
+    op.drop_index(
+        op.f('deployment_group_id_idx'), table_name='deployment_group')
+    op.drop_index(
+        op.f('deployment_group_created_at_idx'), table_name='deployment_group')
+    op.drop_index(
+        op.f('deployment_group__tenant_id_idx'), table_name='deployment_group')
+    op.drop_index(
+        op.f('deployment_group__creator_id_idx'),
+        table_name='deployment_group')
+    op.drop_table('deployment_group')

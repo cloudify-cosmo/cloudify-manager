@@ -15,6 +15,7 @@
 
 import uuid
 from builtins import staticmethod
+from datetime import datetime
 
 from flask import request
 from flask_restful.inputs import boolean
@@ -468,3 +469,74 @@ class InterDeploymentDependencies(SecuredResource):
                 substr_filters=search
             )
         return inter_deployment_dependencies
+
+
+class DeploymentGroups(SecuredResource):
+    @authorize('deployment_group_list', allow_all_tenants=True)
+    @rest_decorators.marshal_with(models.DeploymentGroup)
+    @rest_decorators.sortable(models.DeploymentGroup)
+    @rest_decorators.create_filters(models.DeploymentGroup)
+    @rest_decorators.paginate
+    @rest_decorators.all_tenants
+    def get(self, _include=None, filters=None, pagination=None, sort=None,
+            all_tenants=None):
+        get_all_results = rest_utils.verify_and_convert_bool(
+            '_get_all_results',
+            request.args.get('_get_all_results', False)
+        )
+        return get_storage_manager().list(
+            models.DeploymentGroup,
+            include=_include,
+            filters=filters,
+            pagination=pagination,
+            sort=sort,
+            all_tenants=all_tenants,
+            get_all_results=get_all_results
+        )
+
+
+class DeploymentGroupsId(SecuredResource):
+    @authorize('deployment_group_get')
+    @rest_decorators.marshal_with(models.DeploymentGroup)
+    def get(self, group_id):
+        return get_storage_manager().get(models.DeploymentGroup, group_id)
+
+    @authorize('deployment_group_create')
+    @rest_decorators.marshal_with(models.DeploymentGroup)
+    def put(self, group_id):
+        request_dict = rest_utils.get_json_and_verify_params({
+            'description': {'optional': True},
+            'deployment_ids': {'optional': True},
+        })
+        sm = get_storage_manager()
+        if request_dict.get('deployment_ids') is not None:
+            deployments = [sm.get(models.Deployment, dep_id)
+                           for dep_id in request_dict['deployment_ids']]
+        else:
+            deployments = None
+        try:
+            group = sm.get(models.DeploymentGroup, group_id)
+        except manager_exceptions.NotFoundError:
+            group = models.DeploymentGroup(
+                id=group_id,
+                description=request_dict.get('description'),
+                created_at=datetime.now()
+            )
+            sm.put(group)
+
+        if deployments is not None:
+            group.deployments.clear()
+            for dep in deployments:
+                group.deployments.append(dep)
+
+        return get_storage_manager().get(
+            models.DeploymentGroup,
+            group_id
+        )
+
+    @authorize('deployment_group_delete')
+    def delete(self, group_id):
+        sm = get_storage_manager()
+        group = sm.get(models.DeploymentGroup, group_id)
+        sm.delete(group)
+        return None, 204
