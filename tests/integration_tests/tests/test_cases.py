@@ -31,6 +31,7 @@ from retrying import retry
 from requests.exceptions import ConnectionError
 
 import cloudify.utils
+from cloudify.models_states import VisibilityState
 from cloudify.snapshots import STATES, SNAPSHOT_RESTORE_FLAG_FILE
 
 from manager_rest.constants import CLOUDIFY_TENANT_HEADER
@@ -496,6 +497,36 @@ class BaseTestCase(unittest.TestCase):
         if config.value == 'supervisord':
             service_command = 'supervisorctl -c /etc/supervisord.conf'
         return service_command
+
+    def create_client_with_user_role(self,
+                                     user_role,
+                                     user_name='user',
+                                     password='password'):
+        self.client.users.create(user_name, password, role='default')
+        self.client.tenants.add_user(user_name, 'default_tenant',
+                                     role=user_role)
+        return utils.create_rest_client(host=self.env.container_ip,
+                                        username=user_name,
+                                        password=password,
+                                        tenant='default_tenant')
+
+    def put_deployment_with_labels(self,
+                                   client,
+                                   labels,
+                                   deployment_id=None,
+                                   visibility=VisibilityState.TENANT):
+        dsl_path = test_utils.get_resource('dsl/basic.yaml')
+        blueprint_id = 'd{0}'.format(uuid.uuid4())
+        deployment_id = deployment_id or blueprint_id
+        client.blueprints.upload(dsl_path, blueprint_id, visibility=visibility)
+        test_utils.wait_for_blueprint_upload(blueprint_id, client)
+        deployment = client.deployments.create(blueprint_id,
+                                               deployment_id,
+                                               visibility=visibility,
+                                               labels=labels)
+        test_utils.wait_for_deployment_creation_to_complete(
+            self.env.container_id, deployment_id, self.client)
+        return deployment
 
 
 class AgentlessTestCase(BaseTestCase):
