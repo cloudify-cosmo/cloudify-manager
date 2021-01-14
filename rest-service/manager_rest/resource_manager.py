@@ -31,6 +31,7 @@ from cloudify.workflows import tasks as cloudify_tasks
 from cloudify.models_states import (SnapshotState,
                                     ExecutionState,
                                     VisibilityState,
+                                    BlueprintUploadState,
                                     DeploymentModificationState,
                                     PluginInstallationState)
 from cloudify_rest_client.client import CloudifyClient
@@ -451,13 +452,32 @@ class ResourceManager(object):
         blueprint = self.sm.get(models.Blueprint, blueprint_id)
         validate_global_modification(blueprint)
 
+        if blueprint.state in BlueprintUploadState.FAILED_STATES:
+            return self.sm.delete(blueprint)
+        if blueprint.state != BlueprintUploadState.UPLOADED:
+            # don't allow deleting blueprints while still uploading,
+            # so we don't leave a dirty file system
+            raise manager_exceptions.InvalidBlueprintError(
+                'Blueprint `{}` is still {}.'.format(blueprint.id,
+                                                     blueprint.state))
+
         if not force:
-            imported_blueprints_list = [b.plan.get(
-                                        constants.IMPORTED_BLUEPRINTS, [])
-                                        for b in self.sm.list(
-                                        models.Blueprint,
-                                        include=['id', 'plan'],
-                                        get_all_results=True)]
+            imported_blueprints_list = []
+            for b in self.sm.list(models.Blueprint,
+                                  include=['id', 'plan', 'state'],
+                                  get_all_results=True):
+                # we can't know whether the blueprint's plan will use the
+                # blueprint we try to delete, before we actually have a plan
+                if b.state not in BlueprintUploadState.FAILED_STATES:
+                    if b.plan:
+                        imported_blueprints_list.append(
+                            b.plan.get(constants.IMPORTED_BLUEPRINTS, []))
+                    else:
+                        raise manager_exceptions.BlueprintInUseError(
+                            'Some blueprints have not yet finished parsing. '
+                            'Please wait for them to finish and then try'
+                            ' again.')
+
             for imported in imported_blueprints_list:
                 if blueprint_id in imported:
                     raise manager_exceptions.BlueprintInUseError(
