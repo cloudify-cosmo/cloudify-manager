@@ -55,4 +55,5 @@ from .resource_models import (Blueprint,
                               InterDeploymentDependencies,
                               _PluginState,
                               DeploymentLabel,
-                              Filter)
+                              Filter,
+                              DeploymentGroup)

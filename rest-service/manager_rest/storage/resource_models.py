@@ -46,7 +46,12 @@ from .models_base import (
 )
 from .management_models import User
 from .resource_models_base import SQLResourceBase, SQLModelBase
-from .relationships import foreign_key, one_to_many_relationship
+from .relationships import (
+    foreign_key,
+    one_to_many_relationship,
+    many_to_many_relationship
+)
+
 
 RELATIONSHIP = 'relationship'
 NODE = 'node'
@@ -376,6 +381,26 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                       created_at=label.created_at,
                       creator_id=label.creator.id)
                 for label in deployment_labels]
+
+
+class DeploymentGroup(CreatedAtMixin, SQLResourceBase):
+    description = db.Column(db.Text)
+
+    @declared_attr
+    def deployments(cls):
+        return many_to_many_relationship(cls, Deployment)
+
+    @property
+    def deployment_ids(self):
+        return [dep.id for dep in self.deployments]
+
+    @classproperty
+    def response_fields(cls):
+        fields = super(DeploymentGroup, cls).response_fields
+        fields['deployment_ids'] = flask_fields.List(
+            flask_fields.String()
+        )
+        return fields
 
 
 class _Label(CreatedAtMixin, SQLModelBase):
