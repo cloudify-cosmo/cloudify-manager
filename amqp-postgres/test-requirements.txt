@@ -1,4 +1,4 @@
-git+https://github.com/cloudify-cosmo/cloudify-common@update-filters-mechanism#egg=cloudify-common[dispatcher]==update-filters-mechanism
+git+https://github.com/cloudify-cosmo/cloudify-common@master#egg=cloudify-common[dispatcher]==master
 -e ../rest-service
 mock
 pytest
