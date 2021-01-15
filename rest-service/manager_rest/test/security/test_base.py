@@ -29,9 +29,10 @@ class SecurityTestBase(BaseServerTestCase):
 
     @staticmethod
     def _get_app(flask_app, user=None):
-        # Overriding the base class' app, because otherwise a custom
-        # auth header is set on every use of the client
-        return flask_app.test_client()
+        # security tests use a not-authenticated client by default
+        if user is None:
+            user = {'username': '', 'password': ''}
+        return BaseServerTestCase._get_app(flask_app, user=user)
 
     @contextmanager
     def use_secured_client(self, headers=None, **kwargs):
@@ -55,9 +56,9 @@ class SecurityTestBase(BaseServerTestCase):
     def _assert_user_unauthorized(self, headers=None, **kwargs):
         with self.use_secured_client(headers, **kwargs):
             self.assertRaises(
-                    UserUnauthorizedError,
-                    self.client.deployments.list
-                )
+                UserUnauthorizedError,
+                self.client.deployments.list
+            )
 
     @classmethod
     def create_configuration(cls):
