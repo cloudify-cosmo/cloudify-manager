@@ -15,9 +15,9 @@
 
 from manager_rest.test.attribute import attr
 
+from manager_rest import utils
 from manager_rest.version import get_version_data
 from manager_rest.test.security_utils import get_admin_user
-from manager_rest.constants import CLOUDIFY_TENANT_HEADER, DEFAULT_TENANT_NAME
 from manager_rest.test.base_test import BaseServerTestCase, LATEST_API_VERSION
 
 
@@ -25,32 +25,20 @@ from manager_rest.test.base_test import BaseServerTestCase, LATEST_API_VERSION
 class VersionTestCase(BaseServerTestCase):
     def setUp(self):
         super(VersionTestCase, self).setUp()
-        admin = get_admin_user()
-        self.client = self.create_client_with_tenant(
-            username=admin['username'],
-            password=admin['password'],
-            tenant=DEFAULT_TENANT_NAME
-        )
-
-    @staticmethod
-    def _get_app(flask_app):
-        # Overriding the base class' app, because otherwise a custom
-        # auth header is set on every use of the client
-        return flask_app.test_client()
+        self._expected = get_version_data()
+        # Adding some values, for backwards compatibility with older clients
+        self._expected['build'] = None
+        self._expected['date'] = None
+        self._expected['commit'] = None
 
     def test_get_version(self):
-        self._test_get_version()
+        assert self.client.manager.get_version() == self._expected
 
     def test_version_does_not_require_tenant_header(self):
-        # Remove the the tenant header from the client, and make sure the
-        # rest call still works
-        self.client._client.headers.pop(CLOUDIFY_TENANT_HEADER, None)
-        self._test_get_version()
-
-    def _test_get_version(self):
-        version_dict = get_version_data()
-        # Adding some values, for backwards compatibility with older clients
-        version_dict['build'] = None
-        version_dict['date'] = None
-        version_dict['commit'] = None
-        self.assertDictEqual(self.client.manager.get_version(), version_dict)
+        # create a client without the tenant header
+        admin = get_admin_user()
+        no_tenant_client = self.create_client(headers=utils.create_auth_header(
+            username=admin['username'],
+            password=admin['password'],
+        ))
+        assert no_tenant_client.manager.get_version() == self._expected
