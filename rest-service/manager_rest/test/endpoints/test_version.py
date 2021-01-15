@@ -33,7 +33,7 @@ class VersionTestCase(BaseServerTestCase):
         )
 
     @staticmethod
-    def _get_app(flask_app):
+    def _get_app(flask_app, user):
         # Overriding the base class' app, because otherwise a custom
         # auth header is set on every use of the client
         return flask_app.test_client()
