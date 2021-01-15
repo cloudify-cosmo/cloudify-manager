@@ -133,8 +133,10 @@ class TestClient(FlaskClient):
                     password=self._user['password']
                 )
             )
-        kwargs['headers'][constants.CLOUDIFY_TENANT_HEADER] = \
+        kwargs['headers'].setdefault(
+            constants.CLOUDIFY_TENANT_HEADER,
             constants.DEFAULT_TENANT_NAME
+        )
         return super(TestClient, self).open(*args, **kwargs)
 
 
