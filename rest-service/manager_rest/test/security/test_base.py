@@ -28,7 +28,7 @@ class SecurityTestBase(BaseServerTestCase):
         add_users_to_db(get_test_users())
 
     @staticmethod
-    def _get_app(flask_app):
+    def _get_app(flask_app, user=None):
         # Overriding the base class' app, because otherwise a custom
         # auth header is set on every use of the client
         return flask_app.test_client()
