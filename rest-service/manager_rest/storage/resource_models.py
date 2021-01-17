@@ -14,8 +14,10 @@
 #    * limitations under the License.
 
 
+import re
 from os import path
 from datetime import datetime
+from dateutil import rrule
 
 from flask_restful import fields as flask_fields
 
@@ -529,6 +531,81 @@ class Execution(CreatedAtMixin, SQLResourceBase):
         fields = super(Execution, cls).resource_fields
         fields.pop('token')
         return fields
+
+
+class ExecutionSchedule(CreatedAtMixin, SQLResourceBase):
+    __tablename__ = 'execution_schedules'
+    next_occurrence = db.Column(UTCDateTime, nullable=True, index=True)
+    since = db.Column(UTCDateTime, nullable=True)
+    until = db.Column(UTCDateTime, nullable=True)
+    rule = db.Column(JSONString(), nullable=False)
+    slip = db.Column(db.Integer, nullable=False)
+    workflow_id = db.Column(db.Text, nullable=False)
+    parameters = db.Column(JSONString())
+    execution_arguments = db.Column(JSONString())
+    stop_on_fail = db.Column(db.Boolean, nullable=False, default=False)
+
+    _deployment_fk = foreign_key(Deployment._storage_id)
+    _latest_execution_fk = foreign_key(Execution._storage_id, nullable=True)
+
+    deployment_id = association_proxy('deployment', 'id')
+    latest_execution_status = association_proxy('latest_execution',
+                                                'execution_status')
+
+    @declared_attr
+    def deployment(cls):
+        return one_to_many_relationship(cls, Deployment, cls._deployment_fk)
+
+    @declared_attr
+    def latest_execution(cls):
+        return one_to_many_relationship(cls, Execution,
+                                        cls._latest_execution_fk)
+
+    def compute_next_occurrence(self):
+        return self.get_rrule(self.rule).after(datetime.now())
+
+    # Rules are of the following possible formats (e.g.):
+    # {'frequency': '2 weeks', 'count': 5, 'weekdays': ['SU', 'MO', 'TH']}
+    # -- run every 2 weeks, 5 times totally, only on sun. mon. or thu.
+    # {'count': 1'} -- run exactly once, at the `since` time
+    # {'rrule': 'RRULE:FREQ=DAILY;INTERVAL=3'} -- pass RRULE directly
+
+    def get_rrule(self, rule):
+        if 'rrule' in rule.keys():
+            return rrule.rrulestr(rule['rrule'])
+        if 'frequency' not in rule.keys():
+            if rule.get('count') == 1:
+                frequency = rrule.DAILY
+                interval = None
+            else:
+                return
+        else:
+            parsed = re.findall(r"(\d+) (seconds?|minutes?|hours?|days?|weeks?"
+                                "|months?|years?) ?(ago)?", rule['frequency'])
+            if not parsed or len(parsed[0]) < 2:
+                return
+            freqs = {'seconds': rrule.SECONDLY, 'minutes': rrule.MINUTELY,
+                     'hours': rrule.HOURLY, 'days': rrule.DAILY,
+                     'weeks': rrule.WEEKLY, 'months': rrule.MONTHLY,
+                     'years': rrule.YEARLY}
+            interval = int(parsed[0][0])
+            frequency = freqs[parsed[0][1]]
+
+        if 'weekdays' in rule.keys():
+            weekdays = self._get_weekdays(rule['weekdays'])
+
+        return rrule.rrule(freq=frequency, interval=interval,
+                           dtstart=self.since, until=self.until,
+                           byweekday=weekdays, count=rule.get('count'),
+                           cache=True)
+
+    @staticmethod
+    def _get_weekdays(weekdays):
+        weekdays_rule = []
+        for weekday in rrule.weekdays:
+            if str(weekday) in weekdays:
+                weekdays_rule.append(weekday)
+        return weekdays_rule
 
 
 class Event(SQLResourceBase):
