@@ -119,15 +119,24 @@ class TestClient(FlaskClient):
     """A helper class that overrides flask's default testing.FlaskClient
     class for the purpose of adding authorization headers to all rest calls
     """
+    def __init__(self, *args, **kwargs):
+        self._user = kwargs.pop('user')
+        super(TestClient, self).__init__(*args, **kwargs)
+
     def open(self, *args, **kwargs):
         kwargs = kwargs or {}
-        admin = get_admin_user()
         kwargs['headers'] = kwargs.get('headers') or {}
         if CLOUDIFY_EXECUTION_TOKEN_HEADER not in kwargs['headers']:
-            kwargs['headers'].update(utils.create_auth_header(
-                username=admin['username'], password=admin['password']))
-        kwargs['headers'][constants.CLOUDIFY_TENANT_HEADER] = \
+            kwargs['headers'].update(
+                utils.create_auth_header(
+                    username=self._user['username'],
+                    password=self._user['password']
+                )
+            )
+        kwargs['headers'].setdefault(
+            constants.CLOUDIFY_TENANT_HEADER,
             constants.DEFAULT_TENANT_NAME
+        )
         return super(TestClient, self).open(*args, **kwargs)
 
 
@@ -147,17 +156,20 @@ class BaseServerTestCase(unittest.TestCase):
                                   username,
                                   password,
                                   tenant=DEFAULT_TENANT_NAME):
-        headers = utils.create_auth_header(username=username,
-                                           password=password)
-
-        headers[CLOUDIFY_TENANT_HEADER] = tenant
-        return cls.create_client(headers=headers)
+        app = cls._get_app(server.app, user={
+            'username': username,
+            'password': password
+        })
+        headers = {CLOUDIFY_TENANT_HEADER: tenant}
+        return cls.create_client(headers=headers, app=app)
 
     @classmethod
-    def create_client(cls, headers=None):
+    def create_client(cls, headers=None, app=None):
+        if app is None:
+            app = cls.app
         client = CloudifyClient(host='localhost',
                                 headers=headers)
-        mock_http_client = MockHTTPClient(cls.app,
+        mock_http_client = MockHTTPClient(app,
                                           headers=headers,
                                           file_server=cls.file_server)
         client._client = mock_http_client
@@ -202,6 +214,7 @@ class BaseServerTestCase(unittest.TestCase):
                             mock_http_client
                         client.deployments_labels.api = mock_http_client
                         client.filters.api = mock_http_client
+                        client.deployment_groups.api = mock_http_client
 
         return client
 
@@ -400,14 +413,17 @@ class BaseServerTestCase(unittest.TestCase):
         utils.set_current_tenant(default_tenant)
 
     @staticmethod
-    def _get_app(flask_app):
+    def _get_app(flask_app, user=None):
         """Create a flask.testing FlaskClient
 
         :param flask_app: Flask app
+        :param user: a dict containing username and password
         :return: Our modified version of Flask's test client
         """
+        if user is None:
+            user = get_admin_user()
         flask_app.test_client_class = TestClient
-        return flask_app.test_client()
+        return flask_app.test_client(user=user)
 
     @staticmethod
     def _setup_current_user():
