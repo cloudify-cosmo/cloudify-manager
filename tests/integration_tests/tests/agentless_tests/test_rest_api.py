@@ -19,8 +19,9 @@ import pytest
 
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
-from integration_tests.tests.utils import \
-    wait_for_deployment_creation_to_complete
+from integration_tests.tests.utils import (
+    wait_for_blueprint_upload,
+    wait_for_deployment_creation_to_complete)
 
 
 @pytest.mark.usefixtures('cloudmock_plugin')
@@ -41,6 +42,7 @@ class RestAPITest(AgentlessTestCase):
         blueprint_id = blueprint_id or self.blueprint_id
         deployment_id = deployment_id or self.deployment_id
         self.client.blueprints.upload(dsl_path, blueprint_id)
+        wait_for_blueprint_upload(blueprint_id, self.client, True)
         self.client.deployments.create(blueprint_id, deployment_id,
                                        skip_plugins_validation=True)
         wait_for_deployment_creation_to_complete(
