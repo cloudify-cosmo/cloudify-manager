@@ -509,11 +509,6 @@ class DeploymentGroupsId(SecuredResource):
             'deployment_ids': {'optional': True},
         })
         sm = get_storage_manager()
-        if request_dict.get('deployment_ids') is not None:
-            deployments = [sm.get(models.Deployment, dep_id)
-                           for dep_id in request_dict['deployment_ids']]
-        else:
-            deployments = None
         try:
             group = sm.get(models.DeploymentGroup, group_id)
         except manager_exceptions.NotFoundError:
@@ -524,15 +519,20 @@ class DeploymentGroupsId(SecuredResource):
             )
             sm.put(group)
 
-        if deployments is not None:
-            group.deployments.clear()
-            for dep in deployments:
-                group.deployments.append(dep)
-
+        self._set_group_deployments(
+            sm, group, request_dict.get('deployment_ids'))
         return get_storage_manager().get(
             models.DeploymentGroup,
             group_id
         )
+
+    def _set_group_deployments(self, sm, group, deployment_ids=None):
+        if deployment_ids is not None:
+            deployments = [sm.get(models.Deployment, dep_id)
+                           for dep_id in deployment_ids]
+            group.deployments.clear()
+            for dep in deployments:
+                group.deployments.append(dep)
 
     @authorize('deployment_group_delete')
     def delete(self, group_id):
