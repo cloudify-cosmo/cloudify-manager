@@ -203,7 +203,6 @@ class PluginsId(resources_v2_1.PluginsId):
                 400, 'Unknown action: {0}'.format(action_dict.get('action')))
 
     @authorize('plugin_upload')
-    @rest_decorators.marshal_with(models.Plugin)
     def put(self, plugin_id, **kwargs):
         """Update the plugin, specifically the installation state.
 
@@ -226,17 +225,21 @@ class PluginsId(resources_v2_1.PluginsId):
                 'Expected agent or manager, got none')
 
         sm = get_storage_manager()
-        plugin = sm.get(models.Plugin, plugin_id)
-
-        agent, manager = None, None
-        if agent_name:
-            agent = sm.get(
-                models.Agent, None, filters={'name': agent_name})
-        elif manager_name:
-            manager = sm.get(
-                models.Manager, None, filters={'hostname': manager_name})
-
         try:
+            plugin = sm.get(models.Plugin, plugin_id)
+            # render response under the try/except - avoid marshal_with
+            # in case the plugin was removed concurrently
+            response = plugin.to_response()
+
+            agent, manager = None, None
+            if agent_name:
+                agent = sm.get(
+                    models.Agent, None, filters={'name': agent_name})
+            elif manager_name:
+                manager = sm.get(
+                    models.Manager, None, filters={'hostname': manager_name})
+
+            # response = plugin.to_response()
             get_resource_manager().set_plugin_state(
                 plugin=plugin, manager=manager, agent=agent,
                 state=request_dict['state'], error=request_dict.get('error'))
@@ -246,5 +249,5 @@ class PluginsId(resources_v2_1.PluginsId):
             plugin = sm.get(models.Plugin, plugin_id)
             # ...if it doesn't throw, something is seriously wrong!
             raise RuntimeError('Unknown error setting plugin {0} state: {1}'
-                               .format(plugin, e))
-        return plugin
+                               .format(plugin_id, e))
+        return response
