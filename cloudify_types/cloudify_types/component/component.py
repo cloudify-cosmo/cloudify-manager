@@ -474,6 +474,7 @@ class Component(object):
             dict(
                  deployment_id=self.deployment_id,
                  workflow_id=self.workflow_id,
+                 parameters=ctx.workflow_parameters,
                  **execution_args
              ))
 
