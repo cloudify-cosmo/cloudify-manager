@@ -678,10 +678,13 @@ class BaseServerTestCase(unittest.TestCase):
                        blueprint_dir='mock_blueprint',
                        skip_plugins_validation=None,
                        site_name=None,
-                       labels=None):
+                       labels=None,
+                       client=None):
+        client = client or self.client
         blueprint_response = self.put_blueprint(blueprint_dir,
                                                 blueprint_file_name,
-                                                blueprint_id)
+                                                blueprint_id,
+                                                client=client)
         blueprint_id = blueprint_response['id']
         create_deployment_kwargs = {'inputs': inputs}
         if site_name:
@@ -691,9 +694,9 @@ class BaseServerTestCase(unittest.TestCase):
         if skip_plugins_validation is not None:
             create_deployment_kwargs['skip_plugins_validation'] =\
                 skip_plugins_validation
-        deployment = self.client.deployments.create(blueprint_id,
-                                                    deployment_id,
-                                                    **create_deployment_kwargs)
+        deployment = client.deployments.create(blueprint_id,
+                                               deployment_id,
+                                               **create_deployment_kwargs)
         return blueprint_id, deployment.id, blueprint_response, deployment
 
     def delete_deployment(self, deployment_id):
@@ -708,15 +711,17 @@ class BaseServerTestCase(unittest.TestCase):
     def put_blueprint(self,
                       blueprint_dir='mock_blueprint',
                       blueprint_file_name=None,
-                      blueprint_id='blueprint'):
+                      blueprint_id='blueprint',
+                      client=None):
+        client = client or self.client
         if not blueprint_file_name:
             blueprint_file_name = CONVENTION_APPLICATION_BLUEPRINT_FILE
 
         blueprint_path = self.get_blueprint_path(
             os.path.join(blueprint_dir, blueprint_file_name))
-        self.client.blueprints.upload(path=blueprint_path,
-                                      entity_id=blueprint_id)
-        return self.parse_blueprint_plan(blueprint_id, blueprint_file_name)
+        client.blueprints.upload(path=blueprint_path, entity_id=blueprint_id)
+        return self.parse_blueprint_plan(blueprint_id, blueprint_file_name,
+                                         client=client)
 
     @staticmethod
     def _create_wagon_and_yaml(package_name,
@@ -962,17 +967,42 @@ class BaseServerTestCase(unittest.TestCase):
             *args
         )
 
-    def put_deployment_with_labels(self, labels):
-        resource_id = 'i{0}'.format(uuid.uuid4())
+    def put_deployment_with_labels(self, labels, resource_id=None,
+                                   client=None):
+        client = client or self.client
+        resource_id = resource_id or 'i{0}'.format(uuid.uuid4())
         _, _, _, deployment = self.put_deployment(
             blueprint_file_name='blueprint.yaml',
             blueprint_id=resource_id,
             deployment_id=resource_id,
-            labels=labels)
+            labels=labels,
+            client=client)
 
         return deployment
 
     def create_filter(self, filter_name, filter_rules,
-                      visibility=VisibilityState.TENANT):
-        return self.client.filters.create(
-            filter_name, filter_rules, visibility)
+                      visibility=VisibilityState.TENANT, client=None):
+        client = client or self.client
+        return client.filters.create(filter_name, filter_rules, visibility)
+
+    def update_filter(self, new_filter_rules=None, new_visibility=None,
+                      creator_client=None, updater_client=None):
+        filter_id = 'filter'
+        creator_client = creator_client or self.client
+        updater_client = updater_client or self.client
+        orig_filter = self.create_filter(filter_id, ['a=b'],
+                                         client=creator_client)
+        updated_filter = updater_client.filters.update(
+            filter_id, new_filter_rules, new_visibility)
+
+        updated_rules = new_filter_rules or self.SIMPLE_RULE
+        updated_visibility = new_visibility or VisibilityState.TENANT
+        self.assertEqual(updated_filter.labels_filter, updated_rules)
+        self.assertEqual(updated_filter.visibility, updated_visibility)
+        self.assertGreater(updated_filter.updated_at, orig_filter.updated_at)
+
+    def get_new_user_with_role(self, username, password, role,
+                               tenant=DEFAULT_TENANT_NAME):
+        self.client.users.create(username, password, role='default')
+        self.client.tenants.add_user(username, tenant, role=role)
+        return self.create_client_with_tenant(username, password)
