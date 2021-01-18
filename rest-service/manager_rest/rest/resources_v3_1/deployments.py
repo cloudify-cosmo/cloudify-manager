@@ -507,6 +507,9 @@ class DeploymentGroupsId(SecuredResource):
         request_dict = rest_utils.get_json_and_verify_params({
             'description': {'optional': True},
             'deployment_ids': {'optional': True},
+            'blueprint_id': {'optional': True},
+            'default_inputs': {'optional': True},
+            'visibility': {'optional': True},
         })
         sm = get_storage_manager()
         try:
@@ -517,7 +520,8 @@ class DeploymentGroupsId(SecuredResource):
                 description=request_dict.get('description'),
                 created_at=datetime.now()
             )
-            sm.put(group)
+        self._set_group_attributes(sm, group, request_dict)
+        sm.put(group)
 
         self._set_group_deployments(
             sm, group, request_dict.get('deployment_ids'))
@@ -525,6 +529,20 @@ class DeploymentGroupsId(SecuredResource):
             models.DeploymentGroup,
             group_id
         )
+
+    def _set_group_attributes(self, sm, group, request_dict):
+        if request_dict.get('visibility') is not None:
+            group.visibility = request_dict['visibility']
+
+        if request_dict.get('default_inputs') is not None:
+            group.default_inputs = request_dict['default_inputs']
+
+        if request_dict.get('description') is not None:
+            group.description = request_dict['description']
+
+        if request_dict.get('blueprint_id'):
+            group.default_blueprint = sm.get(
+                models.Blueprint, request_dict['blueprint_id'])
 
     def _set_group_deployments(self, sm, group, deployment_ids=None):
         if deployment_ids is not None:
