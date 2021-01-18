@@ -397,7 +397,8 @@ class ResourceManager(object):
                                     blueprint_id,
                                     plan,
                                     private_resource,
-                                    visibility):
+                                    visibility,
+                                    state=None):
         now = utils.get_formatted_timestamp()
         visibility = self.get_resource_visibility(models.Blueprint,
                                                   blueprint_id,
@@ -410,7 +411,8 @@ class ResourceManager(object):
             created_at=now,
             updated_at=now,
             main_file_name=application_file_name,
-            visibility=visibility
+            visibility=visibility,
+            state=state
         )
         return self.sm.put(new_blueprint)
 
@@ -454,7 +456,8 @@ class ResourceManager(object):
 
         if blueprint.state in BlueprintUploadState.FAILED_STATES:
             return self.sm.delete(blueprint)
-        if blueprint.state != BlueprintUploadState.UPLOADED:
+        if (blueprint.state and
+                blueprint.state != BlueprintUploadState.UPLOADED):
             # don't allow deleting blueprints while still uploading,
             # so we don't leave a dirty file system
             raise manager_exceptions.InvalidBlueprintError(

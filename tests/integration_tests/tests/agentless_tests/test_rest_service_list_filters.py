@@ -157,12 +157,14 @@ class TestRestServiceListFilters(AgentlessTestCase):
 
     def test_executions_list_no_filters(self):
         response = self.client.executions.list()
-        self.assertEqual(len(response), 4, 'expecting 4 execution results'
+        self.assertEqual(len(response), 6, 'expecting 6 execution results'
                                            ' matching deployment_id {0} {1}'
                          .format(self.first_deployment_id, len(response)))
         for execution in response:
-            self.assertIn(execution.deployment_id,
-                          (self.first_deployment_id, self.sec_deployment_id))
+            if execution.deployment_id:
+                self.assertIn(
+                    execution.deployment_id,
+                    (self.first_deployment_id, self.sec_deployment_id))
 
     def test_blueprints_list_with_filters(self):
         id_filter = {'id': self.first_blueprint_id}
