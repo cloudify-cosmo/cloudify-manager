@@ -142,10 +142,10 @@ class ExecutionsCheck(SecuredResource):
 
 
 class ExecutionGroups(SecuredResource):
-    @authorize('deployment_group_list', allow_all_tenants=True)
-    @rest_decorators.marshal_with(models.DeploymentGroup)
-    @rest_decorators.sortable(models.DeploymentGroup)
-    @rest_decorators.create_filters(models.DeploymentGroup)
+    @authorize('execution_group_list', allow_all_tenants=True)
+    @rest_decorators.marshal_with(models.ExecutionGroup)
+    @rest_decorators.sortable(models.ExecutionGroup)
+    @rest_decorators.create_filters(models.ExecutionGroup)
     @rest_decorators.paginate
     @rest_decorators.all_tenants
     def get(self, _include=None, filters=None, pagination=None, sort=None,
@@ -163,3 +163,37 @@ class ExecutionGroups(SecuredResource):
             all_tenants=all_tenants,
             get_all_results=get_all_results
         )
+
+    @authorize('execution_group_create')
+    @rest_decorators.marshal_with(models.ExecutionGroup)
+    def post(self):
+        request_dict = get_json_and_verify_params({
+            'group_id': {'type': str},
+            'workflow_id': {'type': str},
+            'default_parameters': {'optional': True},
+            'parameters': {'optional': True}
+        })
+        default_parameters = request_dict.get('default_parameters') or {}
+        parameters = request_dict.get('parameters') or {}
+        workflow_id = request_dict['workflow_id']
+
+        sm = get_storage_manager()
+        dep_group = sm.get(models.DeploymentGroup, request_dict['group_id'])
+        group = models.ExecutionGroup(
+            deployment_group=dep_group,
+            workflow_id=workflow_id,
+            created_at=datetime.now(),
+            visibility=dep_group.visibility,
+        )
+        sm.put(group)
+        rm = get_resource_manager()
+        for dep in dep_group.deployments:
+            params = default_parameters.copy()
+            params.update(parameters.get(dep.id) or {})
+            execution = rm.execute_workflow(
+                deployment_id=dep.id,
+                workflow_id=workflow_id,
+                parameters=params,
+            )
+            group.executions.append(execution)
+        return group

@@ -145,3 +145,19 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
     def test_get_empty(self):
         result = self.client.execution_groups.list()
         assert len(result) == 0
+
+    def test_create_from_group(self):
+        self.put_blueprint()
+        self.client.deployments.create('blueprint', 'dep1')
+        self.client.deployment_groups.put(
+            'group1',
+            deployment_ids=['dep1']
+        )
+        group = self.client.execution_groups.start(
+            group_id='group1',
+            workflow_id='install'
+        )
+        assert len(group.execution_ids) == 1
+        execution = self.client.executions.get(group.execution_ids[0])
+        assert execution.workflow_id == 'install'
+        assert execution.deployment_id == 'dep1'
