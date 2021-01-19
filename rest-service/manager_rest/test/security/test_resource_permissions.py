@@ -39,7 +39,8 @@ class ResourcePermissionTests(SecurityTestBase):
             self.client.blueprints.upload(
                 blueprint_path,
                 blueprint_id,
-                visibility=visibility
+                visibility=visibility,
+                async_upload=True
             )
             # parse plan on rest service side
             self.parse_blueprint_plan(blueprint_id, 'blueprint.yaml')
