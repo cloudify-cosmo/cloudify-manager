@@ -342,10 +342,11 @@ class ResourceManager(object):
                        b.plan[constants.DEPLOYMENT_PLUGINS_TO_INSTALL] +
                        extract_host_agent_plugins_from_plan(b.plan)):
                     affected_blueprint_ids.append(b.id)
-            raise manager_exceptions.PluginInUseError(
-                'Plugin "{0}" is currently in use in blueprints: {1}. '
-                'You can "force" plugin removal if needed.'.format(
-                    plugin.id, ', '.join(affected_blueprint_ids)))
+            if affected_blueprint_ids:
+                raise manager_exceptions.PluginInUseError(
+                    'Plugin "{0}" is currently in use in blueprints: {1}. '
+                    'You can "force" plugin removal if needed.'.format(
+                        plugin.id, ', '.join(affected_blueprint_ids)))
         workflow_executor.uninstall_plugin(plugin)
 
         # Remove from storage
