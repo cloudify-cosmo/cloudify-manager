@@ -421,7 +421,7 @@ class _Label(CreatedAtMixin, SQLModelBase):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     key = db.Column(db.Text, nullable=False, index=True)
-    value = db.Column(db.Text, nullable=False)
+    value = db.Column(db.Text, nullable=False, index=True)
 
     labeled_model = None
 
@@ -461,6 +461,13 @@ class DeploymentLabel(_Label):
 
 class Filter(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'filters'
+    __table_args__ = (
+        db.Index(
+            'filters_id__tenant_id_idx',
+            'id', '_tenant_id',
+            unique=True
+        ),
+    )
     _extra_fields = {'labels_filters': flask_fields.Raw}
 
     value = db.Column(JSONString, nullable=True)
