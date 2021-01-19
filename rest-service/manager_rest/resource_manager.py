@@ -335,12 +335,9 @@ class ResourceManager(object):
             for b in self.sm.list(models.Blueprint,
                                   include=['id', 'plan'],
                                   get_all_results=True):
-                if any(plugin.package_name == p.package_name \
-                       and plugin.package_version == p.package_version
-                       for p in
-                       b.plan[constants.WORKFLOW_PLUGINS_TO_INSTALL] +
-                       b.plan[constants.DEPLOYMENT_PLUGINS_TO_INSTALL] +
-                       extract_host_agent_plugins_from_plan(b.plan)):
+                if any(plugin.package_name == p.get('package_name') \
+                       and plugin.package_version == p.get('package_version')
+                       for p in b.plugins):
                     affected_blueprint_ids.append(b.id)
             if affected_blueprint_ids:
                 raise manager_exceptions.PluginInUseError(
