@@ -337,7 +337,7 @@ class ResourceManager(object):
                                   get_all_results=True):
                 if any(plugin.package_name == p.get('package_name') \
                        and plugin.package_version == p.get('package_version')
-                       for p in b.plugins):
+                       for p in self._blueprint_plugins(b)):
                     affected_blueprint_ids.append(b.id)
             if affected_blueprint_ids:
                 raise manager_exceptions.PluginInUseError(
@@ -353,6 +353,12 @@ class ResourceManager(object):
         archive_path = utils.get_plugin_archive_path(plugin_id,
                                                      plugin.archive_name)
         shutil.rmtree(os.path.dirname(archive_path), ignore_errors=True)
+
+    @staticmethod
+    def _blueprint_plugins(blueprint):
+        return blueprint.plan[constants.WORKFLOW_PLUGINS_TO_INSTALL] + \
+               blueprint.plan[constants.DEPLOYMENT_PLUGINS_TO_INSTALL] + \
+               extract_host_agent_plugins_from_plan(blueprint.plan)
 
     def upload_blueprint(self, blueprint_id, app_file_name, blueprint_url,
                          file_server_root, validate_only=False):
