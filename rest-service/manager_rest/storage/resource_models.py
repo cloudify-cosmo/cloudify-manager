@@ -94,12 +94,6 @@ class Blueprint(CreatedAtMixin, SQLResourceBase):
     error = db.Column(db.Text)
     error_traceback = db.Column(db.Text)
 
-    @property
-    def plugins(self):
-        return self.plan[constants.WORKFLOW_PLUGINS_TO_INSTALL] + \
-               self.plan[constants.DEPLOYMENT_PLUGINS_TO_INSTALL] + \
-               extract_from(self.plan)
-
 
 class Snapshot(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'snapshots'
