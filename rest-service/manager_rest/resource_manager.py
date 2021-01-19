@@ -331,26 +331,23 @@ class ResourceManager(object):
         validate_global_modification(plugin)
 
         if not force:
-            used_blueprints = list(set(
-                d.blueprint_id for d in
-                self.sm.list(models.Deployment, include=['blueprint_id'])))
-            plugins = [b.plan[constants.WORKFLOW_PLUGINS_TO_INSTALL] +
-                       b.plan[constants.DEPLOYMENT_PLUGINS_TO_INSTALL] +
-                       extract_host_agent_plugins_from_plan(b.plan)
-                       for b in
-                       self.sm.list(models.Blueprint,
-                                    include=['plan'],
-                                    filters={'id': used_blueprints},
-                                    get_all_results=True)]
-            plugins = set((p.get('package_name'), p.get('package_version'))
-                          for sublist in plugins for p in sublist)
-            if (plugin.package_name, plugin.package_version) in plugins:
-                raise manager_exceptions.PluginInUseError(
-                    'Plugin "{0}" is currently in use in blueprints: {1}.'
-                    'You can "force" plugin removal if needed.'.format(
-                        plugin.id,
-                        ', '.join(blueprint
-                                  for blueprint in used_blueprints)))
+            affected_blueprint_ids = []
+            for b in self.sm.list(models.Blueprint,
+                                  include=['id', 'plan'],
+                                  get_all_results=True):
+                plugins = set(
+                    (p.get('package_name'), p.get('package_version'))
+                    for sublist in
+                    [b.plan[constants.WORKFLOW_PLUGINS_TO_INSTALL] +
+                     b.plan[constants.DEPLOYMENT_PLUGINS_TO_INSTALL] +
+                     extract_host_agent_plugins_from_plan(b.plan)]
+                    for p in sublist)
+                if (plugin.package_name, plugin.package_version) in plugins:
+                    affected_blueprint_ids.append(b.id)
+            raise manager_exceptions.PluginInUseError(
+                'Plugin "{0}" is currently in use in blueprints: {1}. '
+                'You can "force" plugin removal if needed.'.format(
+                    plugin.id, ', '.join(affected_blueprint_ids)))
         workflow_executor.uninstall_plugin(plugin)
 
         # Remove from storage
