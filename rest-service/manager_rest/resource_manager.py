@@ -335,14 +335,12 @@ class ResourceManager(object):
             for b in self.sm.list(models.Blueprint,
                                   include=['id', 'plan'],
                                   get_all_results=True):
-                plugins = set(
-                    (p.get('package_name'), p.get('package_version'))
-                    for sublist in
-                    [b.plan[constants.WORKFLOW_PLUGINS_TO_INSTALL] +
-                     b.plan[constants.DEPLOYMENT_PLUGINS_TO_INSTALL] +
-                     extract_host_agent_plugins_from_plan(b.plan)]
-                    for p in sublist)
-                if (plugin.package_name, plugin.package_version) in plugins:
+                if any(plugin.package_name == p.package_name \
+                       and plugin.package_version == p.package_version
+                       for p in
+                       b.plan[constants.WORKFLOW_PLUGINS_TO_INSTALL] +
+                       b.plan[constants.DEPLOYMENT_PLUGINS_TO_INSTALL] +
+                       extract_host_agent_plugins_from_plan(b.plan)):
                     affected_blueprint_ids.append(b.id)
             raise manager_exceptions.PluginInUseError(
                 'Plugin "{0}" is currently in use in blueprints: {1}. '
