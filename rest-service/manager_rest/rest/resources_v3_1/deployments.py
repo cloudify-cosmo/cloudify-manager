@@ -523,12 +523,8 @@ class DeploymentGroupsId(SecuredResource):
         self._set_group_attributes(sm, group, request_dict)
         sm.put(group)
 
-        self._set_group_deployments(
-            sm, group, request_dict.get('deployment_ids'))
-        return get_storage_manager().get(
-            models.DeploymentGroup,
-            group_id
-        )
+        self._set_group_deployments(sm, group, request_dict)
+        return group
 
     def _set_group_attributes(self, sm, group, request_dict):
         if request_dict.get('visibility') is not None:
@@ -544,13 +540,30 @@ class DeploymentGroupsId(SecuredResource):
             group.default_blueprint = sm.get(
                 models.Blueprint, request_dict['blueprint_id'])
 
-    def _set_group_deployments(self, sm, group, deployment_ids=None):
+    def _set_group_deployments(self, sm, group, request_dict):
+        deployment_ids = request_dict.get('deployment_ids')
         if deployment_ids is not None:
             deployments = [sm.get(models.Deployment, dep_id)
                            for dep_id in deployment_ids]
             group.deployments.clear()
             for dep in deployments:
                 group.deployments.append(dep)
+
+        deployment_count = len(group.deployments)
+        rm = get_resource_manager()
+        input_overrides = request_dict.get('inputs') or []
+        for inputs in input_overrides:
+            deployment_inputs = (group.default_inputs or {}).copy()
+            deployment_inputs.update(inputs)
+            dep = rm.create_deployment(
+                blueprint_id=group.default_blueprint.id,
+                deployment_id='{0}-{1}'.format(group.id, deployment_count + 1),
+                private_resource=None,
+                visibility=group.visibility,
+                inputs=deployment_inputs,
+            )
+            group.deployments.append(dep)
+            deployment_count += 1
 
     @authorize('deployment_group_delete')
     def delete(self, group_id):
