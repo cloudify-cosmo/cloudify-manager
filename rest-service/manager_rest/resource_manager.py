@@ -335,7 +335,7 @@ class ResourceManager(object):
             for b in self.sm.list(models.Blueprint,
                                   include=['id', 'plan'],
                                   get_all_results=True):
-                if any(plugin.package_name == p.get('package_name') \
+                if any(plugin.package_name == p.get('package_name')
                        and plugin.package_version == p.get('package_version')
                        for p in self._blueprint_plugins(b)):
                     affected_blueprint_ids.append(b.id)
