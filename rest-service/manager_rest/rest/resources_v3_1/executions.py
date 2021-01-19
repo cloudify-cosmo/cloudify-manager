@@ -15,6 +15,8 @@
 #
 from datetime import datetime
 
+from flask import request
+
 from cloudify.models_states import ExecutionState
 from manager_rest.rest.responses_v3 import ItemsCount
 
@@ -23,8 +25,11 @@ from manager_rest.security.authorization import authorize
 from manager_rest.rest import resources_v2, rest_decorators
 from manager_rest.manager_exceptions import BadParametersError
 from manager_rest.resource_manager import get_resource_manager
-from manager_rest.rest.rest_utils import get_json_and_verify_params
-from manager_rest.storage import models,  get_storage_manager, ListResult
+from manager_rest.rest.rest_utils import (
+    get_json_and_verify_params,
+    verify_and_convert_bool
+)
+from manager_rest.storage import models, get_storage_manager, ListResult
 
 
 class Executions(resources_v2.Executions):
@@ -134,3 +139,27 @@ class ExecutionsCheck(SecuredResource):
         rm = get_resource_manager()
         return not (rm.check_for_executions(deployment_id, force=False,
                                             queue=True, execution=execution))
+
+
+class ExecutionGroups(SecuredResource):
+    @authorize('deployment_group_list', allow_all_tenants=True)
+    @rest_decorators.marshal_with(models.DeploymentGroup)
+    @rest_decorators.sortable(models.DeploymentGroup)
+    @rest_decorators.create_filters(models.DeploymentGroup)
+    @rest_decorators.paginate
+    @rest_decorators.all_tenants
+    def get(self, _include=None, filters=None, pagination=None, sort=None,
+            all_tenants=None):
+        get_all_results = verify_and_convert_bool(
+            '_get_all_results',
+            request.args.get('_get_all_results', False)
+        )
+        return get_storage_manager().list(
+            models.ExecutionGroup,
+            include=_include,
+            filters=filters,
+            pagination=pagination,
+            sort=sort,
+            all_tenants=all_tenants,
+            get_all_results=get_all_results
+        )

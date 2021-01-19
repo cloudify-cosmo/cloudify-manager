@@ -550,6 +550,34 @@ class Execution(CreatedAtMixin, SQLResourceBase):
         return fields
 
 
+class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
+    __tablename__ = 'execution_groups'
+    _deployment_group_fk = foreign_key(
+        DeploymentGroup._storage_id, nullable=True)
+    workflow_id = db.Column(db.Text, nullable=False)
+
+    @declared_attr
+    def deployment_group(cls):
+        return one_to_many_relationship(
+            cls, DeploymentGroup, cls._deployment_group_fk)
+
+    @declared_attr
+    def executions(cls):
+        return many_to_many_relationship(cls, Execution)
+
+    @property
+    def execution_ids(self):
+        return [exc.id for exc in self.executions]
+
+    @classproperty
+    def response_fields(cls):
+        fields = super(ExecutionGroup, cls).response_fields
+        fields['execution_ids'] = flask_fields.List(
+            flask_fields.String()
+        )
+        return fields
+
+
 class ExecutionSchedule(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'execution_schedules'
     next_occurrence = db.Column(UTCDateTime, nullable=True, index=True)

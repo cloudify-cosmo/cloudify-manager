@@ -139,3 +139,9 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             inputs=[{}]
         )
         assert set(group.deployment_ids) == {'dep1', 'group1-2', 'group1-3'}
+
+
+class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
+    def test_get_empty(self):
+        result = self.client.execution_groups.list()
+        assert len(result) == 0

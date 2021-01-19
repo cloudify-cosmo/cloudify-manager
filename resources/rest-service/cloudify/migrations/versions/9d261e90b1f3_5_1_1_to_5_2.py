@@ -31,14 +31,16 @@ def upgrade():
     create_deployment_groups_table()
     create_execution_schedules_table()
     fix_previous_versions()
+    create_execution_groups_table()
 
 
 def downgrade():
+    drop_execution_groups_table()
+    revert_fixes()
+    drop_execution_schedules_table()
     drop_deployment_groups_table()
     downgrade_blueprints_table()
     drop_filters_table()
-    drop_execution_schedules_table()
-    revert_fixes()
 
 
 def upgrade_blueprints_table():
@@ -391,3 +393,113 @@ def revert_fixes():
                     'inter_deployment_dependencies',
                     ['id'],
                     unique=True)
+
+
+def create_execution_groups_table():
+    op.create_table(
+        'execution_groups',
+        sa.Column(
+            '_storage_id',
+            sa.Integer(),
+            autoincrement=True,
+            nullable=False
+        ),
+        sa.Column('id', sa.Text(), nullable=True),
+        sa.Column('visibility', VISIBILITY_ENUM, nullable=True),
+        sa.Column('created_at', UTCDateTime(), nullable=False),
+        sa.Column('_deployment_group_fk', sa.Integer(), nullable=True),
+        sa.Column('workflow_id', sa.Text(), nullable=False),
+        sa.Column('_tenant_id', sa.Integer(), nullable=False),
+        sa.Column('_creator_id', sa.Integer(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ['_creator_id'],
+            ['users.id'],
+            name=op.f('execution_group__creator_id_fkey'),
+            ondelete='CASCADE'
+        ),
+        sa.ForeignKeyConstraint(
+            ['_deployment_group_fk'],
+            ['deployment_group._storage_id'],
+            name=op.f('execution_group__deployment_group_fk_fkey'),
+            ondelete='CASCADE'
+        ),
+        sa.ForeignKeyConstraint(
+            ['_tenant_id'],
+            ['tenants.id'],
+            name=op.f('execution_group__tenant_id_fkey'),
+            ondelete='CASCADE'
+        ),
+        sa.PrimaryKeyConstraint(
+            '_storage_id',
+            name=op.f('execution_group_pkey')
+        )
+    )
+    op.create_index(
+        op.f('execution_group__creator_id_idx'),
+        'execution_groups',
+        ['_creator_id'],
+        unique=False
+    )
+    op.create_index(
+        op.f('execution_group__deployment_group_fk_idx'),
+        'execution_groups',
+        ['_deployment_group_fk'],
+        unique=False
+    )
+    op.create_index(
+        op.f('execution_group__tenant_id_idx'),
+        'execution_groups',
+        ['_tenant_id'],
+        unique=False
+    )
+    op.create_index(
+        op.f('execution_group_created_at_idx'),
+        'execution_groups',
+        ['created_at'],
+        unique=False
+    )
+    op.create_index(
+        op.f('execution_group_id_idx'),
+        'execution_groups',
+        ['id'],
+        unique=False
+    )
+    op.create_index(
+        op.f('execution_group_visibility_idx'),
+        'execution_groups',
+        ['visibility'],
+        unique=False
+    )
+    op.create_table(
+        'execution_groups_executions',
+        sa.Column('execution_group_id', sa.Integer(), nullable=True),
+        sa.Column('execution_id', sa.Integer(), nullable=True),
+        sa.ForeignKeyConstraint(
+            ['execution_group_id'],
+            ['execution_groups._storage_id'],
+            name=op.f('execution_groups_executions_execution_grou_id_fkey')
+        ),
+        sa.ForeignKeyConstraint(
+            ['execution_id'],
+            ['executions._storage_id'],
+            name=op.f('execution_groups_executions_execution_id_fkey')
+        )
+    )
+
+
+def drop_execution_groups_table():
+    op.drop_table('execution_groups_executions')
+    op.drop_index(
+        op.f('execution_group_visibility_idx'), table_name='execution_groups')
+    op.drop_index(
+        op.f('execution_group_id_idx'), table_name='execution_groups')
+    op.drop_index(
+        op.f('execution_group_created_at_idx'), table_name='execution_groups')
+    op.drop_index(
+        op.f('execution_group__tenant_id_idx'), table_name='execution_groups')
+    op.drop_index(
+        op.f('execution_group__deployment_group_fk_idx'),
+        table_name='execution_groups')
+    op.drop_index(
+        op.f('execution_group__creator_id_idx'), table_name='execution_groups')
+    op.drop_table('execution_groups')

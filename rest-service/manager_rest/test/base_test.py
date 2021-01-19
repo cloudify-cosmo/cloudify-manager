@@ -215,6 +215,7 @@ class BaseServerTestCase(unittest.TestCase):
                         client.deployments_labels.api = mock_http_client
                         client.filters.api = mock_http_client
                         client.deployment_groups.api = mock_http_client
+                        client.execution_groups.api = mock_http_client
 
         return client
 
