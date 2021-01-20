@@ -30,6 +30,7 @@ def upgrade():
     create_filters_table()
     create_deployment_groups_table()
     create_execution_schedules_table()
+    fix_previous_versions()
 
 
 def downgrade():
@@ -37,6 +38,7 @@ def downgrade():
     downgrade_blueprints_table()
     drop_filters_table()
     drop_execution_schedules_table()
+    revert_fixes()
 
 
 def upgrade_blueprints_table():
@@ -104,7 +106,7 @@ def create_filters_table():
     op.create_index(op.f('filters_id_idx'),
                     'filters',
                     ['id'],
-                    unique=True)
+                    unique=False)
     op.create_index(op.f('filters__creator_id_idx'),
                     'filters',
                     ['_creator_id'],
@@ -113,10 +115,10 @@ def create_filters_table():
                     'filters',
                     ['visibility'],
                     unique=False)
-    op.create_index(op.f('filters_value_idx'),
+    op.create_index('filters_id__tenant_id_idx',
                     'filters',
-                    ['value'],
-                    unique=False)
+                    ['id', '_tenant_id'],
+                    unique=True)
 
 
 def drop_filters_table():
@@ -130,7 +132,7 @@ def drop_filters_table():
                   table_name='filters')
     op.drop_index(op.f('filters_visibility_idx'),
                   table_name='filters')
-    op.drop_index(op.f('filters_value_idx'),
+    op.drop_index('filters_id__tenant_id_idx',
                   table_name='filters')
     op.drop_table('filters')
 
@@ -352,3 +354,40 @@ def drop_execution_schedules_table():
     op.drop_index(op.f('execution_schedules__deployment_fk_idx'),
                   table_name='execution_schedules')
     op.drop_table('execution_schedules')
+
+
+def fix_previous_versions():
+    op.execute('alter table deployments_labels rename CONSTRAINT '
+               '"{0}_key_value_key" to "deployments_labels_key_key";')
+    op.execute('alter INDEX deployments_labels__deployment_idx RENAME TO '
+               'deployments_labels__deployment_fk_idx')
+    op.create_index(op.f('deployments_labels_value_idx'),
+                    'deployments_labels',
+                    ['value'],
+                    unique=False)
+    op.create_index(op.f('permissions_role_id_idx'),
+                    'permissions',
+                    ['role_id'],
+                    unique=False)
+    op.drop_index('inter_deployment_dependencies_id_idx',
+                  table_name='inter_deployment_dependencies')
+    op.create_index(op.f('inter_deployment_dependencies_id_idx'),
+                    'inter_deployment_dependencies',
+                    ['id'],
+                    unique=False)
+
+
+def revert_fixes():
+    op.execute('alter table deployments_labels rename CONSTRAINT '
+               '"deployments_labels_key_key" to "{0}_key_value_key";')
+    op.execute('alter INDEX deployments_labels__deployment_fk_idx RENAME TO '
+               'deployments_labels__deployment_idx')
+    op.drop_index(op.f('deployments_labels_value_idx'),
+                  table_name='deployments_labels')
+    op.drop_index(op.f('permissions_role_id_idx'), table_name='permissions')
+    op.drop_index(op.f('inter_deployment_dependencies_id_idx'),
+                  table_name='inter_deployment_dependencies')
+    op.create_index('inter_deployment_dependencies_id_idx',
+                    'inter_deployment_dependencies',
+                    ['id'],
+                    unique=True)

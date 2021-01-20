@@ -56,7 +56,7 @@ class Role(SQLModelBase, RoleMixin):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.Text, unique=True, nullable=False, index=True)
-    type = db.Column(db.Text)
+    type = db.Column(db.Text, nullable=False)
     description = db.Column(db.Text)
 
     def _get_identifier_dict(self):
@@ -67,7 +67,7 @@ class Permission(SQLModelBase):
     __tablename__ = 'permissions'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     role_id = foreign_key('roles.id')
-    name = db.Column(db.Text)
+    name = db.Column(db.Text, nullable=False)
 
     role = db.relationship(Role)
     role_name = association_proxy('role', 'name')
