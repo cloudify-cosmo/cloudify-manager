@@ -82,8 +82,8 @@ class DeploymentUpdate(SecuredResource):
         blueprint id.
         """
         manager, skip_install, skip_uninstall, skip_reinstall, workflow_id, \
-            ignore_failure, install_first, preview, \
-            update_plugins, runtime_eval = self._parse_args(id, request.json)
+            ignore_failure, install_first, preview, update_plugins, \
+            runtime_eval, force = self._parse_args(id, request.json)
         blueprint, inputs, reinstall_list = \
             self._get_and_validate_blueprint_and_inputs(id, request.json)
         blueprint_dir_abs = _get_plugin_update_blueprint_abs_path(
@@ -107,13 +107,14 @@ class DeploymentUpdate(SecuredResource):
                                                 ignore_failure,
                                                 install_first,
                                                 reinstall_list,
-                                                update_plugins=update_plugins)
+                                                update_plugins=update_plugins,
+                                                force=force)
 
     def _commit(self, deployment_id):
         request_json = request.args
         manager, skip_install, skip_uninstall, _, workflow_id, \
             ignore_failure, install_first, _, update_plugins, \
-            runtime_eval, = self._parse_args(
+            runtime_eval, force = self._parse_args(
                 deployment_id, request_json, using_post_request=True)
         deployment_update, _ = \
             UploadedBlueprintsDeploymentUpdateManager(). \
@@ -126,7 +127,8 @@ class DeploymentUpdate(SecuredResource):
                                                 workflow_id,
                                                 ignore_failure,
                                                 install_first,
-                                                update_plugins=update_plugins)
+                                                update_plugins=update_plugins,
+                                                force=force)
 
     @staticmethod
     def _get_and_validate_blueprint_and_inputs(deployment_id, request_json):
@@ -180,6 +182,10 @@ class DeploymentUpdate(SecuredResource):
             'runtime_only_evaluation',
             request_json.get('runtime_only_evaluation', False)
         )
+        force = verify_and_convert_bool(
+            'force',
+            request_json.get('force', False)
+        )
         manager = get_deployment_updates_manager(preview)
         manager.validate_no_active_updates_per_deployment(deployment_id)
         return (manager,
@@ -191,7 +197,8 @@ class DeploymentUpdate(SecuredResource):
                 install_first,
                 preview,
                 update_plugins,
-                runtime_only_evaluation)
+                runtime_only_evaluation,
+                force)
 
 
 class DeploymentUpdateId(SecuredResource):

@@ -320,7 +320,8 @@ class ResourceManager(object):
             execution_parameters={
                 'update_id': plugins_update.id,
                 'deployments_to_update': plugins_update.deployments_to_update,
-                'temp_blueprint_id': plugins_update.temp_blueprint_id
+                'temp_blueprint_id': plugins_update.temp_blueprint_id,
+                'force': plugins_update.forced,
             },
             verify_no_executions=False,
             fake_execution=no_changes_required)
