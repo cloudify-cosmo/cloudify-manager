@@ -154,7 +154,7 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
             deployment_ids=['dep1']
         )
         group = self.client.execution_groups.start(
-            group_id='group1',
+            deployment_group_id='group1',
             workflow_id='install'
         )
         assert len(group.execution_ids) == 1

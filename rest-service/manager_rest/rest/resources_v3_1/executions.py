@@ -168,7 +168,7 @@ class ExecutionGroups(SecuredResource):
     @rest_decorators.marshal_with(models.ExecutionGroup)
     def post(self):
         request_dict = get_json_and_verify_params({
-            'group_id': {'type': str},
+            'deployment_group_id': {'type': str},
             'workflow_id': {'type': str},
             'default_parameters': {'optional': True},
             'parameters': {'optional': True}
@@ -178,7 +178,8 @@ class ExecutionGroups(SecuredResource):
         workflow_id = request_dict['workflow_id']
 
         sm = get_storage_manager()
-        dep_group = sm.get(models.DeploymentGroup, request_dict['group_id'])
+        dep_group = sm.get(models.DeploymentGroup,
+                           request_dict['deployment_group_id'])
         group = models.ExecutionGroup(
             deployment_group=dep_group,
             workflow_id=workflow_id,
