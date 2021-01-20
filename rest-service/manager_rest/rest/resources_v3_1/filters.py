@@ -74,6 +74,7 @@ class FiltersId(SecuredResource):
         """
         Get a filter by ID
         """
+        rest_utils.validate_inputs({'filter_id': filter_id})
         return get_storage_manager().get(
             models.Filter, filter_id, include=_include)
 
@@ -82,6 +83,7 @@ class FiltersId(SecuredResource):
         """
         Delete a filter by ID
         """
+        rest_utils.validate_inputs({'filter_id': filter_id})
         storage_manager = get_storage_manager()
         filter_elem = storage_manager.get(models.Filter, filter_id)
         _validate_filter_modification_permitted(filter_elem)
@@ -95,6 +97,7 @@ class FiltersId(SecuredResource):
 
         This function updates the filter rules and visibility
         """
+        rest_utils.validate_inputs({'filter_id': filter_id})
         if not request.json:
             raise manager_exceptions.IllegalActionError(
                 'Update a filter request must include at least one parameter '

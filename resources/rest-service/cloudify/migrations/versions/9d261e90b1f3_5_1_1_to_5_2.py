@@ -238,7 +238,7 @@ def create_execution_schedules_table():
         sa.Column('id', sa.Text(), nullable=True),
         sa.Column('visibility', VISIBILITY_ENUM, nullable=True),
         sa.Column('created_at', UTCDateTime(), nullable=False),
-        sa.Column('next_occurrence', UTCDateTime(), nullable=False),
+        sa.Column('next_occurrence', UTCDateTime(), nullable=True),
         sa.Column('since', UTCDateTime(), nullable=True),
         sa.Column('until', UTCDateTime(), nullable=True),
         sa.Column('rule', JSONString(), nullable=False),
@@ -269,11 +269,23 @@ def create_execution_schedules_table():
             [u'deployments._storage_id'],
             name=op.f('execution_schedules__deployment_fkey'),
             ondelete='CASCADE'),
-        sa.ForeignKeyConstraint(
-            ['_latest_execution_fk'],
-            [u'executions._storage_id'],
-            name=op.f('execution_schedules__latest_execution_fkey')),
     )
+    op.create_foreign_key(
+        op.f('execution_schedules__latest_execution_fk_fkey'),
+        'execution_schedules',
+        'executions',
+        ['_latest_execution_fk'],
+        ['_storage_id'],
+        ondelete='CASCADE'
+    )
+    op.create_index(op.f('execution_schedules_created_at_idx'),
+                    'execution_schedules',
+                    ['created_at'],
+                    unique=False)
+    op.create_index(op.f('execution_schedules_id_idx'),
+                    'execution_schedules',
+                    ['id'],
+                    unique=False)
     op.create_index(op.f('execution_schedules__creator_id_idx'),
                     'execution_schedules',
                     ['_creator_id'],
@@ -282,35 +294,36 @@ def create_execution_schedules_table():
                     'execution_schedules',
                     ['_tenant_id'],
                     unique=False)
-    op.create_index(op.f('execution_schedules__created_at_idx'),
-                    'execution_schedules',
-                    ['created_at'],
-                    unique=False)
-    op.create_index(op.f('execution_schedules__id_idx'),
-                    'execution_schedules',
-                    ['id'],
-                    unique=True)
-    op.create_index(op.f('execution_schedules__visibility_idx'),
+    op.create_index(op.f('execution_schedules_visibility_idx'),
                     'execution_schedules',
                     ['visibility'],
                     unique=False)
-    op.create_index(op.f('execution_schedules__next_occurrence_idx'),
+    op.create_index(op.f('execution_schedules_next_occurrence_idx'),
                     'execution_schedules',
                     ['next_occurrence'],
+                    unique=False)
+    op.create_index(op.f('execution_schedules__deployment_fk_idx'),
+                    'execution_schedules',
+                    ['_deployment_fk'],
+                    unique=False)
+    op.create_index(op.f('execution_schedules__latest_execution_fk_idx'),
+                    'execution_schedules',
+                    ['_latest_execution_fk'],
                     unique=False)
 
 
 def drop_execution_schedules_table():
     op.drop_index(
-        op.f('execution_schedules__next_occurrence_idx'),
+        op.f('execution_schedules_next_occurrence_idx'),
         table_name='execution_schedules')
     op.drop_index(
-        op.f('execution_schedules__visibility_idx'),
+        op.f('execution_schedules_visibility_idx'),
         table_name='execution_schedules')
     op.drop_index(
-        op.f('execution_schedules__id_idx'), table_name='execution_schedules')
+        op.f('execution_schedules_id_idx'),
+        table_name='execution_schedules')
     op.drop_index(
-        op.f('execution_schedules__created_at_idx'),
+        op.f('execution_schedules_created_at_idx'),
         table_name='execution_schedules')
     op.drop_index(
         op.f('execution_schedules__tenant_id_idx'),
@@ -318,4 +331,8 @@ def drop_execution_schedules_table():
     op.drop_index(
         op.f('execution_schedules__creator_id_idx'),
         table_name='execution_schedules')
+    op.drop_index(op.f('execution_schedules__latest_execution_fk_idx'),
+                  table_name='execution_schedules')
+    op.drop_index(op.f('execution_schedules__deployment_fk_idx'),
+                  table_name='execution_schedules')
     op.drop_table('execution_schedules')

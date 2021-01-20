@@ -29,7 +29,8 @@ from integration_tests.tests.utils import (
     generate_scheduled_for_date,
     create_api_token,
     create_tenants_and_add_users)
-from integration_tests.tests.utils import run_postgresql_command
+from integration_tests.tests.utils import (run_postgresql_command,
+                                           wait_for_blueprint_upload)
 
 from cloudify.models_states import ExecutionState as Execution
 from cloudify_rest_client.exceptions import CloudifyClientError
@@ -703,6 +704,7 @@ class ExecutionsTest(AgentlessTestCase):
         blueprint_id = 'blueprint_{0}'.format(_id)
         deployment_id = 'deployment_{0}'.format(_id)
         self.client.blueprints.upload(dsl_path, blueprint_id)
+        wait_for_blueprint_upload(blueprint_id, self.client, True)
         self.client.deployments.create(blueprint_id, deployment_id,
                                        skip_plugins_validation=True)
 
@@ -789,6 +791,7 @@ class ExecutionsTest(AgentlessTestCase):
         blueprint_id = 'blueprint_{0}'.format(_id)
         deployment_id = 'deployment_{0}'.format(_id)
         self.client.blueprints.upload(dsl_path, blueprint_id)
+        wait_for_blueprint_upload(blueprint_id, self.client, True)
         self.client.deployments.create(blueprint_id, deployment_id,
                                        skip_plugins_validation=True)
         do_retries(verify_deployment_env_created, 30,

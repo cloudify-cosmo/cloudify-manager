@@ -18,7 +18,7 @@ import uuid
 
 from flask import current_app
 
-from cloudify.models_states import ExecutionState
+from cloudify.models_states import ExecutionState, BlueprintUploadState
 
 from dsl_parser.constants import (PLUGIN_NAME_KEY,
                                   WORKFLOW_PLUGINS_TO_INSTALL,
@@ -82,6 +82,7 @@ class PluginsUpdateManager(object):
         else:
             kwargs['visibility'] = None
             kwargs['private_resource'] = blueprint.private_resource
+        kwargs['state'] = BlueprintUploadState.UPLOADED
         temp_blueprint = self.rm.publish_blueprint_from_plan(**kwargs)
         temp_blueprint.is_hidden = True
         return self.sm.update(temp_blueprint)

@@ -94,13 +94,6 @@ class FiltersFunctionalityTest(base_test.BaseServerTestCase):
 class FiltersTestCase(base_test.BaseServerTestCase):
     SIMPLE_RULE = ['a=b']
 
-    def list_filters(self, **kwargs):
-        return self.client.filters.list(**kwargs)
-
-    def update_filter(self, filter_name, new_filter_rules, new_visibility):
-        return self.client.filters.update(
-            filter_name, new_filter_rules, new_visibility)
-
     def test_create_legal_filter(self):
         new_filter = self.create_filter(FILTER_ID, LEGAL_RULES)
         self.assertEqual(new_filter.labels_filter, LEGAL_RULES)
@@ -109,7 +102,7 @@ class FiltersTestCase(base_test.BaseServerTestCase):
         for i in range(3):
             self.create_filter('{0}{1}'.format(FILTER_ID, i),
                                ['a{0}=b{0}'.format(i)])
-        filters_list = self.list_filters()
+        filters_list = self.client.filters.list()
 
         self.assertEqual(len(filters_list.items), 3)
         for i in range(3):
@@ -117,15 +110,21 @@ class FiltersTestCase(base_test.BaseServerTestCase):
                              ['a{0}=b{0}'.format(i)])
 
     def test_list_filters_sort(self):
-        filter_names = ['c_filter', 'b_filter', 'a_filter']
+        filter_names = ['a_filter', 'c_filter', 'b_filter']
         for filter_name in filter_names:
             self.create_filter(filter_name, self.SIMPLE_RULE)
 
-        filters_list = self.list_filters(_sort='id')
-        filter_names.sort()
+        sorted_asc_filters_list = self.client.filters.list(sort='id')
         self.assertEqual(
-            [filter_elem.id for filter_elem in filters_list.items],
-            filter_names
+            [filter_elem.id for filter_elem in sorted_asc_filters_list],
+            sorted(filter_names)
+        )
+
+        sorted_dsc_filters_list = self.client.filters.list(
+            sort='id', is_descending=True)
+        self.assertEqual(
+            [filter_elem.id for filter_elem in sorted_dsc_filters_list],
+            sorted(filter_names, reverse=True)
         )
 
     def test_filter_create_lowercase(self):
@@ -162,35 +161,24 @@ class FiltersTestCase(base_test.BaseServerTestCase):
 
     def test_delete_filter(self):
         self.create_filter(FILTER_ID, ['a=b'])
-        self.assertEqual(len(self.list_filters().items), 1)
+        self.assertEqual(len(self.client.filters.list().items), 1)
         self.client.filters.delete(FILTER_ID)
-        self.assertEqual(len(self.list_filters().items), 0)
+        self.assertEqual(len(self.client.filters.list().items), 0)
 
     def test_update_filter(self):
-        self._test_update_filter(['c=d'], VisibilityState.GLOBAL)
+        self.update_filter(['c=d'], VisibilityState.GLOBAL)
 
     def test_update_filter_only_visibility(self):
-        self._test_update_filter(new_visibility=VisibilityState.GLOBAL)
+        self.update_filter(new_visibility=VisibilityState.GLOBAL)
 
     def test_update_filter_only_filter_rules(self):
-        self._test_update_filter(new_filter_rules=['c=d'])
+        self.update_filter(new_filter_rules=['c=d'])
 
     def test_update_filter_no_args_fails(self):
         with self.assertRaisesRegex(RuntimeError, '.*to update a filter.*'):
-            self._test_update_filter()
+            self.update_filter()
 
     def test_update_filter_narrower_visibility_fails(self):
         with self.assertRaisesRegex(CloudifyClientError,
                                     '.*has wider visibility.*'):
-            self._test_update_filter(new_visibility=VisibilityState.PRIVATE)
-
-    def _test_update_filter(self, new_filter_rules=None, new_visibility=None):
-        orig_filter = self.create_filter(FILTER_ID, self.SIMPLE_RULE)
-        self.update_filter(FILTER_ID, new_filter_rules, new_visibility)
-        updated_filter = self.client.filters.get(FILTER_ID)
-
-        updated_rules = new_filter_rules or self.SIMPLE_RULE
-        updated_visibility = new_visibility or VisibilityState.TENANT
-        self.assertEqual(updated_filter.labels_filter, updated_rules)
-        self.assertEqual(updated_filter.visibility, updated_visibility)
-        self.assertGreater(updated_filter.updated_at, orig_filter.updated_at)
+            self.update_filter(new_visibility=VisibilityState.PRIVATE)

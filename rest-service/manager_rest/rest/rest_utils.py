@@ -594,7 +594,7 @@ def verify_blueprint_uploaded_state(blueprint):
         raise manager_exceptions.InvalidBlueprintError(
             'Required blueprint `{}` has failed to upload. State: {}, '
             'Error: {}'.format(blueprint.id, blueprint.state, blueprint.error))
-    elif blueprint.state != BlueprintUploadState.UPLOADED:
+    if blueprint.state and blueprint.state != BlueprintUploadState.UPLOADED:
         raise manager_exceptions.InvalidBlueprintError(
             'Required blueprint `{}` is still {}.'
             .format(blueprint.id, blueprint.state))
