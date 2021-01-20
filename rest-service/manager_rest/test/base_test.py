@@ -986,14 +986,10 @@ class BaseServerTestCase(unittest.TestCase):
         client = client or self.client
         return client.filters.create(filter_name, filter_rules, visibility)
 
-    def update_filter(self, new_filter_rules=None, new_visibility=None,
-                      creator_client=None, updater_client=None):
+    def update_filter(self, new_filter_rules=None, new_visibility=None):
         filter_id = 'filter'
-        creator_client = creator_client or self.client
-        updater_client = updater_client or self.client
-        orig_filter = self.create_filter(filter_id, ['a=b'],
-                                         client=creator_client)
-        updated_filter = updater_client.filters.update(
+        orig_filter = self.create_filter(filter_id, ['a=b'])
+        updated_filter = self.client.filters.update(
             filter_id, new_filter_rules, new_visibility)
 
         updated_rules = new_filter_rules or self.SIMPLE_RULE
