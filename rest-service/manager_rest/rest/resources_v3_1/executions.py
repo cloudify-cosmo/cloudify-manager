@@ -15,6 +15,8 @@
 #
 from datetime import datetime
 
+from flask import request
+
 from cloudify.models_states import ExecutionState
 from manager_rest.rest.responses_v3 import ItemsCount
 
@@ -23,8 +25,11 @@ from manager_rest.security.authorization import authorize
 from manager_rest.rest import resources_v2, rest_decorators
 from manager_rest.manager_exceptions import BadParametersError
 from manager_rest.resource_manager import get_resource_manager
-from manager_rest.rest.rest_utils import get_json_and_verify_params
-from manager_rest.storage import models,  get_storage_manager, ListResult
+from manager_rest.rest.rest_utils import (
+    get_json_and_verify_params,
+    verify_and_convert_bool
+)
+from manager_rest.storage import models, get_storage_manager, ListResult
 
 
 class Executions(resources_v2.Executions):
@@ -134,3 +139,62 @@ class ExecutionsCheck(SecuredResource):
         rm = get_resource_manager()
         return not (rm.check_for_executions(deployment_id, force=False,
                                             queue=True, execution=execution))
+
+
+class ExecutionGroups(SecuredResource):
+    @authorize('execution_group_list', allow_all_tenants=True)
+    @rest_decorators.marshal_with(models.ExecutionGroup)
+    @rest_decorators.sortable(models.ExecutionGroup)
+    @rest_decorators.create_filters(models.ExecutionGroup)
+    @rest_decorators.paginate
+    @rest_decorators.all_tenants
+    def get(self, _include=None, filters=None, pagination=None, sort=None,
+            all_tenants=None):
+        get_all_results = verify_and_convert_bool(
+            '_get_all_results',
+            request.args.get('_get_all_results', False)
+        )
+        return get_storage_manager().list(
+            models.ExecutionGroup,
+            include=_include,
+            filters=filters,
+            pagination=pagination,
+            sort=sort,
+            all_tenants=all_tenants,
+            get_all_results=get_all_results
+        )
+
+    @authorize('execution_group_create')
+    @rest_decorators.marshal_with(models.ExecutionGroup)
+    def post(self):
+        request_dict = get_json_and_verify_params({
+            'deployment_group_id': {'type': str},
+            'workflow_id': {'type': str},
+            'default_parameters': {'optional': True},
+            'parameters': {'optional': True}
+        })
+        default_parameters = request_dict.get('default_parameters') or {}
+        parameters = request_dict.get('parameters') or {}
+        workflow_id = request_dict['workflow_id']
+
+        sm = get_storage_manager()
+        dep_group = sm.get(models.DeploymentGroup,
+                           request_dict['deployment_group_id'])
+        group = models.ExecutionGroup(
+            deployment_group=dep_group,
+            workflow_id=workflow_id,
+            created_at=datetime.now(),
+            visibility=dep_group.visibility,
+        )
+        sm.put(group)
+        rm = get_resource_manager()
+        for dep in dep_group.deployments:
+            params = default_parameters.copy()
+            params.update(parameters.get(dep.id) or {})
+            execution = rm.execute_workflow(
+                deployment_id=dep.id,
+                workflow_id=workflow_id,
+                parameters=params,
+            )
+            group.executions.append(execution)
+        return group
