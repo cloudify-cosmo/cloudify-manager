@@ -1,3 +1,8 @@
+from cloudify.models_states import VisibilityState
+from cloudify_rest_client.exceptions import CloudifyClientError
+
+from manager_rest.storage import models
+
 from manager_rest.test import base_test
 
 
@@ -67,4 +72,70 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             'group1',
             description='descr'
         )
-        assert group['deployment_ids'] == ['dep1']
+        assert group['description'] == 'descr'
+
+    def test_create_with_blueprint(self):
+        self.put_blueprint()
+        self.client.deployment_groups.put(
+            'group1',
+            blueprint_id='blueprint',
+            default_inputs={'a': 'b'}
+        )
+        group = self.sm.get(models.DeploymentGroup, 'group1')
+        assert group.default_blueprint.id == 'blueprint'
+        assert group.default_inputs == {'a': 'b'}
+
+    def test_set_visibility(self):
+        self.client.deployment_groups.put(
+            'group1',
+            visibility=VisibilityState.PRIVATE
+        )
+        group = self.sm.get(models.DeploymentGroup, 'group1')
+        assert group.visibility == VisibilityState.PRIVATE
+
+        self.client.deployment_groups.put(
+            'group1',
+            visibility=VisibilityState.TENANT
+        )
+        assert group.visibility == VisibilityState.TENANT
+
+        with self.assertRaisesRegex(
+                CloudifyClientError, 'visibility_states') as cm:
+            self.client.deployment_groups.put(
+                'group1',
+                visibility='invalid visibility'
+            )
+        assert cm.exception.status_code == 409
+
+    def test_create_deployment(self):
+        self.put_blueprint()
+        self.client.deployment_groups.put(
+            'group1',
+            blueprint_id='blueprint',
+            inputs=[{}]
+        )
+        group = self.sm.get(models.DeploymentGroup, 'group1')
+        assert len(group.deployments) == 1
+        dep = group.deployments[0]
+        assert dep.blueprint.id == 'blueprint'
+        assert dep.id == 'group1-1'
+
+    def test_add_deployments(self):
+        self.put_blueprint()
+        self.client.deployments.create('blueprint', 'dep1')
+        group = self.client.deployment_groups.put(
+            'group1',
+            blueprint_id='blueprint',
+            deployment_ids=['dep1']
+        )
+        assert set(group.deployment_ids) == {'dep1'}
+        group = self.client.deployment_groups.put(
+            'group1',
+            inputs=[{}]
+        )
+        assert set(group.deployment_ids) == {'dep1', 'group1-2'}
+        group = self.client.deployment_groups.put(
+            'group1',
+            inputs=[{}]
+        )
+        assert set(group.deployment_ids) == {'dep1', 'group1-2', 'group1-3'}

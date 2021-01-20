@@ -387,6 +387,16 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
 
 class DeploymentGroup(CreatedAtMixin, SQLResourceBase):
     description = db.Column(db.Text)
+    default_inputs = db.Column(JSONString)
+    _default_blueprint_fk = foreign_key(
+        Blueprint._storage_id,
+        ondelete='SET NULL',
+        nullable=True)
+
+    @declared_attr
+    def default_blueprint(cls):
+        return one_to_many_relationship(
+            cls, Blueprint, cls._default_blueprint_fk)
 
     @declared_attr
     def deployments(cls):

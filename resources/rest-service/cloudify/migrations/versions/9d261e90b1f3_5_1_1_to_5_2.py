@@ -150,8 +150,15 @@ def create_deployment_groups_table():
         ),
         sa.Column('created_at', UTCDateTime(), nullable=False),
         sa.Column('description', sa.Text(), nullable=True),
+        sa.Column('_default_blueprint_fk', sa.Integer(), nullable=True),
+        sa.Column('default_inputs', JSONString(), nullable=True),
         sa.Column('_tenant_id', sa.Integer(), nullable=False),
         sa.Column('_creator_id', sa.Integer(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ['_default_blueprint_fk'], ['blueprints._storage_id'],
+            name=op.f('deployment_group__default_blueprint_fk_fkey'),
+            ondelete='SET NULL'
+        ),
         sa.ForeignKeyConstraint(
             ['_creator_id'], ['users.id'],
             name=op.f('deployment_group__creator_id_fkey'),
@@ -164,6 +171,12 @@ def create_deployment_groups_table():
         ),
         sa.PrimaryKeyConstraint(
             '_storage_id', name=op.f('deployment_group_pkey'))
+    )
+    op.create_index(
+        op.f('deployment_group__default_blueprint_fk_idx'),
+        'deployment_group',
+        ['_default_blueprint_fk'],
+        unique=False
     )
     op.create_index(
         op.f('deployment_group__creator_id_idx'),
@@ -214,6 +227,9 @@ def create_deployment_groups_table():
 
 def drop_deployment_groups_table():
     op.drop_table('deployment_group_deployments')
+    op.drop_index(
+        op.f('deployment_group__default_blueprint_fk_idx'),
+        table_name='deployment_group')
     op.drop_index(
         op.f('deployment_group_visibility_idx'), table_name='deployment_group')
     op.drop_index(
