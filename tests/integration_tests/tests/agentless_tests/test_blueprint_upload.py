@@ -28,118 +28,113 @@ class BlueprintUploadTest(AgentlessTestCase):
     def test_blueprint_upload(self):
         blueprint_id = 'bp'
         blueprint_filename = 'empty_blueprint.yaml'
-        self.client.blueprints.upload(
+        blueprint = self.client.blueprints.upload(
             resource('dsl/{}'.format(blueprint_filename)),
             entity_id=blueprint_id
         )
-        self._verify_blueprint_uploaded(blueprint_id, blueprint_filename)
+        self._verify_blueprint_uploaded(blueprint, blueprint_filename)
 
     def test_blueprint_upload_from_url(self):
         blueprint_id = 'bp-url'
         blueprint_filename = 'blueprint.yaml'
         archive_url = 'https://cloudify-tests-files.s3-eu-west-1.amazonaws' \
                       '.com/blueprints/the-not-blueprint-master.zip'
-        self.client.blueprints.publish_archive(
+        blueprint = self.client.blueprints.publish_archive(
             archive_url,
             blueprint_id)
-        self._verify_blueprint_uploaded(blueprint_id, blueprint_filename)
+        self._verify_blueprint_uploaded(blueprint, blueprint_filename)
 
     def test_blueprint_upload_from_unavailable_url(self):
         blueprint_id = 'bp-url-unavailable'
         archive_url = 'http://www.fake.url/does/not/exist'
-        self.client.blueprints.publish_archive(
+        self.assertRaisesRegexp(
+            CloudifyClientError,
+            'failed uploading.* Max retries exceeded with url',
+            self.client.blueprints.publish_archive,
             archive_url,
             blueprint_id)
-        self._verify_blueprint_failed_uploading_and_assert_error(
-            blueprint_id, BlueprintUploadState.FAILED_UPLOADING,
-            'Max retries exceeded with url'
-        )
 
     def test_blueprint_upload_from_malformed_url(self):
         blueprint_id = 'bp-url-malformed'
         archive_url = 'malformed/url_is.bad'
-        requests.put(
+        response = requests.put(
             'http://{0}/api/v3.1/blueprints/{1}'.format(self.get_manager_ip(),
                                                         blueprint_id),
             headers=self.client._client.headers,
             params={'blueprint_archive_url': archive_url},
             verify=False
         )
-        self._verify_blueprint_failed_uploading_and_assert_error(
-            blueprint_id, BlueprintUploadState.FAILED_UPLOADING,
-            "Invalid URL '{}': No schema supplied".format(archive_url)
-        )
+        self.assertEqual(response.status_code, 400)
+        self.assertRegexpMatches(
+            response.json()['message'],
+            "failed uploading.* "
+            "Invalid URL '{}': No schema supplied".format(archive_url))
 
     def test_blueprint_upload_from_url_bad_archive_format(self):
         blueprint_id = 'bp-url-bad-format'
         archive_url = 'https://cloudify-tests-files.s3-eu-west-1.amazonaws' \
                       '.com/index.html'
-        self.client.blueprints.publish_archive(
+        self.assertRaisesRegexp(
+            CloudifyClientError,
+            'failed uploading.* '
+            'Blueprint archive is of an unrecognized format',
+            self.client.blueprints.publish_archive,
             archive_url,
             blueprint_id)
-        # This is caught at `upload_archive_to_file_server`, before extracting
-        self._verify_blueprint_failed_uploading_and_assert_error(
-            blueprint_id, BlueprintUploadState.FAILED_UPLOADING,
-            'Blueprint archive is of an unrecognized format'
-        )
 
     def test_blueprint_upload_from_url_invalid_archive_structure(self):
         blueprint_id = 'bp-url-bad-structure'
         archive_url = 'https://cloudify-tests-files.s3-eu-west-1.amazonaws' \
                       '.com/blueprints/not-a-valid-archive.zip'
-        self.client.blueprints.publish_archive(
+        self.assertRaisesRegexp(
+            CloudifyClientError,
+            'failed extracting.* '
+            'Archive must contain exactly 1 directory',
+            self.client.blueprints.publish_archive,
             archive_url,
             blueprint_id)
-        self._verify_blueprint_failed_uploading_and_assert_error(
-            blueprint_id, BlueprintUploadState.FAILED_EXTRACTING,
-            "Archive must contain exactly 1 directory"
-        )
 
     def test_blueprint_upload_from_url_missing_yaml(self):
         blueprint_id = 'bp-url-missing-yaml'
         blueprint_filename = 'fancy_name.yaml'
         archive_url = 'https://cloudify-tests-files.s3-eu-west-1.amazonaws' \
                       '.com/blueprints/the-not-blueprint-master.zip'
-        self.client.blueprints.publish_archive(
+        self.assertRaisesRegexp(
+            CloudifyClientError,
+            'failed extracting.* {0} does not exist in the application '
+            'directory'.format(blueprint_filename),
+            self.client.blueprints.publish_archive,
             archive_url,
             blueprint_id,
-            blueprint_filename=blueprint_filename
-        )
-        self._verify_blueprint_failed_uploading_and_assert_error(
-            blueprint_id, BlueprintUploadState.FAILED_EXTRACTING,
-            '{0} does not exist in the application '
-            'directory'.format(blueprint_filename)
-        )
+            blueprint_filename=blueprint_filename)
 
     def test_blueprint_reupload_after_fail(self):
         blueprint_id = 're-bp'
-        self.client.blueprints.upload(resource('dsl/basic.yaml'),
-                                      entity_id=blueprint_id)
-        wait_for_blueprint_upload(blueprint_id, self.client, False)
-        blueprint = self.client.blueprints.get(blueprint_id)
-
         # this should fail due to cloudmock plugin not uploaded
+        self.assertRaisesRegexp(CloudifyClientError,
+                                'Plugin cloudmock .* not found',
+                                self.client.blueprints.upload,
+                                resource('dsl/basic.yaml'),
+                                entity_id=blueprint_id)
+        blueprint = self.client.blueprints.get(blueprint_id)
         self.assertEqual(blueprint['state'], BlueprintUploadState.INVALID)
         self.assertEqual(blueprint.plan, None)
-        self.assertRegexpMatches(blueprint['error'],
-                                 'Plugin cloudmock .* not found')
         original_creation_time = blueprint['created_at']
 
         self.client.blueprints.upload(resource('dsl/empty_blueprint.yaml'),
                                       entity_id=blueprint_id)
-        wait_for_blueprint_upload(blueprint_id, self.client, False)
         blueprint = self.client.blueprints.get(blueprint_id)
-
         self.assertEqual(blueprint['state'], BlueprintUploadState.UPLOADED)
         self.assertNotEqual(blueprint.plan, None)
         self.assertNotEqual(blueprint['created_at'], original_creation_time)
 
-    def test_blueprint_upload_batch(self):
+    def test_blueprint_upload_batch_async(self):
         blueprint_filename = 'empty_blueprint.yaml'
         for i in range(5):
             self.client.blueprints.upload(
                 resource('dsl/{}'.format(blueprint_filename)),
-                entity_id='bp_{}'.format(i)
+                entity_id='bp_{}'.format(i),
+                async_upload=True
             )
         for i in range(5):
             blueprint_id = 'bp_{}'.format(i)
@@ -164,39 +159,30 @@ class BlueprintUploadTest(AgentlessTestCase):
                                            {'cloudify': cloudify_section})
 
         blueprint_id = 'bp-resolver-error'
-        self.client.blueprints.upload(resource('dsl/basic.yaml'),
-                                      entity_id=blueprint_id)
-        self._verify_blueprint_failed_uploading_and_assert_error(
-            blueprint_id, BlueprintUploadState.FAILED_PARSING,
-            'Failed to instantiate resolver'
-        )
+        self.assertRaisesRegexp(
+            CloudifyClientError,
+            'failed parsing.* Failed to instantiate resolver',
+            self.client.blueprints.upload,
+            resource('dsl/basic.yaml'),
+            entity_id=blueprint_id)
+
         # restore provider context
         self.client.manager.update_context(self.id(), provider_context)
 
     def test_blueprint_upload_malformed_dsl(self):
         blueprint_id = 'bp-malformed-dsl'
-        self.client.blueprints.upload(resource('dsl/invalid_dsl.yaml'),
-                                      entity_id=blueprint_id)
-        wait_for_blueprint_upload(blueprint_id, self.client, False)
-        self._verify_blueprint_failed_uploading_and_assert_error(
-            blueprint_id, BlueprintUploadState.INVALID,
-            "Expected 'dict' type but found 'string' type"
-        )
+        self.assertRaisesRegexp(
+            CloudifyClientError,
+            "invalid.* Expected 'dict' type but found 'string' type",
+            self.client.blueprints.upload,
+            resource('dsl/invalid_dsl.yaml'),
+            entity_id=blueprint_id)
 
-    def _verify_blueprint_uploaded(self, blueprint_id, blueprint_filename):
-        wait_for_blueprint_upload(blueprint_id, self.client, False)
-        blueprint = self.client.blueprints.get(blueprint_id)
-        self.assertEqual(blueprint['state'], BlueprintUploadState.UPLOADED)
+    def _verify_blueprint_uploaded(self, blueprint, blueprint_filename):
+        self.assertEqual(blueprint.state, BlueprintUploadState.UPLOADED)
         self.assertEqual(blueprint.main_file_name, blueprint_filename)
         self.assertNotEqual(blueprint.plan, None)
-        self._verify_blueprint_files(blueprint_id, blueprint_filename)
-
-    def _verify_blueprint_failed_uploading_and_assert_error(
-            self, blueprint_id, state, error):
-        wait_for_blueprint_upload(blueprint_id, self.client, False)
-        blueprint = self.client.blueprints.get(blueprint_id)
-        self.assertEqual(blueprint['state'], state)
-        self.assertRegexpMatches(blueprint['error'], error)
+        self._verify_blueprint_files(blueprint.id, blueprint_filename)
 
     def _verify_blueprint_files(self, blueprint_id, blueprint_filename):
         # blueprint available in manager resources

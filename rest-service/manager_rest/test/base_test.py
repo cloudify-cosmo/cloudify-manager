@@ -632,7 +632,8 @@ class BaseServerTestCase(unittest.TestCase):
         bp_path = self.get_blueprint_path('mock_blueprint/blueprint.yaml')
         client.blueprints.upload(path=bp_path,
                                  entity_id=blueprint_id,
-                                 visibility=visibility)
+                                 visibility=visibility,
+                                 async_upload=True)
         self.parse_blueprint_plan(blueprint_id,
                                   CONVENTION_APPLICATION_BLUEPRINT_FILE,
                                   client)
@@ -720,7 +721,9 @@ class BaseServerTestCase(unittest.TestCase):
 
         blueprint_path = self.get_blueprint_path(
             os.path.join(blueprint_dir, blueprint_file_name))
-        client.blueprints.upload(path=blueprint_path, entity_id=blueprint_id)
+        client.blueprints.upload(path=blueprint_path,
+                                 entity_id=blueprint_id,
+                                 async_upload=True)
         return self.parse_blueprint_plan(blueprint_id, blueprint_file_name,
                                          client=client)
 
