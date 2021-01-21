@@ -62,7 +62,7 @@ class Deployments(resources_v1.Deployments):
         )
         if '_group_id' in request.args:
             filters['deployment_group'] = lambda col: col.any(
-                models.DeploymentGroup.id == request.args.get('_group_id')
+                models.DeploymentGroup.id == request.args['_group_id']
             )
         result = get_storage_manager().list(
             models.Deployment,
