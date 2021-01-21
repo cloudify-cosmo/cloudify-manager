@@ -33,7 +33,7 @@ from manager_rest.constants import LABEL_LEN
 from manager_rest import utils, manager_exceptions
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
-from manager_rest.storage import models, get_storage_manager
+from manager_rest.storage import models, get_storage_manager, db
 from manager_rest.manager_exceptions import (BadParametersError,
                                              IllegalActionError)
 from manager_rest.resource_manager import get_resource_manager
@@ -564,6 +564,7 @@ class DeploymentGroupsId(SecuredResource):
             )
             group.deployments.append(dep)
             deployment_count += 1
+        db.session.commit()
 
     @authorize('deployment_group_delete')
     def delete(self, group_id):
