@@ -406,12 +406,19 @@ class DeploymentGroup(CreatedAtMixin, SQLResourceBase):
     def deployment_ids(self):
         return [dep.id for dep in self.deployments]
 
+    @property
+    def default_blueprint_id(self):
+        if not self.default_blueprint:
+            return None
+        return self.default_blueprint.id
+
     @classproperty
     def response_fields(cls):
         fields = super(DeploymentGroup, cls).response_fields
         fields['deployment_ids'] = flask_fields.List(
             flask_fields.String()
         )
+        fields['default_blueprint_id'] = flask_fields.String()
         return fields
 
 
@@ -561,6 +568,8 @@ class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
         return one_to_many_relationship(
             cls, DeploymentGroup, cls._deployment_group_fk)
 
+    deployment_group_id = association_proxy('deployment_group', 'id')
+
     @declared_attr
     def executions(cls):
         return many_to_many_relationship(cls, Execution)
@@ -575,6 +584,7 @@ class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
         fields['execution_ids'] = flask_fields.List(
             flask_fields.String()
         )
+        fields['deployment_group_id'] = flask_fields.String()
         return fields
 
 
