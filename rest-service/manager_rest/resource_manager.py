@@ -146,6 +146,8 @@ class ResourceManager(object):
             if plugin_update:
                 plugin_update.state = PluginsUpdateStates.FAILED
                 self.sm.update(plugin_update)
+                # Delete a temporary blueprint
+                self.sm.delete(plugin_update.temp_blueprint)
 
         if execution.workflow_id == 'delete_deployment_environment' and \
                 status == ExecutionState.TERMINATED:
