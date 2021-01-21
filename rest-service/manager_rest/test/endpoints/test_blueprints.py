@@ -199,8 +199,8 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         blueprint_path = os.path.join(
             self.get_blueprint_path('mock_blueprint'),
             blueprint_file)
-        self.client.blueprints.upload(blueprint_path, 'b0')
-        self.client.blueprints.upload(blueprint_path, 'b1')
+        self.client.blueprints.upload(blueprint_path, 'b0', async_upload=True)
+        self.client.blueprints.upload(blueprint_path, 'b1', async_upload=True)
 
         blueprints = self.client.blueprints.list(sort='created_at')
         self.assertEqual(2, len(blueprints))
@@ -226,7 +226,8 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
 
         try:
             self.client.blueprints.upload(blueprint_path, 'b',
-                                          progress_callback=progress_func)
+                                          progress_callback=progress_func,
+                                          async_upload=True)
         finally:
             self.quiet_delete_directory(tmp_dir)
 
@@ -242,7 +243,8 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         size = self.client.blueprints.calc_size(blueprint_path)
 
         try:
-            self.client.blueprints.upload(blueprint_path, 'b')
+            self.client.blueprints.upload(blueprint_path, 'b',
+                                          async_upload=True)
             progress_func = generate_progress_func(total_size=size)
 
             self.client.blueprints.download('b', tmp_local_path, progress_func)
