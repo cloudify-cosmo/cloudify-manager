@@ -31,7 +31,8 @@ from manager_rest.plugins_update.constants import (PLUGIN_NAMES,
                                                    ALL_TO_LATEST,
                                                    TO_MINOR,
                                                    ALL_TO_MINOR,
-                                                   MAPPING)
+                                                   MAPPING,
+                                                   FORCE)
 from manager_rest.plugins_update.manager import get_plugins_updates_manager
 from manager_rest.rest import (resources_v2,
                                resources_v2_1,
@@ -112,6 +113,7 @@ class PluginsUpdate(SecuredResource):
                 ALL_TO_MINOR: {'type': bool, 'optional': True},
                 TO_MINOR: {'type': list, 'optional': True},
                 MAPPING: {'type': dict, 'optional': True},
+                FORCE: {'type': bool, 'optional': True}
             })
         except BadRequest:
             filters = {}
