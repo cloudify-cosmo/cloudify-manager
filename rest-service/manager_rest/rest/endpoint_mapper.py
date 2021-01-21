@@ -39,6 +39,8 @@ def setup_resources(api):
         'SnapshotsStatus': 'snapshot-status',
         'Executions': 'executions',
         'ExecutionsId': 'executions/<string:execution_id>',
+        'ExecutionSchedules': 'execution-schedules',
+        'ExecutionSchedulesId': 'execution-schedules/<string:schedule_id>',
         'Deployments': 'deployments',
         'DeploymentsId': 'deployments/<string:deployment_id>',
         'DeploymentsSetSite': 'deployments/<string:deployment_id>/set-site',

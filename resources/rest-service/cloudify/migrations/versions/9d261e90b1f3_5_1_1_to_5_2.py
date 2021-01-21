@@ -289,6 +289,9 @@ def create_execution_schedules_table():
             [u'deployments._storage_id'],
             name=op.f('execution_schedules__deployment_fkey'),
             ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint(
+            '_storage_id',
+            name=op.f('execution_schedules_pkey')),
     )
     op.create_foreign_key(
         op.f('execution_schedules__latest_execution_fk_fkey'),
