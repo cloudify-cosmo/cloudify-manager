@@ -44,6 +44,7 @@ ALL_TO_LATEST = 'all_to_latest'
 TO_MINOR = 'to_minor'
 ALL_TO_MINOR = 'all_to_minor'
 MAPPING = 'mapping'
+FORCE = 'force'
 
 UPDATES = 'updates'
 PLUGIN_NAME = 'plugin_name'

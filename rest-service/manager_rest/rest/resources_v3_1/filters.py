@@ -1,5 +1,4 @@
 from flask import request
-from flask_security import current_user
 
 from cloudify.models_states import VisibilityState
 
@@ -86,7 +85,6 @@ class FiltersId(SecuredResource):
         rest_utils.validate_inputs({'filter_id': filter_id})
         storage_manager = get_storage_manager()
         filter_elem = storage_manager.get(models.Filter, filter_id)
-        _validate_filter_modification_permitted(filter_elem)
         storage_manager.delete(filter_elem, validate_global=True)
         return None, 204
 
@@ -112,7 +110,6 @@ class FiltersId(SecuredResource):
 
         storage_manager = get_storage_manager()
         filter_elem = storage_manager.get(models.Filter, filter_id)
-        _validate_filter_modification_permitted(filter_elem)
         if visibility:
             get_resource_manager().validate_visibility_value(
                 models.Filter, filter_elem, visibility)
@@ -124,12 +121,3 @@ class FiltersId(SecuredResource):
         filter_elem.updated_at = get_formatted_timestamp()
 
         return storage_manager.update(filter_elem)
-
-
-def _validate_filter_modification_permitted(filter_elem):
-    if not (rest_utils.is_administrator(filter_elem.tenant) or
-            filter_elem.created_by == current_user.username):
-        raise manager_exceptions.ForbiddenError(
-            'User `{0}` is not permitted to modify the filter `{1}`'.format(
-                current_user.username, filter_elem.id)
-        )

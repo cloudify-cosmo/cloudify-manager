@@ -80,6 +80,10 @@ class BlueprintsId(resources_v2.BlueprintsId):
         Upload a blueprint (id specified)
         """
         rest_utils.validate_inputs({'blueprint_id': blueprint_id})
+        args = get_args_and_verify_arguments(
+            [Argument('async_upload', type=boolean, default=False)]
+        )
+        async_upload = args.async_upload
         visibility = rest_utils.get_visibility_parameter(
             optional=True,
             is_argument=True,
@@ -115,10 +119,14 @@ class BlueprintsId(resources_v2.BlueprintsId):
                         'blueprint with id={0} already exists on tenant {1} '
                         'or with global visibility'.format(blueprint_id,
                                                            current_tenant))
-        return UploadedBlueprintsManager().\
+        response = UploadedBlueprintsManager().\
             receive_uploaded_data(data_id=blueprint_id,
                                   visibility=visibility,
                                   override_failed=override_failed)
+        if not async_upload:
+            sm = get_storage_manager()
+            response = rest_utils.get_uploaded_blueprint(sm, blueprint_id)
+        return response
 
     @swagger.operation(
         responseClass=models.Blueprint,

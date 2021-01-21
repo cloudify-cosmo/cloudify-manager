@@ -387,6 +387,16 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
 
 class DeploymentGroup(CreatedAtMixin, SQLResourceBase):
     description = db.Column(db.Text)
+    default_inputs = db.Column(JSONString)
+    _default_blueprint_fk = foreign_key(
+        Blueprint._storage_id,
+        ondelete='SET NULL',
+        nullable=True)
+
+    @declared_attr
+    def default_blueprint(cls):
+        return one_to_many_relationship(
+            cls, Blueprint, cls._default_blueprint_fk)
 
     @declared_attr
     def deployments(cls):
@@ -411,7 +421,7 @@ class _Label(CreatedAtMixin, SQLModelBase):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     key = db.Column(db.Text, nullable=False, index=True)
-    value = db.Column(db.Text, nullable=False)
+    value = db.Column(db.Text, nullable=False, index=True)
 
     labeled_model = None
 
@@ -451,6 +461,13 @@ class DeploymentLabel(_Label):
 
 class Filter(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'filters'
+    __table_args__ = (
+        db.Index(
+            'filters_id__tenant_id_idx',
+            'id', '_tenant_id',
+            unique=True
+        ),
+    )
     _extra_fields = {'labels_filters': flask_fields.Raw}
 
     value = db.Column(JSONString, nullable=True)
@@ -530,6 +547,34 @@ class Execution(CreatedAtMixin, SQLResourceBase):
     def resource_fields(cls):
         fields = super(Execution, cls).resource_fields
         fields.pop('token')
+        return fields
+
+
+class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
+    __tablename__ = 'execution_groups'
+    _deployment_group_fk = foreign_key(
+        DeploymentGroup._storage_id, nullable=True)
+    workflow_id = db.Column(db.Text, nullable=False)
+
+    @declared_attr
+    def deployment_group(cls):
+        return one_to_many_relationship(
+            cls, DeploymentGroup, cls._deployment_group_fk)
+
+    @declared_attr
+    def executions(cls):
+        return many_to_many_relationship(cls, Execution)
+
+    @property
+    def execution_ids(self):
+        return [exc.id for exc in self.executions]
+
+    @classproperty
+    def response_fields(cls):
+        fields = super(ExecutionGroup, cls).response_fields
+        fields['execution_ids'] = flask_fields.List(
+            flask_fields.String()
+        )
         return fields
 
 

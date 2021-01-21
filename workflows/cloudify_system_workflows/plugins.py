@@ -54,7 +54,8 @@ def _operate_on_plugin(ctx, plugin, action):
 
 
 @workflow(system_wide=True)
-def update(ctx, update_id, temp_blueprint_id, deployments_to_update, **_):
+def update(ctx, update_id, temp_blueprint_id, deployments_to_update, force,
+           **_):
     """Execute deployment update for all the given deployments_to_update.
 
     :param update_id: plugins update ID.
@@ -62,6 +63,8 @@ def update(ctx, update_id, temp_blueprint_id, deployments_to_update, **_):
     this workflow only.
     :param deployments_to_update: deployments to perform the update on, using
     the temp blueprint ID provided.
+    :param force: force update (i.e. even if the blueprint is used to create
+    components).
     """
 
     def get_wait_for_execution_message(execution_id):
@@ -77,7 +80,8 @@ def update(ctx, update_id, temp_blueprint_id, deployments_to_update, **_):
                                             blueprint_id=temp_blueprint_id,
                                             skip_install=True,
                                             skip_uninstall=True,
-                                            skip_reinstall=True) \
+                                            skip_reinstall=True,
+                                            force=force) \
             .execution_id
 
         wait_for(client.executions.get,

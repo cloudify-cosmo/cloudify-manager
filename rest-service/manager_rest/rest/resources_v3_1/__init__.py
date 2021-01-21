@@ -17,7 +17,11 @@ from .license import License                     # NOQA
 from .tokens import UserTokens                   # NOQA
 from .sites import Sites, SitesName              # NOQA
 from .agents import Agents, AgentsName           # NOQA
-from .executions import Executions, ExecutionsCheck   # NOQA
+from .executions import (     # NOQA
+    Executions,
+    ExecutionsCheck,
+    ExecutionGroups
+)
 
 from .manager import (                           # NOQA
     Managers,
