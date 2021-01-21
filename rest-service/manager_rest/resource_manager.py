@@ -322,6 +322,7 @@ class ResourceManager(object):
                 'update_id': plugins_update.id,
                 'deployments_to_update': plugins_update.deployments_to_update,
                 'temp_blueprint_id': plugins_update.temp_blueprint_id,
+                'force': plugins_update.forced,
                 'auto_correct_types': auto_correct_types,
                 'reevaluate_active_statuses': reevaluate_active_statuses,
             },

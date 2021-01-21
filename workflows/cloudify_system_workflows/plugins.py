@@ -55,7 +55,7 @@ def _operate_on_plugin(ctx, plugin, action):
 
 
 @workflow(system_wide=True)
-def update(ctx, update_id, temp_blueprint_id, deployments_to_update,
+def update(ctx, update_id, temp_blueprint_id, deployments_to_update, force,
            auto_correct_types, reevaluate_active_statuses, **_):
     """Execute deployment update for all the given deployments_to_update.
 
@@ -64,6 +64,8 @@ def update(ctx, update_id, temp_blueprint_id, deployments_to_update,
     this workflow only.
     :param deployments_to_update: deployments to perform the update on, using
     the temp blueprint ID provided.
+    :param force: force update (i.e. even if the blueprint is used to create
+    components).
     :param auto_correct_types: update deployments with auto_correct_types flag,
      which will attempt to cast inputs to the types defined by the blueprint.
     :reevaluate_active_statuses: reevaluate deployment updates states based on
@@ -89,6 +91,7 @@ def update(ctx, update_id, temp_blueprint_id, deployments_to_update,
                     skip_install=True,
                     skip_uninstall=True,
                     skip_reinstall=True,
+                    force=force,
                     auto_correct_types=auto_correct_types,
                     reevaluate_active_statuses=reevaluate_active_statuses) \
                 .execution_id

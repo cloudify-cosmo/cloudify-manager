@@ -143,6 +143,7 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
             {'update_id': plugins_update.id,
              'deployments_to_update': ['d1', 'd2'],
              'temp_blueprint_id': plugins_update.temp_blueprint_id,
+             'force': False,
              'auto_correct_types': False,
              'reevaluate_active_statuses': False})
 
