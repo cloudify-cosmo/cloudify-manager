@@ -84,13 +84,16 @@ getent passwd cfyuser >/dev/null || useradd -r -g cfyuser -d /etc/cloudify -s /s
 
 %post
 if [ $1 -gt 1 ]; then
-    touch "%{_localstatedir}/lib/rpm-state/cloudify-upgraded-5-1-1"
+    touch "%{_localstatedir}/lib/rpm-state/cloudify-upgraded"
 fi
 exit 0
 
 %posttrans
-if [ -f "%{_localstatedir}/lib/rpm-state/cloudify-upgraded-5-1-1" ]; then
-    rm "%{_localstatedir}/lib/rpm-state/cloudify-upgraded-5-1-1"
+if [ -f "%{_localstatedir}/lib/rpm-state/cloudify-upgraded" ]; then
+    rm "%{_localstatedir}/lib/rpm-state/cloudify-upgraded"
+
+    chmod 440 /etc/cloudify/ssl/*stage_db.key || true
+    chmod 440 /etc/cloudify/ssl/*composer_db.key || true
 
     if [ -e "/tmp/supervisor.sock" ]; then
         supervisorctl stop haproxy && supervisorctl remove haproxy || true
