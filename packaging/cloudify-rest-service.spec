@@ -82,15 +82,17 @@ done
 groupadd -fr cfyuser
 getent passwd cfyuser >/dev/null || useradd -r -g cfyuser -d /etc/cloudify -s /sbin/nologin cfyuser
 
-%post
-if [ $1 -gt 1 ]; then
-    touch "%{_localstatedir}/lib/rpm-state/cloudify-upgraded"
+
+%preun
+echo "version %{version}"
+if [[ "%{version}" == *"5.1.0"* ]]; then
+    touch "%{_localstatedir}/lib/rpm-state/cloudify-upgrading-5-1-0"
 fi
 exit 0
 
 %posttrans
-if [ -f "%{_localstatedir}/lib/rpm-state/cloudify-upgraded" ]; then
-    rm "%{_localstatedir}/lib/rpm-state/cloudify-upgraded"
+if [ -f "%{_localstatedir}/lib/rpm-state/cloudify-upgrading-5-1-0" ]; then
+    rm "%{_localstatedir}/lib/rpm-state/cloudify-upgrading-5-1-0"
 
     chmod 440 /etc/cloudify/ssl/*stage_db.key || true
     chmod 440 /etc/cloudify/ssl/*composer_db.key || true
