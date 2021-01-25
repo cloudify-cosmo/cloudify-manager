@@ -1,5 +1,6 @@
-from os import kill, rename, sep
+from os import kill, sep
 from os.path import join
+from shutil import move
 from signal import SIGHUP
 from subprocess import check_output
 
@@ -155,8 +156,7 @@ def _deploy_prometheus_missing_alerts(destination, service_name, hosts):
     with NamedTemporaryFile(mode='w+t', delete=False) as f:
         f.write(template)
         tmp_file_name = f.name
-    rename(tmp_file_name,
-           join(PROMETHEUS_ALERTS_DIR, destination))
+    move(tmp_file_name, join(PROMETHEUS_ALERTS_DIR, destination))
     return destination
 
 
