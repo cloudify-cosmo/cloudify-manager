@@ -88,7 +88,7 @@ class SQLStorageManager(object):
 
         If the block exits normally, the transaction is committed; or if
         the block throws, the transaction is rolled back.
-        Calls done before this transaction, are committed immediately.
+        Calls done before this transaction are committed immediately.
         """
         if self._in_transaction:
             raise RuntimeError('Subtransactions are disallowed')
