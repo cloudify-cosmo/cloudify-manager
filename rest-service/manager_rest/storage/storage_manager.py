@@ -92,7 +92,10 @@ class SQLStorageManager(object):
         """
         if self._in_transaction:
             raise RuntimeError('Subtransactions are disallowed')
+        # after committing the existing transaction, a new one is started
+        # automatically by sqlalchemy
         self._safe_commit()
+
         self._in_transaction = True
         try:
             yield
