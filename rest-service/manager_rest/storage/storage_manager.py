@@ -16,6 +16,7 @@
 import psutil
 from functools import wraps
 from collections import OrderedDict
+from contextlib import contextmanager
 from flask_security import current_user
 from sqlalchemy import or_ as sql_or, func, inspect
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
@@ -47,6 +48,9 @@ def no_autoflush(f):
 
 
 class SQLStorageManager(object):
+    def __init__(self):
+        self._in_transaction = False
+
     @staticmethod
     def _is_unique_constraint_violation(e):
         return isinstance(e, IntegrityError) and e.orig.pgcode == '23505'
@@ -55,6 +59,8 @@ class SQLStorageManager(object):
         """Try to commit changes in the session. Roll back if exception raised
         Excepts SQLAlchemy errors and rollbacks if they're caught
         """
+        if self._in_transaction:
+            return
         try:
             db.session.commit()
         except sql_errors as e:
@@ -75,6 +81,28 @@ class SQLStorageManager(object):
                     )
                 )
             raise exception_to_raise
+
+    @contextmanager
+    def transaction(self):
+        """Ensure all DB calls under this are run as a single transaction.
+
+        If the block exits normally, the transaction is committed; or if
+        the block throws, the transaction is rolled back.
+        Calls done before this transaction, are committed immediately.
+        """
+        if self._in_transaction:
+            raise RuntimeError('Subtransactions are disallowed')
+        self._safe_commit()
+        self._in_transaction = True
+        try:
+            yield
+        except Exception:
+            db.session.rollback()
+            raise
+        else:
+            self._safe_commit()
+        finally:
+            self._in_transaction = False
 
     def _get_base_query(self, model_class, include, joins, distinct=None):
         """Create the initial query from the model class and included columns
@@ -237,7 +265,7 @@ class SQLStorageManager(object):
                 tenant.id for tenant in current_user.all_tenants
                 if utils.tenant_specific_authorization(tenant,
                                                        model_class.__name__)
-                ]
+            ]
         else:
             # Specific tenant only
             tenant_ids = [current_tenant.id] if current_tenant else []
