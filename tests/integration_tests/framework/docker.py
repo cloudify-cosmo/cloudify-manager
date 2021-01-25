@@ -137,7 +137,7 @@ def init(expose=None, resources=None):
     _save_docl_config(conf)
 
 
-def run_manager(image, resource_mapping=None):
+def run_manager(image, service_management, resource_mapping=None,):
     with tempfile.NamedTemporaryFile(delete=False, mode='w') as conf:
         conf.write("""
 manager:
@@ -147,7 +147,8 @@ validations:
     skip_validations: true
 sanity:
     skip_sanity: true
-""")
+service_management: {0}
+""".format(service_management))
     command = [
         'docker', 'run', '-d',
         '-v', '/sys/fs/cgroup:/sys/fs/cgroup:ro',

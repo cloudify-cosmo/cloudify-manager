@@ -215,6 +215,7 @@ class BaseServerTestCase(unittest.TestCase):
                         client.deployments_labels.api = mock_http_client
                         client.filters.api = mock_http_client
                         client.deployment_groups.api = mock_http_client
+                        client.execution_groups.api = mock_http_client
 
         return client
 
@@ -631,7 +632,8 @@ class BaseServerTestCase(unittest.TestCase):
         bp_path = self.get_blueprint_path('mock_blueprint/blueprint.yaml')
         client.blueprints.upload(path=bp_path,
                                  entity_id=blueprint_id,
-                                 visibility=visibility)
+                                 visibility=visibility,
+                                 async_upload=True)
         self.parse_blueprint_plan(blueprint_id,
                                   CONVENTION_APPLICATION_BLUEPRINT_FILE,
                                   client)
@@ -719,7 +721,9 @@ class BaseServerTestCase(unittest.TestCase):
 
         blueprint_path = self.get_blueprint_path(
             os.path.join(blueprint_dir, blueprint_file_name))
-        client.blueprints.upload(path=blueprint_path, entity_id=blueprint_id)
+        client.blueprints.upload(path=blueprint_path,
+                                 entity_id=blueprint_id,
+                                 async_upload=True)
         return self.parse_blueprint_plan(blueprint_id, blueprint_file_name,
                                          client=client)
 
@@ -985,14 +989,10 @@ class BaseServerTestCase(unittest.TestCase):
         client = client or self.client
         return client.filters.create(filter_name, filter_rules, visibility)
 
-    def update_filter(self, new_filter_rules=None, new_visibility=None,
-                      creator_client=None, updater_client=None):
+    def update_filter(self, new_filter_rules=None, new_visibility=None):
         filter_id = 'filter'
-        creator_client = creator_client or self.client
-        updater_client = updater_client or self.client
-        orig_filter = self.create_filter(filter_id, ['a=b'],
-                                         client=creator_client)
-        updated_filter = updater_client.filters.update(
+        orig_filter = self.create_filter(filter_id, ['a=b'])
+        updated_filter = self.client.filters.update(
             filter_id, new_filter_rules, new_visibility)
 
         updated_rules = new_filter_rules or self.SIMPLE_RULE

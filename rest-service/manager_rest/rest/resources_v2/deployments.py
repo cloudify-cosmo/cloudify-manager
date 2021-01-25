@@ -60,6 +60,10 @@ class Deployments(resources_v1.Deployments):
             '_get_all_results',
             request.args.get('_get_all_results', False)
         )
+        if '_group_id' in request.args:
+            filters['deployment_group'] = lambda col: col.any(
+                models.DeploymentGroup.id == request.args['_group_id']
+            )
         result = get_storage_manager().list(
             models.Deployment,
             include=_include,
@@ -88,12 +92,12 @@ class Deployments(resources_v1.Deployments):
 
 def _get_filter_rules():
     filter_rules = request.args.get('_filter_rules')
-    filter_name = request.args.get('_filter_name')
+    filter_id = request.args.get('_filter_id')
 
-    if not filter_rules and not filter_name:
+    if not filter_rules and not filter_id:
         return
 
-    if filter_rules and filter_name:
+    if filter_rules and filter_id:
         raise manager_exceptions.BadParametersError(
             'Filter rules and filter name cannot be provided together. '
             'Please specify one of them or neither.'
@@ -102,8 +106,9 @@ def _get_filter_rules():
     if filter_rules:
         return create_labels_filters_mapping(filter_rules.split(','))
 
-    if filter_name:
-        filter_elem = get_storage_manager().get(models.Filter, filter_name)
+    if filter_id:
+        rest_utils.validate_inputs({'filter_id': filter_id})
+        filter_elem = get_storage_manager().get(models.Filter, filter_id)
         return filter_elem.value.get('labels', {})
 
 

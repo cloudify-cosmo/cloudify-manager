@@ -112,7 +112,8 @@ class MaintenanceModeTest(BaseServerTestCase):
 
     def test_deployment_denial_in_maintenance_transition_mode(self):
         self._start_maintenance_transition_mode()
-        self.client.blueprints.upload(self.get_mock_blueprint_path(), 'b1')
+        self.client.blueprints.upload(self.get_mock_blueprint_path(), 'b1',
+                                      async_upload=True)
         self.assertRaises(exceptions.MaintenanceModeActivatingError,
                           self.client.deployments.create,
                           blueprint_id='b1',

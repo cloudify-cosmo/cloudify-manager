@@ -16,7 +16,7 @@ from integration_tests.framework.flask_utils import \
 
 
 logger = logging.getLogger('TESTENV')
-Env = namedtuple('Env', ['container_id', 'container_ip'])
+Env = namedtuple('Env', ['container_id', 'container_ip', 'service_management'])
 
 
 def pytest_addoption(parser):
@@ -38,6 +38,12 @@ def pytest_addoption(parser):
     parser.addoption(
         '--container-id',
         help='Run integration tests on this container',
+    )
+    parser.addoption(
+        '--service-management',
+        default='supervisord',
+        help='Run integration tests using specific service management layer. '
+             '`supervisord` or `systemd`',
     )
 
 
@@ -107,15 +113,16 @@ def manager_container(request, resource_mapping):
     image_name = request.config.getoption("--image-name")
     keep_container = request.config.getoption("--keep-container")
     container_id = request.config.getoption("--container-id")
+    service_management = request.config.getoption("--service-management")
     if container_id:
         _clean_manager(container_id)
         keep_container = True
     else:
         container_id = docker.run_manager(
-            image_name, resource_mapping=resource_mapping)
+            image_name, service_management, resource_mapping=resource_mapping)
         docker.upload_mock_license(container_id)
     container_ip = docker.get_manager_ip(container_id)
-    container = Env(container_id, container_ip)
+    container = Env(container_id, container_ip, service_management)
     prepare_reset_storage_script(container_id)
     amqp_events_printer_thread = threading.Thread(
         target=print_events, args=(docker.get_manager_ip(container_id), ))

@@ -60,4 +60,5 @@ from .resource_models import (
     DeploymentLabel,
     Filter,
     DeploymentGroup,
+    ExecutionGroup,
 )

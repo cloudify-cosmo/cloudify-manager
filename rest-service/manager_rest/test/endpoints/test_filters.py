@@ -110,15 +110,21 @@ class FiltersTestCase(base_test.BaseServerTestCase):
                              ['a{0}=b{0}'.format(i)])
 
     def test_list_filters_sort(self):
-        filter_names = ['c_filter', 'b_filter', 'a_filter']
+        filter_names = ['a_filter', 'c_filter', 'b_filter']
         for filter_name in filter_names:
             self.create_filter(filter_name, self.SIMPLE_RULE)
 
-        filters_list = self.client.filters.list(_sort='id')
-        filter_names.sort()
+        sorted_asc_filters_list = self.client.filters.list(sort='id')
         self.assertEqual(
-            [filter_elem.id for filter_elem in filters_list.items],
-            filter_names
+            [filter_elem.id for filter_elem in sorted_asc_filters_list],
+            sorted(filter_names)
+        )
+
+        sorted_dsc_filters_list = self.client.filters.list(
+            sort='id', is_descending=True)
+        self.assertEqual(
+            [filter_elem.id for filter_elem in sorted_dsc_filters_list],
+            sorted(filter_names, reverse=True)
         )
 
     def test_filter_create_lowercase(self):

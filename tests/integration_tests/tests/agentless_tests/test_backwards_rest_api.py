@@ -17,18 +17,32 @@
 import json
 import os
 import subprocess
+from functools import wraps
 
 from integration_tests.framework import utils
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 
 
+def skip_if_supervisord(test_method):
+    @wraps(test_method)
+    def wrapper(self):
+        if self.env.service_management != 'supervisord':
+            return test_method(self)
+    return wrapper
+
+
 class RestApiBackwardsCompatibilityTest(AgentlessTestCase):
 
+    def setUp(self):
+        super(RestApiBackwardsCompatibilityTest, self).setUp()
+
+    @skip_if_supervisord
     def test_3_2_client(self):
         self._test_client(client_version='3.2',
                           url_version_postfix='')
 
+    @skip_if_supervisord
     def test_3_3_1_client(self):
         self._test_client(client_version='3.3.1',
                           url_version_postfix='/api/v2')

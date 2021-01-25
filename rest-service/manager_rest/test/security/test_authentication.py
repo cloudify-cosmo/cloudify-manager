@@ -113,7 +113,8 @@ class AuthenticationTests(SecurityTestBase):
                                      password='alice_password'):
             self.client.blueprints.upload(
                 self.get_mock_blueprint_path(),
-                'bp-id'
+                'bp-id',
+                async_upload=True
             )
 
     @attr(client_min_version=2.1,

@@ -991,7 +991,8 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
     def test_list_deployments_with_filter_rules(self):
         dep1 = self.put_deployment_with_labels(self.LABELS)
         self.put_deployment_with_labels(self.LABELS_2)
-        deployments = self.client.deployments.list(filter_rules=['env=aws'])
+        deployments = self.client.deployments.list(
+            filter_rules={'_filter_rules': ['env=aws', 'arch=k8s']})
         self.assertEqual(len(deployments), 1)
         self.assertEqual(deployments[0], dep1)
 
@@ -1001,7 +1002,8 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         self.put_deployment_with_labels(self.LABELS)
         dep2 = self.put_deployment_with_labels(self.LABELS_2)
         self.create_filter(self.FILTER_ID, self.FILTER_RULES_2)
-        deployments = self.client.deployments.list(filter_name=self.FILTER_ID)
+        deployments = self.client.deployments.list(
+            filter_rules={'_filter_id': self.FILTER_ID})
         self.assertEqual(len(deployments), 1)
         self.assertEqual(deployments[0], dep2)
 
@@ -1010,17 +1012,9 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
     def test_list_deployments_with_filter_rules_upper(self):
         self.put_deployment_with_labels(self.LABELS)
         self.put_deployment_with_labels(self.LABELS_2)
-        deployments = self.client.deployments.list(filter_rules=['aRcH=k8S'])
+        deployments = self.client.deployments.list(
+            filter_rules={'_filter_rules': ['aRcH=k8S']})
         self.assertEqual(len(deployments), 2)
-
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
-    def test_list_deployments_with_filter_fails(self):
-        self.assertRaisesRegex(RuntimeError,
-                               '.*cannot be provided together.*',
-                               self.client.deployments.list,
-                               filter_rules=self.FILTER_RULES,
-                               filter_name=self.FILTER_ID)
 
     def _assert_deployment_labels(self, deployment_labels, compared_labels):
         simplified_labels = set()

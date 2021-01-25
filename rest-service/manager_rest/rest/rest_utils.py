@@ -23,6 +23,7 @@ from ast import literal_eval
 from string import ascii_letters
 from contextlib import contextmanager
 
+from retrying import retry
 from flask_security import current_user
 from flask import request, make_response, current_app
 from flask_restful.reqparse import Argument, RequestParser
@@ -598,3 +599,28 @@ def verify_blueprint_uploaded_state(blueprint):
         raise manager_exceptions.InvalidBlueprintError(
             'Required blueprint `{}` is still {}.'
             .format(blueprint.id, blueprint.state))
+
+
+def retry_if_upload_not_ended(result):
+    return result.state not in BlueprintUploadState.END_STATES
+
+
+@retry(wait_fixed=1000, stop_max_attempt_number=60,
+       retry_on_result=retry_if_upload_not_ended)
+def wait_for_blueprint_upload(sm, blueprint_id):
+    blueprint = sm.get(models.Blueprint, blueprint_id)
+    sm._safe_commit()
+    return blueprint
+
+
+def get_uploaded_blueprint(sm, blueprint_id):
+    blueprint = wait_for_blueprint_upload(sm, blueprint_id)
+    if blueprint.state in BlueprintUploadState.FAILED_STATES:
+        if blueprint.state == BlueprintUploadState.INVALID:
+            state_display = 'is invalid'
+        else:
+            state_display = 'has {}'.format(blueprint.state.replace('_', ' '))
+        raise manager_exceptions.InvalidBlueprintError(
+            'Blueprint `{}` {}. Error: {}'.format(
+                blueprint.id, state_display, blueprint.error))
+    return blueprint, 201
