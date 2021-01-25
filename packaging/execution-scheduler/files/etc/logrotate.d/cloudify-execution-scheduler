@@ -1,0 +1,11 @@
+/var/log/cloudify/execution-scheduler/*.log {
+        hourly
+        rotate 7
+        size 100M
+        copytruncate
+        compress
+        delaycompress
+        missingok
+        notifempty
+        dateext dateformat -%Y%m%d-%s
+}

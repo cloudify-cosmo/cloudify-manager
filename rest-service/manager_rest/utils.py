@@ -21,9 +21,10 @@ import shutil
 import zipfile
 import tempfile
 from dateutil import rrule
+from base64 import b64encode
 from datetime import datetime
 from os import path, makedirs
-from base64 import b64encode
+from dateutil import parser as date_parser
 
 from flask import g
 from flask import request
@@ -369,9 +370,15 @@ def get_rrule(rule, since, until):
     :param until: A datetime string representing the latest time to schedule
     :return: an iCalendar RRULE object
     """
+    since = _get_timestamp(since)
+    until = _get_timestamp(until)
 
     if rule.get('rrule'):
-        return rrule.rrulestr(rule['rrule'])
+        parsed_rule = rrule.rrulestr(rule['rrule'], dtstart=since, cache=True)
+        if not parsed_rule._until:
+            parsed_rule._until = until
+        return parsed_rule
+
     if not rule.get('frequency'):
         if rule.get('count') == 1:
             frequency = rrule.DAILY
@@ -394,9 +401,6 @@ def get_rrule(rule, since, until):
     if rule.get('weekdays'):
         weekdays = _get_weekdays(rule['weekdays'])
 
-    time_fmt = '%Y-%m-%dT%H:%M:%S.%fZ'
-    since = datetime.strptime(since, time_fmt) if since else None
-    until = datetime.strptime(until, time_fmt) if until else None
     return rrule.rrule(freq=frequency, interval=interval,
                        dtstart=since, until=until, byweekday=weekdays,
                        count=rule.get('count'), cache=True)
@@ -408,3 +412,10 @@ def _get_weekdays(weekdays):
         if str(weekday) in weekdays:
             weekdays_rule.append(weekday)
     return weekdays_rule
+
+
+def _get_timestamp(value):
+    if isinstance(value, str):
+        return date_parser.parse(value, ignoretz=True)
+    else:
+        return value

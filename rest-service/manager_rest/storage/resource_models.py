@@ -622,10 +622,15 @@ class ExecutionSchedule(CreatedAtMixin, SQLResourceBase):
                          self.until).after(datetime.now())
 
     @property
-    def all_next_occurrences(self):
-        return [d.strftime("%Y-%m-%d %H:%M:%S")
-                for d in get_rrule(self.rule, self.since, self.until)
-                if d >= datetime.now()]
+    def all_next_occurrences(self, pagination_size=1000):
+        next_occurrences = []
+        search_limit = 100000
+        for i, d in enumerate(get_rrule(self.rule, self.since, self.until)):
+            if i >= search_limit or len(next_occurrences) >= pagination_size:
+                break
+            if d >= datetime.now():
+                next_occurrences.append(d.strftime("%Y-%m-%d %H:%M:%S"))
+        return next_occurrences
 
     @classproperty
     def response_fields(cls):
