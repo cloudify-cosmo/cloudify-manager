@@ -13,11 +13,12 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from datetime import datetime
 import mock
 
 from cloudify.models_states import VisibilityState
 
-from manager_rest import utils
+from manager_rest import manager_exceptions, utils
 from manager_rest.test import base_test
 from manager_rest.storage import models
 from manager_rest.test.attribute import attr
@@ -227,3 +228,59 @@ class StorageManagerTests(base_test.BaseServerTestCase):
             get_all_results=True
         )
         self.assertEqual(20, len(secret_list))
+
+
+class TestTransactions(base_test.BaseServerTestCase):
+    def _make_secret(self, id, value):
+        # these tests are using secrets, but they could just as well
+        # use any other model, we just need to create _something_ in the db
+        now = datetime.now()
+        return models.Secret(
+            id=id,
+            value=value,
+            created_at=now,
+            updated_at=now,
+            visibility=VisibilityState.TENANT
+        )
+
+    def test_commits(self):
+        """Items created in the transaction are stored"""
+        with self.sm.transaction():
+            self.sm.put(self._make_secret('tx_secret', 'value'))
+        secret = self.sm.get(models.Secret, 'tx_secret')
+        assert secret.value == 'value'
+
+    def test_before_commits(self):
+        """Items created before the transaction are stored as well"""
+        self.sm.put(self._make_secret('tx_secret1', 'value1'))
+        with self.sm.transaction():
+            self.sm.put(self._make_secret('tx_secret2', 'value2'))
+        assert self.sm.get(models.Secret, 'tx_secret1').value == 'value1'
+        assert self.sm.get(models.Secret, 'tx_secret2').value == 'value2'
+
+    def test_exception_rollback(self):
+        """If the transaction throws, items created in it are not stored"""
+        with self.assertRaisesRegex(RuntimeError, 'test error'):
+            with self.sm.transaction():
+                self.sm.put(self._make_secret('tx_secret', 'value'))
+                raise RuntimeError('test error')
+        with self.assertRaises(manager_exceptions.NotFoundError):
+            self.sm.get(models.Secret, 'tx_secret')
+
+    def test_exception_before_commits(self):
+        """items created before a transaction that throws, are still stored"""
+        with self.assertRaisesRegex(RuntimeError, 'test error'):
+            self.sm.put(self._make_secret('tx_secret1', 'value1'))
+            with self.sm.transaction():
+                self.sm.put(self._make_secret('tx_secret2', 'value2'))
+                raise RuntimeError('test error')
+
+        assert self.sm.get(models.Secret, 'tx_secret1').value == 'value1'
+        with self.assertRaises(manager_exceptions.NotFoundError):
+            self.sm.get(models.Secret, 'tx_secret2')
+
+    def test_subtransactions(self):
+        with self.assertRaisesRegex(RuntimeError, 'disallowed'):
+            with self.sm.transaction():
+                with self.sm.transaction():
+                    pass
