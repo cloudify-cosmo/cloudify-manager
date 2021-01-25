@@ -43,11 +43,8 @@ class PluginInstallationTest(AgentTestCase):
         )
 
     def _agent_plugin_dir(self, agent_id, plugin):
-        agent_base_dir = '/opt/cloudify-agent-{0}'.format(
-            self.client.manager.get_version()['version']
-        )
         return os.path.join(
-            agent_base_dir,
+            self.execute_on_manager(['bash', '-c', 'echo ~cfyuser']).strip(),
             agent_id,
             'env', 'plugins',
             plugin.tenant_name,
