@@ -3,7 +3,7 @@ from manager_rest.constants import EQUAL, NOT_EQUAL, IS_NULL, IS_NOT_NULL
 
 
 def add_labels_filters_to_query(query, labels_model, labels_filters):
-    query = query.join(labels_model)
+    query = query.join(labels_model).distinct()
 
     for label_key, label_values in labels_filters.get(EQUAL, {}).items():
         query = query.filter(key_equal_value(
