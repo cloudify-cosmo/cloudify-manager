@@ -16,4 +16,5 @@ node_types:
     interfaces:
       cloudify.interfaces.lifecycle:
         start: dockercompute.dockercompute.operations.start
+        prestop: dockercompute.dockercompute.operations.store_envdir
         delete: dockercompute.dockercompute.operations.delete
