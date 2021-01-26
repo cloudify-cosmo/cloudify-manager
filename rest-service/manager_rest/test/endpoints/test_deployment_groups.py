@@ -140,6 +140,112 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         )
         assert set(group.deployment_ids) == {'dep1', 'group1-2', 'group1-3'}
 
+    def test_add_deployment_ids(self):
+        self.put_blueprint()
+        self.client.deployments.create('blueprint', 'dep1')
+        self.client.deployments.create('blueprint', 'dep2')
+        self.client.deployment_groups.put('group1')
+        group = self.client.deployment_groups.add_deployments(
+            'group1',
+            deployment_ids=['dep1']
+        )
+        assert group.deployment_ids == ['dep1']
+        group = self.client.deployment_groups.add_deployments(
+            'group1',
+            deployment_ids=['dep2']
+        )
+        assert set(group.deployment_ids) == {'dep1', 'dep2'}
+
+    def test_add_twice(self):
+        self.put_blueprint()
+        self.client.deployments.create('blueprint', 'dep1')
+        self.client.deployments.create('blueprint', 'dep2')
+        self.client.deployment_groups.put('group1')
+        group = self.client.deployment_groups.add_deployments(
+            'group1',
+            deployment_ids=['dep1']
+        )
+        assert group.deployment_ids == ['dep1']
+        group = self.client.deployment_groups.add_deployments(
+            'group1',
+            deployment_ids=['dep1']
+        )
+        assert group.deployment_ids == ['dep1']
+
+    def test_remove_nonexistent(self):
+        self.client.deployment_groups.put('group1')
+        with self.assertRaisesRegexp(CloudifyClientError, 'not found'):
+            self.client.deployment_groups.remove_deployments(
+                'group1',
+                deployment_ids=['nonexistent']
+            )
+
+    def test_remove_deployment_ids(self):
+        self.put_blueprint()
+        self.client.deployments.create('blueprint', 'dep1')
+        self.client.deployments.create('blueprint', 'dep2')
+        self.client.deployment_groups.put('group1')
+        group = self.client.deployment_groups.add_deployments(
+            'group1',
+            deployment_ids=['dep1', 'dep2']
+        )
+        assert set(group.deployment_ids) == {'dep1', 'dep2'}
+        group = self.client.deployment_groups.remove_deployments(
+            'group1',
+            deployment_ids=['dep1']
+        )
+        assert group.deployment_ids == ['dep2']
+
+    def test_add_deployment_count(self):
+        self.put_blueprint()
+        self.client.deployment_groups.put(
+            'group1',
+            blueprint_id='blueprint'
+        )
+        group = self.client.deployment_groups.add_deployments(
+            'group1',
+            count=3
+        )
+        assert len(group.deployment_ids) == 3
+
+    def test_add_remove_same(self):
+        self.put_blueprint()
+        self.client.deployments.create('blueprint', 'dep1')
+        self.client.deployments.create('blueprint', 'dep2')
+        self.client.deployment_groups.put('group1')
+        group = self.client.deployment_groups.add_deployments(
+            'group1',
+            deployment_ids=['dep1']
+        )
+        # add and remove the same deployment in a single call - it is
+        # removed; using the http client directly, because the restclient
+        # has no way to express such inconsistency
+        self.client.deployment_groups.api.patch(
+            '/deployment-groups/{0}'.format(group['id']),
+            data={
+                'add': {
+                    'deployment_ids': ['dep2']
+                },
+                'remove': {
+                    'deployment_ids': ['dep1', 'dep2']
+                },
+            }
+        )
+        group = self.client.deployment_groups.get(group['id'])
+        assert group.deployment_ids == []
+
+    def test_add_inputs(self):
+        self.put_blueprint()
+        self.client.deployment_groups.put(
+            'group1',
+            blueprint_id='blueprint'
+        )
+        group = self.client.deployment_groups.add_deployments(
+            'group1',
+            inputs=[{}, {}]
+        )
+        assert len(group.deployment_ids) == 2
+
 
 class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
     def test_get_empty(self):
