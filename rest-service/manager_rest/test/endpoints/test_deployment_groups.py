@@ -69,6 +69,7 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             description='descr'
         )
         assert group['description'] == 'descr'
+        assert group['deployment_ids'] == ['dep1']
 
     def test_create_with_blueprint(self):
         self.client.deployment_groups.put(
