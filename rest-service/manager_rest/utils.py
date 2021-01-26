@@ -14,11 +14,13 @@
 #  * limitations under the License.
 
 import os
+import re
 import glob
 import errno
 import shutil
 import zipfile
 import tempfile
+from dateutil import rrule
 from datetime import datetime
 from os import path, makedirs
 from base64 import b64encode
@@ -351,3 +353,58 @@ def _get_label_filter_rule(mapping_key, label_key, label_values_list=None):
 
     else:  # mapping_key in (IS_NULL, IS_NOT_NULL)
         return label_key + mapping[mapping_key]
+
+
+def get_rrule(rule, since, until):
+    """
+    Compute an RRULE for the execution scheduler.
+
+    :param rule: A dictionary representing a scheduling rule.
+    Rules are of the following possible formats (e.g.):
+        {'frequency': '2 weeks', 'count': 5, 'weekdays': ['SU', 'MO', 'TH']}
+           = run every 2 weeks, 5 times totally, only on sun. mon. or thu.
+        {'count': 1'} = run exactly once, at the `since` time
+        {'rrule': 'RRULE:FREQ=DAILY;INTERVAL=3'} = pass RRULE directly
+    :param since: A datetime string representing the earliest time to schedule
+    :param until: A datetime string representing the latest time to schedule
+    :return: an iCalendar RRULE object
+    """
+
+    if rule.get('rrule'):
+        return rrule.rrulestr(rule['rrule'])
+    if not rule.get('frequency'):
+        if rule.get('count') == 1:
+            frequency = rrule.DAILY
+            interval = None
+        else:
+            return
+    else:
+        parsed = re.findall(r"(\d+) (seconds?|minutes?|hours?|days?|weeks?"
+                            "|months?|years?)", rule['frequency'])
+        if not parsed or len(parsed[0]) < 2:
+            return
+        freqs = {'seconds': rrule.SECONDLY, 'minutes': rrule.MINUTELY,
+                 'hours': rrule.HOURLY, 'days': rrule.DAILY,
+                 'weeks': rrule.WEEKLY, 'months': rrule.MONTHLY,
+                 'years': rrule.YEARLY}
+        interval = int(parsed[0][0])
+        frequency = freqs[parsed[0][1]]
+
+    weekdays = None
+    if rule.get('weekdays'):
+        weekdays = _get_weekdays(rule['weekdays'])
+
+    time_fmt = '%Y-%m-%dT%H:%M:%S.%fZ'
+    since = datetime.strptime(since, time_fmt) if since else None
+    until = datetime.strptime(until, time_fmt) if until else None
+    return rrule.rrule(freq=frequency, interval=interval,
+                       dtstart=since, until=until, byweekday=weekdays,
+                       count=rule.get('count'), cache=True)
+
+
+def _get_weekdays(weekdays):
+    weekdays_rule = []
+    for weekday in rrule.weekdays:
+        if str(weekday) in weekdays:
+            weekdays_rule.append(weekday)
+    return weekdays_rule

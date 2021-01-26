@@ -14,10 +14,8 @@
 #    * limitations under the License.
 
 
-import re
 from os import path
 from datetime import datetime
-from dateutil import rrule
 
 from flask_restful import fields as flask_fields
 
@@ -34,7 +32,8 @@ from cloudify.models_states import (AgentState,
 
 from manager_rest import config
 from manager_rest.rest.responses import Workflow, Label
-from manager_rest.utils import (classproperty,
+from manager_rest.utils import (get_rrule,
+                                classproperty,
                                 files_in_folder,
                                 get_filters_list_from_mapping)
 from manager_rest.deployment_update.constants import ACTION_TYPES, ENTITY_TYPES
@@ -590,6 +589,7 @@ class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
 
 class ExecutionSchedule(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'execution_schedules'
+
     next_occurrence = db.Column(UTCDateTime, nullable=True, index=True)
     since = db.Column(UTCDateTime, nullable=True)
     until = db.Column(UTCDateTime, nullable=True)
@@ -604,8 +604,7 @@ class ExecutionSchedule(CreatedAtMixin, SQLResourceBase):
     _latest_execution_fk = foreign_key(Execution._storage_id, nullable=True)
 
     deployment_id = association_proxy('deployment', 'id')
-    latest_execution_status = association_proxy('latest_execution',
-                                                'execution_status')
+    latest_execution_status = association_proxy('latest_execution', 'status')
 
     @declared_attr
     def deployment(cls):
@@ -617,50 +616,22 @@ class ExecutionSchedule(CreatedAtMixin, SQLResourceBase):
                                         cls._latest_execution_fk)
 
     def compute_next_occurrence(self):
-        return self.get_rrule(self.rule).after(datetime.now())
+        return get_rrule(self.rule,
+                         self.since,
+                         self.until).after(datetime.now())
 
-    # Rules are of the following possible formats (e.g.):
-    # {'frequency': '2 weeks', 'count': 5, 'weekdays': ['SU', 'MO', 'TH']}
-    # -- run every 2 weeks, 5 times totally, only on sun. mon. or thu.
-    # {'count': 1'} -- run exactly once, at the `since` time
-    # {'rrule': 'RRULE:FREQ=DAILY;INTERVAL=3'} -- pass RRULE directly
+    @property
+    def all_next_occurrences(self):
+        return [d.strftime("%Y-%m-%d %H:%M:%S")
+                for d in get_rrule(self.rule, self.since, self.until)
+                if d >= datetime.now()]
 
-    def get_rrule(self, rule):
-        if 'rrule' in rule.keys():
-            return rrule.rrulestr(rule['rrule'])
-        if 'frequency' not in rule.keys():
-            if rule.get('count') == 1:
-                frequency = rrule.DAILY
-                interval = None
-            else:
-                return
-        else:
-            parsed = re.findall(r"(\d+) (seconds?|minutes?|hours?|days?|weeks?"
-                                "|months?|years?) ?(ago)?", rule['frequency'])
-            if not parsed or len(parsed[0]) < 2:
-                return
-            freqs = {'seconds': rrule.SECONDLY, 'minutes': rrule.MINUTELY,
-                     'hours': rrule.HOURLY, 'days': rrule.DAILY,
-                     'weeks': rrule.WEEKLY, 'months': rrule.MONTHLY,
-                     'years': rrule.YEARLY}
-            interval = int(parsed[0][0])
-            frequency = freqs[parsed[0][1]]
-
-        if 'weekdays' in rule.keys():
-            weekdays = self._get_weekdays(rule['weekdays'])
-
-        return rrule.rrule(freq=frequency, interval=interval,
-                           dtstart=self.since, until=self.until,
-                           byweekday=weekdays, count=rule.get('count'),
-                           cache=True)
-
-    @staticmethod
-    def _get_weekdays(weekdays):
-        weekdays_rule = []
-        for weekday in rrule.weekdays:
-            if str(weekday) in weekdays:
-                weekdays_rule.append(weekday)
-        return weekdays_rule
+    @classproperty
+    def response_fields(cls):
+        fields = super(ExecutionSchedule, cls).response_fields
+        fields['all_next_occurrences'] = \
+            flask_fields.List(flask_fields.String())
+        return fields
 
 
 class Event(SQLResourceBase):

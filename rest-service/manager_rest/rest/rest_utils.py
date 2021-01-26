@@ -20,6 +20,7 @@ import copy
 import subprocess
 import dateutil.parser
 from ast import literal_eval
+from datetime import datetime
 from string import ascii_letters
 from contextlib import contextmanager
 
@@ -624,3 +625,15 @@ def get_uploaded_blueprint(sm, blueprint_id):
             'Blueprint `{}` {}. Error: {}'.format(
                 blueprint.id, state_display, blueprint.error))
     return blueprint, 201
+
+
+def parse_datetime_multiple_formats(date_str):
+    for fmt in ('%Y-%m-%d', '%Y-%m-%dT%H:%M:%S',
+                '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M:%S.%f',
+                '%Y-%m-%dT%H:%M:%S.%f', '%Y-%m-%dT%H:%M:%S.%fZ'):
+        try:
+            return datetime.strptime(date_str, fmt)
+        except ValueError:
+            pass
+    raise manager_exceptions.BadParametersError(
+        "{} is not a legal time format".format(date_str))

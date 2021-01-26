@@ -28,7 +28,8 @@ from manager_rest.manager_exceptions import BadParametersError
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.rest.rest_utils import (
     get_json_and_verify_params,
-    verify_and_convert_bool
+    verify_and_convert_bool,
+    parse_datetime_multiple_formats
 )
 from manager_rest.storage import models, get_storage_manager, ListResult
 
@@ -55,8 +56,10 @@ class Executions(resources_v2.Executions):
                     "`keep_last` must be an integer greater than 0. got {} "
                     "instead.".format(request_dict['keep_last'])
                 )
-        requested_time = self._parse_date(request_dict['to_datetime']) if \
-            'to_datetime' in request_dict else None
+        requested_time = None
+        if 'to_datetime' in request_dict:
+            requested_time = parse_datetime_multiple_formats(
+                request_dict['to_datetime'])
         if 'status' in filters:
             if filters['status'] not in ExecutionState.END_STATES:
                 raise BadParametersError(
@@ -112,17 +115,6 @@ class Executions(resources_v2.Executions):
             else:
                 dep_creation_execs[execution.deployment_id] -= 1
         return True
-
-    @staticmethod
-    def _parse_date(date_str):
-        for fmt in ('%Y-%m-%d', '%Y-%m-%dT%H:%M:%S',
-                    '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M:%S.%f',
-                    '%Y-%m-%dT%H:%M:%S.%f', '%Y-%m-%dT%H:%M:%S.%fZ'):
-            try:
-                return datetime.strptime(date_str, fmt)
-            except ValueError:
-                pass
-        raise BadParametersError("`to_datetime` must be a legal UNIX time")
 
 
 class ExecutionsCheck(SecuredResource):

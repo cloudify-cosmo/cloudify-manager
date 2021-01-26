@@ -23,6 +23,11 @@ from .executions import (     # NOQA
     ExecutionGroups
 )
 
+from .execution_schedules import (               # NOQA
+    ExecutionSchedules,
+    ExecutionSchedulesId,
+)
+
 from .manager import (                           # NOQA
     Managers,
     ManagersId,

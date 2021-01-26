@@ -61,4 +61,5 @@ from .resource_models import (
     Filter,
     DeploymentGroup,
     ExecutionGroup,
+    ExecutionSchedule,
 )
