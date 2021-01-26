@@ -7,6 +7,12 @@ from manager_rest.test import base_test
 
 
 class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
+    def setUp(self):
+        super(DeploymentGroupsTestCase, self).setUp()
+        self.put_blueprint()
+        self.client.deployments.create('blueprint', 'dep1')
+        self.client.deployments.create('blueprint', 'dep2')
+
     def test_get_empty(self):
         result = self.client.deployment_groups.list()
         assert len(result) == 0
@@ -18,9 +24,6 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         assert result['id'] == 'group1'
 
     def test_add_to_group(self):
-        self.put_blueprint()
-        self.client.deployments.create('blueprint', 'dep1')
-        self.client.deployments.create('blueprint', 'dep2')
         group = self.client.deployment_groups.put(
             'group1',
             deployment_ids=['dep1', 'dep2']
@@ -28,9 +31,6 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         assert set(group['deployment_ids']) == {'dep1', 'dep2'}
 
     def test_overwrite_group(self):
-        self.put_blueprint()
-        self.client.deployments.create('blueprint', 'dep1')
-        self.client.deployments.create('blueprint', 'dep2')
         group = self.client.deployment_groups.put(
             'group1',
             deployment_ids=['dep1']
@@ -44,8 +44,6 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         assert group['deployment_ids'] == ['dep1']
 
     def test_clear_group(self):
-        self.put_blueprint()
-        self.client.deployments.create('blueprint', 'dep1')
         group = self.client.deployment_groups.put(
             'group1',
             deployment_ids=['dep1']
@@ -60,8 +58,6 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
 
     def test_update_description(self):
         """When deployment_ids is not provided, the group is not cleared"""
-        self.put_blueprint()
-        self.client.deployments.create('blueprint', 'dep1')
         group = self.client.deployment_groups.put(
             'group1',
             deployment_ids=['dep1']
@@ -75,7 +71,6 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         assert group['description'] == 'descr'
 
     def test_create_with_blueprint(self):
-        self.put_blueprint()
         self.client.deployment_groups.put(
             'group1',
             blueprint_id='blueprint',
@@ -108,7 +103,6 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         assert cm.exception.status_code == 409
 
     def test_create_deployment(self):
-        self.put_blueprint()
         self.client.deployment_groups.put(
             'group1',
             blueprint_id='blueprint',
@@ -121,8 +115,6 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         assert dep.id == 'group1-1'
 
     def test_add_deployments(self):
-        self.put_blueprint()
-        self.client.deployments.create('blueprint', 'dep1')
         group = self.client.deployment_groups.put(
             'group1',
             blueprint_id='blueprint',
@@ -141,9 +133,6 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         assert set(group.deployment_ids) == {'dep1', 'group1-2', 'group1-3'}
 
     def test_add_deployment_ids(self):
-        self.put_blueprint()
-        self.client.deployments.create('blueprint', 'dep1')
-        self.client.deployments.create('blueprint', 'dep2')
         self.client.deployment_groups.put('group1')
         group = self.client.deployment_groups.add_deployments(
             'group1',
@@ -157,9 +146,6 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         assert set(group.deployment_ids) == {'dep1', 'dep2'}
 
     def test_add_twice(self):
-        self.put_blueprint()
-        self.client.deployments.create('blueprint', 'dep1')
-        self.client.deployments.create('blueprint', 'dep2')
         self.client.deployment_groups.put('group1')
         group = self.client.deployment_groups.add_deployments(
             'group1',
@@ -181,9 +167,6 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             )
 
     def test_remove_deployment_ids(self):
-        self.put_blueprint()
-        self.client.deployments.create('blueprint', 'dep1')
-        self.client.deployments.create('blueprint', 'dep2')
         self.client.deployment_groups.put('group1')
         group = self.client.deployment_groups.add_deployments(
             'group1',
@@ -197,7 +180,6 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         assert group.deployment_ids == ['dep2']
 
     def test_add_deployment_count(self):
-        self.put_blueprint()
         self.client.deployment_groups.put(
             'group1',
             blueprint_id='blueprint'
@@ -209,9 +191,6 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         assert len(group.deployment_ids) == 3
 
     def test_add_remove_same(self):
-        self.put_blueprint()
-        self.client.deployments.create('blueprint', 'dep1')
-        self.client.deployments.create('blueprint', 'dep2')
         self.client.deployment_groups.put('group1')
         group = self.client.deployment_groups.add_deployments(
             'group1',
@@ -235,7 +214,6 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         assert group.deployment_ids == []
 
     def test_add_inputs(self):
-        self.put_blueprint()
         self.client.deployment_groups.put(
             'group1',
             blueprint_id='blueprint'
