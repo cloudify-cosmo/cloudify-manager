@@ -526,7 +526,7 @@ class DeploymentGroupsId(SecuredResource):
         self._set_group_deployments(sm, group, request_dict)
         return group
 
-    @authorize('deployment_group_create')
+    @authorize('deployment_group_update')
     @rest_decorators.marshal_with(models.DeploymentGroup)
     def patch(self, group_id):
         request_dict = rest_utils.get_json_and_verify_params({
