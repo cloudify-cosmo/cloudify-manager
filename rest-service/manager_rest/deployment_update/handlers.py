@@ -363,13 +363,10 @@ class PropertyHandler(ModifiableEntityHandlerBase):
     def modify(self, ctx, current_entities):
         node = get_node(ctx.deployment_id, ctx.raw_node_id)
         properties = deepcopy(node.properties)
-        try:
-            properties[ctx.property_id] = deployment_update_utils.create_dict(
-                ctx.modification_breadcrumbs,
-                ctx.raw_entity_value
-            )
-        except:
-            properties[ctx.property_id] = None
+        properties[ctx.property_id] = deployment_update_utils.create_dict(
+            ctx.modification_breadcrumbs,
+            ctx.raw_entity_value
+        )
         node.properties = properties
         self.sm.update(node)
 
