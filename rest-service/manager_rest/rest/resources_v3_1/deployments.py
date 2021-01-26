@@ -526,6 +526,33 @@ class DeploymentGroupsId(SecuredResource):
         self._set_group_deployments(sm, group, request_dict)
         return group
 
+    @authorize('deployment_group_update')
+    @rest_decorators.marshal_with(models.DeploymentGroup)
+    def patch(self, group_id):
+        request_dict = rest_utils.get_json_and_verify_params({
+            'description': {'optional': True},
+            'blueprint_id': {'optional': True},
+            'default_inputs': {'optional': True},
+            'visibility': {'optional': True},
+            'add': {'optional': True},
+            'remove': {'optional': True},
+        })
+        sm = get_storage_manager()
+        group = sm.get(models.DeploymentGroup, group_id)
+        self._set_group_attributes(sm, group, request_dict)
+        sm.put(group)
+        if request_dict.get('add'):
+            add = request_dict['add']
+            self._set_group_deployments(sm, group, add, clear=False)
+        if request_dict.get('remove'):
+            remove = request_dict['remove']
+            remove_ids = remove.get('deployment_ids') or []
+            for remove_id in remove_ids:
+                dep = sm.get(models.Deployment, remove_id)
+                group.deployments.remove(dep)
+            db.session.commit()
+        return group
+
     def _set_group_attributes(self, sm, group, request_dict):
         if request_dict.get('visibility') is not None:
             group.visibility = request_dict['visibility']
@@ -540,18 +567,23 @@ class DeploymentGroupsId(SecuredResource):
             group.default_blueprint = sm.get(
                 models.Blueprint, request_dict['blueprint_id'])
 
-    def _set_group_deployments(self, sm, group, request_dict):
+    def _set_group_deployments(self, sm, group, request_dict, clear=True):
         deployment_ids = request_dict.get('deployment_ids')
         if deployment_ids is not None:
             deployments = [sm.get(models.Deployment, dep_id)
                            for dep_id in deployment_ids]
-            group.deployments.clear()
+            if clear:
+                group.deployments.clear()
             for dep in deployments:
                 group.deployments.append(dep)
 
         deployment_count = len(group.deployments)
         rm = get_resource_manager()
         input_overrides = request_dict.get('inputs') or []
+        if input_overrides and not group.default_blueprint:
+            raise manager_exceptions.ConflictError(
+                'Cannot create deployments: group {0} has no '
+                'default blueprint set'.format(group.id))
         for inputs in input_overrides:
             deployment_inputs = (group.default_inputs or {}).copy()
             deployment_inputs.update(inputs)
