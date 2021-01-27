@@ -349,13 +349,15 @@ def update_deployment_dependencies_from_plan(deployment_id,
     dep_graph = RecursiveDeploymentDependencies(storage_manager)
     dep_graph.create_dependencies_graph()
 
-    source_deployment = storage_manager.get(models.Deployment, deployment_id)
+    source_deployment = storage_manager.get(models.Deployment,
+                                            deployment_id,
+                                            all_tenants=True)
     for dependency_creator, target_deployment_attr \
             in new_dependencies_dict.items():
         target_deployment_id = target_deployment_attr[0]
         target_deployment_func = target_deployment_attr[1]
         target_deployment = storage_manager.get(
-            models.Deployment, target_deployment_id) \
+            models.Deployment, target_deployment_id, all_tenants=True) \
             if target_deployment_id else None
 
         if dependency_creator not in curr_dependencies:
@@ -586,7 +588,8 @@ def _evaluate_target_func(target_dep_func, source_dep_id):
 def _get_deployment_from_target_func(sm, target_dep_func, source_dep_id):
     target_dep_id = _evaluate_target_func(target_dep_func, source_dep_id)
     if target_dep_id:
-        return sm.get(models.Deployment, target_dep_id, fail_silently=True)
+        return sm.get(models.Deployment, target_dep_id, fail_silently=True,
+                      all_tenants=True)
 
     return None
 

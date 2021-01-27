@@ -317,7 +317,8 @@ class InterDeploymentDependencies(SecuredResource):
         else:
             source_deployment = sm.get(models.Deployment,
                                        source_deployment_id,
-                                       fail_silently=True)
+                                       fail_silently=True,
+                                       all_tenants=True)
             if not source_deployment:
                 raise manager_exceptions.NotFoundError(
                     'Given source deployment with ID `{0}` does not '
@@ -325,7 +326,8 @@ class InterDeploymentDependencies(SecuredResource):
                 )
         target_deployment = sm.get(models.Deployment,
                                    target_deployment_id,
-                                   fail_silently=True)
+                                   fail_silently=True,
+                                   all_tenants=True)
         if not (is_component_deletion or external_source or
                 external_target or target_deployment):
             raise manager_exceptions.NotFoundError(

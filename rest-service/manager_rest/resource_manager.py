@@ -2453,7 +2453,8 @@ class ResourceManager(object):
             target_deployment_instance = \
                 self.sm.get(models.Deployment,
                             target_deployment,
-                            fail_silently=True) if target_deployment else None
+                            fail_silently=True,
+                            all_tenants=True) if target_deployment else None
 
             now = utils.get_formatted_timestamp()
             if external_client:

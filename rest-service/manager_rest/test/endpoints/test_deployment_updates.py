@@ -714,7 +714,7 @@ class TestDeploymentDependencies(unittest.TestCase):
             (models.Deployment, 'target_old'): 'target_old',
         }
 
-        def side_effect(*args):
+        def side_effect(*args, **kwargs):
             return get_dict[args]
 
         self.mock_sm.get = MagicMock(side_effect=side_effect)
@@ -772,7 +772,7 @@ class TestDeploymentDependencies(unittest.TestCase):
             (models.Deployment, 'target_2_new'): 'target_2_new',
         }
 
-        def side_effect(*args):
+        def side_effect(*args, **kwargs):
             return get_dict[args]
 
         self.mock_sm.get = MagicMock(side_effect=side_effect)
