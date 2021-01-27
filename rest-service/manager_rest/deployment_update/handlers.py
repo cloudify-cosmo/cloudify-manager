@@ -913,7 +913,8 @@ class DeploymentDependencies(UpdateHandler):
             return all(not dependency_creator.startswith(prefix)
                        for prefix in prefixes)
         source_deployment = self.sm.get(models.Deployment,
-                                        dep_update.deployment_id)
+                                        dep_update.deployment_id,
+                                        all_tenants=True)
         self._handle_dependency_changes(
             dep_update,
             query_filters={
@@ -931,7 +932,8 @@ class DeploymentDependencies(UpdateHandler):
         def is_node(dependency_creator):
             return dependency_creator.startswith(NODES)
         source_deployment = self.sm.get(models.Deployment,
-                                        dep_update.deployment_id)
+                                        dep_update.deployment_id,
+                                        all_tenants=True)
 
         self._handle_dependency_changes(
             dep_update,

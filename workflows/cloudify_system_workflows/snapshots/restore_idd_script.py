@@ -169,7 +169,8 @@ def create_service_composition_dependencies(deployment_plan, deployment, sm):
                 target_deployment = None
                 if target_deployment_id:
                     target_deployment = sm.get(models.Deployment,
-                                               target_deployment_id)
+                                               target_deployment_id,
+                                               all_tenants=True)
                 dependency_creator = dependency_creator_generator(prefix,
                                                                   suffix)
                 put_deployment_dependency(deployment,
