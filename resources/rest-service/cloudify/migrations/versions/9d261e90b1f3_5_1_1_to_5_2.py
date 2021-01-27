@@ -141,7 +141,7 @@ def drop_filters_table():
 
 def create_deployment_groups_table():
     op.create_table(
-        'deployment_group',
+        'deployment_groups',
         sa.Column(
             '_storage_id', sa.Integer(), autoincrement=True, nullable=False),
         sa.Column('id', sa.Text(), nullable=True),
@@ -160,92 +160,95 @@ def create_deployment_groups_table():
         sa.Column('_creator_id', sa.Integer(), nullable=False),
         sa.ForeignKeyConstraint(
             ['_default_blueprint_fk'], ['blueprints._storage_id'],
-            name=op.f('deployment_group__default_blueprint_fk_fkey'),
+            name=op.f('deployment_groups__default_blueprint_fk_fkey'),
             ondelete='SET NULL'
         ),
         sa.ForeignKeyConstraint(
             ['_creator_id'], ['users.id'],
-            name=op.f('deployment_group__creator_id_fkey'),
+            name=op.f('deployment_groups__creator_id_fkey'),
             ondelete='CASCADE'
         ),
         sa.ForeignKeyConstraint(
             ['_tenant_id'], ['tenants.id'],
-            name=op.f('deployment_group__tenant_id_fkey'),
+            name=op.f('deployment_groups__tenant_id_fkey'),
             ondelete='CASCADE'
         ),
         sa.PrimaryKeyConstraint(
-            '_storage_id', name=op.f('deployment_group_pkey'))
+            '_storage_id', name=op.f('deployment_groups_pkey'))
     )
     op.create_index(
-        op.f('deployment_group__default_blueprint_fk_idx'),
-        'deployment_group',
+        op.f('deployment_groups__default_blueprint_fk_idx'),
+        'deployment_groups',
         ['_default_blueprint_fk'],
         unique=False
     )
     op.create_index(
-        op.f('deployment_group__creator_id_idx'),
-        'deployment_group',
+        op.f('deployment_groups__creator_id_idx'),
+        'deployment_groups',
         ['_creator_id'],
         unique=False
     )
     op.create_index(
-        op.f('deployment_group__tenant_id_idx'),
-        'deployment_group',
+        op.f('deployment_groups__tenant_id_idx'),
+        'deployment_groups',
         ['_tenant_id'],
         unique=False
     )
     op.create_index(
-        op.f('deployment_group_created_at_idx'),
-        'deployment_group',
+        op.f('deployment_groups_created_at_idx'),
+        'deployment_groups',
         ['created_at'],
         unique=False
     )
     op.create_index(
-        op.f('deployment_group_id_idx'),
-        'deployment_group',
+        op.f('deployment_groups_id_idx'),
+        'deployment_groups',
         ['id'],
         unique=False
     )
     op.create_index(
-        op.f('deployment_group_visibility_idx'),
-        'deployment_group',
+        op.f('deployment_groups_visibility_idx'),
+        'deployment_groups',
         ['visibility'],
         unique=False
     )
     op.create_table(
-        'deployment_group_deployments',
-        sa.Column('deployment_grou_id', sa.Integer(), nullable=True),
+        'deployment_groups_deployments',
+        sa.Column('deployment_group_id', sa.Integer(), nullable=True),
         sa.Column('deployment_id', sa.Integer(), nullable=True),
         sa.ForeignKeyConstraint(
-            ['deployment_grou_id'],
-            ['deployment_group._storage_id'],
-            name=op.f('deployment_group_deployments_deployment_grou_id_fkey')
+            ['deployment_group_id'],
+            ['deployment_groups._storage_id'],
+            name=op.f('deployment_groups_deployments_deployment_grou_id_fkey')
         ),
         sa.ForeignKeyConstraint(
             ['deployment_id'],
             ['deployments._storage_id'],
-            name=op.f('deployment_group_deployments_deployment_id_fkey')
+            name=op.f('deployment_groups_deployments_deployment_id_fkey')
         )
     )
 
 
 def drop_deployment_groups_table():
-    op.drop_table('deployment_group_deployments')
+    op.drop_table('deployment_groups_deployments')
     op.drop_index(
-        op.f('deployment_group__default_blueprint_fk_idx'),
-        table_name='deployment_group')
+        op.f('deployment_groups__default_blueprint_fk_idx'),
+        table_name='deployment_groups')
     op.drop_index(
-        op.f('deployment_group_visibility_idx'), table_name='deployment_group')
+        op.f('deployment_groups_visibility_idx'),
+        table_name='deployment_groups')
     op.drop_index(
-        op.f('deployment_group_id_idx'), table_name='deployment_group')
+        op.f('deployment_groups_id_idx'), table_name='deployment_groups')
     op.drop_index(
-        op.f('deployment_group_created_at_idx'), table_name='deployment_group')
+        op.f('deployment_groups_created_at_idx'),
+        table_name='deployment_groups')
     op.drop_index(
-        op.f('deployment_group__tenant_id_idx'), table_name='deployment_group')
+        op.f('deployment_groups__tenant_id_idx'),
+        table_name='deployment_groups')
     op.drop_index(
-        op.f('deployment_group__creator_id_idx'),
-        table_name='deployment_group')
-    op.drop_table('deployment_group')
+        op.f('deployment_groups__creator_id_idx'),
+        table_name='deployment_groups')
+    op.drop_table('deployment_groups')
 
 
 def create_execution_schedules_table():
@@ -422,7 +425,7 @@ def create_execution_groups_table():
         ),
         sa.ForeignKeyConstraint(
             ['_deployment_group_fk'],
-            ['deployment_group._storage_id'],
+            ['deployment_groups._storage_id'],
             name=op.f('execution_group__deployment_group_fk_fkey'),
             ondelete='CASCADE'
         ),
