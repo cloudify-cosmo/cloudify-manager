@@ -385,6 +385,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
 
 
 class DeploymentGroup(CreatedAtMixin, SQLResourceBase):
+    __tablename__ = 'deployment_groups'
     description = db.Column(db.Text)
     default_inputs = db.Column(JSONString)
     _default_blueprint_fk = foreign_key(
