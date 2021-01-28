@@ -1,18 +1,3 @@
-#########
-# Copyright (c) 2016 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 from flask import request
 from flask import current_app
 
@@ -121,7 +106,6 @@ class LdapAuthentication(SecuredResource):
     @rest_decorators.marshal_with(LdapResponse)
     def post(self):
         ldap_config = self._validate_set_ldap_request()
-
         if 'ldap_ca_cert' in ldap_config:
             destination = (
                 config.instance.ldap_ca_path
@@ -169,18 +153,53 @@ class LdapAuthentication(SecuredResource):
         if not premium_enabled:
             raise MethodNotAllowedError('LDAP is only supported in the '
                                         'Cloudify premium edition.')
+        base_substitutions = ['base_dn', 'domain_dn', 'group_dn']
         ldap_config = rest_utils.get_json_and_verify_params({
             'ldap_server': {},
+            'ldap_domain': {},
             'ldap_username': {'optional': True},
             'ldap_password': {'optional': True},
-            'ldap_domain': {},
             'ldap_is_active_directory': {'optional': True},
-            'ldap_dn_extra': {},
+            'ldap_dn_extra': {'optional': True},
             'ldap_ca_cert': {'optional': True},
+            'ldap_nested_levels': {'optional': True},
+            'ldap_bind_format': {
+                'optional': True,
+                'allowed_substitutions': [
+                    'username', 'domain'] + base_substitutions,
+            },
+            'ldap_group_dn': {
+                'optional': True,
+                'allowed_substitutions': ['base_dn', 'domain_dn'],
+            },
+            'ldap_base_dn': {'optional': True},
+            'ldap_group_member_filter': {
+                'optional': True,
+                'allowed_substitutions': ['object_dn']
+            },
+            'ldap_user_filter': {
+                'optional': True,
+                'allowed_substitutions': ['username'] + base_substitutions,
+            },
+            'ldap_attribute_email': {'optional': True},
+            'ldap_attribute_first_name': {'optional': True},
+            'ldap_attribute_last_name': {'optional': True},
+            'ldap_attribute_uid': {'optional': True},
+            'ldap_attribute_group_membership': {'optional': True},
         })
-        # Not allowing empty username or password
-        ldap_config['ldap_username'] = ldap_config.get('ldap_username', '')
-        ldap_config['ldap_password'] = ldap_config.get('ldap_password', '')
+
+        if ldap_config.get('ldap_nested_levels') is None:
+            ldap_config['ldap_nested_levels'] = 1
+        else:
+            ldap_config['ldap_nested_levels'] = rest_utils.convert_to_int(
+                ldap_config['ldap_nested_levels'])
+
+        for attr in ldap_config:
+            if ldap_config[attr] is None:
+                # Otherwise we try to set None on the config entry, which is
+                # not a string.
+                ldap_config[attr] = ''
+
         ldap_config['ldap_is_active_directory'] = \
             rest_utils.verify_and_convert_bool(
                 'ldap_is_active_directory',
@@ -203,10 +222,9 @@ class LdapAuthentication(SecuredResource):
                 'e.g. ldap://192.0.2.1:389 or ldaps://192.0.2.45:636'
             )
 
-        if ((ldap_config['ldap_username']
-             and not ldap_config['ldap_password'])
-            or (ldap_config['ldap_password']
-                and not ldap_config['ldap_username'])):
+        user = ldap_config.get('ldap_username')
+        password = ldap_config.get('ldap_password')
+        if (user or password) and not (user and password):
             raise BadParametersError(
                 'Must supply either both username and password or neither. '
                 'Note that an empty username or password is invalid')
