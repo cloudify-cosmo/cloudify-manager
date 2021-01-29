@@ -91,9 +91,23 @@ class Config(object):
     ldap_password = Setting('ldap_password')
     ldap_domain = Setting('ldap_domain')
     ldap_is_active_directory = Setting('ldap_is_active_directory')
-    ldap_dn_extra = Setting('ldap_dn_extra')
     ldap_timeout = Setting('ldap_timeout')
     ldap_ca_path = Setting('ldap_ca_path')
+    ldap_bind_format = Setting('ldap_bind_format')
+    ldap_nested_levels = Setting('ldap_nested_levels', default=1)
+    # LDAP search filter and similar settings
+    ldap_dn_extra = Setting('ldap_dn_extra')
+    ldap_group_dn = Setting('ldap_group_dn')
+    ldap_base_dn = Setting('ldap_base_dn')
+    ldap_group_member_filter = Setting('ldap_group_member_filter')
+    ldap_user_filter = Setting('ldap_user_filter')
+    # Attributes on user objects
+    ldap_attribute_email = Setting('ldap_attribute_email')
+    ldap_attribute_first_name = Setting('ldap_attribute_first_name')
+    ldap_attribute_last_name = Setting('ldap_attribute_last_name')
+    ldap_attribute_uid = Setting('ldap_attribute_uid')
+    ldap_attribute_group_membership = Setting(
+        'ldap_attribute_group_membership')
 
     file_server_root = Setting('file_server_root', default=None)
     file_server_url = Setting('file_server_url', default=None)
@@ -245,7 +259,9 @@ class Config(object):
                 try:
                     jsonschema.validate(config_dict[entry.name], entry.schema)
                 except jsonschema.ValidationError as e:
-                    raise ConflictError(e.args[0])
+                    raise ConflictError(
+                        'Error validating {name}: {err}'.format(
+                            name=name, err=e.args[0]))
             config_mappings.append({
                 'name': entry.name,
                 'scope': entry.scope,

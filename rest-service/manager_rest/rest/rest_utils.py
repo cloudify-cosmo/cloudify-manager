@@ -1,28 +1,14 @@
-#########
-# Copyright (c) 2015-2019 Cloudify Platform Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
-import os
-import uuid
-import pytz
-import copy
-import subprocess
-import dateutil.parser
 from ast import literal_eval
+from contextlib import contextmanager
 from datetime import datetime
 from string import ascii_letters
-from contextlib import contextmanager
+import copy
+import dateutil.parser
+import os
+import pytz
+import string
+import subprocess
+import uuid
 
 from retrying import retry
 from flask_security import current_user
@@ -87,7 +73,46 @@ def get_json_and_verify_params(params=None):
                 '{2}'.format(param,
                              param_type.__name__,
                              type(request_dict[param]).__name__))
+
+        if is_params_dict:
+            _validate_allowed_substitutions(
+                param_name=param,
+                param_value=request_dict[param],
+                allowed=params[param].get('allowed_substitutions', None),
+            )
     return request_dict
+
+
+def _validate_allowed_substitutions(param_name, param_value, allowed):
+    if allowed is None or param_value is None:
+        current_app.logger.debug(
+            'Empty value or no allowed substitutions '
+            'defined for %s, skipping.', param_name)
+        return
+    f = string.Formatter()
+    invalid = []
+    current_app.logger.debug('Checking allowed substitutions for %s (%s)',
+                             param_name, ','.join(allowed))
+    current_app.logger.debug('Value is: %s', param_value)
+    for _, field, _, _ in f.parse(param_value):
+        if field is None:
+            # This will occur at the end of a string unless the string ends at
+            # the end of a field
+            continue
+        current_app.logger.debug('Found %s', field)
+        if field not in allowed:
+            current_app.logger.debug('Field not valid.')
+            invalid.append(field)
+    if invalid:
+        raise manager_exceptions.BadParametersError(
+            '{candidate_name} has invalid parameters.\n'
+            'Invalid parameters found: {invalid}.\n'
+            'Allowed: {allowed}'.format(
+                candidate_name=param_name,
+                invalid=', '.join(invalid),
+                allowed=', '.join(allowed),
+            )
+        )
 
 
 def get_args_and_verify_arguments(arguments):

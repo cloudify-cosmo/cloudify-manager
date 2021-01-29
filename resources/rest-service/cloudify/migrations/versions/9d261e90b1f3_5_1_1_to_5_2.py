@@ -10,6 +10,7 @@ Create Date: 2020-11-26 14:07:36.053518
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
+from sqlalchemy.sql import table, column
 
 from cloudify.models_states import VisibilityState
 from manager_rest.storage.models_base import JSONString, UTCDateTime
@@ -25,6 +26,31 @@ VISIBILITY_ENUM = postgresql.ENUM(*VisibilityState.STATES,
                                   create_type=False)
 
 
+config_table = table(
+    'config',
+    column('name', sa.Text),
+    column('value', JSONString()),
+    column('schema', JSONString()),
+    column('is_editable', sa.Boolean),
+    column('updated_at', UTCDateTime()),
+    column('scope', sa.Text),
+)
+
+NEW_LDAP_CONFIG_ENTRIES = [
+    'ldap_group_members_filter',
+    'ldap_attribute_group_membership',
+    'ldap_base_dn',
+    'ldap_group_dn',
+    'ldap_bind_format',
+    'ldap_user_filter',
+    'ldap_group_member_filter',
+    'ldap_attribute_email',
+    'ldap_attribute_first_name',
+    'ldap_attribute_last_name',
+    'ldap_attribute_uid',
+]
+
+
 def upgrade():
     upgrade_blueprints_table()
     create_filters_table()
@@ -32,15 +58,42 @@ def upgrade():
     create_execution_schedules_table()
     fix_previous_versions()
     create_execution_groups_table()
+    add_new_config_entries()
 
 
 def downgrade():
+    remove_new_config_entries()
     drop_execution_groups_table()
     revert_fixes()
     drop_execution_schedules_table()
     drop_deployment_groups_table()
     downgrade_blueprints_table()
     drop_filters_table()
+
+
+def add_new_config_entries():
+    op.bulk_insert(
+        config_table,
+        [
+            dict(
+                name=name,
+                value=None,
+                scope='rest',
+                schema={'type': 'string'},
+                is_editable=True,
+            )
+            for name in NEW_LDAP_CONFIG_ENTRIES
+        ]
+    )
+
+
+def remove_new_config_entries():
+    op.execute(
+        config_table.delete().where(
+            config_table.c.name.in_(NEW_LDAP_CONFIG_ENTRIES)
+            & (config_table.c.scope == op.inline_literal('rest'))
+        )
+    )
 
 
 def upgrade_blueprints_table():
