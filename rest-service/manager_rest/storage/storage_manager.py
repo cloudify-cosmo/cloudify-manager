@@ -656,8 +656,7 @@ class SQLStorageManager(object):
                                                       pagination,
                                                       get_all_results)
         pagination = {'total': total, 'size': size, 'offset': offset}
-        filtered = ({'filtered': total, 'total': self.count(model_class)}
-                    if filter_rules else {})
+        filtered = (self.count(model_class) - total) if filter_rules else None
 
         current_app.logger.debug('Returning: {0}'.format(results))
         return ListResult(items=results, metadata={'pagination': pagination,
