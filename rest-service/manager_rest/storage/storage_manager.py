@@ -656,9 +656,11 @@ class SQLStorageManager(object):
                                                       pagination,
                                                       get_all_results)
         pagination = {'total': total, 'size': size, 'offset': offset}
+        filtered = (self.count(model_class) - total) if filter_rules else None
 
         current_app.logger.debug('Returning: {0}'.format(results))
-        return ListResult(items=results, metadata={'pagination': pagination})
+        return ListResult(items=results, metadata={'pagination': pagination,
+                                                   'filtered': filtered})
 
     def summarize(self, target_field, sub_field, model_class,
                   pagination, get_all_results, all_tenants, filters):
