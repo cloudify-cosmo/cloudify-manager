@@ -467,16 +467,18 @@ class Component(object):
 
         execution_args = self.config.get('executions_start_args', {})
 
+        request_args = dict(
+            deployment_id=self.deployment_id,
+            workflow_id=self.workflow_id,
+            **execution_args
+        )
+        if self.workflow_id == ctx.workflow_id:
+            request_args.update(dict(parameters=ctx.workflow_parameters))
+
         ctx.logger.info('Starting execution for "{0}" deployment'.format(
             self.deployment_id))
         execution = self._http_client_wrapper(
-            'executions', 'start',
-            dict(
-                 deployment_id=self.deployment_id,
-                 workflow_id=self.workflow_id,
-                 parameters=ctx.workflow_parameters,
-                 **execution_args
-             ))
+            'executions', 'start', request_args)
 
         ctx.logger.debug('Execution start response: "{0}".'.format(execution))
 
