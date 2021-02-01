@@ -386,14 +386,13 @@ def get_rrule(rule, since, until):
         else:
             return
     else:
-        parsed = re.findall(r"(\d+) (seconds?|minutes?|hours?|days?|weeks?"
-                            "|months?|years?)", rule['frequency'])
+        parsed = \
+            re.findall(r"(\d+)\ ?(sec|min|h|d|w|wk|mo|y)", rule['frequency'])
         if not parsed or len(parsed[0]) < 2:
             return
-        freqs = {'seconds': rrule.SECONDLY, 'minutes': rrule.MINUTELY,
-                 'hours': rrule.HOURLY, 'days': rrule.DAILY,
-                 'weeks': rrule.WEEKLY, 'months': rrule.MONTHLY,
-                 'years': rrule.YEARLY}
+        freqs = {'sec': rrule.SECONDLY, 'min': rrule.MINUTELY,
+                 'h': rrule.HOURLY, 'd': rrule.DAILY, 'w': rrule.WEEKLY,
+                 'wk': rrule.WEEKLY, 'mo': rrule.MONTHLY, 'y': rrule.YEARLY}
         interval = int(parsed[0][0])
         frequency = freqs[parsed[0][1]]
 

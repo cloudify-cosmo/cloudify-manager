@@ -184,8 +184,10 @@ class ExecutionSchedulesId(SecuredResource):
 
     @staticmethod
     def _get_execution_arguments(request_dict):
-        arguments = request_dict.get('execution_arguments', None)
-        if arguments is not None and not isinstance(arguments, dict):
+        arguments = request_dict.get('execution_arguments')
+        if not arguments:
+            return {}
+        if not isinstance(arguments, dict):
             raise manager_exceptions.BadParametersError(
                 "execution_arguments: expected a dict, but got: {}"
                 .format(arguments))
