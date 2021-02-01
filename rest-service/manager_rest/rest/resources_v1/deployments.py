@@ -63,7 +63,7 @@ class DeploymentsId(SecuredResource):
         """
         Get deployment by id
         """
-        _include = None if 'labels' in _include else _include
+        _include = None if (_include and 'labels' in _include) else _include
         return get_storage_manager().get(
             models.Deployment,
             deployment_id,
