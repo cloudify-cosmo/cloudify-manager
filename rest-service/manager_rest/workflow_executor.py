@@ -220,13 +220,13 @@ def _execute_task(execution_id, execution_parameters,
     context['rest_token'] = execution_creator.get_auth_token()
     context['tenant'] = _get_tenant_dict()
     context['task_target'] = MGMTWORKER_QUEUE
-    context['execution_creator_username'] = current_user.username
+    context['execution_creator_username'] = execution_creator.username
     execution_parameters['__cloudify_context'] = context
     message = {
         'cloudify_task': {'kwargs': execution_parameters},
         'id': execution_id,
         'dlx_id': None,
-        'execution_creator': current_user.id
+        'execution_creator': execution_creator.id
     }
     if scheduled_time:
         message_ttl = _get_time_to_live(scheduled_time)

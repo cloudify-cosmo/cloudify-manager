@@ -1,0 +1,14 @@
+[Unit]
+Description=Cloudify Execution Scheduler Service
+
+[Service]
+TimeoutStartSec=0
+RestartSec=2
+Restart=on-failure
+EnvironmentFile=/etc/sysconfig/cloudify-execution-scheduler
+User=cfyuser
+Group=cfyuser
+ExecStart=/opt/manager/env/bin/cloudify-execution-scheduler
+
+[Install]
+WantedBy=multi-user.target

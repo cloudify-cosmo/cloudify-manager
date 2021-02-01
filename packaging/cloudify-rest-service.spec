@@ -38,6 +38,7 @@ python3 -m venv %_manager_env
 %_manager_env/bin/pip install -r "${RPM_SOURCE_DIR}/rest-service/dev-requirements.txt"
 %_manager_env/bin/pip install "${RPM_SOURCE_DIR}/rest-service"[dbus]
 %_manager_env/bin/pip install "${RPM_SOURCE_DIR}/amqp-postgres"
+%_manager_env/bin/pip install "${RPM_SOURCE_DIR}/execution-scheduler"
 
 
 %install
@@ -51,6 +52,7 @@ cp -R "${RPM_SOURCE_DIR}/resources/rest-service/cloudify/" "%{buildroot}/opt/man
 # Create the log dirs
 mkdir -p %{buildroot}/var/log/cloudify/rest
 mkdir -p %{buildroot}/var/log/cloudify/amqp-postgres
+mkdir -p %{buildroot}/var/log/cloudify/execution-scheduler
 
 # Dir for snapshot restore marker files (CY-1821)
 mkdir -p %{buildroot}/opt/manager/snapshot_status
@@ -60,8 +62,9 @@ mkdir -p %{buildroot}/opt/manager/snapshot_status
 # section of this spec file.
 cp -R ${RPM_SOURCE_DIR}/packaging/rest-service/files/* %{buildroot}
 
-# AMQP Postgres files go in here as well, as there's no separate RPM for it
+# AMQP Postgres and execution scheduler files go in here as well, as there are no separate RPMs for them
 cp -R ${RPM_SOURCE_DIR}/packaging/amqp-postgres/files/* %{buildroot}
+cp -R ${RPM_SOURCE_DIR}/packaging/execution-scheduler/files/* %{buildroot}
 
 visudo -cf %{buildroot}/etc/sudoers.d/cloudify-restservice
 
@@ -132,13 +135,16 @@ exit 0
 %dir /opt/cloudify/encryption
 /opt/cloudify/encryption/update-encryption-key
 /etc/logrotate.d/cloudify-amqp-postgres
+/etc/logrotate.d/cloudify-execution-scheduler
 /etc/sudoers.d/cloudify-restservice
 /opt/restservice
 /usr/lib/systemd/system/cloudify-restservice.service
 /usr/lib/systemd/system/cloudify-amqp-postgres.service
+/usr/lib/systemd/system/cloudify-execution-scheduler.service
 
 %attr(750,cfyuser,adm) /opt/manager/scripts/load_permissions.py
 %attr(750,cfyuser,adm) /var/log/cloudify/rest
 %attr(750,cfyuser,adm) /opt/manager/snapshot_status
 %attr(750,cfyuser,adm) /var/log/cloudify/amqp-postgres
+%attr(750,cfyuser,adm) /var/log/cloudify/execution-scheduler
 %attr(550,root,cfyuser) /opt/cloudify/encryption/update-encryption-key

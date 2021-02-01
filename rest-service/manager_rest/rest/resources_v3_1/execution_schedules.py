@@ -26,7 +26,7 @@ class ExecutionSchedules(SecuredResource):
         nickname='list',
         notes='Returns a list of existing execution schedules.'
     )
-    @authorize('execution_schedules_list', allow_all_tenants=True)
+    @authorize('execution_schedule_list', allow_all_tenants=True)
     @rest_decorators.marshal_with(models.ExecutionSchedule)
     @rest_decorators.create_filters(models.ExecutionSchedule)
     @rest_decorators.paginate
@@ -96,6 +96,7 @@ class ExecutionSchedulesId(SecuredResource):
             execution_arguments=execution_arguments,
             stop_on_fail=stop_on_fail,
         )
+        schedule.next_occurrence = schedule.compute_next_occurrence()
         return rm.sm.put(schedule), 201
 
     @rest_decorators.marshal_with(models.ExecutionSchedule)
@@ -121,6 +122,7 @@ class ExecutionSchedulesId(SecuredResource):
                                                             stop_on_fail)
         schedule.rule = self._compute_rule_from_scheduling_params(
             request.json, existing_rule=schedule.rule)
+        schedule.next_occurrence = schedule.compute_next_occurrence()
         sm.update(schedule)
         return schedule, 201
 
@@ -155,8 +157,7 @@ class ExecutionSchedulesId(SecuredResource):
     def _verify_frequency(frequency_str):
         if not frequency_str:
             return
-        parsed = re.findall(r"(\d+) (seconds?|minutes?|hours?|days?|weeks?"
-                            "|months?|years?)", frequency_str)
+        parsed = re.findall(r"(\d+)\ ?(sec|min|h|d|w|wk|mo|y)", frequency_str)
         if not parsed or len(parsed[0]) < 2:
             raise manager_exceptions.BadParametersError(
                 "`{}` is not a legal frequency expression. Supported format "
