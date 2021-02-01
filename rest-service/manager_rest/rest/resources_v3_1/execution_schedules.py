@@ -1,5 +1,3 @@
-import re
-
 from dateutil import rrule
 from flask import request
 from flask_restful_swagger import swagger
@@ -13,11 +11,11 @@ from manager_rest.rest.rest_utils import (
     validate_inputs,
     parse_datetime_multiple_formats
 )
-from manager_rest.utils import get_formatted_timestamp
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
-from manager_rest.resource_manager import get_resource_manager
 from manager_rest.storage import get_storage_manager, models
+from manager_rest.resource_manager import get_resource_manager
+from manager_rest.utils import get_formatted_timestamp, parse_frequency
 
 
 class ExecutionSchedules(SecuredResource):
@@ -157,8 +155,8 @@ class ExecutionSchedulesId(SecuredResource):
     def _verify_frequency(frequency_str):
         if not frequency_str:
             return
-        parsed = re.findall(r"(\d+)\ ?(sec|min|h|d|w|wk|mo|y)", frequency_str)
-        if not parsed or len(parsed[0]) < 2:
+        _, frequency = parse_frequency(frequency_str)
+        if not frequency:
             raise manager_exceptions.BadParametersError(
                 "`{}` is not a legal frequency expression. Supported format "
                 "is: <number> seconds|minutes|hours|days|weeks|months|years"
@@ -184,8 +182,10 @@ class ExecutionSchedulesId(SecuredResource):
 
     @staticmethod
     def _get_execution_arguments(request_dict):
-        arguments = request_dict.get('execution_arguments', None)
-        if arguments is not None and not isinstance(arguments, dict):
+        arguments = request_dict.get('execution_arguments')
+        if not arguments:
+            return {}
+        if not isinstance(arguments, dict):
             raise manager_exceptions.BadParametersError(
                 "execution_arguments: expected a dict, but got: {}"
                 .format(arguments))

@@ -1,7 +1,7 @@
 from datetime import datetime
 
+from manager_rest.utils import get_rrule
 from manager_rest.test.base_test import BaseServerTestCase
-from manager_rest.utils import get_rrule, _compute_rule_from_scheduling_params
 
 
 class SchedulingRulesTest(BaseServerTestCase):
