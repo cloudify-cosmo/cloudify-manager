@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from cloudify.models_states import VisibilityState
 from cloudify_rest_client.exceptions import CloudifyClientError
 
@@ -246,3 +248,73 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
         execution = self.client.executions.get(group.execution_ids[0])
         assert execution.workflow_id == 'install'
         assert execution.deployment_id == 'dep1'
+
+    def test_get_events(self):
+        """Get events by group id.
+
+        Include events for execution in the group, but not events for
+        executions not in the group.
+        """
+        self.put_blueprint()
+        self.client.deployments.create('blueprint', 'dep1')
+        self.client.deployment_groups.put(
+            'group1',
+            deployment_ids=['dep1']
+        )
+        group = self.client.execution_groups.start(
+            deployment_group_id='group1',
+            workflow_id='install'
+        )
+        non_group_execution = self.client.executions.start(
+            deployment_id='dep1',
+            workflow_id='install'
+        )
+        # refetch as ORM objects so we can pass them to Log/Event
+        group_execution = self.sm.get(models.Execution, group.execution_ids[0])
+        non_group_execution = self.sm.get(
+            models.Execution, non_group_execution.id
+        )
+        self.sm.put(
+            models.Log(
+                id='log1',
+                message='log1',
+                execution=group_execution,
+                reported_timestamp=datetime.utcnow()
+            )
+        )
+        self.sm.put(
+            models.Event(
+                id='event1',
+                message='event1',
+                execution=group_execution,
+                reported_timestamp=datetime.utcnow()
+            )
+        )
+        self.sm.put(
+            models.Log(
+                id='log2',
+                message='log2',
+                execution=non_group_execution,
+                reported_timestamp=datetime.utcnow()
+            )
+        )
+        self.sm.put(
+            models.Event(
+                id='event2',
+                message='event2',
+                execution=non_group_execution,
+                reported_timestamp=datetime.utcnow()
+            )
+        )
+        events = self.client.events.list(
+            execution_group_id=group['id'],
+            include_logs=True
+        )
+        assert len(events) == 2
+        assert all(e['execution_id'] == group_execution.id for e in events)
+
+    def test_get_events_both_arguments(self):
+        with self.assertRaisesRegex(CloudifyClientError, 'not both'):
+            self.client.events.list(
+                execution_group_id='group1', execution_id='exec1'
+            )
