@@ -264,6 +264,17 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         assert len(deployments) == 1
         assert deployments[0].id == 'dep1'
 
+    def test_group_delete(self):
+        group = self.client.deployment_groups.put(
+            'group1',
+            deployment_ids=['dep1']
+        )
+        assert len(group.deployment_ids) == 1
+        group = self.client.deployment_groups.delete('group1')
+        assert len(self.client.deployment_groups.list()) == 0
+        # deleting the group didn't delete the deployments themselves
+        assert len(self.client.deployments.list()) == 2
+
 
 class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
     def test_get_empty(self):
