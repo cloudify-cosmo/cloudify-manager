@@ -21,7 +21,7 @@ DEFAULT_INTERVAL = 60
 SCHEDULER_LOCK_BASE = 10000
 # so we won't conflict with usage collector, which uses lock numbers 1 and 2
 
-DEFAULT_LOG_PATH = '/var/log/cloudify/execution_scheduler/scheduler.log'
+DEFAULT_LOG_PATH = '/var/log/cloudify/execution-scheduler/scheduler.log'
 CONFIG_PATH = '/opt/manager/cloudify-rest.conf'
 REST_SECURITY_PATH = '/opt/manager/rest-security.conf'
 
