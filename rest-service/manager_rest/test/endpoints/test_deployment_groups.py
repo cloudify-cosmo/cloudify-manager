@@ -240,6 +240,21 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         dep = self.client.deployments.get('dep1')
         assert set(dep.deployment_groups) == {'group1', 'group2'}
 
+    def test_get_deployment_include(self):
+        """Group IDs are also in the deployment response"""
+        self.client.deployment_groups.put(
+            'group1',
+            deployment_ids=['dep1']
+        )
+        self.client.deployment_groups.put(
+            'group2',
+            deployment_ids=['dep1']
+        )
+        dep = self.client.deployments.get(
+            'dep1',
+            _include=['id', 'deployment_groups'])
+        assert set(dep.deployment_groups) == {'group1', 'group2'}
+
 
 class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
     def test_get_empty(self):
