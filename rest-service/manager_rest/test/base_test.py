@@ -820,17 +820,10 @@ class BaseServerTestCase(unittest.TestCase):
     def quiet_delete_directory(file_path):
         shutil.rmtree(file_path, ignore_errors=True)
 
-    def wait_for_deployment_creation(self, client, deployment_id):
-        env_creation_execution = None
-        deployment_executions = client.executions.list(
-            deployment_id=deployment_id
-        )
-        for execution in deployment_executions:
-            if execution.workflow_id == 'create_deployment_environment':
-                env_creation_execution = execution
-                break
-        if env_creation_execution:
-            self.wait_for_execution(client, env_creation_execution)
+    @staticmethod
+    def wait_for_deployment_creation(client, deployment_id):
+        # This will raise error if deployment is not created
+        client.deployments.get(deployment_id=deployment_id)
 
     @staticmethod
     def wait_for_execution(client, execution, timeout=900):

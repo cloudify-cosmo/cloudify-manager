@@ -18,8 +18,6 @@ import hashlib
 from itertools import dropwhile
 from datetime import datetime, timedelta
 
-import mock
-
 from cloudify_rest_client import exceptions
 from cloudify.models_states import ExecutionState
 from cloudify.workflows import tasks as cloudify_tasks
@@ -35,13 +33,6 @@ from manager_rest.test.base_test import BaseServerTestCase, LATEST_API_VERSION
 class ExecutionsTestCase(BaseServerTestCase):
 
     DEPLOYMENT_ID = 'deployment'
-
-    def _test_start_execution_dep_env(self, task_state, expected_ex):
-        with mock.patch('manager_rest.test.mocks.task_state',
-                        return_value=task_state):
-            _, deployment_id, _, _ = self.put_deployment(self.DEPLOYMENT_ID)
-        self.assertRaises(expected_ex, self.client.executions.start,
-                          deployment_id, 'install')
 
     def _modify_execution_status(self, execution_id, new_status):
         execution = self.client.executions.update(execution_id, new_status)
@@ -65,10 +56,8 @@ class ExecutionsTestCase(BaseServerTestCase):
         _, deployment_id, _, _ = self.put_deployment(self.DEPLOYMENT_ID)
         executions = self.client.executions.list(deployment_id=deployment_id)
 
-        # expecting 1 execution (create_deployment_environment)
-        self.assertEqual(1, len(executions))
-        self.assertEqual('create_deployment_environment',
-                         executions[0]['workflow_id'])
+        # expecting 0 execution
+        self.assertEqual(0, len(executions))
 
     def test_get_execution_by_id(self):
         (blueprint_id, deployment_id, _,
@@ -110,21 +99,17 @@ class ExecutionsTestCase(BaseServerTestCase):
         # listing only non-system workflow executions
         executions = self.client.executions.list(deployment_id=deployment_id)
 
-        # expecting 1 execution (create_deployment_environment)
-        self.assertEqual(1, len(executions))
-        self.assertEqual('create_deployment_environment',
-                         executions[0]['workflow_id'])
+        # expecting 0 execution
+        self.assertEqual(0, len(executions))
 
         # listing all executions
         executions = self.client.executions.list(deployment_id=deployment_id,
                                                  include_system_workflows=True)
         executions.sort(key=lambda e: e.created_at)
 
-        # expecting 2 executions
-        self.assertEqual(2, len(executions))
-        self.assertEqual('create_deployment_environment',
-                         executions[0]['workflow_id'])
-        self.assertEqual(system_wf_id, executions[1]['workflow_id'])
+        # expecting 1 execution
+        self.assertEqual(1, len(executions))
+        self.assertEqual(system_wf_id, executions[0]['workflow_id'])
 
         return deployment_id, system_wf_id
 
@@ -155,9 +140,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         # explicitly listing only non-system executions
         executions = self.client.executions.list(deployment_id=deployment_id,
                                                  is_system_workflow=False)
-        self.assertEqual(1, len(executions))
-        self.assertEqual('create_deployment_environment',
-                         executions[0]['workflow_id'])
+        self.assertEqual(0, len(executions))
 
         # listing only system executions
         executions = self.client.executions.list(deployment_id=deployment_id,
@@ -752,16 +735,6 @@ class ExecutionsTestCase(BaseServerTestCase):
         response = self.get(resource_path)
         self.assertEqual(response.status_code, 404)
 
-    def test_start_execution_dep_env_pending(self):
-        self._test_start_execution_dep_env(
-            ExecutionState.PENDING,
-            exceptions.DeploymentEnvironmentCreationPendingError)
-
-    def test_start_execution_dep_env_in_progress(self):
-        self._test_start_execution_dep_env(
-            ExecutionState.STARTED,
-            exceptions.DeploymentEnvironmentCreationInProgressError)
-
     def test_install_empty_blueprint(self):
         (blueprint_id, deployment_id, _,
          deployment_response) = self.put_deployment(
@@ -945,7 +918,7 @@ class ExecutionsTestCase(BaseServerTestCase):
 
         # Authentication will succeed after updating the status
         executions = client.executions.list()
-        assert len(executions) == 3   # bp upload + create dep.env + install
+        assert len(executions) == 2   # bp upload + install
 
     @attr(client_min_version=3.1, client_max_version=LATEST_API_VERSION)
     def test_duplicate_execution_token(self):
@@ -961,10 +934,10 @@ class ExecutionsTestCase(BaseServerTestCase):
         self._create_execution_and_update_token('dep-2', uuid.uuid4().hex)
         self.client.executions.start('dep-1', 'install')
         self.client.executions.start('dep-1', 'uninstall')
-        # now we have 5 executions: 2 of them are deployment creations,
-        # and one is not terminated -> so only 2 are eligible for deletion
+        # now we have 3 executions, one is not terminated -> so only 2 are
+        # eligible for deletion
         self.client.executions.delete()
-        assert len(self.client.executions.list()) == 3
+        assert len(self.client.executions.list()) == 1
 
     @attr(client_min_version=3.1, client_max_version=LATEST_API_VERSION)
     def test_delete_executions_keep_last(self):
@@ -978,19 +951,19 @@ class ExecutionsTestCase(BaseServerTestCase):
 
     @attr(client_min_version=3.1, client_max_version=LATEST_API_VERSION)
     def test_delete_executions_by_date(self):
-        self.put_deployment('dep-1')  # 2 execs: bp upload + dep.env.create
+        self.put_deployment('dep-1')  # 1 exec: bp upload
         exec1 = self.client.executions.start('dep-1', 'update')
         exec2 = self.client.executions.start('dep-1', 'update')
         self._update_execution_created_at(exec2, -60)
         self._update_execution_created_at(exec1, -30)
         self.client.executions.delete(
             to_datetime=datetime.strptime('1970-1-1', '%Y-%m-%d'))  # no change
-        assert len(self.client.executions.list()) == 4
+        assert len(self.client.executions.list()) == 3
         a45d_ago = datetime.utcnow() - timedelta(days=45)
         self.client.executions.delete(to_datetime=a45d_ago)   # deletes exec_2
-        assert len(self.client.executions.list()) == 3
+        assert len(self.client.executions.list()) == 2
         self.client.executions.delete(to_datetime=datetime.utcnow())
-        assert len(self.client.executions.list()) == 1   # skip ep.env.create
+        assert len(self.client.executions.list()) == 0  # no execs
 
     def _create_execution_and_update_token(self, deployment_id, token):
         self.put_deployment(deployment_id, blueprint_id=deployment_id)
@@ -1016,8 +989,8 @@ class ExecutionsTestCase(BaseServerTestCase):
         headers = {CLOUDIFY_EXECUTION_TOKEN_HEADER: token}
         client = self.create_client(headers=headers)
         executions = client.executions.list()
-        self.assertEqual(3, len(executions))
-        # bp upload + create dep.env + main execution
+        self.assertEqual(2, len(executions))
+        # bp upload + main execution
 
     def _update_execution_created_at(self, execution, days):
         execution = self.sm.get(models.Execution, execution.id)

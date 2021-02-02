@@ -106,9 +106,7 @@ class DeploymentUpdatesTestCase(DeploymentUpdatesBase):
     def test_add_node_and_relationship(self):
         deployment_id = 'dep'
         changed_params = ['added_instance_ids', 'added_target_instances_ids']
-        self._deploy_base(deployment_id,
-                          'one_node.yaml')
-
+        self._deploy_base(deployment_id, 'one_node.yaml')
         self._update(deployment_id, 'two_nodes.yaml', 'first')
         dep_update = \
             self.client.deployment_updates.list(deployment_id=deployment_id,
@@ -120,14 +118,12 @@ class DeploymentUpdatesTestCase(DeploymentUpdatesBase):
                              len(execution.parameters[param]))
 
         executions = self.client.executions.list()
+        dep_update_execution = {}
         for ex in executions:
-            if ex['workflow_id'] == 'create_deployment_environment':
-                dep_create_execution = ex
-            elif ex['workflow_id'] == 'update':
+            if ex['workflow_id'] == 'update':
                 dep_update_execution = ex
 
         self.assertEqual('first', dep_update_execution['blueprint_id'])
-        self.assertEqual('blueprint', dep_create_execution['blueprint_id'])
 
     def test_remove_node_and_relationship(self):
         deployment_id = 'dep'

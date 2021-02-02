@@ -104,9 +104,7 @@ class Component(object):
                                                           False)
 
         # Execution-related properties
-        self.workflow_id = operation_inputs.get(
-            'workflow_id',
-            'create_deployment_environment')
+        self.workflow_id = operation_inputs.get('workflow_id')
         self.workflow_state = operation_inputs.get('workflow_state',
                                                    'terminated')
 
@@ -330,33 +328,7 @@ class Component(object):
                                   'create',
                                   self._inter_deployment_dependency)
 
-        # Prepare executions list fields
-        execution_list_fields = ['workflow_id', 'id']
-
-        # Call list executions for the current deployment
-        executions = self._http_client_wrapper('executions', 'list', {
-            'deployment_id': self.deployment_id,
-            '_include': execution_list_fields
-        })
-
-        # Retrieve the ``execution_id`` associated with the current deployment
-        execution_id = [execution.get('id') for execution in executions
-                        if (execution.get('workflow_id') ==
-                            'create_deployment_environment')]
-
-        # If the ``execution_id`` cannot be found raise error
-        if not execution_id:
-            raise NonRecoverableError(
-                'No execution Found for component "{}"'
-                ' deployment'.format(self.deployment_id)
-            )
-
-        # If a match was found there can only be one, so we will extract it.
-        execution_id = execution_id[0]
-        ctx.logger.info('Found execution id "{0}" for deployment id "{1}"'
-                        .format(execution_id,
-                                self.deployment_id))
-        return self.verify_execution_successful(execution_id)
+        return True
 
     def _try_to_remove_plugin(self, plugin_id):
         try:

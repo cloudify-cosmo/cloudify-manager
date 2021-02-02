@@ -75,46 +75,26 @@ class Executions(resources_v2.Executions):
                              filters=filters,
                              all_tenants=all_tenants,
                              get_all_results=True)
-        dep_creation_execs = {}
-        for execution in executions:
-            if execution.workflow_id == 'create_deployment_environment' and \
-                    execution.status == 'terminated':
-                dep_creation_execs[execution.deployment_id] = \
-                    dep_creation_execs.get(execution.deployment_id, 0) + 1
-
         deleted_count = 0
         if requested_time:
             for execution in executions:
                 creation_time = datetime.strptime(execution.created_at,
                                                   '%Y-%m-%dT%H:%M:%S.%fZ')
 
-                if creation_time < requested_time and \
-                        self._can_delete_execution(execution,
-                                                   dep_creation_execs):
+                if creation_time < requested_time:
                     sm.delete(execution)
                     deleted_count += 1
         else:
             if request_dict.get('keep_last'):
                 max_to_delete = len(executions) - request_dict['keep_last']
             for execution in executions:
-                if self._can_delete_execution(execution, dep_creation_execs):
-                    sm.delete(execution)
-                    deleted_count += 1
-                    if request_dict.get('keep_last') and deleted_count >= \
-                            max_to_delete:
-                        break
+                sm.delete(execution)
+                deleted_count += 1
+                if request_dict.get('keep_last') and deleted_count >= \
+                        max_to_delete:
+                    break
         return ListResult([{'count': deleted_count}],
                           {'pagination': pagination})
-
-    @staticmethod
-    def _can_delete_execution(execution, dep_creation_execs):
-        if execution.workflow_id == \
-                'create_deployment_environment':
-            if dep_creation_execs[execution.deployment_id] <= 1:
-                return False
-            else:
-                dep_creation_execs[execution.deployment_id] -= 1
-        return True
 
 
 class ExecutionsCheck(SecuredResource):

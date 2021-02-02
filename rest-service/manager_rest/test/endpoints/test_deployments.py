@@ -174,14 +174,9 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         self.assertEqual(deployment_id, execution.deployment_id)
         self.assertIsNotNone(execution.created_at)
         executions = self.client.executions.list(deployment_id=deployment_id)
-        # expecting two executions - 'install' and
-        # 'create_deployment_environment'
-        self.assertEqual(2, len(executions))
-        self.assertIn(execution['id'],
-                      [executions[0]['id'], executions[1]['id']])
-        self.assertIn('create_deployment_environment',
-                      [executions[1]['workflow_id'],
-                       executions[0]['workflow_id']])
+        # expecting one executions - 'install'
+        self.assertEqual(1, len(executions))
+        self.assertEqual(execution['id'], executions[0]['id'])
 
     def test_executing_nonexisting_workflow(self):
         (blueprint_id, deployment_id, blueprint_response,

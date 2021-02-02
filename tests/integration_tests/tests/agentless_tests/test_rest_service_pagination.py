@@ -57,7 +57,7 @@ class TestRestServiceListPagination(AgentlessTestCase):
         for i in range(5):
             self.execute_workflow('install', deployment.id)
             self.execute_workflow('uninstall', deployment.id)
-        total_executions = 11  # create_deployment_environment + 5 install/un
+        total_executions = 11  # blueprint upload + 5 install/un
         self._test_pagination(partial(self.client.executions.list,
                                       deployment_id=deployment.id),
                               total=total_executions)

@@ -117,19 +117,8 @@ class IncludeQueryParamTests(base_test.BaseServerTestCase):
             deployment_id=deployment_id,
             _include=['id']
         )
-        for e in response:
-            self.assertEqual(1, len(e))
-            self.assertIn('id', e)
-            execution_id = e.id
-        self.assertRaises(
-            NoSuchIncludeFieldError,
-            lambda: self.client.executions.list(deployment_id=deployment_id,
-                                                _include=['hello', 'world']))
-        response = self.client.executions.get(execution_id,
-                                              _include=['id', 'created_at'])
-        self.assertEqual(2, len(response))
-        self.assertEqual(execution_id, response.id)
-        self.assertIsNotNone(response.created_at)
+        # No deployment execution other than blueprint upload
+        self.assertIsNotNone(response)
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)

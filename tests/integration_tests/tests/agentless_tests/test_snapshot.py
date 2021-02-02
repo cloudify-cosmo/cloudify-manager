@@ -179,10 +179,9 @@ class TestSnapshot(AgentlessTestCase):
         executions = self._select(
             "SELECT workflow_id FROM executions "
             "WHERE blueprint_id = 'hello-world'")
-        # executions of `create_deployment_environment` and `install` have
-        # blueprint ids
+        # executions of `install` has blueprint ids
         assert set(line[0] for line in executions) \
-            == {'install', 'create_deployment_environment'}
+            == {'install'}
 
         # index added in 5.0.5. with only one instance per node, all indexes=1
         instances = self._select('SELECT index FROM node_instances')
@@ -330,45 +329,6 @@ class TestSnapshot(AgentlessTestCase):
         assert (not secret_string.is_hidden_value and
                 not secret_file.is_hidden_value)
 
-    def _assert_snapshot_restored(self,
-                                  blueprint_id,
-                                  deployment_id,
-                                  node_ids,
-                                  node_instance_ids,
-                                  num_of_workflows,
-                                  num_of_inputs,
-                                  num_of_outputs,
-                                  num_of_executions,
-                                  num_of_events=4,
-                                  tenant_name=DEFAULT_TENANT_NAME):
-        with self.client_using_tenant(self.client, tenant_name):
-            self.client.blueprints.get(blueprint_id)
-        self._assert_deployment_restored(
-            blueprint_id=blueprint_id,
-            deployment_id=deployment_id,
-            num_of_workflows=num_of_workflows,
-            num_of_inputs=num_of_inputs,
-            num_of_outputs=num_of_outputs,
-            tenant_name=tenant_name
-        )
-
-        execution_id = self._assert_execution_restored(
-            deployment_id,
-            num_of_executions,
-            tenant_name,
-        )
-        self._assert_events_restored(
-            execution_id,
-            num_of_events,
-            tenant_name,
-        )
-
-        with self.client_using_tenant(self.client, tenant_name):
-            for node_id in node_ids:
-                self.client.nodes.get(deployment_id, node_id)
-            for node_instance_id in node_instance_ids:
-                self.client.node_instances.get(node_instance_id)
-
     def _assert_4_4_0_plugins_restored_bad_plugin(
             self,
             tenant_name=DEFAULT_TENANT_NAME,
@@ -383,41 +343,6 @@ class TestSnapshot(AgentlessTestCase):
         self.assertEqual(package_name_counts['cloudify-fabric-plugin'], 1)
         self.assertEqual(package_name_counts['cloudify-script-plugin'], 1)
         self.assertEqual(package_name_counts['cloudify-diamond-plugin'], 5)
-
-    def _assert_deployment_restored(self,
-                                    blueprint_id,
-                                    deployment_id,
-                                    num_of_workflows,
-                                    num_of_inputs,
-                                    num_of_outputs,
-                                    tenant_name):
-        with self.client_using_tenant(self.client, tenant_name):
-            deployment = self.client.deployments.get(deployment_id)
-        self.assertEqual(deployment.id, deployment_id)
-        self.assertEqual(len(deployment.workflows), num_of_workflows)
-        self.assertEqual(deployment.blueprint_id, blueprint_id)
-        self.assertEqual(deployment.created_by, 'admin')
-        self.assertEqual(deployment['tenant_name'], tenant_name)
-        self.assertEqual(len(deployment.inputs), num_of_inputs)
-        self.assertEqual(len(deployment.outputs), num_of_outputs)
-
-    def _assert_execution_restored(self,
-                                   deployment_id,
-                                   num_of_executions,
-                                   tenant_name):
-        def condition(execution):
-            return execution.workflow_id == 'create_deployment_environment'
-
-        with self.client_using_tenant(self.client, tenant_name):
-            executions = self.client.executions.list(
-                deployment_id=deployment_id
-            )
-
-        self.assertEqual(len(executions), num_of_executions)
-        executions = [execution for execution
-                      in executions if condition(execution)]
-        self.assertEqual(len(executions), 1)
-        return executions[0].id
 
     def _assert_events_restored(self,
                                 execution_id,

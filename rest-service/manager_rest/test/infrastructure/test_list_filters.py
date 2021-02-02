@@ -117,42 +117,34 @@ class ResourceListFiltersTestCase(BaseListTest):
         filter_params = {'deployment_id': self.first_deployment_id,
                          '_include_system_workflows': True}
         response = self.client.executions.list(**filter_params)
-        self.assertEqual(1, len(response), 'expecting 1 execution results, '
+        self.assertEqual(0, len(response), 'expecting 0 execution results, '
                                            'got {0}'.format(len(response)))
-        execution = response[0]
-        self.assertEqual(execution['deployment_id'], self.first_deployment_id)
-        self.assertEqual(execution['status'], 'terminated')
 
     def test_executions_list_with_hybrid_field_filter(self):
         filter_params = {'status_display': 'completed'}
         response = self.client.executions.list(**filter_params)
-        self.assertEqual(4, len(response), 'expecting 4 execution results, '
+        # executions only for blueprint upload
+        self.assertEqual(2, len(response), 'expecting 2 execution results, '
                                            'got {0}'.format(len(response)))
         for execution in response:
             self.assertEqual(execution['status'], 'terminated')
-        deployment_ids = [ex['deployment_id'] for ex in response]
-        self.assertIn(self.first_deployment_id, deployment_ids)
-        self.assertIn(self.sec_deployment_id, deployment_ids)
 
     def test_executions_list_with_filters_multiple_values(self):
         filter_params = {'deployment_id':
                          [self.first_deployment_id, self.sec_deployment_id],
-                         'workflow_id': 'create_deployment_environment',
                          '_include_system_workflows': True}
-        self._test_multiple_values_filter('executions', filter_params, 2)
+        # Expect no executions entries for deployments
+        response = self.client.executions.list(**filter_params)
+        self.assertEqual(len(response),
+                         0,
+                         'expecting 0 executions'
+                         ' results, got {0}'.format(len(response)))
 
     def test_executions_list_no_filters(self):
         response = self.client.executions.list()
-        self.assertEqual(4, len(response), 'expecting 4 executions results, '
+        # Only 2 blueprint upload executions
+        self.assertEqual(2, len(response), 'expecting 2 executions results, '
                                            'got {0}'.format(len(response)))
-        response_no_blueprint_upload = \
-            [ex for ex in response if ex['workflow_id'] != 'upload_blueprint']
-        for execution in response_no_blueprint_upload:
-            self.assertIn(execution['deployment_id'],
-                          (self.first_deployment_id, self.sec_deployment_id))
-            self.assertIn(execution['blueprint_id'],
-                          (self.first_blueprint_id, self.sec_blueprint_id))
-            self.assertEqual(execution['status'], 'terminated')
 
     def assert_bad_parameter_error(self, fields, e):
         self.assertEqual(400, e.status_code)

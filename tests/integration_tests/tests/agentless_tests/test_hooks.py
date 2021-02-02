@@ -189,9 +189,8 @@ hooks:
         self._update_hooks_config(new_config)
         self._start_a_workflow()
         event_type_msg = "workflow_started"
-        workflow_id_msg = "create_deployment_environment"
         input1_msg = "input1_test"
-        messages = [event_type_msg, workflow_id_msg, input1_msg]
+        messages = [event_type_msg, input1_msg]
         self._assert_messages_in_log(messages, log_path=self.PLUGIN_LOG_PATH)
 
     def test_different_plugin_versions(self):
@@ -212,13 +211,11 @@ hooks:
         self._update_hooks_config(new_config)
         self._start_a_workflow()
         event_type_msg = "workflow_started"
-        workflow_id_msg = "create_deployment_environment"
         input1_msg = "input1_test"
 
         # Verify that the hook task calls the newest version of the plugin
         newest_version_msg = "version 1.33"
         messages = [event_type_msg,
-                    workflow_id_msg,
                     input1_msg,
                     newest_version_msg]
         self._assert_messages_in_log(messages,
@@ -243,10 +240,9 @@ hooks:
         self._update_hooks_config(new_config)
         self._start_a_workflow()
         event_type_msg = "workflow_started"
-        workflow_id_msg = "create_deployment_environment"
         input1_msg = "input1_test"
         input2_msg = "input2_test"
-        messages = [event_type_msg, workflow_id_msg, input1_msg, input2_msg]
+        messages = [event_type_msg, input1_msg, input2_msg]
         self._assert_messages_in_log(messages,
                                      log_path='/tmp/mock_hook_function.txt')
 
@@ -276,11 +272,10 @@ hooks:
         self._start_a_workflow()
         started_event_type_msg = "workflow_started"
         succeeded_event_type_msg = "workflow_succeeded"
-        workflow_id_msg = "create_deployment_environment"
         started_kwargs_msg = "input1_workflow_started"
         succeeded_kwargs_msg = "input2_workflow_succeeded"
         messages = [started_event_type_msg, succeeded_event_type_msg,
-                    workflow_id_msg, started_kwargs_msg, succeeded_kwargs_msg]
+                    started_kwargs_msg, succeeded_kwargs_msg]
         self._assert_messages_in_log(messages,
                                      log_path='/tmp/mock_hook_function.txt')
 

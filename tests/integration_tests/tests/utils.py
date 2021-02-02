@@ -30,7 +30,6 @@ from datetime import datetime, timedelta
 from .constants import SCHEDULED_TIME_FORMAT
 from cloudify.utils import setup_logger
 from cloudify.models_states import BlueprintUploadState
-from cloudify_rest_client.executions import Execution
 from integration_tests.framework import utils, docker
 from integration_tests.framework.constants import ADMIN_TOKEN_SCRIPT
 
@@ -146,18 +145,7 @@ def verify_deployment_env_created(container_id, deployment_id, client):
     # complete
     client = client or create_rest_client(
         host=docker.get_manager_ip(container_id))
-    execs = client.executions.list(deployment_id=deployment_id)
-    if not execs \
-            or execs[0].status != Execution.TERMINATED \
-            or execs[0].workflow_id != 'create_deployment_environment':
-        log_path = '/var/log/cloudify/mgmtworker/mgmtworker.log'
-        logs = docker.execute(container_id, ['tail', '-n', '100', log_path])
-        raise RuntimeError(
-            "Expected a single execution for workflow "
-            "'create_deployment_environment' with status 'terminated'; "
-            "Found these executions instead: {0}.\nLast 100 lines for "
-            "management worker log:\n{1}"
-            .format(json.dumps(execs.items, indent=2), logs))
+    client.deployments.get(deployment_id=deployment_id)
 
 
 def wait_for_deployment_deletion_to_complete(

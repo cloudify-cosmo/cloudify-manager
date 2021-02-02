@@ -23,8 +23,6 @@ from cloudify.utils import ManagerVersion, get_local_rest_certificate
 from cloudify_rest_client.executions import Execution
 
 from . import networks, utils
-from cloudify_system_workflows.deployment_environment import \
-    _create_deployment_workdir
 from cloudify_system_workflows.snapshots import npm
 from .agents import Agents
 from .postgres import Postgres
@@ -128,7 +126,6 @@ class SnapshotRestore(object):
                 self._restore_credentials(postgres)
                 self._restore_agents()
                 self._restore_amqp_vhosts_and_users()
-                self._restore_deployment_envs()
                 self._restore_scheduled_executions()
                 self._restore_inter_deployment_dependencies()
                 self._update_roles_and_permissions()
@@ -252,18 +249,6 @@ class SnapshotRestore(object):
             subprocess.check_call([
                 '/opt/cloudify/encryption/update-encryption-key', '--commit'
             ])
-
-    def _restore_deployment_envs(self):
-        deps = utils.get_dep_contexts(self._snapshot_version)
-        for tenant, deployments in deps:
-            ctx.logger.info('Creating deployment dirs for %s', tenant)
-            for deployment_id in deployments:
-                _create_deployment_workdir(
-                    deployment_id=deployment_id,
-                    tenant=tenant,
-                    logger=ctx.logger,
-                )
-        ctx.logger.info('Successfully created deployment dirs.')
 
     def _restore_inter_deployment_dependencies(self):
         # managers older than 4.6.0 didn't have the support get_capability.

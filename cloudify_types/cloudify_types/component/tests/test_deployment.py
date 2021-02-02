@@ -122,67 +122,24 @@ class TestDeployment(TestDeploymentBase):
                     blueprint_id='test_deployments_create',
                     timeout=MOCK_TIMEOUT)
 
-    def test_create_deployment_timeout(self):
-        self._ctx.instance.runtime_properties['deployment']['id'] = 'dep_name'
-
-        with mock.patch('cloudify.manager.get_rest_client') as mock_client:
-            self.cfy_mock_client.executions.set_existing_objects(
-                [{
-                    'id': 'exec_id',
-                    'workflow_id': 'create_deployment_environment',
-                    'deployment_id': 'dep'
-                }])
-            mock_client.return_value = self.cfy_mock_client
-
-            poll_with_timeout_test = \
-                'cloudify_types.component.polling.poll_with_timeout'
-            with mock.patch(poll_with_timeout_test) as poll:
-                poll.return_value = False
-                with self.assertRaisesRegexp(NonRecoverableError,
-                                             'Execution timed out'):
-                    create(
-                        deployment_id='test_create_deployment_timeout',
-                        blueprint_id='test',
-                        timeout=MOCK_TIMEOUT)
-
     def test_create_deployment_success(self):
-        with mock.patch('cloudify.manager.get_rest_client') as mock_client:
-            self.cfy_mock_client.executions.set_existing_objects(
-                [{
-                    'id': 'exec_id',
-                    'workflow_id': 'create_deployment_environment',
-                    'deployment_id': 'dep'
-                }])
-            mock_client.return_value = self.cfy_mock_client
-
-            poll_with_timeout_test = \
-                'cloudify_types.component.polling.poll_with_timeout'
-            with mock.patch(poll_with_timeout_test) as poll:
-                poll.return_value = True
-
+        with mock.patch('cloudify.manager.get_rest_client'):
+            with mock.patch(
+                    'cloudify_types.component'
+                    '.component.deployment_id_exists',
+                    return_value=False):
                 output = create(operation='create_deployment',
                                 timeout=MOCK_TIMEOUT)
                 self.assertTrue(output)
 
     def test_create_deployment_failed(self):
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
-            self.cfy_mock_client.executions.set_existing_objects(
-                [{
-                    'id': 'exec_id',
-                    'workflow_id': 'test',
-                    'deployment_id': 'dep'
-                }])
+            self.cfy_mock_client.deployments.create = REST_CLIENT_EXCEPTION
             mock_client.return_value = self.cfy_mock_client
-
-            poll_with_timeout_test = \
-                'cloudify_types.component.polling.poll_with_timeout'
-            with mock.patch(poll_with_timeout_test) as poll:
-                poll.return_value = True
-
-                with self.assertRaisesRegexp(
-                        NonRecoverableError,
-                        'No execution Found for component "test" deployment'):
-                    create(operation='create_deployment', timeout=MOCK_TIMEOUT)
+            self.assertRaises(NonRecoverableError,
+                              create,
+                              operation='create_deployment',
+                              timeout=MOCK_TIMEOUT)
 
     def test_create_deployment_exists(self):
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
@@ -367,44 +324,27 @@ class TestComponentSecrets(TestDeploymentBase):
     def test_create_deployment_success_with_secrets(self):
         self._ctx.node.properties['secrets'] = {'a': 'b'}
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
-            self.cfy_mock_client.executions.set_existing_objects(
-                [{
-                    'id': 'exec_id',
-                    'workflow_id': 'create_deployment_environment',
-                    'deployment_id': 'dep'
-                }])
-
             self.cfy_mock_client.secrets.create = mock.Mock()
             mock_client.return_value = self.cfy_mock_client
-
-            poll_with_timeout_test = \
-                'cloudify_types.component.polling.poll_with_timeout'
-            with mock.patch(poll_with_timeout_test) as poll:
-                poll.return_value = True
-
+            with mock.patch(
+                    'cloudify_types.component'
+                    '.component.deployment_id_exists',
+                    return_value=False):
                 output = create(operation='create_deployment',
                                 timeout=MOCK_TIMEOUT)
                 self.assertTrue(output)
-
-            self.cfy_mock_client.secrets.create.assert_called_with(key='a',
-                                                                   value='b')
+                self.cfy_mock_client.secrets.create.assert_called_with(
+                    key='a', value='b'
+                )
 
     def test_create_deployment_with_existing_secrets(self):
         self._ctx.node.properties['secrets'] = {'a': 'b'}
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
-            self.cfy_mock_client.executions.set_existing_objects(
-                [{
-                    'id': 'exec_id',
-                    'workflow_id': 'create_deployment_environment',
-                    'deployment_id': 'dep'
-                }])
-
             self.cfy_mock_client.secrets.create = mock.Mock()
             self.cfy_mock_client.secrets.set_existing_objects([
                 self.Secret(key='a', value='b')
             ])
             mock_client.return_value = self.cfy_mock_client
-
             with self.assertRaisesRegexp(
                     NonRecoverableError,
                     'The secrets: "a" already exist, not updating...'):
