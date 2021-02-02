@@ -351,13 +351,14 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         )
         fields['labels'] = flask_fields.List(
             flask_fields.Nested(Label.resource_fields))
+        fields['deployment_groups'] = flask_fields.List(flask_fields.String)
         return fields
 
     def to_response(self, **kwargs):
         dep_dict = super(Deployment, self).to_response()
         dep_dict['workflows'] = self._list_workflows(self.workflows)
         dep_dict['labels'] = self._list_labels(self.labels)
-
+        dep_dict['deployment_groups'] = [g.id for g in self.deployment_groups]
         return dep_dict
 
     @staticmethod

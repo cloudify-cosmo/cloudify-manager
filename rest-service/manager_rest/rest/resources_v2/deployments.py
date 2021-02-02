@@ -64,7 +64,9 @@ class Deployments(resources_v1.Deployments):
             filters['deployment_group'] = lambda col: col.any(
                 models.DeploymentGroup.id == request.args['_group_id']
             )
-        _include = None if (_include and 'labels' in _include) else _include
+        if _include:
+            if {'labels', 'deployment_groups'}.intersection(_include):
+                _include = None
         result = get_storage_manager().list(
             models.Deployment,
             include=_include,
