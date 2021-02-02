@@ -44,7 +44,10 @@ def check_schedules():
     sm = get_storage_manager()
     schedules = sm.full_access_list(
         models.ExecutionSchedule,
-        filters={'next_occurrence': lambda x: x < datetime.utcnow()}
+        filters={
+            models.ExecutionSchedule.next_occurrence:
+            lambda x: x < datetime.utcnow()
+        }
     )
     for schedule in schedules:
         lock_num = SCHEDULER_LOCK_BASE + schedule._storage_id
