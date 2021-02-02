@@ -66,7 +66,8 @@ sources = [
     ('cloudify-manager/rest-service/manager_rest', ['/opt/manager/env']),
     ('cloudify-manager/workflows/cloudify_system_workflows', ['/opt/mgmtworker/env']),  # NOQA
     ('cloudify-manager/cloudify_types/cloudify_types', ['/opt/mgmtworker/env']),  # NOQA
-    ('cloudify-manager-install/cfy_manager', ['/opt/cloudify/cfy_manager'])
+    ('cloudify-manager-install/cfy_manager', ['/opt/cloudify/cfy_manager']),
+    ('cloudify-manager/execution-scheduler/execution_scheduler', ['/opt/manager/env']),  # NOQA
 ]
 
 # like sources, but just static files, not in a venv. Provide target
