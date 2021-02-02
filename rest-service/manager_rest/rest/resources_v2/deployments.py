@@ -61,7 +61,7 @@ class Deployments(resources_v1.Deployments):
             request.args.get('_get_all_results', False)
         )
         if '_group_id' in request.args:
-            filters['deployment_group'] = lambda col: col.any(
+            filters['deployment_groups'] = lambda col: col.any(
                 models.DeploymentGroup.id == request.args['_group_id']
             )
         if _include:

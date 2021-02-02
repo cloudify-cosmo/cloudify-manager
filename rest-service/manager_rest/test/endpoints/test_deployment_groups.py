@@ -255,6 +255,15 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             _include=['id', 'deployment_groups'])
         assert set(dep.deployment_groups) == {'group1', 'group2'}
 
+    def test_get_deployment_by_group(self):
+        self.client.deployment_groups.put(
+            'group1',
+            deployment_ids=['dep1']
+        )
+        deployments = self.client.deployments.list(_group_id='group1')
+        assert len(deployments) == 1
+        assert deployments[0].id == 'dep1'
+
 
 class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
     def test_get_empty(self):
