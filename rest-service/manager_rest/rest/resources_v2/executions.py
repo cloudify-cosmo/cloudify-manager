@@ -58,6 +58,10 @@ class Executions(resources_v1.Executions):
         """
         List executions
         """
+        if '_group_id' in request.args:
+            filters['execution_groups'] = lambda col: col.any(
+                models.ExecutionGroup.id == request.args['_group_id']
+            )
         is_include_system_workflows = rest_utils.verify_and_convert_bool(
             '_include_system_workflows',
             request.args.get('_include_system_workflows', False))

@@ -255,6 +255,15 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             _include=['id', 'deployment_groups'])
         assert set(dep.deployment_groups) == {'group1', 'group2'}
 
+    def test_get_deployment_by_group(self):
+        self.client.deployment_groups.put(
+            'group1',
+            deployment_ids=['dep1']
+        )
+        deployments = self.client.deployments.list(_group_id='group1')
+        assert len(deployments) == 1
+        assert deployments[0].id == 'dep1'
+
 
 class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
     def test_get_empty(self):
@@ -346,3 +355,22 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
             self.client.events.list(
                 execution_group_id='group1', execution_id='exec1'
             )
+
+    def test_get_execution_by_group(self):
+        self.put_blueprint()
+        self.client.deployments.create('blueprint', 'dep1')
+        self.client.deployment_groups.put(
+            'group1',
+            deployment_ids=['dep1']
+        )
+        execution_group = self.client.execution_groups.start(
+            deployment_group_id='group1',
+            workflow_id='install'
+        )
+        self.client.executions.start(
+            deployment_id='dep1',
+            workflow_id='install'
+        )
+        executions = self.client.executions.list(
+            _group_id=execution_group['id'])
+        assert len(executions) == 1
