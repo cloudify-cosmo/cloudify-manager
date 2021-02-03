@@ -32,7 +32,7 @@ install_requires = [
     'wagon>=0.9.1',
     'python-dateutil==2.5.3',
     'voluptuous==0.9.3',
-    'pika==0.11.2',
+    'pika==1.1.0',
     'cryptography==3.3.1',
     'psycopg2==2.7.4',
     'pytz==2018.4',
