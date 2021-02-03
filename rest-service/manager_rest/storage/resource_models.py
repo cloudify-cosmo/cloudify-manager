@@ -586,7 +586,42 @@ class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
             flask_fields.String()
         )
         fields['deployment_group_id'] = flask_fields.String()
+        fields['status'] = flask_fields.String()
         return fields
+
+    @property
+    def status(self):
+        """Status of this group, based on the status of its executions.
+
+        The group status is:
+            - pending, if all executions are pending
+            - started, if some executions are already not pending, and not
+                all are finished yet
+            - failed, if all executions are finished, and some have failed
+            - terminated, if all are finished, and none have failed (but
+                some might have been cancelled)
+        """
+        states = {e.status for e in self.executions}
+
+        if all(s == ExecutionState.PENDING for s in states):
+            return ExecutionState.PENDING
+
+        if all(s in ExecutionState.END_STATES for s in states):
+            if ExecutionState.FAILED in states:
+                return ExecutionState.FAILED
+            return ExecutionState.TERMINATED
+
+        return ExecutionState.STARTED
+
+    def to_response(self, get_data=False, **kwargs):
+        if get_data:
+            skip_fields = []
+        else:
+            skip_fields = ['execution_ids', 'status']
+        return {
+            f: getattr(self, f)
+            for f in self.response_fields if f not in skip_fields
+        }
 
 
 class ExecutionSchedule(CreatedAtMixin, SQLResourceBase):

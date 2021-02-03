@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from cloudify.models_states import VisibilityState
+from cloudify.models_states import VisibilityState, ExecutionState
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from manager_rest.storage import models
@@ -385,3 +385,9 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
         retrieved = self.client.execution_groups.get(group.id)
         assert retrieved.id == group.id
         assert len(retrieved.execution_ids) == 1
+        assert retrieved.status == ExecutionState.TERMINATED
+
+        listed = self.client.execution_groups.list()[0]
+        assert listed.id == group.id
+        assert listed.get('status') is None
+        assert listed.get('execution_ids') is None

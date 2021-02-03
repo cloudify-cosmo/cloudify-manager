@@ -158,7 +158,7 @@ class ExecutionGroups(SecuredResource):
         )
 
     @authorize('execution_group_create')
-    @rest_decorators.marshal_with(models.ExecutionGroup)
+    @rest_decorators.marshal_with(models.ExecutionGroup, force_get_data=True)
     def post(self):
         request_dict = get_json_and_verify_params({
             'deployment_group_id': {'type': str},
@@ -196,7 +196,7 @@ class ExecutionGroups(SecuredResource):
 
 class ExecutionGroupsId(SecuredResource):
     @authorize('execution_group_get', allow_all_tenants=True)
-    @rest_decorators.marshal_with(models.ExecutionGroup)
+    @rest_decorators.marshal_with(models.ExecutionGroup, force_get_data=True)
     @rest_decorators.all_tenants
     def get(self, group_id, _include=None, all_tenants=None):
         return get_storage_manager().get(
