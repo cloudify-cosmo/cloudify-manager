@@ -20,7 +20,8 @@ from .agents import Agents, AgentsName           # NOQA
 from .executions import (     # NOQA
     Executions,
     ExecutionsCheck,
-    ExecutionGroups
+    ExecutionGroups,
+    ExecutionGroupsId,
 )
 
 from .execution_schedules import (               # NOQA

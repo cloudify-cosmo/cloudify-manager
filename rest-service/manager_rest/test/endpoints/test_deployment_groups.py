@@ -376,3 +376,12 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
         executions = self.client.executions.list(
             _group_id=execution_group['id'])
         assert len(executions) == 1
+
+    def test_get_execution_group(self):
+        group = self.client.execution_groups.start(
+            deployment_group_id='group1',
+            workflow_id='install'
+        )
+        retrieved = self.client.execution_groups.get(group.id)
+        assert retrieved.id == group.id
+        assert len(retrieved.execution_ids) == 1
