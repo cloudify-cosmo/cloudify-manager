@@ -90,7 +90,7 @@ def insecure_rest_method(func):
 
 
 class marshal_with(object):
-    def __init__(self, response_class):
+    def __init__(self, response_class, force_get_data=False):
         """
         :param response_class: response class to marshal result with.
          class must have a "resource_fields" class variable
@@ -101,13 +101,13 @@ class marshal_with(object):
             self._fields = response_class.resource_fields
 
         self.response_class = response_class
+        self.force_get_data = force_get_data
 
     def __call__(self, f):
         @wraps(f)
         def wrapper(*args, **kwargs):
             if hasattr(request, '__skip_marshalling'):
                 return f(*args, **kwargs)
-
             fields_to_include = self._get_fields_to_include()
             if self._is_include_parameter_in_request():
                 # only pushing "_include" into kwargs when the request
@@ -150,7 +150,8 @@ class marshal_with(object):
         elif isinstance(data, list):
             return [self.wrap_with_response_object(item) for item in data]
         elif isinstance(data, SQLModelBase):
-            return data.to_response(get_data=self._get_data())
+            return data.to_response(
+                get_data=self._get_data() or self.force_get_data)
         # Support for partial results from SQLAlchemy (i.e. only
         # certain columns, and not the whole model class)
         elif isinstance(data, sql_alchemy_collection):
