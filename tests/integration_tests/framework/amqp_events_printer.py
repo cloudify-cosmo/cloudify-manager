@@ -54,8 +54,8 @@ def _consume_events(connection):
             logger.error('event/log format error - output: {0}'
                          .format(body), exc_info=True)
 
-    channel.basic_consume(callback, queue=queues[0], no_ack=True)
-    channel.basic_consume(callback, queue=queues[1], no_ack=True)
+    channel.basic_consume(queues[0], callback, no_ack=True)
+    channel.basic_consume(queues[1], callback, no_ack=True)
     channel.start_consuming()
 
 
