@@ -30,10 +30,11 @@ from contextlib import contextmanager
 
 import sh
 import pika
+import ssl
 
 from . import constants
 
-from cloudify.utils import setup_logger
+from cloudify.utils import get_broker_ssl_cert_path, setup_logger
 from cloudify_rest_client import CloudifyClient
 from manager_rest.utils import create_auth_header
 
@@ -113,7 +114,9 @@ def create_pika_connection(host):
     return pika.BlockingConnection(
         pika.ConnectionParameters(host=host,
                                   port=5671,
-                                  ssl=True,
+                                  ssl_options=pika.SSLOptions(
+                                      ssl.create_default_context(
+                                          cafile=get_broker_ssl_cert_path())),
                                   credentials=credentials))
 
 

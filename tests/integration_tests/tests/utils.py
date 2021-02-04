@@ -101,33 +101,6 @@ def _create_mock_wagon(package_name, package_version):
     )
 
 
-def publish_event(queue, routing_key, event):
-    exchange_name = 'cloudify-monitoring'
-    exchange_type = 'topic'
-    connection = utils.create_pika_connection()
-    channel = connection.channel()
-    try:
-        channel.exchange_declare(exchange=exchange_name,
-                                 exchange_type=exchange_type,
-                                 durable=False,
-                                 auto_delete=True,
-                                 internal=False)
-        channel.queue_declare(
-            queue=queue,
-            auto_delete=True,
-            durable=False,
-            exclusive=False)
-        channel.queue_bind(exchange=exchange_name,
-                           queue=queue,
-                           routing_key=routing_key)
-        channel.basic_publish(exchange=exchange_name,
-                              routing_key=routing_key,
-                              body=json.dumps(event))
-    finally:
-        channel.close()
-        connection.close()
-
-
 def create_rest_client(**kwargs):
     return utils.create_rest_client(**kwargs)
 
