@@ -568,12 +568,8 @@ class SQLStorageManager(object):
         result = query.first()
 
         if not result:
-            if filters and set(filters.keys()) != {'id'}:
-                filters_message = ' (filters: {0})'.format(filters)
-            else:
-                filters_message = ''
-            err_msg = 'Requested `{0}` with ID `{1}` was not found{2}'.format(
-                model_class.__name__, element_id, filters_message)
+            err_msg = self._format_not_found_message(
+                model_class, filters)
 
             if fail_silently:
                 current_app.logger.debug(err_msg)
@@ -582,6 +578,19 @@ class SQLStorageManager(object):
 
         current_app.logger.debug('Returning {0}'.format(result))
         return result
+
+    def _format_not_found_message(self, model_class, filters):
+        element_id = filters.pop('id', None)
+        if element_id is not None:
+            id_message = ' with ID `{0}`'.format(element_id)
+        else:
+            id_message = ''
+        if filters and set(filters.keys()) != {'id'}:
+            filters_message = ' (filters: {0})'.format(filters)
+        else:
+            filters_message = ''
+        return 'Requested `{0}`{1} was not found{2}'.format(
+            model_class.__name__, id_message, filters_message)
 
     @staticmethod
     def _validate_available_memory():

@@ -102,11 +102,11 @@ class InterDeploymentDependenciesTest(BaseServerTestCase):
         )
 
     def test_fails_to_delete_non_existing_dependency(self):
-        error_msg_regex = '404: Requested `InterDeploymentDependencies` ' \
-                          'with ID `None` was not found \\(filters:'
-        with self.assertRaisesRegex(CloudifyClientError, error_msg_regex):
+        message = 'not found'
+        with self.assertRaisesRegex(CloudifyClientError, message) as cm:
             self.client.inter_deployment_dependencies.delete(
                 **self.dependency)
+        assert cm.exception.status_code == 404
 
     def test_list_dependencies_returns_empty_list(self):
         self.assertEqual(
