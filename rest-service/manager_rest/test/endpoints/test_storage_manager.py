@@ -14,6 +14,7 @@
 #  * limitations under the License.
 
 from datetime import datetime
+from unittest import TestCase
 import mock
 
 from cloudify.models_states import VisibilityState
@@ -21,6 +22,7 @@ from cloudify.models_states import VisibilityState
 from manager_rest import manager_exceptions, utils
 from manager_rest.test import base_test
 from manager_rest.storage import models
+from manager_rest.storage.storage_manager import SQLStorageManager
 from manager_rest.test.attribute import attr
 
 
@@ -284,3 +286,32 @@ class TestTransactions(base_test.BaseServerTestCase):
             with self.sm.transaction():
                 with self.sm.transaction():
                     pass
+
+
+class TestGetErrorFormat(TestCase):
+    """Tests for the 404 not found error message formatting"""
+    def setUp(self):
+        self.sm = SQLStorageManager()
+
+    def test_get_by_id(self):
+        # Requested `Node` with ID `0` was not found
+        message = self.sm._format_not_found_message(models.Node, {'id': 0})
+        assert 'not found' in message
+        assert 'with ID `0`' in message
+        assert 'filters' not in message
+
+    def test_get_by_id_and_filters(self):
+        # Requested `Node` with ID `0` was not found (filters: {'x': 'y'})
+        message = self.sm._format_not_found_message(
+            models.Node, {'id': 0, 'x': 'y'})
+        assert 'not found' in message
+        assert 'with ID `0`' in message
+        assert 'filters' in message
+
+    def test_get_by_filters(self):
+        # Requested `Node` was not found (filters: {'x': 'y'})"
+        message = self.sm._format_not_found_message(
+            models.Node, {'x': 'y'})
+        assert 'ID' not in message
+        assert 'filters' in message
+        assert "'x': 'y'" in message
