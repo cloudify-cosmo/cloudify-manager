@@ -114,7 +114,9 @@ def create_pika_connection(host):
     return pika.BlockingConnection(
         pika.ConnectionParameters(host=host,
                                   port=5671,
-                                  ssl=True,
+                                  ssl_options=pika.SSLOptions(
+                                      ssl.create_default_context(
+                                          cafile=get_broker_ssl_cert_path())),
                                   credentials=credentials))
 
 
