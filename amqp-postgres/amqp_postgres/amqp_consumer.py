@@ -62,7 +62,7 @@ class AMQPLogsEventsConsumer(object):
                                      EVENTS_EXCHANGE_NAME,
                                      'topic',
                                      routing_key='events.#')
-        channel.basic_consume(self.process, self.queue)
+        channel.basic_consume(self.queue, self.process)
 
     def process(self, channel, method, properties, body):
         try:
