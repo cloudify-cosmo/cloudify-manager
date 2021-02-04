@@ -64,7 +64,7 @@ def upload(ctx, **kwargs):
                         if chunk:
                             f.write(chunk)
 
-        except requests.exceptions.RequestException as e:
+        except Exception as e:
             client.blueprints.update(
                 blueprint_id,
                 update_dict={'state': BlueprintUploadState.FAILED_UPLOADING,
