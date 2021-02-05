@@ -12,6 +12,7 @@ from manager_rest.storage import models, get_storage_manager
 from manager_rest.utils import set_current_tenant
 from manager_rest.flask_utils import setup_flask_app
 from manager_rest.resource_manager import get_resource_manager
+from manager_rest.storage.models_base import db
 from manager_rest.storage.storage_utils import (try_acquire_lock_on_table,
                                                 unlock_table)
 
@@ -49,12 +50,17 @@ def check_schedules():
             lambda x: x < datetime.utcnow()
         }
     )
+    if not schedules:
+        db.session.rollback()
+        return
+
     for schedule in schedules:
         lock_num = SCHEDULER_LOCK_BASE + schedule._storage_id
         with scheduler_lock(lock_num) as locked:
             if not locked:
                 logger.info('Another manager currently runs this schedule: %s',
                             schedule.id)
+                db.session.rollback()
                 continue
 
             logger.debug('Acquired lock for schedule %s in DB', schedule.id)
