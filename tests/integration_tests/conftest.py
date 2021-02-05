@@ -126,7 +126,7 @@ def manager_container(request, resource_mapping):
     container = Env(container_id, container_ip, service_management)
     prepare_reset_storage_script(container_id)
     amqp_events_printer_thread = threading.Thread(
-        target=print_events, args=(docker.get_manager_ip(container_id), ))
+        target=print_events, args=(container_id, ))
     amqp_events_printer_thread.daemon = True
     amqp_events_printer_thread.start()
     _disable_cron_jobs(container_id)
