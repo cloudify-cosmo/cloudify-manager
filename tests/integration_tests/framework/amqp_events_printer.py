@@ -76,7 +76,7 @@ def _bind_queue_to_exchange(channel,
                        routing_key=routing_key)
 
 
-def print_events(container_ip):
+def print_events(container_id):
     """Print logs and events from rabbitmq.
 
     This consumes directly cloudify-logs and cloudify-events-topic exchanges.
@@ -88,7 +88,7 @@ def print_events(container_ip):
     """
     while True:
         try:
-            connection = utils.create_pika_connection(container_ip)
+            connection = utils.create_pika_connection(container_id)
             _consume_events(connection)
         except ConnectionClosed as e:
             logger.debug('print_events got: %s', e)
