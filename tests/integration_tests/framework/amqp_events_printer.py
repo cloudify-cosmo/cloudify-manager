@@ -54,8 +54,8 @@ def _consume_events(connection):
             logger.error('event/log format error - output: {0}'
                          .format(body), exc_info=True)
 
-    channel.basic_consume(queues[0], callback, no_ack=True)
-    channel.basic_consume(queues[1], callback, no_ack=True)
+    channel.basic_consume(queues[0], callback, auto_ack=True)
+    channel.basic_consume(queues[1], callback, auto_ack=True)
     channel.start_consuming()
 
 
@@ -68,7 +68,7 @@ def _bind_queue_to_exchange(channel,
                              exchange_type=exchange_type,
                              auto_delete=False,
                              durable=True)
-    result = channel.queue_declare(exclusive=True)
+    result = channel.queue_declare('', exclusive=True)
     queue_name = result.method.queue
     queues.append(queue_name)
     channel.queue_bind(exchange=exchange_name,
