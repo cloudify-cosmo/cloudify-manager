@@ -164,11 +164,13 @@ class ExecutionGroups(SecuredResource):
             'deployment_group_id': {'type': str},
             'workflow_id': {'type': str},
             'default_parameters': {'optional': True},
-            'parameters': {'optional': True}
+            'parameters': {'optional': True},
+            'force': {'optional': True}
         })
         default_parameters = request_dict.get('default_parameters') or {}
         parameters = request_dict.get('parameters') or {}
         workflow_id = request_dict['workflow_id']
+        force = request_dict.get('force') or False
 
         sm = get_storage_manager()
         dep_group = sm.get(models.DeploymentGroup,
@@ -186,6 +188,7 @@ class ExecutionGroups(SecuredResource):
             params = default_parameters.copy()
             params.update(parameters.get(dep.id) or {})
             execution = rm.execute_workflow(
+                force=force,
                 deployment_id=dep.id,
                 workflow_id=workflow_id,
                 parameters=params,
