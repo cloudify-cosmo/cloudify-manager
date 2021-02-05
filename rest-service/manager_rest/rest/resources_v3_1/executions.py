@@ -158,17 +158,19 @@ class ExecutionGroups(SecuredResource):
         )
 
     @authorize('execution_group_create')
-    @rest_decorators.marshal_with(models.ExecutionGroup)
+    @rest_decorators.marshal_with(models.ExecutionGroup, force_get_data=True)
     def post(self):
         request_dict = get_json_and_verify_params({
             'deployment_group_id': {'type': str},
             'workflow_id': {'type': str},
             'default_parameters': {'optional': True},
-            'parameters': {'optional': True}
+            'parameters': {'optional': True},
+            'force': {'optional': True}
         })
         default_parameters = request_dict.get('default_parameters') or {}
         parameters = request_dict.get('parameters') or {}
         workflow_id = request_dict['workflow_id']
+        force = request_dict.get('force') or False
 
         sm = get_storage_manager()
         dep_group = sm.get(models.DeploymentGroup,
@@ -186,9 +188,24 @@ class ExecutionGroups(SecuredResource):
             params = default_parameters.copy()
             params.update(parameters.get(dep.id) or {})
             execution = rm.execute_workflow(
+                force=force,
                 deployment_id=dep.id,
                 workflow_id=workflow_id,
                 parameters=params,
             )
             group.executions.append(execution)
+        sm._safe_commit()
         return group
+
+
+class ExecutionGroupsId(SecuredResource):
+    @authorize('execution_group_get', allow_all_tenants=True)
+    @rest_decorators.marshal_with(models.ExecutionGroup, force_get_data=True)
+    @rest_decorators.all_tenants
+    def get(self, group_id, _include=None, all_tenants=None):
+        return get_storage_manager().get(
+            models.ExecutionGroup,
+            group_id,
+            include=_include,
+            all_tenants=all_tenants,
+        )

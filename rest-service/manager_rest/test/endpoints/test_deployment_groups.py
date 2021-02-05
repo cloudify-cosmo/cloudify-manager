@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from cloudify.models_states import VisibilityState
+from cloudify.models_states import VisibilityState, ExecutionState
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from manager_rest.storage import models
@@ -277,17 +277,20 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
 
 
 class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
-    def test_get_empty(self):
-        result = self.client.execution_groups.list()
-        assert len(result) == 0
-
-    def test_create_from_group(self):
+    def setUp(self):
+        super(ExecutionGroupsTestCase, self).setUp()
         self.put_blueprint()
         self.client.deployments.create('blueprint', 'dep1')
         self.client.deployment_groups.put(
             'group1',
             deployment_ids=['dep1']
         )
+
+    def test_get_empty(self):
+        result = self.client.execution_groups.list()
+        assert len(result) == 0
+
+    def test_create_from_group(self):
         group = self.client.execution_groups.start(
             deployment_group_id='group1',
             workflow_id='install'
@@ -303,12 +306,6 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
         Include events for execution in the group, but not events for
         executions not in the group.
         """
-        self.put_blueprint()
-        self.client.deployments.create('blueprint', 'dep1')
-        self.client.deployment_groups.put(
-            'group1',
-            deployment_ids=['dep1']
-        )
         group = self.client.execution_groups.start(
             deployment_group_id='group1',
             workflow_id='install'
@@ -368,12 +365,6 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
             )
 
     def test_get_execution_by_group(self):
-        self.put_blueprint()
-        self.client.deployments.create('blueprint', 'dep1')
-        self.client.deployment_groups.put(
-            'group1',
-            deployment_ids=['dep1']
-        )
         execution_group = self.client.execution_groups.start(
             deployment_group_id='group1',
             workflow_id='install'
@@ -385,3 +376,18 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
         executions = self.client.executions.list(
             _group_id=execution_group['id'])
         assert len(executions) == 1
+
+    def test_get_execution_group(self):
+        group = self.client.execution_groups.start(
+            deployment_group_id='group1',
+            workflow_id='install'
+        )
+        retrieved = self.client.execution_groups.get(group.id)
+        assert retrieved.id == group.id
+        assert len(retrieved.execution_ids) == 1
+        assert retrieved.status == ExecutionState.TERMINATED
+
+        listed = self.client.execution_groups.list()[0]
+        assert listed.id == group.id
+        assert listed.get('status') is None
+        assert listed.get('execution_ids') is None
