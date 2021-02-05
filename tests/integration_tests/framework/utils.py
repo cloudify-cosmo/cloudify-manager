@@ -34,7 +34,7 @@ import ssl
 
 from . import constants
 
-from cloudify.utils import get_broker_ssl_cert_path, setup_logger
+from cloudify.utils import setup_logger
 from cloudify_rest_client import CloudifyClient
 from manager_rest.utils import create_auth_header
 
@@ -107,16 +107,20 @@ def create_rest_client(host, **kwargs):
         cert=cert_path)
 
 
-def create_pika_connection(host):
+def create_pika_connection(container_id):
+    host = docker.get_manager_ip(container_id)
+    ca_data = docker.read_file(
+        container_id,
+        '/etc/cloudify/ssl/cloudify_internal_ca_cert.pem')
+
     credentials = pika.credentials.PlainCredentials(
         username='cloudify',
         password='c10udify')
+    ssl_ctx = ssl.create_default_context(cadata=ca_data)
     return pika.BlockingConnection(
         pika.ConnectionParameters(host=host,
                                   port=5671,
-                                  ssl_options=pika.SSLOptions(
-                                      ssl.create_default_context(
-                                          cafile=get_broker_ssl_cert_path())),
+                                  ssl_options=pika.SSLOptions(ssl_ctx),
                                   credentials=credentials))
 
 

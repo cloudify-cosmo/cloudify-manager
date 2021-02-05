@@ -54,8 +54,8 @@ def _consume_events(connection):
             logger.error('event/log format error - output: {0}'
                          .format(body), exc_info=True)
 
-    channel.basic_consume(queues[0], callback, no_ack=True)
-    channel.basic_consume(queues[1], callback, no_ack=True)
+    channel.basic_consume(queues[0], callback, auto_ack=True)
+    channel.basic_consume(queues[1], callback, auto_ack=True)
     channel.start_consuming()
 
 
@@ -68,7 +68,7 @@ def _bind_queue_to_exchange(channel,
                              exchange_type=exchange_type,
                              auto_delete=False,
                              durable=True)
-    result = channel.queue_declare(exclusive=True)
+    result = channel.queue_declare('', exclusive=True)
     queue_name = result.method.queue
     queues.append(queue_name)
     channel.queue_bind(exchange=exchange_name,
@@ -76,7 +76,7 @@ def _bind_queue_to_exchange(channel,
                        routing_key=routing_key)
 
 
-def print_events(container_ip):
+def print_events(container_id):
     """Print logs and events from rabbitmq.
 
     This consumes directly cloudify-logs and cloudify-events-topic exchanges.
@@ -88,7 +88,7 @@ def print_events(container_ip):
     """
     while True:
         try:
-            connection = utils.create_pika_connection(container_ip)
+            connection = utils.create_pika_connection(container_id)
             _consume_events(connection)
         except ConnectionClosed as e:
             logger.debug('print_events got: %s', e)
