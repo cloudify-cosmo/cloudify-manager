@@ -194,6 +194,7 @@ class ExecutionGroups(SecuredResource):
                 parameters=params,
             )
             group.executions.append(execution)
+        sm._safe_commit()
         return group
 
 
