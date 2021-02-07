@@ -88,7 +88,7 @@ def scheduler_lock(lock_number):
 
 def should_run(schedule):
     # TODO :: also, don't run if the latest execution is not in an END_STATE
-    slip = timedelta(minutes=schedule.slip, seconds=59)
+    slip = timedelta(minutes=schedule.slip, seconds=60)
     next_occurrence = dateutil.parser.parse(schedule.next_occurrence,
                                             ignoretz=True)
     return datetime.utcnow() - next_occurrence < slip
@@ -123,10 +123,8 @@ def main():
 
 
 def cli():
-    if 'MANAGER_REST_CONFIG_PATH' not in os.environ:
-        os.environ['MANAGER_REST_CONFIG_PATH'] = CONFIG_PATH
-        os.environ['MANAGER_REST_SECURITY_CONFIG_PATH'] = REST_SECURITY_PATH
-    config.instance.load_configuration()
+    with setup_flask_app().app_context():
+        config.instance.load_configuration()
     parser = argparse.ArgumentParser()
     parser.add_argument('--logfile', default=DEFAULT_LOG_PATH,
                         help='Path to the log file')
