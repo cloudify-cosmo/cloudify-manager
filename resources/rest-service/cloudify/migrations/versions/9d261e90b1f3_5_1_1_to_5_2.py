@@ -59,9 +59,11 @@ def upgrade():
     fix_previous_versions()
     create_execution_groups_table()
     add_new_config_entries()
+    set_null_on_maintenance_mode_cascade()
 
 
 def downgrade():
+    revert_set_null_on_maintenance_mode_cascade()
     remove_new_config_entries()
     drop_execution_groups_table()
     revert_fixes()
@@ -563,3 +565,40 @@ def drop_execution_groups_table():
         op.f('execution_groups__creator_id_idx'),
         table_name='execution_groups')
     op.drop_table('execution_groups')
+
+
+def set_null_on_maintenance_mode_cascade():
+    """Make maintenance_mode.requested_by a cascade=SET NULL"""
+    op.drop_constraint(
+        'maintenance_mode__requested_by_fkey',
+        'maintenance_mode',
+        type_='foreignkey'
+    )
+    op.create_foreign_key(
+        op.f('maintenance_mode__requested_by_fkey'),
+        'maintenance_mode',
+        'users',
+        ['_requested_by'],
+        ['id'],
+        ondelete='SET NULL'
+    )
+
+
+def revert_set_null_on_maintenance_mode_cascade():
+    """Make maintenance_mode.requested_by a cascade=DELETE
+
+    This reverts set_null_on_maintenance_mode_cascade
+    """
+    op.drop_constraint(
+        op.f('maintenance_mode__requested_by_fkey'),
+        'maintenance_mode',
+        type_='foreignkey'
+    )
+    op.create_foreign_key(
+        'maintenance_mode__requested_by_fkey',
+        'maintenance_mode',
+        'users',
+        ['_requested_by'],
+        ['id'],
+        ondelete='CASCADE'
+    )
