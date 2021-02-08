@@ -108,6 +108,7 @@ class ExecutionSchedulesId(SecuredResource):
         schedule = sm.get(models.ExecutionSchedule, schedule_id)
         slip = request.json.get('slip')
         stop_on_fail = request.json.get('stop_on_fail')
+        enabled = request.json.get('enabled')
 
         since = request.json.get('since')
         until = request.json.get('until')
@@ -120,6 +121,8 @@ class ExecutionSchedulesId(SecuredResource):
         if stop_on_fail is not None:
             schedule.stop_on_fail = verify_and_convert_bool('stop_on_fail',
                                                             stop_on_fail)
+        if enabled is not None:
+            schedule.enabled = verify_and_convert_bool('enabled', enabled)
         schedule.rule = self._compute_rule_from_scheduling_params(
             request.json, existing_rule=schedule.rule)
         schedule.next_occurrence = schedule.compute_next_occurrence()
