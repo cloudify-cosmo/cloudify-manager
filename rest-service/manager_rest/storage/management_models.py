@@ -735,7 +735,7 @@ class MaintenanceMode(SQLModelBase):
 
     @declared_attr
     def _requested_by(cls):
-        return foreign_key(User.id, nullable=True)
+        return foreign_key(User.id, nullable=True, ondelete='SET NULL')
 
     @declared_attr
     def requested_by(cls):
