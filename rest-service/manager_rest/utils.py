@@ -356,6 +356,15 @@ def _get_label_filter_rule(mapping_key, label_key, label_values_list=None):
         return label_key + mapping[mapping_key]
 
 
+def parse_frequency(expr):
+    match = r"(\d+)\ ?(sec(ond)?|min(ute)?|h(our)?|d(ay)?|w(eek)?|" \
+            r"mo(nth)?|y(ear)?)s?$"
+    parsed = re.findall(match, expr)
+    if not parsed or len(parsed[0]) < 2:
+        return None, None
+    return int(parsed[0][0]), parsed[0][1]
+
+
 def get_rrule(rule, since, until):
     """
     Compute an RRULE for the execution scheduler.
@@ -386,16 +395,17 @@ def get_rrule(rule, since, until):
         else:
             return
     else:
-        parsed = re.findall(r"(\d+) (seconds?|minutes?|hours?|days?|weeks?"
-                            "|months?|years?)", rule['frequency'])
-        if not parsed or len(parsed[0]) < 2:
+        interval, frequency = parse_frequency(rule['frequency'])
+        if not frequency:
             return
-        freqs = {'seconds': rrule.SECONDLY, 'minutes': rrule.MINUTELY,
-                 'hours': rrule.HOURLY, 'days': rrule.DAILY,
-                 'weeks': rrule.WEEKLY, 'months': rrule.MONTHLY,
-                 'years': rrule.YEARLY}
-        interval = int(parsed[0][0])
-        frequency = freqs[parsed[0][1]]
+        freqs = {'sec': rrule.SECONDLY, 'second': rrule.SECONDLY,
+                 'min': rrule.MINUTELY, 'minute': rrule.MINUTELY,
+                 'h': rrule.HOURLY, 'hour': rrule.HOURLY,
+                 'd': rrule.DAILY, 'day': rrule.DAILY,
+                 'w': rrule.WEEKLY, 'week': rrule.WEEKLY,
+                 'mo': rrule.MONTHLY, 'month': rrule.MONTHLY,
+                 'y': rrule.YEARLY, 'year': rrule.YEARLY}
+        frequency = freqs[frequency]
 
     weekdays = None
     if rule.get('weekdays'):
