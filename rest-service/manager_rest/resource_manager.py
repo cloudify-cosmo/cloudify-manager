@@ -335,9 +335,12 @@ class ResourceManager(object):
 
         if not force:
             affected_blueprint_ids = []
-            for b in self.sm.list(models.Blueprint,
-                                  include=['id', 'plan'],
-                                  get_all_results=True):
+            for b in self.sm.list(
+                models.Blueprint,
+                include=['id', 'plan'],
+                filters={'state': BlueprintUploadState.UPLOADED},
+                get_all_results=True,
+            ):
                 if any(plugin.package_name == p.get('package_name')
                        and plugin.package_version == p.get('package_version')
                        for p in self._blueprint_plugins(b)):
