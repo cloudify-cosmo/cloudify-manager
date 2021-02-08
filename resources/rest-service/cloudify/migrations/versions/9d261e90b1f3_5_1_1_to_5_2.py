@@ -473,58 +473,58 @@ def create_execution_groups_table():
         sa.ForeignKeyConstraint(
             ['_creator_id'],
             ['users.id'],
-            name=op.f('execution_group__creator_id_fkey'),
+            name=op.f('execution_groups__creator_id_fkey'),
             ondelete='CASCADE'
         ),
         sa.ForeignKeyConstraint(
             ['_deployment_group_fk'],
             ['deployment_groups._storage_id'],
-            name=op.f('execution_group__deployment_group_fk_fkey'),
+            name=op.f('execution_groups__deployment_group_fk_fkey'),
             ondelete='CASCADE'
         ),
         sa.ForeignKeyConstraint(
             ['_tenant_id'],
             ['tenants.id'],
-            name=op.f('execution_group__tenant_id_fkey'),
+            name=op.f('execution_groups__tenant_id_fkey'),
             ondelete='CASCADE'
         ),
         sa.PrimaryKeyConstraint(
             '_storage_id',
-            name=op.f('execution_group_pkey')
+            name=op.f('execution_groups_pkey')
         )
     )
     op.create_index(
-        op.f('execution_group__creator_id_idx'),
+        op.f('execution_groups__creator_id_idx'),
         'execution_groups',
         ['_creator_id'],
         unique=False
     )
     op.create_index(
-        op.f('execution_group__deployment_group_fk_idx'),
+        op.f('execution_groups__deployment_group_fk_idx'),
         'execution_groups',
         ['_deployment_group_fk'],
         unique=False
     )
     op.create_index(
-        op.f('execution_group__tenant_id_idx'),
+        op.f('execution_groups__tenant_id_idx'),
         'execution_groups',
         ['_tenant_id'],
         unique=False
     )
     op.create_index(
-        op.f('execution_group_created_at_idx'),
+        op.f('execution_groups_created_at_idx'),
         'execution_groups',
         ['created_at'],
         unique=False
     )
     op.create_index(
-        op.f('execution_group_id_idx'),
+        op.f('execution_groups_id_idx'),
         'execution_groups',
         ['id'],
         unique=False
     )
     op.create_index(
-        op.f('execution_group_visibility_idx'),
+        op.f('execution_groups_visibility_idx'),
         'execution_groups',
         ['visibility'],
         unique=False
@@ -549,16 +549,17 @@ def create_execution_groups_table():
 def drop_execution_groups_table():
     op.drop_table('execution_groups_executions')
     op.drop_index(
-        op.f('execution_group_visibility_idx'), table_name='execution_groups')
+        op.f('execution_groups_visibility_idx'), table_name='execution_groups')
     op.drop_index(
-        op.f('execution_group_id_idx'), table_name='execution_groups')
+        op.f('execution_groups_id_idx'), table_name='execution_groups')
     op.drop_index(
-        op.f('execution_group_created_at_idx'), table_name='execution_groups')
+        op.f('execution_groups_created_at_idx'), table_name='execution_groups')
     op.drop_index(
-        op.f('execution_group__tenant_id_idx'), table_name='execution_groups')
+        op.f('execution_groups__tenant_id_idx'), table_name='execution_groups')
     op.drop_index(
-        op.f('execution_group__deployment_group_fk_idx'),
+        op.f('execution_groups__deployment_group_fk_idx'),
         table_name='execution_groups')
     op.drop_index(
-        op.f('execution_group__creator_id_idx'), table_name='execution_groups')
+        op.f('execution_groups__creator_id_idx'),
+        table_name='execution_groups')
     op.drop_table('execution_groups')
