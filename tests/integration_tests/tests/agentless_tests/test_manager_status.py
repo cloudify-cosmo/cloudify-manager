@@ -110,8 +110,20 @@ class TestManagerStatus(AgentlessTestCase):
                 SERVICES[service]
             )
         )
-        time.sleep(10)
-        status = self.client.manager.get_status()
+
+        countdown, status = 12, {}
+        while not _service_is_started(service, status) and countdown > 0:
+            time.sleep(1)
+            status = self.client.manager.get_status()
+            countdown -= 1
+
         self.assertEqual(status['status'], ServiceStatus.HEALTHY)
         self.assertEqual(status['services'][service]['status'],
                          NodeServiceStatus.ACTIVE)
+
+
+def _service_is_started(service, status):
+    return (
+        status.get('status') == ServiceStatus.HEALTHY and
+        status['services'][service]['status'] == NodeServiceStatus.ACTIVE
+    )
