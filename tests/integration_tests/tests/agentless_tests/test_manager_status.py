@@ -14,6 +14,7 @@
 #    * limitations under the License.
 
 import time
+import retrying
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 from cloudify.cluster_status import ServiceStatus, NodeServiceStatus
@@ -110,7 +111,10 @@ class TestManagerStatus(AgentlessTestCase):
                 SERVICES[service]
             )
         )
-        time.sleep(5)
+        self._verify_service_active(service)
+
+    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=10)
+    def _verify_service_active(self, service):
         status = self.client.manager.get_status()
         self.assertEqual(status['status'], ServiceStatus.HEALTHY)
         self.assertEqual(status['services'][service]['status'],
