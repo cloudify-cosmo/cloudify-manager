@@ -636,6 +636,7 @@ class ExecutionSchedule(CreatedAtMixin, SQLResourceBase):
     parameters = db.Column(JSONString())
     execution_arguments = db.Column(JSONString())
     stop_on_fail = db.Column(db.Boolean, nullable=False, default=False)
+    enabled = db.Column(db.Boolean, nullable=False, default=True)
 
     _deployment_fk = foreign_key(Deployment._storage_id)
     _latest_execution_fk = foreign_key(Execution._storage_id, nullable=True)
