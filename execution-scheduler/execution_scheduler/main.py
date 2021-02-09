@@ -38,11 +38,12 @@ class LoopTimer(object):
 
 
 def check_schedules():
-    logger.info('Checking schedules...')
+    logger.debug('Checking schedules...')
     sm = get_storage_manager()
     schedules = sm.full_access_list(
         models.ExecutionSchedule,
         filters={
+            models.ExecutionSchedule.enabled: True,
             models.ExecutionSchedule.next_occurrence:
             lambda x: x < datetime.utcnow()
         }
@@ -55,8 +56,8 @@ def check_schedules():
         lock_num = SCHEDULER_LOCK_BASE + schedule._storage_id
         with scheduler_lock(lock_num) as locked:
             if not locked:
-                logger.info('Another manager currently runs this schedule: %s',
-                            schedule.id)
+                logger.warning('Another manager currently runs this '
+                               'schedule: %s', schedule.id)
                 db.session.rollback()
                 continue
 
@@ -131,6 +132,7 @@ def cli():
     logging.basicConfig(level=args.loglevel.upper(),
                         filename=args.logfile,
                         format="%(asctime)s %(message)s")
+    logging.getLogger('pika').setLevel(logging.WARNING)
     with setup_flask_app().app_context():
         main()
 
