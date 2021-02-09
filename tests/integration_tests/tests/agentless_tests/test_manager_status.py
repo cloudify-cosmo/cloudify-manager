@@ -110,7 +110,7 @@ class TestManagerStatus(AgentlessTestCase):
                 SERVICES[service]
             )
         )
-        time.sleep(5)
+        time.sleep(10)
         status = self.client.manager.get_status()
         self.assertEqual(status['status'], ServiceStatus.HEALTHY)
         self.assertEqual(status['services'][service]['status'],
