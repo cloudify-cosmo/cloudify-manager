@@ -6,6 +6,8 @@ import dateutil.parser
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 
+from cloudify.models_states import ExecutionState
+
 from manager_rest import config
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.utils import set_current_tenant
@@ -85,7 +87,15 @@ def scheduler_lock(lock_number):
 
 
 def should_run(schedule):
-    # TODO :: also, don't run if the latest execution is not in an END_STATE
+    last_status = schedule.latest_execution_status
+    if last_status and last_status not in ExecutionState.END_STATES:
+        return False
+    if schedule.stop_on_fail and last_status == ExecutionState.FAILED:
+        schedule.enabled = False
+        logger.warning("Disabled schedule %s because the execution failed "
+                       "and stop_on_fail is set to true", schedule.id)
+        return False
+
     slip = timedelta(minutes=schedule.slip, seconds=60)
     next_occurrence = dateutil.parser.parse(schedule.next_occurrence,
                                             ignoretz=True)
