@@ -14,6 +14,7 @@
 #    * limitations under the License.
 
 import copy
+import time
 import requests
 
 from cloudify.models_states import BlueprintUploadState
@@ -255,6 +256,7 @@ class BlueprintValidateTest(AgentlessTestCase):
         except RuntimeError as e:
             if 'Workflow execution failed' not in str(e):
                 raise e
+        time.sleep(3)
         event_messages = [ev for ev in self.client.events.list(execution.id)
                           if message in ev['message']]
         self.assertNotEqual(0, len(event_messages))
