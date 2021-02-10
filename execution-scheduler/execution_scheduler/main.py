@@ -55,25 +55,29 @@ def check_schedules():
         return
 
     for schedule in schedules:
-        lock_num = SCHEDULER_LOCK_BASE + schedule._storage_id
-        with scheduler_lock(lock_num) as locked:
-            if not locked:
-                logger.warning('Another manager currently runs this '
-                               'schedule: %s', schedule.id)
-                db.session.rollback()
-                continue
+        try_run(schedule, sm)
 
-            logger.debug('Acquired lock for schedule %s in DB', schedule.id)
-            next_occurrence = schedule.compute_next_occurrence()
-            old_next_occurrence = schedule.next_occurrence
-            logger.info('Schedule: %s next in %s; old next was %s',
-                        schedule.id, next_occurrence, old_next_occurrence)
 
-            if should_run(schedule):
-                execution = execute_workflow(schedule)
-                schedule.latest_execution = execution
-            schedule.next_occurrence = next_occurrence
-            sm.update(schedule)
+def try_run(schedule, sm):
+    lock_num = SCHEDULER_LOCK_BASE + schedule._storage_id
+    with scheduler_lock(lock_num) as locked:
+        if not locked:
+            logger.warning('Another manager currently runs this '
+                           'schedule: %s', schedule.id)
+            db.session.rollback()
+            return
+
+        logger.debug('Acquired lock for schedule %s in DB', schedule.id)
+        next_occurrence = schedule.compute_next_occurrence()
+        old_next_occurrence = schedule.next_occurrence
+        logger.info('Schedule: %s next in %s; old next was %s',
+                    schedule.id, next_occurrence, old_next_occurrence)
+
+        if should_run(schedule):
+            execution = execute_workflow(schedule)
+            schedule.latest_execution = execution
+        schedule.next_occurrence = next_occurrence
+        sm.update(schedule)
 
 
 @contextmanager
