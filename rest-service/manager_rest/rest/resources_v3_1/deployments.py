@@ -509,6 +509,7 @@ class DeploymentGroupsId(SecuredResource):
         request_dict = rest_utils.get_json_and_verify_params({
             'description': {'optional': True},
             'deployment_ids': {'optional': True},
+            'filter_id': {'optional': True},
             'blueprint_id': {'optional': True},
             'default_inputs': {'optional': True},
             'visibility': {'optional': True},
@@ -531,7 +532,10 @@ class DeploymentGroupsId(SecuredResource):
         return group
 
     def _is_overriding_deployments(self, request_dict):
-        return request_dict.get('deployment_ids') is not None
+        return (
+            request_dict.get('deployment_ids') is not None or
+            request_dict.get('filter_id') is not None
+        )
 
     @authorize('deployment_group_update')
     @rest_decorators.marshal_with(models.DeploymentGroup)
@@ -580,6 +584,16 @@ class DeploymentGroupsId(SecuredResource):
         if deployment_ids is not None:
             deployments = [sm.get(models.Deployment, dep_id)
                            for dep_id in deployment_ids]
+            for dep in deployments:
+                group.deployments.append(dep)
+
+        filter_id = request_dict.get('filter_id')
+        if filter_id is not None:
+            filter_elem = sm.get(models.Filter, filter_id)
+            deployments = sm.list(
+                models.Deployment,
+                filter_rules=filter_elem.value.get('labels', {})
+            )
             for dep in deployments:
                 group.deployments.append(dep)
 
