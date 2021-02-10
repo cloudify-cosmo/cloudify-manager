@@ -564,7 +564,6 @@ class DeploymentGroupsId(SecuredResource):
         db.session.commit()
         return group
 
-
     def _set_group_attributes(self, sm, group, request_dict):
         if request_dict.get('visibility') is not None:
             group.visibility = request_dict['visibility']
