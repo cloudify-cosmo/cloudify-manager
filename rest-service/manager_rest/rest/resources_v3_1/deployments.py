@@ -524,9 +524,14 @@ class DeploymentGroupsId(SecuredResource):
             )
         self._set_group_attributes(sm, group, request_dict)
         sm.put(group)
-
+        if self._is_overriding_deployments(request_dict):
+            group.deployments.clear()
         self._set_group_deployments(sm, group, request_dict)
+        db.session.commit()
         return group
+
+    def _is_overriding_deployments(self, request_dict):
+        return request_dict.get('deployment_ids') is not None
 
     @authorize('deployment_group_update')
     @rest_decorators.marshal_with(models.DeploymentGroup)
@@ -545,15 +550,16 @@ class DeploymentGroupsId(SecuredResource):
         sm.put(group)
         if request_dict.get('add'):
             add = request_dict['add']
-            self._set_group_deployments(sm, group, add, clear=False)
+            self._set_group_deployments(sm, group, add)
         if request_dict.get('remove'):
             remove = request_dict['remove']
             remove_ids = remove.get('deployment_ids') or []
             for remove_id in remove_ids:
                 dep = sm.get(models.Deployment, remove_id)
                 group.deployments.remove(dep)
-            db.session.commit()
+        db.session.commit()
         return group
+
 
     def _set_group_attributes(self, sm, group, request_dict):
         if request_dict.get('visibility') is not None:
@@ -569,13 +575,11 @@ class DeploymentGroupsId(SecuredResource):
             group.default_blueprint = sm.get(
                 models.Blueprint, request_dict['blueprint_id'])
 
-    def _set_group_deployments(self, sm, group, request_dict, clear=True):
+    def _set_group_deployments(self, sm, group, request_dict):
         deployment_ids = request_dict.get('deployment_ids')
         if deployment_ids is not None:
             deployments = [sm.get(models.Deployment, dep_id)
                            for dep_id in deployment_ids]
-            if clear:
-                group.deployments.clear()
             for dep in deployments:
                 group.deployments.append(dep)
 
@@ -598,7 +602,6 @@ class DeploymentGroupsId(SecuredResource):
             )
             group.deployments.append(dep)
             deployment_count += 1
-        db.session.commit()
 
     @authorize('deployment_group_delete')
     def delete(self, group_id):
