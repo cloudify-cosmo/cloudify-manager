@@ -527,7 +527,7 @@ class DeploymentGroupsId(SecuredResource):
         sm.put(group)
         if self._is_overriding_deployments(request_dict):
             group.deployments.clear()
-        self._set_group_deployments(sm, group, request_dict)
+        self._add_group_deployments(sm, group, request_dict)
         db.session.commit()
         return group
 
@@ -553,7 +553,7 @@ class DeploymentGroupsId(SecuredResource):
         self._set_group_attributes(sm, group, request_dict)
         sm.put(group)
         if request_dict.get('add'):
-            self._set_group_deployments(sm, group, request_dict['add'])
+            self._add_group_deployments(sm, group, request_dict['add'])
         if request_dict.get('remove'):
             self._remove_group_deployments(sm, group, request_dict['remove'])
         db.session.commit()
@@ -573,7 +573,7 @@ class DeploymentGroupsId(SecuredResource):
             group.default_blueprint = sm.get(
                 models.Blueprint, request_dict['blueprint_id'])
 
-    def _set_group_deployments(self, sm, group, request_dict):
+    def _add_group_deployments(self, sm, group, request_dict):
         deployment_ids = request_dict.get('deployment_ids')
         if deployment_ids is not None:
             deployments = [sm.get(models.Deployment, dep_id)
