@@ -391,3 +391,25 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
         assert listed.id == group.id
         assert listed.get('status') is None
         assert listed.get('execution_ids') is None
+
+    def test_delete_deployment(self):
+        """It's still possible to delete a deployment used in an exec-group"""
+        self.client.execution_groups.start(
+            deployment_group_id='group1',
+            workflow_id='install'
+        )
+        self.client.deployments.delete('dep1')
+        delete_exec = self.sm.get(models.Execution, None, filters={
+            'workflow_id': 'delete_deployment_environment',
+            'deployment_id': 'dep1'
+        })
+        # set the execution to started, so that we can update its status
+        # via the restclient to terminated, which actually deletes
+        # the deployment from the db
+        delete_exec.status = ExecutionState.STARTED
+        self.sm.update(delete_exec)
+        self.client.executions.update(
+            delete_exec.id, ExecutionState.TERMINATED)
+
+        deps = self.client.deployments.list()
+        assert len(deps) == 0

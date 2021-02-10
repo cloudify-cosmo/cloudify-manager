@@ -542,12 +542,14 @@ def create_execution_groups_table():
         sa.ForeignKeyConstraint(
             ['execution_group_id'],
             ['execution_groups._storage_id'],
-            name=op.f('execution_groups_executions_execution_grou_id_fkey')
+            name=op.f('execution_groups_executions_execution_grou_id_fkey'),
+            ondelete='CASCADE'
         ),
         sa.ForeignKeyConstraint(
             ['execution_id'],
             ['executions._storage_id'],
-            name=op.f('execution_groups_executions_execution_id_fkey')
+            name=op.f('execution_groups_executions_execution_id_fkey'),
+            ondelete='CASCADE'
         )
     )
 
