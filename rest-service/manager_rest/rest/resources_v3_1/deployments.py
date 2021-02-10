@@ -553,14 +553,9 @@ class DeploymentGroupsId(SecuredResource):
         self._set_group_attributes(sm, group, request_dict)
         sm.put(group)
         if request_dict.get('add'):
-            add = request_dict['add']
-            self._set_group_deployments(sm, group, add)
+            self._set_group_deployments(sm, group, request_dict['add'])
         if request_dict.get('remove'):
-            remove = request_dict['remove']
-            remove_ids = remove.get('deployment_ids') or []
-            for remove_id in remove_ids:
-                dep = sm.get(models.Deployment, remove_id)
-                group.deployments.remove(dep)
+            self._remove_group_deployments(sm, group, request_dict['remove'])
         db.session.commit()
         return group
 
@@ -615,6 +610,22 @@ class DeploymentGroupsId(SecuredResource):
             )
             group.deployments.append(dep)
             deployment_count += 1
+
+    def _remove_group_deployments(self, sm, group, request_dict):
+        remove_ids = request_dict.get('deployment_ids') or []
+        for remove_id in remove_ids:
+            dep = sm.get(models.Deployment, remove_id)
+            group.deployments.remove(dep)
+
+        filter_id = request_dict.get('filter_id')
+        if filter_id is not None:
+            filter_elem = sm.get(models.Filter, filter_id)
+            deployments = sm.list(
+                models.Deployment,
+                filter_rules=filter_elem.value.get('labels', {})
+            )
+            for dep in deployments:
+                group.deployments.remove(dep)
 
     @authorize('deployment_group_delete')
     def delete(self, group_id):
