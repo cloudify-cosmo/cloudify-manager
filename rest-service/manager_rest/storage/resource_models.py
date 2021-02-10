@@ -573,7 +573,10 @@ class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
 
     @declared_attr
     def executions(cls):
-        return many_to_many_relationship(cls, Execution)
+        return many_to_many_relationship(
+            cls, Execution,
+            ondelete='CASCADE'
+        )
 
     @property
     def execution_ids(self):
