@@ -642,10 +642,10 @@ def update_archive(blueprint: models.Blueprint, updated_file_name: str):
     if not archive_format:
         raise UpdateException('Unknown archive format: {0}'.format(
             blueprint_archive_file_name))
-    archive_base_dir = '.'.join(blueprint.main_file_name.split('.')[:-1])
     with TemporaryDirectory() as working_dir:
         os.chdir(working_dir)
         shutil.unpack_archive(blueprint_archive_file_name, working_dir)
+        archive_base_dir = os.listdir(working_dir)[0]
         shutil.copy(updated_file_name,
                     join(working_dir,
                          archive_base_dir,
