@@ -244,12 +244,12 @@ CLOUDIFY_PLUGINS = {
         REPO: 'https://github.com/cloudify-cosmo/tosca-vcloud-plugin',
     },
     'cloudify-vcloud-plugin': {
-        VERSIONS: sorted(['2.0.0',],
+        VERSIONS: sorted(['2.0.0', ],
                          key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-cosmo/cloudify-vcloud-plugin',
     },
-    'cloudify-vcloud-plugin': {
-        VERSIONS: sorted(['0.0.8', '0.0.7',],
+    'cloudify-helm-plugin': {
+        VERSIONS: sorted(['0.0.8', '0.0.7', ],
                          key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-incubator/cloudify-helm-plugin',
     },
