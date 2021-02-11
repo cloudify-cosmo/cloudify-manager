@@ -86,6 +86,7 @@ SUGGESTED_VERSION = 'suggested_version'
 UNKNOWN = 'unknown'
 UPDATES = 'updates'
 VERSIONS = 'versions'
+MAX_IMPORT_TOKEN_LENGTH = 200
 
 
 class UpdateException(Exception):
@@ -568,7 +569,9 @@ def get_imports(blueprint_file: typing.TextIO) -> dict:
                     isinstance(token, yaml.tokens.ScalarToken):
                 break
         elif imports_token and level == 2 and \
-                isinstance(token, yaml.tokens.ScalarToken):
+                isinstance(token, yaml.tokens.ScalarToken) and \
+                token.end_mark.index - \
+                token.start_mark.index < MAX_IMPORT_TOKEN_LENGTH:
             import_lines[token.value] = {
                 START_POS: token.start_mark.index,
                 END_POS: token.end_mark.index,
@@ -585,10 +588,9 @@ def write_updated_blueprint(input_file_name: str, output_file_name: str,
                     content = input_file.read(update[START_POS] -
                                               input_file.tell())
                     output_file.write(content)
-                    output_file.write(update[REPLACEMENT])
+                    output_file.write("{0}\n".format(update[REPLACEMENT]))
                     content = input_file.read(update[END_POS] -
                                               update[START_POS] + 1)
-                    output_file.write(' # was: {0}'.format(content))
                 content = input_file.read()
                 output_file.write(content)
     except (FileNotFoundError, PermissionError) as ex:
