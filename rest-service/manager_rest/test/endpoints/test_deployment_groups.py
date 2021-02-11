@@ -275,6 +275,56 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         # deleting the group didn't delete the deployments themselves
         assert len(self.client.deployments.list()) == 2
 
+    def test_create_filters(self):
+        """Create a group with filter_id to set the deployments"""
+        self.client.deployments.update_labels('dep1', [
+            {'label1': 'value1'}
+        ])
+        self.client.filters.create('filter1', [
+            'label1=value1'
+        ])
+        self.client.deployment_groups.put(
+            'group1',
+            filter_id='filter1'
+        )
+        group = self.client.deployment_groups.get('group1')
+        assert group.deployment_ids == ['dep1']
+
+    def test_add_from_filters(self):
+        """Extend a group providing filter_id"""
+        self.client.deployments.update_labels('dep1', [
+            {'label1': 'value1'}
+        ])
+        self.client.filters.create('filter1', [
+            'label1=value1'
+        ])
+        self.client.deployment_groups.put('group1')
+        self.client.deployment_groups.add_deployments(
+            'group1',
+            filter_id='filter1'
+        )
+        group = self.client.deployment_groups.get('group1')
+        assert group.deployment_ids == ['dep1']
+
+    def test_remove_from_filters(self):
+        """Shrink a group providing filter_id"""
+        self.client.deployments.update_labels('dep1', [
+            {'label1': 'value1'}
+        ])
+        self.client.filters.create('filter1', [
+            'label1=value1'
+        ])
+        self.client.deployment_groups.put(
+            'group1',
+            deployment_ids=['dep1']
+        )
+        self.client.deployment_groups.remove_deployments(
+            'group1',
+            filter_id='filter1'
+        )
+        group = self.client.deployment_groups.get('group1')
+        assert group.deployment_ids == []
+
 
 class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
     def setUp(self):

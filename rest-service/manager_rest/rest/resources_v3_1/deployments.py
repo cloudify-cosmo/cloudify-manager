@@ -509,6 +509,7 @@ class DeploymentGroupsId(SecuredResource):
         request_dict = rest_utils.get_json_and_verify_params({
             'description': {'optional': True},
             'deployment_ids': {'optional': True},
+            'filter_id': {'optional': True},
             'blueprint_id': {'optional': True},
             'default_inputs': {'optional': True},
             'visibility': {'optional': True},
@@ -524,9 +525,17 @@ class DeploymentGroupsId(SecuredResource):
             )
         self._set_group_attributes(sm, group, request_dict)
         sm.put(group)
-
-        self._set_group_deployments(sm, group, request_dict)
+        if self._is_overriding_deployments(request_dict):
+            group.deployments.clear()
+        self._add_group_deployments(sm, group, request_dict)
+        db.session.commit()
         return group
+
+    def _is_overriding_deployments(self, request_dict):
+        return (
+            request_dict.get('deployment_ids') is not None or
+            request_dict.get('filter_id') is not None
+        )
 
     @authorize('deployment_group_update')
     @rest_decorators.marshal_with(models.DeploymentGroup)
@@ -544,15 +553,10 @@ class DeploymentGroupsId(SecuredResource):
         self._set_group_attributes(sm, group, request_dict)
         sm.put(group)
         if request_dict.get('add'):
-            add = request_dict['add']
-            self._set_group_deployments(sm, group, add, clear=False)
+            self._add_group_deployments(sm, group, request_dict['add'])
         if request_dict.get('remove'):
-            remove = request_dict['remove']
-            remove_ids = remove.get('deployment_ids') or []
-            for remove_id in remove_ids:
-                dep = sm.get(models.Deployment, remove_id)
-                group.deployments.remove(dep)
-            db.session.commit()
+            self._remove_group_deployments(sm, group, request_dict['remove'])
+        db.session.commit()
         return group
 
     def _set_group_attributes(self, sm, group, request_dict):
@@ -569,13 +573,21 @@ class DeploymentGroupsId(SecuredResource):
             group.default_blueprint = sm.get(
                 models.Blueprint, request_dict['blueprint_id'])
 
-    def _set_group_deployments(self, sm, group, request_dict, clear=True):
+    def _add_group_deployments(self, sm, group, request_dict):
         deployment_ids = request_dict.get('deployment_ids')
         if deployment_ids is not None:
             deployments = [sm.get(models.Deployment, dep_id)
                            for dep_id in deployment_ids]
-            if clear:
-                group.deployments.clear()
+            for dep in deployments:
+                group.deployments.append(dep)
+
+        filter_id = request_dict.get('filter_id')
+        if filter_id is not None:
+            filter_elem = sm.get(models.Filter, filter_id)
+            deployments = sm.list(
+                models.Deployment,
+                filter_rules=filter_elem.value.get('labels', {})
+            )
             for dep in deployments:
                 group.deployments.append(dep)
 
@@ -598,7 +610,22 @@ class DeploymentGroupsId(SecuredResource):
             )
             group.deployments.append(dep)
             deployment_count += 1
-        db.session.commit()
+
+    def _remove_group_deployments(self, sm, group, request_dict):
+        remove_ids = request_dict.get('deployment_ids') or []
+        for remove_id in remove_ids:
+            dep = sm.get(models.Deployment, remove_id)
+            group.deployments.remove(dep)
+
+        filter_id = request_dict.get('filter_id')
+        if filter_id is not None:
+            filter_elem = sm.get(models.Filter, filter_id)
+            deployments = sm.list(
+                models.Deployment,
+                filter_rules=filter_elem.value.get('labels', {})
+            )
+            for dep in deployments:
+                group.deployments.remove(dep)
 
     @authorize('deployment_group_delete')
     def delete(self, group_id):
