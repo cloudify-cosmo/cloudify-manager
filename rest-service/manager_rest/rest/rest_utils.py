@@ -665,3 +665,34 @@ def parse_datetime_multiple_formats(date_str):
             pass
     raise manager_exceptions.BadParametersError(
         "{} is not a legal time format".format(date_str))
+
+
+def get_labels_list(raw_labels_list):
+    labels_list = []
+    for label in raw_labels_list:
+        if (not isinstance(label, dict)) or len(label) != 1:
+            _raise_bad_labels_list()
+
+        [(key, raw_value)] = label.items()
+        values_list = raw_value if isinstance(raw_value, list) else [raw_value]
+        for value in values_list:
+            if ((not isinstance(key, text_type)) or
+                    (not isinstance(value, text_type))):
+                _raise_bad_labels_list()
+            validate_inputs({'key': key, 'value': value})
+            labels_list.append((key.lower(), value.lower()))
+
+    test_unique_labels(labels_list)
+    return labels_list
+
+
+def _raise_bad_labels_list():
+    raise manager_exceptions.BadParametersError(
+        'Labels must be a list of 1-entry dictionaries: '
+        '[{<key1>: <value1>}, {<key2>: <value2>}, ...]')
+
+
+def test_unique_labels(labels_list):
+    if len(set(labels_list)) != len(labels_list):
+        raise manager_exceptions.BadParametersError(
+            'You cannot define the same label twice')

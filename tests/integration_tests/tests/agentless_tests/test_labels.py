@@ -44,6 +44,22 @@ class DeploymentsLabelsTest(AgentlessTestCase):
                                       'key2': {'val3'},
                                       'key3': {'val3'}})
 
+    def test_upload_blueprint_with_labels(self):
+        new_labels = [{'key1': 'key1_val1'}, {'key3': 'val3'}]
+        dsl_path = utils.get_resource('dsl/blueprint_with_labels.yaml')
+        blueprint_id = deployment_id = 'd{0}'.format(uuid.uuid4())
+        self.client.blueprints.upload(dsl_path, blueprint_id)
+        utils.wait_for_blueprint_upload(blueprint_id, self.client)
+        deployment = self.client.deployments.create(blueprint_id,
+                                                    deployment_id,
+                                                    labels=new_labels)
+        utils.wait_for_deployment_creation_to_complete(self.env.container_id,
+                                                       deployment_id,
+                                                       self.client)
+        labels_list = [{'key1': 'key1_val1'}, {'key2': 'key2_val1'},
+                       {'key2': 'key2_val2'}, {'key3': 'val3'}]
+        self._assert_deployment_labels(deployment.labels, labels_list)
+
     def _assert_keys_and_values(self, client, keys_values_dict):
         keys_list = client.deployments_labels.list_keys()
         self.assertEqual(set(keys_list.items), set(keys_values_dict.keys()))
@@ -68,3 +84,16 @@ class DeploymentsLabelsTest(AgentlessTestCase):
                                                        deployment_id,
                                                        self.client)
         return deployment
+
+    def _assert_deployment_labels(self, deployment_labels, compared_labels):
+        simplified_labels = set()
+        compared_labels_set = set()
+
+        for label in deployment_labels:
+            simplified_labels.add((label['key'], label['value']))
+
+        for compared_label in compared_labels:
+            [(key, value)] = compared_label.items()
+            compared_labels_set.add((key, value))
+
+        self.assertEqual(simplified_labels, compared_labels_set)
