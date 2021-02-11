@@ -86,6 +86,7 @@ SUGGESTED_VERSION = 'suggested_version'
 UNKNOWN = 'unknown'
 UPDATES = 'updates'
 VERSIONS = 'versions'
+MAX_IMPORT_TOKEN_LENGTH = 200
 
 
 class UpdateException(Exception):
@@ -568,7 +569,9 @@ def get_imports(blueprint_file: typing.TextIO) -> dict:
                     isinstance(token, yaml.tokens.ScalarToken):
                 break
         elif imports_token and level == 2 and \
-                isinstance(token, yaml.tokens.ScalarToken):
+                isinstance(token, yaml.tokens.ScalarToken) and \
+                token.end_mark.index - \
+                token.start_mark.index < MAX_IMPORT_TOKEN_LENGTH:
             import_lines[token.value] = {
                 START_POS: token.start_mark.index,
                 END_POS: token.end_mark.index,
