@@ -866,7 +866,7 @@ def main(tenant_names, all_tenants, plugin_names, blueprint_ids,
         for blueprint in blueprints:
             print('Processing blueprint of {0}: {1} '.format(tenant.name,
                                                              blueprint.id))
-            blueprint_identifier = '{0}-{1}'.format(tenant.name, blueprint.id)
+            blueprint_identifier = '{0}::{1}'.format(tenant.name, blueprint.id)
             if correct:
                 try:
                     result = correct_blueprint(
