@@ -988,6 +988,19 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
+    def test_invalid_use_of_system_prefix_in_labels(self):
+        resource_id = 'i{0}'.format(uuid.uuid4())
+        error_msg = '400: .*reserved for internal use.*'
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_msg,
+                               self.put_deployment,
+                               blueprint_file_name='blueprint.yaml',
+                               blueprint_id=resource_id,
+                               deployment_id=resource_id,
+                               labels=[{'csys-blah': 'val1'}])
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
     def test_list_deployments_with_filter_rules(self):
         dep1 = self.put_deployment_with_labels(self.LABELS)
         self.put_deployment_with_labels(self.LABELS_2)

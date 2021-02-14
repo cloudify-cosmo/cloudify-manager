@@ -25,7 +25,9 @@ from cloudify.snapshots import SNAPSHOT_RESTORE_FLAG_FILE
 from cloudify.models_states import VisibilityState, BlueprintUploadState
 
 from manager_rest.storage import models
-from manager_rest.constants import REST_SERVICE_NAME
+from manager_rest.constants import (REST_SERVICE_NAME,
+                                    CFY_LABELS,
+                                    CFY_LABELS_PREFIX)
 from manager_rest.dsl_functions import (get_secret_method,
                                         evaluate_intrinsic_functions)
 from manager_rest import manager_exceptions, config, app_context
@@ -680,10 +682,19 @@ def get_labels_list(raw_labels_list):
                     (not isinstance(value, text_type))):
                 _raise_bad_labels_list()
             validate_inputs({'key': key, 'value': value})
+            if key.startswith(CFY_LABELS_PREFIX) and key not in CFY_LABELS:
+                _raise_labels_prefix_not_allowed()
             labels_list.append((key.lower(), value.lower()))
 
     test_unique_labels(labels_list)
     return labels_list
+
+
+def _raise_labels_prefix_not_allowed():
+    raise manager_exceptions.BadParametersError(
+        'All labels with a `{0}` prefix are reserved for internal use. '
+        'Allowed `{0}` prefixed labels are: {1}'.format(
+            CFY_LABELS_PREFIX, ', '.join(CFY_LABELS)))
 
 
 def _raise_bad_labels_list():
