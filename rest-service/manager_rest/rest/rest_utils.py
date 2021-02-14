@@ -689,7 +689,7 @@ def get_labels_list(raw_labels_list):
 def _raise_bad_labels_list():
     raise manager_exceptions.BadParametersError(
         'Labels must be a list of 1-entry dictionaries: '
-        '[{<key1>: <value1>}, {<key2>: <value2>}, ...]')
+        '[{<key1>: <value1>}, {<key2>: [<value2>, <value3>]}, ...]')
 
 
 def test_unique_labels(labels_list):

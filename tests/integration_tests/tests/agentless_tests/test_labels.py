@@ -49,7 +49,6 @@ class DeploymentsLabelsTest(AgentlessTestCase):
         dsl_path = utils.get_resource('dsl/blueprint_with_labels.yaml')
         blueprint_id = deployment_id = 'd{0}'.format(uuid.uuid4())
         self.client.blueprints.upload(dsl_path, blueprint_id)
-        utils.wait_for_blueprint_upload(blueprint_id, self.client)
         deployment = self.client.deployments.create(blueprint_id,
                                                     deployment_id,
                                                     labels=new_labels)
