@@ -1,6 +1,5 @@
 from flask import request
 
-from manager_rest.constants import LABEL_LEN
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager
@@ -41,8 +40,7 @@ class DeploymentsLabelsKey(SecuredResource):
     @rest_decorators.search('value')
     def get(self, key, pagination=None, search=None):
         """Get all deployments' labels' values for the specified key."""
-        rest_utils.validate_inputs(
-            {'label_key': key}, len_input_value=LABEL_LEN)
+        rest_utils.validate_inputs({'label_key': key})
         get_all_results = rest_utils.verify_and_convert_bool(
             '_get_all_results',
             request.args.get('_get_all_results', False)

@@ -29,7 +29,6 @@ from cloudify.deployment_dependencies import (create_deployment_dependency,
                                               SOURCE_DEPLOYMENT,
                                               TARGET_DEPLOYMENT)
 
-from manager_rest.constants import LABEL_LEN
 from manager_rest import utils, manager_exceptions
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
@@ -162,8 +161,7 @@ def _get_labels(request_dict):
         if ((not isinstance(key, text_type)) or
                 (not isinstance(value, text_type))):
             _raise_bad_labels_list()
-        rest_utils.validate_inputs({'key': key, 'value': value},
-                                   len_input_value=LABEL_LEN)
+        rest_utils.validate_inputs({'key': key, 'value': value})
         labels_list.append((key.lower(), value.lower()))
 
     _test_unique_labels(labels_list)
