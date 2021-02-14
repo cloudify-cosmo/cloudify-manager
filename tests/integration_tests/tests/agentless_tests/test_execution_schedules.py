@@ -1,6 +1,8 @@
 from time import sleep
 from datetime import datetime
 
+from retrying import retry
+
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 
@@ -15,8 +17,14 @@ class ExecutionsSchedulesTest(AgentlessTestCase):
             'install',
             since=datetime.utcnow().replace(second=0, microsecond=0),
             frequency='1 min')  # run each HH:MM:00.0
-        sleep(60)  # the scheduler should fire the execution within 1 min.
+        self.verify_execution_fired(deployment)
+        self.client.execution_schedules.delete('install-every-minute')
+
+    @retry(wait_fixed=1000, stop_max_attempt_number=120)
+    def verify_execution_fired(self, deployment):
+        # The execution must fire within 2 minutes.
+        # if the 1st check_schedules occurs between the creation time and the
+        # next :00, the 2nd check (1 min. from then) will run the execution
         executions = self.client.executions.list(deployment_id=deployment.id,
                                                  workflow_id='install')
         self.assertEqual(1, len(executions))
-        self.client.execution_schedules.delete('install-every-minute')
