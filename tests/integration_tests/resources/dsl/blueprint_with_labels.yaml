@@ -1,0 +1,12 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - cloudify/types/types.yaml
+
+labels:
+  key1:
+    value: key1_val1
+  key2:
+    value:
+      - key2_val1
+      - key2_val2

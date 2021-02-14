@@ -53,9 +53,8 @@ from manager_rest.utils import (send_event,
                                 extract_host_agent_plugins_from_plan)
 from manager_rest.plugins_update.constants import PLUGIN_UPDATE_WORKFLOW
 from manager_rest.rest.rest_utils import (
-    parse_datetime_string, RecursiveDeploymentDependencies,
-    update_inter_deployment_dependencies,
-    verify_blueprint_uploaded_state)
+    get_labels_list, parse_datetime_string, RecursiveDeploymentDependencies,
+    update_inter_deployment_dependencies, verify_blueprint_uploaded_state)
 from manager_rest.deployment_update.constants import STATES as UpdateStates
 from manager_rest.plugins_update.constants import STATES as PluginsUpdateStates
 
@@ -1455,6 +1454,7 @@ class ResourceManager(object):
         verify_blueprint_uploaded_state(blueprint)
         plan = blueprint.plan
         site = self.sm.get(models.Site, site_name) if site_name else None
+        deployment_labels = self._handle_deployment_labels(labels, plan)
 
         try:
             deployment_plan = tasks.prepare_deployment_plan(
@@ -1522,7 +1522,7 @@ class ResourceManager(object):
         self._create_deployment_initial_dependencies(
             deployment_plan, new_deployment)
 
-        self.create_deployment_labels(new_deployment, labels)
+        self.create_deployment_labels(new_deployment, deployment_labels)
 
         try:
             self._create_deployment_environment(new_deployment,
@@ -1533,6 +1533,20 @@ class ResourceManager(object):
             raise e
 
         return new_deployment
+
+    @staticmethod
+    def _handle_deployment_labels(provided_labels, plan):
+        labels_list = []
+        plan_labels_dict = plan.get('labels')
+        if plan_labels_dict:
+            raw_plan_labels_list = [{key: value['value']} for key, value
+                                    in plan_labels_dict.items()]
+            labels_list = get_labels_list(raw_plan_labels_list)
+
+        if provided_labels:
+            labels_list.extend(label for label in provided_labels if label
+                               not in labels_list)
+        return labels_list
 
     def install_plugin(self, plugin, manager_names=None, agent_names=None):
         """Send the plugin install task to the given managers or agents."""
