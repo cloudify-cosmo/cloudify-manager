@@ -2,8 +2,7 @@ from cloudify.models_states import VisibilityState
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from manager_rest.test import base_test
-from manager_rest.constants import (LABEL_LEN, EQUAL, NOT_EQUAL, IS_NULL,
-                                    IS_NOT_NULL)
+from manager_rest.constants import EQUAL, NOT_EQUAL, IS_NULL, IS_NOT_NULL
 from manager_rest.test.attribute import attr
 from manager_rest.storage.models_base import db
 from manager_rest.utils import get_filters_list_from_mapping
@@ -142,7 +141,6 @@ class FiltersTestCase(base_test.BaseServerTestCase):
 
     def test_filter_create_fails(self):
         err_rules = [
-            (['a={0}'.format('b'*(LABEL_LEN+1))], '.*too long.*'),
             (['a= '], '.*is empty.*'),
             (['a!=b]'], '.*illegal characters.*'),
             (['a'], '.*not in the right format.*'),
