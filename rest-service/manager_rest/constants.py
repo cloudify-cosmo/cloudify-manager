@@ -78,3 +78,6 @@ EQUAL = 'equal'
 NOT_EQUAL = 'not_equal'
 IS_NULL = 'is_null'
 IS_NOT_NULL = 'is_not_null'
+
+CFY_LABELS = []
+CFY_LABELS_PREFIX = 'csys-'
