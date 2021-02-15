@@ -589,8 +589,7 @@ def write_updated_blueprint(input_file_name: str, output_file_name: str,
                                               input_file.tell())
                     output_file.write(content)
                     output_file.write("{0}\n".format(update[REPLACEMENT]))
-                    content = input_file.read(update[END_POS] -
-                                              update[START_POS] + 1)
+                    input_file.read(update[END_POS] - update[START_POS] + 1)
                 content = input_file.read()
                 output_file.write(content)
     except (FileNotFoundError, PermissionError) as ex:
