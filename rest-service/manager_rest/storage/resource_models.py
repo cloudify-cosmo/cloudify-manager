@@ -93,6 +93,27 @@ class Blueprint(CreatedAtMixin, SQLResourceBase):
     error = db.Column(db.Text)
     error_traceback = db.Column(db.Text)
 
+    @classproperty
+    def labels_model(cls):
+        return BlueprintLabel
+
+    @declared_attr
+    def labels(cls):
+        # labels are defined as `backref` in DeploymentsLabel model
+        return None
+
+    @classproperty
+    def response_fields(cls):
+        fields = super(Blueprint, cls).response_fields
+        fields['labels'] = flask_fields.List(
+            flask_fields.Nested(Label.resource_fields))
+        return fields
+
+    def to_response(self, **kwargs):
+        blueprint_dict = super(Blueprint, self).to_response()
+        blueprint_dict['labels'] = self.list_labels(self.labels)
+        return blueprint_dict
+
 
 class Snapshot(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'snapshots'
@@ -357,7 +378,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
     def to_response(self, **kwargs):
         dep_dict = super(Deployment, self).to_response()
         dep_dict['workflows'] = self._list_workflows(self.workflows)
-        dep_dict['labels'] = self._list_labels(self.labels)
+        dep_dict['labels'] = self.list_labels(self.labels)
         dep_dict['deployment_groups'] = [g.id for g in self.deployment_groups]
         return dep_dict
 
@@ -372,17 +393,6 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                          operation=wf.get('operation', ''),
                          parameters=wf.get('parameters', dict()))
                 for wf_name, wf in deployment_workflows.items()]
-
-    @staticmethod
-    def _list_labels(deployment_labels):
-        if not deployment_labels:
-            return []
-
-        return [Label(key=label.key,
-                      value=label.value,
-                      created_at=label.created_at,
-                      creator_id=label.creator.id)
-                for label in deployment_labels]
 
 
 class DeploymentGroup(CreatedAtMixin, SQLResourceBase):
@@ -454,16 +464,33 @@ class DeploymentLabel(_Label):
     __tablename__ = 'deployments_labels'
     __table_args__ = (
         db.UniqueConstraint(
-            'key', 'value', '_deployment_fk'),
+            'key', 'value', '_labeled_model_fk'),
     )
     labeled_model = Deployment
 
-    _deployment_fk = foreign_key(Deployment._storage_id)
+    _labeled_model_fk = foreign_key(Deployment._storage_id)
 
     @declared_attr
     def deployment(cls):
         return db.relationship(
             'Deployment', lazy='joined',
+            backref=db.backref('labels', cascade='all, delete-orphan'))
+
+
+class BlueprintLabel(_Label):
+    __tablename__ = 'blueprints_labels'
+    __table_args__ = (
+        db.UniqueConstraint(
+            'key', 'value', '_labeled_model_fk'),
+    )
+    labeled_model = Blueprint
+
+    _labeled_model_fk = foreign_key(Blueprint._storage_id)
+
+    @declared_attr
+    def blueprint(cls):
+        return db.relationship(
+            'Blueprint', lazy='joined',
             backref=db.backref('labels', cascade='all, delete-orphan'))
 
 
