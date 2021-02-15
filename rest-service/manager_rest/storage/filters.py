@@ -24,8 +24,8 @@ def add_labels_filters_to_query(query, labels_model, labels_filters):
 
 def key_equal_value(labels_model, label_key, label_value):
     """ <key>=[<val1>,<val2>] """
-    return labels_model._deployment_fk.in_(
-        db.session.query(labels_model._deployment_fk)
+    return labels_model._labeled_model_fk.in_(
+        db.session.query(labels_model._labeled_model_fk)
         .filter(labels_model.key == label_key,
                 labels_model.value.in_(label_value))
         .subquery())
@@ -33,8 +33,8 @@ def key_equal_value(labels_model, label_key, label_value):
 
 def key_not_equal_value(labels_model, label_key, label_value):
     """ <key>!=[<val1>,<val1>] """
-    return labels_model._deployment_fk.in_(
-        db.session.query(labels_model._deployment_fk)
+    return labels_model._labeled_model_fk.in_(
+        db.session.query(labels_model._labeled_model_fk)
         .filter(labels_model.key == label_key,
                 ~labels_model.value.in_(label_value))
         .subquery())
@@ -42,17 +42,17 @@ def key_not_equal_value(labels_model, label_key, label_value):
 
 def key_not_exist(labels_model, label_key):
     """ <key> is null """
-    return ~labels_model._deployment_fk.in_(
+    return ~labels_model._labeled_model_fk.in_(
         _labels_key_subquery(labels_model, label_key))
 
 
 def key_exist(labels_model, label_key):
     """ <key> is not null """
-    return labels_model._deployment_fk.in_(
+    return labels_model._labeled_model_fk.in_(
         _labels_key_subquery(labels_model, label_key))
 
 
 def _labels_key_subquery(labels_model, label_key):
-    return (db.session.query(labels_model._deployment_fk)
+    return (db.session.query(labels_model._labeled_model_fk)
             .filter(labels_model.key == label_key)
             .subquery())

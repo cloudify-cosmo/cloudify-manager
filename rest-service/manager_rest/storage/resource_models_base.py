@@ -17,8 +17,10 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
 
-from manager_rest.utils import classproperty
 from cloudify.models_states import VisibilityState
+
+from manager_rest.utils import classproperty
+from manager_rest.rest.responses import Label
 
 from .models_base import db, SQLModelBase
 from .management_models import Tenant, User
@@ -120,3 +122,14 @@ class SQLResourceBase(SQLModelBase):
                 self.creator = parent_instance.creator
             self.tenant = parent_instance.tenant
             self.visibility = parent_instance.visibility
+
+    @staticmethod
+    def list_labels(labels):
+        if not labels:
+            return []
+
+        return [Label(key=label.key,
+                      value=label.value,
+                      created_at=label.created_at,
+                      creator_id=label.creator.id)
+                for label in labels]
