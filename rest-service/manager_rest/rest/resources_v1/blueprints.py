@@ -18,7 +18,7 @@ import os
 
 from flask_restful_swagger import swagger
 
-from manager_rest import config
+from manager_rest import config, manager_exceptions
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.resource_manager import get_resource_manager
@@ -59,8 +59,9 @@ class BlueprintsIdArchive(SecuredResource):
                 archive_type = arc_type
                 break
         else:
-            raise RuntimeError("Could not find blueprint's archive; "
-                               "Blueprint ID: {0}".format(blueprint.id))
+            raise manager_exceptions.NotFoundError(
+                "Could not find blueprint's archive; Blueprint ID: {0}"
+                .format(blueprint.id))
 
         blueprint_path = '{0}/{1}/{2}/{3}/{3}.{4}'.format(
             FILE_SERVER_RESOURCES_FOLDER,
