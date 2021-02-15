@@ -2,8 +2,7 @@ import re
 
 from manager_rest import manager_exceptions
 from manager_rest.rest.rest_utils import validate_inputs
-from manager_rest.constants import (LABEL_LEN, EQUAL, NOT_EQUAL, IS_NULL,
-                                    IS_NOT_NULL)
+from manager_rest.constants import EQUAL, NOT_EQUAL, IS_NULL, IS_NOT_NULL
 
 
 class BadLabelsFilter(manager_exceptions.BadParametersError):
@@ -86,11 +85,9 @@ def _parse_labels_filter(labels_filter, sign):
     for value in label_values:
         try:
             parsed_value = value.strip()
-            validate_inputs(
-                {'filter key': label_key}, len_input_value=LABEL_LEN)
-            validate_inputs(
-                {'filter value': parsed_value}, len_input_value=LABEL_LEN,
-                err_prefix=value_msg_prefix)
+            validate_inputs({'filter key': label_key})
+            validate_inputs({'filter value': parsed_value},
+                            err_prefix=value_msg_prefix)
         except manager_exceptions.BadParametersError as e:
             err_msg = 'The filter rule {0} is invalid. '.format(labels_filter)
             raise manager_exceptions.BadParametersError(err_msg + str(e))

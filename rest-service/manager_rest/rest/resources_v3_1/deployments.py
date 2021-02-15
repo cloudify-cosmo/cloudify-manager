@@ -29,7 +29,6 @@ from cloudify.deployment_dependencies import (create_deployment_dependency,
                                               SOURCE_DEPLOYMENT,
                                               TARGET_DEPLOYMENT)
 
-from manager_rest.constants import LABEL_LEN
 from manager_rest import utils, manager_exceptions
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
@@ -85,6 +84,8 @@ class DeploymentsId(resources_v1.DeploymentsId):
             optional=True,
             valid_values=VisibilityState.STATES
         )
+        labels = (rest_utils.get_labels_list(request_dict['labels'])
+                  if 'labels' in request_dict else None)
         deployment = get_resource_manager().create_deployment(
             blueprint_id,
             deployment_id,
@@ -97,7 +98,7 @@ class DeploymentsId(resources_v1.DeploymentsId):
             site_name=_get_site_name(request_dict),
             runtime_only_evaluation=request_dict.get(
                 'runtime_only_evaluation', False),
-            labels=_get_labels(request_dict)
+            labels=labels
         )
         return deployment, 201
 
@@ -129,10 +130,11 @@ def _update_labels(sm, deployment):
     If a new label already exists, it won't be created again.
     If an existing label is not in the new labels list, it will be deleted.
     """
-    new_labels = _get_labels(request.json)
-    if new_labels is None:
+    request_dict = request.json
+    if 'labels' not in request_dict:
         return
 
+    new_labels = rest_utils.get_labels_list(request_dict['labels'])
     rm = get_resource_manager()
     new_labels_set = set(new_labels)
     existing_labels = deployment.labels
@@ -146,40 +148,6 @@ def _update_labels(sm, deployment):
             sm.delete(label)
 
     rm.create_deployment_labels(deployment, labels_to_create)
-
-
-def _get_labels(request_dict):
-    if 'labels' not in request_dict:
-        return None
-
-    raw_labels_list = request_dict['labels']
-    labels_list = []
-    for label in raw_labels_list:
-        if (not isinstance(label, dict)) or len(label) != 1:
-            _raise_bad_labels_list()
-
-        [(key, value)] = label.items()
-        if ((not isinstance(key, text_type)) or
-                (not isinstance(value, text_type))):
-            _raise_bad_labels_list()
-        rest_utils.validate_inputs({'key': key, 'value': value},
-                                   len_input_value=LABEL_LEN)
-        labels_list.append((key.lower(), value.lower()))
-
-    _test_unique_labels(labels_list)
-    return labels_list
-
-
-def _raise_bad_labels_list():
-    raise BadParametersError(
-        'Labels must be a list of 1-entry dictionaries: '
-        '[{<key1>: <value1>}, {<key2>: <value2>}, ...]')
-
-
-def _test_unique_labels(labels_list):
-    if len(set(labels_list)) != len(labels_list):
-        raise BadParametersError('You cannot define the same label twice '
-                                 'for a specific deployment.')
 
 
 class DeploymentsSetVisibility(SecuredResource):
