@@ -1,4 +1,4 @@
-git+https://github.com/cloudify-cosmo/cloudify-common@master#egg=cloudify-common[dispatcher]==master
+git+https://github.com/cloudify-cosmo/cloudify-common@RD-1401-add-labels-to-blueprint-from-plan#egg=cloudify-common[dispatcher]==RD-1401-add-labels-to-blueprint-from-plan
 -e ../rest-service
 mock
 pytest
