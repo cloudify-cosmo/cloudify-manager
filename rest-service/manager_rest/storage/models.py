@@ -62,4 +62,5 @@ from .resource_models import (
     DeploymentGroup,
     ExecutionGroup,
     ExecutionSchedule,
+    BlueprintLabel,
 )

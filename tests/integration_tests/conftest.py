@@ -131,6 +131,7 @@ def manager_container(request, resource_mapping):
     amqp_events_printer_thread.daemon = True
     amqp_events_printer_thread.start()
     _disable_cron_jobs(container_id)
+    docker.execute(container_id, '/opt/manager/env/bin/pip install pydevd')
     try:
         yield container
     finally:

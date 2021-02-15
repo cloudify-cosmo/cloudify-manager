@@ -3,6 +3,15 @@ tosca_definitions_version: cloudify_dsl_1_3
 imports:
   - cloudify/types/types.yaml
 
+blueprint-labels:
+  bp_key1:
+    value:
+      - bp_key1_val1
+  bp_key2:
+    value:
+      - bp_key2_val1
+      - bp_key2_val2
+
 labels:
   key1:
     value:
