@@ -79,5 +79,13 @@ NOT_EQUAL = 'not_equal'
 IS_NULL = 'is_null'
 IS_NOT_NULL = 'is_not_null'
 
-CFY_LABELS = []
+CFY_LABELS = {'csys-obj-name',
+              'csys-obj-type',
+              'csys-env-type',
+              'csys-wrcs-services',
+              'csys-location-name',
+              'csys-location-lat',
+              'csys-location-long',
+              'csys-obj-parent'}
+
 CFY_LABELS_PREFIX = 'csys-'
