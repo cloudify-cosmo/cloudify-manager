@@ -551,31 +551,34 @@ def get_imports(blueprint_file: typing.TextIO) -> dict:
     imports_token = None
     import_lines = {}
     blueprint_file.seek(0, 0)
-    for token in yaml.scan(blueprint_file):
-        if isinstance(token, (yaml.tokens.BlockMappingStartToken,
-                              yaml.tokens.BlockSequenceStartToken,
-                              yaml.tokens.FlowMappingStartToken,
-                              yaml.tokens.FlowSequenceStartToken)):
+    for t in yaml.scan(blueprint_file):
+        if isinstance(t, (yaml.tokens.BlockMappingStartToken,
+                          yaml.tokens.BlockSequenceStartToken,
+                          yaml.tokens.FlowMappingStartToken,
+                          yaml.tokens.FlowSequenceStartToken)):
             level += 1
-        if isinstance(token, (yaml.tokens.BlockEndToken,
-                              yaml.tokens.FlowMappingEndToken,
-                              yaml.tokens.FlowSequenceEndToken)):
+        if isinstance(t, (yaml.tokens.BlockEndToken,
+                          yaml.tokens.FlowMappingEndToken,
+                          yaml.tokens.FlowSequenceEndToken)):
             level -= 1
-        if level == 1:
-            if isinstance(token, yaml.tokens.ScalarToken) and \
-                    token.value == 'imports':
-                imports_token = token
-            elif imports_token and \
-                    isinstance(token, yaml.tokens.ScalarToken):
-                break
-        elif imports_token and level == 2 and \
-                isinstance(token, yaml.tokens.ScalarToken) and \
-                token.end_mark.index - \
-                token.start_mark.index < MAX_IMPORT_TOKEN_LENGTH:
-            import_lines[token.value] = {
-                START_POS: token.start_mark.index,
-                END_POS: token.end_mark.index,
-            }
+
+        if isinstance(t, yaml.tokens.ScalarToken):
+            if level == 1 and t.value == 'imports':
+                imports_token = t
+                continue
+
+            token_length = t.end_mark.index - t.start_mark.index
+
+            if level >= 1 and imports_token and \
+                    token_length < MAX_IMPORT_TOKEN_LENGTH:
+                import_lines[t.value] = {
+                    START_POS: t.start_mark.index,
+                    END_POS: t.end_mark.index,
+                }
+
+        if isinstance(t, yaml.tokens.KeyToken) and imports_token:
+            break
+
     return import_lines
 
 
