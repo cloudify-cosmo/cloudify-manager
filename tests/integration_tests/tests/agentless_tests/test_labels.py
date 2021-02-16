@@ -57,7 +57,7 @@ class DeploymentsLabelsTest(AgentlessTestCase):
                                                        self.client)
         labels_list = [{'key1': 'key1_val1'}, {'key2': 'key2_val1'},
                        {'key2': 'key2_val2'}, {'key3': 'val3'}]
-        self._assert_deployment_labels(deployment.labels, labels_list)
+        self.assert_labels(deployment.labels, labels_list)
 
     def _assert_keys_and_values(self, client, keys_values_dict):
         keys_list = client.deployments_labels.list_keys()
@@ -83,16 +83,3 @@ class DeploymentsLabelsTest(AgentlessTestCase):
                                                        deployment_id,
                                                        self.client)
         return deployment
-
-    def _assert_deployment_labels(self, deployment_labels, compared_labels):
-        simplified_labels = set()
-        compared_labels_set = set()
-
-        for label in deployment_labels:
-            simplified_labels.add((label['key'], label['value']))
-
-        for compared_label in compared_labels:
-            [(key, value)] = compared_label.items()
-            compared_labels_set.add((key, value))
-
-        self.assertEqual(simplified_labels, compared_labels_set)

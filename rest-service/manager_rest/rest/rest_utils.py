@@ -690,6 +690,16 @@ def get_labels_list(raw_labels_list):
     return labels_list
 
 
+def get_labels_from_plan(plan, labels_entry):
+    plan_labels_dict = plan.get(labels_entry)
+    if plan_labels_dict:
+        raw_plan_labels_list = [{key: value['value']} for key, value
+                                in plan_labels_dict.items()]
+        return get_labels_list(raw_plan_labels_list)
+
+    return []
+
+
 def _raise_labels_prefix_not_allowed():
     raise manager_exceptions.BadParametersError(
         'All labels with a `{0}` prefix are reserved for internal use. '
