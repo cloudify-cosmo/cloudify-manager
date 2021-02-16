@@ -17,12 +17,15 @@ from os.path import join
 
 from flask import request
 
+from flask_security import current_user
 from flask_restful.inputs import boolean
 from flask_restful.reqparse import Argument
 from flask_restful_swagger import swagger
 
 from cloudify._compat import text_type
 from cloudify.models_states import VisibilityState, BlueprintUploadState
+
+from dsl_parser import constants
 
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
@@ -35,7 +38,8 @@ from manager_rest.rest import (rest_utils,
                                rest_decorators)
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.utils import get_formatted_timestamp, remove
-from manager_rest.rest.rest_utils import get_args_and_verify_arguments
+from manager_rest.rest.rest_utils import (get_labels_from_plan,
+                                          get_args_and_verify_arguments)
 from manager_rest.manager_exceptions import (ConflictError,
                                              IllegalActionError,
                                              BadParametersError)
@@ -226,6 +230,7 @@ class BlueprintsId(resources_v2.BlueprintsId):
                 extract_blueprint_archive_to_file_server(
                     blueprint_id=blueprint_id,
                     tenant=blueprint.tenant.name)
+            _handle_blueprints_labels(sm, blueprint)
 
         # If failed for any reason, cleanup the blueprint archive from server
         elif request_dict['state'] in BlueprintUploadState.FAILED_STATES:
@@ -236,6 +241,25 @@ class BlueprintsId(resources_v2.BlueprintsId):
 
         blueprint.updated_at = get_formatted_timestamp()
         return sm.update(blueprint)
+
+
+def _handle_blueprints_labels(sm, blueprint):
+    labels_list = get_labels_from_plan(blueprint.plan,
+                                       constants.BLUEPRINT_LABELS)
+    if not labels_list:
+        return
+
+    current_time = get_formatted_timestamp()
+    for key, value in labels_list:
+        sm.put(
+            models.BlueprintLabel(
+                key=key,
+                value=value,
+                created_at=current_time,
+                blueprint=blueprint,
+                creator=current_user
+            )
+        )
 
 
 class BlueprintsIdValidate(BlueprintsId):
