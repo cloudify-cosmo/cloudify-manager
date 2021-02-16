@@ -5,7 +5,8 @@ imports:
 
 labels:
   key1:
-    value: key1_val1
+    value:
+      - key1_val1
   key2:
     value:
       - key2_val1
