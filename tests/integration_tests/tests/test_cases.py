@@ -515,6 +515,19 @@ class AgentlessTestCase(BaseTestCase):
         )
         return execution_list[0]
 
+    def assert_labels(self, labels_list_1, labels_list_2):
+        simplified_labels = set()
+        compared_labels_set = set()
+
+        for label in labels_list_1:
+            simplified_labels.add((label['key'], label['value']))
+
+        for compared_label in labels_list_2:
+            [(key, value)] = compared_label.items()
+            compared_labels_set.add((key, value))
+
+        self.assertEqual(simplified_labels, compared_labels_set)
+
 
 class BaseAgentTestCase(BaseTestCase):
     def read_host_file(self, file_path, deployment_id, node_id):

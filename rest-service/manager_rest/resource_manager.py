@@ -53,8 +53,9 @@ from manager_rest.utils import (send_event,
                                 extract_host_agent_plugins_from_plan)
 from manager_rest.plugins_update.constants import PLUGIN_UPDATE_WORKFLOW
 from manager_rest.rest.rest_utils import (
-    get_labels_list, parse_datetime_string, RecursiveDeploymentDependencies,
-    update_inter_deployment_dependencies, verify_blueprint_uploaded_state)
+    get_labels_from_plan, parse_datetime_string,
+    RecursiveDeploymentDependencies, update_inter_deployment_dependencies,
+    verify_blueprint_uploaded_state)
 from manager_rest.deployment_update.constants import STATES as UpdateStates
 from manager_rest.plugins_update.constants import STATES as PluginsUpdateStates
 
@@ -1536,13 +1537,7 @@ class ResourceManager(object):
 
     @staticmethod
     def _handle_deployment_labels(provided_labels, plan):
-        labels_list = []
-        plan_labels_dict = plan.get('labels')
-        if plan_labels_dict:
-            raw_plan_labels_list = [{key: value['value']} for key, value
-                                    in plan_labels_dict.items()]
-            labels_list = get_labels_list(raw_plan_labels_list)
-
+        labels_list = get_labels_from_plan(plan, constants.LABELS)
         if provided_labels:
             labels_list.extend(label for label in provided_labels if label
                                not in labels_list)
@@ -2512,6 +2507,13 @@ class ResourceManager(object):
                 dep_graph.add_dependency_to_graph(source_id, target_id)
 
     def create_deployment_labels(self, deployment, labels_list):
+        """
+        Populate the deployments_labels table.
+
+        :param deployment: A deployment object
+        :param labels_list: A list of labels of the form:
+                            [(key1, value1), (key2, value2)]
+        """
         """
         Populate the deployments_labels table.
 
