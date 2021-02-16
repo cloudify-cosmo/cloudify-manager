@@ -193,7 +193,7 @@ class Status(SecuredResource):
         is_optional = True if service_name in OPTIONAL_SERVICES else False
         server = xmlrpclib.Server(
             'http://',
-            transport=UnixSocketTransport("/tmp/supervisor.sock"))
+            transport=UnixSocketTransport("/var/run/supervisord.sock"))
         try:
             status_response = server.supervisor.getProcessInfo(service_name)
         except xmlrpclib.Fault as e:
