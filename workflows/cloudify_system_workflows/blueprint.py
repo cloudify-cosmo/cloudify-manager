@@ -48,13 +48,13 @@ def upload(ctx, **kwargs):
 
     # Download the archive, one way or the other
     archive_target_path = tempfile.mkdtemp()
-    if url:
-        # download the blueprint archive from URL using requests:
-        if not validate_only:
-            client.blueprints.update(
-                blueprint_id,
-                update_dict={'state': BlueprintUploadState.UPLOADING})
-        try:
+    try:
+        if url:
+            # download the blueprint archive from URL using requests:
+            if not validate_only:
+                client.blueprints.update(
+                    blueprint_id,
+                    update_dict={'state': BlueprintUploadState.UPLOADING})
             with requests.get(url, stream=True, timeout=(5, None)) as resp:
                 resp.raise_for_status()
                 archive_file_path = os.path.join(archive_target_path,
@@ -64,25 +64,24 @@ def upload(ctx, **kwargs):
                         if chunk:
                             f.write(chunk)
 
-        except Exception as e:
-            client.blueprints.update(
-                blueprint_id,
-                update_dict={'state': BlueprintUploadState.FAILED_UPLOADING,
-                             'error': str(e),
-                             'error_traceback': traceback.format_exc()})
-            remove(archive_target_path)
-            raise
+            # Upload the downloaded archive to the manager
+            if not validate_only:
+                client.blueprints.upload_archive(
+                    blueprint_id,
+                    archive_path=archive_file_path)
 
-        # Upload the downloaded archive to the manager
-        if not validate_only:
-            client.blueprints.upload_archive(
-                blueprint_id,
-                archive_path=archive_file_path)
-
-    else:
-        # download the blueprint archive using REST
-        archive_file_path = client.blueprints.download(
-            blueprint_id, output_file=archive_target_path)
+        else:
+            # download the blueprint archive using REST
+            archive_file_path = client.blueprints.download(
+                blueprint_id, output_file=archive_target_path)
+    except Exception as e:
+        client.blueprints.update(
+            blueprint_id,
+            update_dict={'state': BlueprintUploadState.FAILED_UPLOADING,
+                         'error': str(e),
+                         'error_traceback': traceback.format_exc()})
+        remove(archive_target_path)
+        raise
 
     ctx.logger.info('Blueprint archive uploaded. Extracting...')
 
