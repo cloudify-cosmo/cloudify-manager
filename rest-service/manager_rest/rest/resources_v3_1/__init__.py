@@ -107,6 +107,8 @@ from .snapshots import ( # noqa
 from .labels import (                           # NOQA
     DeploymentsLabels,
     DeploymentsLabelsKey,
+    BlueprintsLabels,
+    BlueprintsLabelsKey
 )
 from .permissions import (  # NOQA
     Permissions,

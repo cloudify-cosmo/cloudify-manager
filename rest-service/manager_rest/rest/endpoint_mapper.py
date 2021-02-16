@@ -140,6 +140,8 @@ def setup_resources(api):
         'DeploymentGroupsId': 'deployment-groups/<string:group_id>',
         'ExecutionGroups': 'execution-groups',
         'ExecutionGroupsId': 'execution-groups/<string:group_id>',
+        'BlueprintsLabels': 'labels/blueprints',
+        'BlueprintsLabelsKey': 'labels/blueprints/<string:key>',
     }
 
     # Set version endpoint as a non versioned endpoint
