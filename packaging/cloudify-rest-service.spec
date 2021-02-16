@@ -98,7 +98,7 @@ if [ -f "%{_localstatedir}/lib/rpm-state/cloudify-upgraded" ]; then
     chmod 440 /etc/cloudify/ssl/*stage_db.key || true
     chmod 440 /etc/cloudify/ssl/*composer_db.key || true
 
-    if [ -e "/tmp/supervisor.sock" ]; then
+    if [ -e "/var/run/supervisord.sock" ]; then
         supervisorctl stop haproxy && supervisorctl remove haproxy || true
     else
         systemctl stop haproxy && systemctl disable haproxy || true
