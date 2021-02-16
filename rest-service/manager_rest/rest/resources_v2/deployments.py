@@ -18,7 +18,6 @@ from flask import request
 from flask_restful_swagger import swagger
 
 from .. import rest_utils
-from manager_rest import manager_exceptions
 from manager_rest.rest import (
     resources_v1,
     rest_decorators,
@@ -28,8 +27,8 @@ from manager_rest.storage import (
     models,
 )
 from manager_rest.security.authorization import authorize
+from manager_rest.rest.filters_utils import get_filter_rules
 from manager_rest.utils import create_filter_params_list_description
-from manager_rest.rest.filters_utils import create_labels_filters_mapping
 
 
 class Deployments(resources_v1.Deployments):
@@ -76,7 +75,7 @@ class Deployments(resources_v1.Deployments):
             sort=sort,
             all_tenants=all_tenants,
             get_all_results=get_all_results,
-            filter_rules=_get_filter_rules()
+            filter_rules=get_filter_rules()
         )
 
         if _include and 'workflows' in _include:
@@ -91,28 +90,6 @@ class Deployments(resources_v1.Deployments):
                 result.items[index] = r
 
         return result
-
-
-def _get_filter_rules():
-    filter_rules = request.args.get('_filter_rules')
-    filter_id = request.args.get('_filter_id')
-
-    if not filter_rules and not filter_id:
-        return
-
-    if filter_rules and filter_id:
-        raise manager_exceptions.BadParametersError(
-            'Filter rules and filter name cannot be provided together. '
-            'Please specify one of them or neither.'
-        )
-
-    if filter_rules:
-        return create_labels_filters_mapping(filter_rules.split(','))
-
-    if filter_id:
-        rest_utils.validate_inputs({'filter_id': filter_id})
-        filter_elem = get_storage_manager().get(models.Filter, filter_id)
-        return filter_elem.value.get('labels', {})
 
 
 class DeploymentModifications(resources_v1.DeploymentModifications):

@@ -1,7 +1,10 @@
 import re
 
+from flask import request
+
 from manager_rest import manager_exceptions
 from manager_rest.rest.rest_utils import validate_inputs
+from manager_rest.storage import get_storage_manager, models
 from manager_rest.constants import EQUAL, NOT_EQUAL, IS_NULL, IS_NOT_NULL
 
 
@@ -13,6 +16,28 @@ class BadLabelsFilter(manager_exceptions.BadParametersError):
             '<key>!=<value>, <key>!=[<value1>,<value2>,...], <key> is null, '
             '<key> is not null'.format(labels_filter_value)
         )
+
+
+def get_filter_rules():
+    filter_rules = request.args.get('_filter_rules')
+    filter_id = request.args.get('_filter_id')
+
+    if not filter_rules and not filter_id:
+        return
+
+    if filter_rules and filter_id:
+        raise manager_exceptions.BadParametersError(
+            'Filter rules and filter name cannot be provided together. '
+            'Please specify one of them or neither.'
+        )
+
+    if filter_rules:
+        return create_labels_filters_mapping(filter_rules.split(','))
+
+    if filter_id:
+        validate_inputs({'filter_id': filter_id})
+        filter_elem = get_storage_manager().get(models.Filter, filter_id)
+        return filter_elem.value.get('labels', {})
 
 
 def create_labels_filters_mapping(labels_filters_list):

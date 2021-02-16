@@ -18,6 +18,7 @@ from flask import request
 from flask_restful_swagger import swagger
 
 from manager_rest.security.authorization import authorize
+from manager_rest.rest.filters_utils import get_filter_rules
 from manager_rest.storage import get_storage_manager, models
 from manager_rest.utils import create_filter_params_list_description
 from manager_rest.rest import (resources_v1,
@@ -64,7 +65,9 @@ class Blueprints(resources_v1.Blueprints):
             pagination=pagination,
             sort=sort,
             all_tenants=all_tenants,
-            get_all_results=get_all_results)
+            get_all_results=get_all_results,
+            filter_rules=get_filter_rules()
+        )
 
 
 class BlueprintsId(resources_v1.BlueprintsId):

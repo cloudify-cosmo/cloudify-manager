@@ -474,3 +474,21 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
             blueprint_id,
             {'plan': 'abcd'}
         )
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_list_blueprints_with_filter_rules(self):
+        for i in range(1, 3):
+            bp_file_name = 'blueprint_with_labels_{0}.yaml'.format(i)
+            bp_id = 'blueprint_{0}'.format(i)
+            self.put_blueprint(blueprint_id=bp_id,
+                               blueprint_file_name=bp_file_name)
+        all_blueprints = self.client.blueprints.list(
+            filter_rules={'_filter_rules': ['bp_key1=bp_key1_val1']})
+        second_blueprint = self.client.blueprints.list(
+            filter_rules={'_filter_rules': ['bp_key2=bp_2_val1',
+                                            'bp_key1 is not null']})
+        self.assertEqual(len(all_blueprints), 2)
+        self.assert_metadata_filtered(all_blueprints, 0)
+        self.assertEqual(len(second_blueprint), 1)
+        self.assert_metadata_filtered(second_blueprint, 1)
