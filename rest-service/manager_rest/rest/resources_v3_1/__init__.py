@@ -85,6 +85,7 @@ from .summary import (                           # NOQA
     SummarizeExecutions,
     SummarizeBlueprints,
     SummarizeNodeInstances,
+    SummarizeExecutionSchedules,
 )
 
 from .operations import (                        # NOQA
