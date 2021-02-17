@@ -18,7 +18,7 @@ from unittest import skip
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 
-from manager_rest.storage import db
+from manager_rest.storage import db, models
 from manager_rest.test import base_test
 from manager_rest import manager_exceptions
 from manager_rest.test.mocks import put_node_instance
@@ -424,3 +424,17 @@ class NodesTest(base_test.BaseServerTestCase):
                 self.assertEqual(1, len(scaling_groups))
                 self.assertDictContainsSubset({'name': 'group1'},
                                               scaling_groups[0])
+
+
+class NodesCreateTest(base_test.BaseServerTestCase):
+    def test_create_single(self):
+        self.put_deployment('dep1')
+        self.client.nodes.create_many([
+            {
+                'id': 'test_node1',
+                'deployment_id': 'dep1',
+                'type': 'cloudify.nodes.Root'
+            }
+        ])
+        nodes = self.sm.list(models.Node)
+        assert any(n.id == 'test_node1' for n in nodes)
