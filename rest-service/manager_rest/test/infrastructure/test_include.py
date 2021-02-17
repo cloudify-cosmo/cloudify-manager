@@ -45,7 +45,8 @@ class IncludeQueryParamTests(base_test.BaseServerTestCase):
                 sort={},
                 all_tenants=False,
                 substr_filters=None,
-                get_all_results=False)
+                get_all_results=False,
+                filter_rules=None)
         )
 
     @attr(client_min_version=1, client_max_version=1)

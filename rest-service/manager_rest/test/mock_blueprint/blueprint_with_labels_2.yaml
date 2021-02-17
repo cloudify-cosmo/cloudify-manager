@@ -1,0 +1,13 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - cloudify/types/types.yaml
+
+blueprint-labels:
+  bp_kEy1:
+    value:
+      - bp_key1_VAL1
+  bp_key2:
+    value:
+      - bp_2_val1
+      - bp_2_val2

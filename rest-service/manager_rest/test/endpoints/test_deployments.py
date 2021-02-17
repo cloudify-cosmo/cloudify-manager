@@ -1008,7 +1008,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             filter_rules={'_filter_rules': ['env=aws', 'arch=k8s']})
         self.assertEqual(len(deployments), 1)
         self.assertEqual(deployments[0], dep1)
-        self._assert_metadata_filtered(deployments, 1)
+        self.assert_metadata_filtered(deployments, 1)
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
@@ -1020,7 +1020,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             filter_rules={'_filter_id': self.FILTER_ID})
         self.assertEqual(len(deployments), 1)
         self.assertEqual(deployments[0], dep2)
-        self._assert_metadata_filtered(deployments, 1)
+        self.assert_metadata_filtered(deployments, 1)
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
@@ -1030,7 +1030,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         deployments = self.client.deployments.list(
             filter_rules={'_filter_rules': ['aRcH=k8S']})
         self.assertEqual(len(deployments), 2)
-        self._assert_metadata_filtered(deployments, 0)
+        self.assert_metadata_filtered(deployments, 0)
 
     def _assert_deployment_labels(self, deployment_labels, compared_labels):
         simplified_labels = set()
@@ -1044,7 +1044,3 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             compared_labels_set.add((key, value))
 
         self.assertEqual(simplified_labels, compared_labels_set)
-
-    def _assert_metadata_filtered(self, deployments_list, filtered_cnt):
-        self.assertEqual(
-            deployments_list.metadata.get('filtered'), filtered_cnt)
