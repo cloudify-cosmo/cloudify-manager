@@ -46,12 +46,12 @@ class DeploymentsLabelsTestCase(base_test.BaseServerTestCase):
         self.assertEmpty(not_exist.items)
 
     def test_list_blueprint_labels_keys(self):
-        self.put_blueprint(blueprint_file_name='blueprint_with_labels.yaml')
+        self.put_blueprint(blueprint_file_name='blueprint_with_labels_1.yaml')
         keys_list = self.client.blueprints_labels.list_keys()
         self.assertEqual(set(keys_list.items), {'bp_key1', 'bp_key2'})
 
     def test_list_blueprint_labels_key_values(self):
-        self.put_blueprint(blueprint_file_name='blueprint_with_labels.yaml')
+        self.put_blueprint(blueprint_file_name='blueprint_with_labels_1.yaml')
         key1_values = self.client.blueprints_labels.list_key_values('bp_key1')
         key2_values = self.client.blueprints_labels.list_key_values('bp_key2')
         self.assertEqual(set(key1_values.items), {'bp_key1_val1'})

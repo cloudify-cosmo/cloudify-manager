@@ -151,6 +151,9 @@ class BaseServerTestCase(unittest.TestCase):
         self.assertIsNotNone(obj)
         self.assertFalse(obj)
 
+    def assert_metadata_filtered(self, resource_list, filtered_cnt):
+        self.assertEqual(resource_list.metadata.get('filtered'), filtered_cnt)
+
     @classmethod
     def create_client_with_tenant(cls,
                                   username,
