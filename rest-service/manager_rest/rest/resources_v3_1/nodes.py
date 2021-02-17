@@ -1,5 +1,6 @@
 from ..resources_v3 import Nodes as v3_Nodes
 
+from manager_rest import manager_exceptions
 from manager_rest.rest import rest_utils
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import get_storage_manager, models
@@ -30,6 +31,11 @@ class Nodes(v3_Nodes):
         deployment_ids = set()
         for node in raw_nodes:
             deployment_ids.add(node['deployment_id'])
+        if len(deployment_ids) != 1:
+            raise manager_exceptions.ConflictError(
+                'All nodes must belong to the same deployment, '
+                'but found {0} deployments'.format(len(deployment_ids))
+            )
         return deployment_ids.pop()
 
     def _node_from_raw_node(self, raw_node):

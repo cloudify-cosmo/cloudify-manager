@@ -448,3 +448,21 @@ class NodesCreateTest(base_test.BaseServerTestCase):
         node1 = node1[0]
         assert len(node2) == 1
         assert node1.deployment_id == 'dep1'
+
+    def test_create_different_deployments(self):
+        self.put_blueprint()
+        self.client.deployments.create('blueprint', 'dep1')
+        self.client.deployments.create('blueprint', 'dep2')
+        with self.assertRaisesRegexp(CloudifyClientError, 'deployment'):
+            self.client.nodes.create_many([
+                {
+                    'id': 'test_node1',
+                    'deployment_id': 'dep1',
+                    'type': 'cloudify.nodes.Root'
+                },
+                {
+                    'id': 'test_node2',
+                    'deployment_id': 'dep2',
+                    'type': 'cloudify.nodes.Root'
+                }
+            ])
