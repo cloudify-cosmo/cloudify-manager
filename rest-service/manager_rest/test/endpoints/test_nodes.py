@@ -427,14 +427,24 @@ class NodesTest(base_test.BaseServerTestCase):
 
 
 class NodesCreateTest(base_test.BaseServerTestCase):
-    def test_create_single(self):
+    def test_create_nodes(self):
         self.put_deployment('dep1')
         self.client.nodes.create_many([
             {
                 'id': 'test_node1',
                 'deployment_id': 'dep1',
                 'type': 'cloudify.nodes.Root'
+            },
+            {
+                'id': 'test_node2',
+                'deployment_id': 'dep1',
+                'type': 'cloudify.nodes.Root'
             }
         ])
         nodes = self.sm.list(models.Node)
-        assert any(n.id == 'test_node1' for n in nodes)
+        node1 = [n for n in nodes if n.id == 'test_node1']
+        node2 = [n for n in nodes if n.id == 'test_node2']
+        assert len(node1) == 1
+        node1 = node1[0]
+        assert len(node2) == 1
+        assert node1.deployment_id == 'dep1'
