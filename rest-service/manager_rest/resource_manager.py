@@ -367,7 +367,7 @@ class ResourceManager(object):
                extract_host_agent_plugins_from_plan(blueprint.plan)
 
     def upload_blueprint(self, blueprint_id, app_file_name, blueprint_url,
-                         file_server_root, validate_only=False):
+                         file_server_root, validate_only=False, labels=None):
         self._execute_system_workflow(
             wf_id='upload_blueprint',
             task_mapping='cloudify_system_workflows.blueprint.upload',
@@ -378,6 +378,7 @@ class ResourceManager(object):
                 'url': blueprint_url,
                 'file_server_root': file_server_root,
                 'validate_only': validate_only,
+                'labels': labels,
             },
         )
 
