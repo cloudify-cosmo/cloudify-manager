@@ -582,10 +582,10 @@ class UploadedBlueprintsManager(UploadedDataManager):
         sm = get_resource_manager().sm
         file_server_root = config.instance.file_server_root
         local_path = os.path.join(
-                config.instance.file_server_root,
-                FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
-                tenant,
-                blueprint_id)
+            config.instance.file_server_root,
+            FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
+            tenant,
+            blueprint_id)
         for arc_type in SUPPORTED_ARCHIVE_TYPES:
             # attempting to find the archive file on the file system
             local_file_path = os.path.join(
@@ -602,7 +602,7 @@ class UploadedBlueprintsManager(UploadedDataManager):
                 BlueprintUploadState.FAILED_EXTRACTING_TO_FILE_SERVER
             blueprint.error = error_msg
             sm.update(blueprint)
-            raise RuntimeError(error_msg)
+            raise manager_exceptions.NotFoundError(error_msg)
         try:
             app_dir = self._extract_file_to_file_server(local_file_path,
                                                         file_server_root)
