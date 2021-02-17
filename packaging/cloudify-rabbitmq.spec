@@ -16,6 +16,12 @@ Requires:       rabbitmq-server = 3.8.4
 %define _user rabbitmq
 
 
+%pre
+
+groupadd -fr cfyuser
+getent passwd cfyuser >/dev/null || useradd -r -g cfyuser -d /etc/cloudify -s /sbin/nologin cfyuser
+
+
 %description
 Cloudify's RabbitMQ configuration
 
