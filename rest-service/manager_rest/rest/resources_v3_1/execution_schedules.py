@@ -1,4 +1,3 @@
-from dateutil import rrule
 from flask import request
 from flask_restful_swagger import swagger
 
@@ -7,15 +6,15 @@ from manager_rest.rest import rest_decorators
 from manager_rest.rest.rest_utils import (
     get_json_and_verify_params,
     verify_and_convert_bool,
-    convert_to_int,
     validate_inputs,
-    parse_datetime_multiple_formats
+    parse_datetime_multiple_formats,
+    compute_rule_from_scheduling_params
 )
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import get_storage_manager, models
 from manager_rest.resource_manager import get_resource_manager
-from manager_rest.utils import get_formatted_timestamp, parse_frequency
+from manager_rest.utils import get_formatted_timestamp
 
 
 class ExecutionSchedules(SecuredResource):
@@ -76,7 +75,7 @@ class ExecutionSchedulesId(SecuredResource):
             since = parse_datetime_multiple_formats(since)
         if until:
             until = parse_datetime_multiple_formats(until)
-        rule = self._compute_rule_from_scheduling_params(request_dict)
+        rule = compute_rule_from_scheduling_params(request_dict)
         slip = request_dict['slip']
         stop_on_fail = verify_and_convert_bool(
             'stop_on_fail',  request_dict.get('stop_on_fail', False))
@@ -121,7 +120,7 @@ class ExecutionSchedulesId(SecuredResource):
                                                             stop_on_fail)
         if enabled is not None:
             schedule.enabled = verify_and_convert_bool('enabled', enabled)
-        schedule.rule = self._compute_rule_from_scheduling_params(
+        schedule.rule = compute_rule_from_scheduling_params(
             request.json, existing_rule=schedule.rule)
         schedule.next_occurrence = schedule.compute_next_occurrence()
         sm.update(schedule)
@@ -155,35 +154,6 @@ class ExecutionSchedulesId(SecuredResource):
         return None, 204
 
     @staticmethod
-    def _verify_frequency(frequency_str):
-        if not frequency_str:
-            return
-        _, frequency = parse_frequency(frequency_str)
-        if not frequency:
-            raise manager_exceptions.BadParametersError(
-                "`{}` is not a legal frequency expression. Supported format "
-                "is: <number> seconds|minutes|hours|days|weeks|months|years"
-                .format(frequency_str))
-        return frequency_str
-
-    @staticmethod
-    def _verify_weekdays(weekdays):
-        if not weekdays:
-            return
-        if not isinstance(weekdays, list):
-            raise manager_exceptions.BadParametersError(
-                "weekdays: expected a list, but got: {}".format(weekdays))
-        weekdays_caps = set(d.upper() for d in weekdays)
-        valid_weekdays = {str(d) for d in rrule.weekdays}
-        invalid_weekdays = weekdays_caps - valid_weekdays
-        if invalid_weekdays:
-            raise manager_exceptions.BadParametersError(
-                "weekdays list contains invalid weekdays `{}`. Valid "
-                "weekdays are: {} or their lowercase values."
-                .format(invalid_weekdays, '|'.join(valid_weekdays)))
-        return list(weekdays_caps)
-
-    @staticmethod
     def _get_execution_arguments(request_dict):
         arguments = request_dict.get('execution_arguments')
         if not arguments:
@@ -207,42 +177,3 @@ class ExecutionSchedulesId(SecuredResource):
                 arguments.get('queue', False)),
             'wait_after_fail': arguments.get('wait_after_fail', 600)
         }
-
-    def _compute_rule_from_scheduling_params(self, request_dict,
-                                             existing_rule=None):
-        rrule_string = request_dict.get('rrule')
-        frequency = request_dict.get('frequency')
-        weekdays = request_dict.get('weekdays')
-        count = request_dict.get('count')
-
-        # we need to have at least: rrule; or count=1; or frequency
-        if rrule_string:
-            if frequency or weekdays or count:
-                raise manager_exceptions.BadParametersError(
-                    "`rrule` cannot be provided together with `frequency`, "
-                    "`weekdays` or `count`.")
-            try:
-                rrule.rrulestr(rrule_string)
-            except ValueError as e:
-                raise manager_exceptions.BadParametersError(
-                    "invalid RRULE string provided: {}".format(e))
-            return {'rrule': rrule_string}
-        else:
-            if count:
-                count = convert_to_int(request_dict.get('count'))
-            frequency = self._verify_frequency(request_dict.get('frequency'))
-            weekdays = self._verify_weekdays(request_dict.get('weekdays'))
-            if existing_rule:
-                count = count or existing_rule.get('count')
-                frequency = frequency or existing_rule.get('frequency')
-                weekdays = weekdays or existing_rule.get('weekdays')
-
-            if not frequency and count != 1:
-                raise manager_exceptions.BadParametersError(
-                    "frequency must be specified for execution count larger "
-                    "than 1")
-            return {
-                'frequency': frequency,
-                'count': count,
-                'weekdays': weekdays
-            }

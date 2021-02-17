@@ -1,0 +1,14 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - cloudify/types/types.yaml
+
+deployment_settings:
+  default_schedules:
+    sc1:
+      workflow: install
+      since: '+1min'
+      until: '+1y'
+      recurring: 1w
+      weekdays: [mo, fr]
+      count: 5
