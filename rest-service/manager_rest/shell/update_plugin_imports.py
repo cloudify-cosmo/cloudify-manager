@@ -86,6 +86,7 @@ SUGGESTED_VERSION = 'suggested_version'
 UNKNOWN = 'unknown'
 UPDATES = 'updates'
 VERSIONS = 'versions'
+MAX_IMPORT_TOKEN_LENGTH = 200
 
 
 class UpdateException(Exception):
@@ -94,15 +95,15 @@ class UpdateException(Exception):
 
 CLOUDIFY_PLUGINS = {
     'cloudify-aws-plugin': {
-        VERSIONS: sorted(['2.4.3', '2.4.2', '2.4.0', '2.3.5', '2.3.4', '2.3.2',
-                          '2.3.1', '2.3.0', '2.2.1', '2.2.0', '2.1.0', '2.0.2',
-                          '2.0.1', '2.0.0', '1.5.1.2', '1.5.1.1', '1.5.1',
-                          '1.5'],
+        VERSIONS: sorted(['2.5.11', '2.4.4', '2.4.3', '2.4.2', '2.4.0',
+                          '2.3.5', '2.3.4', '2.3.2', '2.3.1', '2.3.0',
+                          '2.2.1', '2.2.0', '2.1.0', '2.0.2', '2.0.1',
+                          '2.0.0', '1.5.1.2', '1.5.1.1', '1.5.1', '1.5'],
                          key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-cosmo/cloudify-aws-plugin',
     },
     'cloudify-azure-plugin': {
-        VERSIONS: sorted(['3.0.4', '3.0.3', '3.0.2', '3.0.1', '3.0.0',
+        VERSIONS: sorted(['3.0.9', '3.0.4', '3.0.3', '3.0.2', '3.0.1', '3.0.0',
                           '2.1.10', '2.1.9', '2.1.8', '2.1.7', '2.1.6',
                           '2.1.5', '2.1.4', '2.1.3', '2.1.1', '2.1.0', '2.0.0',
                           '1.8.0', '1.7.3', '1.7.2', '1.7.1', '1.7.0', '1.6.2',
@@ -120,58 +121,61 @@ CLOUDIFY_PLUGINS = {
         REPO: 'https://github.com/cloudify-cosmo/cloudify-gcp-plugin',
     },
     'cloudify-openstack-plugin': {
-        VERSIONS: sorted(['2.14.21', '3.2.18', '3.2.18', '3.2.17', '2.14.20',
-                          '3.2.16', '2.14.19', '2.14.18', '3.2.15', '3.2.14',
-                          '3.2.12', '3.2.11', '2.14.17', '3.2.10', '2.14.16',
-                          '3.2.9', '2.14.15', '2.14.14', '2.14.13', '3.2.8',
-                          '2.14.12', '3.2.7', '3.2.6', '3.2.5', '3.2.4',
-                          '3.2.3', '2.14.11', '3.2.2', '3.2.1', '2.14.10',
-                          '3.2.0', '3.1.1', '2.14.9', '3.1.0', '3.0.0',
-                          '2.14.8', '2.14.7', '2.14.6', '2.14.5', '2.14.4',
-                          '2.14.3', '2.14.2', '2.14.1', '2.14.0', '2.13.1',
-                          '2.13.0', '2.12.0', '2.11.1', '2.11.0', '2.10.0',
-                          '2.9.8', '2.9.6', '2.9.5', '2.9.4', '2.9.3', '2.9.2',
-                          '2.9.1', '2.9.0', '2.8.2', '2.8.1', '2.8.0', '2.7.6',
-                          '2.7.5', '2.7.2.1', '2.7.4', '2.7.3', '2.7.2',
-                          '2.7.1', '2.7.0', '2.6.0', '2.5.3', '2.5.2', '2.5.1',
-                          '2.5.0', '2.4.1.1', '2.4.1', '2.4.0', '2.3.0',
-                          '2.2.0'],
+        VERSIONS: sorted(['2.14.22', '3.3.0', '3.2.21', '3.2.18', '3.2.17',
+                          '2.14.20', '3.2.16', '2.14.19', '2.14.18', '3.2.15',
+                          '3.2.14', '3.2.12', '3.2.11', '2.14.17', '3.2.10',
+                          '2.14.16', '3.2.9', '2.14.15', '2.14.14', '2.14.13',
+                          '3.2.8', '2.14.12', '3.2.7', '3.2.6', '3.2.5',
+                          '3.2.4', '3.2.3', '2.14.11', '3.2.2', '3.2.1',
+                          '2.14.10', '3.2.0', '3.1.1', '2.14.9', '3.1.0',
+                          '3.0.0', '2.14.8', '2.14.7', '2.14.6', '2.14.5',
+                          '2.14.4', '2.14.3', '2.14.2', '2.14.1', '2.14.0',
+                          '2.13.1', '2.13.0', '2.12.0', '2.11.1', '2.11.0',
+                          '2.10.0', '2.9.8', '2.9.6', '2.9.5', '2.9.4',
+                          '2.9.3', '2.9.2', '2.9.1', '2.9.0', '2.8.2', '2.8.1',
+                          '2.8.0', '2.7.6', '2.7.5', '2.7.2.1', '2.7.4',
+                          '2.7.3', '2.7.2', '2.7.1', '2.7.0', '2.6.0', '2.5.3',
+                          '2.5.2', '2.5.1', '2.5.0', '2.4.1.1', '2.4.1',
+                          '2.4.0', '2.3.0', '2.2.0'],
                          key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-cosmo/cloudify-openstack-plugin',
     },
     'cloudify-vsphere-plugin': {
-        VERSIONS: sorted(['2.18.11', '2.18.10', '2.18.9', '2.18.8', '2.18.7',
-                          '2.18.6', '2.18.5', '2.18.4', '2.18.3', '2.18.2',
-                          '2.18.1',  '2.18.0', '2.18.0', '2.17.0', '2.16.2',
-                          '2.16.0',  '2.15.1', '2.15.0', '2.14.0', '2.13.1',
-                          '2.13.0', '2.12.0', '2.9.3', '2.11.0', '2.10.0',
-                          '2.9.2', '2.9.1', '2.9.0', '2.8.0', '2.7.0', '2.6.1',
-                          '2.2.2', '2.6.0', '2.4.1', '2.5.0', '2.4.0',
-                          '2.3.0'],
+        VERSIONS: sorted(['2.19.1', '2.18.13', '2.18.11', '2.18.10', '2.18.9',
+                          '2.18.8', '2.18.7', '2.18.6', '2.18.5', '2.18.4',
+                          '2.18.3', '2.18.2', '2.18.1',  '2.18.0', '2.18.0',
+                          '2.17.0', '2.16.2', '2.16.0',  '2.15.1', '2.15.0',
+                          '2.14.0', '2.13.1', '2.13.0', '2.12.0', '2.9.3',
+                          '2.11.0', '2.10.0', '2.9.2', '2.9.1', '2.9.0',
+                          '2.8.0', '2.7.0', '2.6.1', '2.2.2', '2.6.0', '2.4.1',
+                          '2.5.0', '2.4.0', '2.3.0'],
                          key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-cosmo/cloudify-vsphere-plugin',
     },
     'cloudify-terraform-plugin': {
-        VERSIONS: sorted(['0.13.4', '0.13.3', '0.13.2', '0.13.1', '0.13.0',
-                          '0.12.0', '0.11.0', '0.10', '0.9', '0.7'],
+        VERSIONS: sorted(['0.15.1', '0.14.4', '0.13.4', '0.13.3', '0.13.2',
+                          '0.13.1', '0.13.0', '0.12.0', '0.11.0', '0.10',
+                          '0.9', '0.7'],
                          key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-cosmo/cloudify-terraform-plugin',
     },
     'cloudify-ansible-plugin': {
-        VERSIONS: sorted(['2.9.4', '2.9.3', '2.9.2', '2.9.1', '2.9.0', '2.8.2',
-                          '2.8.1', '2.8.0', '2.7.1', '2.7.0', '2.6.0', '2.5.0',
-                          '2.4.0', '2.3.0', '2.2.0', '2.1.1', '2.1.0', '2.0.4',
-                          '2.0.3', '2.0.2', '2.0.1', '2.0.0'],
+        VERSIONS: sorted(['2.10.1', '2.9.4', '2.9.3', '2.9.2', '2.9.1',
+                          '2.9.0', '2.8.2', '2.8.1', '2.8.0', '2.7.1', '2.7.0',
+                          '2.6.0', '2.5.0', '2.4.0', '2.3.0', '2.2.0', '2.1.1',
+                          '2.1.0', '2.0.4', '2.0.3', '2.0.2', '2.0.1',
+                          '2.0.0'],
                          key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-cosmo/cloudify-ansible-plugin',
     },
     'cloudify-kubernetes-plugin': {
-        VERSIONS: sorted(['2.8.3', '2.8.2', '2.8.1', '2.8.0', '2.7.2', '2.7.1',
-                          '2.7.0', '2.6.5', '2.6.4', '2.6.3', '2.6.2', '2.6.0',
-                          '2.5.0', '2.4.1', '2.4.0', '2.3.2', '2.3.1', '2.3.0',
-                          '2.2.2', '2.2.1', '2.2.0', '2.1.0', '2.0.0.1',
-                          '2.0.0', '1.4.0', '1.3.1.1', '1.3.1', '1.3.0',
-                          '1.2.2', '1.2.1', '1.2.0', '1.1.0', '1.0.0'],
+        VERSIONS: sorted(['2.9.3', '2.8.3', '2.8.2', '2.8.1', '2.8.0', '2.7.2',
+                          '2.7.1', '2.7.0', '2.6.5', '2.6.4', '2.6.3', '2.6.2',
+                          '2.6.0', '2.5.0', '2.4.1', '2.4.0', '2.3.2', '2.3.1',
+                          '2.3.0', '2.2.2', '2.2.1', '2.2.0', '2.1.0',
+                          '2.0.0.1', '2.0.0', '1.4.0', '1.3.1.1', '1.3.1',
+                          '1.3.0', '1.2.2', '1.2.1', '1.2.0', '1.1.0',
+                          '1.0.0'],
                          key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-cosmo/cloudify-kubernetes-plugin',
     },
@@ -188,10 +192,10 @@ CLOUDIFY_PLUGINS = {
         REPO: 'https://github.com/cloudify-cosmo/cloudify-netconf-plugin',
     },
     'cloudify-fabric-plugin': {
-        VERSIONS: sorted(['2.0.6', '2.0.5', '2.0.4', '2.0.3', '1.7.0', '2.0.1',
-                          '2.0.0', '1.6.0', '1.5.3', '1.5.1', '1.5', '1.4.3',
-                          '1.4.2', '1.4.1', '1.4', '1.3.1', '1.3', '1.2.1',
-                          '1.2', '1.1'],
+        VERSIONS: sorted(['2.0.7', '2.0.6', '2.0.5', '2.0.4', '2.0.3', '1.7.0',
+                          '2.0.1', '2.0.0', '1.6.0', '1.5.3', '1.5.1', '1.5',
+                          '1.4.3', '1.4.2', '1.4.1', '1.4', '1.3.1', '1.3',
+                          '1.2.1', '1.2', '1.1'],
                          key=parse_version, reverse=True),
         AT_LEAST: '2.0.6',
         REPO: 'https://github.com/cloudify-cosmo/cloudify-fabric-plugin',
@@ -203,21 +207,21 @@ CLOUDIFY_PLUGINS = {
         REPO: 'https://github.com/cloudify-incubator/cloudify-libvirt-plugin',
     },
     'cloudify-utilities-plugin': {
-        VERSIONS: sorted(['1.23.7', '1.23.6', '1.23.5', '1.23.4', '1.23.3',
-                          '1.23.2', '1.23.1', '1.23.0', '1.22.1', '1.22.0',
-                          '1.21.0', '1.20.0', '1.19.0', '1.18.0', '1.17.0',
-                          '1.16.1', '1.16.0', '1.15.3', '1.15.2', '1.15.1',
-                          '1.15.0', '1.14.0', '1.13.0', '1.12.5', '1.12.4',
-                          '1.12.3', '1.12.2', '1.12.1', '1.12.0', '1.11.2',
-                          '1.10.2', '1.10.1', '1.10.0', '1.9.8', '1.9.7',
-                          '1.9.6', '1.9.5', '1.9.4', '1.9.3', '1.9.2', '1.9.1',
-                          '1.9.0', '1.8.3', '1.8.2', '1.8.1', '1.8.0', '1.7.3',
-                          '1.7.2', '1.7.1', '1.7.0', '1.6.1', '1.6.0', '1.5.4',
-                          '1.5.3', '1.5.2', '1.5.1', '1.5.0.1', '1.5.0',
-                          '1.4.5', '1.4.4', '1.4.3', '1.4.2.1', '1.4.2',
-                          '1.4.1.2', '1.4.1.1', '1.4.1', '1.3.1', '1.3.0',
-                          '1.2.5', '1.2.4', '1.2.3', '1.2.2', '1.2.1', '1.2.0',
-                          '1.1.1', '1.1.0', '1.0.0', ],
+        VERSIONS: sorted(['1.24.1', '1.23.12', '1.23.7', '1.23.6', '1.23.5',
+                          '1.23.4', '1.23.3', '1.23.2', '1.23.1', '1.23.0',
+                          '1.22.1', '1.22.0', '1.21.0', '1.20.0', '1.19.0',
+                          '1.18.0', '1.17.0', '1.16.1', '1.16.0', '1.15.3',
+                          '1.15.2', '1.15.1', '1.15.0', '1.14.0', '1.13.0',
+                          '1.12.5', '1.12.4', '1.12.3', '1.12.2', '1.12.1',
+                          '1.12.0', '1.11.2', '1.10.2', '1.10.1', '1.10.0',
+                          '1.9.8', '1.9.7', '1.9.6', '1.9.5', '1.9.4', '1.9.3',
+                          '1.9.2', '1.9.1', '1.9.0', '1.8.3', '1.8.2', '1.8.1',
+                          '1.8.0', '1.7.3', '1.7.2', '1.7.1', '1.7.0', '1.6.1',
+                          '1.6.0', '1.5.4', '1.5.3', '1.5.2', '1.5.1',
+                          '1.5.0.1', '1.5.0', '1.4.5', '1.4.4', '1.4.3',
+                          '1.4.2.1', '1.4.2', '1.4.1.2', '1.4.1.1', '1.4.1',
+                          '1.3.1', '1.3.0', '1.2.5', '1.2.4', '1.2.3', '1.2.2',
+                          '1.2.1', '1.2.0', '1.1.1', '1.1.0', '1.0.0', ],
                          key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-incubator/cloudify-utilities-plugin'
     },
@@ -228,10 +232,10 @@ CLOUDIFY_PLUGINS = {
 
     },
     'cloudify-diamond-plugin': {
-        VERSIONS: sorted(['1.3.18', '1.3.17', '1.3.16', '1.3.15', '1.3.14',
-                          '1.3.10', '1.3.9', '1.3.8', '1.3.7', '1.3.6',
-                          '1.3.5', '1.3.4', '1.3.3', '1.3.2', '1.3.1', '1.3',
-                          '1.2.1', '1.2', '1.1'],
+        VERSIONS: sorted(['1.3.19', '1.3.18', '1.3.17', '1.3.16', '1.3.15',
+                          '1.3.14', '1.3.10', '1.3.9', '1.3.8', '1.3.7',
+                          '1.3.6', '1.3.5', '1.3.4', '1.3.3', '1.3.2', '1.3.1',
+                          '1.3', '1.2.1', '1.2', '1.1'],
                          key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-cosmo/cloudify-diamond-plugin',
     },
@@ -239,6 +243,16 @@ CLOUDIFY_PLUGINS = {
         VERSIONS: sorted(['1.6.1', '1.6.0', '1.5.1', '1.5.0', '1.4.1'],
                          key=parse_version, reverse=True),
         REPO: 'https://github.com/cloudify-cosmo/tosca-vcloud-plugin',
+    },
+    'cloudify-vcloud-plugin': {
+        VERSIONS: sorted(['2.0.0', ],
+                         key=parse_version, reverse=True),
+        REPO: 'https://github.com/cloudify-cosmo/cloudify-vcloud-plugin',
+    },
+    'cloudify-helm-plugin': {
+        VERSIONS: sorted(['0.0.8', '0.0.7', ],
+                         key=parse_version, reverse=True),
+        REPO: 'https://github.com/cloudify-incubator/cloudify-helm-plugin',
     },
 }
 
@@ -537,29 +551,34 @@ def get_imports(blueprint_file: typing.TextIO) -> dict:
     imports_token = None
     import_lines = {}
     blueprint_file.seek(0, 0)
-    for token in yaml.scan(blueprint_file):
-        if isinstance(token, (yaml.tokens.BlockMappingStartToken,
-                              yaml.tokens.BlockSequenceStartToken,
-                              yaml.tokens.FlowMappingStartToken,
-                              yaml.tokens.FlowSequenceStartToken)):
+    for t in yaml.scan(blueprint_file):
+        if isinstance(t, (yaml.tokens.BlockMappingStartToken,
+                          yaml.tokens.BlockSequenceStartToken,
+                          yaml.tokens.FlowMappingStartToken,
+                          yaml.tokens.FlowSequenceStartToken)):
             level += 1
-        if isinstance(token, (yaml.tokens.BlockEndToken,
-                              yaml.tokens.FlowMappingEndToken,
-                              yaml.tokens.FlowSequenceEndToken)):
+        if isinstance(t, (yaml.tokens.BlockEndToken,
+                          yaml.tokens.FlowMappingEndToken,
+                          yaml.tokens.FlowSequenceEndToken)):
             level -= 1
-        if level == 1:
-            if isinstance(token, yaml.tokens.ScalarToken) and \
-                    token.value == 'imports':
-                imports_token = token
-            elif imports_token and \
-                    isinstance(token, yaml.tokens.ScalarToken):
-                break
-        elif imports_token and level == 2 and \
-                isinstance(token, yaml.tokens.ScalarToken):
-            import_lines[token.value] = {
-                START_POS: token.start_mark.index,
-                END_POS: token.end_mark.index,
-            }
+
+        if isinstance(t, yaml.tokens.ScalarToken):
+            if level == 1 and t.value == 'imports':
+                imports_token = t
+                continue
+
+            token_length = t.end_mark.index - t.start_mark.index
+
+            if level >= 1 and imports_token and \
+                    token_length < MAX_IMPORT_TOKEN_LENGTH:
+                import_lines[t.value] = {
+                    START_POS: t.start_mark.index,
+                    END_POS: t.end_mark.index,
+                }
+
+        if isinstance(t, yaml.tokens.KeyToken) and imports_token:
+            break
+
     return import_lines
 
 
@@ -572,10 +591,8 @@ def write_updated_blueprint(input_file_name: str, output_file_name: str,
                     content = input_file.read(update[START_POS] -
                                               input_file.tell())
                     output_file.write(content)
-                    output_file.write(update[REPLACEMENT])
-                    content = input_file.read(update[END_POS] -
-                                              update[START_POS] + 1)
-                    output_file.write(' # was: {0}'.format(content))
+                    output_file.write("{0}\n".format(update[REPLACEMENT]))
+                    input_file.read(update[END_POS] - update[START_POS] + 1)
                 content = input_file.read()
                 output_file.write(content)
     except (FileNotFoundError, PermissionError) as ex:
@@ -642,10 +659,10 @@ def update_archive(blueprint: models.Blueprint, updated_file_name: str):
     if not archive_format:
         raise UpdateException('Unknown archive format: {0}'.format(
             blueprint_archive_file_name))
-    archive_base_dir = '.'.join(blueprint.main_file_name.split('.')[:-1])
     with TemporaryDirectory() as working_dir:
         os.chdir(working_dir)
         shutil.unpack_archive(blueprint_archive_file_name, working_dir)
+        archive_base_dir = os.listdir(working_dir)[0]
         shutil.copy(updated_file_name,
                     join(working_dir,
                          archive_base_dir,
@@ -851,7 +868,7 @@ def main(tenant_names, all_tenants, plugin_names, blueprint_ids,
         for blueprint in blueprints:
             print('Processing blueprint of {0}: {1} '.format(tenant.name,
                                                              blueprint.id))
-            blueprint_identifier = '{0}-{1}'.format(tenant.name, blueprint.id)
+            blueprint_identifier = '{0}::{1}'.format(tenant.name, blueprint.id)
             if correct:
                 try:
                     result = correct_blueprint(
