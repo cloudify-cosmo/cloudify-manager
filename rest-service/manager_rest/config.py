@@ -343,6 +343,7 @@ class Config(object):
                 result = requests.get(
                     'https://{}:8008'.format(candidate),
                     verify=self.postgresql_ca_cert_path,
+                    timeout=5,
                 )
             except Exception as err:
                 current_app.logger.error(
