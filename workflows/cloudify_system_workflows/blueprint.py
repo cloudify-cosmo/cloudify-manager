@@ -45,6 +45,7 @@ def upload(ctx, **kwargs):
     url = kwargs['url']
     file_server_root = kwargs['file_server_root']
     validate_only = kwargs['validate_only']
+    labels = kwargs.get('labels')
 
     # Download the archive, one way or the other
     archive_target_path = tempfile.mkdtemp()
@@ -193,6 +194,8 @@ def upload(ctx, **kwargs):
     }
     if plan.get('description'):
         update_dict['description'] = plan['description']
+    if labels:
+        update_dict['labels'] = labels
     client.blueprints.update(blueprint_id, update_dict=update_dict)
 
 

@@ -85,7 +85,8 @@ class BlueprintsId(resources_v2.BlueprintsId):
         """
         rest_utils.validate_inputs({'blueprint_id': blueprint_id})
         args = get_args_and_verify_arguments(
-            [Argument('async_upload', type=boolean, default=False)]
+            [Argument('async_upload', type=boolean, default=False),
+             Argument('labels')]
         )
         async_upload = args.async_upload
         visibility = rest_utils.get_visibility_parameter(
@@ -93,6 +94,8 @@ class BlueprintsId(resources_v2.BlueprintsId):
             is_argument=True,
             valid_values=VisibilityState.STATES
         )
+        labels = self._get_labels_from_args(args)
+
         # Fail fast if trying to upload a duplicate blueprint.
         # Allow overriding an existing blueprint which failed to upload
         current_tenant = request.headers.get('tenant')
@@ -126,11 +129,24 @@ class BlueprintsId(resources_v2.BlueprintsId):
         response = UploadedBlueprintsManager().\
             receive_uploaded_data(data_id=blueprint_id,
                                   visibility=visibility,
-                                  override_failed=override_failed)
+                                  override_failed=override_failed,
+                                  labels=labels)
         if not async_upload:
             sm = get_storage_manager()
             response = rest_utils.get_uploaded_blueprint(sm, blueprint_id)
         return response
+
+    @staticmethod
+    def _get_labels_from_args(args):
+        if args.labels:
+            labels_list = []
+            raw_labels_list = args.labels.split(',')
+            for raw_label in raw_labels_list:
+                key, value = raw_label.split('=')
+                labels_list.append({key: value})
+            return rest_utils.get_labels_list(labels_list)
+
+        return None
 
     @swagger.operation(
         responseClass=models.Blueprint,
@@ -171,6 +187,7 @@ class BlueprintsId(resources_v2.BlueprintsId):
             'state': {'type': text_type, 'optional': True},
             'error': {'type': text_type, 'optional': True},
             'error_traceback': {'type': text_type, 'optional': True},
+            'labels': {'type': list, 'optional': True}
         }
         request_dict = rest_utils.get_json_and_verify_params(request_schema)
 
@@ -230,7 +247,7 @@ class BlueprintsId(resources_v2.BlueprintsId):
                 extract_blueprint_archive_to_file_server(
                     blueprint_id=blueprint_id,
                     tenant=blueprint.tenant.name)
-            _handle_blueprints_labels(sm, blueprint)
+            _handle_blueprint_labels(sm, blueprint, request_dict.get('labels'))
 
         # If failed for any reason, cleanup the blueprint archive from server
         elif request_dict['state'] in BlueprintUploadState.FAILED_STATES:
@@ -243,11 +260,12 @@ class BlueprintsId(resources_v2.BlueprintsId):
         return sm.update(blueprint)
 
 
-def _handle_blueprints_labels(sm, blueprint):
+def _handle_blueprint_labels(sm, blueprint, provided_labels):
     labels_list = get_labels_from_plan(blueprint.plan,
                                        constants.BLUEPRINT_LABELS)
-    if not labels_list:
-        return
+    if provided_labels:
+        labels_list.extend(tuple(label) for label in provided_labels if
+                           tuple(label) not in labels_list)
 
     current_time = get_formatted_timestamp()
     for key, value in labels_list:
