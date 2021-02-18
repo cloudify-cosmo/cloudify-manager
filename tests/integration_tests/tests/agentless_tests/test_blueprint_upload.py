@@ -26,6 +26,11 @@ from integration_tests.tests.utils import wait_for_blueprint_upload
 
 
 class BlueprintUploadTest(AgentlessTestCase):
+
+    BLUEPRINT_LABELS = [{'bp_key1': 'bp_key1_val1'},
+                        {'bp_key2': 'bp_key2_val1'},
+                        {'bp_key2': 'bp_key2_val2'}]
+
     def test_blueprint_upload(self):
         blueprint_id = 'bp'
         blueprint_filename = 'empty_blueprint.yaml'
@@ -186,9 +191,7 @@ class BlueprintUploadTest(AgentlessTestCase):
             entity_id=blueprint_id,
         )
         blueprint = self.client.blueprints.get(blueprint_id)
-        self.assert_labels(blueprint.labels, [{'bp_key1': 'bp_key1_val1'},
-                                              {'bp_key2': 'bp_key2_val1'},
-                                              {'bp_key2': 'bp_key2_val2'}])
+        self.assert_labels(blueprint.labels, self.BLUEPRINT_LABELS)
 
     def test_async_blueprint_upload_with_labels_in_plan(self):
         blueprint_id = 'bp'
@@ -199,9 +202,7 @@ class BlueprintUploadTest(AgentlessTestCase):
         )
         wait_for_blueprint_upload(blueprint_id, self.client)
         blueprint = self.client.blueprints.get(blueprint_id)
-        self.assert_labels(blueprint.labels, [{'bp_key1': 'bp_key1_val1'},
-                                              {'bp_key2': 'bp_key2_val1'},
-                                              {'bp_key2': 'bp_key2_val2'}])
+        self.assert_labels(blueprint.labels, self.BLUEPRINT_LABELS)
 
     def test_blueprint_upload_with_provided_labels(self):
         blueprint_id = 'bp'
@@ -211,10 +212,41 @@ class BlueprintUploadTest(AgentlessTestCase):
             labels=[{'bp_key1': 'bp_key1_val1'}, {'key1': 'val1'}]
         )
         blueprint = self.client.blueprints.get(blueprint_id)
-        self.assert_labels(blueprint.labels, [{'bp_key1': 'bp_key1_val1'},
-                                              {'bp_key2': 'bp_key2_val1'},
-                                              {'bp_key2': 'bp_key2_val2'},
-                                              {'key1': 'val1'}])
+        self.assert_labels(blueprint.labels,
+                           self.BLUEPRINT_LABELS + [{'key1': 'val1'}])
+
+    def test_blueprint_upload_failure_with_invalid_labels(self):
+        error_msg = '.*Labels must be a list of 1-entry dictionaries.*'
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_msg,
+                               self.client.blueprints.upload,
+                               resource('dsl/empty_blueprint.yaml'),
+                               entity_id='blueprint',
+                               labels=[{'key1': 'val1', 'key2': 'val2'}])
+
+    def test_blueprint_upload_failure_with_duplicate_labels(self):
+        error_msg = '.*You cannot define the same label twice.*'
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_msg,
+                               self.client.blueprints.upload,
+                               resource('dsl/empty_blueprint.yaml'),
+                               entity_id='blueprint',
+                               labels=[{'key1': 'val1'}, {'key1': 'val1'}])
+
+    def test_invalid_blueprint_labels_update_fails(self):
+        blueprint_id = 'blueprint'
+        error_msg = '.*labels can only be updated if the blueprint was ' \
+                    'uploaded successfully.*'
+        self.assertRaisesRegexp(CloudifyClientError,
+                                'Plugin cloudmock .* not found',
+                                self.client.blueprints.upload,
+                                resource('dsl/basic.yaml'),
+                                entity_id=blueprint_id)
+        self.assertRaisesRegexp(CloudifyClientError,
+                                error_msg,
+                                self.client.blueprints.update,
+                                blueprint_id=blueprint_id,
+                                update_dict={'labels': [{'key1': 'val1'}]})
 
     def _verify_blueprint_uploaded(self, blueprint, blueprint_filename):
         self.assertEqual(blueprint.state, BlueprintUploadState.UPLOADED)
