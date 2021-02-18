@@ -351,7 +351,7 @@ def blueprint_diff_file_name(blueprint: models.Blueprint) -> str:
 def load_imports(blueprint: models.Blueprint) -> dict:
     file_name = blueprint_file_name(blueprint)
     try:
-        with open(file_name, 'r') as blueprint_file:
+        with open(file_name, 'rb') as blueprint_file:
             try:
                 return yaml.safe_load(blueprint_file)[IMPORTS]
             except yaml.YAMLError as ex:
@@ -585,8 +585,8 @@ def get_imports(blueprint_file: typing.TextIO) -> dict:
 def write_updated_blueprint(input_file_name: str, output_file_name: str,
                             import_updates: list):
     try:
-        with open(input_file_name, 'r') as input_file:
-            with open(output_file_name, 'w') as output_file:
+        with open(input_file_name, 'rb') as input_file:
+            with open(output_file_name, 'wb') as output_file:
                 for idx, update in enumerate(import_updates):
                     content = input_file.read(update[START_POS] -
                                               input_file.tell())
@@ -696,7 +696,7 @@ def correct_blueprint(blueprint: models.Blueprint,
     file_name = blueprint_file_name(blueprint)
     new_file_name = blueprint_updated_file_name(blueprint)
     try:
-        with open(file_name, 'r') as blueprint_file:
+        with open(file_name, 'rb') as blueprint_file:
             import_lines = get_imports(blueprint_file)
     except (FileNotFoundError, PermissionError) as ex:
         raise UpdateException('Cannot load blueprint from {0}: {1}'.format(
