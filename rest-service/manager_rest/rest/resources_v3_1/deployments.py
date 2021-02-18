@@ -113,41 +113,18 @@ class DeploymentsId(resources_v1.DeploymentsId):
         if not request.json:
             raise IllegalActionError('Update a deployment request must include'
                                      ' at least one parameter to update')
+        request_dict = request.json
         sm = get_storage_manager()
+        rm = get_resource_manager()
         deployment = sm.get(models.Deployment, deployment_id)
-
-        _update_labels(sm, deployment)
+        if 'labels' in request_dict:
+            raw_labels_list = request_dict.get('labels', [])
+            new_labels = rest_utils.get_labels_list(raw_labels_list)
+            rm.update_resource_labels(models.DeploymentLabel,
+                                      deployment,
+                                      new_labels)
 
         return deployment
-
-
-def _update_labels(sm, deployment):
-    """
-    Updating the deployment's labels.
-
-    This function replaces the existing deployment's labels with the new labels
-    that were passed in the request.
-    If a new label already exists, it won't be created again.
-    If an existing label is not in the new labels list, it will be deleted.
-    """
-    request_dict = request.json
-    if 'labels' not in request_dict:
-        return
-
-    new_labels = rest_utils.get_labels_list(request_dict['labels'])
-    rm = get_resource_manager()
-    new_labels_set = set(new_labels)
-    existing_labels = deployment.labels
-    existing_labels_tup = set(
-        (label.key, label.value) for label in existing_labels)
-
-    labels_to_create = new_labels_set - existing_labels_tup
-
-    for label in existing_labels:
-        if (label.key, label.value) not in new_labels_set:
-            sm.delete(label)
-
-    rm.create_deployment_labels(deployment, labels_to_create)
 
 
 class DeploymentsSetVisibility(SecuredResource):

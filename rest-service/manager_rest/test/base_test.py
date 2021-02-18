@@ -154,6 +154,19 @@ class BaseServerTestCase(unittest.TestCase):
     def assert_metadata_filtered(self, resource_list, filtered_cnt):
         self.assertEqual(resource_list.metadata.get('filtered'), filtered_cnt)
 
+    def assert_resource_labels(self, resource_labels, compared_labels):
+        simplified_labels = set()
+        compared_labels_set = set()
+
+        for label in resource_labels:
+            simplified_labels.add((label['key'], label['value']))
+
+        for compared_label in compared_labels:
+            [(key, value)] = compared_label.items()
+            compared_labels_set.add((key, value))
+
+        self.assertEqual(simplified_labels, compared_labels_set)
+
     @classmethod
     def create_client_with_tenant(cls,
                                   username,
@@ -719,7 +732,8 @@ class BaseServerTestCase(unittest.TestCase):
                       blueprint_dir='mock_blueprint',
                       blueprint_file_name=None,
                       blueprint_id='blueprint',
-                      client=None):
+                      client=None,
+                      labels=None):
         client = client or self.client
         if not blueprint_file_name:
             blueprint_file_name = CONVENTION_APPLICATION_BLUEPRINT_FILE
@@ -730,7 +744,7 @@ class BaseServerTestCase(unittest.TestCase):
                                  entity_id=blueprint_id,
                                  async_upload=True)
         return self.parse_blueprint_plan(blueprint_id, blueprint_file_name,
-                                         client=client)
+                                         client=client, labels=labels)
 
     @staticmethod
     def _create_wagon_and_yaml(package_name,
@@ -853,7 +867,7 @@ class BaseServerTestCase(unittest.TestCase):
             time.sleep(3)
 
     def parse_blueprint_plan(self, blueprint_id, app_file_name,
-                             client=None):
+                             client=None, labels=None):
         # complete blueprint parsing without running the upload workflow
         if not client:
             client = self.client
@@ -891,6 +905,8 @@ class BaseServerTestCase(unittest.TestCase):
         }
         if plan.get('description'):
             update_dict['description'] = plan['description']
+        if labels:
+            update_dict['labels'] = labels
         return client.blueprints.update(blueprint_id, update_dict=update_dict)
 
     def _add_blueprint(self, blueprint_id=None):
