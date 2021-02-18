@@ -524,3 +524,6 @@ class NodesCreateTest(base_test.BaseServerTestCase):
         assert node.deploy_number_of_instances == default_instances
         assert node.min_number_of_instances == min_instances
         assert node.max_number_of_instances == max_instances
+
+    def test_empty_list(self):
+        self.client.nodes.create_many([])  # doesn't throw

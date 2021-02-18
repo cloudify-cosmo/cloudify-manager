@@ -14,6 +14,8 @@ class Nodes(v3_Nodes):
         })
         sm = get_storage_manager()
         raw_nodes = request_dict['nodes']
+        if not raw_nodes:
+            return None, 204
         created = []
         with sm.transaction():
             deployment_id = self._deployment_id_from_nodes(raw_nodes)
