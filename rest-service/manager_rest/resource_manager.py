@@ -367,7 +367,7 @@ class ResourceManager(object):
                extract_host_agent_plugins_from_plan(blueprint.plan)
 
     def upload_blueprint(self, blueprint_id, app_file_name, blueprint_url,
-                         file_server_root, validate_only=False):
+                         file_server_root, validate_only=False, labels=None):
         self._execute_system_workflow(
             wf_id='upload_blueprint',
             task_mapping='cloudify_system_workflows.blueprint.upload',
@@ -378,6 +378,7 @@ class ResourceManager(object):
                 'url': blueprint_url,
                 'file_server_root': file_server_root,
                 'validate_only': validate_only,
+                'labels': labels,
             },
         )
 
@@ -1523,7 +1524,9 @@ class ResourceManager(object):
         self._create_deployment_initial_dependencies(
             deployment_plan, new_deployment)
 
-        self.create_deployment_labels(new_deployment, deployment_labels)
+        self.create_resource_labels(models.DeploymentLabel,
+                                    new_deployment,
+                                    deployment_labels)
 
         try:
             self._create_deployment_environment(new_deployment,
@@ -2506,18 +2509,43 @@ class ResourceManager(object):
                 dep_graph.assert_no_cyclic_dependencies(source_id, target_id)
                 dep_graph.add_dependency_to_graph(source_id, target_id)
 
-    def create_deployment_labels(self, deployment, labels_list):
+    def update_resource_labels(self,
+                               labels_resource_model,
+                               resource,
+                               new_labels):
         """
-        Populate the deployments_labels table.
+        Updating the resource labels.
 
-        :param deployment: A deployment object
-        :param labels_list: A list of labels of the form:
-                            [(key1, value1), (key2, value2)]
+        This function replaces the existing resource labels with the new labels
+        that were passed in the request.
+        If a new label already exists, it won't be created again.
+        If an existing label is not in the new labels list, it will be deleted.
         """
-        """
-        Populate the deployments_labels table.
 
-        :param deployment: A deployment object
+        new_labels_set = set(new_labels)
+        existing_labels = resource.labels
+        existing_labels_tup = set(
+            (label.key, label.value) for label in existing_labels)
+
+        labels_to_create = new_labels_set - existing_labels_tup
+
+        for label in existing_labels:
+            if (label.key, label.value) not in new_labels_set:
+                self.sm.delete(label)
+
+        self.create_resource_labels(labels_resource_model,
+                                    resource,
+                                    labels_to_create)
+
+    def create_resource_labels(self,
+                               labels_resource_model,
+                               resource,
+                               labels_list):
+        """
+        Populate the resource_labels table.
+
+        :param labels_resource_model: A labels resource model
+        :param resource: A resource element
         :param labels_list: A list of labels of the form:
                             [(key1, value1), (key2, value2)]
         """
@@ -2526,15 +2554,16 @@ class ResourceManager(object):
 
         current_time = utils.get_formatted_timestamp()
         for key, value in labels_list:
-            self.sm.put(
-                models.DeploymentLabel(
-                    key=key,
-                    value=value,
-                    created_at=current_time,
-                    deployment=deployment,
-                    creator=current_user
-                )
-            )
+            new_label = {'key': key,
+                         'value': value,
+                         'created_at': current_time,
+                         'creator': current_user}
+            if labels_resource_model == models.DeploymentLabel:
+                new_label['deployment'] = resource
+            elif labels_resource_model == models.BlueprintLabel:
+                new_label['blueprint'] = resource
+
+            self.sm.put(labels_resource_model(**new_label))
 
 
 # What we need to access this manager in Flask

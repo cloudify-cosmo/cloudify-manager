@@ -179,7 +179,7 @@ class BlueprintUploadTest(AgentlessTestCase):
             resource('dsl/invalid_dsl.yaml'),
             entity_id=blueprint_id)
 
-    def test_blueprint_upload_with_labels(self):
+    def test_blueprint_upload_with_labels_in_plan(self):
         blueprint_id = 'bp'
         self.client.blueprints.upload(
             resource('dsl/blueprint_with_labels.yaml'),
@@ -190,7 +190,7 @@ class BlueprintUploadTest(AgentlessTestCase):
                                               {'bp_key2': 'bp_key2_val1'},
                                               {'bp_key2': 'bp_key2_val2'}])
 
-    def test_async_blueprint_upload_with_labels(self):
+    def test_async_blueprint_upload_with_labels_in_plan(self):
         blueprint_id = 'bp'
         self.client.blueprints.upload(
             resource('dsl/blueprint_with_labels.yaml'),
@@ -202,6 +202,19 @@ class BlueprintUploadTest(AgentlessTestCase):
         self.assert_labels(blueprint.labels, [{'bp_key1': 'bp_key1_val1'},
                                               {'bp_key2': 'bp_key2_val1'},
                                               {'bp_key2': 'bp_key2_val2'}])
+
+    def test_blueprint_upload_with_provided_labels(self):
+        blueprint_id = 'bp'
+        self.client.blueprints.upload(
+            resource('dsl/blueprint_with_labels.yaml'),
+            entity_id=blueprint_id,
+            labels=[{'bp_key1': 'bp_key1_val1'}, {'key1': 'val1'}]
+        )
+        blueprint = self.client.blueprints.get(blueprint_id)
+        self.assert_labels(blueprint.labels, [{'bp_key1': 'bp_key1_val1'},
+                                              {'bp_key2': 'bp_key2_val1'},
+                                              {'bp_key2': 'bp_key2_val2'},
+                                              {'key1': 'val1'}])
 
     def _verify_blueprint_uploaded(self, blueprint, blueprint_filename):
         self.assertEqual(blueprint.state, BlueprintUploadState.UPLOADED)

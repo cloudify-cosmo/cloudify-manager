@@ -906,13 +906,13 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
           client_max_version=base_test.LATEST_API_VERSION)
     def test_creation_success_with_labels(self):
         deployment = self.put_deployment_with_labels(self.LABELS)
-        self._assert_deployment_labels(deployment.labels, self.LABELS)
+        self.assert_resource_labels(deployment.labels, self.LABELS)
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
     def test_uppercase_labels_to_lowercase(self):
         deployment = self.put_deployment_with_labels(self.UPPERCASE_LABELS)
-        self._assert_deployment_labels(deployment.labels, self.LABELS)
+        self.assert_resource_labels(deployment.labels, self.LABELS)
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
@@ -946,7 +946,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         deployment = self.put_deployment_with_labels(self.LABELS)
         updated_dep = self.client.deployments.update_labels(
             deployment.id, self.UPDATED_LABELS)
-        self._assert_deployment_labels(updated_dep.labels, self.UPDATED_LABELS)
+        self.assert_resource_labels(updated_dep.labels, self.UPDATED_LABELS)
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
@@ -954,13 +954,13 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         deployment = self.put_deployment_with_labels(self.LABELS)
         updated_dep = self.client.deployments.update_labels(
             deployment.id, self.UPDATED_UPPERCASE_LABELS)
-        self._assert_deployment_labels(updated_dep.labels, self.UPDATED_LABELS)
+        self.assert_resource_labels(updated_dep.labels, self.UPDATED_LABELS)
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
     def test_update_empty_deployments_labels(self):
         deployment = self.put_deployment_with_labels(self.LABELS)
-        self._assert_deployment_labels(deployment.labels, self.LABELS)
+        self.assert_resource_labels(deployment.labels, self.LABELS)
         updated_dep = self.client.deployments.update_labels(deployment.id, [])
         self.assertEmpty(updated_dep.labels)
 
@@ -1031,16 +1031,3 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             filter_rules={'_filter_rules': ['aRcH=k8S']})
         self.assertEqual(len(deployments), 2)
         self.assert_metadata_filtered(deployments, 0)
-
-    def _assert_deployment_labels(self, deployment_labels, compared_labels):
-        simplified_labels = set()
-        compared_labels_set = set()
-
-        for label in deployment_labels:
-            simplified_labels.add((label['key'], label['value']))
-
-        for compared_label in compared_labels:
-            [(key, value)] = compared_label.items()
-            compared_labels_set.add((key, value))
-
-        self.assertEqual(simplified_labels, compared_labels_set)

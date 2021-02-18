@@ -17,7 +17,6 @@ from os.path import join
 
 from flask import request
 
-from flask_security import current_user
 from flask_restful.inputs import boolean
 from flask_restful.reqparse import Argument
 from flask_restful_swagger import swagger
@@ -85,7 +84,8 @@ class BlueprintsId(resources_v2.BlueprintsId):
         """
         rest_utils.validate_inputs({'blueprint_id': blueprint_id})
         args = get_args_and_verify_arguments(
-            [Argument('async_upload', type=boolean, default=False)]
+            [Argument('async_upload', type=boolean, default=False),
+             Argument('labels')]
         )
         async_upload = args.async_upload
         visibility = rest_utils.get_visibility_parameter(
@@ -93,6 +93,8 @@ class BlueprintsId(resources_v2.BlueprintsId):
             is_argument=True,
             valid_values=VisibilityState.STATES
         )
+        labels = self._get_labels_from_args(args)
+
         # Fail fast if trying to upload a duplicate blueprint.
         # Allow overriding an existing blueprint which failed to upload
         current_tenant = request.headers.get('tenant')
@@ -126,11 +128,24 @@ class BlueprintsId(resources_v2.BlueprintsId):
         response = UploadedBlueprintsManager().\
             receive_uploaded_data(data_id=blueprint_id,
                                   visibility=visibility,
-                                  override_failed=override_failed)
+                                  override_failed=override_failed,
+                                  labels=labels)
         if not async_upload:
             sm = get_storage_manager()
             response = rest_utils.get_uploaded_blueprint(sm, blueprint_id)
         return response
+
+    @staticmethod
+    def _get_labels_from_args(args):
+        if args.labels:
+            labels_list = []
+            raw_labels_list = args.labels.split(',')
+            for raw_label in raw_labels_list:
+                key, value = raw_label.split('=')
+                labels_list.append({key: value})
+            return rest_utils.get_labels_list(labels_list)
+
+        return None
 
     @swagger.operation(
         responseClass=models.Blueprint,
@@ -171,6 +186,7 @@ class BlueprintsId(resources_v2.BlueprintsId):
             'state': {'type': text_type, 'optional': True},
             'error': {'type': text_type, 'optional': True},
             'error_traceback': {'type': text_type, 'optional': True},
+            'labels': {'type': list, 'optional': True}
         }
         request_dict = rest_utils.get_json_and_verify_params(request_schema)
 
@@ -194,18 +210,6 @@ class BlueprintsId(resources_v2.BlueprintsId):
             sm.delete(blueprint)
             return blueprint
 
-        # set blueprint state
-        state = request_dict.get('state')
-        if state:
-            if state not in BlueprintUploadState.STATES:
-                raise BadParametersError(
-                    "Invalid state: `{0}`. Valid blueprint state values are: "
-                    "{1}".format(state, BlueprintUploadState.STATES)
-                )
-            blueprint.state = state
-            blueprint.error = request_dict.get('error')
-            blueprint.error_traceback = request_dict.get('error_traceback')
-
         # set blueprint visibility
         visibility = request_dict.get('visibility')
         if visibility:
@@ -223,43 +227,68 @@ class BlueprintsId(resources_v2.BlueprintsId):
             blueprint.description = request_dict['description']
         if 'main_file_name' in request_dict:
             blueprint.main_file_name = request_dict['main_file_name']
+        provided_labels = request_dict.get('labels')
 
-        # On finalizing the blueprint upload, extract archive to file server
-        if request_dict['state'] == BlueprintUploadState.UPLOADED:
-            UploadedBlueprintsManager(). \
-                extract_blueprint_archive_to_file_server(
-                    blueprint_id=blueprint_id,
-                    tenant=blueprint.tenant.name)
-            _handle_blueprints_labels(sm, blueprint)
+        # set blueprint state
+        state = request_dict.get('state')
+        if state:
+            if state not in BlueprintUploadState.STATES:
+                raise BadParametersError(
+                    "Invalid state: `{0}`. Valid blueprint state values are: "
+                    "{1}".format(state, BlueprintUploadState.STATES)
+                )
+            if (state != BlueprintUploadState.UPLOADED and
+                    provided_labels is not None):
+                raise ConflictError(
+                    'Blueprint labels can be created only if the provided '
+                    'blueprint state is {0}'.format(
+                        BlueprintUploadState.UPLOADED))
 
-        # If failed for any reason, cleanup the blueprint archive from server
-        elif request_dict['state'] in BlueprintUploadState.FAILED_STATES:
-            UploadedBlueprintsManager(). \
-                cleanup_blueprint_archive_from_file_server(
-                    blueprint_id=blueprint_id,
-                    tenant=blueprint.tenant.name)
+            blueprint.state = state
+            blueprint.error = request_dict.get('error')
+            blueprint.error_traceback = request_dict.get('error_traceback')
+
+            # On finalizing the blueprint upload, extract archive to file
+            # server
+            if state == BlueprintUploadState.UPLOADED:
+                UploadedBlueprintsManager(). \
+                    extract_blueprint_archive_to_file_server(
+                        blueprint_id=blueprint_id,
+                        tenant=blueprint.tenant.name)
+                _create_blueprint_labels(blueprint, provided_labels)
+
+            # If failed for any reason, cleanup the blueprint archive from
+            # server
+            elif state in BlueprintUploadState.FAILED_STATES:
+                UploadedBlueprintsManager(). \
+                    cleanup_blueprint_archive_from_file_server(
+                        blueprint_id=blueprint_id,
+                        tenant=blueprint.tenant.name)
+        else:  # Updating the blueprint not as part of the upload process
+            if provided_labels is not None:
+                if blueprint.state != BlueprintUploadState.UPLOADED:
+                    raise ConflictError(
+                        'Blueprint labels can only be updated if the blueprint'
+                        ' was uploaded successfully')
+
+                rm = get_resource_manager()
+                labels_list = rest_utils.get_labels_list(provided_labels)
+                rm.update_resource_labels(models.BlueprintLabel,
+                                          blueprint,
+                                          labels_list)
 
         blueprint.updated_at = get_formatted_timestamp()
         return sm.update(blueprint)
 
 
-def _handle_blueprints_labels(sm, blueprint):
+def _create_blueprint_labels(blueprint, provided_labels):
     labels_list = get_labels_from_plan(blueprint.plan,
                                        constants.BLUEPRINT_LABELS)
-    if not labels_list:
-        return
-
-    current_time = get_formatted_timestamp()
-    for key, value in labels_list:
-        sm.put(
-            models.BlueprintLabel(
-                key=key,
-                value=value,
-                created_at=current_time,
-                blueprint=blueprint,
-                creator=current_user
-            )
-        )
+    if provided_labels:
+        labels_list.extend(tuple(label) for label in provided_labels if
+                           tuple(label) not in labels_list)
+    rm = get_resource_manager()
+    rm.create_resource_labels(models.BlueprintLabel, blueprint, labels_list)
 
 
 class BlueprintsIdValidate(BlueprintsId):

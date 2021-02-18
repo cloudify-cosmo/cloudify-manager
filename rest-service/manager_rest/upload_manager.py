@@ -475,6 +475,7 @@ class UploadedBlueprintsManager(UploadedDataManager):
     def receive_uploaded_data(self, data_id=None, **kwargs):
         blueprint_url = None
         visibility = kwargs.get(_VISIBILITY, None)
+        labels = kwargs.get('labels', None)
         override_failed_blueprint = kwargs.get('override_failed', False)
 
         args = get_args_and_verify_arguments([
@@ -501,12 +502,14 @@ class UploadedBlueprintsManager(UploadedDataManager):
             visibility,
             blueprint_url,
             application_file_name=args.application_file_name,
-            override_failed_blueprint=override_failed_blueprint)
+            override_failed_blueprint=override_failed_blueprint,
+            labels=labels)
         return new_blueprint, 201
 
     def _prepare_and_process_doc(self, data_id, visibility, blueprint_url,
                                  application_file_name,
-                                 override_failed_blueprint):
+                                 override_failed_blueprint,
+                                 labels=None):
         # Put a new blueprint entry in DB
         now = get_formatted_timestamp()
         rm = get_resource_manager()
@@ -543,6 +546,7 @@ class UploadedBlueprintsManager(UploadedDataManager):
                 application_file_name,
                 blueprint_url,
                 config.instance.file_server_root,   # for the import resolver
+                labels=labels
             )
         except manager_exceptions.ExistingRunningExecutionError as e:
             new_blueprint.state = BlueprintUploadState.FAILED_UPLOADING
@@ -582,10 +586,10 @@ class UploadedBlueprintsManager(UploadedDataManager):
         sm = get_resource_manager().sm
         file_server_root = config.instance.file_server_root
         local_path = os.path.join(
-                config.instance.file_server_root,
-                FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
-                tenant,
-                blueprint_id)
+            config.instance.file_server_root,
+            FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
+            tenant,
+            blueprint_id)
         for arc_type in SUPPORTED_ARCHIVE_TYPES:
             # attempting to find the archive file on the file system
             local_file_path = os.path.join(
@@ -602,7 +606,7 @@ class UploadedBlueprintsManager(UploadedDataManager):
                 BlueprintUploadState.FAILED_EXTRACTING_TO_FILE_SERVER
             blueprint.error = error_msg
             sm.update(blueprint)
-            raise RuntimeError(error_msg)
+            raise manager_exceptions.NotFoundError(error_msg)
         try:
             app_dir = self._extract_file_to_file_server(local_file_path,
                                                         file_server_root)

@@ -54,6 +54,8 @@ class Blueprints(resources_v1.Blueprints):
             '_get_all_results',
             request.args.get('_get_all_results', False)
         )
+        if _include and 'labels' in _include:
+            _include = None
         if not filters:
             filters = {}
         filters.setdefault('is_hidden', False)
@@ -83,6 +85,8 @@ class BlueprintsId(resources_v1.BlueprintsId):
         """
         Get blueprint by id
         """
+        if _include and 'labels' in _include:
+            _include = None
         with rest_utils.skip_nested_marshalling():
             return super(BlueprintsId, self).get(blueprint_id=blueprint_id,
                                                  _include=_include,
