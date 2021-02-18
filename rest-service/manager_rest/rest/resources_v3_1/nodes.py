@@ -26,15 +26,12 @@ class Nodes(v3_Nodes):
         return None, 201
 
     def _deployment_id_from_nodes(self, raw_nodes):
-        deployment_ids = set()
-        for node in raw_nodes:
-            deployment_ids.add(node['deployment_id'])
-        if len(deployment_ids) != 1:
+        deployment_id = raw_nodes[0]['deployment_id']
+        if any(n['deployment_id'] != deployment_id for n in raw_nodes):
             raise manager_exceptions.ConflictError(
-                'All nodes must belong to the same deployment, '
-                'but found {0} deployments'.format(len(deployment_ids))
+                'All nodes must belong to the same deployment'
             )
-        return deployment_ids.pop()
+        return deployment_id
 
     def _node_from_raw_node(self, raw_node):
         node_type = raw_node['type']
