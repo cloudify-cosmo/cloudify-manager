@@ -4,12 +4,10 @@ from manager_rest import manager_exceptions
 from manager_rest.rest import rest_utils
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import get_storage_manager, models
-from manager_rest.rest import rest_decorators
 
 
 class Nodes(v3_Nodes):
     @authorize('node_create')
-    @rest_decorators.marshal_with(models.Node)
     def post(self):
         request_dict = rest_utils.get_json_and_verify_params({
             'nodes': {'type': list},
@@ -25,7 +23,7 @@ class Nodes(v3_Nodes):
                 node.set_deployment(deployment)
                 sm.put(node)
                 created.append(node)
-        return created, 200
+        return None, 201
 
     def _deployment_id_from_nodes(self, raw_nodes):
         deployment_ids = set()
