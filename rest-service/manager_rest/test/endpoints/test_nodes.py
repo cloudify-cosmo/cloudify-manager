@@ -466,3 +466,61 @@ class NodesCreateTest(base_test.BaseServerTestCase):
                     'type': 'cloudify.nodes.Root'
                 }
             ])
+
+    def test_create_parameters(self):
+        self.put_deployment('dep1')
+        # those values don't necessarily make sense, but let's test that
+        # all of them are passed through correctly
+        node_type = 'node_type1'
+        type_hierarchy = ['cloudify.nodes.Root', 'base_type', 'node_type1']
+        relationships = [{
+            'target_id': 'node1',
+            'type': 'relationship_type1',
+            'type_hierarchy': ['relationship_type1'],
+            'properties': {'a': 'b'},
+            'source_operations': {},
+            'target_operations': {},
+        }]
+        properties = {'prop1': 'value'}
+        operations = {'op1': 'operation'}
+        current_instances = 3
+        default_instances = 3
+        min_instances = 2
+        max_instances = 5
+        plugins = ['plug1']
+        self.client.nodes.create_many([
+            {
+                'id': 'test_node1',
+                'deployment_id': 'dep1',
+                'type': node_type,
+                'type_hierarchy': type_hierarchy,
+                'properties': properties,
+                'relationships': relationships,
+                'operations': operations,
+                'plugins': plugins,
+                'capabilities': {
+                    'scalable': {
+                        'properties': {
+                            'current_instances': current_instances,
+                            'default_instances': default_instances,
+                            'min_instances': min_instances,
+                            'max_instances': max_instances,
+                        }
+                    }
+                }
+            }
+        ])
+        deployment = self.sm.get(models.Deployment, 'dep1')
+        node = self.sm.get(models.Node, 'test_node1')
+        assert node.deployment == deployment
+        assert node.type_hierarchy == type_hierarchy
+        assert node.type == node_type
+        assert node.properties == properties
+        assert node.relationships == relationships
+        assert node.plugins == plugins
+        assert node.operations == operations
+        assert node.number_of_instances == current_instances
+        assert node.planned_number_of_instances == current_instances
+        assert node.deploy_number_of_instances == default_instances
+        assert node.min_number_of_instances == min_instances
+        assert node.max_number_of_instances == max_instances
