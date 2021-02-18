@@ -18,7 +18,7 @@ from unittest import skip
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 
-from manager_rest.storage import db
+from manager_rest.storage import db, models
 from manager_rest.test import base_test
 from manager_rest import manager_exceptions
 from manager_rest.test.mocks import put_node_instance
@@ -424,3 +424,106 @@ class NodesTest(base_test.BaseServerTestCase):
                 self.assertEqual(1, len(scaling_groups))
                 self.assertDictContainsSubset({'name': 'group1'},
                                               scaling_groups[0])
+
+
+class NodesCreateTest(base_test.BaseServerTestCase):
+    def test_create_nodes(self):
+        self.put_deployment('dep1')
+        self.client.nodes.create_many([
+            {
+                'id': 'test_node1',
+                'deployment_id': 'dep1',
+                'type': 'cloudify.nodes.Root'
+            },
+            {
+                'id': 'test_node2',
+                'deployment_id': 'dep1',
+                'type': 'cloudify.nodes.Root'
+            }
+        ])
+        nodes = self.sm.list(models.Node)
+        node1 = [n for n in nodes if n.id == 'test_node1']
+        node2 = [n for n in nodes if n.id == 'test_node2']
+        assert len(node1) == 1
+        node1 = node1[0]
+        assert len(node2) == 1
+        assert node1.deployment_id == 'dep1'
+
+    def test_create_different_deployments(self):
+        self.put_blueprint()
+        self.client.deployments.create('blueprint', 'dep1')
+        self.client.deployments.create('blueprint', 'dep2')
+        with self.assertRaisesRegexp(CloudifyClientError, 'same deployment'):
+            self.client.nodes.create_many([
+                {
+                    'id': 'test_node1',
+                    'deployment_id': 'dep1',
+                    'type': 'cloudify.nodes.Root'
+                },
+                {
+                    'id': 'test_node2',
+                    'deployment_id': 'dep2',
+                    'type': 'cloudify.nodes.Root'
+                }
+            ])
+
+    def test_create_parameters(self):
+        self.put_deployment('dep1')
+        # those values don't necessarily make sense, but let's test that
+        # all of them are passed through correctly
+        node_type = 'node_type1'
+        type_hierarchy = ['cloudify.nodes.Root', 'base_type', 'node_type1']
+        relationships = [{
+            'target_id': 'node1',
+            'type': 'relationship_type1',
+            'type_hierarchy': ['relationship_type1'],
+            'properties': {'a': 'b'},
+            'source_operations': {},
+            'target_operations': {},
+        }]
+        properties = {'prop1': 'value'}
+        operations = {'op1': 'operation'}
+        current_instances = 3
+        default_instances = 3
+        min_instances = 2
+        max_instances = 5
+        plugins = ['plug1']
+        self.client.nodes.create_many([
+            {
+                'id': 'test_node1',
+                'deployment_id': 'dep1',
+                'type': node_type,
+                'type_hierarchy': type_hierarchy,
+                'properties': properties,
+                'relationships': relationships,
+                'operations': operations,
+                'plugins': plugins,
+                'capabilities': {
+                    'scalable': {
+                        'properties': {
+                            'current_instances': current_instances,
+                            'default_instances': default_instances,
+                            'min_instances': min_instances,
+                            'max_instances': max_instances,
+                        }
+                    }
+                }
+            }
+        ])
+        deployment = self.sm.get(models.Deployment, 'dep1')
+        node = self.sm.get(models.Node, 'test_node1')
+        assert node.deployment == deployment
+        assert node.type_hierarchy == type_hierarchy
+        assert node.type == node_type
+        assert node.properties == properties
+        assert node.relationships == relationships
+        assert node.plugins == plugins
+        assert node.operations == operations
+        assert node.number_of_instances == current_instances
+        assert node.planned_number_of_instances == current_instances
+        assert node.deploy_number_of_instances == default_instances
+        assert node.min_number_of_instances == min_instances
+        assert node.max_number_of_instances == max_instances
+
+    def test_empty_list(self):
+        self.client.nodes.create_many([])  # doesn't throw
