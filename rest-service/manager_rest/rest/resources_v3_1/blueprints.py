@@ -227,7 +227,7 @@ class BlueprintsId(resources_v2.BlueprintsId):
             blueprint.description = request_dict['description']
         if 'main_file_name' in request_dict:
             blueprint.main_file_name = request_dict['main_file_name']
-        provided_labels = request_dict.get('labels', [])
+        provided_labels = request_dict.get('labels')
 
         # set blueprint state
         state = request_dict.get('state')
@@ -237,6 +237,13 @@ class BlueprintsId(resources_v2.BlueprintsId):
                     "Invalid state: `{0}`. Valid blueprint state values are: "
                     "{1}".format(state, BlueprintUploadState.STATES)
                 )
+            if (state != BlueprintUploadState.UPLOADED and
+                    provided_labels is not None):
+                raise ConflictError(
+                    'Blueprint labels can be created only if the provided '
+                    'blueprint state is {0}'.format(
+                        BlueprintUploadState.UPLOADED))
+
             blueprint.state = state
             blueprint.error = request_dict.get('error')
             blueprint.error_traceback = request_dict.get('error_traceback')
@@ -248,7 +255,7 @@ class BlueprintsId(resources_v2.BlueprintsId):
                     extract_blueprint_archive_to_file_server(
                         blueprint_id=blueprint_id,
                         tenant=blueprint.tenant.name)
-                _handle_blueprint_labels(blueprint, provided_labels)
+                _create_blueprint_labels(blueprint, provided_labels)
 
             # If failed for any reason, cleanup the blueprint archive from
             # server
@@ -258,17 +265,23 @@ class BlueprintsId(resources_v2.BlueprintsId):
                         blueprint_id=blueprint_id,
                         tenant=blueprint.tenant.name)
         else:  # Updating the blueprint not as part of the upload process
-            rm = get_resource_manager()
-            labels_list = rest_utils.get_labels_list(provided_labels)
-            rm.update_resource_labels(models.BlueprintLabel,
-                                      blueprint,
-                                      labels_list)
+            if provided_labels is not None:
+                if blueprint.state != BlueprintUploadState.UPLOADED:
+                    raise ConflictError(
+                        'Blueprint labels can only be updated if the blueprint'
+                        ' was uploaded successfully')
+
+                rm = get_resource_manager()
+                labels_list = rest_utils.get_labels_list(provided_labels)
+                rm.update_resource_labels(models.BlueprintLabel,
+                                          blueprint,
+                                          labels_list)
 
         blueprint.updated_at = get_formatted_timestamp()
         return sm.update(blueprint)
 
 
-def _handle_blueprint_labels(blueprint, provided_labels):
+def _create_blueprint_labels(blueprint, provided_labels):
     labels_list = get_labels_from_plan(blueprint.plan,
                                        constants.BLUEPRINT_LABELS)
     if provided_labels:
