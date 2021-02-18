@@ -453,7 +453,7 @@ class NodesCreateTest(base_test.BaseServerTestCase):
         self.put_blueprint()
         self.client.deployments.create('blueprint', 'dep1')
         self.client.deployments.create('blueprint', 'dep2')
-        with self.assertRaisesRegexp(CloudifyClientError, 'deployment'):
+        with self.assertRaisesRegexp(CloudifyClientError, 'same deployment'):
             self.client.nodes.create_many([
                 {
                     'id': 'test_node1',
