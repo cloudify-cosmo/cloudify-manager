@@ -538,7 +538,9 @@ class UploadedBlueprintsManager(UploadedDataManager):
             self.upload_archive_to_file_server(data_id)
 
         try:
-            rm.upload_blueprint(
+            # unfortunate, but we must pass the execution back out
+            # to the caller, so they can poll on it
+            new_blueprint._upload_execution = rm.upload_blueprint(
                 data_id,
                 application_file_name,
                 blueprint_url,
