@@ -5,9 +5,9 @@ imports:
 
 blueprint_labels:
   bp_key1:
-    value:
+    values:
       - bp_key1_val1
   bp_key2:
-    value:
+    values:
       - bp_key2_val1
       - bp_key2_val2
