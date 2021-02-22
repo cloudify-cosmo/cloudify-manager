@@ -22,7 +22,11 @@ from dsl_parser.constants import INTER_DEPLOYMENT_FUNCTIONS
 
 from cloudify._compat import urlquote, text_type
 from cloudify.snapshots import SNAPSHOT_RESTORE_FLAG_FILE
-from cloudify.models_states import VisibilityState, BlueprintUploadState
+from cloudify.models_states import (
+    VisibilityState,
+    BlueprintUploadState,
+    ExecutionState,
+)
 
 from manager_rest.storage import models
 from manager_rest.constants import REST_SERVICE_NAME
@@ -631,19 +635,21 @@ def verify_blueprint_uploaded_state(blueprint):
 
 
 def retry_if_upload_not_ended(result):
-    return result.state not in BlueprintUploadState.END_STATES
+    return result.status not in ExecutionState.END_STATES
 
 
 @retry(wait_fixed=1000, stop_max_attempt_number=60,
        retry_on_result=retry_if_upload_not_ended)
-def wait_for_blueprint_upload(sm, blueprint_id):
-    blueprint = sm.get(models.Blueprint, blueprint_id)
+def wait_for_blueprint_upload(sm, execution_id):
+    execution = sm.get(models.Execution, execution_id)
     sm._safe_commit()
-    return blueprint
+    return execution
 
 
-def get_uploaded_blueprint(sm, blueprint_id):
-    blueprint = wait_for_blueprint_upload(sm, blueprint_id)
+def get_uploaded_blueprint(sm, blueprint):
+    # ._upload_execution is set in the upload_manager
+    wait_for_blueprint_upload(sm, blueprint._upload_execution.id)
+    blueprint = sm.get(models.Blueprint, blueprint.id)
     if blueprint.state in BlueprintUploadState.FAILED_STATES:
         if blueprint.state == BlueprintUploadState.INVALID:
             state_display = 'is invalid'
