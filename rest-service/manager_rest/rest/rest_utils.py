@@ -624,24 +624,27 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
             if source and target:
                 self.add_dependency_to_graph(source, target)
 
-    def find_recursive_deployments(self, source_id):
+    def find_recursive_deployments(self, source_ids):
         """
         Find all deployments that are referenced directly and indirectly
         referenced by Deployment id `source_id`
-        :param source_id: The deployment id that is could be connected to
-        the deployments graph
+        :param source_ids: List of deployment ids
         :return:List of recursive deployments that are connected by
-        `source_id` deployment
+        `source_ids` deployments
         :rtype List
         """
         inv_graph = self._get_inverted_graph()
         # BFS to find deployments
-        queue = [source_id]
+        queue = source_ids
         results = []
         visited = defaultdict(bool)
         while queue:
             v = queue.pop()
             if v not in inv_graph:
+                continue
+            if not visited[v]:
+                visited[v] = True
+            else:
                 continue
             dependencies = self.sm.list(
                 models.DeploymentLabelsDependencies,
@@ -673,32 +676,37 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
             total_environments += 1
         else:
             total_services += 1
-        target_group = [target_id] + self.find_recursive_deployments(target_id)
+        target_group = [target_id] + self.find_recursive_deployments(
+            [target_id]
+        )
         for target_id in target_group:
             if total_services or total_environments:
                 with self.sm.transaction():
                     target = self.sm.get(
                         models.Deployment,
                         target_id,
-                        locking=True
+                        locking=True,
+                        fail_silently=True
                     )
-                    target.sub_services_count += total_services
-                    target.sub_environments_count += total_environments
-                    self.sm.update(target)
+                    if target:
+                        target.sub_services_count += total_services
+                        target.sub_environments_count += total_environments
+                        self.sm.update(target)
 
-    def decrease_deployment_counts_in_graph(self, target_id, source):
+    def decrease_deployment_counts_in_graph(self, target_ids, source):
         """
         Decrease the counter for each deployment that is referenced
         directly and indirectly by `source` deployment and the counts that
         need to be update are possibly for `sub_environments_count`
         & `sub_services_count`
-        :param target_id: Target Deployment ID that we need to de-attach
+        :param target_ids: Target Deployment IDs that we need to de-attach
         source from
         :rtype str
         :param source: Deployment instance
         :rtype Deployment
         """
-        target_group = [target_id] + self.find_recursive_deployments(target_id)
+        _targets = target_ids.copy()
+        target_group = target_ids + self.find_recursive_deployments(_targets)
         if target_group:
             total_services = source.sub_services_count
             total_environments = source.sub_environments_count
@@ -711,13 +719,15 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
                     target = self.sm.get(
                         models.Deployment,
                         target_id,
-                        locking=True
+                        locking=True,
+                        fail_silently=True
                     )
-                    if target.sub_services_count:
-                        target.sub_services_count -= total_services
-                    if target.sub_environments_count:
-                        target.sub_environments_count -= total_environments
-                    self.sm.update(target)
+                    if target:
+                        if target.sub_services_count:
+                            target.sub_services_count -= total_services
+                        if target.sub_environments_count:
+                            target.sub_environments_count -= total_environments
+                        self.sm.update(target)
 
     def update_deployment_counts_after_source_conversion(self,
                                                          source,
@@ -740,7 +750,7 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
             env_to_update = -1
             srv_to_update = 1
 
-        target_group = self.find_recursive_deployments(source.id)
+        target_group = self.find_recursive_deployments([source.id])
         for target_id in target_group:
             with self.sm.transaction():
                 target = self.sm.get(
@@ -752,17 +762,33 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
                 target.sub_environments_count += env_to_update
                 self.sm.update(target)
 
-    def propagate_deployment_statuses(self, source):
+    def propagate_deployment_statuses(self, source_id):
         """
         Propagate deployment statuses for source deployment to all connected
         in graph that referenced by this node directly and indirectly
-        :param source: Deployment instance
-        :rtype Deployment
+        :param source_id: Deployment id
+        :rtype str
         """
-        queue = deque([source.id] + self.find_recursive_deployments(source.id))
+        def _update_deployment_status(dep, srv_status, env_status):
+            _target = self.sm.get(
+                models.Deployment,
+                dep,
+                locking=True,
+                fail_silently=True
+            )
+            if _target:
+                _target.sub_environments_status = env_status
+                _target.sub_services_status = srv_status
+                _target.deployment_status = \
+                    _target.evaluate_deployment_status()
+                self.sm.update(_target)
+        queue = deque([source_id] + self.find_recursive_deployments(
+            [source_id]
+        ))
         while queue:
             v = queue.popleft()
             if v not in self.graph:
+                _update_deployment_status(v, None, None)
                 continue
             from_dependencies = self.sm.list(
                 models.DeploymentLabelsDependencies,
@@ -790,15 +816,44 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
                     total_srv_status = _source.compare_between_statuses(
                         total_srv_status, _sub_srv_status
                     )
+            _update_deployment_status(v, total_srv_status, total_env_status)
 
-            if total_srv_status or total_env_status:
-                target = self.sm.get(models.Deployment, v, locking=True)
-                if total_env_status:
-                    target.sub_environments_status = total_env_status
-                if total_srv_status:
-                    target.sub_services_status = total_srv_status
-                target.deployment_status = target.evaluate_deployment_status()
-                self.sm.update(target)
+    def retrieve_and_display_dependencies(self, target):
+        self.create_dependencies_graph()
+        queue = [target.id]
+        visited = defaultdict(bool)
+        dependencies = []
+        while queue:
+            v = queue.pop()
+            if v not in self.graph:
+                continue
+            if not visited[v]:
+                visited[v] = True
+            else:
+                continue
+            from_dependencies = self.sm.list(
+                models.DeploymentLabelsDependencies,
+                filters={'target_deployment_id': v}
+            )
+            if not from_dependencies:
+                continue
+            for from_dependency in from_dependencies:
+                if from_dependency.source_deployment_id in self.graph[v]:
+                    if not visited[from_dependency.source_deployment_id]:
+                        queue.append(from_dependency.source_deployment_id)
+                        dependencies.append({
+                            'parent':
+                                from_dependency.target_deployment_id,
+                            'child':
+                                from_dependency.source_deployment_id
+                        })
+                        visited[from_dependency.source_deployment_id] = True
+        dependency_display = '  [{0}] Deployment `{1}` depends on `{2}`'
+        return '\n'.join(
+            dependency_display.format(i + 1,
+                                      d['child'],
+                                      d['parent'])
+            for i, d in enumerate(dependencies))
 
 
 def update_inter_deployment_dependencies(sm):

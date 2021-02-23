@@ -41,6 +41,7 @@ from manager_rest.manager_exceptions import (
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.maintenance import is_bypass_maintenance_mode
 from manager_rest.dsl_functions import evaluate_deployment_capabilities
+
 from manager_rest.rest.filters_utils import get_filter_rules_from_filter_id
 from manager_rest.rest import (
     rest_utils,
@@ -174,6 +175,8 @@ class DeploymentsId(resources_v1.DeploymentsId):
             optional=True,
             valid_values=VisibilityState.STATES
         )
+        labels = rest_utils.get_labels_list(request_dict.get('labels', []))
+        inputs = request_dict.get('inputs', {})
         skip_plugins_validation = self.get_skip_plugin_validation_flag(
             request_dict)
         rm = get_resource_manager()
@@ -181,7 +184,6 @@ class DeploymentsId(resources_v1.DeploymentsId):
         blueprint = sm.get(models.Blueprint, blueprint_id)
         site_name = _get_site_name(request_dict)
         site = sm.get(models.Site, site_name) if site_name else None
-        labels = rest_utils.get_labels_list(request_dict.get('labels', []))
         rm.cleanup_failed_deployment(deployment_id)
         deployment = rm.create_deployment(
             blueprint,
@@ -192,10 +194,11 @@ class DeploymentsId(resources_v1.DeploymentsId):
             site=site,
             runtime_only_evaluation=request_dict.get(
                 'runtime_only_evaluation', False),
+            labels=labels,
         )
         try:
             rm.execute_workflow(deployment.make_create_environment_execution(
-                inputs=request_dict.get('inputs', {}),
+                inputs=inputs,
                 labels=labels,
                 skip_plugins_validation=skip_plugins_validation,
 
