@@ -1,6 +1,7 @@
 """5_2 to 5_3
 
 - Create blueprints_labels table
+- Create deployment labels dependencies table
 - Add installation_status to the deployment table
 - Add deployment_status to the deployment table
 - Add latest execution FK to the deployment table
@@ -12,7 +13,9 @@ Create Date: 2021-02-15 12:02:22.089135
 """
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
+from cloudify.models_states import VisibilityState
 from manager_rest.storage.models_base import UTCDateTime
 
 # revision identifiers, used by Alembic.
@@ -34,6 +37,12 @@ deployment_status = sa.Enum(
     name='deployment_status'
 )
 
+VISIBILITY_ENUM = postgresql.ENUM(
+    *VisibilityState.STATES,
+    name='visibility_states',
+    create_type=False
+)
+
 
 def upgrade():
     _create_blueprints_labels_table()
@@ -43,9 +52,11 @@ def upgrade():
     _add_deployment_statuses()
     _add_execgroups_concurrency()
     _add_execution_operations_columns()
+    _create_deployment_labels_dependencies_table()
 
 
 def downgrade():
+    _drop_deployment_labels_dependencies_table()
     _drop_execgroups_concurrency()
     _drop_deployment_statuses()
     _drop_specialized_execution_fk()
@@ -53,6 +64,78 @@ def downgrade():
     _revert_changes_to_deployments_labels_table()
     _drop_blueprints_labels_table()
     _drop_execution_operations_columns()
+
+
+def _create_deployment_labels_dependencies_table():
+    op.create_table(
+        'deployment_labels_dependencies',
+        sa.Column('_storage_id', sa.Integer(), autoincrement=True,
+                  nullable=False),
+        sa.Column('id', sa.Text(), nullable=True),
+        sa.Column('visibility', VISIBILITY_ENUM, nullable=True),
+        sa.Column('created_at', UTCDateTime(), nullable=False),
+        sa.Column('_source_deployment', sa.Integer(),
+                  nullable=False),
+        sa.Column('_target_deployment', sa.Integer(),
+                  nullable=False),
+        sa.Column('_tenant_id', sa.Integer(), nullable=False),
+        sa.Column('_creator_id', sa.Integer(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ['_creator_id'], ['users.id'],
+            name=op.f('deployment_labels_dependencies__creator_id_fkey'),
+            ondelete='CASCADE'
+        ),
+        sa.ForeignKeyConstraint(
+            ['_tenant_id'], ['tenants.id'],
+            name=op.f('deployment_labels_dependencies__tenant_id_fkey'),
+            ondelete='CASCADE'
+        ),
+        sa.ForeignKeyConstraint(
+            ['_source_deployment'], ['deployments._storage_id'],
+            name=op.f(
+                'deployment_labels_dependencies__source_deployment_fkey'
+            ), ondelete='CASCADE'
+        ),
+        sa.ForeignKeyConstraint(
+            ['_target_deployment'], ['deployments._storage_id'],
+            name=op.f(
+                'deployment_labels_dependencies__target_deployment_fkey'
+            ), ondelete='CASCADE'
+        ),
+        sa.PrimaryKeyConstraint(
+            '_storage_id', name=op.f('deployment_labels_dependencies_pkey')
+        ),
+    )
+    op.create_index(
+        op.f('deployment_labels_dependencies__creator_id_idx'),
+        'deployment_labels_dependencies', ['_creator_id'], unique=False
+    )
+    op.create_index(
+        op.f('deployment_labels_dependencies__tenant_id_idx'),
+        'deployment_labels_dependencies', ['_tenant_id'], unique=False
+    )
+    op.create_index(
+        op.f('deployment_labels_dependencies_created_at_idx'),
+        'deployment_labels_dependencies', ['created_at'], unique=False
+    )
+    op.create_index(
+        op.f('deployment_labels_dependencies_id_idx'),
+        'deployment_labels_dependencies', ['id'], unique=False
+    )
+    op.create_index(
+        op.f('deployment_labels_dependencies__source_deployment_idx'),
+        'deployment_labels_dependencies', ['_source_deployment'],
+        unique=False
+    )
+    op.create_index(
+        op.f('deployment_labels_dependencies__target_deployment_idx'),
+        'deployment_labels_dependencies', ['_target_deployment'],
+        unique=False
+    )
+    op.create_index(
+        op.f('deployment_labels_dependencies_visibility_idx'),
+        'deployment_labels_dependencies', ['visibility'], unique=False
+    )
 
 
 def _add_deployment_statuses():
@@ -362,3 +445,35 @@ def _add_execution_operations_columns():
 def _drop_execution_operations_columns():
     op.drop_column('executions', 'total_operations')
     op.drop_column('executions', 'finished_operations')
+
+
+def _drop_deployment_labels_dependencies_table():
+    op.drop_index(
+        op.f('deployment_labels_dependencies_visibility_idx'),
+        table_name='deployment_labels_dependencies'
+    )
+    op.drop_index(
+        op.f('deployment_labels_dependencies__target_deployment_idx'),
+        table_name='deployment_labels_dependencies'
+    )
+    op.drop_index(
+        op.f('deployment_labels_dependencies__source_deployment_idx'),
+        table_name='deployment_labels_dependencies'
+    )
+    op.drop_index(
+        op.f('deployment_labels_dependencies_id_idx'),
+        table_name='deployment_labels_dependencies'
+    )
+    op.drop_index(
+        op.f('deployment_labels_dependencies_created_at_idx'),
+        table_name='deployment_labels_dependencies'
+    )
+    op.drop_index(
+        op.f('deployment_labels_dependencies__tenant_id_idx'),
+        table_name='deployment_labels_dependencies'
+    )
+    op.drop_index(
+        op.f('deployment_labels_dependencies__creator_id_idx'),
+        table_name='deployment_labels_dependencies'
+    )
+    op.drop_table('deployment_labels_dependencies')
