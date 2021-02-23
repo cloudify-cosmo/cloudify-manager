@@ -100,12 +100,12 @@ class SQLStorageManager(object):
         try:
             yield
         except Exception:
+            self._in_transaction = False
             db.session.rollback()
             raise
         else:
-            self._safe_commit()
-        finally:
             self._in_transaction = False
+            self._safe_commit()
 
     def _get_base_query(self, model_class, include, joins, distinct=None):
         """Create the initial query from the model class and included columns
