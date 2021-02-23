@@ -1574,17 +1574,16 @@ class Operation(SQLResourceBase):
         return self.type == 'NOPLocalWorkflowTask'
 
 
-class InterDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
-    __tablename__ = 'inter_deployment_dependencies'
+class BaseDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
+    __abstract__ = True
+    _source_deployment = None
+    _target_deployment = None
 
-    dependency_creator = db.Column(db.Text, nullable=False)
-    _source_deployment = foreign_key(Deployment._storage_id, nullable=True)
-    _target_deployment = foreign_key(Deployment._storage_id,
-                                     nullable=True,
-                                     ondelete='SET NULL')
-    target_deployment_func = db.Column(JSONString, nullable=True)
-    external_source = db.Column(JSONString, nullable=True)
-    external_target = db.Column(JSONString, nullable=True)
+    _source_backref_name = None
+    _target_backref_name = None
+
+    _source_cascade = 'all'
+    _target_cascade = 'all'
 
     @declared_attr
     def source_deployment(cls):
@@ -1592,7 +1591,8 @@ class InterDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
             cls,
             Deployment,
             cls._source_deployment,
-            backref=db.backref('source_of_dependency_in', cascade='all')
+            backref=db.backref(cls._source_backref_name,
+                               cascade=cls._source_cascade)
         )
 
     @declared_attr
@@ -1601,9 +1601,38 @@ class InterDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
             cls,
             Deployment,
             cls._target_deployment,
-            backref=db.backref('target_of_dependency_in'),
-            cascade='save-update, merge, refresh-expire, expunge')
+            backref=db.backref(cls._target_backref_name),
+            cascade=cls._target_cascade)
 
     source_deployment_id = association_proxy('source_deployment', 'id')
     target_deployment_id = association_proxy('target_deployment', 'id')
+
+
+class InterDeploymentDependencies(BaseDeploymentDependencies):
+    __tablename__ = 'inter_deployment_dependencies'
+
+    _source_backref_name = 'source_of_dependency_in'
+    _target_backref_name = 'target_of_dependency_in'
+
+    _target_cascade = 'save-update, merge, refresh-expire, expunge'
+
+    _source_deployment = foreign_key(Deployment._storage_id, nullable=True)
+    _target_deployment = foreign_key(Deployment._storage_id,
+                                     nullable=True,
+                                     ondelete='SET NULL')
+
+    dependency_creator = db.Column(db.Text, nullable=False)
+    target_deployment_func = db.Column(JSONString, nullable=True)
+    external_source = db.Column(JSONString, nullable=True)
+    external_target = db.Column(JSONString, nullable=True)
+
+
+class DeploymentLabelsDependencies(BaseDeploymentDependencies):
+    __tablename__ = 'deployment_labels_dependencies'
+
+    _source_backref_name = 'source_of_dependency_labels'
+    _target_backref_name = 'target_of_dependency_labels'
+
+    _source_deployment = foreign_key(Deployment._storage_id)
+    _target_deployment = foreign_key(Deployment._storage_id)
 # endregion
