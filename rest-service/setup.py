@@ -35,7 +35,7 @@ install_requires = [
     'pika==1.1.0',
     'cryptography==3.3.1',
     'psycopg2==2.7.4',
-    'pytz==2018.4',
+    'pytz==2021.1',
     'packaging==17.1',
     'jsonschema==3.0.0',
     'SQLAlchemy==1.3.19',
