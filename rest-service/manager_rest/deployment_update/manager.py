@@ -84,7 +84,8 @@ class DeploymentUpdateManager(object):
                                 additional_inputs,
                                 new_blueprint_id=None,
                                 preview=False,
-                                runtime_only_evaluation=False):
+                                runtime_only_evaluation=False,
+                                auto_correct_types=False):
         # enables reverting to original blueprint resources
         deployment = self.sm.get(models.Deployment, deployment_id)
         old_blueprint = deployment.blueprint
@@ -103,7 +104,8 @@ class DeploymentUpdateManager(object):
 
         # applying intrinsic functions
         plan = get_deployment_plan(parsed_deployment, new_inputs,
-                                   runtime_only_evaluation)
+                                   runtime_only_evaluation,
+                                   auto_correct_types)
 
         deployment_update_id = '{0}-{1}'.format(deployment.id, uuid.uuid4())
         deployment_update = models.DeploymentUpdate(
