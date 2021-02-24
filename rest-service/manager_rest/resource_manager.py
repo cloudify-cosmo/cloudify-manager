@@ -308,7 +308,9 @@ class ResourceManager(object):
                 )
         return True
 
-    def update_plugins(self, plugins_update, no_changes_required=False):
+    def update_plugins(self, plugins_update,
+                       no_changes_required=False,
+                       auto_correct_types=False):
         """Executes the plugin update workflow.
 
         :param plugins_update: a PluginUpdate object.
@@ -324,6 +326,7 @@ class ResourceManager(object):
                 'deployments_to_update': plugins_update.deployments_to_update,
                 'temp_blueprint_id': plugins_update.temp_blueprint_id,
                 'force': plugins_update.forced,
+                'auto_correct_types': auto_correct_types,
             },
             verify_no_executions=False,
             fake_execution=no_changes_required)

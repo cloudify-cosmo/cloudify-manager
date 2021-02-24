@@ -96,7 +96,8 @@ class PluginsUpdateManager(object):
         plugins_update.set_blueprint(blueprint)
         return self.sm.put(plugins_update)
 
-    def initiate_plugins_update(self, blueprint_id, filters):
+    def initiate_plugins_update(self, blueprint_id, filters,
+                                auto_correct_types=False):
         """Creates a temporary blueprint and executes the plugins update
         workflow.
         """
@@ -126,8 +127,9 @@ class PluginsUpdateManager(object):
             plugins_update.state = STATES.UPDATING
             self.sm.update(plugins_update)
 
-        plugins_update.execution = get_resource_manager(
-            self.sm).update_plugins(plugins_update, not changes_required)
+        plugins_update.execution = \
+            get_resource_manager(self.sm).update_plugins(
+                plugins_update, not changes_required, auto_correct_types)
         plugins_update.state = (STATES.EXECUTING_WORKFLOW if changes_required
                                 else STATES.NO_CHANGES_REQUIRED)
         return self.sm.update(plugins_update)
