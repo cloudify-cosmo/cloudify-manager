@@ -21,7 +21,7 @@ from cloudify.models_states import VisibilityState
 
 from manager_rest import manager_exceptions, utils
 from manager_rest.test import base_test
-from manager_rest.storage import models
+from manager_rest.storage import models, db
 from manager_rest.storage.storage_manager import SQLStorageManager
 from manager_rest.test.attribute import attr
 
@@ -249,6 +249,11 @@ class TestTransactions(base_test.BaseServerTestCase):
         """Items created in the transaction are stored"""
         with self.sm.transaction():
             self.sm.put(self._make_secret('tx_secret', 'value'))
+
+        # rollback the current transaction - if the secret was committed
+        # indeed, then this will be a no-op
+        db.session.rollback()
+
         secret = self.sm.get(models.Secret, 'tx_secret')
         assert secret.value == 'value'
 
