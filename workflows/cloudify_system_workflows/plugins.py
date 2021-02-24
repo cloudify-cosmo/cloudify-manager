@@ -65,9 +65,8 @@ def update(ctx, update_id, temp_blueprint_id, deployments_to_update, force,
     the temp blueprint ID provided.
     :param force: force update (i.e. even if the blueprint is used to create
     components).
-    :param auto_correct_types: update deployments with auto_correct_types
-    flag, which will attempt to cast inputs to the types defined by
-    the blueprint.
+    :param auto_correct_types: update deployments with auto_correct_types flag,
+     which will attempt to cast inputs to the types defined by the blueprint.
     """
 
     def get_wait_for_execution_message(execution_id):

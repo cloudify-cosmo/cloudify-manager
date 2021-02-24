@@ -152,10 +152,9 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
         self.wait_for_deployment_creation(self.client, 'dep')
         plugins_update = self.client.plugins_update.update_plugins(
             'hello_world', auto_correct_types=True)
-        self.assertListEqual(['dep'],
-                             plugins_update.deployments_to_update)
+        self.assertEqual(['dep'], plugins_update.deployments_to_update)
         execution = self.client.executions.get(plugins_update.execution_id)
-        self.assertDictEqual(
+        self.assertEqual(
             execution.parameters,
             {'update_id': plugins_update.id,
              'deployments_to_update': ['dep'],
