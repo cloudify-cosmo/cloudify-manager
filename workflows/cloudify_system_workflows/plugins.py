@@ -74,6 +74,10 @@ def update(ctx, update_id, temp_blueprint_id, deployments_to_update, force,
         return 'Deployment update has failed with execution ID: ' \
                '{0}.'.format(execution_id)
 
+    ctx.logger.info('Executing update_plugin system workflow with flags: '
+                    'force={0}, auto_correct_types={1}'.
+                    format(force, auto_correct_types))
+
     client = get_rest_client()
     for dep in deployments_to_update:
         ctx.send_event('Executing deployment update for deployment '
