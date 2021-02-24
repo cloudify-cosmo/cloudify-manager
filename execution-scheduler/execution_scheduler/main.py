@@ -12,6 +12,8 @@ from manager_rest import config
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.utils import set_current_tenant
 from manager_rest.flask_utils import setup_flask_app
+from manager_rest.maintenance import get_maintenance_state
+from manager_rest.constants import MAINTENANCE_MODE_ACTIVATED
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.storage.models_base import db
 from manager_rest.storage.storage_utils import (try_acquire_lock_on_table,
@@ -40,6 +42,12 @@ class LoopTimer(object):
 
 
 def check_schedules():
+    maint_state = get_maintenance_state()
+    if maint_state and maint_state['status'] == MAINTENANCE_MODE_ACTIVATED:
+        logger.debug("Maintenance mode activated, schedules won't run")
+        db.session.rollback()
+        return
+
     logger.debug('Checking schedules...')
     sm = get_storage_manager()
     schedules = sm.full_access_list(
