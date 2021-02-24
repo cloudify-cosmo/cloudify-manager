@@ -527,3 +527,70 @@ class NodesCreateTest(base_test.BaseServerTestCase):
 
     def test_empty_list(self):
         self.client.nodes.create_many([])  # doesn't throw
+
+
+class NodeInstancesCreateTest(base_test.BaseServerTestCase):
+    def test_empty_list(self):
+        self.client.node_instances.create_many([])  # doesn't throw
+
+    def test_create_instances(self):
+        self.put_deployment('dep1')
+        self.client.nodes.create_many([
+            {
+                'id': 'test_node1',
+                'deployment_id': 'dep1',
+                'type': 'cloudify.nodes.Root'
+            }
+        ])
+        self.client.node_instances.create_many([
+            {
+                'id': 'test_node1_xyz123',
+                'deployment_id': 'dep1',
+                'node_id': 'test_node1'
+            }
+        ])
+        node = self.sm.get(models.Node, 'test_node1')
+        all_instances = self.sm.list(models.NodeInstance)
+        node_instance = self.sm.get(models.NodeInstance, 'test_node1_xyz123')
+        assert node_instance.node == node
+        assert len(all_instances) == 1
+
+    def test_instance_index(self):
+        self.put_deployment('dep1')
+        self.client.nodes.create_many([
+            {
+                'id': 'test_node1',
+                'deployment_id': 'dep1',
+                'type': 'cloudify.nodes.Root'
+            },
+            {
+                'id': 'test_node2',
+                'deployment_id': 'dep1',
+                'type': 'cloudify.nodes.Root'
+            },
+        ])
+        self.client.node_instances.create_many([
+            {
+                'id': 'test_node1_1',
+                'deployment_id': 'dep1',
+                'node_id': 'test_node1'
+            }
+        ])
+        instance1 = self.sm.get(models.NodeInstance, 'test_node1_1')
+        self.client.node_instances.create_many([
+            {
+                'id': 'test_node1_2',
+                'deployment_id': 'dep1',
+                'node_id': 'test_node1'
+            },
+            {
+                'id': 'test_node2_1',
+                'deployment_id': 'dep1',
+                'node_id': 'test_node2'
+            },
+        ])
+        instance2 = self.sm.get(models.NodeInstance, 'test_node1_2')
+        node2_instance1 = self.sm.get(models.NodeInstance, 'test_node2_1')
+        assert instance1.index == 1
+        assert instance2.index == 2
+        assert node2_instance1.index == 1
