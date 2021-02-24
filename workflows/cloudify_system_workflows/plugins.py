@@ -54,7 +54,8 @@ def _operate_on_plugin(ctx, plugin, action):
 
 
 @workflow(system_wide=True)
-def update(ctx, update_id, temp_blueprint_id, deployments_to_update, **_):
+def update(ctx, update_id, temp_blueprint_id, deployments_to_update,
+           auto_correct_types, **_):
     """Execute deployment update for all the given deployments_to_update.
 
     :param update_id: plugins update ID.
@@ -62,22 +63,29 @@ def update(ctx, update_id, temp_blueprint_id, deployments_to_update, **_):
     this workflow only.
     :param deployments_to_update: deployments to perform the update on, using
     the temp blueprint ID provided.
+    :param auto_correct_types: update deployments with auto_correct_types flag,
+     which will attempt to cast inputs to the types defined by the blueprint.
     """
 
     def get_wait_for_execution_message(execution_id):
         return 'Deployment update has failed with execution ID: ' \
                '{0}.'.format(execution_id)
 
+    ctx.logger.info('Executing update_plugin system workflow with flag: '
+                    'auto_correct_types={0}'.format(auto_correct_types))
+
     client = get_rest_client()
     for dep in deployments_to_update:
         ctx.send_event('Executing deployment update for deployment '
                        '{}...'.format(dep))
         execution_id = client.deployment_updates \
-            .update_with_existing_blueprint(deployment_id=dep,
-                                            blueprint_id=temp_blueprint_id,
-                                            skip_install=True,
-                                            skip_uninstall=True,
-                                            skip_reinstall=True) \
+            .update_with_existing_blueprint(
+                deployment_id=dep,
+                blueprint_id=temp_blueprint_id,
+                skip_install=True,
+                skip_uninstall=True,
+                skip_reinstall=True,
+                auto_correct_types=auto_correct_types) \
             .execution_id
 
         wait_for(client.executions.get,
