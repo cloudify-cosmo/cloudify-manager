@@ -15,12 +15,15 @@
 
 from .. import rest_utils
 from flask import request
+from dateutil import rrule
 from manager_rest.rest import rest_decorators
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import (get_storage_manager,
                                   models)
 from manager_rest import manager_exceptions
+
+from cloudify_rest_client.responses import ListResponse
 
 from functools import wraps
 
@@ -196,3 +199,68 @@ class SummarizeBlueprints(BaseSummary):
     @rest_decorators.paginate
     def get(self, *args, **kwargs):
         return super(SummarizeBlueprints, self).get(*args, **kwargs)
+
+
+class SummarizeExecutionSchedules(BaseSummary):
+    summary_fields = [
+        'deployment_id',
+        'workflow_id',
+        'tenant_name',
+        'visibility',
+    ]
+    auth_req = 'execution_schedule_list'
+    model = models.ExecutionSchedule
+
+    @authorize(auth_req, allow_all_tenants=True)
+    @marshal_summary('execution_schedules')
+    @rest_decorators.all_tenants
+    @rest_decorators.create_filters(models.ExecutionSchedule)
+    @rest_decorators.paginate
+    def get(self, *args, **kwargs):
+        target_field = request.args.get('_target_field')
+        get_all_results = rest_utils.verify_and_convert_bool(
+            '_get_all_results',
+            request.args.get('_get_all_results', False)
+        )
+        if target_field not in self.summary_fields:
+            raise manager_exceptions.BadParametersError(
+                'Field {target} is not available for summary. Valid fields '
+                'are: {valid}'.format(
+                    target=target_field,
+                    valid=', '.join(self.summary_fields),
+                )
+            )
+        schedules_list = get_storage_manager().list(
+            models.ExecutionSchedule,
+            pagination=kwargs.get('pagination'),
+            all_tenants=kwargs.get('all_tenants'),
+            get_all_results=get_all_results,
+            filters=kwargs.get('filters'),
+        )
+        summary_dict = {}
+        for schedule in schedules_list:
+            recurring = self.is_recurring(schedule.rule)
+            key = (getattr(schedule, target_field),
+                   'recurring' if recurring else 'single')
+            summary_dict[key] = summary_dict.get(key, 0) + 1
+
+        summary_list = []
+        for k, v in summary_dict.items():
+            summary_list.append(k + (v,))
+
+        metadata = schedules_list.metadata
+        schedules_list.metadata['pagination']['total'] = len(summary_dict)
+        return ListResponse(summary_list, metadata)
+
+    @staticmethod
+    def is_recurring(rule):
+        if 'frequency' in rule and rule.get('count') != 1:
+            return True
+        if 'rrule' in rule:
+            rrule_dates = rrule.rrulestr(rule['rrule'])
+            try:
+                if rrule_dates[1]:
+                    return True
+            except IndexError:
+                return False
+        return False
