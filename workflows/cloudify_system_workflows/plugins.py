@@ -55,7 +55,7 @@ def _operate_on_plugin(ctx, plugin, action):
 
 @workflow(system_wide=True)
 def update(ctx, update_id, temp_blueprint_id, deployments_to_update, force,
-           **_):
+           auto_correct_types, **_):
     """Execute deployment update for all the given deployments_to_update.
 
     :param update_id: plugins update ID.
@@ -65,6 +65,9 @@ def update(ctx, update_id, temp_blueprint_id, deployments_to_update, force,
     the temp blueprint ID provided.
     :param force: force update (i.e. even if the blueprint is used to create
     components).
+    :param auto_correct_types: update deployments with auto_correct_types
+    flag, which will attempt to cast inputs to the types defined by
+    the blueprint.
     """
 
     def get_wait_for_execution_message(execution_id):
@@ -76,12 +79,14 @@ def update(ctx, update_id, temp_blueprint_id, deployments_to_update, force,
         ctx.send_event('Executing deployment update for deployment '
                        '{}...'.format(dep))
         execution_id = client.deployment_updates \
-            .update_with_existing_blueprint(deployment_id=dep,
-                                            blueprint_id=temp_blueprint_id,
-                                            skip_install=True,
-                                            skip_uninstall=True,
-                                            skip_reinstall=True,
-                                            force=force) \
+            .update_with_existing_blueprint(
+                deployment_id=dep,
+                blueprint_id=temp_blueprint_id,
+                skip_install=True,
+                skip_uninstall=True,
+                skip_reinstall=True,
+                force=force,
+                auto_correct_types=auto_correct_types) \
             .execution_id
 
         wait_for(client.executions.get,
