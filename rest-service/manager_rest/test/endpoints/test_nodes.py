@@ -550,10 +550,8 @@ class NodeInstancesCreateTest(base_test.BaseServerTestCase):
             }
         ])
         node = self.sm.get(models.Node, 'test_node1')
-        all_instances = self.sm.list(models.NodeInstance)
         node_instance = self.sm.get(models.NodeInstance, 'test_node1_xyz123')
         assert node_instance.node == node
-        assert len(all_instances) == 1
 
     def test_instance_index(self):
         self.put_deployment('dep1')
