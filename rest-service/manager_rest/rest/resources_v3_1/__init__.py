@@ -124,4 +124,5 @@ from .filters import (                           # NOQA
 
 from .nodes import (  # NOQA
     Nodes,
+    NodeInstances,
 )
