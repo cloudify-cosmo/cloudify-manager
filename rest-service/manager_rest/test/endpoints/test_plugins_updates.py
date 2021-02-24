@@ -146,7 +146,7 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
              'auto_correct_types': False})
 
     def test_plugins_update_auto_correct_types_flag(self):
-        self.put_blueprint(blueprint_id='hello_world')
+        self.put_file(*self.put_blueprint_args(blueprint_id='hello_world'))
         self.client.deployments.create('hello_world', 'dep')
         self.wait_for_deployment_creation(self.client, 'dep')
         plugins_update = self.client.plugins_update.update_plugins(
