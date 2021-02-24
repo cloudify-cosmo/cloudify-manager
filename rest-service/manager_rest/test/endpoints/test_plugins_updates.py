@@ -146,6 +146,23 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
              'force': False,
              'auto_correct_types': False})
 
+    def test_plugins_update_auto_correct_types_flag(self):
+        self.put_blueprint(blueprint_id='hello_world')
+        self.client.deployments.create('hello_world', 'dep')
+        self.wait_for_deployment_creation(self.client, 'dep')
+        plugins_update = self.client.plugins_update.update_plugins(
+            'hello_world', auto_correct_types=True)
+        self.assertListEqual(['dep'],
+                             plugins_update.deployments_to_update)
+        execution = self.client.executions.get(plugins_update.execution_id)
+        self.assertDictEqual(
+            execution.parameters,
+            {'update_id': plugins_update.id,
+             'deployments_to_update': ['dep'],
+             'temp_blueprint_id': plugins_update.temp_blueprint_id,
+             'force': False,
+             'auto_correct_types': True})
+
     def test_raises_while_plugins_updates_are_active(self):
         self.put_blueprint(blueprint_id='hello_world')
         self.client.deployments.create('hello_world', 'd123')
