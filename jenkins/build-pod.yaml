@@ -6,11 +6,11 @@ spec:
     image: circleci/python:3.6
     resources:
       requests:
-        cpu: 1
-        memory: 2Gi
+        cpu: 1.2
+        memory: 3Gi
       limits:
-        cpu: 1
-        memory: 2Gi
+        cpu: 1.2
+        memory: 3Gi
     command:
     - cat
     tty: true
@@ -24,11 +24,11 @@ spec:
     tty: true
     resources:
       requests:
-        cpu: 0.3
-        memory: 0.5Gi
+        cpu: 0.5
+        memory: 1Gi
       limits:
-        cpu: 0.3
-        memory: 0.5Gi
+        cpu: 0.5
+        memory: 1Gi
     securityContext:
       runAsUser: 0
       privileged: true
@@ -75,4 +75,4 @@ spec:
         cpu: 0.1
         memory: 256Mi
   nodeSelector:
-    instance-type: spot
+    instance-type: spot-xlarge
