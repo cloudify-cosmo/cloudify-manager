@@ -46,7 +46,8 @@ def execute_workflow(name,
                      execution_creator=None,
                      scheduled_time=None,
                      resume=False,
-                     execution_token=None):
+                     execution_token=None,
+                     handler=None,):
 
     execution_parameters = execution_parameters or {}
     task_name = workflow['operation']
@@ -94,7 +95,8 @@ def execute_workflow(name,
                          execution_parameters=execution_parameters,
                          context=context,
                          execution_creator=execution_creator,
-                         scheduled_time=scheduled_time)
+                         scheduled_time=scheduled_time,
+                         handler=handler,)
 
 
 def execute_system_workflow(wf_id,
@@ -212,7 +214,8 @@ def _send_task_to_dlx(message, message_ttl, routing_key='workflow'):
 
 
 def _execute_task(execution_id, execution_parameters,
-                  context, execution_creator, scheduled_time=None):
+                  context, execution_creator, scheduled_time=None,
+                  handler=None):
     # Get the host ip info and return them
     sm = get_storage_manager()
     managers = sm.list(models.Manager)
@@ -233,7 +236,10 @@ def _execute_task(execution_id, execution_parameters,
         message['dlx_id'] = execution_id
         _send_task_to_dlx(message, message_ttl)
         return
-    _send_mgmtworker_task(message)
+    if handler is not None:
+        handler.publish(message)
+    else:
+        _send_mgmtworker_task(message)
 
 
 def _get_time_to_live(scheduled_time):

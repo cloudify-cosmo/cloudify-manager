@@ -804,7 +804,8 @@ class ResourceManager(object):
                          wait_after_fail=600,
                          execution_creator=None,
                          scheduled_time=None,
-                         allow_overlapping_running_wf=False):
+                         allow_overlapping_running_wf=False,
+                         send_handler=None):
         execution_creator = execution_creator or current_user
         deployment = self.sm.get(models.Deployment, deployment_id)
         self._validate_permitted_to_execute_global_workflow(deployment)
@@ -884,7 +885,9 @@ class ResourceManager(object):
             bypass_maintenance=bypass_maintenance,
             dry_run=dry_run,
             wait_after_fail=wait_after_fail,
-            scheduled_time=scheduled_time)
+            scheduled_time=scheduled_time,
+            handler=send_handler,
+        )
 
         is_cascading_workflow = workflow.get('is_cascading', False)
         if is_cascading_workflow:
@@ -892,19 +895,22 @@ class ResourceManager(object):
                 deployment_id)
 
             for component_dep_id in components_dep_ids:
-                self.execute_workflow(component_dep_id,
-                                      workflow_id,
-                                      None,
-                                      parameters,
-                                      allow_custom_parameters,
-                                      force,
-                                      bypass_maintenance,
-                                      dry_run,
-                                      queue,
-                                      execution,
-                                      wait_after_fail,
-                                      execution_creator,
-                                      scheduled_time)
+                self.execute_workflow(
+                    component_dep_id,
+                    workflow_id,
+                    None,
+                    parameters,
+                    allow_custom_parameters,
+                    force,
+                    bypass_maintenance,
+                    dry_run,
+                    queue,
+                    execution,
+                    wait_after_fail,
+                    execution_creator,
+                    scheduled_time,
+                    send_handler=send_handler,
+                )
         return new_execution
 
     @staticmethod
