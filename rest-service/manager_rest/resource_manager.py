@@ -19,6 +19,7 @@ import yaml
 import json
 import shutil
 import itertools
+import typing
 from copy import deepcopy
 from collections import defaultdict
 
@@ -70,6 +71,9 @@ from . import app_context
 from . import workflow_executor
 from . import manager_exceptions
 from .workflow_executor import generate_execution_token
+
+if typing.TYPE_CHECKING:
+    from cloudify.amqp_client import SendHandler
 
 
 class ResourceManager(object):
@@ -805,7 +809,7 @@ class ResourceManager(object):
                          execution_creator=None,
                          scheduled_time=None,
                          allow_overlapping_running_wf=False,
-                         send_handler=None):
+                         send_handler: 'SendHandler' = None):
         execution_creator = execution_creator or current_user
         deployment = self.sm.get(models.Deployment, deployment_id)
         self._validate_permitted_to_execute_global_workflow(deployment)

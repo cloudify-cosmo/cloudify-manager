@@ -47,7 +47,7 @@ def execute_workflow(name,
                      scheduled_time=None,
                      resume=False,
                      execution_token=None,
-                     handler=None,):
+                     handler: SendHandler = None,):
 
     execution_parameters = execution_parameters or {}
     task_name = workflow['operation']
@@ -215,7 +215,7 @@ def _send_task_to_dlx(message, message_ttl, routing_key='workflow'):
 
 def _execute_task(execution_id, execution_parameters,
                   context, execution_creator, scheduled_time=None,
-                  handler=None):
+                  handler: SendHandler = None):
     # Get the host ip info and return them
     sm = get_storage_manager()
     managers = sm.list(models.Manager)
