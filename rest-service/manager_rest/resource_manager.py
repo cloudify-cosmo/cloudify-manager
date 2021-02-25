@@ -36,7 +36,8 @@ from cloudify.models_states import (SnapshotState,
                                     VisibilityState,
                                     BlueprintUploadState,
                                     DeploymentModificationState,
-                                    PluginInstallationState)
+                                    PluginInstallationState,
+                                    DeploymentState)
 from cloudify_rest_client.client import CloudifyClient
 
 from dsl_parser import constants, tasks
@@ -107,6 +108,33 @@ class ResourceManager(object):
             get_all_results=get_all_results
         )
 
+    def update_deployment_statuses(self, latest_execution):
+        """
+        Update deployment statuses based on latest execution
+        :param latest_execution: Latest execution object
+        """
+        if latest_execution.workflow_id == 'delete_deployment_environment' or\
+                not latest_execution.deployment_id:
+            return
+
+        node_instances = self.sm.list(
+            models.NodeInstance,
+            filters={
+                'deployment_id': latest_execution.deployment_id,
+                'state': lambda col: col != 'started'
+            },
+            get_all_results=True
+        )
+        installation_status = DeploymentState.ACTIVE
+        if node_instances:
+            installation_status = DeploymentState.INACTIVE
+
+        dep = latest_execution.deployment
+        dep.installation_status = installation_status
+        dep.latest_execution = latest_execution
+        dep.deployment_status = dep.evaluate_deployment_status()
+        self.sm.update(dep)
+
     def update_execution_status(self, execution_id, status, error):
         execution = self.sm.get(models.Execution, execution_id)
         if not self._validate_execution_update(execution.status, status):
@@ -130,6 +158,8 @@ class ResourceManager(object):
             execution.ended_at = utils.get_formatted_timestamp()
 
         res = self.sm.update(execution)
+        self.update_deployment_statuses(res)
+
         if status in ExecutionState.END_STATES:
             update_inter_deployment_dependencies(self.sm)
             self.start_queued_executions()
@@ -865,6 +895,11 @@ class ResourceManager(object):
         if should_queue and not scheduled_time:
             # Scheduled executions are passed to rabbit, no need to break here
             self.sm.put(new_execution)
+            if not deployment.installation_status:
+                deployment.installation_status = DeploymentState.INACTIVE
+            deployment.deployment_status = DeploymentState.IN_PROGRESS
+            deployment.latest_execution = new_execution
+            self.sm.update(deployment)
             self._workflow_queued(new_execution)
             return new_execution
 
@@ -1317,7 +1352,14 @@ class ResourceManager(object):
             if execution.status not in ExecutionState.END_STATES:
                 self.cancel_execution(exec_id, force, kill)
 
-        return self.sm.update(execution)
+        execution = self.sm.update(execution)
+        if execution.deployment_id:
+            dep = execution.deployment
+            dep.latest_execution = execution
+            dep.deployment_status = dep.evaluate_deployment_status()
+            self.sm.update(dep)
+
+        return execution
 
     @staticmethod
     def prepare_deployment_for_storage(deployment_id, deployment_plan):
