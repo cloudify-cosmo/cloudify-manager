@@ -34,7 +34,8 @@ from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager, db
 from manager_rest.manager_exceptions import (BadParametersError,
-                                             IllegalActionError)
+                                             IllegalActionError,
+                                             ConflictError)
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.maintenance import is_bypass_maintenance_mode
 from manager_rest.dsl_functions import evaluate_deployment_capabilities
@@ -105,10 +106,7 @@ class DeploymentsId(resources_v1.DeploymentsId):
     @authorize('deployment_create')
     @rest_decorators.marshal_with(models.Deployment)
     def patch(self, deployment_id):
-        """
-        Update a deployment
-
-        Currently, this function only updates the deployment's labels.
+        """Update a deployment, setting attributes and labels.
         """
         if not request.json:
             raise IllegalActionError('Update a deployment request must include'
@@ -117,13 +115,26 @@ class DeploymentsId(resources_v1.DeploymentsId):
         sm = get_storage_manager()
         rm = get_resource_manager()
         deployment = sm.get(models.Deployment, deployment_id)
+        allowed_attribs = {
+            'description', 'workflows', 'inputs', 'policy_types',
+            'policy_triggers', 'groups', 'scaling_groups', 'outputs',
+            'capabilities'
+        }
+        for attrib in allowed_attribs:
+            if attrib not in request_dict:
+                continue
+            previous = getattr(deployment, attrib, None)
+            if previous is not None:
+                raise ConflictError('{0} is already set'.format(attrib))
+            setattr(deployment, attrib, request_dict[attrib])
+
         if 'labels' in request_dict:
             raw_labels_list = request_dict.get('labels', [])
             new_labels = rest_utils.get_labels_list(raw_labels_list)
             rm.update_resource_labels(models.DeploymentLabel,
                                       deployment,
                                       new_labels)
-
+        sm.update(deployment)
         return deployment
 
 
