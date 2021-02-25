@@ -1,5 +1,6 @@
 from ast import literal_eval
 from contextlib import contextmanager
+from dateutil import rrule
 from datetime import datetime
 from string import ascii_letters
 import copy
@@ -31,7 +32,9 @@ from manager_rest.constants import (REST_SERVICE_NAME,
 from manager_rest.dsl_functions import (get_secret_method,
                                         evaluate_intrinsic_functions)
 from manager_rest import manager_exceptions, config, app_context
-from manager_rest.utils import is_administrator, get_formatted_timestamp
+from manager_rest.utils import (parse_frequency,
+                                is_administrator,
+                                get_formatted_timestamp)
 
 
 states_except_private = copy.deepcopy(VisibilityState.STATES)
@@ -719,3 +722,71 @@ def test_unique_labels(labels_list):
     if len(set(labels_list)) != len(labels_list):
         raise manager_exceptions.BadParametersError(
             'You cannot define the same label twice')
+
+
+def compute_rule_from_scheduling_params(request_dict, existing_rule=None):
+    rrule_string = request_dict.get('rrule')
+    frequency = request_dict.get('frequency')
+    weekdays = request_dict.get('weekdays')
+    count = request_dict.get('count')
+
+    # we need to have at least: rrule; or count=1; or frequency
+    if rrule_string:
+        if frequency or weekdays or count:
+            raise manager_exceptions.BadParametersError(
+                "`rrule` cannot be provided together with `frequency`, "
+                "`weekdays` or `count`.")
+        try:
+            rrule.rrulestr(rrule_string)
+        except ValueError as e:
+            raise manager_exceptions.BadParametersError(
+                "invalid RRULE string provided: {}".format(e))
+        return {'rrule': rrule_string}
+    else:
+        if count:
+            count = convert_to_int(request_dict.get('count'))
+        frequency = _verify_schedule_frequency(request_dict.get('frequency'))
+        weekdays = _verify_weekdays(request_dict.get('weekdays'))
+        if existing_rule:
+            count = count or existing_rule.get('count')
+            frequency = frequency or existing_rule.get('frequency')
+            weekdays = weekdays or existing_rule.get('weekdays')
+
+        if not frequency and count != 1:
+            raise manager_exceptions.BadParametersError(
+                "frequency must be specified for execution count larger "
+                "than 1")
+        return {
+            'frequency': frequency,
+            'count': count,
+            'weekdays': weekdays
+        }
+
+
+def _verify_schedule_frequency(frequency_str):
+    if not frequency_str:
+        return
+    _, frequency = parse_frequency(frequency_str)
+    if not frequency:
+        raise manager_exceptions.BadParametersError(
+            "`{}` is not a legal frequency expression. Supported format "
+            "is: <number> seconds|minutes|hours|days|weeks|months|years"
+            .format(frequency_str))
+    return frequency_str
+
+
+def _verify_weekdays(weekdays):
+    if not weekdays:
+        return
+    if not isinstance(weekdays, list):
+        raise manager_exceptions.BadParametersError(
+            "weekdays: expected a list, but got: {}".format(weekdays))
+    weekdays_caps = set(d.upper() for d in weekdays)
+    valid_weekdays = {str(d) for d in rrule.weekdays}
+    invalid_weekdays = weekdays_caps - valid_weekdays
+    if invalid_weekdays:
+        raise manager_exceptions.BadParametersError(
+            "weekdays list contains invalid weekdays `{}`. Valid "
+            "weekdays are: {} or their lowercase values."
+            .format(invalid_weekdays, '|'.join(valid_weekdays)))
+    return list(weekdays_caps)
