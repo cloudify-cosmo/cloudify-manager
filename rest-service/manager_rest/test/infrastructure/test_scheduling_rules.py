@@ -28,6 +28,23 @@ class SchedulingRulesTest(BaseServerTestCase):
         }
         self._assert_dates(since, until, rule, 5, expected_dates)
 
+    def test_parse_rule_complex_weekdays(self):
+        since = '2018-1-1T00:00:00.000Z'
+        until = None
+        rule = {
+            'frequency': '2 mo',
+            'count': 5,
+            'weekdays': ['2MO', '3TU']
+        }
+        expected_dates = {
+            '2018-01-08 00:00:00',
+            '2018-01-16 00:00:00',
+            '2018-03-12 00:00:00',
+            '2018-03-20 00:00:00',
+            '2018-05-14 00:00:00',
+        }
+        self._assert_dates(since, until, rule, 5, expected_dates)
+
     def test_parse_rule_raw_format(self):
         since = '2018-1-1T00:00:00.000Z'
         until = '2019-1-2T00:00:00.000Z'
