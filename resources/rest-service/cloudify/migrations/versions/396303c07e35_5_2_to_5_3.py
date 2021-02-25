@@ -142,22 +142,6 @@ def _add_specialized_execution_fk():
 
 def _drop_specialized_execution_fk():
     op.drop_constraint(
-        op.f('deployments__latest_execution_fk_fkey'),
-        'deployments',
-        type_='foreignkey'
-    )
-
-    op.drop_index(
-        op.f('deployments__latest_execution_fk_idx'),
-        table_name='deployments'
-    )
-
-    op.drop_column(
-        'deployments',
-        '_latest_execution_fk'
-    )
-
-    op.drop_constraint(
         op.f('deployments__create_execution_fk_fkey'),
         'deployments',
         type_='foreignkey'
