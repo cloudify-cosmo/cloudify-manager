@@ -19,6 +19,7 @@ import yaml
 import json
 import shutil
 import itertools
+import typing
 from copy import deepcopy
 from datetime import datetime
 from collections import defaultdict
@@ -72,6 +73,9 @@ from . import app_context
 from . import workflow_executor
 from . import manager_exceptions
 from .workflow_executor import generate_execution_token
+
+if typing.TYPE_CHECKING:
+    from cloudify.amqp_client import SendHandler
 
 
 class ResourceManager(object):
@@ -806,7 +810,8 @@ class ResourceManager(object):
                          wait_after_fail=600,
                          execution_creator=None,
                          scheduled_time=None,
-                         allow_overlapping_running_wf=False):
+                         allow_overlapping_running_wf=False,
+                         send_handler: 'SendHandler' = None):
         execution_creator = execution_creator or current_user
         deployment = self.sm.get(models.Deployment, deployment_id)
         self._validate_permitted_to_execute_global_workflow(deployment)
@@ -886,7 +891,9 @@ class ResourceManager(object):
             bypass_maintenance=bypass_maintenance,
             dry_run=dry_run,
             wait_after_fail=wait_after_fail,
-            scheduled_time=scheduled_time)
+            scheduled_time=scheduled_time,
+            handler=send_handler,
+        )
 
         is_cascading_workflow = workflow.get('is_cascading', False)
         if is_cascading_workflow:
@@ -894,19 +901,22 @@ class ResourceManager(object):
                 deployment_id)
 
             for component_dep_id in components_dep_ids:
-                self.execute_workflow(component_dep_id,
-                                      workflow_id,
-                                      None,
-                                      parameters,
-                                      allow_custom_parameters,
-                                      force,
-                                      bypass_maintenance,
-                                      dry_run,
-                                      queue,
-                                      execution,
-                                      wait_after_fail,
-                                      execution_creator,
-                                      scheduled_time)
+                self.execute_workflow(
+                    component_dep_id,
+                    workflow_id,
+                    None,
+                    parameters,
+                    allow_custom_parameters,
+                    force,
+                    bypass_maintenance,
+                    dry_run,
+                    queue,
+                    execution,
+                    wait_after_fail,
+                    execution_creator,
+                    scheduled_time,
+                    send_handler=send_handler,
+                )
         return new_execution
 
     @staticmethod
