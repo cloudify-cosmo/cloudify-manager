@@ -16,12 +16,14 @@
 import errno
 import os
 import uuid
+from datetime import datetime
 
 from cloudify.models_states import VisibilityState
 
 from manager_rest.test import base_test
 from manager_rest.test.attribute import attr
 from manager_rest import manager_exceptions
+from manager_rest.storage import models
 from manager_rest.constants import (DEFAULT_TENANT_NAME,
                                     FILE_SERVER_DEPLOYMENTS_FOLDER)
 
@@ -1031,3 +1033,39 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             filter_rules={'_filter_rules': ['aRcH=k8S']})
         self.assertEqual(len(deployments), 2)
         self.assert_metadata_filtered(deployments, 0)
+
+    def test_update_attributes(self):
+        self.put_blueprint()
+        bp = self.sm.get(models.Blueprint, 'blueprint')
+        self.sm.put(models.Deployment(
+            id='dep1',
+            blueprint=bp,
+            created_at=datetime.now()
+        ))
+        new_attributes = {
+            'description': 'descr1',
+            'workflows': {'wf1': {}},
+            'inputs': {'input1': {}},
+            'policy_types': ['type1'],
+            'policy_triggers': {'trigger1': {}},
+            'groups': {'group1': {}},
+            'scaling_groups': {'scaling_group1': {}},
+            'outputs': {'output1': {}},
+            'capabilities': {'cap1': {}}
+        }
+        self.client.deployments.set_attributes('dep1', **new_attributes)
+        dep = self.sm.get(models.Deployment, 'dep1')
+        for k, v in new_attributes.items():
+            assert getattr(dep, k) == v
+
+    def test_update_attributes_already_set(self):
+        self.put_blueprint()
+        bp = self.sm.get(models.Blueprint, 'blueprint')
+        self.sm.put(models.Deployment(
+            id='dep1',
+            blueprint=bp,
+            description='d1',
+            created_at=datetime.now()
+        ))
+        with self.assertRaisesRegex(CloudifyClientError, 'already set'):
+            self.client.deployments.set_attributes('dep1', description='d2')
