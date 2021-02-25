@@ -15,6 +15,7 @@
 
 import os
 import uuid
+from datetime import datetime
 
 from flask import current_app
 
@@ -68,7 +69,17 @@ class PluginsUpdateManager(object):
             '{0}'.format(', '.join(u.id for u in active_updates)))
 
     def _create_temp_blueprint_from(self, blueprint, temp_plan):
-        temp_blueprint_id = str(uuid.uuid4())
+
+        def description(description: str, orig_blueprint_id: str) -> str:
+            ts = utils.get_formatted_timestamp()
+            comment = f'copied from {orig_blueprint_id} at {ts} on ' \
+                      'plugins update'
+            if description:
+                return f'{description}\n{comment}'
+            return comment
+
+        timestamp = datetime.now().strftime('%Y%m%dT%H%M%S')
+        temp_blueprint_id = f'{blueprint.id}-{timestamp}-plugins-update'
         kwargs = {
             'application_file_name': blueprint.main_file_name,
             'blueprint_id': temp_blueprint_id,
@@ -84,6 +95,8 @@ class PluginsUpdateManager(object):
             kwargs['private_resource'] = blueprint.private_resource
         kwargs['state'] = BlueprintUploadState.UPLOADED
         temp_blueprint = self.rm.publish_blueprint_from_plan(**kwargs)
+        temp_blueprint.description = description(temp_blueprint.description,
+                                                 blueprint.id)
         temp_blueprint.is_hidden = True
         return self.sm.update(temp_blueprint)
 
