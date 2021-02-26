@@ -163,6 +163,23 @@ class PluginsUpdateManager(object):
         plugins_update.state = STATES.FINALIZING
         self.sm.update(plugins_update)
 
+        not_updated_deployments = self._get_deployments_to_update(
+            plugins_update.blueprint_id)
+
+        if not_updated_deployments:
+            current_app.logger.error(
+                "These deployments were not updated during plugins update "
+                "ID {0}, execution ID {1}: {2}".format(
+                    plugins_update_id, plugins_update.execution.id,
+                    ', '.join(dep.id for dep in not_updated_deployments)))
+            plugins_update.temp_blueprint.is_hidden = False
+            self.sm.update(plugins_update.temp_blueprint)
+            current_app.logger.info(
+                "Look in the latest update executions' logs of these "
+                "deployments for more details.")
+            plugins_update.state = STATES.FAILED
+            return self.sm.update(plugins_update)
+
         plugins_update.blueprint.plan = plugins_update.temp_blueprint.plan
         self.sm.update(plugins_update.blueprint)
 
