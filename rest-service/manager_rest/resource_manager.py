@@ -2591,17 +2591,31 @@ class ResourceManager(object):
         plan_schedules_dict = plan_deployment_settings.get('default_schedules')
         if not plan_schedules_dict:
             return
-        for schedule_id, schedule in plan_schedules_dict.items():
+        self.create_deployment_schedules_from_dict(plan_schedules_dict,
+                                                   deployment)
+
+    def create_deployment_schedules_from_dict(self, schedules_dict, deployment,
+                                              base_datetime=None):
+        """
+        :param schedules_dict: a dict of deployment schedules to create
+        :param deployment: the deployment for which the schedules are created
+        :param base_datetime: a datetime object representing the absolute date
+            and time to which we apply relative time deltas.
+            By default: UTC now.
+        """
+        for schedule_id, schedule in schedules_dict.items():
             namespaced_schedule_id = '{}_{}'.format(deployment.id, schedule_id)
             workflow_id = schedule['workflow']
             execution_arguments = schedule.get('execution_arguments', {})
             parameters = schedule.get('workflow_parameters')
             self._verify_workflow_in_deployment(
                 workflow_id, deployment, deployment.id)
-            since = self.get_utc_datetime_from_sched_plan(schedule['since'])
+            since = self._get_utc_datetime_from_sched_plan(schedule['since'],
+                                                           base_datetime)
             until = schedule.get('until')
             if until:
-                until = self.get_utc_datetime_from_sched_plan(until)
+                until = self._get_utc_datetime_from_sched_plan(until,
+                                                               base_datetime)
             rule = compute_rule_from_scheduling_params({
                 'rrule': schedule.get('rrule'),
                 'frequency': schedule.get('recurring'),
@@ -2630,7 +2644,7 @@ class ResourceManager(object):
             self.sm.put(schedule)
 
     @staticmethod
-    def get_utc_datetime_from_sched_plan(time_expression, base_datetime=None):
+    def _get_utc_datetime_from_sched_plan(time_expression, base_datetime=None):
         """
         :param time_expression: Either a string representing an absolute
             datetime, or a relative time delta, such as '+4 hours' or '+1y+1d'.

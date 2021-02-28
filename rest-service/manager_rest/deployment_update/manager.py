@@ -15,6 +15,7 @@
 
 import copy
 import uuid
+from datetime import datetime
 
 from flask import current_app
 
@@ -207,6 +208,10 @@ class DeploymentUpdateManager(object):
         central_plugins_to_install, central_plugins_to_uninstall = \
             self._extract_plugins_changes(dep_update, update_plugins)
 
+        # Calculate which deployment schedules need to be added or deleted
+        schedules_to_create, schedules_to_delete = \
+            self._extract_schedules_changes(dep_update)
+
         # Saving the needed changes back to the storage manager for future use
         # (removing entities).
         dep_update.deployment_update_deployment = raw_updated_deployment
@@ -229,6 +234,9 @@ class DeploymentUpdateManager(object):
             deployment_dependencies = dep_graph.retrieve_dependent_deployments(
                 dep_update.deployment_id)
             dep_update.set_recursive_dependencies(deployment_dependencies)
+            dep_update.set_schedules_to_create(
+                self.list_schedules(schedules_to_create))
+            dep_update.schedules_to_delete = schedules_to_delete
             return dep_update
 
         # Handle inter-deployment dependencies changes
@@ -270,6 +278,24 @@ class DeploymentUpdateManager(object):
         dep_update.state = STATES.EXECUTING_WORKFLOW
         self.sm.update(dep_update)
 
+        # First, delete old deployment schedules
+        for schedule_id in schedules_to_delete:
+            namespaced_schedule_id = '{}_{}'.format(deployment.id, schedule_id)
+            try:
+                schedule = self.sm.get(models.ExecutionSchedule,
+                                       namespaced_schedule_id)
+            except manager_exceptions.NotFoundError:
+                continue
+            if schedule.deployment_id == deployment.id:
+                self.sm.delete(schedule)
+
+        # Then, create new deployment schedules
+        deployment_creation_time = datetime.strptime(
+            deployment.created_at.split('.')[0], '%Y-%m-%dT%H:%M:%S'
+        ).replace(second=0)
+        get_resource_manager().create_deployment_schedules_from_dict(
+            schedules_to_create, deployment, deployment_creation_time)
+
         # Return the deployment update object
         return self.get_deployment_update(dep_update.id)
 
@@ -283,6 +309,15 @@ class DeploymentUpdateManager(object):
         raise manager_exceptions.ConflictError(
             'there are deployment updates still active; update IDs: {0}'
             .format(', '.join([u.id for u in active_updates])))
+
+    @staticmethod
+    def list_schedules(schedules_dict):
+        schedules_list = []
+        for k, v in schedules_dict.items():
+            list_item = v
+            list_item['id'] = k
+            schedules_list.append(list_item)
+        return schedules_list
 
     def _extract_changes(self,
                          dep_update,
@@ -595,6 +630,17 @@ class DeploymentUpdateManager(object):
             central_plugins_to_uninstall.append(old_plugin)
 
         return central_plugins_to_install, central_plugins_to_uninstall
+
+    def _extract_schedules_changes(self, dep_update):
+        deployment = self.sm.get(models.Deployment, dep_update.deployment_id)
+        old_settings = deployment.blueprint.plan.get('deployment_settings')
+        new_settings = dep_update.deployment_plan.get('deployment_settings')
+        schedules_to_delete = (
+            [k for k in old_settings.get('default_schedules')]
+            if old_settings else [])
+        schedules_to_create = (new_settings.get('default_schedules')
+                               if new_settings else {})
+        return schedules_to_create, schedules_to_delete
 
 
 # What we need to access this manager in Flask
