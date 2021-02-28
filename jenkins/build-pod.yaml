@@ -48,7 +48,7 @@ spec:
       privileged: true
     resources:
       limits:
-        cpu: 1
+        cpu: 0.5
         memory: 1Gi
   - name: rabbitmq
     image: rabbitmq:3.7.7
