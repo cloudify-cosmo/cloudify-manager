@@ -342,11 +342,20 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
     _site_fk = foreign_key(Site._storage_id,
                            nullable=True,
                            ondelete='SET NULL')
+    _create_execution_fk = foreign_key('executions._storage_id',
+                                       nullable=True,
+                                       ondelete='SET NULL')
 
     @classproperty
     def labels_model(cls):
         return DeploymentLabel
 
+    @declared_attr
+    def create_execution(cls):
+        """The create-deployment-environment execution for this deployment"""
+        return db.relationship('Execution',
+                               foreign_keys=[cls._create_execution_fk],
+                               cascade='all, delete')
     @declared_attr
     def blueprint(cls):
         return one_to_many_relationship(cls, Blueprint, cls._blueprint_fk)
