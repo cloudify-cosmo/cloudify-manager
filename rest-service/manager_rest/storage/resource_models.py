@@ -92,6 +92,9 @@ class Blueprint(CreatedAtMixin, SQLResourceBase):
     state = db.Column(db.Text)
     error = db.Column(db.Text)
     error_traceback = db.Column(db.Text)
+    _upload_execution_fk = foreign_key('executions._storage_id',
+                                       nullable=True,
+                                       ondelete='SET NULL')
 
     @classproperty
     def labels_model(cls):
@@ -101,6 +104,12 @@ class Blueprint(CreatedAtMixin, SQLResourceBase):
     def labels(cls):
         # labels are defined as `backref` in DeploymentsLabel model
         return None
+
+    @declared_attr
+    def upload_execution(cls):
+        return db.relationship('Execution',
+                               foreign_keys=[cls._upload_execution_fk],
+                               cascade='all, delete')
 
     @classproperty
     def response_fields(cls):

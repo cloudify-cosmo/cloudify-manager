@@ -377,7 +377,7 @@ class ResourceManager(object):
 
     def upload_blueprint(self, blueprint_id, app_file_name, blueprint_url,
                          file_server_root, validate_only=False, labels=None):
-        self._execute_system_workflow(
+        return self._execute_system_workflow(
             wf_id='upload_blueprint',
             task_mapping='cloudify_system_workflows.blueprint.upload',
             verify_no_executions=False,
