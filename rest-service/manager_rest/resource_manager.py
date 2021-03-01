@@ -377,7 +377,7 @@ class ResourceManager(object):
 
     def upload_blueprint(self, blueprint_id, app_file_name, blueprint_url,
                          file_server_root, validate_only=False, labels=None):
-        self._execute_system_workflow(
+        return self._execute_system_workflow(
             wf_id='upload_blueprint',
             task_mapping='cloudify_system_workflows.blueprint.upload',
             verify_no_executions=False,
@@ -2148,7 +2148,7 @@ class ResourceManager(object):
         wf_id = 'create_deployment_environment'
         deployment_env_creation_task_name = \
             'cloudify_system_workflows.deployment_environment.create'
-        self._execute_system_workflow(
+        create_execution = self._execute_system_workflow(
             wf_id=wf_id,
             task_mapping=deployment_env_creation_task_name,
             deployment=deployment,
@@ -2167,6 +2167,8 @@ class ResourceManager(object):
                 }
             }
         )
+        deployment.create_execution = create_execution
+        self.sm.update(deployment)
 
     def _check_for_active_executions(self, deployment_id, force,
                                      queue, schedule):
