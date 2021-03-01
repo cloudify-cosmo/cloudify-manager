@@ -366,6 +366,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                                foreign_keys=[cls._create_execution_fk],
                                cascade='all, delete',
                                post_update=True)
+
     @declared_attr
     def blueprint(cls):
         return one_to_many_relationship(cls, Blueprint, cls._blueprint_fk)
