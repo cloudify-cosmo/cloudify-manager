@@ -162,6 +162,10 @@ def get_amqp_client(tenant=None):
     return client
 
 
+def workflow_sendhandler() -> SendHandler:
+    return SendHandler(MGMTWORKER_QUEUE, 'direct', routing_key='workflow')
+
+
 def _send_mgmtworker_task(message, exchange=MGMTWORKER_QUEUE,
                           exchange_type='direct', routing_key='workflow'):
     """Send a message to the mgmtworker exchange"""

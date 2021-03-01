@@ -32,6 +32,10 @@ from manager_rest.rest.rest_utils import (
     parse_datetime_multiple_formats
 )
 from manager_rest.storage import models, get_storage_manager, ListResult
+from manager_rest.workflow_executor import (
+    get_amqp_client,
+    workflow_sendhandler
+)
 
 
 class Executions(resources_v2.Executions):
@@ -184,17 +188,22 @@ class ExecutionGroups(SecuredResource):
         )
         sm.put(group)
         rm = get_resource_manager()
-        for dep in dep_group.deployments:
-            params = default_parameters.copy()
-            params.update(parameters.get(dep.id) or {})
-            execution = rm.execute_workflow(
-                force=force,
-                deployment_id=dep.id,
-                workflow_id=workflow_id,
-                parameters=params,
-            )
-            group.executions.append(execution)
-        sm._safe_commit()
+        amqp_client = get_amqp_client()
+        handler = workflow_sendhandler()
+        amqp_client.add_handler(handler)
+        with amqp_client:
+            for dep in dep_group.deployments:
+                params = default_parameters.copy()
+                params.update(parameters.get(dep.id) or {})
+                execution = rm.execute_workflow(
+                    force=force,
+                    deployment_id=dep.id,
+                    workflow_id=workflow_id,
+                    parameters=params,
+                    send_handler=handler,
+                )
+                group.executions.append(execution)
+            sm._safe_commit()
         return group
 
 
