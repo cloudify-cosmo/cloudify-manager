@@ -17,21 +17,21 @@ from flask import current_app, request
 
 from cloudify._compat import text_type
 from cloudify.models_states import AgentState
-from cloudify.constants import BROKER_PORT_SSL
 from cloudify.cryptography_utils import encrypt, decrypt
-from cloudify.amqp_client import SendHandler, get_client
+from cloudify.amqp_client import SendHandler
 
 from manager_rest.config import instance
 from manager_rest.rest import rest_decorators
 from manager_rest.security import SecuredResource
 from manager_rest.amqp_manager import AMQPManager
-from manager_rest import utils, manager_exceptions, config
+from manager_rest import utils, manager_exceptions
 from manager_rest.rest.responses_v3 import AgentResponse
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.rest.rest_utils import (validate_inputs,
                                           verify_and_convert_bool,
                                           get_json_and_verify_params)
+from manager_rest.workflow_executor import get_amqp_client
 
 
 class Agents(SecuredResource):
@@ -87,8 +87,7 @@ class Agents(SecuredResource):
                 filters={'tenant': tenant}
             )
 
-            amqp_client = self._get_amqp_client(
-                amqp_vhost=tenant.rabbitmq_vhost)
+            amqp_client = get_amqp_client(tenant=tenant)
             to_send = []
             for agent in tenant_agents:
                 message = {
@@ -113,19 +112,6 @@ class Agents(SecuredResource):
                     handler.publish(message)
 
         return {'number_of_updated_agents': num_of_updated_agents}
-
-    @staticmethod
-    def _get_amqp_client(amqp_vhost='/'):
-        client = get_client(
-            amqp_host=config.instance.amqp_host,
-            amqp_user=config.instance.amqp_username,
-            amqp_pass=config.instance.amqp_password,
-            amqp_port=BROKER_PORT_SSL,
-            amqp_vhost=amqp_vhost,
-            ssl_enabled=True,
-            ssl_cert_path=config.instance.amqp_ca_path
-        )
-        return client
 
     @staticmethod
     def _get_new_ca_certs(sm, bundle, broker_ca_cert, manager_ca_cert):
