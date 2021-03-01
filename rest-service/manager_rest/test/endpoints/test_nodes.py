@@ -429,15 +429,13 @@ class NodesTest(base_test.BaseServerTestCase):
 class NodesCreateTest(base_test.BaseServerTestCase):
     def test_create_nodes(self):
         self.put_deployment('dep1')
-        self.client.nodes.create_many([
+        self.client.nodes.create_many('dep1', [
             {
                 'id': 'test_node1',
-                'deployment_id': 'dep1',
                 'type': 'cloudify.nodes.Root'
             },
             {
                 'id': 'test_node2',
-                'deployment_id': 'dep1',
                 'type': 'cloudify.nodes.Root'
             }
         ])
@@ -448,24 +446,6 @@ class NodesCreateTest(base_test.BaseServerTestCase):
         node1 = node1[0]
         assert len(node2) == 1
         assert node1.deployment_id == 'dep1'
-
-    def test_create_different_deployments(self):
-        self.put_blueprint()
-        self.client.deployments.create('blueprint', 'dep1')
-        self.client.deployments.create('blueprint', 'dep2')
-        with self.assertRaisesRegexp(CloudifyClientError, 'same deployment'):
-            self.client.nodes.create_many([
-                {
-                    'id': 'test_node1',
-                    'deployment_id': 'dep1',
-                    'type': 'cloudify.nodes.Root'
-                },
-                {
-                    'id': 'test_node2',
-                    'deployment_id': 'dep2',
-                    'type': 'cloudify.nodes.Root'
-                }
-            ])
 
     def test_create_parameters(self):
         self.put_deployment('dep1')
@@ -488,10 +468,9 @@ class NodesCreateTest(base_test.BaseServerTestCase):
         min_instances = 2
         max_instances = 5
         plugins = ['plug1']
-        self.client.nodes.create_many([
+        self.client.nodes.create_many('dep1', [
             {
                 'id': 'test_node1',
-                'deployment_id': 'dep1',
                 'type': node_type,
                 'type_hierarchy': type_hierarchy,
                 'properties': properties,
@@ -526,26 +505,24 @@ class NodesCreateTest(base_test.BaseServerTestCase):
         assert node.max_number_of_instances == max_instances
 
     def test_empty_list(self):
-        self.client.nodes.create_many([])  # doesn't throw
+        self.client.nodes.create_many('dep1', [])  # doesn't throw
 
 
 class NodeInstancesCreateTest(base_test.BaseServerTestCase):
     def test_empty_list(self):
-        self.client.node_instances.create_many([])  # doesn't throw
+        self.client.node_instances.create_many('dep1', [])  # doesn't throw
 
     def test_create_instances(self):
         self.put_deployment('dep1')
-        self.client.nodes.create_many([
+        self.client.nodes.create_many('dep1', [
             {
                 'id': 'test_node1',
-                'deployment_id': 'dep1',
                 'type': 'cloudify.nodes.Root'
             }
         ])
-        self.client.node_instances.create_many([
+        self.client.node_instances.create_many('dep1', [
             {
                 'id': 'test_node1_xyz123',
-                'deployment_id': 'dep1',
                 'node_id': 'test_node1'
             }
         ])
@@ -555,35 +532,30 @@ class NodeInstancesCreateTest(base_test.BaseServerTestCase):
 
     def test_instance_index(self):
         self.put_deployment('dep1')
-        self.client.nodes.create_many([
+        self.client.nodes.create_many('dep1', [
             {
                 'id': 'test_node1',
-                'deployment_id': 'dep1',
                 'type': 'cloudify.nodes.Root'
             },
             {
                 'id': 'test_node2',
-                'deployment_id': 'dep1',
                 'type': 'cloudify.nodes.Root'
             },
         ])
-        self.client.node_instances.create_many([
+        self.client.node_instances.create_many('dep1', [
             {
                 'id': 'test_node1_1',
-                'deployment_id': 'dep1',
                 'node_id': 'test_node1'
             }
         ])
         instance1 = self.sm.get(models.NodeInstance, 'test_node1_1')
-        self.client.node_instances.create_many([
+        self.client.node_instances.create_many('dep1', [
             {
                 'id': 'test_node1_2',
-                'deployment_id': 'dep1',
                 'node_id': 'test_node1'
             },
             {
                 'id': 'test_node2_1',
-                'deployment_id': 'dep1',
                 'node_id': 'test_node2'
             },
         ])
