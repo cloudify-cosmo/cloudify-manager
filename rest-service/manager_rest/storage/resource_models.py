@@ -364,7 +364,8 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         """The create-deployment-environment execution for this deployment"""
         return db.relationship('Execution',
                                foreign_keys=[cls._create_execution_fk],
-                               cascade='all, delete')
+                               cascade='all, delete',
+                               post_update=True)
     @declared_attr
     def blueprint(cls):
         return one_to_many_relationship(cls, Blueprint, cls._blueprint_fk)
