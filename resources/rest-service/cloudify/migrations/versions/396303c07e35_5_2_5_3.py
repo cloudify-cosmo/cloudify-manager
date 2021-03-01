@@ -22,11 +22,79 @@ depends_on = None
 def upgrade():
     _create_blueprints_labels_table()
     _modify_deployments_labels_table()
+    _add_specialized_execution_fk()
 
 
 def downgrade():
+    _drop_specialized_execution_fk()
     _revert_changes_to_deployments_labels_table()
     _drop_blueprints_labels_table()
+
+
+def _add_specialized_execution_fk():
+    """Add FKs that point to special executions:
+    - the upload_blueprint execution for a blueprint
+    - the create-dep-env execution for a deployment
+    """
+    op.add_column(
+        'blueprints',
+        sa.Column('_upload_execution_fk', sa.Integer(), nullable=True)
+    )
+    op.create_index(
+        op.f('blueprints__upload_execution_fk_idx'),
+        'blueprints',
+        ['_upload_execution_fk'],
+        unique=False
+    )
+    op.create_foreign_key(
+        op.f('blueprints__upload_execution_fk_fkey'),
+        'blueprints',
+        'executions',
+        ['_upload_execution_fk'],
+        ['_storage_id'],
+        ondelete='SET NULL'
+    )
+    op.add_column(
+        'deployments',
+        sa.Column('_create_execution_fk', sa.Integer(), nullable=True)
+    )
+    op.create_index(
+        op.f('deployments__create_execution_fk_idx'),
+        'deployments',
+        ['_create_execution_fk'],
+        unique=False
+    )
+    op.create_foreign_key(
+        op.f('deployments__create_execution_fk_fkey'),
+        'deployments',
+        'executions',
+        ['_create_execution_fk'],
+        ['_storage_id'],
+        ondelete='SET NULL'
+    )
+
+
+def _drop_specialized_execution_fk():
+    op.drop_constraint(
+        op.f('deployments__create_execution_fk_fkey'),
+        'deployments',
+        type_='foreignkey'
+    )
+    op.drop_index(
+        op.f('deployments__create_execution_fk_idx'),
+        table_name='deployments'
+    )
+    op.drop_column('deployments', '_create_execution_fk')
+    op.drop_constraint(
+        op.f('blueprints__upload_execution_fk_fkey'),
+        'blueprints',
+        type_='foreignkey'
+    )
+    op.drop_index(
+        op.f('blueprints__upload_execution_fk_idx'),
+        table_name='blueprints'
+    )
+    op.drop_column('blueprints', '_upload_execution_fk')
 
 
 def _create_blueprints_labels_table():
