@@ -1033,10 +1033,11 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
-    def test_list_deployments_with_filter_name(self):
+    def test_list_deployments_with_filter_id(self):
         self.put_deployment_with_labels(self.LABELS)
         dep2 = self.put_deployment_with_labels(self.LABELS_2)
-        self.create_filter(self.FILTER_ID, self.FILTER_RULES_2)
+        self.create_filter(self.client.deployments_filters,
+                           self.FILTER_ID, self.FILTER_RULES_2)
         deployments = self.client.deployments.list(
             filter_rules={'_filter_id': self.FILTER_ID})
         self.assertEqual(len(deployments), 1)

@@ -40,8 +40,7 @@ from manager_rest import config, manager_exceptions
 from manager_rest.rest.responses import Workflow, Label
 from manager_rest.utils import (get_rrule,
                                 classproperty,
-                                files_in_folder,
-                                get_filters_list_from_mapping)
+                                files_in_folder)
 from manager_rest.deployment_update.constants import ACTION_TYPES, ENTITY_TYPES
 from manager_rest.constants import (FILE_SERVER_PLUGINS_FOLDER,
                                     FILE_SERVER_RESOURCES_FOLDER)
@@ -133,6 +132,10 @@ class Blueprint(CreatedAtMixin, SQLResourceBase):
         fields['labels'] = flask_fields.List(
             flask_fields.Nested(Label.resource_fields))
         return fields
+
+    @classproperty
+    def allowed_filter_attrs(cls):
+        return ['created_by', 'description']
 
     def to_response(self, **kwargs):
         blueprint_dict = super(Blueprint, self).to_response()
@@ -434,6 +437,10 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         fields['latest_execution_status'] = flask_fields.String()
         return fields
 
+    @classproperty
+    def allowed_filter_attrs(cls):
+        return ['blueprint_id', 'created_by', 'description', 'site_name']
+
     def to_response(self, **kwargs):
         dep_dict = super(Deployment, self).to_response()
         dep_dict['workflows'] = self._list_workflows(self.workflows)
@@ -608,11 +615,13 @@ class Filter(CreatedAtMixin, SQLResourceBase):
     _extra_fields = {'labels_filters': flask_fields.Raw}
 
     value = db.Column(JSONString, nullable=True)
+    filtered_resource = db.Column(db.Text, nullable=False, index=True)
     updated_at = db.Column(UTCDateTime)
 
     @property
     def labels_filters(self):
-        return get_filters_list_from_mapping(self.value.get('labels', {}))
+        return [filter_rule for filter_rule in self.value
+                if filter_rule['type'] == 'label']
 
 
 class Execution(CreatedAtMixin, SQLResourceBase):
