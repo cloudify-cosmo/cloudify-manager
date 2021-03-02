@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from manager_rest.constants import FILTER_RULE_TYPES
 
 INTERNAL_SERVER_ERROR_CODE = 'internal_server_error'
 
@@ -643,4 +644,14 @@ class InvalidYamlFormat(ManagerException):
             InvalidYamlFormat.ERROR_CODE,
             *args,
             **kwargs
+        )
+
+
+class BadFilterRule(BadParametersError):
+    def __init__(self, err_filter_rule, suffix=''):
+        super(BadFilterRule, self).__init__(
+            f"The filter rule {err_filter_rule} is not in the right format. "
+            f"Filter rule is a dictionary of the form {{key: <key>, values: "
+            f"[<values>], operator: <operator>, "
+            f"type: <one of {', '.join(FILTER_RULE_TYPES)}>}}. {suffix}"
         )
