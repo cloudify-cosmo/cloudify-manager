@@ -3,25 +3,16 @@ from collections import defaultdict
 from ..resources_v3 import Nodes as v3_Nodes
 from ..resources_v2 import NodeInstances as v2_NodeInstances
 
-from manager_rest import manager_exceptions
 from manager_rest.rest import rest_utils
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import get_storage_manager, models
-
-
-def _common_deployment_id(raw_nodes):
-    deployment_id = raw_nodes[0]['deployment_id']
-    if any(n['deployment_id'] != deployment_id for n in raw_nodes):
-        raise manager_exceptions.ConflictError(
-            'All nodes must belong to the same deployment'
-        )
-    return deployment_id
 
 
 class Nodes(v3_Nodes):
     @authorize('node_list')
     def post(self):
         request_dict = rest_utils.get_json_and_verify_params({
+            'deployment_id': {'type': str},
             'nodes': {'type': list},
         })
         sm = get_storage_manager()
@@ -30,7 +21,7 @@ class Nodes(v3_Nodes):
         if not raw_nodes:
             return None, 204
         with sm.transaction():
-            deployment_id = _common_deployment_id(raw_nodes)
+            deployment_id = request_dict['deployment_id']
             deployment = sm.get(models.Deployment, deployment_id)
             for raw_node in raw_nodes:
                 node = self._node_from_raw_node(raw_node)
@@ -85,6 +76,7 @@ class NodeInstances(v2_NodeInstances):
     @authorize('node_list')
     def post(self):
         request_dict = rest_utils.get_json_and_verify_params({
+            'deployment_id': {'type': str},
             'node_instances': {'type': list},
         })
         sm = get_storage_manager()
@@ -92,7 +84,7 @@ class NodeInstances(v2_NodeInstances):
         if not raw_instances:
             return None, 204
         with sm.transaction():
-            deployment_id = _common_deployment_id(raw_instances)
+            deployment_id = request_dict['deployment_id']
             deployment = sm.get(models.Deployment, deployment_id)
             nodes = {node.id: node for node in deployment.nodes}
             self._set_ni_index(sm, deployment, raw_instances)

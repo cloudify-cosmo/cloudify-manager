@@ -134,7 +134,7 @@ class ExecutionSchedulesTestCase(BaseServerTestCase):
     def test_schedule_invalid_weekdays(self):
         self.assertRaisesRegex(
             CloudifyClientError,
-            '400: weekdays list contains invalid weekdays',
+            '400:.* invalid weekday',
             self.client.execution_schedules.create,
             'bad-weekdays', self.deployment_id, 'install',
             since=self.an_hour_from_now, frequency='4 hours',
@@ -147,7 +147,7 @@ class ExecutionSchedulesTestCase(BaseServerTestCase):
         )
         self.assertRaisesRegex(
             CloudifyClientError,
-            '400: weekdays list contains invalid weekdays',
+            '400:.* invalid weekday',
             self.client.execution_schedules.update,
             'good-weekdays', weekdays='oneday, someday'
         )

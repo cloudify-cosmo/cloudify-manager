@@ -2,11 +2,21 @@ apiVersion: v1
 kind: Pod
 spec:
   containers:
+  - name: jnlp
+    image: jenkins/inbound-agent:4.3-4
+    resources:
+      limits:
+        cpu: 0.2
+        memory: 256Mi
   - name: python
     image: circleci/python:3.6
     resources:
       requests:
-        cpu: 1
+        cpu: 1.2
+        memory: 3Gi
+      limits:
+        cpu: 1.2
+        memory: 3Gi
     command:
     - cat
     tty: true
@@ -20,7 +30,11 @@ spec:
     tty: true
     resources:
       requests:
-        cpu: 1
+        cpu: 0.5
+        memory: 1Gi
+      limits:
+        cpu: 0.5
+        memory: 1Gi
     securityContext:
       runAsUser: 0
       privileged: true
@@ -32,13 +46,25 @@ spec:
     securityContext:
       runAsUser: 0
       privileged: true
+    resources:
+      limits:
+        cpu: 0.5
+        memory: 1Gi
   - name: rabbitmq
     image: rabbitmq:3.7.7
+    resources:
+      limits:
+        cpu: 0.1
+        memory: 256Mi
   - name: awscli
     image: amazon/aws-cli
     command:
     - cat
     tty: true
+    resources:
+      limits:
+        cpu: 0.1
+        memory: 256Mi
   - name: postgres
     image: circleci/postgres:9.5-alpine
     ports:
@@ -50,5 +76,9 @@ spec:
       value: cloudify
     - name: POSTGRES_DB
       value: cloudify_db
+    resources:
+      limits:
+        cpu: 0.1
+        memory: 256Mi
   nodeSelector:
     instance-type: spot-xlarge
