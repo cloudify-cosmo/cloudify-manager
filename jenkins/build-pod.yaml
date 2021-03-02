@@ -6,16 +6,16 @@ spec:
     image: jenkins/inbound-agent:4.3-4
     resources:
       limits:
-        cpu: 0.2
+        cpu: 0.3
         memory: 256Mi
   - name: python
     image: circleci/python:3.6
     resources:
       requests:
-        cpu: 1.2
+        cpu: 1.5
         memory: 3Gi
       limits:
-        cpu: 1.2
+        cpu: 1.5
         memory: 3Gi
     command:
     - cat
@@ -54,7 +54,7 @@ spec:
     image: rabbitmq:3.7.7
     resources:
       limits:
-        cpu: 0.1
+        cpu: 0.2
         memory: 256Mi
   - name: awscli
     image: amazon/aws-cli
@@ -63,7 +63,7 @@ spec:
     tty: true
     resources:
       limits:
-        cpu: 0.1
+        cpu: 0.2
         memory: 256Mi
   - name: postgres
     image: circleci/postgres:9.5-alpine
@@ -78,7 +78,7 @@ spec:
       value: cloudify_db
     resources:
       limits:
-        cpu: 0.1
+        cpu: 0.2
         memory: 256Mi
   nodeSelector:
     instance-type: spot-xlarge
