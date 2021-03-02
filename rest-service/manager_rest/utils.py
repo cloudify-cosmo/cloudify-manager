@@ -391,7 +391,7 @@ def get_rrule(rule, since, until):
     if not rule.get('frequency'):
         if rule.get('count') == 1:
             frequency = rrule.DAILY
-            interval = None
+            interval = 0
         else:
             return
     else:
@@ -411,17 +411,64 @@ def get_rrule(rule, since, until):
     if rule.get('weekdays'):
         weekdays = _get_weekdays(rule['weekdays'])
 
-    return rrule.rrule(freq=frequency, interval=interval,
-                       dtstart=since, until=until, byweekday=weekdays,
-                       count=rule.get('count'), cache=True)
+    if not weekdays:
+        return rrule.rrule(freq=frequency, interval=interval,
+                           dtstart=since, until=until, count=rule.get('count'),
+                           cache=True)
+
+    count = rule.get('count')
+    rule_set = _get_rule_set_by_weekdays(
+        frequency, interval, since, until, weekdays)
+    return _cap_rule_set_by_occurrence_count(rule_set, count)
 
 
-def _get_weekdays(weekdays):
-    weekdays_rule = []
-    for weekday in rrule.weekdays:
-        if str(weekday) in weekdays:
-            weekdays_rule.append(weekday)
-    return weekdays_rule
+def _get_rule_set_by_weekdays(frequency, interval, since, until, weekdays):
+    rule_set = rrule.rruleset()
+    for weekday in weekdays:
+        rule_set.rrule(
+            rrule.rrule(freq=frequency, interval=interval, dtstart=since,
+                        until=until, byweekday=weekday[0], bysetpos=weekday[1],
+                        cache=True))
+    return rule_set
+
+
+def _cap_rule_set_by_occurrence_count(rule_set, count):
+    if not count:
+        return rule_set
+    try:
+        until_cap = rule_set[count-1]
+    except IndexError:
+        return rule_set
+    capped_rule_set = rrule.rruleset()
+    for rule in rule_set._rrule:
+        capped_rule_set.rrule(rule.replace(until=until_cap))
+    return capped_rule_set
+
+
+def _get_weekdays(raw_weekdays):
+    """
+    :param raw_weekdays: a list of strings representing a weekday in 2-letter
+        format, e.g. 'MO', 'TU', with an optional prefix representing the
+        weekday's position in a month, e.g. '1SU' = first sunday, or
+        'L-FR' = last friday
+    :return: a corresponding list of tuples, each of the structure:
+        (dateutil weekday object, int representing the position in month)
+        position = -1 means "last <weekday> of a month"
+        position = None means "every <weekday>"
+    """
+    weekdays_map = {str(wd): wd for wd in rrule.weekdays}
+    weekdays = []
+    for prefixed_weekday in raw_weekdays:
+        weekday, position = prefixed_weekday[-2:], prefixed_weekday[:-2]
+        if not position:
+            position = None
+        elif position == 'L-':
+            position = -1
+        else:
+            position = int(position)
+        if weekday in weekdays_map:
+            weekdays.append((weekdays_map[weekday], position))
+    return weekdays
 
 
 def _get_timestamp(value):

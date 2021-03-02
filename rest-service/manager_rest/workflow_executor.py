@@ -46,7 +46,8 @@ def execute_workflow(name,
                      execution_creator=None,
                      scheduled_time=None,
                      resume=False,
-                     execution_token=None):
+                     execution_token=None,
+                     handler: SendHandler = None,):
 
     execution_parameters = execution_parameters or {}
     task_name = workflow['operation']
@@ -94,7 +95,8 @@ def execute_workflow(name,
                          execution_parameters=execution_parameters,
                          context=context,
                          execution_creator=execution_creator,
-                         scheduled_time=scheduled_time)
+                         scheduled_time=scheduled_time,
+                         handler=handler,)
 
 
 def execute_system_workflow(wf_id,
@@ -146,7 +148,7 @@ def _get_tenant_dict():
     return {'name': utils.current_tenant.name}
 
 
-def _get_amqp_client(tenant=None):
+def get_amqp_client(tenant=None):
     vhost = '/' if tenant is None else tenant.rabbitmq_vhost
     client = get_client(
         amqp_host=config.instance.amqp_host,
@@ -160,10 +162,14 @@ def _get_amqp_client(tenant=None):
     return client
 
 
+def workflow_sendhandler() -> SendHandler:
+    return SendHandler(MGMTWORKER_QUEUE, 'direct', routing_key='workflow')
+
+
 def _send_mgmtworker_task(message, exchange=MGMTWORKER_QUEUE,
                           exchange_type='direct', routing_key='workflow'):
     """Send a message to the mgmtworker exchange"""
-    client = _get_amqp_client()
+    client = get_amqp_client()
     send_handler = SendHandler(exchange, exchange_type,
                                routing_key=routing_key)
     client.add_handler(send_handler)
@@ -174,7 +180,7 @@ def _send_mgmtworker_task(message, exchange=MGMTWORKER_QUEUE,
 def _broadcast_mgmtworker_task(message, exchange='cloudify-mgmtworker-service',
                                exchange_type='fanout', routing_key='service'):
     """Broadcast a message to all mgmtworkers in a cluster."""
-    client = _get_amqp_client()
+    client = get_amqp_client()
     send_handler = SendHandler(exchange, exchange_type,
                                routing_key=routing_key)
     client.add_handler(send_handler)
@@ -199,7 +205,7 @@ def _send_task_to_dlx(message, message_ttl, routing_key='workflow'):
     dlx_exchange = message['dlx_id']
     dlx_routing_key = message['dlx_id'] + '_queue'
 
-    client = _get_amqp_client()
+    client = get_amqp_client()
     send_handler = ScheduledExecutionHandler(exchange=dlx_exchange,
                                              exchange_type='direct',
                                              routing_key=dlx_routing_key,
@@ -212,7 +218,8 @@ def _send_task_to_dlx(message, message_ttl, routing_key='workflow'):
 
 
 def _execute_task(execution_id, execution_parameters,
-                  context, execution_creator, scheduled_time=None):
+                  context, execution_creator, scheduled_time=None,
+                  handler: SendHandler = None):
     # Get the host ip info and return them
     sm = get_storage_manager()
     managers = sm.list(models.Manager)
@@ -233,7 +240,10 @@ def _execute_task(execution_id, execution_parameters,
         message['dlx_id'] = execution_id
         _send_task_to_dlx(message, message_ttl)
         return
-    _send_mgmtworker_task(message)
+    if handler is not None:
+        handler.publish(message)
+    else:
+        _send_mgmtworker_task(message)
 
 
 def _get_time_to_live(scheduled_time):
@@ -320,7 +330,7 @@ def install_plugin(plugin):
         for tenant, agents in agents_per_tenant.items():
             # amqp client for the given tenant's vhost.
             # Still use the manager's creds.
-            tenant_client = _get_amqp_client(tenant)
+            tenant_client = get_amqp_client(tenant)
             with tenant_client:
                 for agent in agents:
                     send_handler = SendHandler(
@@ -359,7 +369,7 @@ def uninstall_plugin(plugin):
         for tenant, agents in agents_per_tenant.items():
             # amqp client for the given tenant's vhost.
             # Still use the manager's creds.
-            tenant_client = _get_amqp_client(tenant)
+            tenant_client = get_amqp_client(tenant)
             with tenant_client:
                 for agent in agents:
                     send_handler = SendHandler(

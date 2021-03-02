@@ -30,7 +30,7 @@ install_requires = [
     'psutil==5.7.2',
     'virtualenv==15.1.0',
     'wagon>=0.9.1',
-    'python-dateutil==2.5.3',
+    'python-dateutil==2.8.1',
     'voluptuous==0.9.3',
     'pika==1.1.0',
     'cryptography==3.3.1',

@@ -19,7 +19,9 @@ import yaml
 import json
 import shutil
 import itertools
+import typing
 from copy import deepcopy
+from datetime import datetime
 from collections import defaultdict
 
 from flask import current_app
@@ -47,6 +49,7 @@ from manager_rest.constants import (DEFAULT_TENANT_NAME,
                                     FILE_SERVER_DEPLOYMENTS_FOLDER)
 from manager_rest.dsl_functions import get_secret_method
 from manager_rest.utils import (send_event,
+                                get_formatted_timestamp,
                                 is_create_global_permitted,
                                 validate_global_modification,
                                 validate_deployment_and_site_visibility,
@@ -55,7 +58,7 @@ from manager_rest.plugins_update.constants import PLUGIN_UPDATE_WORKFLOW
 from manager_rest.rest.rest_utils import (
     get_labels_from_plan, parse_datetime_string,
     RecursiveDeploymentDependencies, update_inter_deployment_dependencies,
-    verify_blueprint_uploaded_state)
+    verify_blueprint_uploaded_state,  compute_rule_from_scheduling_params)
 from manager_rest.deployment_update.constants import STATES as UpdateStates
 from manager_rest.plugins_update.constants import STATES as PluginsUpdateStates
 
@@ -70,6 +73,9 @@ from . import app_context
 from . import workflow_executor
 from . import manager_exceptions
 from .workflow_executor import generate_execution_token
+
+if typing.TYPE_CHECKING:
+    from cloudify.amqp_client import SendHandler
 
 
 class ResourceManager(object):
@@ -371,7 +377,7 @@ class ResourceManager(object):
 
     def upload_blueprint(self, blueprint_id, app_file_name, blueprint_url,
                          file_server_root, validate_only=False, labels=None):
-        self._execute_system_workflow(
+        return self._execute_system_workflow(
             wf_id='upload_blueprint',
             task_mapping='cloudify_system_workflows.blueprint.upload',
             verify_no_executions=False,
@@ -804,7 +810,8 @@ class ResourceManager(object):
                          wait_after_fail=600,
                          execution_creator=None,
                          scheduled_time=None,
-                         allow_overlapping_running_wf=False):
+                         allow_overlapping_running_wf=False,
+                         send_handler: 'SendHandler' = None):
         execution_creator = execution_creator or current_user
         deployment = self.sm.get(models.Deployment, deployment_id)
         self._validate_permitted_to_execute_global_workflow(deployment)
@@ -884,7 +891,9 @@ class ResourceManager(object):
             bypass_maintenance=bypass_maintenance,
             dry_run=dry_run,
             wait_after_fail=wait_after_fail,
-            scheduled_time=scheduled_time)
+            scheduled_time=scheduled_time,
+            handler=send_handler,
+        )
 
         is_cascading_workflow = workflow.get('is_cascading', False)
         if is_cascading_workflow:
@@ -892,19 +901,22 @@ class ResourceManager(object):
                 deployment_id)
 
             for component_dep_id in components_dep_ids:
-                self.execute_workflow(component_dep_id,
-                                      workflow_id,
-                                      None,
-                                      parameters,
-                                      allow_custom_parameters,
-                                      force,
-                                      bypass_maintenance,
-                                      dry_run,
-                                      queue,
-                                      execution,
-                                      wait_after_fail,
-                                      execution_creator,
-                                      scheduled_time)
+                self.execute_workflow(
+                    component_dep_id,
+                    workflow_id,
+                    None,
+                    parameters,
+                    allow_custom_parameters,
+                    force,
+                    bypass_maintenance,
+                    dry_run,
+                    queue,
+                    execution,
+                    wait_after_fail,
+                    execution_creator,
+                    scheduled_time,
+                    send_handler=send_handler,
+                )
         return new_execution
 
     @staticmethod
@@ -1530,6 +1542,7 @@ class ResourceManager(object):
         self.create_resource_labels(models.DeploymentLabel,
                                     new_deployment,
                                     deployment_labels)
+        self.create_deployment_schedules(new_deployment, plan)
 
         try:
             self._create_deployment_environment(new_deployment,
@@ -2135,7 +2148,7 @@ class ResourceManager(object):
         wf_id = 'create_deployment_environment'
         deployment_env_creation_task_name = \
             'cloudify_system_workflows.deployment_environment.create'
-        self._execute_system_workflow(
+        create_execution = self._execute_system_workflow(
             wf_id=wf_id,
             task_mapping=deployment_env_creation_task_name,
             deployment=deployment,
@@ -2154,6 +2167,8 @@ class ResourceManager(object):
                 }
             }
         )
+        deployment.create_execution = create_execution
+        self.sm.update(deployment)
 
     def _check_for_active_executions(self, deployment_id, force,
                                      queue, schedule):
@@ -2567,6 +2582,52 @@ class ResourceManager(object):
                 new_label['blueprint'] = resource
 
             self.sm.put(labels_resource_model(**new_label))
+
+    def create_deployment_schedules(self, deployment, plan):
+        plan_deployment_settings = plan.get('deployment_settings')
+        if not plan_deployment_settings:
+            return
+        plan_schedules_dict = plan_deployment_settings.get('default_schedules')
+        if not plan_schedules_dict:
+            return
+        for schedule_id, schedule in plan_schedules_dict.items():
+            workflow_id = schedule['workflow']
+            execution_arguments = schedule.get('execution_arguments', {})
+            parameters = schedule.get('workflow_parameters')
+            self._verify_workflow_in_deployment(
+                workflow_id, deployment, deployment.id)
+
+            time_fmt = '%Y-%m-%d %H:%M:%S'
+            since = datetime.strptime(schedule['since'], time_fmt)
+            until = schedule.get('until')
+            if until:
+                until = datetime.strptime(schedule['until'], time_fmt)
+            rule = compute_rule_from_scheduling_params({
+                'rrule': schedule.get('rrule'),
+                'frequency': schedule.get('recurring'),
+                'weekdays': schedule.get('weekdays'),
+                'count': schedule.get('count')
+            })
+            slip = schedule.get('slip', 0)
+            stop_on_fail = schedule.get('stop_on_fail', False)
+            enabled = schedule.get('default_enabled', True)
+            now = get_formatted_timestamp()
+            schedule = models.ExecutionSchedule(
+                id=schedule_id,
+                deployment=deployment,
+                created_at=now,
+                since=since,
+                until=until,
+                rule=rule,
+                slip=slip,
+                workflow_id=workflow_id,
+                parameters=parameters,
+                execution_arguments=execution_arguments,
+                stop_on_fail=stop_on_fail,
+                enabled=enabled,
+            )
+            schedule.next_occurrence = schedule.compute_next_occurrence()
+            self.sm.put(schedule)
 
 
 # What we need to access this manager in Flask
