@@ -75,7 +75,7 @@ class Deployments(resources_v1.Deployments):
             sort=sort,
             all_tenants=all_tenants,
             get_all_results=get_all_results,
-            filter_rules=get_filter_rules()
+            filter_rules=get_filter_rules(models.Deployment)
         )
 
         if _include and 'workflows' in _include:
