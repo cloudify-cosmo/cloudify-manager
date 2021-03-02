@@ -9,7 +9,7 @@ from manager_rest.rest import rest_decorators, rest_utils
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.resource_manager import get_resource_manager
-from manager_rest.rest.filters_utils import parse_filter_rules
+from manager_rest.rest.filters_utils import create_filter_rules_list
 
 
 class BlueprintsFilters(SecuredResource):
@@ -68,8 +68,8 @@ class FiltersId(SecuredResource):
         rest_utils.validate_inputs({'filter_id': filter_id})
         request_dict = rest_utils.get_json_and_verify_params(
             {'filter_rules': {'type': list}})
-        filter_rules = parse_filter_rules(request_dict['filter_rules'],
-                                          filtered_resource)
+        filter_rules = create_filter_rules_list(request_dict['filter_rules'],
+                                                filtered_resource)
         visibility = rest_utils.get_visibility_parameter(
             optional=True, valid_values=VisibilityState.STATES)
 
@@ -131,8 +131,8 @@ class FiltersId(SecuredResource):
                 models.Filter, filter_elem, visibility)
             filter_elem.visibility = visibility
         if filter_rules:
-            filter_elem.value = parse_filter_rules(filter_rules,
-                                                   filtered_resource)
+            filter_elem.value = create_filter_rules_list(filter_rules,
+                                                         filtered_resource)
         filter_elem.updated_at = get_formatted_timestamp()
 
         return storage_manager.update(filter_elem)

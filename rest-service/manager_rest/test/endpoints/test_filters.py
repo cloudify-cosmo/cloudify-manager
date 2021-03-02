@@ -5,7 +5,8 @@ from manager_rest.test import base_test
 from manager_rest.storage import models
 from manager_rest.test.attribute import attr
 from manager_rest.storage.models_base import db
-from manager_rest.rest.filters_utils import parse_filter_rules
+from manager_rest.rest.filters_utils import (FilterRule,
+                                             create_filter_rules_list)
 from manager_rest.storage.filters import add_filter_rules_to_query
 from manager_rest.storage.resource_models import Deployment, DeploymentLabel
 from manager_rest.manager_exceptions import BadFilterRule, BadParametersError
@@ -48,51 +49,59 @@ class FiltersFunctionalityTest(base_test.BaseServerTestCase):
              ('c', ['y', 'z'], 'not_any_of', 'label')], {dep1.id})
 
     def test_filter_rule_not_dictionary_fails(self):
-        with self.assertRaisesRegex(BadFilterRule, '.*not a dictionary'):
-            parse_filter_rules(['a'], models.Deployment)
+        with self.assertRaisesRegex(BadFilterRule, 'not a dictionary'):
+            create_filter_rules_list(['a'], models.Deployment)
 
     def test_filter_rule_missing_entry_fails(self):
-        with self.assertRaisesRegex(BadFilterRule,
-                                    '.*one of the entries in the filter rule'
-                                    ' is missing'):
-            parse_filter_rules([{'key': 'key1'}], models.Deployment)
+        with self.assertRaisesRegex(BadFilterRule, 'missing'):
+            create_filter_rules_list([{'key': 'key1'}], models.Deployment)
+
+    def test_filter_rule_key_not_text_type_fails(self):
+        with self.assertRaisesRegex(BadFilterRule,  'must be a string'):
+            err_filter_rule = {'key': 1, 'values': ['b'],
+                               'operator': 'any_of', 'type': 'label'}
+            create_filter_rules_list([err_filter_rule], models.Deployment)
+
+    def test_filter_rule_value_not_list_fails(self):
+        with self.assertRaisesRegex(BadFilterRule,  'must be a list'):
+            err_filter_rule = {'key': 'a', 'values': 'b',
+                               'operator': 'any_of', 'type': 'label'}
+            create_filter_rules_list([err_filter_rule], models.Deployment)
 
     def test_parse_filter_rules_fails(self):
         err_filter_rules_params = [
-            ((1, ['b'], 'any_of', 'label'), '.*must be of type string.*'),
-            (('a', 'b', 'any_of', 'label'), '.*must be of type list.*'),
             (('a', ['b'], 'bad_operator', 'label'),
-             '.*operator for filtering by labels must be one of.*'),
+             'operator for filtering by labels must be one of'),
             (('a', ['b'], 'is_null', 'label'),
-             '.*list must be empty if the operator.*'),
+             'list must be empty if the operator'),
             (('a', ['b'], 'is_not_null', 'label'),
-             '.*list must be empty if the operator.*'),
+             'list must be empty if the operator'),
             (('a', [], 'any_of', 'label'),
-             '.*list must include at least one item if the operator.*'),
+             'list must include at least one item if the operator'),
             (('blueprint_id', ['b'], 'bad_operator', 'attribute'),
-             '.*The operator for filtering by attributes must be one.*'),
+             'The operator for filtering by attributes must be'),
             (('bad_attribute', ['dep1'], 'any_of', 'attribute'),
-             '.*Allowed attributes to filter deployments by are.*'),
+             'Allowed attributes to filter deployments by are'),
             (('a', ['b'], 'any_of', 'bad_type'),
-             '.*Filter rule type must be one of.*'),
+             'Filter rule type must be one of'),
             (('bad_attribute', ['dep1'], 'any_of', 'bad_type'),
-             '.*Filter rule type must be one of.*')
+             'Filter rule type must be one of')
         ]
         for params, err_msg in err_filter_rules_params:
             with self.assertRaisesRegex(BadFilterRule, err_msg):
-                parse_filter_rules([_get_filter_rule_from_params(params)],
-                                   models.Deployment)
+                create_filter_rules_list([FilterRule(*params)],
+                                         models.Deployment)
 
     def test_key_and_value_validation_fails(self):
         err_filter_rules_params = [
-            (('a b', ['b'], 'any_of', 'label'), '.*filter rule key.*'),
+            (('a b', ['b'], 'any_of', 'label'), 'filter rule key'),
             (('a', ['b', 'c d'], 'any_of', 'label'),
-             '.*One of the filter rule values.*')
+             'One of the filter rule values')
         ]
         for params, err_msg in err_filter_rules_params:
             with self.assertRaisesRegex(BadParametersError, err_msg):
-                parse_filter_rules([_get_filter_rule_from_params(params)],
-                                   models.Deployment)
+                create_filter_rules_list([FilterRule(*params)],
+                                         models.Deployment)
 
     @staticmethod
     def _assert_filters_applied(filter_rules_params, deployments_ids_set):
@@ -101,8 +110,7 @@ class FiltersFunctionalityTest(base_test.BaseServerTestCase):
         :param filter_rules_params: List of filter rules parameters
         :param deployments_ids_set: The corresponding deployments' IDs set
         """
-        filter_rules = [_get_filter_rule_from_params(params)
-                        for params in filter_rules_params]
+        filter_rules = [FilterRule(*params) for params in filter_rules_params]
         query = db.session.query(Deployment)
         query = add_filter_rules_to_query(query,
                                           DeploymentLabel,
@@ -123,20 +131,19 @@ class FiltersBaseCase(base_test.BaseServerTestCase):
         self.filters_client = getattr(self.client, filters_resource)
 
     def test_create_legal_filter(self):
-        new_filter = self.create_filter(FILTER_ID,
-                                        LABELS_LEGAL_FILTER_RULES,
-                                        filters_client=self.filters_client)
+        new_filter = self.create_filter(self.filters_client, FILTER_ID,
+                                        LABELS_LEGAL_FILTER_RULES)
         self.assertEqual(new_filter.labels_filter,
                          LABELS_LEGAL_FILTER_RULES)
 
     def test_list_filters(self):
         for i in range(3):
-            self.create_filter('{0}{1}'.format(FILTER_ID, i),
+            self.create_filter(self.filters_client,
+                               '{0}{1}'.format(FILTER_ID, i),
                                [{'key': f'a{i}',
                                  'values': [f'b{i}'],
                                  'operator': 'any_of',
-                                 'type': 'label'}],
-                               filters_client=self.filters_client)
+                                 'type': 'label'}])
         filters_list = self.filters_client.list()
 
         self.assertEqual(len(filters_list.items), 3)
@@ -148,22 +155,23 @@ class FiltersBaseCase(base_test.BaseServerTestCase):
                                'type': 'label'}])
 
     def test_list_filters_sort(self):
-        filter_names = ['a_filter', 'c_filter', 'b_filter']
-        for filter_name in filter_names:
-            self.create_filter(filter_name, self.SIMPLE_RULE,
-                               filters_client=self.filters_client)
+        filter_ids = ['a_filter', 'c_filter', 'b_filter']
+        for filter_id in filter_ids:
+            self.create_filter(self.filters_client,
+                               filter_id,
+                               self.SIMPLE_RULE)
 
         sorted_asc_filters_list = self.filters_client.list(sort='id')
         self.assertEqual(
             [filter_elem.id for filter_elem in sorted_asc_filters_list],
-            sorted(filter_names)
+            sorted(filter_ids)
         )
 
         sorted_dsc_filters_list = self.filters_client.list(sort='id',
                                                            is_descending=True)
         self.assertEqual(
             [filter_elem.id for filter_elem in sorted_dsc_filters_list],
-            sorted(filter_names, reverse=True)
+            sorted(filter_ids, reverse=True)
         )
 
     def test_filter_create_lowercase(self):
@@ -174,52 +182,50 @@ class FiltersBaseCase(base_test.BaseServerTestCase):
                                   'values': ['B'],
                                   'operator': 'any_of',
                                   'type': 'label'}]
-        new_filter = self.create_filter(FILTER_ID, simple_rule_uppercase,
-                                        filters_client=self.filters_client)
+        new_filter = self.create_filter(self.filters_client,
+                                        FILTER_ID,
+                                        simple_rule_uppercase)
         self.assertEqual(new_filter.labels_filter, self.SIMPLE_RULE)
 
     def test_filter_create_fails(self):
         err_filter_rule = [{'key': 'a', 'values': 'b', 'operator': 'any_of',
                             'type': 'label'}]
-        with self.assertRaisesRegex(CloudifyClientError,
-                                    '.*must be of type list.*'):
-            self.create_filter(FILTER_ID, err_filter_rule,
-                               filters_client=self.filters_client)
+        with self.assertRaisesRegex(CloudifyClientError, 'must be a list'):
+            self.create_filter(self.filters_client, FILTER_ID, err_filter_rule)
 
     def test_get_filter(self):
-        self.create_filter(FILTER_ID, self.SIMPLE_RULE,
-                           filters_client=self.filters_client)
+        self.create_filter(self.filters_client, FILTER_ID, self.SIMPLE_RULE)
         fetched_filter = self.filters_client.get(FILTER_ID)
         self.assertEqual(fetched_filter.labels_filter, self.SIMPLE_RULE)
 
     def test_delete_filter(self):
-        self.create_filter(FILTER_ID, self.SIMPLE_RULE,
-                           filters_client=self.filters_client)
+        self.create_filter(self.filters_client, FILTER_ID, self.SIMPLE_RULE)
         self.assertEqual(len(self.filters_client.list().items), 1)
         self.filters_client.delete(FILTER_ID)
         self.assertEqual(len(self.filters_client.list().items), 0)
 
     def test_update_filter(self):
-        self.update_filter(self.NEW_RULE, VisibilityState.GLOBAL,
-                           filters_client=self.filters_client)
+        self.update_filter(filters_client=self.filters_client,
+                           new_filter_rules=self.NEW_RULE,
+                           new_visibility=VisibilityState.GLOBAL)
 
     def test_update_filter_only_visibility(self):
-        self.update_filter(new_visibility=VisibilityState.GLOBAL,
-                           filters_client=self.filters_client)
+        self.update_filter(filters_client=self.filters_client,
+                           new_visibility=VisibilityState.GLOBAL)
 
     def test_update_filter_only_filter_rules(self):
-        self.update_filter(new_filter_rules=self.NEW_RULE,
-                           filters_client=self.filters_client)
+        self.update_filter(filters_client=self.filters_client,
+                           new_filter_rules=self.NEW_RULE)
 
     def test_update_filter_no_args_fails(self):
-        with self.assertRaisesRegex(RuntimeError, '.*to update a filter.*'):
+        with self.assertRaisesRegex(RuntimeError, 'to update a filter'):
             self.update_filter(filters_client=self.filters_client)
 
     def test_update_filter_narrower_visibility_fails(self):
         with self.assertRaisesRegex(CloudifyClientError,
-                                    '.*has wider visibility.*'):
-            self.update_filter(new_visibility=VisibilityState.PRIVATE,
-                               filters_client=self.filters_client)
+                                    'has wider visibility'):
+            self.update_filter(filters_client=self.filters_client,
+                               new_visibility=VisibilityState.PRIVATE)
 
 
 @attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
@@ -232,11 +238,6 @@ class BlueprintsFiltersCase(FiltersBaseCase):
 class DeploymentsFiltersCase(FiltersBaseCase):
     def setUp(self):
         super().setUp('blueprints_filters')
-
-
-def _get_filter_rule_from_params(params):
-    return {'key': params[0], 'values': params[1],
-            'operator': params[2], 'type': params[3]}
 
 
 # This way we avoid running it too

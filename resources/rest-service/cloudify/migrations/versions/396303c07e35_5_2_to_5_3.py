@@ -27,7 +27,7 @@ def upgrade():
 
 
 def downgrade():
-    _modify_filters_table()
+    _revert_changes_to_deployments_labels_table()
     _drop_specialized_execution_fk()
     _revert_changes_to_deployments_labels_table()
     _drop_blueprints_labels_table()

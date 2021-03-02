@@ -1,12 +1,12 @@
-from typing import List
+from typing import List, Union, NewType
 
 from flask import request
 
 from cloudify._compat import text_type
 
 from manager_rest.rest.rest_utils import validate_inputs
-from manager_rest.manager_exceptions import BadFilterRule, BadParametersError
 from manager_rest.storage import get_storage_manager, models
+from manager_rest.manager_exceptions import BadFilterRule, BadParametersError
 from manager_rest.constants import (ATTRS_OPERATORS,
                                     FilterRuleType,
                                     LabelsOperator,
@@ -14,7 +14,20 @@ from manager_rest.constants import (ATTRS_OPERATORS,
                                     FILTER_RULE_TYPES)
 
 
-def get_filter_rules(resource_model: models):
+class FilterRule(dict):
+    def __init__(self, key, values, operator, filter_rule_type):
+        super().__init__()
+        self['key'] = key.lower()
+        self['values'] = [value.lower() for value in values]
+        self['operator'] = operator
+        self['type'] = filter_rule_type
+
+
+FilteredModels = NewType('FilteredModels',
+                         Union[models.Deployment, models.Blueprint])
+
+
+def get_filter_rules(resource_model: FilteredModels):
     filter_rules = request.args.get('_filter_rules')
     filter_id = request.args.get('_filter_id')
 
@@ -28,7 +41,7 @@ def get_filter_rules(resource_model: models):
         )
 
     if filter_rules:
-        return parse_filter_rules(filter_rules, resource_model)
+        return create_filter_rules_list(filter_rules, resource_model)
 
     if filter_id:
         validate_inputs({'filter_id': filter_id})
@@ -36,22 +49,23 @@ def get_filter_rules(resource_model: models):
         return filter_elem.value
 
 
-def parse_filter_rules(filter_rules: List[dict], resource_model: models):
-    """Validating the filter rules list.
+def create_filter_rules_list(raw_filter_rules: List[dict],
+                             resource_model: FilteredModels):
+    """Validate the raw filter rules list and return a FilterRule items list.
 
-    :param filter_rules: A list of filter rules. A filter rule is a dictionary
-           of the following form:
+    :param raw_filter_rules: A list of filter rules. A filter rule is a
+           dictionary of the following form:
            {
                key: <key>,
                values: [<list of values>],
                operator: <LabelsOperator> or <AttrsOperator>,
                type: <FilterRuleType>
             }
-    :param resource_model: models.Deployment or models.Blueprint
-    :return: Parsed filter rules list
+    :param resource_model: One of FilteredModels
+    :return: A list of FilterRule items
     """
-    parsed_filter_rules = []
-    for filter_rule in filter_rules:
+    filter_rules_list = []
+    for filter_rule in raw_filter_rules:
         _assert_filter_rule_structure(filter_rule)
 
         filter_rule_key = filter_rule['key']
@@ -61,10 +75,10 @@ def parse_filter_rules(filter_rules: List[dict], resource_model: models):
 
         if not isinstance(filter_rule_key, text_type):
             raise BadFilterRule(filter_rule,
-                                'The filter rule key must be of type string')
+                                'The filter rule key must be a string')
         if not isinstance(filter_rule_values, list):
             raise BadFilterRule(filter_rule,
-                                'The filter rule values must be of type list')
+                                'The filter rule values must be a list')
 
         if filter_rule_type == FilterRuleType.LABEL:
             null_operators = [LabelsOperator.IS_NULL,
@@ -108,7 +122,6 @@ def parse_filter_rules(filter_rules: List[dict], resource_model: models):
         value_msg_prefix = (None if len(filter_rule_values) == 1 else
                             'One of the filter rule values')
 
-        parsed_values_list = []
         for value in filter_rule_values:
             try:
                 validate_inputs({'filter rule key': filter_rule_key})
@@ -117,22 +130,21 @@ def parse_filter_rules(filter_rules: List[dict], resource_model: models):
             except BadParametersError as e:
                 err_msg = f'The filter rule {filter_rule} is invalid. '
                 raise BadParametersError(err_msg + str(e))
-            parsed_values_list.append(value.lower())
 
-        parsed_filter_rules.append({'key': filter_rule_key.lower(),
-                                    'values': parsed_values_list,
-                                    'operator': filter_rule_operator,
-                                    'type': filter_rule_type})
+        new_filter_rule = FilterRule(filter_rule_key,
+                                     filter_rule_values,
+                                     filter_rule_operator,
+                                     filter_rule_type)
+        filter_rules_list.append(new_filter_rule)
 
-    return parsed_filter_rules
+    return filter_rules_list
 
 
 def _assert_filter_rule_structure(filter_rule):
     if not isinstance(filter_rule, dict):
         raise BadFilterRule(filter_rule, 'The filter rule is not a dictionary')
 
-    if not (all(key in filter_rule for key in
-                ['key', 'values', 'operator', 'type'])):
+    if filter_rule.keys() != {'key', 'values', 'operator', 'type'}:
         raise BadFilterRule(
             filter_rule, 'At least one of the entries in the filter rule '
                          'is missing')

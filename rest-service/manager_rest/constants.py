@@ -111,11 +111,8 @@ class FilterRuleType(str, Enum):
     ATTRIBUTE = 'attribute'
 
 
-LABELS_OPERATORS = [labels_operator.value for labels_operator in
-                    LabelsOperator.__members__.values()]
+LABELS_OPERATORS = [operator.value for operator in LabelsOperator]
 
-ATTRS_OPERATORS = [attrs_operator.value for attrs_operator in
-                   AttrsOperator.__members__.values()]
+ATTRS_OPERATORS = [attrs_operator.value for attrs_operator in AttrsOperator]
 
-FILTER_RULE_TYPES = [filter_rule_type.value for filter_rule_type in
-                     FilterRuleType.__members__.values()]
+FILTER_RULE_TYPES = [rule_type.value for rule_type in FilterRuleType]

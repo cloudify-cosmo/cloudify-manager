@@ -1008,21 +1008,21 @@ class BaseServerTestCase(unittest.TestCase):
 
         return deployment
 
-    def create_filter(self, filter_name, filter_rules,
-                      visibility=VisibilityState.TENANT, filters_client=None):
-        client = filters_client or self.client
-        return client.create(filter_name, filter_rules, visibility)
+    @staticmethod
+    def create_filter(filters_client, filter_id, filter_rules,
+                      visibility=VisibilityState.TENANT):
+        return filters_client.create(filter_id, filter_rules, visibility)
 
-    def update_filter(self, new_filter_rules=None, new_visibility=None,
-                      filters_client=None):
+    def update_filter(self, filters_client, new_filter_rules=None,
+                      new_visibility=None):
         filter_id = 'filter'
         filter_rule = {'key': 'a', 'values': ['b'], 'operator': 'any_of',
                        'type': 'label'}
-        client = filters_client or self.client
-        orig_filter = self.create_filter(filter_id, [filter_rule],
-                                         filters_client=client)
-        updated_filter = client.update(filter_id, new_filter_rules,
-                                       new_visibility)
+        orig_filter = self.create_filter(filters_client,
+                                         filter_id,
+                                         [filter_rule])
+        updated_filter = filters_client.update(filter_id, new_filter_rules,
+                                               new_visibility)
 
         updated_rules = new_filter_rules or self.SIMPLE_RULE
         updated_visibility = new_visibility or VisibilityState.TENANT

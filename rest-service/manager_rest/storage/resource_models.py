@@ -400,8 +400,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
 
     @classproperty
     def allowed_filter_attrs(cls):
-        return ['blueprint_id', 'created_by', 'description', 'site_name',
-                'latest_execution_status']
+        return ['blueprint_id', 'created_by', 'description', 'site_name']
 
     def to_response(self, **kwargs):
         dep_dict = super(Deployment, self).to_response()
