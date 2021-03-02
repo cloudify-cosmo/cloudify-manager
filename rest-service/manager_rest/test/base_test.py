@@ -224,7 +224,8 @@ class BaseServerTestCase(unittest.TestCase):
                         client.inter_deployment_dependencies.api = \
                             mock_http_client
                         client.deployments_labels.api = mock_http_client
-                        client.filters.api = mock_http_client
+                        client.blueprints_filters.api = mock_http_client
+                        client.deployments_filters.api = mock_http_client
                         client.deployment_groups.api = mock_http_client
                         client.execution_groups.api = mock_http_client
                         client.execution_schedules.api = mock_http_client
@@ -1035,16 +1036,21 @@ class BaseServerTestCase(unittest.TestCase):
 
         return deployment
 
-    def create_filter(self, filter_name, filter_rules,
-                      visibility=VisibilityState.TENANT, client=None):
-        client = client or self.client
-        return client.filters.create(filter_name, filter_rules, visibility)
+    @staticmethod
+    def create_filter(filters_client, filter_id, filter_rules,
+                      visibility=VisibilityState.TENANT):
+        return filters_client.create(filter_id, filter_rules, visibility)
 
-    def update_filter(self, new_filter_rules=None, new_visibility=None):
+    def update_filter(self, filters_client, new_filter_rules=None,
+                      new_visibility=None):
         filter_id = 'filter'
-        orig_filter = self.create_filter(filter_id, ['a=b'])
-        updated_filter = self.client.filters.update(
-            filter_id, new_filter_rules, new_visibility)
+        filter_rule = {'key': 'a', 'values': ['b'], 'operator': 'any_of',
+                       'type': 'label'}
+        orig_filter = self.create_filter(filters_client,
+                                         filter_id,
+                                         [filter_rule])
+        updated_filter = filters_client.update(filter_id, new_filter_rules,
+                                               new_visibility)
 
         updated_rules = new_filter_rules or self.SIMPLE_RULE
         updated_visibility = new_visibility or VisibilityState.TENANT

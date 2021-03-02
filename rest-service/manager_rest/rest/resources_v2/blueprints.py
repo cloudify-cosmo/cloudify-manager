@@ -68,7 +68,7 @@ class Blueprints(resources_v1.Blueprints):
             sort=sort,
             all_tenants=all_tenants,
             get_all_results=get_all_results,
-            filter_rules=get_filter_rules()
+            filter_rules=get_filter_rules(models.Blueprint)
         )
 
 

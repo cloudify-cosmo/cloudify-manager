@@ -135,8 +135,10 @@ def setup_resources(api):
         'PermissionsRole': 'permissions/<string:role_name>',
         'PermissionsRoleId':
             'permissions/<string:role_name>/<string:permission_name>',
-        'Filters': 'filters',
-        'FiltersId': 'filters/<string:filter_id>',
+        'BlueprintsFilters': 'filters/blueprints',
+        'BlueprintsFiltersId': 'filters/blueprints/<string:filter_id>',
+        'DeploymentsFilters': 'filters/deployments',
+        'DeploymentsFiltersId': 'filters/deployments/<string:filter_id>',
         'DeploymentGroups': 'deployment-groups',
         'DeploymentGroupsId': 'deployment-groups/<string:group_id>',
         'ExecutionGroups': 'execution-groups',
