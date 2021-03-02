@@ -15,6 +15,7 @@
 
 import os
 import uuid
+import shutil
 from datetime import datetime
 
 from flask import current_app
@@ -45,7 +46,8 @@ from manager_rest.plugins_update.constants import (STATES,
 from manager_rest.manager_exceptions import (ConflictError,
                                              PluginsUpdateError,
                                              IllegalActionError)
-from manager_rest.constants import FILE_SERVER_BLUEPRINTS_FOLDER
+from manager_rest.constants import (FILE_SERVER_BLUEPRINTS_FOLDER,
+                                    FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER)
 
 
 PLUGIN_VERSION_CONSTRAINTS = 'plugin_version_constraints'
@@ -78,7 +80,7 @@ class PluginsUpdateManager(object):
                 return f'{description}\n{comment}'
             return comment
 
-        timestamp = datetime.now().strftime('%Y%m%dT%H%M%S')
+        timestamp = datetime.now().strftime('%Y%m%dT%H%M%S.%f')
         temp_blueprint_id = f'{blueprint.id}-{timestamp}-plugins-update'
         kwargs = {
             'application_file_name': blueprint.main_file_name,
@@ -163,6 +165,9 @@ class PluginsUpdateManager(object):
         plugins_update.state = STATES.FINALIZING
         self.sm.update(plugins_update)
 
+        updated_deployments = self._get_deployments_to_update(
+            plugins_update.temp_blueprint_id)
+
         not_updated_deployments = self._get_deployments_to_update(
             plugins_update.blueprint_id)
 
@@ -172,13 +177,17 @@ class PluginsUpdateManager(object):
                 "ID {0}, execution ID {1}: {2}".format(
                     plugins_update_id, plugins_update.execution.id,
                     ', '.join(dep.id for dep in not_updated_deployments)))
-            plugins_update.temp_blueprint.is_hidden = False
-            self.sm.update(plugins_update.temp_blueprint)
-            current_app.logger.info(
-                "Look in the latest update executions' logs of these "
-                "deployments for more details.")
-            plugins_update.state = STATES.FAILED
-            return self.sm.update(plugins_update)
+
+            if updated_deployments:
+                # instantiate the updated blueprint (temp_blueprint)
+                self._copy_blueprint_files(plugins_update.blueprint,
+                                           plugins_update.temp_blueprint)
+                plugins_update.temp_blueprint.is_hidden = False
+                self.sm.update(plugins_update.temp_blueprint)
+            else:
+                self.sm.delete(plugins_update.temp_blueprint)
+
+            self._raise_error(plugins_update)
 
         plugins_update.blueprint.plan = plugins_update.temp_blueprint.plan
         self.sm.update(plugins_update.blueprint)
@@ -208,12 +217,64 @@ class PluginsUpdateManager(object):
         execution = self.sm.get(models.Execution, plugins_update.execution_id)
         if (execution.status in ExecutionState.END_STATES
                 and execution.status != ExecutionState.TERMINATED):
-            plugins_update.state = STATES.FAILED
-            self.sm.update(plugins_update)
-            raise PluginsUpdateError(
-                'The execution of plugins update {0} {1}.'.format(
-                    plugins_update.id,
-                    execution.status.lower()))
+            self._raise_error(plugins_update, execution)
+
+    def _raise_error(self, plugins_update, execution=None):
+        if execution is None:
+            execution = self.sm.get(models.Execution,
+                                    plugins_update.execution_id)
+        plugins_update.state = STATES.FAILED
+        self.sm.update(plugins_update)
+        raise PluginsUpdateError(
+            'The execution of plugins update {0} {1}.'.format(
+                plugins_update.id,
+                execution.status.lower()))
+
+    def _copy_blueprint_files(self, src_blueprint, dst_blueprint):
+        """Duplicate a blueprint files on disk."""
+        # copy a blueprint archive
+        dst_dir = os.path.join(config.instance.file_server_root,
+                               FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
+                               dst_blueprint.tenant.name,
+                               dst_blueprint.id)
+        shutil.copytree(
+            os.path.join(config.instance.file_server_root,
+                         FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
+                         src_blueprint.tenant.name,
+                         src_blueprint.id),
+            dst_dir,
+        )
+        src_archive_filename = os.listdir(dst_dir)[0]
+        _, archive_ext = self._split_archive_filename(src_archive_filename)
+        dst_archive_filename = '{0}{1}'.format(dst_blueprint.id,
+                                               ''.join(archive_ext))
+        shutil.move(
+            os.path.join(config.instance.file_server_root,
+                         FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
+                         dst_blueprint.tenant.name,
+                         dst_blueprint.id,
+                         src_archive_filename),
+            os.path.join(dst_dir, dst_archive_filename)
+        )
+        # copy a blueprint
+        shutil.copytree(
+            os.path.join(config.instance.file_server_root,
+                         FILE_SERVER_BLUEPRINTS_FOLDER,
+                         src_blueprint.tenant.name,
+                         src_blueprint.id),
+            os.path.join(config.instance.file_server_root,
+                         FILE_SERVER_BLUEPRINTS_FOLDER,
+                         dst_blueprint.tenant.name,
+                         dst_blueprint.id)
+        )
+
+    def _split_archive_filename(self, filename, ext=None):
+        f, e = os.path.splitext(filename)
+        if not e:
+            return f, ext
+        if not ext:
+            ext = []
+        return self._split_archive_filename(f, [e] + ext)
 
     def _get_deployments_to_update(self, blueprint_id):
         return self.sm.list(models.Deployment,
