@@ -12,10 +12,10 @@ spec:
     image: circleci/python:3.6
     resources:
       requests:
-        cpu: 1.2
+        cpu: 1.5
         memory: 3Gi
       limits:
-        cpu: 1.2
+        cpu: 1.5
         memory: 3Gi
     command:
     - cat
