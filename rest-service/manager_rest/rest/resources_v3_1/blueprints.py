@@ -132,7 +132,8 @@ class BlueprintsId(resources_v2.BlueprintsId):
                                   labels=labels)
         if not async_upload:
             sm = get_storage_manager()
-            response = rest_utils.get_uploaded_blueprint(sm, blueprint_id)
+            blueprint, _ = response
+            response = rest_utils.get_uploaded_blueprint(sm, blueprint)
         return response
 
     @staticmethod
