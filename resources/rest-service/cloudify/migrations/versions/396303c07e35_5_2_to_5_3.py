@@ -39,11 +39,13 @@ def upgrade():
     _create_blueprints_labels_table()
     _modify_deployments_labels_table()
     _add_specialized_execution_fk()
+    _modify_filters_table()
     _add_deployment_statuses()
 
 
 def downgrade():
     _drop_deployment_statuses()
+    _revert_changes_to_deployments_labels_table()
     _drop_specialized_execution_fk()
     _revert_changes_to_deployments_labels_table()
     _drop_blueprints_labels_table()
@@ -257,6 +259,15 @@ def _modify_deployments_labels_table():
     op.drop_column('deployments_labels', '_deployment_fk')
 
 
+def _modify_filters_table():
+    op.add_column('filters',
+                  sa.Column('filtered_resource', sa.Text(), nullable=False))
+    op.create_index(op.f('filters_filtered_resource_idx'),
+                    'filters',
+                    ['filtered_resource'],
+                    unique=False)
+
+
 def _revert_changes_to_deployments_labels_table():
     op.add_column('deployments_labels',
                   sa.Column('_deployment_fk',
@@ -299,6 +310,11 @@ def _drop_blueprints_labels_table():
     op.drop_index(op.f('blueprints_labels__creator_id_idx'),
                   table_name='blueprints_labels')
     op.drop_table('blueprints_labels')
+
+
+def _revert_changes_to_filters_table():
+    op.drop_index(op.f('filters_filtered_resource_idx'), table_name='filters')
+    op.drop_column('filters', 'filtered_resource')
 
 
 def _drop_deployment_statuses():

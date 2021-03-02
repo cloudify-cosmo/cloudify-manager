@@ -32,7 +32,7 @@ from manager_rest.utils import (is_administrator,
                                 all_tenants_authorization,
                                 validate_global_modification)
 
-from .filters import add_labels_filters_to_query
+from .filters import add_filter_rules_to_query
 
 from psycopg2 import DatabaseError as Psycopg2DBError
 sql_errors = (SQLAlchemyError, Psycopg2DBError)
@@ -181,7 +181,7 @@ class SQLStorageManager(object):
     def _add_filter_rules(query, model_class, filter_rules):
         if filter_rules:
             if hasattr(model_class, 'labels_model'):
-                return add_labels_filters_to_query(
+                return add_filter_rules_to_query(
                     query, model_class.labels_model, filter_rules)
 
         return query
