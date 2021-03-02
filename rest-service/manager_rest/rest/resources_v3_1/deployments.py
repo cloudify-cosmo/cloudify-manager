@@ -469,6 +469,7 @@ class DeploymentGroupsId(SecuredResource):
             'blueprint_id': {'optional': True},
             'default_inputs': {'optional': True},
             'visibility': {'optional': True},
+            'inputs': {'optional': True},
         })
         sm = get_storage_manager()
         try:
