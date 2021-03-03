@@ -174,9 +174,9 @@ class PluginsUpdateManager(object):
         if not_updated_deployments:
             current_app.logger.error(
                 "These deployments were not updated during plugins update "
-                "ID {0}, execution ID {1}: {2}".format(
-                    plugins_update_id, plugins_update.execution.id,
-                    ', '.join(dep.id for dep in not_updated_deployments)))
+                "ID %s, execution ID %s: %s",
+                plugins_update_id, plugins_update.execution.id,
+                ', '.join(dep.id for dep in not_updated_deployments))
 
             if updated_deployments:
                 # instantiate the updated blueprint (temp_blueprint)
