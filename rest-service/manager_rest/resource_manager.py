@@ -30,6 +30,7 @@ from flask_security import current_user
 from cloudify._compat import StringIO, text_type
 from cloudify.cryptography_utils import encrypt
 from cloudify.workflows import tasks as cloudify_tasks
+from cloudify.utils import parse_utc_datetime_relative
 from cloudify.models_states import (SnapshotState,
                                     ExecutionState,
                                     VisibilityState,
@@ -2591,17 +2592,16 @@ class ResourceManager(object):
         if not plan_schedules_dict:
             return
         for schedule_id, schedule in plan_schedules_dict.items():
+            namespaced_schedule_id = '{}_{}'.format(deployment.id, schedule_id)
             workflow_id = schedule['workflow']
             execution_arguments = schedule.get('execution_arguments', {})
             parameters = schedule.get('workflow_parameters')
             self._verify_workflow_in_deployment(
                 workflow_id, deployment, deployment.id)
-
-            time_fmt = '%Y-%m-%d %H:%M:%S'
-            since = datetime.strptime(schedule['since'], time_fmt)
+            since = self.get_utc_datetime_from_sched_plan(schedule['since'])
             until = schedule.get('until')
             if until:
-                until = datetime.strptime(schedule['until'], time_fmt)
+                until = self.get_utc_datetime_from_sched_plan(until)
             rule = compute_rule_from_scheduling_params({
                 'rrule': schedule.get('rrule'),
                 'frequency': schedule.get('recurring'),
@@ -2613,7 +2613,7 @@ class ResourceManager(object):
             enabled = schedule.get('default_enabled', True)
             now = get_formatted_timestamp()
             schedule = models.ExecutionSchedule(
-                id=schedule_id,
+                id=namespaced_schedule_id,
                 deployment=deployment,
                 created_at=now,
                 since=since,
@@ -2628,6 +2628,22 @@ class ResourceManager(object):
             )
             schedule.next_occurrence = schedule.compute_next_occurrence()
             self.sm.put(schedule)
+
+    @staticmethod
+    def get_utc_datetime_from_sched_plan(time_expression, base_datetime=None):
+        """
+        :param time_expression: Either a string representing an absolute
+            datetime, or a relative time delta, such as '+4 hours' or '+1y+1d'.
+        :param base_datetime: a datetime object representing the absolute date
+            and time to which we apply the time delta. By default: UTC now
+            (relevant only for relative time).
+        :return: A naive datetime object, in UTC time.
+        """
+        time_fmt = '%Y-%m-%d %H:%M:%S'
+        if time_expression.startswith('+'):
+            base_datetime = base_datetime or datetime.utcnow()
+            return parse_utc_datetime_relative(time_expression, base_datetime)
+        return datetime.strptime(time_expression, time_fmt)
 
 
 # What we need to access this manager in Flask
