@@ -1,24 +1,9 @@
-########
-# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#        http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-############
-
 import os
 import sys
 import json
 import time
 import shutil
+import subprocess
 import logging
 import argparse
 
@@ -134,6 +119,7 @@ class MgmtworkerServiceTaskConsumer(ServiceTaskConsumer):
     service_tasks['broker-updated'] = 'broker_updated'
     service_tasks['broker-removed'] = 'broker_removed'
     service_tasks['db-updated'] = 'db_updated'
+    service_tasks['restart-restservice'] = 'restart_restservice'
 
     def __init__(self, *args, **kwargs):
         self._workflow_registry = kwargs.pop('workflow_registry')
@@ -143,6 +129,17 @@ class MgmtworkerServiceTaskConsumer(ServiceTaskConsumer):
         super(MgmtworkerServiceTaskConsumer, self).__init__(
             name, queue_name, *args, **kwargs)
         self.exchange = 'cloudify-mgmtworker-service'
+
+    def restart_restservice(self, service_management):
+        logger.info('Restarting restservice.')
+
+        service_command = 'systemctl'
+        if service_management == 'supervisord':
+            service_command = 'supervisorctl'
+
+        subprocess.check_call([
+            'sudo', service_command, 'restart', 'cloudify-restservice',
+        ])
 
     def manager_added(self):
         logger.info('A manager has been added to the cluster, updating '
