@@ -20,7 +20,8 @@ def foreign_key(foreign_key_column,
                 nullable=False,
                 index=True,
                 primary_key=False,
-                ondelete='CASCADE'):
+                ondelete='CASCADE',
+                **fk_kwargs):
     """Return a ForeignKey object with the relevant
 
     :param foreign_key_column: Unique id column in the parent table
@@ -31,7 +32,7 @@ def foreign_key(foreign_key_column,
         action will affect the corresponding records in the child table
     """
     return db.Column(
-        db.ForeignKey(foreign_key_column, ondelete=ondelete),
+        db.ForeignKey(foreign_key_column, ondelete=ondelete, **fk_kwargs),
         nullable=nullable,
         index=index,
         primary_key=primary_key,
