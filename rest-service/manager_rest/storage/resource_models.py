@@ -96,7 +96,8 @@ class Blueprint(CreatedAtMixin, SQLResourceBase):
                                        nullable=True,
                                        ondelete='SET NULL',
                                        deferrable=True,
-                                       initially='DEFERRED')
+                                       initially='DEFERRED',
+                                       use_alter=True)
 
     @classproperty
     def labels_model(cls):
@@ -357,7 +358,8 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                                        nullable=True,
                                        ondelete='SET NULL',
                                        deferrable=True,
-                                       initially='DEFERRED')
+                                       initially='DEFERRED',
+                                       use_alter=True)
 
     @classproperty
     def labels_model(cls):
