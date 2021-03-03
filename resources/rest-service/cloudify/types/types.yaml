@@ -848,6 +848,34 @@ workflows:
       install_methods:
         default: null
 
+  rollback:
+    mapping: default_workflows.cloudify.plugins.workflows.rollback
+    parameters:
+      type_names:
+        default: []
+        description: >
+          A list of type names. The operation will be executed
+          only on node instances which are of these types or of types which
+          (recursively) derive from them. An empty list means no filtering
+          will take place and all type names are valid.
+      node_ids:
+        default: []
+        description: >
+          A list of node ids. The operation will be executed only on node
+          instances which are instances of these nodes. An empty list means
+          no filtering will take place and all nodes are valid.
+      node_instance_ids:
+        default: []
+        description: >
+          A list of node instance ids. The operation will be executed only on
+          the node instances specified. An empty list means no filtering will
+          take place and all node instances are valid.
+      full_rollback:
+        default: false
+        type: boolean
+        description: >
+          Whether rollback to resolved state or full uninstall.
+
 ##################################################################################
 # Base data type definitions
 ##################################################################################
