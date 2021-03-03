@@ -11,6 +11,7 @@ from json import dump
 from datetime import datetime
 from flask_security import current_user
 from flask import current_app
+from sqlalchemy import create_engine, orm
 
 from manager_rest.manager_exceptions import (
     ConflictError,
@@ -25,6 +26,7 @@ CONFIG_TYPES = [
 SKIP_RESET_WRITE = ['authorization']
 NOT_SET = object()
 SQL_DIALECT = 'postgresql'
+LDAP_CA_NAME = '_auth-ldap-ca'
 
 
 class Setting(object):
@@ -92,7 +94,7 @@ class Config(object):
     ldap_domain = Setting('ldap_domain')
     ldap_is_active_directory = Setting('ldap_is_active_directory')
     ldap_timeout = Setting('ldap_timeout')
-    ldap_ca_path = Setting('ldap_ca_path')
+    ldap_ca_cert = Setting('ldap_ca_cert')
     ldap_bind_format = Setting('ldap_bind_format')
     ldap_nested_levels = Setting('ldap_nested_levels', default=1)
     # LDAP search filter and similar settings
@@ -175,7 +177,6 @@ class Config(object):
 
     def load_from_db(self):
         from manager_rest.storage import models
-        from sqlalchemy import create_engine, orm
         engine = create_engine(self.db_url)
         session = orm.Session(bind=engine)
         stored_config = (
@@ -232,6 +233,10 @@ class Config(object):
             self.authorization_permissions[perm.name].append(
                 role_names[perm.role_id])
 
+        self.ldap_ca_cert = session.query(
+            models.Certificate.value
+        ).filter_by(name=LDAP_CA_NAME).scalar()
+
         session.close()
         engine.dispose()
 
@@ -244,7 +249,6 @@ class Config(object):
         config dictionary parameter
         """
         from manager_rest.storage import models
-        from sqlalchemy import create_engine, orm
 
         engine = create_engine(self.db_url)
         session = orm.Session(bind=engine)
@@ -252,6 +256,14 @@ class Config(object):
 
         config_mappings = []
         for name, value in config_dict.items():
+            if name == 'ldap_ca_cert':
+                cert = session.query(models.Certificate).filter_by(
+                    name=LDAP_CA_NAME,
+                ).one_or_none() or models.Certificate()
+                cert.name = LDAP_CA_NAME
+                cert.value = value
+                session.add(cert)
+                continue
             entry = self._find_entry(stored_configs, name)
             if not entry.is_editable and not force:
                 raise ConflictError('{0} is not editable'.format(entry.name))

@@ -1,22 +1,7 @@
-#########
-# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
-import uuid
-import math
-import hashlib
 from datetime import datetime
+import hashlib
+import math
+import uuid
 
 from flask_security import current_user
 
@@ -248,6 +233,18 @@ def _get_time_to_live(scheduled_time):
     delta = int(math.floor(delta))
     delta_in_milisecs = delta * 1000
     return delta_in_milisecs
+
+
+def restart_restservice():
+    message = {
+        'service_task': {
+            'task_name': 'restart-restservice',
+            'kwargs': {
+                'service_management': config.instance.service_management,
+            },
+        }
+    }
+    _broadcast_mgmtworker_task(message)
 
 
 def cancel_execution(execution_id):
