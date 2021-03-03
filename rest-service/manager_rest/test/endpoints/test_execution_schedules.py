@@ -152,6 +152,26 @@ class ExecutionSchedulesTestCase(BaseServerTestCase):
             'good-weekdays', weekdays='oneday, someday'
         )
 
+    def test_schedule_invalid_complex_weekdays(self):
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            '400:.* invalid weekday',
+            self.client.execution_schedules.create,
+            'bad-complex-wd', self.deployment_id, 'install',
+            since=self.an_hour_from_now, frequency='4 hours',
+            weekdays='5tu'
+        )
+
+    def test_schedule_invalid_frequency_with_complex_weekdays(self):
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            '400:.* complex weekday expression',
+            self.client.execution_schedules.create,
+            'bad-complex-wd', self.deployment_id, 'install',
+            since=self.an_hour_from_now, frequency='4 hours',
+            weekdays='2mo, l-tu'
+        )
+
     def test_schedule_invalid_repetition_without_frequency(self):
         frequency_error = \
             '400: frequency must be specified for execution count ' \
