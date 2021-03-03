@@ -94,7 +94,9 @@ class Blueprint(CreatedAtMixin, SQLResourceBase):
     error_traceback = db.Column(db.Text)
     _upload_execution_fk = foreign_key('executions._storage_id',
                                        nullable=True,
-                                       ondelete='SET NULL')
+                                       ondelete='SET NULL',
+                                       deferrable=True,
+                                       initially='DEFERRED')
 
     @classproperty
     def labels_model(cls):
@@ -353,7 +355,9 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                            ondelete='SET NULL')
     _create_execution_fk = foreign_key('executions._storage_id',
                                        nullable=True,
-                                       ondelete='SET NULL')
+                                       ondelete='SET NULL',
+                                       deferrable=True,
+                                       initially='DEFERRED')
 
     @classproperty
     def labels_model(cls):
