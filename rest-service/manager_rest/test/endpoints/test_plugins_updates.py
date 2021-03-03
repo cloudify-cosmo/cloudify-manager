@@ -314,6 +314,25 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
             models.Deployment, plugins_update.deployments_to_update[0])
         self.assertEqual('bp', updated_deployment.blueprint.id)
 
+    def test_deployments_partially_updated(self):
+        """Test the case where only a part of deployments was updated."""
+        self.put_blueprint(blueprint_id='bp')
+        self.client.deployments.create('bp', 'dep1')
+        self.wait_for_deployment_creation(self.client, 'dep1')
+        self.client.deployments.create('bp', 'dep2')
+        self.wait_for_deployment_creation(self.client, 'dep2')
+        plugins_update = self.client.plugins_update.update_plugins('bp')
+        self.pretend_deployments_updated(plugins_update.id, ['dep1'])
+        with self.assertRaises(CloudifyClientError):
+            plugins_update = self.client.plugins_update.\
+                finalize_plugins_update(plugins_update.id)
+        # Check "updated" deployment
+        dep1 = self._sm.get(models.Deployment, 'dep1')
+        self.assertEqual(plugins_update.temp_blueprint_id, dep1.blueprint.id)
+        # Check not update deployment
+        dep2 = self._sm.get(models.Deployment, 'dep2')
+        self.assertEqual(plugins_update.blueprint_id, dep2.blueprint.id)
+
     def pretend_deployments_updated(self, plugins_update_id: str,
                                     deployment_ids: list = None):
         """Pretend those deployments were updated."""
