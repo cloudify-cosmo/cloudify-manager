@@ -1,7 +1,6 @@
 from datetime import datetime
 import hashlib
 import math
-import os
 import uuid
 
 from flask_security import current_user
