@@ -1,3 +1,5 @@
+import re
+
 from ast import literal_eval
 from contextlib import contextmanager
 from dateutil import rrule
@@ -751,7 +753,7 @@ def compute_rule_from_scheduling_params(request_dict, existing_rule=None):
         if count:
             count = convert_to_int(request_dict.get('count'))
         frequency = _verify_schedule_frequency(request_dict.get('frequency'))
-        weekdays = _verify_weekdays(request_dict.get('weekdays'))
+        weekdays = _verify_weekdays(request_dict.get('weekdays'), frequency)
         if existing_rule:
             count = count or existing_rule.get('count')
             frequency = frequency or existing_rule.get('frequency')
@@ -780,18 +782,31 @@ def _verify_schedule_frequency(frequency_str):
     return frequency_str
 
 
-def _verify_weekdays(weekdays):
+def _verify_weekdays(weekdays, frequency):
     if not weekdays:
         return
     if not isinstance(weekdays, list):
         raise manager_exceptions.BadParametersError(
             "weekdays: expected a list, but got: {}".format(weekdays))
-    weekdays_caps = set(d.upper() for d in weekdays)
+    weekdays_caps = [d.upper() for d in weekdays]
     valid_weekdays = {str(d) for d in rrule.weekdays}
-    invalid_weekdays = weekdays_caps - valid_weekdays
-    if invalid_weekdays:
-        raise manager_exceptions.BadParametersError(
-            "weekdays list contains invalid weekdays `{}`. Valid "
-            "weekdays are: {} or their lowercase values."
-            .format(invalid_weekdays, '|'.join(valid_weekdays)))
-    return list(weekdays_caps)
+
+    complex_weekdays_freq = False
+    if frequency:
+        _, frequency = parse_frequency(frequency)
+        complex_weekdays_freq = (frequency in ['mo', 'month', 'y', 'year'])
+
+    for weekday in weekdays_caps:
+        parsed = re.findall(r"^([1-4]|L-)?({})".format(
+            '|'.join(valid_weekdays)), weekday)
+        if not parsed:
+            raise manager_exceptions.BadParametersError(
+                "weekdays list contains an invalid weekday `{}`. Valid "
+                "weekdays are: {} or their lowercase values, optionally "
+                "prefixed by 1-4 or l-/L-.".format(weekday,
+                                                   '|'.join(valid_weekdays)))
+        if parsed[0][0] and not complex_weekdays_freq:
+            raise manager_exceptions.BadParametersError(
+                "complex weekday expression {} can only be used with a months|"
+                "years frequency, but got {}.".format(weekday, frequency))
+    return weekdays_caps
