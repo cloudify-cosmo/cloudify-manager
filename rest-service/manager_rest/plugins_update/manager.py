@@ -81,7 +81,7 @@ class PluginsUpdateManager(object):
             return comment
 
         timestamp = datetime.now().strftime('%Y%m%dT%H%M%S.%f')
-        temp_blueprint_id = f'{blueprint.id}-{timestamp}-plugins-update'
+        temp_blueprint_id = f'plugins-update-{timestamp}-{blueprint.id}'
         kwargs = {
             'application_file_name': blueprint.main_file_name,
             'blueprint_id': temp_blueprint_id,
@@ -245,9 +245,8 @@ class PluginsUpdateManager(object):
             dst_dir,
         )
         src_archive_filename = os.listdir(dst_dir)[0]
-        _, archive_ext = self._split_archive_filename(src_archive_filename)
-        dst_archive_filename = '{0}{1}'.format(dst_blueprint.id,
-                                               ''.join(archive_ext))
+        dst_archive_filename = src_archive_filename.replace(
+            src_blueprint.id, dst_blueprint.id, 1)
         shutil.move(
             os.path.join(config.instance.file_server_root,
                          FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
@@ -267,14 +266,6 @@ class PluginsUpdateManager(object):
                          dst_blueprint.tenant.name,
                          dst_blueprint.id)
         )
-
-    def _split_archive_filename(self, filename, ext=None):
-        f, e = os.path.splitext(filename)
-        if not e:
-            return f, ext
-        if not ext:
-            ext = []
-        return self._split_archive_filename(f, [e] + ext)
 
     def _get_deployments_to_update(self, blueprint_id):
         return self.sm.list(models.Deployment,

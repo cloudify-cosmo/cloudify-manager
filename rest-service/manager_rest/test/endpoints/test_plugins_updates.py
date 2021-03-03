@@ -305,7 +305,8 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
         with self.assertRaises(CloudifyClientError):
             plugins_update = self.client.plugins_update.\
                 finalize_plugins_update(plugins_update.id)
-        self.assertRegex(plugins_update['temp_blueprint_id'], r'^bp\-')
+        self.assertRegex(plugins_update['temp_blueprint_id'],
+                         r'^plugins-update\-.*\-bp$')
         self.assertEmpty(self._sm.list(
             models.Deployment,
             filters={'blueprint_id': plugins_update['temp_blueprint_id']},
