@@ -245,6 +245,7 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
         plan[DEPLOYMENT_PLUGINS_TO_INSTALL].append('dummy')
         blueprint.plan = plan
         self._sm.update(blueprint)
+        self.pretend_deployments_updated(plugins_update_id)
         # Sanity check
         self.assertIn(
             'dummy',
@@ -264,6 +265,7 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
         plugins_update = self.client.plugins_update.update_plugins(
             'hello_world')
         self.assertNotEqual(plugins_update.state, STATES.SUCCESSFUL)
+        self.pretend_deployments_updated(plugins_update.id)
         plugins_update = self.client.plugins_update.finalize_plugins_update(
             plugins_update.id)
         self.assertEqual(plugins_update.state, STATES.SUCCESSFUL)
@@ -275,10 +277,56 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
         plugins_update = self.client.plugins_update.update_plugins(
             'hello_world')
         self._sm.get(models.Blueprint, plugins_update.temp_blueprint_id)
-        plugins_update = self.client.plugins_update.finalize_plugins_update(
-            plugins_update.id)
+        with self.assertRaises(CloudifyClientError):
+            plugins_update = self.client.plugins_update.\
+                finalize_plugins_update(plugins_update.id)
         with self.assertRaises(NotFoundError):
             self._sm.get(models.Blueprint, plugins_update.temp_blueprint_id)
+
+    def test_finalize_error_if_deployments_not_updated(self):
+        self.put_blueprint(blueprint_id='bp')
+        self.client.deployments.create('bp', 'dep')
+        self.wait_for_deployment_creation(self.client, 'dep')
+        plugins_update = self.client.plugins_update.update_plugins('bp')
+        self._sm.get(models.Blueprint, plugins_update.temp_blueprint_id)
+        with self.assertRaises(CloudifyClientError) as ex:
+            plugins_update = self.client.plugins_update.\
+                finalize_plugins_update(plugins_update.id)
+            self.assertEqual(STATES.FAILED, plugins_update.state)
+            self.assertEqual(ex.status_code, 400)
+            self.assertIn(str(ex), plugins_update.id)
+
+    def test_finalize_no_deployments_updated(self):
+        self.put_blueprint(blueprint_id='bp')
+        self.client.deployments.create('bp', 'dep')
+        self.wait_for_deployment_creation(self.client, 'dep')
+        plugins_update = self.client.plugins_update.update_plugins('bp')
+        self._sm.get(models.Blueprint, plugins_update.temp_blueprint_id)
+        with self.assertRaises(CloudifyClientError):
+            plugins_update = self.client.plugins_update.\
+                finalize_plugins_update(plugins_update.id)
+        self.assertRegex(plugins_update['temp_blueprint_id'], r'^bp\-')
+        self.assertEmpty(self._sm.list(
+            models.Deployment,
+            filters={'blueprint_id': plugins_update['temp_blueprint_id']},
+        ).items)
+        updated_deployment = self._sm.get(
+            models.Deployment, plugins_update.deployments_to_update[0])
+        self.assertEqual('bp', updated_deployment.blueprint.id)
+
+    def pretend_deployments_updated(self, plugins_update_id: str,
+                                    deployment_ids: list = None):
+        """Pretend those deployments were updated."""
+        plugins_update = self._sm.get(models.PluginsUpdate,
+                                      plugins_update_id)
+        temp_blueprint = self._sm.get(models.Blueprint,
+                                      plugins_update.temp_blueprint.id)
+        if deployment_ids is None:
+            deployment_ids = plugins_update.deployments_to_update
+        for deployment_id in deployment_ids:
+            deployment = self._sm.get(models.Deployment, deployment_id)
+            deployment.blueprint = temp_blueprint
+            self._sm.update(deployment)
 
 
 @attr(client_min_version=3.1,
