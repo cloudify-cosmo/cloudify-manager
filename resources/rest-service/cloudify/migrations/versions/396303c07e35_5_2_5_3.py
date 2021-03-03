@@ -52,7 +52,9 @@ def _add_specialized_execution_fk():
         'executions',
         ['_upload_execution_fk'],
         ['_storage_id'],
-        ondelete='SET NULL'
+        ondelete='SET NULL',
+        deferrable=True,
+        initially='DEFERRED',
     )
     op.add_column(
         'deployments',
@@ -70,7 +72,9 @@ def _add_specialized_execution_fk():
         'executions',
         ['_create_execution_fk'],
         ['_storage_id'],
-        ondelete='SET NULL'
+        ondelete='SET NULL',
+        deferrable=True,
+        initially='DEFERRED',
     )
 
 
