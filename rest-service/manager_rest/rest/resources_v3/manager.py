@@ -11,6 +11,7 @@ from manager_rest.manager_exceptions import (BadParametersError,
                                              MethodNotAllowedError,
                                              UnauthorizedError,
                                              NotFoundError)
+from manager_rest.workflow_executor import restart_restservice
 from manager_rest.constants import (
     FILE_SERVER_BLUEPRINTS_FOLDER,
     FILE_SERVER_DEPLOYMENTS_FOLDER,
@@ -22,8 +23,6 @@ from .. import rest_decorators, rest_utils
 from ...security.authentication import authenticator
 from ..responses_v3 import BaseResponse, ResourceID
 
-
-LDAP_CA_PATH = '/etc/cloudify/ssl/ldap_ca.crt'
 
 try:
     from cloudify_premium.multi_tenancy.responses import LdapResponse
@@ -106,15 +105,6 @@ class LdapAuthentication(SecuredResource):
     @rest_decorators.marshal_with(LdapResponse)
     def post(self):
         ldap_config = self._validate_set_ldap_request()
-        if 'ldap_ca_cert' in ldap_config:
-            destination = (
-                config.instance.ldap_ca_path
-                or LDAP_CA_PATH
-            )
-            with open(destination, 'w') as ca_handle:
-                ca_handle.write(ldap_config['ldap_ca_cert'])
-            ldap_config.pop('ldap_ca_cert')
-            ldap_config['ldap_ca_path'] = destination
 
         from cloudify_premium.authentication.ldap_authentication \
             import LdapAuthentication
@@ -136,11 +126,7 @@ class LdapAuthentication(SecuredResource):
                     'Failed setting LDAP authenticator: Invalid parameters '
                     'provided.')
 
-        # Restart the rest service so that each the LDAP configuration
-        # be loaded to all flask processes.
-        rest_utils.set_restart_task(
-            service_management=config.instance.service_management
-        )
+        restart_restservice()
 
         ldap_config.pop('ldap_password')
         return ldap_config

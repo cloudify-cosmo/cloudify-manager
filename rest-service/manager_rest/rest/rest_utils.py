@@ -10,7 +10,6 @@ import dateutil.parser
 import os
 import pytz
 import string
-import subprocess
 import uuid
 
 from retrying import retry
@@ -32,9 +31,7 @@ from cloudify.models_states import (
 )
 
 from manager_rest.storage import models
-from manager_rest.constants import (REST_SERVICE_NAME,
-                                    CFY_LABELS,
-                                    CFY_LABELS_PREFIX)
+from manager_rest.constants import CFY_LABELS, CFY_LABELS_PREFIX
 from manager_rest.dsl_functions import (get_secret_method,
                                         evaluate_intrinsic_functions)
 from manager_rest import manager_exceptions, config, app_context
@@ -164,17 +161,6 @@ def make_streaming_response(res_id, res_path, archive_type):
     response.headers['X-Accel-Redirect'] = res_path
     response.headers['X-Accel-Buffering'] = 'yes'
     return response
-
-
-def set_restart_task(delay=1, service_management='systemd'):
-    current_app.logger.info('Restarting the rest service')
-    service_command = 'systemctl'
-    if service_management == 'supervisord':
-        service_command = 'supervisorctl -c /etc/supervisord.conf'
-    cmd = 'sleep {0}; sudo {1} restart {2}' \
-        .format(delay, service_command, REST_SERVICE_NAME)
-
-    subprocess.Popen(cmd, shell=True)
 
 
 def validate_inputs(input_dict, len_input_value=256, err_prefix=None):
