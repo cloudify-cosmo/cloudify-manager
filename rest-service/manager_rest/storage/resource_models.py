@@ -123,7 +123,7 @@ class Blueprint(CreatedAtMixin, SQLResourceBase):
 
     @classproperty
     def allowed_filter_attrs(cls):
-        return ['created_by', 'description']
+        return ['created_by']
 
     def to_response(self, **kwargs):
         blueprint_dict = super(Blueprint, self).to_response()
@@ -432,7 +432,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
 
     @classproperty
     def allowed_filter_attrs(cls):
-        return ['blueprint_id', 'created_by', 'description', 'site_name']
+        return ['blueprint_id', 'created_by', 'site_name']
 
     def to_response(self, **kwargs):
         dep_dict = super(Deployment, self).to_response()
