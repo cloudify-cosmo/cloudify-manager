@@ -10,7 +10,7 @@ Create Date: 2021-02-15 12:02:22.089135
 from alembic import op
 import sqlalchemy as sa
 
-from manager_rest.storage.models_base import UTCDateTime, JSONString
+from manager_rest.storage.models_base import UTCDateTime
 
 # revision identifiers, used by Alembic.
 revision = '396303c07e35'

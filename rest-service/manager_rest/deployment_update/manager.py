@@ -234,8 +234,8 @@ class DeploymentUpdateManager(object):
             deployment_dependencies = dep_graph.retrieve_dependent_deployments(
                 dep_update.deployment_id)
             dep_update.set_recursive_dependencies(deployment_dependencies)
-            dep_update.set_schedules_to_create(
-                self.list_schedules(schedules_to_create))
+            dep_update.schedules_to_create = \
+                self.list_schedules(schedules_to_create)
             dep_update.schedules_to_delete = schedules_to_delete
             return dep_update
 
@@ -280,14 +280,9 @@ class DeploymentUpdateManager(object):
 
         # First, delete old deployment schedules
         for schedule_id in schedules_to_delete:
-            namespaced_schedule_id = '{}_{}'.format(deployment.id, schedule_id)
-            try:
-                schedule = self.sm.get(models.ExecutionSchedule,
-                                       namespaced_schedule_id)
-            except manager_exceptions.NotFoundError:
-                continue
-            if schedule.deployment_id == deployment.id:
-                self.sm.delete(schedule)
+            schedule = self.sm.get(models.ExecutionSchedule,
+                                   '{}_{}'.format(deployment.id, schedule_id))
+            self.sm.delete(schedule)
 
         # Then, create new deployment schedules
         deployment_creation_time = datetime.strptime(
@@ -635,11 +630,35 @@ class DeploymentUpdateManager(object):
         deployment = self.sm.get(models.Deployment, dep_update.deployment_id)
         old_settings = deployment.blueprint.plan.get('deployment_settings')
         new_settings = dep_update.deployment_plan.get('deployment_settings')
-        schedules_to_delete = (
-            [k for k in old_settings.get('default_schedules')]
-            if old_settings else [])
-        schedules_to_create = (new_settings.get('default_schedules')
-                               if new_settings else {})
+        schedules_to_delete = []
+        schedules_to_create = {}
+        if old_settings:
+            for schedule_id in old_settings.get('default_schedules', {}):
+                try:
+                    schedule = self.sm.get(
+                        models.ExecutionSchedule,
+                        '{}_{}'.format(deployment.id, schedule_id))
+                    if schedule.deployment_id == deployment.id:
+                        schedules_to_delete.append(schedule_id)
+                except manager_exceptions.NotFoundError:
+                    continue
+        if new_settings:
+            name_conflict_error_msg = \
+                'The Blueprint used for the deployment update contains a ' \
+                'default schedule `{0}` which conflicts with an existing ' \
+                'deployment schedule `{1}`. Please either delete the ' \
+                'existing schedule or fix the blueprint.'
+            schedules_to_create = new_settings.get('default_schedules', {})
+            for schedule_id in schedules_to_create:
+                try:
+                    namespaced_id = '{}_{}'.format(deployment.id, schedule_id)
+                    self.sm.get(models.ExecutionSchedule, namespaced_id)
+                    if schedule_id not in schedules_to_delete:
+                        raise manager_exceptions.InvalidBlueprintError(
+                            name_conflict_error_msg.format(schedule_id,
+                                                           namespaced_id))
+                except manager_exceptions.NotFoundError:
+                    continue
         return schedules_to_create, schedules_to_delete
 
 

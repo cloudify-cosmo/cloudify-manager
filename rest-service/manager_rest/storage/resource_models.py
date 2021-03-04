@@ -969,9 +969,6 @@ class DeploymentUpdate(CreatedAtMixin, SQLResourceBase):
     def set_recursive_dependencies(self, recursive_dependencies):
         self.recursive_dependencies = recursive_dependencies
 
-    def set_schedules_to_create(self, schedules_to_create):
-        self.schedules_to_create = schedules_to_create
-
 
 class DeploymentUpdateStep(SQLResourceBase):
     __tablename__ = 'deployment_update_steps'
