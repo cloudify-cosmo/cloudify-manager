@@ -1,24 +1,88 @@
+from sqlalchemy import and_, or_
+
 from manager_rest.storage.models_base import db
 from manager_rest.manager_exceptions import BadFilterRule
-from manager_rest.constants import FilterRuleType, LabelsOperator
+from manager_rest.constants import (AttrsOperator,
+                                    FilterRuleType,
+                                    LabelsOperator)
+
+from .utils import get_column, get_joins
 
 
-def add_filter_rules_to_query(query, labels_model, filter_rules):
-    query = query.join(labels_model).distinct()
+def add_filter_rules_to_query(query, model_class, filter_rules):
+    labels_join_added = False
+    joined_columns_set = set()
+    labels_model = model_class.labels_model
     for filter_rule in filter_rules:
         filter_rule_type = filter_rule['type']
         if filter_rule_type == FilterRuleType.LABEL:
-            query = add_labels_filter_to_query(query, labels_model,
+            if not labels_join_added:
+                query = query.join(labels_model).distinct()
+                labels_join_added = True
+            query = add_labels_filter_to_query(query,
+                                               labels_model,
                                                filter_rule)
         elif filter_rule_type == FilterRuleType.ATTRIBUTE:
-            query = add_attrs_filter_to_query(query, filter_rule)
+            query = add_attrs_filter_to_query(query, model_class, filter_rule,
+                                              joined_columns_set)
         else:
             raise BadFilterRule(filter_rule)
 
     return query
 
 
-def add_attrs_filter_to_query(query, filter_rule):
+def add_attrs_filter_to_query(query, model_class, filter_rule,
+                              joined_columns_set):
+    filter_rule_operator = filter_rule['operator']
+    column_name = filter_rule['key']
+    filter_rule_values = filter_rule['values']
+
+    column = get_column(model_class, column_name)
+    if column_name not in joined_columns_set:
+        joined_columns_set.add(column_name)
+        join = get_joins(model_class, [column_name])
+        query = query.outerjoin(*join)
+    if filter_rule_operator == AttrsOperator.ANY_OF:
+        query = query.filter(column.in_(filter_rule_values))
+
+    elif filter_rule_operator == AttrsOperator.NOT_ANY_OF:
+        query = query.filter(~column.in_(filter_rule_values))
+
+    elif filter_rule_operator == AttrsOperator.CONTAIN:
+        if len(filter_rule_values) == 1:
+            query = query.filter(column.contains(filter_rule_values[0]))
+        else:
+            contain_filter = (column.contains(value) for value in
+                              filter_rule_values)
+            query = query.filter(or_(*contain_filter))
+
+    elif filter_rule_operator == AttrsOperator.NOT_CONTAIN:
+        if len(filter_rule_values) == 1:
+            query = query.filter(~column.contains(filter_rule_values[0]))
+        else:
+            contain_filter = (~column.contains(value) for value in
+                              filter_rule_values)
+            query = query.filter(and_(*contain_filter))
+
+    elif filter_rule_operator == AttrsOperator.START_WITH:
+        if len(filter_rule_values) == 1:
+            query = query.filter(column.ilike(f'{filter_rule_values[0]}%'))
+        else:
+            like_filter = (column.ilike(f'{value}%') for value in
+                           filter_rule_values)
+            query = query.filter(or_(*like_filter))
+
+    elif filter_rule_operator == AttrsOperator.END_WITH:
+        if len(filter_rule_values) == 1:
+            query = query.filter(column.ilike(f'%{filter_rule_values[0]}'))
+        else:
+            like_filter = (column.ilike(f'%{value}') for value in
+                           filter_rule_values)
+            query = query.filter(or_(*like_filter))
+
+    else:
+        raise BadFilterRule(filter_rule)
+
     return query
 
 
