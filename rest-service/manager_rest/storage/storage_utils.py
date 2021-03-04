@@ -18,8 +18,8 @@ from flask_security.utils import hash_password
 
 from manager_rest import constants
 from manager_rest.storage.models import Node
-from manager_rest.manager_exceptions import NotFoundError
 from manager_rest.storage import user_datastore, db, get_storage_manager
+from manager_rest.manager_exceptions import NotFoundError
 from manager_rest.storage.management_models import (
     Tenant, UserTenantAssoc, Role
 )
