@@ -51,8 +51,11 @@ from cloudify.cluster_status import (
 from manager_rest import server
 from manager_rest.rest import rest_utils
 from manager_rest.test.attribute import attr
+from manager_rest.storage.models_base import db
+from manager_rest.rest.filters_utils import FilterRule
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.flask_utils import set_admin_current_user
+from manager_rest.storage.filters import add_filter_rules_to_query
 from manager_rest.test.security_utils import (get_admin_user,
                                               get_status_reporters)
 from manager_rest import utils, config, constants, archiving
@@ -161,6 +164,23 @@ class BaseServerTestCase(unittest.TestCase):
             compared_labels_set.add((key, value))
 
         self.assertEqual(simplified_labels, compared_labels_set)
+
+    @staticmethod
+    def assert_filters_applied(filter_rules_params, resource_ids_set,
+                               resource_model=models.Deployment):
+        """Asserts the right resources return when filter rules are applied
+
+        :param filter_rules_params: List of filter rules parameters
+        :param resource_ids_set: The corresponding deployments' IDs set
+        :param resource_model: The resource model to filter.
+               Can be Deployment or Blueprint
+        """
+        filter_rules = [FilterRule(*params) for params in filter_rules_params]
+        query = db.session.query(resource_model)
+        query = add_filter_rules_to_query(query, resource_model, filter_rules)
+        results = query.all()
+
+        assert resource_ids_set == set(res.id for res in results)
 
     @classmethod
     def create_client_with_tenant(cls,
@@ -937,7 +957,11 @@ class BaseServerTestCase(unittest.TestCase):
         if plan.get('description'):
             update_dict['description'] = plan['description']
         if labels:
-            update_dict['labels'] = labels
+            parsed_labels_list = []
+            for label in labels:
+                [(label_key, label_value)] = label.items()
+                parsed_labels_list.append([label_key, label_value])
+            update_dict['labels'] = parsed_labels_list
         return client.blueprints.update(blueprint_id, update_dict=update_dict)
 
     def _add_blueprint(self, blueprint_id=None):
@@ -1024,7 +1048,7 @@ class BaseServerTestCase(unittest.TestCase):
         )
 
     def put_deployment_with_labels(self, labels, resource_id=None,
-                                   client=None):
+                                   client=None, **deployment_kwargs):
         client = client or self.client
         resource_id = resource_id or 'i{0}'.format(uuid.uuid4())
         _, _, _, deployment = self.put_deployment(
@@ -1032,9 +1056,13 @@ class BaseServerTestCase(unittest.TestCase):
             blueprint_id=resource_id,
             deployment_id=resource_id,
             labels=labels,
-            client=client)
+            client=client,
+            **deployment_kwargs)
 
         return deployment
+
+    def put_blueprint_with_labels(self, labels, **blueprint_kwargs):
+        return self.put_blueprint(labels=labels, **blueprint_kwargs)
 
     @staticmethod
     def create_filter(filters_client, filter_id, filter_rules,

@@ -32,6 +32,7 @@ from .test_utils import generate_progress_func
 
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
 class BlueprintsTestCase(base_test.BaseServerTestCase):
+    LABELS = [{'key1': 'val1'}, {'key2': 'val2'}]
 
     def test_get_empty(self):
         result = self.client.blueprints.list()
@@ -491,7 +492,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
           client_max_version=base_test.LATEST_API_VERSION)
     def test_update_blueprint_labels(self):
         new_labels = [{'key2': 'val2'}, {'key3': 'val3'}]
-        blueprint = self._put_blueprint_with_labels()
+        blueprint = self.put_blueprint_with_labels(self.LABELS)
         updated_bp = self.client.blueprints.update(blueprint['id'],
                                                    {'labels': new_labels})
         self.assert_resource_labels(updated_bp['labels'], new_labels)
@@ -499,7 +500,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
     def test_update_empty_blueprint_labels(self):
-        blueprint = self._put_blueprint_with_labels()
+        blueprint = self.put_blueprint_with_labels(self.LABELS)
         updated_bp = self.client.blueprints.update(blueprint['id'],
                                                    {'labels': []})
         self.assert_resource_labels(updated_bp['labels'], [])
@@ -508,8 +509,8 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
           client_max_version=base_test.LATEST_API_VERSION)
     def test_blueprint_update_failure_with_duplicate_labels(self):
         update_dict = {'labels': [{'key3': 'val3'}, {'key3': 'val3'}]}
-        blueprint = self._put_blueprint_with_labels()
-        error_msg = '400: .*You cannot define the same label twice.*'
+        blueprint = self.put_blueprint_with_labels(self.LABELS)
+        error_msg = '400: .*You cannot define the same label twice'
         self.assertRaisesRegex(exceptions.CloudifyClientError,
                                error_msg,
                                self.client.blueprints.update,
@@ -522,6 +523,3 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         updated_bp = self.client.blueprints.update(blueprint['id'],
                                                    {'labels': new_labels})
         self.assert_resource_labels(updated_bp['labels'], new_labels)
-
-    def _put_blueprint_with_labels(self):
-        return self.put_blueprint(labels=[{'key1': 'val1', 'key2': 'val2'}])
