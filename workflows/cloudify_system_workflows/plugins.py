@@ -17,6 +17,7 @@ from cloudify.utils import wait_for
 from cloudify.decorators import workflow
 from cloudify.manager import get_rest_client
 from cloudify.models_states import ExecutionState
+from cloudify_rest_client.exceptions import CloudifyClientError
 
 
 @workflow(system_wide=True)
@@ -81,30 +82,34 @@ def update(ctx, update_id, temp_blueprint_id, deployments_to_update, force,
     for dep in deployments_to_update:
         ctx.send_event('Executing deployment update for deployment '
                        '{}...'.format(dep))
-        execution_id = client.deployment_updates \
-            .update_with_existing_blueprint(
-                deployment_id=dep,
-                blueprint_id=temp_blueprint_id,
-                skip_install=True,
-                skip_uninstall=True,
-                skip_reinstall=True,
-                force=force,
-                auto_correct_types=auto_correct_types) \
-            .execution_id
+        try:
+            execution_id = client.deployment_updates \
+                .update_with_existing_blueprint(
+                    deployment_id=dep,
+                    blueprint_id=temp_blueprint_id,
+                    skip_install=True,
+                    skip_uninstall=True,
+                    skip_reinstall=True,
+                    force=force,
+                    auto_correct_types=auto_correct_types) \
+                .execution_id
+        except CloudifyClientError:
+            execution_id = None
+            execution_status = ExecutionState.FAILED
+        else:
+            wait_for(client.executions.get,
+                     execution_id,
+                     'status',
+                     lambda x: x in ExecutionState.END_STATES,
+                     RuntimeError,
+                     get_wait_for_execution_message(execution_id))
+            execution_status = client.executions.get(execution_id).status
 
-        wait_for(client.executions.get,
-                 execution_id,
-                 'status',
-                 lambda x: x in ExecutionState.END_STATES,
-                 RuntimeError,
-                 get_wait_for_execution_message(execution_id))
-        execution_status = client.executions.get(execution_id).status
-        if execution_status in (ExecutionState.FAILED,
-                                ExecutionState.CANCELLED):
-            raise RuntimeError("Deployment update of deployment {0} with "
-                               "execution ID {1} failed, stopped this "
-                               "plugins update (id="
-                               "'{2}').".format(dep, execution_id, update_id))
+        msg = f'Deployment update of deployment {dep} {execution_status}. ' \
+            f'Plugins update ID {update_id}.'
+        if execution_id:
+            msg += f' Execution ID {execution_id}.'
+        ctx.send_event(msg)
 
     ctx.send_event('Finalizing plugins update...')
     client.plugins_update.finalize_plugins_update(update_id)
