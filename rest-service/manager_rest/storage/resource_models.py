@@ -917,6 +917,14 @@ class DeploymentUpdate(CreatedAtMixin, SQLResourceBase):
     def recursive_dependencies(cls):
         return None
 
+    @declared_attr
+    def schedules_to_create(cls):
+        return None
+
+    @declared_attr
+    def schedules_to_delete(cls):
+        return None
+
     @classproperty
     def response_fields(cls):
         fields = super(DeploymentUpdate, cls).response_fields
@@ -929,8 +937,20 @@ class DeploymentUpdate(CreatedAtMixin, SQLResourceBase):
             'dependent_node': flask_fields.String,
             'tenant': flask_fields.String
         }
+        created_scheduled_fields = {
+            'id': flask_fields.String,
+            'workflow': flask_fields.String,
+            'since': flask_fields.String,
+            'until': flask_fields.String,
+            'count': flask_fields.String,
+            'recurring': flask_fields.String,
+            'weekdays': flask_fields.List(flask_fields.String)
+        }
         fields['recursive_dependencies'] = flask_fields.List(
             flask_fields.Nested(dependency_fields))
+        fields['schedules_to_create'] = flask_fields.List(
+            flask_fields.Nested(created_scheduled_fields))
+        fields['schedules_to_delete'] = flask_fields.List(flask_fields.String)
         return fields
 
     def to_response(self, **kwargs):
@@ -938,6 +958,8 @@ class DeploymentUpdate(CreatedAtMixin, SQLResourceBase):
         # Taking care of the fact the DeploymentSteps are objects
         dep_update_dict['steps'] = [step.to_dict() for step in self.steps]
         dep_update_dict['recursive_dependencies'] = self.recursive_dependencies
+        dep_update_dict['schedules_to_create'] = self.schedules_to_create
+        dep_update_dict['schedules_to_delete'] = self.schedules_to_delete
         return dep_update_dict
 
     def set_deployment(self, deployment):

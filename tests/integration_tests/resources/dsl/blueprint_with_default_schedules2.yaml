@@ -1,0 +1,17 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - cloudify/types/types.yaml
+
+deployment_settings:
+  default_schedules:
+    sc2:
+      workflow: uninstall
+      since: '2022-1-1 15:00'
+      until: '+1d'
+      timezone: 'Israel'
+      recurring: 12h
+    sc3:
+      workflow: install
+      since: '2022-1-1 15:00'
+      count: 1

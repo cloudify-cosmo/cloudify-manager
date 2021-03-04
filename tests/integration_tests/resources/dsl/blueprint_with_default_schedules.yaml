@@ -12,3 +12,11 @@ deployment_settings:
       recurring: 1w
       weekdays: [mo, fr]
       count: 5
+    sc2:
+      workflow: install
+      since: '2022-1-1 15:00'
+      until: '+1d'
+      timezone: 'Israel'
+      recurring: 1mo
+      weekdays: [ l-fr ]
+      count: 10
