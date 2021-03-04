@@ -46,9 +46,6 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
     UPPERCASE_LABELS = [{'EnV': 'aWs'}, {'aRcH': 'k8s'}]
     DUPLICATE_LABELS = [{'env': 'aws'}, {'env': 'aws'}]
     INVALID_LABELS = [{'env': 'aws', 'aRcH': 'k8s'}]
-    FILTER_ID = 'filter'
-    FILTER_RULES = ['env=aws']
-    FILTER_RULES_2 = ['env!=aws', 'arch=k8s']
 
     def test_get_empty(self):
         result = self.client.deployments.list()
@@ -1000,40 +997,6 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                                blueprint_id=resource_id,
                                deployment_id=resource_id,
                                labels=[{'csys-blah': 'val1'}])
-
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
-    def test_list_deployments_with_filter_rules(self):
-        dep1 = self.put_deployment_with_labels(self.LABELS)
-        self.put_deployment_with_labels(self.LABELS_2)
-        deployments = self.client.deployments.list(
-            filter_rules={'_filter_rules': ['env=aws', 'arch=k8s']})
-        self.assertEqual(len(deployments), 1)
-        self.assertEqual(deployments[0], dep1)
-        self.assert_metadata_filtered(deployments, 1)
-
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
-    def test_list_deployments_with_filter_id(self):
-        self.put_deployment_with_labels(self.LABELS)
-        dep2 = self.put_deployment_with_labels(self.LABELS_2)
-        self.create_filter(self.client.deployments_filters,
-                           self.FILTER_ID, self.FILTER_RULES_2)
-        deployments = self.client.deployments.list(
-            filter_rules={'_filter_id': self.FILTER_ID})
-        self.assertEqual(len(deployments), 1)
-        self.assertEqual(deployments[0], dep2)
-        self.assert_metadata_filtered(deployments, 1)
-
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
-    def test_list_deployments_with_filter_rules_upper(self):
-        self.put_deployment_with_labels(self.LABELS)
-        self.put_deployment_with_labels(self.LABELS_2)
-        deployments = self.client.deployments.list(
-            filter_rules={'_filter_rules': ['aRcH=k8S']})
-        self.assertEqual(len(deployments), 2)
-        self.assert_metadata_filtered(deployments, 0)
 
     def test_update_attributes(self):
         self.put_blueprint()

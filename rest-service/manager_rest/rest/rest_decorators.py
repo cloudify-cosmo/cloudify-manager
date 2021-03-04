@@ -17,7 +17,6 @@ import pytz
 
 from functools import wraps
 from collections import OrderedDict
-
 from dateutil.parser import parse as parse_datetime
 from flask_restful import marshal
 from flask_restful.utils import unpack
@@ -109,7 +108,8 @@ class marshal_with(object):
             if hasattr(request, '__skip_marshalling'):
                 return f(*args, **kwargs)
             fields_to_include = self._get_fields_to_include()
-            if self._is_include_parameter_in_request():
+            if (self._is_include_in_request_args() or
+                    self._is_include_in_request_payload()):
                 # only pushing "_include" into kwargs when the request
                 # contained this parameter, to keep things cleaner (identical
                 # behavior for passing "_include" which contains all fields)
@@ -160,8 +160,25 @@ class marshal_with(object):
             type(data), data))
 
     @staticmethod
-    def _is_include_parameter_in_request():
+    def _is_include_in_request_args():
         return '_include' in request.args and request.args['_include']
+
+    @staticmethod
+    def _is_include_in_request_payload():
+        try:
+            request_dict = request.json
+            return 'include' in request_dict and request_dict['include']
+        except Exception:
+            return False
+
+    def _get_fields_to_include_from_request(self):
+        if self._is_include_in_request_args():
+            return set(request.args['_include'].split(','))
+
+        if self._is_include_in_request_payload():
+            return set(request.json['include'])
+
+        return None
 
     @staticmethod
     def _get_data():
@@ -173,11 +190,11 @@ class marshal_with(object):
         model_fields = {k: v for k, v in self._fields.items()
                         if k not in skipped_fields}
 
-        if self._is_include_parameter_in_request():
-            include = set(request.args['_include'].split(','))
-            _validate_fields(model_fields, include, INCLUDE)
+        include_fields = self._get_fields_to_include_from_request()
+        if include_fields:
+            _validate_fields(model_fields, include_fields, INCLUDE)
             include_fields = {k: v for k, v in model_fields.items()
-                              if k in include}
+                              if k in include_fields}
             return include_fields
         return model_fields
 
