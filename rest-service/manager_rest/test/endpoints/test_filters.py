@@ -4,11 +4,8 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 from manager_rest.test import base_test
 from manager_rest.storage import models
 from manager_rest.test.attribute import attr
-from manager_rest.storage.models_base import db
 from manager_rest.rest.filters_utils import (FilterRule,
                                              create_filter_rules_list)
-from manager_rest.storage.filters import add_filter_rules_to_query
-from manager_rest.storage.resource_models import Deployment, DeploymentLabel
 from manager_rest.manager_exceptions import BadFilterRule, BadParametersError
 
 FILTER_ID = 'filter'
@@ -23,50 +20,50 @@ LABELS_LEGAL_FILTER_RULES = [
 ]
 
 
-class FiltersFunctionalityTest(base_test.BaseServerTestCase):
+class FiltersFunctionalityBaseCase(base_test.BaseServerTestCase):
     LABELS = [{'a': 'b'}, {'a': 'z'}, {'c': 'd'}]
     LABELS_2 = [{'a': 'b'}, {'c': 'z'}, {'e': 'f'}]
 
-    def test_labels_filters_applied(self):
-        dep1 = self.put_deployment_with_labels(self.LABELS)
-        dep2 = self.put_deployment_with_labels(self.LABELS_2)
-        self._assert_filters_applied([('a', ['b'], 'any_of', 'label')],
-                                     {dep1.id, dep2.id})
-        self._assert_filters_applied([('c', ['z'], 'not_any_of', 'label')],
-                                     {dep1.id})
-        self._assert_filters_applied([('a', ['y', 'z'], 'any_of', 'label'),
-                                      ('c', ['d'], 'any_of', 'label')],
-                                     {dep1.id})
-        self._assert_filters_applied([('a', ['b'], 'any_of', 'label'),
-                                      ('e', [], 'is_not_null', 'label')],
-                                     {dep2.id})
-        self._assert_filters_applied([('a', ['b'], 'any_of', 'label'),
-                                      ('e', [], 'is_null', 'label')],
-                                     {dep1.id})
-        self._assert_filters_applied([('a', [], 'is_null', 'label')], set())
-        self._assert_filters_applied(
-            [('a', ['b'], 'any_of', 'label'),
-             ('c', ['y', 'z'], 'not_any_of', 'label')], {dep1.id})
+    def setUp(self, resource_model):
+        super().setUp()
+        self.resource_model = resource_model
+
+    def _test_labels_filters_applied(self, res_1_id, res_2_id):
+        self.assert_filters_applied([('a', ['b'], 'any_of', 'label')],
+                                    {res_1_id, res_2_id}, self.resource_model)
+        self.assert_filters_applied([('c', ['z'], 'not_any_of', 'label')],
+                                    {res_1_id}, self.resource_model)
+        self.assert_filters_applied([('a', ['y', 'z'], 'any_of', 'label'),
+                                     ('c', ['d'], 'any_of', 'label')],
+                                    {res_1_id}, self.resource_model)
+        self.assert_filters_applied([('a', ['b'], 'any_of', 'label'),
+                                     ('e', [], 'is_not_null', 'label')],
+                                    {res_2_id}, self.resource_model)
+        self.assert_filters_applied([('a', ['b'], 'any_of', 'label'),
+                                     ('e', [], 'is_null', 'label')],
+                                    {res_1_id}, self.resource_model)
+        self.assert_filters_applied([('a', [], 'is_null', 'label')], set(),
+                                    self.resource_model)
 
     def test_filter_rule_not_dictionary_fails(self):
         with self.assertRaisesRegex(BadFilterRule, 'not a dictionary'):
-            create_filter_rules_list(['a'], models.Deployment)
+            create_filter_rules_list(['a'], self.resource_model)
 
     def test_filter_rule_missing_entry_fails(self):
         with self.assertRaisesRegex(BadFilterRule, 'missing'):
-            create_filter_rules_list([{'key': 'key1'}], models.Deployment)
+            create_filter_rules_list([{'key': 'key1'}], self.resource_model)
 
     def test_filter_rule_key_not_text_type_fails(self):
         with self.assertRaisesRegex(BadFilterRule,  'must be a string'):
             err_filter_rule = {'key': 1, 'values': ['b'],
                                'operator': 'any_of', 'type': 'label'}
-            create_filter_rules_list([err_filter_rule], models.Deployment)
+            create_filter_rules_list([err_filter_rule], self.resource_model)
 
     def test_filter_rule_value_not_list_fails(self):
         with self.assertRaisesRegex(BadFilterRule,  'must be a list'):
             err_filter_rule = {'key': 'a', 'values': 'b',
                                'operator': 'any_of', 'type': 'label'}
-            create_filter_rules_list([err_filter_rule], models.Deployment)
+            create_filter_rules_list([err_filter_rule], self.resource_model)
 
     def test_parse_filter_rules_fails(self):
         err_filter_rules_params = [
@@ -81,7 +78,7 @@ class FiltersFunctionalityTest(base_test.BaseServerTestCase):
             (('blueprint_id', ['b'], 'bad_operator', 'attribute'),
              'The operator for filtering by attributes must be'),
             (('bad_attribute', ['dep1'], 'any_of', 'attribute'),
-             'Allowed attributes to filter deployments by are'),
+             'Allowed attributes to filter deployments|blueprints by are'),
             (('a', ['b'], 'any_of', 'bad_type'),
              'Filter rule type must be one of'),
             (('bad_attribute', ['dep1'], 'any_of', 'bad_type'),
@@ -90,7 +87,7 @@ class FiltersFunctionalityTest(base_test.BaseServerTestCase):
         for params, err_msg in err_filter_rules_params:
             with self.assertRaisesRegex(BadFilterRule, err_msg):
                 create_filter_rules_list([FilterRule(*params)],
-                                         models.Deployment)
+                                         self.resource_model)
 
     def test_key_and_value_validation_fails(self):
         err_filter_rules_params = [
@@ -101,23 +98,99 @@ class FiltersFunctionalityTest(base_test.BaseServerTestCase):
         for params, err_msg in err_filter_rules_params:
             with self.assertRaisesRegex(BadParametersError, err_msg):
                 create_filter_rules_list([FilterRule(*params)],
-                                         models.Deployment)
+                                         self.resource_model)
 
-    @staticmethod
-    def _assert_filters_applied(filter_rules_params, deployments_ids_set):
-        """Asserts the right deployments return when filter labels are applied
 
-        :param filter_rules_params: List of filter rules parameters
-        :param deployments_ids_set: The corresponding deployments' IDs set
-        """
-        filter_rules = [FilterRule(*params) for params in filter_rules_params]
-        query = db.session.query(Deployment)
-        query = add_filter_rules_to_query(query,
-                                          DeploymentLabel,
-                                          filter_rules)
-        deployments = query.all()
+@attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
+class BlueprintsFiltersFunctionalityCase(FiltersFunctionalityBaseCase):
+    def setUp(self):
+        super().setUp(models.Blueprint)
 
-        assert deployments_ids_set == set(dep.id for dep in deployments)
+    def test_labels_filters_applied(self):
+        bp_1 = self.put_blueprint_with_labels(self.LABELS, blueprint_id='bp_1')
+        bp_2 = self.put_blueprint_with_labels(self.LABELS_2,
+                                              blueprint_id='bp_2')
+        self._test_labels_filters_applied(bp_1['id'], bp_2['id'])
+
+
+@attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
+class DeploymentFiltersFunctionalityCase(FiltersFunctionalityBaseCase):
+    def setUp(self):
+        super().setUp(models.Deployment)
+
+    def test_labels_filters_applied(self):
+        self.client.sites.create('site_1')
+        self.client.sites.create('other_site')
+        dep1 = self.put_deployment_with_labels(self.LABELS,
+                                               resource_id='res_1',
+                                               site_name='site_1')
+        dep2 = self.put_deployment_with_labels(self.LABELS_2,
+                                               resource_id='res_2',
+                                               site_name='other_site')
+        self._test_labels_filters_applied(dep1.id, dep2.id)
+        self.assert_filters_applied(
+            [('a', ['b'], 'any_of', 'label'),
+             ('c', ['y', 'z'], 'not_any_of', 'label')], {dep1.id})
+
+        self.assert_filters_applied(
+            [('a', ['b'], 'any_of', 'label'),
+             ('blueprint_id', ['res_1', 'res_2'], 'any_of', 'attribute'),
+             ('blueprint_id', ['not_bp'], 'not_any_of', 'attribute'),
+             ('site_name', ['site'], 'contain', 'attribute')],
+            {dep1.id, dep2.id},
+        )
+
+        self.assert_filters_applied(
+            [('a', ['b'], 'any_of', 'label'),
+             ('blueprint_id', ['res_1', 'res_2'], 'not_any_of', 'attribute')],
+            set()
+        )
+
+        self.assert_filters_applied(
+            [('a', ['b'], 'any_of', 'label'),
+             ('blueprint_id', ['res'], 'contain', 'attribute')],
+            {dep1.id, dep2.id}
+        )
+
+        self.assert_filters_applied(
+            [('a', ['b'], 'any_of', 'label'),
+             ('blueprint_id', ['res_1'], 'contain', 'attribute')],
+            {dep1.id}
+        )
+
+        self.assert_filters_applied(
+            [('site_name', ['site_1'], 'not_contain', 'attribute')],
+            {dep2.id}
+        )
+
+        self.assert_filters_applied(
+            [('site_name', ['site_1', 'site_3'], 'not_contain', 'attribute')],
+            {dep2.id}
+        )
+
+        self.assert_filters_applied(
+            [('site_name', ['site'], 'start_with', 'attribute')],
+            {dep1.id}
+        )
+
+        self.assert_filters_applied(
+            [('site_name', ['other', 'blah'], 'start_with', 'attribute')],
+            {dep2.id}
+        )
+
+        self.assert_filters_applied(
+            [('site_name', ['site'], 'end_with', 'attribute')],
+            {dep2.id}
+        )
+
+        self.assert_filters_applied(
+            [('site_name', ['1', 'blah'], 'end_with', 'attribute')],
+            {dep1.id}
+        )
+
+
+# This way we avoid running it too
+del FiltersFunctionalityBaseCase
 
 
 class FiltersBaseCase(base_test.BaseServerTestCase):
@@ -237,7 +310,7 @@ class BlueprintsFiltersCase(FiltersBaseCase):
 @attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
 class DeploymentsFiltersCase(FiltersBaseCase):
     def setUp(self):
-        super().setUp('blueprints_filters')
+        super().setUp('deployments_filters')
 
 
 # This way we avoid running it too
