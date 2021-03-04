@@ -38,18 +38,6 @@ spec:
     securityContext:
       runAsUser: 0
       privileged: true
-  - name: python-old
-    image: circleci/python:2.7
-    command:
-    - cat
-    tty: true
-    securityContext:
-      runAsUser: 0
-      privileged: true
-    resources:
-      limits:
-        cpu: 0.5
-        memory: 1Gi
   - name: rabbitmq
     image: rabbitmq:3.7.7
     resources:
