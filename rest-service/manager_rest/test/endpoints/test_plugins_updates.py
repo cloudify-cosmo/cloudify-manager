@@ -283,7 +283,7 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
             self._sm.get(models.Blueprint, plugins_update.temp_blueprint_id)
 
     def test_finalize_error_if_deployments_not_updated(self):
-        self.put_blueprint(blueprint_id='bp')
+        self.put_file(*self.put_blueprint_args(blueprint_id='bp'))
         self.client.deployments.create('bp', 'dep')
         self.wait_for_deployment_creation(self.client, 'dep')
         plugins_update = self.client.plugins_update.update_plugins('bp')
@@ -296,7 +296,7 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
             self.assertIn(str(ex), plugins_update.id)
 
     def test_finalize_no_deployments_updated(self):
-        self.put_blueprint(blueprint_id='bp')
+        self.put_file(*self.put_blueprint_args(blueprint_id='bp'))
         self.client.deployments.create('bp', 'dep')
         self.wait_for_deployment_creation(self.client, 'dep')
         plugins_update = self.client.plugins_update.update_plugins('bp')
@@ -316,7 +316,7 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
 
     def test_deployments_partially_updated(self):
         """Test the case where only a part of deployments was updated."""
-        self.put_blueprint(blueprint_id='bp')
+        self.put_file(*self.put_blueprint_args(blueprint_id='bp'))
         self.client.deployments.create('bp', 'dep1')
         self.wait_for_deployment_creation(self.client, 'dep1')
         self.client.deployments.create('bp', 'dep2')
