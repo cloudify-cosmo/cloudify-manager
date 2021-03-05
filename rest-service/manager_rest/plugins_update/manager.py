@@ -437,8 +437,7 @@ def get_plugins_updates_manager():
     )
 
 
-def _map_execution_to_plugins_update_status(
-        execution_status: ExecutionState) -> str:
+def _map_execution_to_plugins_update_status(execution_status: str) -> str:
     if execution_status == ExecutionState.TERMINATED:
         return STATES.SUCCESSFUL
     if execution_status in [ExecutionState.FAILED,
