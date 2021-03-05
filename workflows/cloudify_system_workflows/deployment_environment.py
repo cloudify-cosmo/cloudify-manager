@@ -21,11 +21,39 @@ import errno
 from retrying import retry
 
 from cloudify.decorators import workflow
+from cloudify.manager import get_rest_client
 from cloudify.workflows import workflow_context
+from cloudify.exceptions import NonRecoverableError
+
+from dsl_parser import constants, tasks
 
 
 @workflow
-def create(ctx, **_):
+def create(ctx, inputs=None, skip_plugins_validation=False, **_):
+    client = get_rest_client(tenant=ctx.tenant_name)
+    bp = client.blueprints.get(ctx.blueprint.id)
+    deployment_plan = tasks.prepare_deployment_plan(
+        bp.plan, client.secrets.get, inputs)
+    nodes = deployment_plan['nodes']
+    node_instances = deployment_plan['node_instances']
+
+    ctx.logger.info('Creating %d nodes', len(nodes))
+    client.nodes.create_many(ctx.deployment.id, nodes)
+    ctx.logger.info('Creating %d node-instances', len(node_instances))
+    client.node_instances.create_many(ctx.deployment.id, node_instances)
+    ctx.logger.info('Setting deployment attributes')
+    client.deployments.set_attributes(
+        ctx.deployment.id,
+        description=deployment_plan['description'],
+        workflows=deployment_plan['workflows'],
+        inputs=deployment_plan['inputs'],
+        policy_types=deployment_plan['policy_types'],
+        policy_triggers=deployment_plan['policy_triggers'],
+        groups=deployment_plan['groups'],
+        scaling_groups=deployment_plan['scaling_groups'],
+        outputs=deployment_plan['outputs'],
+        capabilities=deployment_plan.get('capabilities', {})
+    )
     ctx.logger.info('Creating deployment work directory')
     _create_deployment_workdir(
         deployment_id=ctx.deployment.id,
