@@ -52,8 +52,7 @@ class ExecutionSchedulesId(SecuredResource):
         validate_inputs({'schedule_id': schedule_id})
         request_dict = get_json_and_verify_params({'deployment_id',
                                                    'workflow_id',
-                                                   'since',
-                                                   'slip'})
+                                                   'since'})
 
         workflow_id = request_dict['workflow_id']
         execution_arguments = self._get_execution_arguments(request_dict)
@@ -76,7 +75,7 @@ class ExecutionSchedulesId(SecuredResource):
         if until:
             until = parse_datetime_multiple_formats(until)
         rule = compute_rule_from_scheduling_params(request_dict)
-        slip = request_dict['slip']
+        slip = request_dict.get('slip', 0)
         stop_on_fail = verify_and_convert_bool(
             'stop_on_fail',  request_dict.get('stop_on_fail', False))
         now = get_formatted_timestamp()
