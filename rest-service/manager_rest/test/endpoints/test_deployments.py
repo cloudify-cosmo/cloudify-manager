@@ -992,7 +992,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
           client_max_version=base_test.LATEST_API_VERSION)
     def test_invalid_use_of_system_prefix_in_labels(self):
         resource_id = 'i{0}'.format(uuid.uuid4())
-        error_msg = '400: .*reserved for internal use.*'
+        error_msg = '400: .*reserved for internal use'
         self.assertRaisesRegex(CloudifyClientError,
                                error_msg,
                                self.put_deployment,
@@ -1069,3 +1069,77 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         ))
         with self.assertRaisesRegex(CloudifyClientError, 'already set'):
             self.client.deployments.set_attributes('dep1', description='d2')
+
+    def test_create_deployment_with_default_schedules(self):
+        _, _, _, deployment = self.put_deployment(
+            blueprint_file_name='blueprint_with_default_schedules.yaml')
+
+        sched_ids = [sc['id'] for sc in self.client.execution_schedules.list()]
+        sc1_id = '{}_{}'.format(deployment.id, 'sc1')
+        sc2_id = '{}_{}'.format(deployment.id, 'sc2')
+        self.assertListEqual([sc1_id, sc2_id], sched_ids)
+        self.assertEquals(
+            'install',
+            self.client.execution_schedules.get(sc2_id)['workflow_id'])
+
+        sc1 = self.client.execution_schedules.get(sc1_id)
+        self.assertEquals(sc1['rule']['frequency'], '1w')
+        self.assertEquals(len(sc1['all_next_occurrences']), 5)
+
+    def test_update_deployment_with_default_schedules(self):
+        _, _, _, deployment = self.put_deployment(
+            blueprint_file_name='blueprint_with_default_schedules.yaml')
+
+        new_blueprint_id = 'updated_schedules'
+        self.put_blueprint(
+            blueprint_id=new_blueprint_id,
+            blueprint_file_name='blueprint_with_default_schedules2.yaml')
+        self.client.deployment_updates.update_with_existing_blueprint(
+            deployment.id, new_blueprint_id)
+
+        sched_ids = [sc['id'] for sc in self.client.execution_schedules.list()]
+        sc2_id = '{}_{}'.format(deployment.id, 'sc2')
+        sc3_id = '{}_{}'.format(deployment.id, 'sc3')
+        self.assertListEqual([sc2_id, sc3_id], sched_ids)
+        self.assertEquals(
+            'uninstall',
+            self.client.execution_schedules.get(sc2_id)['workflow_id'])
+
+    def test_update_deployment_with_default_schedule_manually_deleted(self):
+        _, _, _, deployment = self.put_deployment(
+            blueprint_file_name='blueprint_with_default_schedules.yaml')
+
+        sc2_id = '{}_{}'.format(deployment.id, 'sc2')
+        self.client.execution_schedules.delete(sc2_id)
+        new_blueprint_id = 'updated_schedules'
+        self.put_blueprint(
+            blueprint_id=new_blueprint_id,
+            blueprint_file_name='blueprint_with_default_schedules2.yaml')
+        dep_up = self.client.deployment_updates.update_with_existing_blueprint(
+            deployment.id, new_blueprint_id, preview=True)
+
+        self.assertListEqual(['sc1'], dep_up['schedules_to_delete'])
+        self.assertListEqual(['sc2', 'sc3'],
+                             [i['id'] for i in dep_up['schedules_to_create']])
+
+    def test_update_deployment_with_default_schedule_name_conflict(self):
+        _, _, _, deployment = self.put_deployment(
+            blueprint_file_name='blueprint_with_default_schedules.yaml')
+
+        sc3_id = '{}_{}'.format(deployment.id, 'sc3')
+        self.client.execution_schedules.create(
+            sc3_id, deployment.id, 'install', since=datetime.now(), count=1)
+
+        new_blueprint_id = 'updated_schedules'
+        self.put_blueprint(
+            blueprint_id=new_blueprint_id,
+            blueprint_file_name='blueprint_with_default_schedules2.yaml')
+
+        error_msg = "400:.* contains a default schedule `sc3` which " \
+                    "conflicts with an existing deployment schedule"
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            error_msg,
+            self.client.deployment_updates.update_with_existing_blueprint,
+            deployment.id,
+            new_blueprint_id)
