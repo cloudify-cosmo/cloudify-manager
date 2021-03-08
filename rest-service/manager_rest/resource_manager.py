@@ -56,7 +56,6 @@ from manager_rest.utils import (send_event,
                                 validate_global_modification,
                                 validate_deployment_and_site_visibility,
                                 extract_host_agent_plugins_from_plan)
-from manager_rest.plugins_update.constants import PLUGIN_UPDATE_WORKFLOW
 from manager_rest.rest.rest_utils import (
     get_labels_from_plan, parse_datetime_string,
     RecursiveDeploymentDependencies, update_inter_deployment_dependencies,
@@ -271,7 +270,6 @@ class ResourceManager(object):
         try:
             execution = self._execute_system_workflow(
                 wf_id='create_snapshot',
-                task_mapping='cloudify_system_workflows.snapshot.create',
                 execution_parameters={
                     'snapshot_id': snapshot_id,
                     'include_credentials': include_credentials,
@@ -306,7 +304,6 @@ class ResourceManager(object):
 
         execution = self._execute_system_workflow(
             wf_id='restore_snapshot',
-            task_mapping='cloudify_system_workflows.snapshot.restore',
             execution_parameters={
                 'snapshot_id': snapshot_id,
                 'recreate_deployments_envs': recreate_deployments_envs,
@@ -356,7 +353,6 @@ class ResourceManager(object):
         """
         return self._execute_system_workflow(
             wf_id='update_plugin',
-            task_mapping=PLUGIN_UPDATE_WORKFLOW,
             deployment=None,
             execution_parameters={
                 'update_id': plugins_update.id,
@@ -410,7 +406,6 @@ class ResourceManager(object):
                          file_server_root, validate_only=False, labels=None):
         return self._execute_system_workflow(
             wf_id='upload_blueprint',
-            task_mapping='cloudify_system_workflows.blueprint.upload',
             verify_no_executions=False,
             execution_parameters={
                 'blueprint_id': blueprint_id,
@@ -624,11 +619,8 @@ class ResourceManager(object):
 
         dep = self.sm.get(models.Deployment, deployment_id)
 
-        deployment_env_deletion_task_name = \
-            'cloudify_system_workflows.deployment_environment.delete'
         self._execute_system_workflow(
             wf_id='delete_deployment_environment',
-            task_mapping=deployment_env_deletion_task_name,
             deployment=deployment,
             bypass_maintenance=bypass_maintenance,
             verify_no_executions=False,
@@ -752,26 +744,10 @@ class ResourceManager(object):
         execution.ended_at = None
         self.sm.update(execution, modified_attrs=('status', 'ended_at'))
 
-        workflow_id = execution.workflow_id
-        deployment = execution.deployment
-        blueprint = deployment.blueprint
-        workflow_plugins = blueprint.plan[
-            constants.WORKFLOW_PLUGINS_TO_INSTALL]
-        workflow = deployment.workflows[workflow_id]
-
         workflow_executor.execute_workflow(
-            workflow_id,
-            workflow,
-            workflow_plugins=workflow_plugins,
-            blueprint_id=deployment.blueprint_id,
-            deployment=deployment,
-            execution_id=execution_id,
-            execution_parameters=execution.parameters,
+            execution,
             bypass_maintenance=False,
-            dry_run=False,
             resume=True,
-            execution_creator=execution.creator,
-            execution_token=execution_token
         )
 
         # Dealing with the inner Components' deployments
@@ -792,28 +768,12 @@ class ResourceManager(object):
                 'Cannot requeue execution: `{0}` in state: `{1}`'
                 .format(execution.id, execution.status))
 
-        workflow_id = execution.workflow_id
-        deployment = execution.deployment
-        blueprint = deployment.blueprint
-        workflow_plugins = blueprint.plan[
-            constants.WORKFLOW_PLUGINS_TO_INSTALL]
-        workflow = deployment.workflows[workflow_id]
-        execution_token = generate_execution_token(execution_id)
+        execution.token = None  # it will be re-created
 
         workflow_executor.execute_workflow(
-            workflow_id,
-            workflow,
-            workflow_plugins=workflow_plugins,
-            blueprint_id=deployment.blueprint_id,
-            deployment=deployment,
-            execution_id=execution_id,
-            execution_parameters=execution.parameters,
+            execution,
             bypass_maintenance=False,
-            dry_run=False,
-            resume=False,
             scheduled_time=parse_datetime_string(execution.scheduled_for),
-            execution_creator=execution.creator,
-            execution_token=execution_token
         )
 
         return execution
@@ -847,7 +807,6 @@ class ResourceManager(object):
         deployment = self.sm.get(models.Deployment, deployment_id)
         self._validate_permitted_to_execute_global_workflow(deployment)
         blueprint_id = blueprint_id or deployment.blueprint_id
-        blueprint = self.sm.get(models.Blueprint, blueprint_id)
         self._verify_workflow_in_deployment(workflow_id, deployment,
                                             deployment_id)
         self._verify_dependencies_not_affected(workflow_id, deployment, force)
@@ -911,21 +870,9 @@ class ResourceManager(object):
             new_execution.started_at = utils.get_formatted_timestamp()
             self.sm.put(new_execution)
 
-        # executing the user workflow
-        workflow_plugins = blueprint.plan[
-            constants.WORKFLOW_PLUGINS_TO_INSTALL]
-
         workflow_executor.execute_workflow(
-            workflow_id,
-            workflow,
-            execution_creator=execution_creator,
-            workflow_plugins=workflow_plugins,
-            blueprint_id=deployment.blueprint_id,
-            deployment=deployment,
-            execution_id=execution_id,
-            execution_parameters=execution_parameters,
+            new_execution,
             bypass_maintenance=bypass_maintenance,
-            dry_run=dry_run,
             wait_after_fail=wait_after_fail,
             scheduled_time=scheduled_time,
             handler=send_handler,
@@ -987,7 +934,6 @@ class ResourceManager(object):
             deployment_id = deployment.id
         workflow_id = execution.workflow_id
         execution_parameters = execution.parameters
-        task_mapping = self.task_mapping.get(workflow_id)
 
         # Since this method is triggered by another execution we need to
         # make sure we use the correct user to execute the queued execution.
@@ -998,7 +944,7 @@ class ResourceManager(object):
         if self._should_use_system_workflow_executor(execution):
             # Use `execute_system_workflow`
             self._execute_system_workflow(
-                workflow_id, task_mapping, deployment=deployment,
+                workflow_id, deployment=deployment,
                 execution_parameters=execution_parameters, timeout=0,
                 created_at=None, verify_no_executions=True,
                 bypass_maintenance=None, update_execution_status=True,
@@ -1124,7 +1070,6 @@ class ResourceManager(object):
 
     def _execute_system_workflow(self,
                                  wf_id,
-                                 task_mapping,
                                  deployment=None,
                                  execution_parameters=None,
                                  created_at=None,
@@ -1139,7 +1084,6 @@ class ResourceManager(object):
         """
         :param deployment: deployment for workflow execution
         :param wf_id: workflow id
-        :param task_mapping: mapping to the system workflow
         :param execution_parameters: parameters for the system workflow
         :param created_at: creation time for the workflow execution object.
          if omitted, a value will be generated by this method.
@@ -1208,15 +1152,9 @@ class ResourceManager(object):
         execution.started_at = utils.get_formatted_timestamp()
         self.sm.put(execution)
         workflow_executor.execute_system_workflow(
-            wf_id=wf_id,
-            task_id=execution_id,
-            task_mapping=task_mapping,
-            deployment=deployment,
-            execution_parameters=execution_parameters,
+            execution,
             bypass_maintenance=bypass_maintenance,
             update_execution_status=update_execution_status,
-            is_system_workflow=is_system_workflow,
-            execution_creator=execution_creator
         )
 
         return execution
@@ -2188,12 +2126,8 @@ class ResourceManager(object):
                                        deployment,
                                        deployment_plan,
                                        bypass_maintenance):
-        wf_id = 'create_deployment_environment'
-        deployment_env_creation_task_name = \
-            'cloudify_system_workflows.deployment_environment.create'
         create_execution = self._execute_system_workflow(
-            wf_id=wf_id,
-            task_mapping=deployment_env_creation_task_name,
+            wf_id='create_deployment_environment',
             deployment=deployment,
             bypass_maintenance=bypass_maintenance,
             execution_parameters={
