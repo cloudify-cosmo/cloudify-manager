@@ -23,9 +23,8 @@ from retrying import retry
 from cloudify.decorators import workflow
 from cloudify.manager import get_rest_client
 from cloudify.workflows import workflow_context
-from cloudify.exceptions import NonRecoverableError
 
-from dsl_parser import constants, tasks
+from dsl_parser import tasks
 
 
 @workflow

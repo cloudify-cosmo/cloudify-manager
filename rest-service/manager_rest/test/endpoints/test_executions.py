@@ -18,8 +18,6 @@ import hashlib
 from itertools import dropwhile
 from datetime import datetime, timedelta
 
-import mock
-
 from cloudify_rest_client import exceptions
 from cloudify.models_states import ExecutionState
 from cloudify.workflows import tasks as cloudify_tasks

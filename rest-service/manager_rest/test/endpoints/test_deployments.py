@@ -382,11 +382,11 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                 deployment_id='dep2',
                 blueprint_id='b7788',
                 blueprint_file_name='blueprint_with_inputs'
-                                   '.yaml',
+                                    '.yaml',
                 inputs={
-                   'http_web_server_port': '1234',
-                   'http_web_server_port2': {'a': ['9090']},
-                   'unknown_input': 'yay'
+                    'http_web_server_port': '1234',
+                    'http_web_server_port2': {'a': ['9090']},
+                    'unknown_input': 'yay'
                 }
             )
         with self.assertRaises(dsl_exceptions.InputEvaluationError):
@@ -394,11 +394,11 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                 deployment_id='dep2',
                 blueprint_id='b7789',
                 blueprint_file_name='blueprint_with_inputs'
-                                   '.yaml',
+                                    '.yaml',
                 inputs={
-                   'http_web_server_port': '1234',
-                   'http_web_server_port2': {
-                       'something_new': ['9090']}
+                    'http_web_server_port': '1234',
+                    'http_web_server_port2': {
+                        'something_new': ['9090']}
                 }
             )
         with self.assertRaisesRegex(dsl_exceptions.InputEvaluationError,
@@ -407,23 +407,23 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                 deployment_id='dep2',
                 blueprint_id='b7790',
                 blueprint_file_name='blueprint_with_inputs'
-                                   '.yaml',
+                                    '.yaml',
                 inputs={
-                   'http_web_server_port': '1234',
-                   'http_web_server_port2': [1234]
+                    'http_web_server_port': '1234',
+                    'http_web_server_port2': [1234]
                 }
             )
         with self.assertRaisesRegex(dsl_exceptions.InputEvaluationError,
                                     "(List size of).+(but index)"):
-           self.put_deployment(
-               deployment_id='dep2',
-               blueprint_id='b7791',
-               blueprint_file_name='blueprint_with_inputs'
-                                   '.yaml',
-               inputs={
-                   'http_web_server_port': '1234',
-                   'http_web_server_port2': {'a': []}
-               }
+            self.put_deployment(
+                deployment_id='dep2',
+                blueprint_id='b7791',
+                blueprint_file_name='blueprint_with_inputs'
+                                    '.yaml',
+                inputs={
+                    'http_web_server_port': '1234',
+                    'http_web_server_port2': {'a': []}
+                }
             )
 
     def test_input_with_default_value_and_constraints(self):
@@ -448,18 +448,20 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         with self.assertRaisesRegex(
                 dsl_exceptions.ConstraintException,
                 '123 .* http_web_server_port .* constraint'):
+            filename = 'blueprint_with_inputs_and_constraints.yaml'
             self.put_deployment(
                 blueprint_id='b9702',
-                blueprint_file_name='blueprint_with_inputs_and_constraints.yaml',
+                blueprint_file_name=filename,
                 deployment_id=self.DEPLOYMENT_ID,
                 inputs={'http_web_server_port': '123'}
             )
 
     def test_input_violates_constraint_data_type(self):
         with self.assertRaises(dsl_exceptions.ConstraintException):
+            filename = 'blueprint_with_inputs_and_constraints.yaml'
             self.put_deployment(
                 blueprint_id='b9702',
-                blueprint_file_name='blueprint_with_inputs_and_constraints.yaml',
+                blueprint_file_name=filename,
                 deployment_id=self.DEPLOYMENT_ID,
                 inputs={'http_web_server_port': 123}
             )

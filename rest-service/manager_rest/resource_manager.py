@@ -41,8 +41,6 @@ from cloudify.models_states import (SnapshotState,
 from cloudify_rest_client.client import CloudifyClient
 
 from dsl_parser import constants, tasks
-from dsl_parser import exceptions as parser_exceptions
-from dsl_parser.constants import INTER_DEPLOYMENT_FUNCTIONS
 
 from manager_rest import premium_enabled
 from manager_rest.constants import (DEFAULT_TENANT_NAME,
@@ -1482,7 +1480,6 @@ class ResourceManager(object):
         site = self.sm.get(models.Site, site_name) if site_name else None
         deployment_labels = self._handle_deployment_labels(labels, plan)
 
-
         visibility = self.get_resource_visibility(models.Deployment,
                                                   deployment_id,
                                                   visibility,
@@ -2437,7 +2434,7 @@ class ResourceManager(object):
             source_deployment.inputs
         )
         new_dependencies = deployment_plan.setdefault(
-            INTER_DEPLOYMENT_FUNCTIONS, {})
+            constants.INTER_DEPLOYMENT_FUNCTIONS, {})
 
         # handle external client for component and shared resource
         client_config = None

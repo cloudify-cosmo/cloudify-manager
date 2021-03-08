@@ -735,7 +735,8 @@ class BaseServerTestCase(unittest.TestCase):
         create_dep_execution.status = ExecutionState.STARTED
         self.sm.update(create_dep_execution)
         with patch(get_rest_client_target, return_value=client), \
-                patch('cloudify_system_workflows.deployment_environment.os.makedirs'):
+                patch('cloudify_system_workflows.deployment_environment.'
+                      'os.makedirs'):
             try:
                 create(m, inputs=inputs, tenant_name=deployment.tenant.name)
             except Exception:
