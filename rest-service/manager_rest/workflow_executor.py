@@ -13,42 +13,35 @@ from cloudify.constants import (
     MGMTWORKER_QUEUE,
     BROKER_PORT_SSL
 )
+from dsl_parser import constants
 
 from manager_rest import config, utils
 from manager_rest.storage import get_storage_manager, models
 
 
-def execute_workflow(name,
-                     workflow,
-                     workflow_plugins,
-                     blueprint_id,
-                     deployment,
-                     execution_id,
-                     execution_parameters=None,
+def execute_workflow(execution,
                      bypass_maintenance=None,
-                     dry_run=False,
                      wait_after_fail=600,
-                     execution_creator=None,
                      scheduled_time=None,
                      resume=False,
-                     execution_token=None,
                      handler: SendHandler = None,):
-
-    execution_parameters = execution_parameters or {}
+    deployment = execution.deployment
+    blueprint = deployment.blueprint
+    workflow = deployment.workflows[execution.workflow_id]
     task_name = workflow['operation']
-    execution_token = execution_token or generate_execution_token(execution_id)
+    execution_token = execution.token or generate_execution_token(execution.id)
 
     context = {
         'type': 'workflow',
         'task_name': task_name,
-        'task_id': execution_id,
-        'workflow_id': name,
-        'blueprint_id': blueprint_id,
+        'task_id': execution.id,
+        'workflow_id': execution.workflow_id,
+        'blueprint_id': blueprint.id,
         'deployment_id': deployment.id,
         'runtime_only_evaluation': deployment.runtime_only_evaluation,
-        'execution_id': execution_id,
+        'execution_id': execution.id,
         'bypass_maintenance': bypass_maintenance,
-        'dry_run': dry_run,
+        'dry_run': execution.is_dry_run,
         'is_system_workflow': False,
         'wait_after_fail': wait_after_fail,
         'resume': resume,
@@ -56,6 +49,7 @@ def execute_workflow(name,
         'plugin': {}
     }
     plugin_name = workflow['plugin']
+    workflow_plugins = blueprint.plan[constants.WORKFLOW_PLUGINS_TO_INSTALL]
     plugins = [p for p in workflow_plugins if p['name'] == plugin_name]
     plugin = plugins[0] if plugins else None
     if plugin is not None and plugin['package_name']:
@@ -76,45 +70,51 @@ def execute_workflow(name,
             'source': plugin.get('source')
         }
 
-    return _execute_task(execution_id=execution_id,
-                         execution_parameters=execution_parameters,
+    return _execute_task(execution_id=execution.id,
+                         execution_parameters=execution.parameters,
                          context=context,
-                         execution_creator=execution_creator,
+                         execution_creator=execution.creator,
                          scheduled_time=scheduled_time,
                          handler=handler,)
 
 
-def execute_system_workflow(wf_id,
-                            task_id,
-                            task_mapping,
-                            deployment=None,
-                            execution_parameters=None,
+def _system_workflow_task_name(wf_id):
+    return {
+        'create_snapshot': 'cloudify_system_workflows.snapshot.create',
+        'restore_snapshot': 'cloudify_system_workflows.snapshot.restore',
+        'uninstall_plugin': 'cloudify_system_workflows.plugins.uninstall',
+        'create_deployment_environment':
+            'cloudify_system_workflows.deployment_environment.create',
+        'delete_deployment_environment':
+            'cloudify_system_workflows.deployment_environment.delete',
+        'update_plugin': 'cloudify_system_workflows.plugins.update',
+        'upload_blueprint': 'cloudify_system_workflows.blueprint.upload'
+    }[wf_id]
+
+
+def execute_system_workflow(execution,
                             bypass_maintenance=None,
-                            update_execution_status=True,
-                            dry_run=False,
-                            is_system_workflow=True,
-                            execution_creator=None):
-    execution_parameters = execution_parameters or {}
+                            update_execution_status=True):
     context = {
         'type': 'workflow',
-        'task_id': task_id,
-        'task_name': task_mapping,
-        'execution_id': task_id,
-        'workflow_id': wf_id,
+        'task_id': execution.id,
+        'execution_id': execution.id,
+        'workflow_id': execution.workflow_id,
+        'task_name': _system_workflow_task_name(execution.workflow_id),
         'bypass_maintenance': bypass_maintenance,
-        'dry_run': dry_run,
+        'dry_run': execution.is_dry_run,
         'update_execution_status': update_execution_status,
-        'is_system_workflow': is_system_workflow,
-        'execution_token': generate_execution_token(task_id),
+        'is_system_workflow': execution.is_system_workflow,
+        'execution_token': generate_execution_token(execution.id),
     }
 
-    if deployment:
-        context['blueprint_id'] = deployment.blueprint_id
-        context['deployment_id'] = deployment.id
+    if execution.deployment:
+        context['blueprint_id'] = execution.deployment.blueprint_id
+        context['deployment_id'] = execution.deployment.id
 
     return _execute_task(execution_id=context['task_id'],
-                         execution_parameters=execution_parameters,
-                         context=context, execution_creator=execution_creator)
+                         execution_parameters=execution.parameters,
+                         context=context, execution_creator=execution.creator)
 
 
 def generate_execution_token(execution_id):

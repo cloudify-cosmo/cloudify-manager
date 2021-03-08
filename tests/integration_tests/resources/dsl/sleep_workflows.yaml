@@ -15,6 +15,7 @@ node_templates:
 
 workflows:
     sleep: mock_workflows.mock_workflows.workflows.sleep
+    simple_sleep: mock_workflows.mock_workflows.workflows.simple_sleep
     sleep_with_graph_usage: mock_workflows.mock_workflows.workflows.sleep_with_graph_usage
     sleep_with_cancel_support:
         mapping: mock_workflows.mock_workflows.workflows.sleep_with_cancel_support

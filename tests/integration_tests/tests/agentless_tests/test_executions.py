@@ -43,7 +43,7 @@ class ExecutionsTest(AgentlessTestCase):
 
     def _wait_for_exec_to_end_and_modify_status(self, execution, new_status):
         self.wait_for_execution_to_end(execution)
-        self._manually_update_execution_status(new_status, execution.id)
+        self.manually_update_execution_status(new_status, execution.id)
         self._assert_execution_status(execution.id, new_status)
 
         return execution
@@ -84,13 +84,6 @@ class ExecutionsTest(AgentlessTestCase):
                                            _all_tenants=True,
                                            _offset=0,
                                            _size=1000).items
-
-    def _manually_update_execution_status(self, new_status, id):
-        run_postgresql_command(
-            self.env.container_id,
-            "UPDATE executions SET status = '{0}' WHERE id = '{1}'"
-                .format(new_status, id)
-        )
 
     def _assert_execution_status(self, execution_id,
                                  wanted_status, client=None):

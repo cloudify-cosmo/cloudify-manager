@@ -1,6 +1,9 @@
 """5_2 to 5_3
 
 - Create blueprints_labels table
+- Add installation_status to the deployment table
+- Add deployment_status to the deployment table
+- Add latest execution FK to the deployment table
 
 Revision ID: 396303c07e35
 Revises: 9d261e90b1f3
@@ -18,17 +21,53 @@ down_revision = '9d261e90b1f3'
 branch_labels = None
 depends_on = None
 
+installation_status = sa.Enum(
+    'active',
+    'inactive',
+    name='installation_status'
+)
+
+deployment_status = sa.Enum(
+    'good',
+    'in_progress',
+    'require_attention',
+    name='deployment_status'
+)
+
 
 def upgrade():
     _create_blueprints_labels_table()
     _modify_deployments_labels_table()
     _add_specialized_execution_fk()
+    _add_deployment_statuses()
 
 
 def downgrade():
+    _drop_deployment_statuses()
     _drop_specialized_execution_fk()
     _revert_changes_to_deployments_labels_table()
     _drop_blueprints_labels_table()
+
+
+def _add_deployment_statuses():
+    installation_status.create(op.get_bind())
+    deployment_status.create(op.get_bind())
+    op.add_column(
+        'deployments',
+        sa.Column(
+            'installation_status',
+            type_=installation_status,
+            nullable=True
+        )
+    )
+    op.add_column(
+        'deployments',
+        sa.Column(
+            'deployment_status',
+            type_=deployment_status,
+            nullable=True
+        )
+    )
 
 
 def _add_specialized_execution_fk():
@@ -77,8 +116,47 @@ def _add_specialized_execution_fk():
         initially='DEFERRED',
     )
 
+    op.add_column(
+        'deployments',
+        sa.Column('_latest_execution_fk', sa.Integer(), nullable=True))
+
+    op.create_index(
+        op.f('deployments__latest_execution_fk_idx'),
+        'deployments',
+        ['_latest_execution_fk'],
+        unique=True
+    )
+
+    op.create_foreign_key(
+        op.f('deployments__latest_execution_fk_fkey'),
+        'deployments',
+        'executions',
+        ['_latest_execution_fk'],
+        ['_storage_id'],
+        ondelete='SET NULL',
+        initially='DEFERRED',
+        deferrable=True,
+        use_alter=True
+    )
+
 
 def _drop_specialized_execution_fk():
+    op.drop_constraint(
+        op.f('deployments__latest_execution_fk_fkey'),
+        'deployments',
+        type_='foreignkey'
+    )
+
+    op.drop_index(
+        op.f('deployments__latest_execution_fk_idx'),
+        table_name='deployments'
+    )
+
+    op.drop_column(
+        'deployments',
+        '_latest_execution_fk'
+    )
+
     op.drop_constraint(
         op.f('deployments__create_execution_fk_fkey'),
         'deployments',
@@ -89,6 +167,7 @@ def _drop_specialized_execution_fk():
         table_name='deployments'
     )
     op.drop_column('deployments', '_create_execution_fk')
+
     op.drop_constraint(
         op.f('blueprints__upload_execution_fk_fkey'),
         'blueprints',
@@ -220,3 +299,8 @@ def _drop_blueprints_labels_table():
     op.drop_index(op.f('blueprints_labels__creator_id_idx'),
                   table_name='blueprints_labels')
     op.drop_table('blueprints_labels')
+
+
+def _drop_deployment_statuses():
+    op.drop_column('deployments', 'installation_status')
+    op.drop_column('deployments', 'deployment_status')
