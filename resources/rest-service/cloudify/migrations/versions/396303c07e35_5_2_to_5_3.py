@@ -304,3 +304,6 @@ def _drop_blueprints_labels_table():
 def _drop_deployment_statuses():
     op.drop_column('deployments', 'installation_status')
     op.drop_column('deployments', 'deployment_status')
+
+    installation_status.drop(op.get_bind())
+    deployment_status.drop(op.get_bind())
