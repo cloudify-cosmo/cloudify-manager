@@ -110,11 +110,29 @@ class PluginsUpdateManager(object):
         plugins_update.set_blueprint(blueprint)
         return self.sm.put(plugins_update)
 
+    def reevaluate_updates_statuses_per_blueprint(self, blueprint_id: str):
+        for plugins_update in self.list_plugins_updates(
+                filters={'blueprint_id': blueprint_id,
+                         'state': ACTIVE_STATES}):
+            reevaluated_state = _map_execution_to_plugins_update_status(
+                plugins_update.execution.status)
+            if reevaluated_state and plugins_update.state != reevaluated_state:
+                current_app.logger.info("Plugins update %s status "
+                                        "reevaluation: `%s` -> `%s`",
+                                        plugins_update.id,
+                                        plugins_update.state,
+                                        reevaluated_state)
+                plugins_update.state = reevaluated_state
+                self.sm.update(plugins_update)
+
     def initiate_plugins_update(self, blueprint_id, filters,
-                                auto_correct_types=False):
+                                auto_correct_types=False,
+                                reevaluate_active_statuses=False):
         """Creates a temporary blueprint and executes the plugins update
         workflow.
         """
+        if reevaluate_active_statuses:
+            self.reevaluate_updates_statuses_per_blueprint(blueprint_id)
         self.validate_no_active_updates_per_blueprint(blueprint_id)
         blueprint = self.sm.get(models.Blueprint, blueprint_id)
         temp_plan = self.get_reevaluated_plan(
@@ -415,3 +433,14 @@ def get_plugins_updates_manager():
         'plugins_updates_manager',
         PluginsUpdateManager(get_storage_manager())
     )
+
+
+def _map_execution_to_plugins_update_status(execution_status: str) -> str:
+    if execution_status == ExecutionState.TERMINATED:
+        return STATES.SUCCESSFUL
+    if execution_status in [ExecutionState.FAILED,
+                            ExecutionState.CANCELLED,
+                            ExecutionState.CANCELLING,
+                            ExecutionState.FORCE_CANCELLING,
+                            ExecutionState.KILL_CANCELLING]:
+        return STATES.FAILED
