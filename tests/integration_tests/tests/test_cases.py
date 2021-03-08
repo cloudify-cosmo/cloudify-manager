@@ -44,6 +44,7 @@ from integration_tests.tests.utils import (
     wait_for_deployment_creation_to_complete,
     wait_for_deployment_deletion_to_complete,
     verify_deployment_env_created,
+    run_postgresql_command,
     do_retries
 )
 
@@ -527,6 +528,13 @@ class AgentlessTestCase(BaseTestCase):
             compared_labels_set.add((key, value))
 
         self.assertEqual(simplified_labels, compared_labels_set)
+
+    def manually_update_execution_status(self, new_status, id):
+        run_postgresql_command(
+            self.env.container_id,
+            "UPDATE executions SET status = '{0}' WHERE id = '{1}'"
+                .format(new_status, id)
+        )
 
 
 class BaseAgentTestCase(BaseTestCase):
