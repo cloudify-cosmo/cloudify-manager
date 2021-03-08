@@ -135,7 +135,8 @@ class TestPluginsUpdate(unittest.TestCase):
             = finalize_update_mock
         self.mock_rest_client.executions.get \
             .return_value = PropertyMock(status=ExecutionState.TERMINATED)
-        update_func(MagicMock(), '12345678', None, dep_ids, False, False)
+        update_func(MagicMock(),
+                    '12345678', None, dep_ids, False, False, False)
         should_call_these = [call(deployment_id=i,
                                   blueprint_id=None,
                                   skip_install=True,
