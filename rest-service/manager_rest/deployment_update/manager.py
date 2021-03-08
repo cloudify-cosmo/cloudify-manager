@@ -87,6 +87,10 @@ class DeploymentUpdateManager(object):
                                 preview=False,
                                 runtime_only_evaluation=False,
                                 auto_correct_types=False):
+
+        # validate no active updates are running for a deployment_id
+        self.validate_no_active_updates_per_deployment(deployment_id)
+
         # enables reverting to original blueprint resources
         deployment = self.sm.get(models.Deployment, deployment_id)
         old_blueprint = deployment.blueprint

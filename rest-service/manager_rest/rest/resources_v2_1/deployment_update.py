@@ -118,6 +118,7 @@ class DeploymentUpdate(SecuredResource):
             ignore_failure, install_first, _, update_plugins, \
             runtime_eval, _, force = self._parse_args(
                 deployment_id, request_json, using_post_request=True)
+        manager.validate_no_active_updates_per_deployment(deployment_id)
         deployment_update, _ = \
             UploadedBlueprintsDeploymentUpdateManager(). \
             receive_uploaded_data(
@@ -193,7 +194,6 @@ class DeploymentUpdate(SecuredResource):
             request_json.get('force', False)
         )
         manager = get_deployment_updates_manager(preview)
-        manager.validate_no_active_updates_per_deployment(deployment_id)
         return (manager,
                 skip_install,
                 skip_uninstall,
