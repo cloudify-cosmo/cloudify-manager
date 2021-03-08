@@ -715,7 +715,7 @@ class BaseServerTestCase(unittest.TestCase):
                                                deployment_id,
                                                **create_deployment_kwargs)
         self.create_deployment_environment(
-            inputs=inputs, deployment=deployment)
+            inputs=inputs, deployment=deployment, client=client)
         deployment = client.deployments.get(deployment_id)
         return blueprint_id, deployment.id, blueprint_response, deployment
 
@@ -740,12 +740,12 @@ class BaseServerTestCase(unittest.TestCase):
             try:
                 create(m, inputs=inputs, tenant_name=deployment.tenant.name)
             except Exception:
-                self.client.executions.update(
+                client.executions.update(
                     deployment.executions[0].id,
                     ExecutionState.FAILED)
                 raise
             else:
-                self.client.executions.update(
+                client.executions.update(
                     deployment.executions[0].id,
                     ExecutionState.TERMINATED)
 
