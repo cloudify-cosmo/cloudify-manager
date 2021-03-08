@@ -7,7 +7,7 @@ deployment_settings:
   default_schedules:
     sc1:
       workflow: install
-      since: '+1min'
+      since: '+1w'
       until: '+1y'
       recurring: 1w
       weekdays: [mo, fr]
