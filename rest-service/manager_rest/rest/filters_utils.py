@@ -1,7 +1,5 @@
 from typing import List, Union, NewType
 
-from flask import request
-
 from cloudify._compat import text_type
 
 from manager_rest.rest.rest_utils import validate_inputs
@@ -27,26 +25,18 @@ FilteredModels = NewType('FilteredModels',
                          Union[models.Deployment, models.Blueprint])
 
 
-def get_filter_rules(resource_model: FilteredModels):
-    filter_rules = request.args.get('_filter_rules')
-    filter_id = request.args.get('_filter_id')
+def get_filter_rules_from_filter_id(filter_id):
+    if not filter_id:
+        return None
 
-    if not filter_rules and not filter_id:
-        return
+    validate_inputs({'filter_id': filter_id})
+    filter_elem = get_storage_manager().get(models.Filter, filter_id)
+    return filter_elem.value
 
-    if filter_rules and filter_id:
-        raise BadParametersError(
-            'Filter rules and filter ID cannot be provided together. '
-            'Please specify one of them or neither.'
-        )
 
-    if filter_rules:
-        return create_filter_rules_list(filter_rules, resource_model)
-
-    if filter_id:
-        validate_inputs({'filter_id': filter_id})
-        filter_elem = get_storage_manager().get(models.Filter, filter_id)
-        return filter_elem.value
+def get_filter_rule_tuple(filter_rule):
+    return (filter_rule['key'], tuple(filter_rule['values']),
+            filter_rule['operator'], filter_rule['type'])
 
 
 def create_filter_rules_list(raw_filter_rules: List[dict],
@@ -65,6 +55,7 @@ def create_filter_rules_list(raw_filter_rules: List[dict],
     :return: A list of FilterRule items
     """
     filter_rules_list = []
+    filter_rules_set = set()
     for filter_rule in raw_filter_rules:
         _assert_filter_rule_structure(filter_rule)
 
@@ -135,6 +126,12 @@ def create_filter_rules_list(raw_filter_rules: List[dict],
                                      filter_rule_values,
                                      filter_rule_operator,
                                      filter_rule_type)
+        new_filter_rule_tuple = get_filter_rule_tuple(new_filter_rule)
+        if new_filter_rule_tuple in filter_rules_set:
+            raise BadParametersError(
+                f'Filter rules must be unique. The filter rule {filter_rule} '
+                f'is not unique')
+        filter_rules_set.add(new_filter_rule_tuple)
         filter_rules_list.append(new_filter_rule)
 
     return filter_rules_list

@@ -39,8 +39,6 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
 
     DEPLOYMENT_ID = 'deployment'
     SITE_NAME = 'test_site'
-    LABELS = [{'env': 'aws'}, {'arch': 'k8s'}]
-    LABELS_2 = [{'env': 'gcp'}, {'arch': 'k8s'}]
     UPDATED_LABELS = [{'env': 'gcp'}, {'arch': 'k8s'}]
     UPDATED_UPPERCASE_LABELS = [{'env': 'GCp'}, {'ArCh': 'k8s'}]
     UPPERCASE_LABELS = [{'EnV': 'aWs'}, {'aRcH': 'k8s'}]
@@ -997,6 +995,19 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                                blueprint_id=resource_id,
                                deployment_id=resource_id,
                                labels=[{'csys-blah': 'val1'}])
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_list_deployments_with_filter_id(self):
+        self.put_deployment_with_labels(self.LABELS)
+        dep2 = self.put_deployment_with_labels(self.LABELS_2)
+        self.create_filter(self.client.deployments_filters,
+                           self.FILTER_ID, self.FILTER_RULES)
+        deployments = self.client.deployments.list(
+            filter_id=self.FILTER_ID)
+        self.assertEqual(len(deployments), 1)
+        self.assertEqual(deployments[0], dep2)
+        self.assert_metadata_filtered(deployments, 1)
 
     def test_update_attributes(self):
         self.put_blueprint()

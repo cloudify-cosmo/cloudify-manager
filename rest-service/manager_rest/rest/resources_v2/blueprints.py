@@ -18,9 +18,9 @@ from flask import request
 from flask_restful_swagger import swagger
 
 from manager_rest.security.authorization import authorize
-from manager_rest.rest.filters_utils import get_filter_rules
 from manager_rest.storage import get_storage_manager, models
 from manager_rest.utils import create_filter_params_list_description
+from manager_rest.rest.filters_utils import get_filter_rules_from_filter_id
 from manager_rest.rest import (resources_v1,
                                rest_decorators,
                                rest_utils)
@@ -45,8 +45,9 @@ class Blueprints(resources_v1.Blueprints):
     @rest_decorators.sortable(models.Blueprint)
     @rest_decorators.all_tenants
     @rest_decorators.search('id')
+    @rest_decorators.filter_id
     def get(self, _include=None, filters=None, pagination=None, sort=None,
-            all_tenants=None, search=None, **kwargs):
+            all_tenants=None, search=None, filter_id=None, **kwargs):
         """
         List uploaded blueprints
         """
@@ -54,11 +55,9 @@ class Blueprints(resources_v1.Blueprints):
             '_get_all_results',
             request.args.get('_get_all_results', False)
         )
-        if _include and 'labels' in _include:
-            _include = None
-        if not filters:
-            filters = {}
-        filters.setdefault('is_hidden', False)
+        filters, _include = rest_utils.modify_blueprints_list_args(filters,
+                                                                   _include)
+        filter_rules = get_filter_rules_from_filter_id(filter_id)
         return get_storage_manager().list(
             models.Blueprint,
             include=_include,
@@ -68,7 +67,7 @@ class Blueprints(resources_v1.Blueprints):
             sort=sort,
             all_tenants=all_tenants,
             get_all_results=get_all_results,
-            filter_rules=get_filter_rules(models.Blueprint)
+            filter_rules=filter_rules
         )
 
 

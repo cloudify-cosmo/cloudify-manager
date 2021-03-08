@@ -478,6 +478,19 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
+    def test_list_blueprints_with_filter_id(self):
+        self.put_blueprint_with_labels(self.LABELS, blueprint_id='bp1')
+        bp2 = self.put_blueprint_with_labels(self.LABELS_2, blueprint_id='bp2')
+        self.create_filter(self.client.deployments_filters,
+                           self.FILTER_ID, self.FILTER_RULES)
+        blueprints = self.client.blueprints.list(
+            filter_id=self.FILTER_ID)
+        self.assertEqual(len(blueprints), 1)
+        self.assertEqual(blueprints[0], bp2)
+        self.assert_metadata_filtered(blueprints, 1)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
     def test_update_blueprint_labels(self):
         new_labels = [{'key2': 'val2'}, {'key3': 'val3'}]
         blueprint = self.put_blueprint_with_labels(self.LABELS)

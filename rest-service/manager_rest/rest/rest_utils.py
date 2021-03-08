@@ -796,3 +796,24 @@ def _verify_weekdays(weekdays, frequency):
                 "complex weekday expression {} can only be used with a months|"
                 "years frequency, but got {}.".format(weekday, frequency))
     return weekdays_caps
+
+
+def modify_blueprints_list_args(filters, _include):
+    if _include and 'labels' in _include:
+        _include = None
+    if filters is None:
+        filters = {}
+    filters.setdefault('is_hidden', False)
+    return filters, _include
+
+
+def modify_deployments_list_args(filters, _include):
+    if '_group_id' in request.args:
+        filters['deployment_groups'] = lambda col: col.any(
+            models.DeploymentGroup.id == request.args['_group_id']
+        )
+    if _include:
+        if {'labels', 'deployment_groups'}.intersection(_include):
+            _include = None
+
+    return filters, _include
