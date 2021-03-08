@@ -28,7 +28,8 @@ from sqlalchemy.ext.associationproxy import association_proxy
 from cloudify.models_states import (AgentState,
                                     SnapshotState,
                                     ExecutionState,
-                                    DeploymentModificationState)
+                                    DeploymentModificationState,
+                                    DeploymentState)
 
 from manager_rest import config
 from manager_rest.rest.responses import Workflow, Label
@@ -334,7 +335,6 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         v1=['scaling_groups'],
         v2=['scaling_groups']
     )
-
     description = db.Column(db.Text)
     inputs = db.Column(db.PickleType(protocol=2))
     groups = db.Column(db.PickleType(protocol=2))
@@ -349,12 +349,30 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
     workflows = db.Column(db.PickleType(
         protocol=2, comparator=lambda *a: False))
     runtime_only_evaluation = db.Column(db.Boolean, default=False)
-
+    installation_status = db.Column(db.Enum(
+        DeploymentState.ACTIVE,
+        DeploymentState.INACTIVE,
+        name="installation_status"
+    ))
+    deployment_status = db.Column(db.Enum(
+            DeploymentState.GOOD,
+            DeploymentState.IN_PROGRESS,
+            DeploymentState.REQUIRE_ATTENTION,
+            name='deployment_status'
+        )
+    )
     _blueprint_fk = foreign_key(Blueprint._storage_id)
     _site_fk = foreign_key(Site._storage_id,
                            nullable=True,
                            ondelete='SET NULL')
     _create_execution_fk = foreign_key('executions._storage_id',
+                                       nullable=True,
+                                       ondelete='SET NULL',
+                                       deferrable=True,
+                                       initially='DEFERRED',
+                                       use_alter=True)
+
+    _latest_execution_fk = foreign_key('executions._storage_id',
                                        nullable=True,
                                        ondelete='SET NULL',
                                        deferrable=True,
@@ -370,6 +388,13 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         """The create-deployment-environment execution for this deployment"""
         return db.relationship('Execution',
                                foreign_keys=[cls._create_execution_fk],
+                               cascade='all, delete',
+                               post_update=True)
+
+    @declared_attr
+    def latest_execution(cls):
+        return db.relationship('Execution',
+                               foreign_keys=[cls._latest_execution_fk],
                                cascade='all, delete',
                                post_update=True)
 
@@ -399,6 +424,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         fields['labels'] = flask_fields.List(
             flask_fields.Nested(Label.resource_fields))
         fields['deployment_groups'] = flask_fields.List(flask_fields.String)
+        fields['latest_execution_status'] = flask_fields.String()
         return fields
 
     def to_response(self, **kwargs):
@@ -406,6 +432,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         dep_dict['workflows'] = self._list_workflows(self.workflows)
         dep_dict['labels'] = self.list_labels(self.labels)
         dep_dict['deployment_groups'] = [g.id for g in self.deployment_groups]
+        dep_dict['latest_execution_status'] = self.latest_execution_status
         return dep_dict
 
     @staticmethod
@@ -419,6 +446,37 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                          operation=wf.get('operation', ''),
                          parameters=wf.get('parameters', dict()))
                 for wf_name, wf in deployment_workflows.items()]
+
+    @property
+    def latest_execution_status(self):
+        _execution = self.latest_execution or self.create_execution
+        if not _execution:
+            return None
+        return DeploymentState.EXECUTION_STATES_SUMMARY.get(_execution.status)
+
+    def evaluate_deployment_status(self):
+        """
+        Evaluate the overall deployment status based on installation status
+        and latest execution object
+        :return: deployment_status: Overall deployment status
+        """
+        # TODO we need to cover also aggregated statuses for deployment
+        #  children later on
+        if self.latest_execution_status == DeploymentState.CANCELLED:
+            if self.installation_status == DeploymentState.ACTIVE:
+                return DeploymentState.GOOD
+            return DeploymentState.REQUIRE_ATTENTION
+        elif self.latest_execution_status == DeploymentState.IN_PROGRESS and \
+                self.installation_status == DeploymentState.INACTIVE:
+            return DeploymentState.IN_PROGRESS
+        elif self.latest_execution_status == DeploymentState.FAILED or \
+                self.installation_status == DeploymentState.INACTIVE:
+            return DeploymentState.REQUIRE_ATTENTION
+        elif self.latest_execution_status == DeploymentState.COMPLETED and \
+                self.installation_status == DeploymentState.ACTIVE:
+            return DeploymentState.GOOD
+        else:
+            return DeploymentState.IN_PROGRESS
 
 
 class DeploymentGroup(CreatedAtMixin, SQLResourceBase):
