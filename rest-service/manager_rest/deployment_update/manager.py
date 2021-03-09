@@ -19,8 +19,8 @@ from datetime import datetime
 
 from flask import current_app
 
+from cloudify.models_states import ExecutionState
 from cloudify.utils import extract_and_merge_plugins
-
 
 from dsl_parser import constants, tasks
 
@@ -86,7 +86,14 @@ class DeploymentUpdateManager(object):
                                 new_blueprint_id=None,
                                 preview=False,
                                 runtime_only_evaluation=False,
-                                auto_correct_types=False):
+                                auto_correct_types=False,
+                                reevaluate_active_statuses=False):
+
+        # validate no active updates are running for a deployment_id
+        if reevaluate_active_statuses:
+            self.reevaluate_updates_statuses_per_deployment(deployment_id)
+        self.validate_no_active_updates_per_deployment(deployment_id)
+
         # enables reverting to original blueprint resources
         deployment = self.sm.get(models.Deployment, deployment_id)
         old_blueprint = deployment.blueprint
@@ -126,6 +133,23 @@ class DeploymentUpdateManager(object):
             deployment_update.new_blueprint = new_blueprint
         self.sm.put(deployment_update)
         return deployment_update
+
+    def reevaluate_updates_statuses_per_deployment(self, deployment_id: str):
+        for active_update in self.list_deployment_updates(
+                filters={'blueprint_id': deployment_id,
+                         'state': [STATES.UPDATING,
+                                   STATES.EXECUTING_WORKFLOW,
+                                   STATES.FINALIZING]}):
+            reevaluated_state = _map_execution_to_deployment_update_status(
+                active_update.execution.status)
+            if reevaluated_state and active_update.state != reevaluated_state:
+                current_app.logger.info("Deployment update %s status "
+                                        "reevaluation: `%s` -> `%s`",
+                                        active_update.id,
+                                        active_update.state,
+                                        reevaluated_state)
+                active_update.state = reevaluated_state
+                self.sm.update(active_update)
 
     def create_deployment_update_step(self,
                                       deployment_update,
@@ -676,3 +700,14 @@ def get_deployment_updates_manager(preview=False):
         'deployment_updates_manager',
         DeploymentUpdateManager(get_storage_manager())
     )
+
+
+def _map_execution_to_deployment_update_status(execution_status: str) -> str:
+    if execution_status == ExecutionState.TERMINATED:
+        return STATES.SUCCESSFUL
+    if execution_status in [ExecutionState.FAILED,
+                            ExecutionState.CANCELLED,
+                            ExecutionState.CANCELLING,
+                            ExecutionState.FORCE_CANCELLING,
+                            ExecutionState.KILL_CANCELLING]:
+        return STATES.FAILED

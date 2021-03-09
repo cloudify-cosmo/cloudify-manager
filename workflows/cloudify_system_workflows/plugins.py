@@ -56,7 +56,7 @@ def _operate_on_plugin(ctx, plugin, action):
 
 @workflow(system_wide=True)
 def update(ctx, update_id, temp_blueprint_id, deployments_to_update, force,
-           auto_correct_types, **_):
+           auto_correct_types, reevaluate_active_statuses, **_):
     """Execute deployment update for all the given deployments_to_update.
 
     :param update_id: plugins update ID.
@@ -68,6 +68,8 @@ def update(ctx, update_id, temp_blueprint_id, deployments_to_update, force,
     components).
     :param auto_correct_types: update deployments with auto_correct_types flag,
      which will attempt to cast inputs to the types defined by the blueprint.
+    :reevaluate_active_statuses: reevaluate deployment updates states based on
+    relevant executions statuses.
     """
 
     def get_wait_for_execution_message(execution_id):
@@ -91,7 +93,8 @@ def update(ctx, update_id, temp_blueprint_id, deployments_to_update, force,
                     skip_uninstall=True,
                     skip_reinstall=True,
                     force=force,
-                    auto_correct_types=auto_correct_types) \
+                    auto_correct_types=auto_correct_types,
+                    reevaluate_active_statuses=reevaluate_active_statuses) \
                 .execution_id
         except CloudifyClientError:
             execution_id = None
