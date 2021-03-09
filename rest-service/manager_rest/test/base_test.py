@@ -142,11 +142,6 @@ class TestClient(FlaskClient):
 
 @attr(client_min_version=1, client_max_version=LATEST_API_VERSION)
 class BaseServerTestCase(unittest.TestCase):
-    # hack for running tests with py2's unnitest, but using py3's
-    # assert method name; to be removed once we run unittests on py3 only
-    def assertRaisesRegex(self, *a, **kw):
-        return self.assertRaisesRegexp(*a, **kw)
-
     def assertEmpty(self, obj):
         self.assertIsNotNone(obj)
         self.assertFalse(obj)
@@ -688,7 +683,7 @@ class BaseServerTestCase(unittest.TestCase):
             data = {'application_file_name': blueprint_file_name}
         else:
             data = {}
-
+        data['async_upload'] = True
         result.append(data)
         return result
 
@@ -719,7 +714,40 @@ class BaseServerTestCase(unittest.TestCase):
         deployment = client.deployments.create(blueprint_id,
                                                deployment_id,
                                                **create_deployment_kwargs)
+        self.create_deployment_environment(
+            inputs=inputs, deployment=deployment, client=client)
+        deployment = client.deployments.get(deployment_id)
         return blueprint_id, deployment.id, blueprint_response, deployment
+
+    def create_deployment_environment(self, deployment, inputs, client=None):
+        from cloudify_system_workflows.deployment_environment import create
+        client = client or self.client
+        m = MagicMock()
+        deployment = self.sm.get(models.Deployment, deployment.id)
+        blueprint = client.blueprints.get(deployment.blueprint_id)
+        m.blueprint = blueprint
+        m.deployment = deployment
+        m.tenant_name = deployment.tenant_name
+        m.logger = MagicMock()
+        get_rest_client_target = \
+            'cloudify_system_workflows.deployment_environment.get_rest_client'
+        create_dep_execution = deployment.executions[0]
+        create_dep_execution.status = ExecutionState.STARTED
+        self.sm.update(create_dep_execution)
+        with patch(get_rest_client_target, return_value=client), \
+                patch('cloudify_system_workflows.deployment_environment.'
+                      'os.makedirs'):
+            try:
+                create(m, inputs=inputs, tenant_name=deployment.tenant.name)
+            except Exception:
+                client.executions.update(
+                    deployment.executions[0].id,
+                    ExecutionState.FAILED)
+                raise
+            else:
+                client.executions.update(
+                    deployment.executions[0].id,
+                    ExecutionState.TERMINATED)
 
     def delete_deployment(self, deployment_id):
         """Delete the deployment from the database.

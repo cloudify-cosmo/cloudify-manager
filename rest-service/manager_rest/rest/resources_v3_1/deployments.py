@@ -78,9 +78,10 @@ class DeploymentsId(resources_v1.DeploymentsId):
         request_dict = rest_utils.get_json_and_verify_params(request_schema)
         blueprint_id = request_dict['blueprint_id']
         bypass_maintenance = is_bypass_maintenance_mode()
-        args = rest_utils.get_args_and_verify_arguments(
-            [Argument('private_resource', type=boolean)]
-        )
+        args = rest_utils.get_args_and_verify_arguments([
+            Argument('private_resource', type=boolean),
+            Argument('async_create', type=boolean, default=False)
+        ])
         visibility = rest_utils.get_visibility_parameter(
             optional=True,
             valid_values=VisibilityState.STATES
@@ -101,6 +102,9 @@ class DeploymentsId(resources_v1.DeploymentsId):
                 'runtime_only_evaluation', False),
             labels=labels
         )
+        if not args.async_create:
+            sm = get_storage_manager()
+            rest_utils.wait_for_execution(sm, deployment.create_execution.id)
         return deployment, 201
 
     @authorize('deployment_create')

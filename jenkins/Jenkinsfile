@@ -59,9 +59,10 @@ pipeline {
                 vEnv()
                 sh script: '''
                     . .venv/bin/activate
-                  pip install -Ur rest-service/dev-requirements.txt
-                  pip install -Ur rest-service/test-requirements.txt
-                  pip install -e rest-service/
+                  cd rest-service
+                  pip install -Ur dev-requirements.txt
+                  pip install -Ur test-requirements.txt
+                  pip install -e .
                 ''', label: "installing requirements for pytest"
                 echo 'Running pytest <<rest-service/manager_rest/test/endpoints>>'
                 sh '''
@@ -204,9 +205,11 @@ pipeline {
                   vEnv()
                   sh script: '''
                     . .venv/bin/activate
-                    pip install -Ur rest-service/dev-requirements.txt
-                    pip install -Ur rest-service/test-requirements.txt
-                    pip install -e rest-service/
+                    cd rest-service
+                    pip install -Ur dev-requirements.txt
+                    pip install -Ur test-requirements.txt
+                    pip install -e .
+                    cd ..
                     pip install -e ~/cloudify-premium
                   ''', label: "installing requirements for pytest"
                   echo 'Replace the cloudify-manager URL in dev-requirements.txt with the local path to this checkout'
