@@ -160,7 +160,8 @@ class PluginsUpdateManager(object):
 
         plugins_update.execution = \
             get_resource_manager(self.sm).update_plugins(
-                plugins_update, not changes_required, auto_correct_types)
+                plugins_update, not changes_required, auto_correct_types,
+                reevaluate_active_statuses)
         plugins_update.state = (STATES.EXECUTING_WORKFLOW if changes_required
                                 else STATES.NO_CHANGES_REQUIRED)
         return self.sm.update(plugins_update)
