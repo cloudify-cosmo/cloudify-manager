@@ -740,6 +740,16 @@ class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
 
 class ExecutionSchedule(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'execution_schedules'
+    __table_args__ = (
+        db.UniqueConstraint(
+            'id', '_deployment_fk', '_tenant_id'),
+        db.Index(
+            'execution_schedules_id__deployment_fk_idx',
+            'id', '_deployment_fk', '_tenant_id',
+            unique=True
+        ),
+    )
+    is_id_unique = False
 
     next_occurrence = db.Column(UTCDateTime, nullable=True, index=True)
     since = db.Column(UTCDateTime, nullable=True)

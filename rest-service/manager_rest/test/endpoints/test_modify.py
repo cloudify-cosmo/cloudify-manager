@@ -232,7 +232,7 @@ class ModifyTests(base_test.BaseServerTestCase):
         deployment2 = self.client.deployments.create(
             blueprint_id=blueprint_id,
             deployment_id='d{0}'.format(uuid.uuid4()))
-
+        self.create_deployment_environment(deployment=deployment2, inputs=None)
         modification = self.client.deployment_modifications.start(
             deployment.id, nodes={})
         # should not allow another deployment modification of the same

@@ -19,6 +19,7 @@ import uuid
 from datetime import datetime
 
 from cloudify.models_states import VisibilityState
+from dsl_parser import exceptions as dsl_exceptions
 
 from manager_rest.test import base_test
 from manager_rest.test.attribute import attr
@@ -354,75 +355,76 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         self.put_deployment(
             blueprint_file_name='blueprint_with_inputs.yaml',
             blueprint_id='b5566',
-            deployment_id=self.DEPLOYMENT_ID,
+            deployment_id='dep1',
             inputs={'http_web_server_port': '8080',
                     'http_web_server_port2': {'a': ['9090']}})
-        node = self.client.nodes.get(self.DEPLOYMENT_ID, 'http_web_server')
+        node = self.client.nodes.get('dep1', 'http_web_server')
         self.assertEqual('8080', node.properties['port'])
-        node2 = self.client.nodes.get(self.DEPLOYMENT_ID, 'http_web_server2')
+        node2 = self.client.nodes.get('dep1', 'http_web_server2')
         self.assertEqual('9090', node2.properties['port'])
-        self.assertRaisesRegex(CloudifyClientError,
-                               'inputs parameter is expected',
-                               self.put_deployment,
-                               blueprint_id='b1122',
-                               blueprint_file_name='blueprint_with_inputs'
-                                                   '.yaml',
-                               deployment_id=self.DEPLOYMENT_ID,
-                               inputs='illegal')
-        self.assertRaisesRegex(CloudifyClientError,
-                               'were not specified',
-                               self.put_deployment,
-                               blueprint_id='b3344',
-                               blueprint_file_name='blueprint_with_inputs'
-                                                   '.yaml',
-                               deployment_id=self.DEPLOYMENT_ID,
-                               inputs={'some_input': '1234'})
-        self.assertRaisesRegex(CloudifyClientError,
-                               'Unknown input',
-                               self.put_deployment,
-                               blueprint_id='b7788',
-                               blueprint_file_name='blueprint_with_inputs'
-                                                   '.yaml',
-                               deployment_id=self.DEPLOYMENT_ID,
-                               inputs={
-                                   'http_web_server_port': '1234',
-                                   'http_web_server_port2': {'a': ['9090']},
-                                   'unknown_input': 'yay'
-                               })
-        self.assertRaisesRegex(CloudifyClientError,
-                               "(Input attribute).+(doesn't exist)",
-                               self.put_deployment,
-                               blueprint_id='b7789',
-                               blueprint_file_name='blueprint_with_inputs'
-                                                   '.yaml',
-                               deployment_id=self.DEPLOYMENT_ID,
-                               inputs={
-                                   'http_web_server_port': '1234',
-                                   'http_web_server_port2': {
-                                       'something_new': ['9090']}
-                               })
-        self.assertRaisesRegex(CloudifyClientError,
-                               'is expected to be an int but got',
-                               self.put_deployment,
-                               blueprint_id='b7790',
-                               blueprint_file_name='blueprint_with_inputs'
-                                                   '.yaml',
-                               deployment_id=self.DEPLOYMENT_ID,
-                               inputs={
-                                   'http_web_server_port': '1234',
-                                   'http_web_server_port2': [1234]
-                               })
-        self.assertRaisesRegex(CloudifyClientError,
-                               "(List size of).+(but index)",
-                               self.put_deployment,
-                               blueprint_id='b7791',
-                               blueprint_file_name='blueprint_with_inputs'
-                                                   '.yaml',
-                               deployment_id=self.DEPLOYMENT_ID,
-                               inputs={
-                                   'http_web_server_port': '1234',
-                                   'http_web_server_port2': {'a': []}
-                               })
+        with self.assertRaisesRegex(
+                CloudifyClientError, 'inputs parameter is expected'):
+            self.put_deployment(
+                deployment_id='dep2',
+                blueprint_id='b1122',
+                blueprint_file_name='blueprint_with_inputs.yaml',
+                inputs='illegal'
+            )
+        with self.assertRaises(dsl_exceptions.MissingRequiredInputError):
+            self.put_deployment(
+                deployment_id='dep2',
+                blueprint_id='b3344',
+                blueprint_file_name='blueprint_with_inputs.yaml',
+                inputs={'some_input': '1234'}
+            )
+        with self.assertRaises(dsl_exceptions.UnknownInputError):
+            self.put_deployment(
+                deployment_id='dep2',
+                blueprint_id='b7788',
+                blueprint_file_name='blueprint_with_inputs'
+                                    '.yaml',
+                inputs={
+                    'http_web_server_port': '1234',
+                    'http_web_server_port2': {'a': ['9090']},
+                    'unknown_input': 'yay'
+                }
+            )
+        with self.assertRaises(dsl_exceptions.InputEvaluationError):
+            self.put_deployment(
+                deployment_id='dep2',
+                blueprint_id='b7789',
+                blueprint_file_name='blueprint_with_inputs'
+                                    '.yaml',
+                inputs={
+                    'http_web_server_port': '1234',
+                    'http_web_server_port2': {
+                        'something_new': ['9090']}
+                }
+            )
+        with self.assertRaisesRegex(dsl_exceptions.InputEvaluationError,
+                                    'expected to be an int'):
+            self.put_deployment(
+                deployment_id='dep2',
+                blueprint_id='b7790',
+                blueprint_file_name='blueprint_with_inputs'
+                                    '.yaml',
+                inputs={
+                    'http_web_server_port': '1234',
+                    'http_web_server_port2': [1234]
+                }
+            )
+        with self.assertRaisesRegex(dsl_exceptions.InputEvaluationError,
+                                    "(List size of).+(but index)"):
+            self.put_deployment(
+                deployment_id='dep2',
+                blueprint_id='b7791',
+                blueprint_file_name='blueprint_with_inputs'
+                                    '.yaml',
+                inputs={
+                    'http_web_server_port': '1234',
+                    'http_web_server_port2': {'a': []}
+                }
+            )
 
     def test_input_with_default_value_and_constraints(self):
         self.put_deployment(
@@ -443,24 +445,26 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         self.assertEqual('9090', node.properties['port'])
 
     def test_input_violates_constraint(self):
-        self.assertRaisesRegex(
-            CloudifyClientError,
-            "Value .+ of input .+ violates constraint length.+\\.",
-            self.put_deployment,
-            blueprint_id='b9702',
-            blueprint_file_name='blueprint_with_inputs_and_constraints.yaml',
-            deployment_id=self.DEPLOYMENT_ID,
-            inputs={'http_web_server_port': '123'})
+        with self.assertRaisesRegex(
+                dsl_exceptions.ConstraintException,
+                '123 .* http_web_server_port .* constraint'):
+            filename = 'blueprint_with_inputs_and_constraints.yaml'
+            self.put_deployment(
+                blueprint_id='b9702',
+                blueprint_file_name=filename,
+                deployment_id=self.DEPLOYMENT_ID,
+                inputs={'http_web_server_port': '123'}
+            )
 
     def test_input_violates_constraint_data_type(self):
-        self.assertRaisesRegex(
-            CloudifyClientError,
-            "Value's length could not be computed. Value type is 'int'\\.",
-            self.put_deployment,
-            blueprint_id='b9703',
-            blueprint_file_name='blueprint_with_inputs_and_constraints.yaml',
-            deployment_id=self.DEPLOYMENT_ID,
-            inputs={'http_web_server_port': 123})
+        with self.assertRaises(dsl_exceptions.ConstraintException):
+            filename = 'blueprint_with_inputs_and_constraints.yaml'
+            self.put_deployment(
+                blueprint_id='b9702',
+                blueprint_file_name=filename,
+                deployment_id=self.DEPLOYMENT_ID,
+                inputs={'http_web_server_port': 123}
+            )
 
     def test_outputs(self):
         id_ = 'i{0}'.format(uuid.uuid4())
@@ -1074,15 +1078,15 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         _, _, _, deployment = self.put_deployment(
             blueprint_file_name='blueprint_with_default_schedules.yaml')
 
-        sched_ids = [sc['id'] for sc in self.client.execution_schedules.list()]
-        sc1_id = '{}_{}'.format(deployment.id, 'sc1')
-        sc2_id = '{}_{}'.format(deployment.id, 'sc2')
-        self.assertListEqual([sc1_id, sc2_id], sched_ids)
-        self.assertEquals(
-            'install',
-            self.client.execution_schedules.get(sc2_id)['workflow_id'])
+        sched_ids = list(self.client.execution_schedules.list(
+            _include=['id', 'deployment_id']))
+        self.assertListEqual(
+            sched_ids,
+            [{'id': 'sc1', 'deployment_id': deployment.id},
+             {'id': 'sc2', 'deployment_id': deployment.id}])
 
-        sc1 = self.client.execution_schedules.get(sc1_id)
+        sc1 = self.client.execution_schedules.get('sc1', deployment.id)
+        # sc2 = self.client.execution_schedules.get('sc2', deployment.id)
         self.assertEquals(sc1['rule']['frequency'], '1w')
         self.assertEquals(len(sc1['all_next_occurrences']), 5)
 
@@ -1094,23 +1098,25 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         self.put_blueprint(
             blueprint_id=new_blueprint_id,
             blueprint_file_name='blueprint_with_default_schedules2.yaml')
+
+        # sc2's workflow_id of should change to `uninstall` after the update
+        sc2 = self.client.execution_schedules.get('sc2', deployment.id)
+        self.assertEquals('install', sc2['workflow_id'])
+
         self.client.deployment_updates.update_with_existing_blueprint(
             deployment.id, new_blueprint_id)
 
-        sched_ids = [sc['id'] for sc in self.client.execution_schedules.list()]
-        sc2_id = '{}_{}'.format(deployment.id, 'sc2')
-        sc3_id = '{}_{}'.format(deployment.id, 'sc3')
-        self.assertListEqual([sc2_id, sc3_id], sched_ids)
-        self.assertEquals(
-            'uninstall',
-            self.client.execution_schedules.get(sc2_id)['workflow_id'])
+        self.assertListEqual(
+            ['sc2', 'sc3'],
+            [sc['id'] for sc in self.client.execution_schedules.list()])
+        sc2 = self.client.execution_schedules.get('sc2', deployment.id)
+        self.assertEquals('uninstall', sc2['workflow_id'])
 
     def test_update_deployment_with_default_schedule_manually_deleted(self):
         _, _, _, deployment = self.put_deployment(
             blueprint_file_name='blueprint_with_default_schedules.yaml')
 
-        sc2_id = '{}_{}'.format(deployment.id, 'sc2')
-        self.client.execution_schedules.delete(sc2_id)
+        self.client.execution_schedules.delete('sc2', deployment.id)
         new_blueprint_id = 'updated_schedules'
         self.put_blueprint(
             blueprint_id=new_blueprint_id,
@@ -1126,17 +1132,16 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         _, _, _, deployment = self.put_deployment(
             blueprint_file_name='blueprint_with_default_schedules.yaml')
 
-        sc3_id = '{}_{}'.format(deployment.id, 'sc3')
         self.client.execution_schedules.create(
-            sc3_id, deployment.id, 'install', since=datetime.now(), count=1)
+            'sc3', deployment.id, 'install', since=datetime.now(), count=1)
 
         new_blueprint_id = 'updated_schedules'
         self.put_blueprint(
             blueprint_id=new_blueprint_id,
             blueprint_file_name='blueprint_with_default_schedules2.yaml')
 
-        error_msg = "400:.* contains a default schedule `sc3` which " \
-                    "conflicts with an existing deployment schedule"
+        error_msg = "400:.* contains a default schedule `sc3`.* " \
+                    "already exists for the deployment"
         self.assertRaisesRegex(
             CloudifyClientError,
             error_msg,

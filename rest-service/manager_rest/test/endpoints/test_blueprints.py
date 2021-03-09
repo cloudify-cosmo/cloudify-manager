@@ -161,21 +161,15 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
 
     def test_put_blueprint_non_existing_filename(self):
         blueprint_id = 'new_blueprint_id'
-        self.assertRaisesRegexp(
-            DslParseException,
-            'No such file or directory: .*non-existing',
-            self.put_blueprint,
-            blueprint_id=blueprint_id,
-            blueprint_file_name='non-existing')
+        with self.assertRaisesRegexp(DslParseException, 'non-existing'):
+            self.put_blueprint(
+                blueprint_id=blueprint_id, blueprint_file_name='non-existing')
 
     def test_put_blueprint_no_default_yaml(self):
         blueprint_id = 'new_blueprint_id'
-        self.assertRaisesRegexp(
-            DslParseException,
-            'No such file or directory: .*blueprint.yaml',
-            self.put_blueprint,
-            blueprint_id=blueprint_id,
-            blueprint_dir='mock_blueprint_no_default')
+        with self.assertRaisesRegexp(DslParseException, 'blueprint.yaml'):
+            self.put_blueprint(blueprint_id=blueprint_id,
+                               blueprint_dir='mock_blueprint_no_default')
 
     @attr(client_min_version=2,
           client_max_version=base_test.LATEST_API_VERSION)

@@ -330,7 +330,8 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
     def setUp(self):
         super(ExecutionGroupsTestCase, self).setUp()
         self.put_blueprint()
-        self.client.deployments.create('blueprint', 'dep1')
+        dep = self.client.deployments.create('blueprint', 'dep1')
+        self.create_deployment_environment(dep, None)
         self.client.deployment_groups.put(
             'group1',
             deployment_ids=['dep1']
