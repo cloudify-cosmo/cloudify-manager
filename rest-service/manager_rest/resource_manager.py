@@ -2582,7 +2582,6 @@ class ResourceManager(object):
             By default: UTC now.
         """
         for schedule_id, schedule in schedules_dict.items():
-            namespaced_schedule_id = '{}_{}'.format(deployment.id, schedule_id)
             workflow_id = schedule['workflow']
             execution_arguments = schedule.get('execution_arguments', {})
             parameters = schedule.get('workflow_parameters')
@@ -2605,7 +2604,7 @@ class ResourceManager(object):
             enabled = schedule.get('default_enabled', True)
             now = get_formatted_timestamp()
             schedule = models.ExecutionSchedule(
-                id=namespaced_schedule_id,
+                id=schedule_id,
                 deployment=deployment,
                 created_at=now,
                 since=since,
