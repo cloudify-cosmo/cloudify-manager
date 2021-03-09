@@ -78,6 +78,7 @@ IS_UNKNOWN = True
 IS_NOT_UNKNOWN = False
 PLUGIN_NAME = 'plugin_name'
 REPLACEMENT = 'replacement'
+EXACT_VERSION = 'exact_version'
 START_POS = 'start_pos'
 SUGGESTED_IMPORT_FROM = 'suggested_import_from'
 SUGGESTED_IS_PINNED = 'suggested_is_pinned'
@@ -99,6 +100,7 @@ CLOUDIFY_PLUGINS = {
                           '2.2.1', '2.2.0', '2.1.0', '2.0.2', '2.0.1',
                           '2.0.0', '1.5.1.2', '1.5.1.1', '1.5.1', '1.5'],
                          key=parse_version, reverse=True),
+        EXACT_VERSION: None,
     },
     'cloudify-azure-plugin': {
         VERSIONS: sorted(['3.0.9', '3.0.4', '3.0.3', '3.0.2', '3.0.1', '3.0.0',
@@ -436,7 +438,9 @@ def find_plugin_in_a_plan(plan: Plan, plugin_name: str) -> dict:
 def suggest_version(plugin_name: str, plugin_version: str) -> str:
     if plugin_name not in CLOUDIFY_PLUGINS:
         return plugin_version
-    if CLOUDIFY_PLUGINS[plugin_name].get(AT_LEAST) and \
+    if CLOUDIFY_PLUGINS[plugin_name].get(EXACT_VERSION) is not None:
+        return CLOUDIFY_PLUGINS[plugin_name].get(EXACT_VERSION)
+    elif CLOUDIFY_PLUGINS[plugin_name].get(AT_LEAST) and \
             (parse_version(CLOUDIFY_PLUGINS[plugin_name][AT_LEAST]) >
              parse_version(plugin_version)):
         base_version = CLOUDIFY_PLUGINS[plugin_name][AT_LEAST]
