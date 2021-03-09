@@ -56,6 +56,7 @@ from .resource_models import (
     Site,
     PluginsUpdate,
     InterDeploymentDependencies,
+    DeploymentLabelsDependencies,
     _PluginState,
     DeploymentLabel,
     Filter,
