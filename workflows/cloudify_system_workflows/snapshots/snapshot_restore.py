@@ -45,6 +45,7 @@ from .constants import (
     METADATA_FILENAME,
     M_SCHEMA_REVISION,
     M_STAGE_SCHEMA_REVISION,
+    M_COMPOSER_SCHEMA_REVISION,
     M_VERSION,
     MANAGER_PYTHON,
     V_4_0_0,
@@ -57,6 +58,10 @@ from .constants import (
     SECURITY_FILE_LOCATION,
     SECURITY_FILENAME,
     REST_AUTHORIZATION_CONFIG_PATH,
+    STAGE_USER,
+    STAGE_APP,
+    COMPOSER_USER,
+    COMPOSER_APP
 )
 from .utils import is_later_than_now
 
@@ -109,6 +114,9 @@ class SnapshotRestore(object):
             stage_revision = metadata.get(M_STAGE_SCHEMA_REVISION) or ''
             if stage_revision and self._premium_enabled:
                 stage_revision = re.sub(r".*\n", '', stage_revision)
+            composer_revision = metadata.get(M_COMPOSER_SCHEMA_REVISION) or ''
+            if composer_revision and self._premium_enabled:
+                composer_revision = re.sub(r".*\n", '', composer_revision)
             self._validate_snapshot()
 
             with Postgres(self._config) as postgres:
@@ -118,7 +126,12 @@ class SnapshotRestore(object):
                 self._service_management = \
                     json.loads(postgres.get_service_management())
                 with self._pause_services():
-                    self._restore_db(postgres, schema_revision, stage_revision)
+                    self._restore_db(
+                        postgres,
+                        schema_revision,
+                        stage_revision,
+                        composer_revision
+                    )
                 self._restore_hash_salt()
                 self._encrypt_secrets(postgres)
                 self._encrypt_rabbitmq_passwords(postgres)
@@ -475,7 +488,13 @@ class SnapshotRestore(object):
             json.dump(rest_security_conf, security_conf_file)
         self._encryption_key = str(rest_security_conf['encryption_key'])
 
-    def _restore_db(self, postgres, schema_revision, stage_revision):
+    def _restore_db(
+            self,
+            postgres,
+            schema_revision,
+            stage_revision,
+            composer_revision
+    ):
         """Restore database from snapshot.
 
         :param postgres: Database wrapper for snapshots
@@ -483,6 +502,12 @@ class SnapshotRestore(object):
         :param schema_revision:
             Schema revision for the dump file in the snapshot
         :type schema_revision: str
+        :param stage_revision:
+            Stage Schema revision for the dump file in the snapshot
+        :type stage_revision: str
+        :param composer_revision:
+            Composer Schema revision for the dump file in the snapshot
+        :type composer_revision: str
 
         """
         ctx.logger.info('Restoring database')
@@ -512,7 +537,8 @@ class SnapshotRestore(object):
                 ctx.logger.warning('Could not restore stage ({0})'.format(e))
             else:
                 raise
-        self._restore_composer(postgres, self._tempdir)
+        if composer_revision:
+            self._restore_composer(postgres, self._tempdir, composer_revision)
         if not self._license_exists(postgres):
             postgres.restore_license_from_dump(self._tempdir)
         ctx.logger.info('Successfully restored database')
@@ -556,19 +582,24 @@ class SnapshotRestore(object):
         if not self._premium_enabled:
             return
         ctx.logger.info('Restoring stage DB')
-        npm.clear_db()
-        npm.downgrade_stage_db(migration_version)
+        npm.clear_db(STAGE_APP, STAGE_USER)
+        npm.downgrade_app_db(STAGE_APP, STAGE_USER, migration_version)
         try:
             postgres.restore_stage(tempdir)
         finally:
-            npm.upgrade_stage_db()
+            npm.upgrade_app_db(STAGE_APP, STAGE_USER)
         ctx.logger.debug('Stage DB restored')
 
-    def _restore_composer(self, postgres, tempdir):
+    def _restore_composer(self, postgres, tempdir, migration_version):
         if not (self._snapshot_version >= V_4_2_0 and self._premium_enabled):
             return
         ctx.logger.info('Restoring composer DB')
-        postgres.restore_composer(tempdir)
+        npm.clear_db(COMPOSER_APP, COMPOSER_USER)
+        npm.downgrade_app_db(COMPOSER_APP, COMPOSER_USER, migration_version)
+        try:
+            postgres.restore_composer(tempdir)
+        finally:
+            npm.upgrade_app_db(COMPOSER_APP, COMPOSER_USER)
         ctx.logger.debug('Composer DB restored')
 
     def _should_clean_old_db_for_3_x_snapshot(self):
