@@ -20,6 +20,18 @@ class FilterRule(dict):
         self['operator'] = operator
         self['type'] = filter_rule_type
 
+    def __key(self):
+        return (self['key'], tuple(self['values']),
+                self['operator'], self['type'])
+
+    def __hash__(self):
+        return hash(self.__key())
+
+    def __eq__(self, other):
+        if isinstance(other, FilterRule):
+            return self.__key() == other.__key()
+        return NotImplemented
+
 
 FilteredModels = NewType('FilteredModels',
                          Union[models.Deployment, models.Blueprint])
@@ -120,6 +132,8 @@ def create_filter_rules_list(raw_filter_rules: List[dict],
                                      filter_rule_values,
                                      filter_rule_operator,
                                      filter_rule_type)
+        if new_filter_rule in filter_rules_list:
+            continue
         filter_rules_list.append(new_filter_rule)
 
     return filter_rules_list

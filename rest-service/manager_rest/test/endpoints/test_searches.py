@@ -1,6 +1,8 @@
 from manager_rest.test import base_test
+from manager_rest.storage import models
 from manager_rest.test.attribute import attr
 from manager_rest.rest.filters_utils import FilterRule
+from manager_rest.rest.resources_v3_1.searches import get_filter_rules
 
 
 @attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
@@ -73,10 +75,15 @@ class SearchesTestCase(base_test.BaseServerTestCase):
         self.assertEqual(deployments[0], dep1)
         self.assert_metadata_filtered(deployments, 1)
 
-    def _test_list_resources_with_filter_rules_and_filter_id(self,
-                                                             filters_client,
-                                                             resource_client,
-                                                             cmp_resource):
+    def test_searches_get_filter_rules(self):
+        self.create_filter(self.client.deployments_filters, self.FILTER_ID,
+                           self.FILTER_RULES)
+        filter_rules = get_filter_rules(self.FILTER_RULES, models.Deployment,
+                                        self.FILTER_ID)
+        self.assertEqual(filter_rules, self.FILTER_RULES)
+
+    def _test_list_resources_with_filter_rules_and_filter_id(
+            self, filters_client, resource_client, compared_resource):
         self.create_filter(filters_client, self.FILTER_ID,
                            [FilterRule('key2', [], 'is_not_null', 'label')])
         resources = resource_client.list(
@@ -86,4 +93,4 @@ class SearchesTestCase(base_test.BaseServerTestCase):
         )
         self.assertEqual(len(resources), 1)
         self.assertEqual(resources[0].keys(), {'id'})
-        self.assertEqual(resources[0]['id'], cmp_resource['id'])
+        self.assertEqual(resources[0]['id'], compared_resource['id'])

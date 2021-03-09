@@ -799,6 +799,11 @@ def _verify_weekdays(weekdays, frequency):
 
 
 def modify_blueprints_list_args(filters, _include):
+    """
+    As blueprints list can be retrieved both using `POST /searches/blueprints`
+    and `GET /blueprints`, we need a function to serve both endpoints to modify
+    the `filters` and `_include` arguments.
+    """
     if _include and 'labels' in _include:
         _include = None
     if filters is None:
@@ -808,6 +813,11 @@ def modify_blueprints_list_args(filters, _include):
 
 
 def modify_deployments_list_args(filters, _include):
+    """
+    As blueprints list can be retrieved both using `POST /searches/blueprints`
+    and `GET /blueprints`, we need a function to serve both endpoints to modify
+    the `filters` and `_include` arguments.
+    """
     if '_group_id' in request.args:
         filters['deployment_groups'] = lambda col: col.any(
             models.DeploymentGroup.id == request.args['_group_id']

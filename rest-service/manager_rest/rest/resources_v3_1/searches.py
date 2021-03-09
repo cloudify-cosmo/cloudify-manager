@@ -7,6 +7,7 @@ from manager_rest.storage import models, get_storage_manager
 from ..responses_v2 import ListResponse
 from .. import rest_decorators, rest_utils
 from ..filters_utils import (create_filter_rules_list,
+                             FilterRule,
                              get_filter_rules_from_filter_id)
 
 
@@ -21,8 +22,8 @@ class ResourceSearches(SecuredResource):
         request_schema = {'filter_rules': {'optional': False, 'type': list}}
         request_dict = rest_utils.get_json_and_verify_params(request_schema)
 
-        filter_rules = _get_filter_rules(request_dict['filter_rules'],
-                                         resource_model, filter_id)
+        filter_rules = get_filter_rules(request_dict['filter_rules'],
+                                        resource_model, filter_id)
 
         result = get_storage_manager().list(
             resource_model,
@@ -39,11 +40,18 @@ class ResourceSearches(SecuredResource):
         return ListResponse(items=result.items, metadata=result.metadata)
 
 
-def _get_filter_rules(raw_filter_rules, resource_model, filter_id):
+def get_filter_rules(raw_filter_rules, resource_model, filter_id):
     filter_rules = create_filter_rules_list(raw_filter_rules, resource_model)
     if filter_id:
         existing_filter_rules = get_filter_rules_from_filter_id(filter_id)
-        filter_rules.extend(existing_filter_rules)
+        for existing_filter_rule in existing_filter_rules:
+            filter_rule_elem = FilterRule(existing_filter_rule['key'],
+                                          existing_filter_rule['values'],
+                                          existing_filter_rule['operator'],
+                                          existing_filter_rule['type'])
+            if filter_rule_elem in filter_rules:
+                continue
+            filter_rules.append(filter_rule_elem)
 
     return filter_rules
 
@@ -59,7 +67,7 @@ class DeploymentsSearches(ResourceSearches):
     @rest_decorators.filter_id
     def post(self, _include=None, filters=None, pagination=None, sort=None,
              all_tenants=None, search=None, filter_id=None, **kwargs):
-        """List Deployments"""
+        """List Deployments using filter rules"""
         filters, _include = rest_utils.modify_deployments_list_args(filters,
                                                                     _include)
         return super().post(models.Deployment, _include, filters, pagination,
@@ -77,7 +85,7 @@ class BlueprintsSearches(ResourceSearches):
     @rest_decorators.filter_id
     def post(self, _include=None, filters=None, pagination=None, sort=None,
              all_tenants=None, search=None, filter_id=None, **kwargs):
-        """List Blueprints"""
+        """List Blueprints using filter rules"""
         filters, _include = rest_utils.modify_blueprints_list_args(filters,
                                                                    _include)
         return super().post(models.Blueprint, _include, filters, pagination,
