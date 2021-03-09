@@ -159,7 +159,7 @@ class ResourceManager(object):
 
         if status in ExecutionState.END_STATES:
             update_inter_deployment_dependencies(self.sm)
-            self.start_queued_executions()
+            self.start_queued_executions(execution)
 
         # If the execution is a deployment update, and the status we're
         # updating to is one which should cause the update to fail - do it here
@@ -200,9 +200,25 @@ class ResourceManager(object):
             self.delete_deployment(execution.deployment)
         return res
 
-    def start_queued_executions(self):
+    def start_queued_executions(self, finished_execution):
         queued_executions = self._get_queued_executions()
-        for e in queued_executions:
+        same_deployment_executions = []
+        other_executions = []
+        if finished_execution.deployment:
+            for execution in queued_executions:
+                if finished_execution.deployment == execution.deployment:
+                    same_deployment_executions.append(execution)
+                else:
+                    other_executions.append(execution)
+        else:
+            other_executions = queued_executions
+
+        # same-deployment executions run first, no matter if there's system
+        # executions or not
+        for e in same_deployment_executions:
+            self.execute_queued_workflow(e)
+
+        for e in other_executions:
             self.execute_queued_workflow(e)
             if e.is_system_workflow:  # To avoid starvation of system workflows
                 break
