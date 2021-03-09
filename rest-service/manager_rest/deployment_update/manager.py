@@ -304,8 +304,10 @@ class DeploymentUpdateManager(object):
 
         # First, delete old deployment schedules
         for schedule_id in schedules_to_delete:
-            schedule = self.sm.get(models.ExecutionSchedule,
-                                   '{}_{}'.format(deployment.id, schedule_id))
+            schedule = self.sm.get(
+                models.ExecutionSchedule,
+                None,
+                filters={'id': schedule_id, 'deployment_id': deployment.id})
             self.sm.delete(schedule)
 
         # Then, create new deployment schedules
@@ -661,7 +663,9 @@ class DeploymentUpdateManager(object):
                 try:
                     schedule = self.sm.get(
                         models.ExecutionSchedule,
-                        '{}_{}'.format(deployment.id, schedule_id))
+                        None,
+                        filters={'id': schedule_id,
+                                 'deployment_id': deployment.id})
                     if schedule.deployment_id == deployment.id:
                         schedules_to_delete.append(schedule_id)
                 except manager_exceptions.NotFoundError:
@@ -669,18 +673,20 @@ class DeploymentUpdateManager(object):
         if new_settings:
             name_conflict_error_msg = \
                 'The Blueprint used for the deployment update contains a ' \
-                'default schedule `{0}` which conflicts with an existing ' \
-                'deployment schedule `{1}`. Please either delete the ' \
-                'existing schedule or fix the blueprint.'
+                'default schedule `{0}`, but a deployment schedule `{0}` ' \
+                'already exists for the deployment `{1}` . Please either ' \
+                'delete the existing schedule or fix the blueprint.'
             schedules_to_create = new_settings.get('default_schedules', {})
             for schedule_id in schedules_to_create:
                 try:
-                    namespaced_id = '{}_{}'.format(deployment.id, schedule_id)
-                    self.sm.get(models.ExecutionSchedule, namespaced_id)
+                    self.sm.get(models.ExecutionSchedule,
+                                None,
+                                filters={'id': schedule_id,
+                                         'deployment_id': deployment.id})
                     if schedule_id not in schedules_to_delete:
                         raise manager_exceptions.InvalidBlueprintError(
                             name_conflict_error_msg.format(schedule_id,
-                                                           namespaced_id))
+                                                           deployment.id))
                 except manager_exceptions.NotFoundError:
                     continue
         return schedules_to_create, schedules_to_delete
