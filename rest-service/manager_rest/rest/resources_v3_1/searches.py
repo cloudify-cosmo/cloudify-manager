@@ -13,7 +13,7 @@ from ..filters_utils import (create_filter_rules_list,
 
 class ResourceSearches(SecuredResource):
     def post(self, resource_model, _include, filters, pagination, sort,
-             all_tenants, search, filter_id, **kwargs):
+             all_tenants, filter_id, **kwargs):
         """List resource items"""
         get_all_results = rest_utils.verify_and_convert_bool(
             '_get_all_results',
@@ -29,7 +29,6 @@ class ResourceSearches(SecuredResource):
             resource_model,
             include=_include,
             filters=filters,
-            substr_filters=search,
             pagination=pagination,
             sort=sort,
             all_tenants=all_tenants,
@@ -59,34 +58,30 @@ def get_filter_rules(raw_filter_rules, resource_model, filter_id):
 class DeploymentsSearches(ResourceSearches):
     @authorize('deployment_list', allow_all_tenants=True)
     @rest_decorators.marshal_with(models.Deployment)
-    @rest_decorators.create_filters(models.Deployment)
     @rest_decorators.paginate
     @rest_decorators.sortable(models.Deployment)
     @rest_decorators.all_tenants
-    @rest_decorators.search('id')
     @rest_decorators.filter_id
-    def post(self, _include=None, filters=None, pagination=None, sort=None,
-             all_tenants=None, search=None, filter_id=None, **kwargs):
+    def post(self, _include=None, pagination=None, sort=None,
+             all_tenants=None, filter_id=None, **kwargs):
         """List Deployments using filter rules"""
-        filters, _include = rest_utils.modify_deployments_list_args(filters,
+        filters, _include = rest_utils.modify_deployments_list_args({},
                                                                     _include)
         return super().post(models.Deployment, _include, filters, pagination,
-                            sort, all_tenants, search, filter_id, **kwargs)
+                            sort, all_tenants, filter_id, **kwargs)
 
 
 class BlueprintsSearches(ResourceSearches):
     @authorize('blueprint_list', allow_all_tenants=True)
     @rest_decorators.marshal_with(models.Blueprint)
-    @rest_decorators.create_filters(models.Blueprint)
     @rest_decorators.paginate
     @rest_decorators.sortable(models.Blueprint)
     @rest_decorators.all_tenants
-    @rest_decorators.search('id')
     @rest_decorators.filter_id
-    def post(self, _include=None, filters=None, pagination=None, sort=None,
-             all_tenants=None, search=None, filter_id=None, **kwargs):
+    def post(self, _include=None, pagination=None, sort=None,
+             all_tenants=None, filter_id=None, **kwargs):
         """List Blueprints using filter rules"""
-        filters, _include = rest_utils.modify_blueprints_list_args(filters,
+        filters, _include = rest_utils.modify_blueprints_list_args({},
                                                                    _include)
         return super().post(models.Blueprint, _include, filters, pagination,
-                            sort, all_tenants, search, filter_id, **kwargs)
+                            sort, all_tenants, filter_id, **kwargs)

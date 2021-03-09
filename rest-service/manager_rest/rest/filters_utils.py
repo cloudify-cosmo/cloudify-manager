@@ -20,17 +20,12 @@ class FilterRule(dict):
         self['operator'] = operator
         self['type'] = filter_rule_type
 
-    def __key(self):
+    def _key(self):
         return (self['key'], tuple(self['values']),
                 self['operator'], self['type'])
 
     def __hash__(self):
-        return hash(self.__key())
-
-    def __eq__(self, other):
-        if isinstance(other, FilterRule):
-            return self.__key() == other.__key()
-        return NotImplemented
+        return hash(self._key())
 
 
 FilteredModels = NewType('FilteredModels',
