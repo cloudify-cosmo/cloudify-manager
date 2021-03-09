@@ -21,30 +21,33 @@ from .utils import sudo
 NPM_BIN = os.path.join('/usr', 'bin', 'npm')
 
 
-def run(command, *args):
+def run(command, app, user, *args):
     npm_command = [NPM_BIN, 'run', command]
+    path_to_app = '/opt/cloudify-{0}/backend'.format(app)
     npm_command.extend(args)
     sudo(
         npm_command,
-        cwd='/opt/cloudify-stage/backend',
-        user='stage_user',
+        cwd=path_to_app,
+        user=user,
     )
 
 
-def clear_db():
-    """ Clear the Stage DB """
-    ctx.logger.info('Clearing Stage DB')
-    run('db-migrate-clear')
+def clear_db(app, user):
+    """ Clear the App DB """
+    ctx.logger.info('Clearing %s DB', app.capitalize())
+    run('db-migrate-clear', app, user)
 
 
-def downgrade_stage_db(migration_version):
+def downgrade_app_db(app, user, migration_version):
     """ Downgrade db schema, based on metadata from the snapshot """
-    ctx.logger.info('Downgrading Stage DB to revision: {0}'
-                    .format(migration_version))
-    run('db-migrate-down-to', migration_version)
+    ctx.logger.info(
+        'Downgrading %s DB to revision: %s', app.capitalize(),
+        migration_version
+    )
+    run('db-migrate-down-to', app, user, migration_version)
 
 
-def upgrade_stage_db():
+def upgrade_app_db(app, user):
     """  Runs the migration up to latest revision """
-    ctx.logger.info('Upgrading Stage DB')
-    run('db-migrate')
+    ctx.logger.info('Upgrading %s DB', app.capitalize())
+    run('db-migrate', app, user)

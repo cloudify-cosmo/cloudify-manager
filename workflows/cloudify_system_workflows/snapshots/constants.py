@@ -40,6 +40,7 @@ STAGE_WIDGETS_FOLDER = 'dist/widgets'
 STAGE_TEMPLATES_FOLDER = 'dist/templates'
 STAGE_USERDATA_FOLDER = 'dist/userData'
 STAGE_USER = 'stage_user'
+STAGE_APP = 'stage'
 # created during bootstrap
 STAGE_RESTORE_SCRIPT = '/opt/cloudify/stage/restore-snapshot.py'
 MANAGER_PYTHON = '/opt/manager/env/bin/python'
@@ -53,6 +54,7 @@ DENY_DB_CLIENT_CERTS_SCRIPT = (
 COMPOSER_BASE_FOLDER = '/opt/cloudify-composer'
 COMPOSER_BLUEPRINTS_FOLDER = 'backend/dev'
 COMPOSER_USER = 'composer_user'
+COMPOSER_APP = 'composer'
 SECURITY_FILENAME = 'rest-security.conf'
 SECURITY_FILE_LOCATION = join('/opt/manager/', SECURITY_FILENAME)
 REST_AUTHORIZATION_CONFIG_PATH = '/opt/manager/authorization.conf'
