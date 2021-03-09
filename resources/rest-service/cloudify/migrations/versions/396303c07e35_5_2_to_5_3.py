@@ -38,6 +38,7 @@ deployment_status = sa.Enum(
 def upgrade():
     _create_blueprints_labels_table()
     _modify_deployments_labels_table()
+    _modify_execution_schedules_table()
     _add_specialized_execution_fk()
     _add_deployment_statuses()
 
@@ -45,6 +46,7 @@ def upgrade():
 def downgrade():
     _drop_deployment_statuses()
     _drop_specialized_execution_fk()
+    _revert_changes_to_execution_schedules_table()
     _revert_changes_to_deployments_labels_table()
     _drop_blueprints_labels_table()
 
@@ -285,6 +287,23 @@ def _revert_changes_to_deployments_labels_table():
                     ['_deployment_fk'],
                     unique=False)
     op.drop_column('deployments_labels', '_labeled_model_fk')
+
+
+def _modify_execution_schedules_table():
+    op.create_index('execution_schedules_id__deployment_fk_idx',
+                    'execution_schedules',
+                    ['id', '_deployment_fk', '_tenant_id'],
+                    unique=False)
+    op.create_unique_constraint(op.f('execution_schedules_id_key'),
+                                'execution_schedules',
+                                ['id', '_deployment_fk', '_tenant_id'])
+
+
+def _revert_changes_to_execution_schedules_table():
+    op.drop_constraint(op.f('execution_schedules_id_key'),
+                       'execution_schedules', type_='unique')
+    op.drop_index('execution_schedules_id__deployment_fk_idx',
+                  table_name='execution_schedules')
 
 
 def _drop_blueprints_labels_table():

@@ -1,5 +1,8 @@
 from flask import request
 from flask_restful_swagger import swagger
+from flask_restful.reqparse import Argument
+
+from cloudify._compat import text_type
 
 from manager_rest import manager_exceptions
 from manager_rest.rest import rest_decorators
@@ -7,6 +10,7 @@ from manager_rest.rest.rest_utils import (
     get_json_and_verify_params,
     verify_and_convert_bool,
     validate_inputs,
+    get_args_and_verify_arguments,
     parse_datetime_multiple_formats,
     compute_rule_from_scheduling_params
 )
@@ -50,8 +54,10 @@ class ExecutionSchedulesId(SecuredResource):
         """Schedule a workflow execution"""
 
         validate_inputs({'schedule_id': schedule_id})
-        request_dict = get_json_and_verify_params({'deployment_id',
-                                                   'workflow_id',
+        deployment_id = get_args_and_verify_arguments([
+            Argument('deployment_id', type=text_type, required=True)
+        ])['deployment_id']
+        request_dict = get_json_and_verify_params({'workflow_id',
                                                    'since'})
 
         workflow_id = request_dict['workflow_id']
@@ -62,7 +68,6 @@ class ExecutionSchedulesId(SecuredResource):
                 "parameters: expected a dict, but got: {0}".format(parameters))
 
         rm = get_resource_manager()
-        deployment_id = request_dict['deployment_id']
         deployment = rm.sm.get(models.Deployment, deployment_id)
         rm._verify_workflow_in_deployment(workflow_id,
                                           deployment,
@@ -100,8 +105,15 @@ class ExecutionSchedulesId(SecuredResource):
     def patch(self, schedule_id, **kwargs):
         """Updates scheduling parameters of an existing execution schedule"""
 
+        deployment_id = get_args_and_verify_arguments([
+            Argument('deployment_id', type=text_type, required=True)
+        ])['deployment_id']
         sm = get_storage_manager()
-        schedule = sm.get(models.ExecutionSchedule, schedule_id)
+        schedule = sm.get(
+            models.ExecutionSchedule,
+            None,
+            filters={'id': schedule_id,  'deployment_id': deployment_id}
+        )
         slip = request.json.get('slip')
         stop_on_fail = request.json.get('stop_on_fail')
         enabled = request.json.get('enabled')
@@ -136,19 +148,26 @@ class ExecutionSchedulesId(SecuredResource):
         """
         Get execution schedule by id
         """
-        # TODO :: include in response: number of executions already run,
-        #         of them - number succeeded + number failed
-
+        deployment_id = get_args_and_verify_arguments([
+            Argument('deployment_id', type=text_type, required=True)
+        ])['deployment_id']
         return get_storage_manager().get(
             models.ExecutionSchedule,
-            schedule_id,
+            None,
+            filters={'id': schedule_id, 'deployment_id': deployment_id},
             include=_include
         )
 
     @authorize('execution_schedule_create')
     def delete(self, schedule_id):
+        deployment_id = get_args_and_verify_arguments([
+            Argument('deployment_id', type=text_type, required=True)
+        ])['deployment_id']
         sm = get_storage_manager()
-        schedule = sm.get(models.ExecutionSchedule, schedule_id)
+        schedule = sm.get(
+            models.ExecutionSchedule,
+            None,
+            filters={'id': schedule_id, 'deployment_id': deployment_id})
         sm.delete(schedule)
         return None, 204
 

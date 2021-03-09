@@ -68,7 +68,7 @@ class ExecutionSchedulesTestCase(BaseServerTestCase):
             'delete-me', self.deployment_id, 'install',
             since=self.an_hour_from_now, frequency='1 minutes', count=5)
         self.assertEqual(len(self.client.execution_schedules.list()), 1)
-        self.client.execution_schedules.delete('delete-me')
+        self.client.execution_schedules.delete('delete-me', self.deployment_id)
         self.assertEqual(len(self.client.execution_schedules.list()), 0)
 
     def test_schedule_update(self):
@@ -83,18 +83,20 @@ class ExecutionSchedulesTestCase(BaseServerTestCase):
         self.assertEqual(schedule['slip'], 0)
 
         self.client.execution_schedules.update(
-            'update-me', frequency='5 minutes', slip=30)
+            'update-me', self.deployment_id, frequency='5 minutes', slip=30)
 
         # get the schedule from the DB and not directly from .update endpoint
-        schedule = self.client.execution_schedules.get('update-me')
+        schedule = self.client.execution_schedules.get('update-me',
+                                                       self.deployment_id)
 
         self.assertEqual(len(schedule['all_next_occurrences']), 13)  # 60/5+1
         self.assertEqual(schedule['rule']['frequency'], '5 minutes')
         self.assertEqual(schedule['slip'], 30)
 
         self.client.execution_schedules.update(
-            'update-me',  until=self.three_hours_from_now)
-        schedule = self.client.execution_schedules.get('update-me')
+            'update-me', self.deployment_id, until=self.three_hours_from_now)
+        schedule = self.client.execution_schedules.get('update-me',
+                                                       self.deployment_id)
         self.assertEqual(len(schedule['all_next_occurrences']), 25)  # 2*60/5+1
 
     def test_schedule_get_invalid_id(self):
@@ -102,7 +104,8 @@ class ExecutionSchedulesTestCase(BaseServerTestCase):
             CloudifyClientError,
             '404: Requested `ExecutionSchedule` .* was not found',
             self.client.execution_schedules.get,
-            'nonsuch'
+            'nonsuch',
+            self.deployment_id
         )
 
     def test_schedule_create_no_since(self):
@@ -149,10 +152,10 @@ class ExecutionSchedulesTestCase(BaseServerTestCase):
             CloudifyClientError,
             '400:.* invalid weekday',
             self.client.execution_schedules.update,
-            'good-weekdays', weekdays='oneday, someday'
+            'good-weekdays', self.deployment_id, weekdays='oneday, someday'
         )
 
-    def test_schedule_invalid_complex_weekdays(self):
+    def test_schedule_create_invalid_complex_weekdays(self):
         self.assertRaisesRegex(
             CloudifyClientError,
             '400:.* invalid weekday',
@@ -162,7 +165,7 @@ class ExecutionSchedulesTestCase(BaseServerTestCase):
             weekdays='5tu'
         )
 
-    def test_schedule_invalid_frequency_with_complex_weekdays(self):
+    def test_schedule_create_invalid_frequency_with_complex_weekdays(self):
         self.assertRaisesRegex(
             CloudifyClientError,
             '400:.* complex weekday expression',
@@ -192,10 +195,10 @@ class ExecutionSchedulesTestCase(BaseServerTestCase):
             CloudifyClientError,
             frequency_error,
             self.client.execution_schedules.update,
-            'no-frequency-count-1', count=2
+            'no-frequency-count-1', self.deployment_id, count=2
         )
 
-    def test_schedule_invalid_frequency(self):
+    def test_schedule_create_invalid_frequency(self):
         self.assertRaisesRegex(
             CloudifyClientError,
             '400: `10 doboshes` is not a legal frequency expression.',
