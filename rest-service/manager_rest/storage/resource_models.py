@@ -770,7 +770,7 @@ class ExecutionSchedule(CreatedAtMixin, SQLResourceBase):
     def compute_next_occurrence(self):
         return get_rrule(self.rule,
                          self.since,
-                         self.until).after(datetime.now())
+                         self.until).after(datetime.utcnow())
 
     @property
     def all_next_occurrences(self, pagination_size=1000):
@@ -779,7 +779,7 @@ class ExecutionSchedule(CreatedAtMixin, SQLResourceBase):
         for i, d in enumerate(get_rrule(self.rule, self.since, self.until)):
             if i >= search_limit or len(next_occurrences) >= pagination_size:
                 break
-            if d >= datetime.now():
+            if d >= datetime.utcnow():
                 next_occurrences.append(d.strftime("%Y-%m-%d %H:%M:%S"))
         return next_occurrences
 
