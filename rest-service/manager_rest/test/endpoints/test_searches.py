@@ -1,5 +1,3 @@
-from cloudify_rest_client.exceptions import CloudifyClientError
-
 from manager_rest.test import base_test
 from manager_rest.test.attribute import attr
 from manager_rest.rest.filters_utils import FilterRule
@@ -64,16 +62,16 @@ class SearchesTestCase(base_test.BaseServerTestCase):
         self._test_list_resources_with_filter_rules_and_filter_id(
             self.client.blueprints_filters, self.client.blueprints, bp3)
 
-    def test_list_deployments_with_duplicate_filter_rules_fails(self):
-        self.put_deployment_with_labels(self.LABELS)
+    def test_list_deployments_with_duplicate_filter_rules(self):
+        dep1 = self.put_deployment_with_labels(self.LABELS)
         self.put_deployment_with_labels(self.LABELS_2)
         self.create_filter(self.client.deployments_filters, self.FILTER_ID,
                            self.FILTER_RULES)
-        self.assertRaisesRegex(CloudifyClientError,
-                               'cannot be part of the filter rules list',
-                               self.client.deployments.list,
-                               filter_rules=self.FILTER_RULES,
-                               filter_id=self.FILTER_ID)
+        deployments = self.client.deployments.list(
+            filter_rules=self.FILTER_RULES, filter_id=self.FILTER_ID)
+        self.assertEqual(len(deployments), 1)
+        self.assertEqual(deployments[0], dep1)
+        self.assert_metadata_filtered(deployments, 1)
 
     def _test_list_resources_with_filter_rules_and_filter_id(self,
                                                              filters_client,

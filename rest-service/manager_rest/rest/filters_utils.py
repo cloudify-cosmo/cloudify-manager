@@ -34,11 +34,6 @@ def get_filter_rules_from_filter_id(filter_id):
     return filter_elem.value
 
 
-def get_filter_rule_tuple(filter_rule):
-    return (filter_rule['key'], tuple(filter_rule['values']),
-            filter_rule['operator'], filter_rule['type'])
-
-
 def create_filter_rules_list(raw_filter_rules: List[dict],
                              resource_model: FilteredModels):
     """Validate the raw filter rules list and return a FilterRule items list.
@@ -55,7 +50,6 @@ def create_filter_rules_list(raw_filter_rules: List[dict],
     :return: A list of FilterRule items
     """
     filter_rules_list = []
-    filter_rules_set = set()
     for filter_rule in raw_filter_rules:
         _assert_filter_rule_structure(filter_rule)
 
@@ -126,12 +120,6 @@ def create_filter_rules_list(raw_filter_rules: List[dict],
                                      filter_rule_values,
                                      filter_rule_operator,
                                      filter_rule_type)
-        new_filter_rule_tuple = get_filter_rule_tuple(new_filter_rule)
-        if new_filter_rule_tuple in filter_rules_set:
-            raise BadParametersError(
-                f'Filter rules must be unique. The filter rule {filter_rule} '
-                f'is not unique')
-        filter_rules_set.add(new_filter_rule_tuple)
         filter_rules_list.append(new_filter_rule)
 
     return filter_rules_list
