@@ -81,7 +81,6 @@ class ResourceManager(object):
 
     def __init__(self, sm=None):
         self.sm = sm or get_storage_manager()
-        self.task_mapping = _create_task_mapping()
 
     def list_executions(self, include=None, is_include_system_workflows=False,
                         filters=None, pagination=None, sort=None,
@@ -2662,19 +2661,6 @@ def get_resource_manager(sm=None):
         return ResourceManager(sm)
     return current_app.config.setdefault('resource_manager',
                                          ResourceManager())
-
-
-def _create_task_mapping():
-    mapping = {
-        'create_snapshot': 'cloudify_system_workflows.snapshot.create',
-        'restore_snapshot': 'cloudify_system_workflows.snapshot.restore',
-        'uninstall_plugin': 'cloudify_system_workflows.plugins.uninstall',
-        'create_deployment_environment':
-            'cloudify_system_workflows.deployment_environment.create',
-        'delete_deployment_environment':
-            'cloudify_system_workflows.deployment_environment.delete'
-    }
-    return mapping
 
 
 def create_secret(key, secret, tenant):
