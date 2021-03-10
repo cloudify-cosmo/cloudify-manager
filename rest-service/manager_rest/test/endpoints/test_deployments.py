@@ -916,6 +916,18 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
+    def test_create_deployment_labels_from_blueprint(self):
+        self.put_blueprint(blueprint_id='bp1',
+                           blueprint_file_name='blueprint_with_labels_1.yaml')
+        deployment = self.client.deployments.create(
+            blueprint_id='bp1', deployment_id='dep1',
+            labels=[{'new_key': 'new_value'}])
+        expected_labels = [{'key1': 'key1_val1'}, {'key2': 'key2_val1'},
+                           {'key2': 'key2_val2'}, {'new_key': 'new_value'}]
+        self.assert_resource_labels(deployment.labels, expected_labels)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
     def test_uppercase_labels_to_lowercase(self):
         deployment = self.put_deployment_with_labels(self.UPPERCASE_LABELS)
         self.assert_resource_labels(deployment.labels, self.LABELS)
