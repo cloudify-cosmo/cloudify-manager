@@ -510,4 +510,12 @@ def prevent_running_in_snapshot_restore(endpoint_func):
 
     return wrapper
 
+
+def filter_id(func):
+    @wraps(func)
+    def get_filter_id(*args, **kw):
+        return func(filter_id=request.args.get('_filter_id', None),
+                    *args, **kw)
+    return get_filter_id
+
 # endregion
