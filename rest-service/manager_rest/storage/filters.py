@@ -80,6 +80,15 @@ def add_attrs_filter_to_query(query, model_class, filter_rule,
                            filter_rule_values)
             query = query.filter(or_(*like_filter))
 
+    elif filter_rule_operator == AttrsOperator.IS_NOT_EMPTY:
+        try:
+            query = query.filter(column.isnot(None))\
+                .filter(~column.in_(['', [], '{}']))
+        except NotImplementedError:
+            # if the column represents a relationship, in_() is not supported:
+            # use RelationshipProperty.Comparator.any() instead
+            query = query.filter(column.any())
+
     else:
         raise BadFilterRule(filter_rule)
 
