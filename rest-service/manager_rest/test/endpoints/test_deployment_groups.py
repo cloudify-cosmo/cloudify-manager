@@ -109,7 +109,7 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         self.client.deployment_groups.put(
             'group1',
             blueprint_id='blueprint',
-            inputs=[{}]
+            new_deployments=[{}]
         )
         group = self.sm.get(models.DeploymentGroup, 'group1')
         assert len(group.deployments) == 1
@@ -126,12 +126,12 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         assert set(group.deployment_ids) == {'dep1'}
         group = self.client.deployment_groups.put(
             'group1',
-            inputs=[{}]
+            new_deployments=[{}]
         )
         assert set(group.deployment_ids) == {'dep1', 'group1-2'}
         group = self.client.deployment_groups.put(
             'group1',
-            inputs=[{}]
+            new_deployments=[{}]
         )
         assert set(group.deployment_ids) == {'dep1', 'group1-2', 'group1-3'}
 
@@ -223,7 +223,7 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         )
         group = self.client.deployment_groups.add_deployments(
             'group1',
-            inputs=[{}, {}]
+            new_deployments=[{}, {}]
         )
         assert len(group.deployment_ids) == 2
 
