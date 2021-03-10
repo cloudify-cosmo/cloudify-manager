@@ -36,6 +36,7 @@ def add_attrs_filter_to_query(query, model_class, filter_rule,
     filter_rule_operator = filter_rule['operator']
     column_name = filter_rule['key']
     filter_rule_values = filter_rule['values']
+    empty_values = [None, [], {}, (), set(), ""]
 
     column = get_column(model_class, column_name)
     if column_name not in joined_columns_set:
@@ -79,6 +80,15 @@ def add_attrs_filter_to_query(query, model_class, filter_rule,
             like_filter = (column.ilike(f'%{value}') for value in
                            filter_rule_values)
             query = query.filter(or_(*like_filter))
+
+    elif filter_rule_operator == AttrsOperator.IS_NOT_EMPTY:
+        try:
+            query = query.filter(~column.in_(empty_values))
+        except NotImplementedError:
+            # If the attribute is a relationship, for which in_() is not yet
+            # supported by SQLAlchemy, simply use join() to filter out the
+            # entries which don't actually have the relationship.
+            query = query.join(column)
 
     else:
         raise BadFilterRule(filter_rule)

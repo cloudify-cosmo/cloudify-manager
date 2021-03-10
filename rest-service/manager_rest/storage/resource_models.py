@@ -418,6 +418,11 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         # labels are defined as `backref` in DeploymentsLabel model
         return None
 
+    @declared_attr
+    def schedules(cls):
+        # schedules are defined as `backref` in ExecutionSchedule model
+        return None
+
     @classproperty
     def response_fields(cls):
         fields = super(Deployment, cls).response_fields
@@ -426,13 +431,15 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         )
         fields['labels'] = flask_fields.List(
             flask_fields.Nested(Label.resource_fields))
+        fields['schedules'] = flask_fields.List(
+            flask_fields.Nested(ExecutionSchedule.resource_fields))
         fields['deployment_groups'] = flask_fields.List(flask_fields.String)
         fields['latest_execution_status'] = flask_fields.String()
         return fields
 
     @classproperty
     def allowed_filter_attrs(cls):
-        return ['blueprint_id', 'created_by', 'site_name']
+        return ['blueprint_id', 'created_by', 'site_name', 'schedules']
 
     def to_response(self, **kwargs):
         dep_dict = super(Deployment, self).to_response()
@@ -779,7 +786,9 @@ class ExecutionSchedule(CreatedAtMixin, SQLResourceBase):
 
     @declared_attr
     def deployment(cls):
-        return one_to_many_relationship(cls, Deployment, cls._deployment_fk)
+        return one_to_many_relationship(
+            cls, Deployment, cls._deployment_fk,
+            backref=db.backref('schedules', cascade='all, delete-orphan'))
 
     @declared_attr
     def latest_execution(cls):
