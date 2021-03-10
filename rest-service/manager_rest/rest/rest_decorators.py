@@ -510,4 +510,16 @@ def prevent_running_in_snapshot_restore(endpoint_func):
 
     return wrapper
 
+
+def get_reserved_labels_keys(func):
+    @wraps(func)
+    def is_get_reserved_labels_keys(*args, **kw):
+        return func(get_reserved=_request_reserved_labels_keys(), *args, **kw)
+    return is_get_reserved_labels_keys
+
+
+def _request_reserved_labels_keys():
+    return verify_and_convert_bool('reserved',
+                                   request.args.get('_reserved', False))
+
 # endregion
