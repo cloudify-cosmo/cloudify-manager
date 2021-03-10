@@ -281,30 +281,6 @@ class DeploymentModificationAlreadyEndedError(ManagerException):
             .DEPLOYMENT_MODIFICATION_ALREADY_ENDED_ERROR, *args, **kwargs)
 
 
-class DeploymentEnvironmentCreationInProgressError(ManagerException):
-    DEPLOYMENT_ENVIRONMENT_CREATION_IN_PROGRESS_ERROR_CODE = \
-        'deployment_environment_creation_in_progress_error'
-
-    def __init__(self, *args, **kwargs):
-        super(DeploymentEnvironmentCreationInProgressError, self).__init__(
-            400,
-            DeploymentEnvironmentCreationInProgressError
-            .DEPLOYMENT_ENVIRONMENT_CREATION_IN_PROGRESS_ERROR_CODE,
-            *args, **kwargs)
-
-
-class DeploymentEnvironmentCreationPendingError(ManagerException):
-    DEPLOYMENT_ENVIRONMENT_CREATION_PENDING_ERROR_CODE = \
-        'deployment_environment_creation_pending_error'
-
-    def __init__(self, *args, **kwargs):
-        super(DeploymentEnvironmentCreationPendingError, self).__init__(
-            400,
-            DeploymentEnvironmentCreationPendingError
-            .DEPLOYMENT_ENVIRONMENT_CREATION_PENDING_ERROR_CODE,
-            *args, **kwargs)
-
-
 class IllegalActionError(ManagerException):
     ILLEGAL_ACTION_ERROR_CODE = 'illegal_action_error'
 
@@ -335,6 +311,41 @@ class NoSuchIncludeFieldError(ManagerException):
             *args,
             **kwargs
         )
+
+
+class DeploymentCreationError(ManagerException):
+    """An error during create-deployment-environment"""
+    DEPLOYMENT_CREATION_ERROR_CODE = 'deployment_creation_error'
+
+    def __init__(self, *args, **kwargs):
+        super(DeploymentCreationError, self).__init__(
+            400,
+            DeploymentCreationError.DEPLOYMENT_CREATION_ERROR_CODE,
+            *args, **kwargs)
+
+
+class DeploymentEnvironmentCreationInProgressError(ManagerException):
+    DEPLOYMENT_ENVIRONMENT_CREATION_IN_PROGRESS_ERROR_CODE = \
+        'deployment_environment_creation_in_progress_error'
+
+    def __init__(self, *args, **kwargs):
+        super(DeploymentEnvironmentCreationInProgressError, self).__init__(
+            400,
+            DeploymentEnvironmentCreationInProgressError
+            .DEPLOYMENT_ENVIRONMENT_CREATION_IN_PROGRESS_ERROR_CODE,
+            *args, **kwargs)
+
+
+class DeploymentEnvironmentCreationPendingError(ManagerException):
+    DEPLOYMENT_ENVIRONMENT_CREATION_PENDING_ERROR_CODE = \
+        'deployment_environment_creation_pending_error'
+
+    def __init__(self, *args, **kwargs):
+        super(DeploymentEnvironmentCreationPendingError, self).__init__(
+            400,
+            DeploymentEnvironmentCreationPendingError
+            .DEPLOYMENT_ENVIRONMENT_CREATION_PENDING_ERROR_CODE,
+            *args, **kwargs)
 
 
 class MissingRequiredDeploymentInputError(ManagerException):

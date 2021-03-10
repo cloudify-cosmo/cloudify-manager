@@ -829,8 +829,7 @@ class ResourceManager(object):
                          send_handler: 'SendHandler' = None):
         execution_creator = execution_creator or current_user
         deployment = self.sm.get(models.Deployment, deployment_id)
-        self._verify_deployment_environment_created_successfully(
-            deployment_id)
+        self._verify_deployment_environment_created_successfully(deployment)
         self._validate_permitted_to_execute_global_workflow(deployment)
         blueprint_id = blueprint_id or deployment.blueprint_id
         self._verify_workflow_in_deployment(workflow_id, deployment,
@@ -2091,22 +2090,12 @@ class ResourceManager(object):
             prepared_relationships.append(relationship)
         return prepared_relationships
 
-    def _verify_deployment_environment_created_successfully(self,
-                                                            deployment_id):
-        deployment_id_filter = self.create_filters_dict(
-            deployment_id=deployment_id,
-            workflow_id='create_deployment_environment')
-        env_creation = next(
-            (execution for execution in
-             self.sm.list(models.Execution, filters=deployment_id_filter)
-             if execution.workflow_id == 'create_deployment_environment'),
-            None)
-
-        if not env_creation:
-            raise RuntimeError('Failed to find "create_deployment_environment"'
-                               ' execution for deployment {0}'.format(
-                                   deployment_id))
-        status = env_creation.status
+    def _verify_deployment_environment_created_successfully(self, deployment):
+        if not deployment.create_execution:
+            # the user removed the execution, let's assume they knew
+            # what they were doing and allow this
+            return
+        status = deployment.create_execution.status
         if status == ExecutionState.TERMINATED:
             return
         elif status == ExecutionState.PENDING:
@@ -2120,21 +2109,23 @@ class ResourceManager(object):
                     'Deployment environment creation is still in progress, '
                     'try again in a minute')
         elif status == ExecutionState.FAILED:
-            raise RuntimeError(
+            error_line = deployment.create_execution.error\
+                .strip().split('\n')[-1]
+            raise manager_exceptions.DeploymentCreationError(
                 "Can't launch executions since environment creation for "
                 "deployment {0} has failed: {1}".format(
-                    deployment_id, env_creation.error))
+                    deployment.id, error_line))
         elif status in (
             ExecutionState.CANCELLED, ExecutionState.CANCELLING,
                 ExecutionState.FORCE_CANCELLING):
-            raise RuntimeError(
+            raise manager_exceptions.DeploymentCreationError(
                 "Can't launch executions since the environment creation for "
                 "deployment {0} has been cancelled [status={1}]".format(
-                    deployment_id, status))
+                    deployment.id, status))
         else:
-            raise RuntimeError(
+            raise manager_exceptions.DeploymentCreationError(
                 'Unexpected deployment status for deployment {0} '
-                '[status={1}]'.format(deployment_id, status))
+                '[status={1}]'.format(deployment.id, status))
 
     @staticmethod
     def create_filters_dict(**kwargs):
