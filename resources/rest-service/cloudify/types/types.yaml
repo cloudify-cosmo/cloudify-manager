@@ -28,6 +28,7 @@ node_types:
         stop: {}
         delete: {}
         postdelete: {}
+        pull: {}
       cloudify.interfaces.validation:
         create: {}
         delete: {}
@@ -875,6 +876,21 @@ workflows:
         type: boolean
         description: >
           Whether rollback to resolved state or full uninstall.
+
+  pull:
+    mapping: default_workflows.cloudify.plugins.workflows.pull
+    is_cascading: false
+    parameters:
+      operation_parms:
+        default: {}
+      run_by_dependency_order:
+        default: true
+      type_names:
+        default: []
+      node_ids:
+        default: []
+      node_instance_ids:
+        default: []
 
 ##################################################################################
 # Base data type definitions
