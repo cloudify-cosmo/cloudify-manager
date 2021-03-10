@@ -282,8 +282,9 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         self.client.deployments.update_labels('dep1', [
             {'label1': 'value1'}
         ])
-        self.client.filters.create('filter1', [
-            'label1=value1'
+        self.client.deployments_filters.create('filter1', [
+            {'key': 'label1', 'values': ['value1'],
+             'operator': 'any_of', 'type': 'label'}
         ])
         self.client.deployment_groups.put(
             'group1',
@@ -297,8 +298,9 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         self.client.deployments.update_labels('dep1', [
             {'label1': 'value1'}
         ])
-        self.client.filters.create('filter1', [
-            'label1=value1'
+        self.client.deployments_filters.create('filter1', [
+            {'key': 'label1', 'values': ['value1'],
+             'operator': 'any_of', 'type': 'label'}
         ])
         self.client.deployment_groups.put('group1')
         self.client.deployment_groups.add_deployments(
@@ -313,8 +315,9 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         self.client.deployments.update_labels('dep1', [
             {'label1': 'value1'}
         ])
-        self.client.filters.create('filter1', [
-            'label1=value1'
+        self.client.deployments_filters.create('filter1', [
+            {'key': 'label1', 'values': ['value1'],
+             'operator': 'any_of', 'type': 'label'}
         ])
         self.client.deployment_groups.put(
             'group1',

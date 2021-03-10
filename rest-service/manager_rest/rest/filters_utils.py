@@ -1,7 +1,5 @@
 from typing import List, Union, NewType
 
-from flask import request
-
 from cloudify._compat import text_type
 
 from manager_rest.rest.rest_utils import validate_inputs
@@ -22,31 +20,25 @@ class FilterRule(dict):
         self['operator'] = operator
         self['type'] = filter_rule_type
 
+    def _key(self):
+        return (self['key'], tuple(self['values']),
+                self['operator'], self['type'])
+
+    def __hash__(self):
+        return hash(self._key())
+
 
 FilteredModels = NewType('FilteredModels',
                          Union[models.Deployment, models.Blueprint])
 
 
-def get_filter_rules(resource_model: FilteredModels):
-    filter_rules = request.args.get('_filter_rules')
-    filter_id = request.args.get('_filter_id')
+def get_filter_rules_from_filter_id(filter_id):
+    if not filter_id:
+        return None
 
-    if not filter_rules and not filter_id:
-        return
-
-    if filter_rules and filter_id:
-        raise BadParametersError(
-            'Filter rules and filter ID cannot be provided together. '
-            'Please specify one of them or neither.'
-        )
-
-    if filter_rules:
-        return create_filter_rules_list(filter_rules, resource_model)
-
-    if filter_id:
-        validate_inputs({'filter_id': filter_id})
-        filter_elem = get_storage_manager().get(models.Filter, filter_id)
-        return filter_elem.value
+    validate_inputs({'filter_id': filter_id})
+    filter_elem = get_storage_manager().get(models.Filter, filter_id)
+    return filter_elem.value
 
 
 def create_filter_rules_list(raw_filter_rules: List[dict],
@@ -135,6 +127,8 @@ def create_filter_rules_list(raw_filter_rules: List[dict],
                                      filter_rule_values,
                                      filter_rule_operator,
                                      filter_rule_type)
+        if new_filter_rule in filter_rules_list:
+            continue
         filter_rules_list.append(new_filter_rule)
 
     return filter_rules_list
