@@ -266,6 +266,12 @@ class FiltersBaseCase(base_test.BaseServerTestCase):
         with self.assertRaisesRegex(CloudifyClientError, 'must be a list'):
             self.create_filter(self.filters_client, FILTER_ID, err_filter_rule)
 
+    def test_create_filter_with_duplicate_filter_rules(self):
+        filter_rule = FilterRule('a', ['b'], 'any_of', 'label')
+        new_filter = self.create_filter(self.filters_client, FILTER_ID,
+                                        [filter_rule, filter_rule])
+        self.assertEqual(new_filter.labels_filter, [filter_rule])
+
     def test_get_filter(self):
         self.create_filter(self.filters_client, FILTER_ID, self.SIMPLE_RULE)
         fetched_filter = self.filters_client.get(FILTER_ID)

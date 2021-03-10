@@ -145,6 +145,20 @@ class TestClient(FlaskClient):
 
 @attr(client_min_version=1, client_max_version=LATEST_API_VERSION)
 class BaseServerTestCase(unittest.TestCase):
+    # hack for running tests with py2's unnitest, but using py3's
+    # assert method name; to be removed once we run unittests on py3 only
+    LABELS = [{'env': 'aws'}, {'arch': 'k8s'}]
+    LABELS_2 = [{'env': 'gcp'}, {'arch': 'k8s'}]
+    FILTER_ID = 'filter'
+    FILTER_RULES = [FilterRule('env', ['aws'], 'not_any_of', 'label'),
+                    FilterRule('arch', ['k8s'], 'any_of', 'label')]
+
+    FILTER_RULES_2 = [FilterRule('env', ['aws'], 'any_of', 'label'),
+                      FilterRule('arch', ['k8s'], 'any_of', 'label')]
+
+    def assertRaisesRegex(self, *a, **kw):
+        return self.assertRaisesRegexp(*a, **kw)
+
     def assertEmpty(self, obj):
         self.assertIsNotNone(obj)
         self.assertFalse(obj)

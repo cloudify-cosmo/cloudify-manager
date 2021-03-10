@@ -597,10 +597,7 @@ class SQLStorageManager(object):
                                 prevent consumption of too much memory
         :param distinct: An optional list of columns names to get distinct
                          results by.
-        :param filter_rules: A dictionary of filter rules. The keys in the
-                             dictionary specify the relevant filters, and
-                             the values are lists of rules.
-                             E.g. {'labels': ['a=b', 'c!=d']}
+        :param filter_rules: A list of filter rules.
         :return: A (possibly empty) list of `model_class` results
         """
         self._validate_available_memory()

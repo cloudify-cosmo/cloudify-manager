@@ -39,6 +39,7 @@ from manager_rest.manager_exceptions import (BadParametersError,
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.maintenance import is_bypass_maintenance_mode
 from manager_rest.dsl_functions import evaluate_deployment_capabilities
+from manager_rest.rest.filters_utils import get_filter_rules_from_filter_id
 from manager_rest.rest import (
     rest_utils,
     resources_v1,
@@ -544,10 +545,9 @@ class DeploymentGroupsId(SecuredResource):
 
         filter_id = request_dict.get('filter_id')
         if filter_id is not None:
-            filter_elem = sm.get(models.Filter, filter_id)
             deployments = sm.list(
                 models.Deployment,
-                filter_rules=filter_elem.value.get('labels', {})
+                filter_rules=get_filter_rules_from_filter_id(filter_id)
             )
             for dep in deployments:
                 group.deployments.append(dep)
@@ -580,10 +580,9 @@ class DeploymentGroupsId(SecuredResource):
 
         filter_id = request_dict.get('filter_id')
         if filter_id is not None:
-            filter_elem = sm.get(models.Filter, filter_id)
             deployments = sm.list(
                 models.Deployment,
-                filter_rules=filter_elem.value.get('labels', {})
+                filter_rules=get_filter_rules_from_filter_id(filter_id)
             )
             for dep in deployments:
                 group.deployments.remove(dep)
