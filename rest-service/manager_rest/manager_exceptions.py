@@ -324,7 +324,7 @@ class DeploymentCreationError(ManagerException):
             *args, **kwargs)
 
 
-class DeploymentEnvironmentCreationInProgressError(DeploymentCreationError):
+class DeploymentEnvironmentCreationInProgressError(ManagerException):
     DEPLOYMENT_ENVIRONMENT_CREATION_IN_PROGRESS_ERROR_CODE = \
         'deployment_environment_creation_in_progress_error'
 
@@ -336,7 +336,7 @@ class DeploymentEnvironmentCreationInProgressError(DeploymentCreationError):
             *args, **kwargs)
 
 
-class DeploymentEnvironmentCreationPendingError(DeploymentCreationError):
+class DeploymentEnvironmentCreationPendingError(ManagerException):
     DEPLOYMENT_ENVIRONMENT_CREATION_PENDING_ERROR_CODE = \
         'deployment_environment_creation_pending_error'
 
@@ -348,7 +348,7 @@ class DeploymentEnvironmentCreationPendingError(DeploymentCreationError):
             *args, **kwargs)
 
 
-class MissingRequiredDeploymentInputError(DeploymentCreationError):
+class MissingRequiredDeploymentInputError(ManagerException):
     ERROR_CODE = 'missing_required_deployment_input_error'
 
     def __init__(self, *args, **kwargs):
@@ -360,7 +360,7 @@ class MissingRequiredDeploymentInputError(DeploymentCreationError):
         )
 
 
-class UnknownDeploymentInputError(DeploymentCreationError):
+class UnknownDeploymentInputError(ManagerException):
     ERROR_CODE = 'unknown_deployment_input_error'
 
     def __init__(self, *args, **kwargs):
@@ -372,7 +372,7 @@ class UnknownDeploymentInputError(DeploymentCreationError):
         )
 
 
-class DeploymentInputEvaluationError(DeploymentCreationError):
+class DeploymentInputEvaluationError(ManagerException):
     ERROR_CODE = 'deployment_input_evaluation_error'
 
     def __init__(self, *args, **kwargs):
@@ -384,7 +384,7 @@ class DeploymentInputEvaluationError(DeploymentCreationError):
         )
 
 
-class ConstraintError(DeploymentCreationError):
+class ConstraintError(ManagerException):
     ERROR_CODE = 'constraint_error'
 
     def __init__(self, *args, **kwargs):
@@ -396,7 +396,7 @@ class ConstraintError(DeploymentCreationError):
         )
 
 
-class UnknownDeploymentSecretError(DeploymentCreationError):
+class UnknownDeploymentSecretError(ManagerException):
     ERROR_CODE = 'unknown_deployment_secret_error'
 
     def __init__(self, *args, **kwargs):
@@ -408,7 +408,7 @@ class UnknownDeploymentSecretError(DeploymentCreationError):
         )
 
 
-class UnsupportedDeploymentGetSecretError(DeploymentCreationError):
+class UnsupportedDeploymentGetSecretError(ManagerException):
     ERROR_CODE = 'unknown_deployment_secret_error'
 
     def __init__(self, *args, **kwargs):
