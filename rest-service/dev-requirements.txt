@@ -1,4 +1,4 @@
-git+https://github.com/cloudify-cosmo/cloudify-common@ffb2c8bfe504a37e52b38dff0f0d4d559b93ebaa#egg=cloudify-common[dispatcher]
+git+https://github.com/cloudify-cosmo/cloudify-common@RD-1472-complex-filters#egg=cloudify-common[dispatcher]
 
 # For dealing with the binary leftovers of psycopg2 in the 2.7.x version
 psycopg2==2.7.4 --no-binary psycopg2

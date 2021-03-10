@@ -145,6 +145,20 @@ class TestClient(FlaskClient):
 
 @attr(client_min_version=1, client_max_version=LATEST_API_VERSION)
 class BaseServerTestCase(unittest.TestCase):
+    # hack for running tests with py2's unnitest, but using py3's
+    # assert method name; to be removed once we run unittests on py3 only
+    LABELS = [{'env': 'aws'}, {'arch': 'k8s'}]
+    LABELS_2 = [{'env': 'gcp'}, {'arch': 'k8s'}]
+    FILTER_ID = 'filter'
+    FILTER_RULES = [FilterRule('env', ['aws'], 'not_any_of', 'label'),
+                    FilterRule('arch', ['k8s'], 'any_of', 'label')]
+
+    FILTER_RULES_2 = [FilterRule('env', ['aws'], 'any_of', 'label'),
+                      FilterRule('arch', ['k8s'], 'any_of', 'label')]
+
+    def assertRaisesRegex(self, *a, **kw):
+        return self.assertRaisesRegexp(*a, **kw)
+
     def assertEmpty(self, obj):
         self.assertIsNotNone(obj)
         self.assertFalse(obj)
@@ -1057,10 +1071,10 @@ class BaseServerTestCase(unittest.TestCase):
     def put_blueprint_with_labels(self, labels, **blueprint_kwargs):
         return self.put_blueprint(labels=labels, **blueprint_kwargs)
 
-    def create_filter(self, filter_name, filter_rules,
-                      visibility=VisibilityState.TENANT, client=None):
-        client = client or self.client
-        return client.filters.create(filter_name, filter_rules, visibility)
+    @staticmethod
+    def create_filter(filters_client, filter_id, filter_rules,
+                      visibility=VisibilityState.TENANT):
+        return filters_client.create(filter_id, filter_rules, visibility)
 
     def update_filter(self, filters_client, new_filter_rules=None,
                       new_visibility=None):

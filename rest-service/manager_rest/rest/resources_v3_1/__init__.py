@@ -128,3 +128,8 @@ from .nodes import (  # NOQA
     Nodes,
     NodeInstances,
 )
+
+from .searches import (  # NOQA
+    DeploymentsSearches,
+    BlueprintsSearches
+)
