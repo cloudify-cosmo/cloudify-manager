@@ -30,7 +30,7 @@ installation_status = sa.Enum(
 deployment_status = sa.Enum(
     'good',
     'in_progress',
-    'require_attention',
+    'requires_attention',
     name='deployment_status'
 )
 
