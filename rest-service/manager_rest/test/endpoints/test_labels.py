@@ -15,45 +15,70 @@
 
 from manager_rest.test import base_test
 from manager_rest.test.attribute import attr
+from manager_rest.constants import CFY_LABELS
 
 
 @attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
-class DeploymentsLabelsTestCase(base_test.BaseServerTestCase):
-
+class LabelsTestCase(base_test.BaseServerTestCase):
     LABELS = [{'env': 'aws'}, {'arch': 'k8s'}]
     LABELS_2 = [{'env': 'gcp'}, {'arch': 'k8s'}]
+
+    def setUp(self, labels_client):
+        super().setUp()
+        self.labels_client = labels_client
+
+    def _test_list_resource_labels_keys(self):
+        keys_list = self.labels_client.list_keys()
+        self.assertEqual(set(keys_list.items), {'env', 'arch'})
+
+    def _test_list_resource_labels_key_values(self):
+        env_values = self.labels_client.list_key_values('env')
+        arch_values = self.labels_client.list_key_values('arch')
+        self.assertEqual(set(env_values.items), {'aws', 'gcp'})
+        self.assertEqual(arch_values.items, ['k8s'])
+
+    def test_resource_labels_empty_labels(self):
+        keys_list = self.labels_client.list_keys()
+        self.assertEmpty(keys_list.items)
+
+    def test_resource_labels_key_does_not_exist(self):
+        not_exist = self.labels_client.list_key_values('env')
+        self.assertEmpty(not_exist.items)
+
+    def test_get_reserved_labels(self):
+        reserved_labels = self.labels_client.get_reserved_labels_keys()
+        self.assertEqual(reserved_labels.items, list(CFY_LABELS))
+
+
+class DeploymentsLabelsTestCase(LabelsTestCase):
+    def setUp(self):
+        super().setUp(self.client.deployments_labels)
 
     def test_list_deployment_labels_keys(self):
         self.put_deployment_with_labels(self.LABELS)
         self.put_deployment_with_labels(self.LABELS_2)
-        keys_list = self.client.deployments_labels.list_keys()
-        self.assertEqual(set(keys_list.items), {'env', 'arch'})
+        self._test_list_resource_labels_keys()
 
     def test_list_deployment_labels_key_values(self):
         self.put_deployment_with_labels(self.LABELS)
         self.put_deployment_with_labels(self.LABELS_2)
-        env_values = self.client.deployments_labels.list_key_values('env')
-        arch_values = self.client.deployments_labels.list_key_values('arch')
-        self.assertEqual(set(env_values.items), {'aws', 'gcp'})
-        self.assertEqual(arch_values.items, ['k8s'])
+        self._test_list_resource_labels_key_values()
 
-    def test_deployment_labels_empty_labels(self):
-        keys_list = self.client.deployments_labels.list_keys()
-        self.assertEmpty(keys_list.items)
 
-    def test_deployment_labels_key_does_not_exist(self):
-        not_exist = self.client.deployments_labels.list_key_values('env')
-        self.assertEmpty(not_exist.items)
+class BlueprintsLabelsTestCase(LabelsTestCase):
+    def setUp(self):
+        super().setUp(self.client.blueprints_labels)
 
     def test_list_blueprint_labels_keys(self):
-        self.put_blueprint(blueprint_file_name='blueprint_with_labels_1.yaml')
-        keys_list = self.client.blueprints_labels.list_keys()
-        self.assertEqual(set(keys_list.items), {'bp_key1', 'bp_key2'})
+        self.put_blueprint_with_labels(self.LABELS, blueprint_id='bp1')
+        self.put_blueprint_with_labels(self.LABELS_2, blueprint_id='bp2')
+        self._test_list_resource_labels_keys()
 
     def test_list_blueprint_labels_key_values(self):
-        self.put_blueprint(blueprint_file_name='blueprint_with_labels_1.yaml')
-        key1_values = self.client.blueprints_labels.list_key_values('bp_key1')
-        key2_values = self.client.blueprints_labels.list_key_values('bp_key2')
-        self.assertEqual(set(key1_values.items), {'bp_key1_val1'})
-        self.assertEqual(set(key2_values.items),
-                         {'bp_key2_val1', 'bp_key2_val2'})
+        self.put_blueprint_with_labels(self.LABELS, blueprint_id='bp1')
+        self.put_blueprint_with_labels(self.LABELS_2, blueprint_id='bp2')
+        self._test_list_resource_labels_key_values()
+
+
+# This way we avoid rom running this class too
+del LabelsTestCase
