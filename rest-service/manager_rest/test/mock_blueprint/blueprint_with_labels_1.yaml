@@ -11,3 +11,12 @@ blueprint_labels:
     values:
       - bp_key2_val1
       - bp_key2_val2
+
+labels:
+  key1:
+    values:
+      - key1_val1
+  key2:
+    values:
+      - key2_val1
+      - key2_val2
