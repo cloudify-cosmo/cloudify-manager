@@ -33,12 +33,12 @@ FilteredModels = NewType('FilteredModels',
                          Union[models.Deployment, models.Blueprint])
 
 
-def get_filter_rules_from_filter_id(filter_id):
+def get_filter_rules_from_filter_id(filter_id, filters_model):
     if not filter_id:
         return None
 
     validate_inputs({'filter_id': filter_id})
-    filter_elem = get_storage_manager().get(models.Filter, filter_id)
+    filter_elem = get_storage_manager().get(filters_model, filter_id)
     return filter_elem.value
 
 
@@ -98,7 +98,7 @@ def create_filter_rules_list(raw_filter_rules: List[dict],
         elif filter_rule_type == FilterRuleType.ATTRIBUTE:
             err_attr_msg = f"Allowed attributes to filter " \
                            f"{resource_model.__tablename__} by are " \
-                           f"{','.join(resource_model.allowed_filter_attrs)}"
+                           f"{', '.join(resource_model.allowed_filter_attrs)}"
             if filter_rule_operator not in ATTRS_OPERATORS:
                 raise BadFilterRule(
                     filter_rule,

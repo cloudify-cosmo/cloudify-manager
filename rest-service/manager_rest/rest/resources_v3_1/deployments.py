@@ -559,7 +559,8 @@ class DeploymentGroupsId(SecuredResource):
         if filter_id is not None:
             deployments = sm.list(
                 models.Deployment,
-                filter_rules=get_filter_rules_from_filter_id(filter_id)
+                filter_rules=get_filter_rules_from_filter_id(
+                    filter_id, models.DeploymentsFilter)
             )
             for dep in deployments:
                 group.deployments.append(dep)
@@ -594,7 +595,8 @@ class DeploymentGroupsId(SecuredResource):
         if filter_id is not None:
             deployments = sm.list(
                 models.Deployment,
-                filter_rules=get_filter_rules_from_filter_id(filter_id)
+                filter_rules=get_filter_rules_from_filter_id(
+                    filter_id, models.DeploymentsFilter)
             )
             for dep in deployments:
                 group.deployments.remove(dep)
