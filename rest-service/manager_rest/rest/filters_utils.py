@@ -7,6 +7,7 @@ from manager_rest.storage import get_storage_manager, models
 from manager_rest.manager_exceptions import BadFilterRule, BadParametersError
 from manager_rest.constants import (ATTRS_OPERATORS,
                                     FilterRuleType,
+                                    AttrsOperator,
                                     LabelsOperator,
                                     LABELS_OPERATORS,
                                     FILTER_RULE_TYPES)
@@ -103,6 +104,12 @@ def create_filter_rules_list(raw_filter_rules: List[dict],
                     filter_rule,
                     f"The operator for filtering by attributes must be one"
                     f" of {', '.join(ATTRS_OPERATORS)}")
+            if filter_rule_operator == AttrsOperator.IS_NOT_EMPTY:
+                if len(filter_rule_values) > 0:
+                    raise BadFilterRule(
+                        filter_rule,
+                        f"Values list must be empty if the operator is "
+                        f"{AttrsOperator.IS_NOT_EMPTY}")
             if filter_rule_key not in resource_model.allowed_filter_attrs:
                 raise BadFilterRule(filter_rule, err_attr_msg)
 

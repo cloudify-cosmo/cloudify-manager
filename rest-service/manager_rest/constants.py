@@ -102,6 +102,7 @@ class AttrsOperator(str, Enum):
     NOT_CONTAIN = 'not_contain'
     START_WITH = 'start_with'
     END_WITH = 'end_with'
+    IS_NOT_EMPTY = 'is_not_empty'
 
 
 class FilterRuleType(str, Enum):

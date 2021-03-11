@@ -27,6 +27,7 @@ from manager_rest import manager_exceptions
 from manager_rest.storage import models
 from manager_rest.constants import (DEFAULT_TENANT_NAME,
                                     FILE_SERVER_DEPLOYMENTS_FOLDER)
+from manager_rest.rest.filters_utils import FilterRule
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 
@@ -1090,6 +1091,54 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         # sc2 = self.client.execution_schedules.get('sc2', deployment.id)
         self.assertEquals(sc1['rule']['recurrence'], '1w')
         self.assertEquals(len(sc1['all_next_occurrences']), 5)
+
+    def test_list_deployments_with_not_empty_filter(self):
+        self.client.sites.create(self.SITE_NAME)
+        _, _, _, dep_1 = self.put_deployment(
+            blueprint_id='dep_with_site',
+            deployment_id='dep_with_site',
+            site_name=self.SITE_NAME)
+
+        _, _, _, dep_2 = self.put_deployment(
+            blueprint_id='dep_with_no_site',
+            deployment_id='dep_with_no_site')
+
+        site_name_filter = \
+            FilterRule('site_name', [], 'is_not_empty', 'attribute')
+        filtered_dep_ids = [d['id'] for d in self.client.deployments.list(
+            filter_rules=[site_name_filter])]
+        self.assertListEqual(filtered_dep_ids, ['dep_with_site'])
+
+    def test_list_deployments_with_schedules_filter(self):
+        _, _, _, dep_1 = self.put_deployment(
+            blueprint_id='born-with-schedules',
+            deployment_id='born-with-schedules',
+            blueprint_file_name='blueprint_with_default_schedules.yaml')
+        _, _, _, dep_2 = self.put_deployment(
+            blueprint_id='born-without-schedules',
+            deployment_id='born-without-schedules')
+        schedules_filter = \
+            FilterRule('schedules', [], 'is_not_empty', 'attribute')
+
+        # dep_1 has has 2 schedules, dep_2 has none
+        filtered_dep_ids = [d['id'] for d in self.client.deployments.list(
+            filter_rules=[schedules_filter])]
+        self.assertListEqual(filtered_dep_ids, ['born-with-schedules'])
+
+        self.client.execution_schedules.create(
+            'custom-sc', dep_2.id, 'install', since=datetime.now(), count=1)
+        self.client.execution_schedules.delete('sc1', dep_1.id)
+
+        # now each deployment has 1 schedule
+        filtered_dep_ids = [d['id'] for d in self.client.deployments.list(
+            filter_rules=[schedules_filter])]
+        self.assertListEqual(filtered_dep_ids, ['born-with-schedules',
+                                                'born-without-schedules'])
+
+        self.client.execution_schedules.delete('sc2', dep_1.id)
+        filtered_dep_ids = [d['id'] for d in self.client.deployments.list(
+            filter_rules=[schedules_filter])]
+        self.assertListEqual(filtered_dep_ids, ['born-without-schedules'])
 
     def test_update_deployment_with_default_schedules(self):
         _, _, _, deployment = self.put_deployment(
