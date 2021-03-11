@@ -1,14 +1,73 @@
 from flask import request
+from flask_restful_swagger import swagger
 
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager
+from manager_rest.constants import (ATTRS_OPERATORS,
+                                    FILTER_RULE_TYPES,
+                                    LABELS_OPERATORS)
 
 from ..responses_v2 import ListResponse
 from .. import rest_decorators, rest_utils
 from ..filters_utils import (create_filter_rules_list,
                              FilterRule,
                              get_filter_rules_from_filter_id)
+
+
+def _get_swagger_searches_parameters():
+    return [
+        {
+            'in': 'query',
+            'name': '_size',
+            'type': 'integer',
+            'required': 'false'
+        },
+        {
+            'in': 'query',
+            'name': '_offset',
+            'type': 'integer',
+            'required': 'false'
+        },
+        {
+            'in': 'query',
+            'name': '_sort',
+            'type': 'string',
+            'required': 'false'
+        },
+        {
+            'in': 'query',
+            'name': '_all_tenants',
+            'type': 'boolean',
+            'required': 'false'
+        },
+        {
+            'in': 'query',
+            'name': '_get_all_results',
+            'type': 'boolean',
+            'required': 'false'
+        },
+        {
+            'in': 'query',
+            'name': '_filter_id',
+            'type': 'string',
+            'required': 'false'
+        },
+    ]
+
+
+def _swagger_searches_docs(resource_model, resource_name):
+    return {
+        'responseClass': f'List[{resource_model.__name__}]',
+        'nickname': 'list',
+        'notes': f'Returns a filtered list of existing {resource_name}, '
+                 f'based on the provided filter rules.',
+        'parameters': _get_swagger_searches_parameters(),
+        'allowed_filter_rules_attrs': resource_model.allowed_filter_attrs,
+        'filter_rules_attributes_operators': ATTRS_OPERATORS,
+        'filter_rules_labels_operators': LABELS_OPERATORS,
+        'filter_rules_types': FILTER_RULE_TYPES
+    }
 
 
 class ResourceSearches(SecuredResource):
@@ -56,6 +115,8 @@ def get_filter_rules(raw_filter_rules, resource_model, filter_id):
 
 
 class DeploymentsSearches(ResourceSearches):
+    @swagger.operation(**_swagger_searches_docs(models.Deployment,
+                                                'deployments'))
     @authorize('deployment_list', allow_all_tenants=True)
     @rest_decorators.marshal_with(models.Deployment)
     @rest_decorators.paginate
@@ -64,7 +125,7 @@ class DeploymentsSearches(ResourceSearches):
     @rest_decorators.filter_id
     def post(self, _include=None, pagination=None, sort=None,
              all_tenants=None, filter_id=None, **kwargs):
-        """List Deployments using filter rules"""
+        """List deployments using filter rules"""
         filters, _include = rest_utils.modify_deployments_list_args({},
                                                                     _include)
         return super().post(models.Deployment, _include, filters, pagination,
@@ -72,6 +133,8 @@ class DeploymentsSearches(ResourceSearches):
 
 
 class BlueprintsSearches(ResourceSearches):
+    @swagger.operation(**_swagger_searches_docs(models.Blueprint,
+                                                'blueprints'))
     @authorize('blueprint_list', allow_all_tenants=True)
     @rest_decorators.marshal_with(models.Blueprint)
     @rest_decorators.paginate
@@ -80,7 +143,7 @@ class BlueprintsSearches(ResourceSearches):
     @rest_decorators.filter_id
     def post(self, _include=None, pagination=None, sort=None,
              all_tenants=None, filter_id=None, **kwargs):
-        """List Blueprints using filter rules"""
+        """List blueprints using filter rules"""
         filters, _include = rest_utils.modify_blueprints_list_args({},
                                                                    _include)
         return super().post(models.Blueprint, _include, filters, pagination,
