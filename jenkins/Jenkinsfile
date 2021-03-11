@@ -152,17 +152,6 @@ pipeline {
             }
           }
         }
-        stage('py3_compat') {
-          steps {
-            sh script: "mkdir -p ${env.WORKSPACE}/py3_compat && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/py3_compat", label: "copying repo to seperate workspace"
-
-            container('python-old'){
-              dir("${env.WORKSPACE}/py3_compat") {
-                py3Compat()
-              }
-            }
-          }
-        }
       }
     }
     stage('Run Tests') {
