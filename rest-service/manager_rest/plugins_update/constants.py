@@ -45,6 +45,8 @@ TO_MINOR = 'to_minor'
 ALL_TO_MINOR = 'all_to_minor'
 MAPPING = 'mapping'
 FORCE = 'force'
+AUTO_CORRECT_TYPES = 'auto_correct_types'
+REEVALUATE_ACTIVE_STATUSES = 'reevaluate_active_statuses'
 
 UPDATES = 'updates'
 PLUGIN_NAME = 'plugin_name'

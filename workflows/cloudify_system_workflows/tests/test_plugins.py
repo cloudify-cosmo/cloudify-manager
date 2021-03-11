@@ -91,7 +91,7 @@ class TestPluginsUpdate(unittest.TestCase):
     def _update_with_existing_blueprint_mock(deployment_id, *_, **__):
         return PropertyMock(execution_id=deployment_id)
 
-    def test_plugins_update_stops_when_one_deployment_update_fails(self):
+    def test_plugins_update_continues_when_one_deployment_update_fails(self):
         def get_execution_mock(execution_id):
             """
             :return: a mock of an execution object where its status is
@@ -103,32 +103,19 @@ class TestPluginsUpdate(unittest.TestCase):
                     status=execution_status['curr_exec_status'])
             return PropertyMock(status=ExecutionState.TERMINATED)
 
-        def _assert_update_func_raises():
-            with self.assertRaisesRegexp(
-                    RuntimeError,
-                    "Deployment update of deployment {0} with execution ID {0}"
-                    " failed, stopped this plugins update "
-                    "\\(id='my_update_id'\\)\\.".format(failed_execution_id)):
-                update_func(MagicMock(), 'my_update_id', None, dep_ids, False)
+        def _assert_update_func():
+            update_func(MagicMock(),
+                        'my_update_id', None, dep_ids, False, False, True)
             should_call_these = [call(deployment_id=i,
                                       blueprint_id=None,
                                       skip_install=True,
                                       skip_uninstall=True,
                                       skip_reinstall=True,
-                                      force=False)
-                                 for i in range(failed_execution_id)]
+                                      force=False,
+                                      auto_correct_types=False,
+                                      reevaluate_active_statuses=True)
+                                 for i in dep_ids]
             self.deployment_update_mock.assert_has_calls(should_call_these)
-
-            should_not_call_these = [call(deployment_id=i,
-                                          blueprint_id=None,
-                                          skip_install=True,
-                                          skip_uninstall=True,
-                                          skip_reinstall=True,
-                                          force=False)
-                                     for i in range(
-                    failed_execution_id + 1, len(dep_ids))]
-            for _call in self.deployment_update_mock.mock_calls:
-                self.assertNotIn(_call, should_not_call_these)
 
         execution_status = {'curr_exec_status': ExecutionState.FAILED}
 
@@ -137,9 +124,9 @@ class TestPluginsUpdate(unittest.TestCase):
         self.mock_rest_client.executions.get \
             .side_effect = get_execution_mock
 
-        _assert_update_func_raises()
+        _assert_update_func()
         execution_status['curr_exec_status'] = ExecutionState.CANCELLED
-        _assert_update_func_raises()
+        _assert_update_func()
 
     def test_doesnt_stop_updating(self):
         finalize_update_mock = MagicMock()
@@ -148,13 +135,16 @@ class TestPluginsUpdate(unittest.TestCase):
             = finalize_update_mock
         self.mock_rest_client.executions.get \
             .return_value = PropertyMock(status=ExecutionState.TERMINATED)
-        update_func(MagicMock(), '12345678', None, dep_ids, False)
+        update_func(MagicMock(),
+                    '12345678', None, dep_ids, False, False, False)
         should_call_these = [call(deployment_id=i,
                                   blueprint_id=None,
                                   skip_install=True,
                                   skip_uninstall=True,
                                   skip_reinstall=True,
-                                  force=False)
+                                  force=False,
+                                  auto_correct_types=False,
+                                  reevaluate_active_statuses=False)
                              for i in range(len(dep_ids))]
         self.deployment_update_mock.assert_has_calls(should_call_these)
         finalize_update_mock.assert_called_with('12345678')

@@ -32,7 +32,9 @@ from manager_rest.plugins_update.constants import (PLUGIN_NAMES,
                                                    TO_MINOR,
                                                    ALL_TO_MINOR,
                                                    MAPPING,
-                                                   FORCE)
+                                                   FORCE,
+                                                   AUTO_CORRECT_TYPES,
+                                                   REEVALUATE_ACTIVE_STATUSES,)
 from manager_rest.plugins_update.manager import get_plugins_updates_manager
 from manager_rest.rest import (resources_v2,
                                resources_v2_1,
@@ -113,13 +115,20 @@ class PluginsUpdate(SecuredResource):
                 ALL_TO_MINOR: {'type': bool, 'optional': True},
                 TO_MINOR: {'type': list, 'optional': True},
                 MAPPING: {'type': dict, 'optional': True},
-                FORCE: {'type': bool, 'optional': True}
+                FORCE: {'type': bool, 'optional': True},
+                AUTO_CORRECT_TYPES: {'type': bool, 'optional': True},
+                REEVALUATE_ACTIVE_STATUSES: {'type': bool, 'optional': True},
             })
         except BadRequest:
             filters = {}
+        auto_correct_types = filters.pop(AUTO_CORRECT_TYPES, False)
+        reevaluate_active_statuses = filters.pop(REEVALUATE_ACTIVE_STATUSES,
+                                                 False)
         if phase == PHASES.INITIAL:
             return get_plugins_updates_manager().initiate_plugins_update(
-                blueprint_id=id, filters=filters)
+                blueprint_id=id, filters=filters,
+                auto_correct_types=auto_correct_types,
+                reevaluate_active_statuses=reevaluate_active_statuses)
         elif phase == PHASES.FINAL:
             return get_plugins_updates_manager().finalize(
                 plugins_update_id=id)

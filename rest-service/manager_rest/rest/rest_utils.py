@@ -331,11 +331,13 @@ def get_parsed_deployment(blueprint,
 
 def get_deployment_plan(parsed_deployment,
                         inputs,
-                        runtime_only_evaluation=False):
+                        runtime_only_evaluation=False,
+                        auto_correct_types=False):
     try:
         return tasks.prepare_deployment_plan(
             parsed_deployment, get_secret_method, inputs=inputs,
-            runtime_only_evaluation=runtime_only_evaluation)
+            runtime_only_evaluation=runtime_only_evaluation,
+            auto_correct_types=auto_correct_types)
     except parser_exceptions.MissingRequiredInputError as e:
         raise manager_exceptions.MissingRequiredDeploymentInputError(
             str(e))
