@@ -169,12 +169,14 @@ class ExecutionGroups(SecuredResource):
             'workflow_id': {'type': str},
             'default_parameters': {'optional': True},
             'parameters': {'optional': True},
-            'force': {'optional': True}
+            'force': {'optional': True},
+            'concurrency': {'optional': True},
         })
         default_parameters = request_dict.get('default_parameters') or {}
         parameters = request_dict.get('parameters') or {}
         workflow_id = request_dict['workflow_id']
         force = request_dict.get('force') or False
+        concurrency = request_dict.get('concurrency', 5)
 
         sm = get_storage_manager()
         dep_group = sm.get(models.DeploymentGroup,
@@ -185,6 +187,7 @@ class ExecutionGroups(SecuredResource):
             workflow_id=workflow_id,
             created_at=datetime.now(),
             visibility=dep_group.visibility,
+            concurrency=concurrency,
         )
         sm.put(group)
         rm = get_resource_manager()
