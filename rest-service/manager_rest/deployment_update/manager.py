@@ -136,7 +136,7 @@ class DeploymentUpdateManager(object):
 
     def reevaluate_updates_statuses_per_deployment(self, deployment_id: str):
         for active_update in self.list_deployment_updates(
-                filters={'blueprint_id': deployment_id,
+                filters={'deployment_id': deployment_id,
                          'state': [STATES.UPDATING,
                                    STATES.EXECUTING_WORKFLOW,
                                    STATES.FINALIZING]}):
