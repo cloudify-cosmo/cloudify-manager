@@ -294,6 +294,31 @@ class DeploymentUpdatesTestCase(DeploymentUpdatesBase):
             self.assertEqual(getattr(depup_from_client, att),
                              getattr(depup, att))
 
+    def test_reevaluate_active_statuses(self):
+        orig_blueprint = self._add_blueprint('bp1')
+        # new_blueprint = self._add_blueprint('bp2')
+        self.put_blueprint(blueprint_id='bp2')
+        deployment = self._add_deployment(orig_blueprint)
+        execution = self._add_execution(deployment)
+        deployment_update_updating = self._add_deployment_update(
+            deployment, execution)
+        deployment_update_updating.state = 'updating'
+        self.sm.update(deployment_update_updating)
+
+        with self.assertRaisesRegex(
+                CloudifyClientError,
+                r"^409: there are deployment updates still active;"):
+            self.client.deployment_updates.update_with_existing_blueprint(
+                deployment.id, blueprint_id='bp2',
+                reevaluate_active_statuses=False)
+
+        with self.assertRaisesRegex(
+                CloudifyClientError,
+                r"^500: Internal error occurred in manager REST server"):
+            self.client.deployment_updates.update_with_existing_blueprint(
+                deployment.id, blueprint_id='bp2',
+                reevaluate_active_statuses=True)
+
 
 @mark.skip
 class DeploymentUpdatesStepAndStageTestCase(base_test.BaseServerTestCase):
