@@ -41,9 +41,11 @@ def upgrade():
     _modify_execution_schedules_table()
     _add_specialized_execution_fk()
     _add_deployment_statuses()
+    _add_execgroups_concurrency()
 
 
 def downgrade():
+    _drop_execgroups_concurrency()
     _drop_deployment_statuses()
     _drop_specialized_execution_fk()
     _revert_changes_to_execution_schedules_table()
@@ -326,3 +328,19 @@ def _drop_deployment_statuses():
 
     installation_status.drop(op.get_bind())
     deployment_status.drop(op.get_bind())
+
+
+def _add_execgroups_concurrency():
+    op.add_column(
+        'execution_groups',
+        sa.Column(
+            'concurrency',
+            sa.Integer(),
+            server_default='5',
+            nullable=False
+        )
+    )
+
+
+def _drop_execgroups_concurrency():
+    op.drop_column('execution_groups', 'concurrency')
