@@ -60,7 +60,8 @@ NODE = 'node'
 
 
 class CreatedAtMixin(object):
-    created_at = db.Column(UTCDateTime, nullable=False, index=True)
+    created_at = db.Column(UTCDateTime, nullable=False, index=True,
+                           default=lambda: datetime.utcnow())
 
     @classmethod
     def default_sort_column(cls):
@@ -433,6 +434,8 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         dep_dict['labels'] = self.list_labels(self.labels)
         dep_dict['deployment_groups'] = [g.id for g in self.deployment_groups]
         dep_dict['latest_execution_status'] = self.latest_execution_status
+        if not dep_dict.get('installation_status'):
+            dep_dict['installation_status'] = DeploymentState.INACTIVE
         return dep_dict
 
     @staticmethod
@@ -616,10 +619,11 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             '_deployment_fk', 'is_system_workflow', 'visibility', '_tenant_id'
         ),
     )
-
+    id = db.Column(db.Text, index=True, default=lambda: str(uuid.uuid4()))
     ended_at = db.Column(UTCDateTime, nullable=True, index=True)
     error = db.Column(db.Text)
-    is_system_workflow = db.Column(db.Boolean, nullable=False, index=True)
+    is_system_workflow = db.Column(db.Boolean, nullable=False, index=True,
+                                   default=False)
     parameters = db.Column(db.PickleType(protocol=2))
     status = db.Column(
         db.Enum(*ExecutionState.STATES, name='execution_status')
@@ -814,6 +818,7 @@ class Execution(CreatedAtMixin, SQLResourceBase):
                     'source': plugin.get('source')
                 }
         return context
+
 
 class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'execution_groups'
