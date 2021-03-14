@@ -13,7 +13,6 @@ from cloudify.constants import (
     MGMTWORKER_QUEUE,
     BROKER_PORT_SSL
 )
-from dsl_parser import constants
 
 from manager_rest import config, utils
 from manager_rest.storage import get_storage_manager, models
@@ -25,108 +24,55 @@ def execute_workflow(execution,
                      scheduled_time=None,
                      resume=False,
                      handler: SendHandler = None,):
-    deployment = execution.deployment
-    blueprint = deployment.blueprint
-    workflow = deployment.workflows[execution.workflow_id]
-    task_name = workflow['operation']
-    execution_token = execution.token or generate_execution_token(execution.id)
-
-    context = {
-        'type': 'workflow',
-        'task_name': task_name,
-        'task_id': execution.id,
-        'workflow_id': execution.workflow_id,
-        'blueprint_id': blueprint.id,
-        'deployment_id': deployment.id,
-        'runtime_only_evaluation': deployment.runtime_only_evaluation,
-        'execution_id': execution.id,
-        'bypass_maintenance': bypass_maintenance,
-        'dry_run': execution.is_dry_run,
-        'is_system_workflow': False,
-        'wait_after_fail': wait_after_fail,
-        'resume': resume,
-        'execution_token': execution_token,
-        'plugin': {}
-    }
-    plugin_name = workflow['plugin']
-    workflow_plugins = blueprint.plan[constants.WORKFLOW_PLUGINS_TO_INSTALL]
-    plugins = [p for p in workflow_plugins if p['name'] == plugin_name]
-    plugin = plugins[0] if plugins else None
-    if plugin is not None and plugin['package_name']:
-        sm = get_storage_manager()
-        filter_plugin = {'package_name': plugin.get('package_name'),
-                         'package_version': plugin.get('package_version')}
-        managed_plugins = sm.list(models.Plugin, filters=filter_plugin).items
-        if managed_plugins:
-            plugin['visibility'] = managed_plugins[0].visibility
-            plugin['tenant_name'] = managed_plugins[0].tenant_name
-
-        context['plugin'] = {
-            'name': plugin_name,
-            'package_name': plugin.get('package_name'),
-            'package_version': plugin.get('package_version'),
-            'visibility': plugin.get('visibility'),
-            'tenant_name': plugin.get('tenant_name'),
-            'source': plugin.get('source')
-        }
-
-    return _execute_task(execution_id=execution.id,
-                         execution_parameters=execution.parameters,
-                         context=context,
-                         execution_creator=execution.creator,
-                         scheduled_time=scheduled_time,
-                         handler=handler,)
-
-
-def _system_workflow_task_name(wf_id):
-    return {
-        'create_snapshot': 'cloudify_system_workflows.snapshot.create',
-        'restore_snapshot': 'cloudify_system_workflows.snapshot.restore',
-        'uninstall_plugin': 'cloudify_system_workflows.plugins.uninstall',
-        'create_deployment_environment':
-            'cloudify_system_workflows.deployment_environment.create',
-        'delete_deployment_environment':
-            'cloudify_system_workflows.deployment_environment.delete',
-        'update_plugin': 'cloudify_system_workflows.plugins.update',
-        'upload_blueprint': 'cloudify_system_workflows.blueprint.upload'
-    }[wf_id]
-
-
-def execute_system_workflow(execution,
-                            bypass_maintenance=None,
-                            update_execution_status=True):
-    context = {
-        'type': 'workflow',
-        'task_id': execution.id,
-        'execution_id': execution.id,
-        'workflow_id': execution.workflow_id,
-        'task_name': _system_workflow_task_name(execution.workflow_id),
-        'bypass_maintenance': bypass_maintenance,
-        'dry_run': execution.is_dry_run,
-        'update_execution_status': update_execution_status,
-        'is_system_workflow': execution.is_system_workflow,
-        'execution_token': generate_execution_token(execution.id),
-    }
-
-    if execution.deployment:
-        context['blueprint_id'] = execution.deployment.blueprint_id
-        context['deployment_id'] = execution.deployment.id
-
-    return _execute_task(execution_id=context['task_id'],
-                         execution_parameters=execution.parameters,
-                         context=context, execution_creator=execution.creator)
-
-
-def generate_execution_token(execution_id):
     sm = get_storage_manager()
-    execution = sm.get(models.Execution, execution_id)
-    execution_token = uuid.uuid4().hex
+    token = generate_execution_token(execution)
+    context = execution.render_context()
+    context.update({
+        'resume': resume,
+        'wait_after_fail': wait_after_fail,
+        'bypass_maintenance': bypass_maintenance,
+        'execution_token': token,
+        'rest_host': [
+            manager.private_ip for manager in sm.list(models.Manager)
+        ],
+        'rest_token': execution.creator.get_auth_token(),
+    })
+    if context.get('plugin'):
+        managed_plugins = sm.list(models.Plugin, filters={
+            'package_name': context['plugin'].get('package_name'),
+            'package_version': context['plugin'].get('package_version'),
+        }).items
+        if managed_plugins:
+            context['plugin']['visibility'] = managed_plugins[0].visibility
+            context['plugin']['tenant_name'] = managed_plugins[0].tenant_name
 
-    # Store the token hashed in the DB
-    execution.token = hashlib.sha256(
-        execution_token.encode('ascii')).hexdigest()
+    execution_parameters = execution.parameters.copy()
+    execution_parameters['__cloudify_context'] = context
+    message = {
+        'cloudify_task': {'kwargs': execution_parameters},
+        'id': execution.id,
+        'dlx_id': None,
+        'execution_creator': execution.creator.id
+    }
+
+    if scheduled_time:
+        message_ttl = _get_time_to_live(scheduled_time)
+        message['dlx_id'] = execution.id
+        _send_task_to_dlx(message, message_ttl)
+        return
+
+    if handler is not None:
+        handler.publish(message)
+    else:
+        _send_mgmtworker_task(message)
+
+
+def generate_execution_token(execution):
+    sm = get_storage_manager()
+    token = uuid.uuid4().hex
+    execution.token = hashlib.sha256(token.encode('ascii')).hexdigest()
     sm.update(execution)
-    return execution_token
+    return token
 
 
 def _get_tenant_dict():
@@ -200,35 +146,6 @@ def _send_task_to_dlx(message, message_ttl, routing_key='workflow'):
     client.add_handler(send_handler)
     with client:
         send_handler.publish(message)
-
-
-def _execute_task(execution_id, execution_parameters,
-                  context, execution_creator, scheduled_time=None,
-                  handler: SendHandler = None):
-    # Get the host ip info and return them
-    sm = get_storage_manager()
-    managers = sm.list(models.Manager)
-    context['rest_host'] = [manager.private_ip for manager in managers]
-    context['rest_token'] = execution_creator.get_auth_token()
-    context['tenant'] = _get_tenant_dict()
-    context['task_target'] = MGMTWORKER_QUEUE
-    context['execution_creator_username'] = execution_creator.username
-    execution_parameters['__cloudify_context'] = context
-    message = {
-        'cloudify_task': {'kwargs': execution_parameters},
-        'id': execution_id,
-        'dlx_id': None,
-        'execution_creator': execution_creator.id
-    }
-    if scheduled_time:
-        message_ttl = _get_time_to_live(scheduled_time)
-        message['dlx_id'] = execution_id
-        _send_task_to_dlx(message, message_ttl)
-        return
-    if handler is not None:
-        handler.publish(message)
-    else:
-        _send_mgmtworker_task(message)
 
 
 def _get_time_to_live(scheduled_time):
