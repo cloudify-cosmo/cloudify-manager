@@ -290,21 +290,27 @@ class ResourceManager(object):
 
         self.create_snapshot_model(snapshot_id)
         try:
-            execution = self._execute_system_workflow(
-                wf_id='create_snapshot',
-                execution_parameters={
+            execution = models.Execution(
+                workflow_id='create_snapshot',
+                parameters={
                     'snapshot_id': snapshot_id,
                     'include_credentials': include_credentials,
                     'include_logs': include_logs,
                     'include_events': include_events,
                     'config': self._get_conf_for_snapshots_wf()
                 },
+                is_system_workflow=True,
+            )
+            self.sm.put(execution)
+            execution = self._execute_system_workflow(
+                execution,
                 bypass_maintenance=bypass_maintenance,
-                queue=queue
+                queue=queue,
             )
         except manager_exceptions.ExistingRunningExecutionError:
             snapshot = self.sm.get(models.Snapshot, snapshot_id)
             self.sm.delete(snapshot)
+            self.sm.delete(execution)
             raise
 
         return execution
@@ -324,9 +330,9 @@ class ResourceManager(object):
                 'Failed snapshot cannot be restored'
             )
 
-        execution = self._execute_system_workflow(
-            wf_id='restore_snapshot',
-            execution_parameters={
+        execution = models.Execution(
+            workflow_id='restore_snapshot',
+            parameters={
                 'snapshot_id': snapshot_id,
                 'recreate_deployments_envs': recreate_deployments_envs,
                 'config': self._get_conf_for_snapshots_wf(),
@@ -337,6 +343,11 @@ class ResourceManager(object):
                 'premium_enabled': premium_enabled,
                 'user_is_bootstrap_admin': current_user.is_bootstrap_admin
             },
+            is_system_workflow=True,
+        )
+        self.sm.put(execution)
+        execution = self._execute_system_workflow(
+            execution,
             bypass_maintenance=bypass_maintenance
         )
         return execution
@@ -374,10 +385,9 @@ class ResourceManager(object):
         :param no_changes_required: True if a fake execution should be created.
         :return: execution ID.
         """
-        return self._execute_system_workflow(
-            wf_id='update_plugin',
-            deployment=None,
-            execution_parameters={
+        execution = models.Execution(
+            workflow_id='update_plugin',
+            parameters={
                 'update_id': plugins_update.id,
                 'deployments_to_update': plugins_update.deployments_to_update,
                 'temp_blueprint_id': plugins_update.temp_blueprint_id,
@@ -385,8 +395,18 @@ class ResourceManager(object):
                 'auto_correct_types': auto_correct_types,
                 'reevaluate_active_statuses': reevaluate_active_statuses,
             },
-            verify_no_executions=False,
-            fake_execution=no_changes_required)
+            status=ExecutionState.PENDING,
+            is_system_workflow=True
+        )
+        if no_changes_required:
+            execution.status = ExecutionState.TERMINATED
+            self.sm.put(execution)
+            return execution
+        else:
+            self.sm.put(execution)
+            return self._execute_system_workflow(
+                execution,
+                verify_no_executions=False)
 
     def remove_plugin(self, plugin_id, force):
         # Verify plugin exists and can be removed
@@ -428,10 +448,9 @@ class ResourceManager(object):
 
     def upload_blueprint(self, blueprint_id, app_file_name, blueprint_url,
                          file_server_root, validate_only=False, labels=None):
-        return self._execute_system_workflow(
-            wf_id='upload_blueprint',
-            verify_no_executions=False,
-            execution_parameters={
+        execution = models.Execution(
+            workflow_id='upload_blueprint',
+            parameters={
                 'blueprint_id': blueprint_id,
                 'app_file_name': app_file_name,
                 'url': blueprint_url,
@@ -439,6 +458,12 @@ class ResourceManager(object):
                 'validate_only': validate_only,
                 'labels': labels,
             },
+            status=ExecutionState.PENDING,
+        )
+        self.sm.put(execution)
+        return self._execute_system_workflow(
+            execution,
+            verify_no_executions=False,
         )
 
     def publish_blueprint(self,
@@ -643,17 +668,21 @@ class ResourceManager(object):
 
         dep = self.sm.get(models.Deployment, deployment_id)
 
-        self._execute_system_workflow(
-            wf_id='delete_deployment_environment',
+        execution = models.Execution(
+            workflow_id='delete_deployment_environment',
             deployment=deployment,
+            status=ExecutionState.PENDING,
+            parameters={'delete_logs': delete_logs},
+        )
+        self.sm.put(execution)
+        self._execute_system_workflow(
+            execution,
             bypass_maintenance=bypass_maintenance,
             verify_no_executions=False,
-            execution_parameters={
-                'delete_logs': delete_logs
-            })
+        )
         workflow_executor.delete_source_plugins(deployment.id)
 
-        return dep
+        return deployment
 
     def delete_deployment(self, deployment):
         """Delete the deployment.
@@ -1918,16 +1947,21 @@ class ResourceManager(object):
                                        inputs,
                                        skip_plugins_validation,
                                        bypass_maintenance):
-        create_execution = self._execute_system_workflow(
-            wf_id='create_deployment_environment',
+        execution = models.Execution(
+            workflow_id='create_deployment_environment',
             deployment=deployment,
-            bypass_maintenance=bypass_maintenance,
-            execution_parameters={
+            status=ExecutionState.PENDING,
+            parameters={
                 'inputs': inputs,
                 'skip_plugins_validation': skip_plugins_validation,
-            }
+            },
         )
-        deployment.create_execution = create_execution
+        self.sm.put(execution)
+        self._execute_system_workflow(
+            execution,
+            bypass_maintenance=bypass_maintenance,
+        )
+        deployment.create_execution = execution
         self.sm.update(deployment)
 
     def _check_for_active_executions(self, deployment_id, force,

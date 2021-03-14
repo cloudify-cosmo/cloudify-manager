@@ -116,23 +116,22 @@ def should_run(schedule):
 
 def execute_workflow(schedule):
     rm = get_resource_manager()
-    set_current_tenant(schedule.tenant)
     logger.info('Running: %s', schedule)
 
-    # always queue an execution which couldn't start
     execution_arguments = schedule.execution_arguments or {}
-    execution_arguments['queue'] = True
+    start_arguments = {'queue': True}
+    for start_arg in ('force', 'wait_after_fail'):
+        if start_arg in execution_arguments:
+            start_arguments[start_arg] = execution_arguments.pop(start_arg)
 
-    try:
-        return rm.execute_workflow(
-            deployment_id=schedule.deployment.id,
-            workflow_id=schedule.workflow_id,
-            parameters=schedule.parameters,
-            execution_creator=schedule.creator,
-            **schedule.execution_arguments
-        )
-    finally:
-        set_current_tenant(None)
+    execution = models.Execution(
+        workflow_id=schedule.workflow_id,
+        deployment=schedule.deployment,
+        creator=schedule.creator,
+        parameters=schedule.parameters,
+        **execution_arguments,
+    )
+    return rm.execute_workflow(execution, **start_arguments)
 
 
 def main():
