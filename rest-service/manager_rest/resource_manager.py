@@ -602,18 +602,13 @@ class ResourceManager(object):
         Do validations and send the delete-dep-env workflow. The deployment
         will be really actually deleted once that finishes.
         """
-        # Verify deployment exists.
         deployment = self.sm.get(models.Deployment, deployment_id)
-
-        # Validate there are no running executions for this deployment
-        deployment_id_filter = self.create_filters_dict(
-            deployment_id=deployment_id,
-            status=ExecutionState.ACTIVE_STATES + ExecutionState.QUEUED_STATE
-        )
-        executions = self.sm.list(
-            models.Execution,
-            filters=deployment_id_filter
-        )
+        executions = self.sm.list(models.Execution, filters={
+            'deployment_id': deployment_id,
+            'status': (
+                ExecutionState.ACTIVE_STATES + ExecutionState.QUEUED_STATE
+            )
+        }, get_all_results=True)
 
         # Verify deleting the deployment won't affect dependent deployments
         dep_graph = RecursiveDeploymentDependencies(self.sm)
@@ -622,51 +617,49 @@ class ResourceManager(object):
             dep_graph.retrieve_and_display_dependencies(
                 deployment.id,
                 excluded_component_creator_ids=excluded_ids)
+
         if deployment_dependencies:
             if force:
                 current_app.logger.warning(
-                    "Force-deleting deployment {0} despite having the "
-                    "following existing dependent installations\n{1}".format(
-                        deployment.id, deployment_dependencies
-                    ))
+                    "Force-deleting deployment %s despite having the "
+                    "following existing dependent installations\n%s",
+                    deployment.id, deployment_dependencies
+                )
             else:
                 raise manager_exceptions.DependentExistsError(
-                    "Can't delete deployment {0} - the following existing "
-                    "installations depend on it:\n{1}".format(
-                        deployment_id, deployment_dependencies
-                    )
+                    f"Can't delete deployment {deployment_id} - the following "
+                    f"existing installations depend on it:\n"
+                    f"{deployment_dependencies}"
                 )
 
-        if self._any_running_executions(executions):
-            raise manager_exceptions.DependentExistsError(
-                "Can't delete deployment {0} - There are running or queued "
-                "executions for this deployment. Running executions ids: {1}"
-                .format(
-                    deployment_id,
-                    ','.join([execution.id for execution in
-                              executions if execution.status not
-                              in ExecutionState.END_STATES])))
-        if not force:
-            deployment_id_filter = self.create_filters_dict(
-                deployment_id=deployment_id)
-            node_instances = self.sm.list(
-                models.NodeInstance,
-                filters=deployment_id_filter,
-                get_all_results=True
+        if executions:
+            running_ids = ','.join(
+                execution.id for execution in executions
+                if execution.status not in ExecutionState.END_STATES
             )
+            raise manager_exceptions.DependentExistsError(
+                f"Can't delete deployment {deployment_id} - There are "
+                f"running or queued executions for this deployment. "
+                f"Running executions ids: {running_ids}"
+            )
+
+        if not force:
+            node_instances = self.sm.list(models.NodeInstance, filters={
+                'deployment_id': deployment_id
+            }, get_all_results=True)
             # validate either all nodes for this deployment are still
             # uninitialized or have been deleted
             if any(node.state not in ('uninitialized', 'deleted') for node in
                    node_instances):
+                existing_instances = ','.join(
+                    node.id for node in node_instances
+                    if node.state not in ('uninitialized', 'deleted')
+                )
                 raise manager_exceptions.DependentExistsError(
-                    "Can't delete deployment {0} - There are live nodes for "
-                    "this deployment. Live nodes ids: {1}"
-                    .format(deployment_id,
-                            ','.join([node.id for node in node_instances
-                                     if node.state not in
-                                     ('uninitialized', 'deleted')])))
-
-        dep = self.sm.get(models.Deployment, deployment_id)
+                    f"Can't delete deployment {deployment_id} - There are "
+                    f"live nodes for this deployment. Live nodes ids: "
+                    f"{existing_instances}"
+                )
 
         execution = models.Execution(
             workflow_id='delete_deployment_environment',
@@ -2177,11 +2170,6 @@ class ResourceManager(object):
                 active_component_creator_deployment_ids.append(deployment.id)
 
         return active_component_creator_deployment_ids
-
-    @staticmethod
-    def _any_running_executions(executions):
-        return any(execution.status not in
-                   ExecutionState.END_STATES for execution in executions)
 
     def _workflow_queued(self, execution):
         message_context = {
