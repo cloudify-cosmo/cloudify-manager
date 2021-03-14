@@ -893,46 +893,10 @@ class ResourceManager(object):
         return False
 
     def execute_queued_workflow(self, execution):
-        """
-        Whenever an execution is about to change to END status this function
-        is called. Since the execution exists in the DB (it was created and
-        then queued), we extract the needed information, set the correct user
-        and re-run it with the correct workflow executor.
-        :param execution: an execution DB object
-        """
-        current_tenant = utils.current_tenant
-        deployment = execution.deployment
-        deployment_id = None
-        if deployment:
-            deployment_id = deployment.id
-        workflow_id = execution.workflow_id
-        execution_parameters = execution.parameters
-
-        # Since this method is triggered by another execution we need to
-        # make sure we use the correct user to execute the queued execution.
-        # That is, the user that created the execution (instead of
-        # `current_user` which we usually use)
-        execution_creator = execution.creator
-        self._set_execution_tenant(execution.tenant_name)
         if self._should_use_system_workflow_executor(execution):
-            # Use `execute_system_workflow`
-            self._execute_system_workflow(
-                workflow_id, deployment=deployment,
-                execution_parameters=execution_parameters, timeout=0,
-                created_at=None, verify_no_executions=True,
-                bypass_maintenance=None, update_execution_status=True,
-                queue=True, execution=execution,
-                execution_creator=execution_creator
-            )
-
-        else:  # Use `execute_workflow`
-            self.execute_workflow(
-                deployment_id, workflow_id, parameters=execution_parameters,
-                allow_custom_parameters=False, force=False,
-                bypass_maintenance=None, dry_run=False, queue=True,
-                execution=execution, execution_creator=execution_creator
-            )
-        utils.set_current_tenant(current_tenant)
+            self._execute_system_workflow(execution, queue=True)
+        else:
+            self.execute_workflow(execution, queue=True)
 
     @staticmethod
     def _get_proper_status(should_queue, scheduled=None):
