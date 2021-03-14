@@ -27,7 +27,6 @@ from collections import defaultdict
 from flask import current_app
 from flask_security import current_user
 
-from cloudify._compat import StringIO, text_type
 from cloudify.cryptography_utils import encrypt
 from cloudify.workflows import tasks as cloudify_tasks
 from cloudify.utils import parse_utc_datetime_relative
@@ -512,8 +511,7 @@ class ResourceManager(object):
                            application_dir,
                            application_file_name,
                            resources_base):
-        self.parse_plan(
-            application_dir, application_file_name, resources_base)
+        self.parse_plan(application_dir, application_file_name, resources_base)
 
     @staticmethod
     def parse_plan(application_dir, application_file_name, resources_base,
@@ -765,7 +763,7 @@ class ResourceManager(object):
 
     def resume_execution(self, execution_id, force=False):
         execution = self.sm.get(models.Execution, execution_id)
-        execution_token = generate_execution_token(execution_id)
+        execution_token = generate_execution_token(execution)
         if execution.status in {ExecutionState.CANCELLED,
                                 ExecutionState.FAILED}:
             self._reset_operations(execution, execution_token)
@@ -854,7 +852,7 @@ class ResourceManager(object):
         is_cascading_workflow = workflow.get('is_cascading', False)
         if is_cascading_workflow:
             components_dep_ids = self._find_all_components_deployment_id(
-                deployment_id)
+                execution.deployment.id)
 
             for component_dep_id in components_dep_ids:
                 dep = self.sm.get(models.Deployment, component_dep_id)
@@ -1837,7 +1835,7 @@ class ResourceManager(object):
             prepared_relationships.append(relationship)
         return prepared_relationships
 
-    def _verify_deployment_environment_created_successfully(self, deployment):
+    def verify_deployment_environment_created_successfully(self, deployment):
         if not deployment.create_execution:
             # the user removed the execution, let's assume they knew
             # what they were doing and allow this
@@ -2055,7 +2053,7 @@ class ResourceManager(object):
                 .format(resource_id)
             )
 
-    def _validate_permitted_to_execute_global_workflow(self, deployment):
+    def _check_allow_global_execution(self, deployment):
         if (deployment.visibility == VisibilityState.GLOBAL and
                 deployment.tenant != self.sm.current_tenant and
                 not utils.can_execute_global_workflow(utils.current_tenant)):
