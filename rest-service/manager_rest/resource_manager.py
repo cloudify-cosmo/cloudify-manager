@@ -141,14 +141,16 @@ class ResourceManager(object):
                         status,
                         execution.id,
                         execution.workflow_id))
-        old_status = execution.status
         execution.status = status
         execution.error = error
 
-        # Add `started_at` to scheduled execution that just started
-        if (old_status == ExecutionState.SCHEDULED
-                and status == ExecutionState.STARTED):
+        if status == ExecutionState.STARTED:
             execution.started_at = utils.get_formatted_timestamp()
+            if execution.deployment:
+                execution.deployment.deployment_status = \
+                    DeploymentState.IN_PROGRESS
+                execution.deployment.latest_execution = execution
+                self.sm.update(execution.deployment)
 
         if status in ExecutionState.END_STATES:
             execution.ended_at = utils.get_formatted_timestamp()
