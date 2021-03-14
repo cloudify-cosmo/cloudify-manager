@@ -936,7 +936,11 @@ class BaseServerTestCase(unittest.TestCase):
         if plan.get('description'):
             update_dict['description'] = plan['description']
         if labels:
-            update_dict['labels'] = labels
+            parsed_labels_list = []
+            for label in labels:
+                [(label_key, label_value)] = label.items()
+                parsed_labels_list.append([label_key, label_value])
+            update_dict['labels'] = parsed_labels_list
         return client.blueprints.update(blueprint_id, update_dict=update_dict)
 
     def _add_blueprint(self, blueprint_id=None):
@@ -1023,7 +1027,7 @@ class BaseServerTestCase(unittest.TestCase):
         )
 
     def put_deployment_with_labels(self, labels, resource_id=None,
-                                   client=None):
+                                   client=None, **deployment_kwargs):
         client = client or self.client
         resource_id = resource_id or 'i{0}'.format(uuid.uuid4())
         _, _, _, deployment = self.put_deployment(
@@ -1031,9 +1035,13 @@ class BaseServerTestCase(unittest.TestCase):
             blueprint_id=resource_id,
             deployment_id=resource_id,
             labels=labels,
-            client=client)
+            client=client,
+            **deployment_kwargs)
 
         return deployment
+
+    def put_blueprint_with_labels(self, labels, **blueprint_kwargs):
+        return self.put_blueprint(labels=labels, **blueprint_kwargs)
 
     def create_filter(self, filter_name, filter_rules,
                       visibility=VisibilityState.TENANT, client=None):

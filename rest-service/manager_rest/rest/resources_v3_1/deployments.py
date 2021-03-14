@@ -23,7 +23,7 @@ from flask_restful_swagger import swagger
 from flask_restful.reqparse import Argument
 
 from cloudify._compat import text_type
-from cloudify.models_states import VisibilityState
+from cloudify.models_states import VisibilityState, ExecutionState
 from cloudify.deployment_dependencies import (create_deployment_dependency,
                                               DEPENDENCY_CREATOR,
                                               SOURCE_DEPLOYMENT,
@@ -33,9 +33,12 @@ from manager_rest import utils, manager_exceptions
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager, db
-from manager_rest.manager_exceptions import (BadParametersError,
-                                             IllegalActionError,
-                                             ConflictError)
+from manager_rest.manager_exceptions import (
+    DeploymentEnvironmentCreationInProgressError,
+    DeploymentCreationError,
+    BadParametersError,
+    IllegalActionError,
+    ConflictError)
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.maintenance import is_bypass_maintenance_mode
 from manager_rest.dsl_functions import evaluate_deployment_capabilities
@@ -105,7 +108,16 @@ class DeploymentsId(resources_v1.DeploymentsId):
         if not args.async_create:
             sm = get_storage_manager()
             rest_utils.wait_for_execution(sm, deployment.create_execution.id)
+            if deployment.create_execution.status != ExecutionState.TERMINATED:
+                raise self._error_from_create(deployment.create_execution)
         return deployment, 201
+
+    def _error_from_create(self, execution):
+        """Map a failed create-dep-env execution to a REST error response"""
+        if execution.status != ExecutionState.FAILED or not execution.error:
+            return DeploymentEnvironmentCreationInProgressError()
+        error_message = execution.error.strip().split('\n')[-1]
+        return DeploymentCreationError(error_message)
 
     @authorize('deployment_create')
     @rest_decorators.marshal_with(models.Deployment)

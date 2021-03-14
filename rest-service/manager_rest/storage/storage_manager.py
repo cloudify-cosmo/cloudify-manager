@@ -835,3 +835,13 @@ class ListResult(object):
 
     def __getitem__(self, item):
         return self.items[item]
+
+    @classmethod
+    def from_list(cls, items):
+        return cls(items, metadata={
+            'pagination': {
+                'total': len(items),
+                'size': config.instance.default_page_size,
+                'offset': 0,
+            }
+        })

@@ -674,6 +674,7 @@ class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
     _deployment_group_fk = foreign_key(
         DeploymentGroup._storage_id, nullable=True)
     workflow_id = db.Column(db.Text, nullable=False)
+    concurrency = db.Column(db.Integer, server_default='5', nullable=False)
 
     @declared_attr
     def deployment_group(cls):
