@@ -598,6 +598,11 @@ class Filter(CreatedAtMixin, SQLResourceBase):
 
 
 class Execution(CreatedAtMixin, SQLResourceBase):
+    def __init__(self, **kwargs):
+        self.allow_custom_parameters = kwargs.pop(
+            'allow_custom_parameters', False)
+        super().__init__(**kwargs)
+
     __tablename__ = 'executions'
     STATUS_DISPLAY_NAMES = {
         ExecutionState.TERMINATED: 'completed'
@@ -656,18 +661,123 @@ class Execution(CreatedAtMixin, SQLResourceBase):
         id_dict['status'] = self.status
         return id_dict
 
-    def set_deployment(self, deployment, blueprint_id=None):
-        self._set_parent(deployment)
-        self.deployment = deployment
-        current_blueprint_id = blueprint_id or deployment.blueprint_id
-        self.blueprint_id = current_blueprint_id
-
     @classproperty
     def resource_fields(cls):
         fields = super(Execution, cls).resource_fields
         fields.pop('token')
         return fields
 
+    @validates('deployment')
+    def _set_deployment(self, key, deployment):
+        self._set_parent(deployment)
+        if self.blueprint_id is None:
+            self.blueprint_id = deployment.blueprint_id
+        if self.parameters is not None and self.workflow_id is not None:
+            self.merge_workflow_parameters(
+                self.parameters, deployment, self.workflow_id)
+        return deployment
+
+    @validates('workflow_id')
+    def _validate_workflow_id(self, key, workflow_id):
+        if self.parameters is not None and self.deployment is not None:
+            self.merge_workflow_parameters(
+                self.parameters, self.deployment, workflow_id)
+        return workflow_id
+
+    @validates('parameters')
+    def _validate_parameters(self, key, parameters):
+        parameters = parameters or {}
+        if self.workflow_id is not None and self.deployment is not None:
+            self.merge_workflow_parameters(
+                parameters, self.deployment, self.workflow_id)
+        return parameters
+
+    def _system_workflow_task_name(self, wf_id):
+        return {
+            'create_snapshot': 'cloudify_system_workflows.snapshot.create',
+            'restore_snapshot': 'cloudify_system_workflows.snapshot.restore',
+            'uninstall_plugin': 'cloudify_system_workflows.plugins.uninstall',
+            'create_deployment_environment':
+                'cloudify_system_workflows.deployment_environment.create',
+            'delete_deployment_environment':
+                'cloudify_system_workflows.deployment_environment.delete',
+            'update_plugin': 'cloudify_system_workflows.plugins.update',
+            'upload_blueprint': 'cloudify_system_workflows.blueprint.upload'
+        }.get(wf_id)
+
+    def get_workflow(self, deployment, workflow_id):
+        system_task_name = self._system_workflow_task_name(workflow_id)
+        if system_task_name:
+            self.allow_custom_parameters = True
+            return {'operation': system_task_name}
+        try:
+            return deployment.workflows[workflow_id]
+        except KeyError:
+            raise manager_exceptions.NonexistentWorkflowError(
+                f'Workflow {workflow_id} does not exist in the '
+                f'deployment {deployment.id}') from None
+
+    def merge_workflow_parameters(self, parameters, deployment, workflow_id):
+        if not deployment.workflows:
+            return
+        workflow = self.get_workflow(deployment, workflow_id)
+        workflow_parameters = workflow.get('parameters', {})
+        custom_parameters = parameters.keys() - workflow_parameters.keys()
+        if not self.allow_custom_parameters and custom_parameters:
+            raise manager_exceptions.IllegalExecutionParametersError(
+                f'Workflow "{workflow_id}" does not have the following '
+                f'parameters declared: { ",".join(custom_parameters) }. '
+                f'Remove these parameters or use the flag for allowing '
+                f'custom parameters') from None
+
+        wrong_types = {}
+        for name, param in workflow_parameters.items():
+            declared_type = param.get('type')
+            if declared_type is None or name not in parameters:
+                continue
+            try:
+                parameters[name] = self._convert_param_type(
+                        parameters[name], declared_type)
+            except ValueError:
+                wrong_types[name] = declared_type
+        if wrong_types:
+            raise manager_exceptions.IllegalExecutionParametersError('\n'.join(
+                f'Parameter "{n}" must be of type {t}'
+                for n, t in wrong_types.items())
+            )
+
+        for name, param in workflow_parameters.items():
+            if 'default' in param:
+                parameters.setdefault(name, param['default'])
+
+        missing_parameters = workflow_parameters.keys() - parameters.keys()
+        if missing_parameters:
+            raise manager_exceptions.IllegalExecutionParametersError(
+                f'Workflow "{workflow_id}" must be provided with the following'
+                f' parameters to execute: { ",".join(missing_parameters) }'
+            ) from None
+
+    def _convert_param_type(self, param, target_type):
+        if target_type == 'integer':
+            return int(param)
+        elif target_type == 'boolean':
+            if isinstance(param, bool):
+                return param
+            elif param.lower() == 'true':
+                return True
+            elif param.lower() == 'false':
+                return False
+            else:
+                raise ValueError(param)
+        elif target_type == 'float':
+            return float(param)
+        elif target_type == 'string':
+            if isinstance(param, str):
+                return param
+            else:
+                raise ValueError(param)
+        else:
+            return param
 
 class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'execution_groups'
