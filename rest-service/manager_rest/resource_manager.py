@@ -958,26 +958,22 @@ class ResourceManager(object):
                 'Workflow {0} does not exist in deployment {1}'.format(
                     wf_id, dep_id))
 
-    def check_for_executions(self, deployment_id, force,
-                             queue, execution, schedule=None):
-        """
-        :param deployment_id: The id of the deployment the workflow belongs to.
-        :param force: If set, 2 executions under the same deployment can run
-                together.
-        :param queue: If set, in case an execution can't currently run it will
-                be queued (instead of raising an exception).
-        :param execution: An execution DB object, if exists it means this
-                execution was de-queued.
-        :param schedule: Whether or not this execution is scheduled to run in
-                        the future
-        If the `queue` flag is False and there are running executions an
-        Exception will be raised
+    def check_for_executions(self, execution, force, queue):
+        """Check if this execution should be queued.
+
+        :param execution: the execution object
+        :param force: allow running this execution in parallel with others
+        :param queue: if the execution can't be run in parallel with others,
+            and this is set, queue the execution. Otherwise, throw.
         """
         system_exec_running = self._check_for_active_system_wide_execution(
-            queue, execution, schedule)
-        execution_running = self._check_for_active_executions(
-            deployment_id, force, queue, schedule)
-        return system_exec_running or execution_running
+            queue, execution)
+        if force:
+            return system_exec_running
+        else:
+            execution_running = self._check_for_active_executions(
+                execution, queue)
+            return system_exec_running or execution_running
 
     def _check_for_any_active_executions(self, queue):
         filters = {
@@ -990,51 +986,36 @@ class ResourceManager(object):
                                           all_tenants=True,
                                           get_all_results=True).items
         ]
-        should_queue = False
         # Execution can't currently run because other executions are running,
         # since `queue` flag is on - we will queue the execution and it will
         # run when possible
         if executions and queue:
-            should_queue = True
-
+            return True
         elif executions:
             raise manager_exceptions.ExistingRunningExecutionError(
                 'You cannot start a system-wide execution if there are '
                 'other executions running. '
                 'Currently running executions: {0}'
                 .format(executions))
-        return should_queue
+        else:
+            return False
 
-    def _check_for_active_system_wide_execution(self, queue,
-                                                execution, scheduled):
-        """
-        If execution is passed (execution is de-queued) we only check for
-        ACTIVE system executions.
-        If execution is None (it's the first time this execution is trying to
-        run) we check for ACTIVE and QUEUED executions.
-        We do this to avoid starving executions.
-        """
-
-        status = ExecutionState.ACTIVE_STATES if execution else \
-            ExecutionState.ACTIVE_STATES + ExecutionState.QUEUED_STATE
-        filters = {
-            'status': status
-        }
+    def _check_for_active_system_wide_execution(self, execution, queue):
         should_queue = False
-        for e in self.list_executions(is_include_system_workflows=True,
-                                      filters=filters,
-                                      all_tenants=True,
-                                      get_all_results=True).items:
+        for e in self.list_executions(
+                is_include_system_workflows=True,
+                filters={'status': ExecutionState.ACTIVE_STATES},
+                all_tenants=True,
+                get_all_results=True).items:
             # When `queue` or `schedule` options are used no need to
             # raise an exception (the execution will run later)
-            if e.deployment_id is None and (queue or scheduled):
+            if e.deployment_id is None and (queue or execution.scheduled_for):
                 should_queue = True
                 break
             elif e.deployment_id is None:
                 raise manager_exceptions.ExistingRunningExecutionError(
-                    'You cannot start an execution if there is a running '
-                    'system-wide execution (id: {0})'
-                    .format(e.id))
+                    f'You cannot start an execution if there is a running '
+                    f'system-wide execution (id: {e.id})')
 
         return should_queue
 
@@ -1964,40 +1945,25 @@ class ResourceManager(object):
         deployment.create_execution = execution
         self.sm.update(deployment)
 
-    def _check_for_active_executions(self, deployment_id, force,
-                                     queue, schedule):
+    def _check_for_active_executions(self, execution, queue):
+        running = self.list_executions(
+            filters={
+                'deployment_id': execution.deployment_id,
+                'id': lambda col: col != execution.id,
+                'status': lambda col: col.notin_(ExecutionState.END_STATES)
+            },
+            is_include_system_workflows=True
+        ).items
 
-        def _get_running_executions(deployment_id=None, include_system=True):
-            deployment_id_filter = self.create_filters_dict(
-                deployment_id=deployment_id,
-                status=ExecutionState.ACTIVE_STATES)
-            executions = self.list_executions(
-                filters=deployment_id_filter,
-                is_include_system_workflows=include_system).items
-            return [e.id for e in executions if
-                    self.sm.get(models.Execution, e.id).status
-                    not in ExecutionState.END_STATES]
-
-        should_queue = False
-
-        # validate no execution is currently in progress
-        if not force:
-            running = _get_running_executions(deployment_id)
-
-            # Execution can't currently run since other executions are running.
-            # `queue` flag is on - we will queue the execution and it will
-            # run when possible
-            if len(running) > 0 and (queue or schedule):
-                should_queue = True
-                return should_queue
-            if len(running) > 0:
-                raise manager_exceptions.ExistingRunningExecutionError(
-                    'The following executions are currently running for this '
-                    'deployment: {0}. To execute this workflow anyway, pass '
-                    '"force=true" as a query parameter to this request'.format(
-                        running))
-
-        return should_queue
+        if not running:
+            return False
+        if queue or execution.scheduled_for:
+            return True
+        else:
+            raise manager_exceptions.ExistingRunningExecutionError(
+                f'The following executions are currently running for this '
+                f'deployment: {running}. To execute this workflow anyway, '
+                f'pass "force=true" as a query parameter to this request')
 
     @staticmethod
     def _get_only_user_execution_parameters(execution_parameters):
