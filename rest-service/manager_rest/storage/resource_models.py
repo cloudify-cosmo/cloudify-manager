@@ -779,6 +779,42 @@ class Execution(CreatedAtMixin, SQLResourceBase):
         else:
             return param
 
+    def render_context(self):
+        workflow = self.get_workflow(self.deployment, self.workflow_id)
+        context = {
+            'type': 'workflow',
+            'task_id': self.id,
+            'execution_id': self.id,
+            'task_name': workflow['operation'],
+            'workflow_id': self.workflow_id,
+            'dry_run': self.is_dry_run,
+            'is_system_workflow': self.is_system_workflow,
+            'execution_creator_username': self.creator.username,
+            'task_target': MGMTWORKER_QUEUE,
+            'tenant': {'name': self.tenant.name},
+        }
+        if self.deployment is not None:
+            context['deployment_id'] = self.deployment.id
+            context['blueprint_id'] = self.blueprint_id
+            context['runtime_only_evaluation'] = \
+                self.deployment.runtime_only_evaluation
+        plugin_name = workflow.get('plugin')
+        if plugin_name:
+            blueprint = self.deployment.blueprint
+            workflow_plugins = blueprint.plan[WORKFLOW_PLUGINS_TO_INSTALL]
+            plugins = [p for p in workflow_plugins if p['name'] == plugin_name]
+            if plugins:
+                plugin = plugins[0]
+                context['plugin'] = {
+                    'name': plugin_name,
+                    'package_name': plugin.get('package_name'),
+                    'package_version': plugin.get('package_version'),
+                    'visibility': plugin.get('visibility'),
+                    'tenant_name': plugin.get('tenant_name'),
+                    'source': plugin.get('source')
+                }
+        return context
+
 class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'execution_groups'
     _deployment_group_fk = foreign_key(
