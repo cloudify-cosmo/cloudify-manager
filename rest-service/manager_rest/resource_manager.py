@@ -54,9 +54,9 @@ from manager_rest.utils import (send_event,
                                 validate_deployment_and_site_visibility,
                                 extract_host_agent_plugins_from_plan)
 from manager_rest.rest.rest_utils import (
-    get_labels_from_plan, parse_datetime_string,
-    RecursiveDeploymentDependencies, update_inter_deployment_dependencies,
-    verify_blueprint_uploaded_state, compute_rule_from_scheduling_params)
+    get_labels_from_plan, RecursiveDeploymentDependencies,
+    update_inter_deployment_dependencies, verify_blueprint_uploaded_state,
+    compute_rule_from_scheduling_params)
 from manager_rest.deployment_update.constants import STATES as UpdateStates
 from manager_rest.plugins_update.constants import STATES as PluginsUpdateStates
 
@@ -836,23 +836,6 @@ class ResourceManager(object):
 
         return execution
 
-    def requeue_execution(self, execution_id, force=False):
-        execution = self.sm.get(models.Execution, execution_id)
-        if execution.status != ExecutionState.SCHEDULED:
-            raise manager_exceptions.ConflictError(
-                'Cannot requeue execution: `{0}` in state: `{1}`'
-                .format(execution.id, execution.status))
-
-        execution.token = None  # it will be re-created
-
-        workflow_executor.execute_workflow(
-            execution,
-            bypass_maintenance=False,
-            scheduled_time=parse_datetime_string(execution.scheduled_for),
-        )
-
-        return execution
-
     def execute_workflow(self, execution, *, force=False, queue=False,
                          bypass_maintenance=None, wait_after_fail=600,
                          allow_overlapping_running_wf=False,
@@ -865,7 +848,7 @@ class ResourceManager(object):
         if not allow_overlapping_running_wf:
             should_queue = self.check_for_executions(execution, force, queue)
 
-        if should_queue and not execution.scheduled_for:
+        if should_queue:
             self._workflow_queued(execution)
             return execution
 
@@ -873,7 +856,6 @@ class ResourceManager(object):
             execution,
             bypass_maintenance=bypass_maintenance,
             wait_after_fail=wait_after_fail,
-            scheduled_time=execution.scheduled_for,
             handler=send_handler,
         )
 
@@ -892,7 +874,6 @@ class ResourceManager(object):
                     allow_custom_parameters=execution.allow_custom_parameters,
                     dry_run=execution.dry_run,
                     creator=execution.creator,
-                    scheduled_for=execution.scheduled_for,
                 )
                 self.execute_workflow(
                     component_execution,
@@ -920,16 +901,6 @@ class ResourceManager(object):
         if workflow_id in dep_env_workflows or execution.is_system_workflow:
             return True
         return False
-
-    @staticmethod
-    def _get_proper_status(should_queue, scheduled=None):
-        if scheduled:
-            return ExecutionState.SCHEDULED
-
-        elif should_queue:
-            return ExecutionState.QUEUED
-
-        return ExecutionState.PENDING
 
     @staticmethod
     def _verify_workflow_in_deployment(wf_id, deployment, dep_id):
