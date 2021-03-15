@@ -845,6 +845,12 @@ class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
             ondelete='CASCADE'
         )
 
+    def currently_running_executions(self):
+        return [
+            exc for exc in self.executions
+            if exc.status in ExecutionState.IN_PROGRESS_STATES
+        ]
+
     @property
     def execution_ids(self):
         return [exc.id for exc in self.executions]

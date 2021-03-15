@@ -713,7 +713,7 @@ class ExecutionsTestCase(BaseServerTestCase):
 
 
 @mock.patch.object(db, 'session', mock.MagicMock())
-class TestExecutionModelValidtions(unittest.TestCase):
+class TestExecutionModelValidtionTests(unittest.TestCase):
     def test_missing_workflow(self):
         d = models.Deployment(workflows={
             'wf': {}
@@ -870,3 +870,94 @@ class TestExecutionModelValidtions(unittest.TestCase):
         assert exc.blueprint_id == d.blueprint_id
         assert exc.visibility == d.visibility
         assert exc.tenant == d.tenant
+
+
+class ExecutionQueueingTests(BaseServerTestCase):
+    def setUp(self):
+        super().setUp()
+        bp = models.Blueprint(id='abc')
+        self.sm.put(bp)
+        self.deployment1 = models.Deployment(id='dep1', blueprint=bp)
+        self.sm.put(self.deployment1)
+        self.deployment2 = models.Deployment(id='dep2', blueprint=bp)
+        self.sm.put(self.deployment2)
+        self.execution1 = models.Execution(
+            deployment=self.deployment1,
+            workflow_id='install',
+            parameters={},
+            status=ExecutionState.TERMINATED,
+        )
+        self.sm.put(self.execution1)
+
+    def _get_queued(self):
+        return list(self.rm._get_queued_executions(self.execution1))
+
+    def _make_execution(self, status=None, deployment=None):
+        execution = models.Execution(
+            deployment=deployment or self.deployment2,
+            workflow_id='install',
+            parameters={},
+            status=status or ExecutionState.QUEUED,
+        )
+        self.sm.put(execution)
+        return execution
+
+    def test_unrelated_execution(self):
+        execution2 = self._make_execution()
+        assert self._get_queued() == [execution2]
+
+    def test_system_workflow(self):
+        self._make_execution()
+        system_execution = models.Execution(
+            workflow_id='install',
+            parameters={},
+            status=ExecutionState.QUEUED,
+            is_system_workflow=True
+        )
+        self.sm.put(system_execution)
+        assert self._get_queued() == [system_execution]
+
+    def test_one_per_deployment(self):
+        self._make_execution(deployment=self.deployment2)
+        self._make_execution(deployment=self.deployment2)
+        assert len(self._get_queued()) == 1
+
+    def test_same_deployment_first(self):
+        execution1 = self._make_execution(deployment=self.deployment2)
+        execution2 = self._make_execution(deployment=self.deployment1)
+        assert self._get_queued() == [execution2, execution1]
+
+    def test_full_group(self):
+        group = models.ExecutionGroup(workflow_id='install')
+        self.sm.put(group)
+
+        # group has concurrency=5, has 4 started, so 1 can run
+        for _ in range(4):
+            execution = self._make_execution(status=ExecutionState.STARTED)
+            group.executions.append(execution)
+
+        queued_execution = self._make_execution(deployment=self.deployment1)
+        group.executions.append(queued_execution)
+
+        assert self._get_queued() == [queued_execution]
+        # now group has 5 started, so none can run
+        execution = self._make_execution(status=ExecutionState.STARTED)
+        group.executions.append(execution)
+        assert self._get_queued() == []
+
+    def test_two_groups(self):
+        group1 = models.ExecutionGroup(id='g1', workflow_id='install')
+        self.sm.put(group1)
+        group2 = models.ExecutionGroup(id='g2', workflow_id='install')
+        self.sm.put(group2)
+        for _ in range(5):
+            execution = self._make_execution(status=ExecutionState.STARTED)
+            group1.executions.append(execution)
+
+        queued_execution = self._make_execution(deployment=self.deployment1)
+        group2.executions.append(queued_execution)
+        assert self._get_queued() == [queued_execution]
+
+        group1.executions.append(queued_execution)
+        # execution won't run because it is in a full group now
+        assert self._get_queued() == []

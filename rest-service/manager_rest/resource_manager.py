@@ -201,38 +201,67 @@ class ResourceManager(object):
         return res
 
     def start_queued_executions(self, finished_execution):
-        queued_executions = self._get_queued_executions()
-        same_deployment_executions = []
-        other_executions = []
+        for execution in self._get_queued_executions(finished_execution):
+            if self._should_use_system_workflow_executor(execution):
+                self._execute_system_workflow(execution, queue=True)
+            else:
+                self.execute_workflow(execution, queue=True)
+
+    def _get_queued_executions(self, finished_execution):
+        sort_by = {'created_at': 'asc'}
+        system_executions = self.sm.list(models.Execution, filters={
+            'status': ExecutionState.QUEUED_STATE,
+            'is_system_workflow': True,
+        }, sort=sort_by, get_all_results=True).items
+        if system_executions:
+            yield system_executions[0]
+            return
+
+        deployment_id = finished_execution.deployment.id
         if finished_execution.deployment:
-            for execution in queued_executions:
-                if finished_execution.deployment == execution.deployment:
-                    same_deployment_executions.append(execution)
-                else:
-                    other_executions.append(execution)
+            same_dep_executions = self.sm.list(models.Execution, filters={
+                'status': ExecutionState.QUEUED_STATE,
+                'deployment_id': deployment_id,
+            }, sort=sort_by, get_all_results=True).items
         else:
-            other_executions = queued_executions
+            same_dep_executions = []
 
-        # same-deployment executions run first, no matter if there's system
-        # executions or not
-        for e in same_deployment_executions:
-            self.execute_queued_workflow(e)
+        other_queued = self.sm.list(models.Execution, filters={
+            'status': ExecutionState.QUEUED_STATE,
+            'deployment_id': lambda col: col != deployment_id,
+        }, sort=sort_by, get_all_results=True).items
+        queued_executions = same_dep_executions + other_queued
 
-        for e in other_executions:
-            self.execute_queued_workflow(e)
-            if e.is_system_workflow:  # To avoid starvation of system workflows
-                break
+        # {deployment: whether it can run executions}
+        busy_deployments = {}
+        # {group: how many executions can it still run}
+        group_can_run = {}
+        for execution in queued_executions:
+            for group in execution.execution_groups:
+                if group.id not in group_can_run:
+                    group_can_run[group] = group.concurrency -\
+                        len(group.currently_running_executions())
 
-    def _get_queued_executions(self):
-        filters = {'status': ExecutionState.QUEUED_STATE}
+            if any(group_can_run[g] <= 0 for g in execution.execution_groups):
+                # this execution cannot run, because it would exceed one
+                # of its' groups concurrency limit
+                continue
 
-        queued_executions = self.list_executions(
-            is_include_system_workflows=True,
-            filters=filters,
-            all_tenants=True,
-            sort={'created_at': 'asc'}).items
+            if execution.deployment not in busy_deployments:
+                busy_deployments[execution.deployment] = any(
+                    exc.status in ExecutionState.ACTIVE_STATES
+                    for exc in execution.deployment.executions
+                )
+            if busy_deployments[execution.deployment]:
+                # this execution can't run, because there's already an
+                # execution running for this deployment
+                continue
 
-        return queued_executions
+            for group in execution.execution_groups:
+                group_can_run[group] -= 1
+            busy_deployments[execution.deployment] = True
+
+            yield execution
 
     def _validate_execution_update(self, current_status, future_status):
         if current_status in ExecutionState.END_STATES:
@@ -891,12 +920,6 @@ class ResourceManager(object):
         if workflow_id in dep_env_workflows or execution.is_system_workflow:
             return True
         return False
-
-    def execute_queued_workflow(self, execution):
-        if self._should_use_system_workflow_executor(execution):
-            self._execute_system_workflow(execution, queue=True)
-        else:
-            self.execute_workflow(execution, queue=True)
 
     @staticmethod
     def _get_proper_status(should_queue, scheduled=None):
