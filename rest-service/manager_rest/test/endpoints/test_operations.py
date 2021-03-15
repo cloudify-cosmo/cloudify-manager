@@ -92,7 +92,7 @@ class OperationsTestCase(base_test.BaseServerTestCase):
         }
         assert self.execution.finished_operations is None
         assert self.execution.total_operations is None
-        tg = self.client.tasks_graphs.create(
+        self.client.tasks_graphs.create(
             self.execution.id, name='workflow', operations=[op1, op2])
         self.sm.refresh(self.execution)
         assert self.execution.finished_operations == 0
