@@ -26,7 +26,7 @@ from cloudify.workflows import tasks as cloudify_tasks
 from cloudify.constants import CLOUDIFY_EXECUTION_TOKEN_HEADER
 
 from manager_rest.storage import models, db
-from manager_rest import utils, manager_exceptions
+from manager_rest import manager_exceptions
 from manager_rest.test.attribute import attr
 from manager_rest.test.base_test import BaseServerTestCase, LATEST_API_VERSION
 
@@ -89,49 +89,6 @@ class ExecutionsTestCase(BaseServerTestCase):
 
         return get_execution
 
-    def test_list_system_executions(self):
-        (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_deployment(
-            deployment_id=self.DEPLOYMENT_ID)
-
-        # manually pushing a system workflow execution to the storage
-        system_wf_execution_id = 'mock_execution_id'
-        system_wf_id = 'mock_system_workflow_id'
-        system_wf_execution = models.Execution(
-            id=system_wf_execution_id,
-            status=ExecutionState.TERMINATED,
-            workflow_id=system_wf_id,
-            created_at=utils.get_formatted_timestamp(),
-            error='',
-            parameters=dict(),
-            is_system_workflow=True,
-            blueprint_id=blueprint_id
-        )
-        deployment = self.sm.get(models.Deployment, deployment_id)
-        system_wf_execution.deployment = deployment
-        self.sm.put(system_wf_execution)
-
-        # listing only non-system workflow executions
-        executions = self.client.executions.list(deployment_id=deployment_id)
-
-        # expecting 1 execution (create_deployment_environment)
-        self.assertEqual(1, len(executions))
-        self.assertEqual('create_deployment_environment',
-                         executions[0]['workflow_id'])
-
-        # listing all executions
-        executions = self.client.executions.list(deployment_id=deployment_id,
-                                                 include_system_workflows=True)
-        executions.sort(key=lambda e: e.created_at)
-
-        # expecting 2 executions
-        self.assertEqual(2, len(executions))
-        self.assertEqual('create_deployment_environment',
-                         executions[0]['workflow_id'])
-        self.assertEqual(system_wf_id, executions[1]['workflow_id'])
-
-        return deployment_id, system_wf_id
-
     @attr(client_min_version=3,
           client_max_version=LATEST_API_VERSION)
     def test_sort_list(self):
@@ -150,24 +107,6 @@ class ExecutionsTestCase(BaseServerTestCase):
         self.assertEqual(2, len(executions))
         self.assertEqual('1', executions[0].id)
         self.assertEqual('0', executions[1].id)
-
-    @attr(client_min_version=2,
-          client_max_version=LATEST_API_VERSION)
-    def test_list_system_executions_with_filters(self):
-        deployment_id, system_wf_id = self.test_list_system_executions()
-
-        # explicitly listing only non-system executions
-        executions = self.client.executions.list(deployment_id=deployment_id,
-                                                 is_system_workflow=False)
-        self.assertEqual(1, len(executions))
-        self.assertEqual('create_deployment_environment',
-                         executions[0]['workflow_id'])
-
-        # listing only system executions
-        executions = self.client.executions.list(deployment_id=deployment_id,
-                                                 is_system_workflow=True)
-        self.assertEqual(1, len(executions))
-        self.assertEqual(system_wf_id, executions[0]['workflow_id'])
 
     def test_get_execution_parameters(self):
         (blueprint_id, deployment_id, blueprint_response,
