@@ -2,6 +2,7 @@ import re
 import os
 import json
 import time
+import uuid
 import base64
 import shutil
 import zipfile
@@ -719,17 +720,28 @@ class SnapshotRestore(object):
         for execution in self._client.executions.list(
                 _get_all_results=True, status=Execution.SCHEDULED):
             if is_later_than_now(execution.scheduled_for):
-                ctx.logger.debug("Restoring execution %s (at %s)",
+                ctx.logger.debug("Re-scheduling execution %s (at %s)",
                                  execution.workflow_id,
                                  execution.scheduled_for)
-                self._client.executions.requeue(execution.id)
-            else:
-                self._client.executions.update(execution.id,
-                                               Execution.FAILED)
-                ctx.logger.warning("Execution %s scheduled for %s is "
-                                   "overdue. Marking as FAILED.",
-                                   execution.id,
-                                   execution.scheduled_for)
+
+                schedule_name = '{}_restored_{}'.format(execution.workflow_id,
+                                                        uuid.uuid4().hex[:16])
+                self._client.execution_schedules.create(
+                    schedule_name,
+                    execution.deployment_id,
+                    execution.workflow_id,
+                    execution_arguments={
+                        'allow_custom_parameters': True,
+                        'dry_run': execution.is_dry_run,
+                    },
+                    parameters=execution.parameters,
+                    since=execution.scheduled_for,
+                    count=1)
+
+            self._client.executions.update(execution.id, Execution.FAILED)
+            ctx.logger.warning(
+                "Marking original execution %s scheduled for %s as FAILED.",
+                execution.id, execution.scheduled_for)
 
     @staticmethod
     def _mark_manager_restoring():

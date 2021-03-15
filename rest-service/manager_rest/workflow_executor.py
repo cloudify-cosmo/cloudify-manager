@@ -1,13 +1,9 @@
-from datetime import datetime
 import hashlib
-import math
 import uuid
 
 from flask_security import current_user
 
-from cloudify.amqp_client import (get_client,
-                                  SendHandler,
-                                  ScheduledExecutionHandler)
+from cloudify.amqp_client import get_client, SendHandler
 from cloudify.models_states import PluginInstallationState
 from cloudify.constants import (
     MGMTWORKER_QUEUE,
@@ -22,7 +18,6 @@ from manager_rest.storage import get_storage_manager, models
 def execute_workflow(execution,
                      bypass_maintenance=None,
                      wait_after_fail=600,
-                     scheduled_time=None,
                      resume=False,
                      handler: SendHandler = None,):
     deployment = execution.deployment
@@ -74,7 +69,6 @@ def execute_workflow(execution,
                          execution_parameters=execution.parameters,
                          context=context,
                          execution_creator=execution.creator,
-                         scheduled_time=scheduled_time,
                          handler=handler,)
 
 
@@ -173,38 +167,8 @@ def _broadcast_mgmtworker_task(message, exchange='cloudify-mgmtworker-service',
         send_handler.publish(message)
 
 
-def _send_task_to_dlx(message, message_ttl, routing_key='workflow'):
-    """
-    We use Rabbit's `Dead Letter Exchange` to achieve execution scheduling:
-    1. Create a Dead Letter Exchange with the following parameters:
-        - `ttl` (time until message is moved to another queue): the delta
-            between now and the scheduled time.
-        - `dead-letter-exchange`: The temporary exchange that is used to
-            forward the task
-        - `dead-letter-routing-key`: The queue we want the task to be
-             ultimately sent to (in this case MGMTWORKER queue).
-    2. Send the execution to that DLX
-    3. When ttl is passed the task will automatically be sent to the
-        MGMTWORKER queue and will be executed normally.
-    """
-    dlx_exchange = message['dlx_id']
-    dlx_routing_key = message['dlx_id'] + '_queue'
-
-    client = get_amqp_client()
-    send_handler = ScheduledExecutionHandler(exchange=dlx_exchange,
-                                             exchange_type='direct',
-                                             routing_key=dlx_routing_key,
-                                             target_exchange=MGMTWORKER_QUEUE,
-                                             target_routing_key=routing_key,
-                                             ttl=message_ttl)
-    client.add_handler(send_handler)
-    with client:
-        send_handler.publish(message)
-
-
 def _execute_task(execution_id, execution_parameters,
-                  context, execution_creator, scheduled_time=None,
-                  handler: SendHandler = None):
+                  context, execution_creator, handler: SendHandler = None):
     # Get the host ip info and return them
     sm = get_storage_manager()
     managers = sm.list(models.Manager)
@@ -220,29 +184,10 @@ def _execute_task(execution_id, execution_parameters,
         'dlx_id': None,
         'execution_creator': execution_creator.id
     }
-    if scheduled_time:
-        message_ttl = _get_time_to_live(scheduled_time)
-        message['dlx_id'] = execution_id
-        _send_task_to_dlx(message, message_ttl)
-        return
     if handler is not None:
         handler.publish(message)
     else:
         _send_mgmtworker_task(message)
-
-
-def _get_time_to_live(scheduled_time):
-    """
-    Rabbit's ttl is the time until message is moved to another queue.
-    Ttl should be an Integer and in miliseconds.
-    :param scheduled_time: The date and time this execution is scheduled for.
-    :return: time (in miliseconds) between `now` and `scheduled time`
-    """
-    now = datetime.utcnow()
-    delta = (scheduled_time - now).total_seconds()
-    delta = int(math.floor(delta))
-    delta_in_milisecs = delta * 1000
-    return delta_in_milisecs
 
 
 def restart_restservice():

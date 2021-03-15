@@ -14,11 +14,14 @@
 #  * limitations under the License.
 #
 
+import uuid
 from datetime import datetime
 
 from flask_restful.reqparse import Argument
 from flask_restful_swagger import swagger
 from flask_restful.inputs import boolean
+
+from cloudify.models_states import ExecutionState
 
 from manager_rest import manager_exceptions
 from manager_rest.maintenance import is_bypass_maintenance_mode
@@ -107,7 +110,27 @@ class Executions(SecuredResource):
         scheduled_time = request_dict.get('scheduled_time', None)
 
         if scheduled_time:
-            scheduled_time = self._parse_scheduled_time(scheduled_time)
+            sm = get_storage_manager()
+            schedule = models.ExecutionSchedule(
+                id='{}_{}'.format(workflow_id, uuid.uuid4().hex[:16]),
+                deployment=sm.get(models.Deployment, deployment_id),
+                created_at=datetime.utcnow(),
+                since=self._parse_scheduled_time(scheduled_time),
+                rule={'count': 1},
+                slip=0,
+                workflow_id=workflow_id,
+                parameters=parameters,
+                execution_arguments={
+                    'allow_custom_parameters': allow_custom_parameters,
+                    'force': force,
+                    'dry_run': dry_run,
+                    'wait_after_fail': wait_after_fail,
+                },
+                stop_on_fail=False,
+            )
+            schedule.next_occurrence = schedule.compute_next_occurrence()
+            sm.put(schedule)
+            return models.Execution(status=ExecutionState.SCHEDULED), 201
 
         if parameters is not None and parameters.__class__ is not dict:
             raise manager_exceptions.BadParametersError(
@@ -119,8 +142,7 @@ class Executions(SecuredResource):
             deployment_id, workflow_id, parameters=parameters,
             allow_custom_parameters=allow_custom_parameters, force=force,
             dry_run=dry_run, bypass_maintenance=bypass_maintenance,
-            queue=queue, wait_after_fail=wait_after_fail,
-            scheduled_time=scheduled_time)
+            queue=queue, wait_after_fail=wait_after_fail)
         return execution, 201
 
     def _parse_scheduled_time(self, scheduled_time):
@@ -187,8 +209,6 @@ class ExecutionsId(SecuredResource):
                 'Invalid action: {0}, Valid action values are: {1}'.format(
                     action, valid_actions))
 
-        if action == 'requeue':
-            return get_resource_manager().requeue_execution(execution_id)
         elif action in ('resume', 'force-resume'):
             return get_resource_manager().resume_execution(
                 execution_id, force=action == 'force-resume')
