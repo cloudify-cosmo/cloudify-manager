@@ -195,7 +195,8 @@ def task_state():
     return Execution.TERMINATED
 
 
-def mock_execute_task(execution_id, **_):
+def mock_send_mgmtworker_task(message, **_):
+    execution_id = message['id']
     sm = get_storage_manager()
     execution = sm.get(models.Execution, execution_id)
     execution.status = task_state()
