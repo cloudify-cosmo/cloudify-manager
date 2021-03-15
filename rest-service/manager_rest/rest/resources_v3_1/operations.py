@@ -16,6 +16,7 @@
 from flask_restful.reqparse import Argument
 
 from cloudify._compat import text_type
+from cloudify.constants import TERMINATED_STATES
 
 from manager_rest.rest.rest_utils import (
     get_args_and_verify_arguments,
@@ -88,6 +89,14 @@ class OperationsId(SecuredResource):
         sm = get_storage_manager()
         instance = sm.get(models.Operation, operation_id, locking=True)
         instance.state = request_dict.get('state', instance.state)
+        if instance.tasks_graph and instance.tasks_graph.execution:
+            execution = instance.tasks_graph.execution
+            if execution.finished_operations is not None:
+                if instance.state in TERMINATED_STATES:
+                    execution.finished_operations += 1
+            sm.update(
+                execution,
+                modified_attrs=('total_operations', 'finished_operations'))
         return sm.update(instance)
 
     @authorize('operations')
@@ -95,6 +104,15 @@ class OperationsId(SecuredResource):
     def delete(self, operation_id, **kwargs):
         sm = get_storage_manager()
         instance = sm.get(models.Operation, operation_id, locking=True)
+        if instance.tasks_graph and instance.tasks_graph.execution:
+            execution = instance.tasks_graph.execution
+            if execution.total_operations:
+                execution.total_operations -= 1
+                if instance.state in TERMINATED_STATES:
+                    execution.finished_operations -= 1
+            sm.update(
+                execution,
+                modified_attrs=('total_operations', 'finished_operations'))
         sm.delete(instance)
         return instance, 200
 
