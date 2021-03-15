@@ -1811,6 +1811,14 @@ class ResourceManager(object):
             type=type,
         )
         self.sm.put(operation)
+        execution = graph.execution
+        if execution.total_operations is None:
+            execution.total_operations = 0
+            execution.finished_operations = 0
+        execution.total_operations += 1
+        self.sm.update(
+            execution,
+            modified_attrs=('total_operations', 'finished_operations'))
         return operation
 
     def create_tasks_graph(self, name, execution_id, operations=None):
@@ -1839,6 +1847,13 @@ class ResourceManager(object):
                     **operation)
                 db.session.add(op)
             self.sm._safe_commit()
+        if execution.total_operations is None:
+            execution.total_operations = 0
+            execution.finished_operations = 0
+        execution.total_operations += len(operations)
+        self.sm.update(
+            execution,
+            modified_attrs=('total_operations', 'finished_operations'))
         return graph
 
     @staticmethod

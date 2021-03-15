@@ -73,6 +73,14 @@ class TestLicense(AgentlessTestCase):
         self.client.license.list()
         self.client.manager.get_status()
 
+    def test_no_error_when_using_get_user(self):
+        self.client.users.get('admin', _get_data=True)
+
+    def test_error_when_using_allowed_endpoint_and_forbidden_method(self):
+        self.assertRaises(MissingCloudifyLicense,
+                          self.client.users.create,
+                          username='user', password='password', role='default')
+
     def test_upload_valid_paying_license(self):
         self._upload_license('test_valid_paying_license.yaml')
         self._verify_license(expired=False, trial=False)

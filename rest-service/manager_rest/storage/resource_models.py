@@ -415,11 +415,6 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
 
     site_name = association_proxy('site', 'name')
 
-    @declared_attr
-    def labels(cls):
-        # labels are defined as `backref` in DeploymentsLabel model
-        return None
-
     @classproperty
     def response_fields(cls):
         fields = super(Deployment, cls).response_fields
@@ -639,6 +634,9 @@ class Execution(CreatedAtMixin, SQLResourceBase):
     token = db.Column(db.String(100), nullable=True, index=True)
 
     _deployment_fk = foreign_key(Deployment._storage_id, nullable=True)
+
+    total_operations = db.Column(db.Integer, nullable=True)
+    finished_operations = db.Column(db.Integer, nullable=True)
 
     @declared_attr
     def deployment(cls):
