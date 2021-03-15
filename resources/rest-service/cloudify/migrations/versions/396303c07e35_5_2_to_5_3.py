@@ -42,6 +42,7 @@ def upgrade():
     _add_specialized_execution_fk()
     _add_deployment_statuses()
     _add_execgroups_concurrency()
+    _add_execution_operations_columns()
 
 
 def downgrade():
@@ -51,6 +52,7 @@ def downgrade():
     _revert_changes_to_execution_schedules_table()
     _revert_changes_to_deployments_labels_table()
     _drop_blueprints_labels_table()
+    _drop_execution_operations_columns()
 
 
 def _add_deployment_statuses():
@@ -344,3 +346,19 @@ def _add_execgroups_concurrency():
 
 def _drop_execgroups_concurrency():
     op.drop_column('execution_groups', 'concurrency')
+
+
+def _add_execution_operations_columns():
+    op.add_column(
+        'executions',
+        sa.Column('finished_operations', sa.Integer(), nullable=True)
+    )
+    op.add_column(
+        'executions',
+        sa.Column('total_operations', sa.Integer(), nullable=True)
+    )
+
+
+def _drop_execution_operations_columns():
+    op.drop_column('executions', 'total_operations')
+    op.drop_column('executions', 'finished_operations')

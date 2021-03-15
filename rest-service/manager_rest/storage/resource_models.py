@@ -627,6 +627,9 @@ class Execution(CreatedAtMixin, SQLResourceBase):
 
     _deployment_fk = foreign_key(Deployment._storage_id, nullable=True)
 
+    total_operations = db.Column(db.Integer, nullable=True)
+    finished_operations = db.Column(db.Integer, nullable=True)
+
     @declared_attr
     def deployment(cls):
         return one_to_many_relationship(
