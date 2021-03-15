@@ -62,7 +62,8 @@ class Deployments(resources_v1.Deployments):
         )
         filters, _include = rest_utils.modify_deployments_list_args(filters,
                                                                     _include)
-        filter_rules = get_filter_rules_from_filter_id(filter_id)
+        filter_rules = get_filter_rules_from_filter_id(
+            filter_id, models.DeploymentsFilter)
         result = get_storage_manager().list(
             models.Deployment,
             include=_include,

@@ -475,7 +475,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
     def test_list_blueprints_with_filter_id(self):
         self.put_blueprint_with_labels(self.LABELS, blueprint_id='bp1')
         bp2 = self.put_blueprint_with_labels(self.LABELS_2, blueprint_id='bp2')
-        self.create_filter(self.client.deployments_filters,
+        self.create_filter(self.client.blueprints_filters,
                            self.FILTER_ID, self.FILTER_RULES)
         blueprints = self.client.blueprints.list(
             filter_id=self.FILTER_ID)

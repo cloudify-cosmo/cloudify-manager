@@ -206,7 +206,7 @@ class FiltersBaseCase(base_test.BaseServerTestCase):
     def test_create_legal_filter(self):
         new_filter = self.create_filter(self.filters_client, FILTER_ID,
                                         LABELS_LEGAL_FILTER_RULES)
-        self.assertEqual(new_filter.labels_filter,
+        self.assertEqual(new_filter.labels_filter_rules,
                          LABELS_LEGAL_FILTER_RULES)
 
     def test_list_filters(self):
@@ -221,7 +221,7 @@ class FiltersBaseCase(base_test.BaseServerTestCase):
 
         self.assertEqual(len(filters_list.items), 3)
         for i in range(3):
-            self.assertEqual(filters_list.items[i].labels_filter,
+            self.assertEqual(filters_list.items[i].labels_filter_rules,
                              [{'key': f'a{i}',
                                'values': [f'b{i}'],
                                'operator': 'any_of',
@@ -258,7 +258,7 @@ class FiltersBaseCase(base_test.BaseServerTestCase):
         new_filter = self.create_filter(self.filters_client,
                                         FILTER_ID,
                                         simple_rule_uppercase)
-        self.assertEqual(new_filter.labels_filter, self.SIMPLE_RULE)
+        self.assertEqual(new_filter.labels_filter_rules, self.SIMPLE_RULE)
 
     def test_filter_create_fails(self):
         err_filter_rule = [{'key': 'a', 'values': 'b', 'operator': 'any_of',
@@ -270,12 +270,12 @@ class FiltersBaseCase(base_test.BaseServerTestCase):
         filter_rule = FilterRule('a', ['b'], 'any_of', 'label')
         new_filter = self.create_filter(self.filters_client, FILTER_ID,
                                         [filter_rule, filter_rule])
-        self.assertEqual(new_filter.labels_filter, [filter_rule])
+        self.assertEqual(new_filter.labels_filter_rules, [filter_rule])
 
     def test_get_filter(self):
         self.create_filter(self.filters_client, FILTER_ID, self.SIMPLE_RULE)
         fetched_filter = self.filters_client.get(FILTER_ID)
-        self.assertEqual(fetched_filter.labels_filter, self.SIMPLE_RULE)
+        self.assertEqual(fetched_filter.labels_filter_rules, self.SIMPLE_RULE)
 
     def test_delete_filter(self):
         self.create_filter(self.filters_client, FILTER_ID, self.SIMPLE_RULE)

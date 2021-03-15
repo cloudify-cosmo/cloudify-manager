@@ -589,25 +589,45 @@ class BlueprintLabel(_Label):
             backref=db.backref('labels', cascade='all, delete-orphan'))
 
 
-class Filter(CreatedAtMixin, SQLResourceBase):
-    __tablename__ = 'filters'
+class _Filter(CreatedAtMixin, SQLResourceBase):
+    __abstract__ = True
+    _extra_fields = {'labels_filter_rules': flask_fields.Raw,
+                     'attrs_filter_rules': flask_fields.Raw}
+
+    value = db.Column(JSONString, nullable=True)
+    updated_at = db.Column(UTCDateTime)
+
+    @property
+    def labels_filter_rules(self):
+        return [filter_rule for filter_rule in self.value
+                if filter_rule['type'] == 'label']
+
+    @property
+    def attrs_filter_rules(self):
+        return [filter_rule for filter_rule in self.value
+                if filter_rule['type'] == 'attribute']
+
+
+class DeploymentsFilter(_Filter):
+    __tablename__ = 'deployments_filters'
     __table_args__ = (
         db.Index(
-            'filters_id__tenant_id_idx',
+            'deployments_filters_id__tenant_id_idx',
             'id', '_tenant_id',
             unique=True
         ),
     )
-    _extra_fields = {'labels_filters': flask_fields.Raw}
 
-    value = db.Column(JSONString, nullable=True)
-    filtered_resource = db.Column(db.Text, nullable=False, index=True)
-    updated_at = db.Column(UTCDateTime)
 
-    @property
-    def labels_filters(self):
-        return [filter_rule for filter_rule in self.value
-                if filter_rule['type'] == 'label']
+class BlueprintsFilter(_Filter):
+    __tablename__ = 'blueprints_filters'
+    __table_args__ = (
+        db.Index(
+            'blueprints_filters_id__tenant_id_idx',
+            'id', '_tenant_id',
+            unique=True
+        ),
+    )
 
 
 class Execution(CreatedAtMixin, SQLResourceBase):
