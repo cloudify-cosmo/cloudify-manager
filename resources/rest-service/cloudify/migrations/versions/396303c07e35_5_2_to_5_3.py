@@ -1,6 +1,8 @@
 """5_2 to 5_3
 
 - Create blueprints_labels table
+- Apply some modification to the deployments labels table
+- Split the `filters` table to `deployments_filters` and `blueprints_filters`
 - Add installation_status to the deployment table
 - Add deployment_status to the deployment table
 - Add latest execution FK to the deployment table
@@ -12,8 +14,10 @@ Create Date: 2021-02-15 12:02:22.089135
 """
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
-from manager_rest.storage.models_base import UTCDateTime
+from cloudify.models_states import VisibilityState
+from manager_rest.storage.models_base import UTCDateTime, JSONString
 
 # revision identifiers, used by Alembic.
 revision = '396303c07e35'
@@ -35,12 +39,17 @@ deployment_status = sa.Enum(
 )
 
 
+VISIBILITY_ENUM = postgresql.ENUM(*VisibilityState.STATES,
+                                  name='visibility_states',
+                                  create_type=False)
+
+
 def upgrade():
     _create_blueprints_labels_table()
     _modify_deployments_labels_table()
     _modify_execution_schedules_table()
     _add_specialized_execution_fk()
-    _modify_filters_table()
+    _create_filters_tables()
     _add_deployment_statuses()
     _add_execgroups_concurrency()
     _add_execution_operations_columns()
@@ -49,7 +58,7 @@ def upgrade():
 def downgrade():
     _drop_execgroups_concurrency()
     _drop_deployment_statuses()
-    _revert_changes_to_deployments_labels_table()
+    _revert_filters_modifications()
     _drop_specialized_execution_fk()
     _revert_changes_to_execution_schedules_table()
     _revert_changes_to_deployments_labels_table()
@@ -265,15 +274,6 @@ def _modify_deployments_labels_table():
     op.drop_column('deployments_labels', '_deployment_fk')
 
 
-def _modify_filters_table():
-    op.add_column('filters',
-                  sa.Column('filtered_resource', sa.Text(), nullable=False))
-    op.create_index(op.f('filters_filtered_resource_idx'),
-                    'filters',
-                    ['filtered_resource'],
-                    unique=False)
-
-
 def _revert_changes_to_deployments_labels_table():
     op.add_column('deployments_labels',
                   sa.Column('_deployment_fk',
@@ -335,17 +335,224 @@ def _drop_blueprints_labels_table():
     op.drop_table('blueprints_labels')
 
 
-def _revert_changes_to_filters_table():
-    op.drop_index(op.f('filters_filtered_resource_idx'), table_name='filters')
-    op.drop_column('filters', 'filtered_resource')
-
-
 def _drop_deployment_statuses():
     op.drop_column('deployments', 'installation_status')
     op.drop_column('deployments', 'deployment_status')
 
     installation_status.drop(op.get_bind())
     deployment_status.drop(op.get_bind())
+
+
+def _create_filters_tables():
+    op.create_table(
+        'blueprints_filters',
+        sa.Column('_storage_id',
+                  sa.Integer(),
+                  autoincrement=True,
+                  nullable=False),
+        sa.Column('id', sa.Text(), nullable=True),
+        sa.Column('visibility', VISIBILITY_ENUM, nullable=True),
+        sa.Column('created_at', UTCDateTime(), nullable=False),
+        sa.Column('value', JSONString(), nullable=True),
+        sa.Column('updated_at', UTCDateTime(), nullable=True),
+        sa.Column('_tenant_id', sa.Integer(), nullable=False),
+        sa.Column('_creator_id', sa.Integer(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ['_creator_id'],
+            ['users.id'],
+            name=op.f('blueprints_filters__creator_id_fkey'),
+            ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(
+            ['_tenant_id'],
+            ['tenants.id'],
+            name=op.f('blueprints_filters__tenant_id_fkey'),
+            ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint(
+            '_storage_id',
+            name=op.f('blueprints_filters_pkey'))
+    )
+    op.create_index(op.f('blueprints_filters__creator_id_idx'),
+                    'blueprints_filters',
+                    ['_creator_id'],
+                    unique=False)
+    op.create_index(op.f('blueprints_filters__tenant_id_idx'),
+                    'blueprints_filters',
+                    ['_tenant_id'],
+                    unique=False)
+    op.create_index(op.f('blueprints_filters_created_at_idx'),
+                    'blueprints_filters',
+                    ['created_at'],
+                    unique=False)
+    op.create_index('blueprints_filters_id__tenant_id_idx',
+                    'blueprints_filters',
+                    ['id', '_tenant_id'],
+                    unique=True)
+    op.create_index(op.f('blueprints_filters_id_idx'),
+                    'blueprints_filters',
+                    ['id'],
+                    unique=False)
+    op.create_index(op.f('blueprints_filters_visibility_idx'),
+                    'blueprints_filters',
+                    ['visibility'],
+                    unique=False)
+
+    op.create_table(
+        'deployments_filters',
+        sa.Column('_storage_id',
+                  sa.Integer(),
+                  autoincrement=True,
+                  nullable=False),
+        sa.Column('id', sa.Text(), nullable=True),
+        sa.Column('visibility', VISIBILITY_ENUM, nullable=True),
+        sa.Column('created_at', UTCDateTime(), nullable=False),
+        sa.Column('value', JSONString(), nullable=True),
+        sa.Column('updated_at', UTCDateTime(), nullable=True),
+        sa.Column('_tenant_id', sa.Integer(), nullable=False),
+        sa.Column('_creator_id', sa.Integer(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ['_creator_id'],
+            ['users.id'],
+            name=op.f('deployments_filters__creator_id_fkey'),
+            ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(
+            ['_tenant_id'],
+            ['tenants.id'],
+            name=op.f('deployments_filters__tenant_id_fkey'),
+            ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint(
+            '_storage_id',
+            name=op.f('deployments_filters_pkey'))
+    )
+    op.create_index(op.f('deployments_filters__creator_id_idx'),
+                    'deployments_filters',
+                    ['_creator_id'],
+                    unique=False)
+    op.create_index(op.f('deployments_filters__tenant_id_idx'),
+                    'deployments_filters',
+                    ['_tenant_id'],
+                    unique=False)
+    op.create_index(op.f('deployments_filters_created_at_idx'),
+                    'deployments_filters',
+                    ['created_at'],
+                    unique=False)
+    op.create_index('deployments_filters_id__tenant_id_idx',
+                    'deployments_filters',
+                    ['id', '_tenant_id'],
+                    unique=True)
+    op.create_index(op.f('deployments_filters_id_idx'),
+                    'deployments_filters',
+                    ['id'],
+                    unique=False)
+    op.create_index(op.f('deployments_filters_visibility_idx'),
+                    'deployments_filters',
+                    ['visibility'],
+                    unique=False)
+    op.drop_index('filters__creator_id_idx',
+                  table_name='filters')
+    op.drop_index('filters__tenant_id_idx',
+                  table_name='filters')
+    op.drop_index('filters_created_at_idx',
+                  table_name='filters')
+    op.drop_index('filters_id__tenant_id_idx',
+                  table_name='filters')
+    op.drop_index('filters_id_idx',
+                  table_name='filters')
+    op.drop_index('filters_visibility_idx',
+                  table_name='filters')
+    op.drop_table('filters')
+
+
+def _revert_filters_modifications():
+    op.create_table(
+        'filters',
+        sa.Column('_storage_id',
+                  sa.INTEGER(),
+                  autoincrement=True,
+                  nullable=False),
+        sa.Column('id', sa.TEXT(), autoincrement=False, nullable=True),
+        sa.Column('value', sa.TEXT(), autoincrement=False, nullable=True),
+        sa.Column('visibility',
+                  VISIBILITY_ENUM,
+                  autoincrement=False,
+                  nullable=True),
+        sa.Column('created_at',
+                  UTCDateTime,
+                  autoincrement=False,
+                  nullable=False),
+        sa.Column('updated_at',
+                  UTCDateTime,
+                  autoincrement=False,
+                  nullable=True),
+        sa.Column('_tenant_id',
+                  sa.INTEGER(),
+                  autoincrement=False,
+                  nullable=False),
+        sa.Column('_creator_id',
+                  sa.INTEGER(),
+                  autoincrement=False,
+                  nullable=False),
+        sa.ForeignKeyConstraint(
+            ['_creator_id'],
+            ['users.id'],
+            name='filters__creator_id_fkey',
+            ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(
+            ['_tenant_id'],
+            ['tenants.id'],
+            name='filters__tenant_id_fkey',
+            ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint('_storage_id', name='filters_pkey')
+    )
+    op.create_index('filters_visibility_idx',
+                    'filters',
+                    ['visibility'],
+                    unique=False)
+    op.create_index('filters_id_idx',
+                    'filters',
+                    ['id'],
+                    unique=False)
+    op.create_index('filters_id__tenant_id_idx',
+                    'filters',
+                    ['id', '_tenant_id'],
+                    unique=True)
+    op.create_index('filters_created_at_idx',
+                    'filters',
+                    ['created_at'],
+                    unique=False)
+    op.create_index('filters__tenant_id_idx',
+                    'filters',
+                    ['_tenant_id'],
+                    unique=False)
+    op.create_index('filters__creator_id_idx',
+                    'filters',
+                    ['_creator_id'],
+                    unique=False)
+    op.drop_index(op.f('deployments_filters_visibility_idx'),
+                  table_name='deployments_filters')
+    op.drop_index(op.f('deployments_filters_id_idx'),
+                  table_name='deployments_filters')
+    op.drop_index('deployments_filters_id__tenant_id_idx',
+                  table_name='deployments_filters')
+    op.drop_index(op.f('deployments_filters_created_at_idx'),
+                  table_name='deployments_filters')
+    op.drop_index(op.f('deployments_filters__tenant_id_idx'),
+                  table_name='deployments_filters')
+    op.drop_index(op.f('deployments_filters__creator_id_idx'),
+                  table_name='deployments_filters')
+    op.drop_table('deployments_filters')
+    op.drop_index(op.f('blueprints_filters_visibility_idx'),
+                  table_name='blueprints_filters')
+    op.drop_index(op.f('blueprints_filters_id_idx'),
+                  table_name='blueprints_filters')
+    op.drop_index('blueprints_filters_id__tenant_id_idx',
+                  table_name='blueprints_filters')
+    op.drop_index(op.f('blueprints_filters_created_at_idx'),
+                  table_name='blueprints_filters')
+    op.drop_index(op.f('blueprints_filters__tenant_id_idx'),
+                  table_name='blueprints_filters')
+    op.drop_index(op.f('blueprints_filters__creator_id_idx'),
+                  table_name='blueprints_filters')
+    op.drop_table('blueprints_filters')
 
 
 def _add_execgroups_concurrency():

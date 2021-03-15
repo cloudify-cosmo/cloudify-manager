@@ -79,6 +79,7 @@ class SearchesTestCase(base_test.BaseServerTestCase):
         self.create_filter(self.client.deployments_filters, self.FILTER_ID,
                            self.FILTER_RULES)
         filter_rules = get_filter_rules(self.FILTER_RULES, models.Deployment,
+                                        models.DeploymentsFilter,
                                         self.FILTER_ID)
         self.assertEqual(filter_rules, self.FILTER_RULES)
 

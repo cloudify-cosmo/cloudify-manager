@@ -1089,7 +1089,7 @@ class BaseServerTestCase(unittest.TestCase):
 
         updated_rules = new_filter_rules or self.SIMPLE_RULE
         updated_visibility = new_visibility or VisibilityState.TENANT
-        self.assertEqual(updated_filter.labels_filter, updated_rules)
+        self.assertEqual(updated_filter.value, updated_rules)
         self.assertEqual(updated_filter.visibility, updated_visibility)
         self.assertGreater(updated_filter.updated_at, orig_filter.updated_at)
 

@@ -14,56 +14,55 @@ from manager_rest.rest.filters_utils import create_filter_rules_list
 
 class BlueprintsFilters(SecuredResource):
     @authorize('filters_list')
-    @rest_decorators.marshal_with(models.Filter)
+    @rest_decorators.marshal_with(models.BlueprintsFilter)
     @rest_decorators.paginate
-    @rest_decorators.sortable(models.Filter)
+    @rest_decorators.sortable(models.BlueprintsFilter)
     @rest_decorators.all_tenants
     @rest_decorators.search('id')
     def get(self, _include=None, pagination=None, sort=None,
             all_tenants=None, search=None):
         """List blueprints filters"""
 
-        return list_resource_filters('blueprints', _include, pagination, sort,
-                                     all_tenants, search)
+        return list_resource_filters(models.BlueprintsFilter, _include,
+                                     pagination, sort, all_tenants, search)
 
 
 class DeploymentsFilters(SecuredResource):
     @authorize('filters_list')
-    @rest_decorators.marshal_with(models.Filter)
+    @rest_decorators.marshal_with(models.DeploymentsFilter)
     @rest_decorators.paginate
-    @rest_decorators.sortable(models.Filter)
+    @rest_decorators.sortable(models.DeploymentsFilter)
     @rest_decorators.all_tenants
     @rest_decorators.search('id')
     def get(self, _include=None, pagination=None, sort=None,
             all_tenants=None, search=None):
         """List deployments filters"""
 
-        return list_resource_filters('deployments', _include, pagination, sort,
-                                     all_tenants, search)
+        return list_resource_filters(models.DeploymentsFilter, _include,
+                                     pagination, sort, all_tenants, search)
 
 
-def list_resource_filters(filtered_resource, _include=None, pagination=None,
+def list_resource_filters(filters_model, _include=None, pagination=None,
                           sort=None, all_tenants=None, search=None):
     get_all_results = rest_utils.verify_and_convert_bool(
         '_get_all_results',
         request.args.get('_get_all_results', False)
     )
     result = get_storage_manager().list(
-        models.Filter,
+        filters_model,
         include=_include,
         substr_filters=search,
         pagination=pagination,
         sort=sort,
         all_tenants=all_tenants,
         get_all_results=get_all_results,
-        filters={'filtered_resource': filtered_resource}
     )
 
     return result
 
 
 class FiltersId(SecuredResource):
-    def put(self, filter_id, filtered_resource):
+    def put(self, filters_model, filter_id, filtered_resource):
         """Create a filter"""
         rest_utils.validate_inputs({'filter_id': filter_id})
         request_dict = rest_utils.get_json_and_verify_params(
@@ -74,10 +73,9 @@ class FiltersId(SecuredResource):
             optional=True, valid_values=VisibilityState.STATES)
 
         now = get_formatted_timestamp()
-        new_filter = models.Filter(
+        new_filter = filters_model(
             id=filter_id,
             value=filter_rules,
-            filtered_resource=filtered_resource,
             created_at=now,
             updated_at=now,
             visibility=visibility
@@ -85,28 +83,25 @@ class FiltersId(SecuredResource):
 
         return get_storage_manager().put(new_filter)
 
-    @authorize('filters_get')
-    @rest_decorators.marshal_with(models.Filter)
-    def get(self, filter_id, _include=None):
+    def get(self, filters_model, filter_id, _include=None):
         """
         Get a filter by ID
         """
         rest_utils.validate_inputs({'filter_id': filter_id})
         return get_storage_manager().get(
-            models.Filter, filter_id, include=_include)
+            filters_model, filter_id, include=_include)
 
-    @authorize('filters_delete')
-    def delete(self, filter_id):
+    def delete(self, filters_model, filter_id):
         """
         Delete a filter by ID
         """
         rest_utils.validate_inputs({'filter_id': filter_id})
         storage_manager = get_storage_manager()
-        filter_elem = storage_manager.get(models.Filter, filter_id)
+        filter_elem = storage_manager.get(filters_model, filter_id)
         storage_manager.delete(filter_elem, validate_global=True)
         return None, 204
 
-    def patch(self, filter_id, filtered_resource):
+    def patch(self, filters_model, filter_id, filtered_resource):
         """Update a filter by its ID
 
         This function updates the filter rules and visibility
@@ -125,10 +120,10 @@ class FiltersId(SecuredResource):
             optional=True, valid_values=VisibilityState.STATES)
 
         storage_manager = get_storage_manager()
-        filter_elem = storage_manager.get(models.Filter, filter_id)
+        filter_elem = storage_manager.get(filters_model, filter_id)
         if visibility:
             get_resource_manager().validate_visibility_value(
-                models.Filter, filter_elem, visibility)
+                filters_model, filter_elem, visibility)
             filter_elem.visibility = visibility
         if filter_rules:
             filter_elem.value = create_filter_rules_list(filter_rules,
@@ -140,23 +135,45 @@ class FiltersId(SecuredResource):
 
 class BlueprintsFiltersId(FiltersId):
     @authorize('filters_create')
-    @rest_decorators.marshal_with(models.Filter)
+    @rest_decorators.marshal_with(models.BlueprintsFilter)
     def put(self, filter_id):
-        return super().put(filter_id, 'blueprints')
+        return super().put(models.BlueprintsFilter, filter_id,
+                           models.Blueprint)
+
+    @authorize('filters_get')
+    @rest_decorators.marshal_with(models.BlueprintsFilter)
+    def get(self, filter_id, _include=None):
+        return super().get(models.BlueprintsFilter, filter_id, _include)
 
     @authorize('filters_update')
-    @rest_decorators.marshal_with(models.Filter)
+    @rest_decorators.marshal_with(models.BlueprintsFilter)
     def patch(self, filter_id):
-        return super().patch(filter_id, 'blueprints')
+        return super().patch(models.BlueprintsFilter, filter_id,
+                             models.Blueprint)
+
+    @authorize('filters_delete')
+    def delete(self, filter_id):
+        return super().delete(models.BlueprintsFilter, filter_id)
 
 
 class DeploymentsFiltersId(FiltersId):
     @authorize('filters_create')
-    @rest_decorators.marshal_with(models.Filter)
+    @rest_decorators.marshal_with(models.DeploymentsFilter)
     def put(self, filter_id):
-        return super().put(filter_id, 'deployments')
+        return super().put(models.DeploymentsFilter, filter_id,
+                           models.Deployment)
+
+    @authorize('filters_get')
+    @rest_decorators.marshal_with(models.DeploymentsFilter)
+    def get(self, filter_id, _include=None):
+        return super().get(models.DeploymentsFilter, filter_id, _include)
 
     @authorize('filters_update')
-    @rest_decorators.marshal_with(models.Filter)
+    @rest_decorators.marshal_with(models.DeploymentsFilter)
     def patch(self, filter_id):
-        return super().patch(filter_id, 'deployments')
+        return super().patch(models.DeploymentsFilter, filter_id,
+                             models.Deployment)
+
+    @authorize('filters_delete')
+    def delete(self, filter_id):
+        return super().delete(models.DeploymentsFilter, filter_id)
