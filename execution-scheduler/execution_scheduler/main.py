@@ -10,7 +10,6 @@ from cloudify.models_states import ExecutionState
 
 from manager_rest import config
 from manager_rest.storage import models, get_storage_manager
-from manager_rest.utils import set_current_tenant
 from manager_rest.flask_utils import setup_flask_app
 from manager_rest.maintenance import get_maintenance_state
 from manager_rest.constants import MAINTENANCE_MODE_ACTIVATED

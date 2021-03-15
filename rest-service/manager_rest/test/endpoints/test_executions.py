@@ -713,7 +713,7 @@ class ExecutionsTestCase(BaseServerTestCase):
 
 
 @mock.patch.object(db, 'session', mock.MagicMock())
-class TestExecutionModelValidtionTests(unittest.TestCase):
+class TestExecutionModelValidationTests(unittest.TestCase):
     def test_missing_workflow(self):
         d = models.Deployment(workflows={
             'wf': {}
