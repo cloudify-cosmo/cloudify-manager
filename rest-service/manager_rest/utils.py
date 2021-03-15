@@ -51,7 +51,16 @@ def check_allowed_endpoint(allowed_endpoints):
     endpoint_parts = request.endpoint.split('/')
     request_endpoint = endpoint_parts[1] if len(endpoint_parts) > 1 else \
         endpoint_parts[0]
-    return request_endpoint in allowed_endpoints
+    request_method = request.method.lower()
+    for allowed_endpoint in allowed_endpoints:
+        if isinstance(allowed_endpoint, tuple):
+            if request_endpoint == allowed_endpoint[0]:
+                return request_method == allowed_endpoint[1]
+        else:
+            if request_endpoint == allowed_endpoint:
+                return True
+
+    return False
 
 
 def is_sanity_mode():
