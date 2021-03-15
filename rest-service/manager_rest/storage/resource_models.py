@@ -410,11 +410,6 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
 
     site_name = association_proxy('site', 'name')
 
-    @declared_attr
-    def labels(cls):
-        # labels are defined as `backref` in DeploymentsLabel model
-        return None
-
     @classproperty
     def response_fields(cls):
         fields = super(Deployment, cls).response_fields
