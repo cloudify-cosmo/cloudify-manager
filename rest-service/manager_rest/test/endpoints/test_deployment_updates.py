@@ -218,7 +218,6 @@ class DeploymentUpdatesTestCase(DeploymentUpdatesBase):
                             updated_deployment.blueprint_id)
         self.assertEqual(updated_deployment.blueprint_id,
                          update_execution.blueprint_id)
-        self.assertIsNotNone(update_execution.started_at)
 
     def test_step_add(self):
         deployment_id = 'dep'

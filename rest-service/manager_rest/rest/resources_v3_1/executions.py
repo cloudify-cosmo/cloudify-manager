@@ -198,15 +198,17 @@ class ExecutionGroups(SecuredResource):
             for dep in dep_group.deployments:
                 params = default_parameters.copy()
                 params.update(parameters.get(dep.id) or {})
-                execution = rm.execute_workflow(
-                    force=force,
-                    deployment_id=dep.id,
+                execution = models.Execution(
                     workflow_id=workflow_id,
+                    deployment=dep,
                     parameters=params,
-                    send_handler=handler,
                 )
                 group.executions.append(execution)
-            sm._safe_commit()
+                rm.execute_workflow(
+                    execution,
+                    force=force,
+                    send_handler=handler,
+                )
         return group
 
 

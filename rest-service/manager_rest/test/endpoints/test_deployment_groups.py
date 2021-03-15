@@ -1,3 +1,5 @@
+import mock
+
 from datetime import datetime
 
 from cloudify.models_states import VisibilityState, ExecutionState
@@ -326,6 +328,10 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         assert group.deployment_ids == []
 
 
+@mock.patch(
+    'manager_rest.rest.resources_v3_1.executions.workflow_sendhandler',
+    mock.Mock()
+)
 class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
     def setUp(self):
         super(ExecutionGroupsTestCase, self).setUp()
@@ -433,6 +439,9 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
             deployment_group_id='group1',
             workflow_id='install'
         )
+        execution = self.sm.get(models.Execution, group.execution_ids[0])
+        execution.status = ExecutionState.TERMINATED
+        self.sm.update(execution)
         retrieved = self.client.execution_groups.get(group.id)
         assert retrieved.id == group.id
         assert len(retrieved.execution_ids) == 1

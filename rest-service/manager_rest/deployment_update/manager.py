@@ -565,12 +565,16 @@ class DeploymentUpdateManager(object):
             # List of node-instances to reinstall
             'node_instances_to_reinstall': reinstall_list
         }
-        return get_resource_manager().execute_workflow(
-            dep_update.deployment.id,
-            workflow_id or DEFAULT_DEPLOYMENT_UPDATE_WORKFLOW,
+        execution = models.Execution(
+            workflow_id=workflow_id or DEFAULT_DEPLOYMENT_UPDATE_WORKFLOW,
+            deployment=dep_update.deployment,
+            allow_custom_parameters=True,
             blueprint_id=dep_update.new_blueprint_id,
             parameters=parameters,
-            allow_custom_parameters=True,
+        )
+        self.sm.put(execution)
+        return get_resource_manager().execute_workflow(
+            execution,
             allow_overlapping_running_wf=True,
             force=force,
         )

@@ -13,18 +13,20 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import mock
 import uuid
 import hashlib
+import unittest
 from itertools import dropwhile
 from datetime import datetime, timedelta
 
 from cloudify_rest_client import exceptions
-from cloudify.models_states import ExecutionState
+from cloudify.models_states import ExecutionState, VisibilityState
 from cloudify.workflows import tasks as cloudify_tasks
 from cloudify.constants import CLOUDIFY_EXECUTION_TOKEN_HEADER
 
-from manager_rest.storage import models
-from manager_rest import utils, manager_exceptions
+from manager_rest.storage import models, db
+from manager_rest import manager_exceptions
 from manager_rest.test.attribute import attr
 from manager_rest.test.base_test import BaseServerTestCase, LATEST_API_VERSION
 
@@ -87,49 +89,6 @@ class ExecutionsTestCase(BaseServerTestCase):
 
         return get_execution
 
-    def test_list_system_executions(self):
-        (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_deployment(
-            deployment_id=self.DEPLOYMENT_ID)
-
-        # manually pushing a system workflow execution to the storage
-        system_wf_execution_id = 'mock_execution_id'
-        system_wf_id = 'mock_system_workflow_id'
-        system_wf_execution = models.Execution(
-            id=system_wf_execution_id,
-            status=ExecutionState.TERMINATED,
-            workflow_id=system_wf_id,
-            created_at=utils.get_formatted_timestamp(),
-            error='',
-            parameters=dict(),
-            is_system_workflow=True,
-            blueprint_id=blueprint_id
-        )
-        deployment = self.sm.get(models.Deployment, deployment_id)
-        system_wf_execution.deployment = deployment
-        self.sm.put(system_wf_execution)
-
-        # listing only non-system workflow executions
-        executions = self.client.executions.list(deployment_id=deployment_id)
-
-        # expecting 1 execution (create_deployment_environment)
-        self.assertEqual(1, len(executions))
-        self.assertEqual('create_deployment_environment',
-                         executions[0]['workflow_id'])
-
-        # listing all executions
-        executions = self.client.executions.list(deployment_id=deployment_id,
-                                                 include_system_workflows=True)
-        executions.sort(key=lambda e: e.created_at)
-
-        # expecting 2 executions
-        self.assertEqual(2, len(executions))
-        self.assertEqual('create_deployment_environment',
-                         executions[0]['workflow_id'])
-        self.assertEqual(system_wf_id, executions[1]['workflow_id'])
-
-        return deployment_id, system_wf_id
-
     @attr(client_min_version=3,
           client_max_version=LATEST_API_VERSION)
     def test_sort_list(self):
@@ -148,214 +107,6 @@ class ExecutionsTestCase(BaseServerTestCase):
         self.assertEqual(2, len(executions))
         self.assertEqual('1', executions[0].id)
         self.assertEqual('0', executions[1].id)
-
-    @attr(client_min_version=2,
-          client_max_version=LATEST_API_VERSION)
-    def test_list_system_executions_with_filters(self):
-        deployment_id, system_wf_id = self.test_list_system_executions()
-
-        # explicitly listing only non-system executions
-        executions = self.client.executions.list(deployment_id=deployment_id,
-                                                 is_system_workflow=False)
-        self.assertEqual(1, len(executions))
-        self.assertEqual('create_deployment_environment',
-                         executions[0]['workflow_id'])
-
-        # listing only system executions
-        executions = self.client.executions.list(deployment_id=deployment_id,
-                                                 is_system_workflow=True)
-        self.assertEqual(1, len(executions))
-        self.assertEqual(system_wf_id, executions[0]['workflow_id'])
-
-    def test_execute_with_custom_parameters(self):
-        # note that this test also tests for passing custom parameters for an
-        #  execution of a workflow which doesn't have any workflow parameters
-
-        (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
-
-        parameters = {'param1': 'val1', 'param2': 'val2'}
-        execution = self.client.executions.start(deployment_id,
-                                                 'install',
-                                                 parameters,
-                                                 allow_custom_parameters=True)
-        self.assertEqual(parameters, execution.parameters)
-
-    def test_execute_with_custom_parameters_not_allowed(self):
-        (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
-
-        parameters = {'param1': 'val1', 'param2': 'val2'}
-        # ensure all custom parameters are mentioned in the error message,
-        # but they can be in any order
-        expected_regex = 'param1,param2|param2,param1'
-        with self.assertRaisesRegex(
-                exceptions.CloudifyClientError, expected_regex) as cm:
-            self.client.executions.start(deployment_id,
-                                         'install',
-                                         parameters)
-        self.assertEqual(
-            manager_exceptions.IllegalExecutionParametersError.
-            ILLEGAL_EXECUTION_PARAMETERS_ERROR_CODE,
-            cm.exception.error_code)
-
-    def test_execute_with_mandatory_parameters_types(self):
-        (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_deployment(
-            self.DEPLOYMENT_ID,
-            'blueprint_with_workflows_with_parameters_types.yaml')
-
-        parameters = {
-            'mandatory1': 'bla',
-            'mandatory2': 6,
-            'mandatory_int1': 1,
-            'mandatory_int2': 'bla',
-            'mandatory_float1': 3.5,
-            'mandatory_float2': True,
-            'mandatory_str1': 'bla',
-            'mandatory_str2': 7,
-            'mandatory_bool1': False,
-            'mandatory_bool2': 'string_that_is_not_a_boolean'
-        }
-        try:
-            self.client.executions.start(deployment_id,
-                                         'mock_workflow',
-                                         parameters)
-        except exceptions.IllegalExecutionParametersError as e:
-            self.assertIn('mandatory_int2', str(e))
-            self.assertIn('mandatory_float2', str(e))
-            self.assertIn('mandatory_str2', str(e))
-            self.assertIn('mandatory_bool2', str(e))
-            self.assertNotIn('mandatory1', str(e))
-            self.assertNotIn('mandatory2', str(e))
-            self.assertNotIn('mandatory_int1', str(e))
-            self.assertNotIn('mandatory_float1', str(e))
-            self.assertNotIn('mandatory_str1', str(e))
-            self.assertNotIn('mandatory_bool1', str(e))
-            # check which parameters are mentioned in the error message
-        else:
-            self.fail()
-
-    def test_execute_with_optional_parameters_types(self):
-        (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_deployment(
-            self.DEPLOYMENT_ID,
-            'blueprint_with_workflows_with_parameters_types.yaml')
-
-        parameters = {
-            'mandatory1': False,
-            'mandatory2': [],
-            'mandatory_int1': '-7',
-            'mandatory_int2': 3.5,
-            'mandatory_float1': '5.0',
-            'mandatory_float2': [],
-            'mandatory_str1': u'bla',
-            'mandatory_str2': ['bla'],
-            'mandatory_bool1': 'tRUe',
-            'mandatory_bool2': 0,
-            'optional1': 'bla',
-            'optional2': 6,
-            'optional_int1': 1,
-            'optional_int2': 'bla',
-            'optional_float1': 3.5,
-            'optional_float2': True,
-            'optional_str1': 'bla',
-            'optional_str2': 7,
-            'optional_bool1': False,
-            'optional_bool2': 'bla'
-        }
-        try:
-            self.client.executions.start(deployment_id,
-                                         'mock_workflow',
-                                         parameters)
-        except exceptions.IllegalExecutionParametersError as e:
-            self.assertIn('mandatory_int2', str(e))
-            self.assertIn('mandatory_float2', str(e))
-            self.assertIn('mandatory_str2', str(e))
-            self.assertIn('mandatory_bool2', str(e))
-            self.assertNotIn('mandatory1', str(e))
-            self.assertNotIn('mandatory2', str(e))
-            self.assertNotIn('mandatory_int1', str(e))
-            self.assertNotIn('mandatory_float1', str(e))
-            self.assertNotIn('mandatory_str1', str(e))
-            self.assertNotIn('mandatory_bool1', str(e))
-            # check which parameters are mentioned in the error message
-            self.assertIn('optional_int2', str(e))
-            self.assertIn('optional_float2', str(e))
-            self.assertIn('optional_str2', str(e))
-            self.assertIn('optional_bool2', str(e))
-            self.assertNotIn('optional1', str(e))
-            self.assertNotIn('optional2', str(e))
-            self.assertNotIn('optional_int1', str(e))
-            self.assertNotIn('optional_float1', str(e))
-            self.assertNotIn('optional_str1', str(e))
-            self.assertNotIn('optional_bool1', str(e))
-        else:
-            self.fail()
-
-    def test_execute_with_custom_parameters_types(self):
-        (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_deployment(
-            self.DEPLOYMENT_ID,
-            'blueprint_with_workflows_with_parameters_types.yaml')
-
-        parameters = {
-            'mandatory1': False,
-            'mandatory2': [],
-            'mandatory_int1': -7,
-            'mandatory_int2': 3,
-            'mandatory_float1': 5.0,
-            'mandatory_float2': 0.0,
-            'mandatory_str1': u'bla',
-            'mandatory_str2': 'bla',
-            'mandatory_bool1': 'falSE',
-            'mandatory_bool2': False,
-            'optional1': 'bla',
-            'optional2': 6,
-            'optional_int1': 1,
-            'optional_int2': 'bla',
-            'optional_float1': 3.5,
-            'optional_str1': 'bla',
-            'optional_bool1': False,
-            'custom1': 8,
-            'custom2': 3.2,
-            'custom3': 'bla',
-            'custom4': True
-        }
-        try:
-            self.client.executions.start(deployment_id,
-                                         'mock_workflow',
-                                         parameters,
-                                         allow_custom_parameters=True)
-        except exceptions.IllegalExecutionParametersError as e:
-            self.assertNotIn('mandatory_int2', str(e))
-            self.assertNotIn('mandatory_float2', str(e))
-            self.assertNotIn('mandatory_str2', str(e))
-            self.assertNotIn('mandatory_bool2', str(e))
-            self.assertNotIn('mandatory1', str(e))
-            self.assertNotIn('mandatory2', str(e))
-            self.assertNotIn('mandatory_int1', str(e))
-            self.assertNotIn('mandatory_float1', str(e))
-            self.assertNotIn('mandatory_str1', str(e))
-            self.assertNotIn('mandatory_bool1', str(e))
-            # check which parameters are mentioned in the error message
-            self.assertIn('optional_int2', str(e))
-            self.assertNotIn('optional_float2', str(e))
-            self.assertNotIn('optional_str2', str(e))
-            self.assertNotIn('optional_bool2', str(e))
-            self.assertNotIn('optional1', str(e))
-            self.assertNotIn('optional2', str(e))
-            self.assertNotIn('optional_int1', str(e))
-            self.assertNotIn('optional_float1', str(e))
-            self.assertNotIn('optional_str1', str(e))
-            self.assertNotIn('optional_bool1', str(e))
-
-            self.assertNotIn('custom1', str(e))
-            self.assertNotIn('custom2', str(e))
-            self.assertNotIn('custom3', str(e))
-            self.assertNotIn('custom4', str(e))
-        else:
-            self.fail()
 
     def test_get_execution_parameters(self):
         (blueprint_id, deployment_id, blueprint_response,
@@ -377,74 +128,6 @@ class ExecutionsTestCase(BaseServerTestCase):
             }
         }
         self.assertEqual(expected_executions_params, execution.parameters)
-
-    def test_execution_parameters_override_over_workflow_parameters(self):
-        (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_deployment(
-             self.DEPLOYMENT_ID, 'blueprint_with_workflows.yaml')
-
-        parameters = {'mandatory_param': 'value',
-                      'mandatory_param2': 'value2',
-                      'optional_param': {'overridden_value': 'obj'}}
-        execution = self.client.executions.start(deployment_id,
-                                                 'mock_workflow',
-                                                 parameters)
-        # overriding 'optional_param' with a value of a different type
-        expected_executions_params = {
-            'mandatory_param': 'value',
-            'mandatory_param2': 'value2',
-            'optional_param': {'overridden_value': 'obj'},
-            'nested_param': {
-                'key': 'test_key',
-                'value': 'test_value'
-            }
-        }
-        self.assertEqual(expected_executions_params, execution.parameters)
-
-    def test_execution_parameters_override_no_recursive_merge(self):
-        (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_deployment(
-             self.DEPLOYMENT_ID, 'blueprint_with_workflows.yaml')
-
-        parameters = {'mandatory_param': 'value',
-                      'mandatory_param2': 'value2',
-                      'nested_param': {'key': 'overridden_value'}}
-        execution = self.client.executions.start(deployment_id,
-                                                 'mock_workflow',
-                                                 parameters)
-        # expecting 'nested_param' to only have the one subfield - there's
-        # no recursive merge for parameters, so the second key ('value')
-        # should no longer appear
-        expected_executions_params = {
-            'mandatory_param': 'value',
-            'mandatory_param2': 'value2',
-            'optional_param': 'test_default_value',
-            'nested_param': {
-                'key': 'overridden_value'
-            }
-        }
-        self.assertEqual(expected_executions_params, execution.parameters)
-
-    def test_missing_execution_parameters(self):
-        (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_deployment(
-             self.DEPLOYMENT_ID, 'blueprint_with_workflows.yaml')
-
-        parameters = {'optional_param': 'some_value'}
-        # ensure all custom parameters are mentioned in the error message,
-        # but they can be in any order
-        expected_regex = 'mandatory_param,mandatory_param2|'\
-            'mandatory_param2,mandatory_param'
-        with self.assertRaisesRegex(
-                exceptions.CloudifyClientError, expected_regex) as cm:
-            self.client.executions.start(deployment_id,
-                                         'mock_workflow',
-                                         parameters)
-
-        self.assertEqual(
-            manager_exceptions.IllegalExecutionParametersError.
-            ILLEGAL_EXECUTION_PARAMETERS_ERROR_CODE,
-            cm.exception.error_code)
 
     def test_bad_execution_parameters(self):
         (blueprint_id, deployment_id, blueprint_response,
@@ -785,7 +468,8 @@ class ExecutionsTestCase(BaseServerTestCase):
             is_system_workflow=False,
             workflow_id='install',
             status=status,
-            blueprint_id=deployment.blueprint_id
+            blueprint_id=deployment.blueprint_id,
+            parameters={},
         ))
         tasks_graph = self.sm.put(models.TasksGraph(
             _execution_fk=execution._storage_id,
@@ -1026,3 +710,254 @@ class ExecutionsTestCase(BaseServerTestCase):
         execution.created_at = timedelta(days=days) + \
             datetime.strptime(execution.created_at, '%Y-%m-%dT%H:%M:%S.%fZ')
         self.sm.update(execution)
+
+
+@mock.patch.object(db, 'session', mock.MagicMock())
+class TestExecutionModelValidationTests(unittest.TestCase):
+    def test_missing_workflow(self):
+        d = models.Deployment(workflows={
+            'wf': {}
+        })
+        with self.assertRaises(manager_exceptions.NonexistentWorkflowError):
+            models.Execution(
+                parameters={},
+                deployment=d,
+                workflow_id='nonexistent',
+            )
+
+    def test_parameters_type_conversion(self):
+        d = models.Deployment(workflows={
+            'wf': {
+                'parameters': {
+                    'bool_param': {'type': 'boolean'},
+                    'int_param': {'type': 'integer'},
+                    'float_param': {'type': 'float'},
+                    'string_param': {'type': 'string'},
+                    'untyped_param': {}
+                }
+            }
+        })
+        exc = models.Execution(
+            parameters={
+                'bool_param': 'true',
+                'int_param': '5',
+                'float_param': '1.5',
+                'string_param': 'abc',
+                'untyped_param': 'def',
+            },
+            deployment=d,
+            workflow_id='wf',
+        )
+        assert exc.parameters == {
+            'bool_param': True,
+            'int_param': 5,
+            'float_param': 1.5,
+            'string_param': 'abc',
+            'untyped_param': 'def'
+        }
+
+    def test_parameters_wrong_type(self):
+        d = models.Deployment(workflows={
+            'wf': {
+                'parameters': {
+                    'bool_param': {'type': 'boolean', 'default': True},
+                    'int_param': {'type': 'integer', 'default': 5},
+                    'float_param': {'type': 'float', 'default': 5.0},
+                }
+            }
+        })
+        with self.assertRaises(
+                manager_exceptions.IllegalExecutionParametersError) as cm:
+            models.Execution(
+                parameters={
+                    'bool_param': 'abc',
+                    'int_param': 'abc',
+                    'float_param': 'abc',
+                },
+                deployment=d,
+                workflow_id='wf',
+            )
+
+        error_message = str(cm.exception)
+        assert 'bool_param' in error_message
+        assert 'int_param' in error_message
+        assert 'float_param' in error_message
+
+    def test_missing_mandatory_param(self):
+        d = models.Deployment(workflows={
+            'wf': {
+                'parameters': {
+                    'mandatory_param': {}
+                }
+            }
+        })
+        with self.assertRaisesRegex(
+            manager_exceptions.IllegalExecutionParametersError,
+            'mandatory_param'
+        ):
+            models.Execution(
+                parameters={},
+                deployment=d,
+                workflow_id='wf',
+            )
+
+    def test_use_default_params(self):
+        d = models.Deployment(workflows={
+            'wf': {
+                'parameters': {
+                    'param1': {'default': 'abc'}
+                }
+            }
+        })
+        exc = models.Execution(
+            parameters={},
+            deployment=d,
+            workflow_id='wf',
+        )
+        assert exc.parameters == {'param1': 'abc'}
+
+    def test_override_default_params(self):
+        d = models.Deployment(workflows={
+            'wf': {
+                'parameters': {
+                    'param1': {'default': 'abc'},
+                    'param2': {'default': {'nested': 'abc'}}
+                }
+            }
+        })
+        exc = models.Execution(
+            parameters={'param1': 'bcd', 'param2': {'nested': 'bcd'}},
+            deployment=d,
+            workflow_id='wf',
+        )
+        assert exc.parameters == {'param1': 'bcd', 'param2': {'nested': 'bcd'}}
+
+    def test_undeclared_parameters(self):
+        d = models.Deployment(workflows={
+            'wf': {}
+        })
+        with self.assertRaisesRegex(
+            manager_exceptions.IllegalExecutionParametersError,
+            'custom parameters',
+        ):
+            models.Execution(
+                parameters={'param1': 'abc'},
+                deployment=d,
+                workflow_id='wf',
+            )
+
+    def test_allow_undeclared_parameters(self):
+        d = models.Deployment(workflows={
+            'wf': {}
+        })
+        exc = models.Execution(
+            parameters={'param1': 'abc'},
+            deployment=d,
+            workflow_id='wf',
+            allow_custom_parameters=True
+        )
+        assert exc.parameters == {'param1': 'abc'}
+
+    def test_set_parent(self):
+        bp = models.Blueprint(id='abc')
+        t = models.Tenant()
+        d = models.Deployment(
+            blueprint=bp,
+            visibility=VisibilityState.TENANT,
+            tenant=t,
+        )
+        exc = models.Execution(deployment=d)
+        assert exc.blueprint_id == d.blueprint_id
+        assert exc.visibility == d.visibility
+        assert exc.tenant == d.tenant
+
+
+class ExecutionQueueingTests(BaseServerTestCase):
+    def setUp(self):
+        super().setUp()
+        bp = models.Blueprint(id='abc')
+        self.sm.put(bp)
+        self.deployment1 = models.Deployment(id='dep1', blueprint=bp)
+        self.sm.put(self.deployment1)
+        self.deployment2 = models.Deployment(id='dep2', blueprint=bp)
+        self.sm.put(self.deployment2)
+        self.execution1 = models.Execution(
+            deployment=self.deployment1,
+            workflow_id='install',
+            parameters={},
+            status=ExecutionState.TERMINATED,
+        )
+        self.sm.put(self.execution1)
+
+    def _get_queued(self):
+        return list(self.rm._get_queued_executions(self.execution1))
+
+    def _make_execution(self, status=None, deployment=None):
+        execution = models.Execution(
+            deployment=deployment or self.deployment2,
+            workflow_id='install',
+            parameters={},
+            status=status or ExecutionState.QUEUED,
+        )
+        self.sm.put(execution)
+        return execution
+
+    def test_unrelated_execution(self):
+        execution2 = self._make_execution()
+        assert self._get_queued() == [execution2]
+
+    def test_system_workflow(self):
+        self._make_execution()
+        system_execution = models.Execution(
+            workflow_id='install',
+            parameters={},
+            status=ExecutionState.QUEUED,
+            is_system_workflow=True
+        )
+        self.sm.put(system_execution)
+        assert self._get_queued() == [system_execution]
+
+    def test_one_per_deployment(self):
+        self._make_execution(deployment=self.deployment2)
+        self._make_execution(deployment=self.deployment2)
+        assert len(self._get_queued()) == 1
+
+    def test_same_deployment_first(self):
+        execution1 = self._make_execution(deployment=self.deployment2)
+        execution2 = self._make_execution(deployment=self.deployment1)
+        assert self._get_queued() == [execution2, execution1]
+
+    def test_full_group(self):
+        group = models.ExecutionGroup(workflow_id='install')
+        self.sm.put(group)
+
+        # group has concurrency=5, has 4 started, so 1 can run
+        for _ in range(4):
+            execution = self._make_execution(status=ExecutionState.STARTED)
+            group.executions.append(execution)
+
+        queued_execution = self._make_execution(deployment=self.deployment1)
+        group.executions.append(queued_execution)
+
+        assert self._get_queued() == [queued_execution]
+        # now group has 5 started, so none can run
+        execution = self._make_execution(status=ExecutionState.STARTED)
+        group.executions.append(execution)
+        assert self._get_queued() == []
+
+    def test_two_groups(self):
+        group1 = models.ExecutionGroup(id='g1', workflow_id='install')
+        self.sm.put(group1)
+        group2 = models.ExecutionGroup(id='g2', workflow_id='install')
+        self.sm.put(group2)
+        for _ in range(5):
+            execution = self._make_execution(status=ExecutionState.STARTED)
+            group1.executions.append(execution)
+
+        queued_execution = self._make_execution(deployment=self.deployment1)
+        group2.executions.append(queued_execution)
+        assert self._get_queued() == [queued_execution]
+
+        group1.executions.append(queued_execution)
+        # execution won't run because it is in a full group now
+        assert self._get_queued() == []

@@ -13,6 +13,7 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import uuid
 
 from os import path
 from datetime import datetime
@@ -24,14 +25,17 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy import func, select, table, column
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
+from sqlalchemy.orm import validates
 
+from cloudify.constants import MGMTWORKER_QUEUE
 from cloudify.models_states import (AgentState,
                                     SnapshotState,
                                     ExecutionState,
                                     DeploymentModificationState,
                                     DeploymentState)
+from dsl_parser.constants import WORKFLOW_PLUGINS_TO_INSTALL
 
-from manager_rest import config
+from manager_rest import config, manager_exceptions
 from manager_rest.rest.responses import Workflow, Label
 from manager_rest.utils import (get_rrule,
                                 classproperty,
@@ -60,7 +64,8 @@ NODE = 'node'
 
 
 class CreatedAtMixin(object):
-    created_at = db.Column(UTCDateTime, nullable=False, index=True)
+    created_at = db.Column(UTCDateTime, nullable=False, index=True,
+                           default=lambda: datetime.utcnow())
 
     @classmethod
     def default_sort_column(cls):
@@ -428,6 +433,8 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         dep_dict['labels'] = self.list_labels(self.labels)
         dep_dict['deployment_groups'] = [g.id for g in self.deployment_groups]
         dep_dict['latest_execution_status'] = self.latest_execution_status
+        if not dep_dict.get('installation_status'):
+            dep_dict['installation_status'] = DeploymentState.INACTIVE
         return dep_dict
 
     @staticmethod
@@ -593,6 +600,11 @@ class Filter(CreatedAtMixin, SQLResourceBase):
 
 
 class Execution(CreatedAtMixin, SQLResourceBase):
+    def __init__(self, **kwargs):
+        self.allow_custom_parameters = kwargs.pop(
+            'allow_custom_parameters', False)
+        super().__init__(**kwargs)
+
     __tablename__ = 'executions'
     STATUS_DISPLAY_NAMES = {
         ExecutionState.TERMINATED: 'completed'
@@ -606,10 +618,11 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             '_deployment_fk', 'is_system_workflow', 'visibility', '_tenant_id'
         ),
     )
-
+    id = db.Column(db.Text, index=True, default=lambda: str(uuid.uuid4()))
     ended_at = db.Column(UTCDateTime, nullable=True, index=True)
     error = db.Column(db.Text)
-    is_system_workflow = db.Column(db.Boolean, nullable=False, index=True)
+    is_system_workflow = db.Column(db.Boolean, nullable=False, index=True,
+                                   default=False)
     parameters = db.Column(db.PickleType(protocol=2))
     status = db.Column(
         db.Enum(*ExecutionState.STATES, name='execution_status')
@@ -654,17 +667,159 @@ class Execution(CreatedAtMixin, SQLResourceBase):
         id_dict['status'] = self.status
         return id_dict
 
-    def set_deployment(self, deployment, blueprint_id=None):
-        self._set_parent(deployment)
-        self.deployment = deployment
-        current_blueprint_id = blueprint_id or deployment.blueprint_id
-        self.blueprint_id = current_blueprint_id
-
     @classproperty
     def resource_fields(cls):
         fields = super(Execution, cls).resource_fields
         fields.pop('token')
         return fields
+
+    @validates('deployment')
+    def _set_deployment(self, key, deployment):
+        self._set_parent(deployment)
+        if self.blueprint_id is None:
+            self.blueprint_id = deployment.blueprint_id
+        if self.parameters is not None and self.workflow_id is not None:
+            self.merge_workflow_parameters(
+                self.parameters, deployment, self.workflow_id)
+        return deployment
+
+    @validates('workflow_id')
+    def _validate_workflow_id(self, key, workflow_id):
+        if self.parameters is not None and self.deployment is not None:
+            self.merge_workflow_parameters(
+                self.parameters, self.deployment, workflow_id)
+        return workflow_id
+
+    @validates('parameters')
+    def _validate_parameters(self, key, parameters):
+        parameters = parameters or {}
+        if self.workflow_id is not None and self.deployment is not None:
+            self.merge_workflow_parameters(
+                parameters, self.deployment, self.workflow_id)
+        return parameters
+
+    def _system_workflow_task_name(self, wf_id):
+        return {
+            'create_snapshot': 'cloudify_system_workflows.snapshot.create',
+            'restore_snapshot': 'cloudify_system_workflows.snapshot.restore',
+            'uninstall_plugin': 'cloudify_system_workflows.plugins.uninstall',
+            'create_deployment_environment':
+                'cloudify_system_workflows.deployment_environment.create',
+            'delete_deployment_environment':
+                'cloudify_system_workflows.deployment_environment.delete',
+            'update_plugin': 'cloudify_system_workflows.plugins.update',
+            'upload_blueprint': 'cloudify_system_workflows.blueprint.upload'
+        }.get(wf_id)
+
+    def get_workflow(self, deployment, workflow_id):
+        system_task_name = self._system_workflow_task_name(workflow_id)
+        if system_task_name:
+            self.allow_custom_parameters = True
+            return {'operation': system_task_name}
+        try:
+            return deployment.workflows[workflow_id]
+        except KeyError:
+            raise manager_exceptions.NonexistentWorkflowError(
+                f'Workflow {workflow_id} does not exist in the '
+                f'deployment {deployment.id}') from None
+
+    def merge_workflow_parameters(self, parameters, deployment, workflow_id):
+        if not deployment.workflows:
+            return
+        workflow = self.get_workflow(deployment, workflow_id)
+        workflow_parameters = workflow.get('parameters', {})
+        custom_parameters = parameters.keys() - workflow_parameters.keys()
+        if not self.allow_custom_parameters and custom_parameters:
+            raise manager_exceptions.IllegalExecutionParametersError(
+                f'Workflow "{workflow_id}" does not have the following '
+                f'parameters declared: { ",".join(custom_parameters) }. '
+                f'Remove these parameters or use the flag for allowing '
+                f'custom parameters') from None
+
+        wrong_types = {}
+        for name, param in workflow_parameters.items():
+            declared_type = param.get('type')
+            if declared_type is None or name not in parameters:
+                continue
+            try:
+                parameters[name] = self._convert_param_type(
+                        parameters[name], declared_type)
+            except ValueError:
+                wrong_types[name] = declared_type
+        if wrong_types:
+            raise manager_exceptions.IllegalExecutionParametersError('\n'.join(
+                f'Parameter "{n}" must be of type {t}'
+                for n, t in wrong_types.items())
+            )
+
+        for name, param in workflow_parameters.items():
+            if 'default' in param:
+                parameters.setdefault(name, param['default'])
+
+        missing_parameters = workflow_parameters.keys() - parameters.keys()
+        if missing_parameters:
+            raise manager_exceptions.IllegalExecutionParametersError(
+                f'Workflow "{workflow_id}" must be provided with the following'
+                f' parameters to execute: { ",".join(missing_parameters) }'
+            ) from None
+
+    def _convert_param_type(self, param, target_type):
+        if target_type == 'integer':
+            return int(param)
+        elif target_type == 'boolean':
+            if isinstance(param, bool):
+                return param
+            elif param.lower() == 'true':
+                return True
+            elif param.lower() == 'false':
+                return False
+            else:
+                raise ValueError(param)
+        elif target_type == 'float':
+            return float(param)
+        elif target_type == 'string':
+            if isinstance(param, str):
+                return param
+            else:
+                raise ValueError(param)
+        else:
+            return param
+
+    def render_context(self):
+        workflow = self.get_workflow(self.deployment, self.workflow_id)
+        context = {
+            'type': 'workflow',
+            'task_id': self.id,
+            'execution_id': self.id,
+            'task_name': workflow['operation'],
+            'workflow_id': self.workflow_id,
+            'dry_run': self.is_dry_run,
+            'is_system_workflow': self.is_system_workflow,
+            'execution_creator_username': self.creator.username,
+            'task_target': MGMTWORKER_QUEUE,
+            'tenant': {'name': self.tenant.name},
+        }
+        if self.deployment is not None:
+            context['deployment_id'] = self.deployment.id
+            context['blueprint_id'] = self.blueprint_id
+            context['runtime_only_evaluation'] = \
+                self.deployment.runtime_only_evaluation
+        plugin_name = workflow.get('plugin')
+        if plugin_name:
+            blueprint = self.deployment.blueprint
+            workflow_plugins = blueprint.plan[WORKFLOW_PLUGINS_TO_INSTALL]
+            plugins = [p for p in workflow_plugins if p['name'] == plugin_name]
+            if plugins:
+                plugin = plugins[0]
+                context['plugin'] = {
+                    'name': plugin_name,
+                    'package_name': plugin.get('package_name'),
+                    'package_version': plugin.get('package_version'),
+                    'visibility': plugin.get('visibility'),
+                    'tenant_name': plugin.get('tenant_name'),
+                    'source': plugin.get('source')
+                }
+        return context
 
 
 class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
@@ -687,6 +842,12 @@ class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
             cls, Execution,
             ondelete='CASCADE'
         )
+
+    def currently_running_executions(self):
+        return [
+            exc for exc in self.executions
+            if exc.status in ExecutionState.IN_PROGRESS_STATES
+        ]
 
     @property
     def execution_ids(self):

@@ -74,7 +74,7 @@ from .mocks import (
     MockHTTPClient,
     CLIENT_API_VERSION,
     build_query_string,
-    mock_execute_task,
+    mock_send_mgmtworker_task,
     upload_mock_cloudify_license
 )
 
@@ -297,10 +297,8 @@ class BaseServerTestCase(unittest.TestCase):
         """
         amqp_patches = [
             patch('manager_rest.amqp_manager.RabbitMQClient'),
-            patch('manager_rest.workflow_executor._execute_task',
-                  mock_execute_task),
-            patch('manager_rest.workflow_executor._send_mgmtworker_task'),
-            patch('manager_rest.workflow_executor._broadcast_mgmtworker_task'),
+            patch('manager_rest.workflow_executor._send_mgmtworker_task',
+                  mock_send_mgmtworker_task),
             patch('manager_rest.workflow_executor._broadcast_mgmtworker_task'),
             patch('manager_rest.workflow_executor.get_client'),
         ]

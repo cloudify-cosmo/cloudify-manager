@@ -13,13 +13,13 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 #
-
 from datetime import datetime
 
 from flask_restful.reqparse import Argument
 from flask_restful_swagger import swagger
 from flask_restful.inputs import boolean
 
+from cloudify.models_states import ExecutionState
 from manager_rest import manager_exceptions
 from manager_rest.maintenance import is_bypass_maintenance_mode
 from manager_rest.resource_manager import (
@@ -109,18 +109,33 @@ class Executions(SecuredResource):
         if scheduled_time:
             scheduled_time = self._parse_scheduled_time(scheduled_time)
 
-        if parameters is not None and parameters.__class__ is not dict:
+        if parameters is not None and not isinstance(parameters, dict):
             raise manager_exceptions.BadParametersError(
-                "request body's 'parameters' field must be a dict but"
-                " is of type {0}".format(parameters.__class__.__name__))
+                f"request body's 'parameters' field must be a dict but"
+                f" is of type {parameters.__class__.__name__}")
 
-        bypass_maintenance = is_bypass_maintenance_mode()
-        execution = get_resource_manager().execute_workflow(
-            deployment_id, workflow_id, parameters=parameters,
-            allow_custom_parameters=allow_custom_parameters, force=force,
-            dry_run=dry_run, bypass_maintenance=bypass_maintenance,
-            queue=queue, wait_after_fail=wait_after_fail,
-            scheduled_time=scheduled_time)
+        sm = get_storage_manager()
+        rm = get_resource_manager()
+        with sm.transaction():
+            deployment = sm.get(models.Deployment, deployment_id)
+            rm.verify_deployment_environment_created_successfully(deployment)
+            execution = models.Execution(
+                workflow_id=workflow_id,
+                deployment=deployment,
+                parameters=parameters,
+                is_dry_run=dry_run,
+                status=ExecutionState.PENDING,
+                allow_custom_parameters=allow_custom_parameters,
+                scheduled_for=scheduled_time,
+            )
+            sm.put(execution)
+        rm.execute_workflow(
+            execution,
+            bypass_maintenance=is_bypass_maintenance_mode(),
+            force=force,
+            queue=queue,
+            wait_after_fail=wait_after_fail,
+        )
         return execution, 201
 
     def _parse_scheduled_time(self, scheduled_time):
