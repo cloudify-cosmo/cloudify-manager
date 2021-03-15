@@ -468,7 +468,8 @@ class ExecutionsTestCase(BaseServerTestCase):
             is_system_workflow=False,
             workflow_id='install',
             status=status,
-            blueprint_id=deployment.blueprint_id
+            blueprint_id=deployment.blueprint_id,
+            parameters={},
         ))
         tasks_graph = self.sm.put(models.TasksGraph(
             _execution_fk=execution._storage_id,
