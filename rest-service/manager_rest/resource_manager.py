@@ -203,6 +203,7 @@ class ResourceManager(object):
 
     def start_queued_executions(self, finished_execution):
         for execution in self._get_queued_executions(finished_execution):
+            execution.status = ExecutionState.PENDING
             if self._should_use_system_workflow_executor(execution):
                 self._execute_system_workflow(execution, queue=True)
             else:
