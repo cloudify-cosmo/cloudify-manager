@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 #
+import uuid
 from datetime import datetime
 
 from flask_restful.reqparse import Argument
@@ -107,7 +108,27 @@ class Executions(SecuredResource):
         scheduled_time = request_dict.get('scheduled_time', None)
 
         if scheduled_time:
-            scheduled_time = self._parse_scheduled_time(scheduled_time)
+            sm = get_storage_manager()
+            schedule = models.ExecutionSchedule(
+                id='{}_{}'.format(workflow_id, uuid.uuid4().hex),
+                deployment=sm.get(models.Deployment, deployment_id),
+                created_at=datetime.utcnow(),
+                since=self._parse_scheduled_time(scheduled_time),
+                rule={'count': 1},
+                slip=0,
+                workflow_id=workflow_id,
+                parameters=parameters,
+                execution_arguments={
+                    'allow_custom_parameters': allow_custom_parameters,
+                    'force': force,
+                    'dry_run': dry_run,
+                    'wait_after_fail': wait_after_fail,
+                },
+                stop_on_fail=False,
+            )
+            schedule.next_occurrence = schedule.compute_next_occurrence()
+            sm.put(schedule)
+            return models.Execution(status=ExecutionState.SCHEDULED), 201
 
         if parameters is not None and not isinstance(parameters, dict):
             raise manager_exceptions.BadParametersError(
@@ -126,7 +147,6 @@ class Executions(SecuredResource):
                 is_dry_run=dry_run,
                 status=ExecutionState.PENDING,
                 allow_custom_parameters=allow_custom_parameters,
-                scheduled_for=scheduled_time,
             )
             sm.put(execution)
         rm.execute_workflow(
@@ -202,9 +222,7 @@ class ExecutionsId(SecuredResource):
                 'Invalid action: {0}, Valid action values are: {1}'.format(
                     action, valid_actions))
 
-        if action == 'requeue':
-            return get_resource_manager().requeue_execution(execution_id)
-        elif action in ('resume', 'force-resume'):
+        if action in ('resume', 'force-resume'):
             return get_resource_manager().resume_execution(
                 execution_id, force=action == 'force-resume')
         return get_resource_manager().cancel_execution(
