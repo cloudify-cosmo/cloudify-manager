@@ -204,7 +204,7 @@ class ResourceManager(object):
     def start_queued_executions(self, finished_execution):
         for execution in self._get_queued_executions(finished_execution):
             execution.status = ExecutionState.PENDING
-            if self._should_use_system_workflow_executor(execution):
+            if execution.is_system_workflow:
                 self._execute_system_workflow(execution, queue=True)
             else:
                 self.execute_workflow(execution, queue=True)
@@ -703,11 +703,7 @@ class ResourceManager(object):
             parameters={'delete_logs': delete_logs},
         )
         self.sm.put(execution)
-        self._execute_system_workflow(
-            execution,
-            bypass_maintenance=bypass_maintenance,
-            verify_no_executions=False,
-        )
+        self.execute_workflow(execution, bypass_maintenance=bypass_maintenance)
         workflow_executor.delete_source_plugins(deployment.id)
 
         return deployment
@@ -893,23 +889,6 @@ class ResourceManager(object):
         return execution
 
     @staticmethod
-    def _should_use_system_workflow_executor(execution):
-        """
-        Both system and `regular` workflows are being de-queued, and each kind
-        should be executed using a different executor function
-        (`execute_system_workflow`/`execute_workflow`).
-        * Deployment environment creation and deletion are considered
-        system workflows
-
-        """
-        workflow_id = execution.workflow_id
-        dep_env_workflows = ('create_deployment_environment',
-                             'delete_deployment_environment')
-        if workflow_id in dep_env_workflows or execution.is_system_workflow:
-            return True
-        return False
-
-    @staticmethod
     def _verify_workflow_in_deployment(wf_id, deployment, dep_id):
         if wf_id not in deployment.workflows:
             raise manager_exceptions.NonexistentWorkflowError(
@@ -984,9 +963,7 @@ class ResourceManager(object):
             needs to be blocked while a `create_snapshot` workflow
             is running or queued.
         """
-        return wf_id in ('create_deployment_environment',
-                         'delete_deployment_environment',
-                         'uninstall_plugin')
+        return wf_id == 'uninstall_plugin'
 
     def _execute_system_workflow(self,
                                  execution,
@@ -1925,7 +1902,7 @@ class ResourceManager(object):
             },
         )
         self.sm.put(execution)
-        self._execute_system_workflow(
+        self.execute_workflow(
             execution,
             bypass_maintenance=bypass_maintenance,
         )
