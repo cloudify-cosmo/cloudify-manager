@@ -1293,13 +1293,15 @@ class ResourceManager(object):
         for node_instance in node_instances:
             self.sm.put(node_instance)
 
-    def assert_no_snapshot_creation_running_or_queued(self, execution):
+    def assert_no_snapshot_creation_running_or_queued(self, execution=None):
         """
         Make sure no 'create_snapshot' workflow is currently running or queued.
         We do this to avoid DB modifications during snapshot creation.
         """
         status = ExecutionState.ACTIVE_STATES + ExecutionState.QUEUED_STATE
-        filters = {'status': status, 'id': lambda col: col != execution.id}
+        filters = {'status': status}
+        if execution is not None:
+            filters['id'] = lambda col: col != execution.id
         for e in self.list_executions(is_include_system_workflows=True,
                                       filters=filters,
                                       get_all_results=True).items:
