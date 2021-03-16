@@ -938,11 +938,10 @@ class ResourceManager(object):
 
     def _check_for_active_system_wide_execution(self, execution, queue):
         should_queue = False
-        for e in self.list_executions(
-                is_include_system_workflows=True,
-                filters={'status': ExecutionState.ACTIVE_STATES},
-                all_tenants=True,
-                get_all_results=True).items:
+        for e in self.sm.list(models.Execution, filters={
+                    'is_system_workflow': True,
+                    'status': ExecutionState.ACTIVE_STATES,
+                }, get_all_results=True, all_tenants=True).items:
             # When `queue` or `schedule` options are used no need to
             # raise an exception (the execution will run later)
             if e.deployment_id is None and (queue or execution.scheduled_for):
