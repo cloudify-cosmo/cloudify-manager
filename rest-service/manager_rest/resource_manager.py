@@ -218,20 +218,22 @@ class ResourceManager(object):
             yield system_executions[0]
             return
 
-        deployment_id = finished_execution.deployment.id
         if finished_execution.deployment:
+            deployment_id = finished_execution.deployment.id
             same_dep_executions = self.sm.list(models.Execution, filters={
                 'status': ExecutionState.QUEUED_STATE,
                 'deployment_id': deployment_id,
             }, sort=sort_by, get_all_results=True).items
+            other_queued = self.sm.list(models.Execution, filters={
+                'status': ExecutionState.QUEUED_STATE,
+                'deployment_id': lambda col: col != deployment_id,
+            }, sort=sort_by, get_all_results=True).items
+            queued_executions = same_dep_executions + other_queued
         else:
-            same_dep_executions = []
-
-        other_queued = self.sm.list(models.Execution, filters={
-            'status': ExecutionState.QUEUED_STATE,
-            'deployment_id': lambda col: col != deployment_id,
-        }, sort=sort_by, get_all_results=True).items
-        queued_executions = same_dep_executions + other_queued
+            queued_executions = self.sm.list(models.Execution, filters={
+                'status': ExecutionState.QUEUED_STATE,
+                'is_system_workflow': False,
+            }, sort=sort_by, get_all_results=True).items
 
         # {deployment: whether it can run executions}
         busy_deployments = {}
