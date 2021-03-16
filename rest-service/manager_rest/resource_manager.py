@@ -27,6 +27,7 @@ from collections import defaultdict
 from flask import current_app
 from flask_security import current_user
 
+from cloudify.constants import TERMINATED_STATES as TERMINATED_TASK_STATES
 from cloudify.cryptography_utils import encrypt
 from cloudify.workflows import tasks as cloudify_tasks
 from cloudify.utils import parse_utc_datetime_relative
@@ -1808,6 +1809,7 @@ class ResourceManager(object):
         self.sm.put(graph)
         if operations:
             created_at = utils.get_formatted_timestamp()
+            created_ops = []
             for operation in operations:
                 operation.setdefault('state', 'pending')
                 op = models.Operation(
@@ -1816,12 +1818,21 @@ class ResourceManager(object):
                     _tasks_graph_fk=graph._storage_id,
                     created_at=created_at,
                     **operation)
+                created_ops.append(op)
                 db.session.add(op)
             self.sm._safe_commit()
         if execution.total_operations is None:
             execution.total_operations = 0
             execution.finished_operations = 0
-        execution.total_operations += len(operations)
+        if operations:
+            execution.total_operations += sum(
+                not op.is_nop
+                for op in created_ops
+            )
+            execution.finished_operations += sum(
+                not op.is_nop and op.state in TERMINATED_TASK_STATES
+                for op in created_ops
+            )
         self.sm.update(
             execution,
             modified_attrs=('total_operations', 'finished_operations'))
