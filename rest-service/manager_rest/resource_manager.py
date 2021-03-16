@@ -334,6 +334,7 @@ class ResourceManager(object):
                     'config': self._get_conf_for_snapshots_wf()
                 },
                 is_system_workflow=True,
+                status=ExecutionState.PENDING,
             )
             self.sm.put(execution)
             execution = self._execute_system_workflow(
@@ -378,6 +379,7 @@ class ResourceManager(object):
                 'user_is_bootstrap_admin': current_user.is_bootstrap_admin
             },
             is_system_workflow=True,
+            status=ExecutionState.PENDING,
         )
         self.sm.put(execution)
         execution = self._execute_system_workflow(
@@ -878,6 +880,7 @@ class ResourceManager(object):
                     allow_custom_parameters=execution.allow_custom_parameters,
                     dry_run=execution.dry_run,
                     creator=execution.creator,
+                    status=ExecutionState.PENDING,
                 )
                 self.execute_workflow(
                     component_execution,
