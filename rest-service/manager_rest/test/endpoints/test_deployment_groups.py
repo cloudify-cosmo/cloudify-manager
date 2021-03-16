@@ -503,7 +503,7 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
             models.ExecutionGroup, exc_group.id).executions
         pending_execs = sum(
             exc.status == ExecutionState.PENDING for exc in group_execs)
-        queued_execs = sum(exc.status == ExecutionState.QUEUED
-            for exc in group_execs)
-        assert  pending_execs == exc_group.concurrency
-        assert  queued_execs == len(group_execs) - exc_group.concurrency
+        queued_execs = sum(
+            exc.status == ExecutionState.QUEUED for exc in group_execs)
+        assert pending_execs == exc_group.concurrency
+        assert queued_execs == len(group_execs) - exc_group.concurrency
