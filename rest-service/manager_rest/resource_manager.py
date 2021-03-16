@@ -203,6 +203,7 @@ class ResourceManager(object):
 
     def start_queued_executions(self, finished_execution):
         for execution in self._get_queued_executions(finished_execution):
+            execution.status = ExecutionState.PENDING
             if self._should_use_system_workflow_executor(execution):
                 self._execute_system_workflow(execution, queue=True)
             else:
@@ -333,6 +334,7 @@ class ResourceManager(object):
                     'config': self._get_conf_for_snapshots_wf()
                 },
                 is_system_workflow=True,
+                status=ExecutionState.PENDING,
             )
             self.sm.put(execution)
             execution = self._execute_system_workflow(
@@ -377,6 +379,7 @@ class ResourceManager(object):
                 'user_is_bootstrap_admin': current_user.is_bootstrap_admin
             },
             is_system_workflow=True,
+            status=ExecutionState.PENDING,
         )
         self.sm.put(execution)
         execution = self._execute_system_workflow(
@@ -877,6 +880,7 @@ class ResourceManager(object):
                     allow_custom_parameters=execution.allow_custom_parameters,
                     dry_run=execution.dry_run,
                     creator=execution.creator,
+                    status=ExecutionState.PENDING,
                 )
                 self.execute_workflow(
                     component_execution,
@@ -929,9 +933,10 @@ class ResourceManager(object):
                 execution, queue)
             return system_exec_running or execution_running
 
-    def _check_for_any_active_executions(self, queue):
+    def _check_for_any_active_executions(self, execution, queue):
         filters = {
-            'status': ExecutionState.ACTIVE_STATES
+            'status': ExecutionState.ACTIVE_STATES,
+            'id': lambda col: col != execution.id,
         }
         executions = [
             e.id
@@ -1007,10 +1012,11 @@ class ResourceManager(object):
 
         should_queue = False
         if self._system_workflow_modifies_db(execution.workflow_id):
-            self.assert_no_snapshot_creation_running_or_queued()
+            self.assert_no_snapshot_creation_running_or_queued(execution)
 
         if execution.deployment is None and verify_no_executions:
-            should_queue = self._check_for_any_active_executions(queue)
+            should_queue = self._check_for_any_active_executions(
+                execution, queue)
 
         # Execution can't currently run, it's queued and will run later
         if should_queue:
@@ -1287,13 +1293,15 @@ class ResourceManager(object):
         for node_instance in node_instances:
             self.sm.put(node_instance)
 
-    def assert_no_snapshot_creation_running_or_queued(self):
+    def assert_no_snapshot_creation_running_or_queued(self, execution=None):
         """
         Make sure no 'create_snapshot' workflow is currently running or queued.
         We do this to avoid DB modifications during snapshot creation.
         """
         status = ExecutionState.ACTIVE_STATES + ExecutionState.QUEUED_STATE
         filters = {'status': status}
+        if execution is not None:
+            filters['id'] = lambda col: col != execution.id
         for e in self.list_executions(is_include_system_workflows=True,
                                       filters=filters,
                                       get_all_results=True).items:

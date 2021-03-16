@@ -191,10 +191,8 @@ class ExecutionGroups(SecuredResource):
         )
         sm.put(group)
         rm = get_resource_manager()
-        amqp_client = get_amqp_client()
-        handler = workflow_sendhandler()
-        amqp_client.add_handler(handler)
-        with amqp_client:
+        executions = []
+        with sm.transaction():
             for dep in dep_group.deployments:
                 params = default_parameters.copy()
                 params.update(parameters.get(dep.id) or {})
@@ -202,13 +200,29 @@ class ExecutionGroups(SecuredResource):
                     workflow_id=workflow_id,
                     deployment=dep,
                     parameters=params,
+                    status=ExecutionState.PENDING,
                 )
+                sm.put(execution)
+                executions.append(execution)
                 group.executions.append(execution)
+
+        amqp_client = get_amqp_client()
+        handler = workflow_sendhandler()
+        amqp_client.add_handler(handler)
+        with amqp_client:
+            for execution in executions[:group.concurrency]:
                 rm.execute_workflow(
                     execution,
                     force=force,
                     send_handler=handler,
+                    queue=True,  # allow queue, but it will try to run
                 )
+
+        with sm.transaction():
+            for execution in executions[group.concurrency:]:
+                execution.status = ExecutionState.QUEUED
+                sm.update(execution, modified_attrs=('status', ))
+
         return group
 
 

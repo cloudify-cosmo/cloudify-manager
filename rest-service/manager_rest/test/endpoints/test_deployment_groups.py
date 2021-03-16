@@ -369,7 +369,8 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
         )
         non_group_execution = self.client.executions.start(
             deployment_id='dep1',
-            workflow_id='install'
+            workflow_id='install',
+            force=True,  # force, because there's one already running
         )
         # refetch as ORM objects so we can pass them to Log/Event
         group_execution = self.sm.get(models.Execution, group.execution_ids[0])
@@ -428,7 +429,8 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
         )
         self.client.executions.start(
             deployment_id='dep1',
-            workflow_id='install'
+            workflow_id='install',
+            force=True,  # force, because there's one already running
         )
         executions = self.client.executions.list(
             _group_id=execution_group['id'])
@@ -454,11 +456,21 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
 
     def test_delete_deployment(self):
         """It's still possible to delete a deployment used in an exec-group"""
-        self.client.execution_groups.start(
+        exc_group = self.client.execution_groups.start(
             deployment_group_id='group1',
             workflow_id='install'
         )
+        with self.assertRaisesRegex(CloudifyClientError, 'running or queued'):
+            self.client.deployments.delete('dep1')
+
+        group_execs = self.sm.get(
+            models.ExecutionGroup, exc_group.id).executions
+        for exc in group_execs:
+            exc.status = ExecutionState.TERMINATED
+            self.sm.update(exc)
+
         self.client.deployments.delete('dep1')
+
         delete_exec = self.sm.get(models.Execution, None, filters={
             'workflow_id': 'delete_deployment_environment',
             'deployment_id': 'dep1'
@@ -473,3 +485,25 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
 
         deps = self.client.deployments.list()
         assert len(deps) == 0
+
+    def test_queues_over_concurrency(self):
+        dep_ids = []
+        for ix in range(5):
+            dep_id = f'd{ix}'
+            dep = self.client.deployments.create('blueprint', dep_id)
+            self.create_deployment_environment(dep, None)
+            dep_ids.append(dep_id)
+        self.client.deployment_groups.put('group2', deployment_ids=dep_ids)
+        exc_group = self.client.execution_groups.start(
+            deployment_group_id='group2',
+            workflow_id='install',
+            concurrency=3,
+        )
+        group_execs = self.sm.get(
+            models.ExecutionGroup, exc_group.id).executions
+        pending_execs = sum(
+            exc.status == ExecutionState.PENDING for exc in group_execs)
+        queued_execs = sum(
+            exc.status == ExecutionState.QUEUED for exc in group_execs)
+        assert pending_execs == exc_group.concurrency
+        assert queued_execs == len(group_execs) - exc_group.concurrency
