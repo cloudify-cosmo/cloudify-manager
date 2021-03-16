@@ -865,7 +865,7 @@ class ResourceManager(object):
             handler=send_handler,
         )
 
-        workflow = execution.deployment.workflows[execution.workflow_id]
+        workflow = execution.get_workflow()
         is_cascading_workflow = workflow.get('is_cascading', False)
         if is_cascading_workflow:
             components_dep_ids = self._find_all_components_deployment_id(
