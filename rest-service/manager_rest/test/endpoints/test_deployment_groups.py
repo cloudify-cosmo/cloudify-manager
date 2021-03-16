@@ -370,7 +370,7 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
         non_group_execution = self.client.executions.start(
             deployment_id='dep1',
             workflow_id='install',
-            force=True,  # force, because there's on already running
+            force=True,  # force, because there's one already running
         )
         # refetch as ORM objects so we can pass them to Log/Event
         group_execution = self.sm.get(models.Execution, group.execution_ids[0])
@@ -430,7 +430,7 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
         self.client.executions.start(
             deployment_id='dep1',
             workflow_id='install',
-            force=True,  # force, because there's on already running
+            force=True,  # force, because there's one already running
         )
         executions = self.client.executions.list(
             _group_id=execution_group['id'])
