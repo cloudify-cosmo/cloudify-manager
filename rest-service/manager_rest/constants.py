@@ -98,10 +98,10 @@ class LabelsOperator(str, Enum):
 class AttrsOperator(str, Enum):
     ANY_OF = 'any_of'
     NOT_ANY_OF = 'not_any_of'
-    CONTAIN = 'contain'
-    NOT_CONTAIN = 'not_contain'
-    START_WITH = 'start_with'
-    END_WITH = 'end_with'
+    CONTAINS = 'contains'
+    NOT_CONTAINS = 'not_contains'
+    STARTS_WITH = 'starts_with'
+    ENDS_WITH = 'ends_with'
     IS_NOT_EMPTY = 'is_not_empty'
 
 

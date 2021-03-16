@@ -6,29 +6,37 @@ from manager_rest.storage import models
 from manager_rest.test.attribute import attr
 from manager_rest.rest.filters_utils import (FilterRule,
                                              create_filter_rules_list)
+from manager_rest.constants import AttrsOperator, LabelsOperator
 from manager_rest.manager_exceptions import BadFilterRule, BadParametersError
 
 FILTER_ID = 'filter'
 LEGAL_FILTER_RULES = [
-    FilterRule('a', ['b'], 'any_of', 'label'),
-    FilterRule('e', ['f', 'g'], 'any_of', 'label'),
-    FilterRule('c', ['d'], 'not_any_of', 'label'),
-    FilterRule('h', ['i', 'j'], 'not_any_of', 'label'),
-    FilterRule('k', [], 'is_null', 'label'),
-    FilterRule('l', [], 'is_not_null', 'label'),
-    FilterRule('created_by', ['user'], 'any_of', 'attribute'),
-    FilterRule('created_by', ['user', 'admin'], 'any_of', 'attribute'),
-    FilterRule('created_by', ['user'], 'not_any_of', 'attribute'),
-    FilterRule('created_by', ['user', 'admin'], 'not_any_of', 'attribute'),
-    FilterRule('created_by', ['user'], 'contain', 'attribute'),
-    FilterRule('created_by', ['user', 'admin'], 'contain', 'attribute'),
-    FilterRule('created_by', ['user'], 'not_contain', 'attribute'),
-    FilterRule('created_by', ['user', 'admin'], 'not_contain', 'attribute'),
-    FilterRule('created_by', ['user'], 'start_with', 'attribute'),
-    FilterRule('created_by', ['user', 'admin'], 'start_with', 'attribute'),
-    FilterRule('created_by', ['user'], 'end_with', 'attribute'),
-    FilterRule('created_by', ['user', 'admin'], 'end_with', 'attribute'),
-    FilterRule('created_by', [], 'is_not_empty', 'attribute')
+    FilterRule('a', ['b'], LabelsOperator.ANY_OF, 'label'),
+    FilterRule('e', ['f', 'g'], LabelsOperator.ANY_OF, 'label'),
+    FilterRule('c', ['d'], LabelsOperator.NOT_ANY_OF, 'label'),
+    FilterRule('h', ['i', 'j'], LabelsOperator.NOT_ANY_OF, 'label'),
+    FilterRule('k', [], LabelsOperator.IS_NULL, 'label'),
+    FilterRule('l', [], LabelsOperator.IS_NOT_NULL, 'label'),
+    FilterRule('created_by', ['user'], AttrsOperator.ANY_OF, 'attribute'),
+    FilterRule('created_by', ['user', 'admin'], AttrsOperator.ANY_OF,
+               'attribute'),
+    FilterRule('created_by', ['user'], AttrsOperator.NOT_ANY_OF, 'attribute'),
+    FilterRule('created_by', ['user', 'admin'], AttrsOperator.NOT_ANY_OF,
+               'attribute'),
+    FilterRule('created_by', ['user'], AttrsOperator.CONTAINS, 'attribute'),
+    FilterRule('created_by', ['user', 'admin'], AttrsOperator.CONTAINS,
+               'attribute'),
+    FilterRule('created_by', ['user'], AttrsOperator.NOT_CONTAINS,
+               'attribute'),
+    FilterRule('created_by', ['user', 'admin'], AttrsOperator.NOT_CONTAINS,
+               'attribute'),
+    FilterRule('created_by', ['user'], AttrsOperator.STARTS_WITH, 'attribute'),
+    FilterRule('created_by', ['user', 'admin'], AttrsOperator.STARTS_WITH,
+               'attribute'),
+    FilterRule('created_by', ['user'], AttrsOperator.ENDS_WITH, 'attribute'),
+    FilterRule('created_by', ['user', 'admin'], AttrsOperator.ENDS_WITH,
+               'attribute'),
+    FilterRule('created_by', [], AttrsOperator.IS_NOT_EMPTY, 'attribute')
 ]
 
 
@@ -41,20 +49,29 @@ class FiltersFunctionalityBaseCase(base_test.BaseServerTestCase):
         self.resource_model = resource_model
 
     def _test_labels_filters_applied(self, res_1_id, res_2_id):
-        self.assert_filters_applied([('a', ['b'], 'any_of', 'label')],
+        self.assert_filters_applied([('a', ['b'], LabelsOperator.ANY_OF,
+                                      'label')],
                                     {res_1_id, res_2_id}, self.resource_model)
-        self.assert_filters_applied([('c', ['z'], 'not_any_of', 'label')],
+        self.assert_filters_applied([('c', ['z'], LabelsOperator.NOT_ANY_OF,
+                                      'label')],
                                     {res_1_id}, self.resource_model)
-        self.assert_filters_applied([('a', ['y', 'z'], 'any_of', 'label'),
-                                     ('c', ['d'], 'any_of', 'label')],
+        self.assert_filters_applied([('a', ['y', 'z'], LabelsOperator.ANY_OF,
+                                      'label'),
+                                     ('c', ['d'], LabelsOperator.ANY_OF,
+                                      'label')],
                                     {res_1_id}, self.resource_model)
-        self.assert_filters_applied([('a', ['b'], 'any_of', 'label'),
-                                     ('e', [], 'is_not_null', 'label')],
+        self.assert_filters_applied([('a', ['b'], LabelsOperator.ANY_OF,
+                                      'label'),
+                                     ('e', [], LabelsOperator.IS_NOT_NULL,
+                                      'label')],
                                     {res_2_id}, self.resource_model)
-        self.assert_filters_applied([('a', ['b'], 'any_of', 'label'),
-                                     ('e', [], 'is_null', 'label')],
+        self.assert_filters_applied([('a', ['b'], LabelsOperator.ANY_OF,
+                                      'label'),
+                                     ('e', [], LabelsOperator.IS_NULL,
+                                      'label')],
                                     {res_1_id}, self.resource_model)
-        self.assert_filters_applied([('a', [], 'is_null', 'label')], set(),
+        self.assert_filters_applied([('a', [], LabelsOperator.IS_NULL,
+                                      'label')], set(),
                                     self.resource_model)
 
     def test_filter_rule_not_dictionary_fails(self):
@@ -68,32 +85,34 @@ class FiltersFunctionalityBaseCase(base_test.BaseServerTestCase):
     def test_filter_rule_key_not_text_type_fails(self):
         with self.assertRaisesRegex(BadFilterRule,  'must be a string'):
             err_filter_rule = {'key': 1, 'values': ['b'],
-                               'operator': 'any_of', 'type': 'label'}
+                               'operator': LabelsOperator.ANY_OF,
+                               'type': 'label'}
             create_filter_rules_list([err_filter_rule], self.resource_model)
 
     def test_filter_rule_value_not_list_fails(self):
         with self.assertRaisesRegex(BadFilterRule,  'must be a list'):
             err_filter_rule = {'key': 'a', 'values': 'b',
-                               'operator': 'any_of', 'type': 'label'}
+                               'operator': LabelsOperator.ANY_OF,
+                               'type': 'label'}
             create_filter_rules_list([err_filter_rule], self.resource_model)
 
     def test_parse_filter_rules_fails(self):
         err_filter_rules_params = [
             (('a', ['b'], 'bad_operator', 'label'),
              'operator for filtering by labels must be one of'),
-            (('a', ['b'], 'is_null', 'label'),
+            (('a', ['b'], LabelsOperator.IS_NULL, 'label'),
              'list must be empty if the operator'),
-            (('a', ['b'], 'is_not_null', 'label'),
+            (('a', ['b'], LabelsOperator.IS_NOT_NULL, 'label'),
              'list must be empty if the operator'),
-            (('a', [], 'any_of', 'label'),
+            (('a', [], LabelsOperator.ANY_OF, 'label'),
              'list must include at least one item if the operator'),
             (('blueprint_id', ['b'], 'bad_operator', 'attribute'),
              'The operator for filtering by attributes must be'),
-            (('bad_attribute', ['dep1'], 'any_of', 'attribute'),
+            (('bad_attribute', ['dep1'], LabelsOperator.ANY_OF, 'attribute'),
              'Allowed attributes to filter deployments|blueprints by are'),
-            (('a', ['b'], 'any_of', 'bad_type'),
+            (('a', ['b'], LabelsOperator.ANY_OF, 'bad_type'),
              'Filter rule type must be one of'),
-            (('bad_attribute', ['dep1'], 'any_of', 'bad_type'),
+            (('bad_attribute', ['dep1'], LabelsOperator.ANY_OF, 'bad_type'),
              'Filter rule type must be one of')
         ]
         for params, err_msg in err_filter_rules_params:
@@ -103,8 +122,9 @@ class FiltersFunctionalityBaseCase(base_test.BaseServerTestCase):
 
     def test_key_and_value_validation_fails(self):
         err_filter_rules_params = [
-            (('a b', ['b'], 'any_of', 'label'), 'filter rule key'),
-            (('a', ['b', 'c d'], 'any_of', 'label'),
+            (('a b', ['b'], LabelsOperator.ANY_OF, 'label'),
+             'filter rule key'),
+            (('a', ['b', 'c d'], LabelsOperator.ANY_OF, 'label'),
              'One of the filter rule values')
         ]
         for params, err_msg in err_filter_rules_params:
@@ -141,63 +161,66 @@ class DeploymentFiltersFunctionalityCase(FiltersFunctionalityBaseCase):
                                                site_name='other_site')
         self._test_labels_filters_applied(dep1.id, dep2.id)
         self.assert_filters_applied(
-            [('a', ['b'], 'any_of', 'label'),
-             ('c', ['y', 'z'], 'not_any_of', 'label')], {dep1.id})
+            [('a', ['b'], LabelsOperator.ANY_OF, 'label'),
+             ('c', ['y', 'z'], LabelsOperator.NOT_ANY_OF, 'label')], {dep1.id})
 
         self.assert_filters_applied(
-            [('a', ['b'], 'any_of', 'label'),
-             ('blueprint_id', ['res_1', 'res_2'], 'any_of', 'attribute'),
-             ('blueprint_id', ['not_bp'], 'not_any_of', 'attribute'),
-             ('site_name', ['site'], 'contain', 'attribute')],
+            [('a', ['b'], LabelsOperator.ANY_OF, 'label'),
+             ('blueprint_id', ['res_1', 'res_2'], AttrsOperator.ANY_OF,
+              'attribute'),
+             ('blueprint_id', ['not_bp'], AttrsOperator.NOT_ANY_OF,
+              'attribute'),
+             ('site_name', ['site'], AttrsOperator.CONTAINS, 'attribute')],
             {dep1.id, dep2.id},
         )
 
         self.assert_filters_applied(
-            [('a', ['b'], 'any_of', 'label'),
-             ('blueprint_id', ['res_1', 'res_2'], 'not_any_of', 'attribute')],
+            [('a', ['b'], LabelsOperator.ANY_OF, 'label'),
+             ('blueprint_id', ['res_1', 'res_2'], AttrsOperator.NOT_ANY_OF,
+              'attribute')],
             set()
         )
 
         self.assert_filters_applied(
-            [('a', ['b'], 'any_of', 'label'),
-             ('blueprint_id', ['res'], 'contain', 'attribute')],
+            [('a', ['b'], LabelsOperator.ANY_OF, 'label'),
+             ('blueprint_id', ['res'], AttrsOperator.CONTAINS, 'attribute')],
             {dep1.id, dep2.id}
         )
 
         self.assert_filters_applied(
-            [('a', ['b'], 'any_of', 'label'),
-             ('blueprint_id', ['res_1'], 'contain', 'attribute')],
+            [('a', ['b'], LabelsOperator.ANY_OF, 'label'),
+             ('blueprint_id', ['res_1'], AttrsOperator.CONTAINS, 'attribute')],
             {dep1.id}
         )
 
         self.assert_filters_applied(
-            [('site_name', ['site_1'], 'not_contain', 'attribute')],
-            {dep2.id}
+            [('site_name', ['site_1'], AttrsOperator.NOT_CONTAINS,
+              'attribute')], {dep2.id}
         )
 
         self.assert_filters_applied(
-            [('site_name', ['site_1', 'site_3'], 'not_contain', 'attribute')],
-            {dep2.id}
+            [('site_name', ['site_1', 'site_3'], AttrsOperator.NOT_CONTAINS,
+              'attribute')], {dep2.id}
         )
 
         self.assert_filters_applied(
-            [('site_name', ['site'], 'start_with', 'attribute')],
+            [('site_name', ['site'], AttrsOperator.STARTS_WITH, 'attribute')],
             {dep1.id}
         )
 
         self.assert_filters_applied(
-            [('site_name', ['other', 'blah'], 'start_with', 'attribute')],
+            [('site_name', ['other', 'blah'], AttrsOperator.STARTS_WITH,
+              'attribute')], {dep2.id}
+        )
+
+        self.assert_filters_applied(
+            [('site_name', ['site'], AttrsOperator.ENDS_WITH, 'attribute')],
             {dep2.id}
         )
 
         self.assert_filters_applied(
-            [('site_name', ['site'], 'end_with', 'attribute')],
-            {dep2.id}
-        )
-
-        self.assert_filters_applied(
-            [('site_name', ['1', 'blah'], 'end_with', 'attribute')],
-            {dep1.id}
+            [('site_name', ['1', 'blah'], AttrsOperator.ENDS_WITH,
+              'attribute')], {dep1.id}
         )
 
 
@@ -206,12 +229,14 @@ del FiltersFunctionalityBaseCase
 
 
 class FiltersBaseCase(base_test.BaseServerTestCase):
-    LABELS_RULE = FilterRule('a', ['b'], 'any_of', 'label')
-    ATTRS_RULE = FilterRule('created_by', ['admin'], 'not_any_of', 'attribute')
+    LABELS_RULE = FilterRule('a', ['b'],  LabelsOperator.ANY_OF, 'label')
+    ATTRS_RULE = FilterRule('created_by', ['admin'],  AttrsOperator.NOT_ANY_OF,
+                            'attribute')
     FILTER_RULES = [LABELS_RULE, ATTRS_RULE]
 
-    NEW_LABELS_RULE = FilterRule('c', ['d'], 'any_of', 'label')
-    NEW_ATTRS_RULE = FilterRule('created_by', ['user'], 'any_of', 'attribute')
+    NEW_LABELS_RULE = FilterRule('c', ['d'], LabelsOperator.ANY_OF, 'label')
+    NEW_ATTRS_RULE = FilterRule('created_by', ['user'], AttrsOperator.ANY_OF,
+                                'attribute')
     NEW_RULES = [NEW_LABELS_RULE, NEW_ATTRS_RULE]
 
     def setUp(self, filters_resource):
@@ -228,15 +253,15 @@ class FiltersBaseCase(base_test.BaseServerTestCase):
         for i in range(3):
             self.create_filter(self.filters_client,
                                '{0}{1}'.format(FILTER_ID, i),
-                               [FilterRule(f'a{i}', [f'b{i}'], 'any_of',
-                                           'label')])
+                               [FilterRule(f'a{i}', [f'b{i}'],
+                                           LabelsOperator.ANY_OF, 'label')])
         filters_list = self.filters_client.list()
 
         self.assertEqual(len(filters_list.items), 3)
         for i in range(3):
             self.assertEqual(filters_list.items[i].labels_filter_rules,
-                             [FilterRule(f'a{i}', [f'b{i}'], 'any_of',
-                                         'label')])
+                             [FilterRule(f'a{i}', [f'b{i}'],
+                                         LabelsOperator.ANY_OF, 'label')])
 
     def test_list_filters_sort(self):
         filter_ids = ['a_filter', 'c_filter', 'b_filter']
@@ -262,7 +287,8 @@ class FiltersBaseCase(base_test.BaseServerTestCase):
         # This test only handles one case in order to verify an exception is
         # thrown during a filter creation. All cases are tested in the
         # FiltersFunctionalityTest::test_parse_filter_rules_fails test.
-        simple_rule_uppercase = [FilterRule('A', ['B'], 'any_of', 'label')]
+        simple_rule_uppercase = [FilterRule('A', ['B'], LabelsOperator.ANY_OF,
+                                            'label')]
         new_filter = self.create_filter(self.filters_client,
                                         FILTER_ID,
                                         simple_rule_uppercase)
