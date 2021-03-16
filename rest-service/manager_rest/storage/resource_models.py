@@ -1487,6 +1487,10 @@ class Operation(SQLResourceBase):
     def tasks_graph(cls):
         return one_to_many_relationship(cls, TasksGraph, cls._tasks_graph_fk)
 
+    @property
+    def is_nop(self):
+        return self.type == 'NOPLocalWorkflowTask'
+
 
 class InterDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'inter_deployment_dependencies'
