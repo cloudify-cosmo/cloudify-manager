@@ -87,34 +87,47 @@ class OperationsId(SecuredResource):
             {'state': {'type': text_type}}
         )
         sm = get_storage_manager()
-        instance = sm.get(models.Operation, operation_id, locking=True)
-        instance.state = request_dict.get('state', instance.state)
-        if instance.tasks_graph and instance.tasks_graph.execution:
-            execution = instance.tasks_graph.execution
-            if execution.finished_operations is not None:
-                if instance.state in TERMINATED_STATES:
+        with sm.transaction():
+            instance = sm.get(models.Operation, operation_id, locking=True)
+            old_state = instance.state
+            instance.state = request_dict.get('state', instance.state)
+            if not instance.is_nop and \
+                    old_state not in TERMINATED_STATES and \
+                    instance.state in TERMINATED_STATES:
+                execution = self._get_execution(sm, instance)
+                if execution and execution.finished_operations is not None:
                     execution.finished_operations += 1
-            sm.update(
-                execution,
-                modified_attrs=('total_operations', 'finished_operations'))
-        return sm.update(instance)
+                sm.update(execution, modified_attrs=('finished_operations',))
+            instance = sm.update(instance)
+        return instance
 
     @authorize('operations')
     @marshal_with(models.Operation)
     def delete(self, operation_id, **kwargs):
         sm = get_storage_manager()
         instance = sm.get(models.Operation, operation_id, locking=True)
-        if instance.tasks_graph and instance.tasks_graph.execution:
-            execution = instance.tasks_graph.execution
-            if execution.total_operations:
-                execution.total_operations -= 1
-                if instance.state in TERMINATED_STATES:
-                    execution.finished_operations -= 1
-            sm.update(
-                execution,
-                modified_attrs=('total_operations', 'finished_operations'))
-        sm.delete(instance)
+        with sm.transaction():
+            if not instance.is_nop:
+                execution = self._get_execution(sm, instance)
+                if execution and execution.total_operations is not None:
+                    execution.total_operations -= 1
+                    if instance.state in TERMINATED_STATES:
+                        execution.finished_operations -= 1
+                    sm.update(execution, modified_attrs=(
+                        'total_operations', 'finished_operations'))
+            sm.delete(instance)
         return instance, 200
+
+    def _get_execution(self, sm, operation):
+        """Get the execution for the operation, with a `FOR UPDATE`"""
+        # use the FK, avoding touching .execution, which would load
+        # the object implicitly (without FOR UPDATE)
+        if operation.tasks_graph and operation.tasks_graph._execution_fk:
+            return sm.get(
+                models.Execution,
+                None,
+                filters={'_storage_id': operation.tasks_graph._execution_fk},
+                locking=True)
 
 
 class TasksGraphs(SecuredResource):
