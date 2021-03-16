@@ -126,11 +126,36 @@ class FiltersId(SecuredResource):
                 filters_model, filter_elem, visibility)
             filter_elem.visibility = visibility
         if filter_rules:
-            filter_elem.value = create_filter_rules_list(filter_rules,
-                                                         filtered_resource)
+            new_filter_rules = create_filter_rules_list(filter_rules,
+                                                        filtered_resource)
+            new_attrs_filter_rules = _get_filter_rules_by_type(
+                new_filter_rules, 'attribute')
+            new_labels_filter_rules = _get_filter_rules_by_type(
+                new_filter_rules, 'label')
+            if new_attrs_filter_rules:
+                if new_labels_filter_rules:  # Both need to be updated
+                    filter_elem.value = new_filter_rules
+                else:  # Only labels filter rules should be saved
+                    filter_elem.value = (filter_elem.labels_filter_rules +
+                                         new_filter_rules)
+
+            elif new_labels_filter_rules:
+                # Only attributes filter rules should be saved
+                filter_elem.value = (filter_elem.attrs_filter_rules +
+                                     new_filter_rules)
+
+            else:  # Should not get here
+                raise manager_exceptions.BadParametersError(
+                    'Unknown filter rules type')
+
         filter_elem.updated_at = get_formatted_timestamp()
 
         return storage_manager.update(filter_elem)
+
+
+def _get_filter_rules_by_type(filter_rules_list, filter_rule_type):
+    return [filter_rule for filter_rule in
+            filter_rules_list if filter_rule['type'] == filter_rule_type]
 
 
 class BlueprintsFiltersId(FiltersId):

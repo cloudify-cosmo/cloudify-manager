@@ -1083,22 +1083,10 @@ class BaseServerTestCase(unittest.TestCase):
                       visibility=VisibilityState.TENANT):
         return filters_client.create(filter_id, filter_rules, visibility)
 
-    def update_filter(self, filters_client, new_filter_rules=None,
-                      new_visibility=None):
-        filter_id = 'filter'
-        filter_rule = {'key': 'a', 'values': ['b'], 'operator': 'any_of',
-                       'type': 'label'}
-        orig_filter = self.create_filter(filters_client,
-                                         filter_id,
-                                         [filter_rule])
-        updated_filter = filters_client.update(filter_id, new_filter_rules,
-                                               new_visibility)
-
-        updated_rules = new_filter_rules or self.SIMPLE_RULE
-        updated_visibility = new_visibility or VisibilityState.TENANT
-        self.assertEqual(updated_filter.value, updated_rules)
-        self.assertEqual(updated_filter.visibility, updated_visibility)
-        self.assertGreater(updated_filter.updated_at, orig_filter.updated_at)
+    @staticmethod
+    def _get_filter_rules_by_type(filter_rules, filter_rules_type):
+        return [filter_rule for filter_rule in filter_rules if
+                filter_rule['type'] == filter_rules_type]
 
     def get_new_user_with_role(self, username, password, role,
                                tenant=DEFAULT_TENANT_NAME):
