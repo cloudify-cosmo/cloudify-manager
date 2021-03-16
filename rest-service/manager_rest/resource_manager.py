@@ -56,8 +56,11 @@ from manager_rest.utils import (send_event,
                                 extract_host_agent_plugins_from_plan)
 from manager_rest.rest.rest_utils import (
     RecursiveDeploymentDependencies,
-    update_inter_deployment_dependencies, verify_blueprint_uploaded_state,
-    compute_rule_from_scheduling_params)
+    RecursiveDeploymentLabelsDependencies,
+    update_inter_deployment_dependencies,
+    verify_blueprint_uploaded_state,
+    compute_rule_from_scheduling_params,
+)
 from manager_rest.deployment_update.constants import STATES as UpdateStates
 from manager_rest.plugins_update.constants import STATES as PluginsUpdateStates
 
@@ -1304,8 +1307,7 @@ class ResourceManager(object):
                           visibility,
                           skip_plugins_validation=False,
                           site=None,
-                          runtime_only_evaluation=False,
-                          labels=None):
+                          runtime_only_evaluation=False):
         verify_blueprint_uploaded_state(blueprint)
         plan = blueprint.plan
         visibility = self.get_resource_visibility(models.Deployment,
@@ -1355,6 +1357,99 @@ class ResourceManager(object):
         """This runs when create-deployment-environment finishes"""
         # RD-1602 will move this to the workflow:
         self._create_deployment_initial_dependencies(deployment)
+
+    @staticmethod
+    def get_deployment_parents_from_labels(labels):
+        parents = []
+        for label, value in labels:
+            if label == 'csys-obj-parent':
+                parents.append(value)
+        return parents
+
+    def verify_deployment_parent_labels(self, parents, deployment_id):
+        if not parents:
+            return
+        result = self.sm.list(
+            models.Deployment,
+            include=['id'],
+            filters={'id': lambda col: col.in_(parents)}
+        ).items
+        _existing_parents = [_parent[0] for _parent in result]
+        missing_parents = set(parents) - set(_existing_parents)
+        if missing_parents:
+            raise manager_exceptions.DeploymentParentNotFound(
+                'Deployment {0}: is referencing deployments'
+                ' using label `csys-obj-parent` that does not exist, '
+                'make sure that deployment(s) {1} exist before creating '
+                'deployment'.format(deployment_id, ','.join(missing_parents))
+            )
+
+    def _place_deployment_label_dependency(self, source, target):
+        self.sm.put(
+            models.DeploymentLabelsDependencies(
+                id=str(uuid.uuid4()),
+                source_deployment=source,
+                target_deployment=target,
+            )
+        )
+
+    def _remove_deployment_label_dependency(self, source, target):
+        dld = self.sm.get(
+                models.DeploymentLabelsDependencies,
+                None,
+                filters={
+                    'source_deployment': source,
+                    'target_deployment': target
+                }
+            )
+        self.sm.delete(dld)
+
+    def add_deployment_to_labels_graph(self, dep_graph, source, target_id):
+        self._place_deployment_label_dependency(
+            source,
+            self.sm.get(models.Deployment, target_id)
+        )
+        dep_graph.assert_no_cyclic_dependencies(
+            source.id, target_id
+        )
+        dep_graph.add_dependency_to_graph(source.id, target_id)
+        dep_graph.increase_deployment_counts_in_graph(
+            target_id,
+            source
+        )
+
+    def delete_deployment_from_labels_graph(self,
+                                            dep_graph,
+                                            source,
+                                            target_id):
+        dep_graph.decrease_deployment_counts_in_graph(target_id, source)
+        dep_graph.remove_dependency_from_graph(source.id, target_id)
+        self._remove_deployment_label_dependency(
+            source,
+            self.sm.get(
+                models.Deployment, target_id
+            )
+        )
+
+    def handle_deployment_labels_graph(self, parents, new_deployment):
+        if not parents:
+            return
+        parents_to_add = parents.setdefault('parents_to_add', {})
+        parents_to_remove = parents.setdefault('parents_to_remove', {})
+        dep_graph = RecursiveDeploymentLabelsDependencies(self.sm)
+        dep_graph.create_dependencies_graph()
+        for parent in parents_to_add:
+            self.add_deployment_to_labels_graph(
+                dep_graph,
+                new_deployment,
+                parent
+            )
+        for parent in parents_to_remove:
+            self.delete_deployment_from_labels_graph(
+                dep_graph,
+                new_deployment,
+                parent
+            )
 
     def install_plugin(self, plugin, manager_names=None, agent_names=None):
         """Send the plugin install task to the given managers or agents."""

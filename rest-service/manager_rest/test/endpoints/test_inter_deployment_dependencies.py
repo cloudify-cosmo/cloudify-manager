@@ -19,8 +19,6 @@ from mock import patch
 from cloudify_rest_client.exceptions import CloudifyClientError
 from cloudify.deployment_dependencies import create_deployment_dependency
 
-from manager_rest import utils
-from manager_rest.storage import models
 from manager_rest.manager_exceptions import NotFoundError, ConflictError
 from manager_rest.rest.rest_utils import RecursiveDeploymentDependencies
 
@@ -31,38 +29,6 @@ from manager_rest.test.base_test import BaseServerTestCase
 
 @attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
 class InterDeploymentDependenciesTest(BaseServerTestCase):
-    def _put_mock_blueprint(self):
-        blueprint_id = str(uuid.uuid4())
-        now = utils.get_formatted_timestamp()
-        return self.sm.put(
-            models.Blueprint(
-                id=blueprint_id,
-                created_at=now,
-                updated_at=now,
-                main_file_name='abcd',
-                plan={})
-        )
-
-    @staticmethod
-    def _get_mock_deployment(deployment_id, blueprint):
-        now = utils.get_formatted_timestamp()
-        deployment = models.Deployment(
-            id=deployment_id,
-            created_at=now,
-            updated_at=now,
-        )
-        deployment.blueprint = blueprint
-        return deployment
-
-    def _put_mock_deployments(self, source_deployment, target_deployment):
-        blueprint = self._put_mock_blueprint()
-        source_deployment = self._get_mock_deployment(source_deployment,
-                                                      blueprint)
-        self.sm.put(source_deployment)
-        target_deployment = self._get_mock_deployment(target_deployment,
-                                                      blueprint)
-        self.sm.put(target_deployment)
-
     def setUp(self):
         super(InterDeploymentDependenciesTest, self).setUp()
         self.dependency_creator = 'dependency_creator'
@@ -72,8 +38,8 @@ class InterDeploymentDependenciesTest(BaseServerTestCase):
             self.dependency_creator,
             self.source_deployment,
             self.target_deployment)
-        self._put_mock_deployments(self.source_deployment,
-                                   self.target_deployment)
+        self.put_mock_deployments(self.source_deployment,
+                                  self.target_deployment)
 
     @patch('manager_rest.rest.rest_utils.RecursiveDeploymentDependencies'
            '.assert_no_cyclic_dependencies')
@@ -264,10 +230,10 @@ class InterDeploymentDependenciesTest(BaseServerTestCase):
         # `comp-top` depends on `comp-bottom` which is shared with `sharing-1`
         # `sharing-2` depends on `resource`, `sharing-3` depends on `sharing-1`
         # and `capable` depends on `multi`.
-        self._put_mock_deployments('capable', 'multi')
-        self._put_mock_deployments('comp-top', 'comp-bottom')
-        self._put_mock_deployments('sharing-2', 'resource')
-        self._put_mock_deployments('sharing-3', 'sharing-1')
+        self.put_mock_deployments('capable', 'multi')
+        self.put_mock_deployments('comp-top', 'comp-bottom')
+        self.put_mock_deployments('sharing-2', 'resource')
+        self.put_mock_deployments('sharing-3', 'sharing-1')
         self.client.inter_deployment_dependencies.create(
             **create_deployment_dependency('component.teiredcomponent',
                                            'multi', 'comp-top'))
@@ -364,9 +330,9 @@ class InterDeploymentDependenciesTest(BaseServerTestCase):
                                            'infra'))
 
     def _populate_dependencies_table(self):
-        self._put_mock_deployments('0', '1')
-        self._put_mock_deployments('2', '3')
-        self._put_mock_deployments('4', '5')
+        self.put_mock_deployments('0', '1')
+        self.put_mock_deployments('2', '3')
+        self.put_mock_deployments('4', '5')
         self.client.inter_deployment_dependencies.create(
             **create_deployment_dependency('sample.vm', '1', '0'))
         self.client.inter_deployment_dependencies.create(

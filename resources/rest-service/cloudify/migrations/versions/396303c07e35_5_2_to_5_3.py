@@ -80,7 +80,8 @@ def _add_deployment_sub_statuses_and_counters():
         sa.Column(
             'sub_environments_count',
             sa.Integer(),
-            nullable=True
+            nullable=False,
+            default=0,
         )
     )
     op.add_column(
@@ -101,7 +102,8 @@ def _add_deployment_sub_statuses_and_counters():
         sa.Column(
             'sub_services_count',
             sa.Integer(),
-            nullable=True
+            nullable=False,
+            default=0,
         )
     )
     op.add_column(
@@ -115,86 +117,6 @@ def _add_deployment_sub_statuses_and_counters():
                     ),
             nullable=True
         )
-    )
-
-
-def _create_deployment_labels_dependencies_table():
-    op.create_table(
-        'deployment_labels_dependencies',
-        sa.Column('_storage_id', sa.Integer(), autoincrement=True,
-                  nullable=False),
-        sa.Column('id', sa.Text(), nullable=True),
-        sa.Column('visibility', VISIBILITY_ENUM, nullable=True),
-        sa.Column('created_at', UTCDateTime(), nullable=False),
-        sa.Column('_source_deployment', sa.Integer(),
-                  nullable=False),
-        sa.Column('_target_deployment', sa.Integer(),
-                  nullable=False),
-        sa.Column('_tenant_id', sa.Integer(), nullable=False),
-        sa.Column('_creator_id', sa.Integer(), nullable=False),
-        sa.ForeignKeyConstraint(
-            ['_creator_id'], ['users.id'],
-            name=op.f('deployment_labels_dependencies__creator_id_fkey'),
-            ondelete='CASCADE'
-        ),
-        sa.ForeignKeyConstraint(
-            ['_tenant_id'], ['tenants.id'],
-            name=op.f('deployment_labels_dependencies__tenant_id_fkey'),
-            ondelete='CASCADE'
-        ),
-        sa.ForeignKeyConstraint(
-            ['_source_deployment'], ['deployments._storage_id'],
-            name=op.f(
-                'deployment_labels_dependencies__source_deployment_fkey'
-            ), ondelete='CASCADE'
-        ),
-        sa.ForeignKeyConstraint(
-            ['_target_deployment'], ['deployments._storage_id'],
-            name=op.f(
-                'deployment_labels_dependencies__target_deployment_fkey'
-            ), ondelete='CASCADE'
-        ),
-        sa.PrimaryKeyConstraint(
-            '_storage_id', name=op.f('deployment_labels_dependencies_pkey')
-        ),
-
-        sa.UniqueConstraint(
-            '_source_deployment',
-            '_target_deployment',
-            name=op.f(
-                'deployment_labels_dependencies__source_deployment_key'
-            )
-        )
-    )
-    op.create_index(
-        op.f('deployment_labels_dependencies__creator_id_idx'),
-        'deployment_labels_dependencies', ['_creator_id'], unique=False
-    )
-    op.create_index(
-        op.f('deployment_labels_dependencies__tenant_id_idx'),
-        'deployment_labels_dependencies', ['_tenant_id'], unique=False
-    )
-    op.create_index(
-        op.f('deployment_labels_dependencies_created_at_idx'),
-        'deployment_labels_dependencies', ['created_at'], unique=False
-    )
-    op.create_index(
-        op.f('deployment_labels_dependencies_id_idx'),
-        'deployment_labels_dependencies', ['id'], unique=False
-    )
-    op.create_index(
-        op.f('deployment_labels_dependencies__source_deployment_idx'),
-        'deployment_labels_dependencies', ['_source_deployment'],
-        unique=False
-    )
-    op.create_index(
-        op.f('deployment_labels_dependencies__target_deployment_idx'),
-        'deployment_labels_dependencies', ['_target_deployment'],
-        unique=False
-    )
-    op.create_index(
-        op.f('deployment_labels_dependencies_visibility_idx'),
-        'deployment_labels_dependencies', ['visibility'], unique=False
     )
 
 

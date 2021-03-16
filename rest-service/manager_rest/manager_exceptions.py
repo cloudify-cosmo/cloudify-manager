@@ -124,6 +124,19 @@ class DependentExistsError(ManagerException):
             *args, **kwargs)
 
 
+class DeploymentParentNotFound(ManagerException):
+    DEPLOYMENT_PARENT_NOT_FOUND_ERROR_CODE = \
+        'deployment_parent_not_found_error'
+
+    def __init__(self, *args, **kwargs):
+        super(DeploymentParentNotFound, self).__init__(
+            400,
+            DeploymentParentNotFound.DEPLOYMENT_PARENT_NOT_FOUND_ERROR_CODE,
+            *args,
+            **kwargs
+        )
+
+
 class NonexistentWorkflowError(ManagerException):
     NONEXISTENT_WORKFLOW_ERROR_CODE = 'nonexistent_workflow_error'
 

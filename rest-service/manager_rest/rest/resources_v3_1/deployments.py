@@ -76,6 +76,65 @@ class DeploymentsId(resources_v1.DeploymentsId):
     def get_skip_plugin_validation_flag(self, request_dict):
         return request_dict.get('skip_plugins_validation', False)
 
+    def _error_from_create(self, execution):
+        """Map a failed create-dep-env execution to a REST error response"""
+        if execution.status != ExecutionState.FAILED or not execution.error:
+            return DeploymentEnvironmentCreationInProgressError()
+        error_message = execution.error.strip().split('\n')[-1]
+        return DeploymentCreationError(error_message)
+
+    @staticmethod
+    def _populate_direct_deployment_counts(deployment):
+        sm = get_storage_manager()
+        sub_services_count = 0
+        sub_environments_count = 0
+        sources = sm.list(
+            models.DeploymentLabelsDependencies,
+            filters={
+                'target_deployment_id': deployment['id']
+            }
+        )
+        for source in sources:
+            if source.source_deployment.is_environment:
+                sub_environments_count += 1
+            else:
+                sub_services_count += 1
+        deployment['sub_environments_count'] = sub_environments_count
+        deployment['sub_services_count'] = sub_services_count
+        return deployment
+
+    @staticmethod
+    def _handle_deployment_labels(rm, deployment, raw_labels_list):
+        deployment_parents = deployment.deployment_parents
+        new_labels = rest_utils.get_labels_list(raw_labels_list)
+
+        parents_labels = rm.get_deployment_parents_from_labels(
+            new_labels
+        )
+        _parents_to_add = set(parents_labels) - set(
+            deployment_parents
+        )
+        _parents_to_remove = set(deployment_parents) - set(
+            parents_labels
+        )
+        if _parents_to_add:
+            rm.verify_deployment_parent_labels(
+                _parents_to_add, deployment.id
+            )
+        rm.update_resource_labels(
+            models.DeploymentLabel,
+            deployment,
+            new_labels
+        )
+        if _parents_to_add or _parents_to_remove:
+            parents = {
+                'parents_to_add': _parents_to_add,
+                'parents_to_remove': _parents_to_remove
+            }
+            rm.handle_deployment_labels_graph(
+                parents, deployment
+            )
+
     @authorize('deployment_create')
     @rest_decorators.marshal_with(models.Deployment)
     def put(self, deployment_id, **kwargs):
@@ -130,13 +189,6 @@ class DeploymentsId(resources_v1.DeploymentsId):
                 raise self._error_from_create(deployment.create_execution)
         return deployment, 201
 
-    def _error_from_create(self, execution):
-        """Map a failed create-dep-env execution to a REST error response"""
-        if execution.status != ExecutionState.FAILED or not execution.error:
-            return DeploymentEnvironmentCreationInProgressError()
-        error_message = execution.error.strip().split('\n')[-1]
-        return DeploymentCreationError(error_message)
-
     @authorize('deployment_update')
     @rest_decorators.marshal_with(models.Deployment)
     def patch(self, deployment_id):
@@ -161,15 +213,29 @@ class DeploymentsId(resources_v1.DeploymentsId):
             if previous is not None:
                 raise ConflictError('{0} is already set'.format(attrib))
             setattr(deployment, attrib, request_dict[attrib])
-
         if 'labels' in request_dict:
             raw_labels_list = request_dict.get('labels', [])
-            new_labels = rest_utils.get_labels_list(raw_labels_list)
-            rm.update_resource_labels(models.DeploymentLabel,
-                                      deployment,
-                                      new_labels)
+            self._handle_deployment_labels(
+                rm,
+                deployment,
+                raw_labels_list
+            )
         sm.update(deployment)
         return deployment
+
+    @authorize('deployment_get')
+    @rest_decorators.marshal_with(models.Deployment)
+    def get(self, deployment_id, _include=None, **kwargs):
+        args = rest_utils.get_args_and_verify_arguments([
+            Argument('all_sub_deployments', type=boolean, default=True),
+        ])
+        deployment = super(DeploymentsId, self).get(
+            deployment_id, _include=_include, kwargs=kwargs
+        )
+        # always return the deployment if `all_sub_deployments` is True
+        if args.all_sub_deployments:
+            return deployment
+        return self._populate_direct_deployment_counts(deployment)
 
 
 class DeploymentsSetVisibility(SecuredResource):
