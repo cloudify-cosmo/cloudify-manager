@@ -497,10 +497,7 @@ class ResourceManager(object):
             status=ExecutionState.PENDING,
         )
         self.sm.put(execution)
-        return self._execute_system_workflow(
-            execution,
-            verify_no_executions=False,
-        )
+        return self.execute_workflow(execution)
 
     def publish_blueprint(self,
                           application_dir,
@@ -842,9 +839,10 @@ class ResourceManager(object):
                          bypass_maintenance=None, wait_after_fail=600,
                          allow_overlapping_running_wf=False,
                          send_handler: 'SendHandler' = None):
-        self._check_allow_global_execution(execution.deployment)
-        self._verify_dependencies_not_affected(
-            execution.workflow_id, execution.deployment, force)
+        if execution.deployment:
+            self._check_allow_global_execution(execution.deployment)
+            self._verify_dependencies_not_affected(
+                execution.workflow_id, execution.deployment, force)
 
         should_queue = queue
         if not allow_overlapping_running_wf:
@@ -905,7 +903,7 @@ class ResourceManager(object):
         """
         system_exec_running = self._check_for_active_system_wide_execution(
             queue, execution)
-        if force:
+        if force or not execution.deployment:
             return system_exec_running
         else:
             execution_running = self._check_for_active_executions(
