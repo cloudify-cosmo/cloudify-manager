@@ -9,14 +9,26 @@ from manager_rest.rest.filters_utils import (FilterRule,
 from manager_rest.manager_exceptions import BadFilterRule, BadParametersError
 
 FILTER_ID = 'filter'
-LABELS_LEGAL_FILTER_RULES = [
-    {'key': 'a', 'values': ['b'], 'operator': 'any_of', 'type': 'label'},
-    {'key': 'e', 'values': ['f', 'g'], 'operator': 'any_of', 'type': 'label'},
-    {'key': 'c', 'values': ['d'], 'operator': 'not_any_of', 'type': 'label'},
-    {'key': 'h', 'values': ['i', 'j'], 'operator': 'not_any_of',
-     'type': 'label'},
-    {'key': 'k', 'values': [], 'operator': 'is_null', 'type': 'label'},
-    {'key': 'l', 'values': [], 'operator': 'is_not_null', 'type': 'label'}
+LEGAL_FILTER_RULES = [
+    FilterRule('a', ['b'], 'any_of', 'label'),
+    FilterRule('e', ['f', 'g'], 'any_of', 'label'),
+    FilterRule('c', ['d'], 'not_any_of', 'label'),
+    FilterRule('h', ['i', 'j'], 'not_any_of', 'label'),
+    FilterRule('k', [], 'is_null', 'label'),
+    FilterRule('l', [], 'is_not_null', 'label'),
+    FilterRule('created_by', ['user'], 'any_of', 'attribute'),
+    FilterRule('created_by', ['user', 'admin'], 'any_of', 'attribute'),
+    FilterRule('created_by', ['user'], 'not_any_of', 'attribute'),
+    FilterRule('created_by', ['user', 'admin'], 'not_any_of', 'attribute'),
+    FilterRule('created_by', ['user'], 'contain', 'attribute'),
+    FilterRule('created_by', ['user', 'admin'], 'contain', 'attribute'),
+    FilterRule('created_by', ['user'], 'not_contain', 'attribute'),
+    FilterRule('created_by', ['user', 'admin'], 'not_contain', 'attribute'),
+    FilterRule('created_by', ['user'], 'start_with', 'attribute'),
+    FilterRule('created_by', ['user', 'admin'], 'start_with', 'attribute'),
+    FilterRule('created_by', ['user'], 'end_with', 'attribute'),
+    FilterRule('created_by', ['user', 'admin'], 'end_with', 'attribute'),
+    FilterRule('created_by', [], 'is_not_empty', 'attribute')
 ]
 
 
@@ -194,45 +206,44 @@ del FiltersFunctionalityBaseCase
 
 
 class FiltersBaseCase(base_test.BaseServerTestCase):
-    SIMPLE_RULE = [{'key': 'a', 'values': ['b'], 'operator': 'any_of',
-                    'type': 'label'}]
-    NEW_RULE = [{'key': 'c', 'values': ['d'], 'operator': 'any_of',
-                 'type': 'label'}]
+    LABELS_RULE = FilterRule('a', ['b'], 'any_of', 'label')
+    ATTRS_RULE = FilterRule('created_by', ['admin'], 'not_any_of', 'attribute')
+    FILTER_RULES = [LABELS_RULE, ATTRS_RULE]
+
+    NEW_LABELS_RULE = FilterRule('c', ['d'], 'any_of', 'label')
+    NEW_ATTRS_RULE = FilterRule('created_by', ['user'], 'any_of', 'attribute')
+    NEW_RULES = [NEW_LABELS_RULE, NEW_ATTRS_RULE]
 
     def setUp(self, filters_resource):
         super().setUp()
         self.filters_client = getattr(self.client, filters_resource)
 
     def test_create_legal_filter(self):
-        new_filter = self.create_filter(self.filters_client, FILTER_ID,
-                                        LABELS_LEGAL_FILTER_RULES)
-        self.assertEqual(new_filter.labels_filter_rules,
-                         LABELS_LEGAL_FILTER_RULES)
+        new_filter = self.create_filter(self.filters_client,
+                                        FILTER_ID,
+                                        LEGAL_FILTER_RULES)
+        self.assertEqual(new_filter.value, LEGAL_FILTER_RULES)
 
     def test_list_filters(self):
         for i in range(3):
             self.create_filter(self.filters_client,
                                '{0}{1}'.format(FILTER_ID, i),
-                               [{'key': f'a{i}',
-                                 'values': [f'b{i}'],
-                                 'operator': 'any_of',
-                                 'type': 'label'}])
+                               [FilterRule(f'a{i}', [f'b{i}'], 'any_of',
+                                           'label')])
         filters_list = self.filters_client.list()
 
         self.assertEqual(len(filters_list.items), 3)
         for i in range(3):
             self.assertEqual(filters_list.items[i].labels_filter_rules,
-                             [{'key': f'a{i}',
-                               'values': [f'b{i}'],
-                               'operator': 'any_of',
-                               'type': 'label'}])
+                             [FilterRule(f'a{i}', [f'b{i}'], 'any_of',
+                                         'label')])
 
     def test_list_filters_sort(self):
         filter_ids = ['a_filter', 'c_filter', 'b_filter']
         for filter_id in filter_ids:
             self.create_filter(self.filters_client,
                                filter_id,
-                               self.SIMPLE_RULE)
+                               self.FILTER_RULES)
 
         sorted_asc_filters_list = self.filters_client.list(sort='id')
         self.assertEqual(
@@ -251,14 +262,11 @@ class FiltersBaseCase(base_test.BaseServerTestCase):
         # This test only handles one case in order to verify an exception is
         # thrown during a filter creation. All cases are tested in the
         # FiltersFunctionalityTest::test_parse_filter_rules_fails test.
-        simple_rule_uppercase = [{'key': 'A',
-                                  'values': ['B'],
-                                  'operator': 'any_of',
-                                  'type': 'label'}]
+        simple_rule_uppercase = [FilterRule('A', ['B'], 'any_of', 'label')]
         new_filter = self.create_filter(self.filters_client,
                                         FILTER_ID,
                                         simple_rule_uppercase)
-        self.assertEqual(new_filter.labels_filter_rules, self.SIMPLE_RULE)
+        self.assertEqual(new_filter.value, [self.LABELS_RULE])
 
     def test_filter_create_fails(self):
         err_filter_rule = [{'key': 'a', 'values': 'b', 'operator': 'any_of',
@@ -267,44 +275,78 @@ class FiltersBaseCase(base_test.BaseServerTestCase):
             self.create_filter(self.filters_client, FILTER_ID, err_filter_rule)
 
     def test_create_filter_with_duplicate_filter_rules(self):
-        filter_rule = FilterRule('a', ['b'], 'any_of', 'label')
-        new_filter = self.create_filter(self.filters_client, FILTER_ID,
-                                        [filter_rule, filter_rule])
-        self.assertEqual(new_filter.labels_filter_rules, [filter_rule])
+        new_filter = self.create_filter(self.filters_client,
+                                        FILTER_ID,
+                                        [self.LABELS_RULE, self.ATTRS_RULE,
+                                         self.LABELS_RULE, self.ATTRS_RULE])
+        self.assertEqual(new_filter.value, self.FILTER_RULES)
 
     def test_get_filter(self):
-        self.create_filter(self.filters_client, FILTER_ID, self.SIMPLE_RULE)
+        self.create_filter(self.filters_client, FILTER_ID, self.FILTER_RULES)
         fetched_filter = self.filters_client.get(FILTER_ID)
-        self.assertEqual(fetched_filter.labels_filter_rules, self.SIMPLE_RULE)
+        self.assertEqual(fetched_filter.value, self.FILTER_RULES)
 
     def test_delete_filter(self):
-        self.create_filter(self.filters_client, FILTER_ID, self.SIMPLE_RULE)
+        self.create_filter(self.filters_client, FILTER_ID, self.FILTER_RULES)
         self.assertEqual(len(self.filters_client.list().items), 1)
         self.filters_client.delete(FILTER_ID)
         self.assertEqual(len(self.filters_client.list().items), 0)
 
     def test_update_filter(self):
-        self.update_filter(filters_client=self.filters_client,
-                           new_filter_rules=self.NEW_RULE,
-                           new_visibility=VisibilityState.GLOBAL)
+        self._update_filter(new_filter_rules=self.NEW_RULES,
+                            new_visibility=VisibilityState.GLOBAL)
 
     def test_update_filter_only_visibility(self):
-        self.update_filter(filters_client=self.filters_client,
-                           new_visibility=VisibilityState.GLOBAL)
+        self._update_filter(new_visibility=VisibilityState.GLOBAL)
 
     def test_update_filter_only_filter_rules(self):
-        self.update_filter(filters_client=self.filters_client,
-                           new_filter_rules=self.NEW_RULE)
+        self._update_filter(new_filter_rules=self.NEW_RULES)
 
     def test_update_filter_no_args_fails(self):
         with self.assertRaisesRegex(RuntimeError, 'to update a filter'):
-            self.update_filter(filters_client=self.filters_client)
+            self._update_filter()
 
     def test_update_filter_narrower_visibility_fails(self):
         with self.assertRaisesRegex(CloudifyClientError,
                                     'has wider visibility'):
-            self.update_filter(filters_client=self.filters_client,
-                               new_visibility=VisibilityState.PRIVATE)
+            self._update_filter(new_visibility=VisibilityState.PRIVATE)
+
+    def test_update_filter_updates_only_labels_rules(self):
+        self._update_filter(new_filter_rules=[self.NEW_LABELS_RULE])
+
+    def test_update_filter_updates_only_attrs_rules(self):
+        self._update_filter(new_filter_rules=[self.NEW_ATTRS_RULE])
+
+    def _update_filter(self, new_filter_rules=None, new_visibility=None):
+        orig_filter = self.create_filter(self.filters_client,
+                                         FILTER_ID,
+                                         self.FILTER_RULES)
+        updated_filter = self.filters_client.update(FILTER_ID,
+                                                    new_filter_rules,
+                                                    new_visibility)
+
+        updated_visibility = new_visibility or VisibilityState.TENANT
+        if new_filter_rules:
+            new_attrs_filter_rules = self._get_filter_rules_by_type(
+                new_filter_rules, 'attribute')
+            new_labels_filter_rules = self._get_filter_rules_by_type(
+                new_filter_rules, 'label')
+
+            if new_attrs_filter_rules:
+                if new_labels_filter_rules:
+                    updated_rules = new_filter_rules
+                else:
+                    updated_rules = [self.LABELS_RULE] + new_attrs_filter_rules
+            elif new_labels_filter_rules:
+                updated_rules = [self.ATTRS_RULE] + new_labels_filter_rules
+            else:
+                raise Exception('Unknown filter rule type')
+        else:
+            updated_rules = self.FILTER_RULES
+
+        self.assertEqual(updated_filter.value, updated_rules)
+        self.assertEqual(updated_filter.visibility, updated_visibility)
+        self.assertGreater(updated_filter.updated_at, orig_filter.updated_at)
 
 
 @attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
