@@ -1146,7 +1146,7 @@ class ResourceManager(object):
         execution.status = new_status
         execution.error = ''
         if kill:
-            workflow_executor.cancel_execution(execution_id)
+            workflow_executor.cancel_execution(execution)
 
         # Dealing with the inner Components' deployments
         components_executions = self._find_all_components_executions(
