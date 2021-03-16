@@ -485,3 +485,25 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
 
         deps = self.client.deployments.list()
         assert len(deps) == 0
+
+    def test_queues_over_concurrency(self):
+        dep_ids = []
+        for ix in range(5):
+            dep_id = f'd{ix}'
+            dep = self.client.deployments.create('blueprint', dep_id)
+            self.create_deployment_environment(dep, None)
+            dep_ids.append(dep_id)
+        self.client.deployment_groups.put('group2', deployment_ids=dep_ids)
+        exc_group = self.client.execution_groups.start(
+            deployment_group_id='group2',
+            workflow_id='install',
+            concurrency=3,
+        )
+        group_execs = self.sm.get(
+            models.ExecutionGroup, exc_group.id).executions
+        pending_execs = sum(
+            exc.status == ExecutionState.PENDING for exc in group_execs)
+        queued_execs = sum(exc.status == ExecutionState.QUEUED
+            for exc in group_execs)
+        assert  pending_execs == exc_group.concurrency
+        assert  queued_execs == len(group_execs) - exc_group.concurrency
