@@ -10,6 +10,10 @@ from manager_rest.storage import models
 from manager_rest.test import base_test
 
 
+@mock.patch(
+    'manager_rest.rest.resources_v3_1.deployments.workflow_sendhandler',
+    mock.Mock()
+)
 class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
     def setUp(self):
         super(DeploymentGroupsTestCase, self).setUp()
