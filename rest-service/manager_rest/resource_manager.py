@@ -1364,14 +1364,6 @@ class ResourceManager(object):
         self.create_resource_labels(models.DeploymentLabel,
                                     new_deployment,
                                     deployment_labels)
-        try:
-            self._create_deployment_environment(new_deployment,
-                                                inputs,
-                                                skip_plugins_validation,
-                                                bypass_maintenance)
-        except manager_exceptions.ExistingRunningExecutionError as e:
-            self.delete_deployment(new_deployment)
-            raise e
 
         return new_deployment
 
@@ -1883,28 +1875,6 @@ class ResourceManager(object):
             if val:
                 filters[key] = val
         return filters or None
-
-    def _create_deployment_environment(self,
-                                       deployment,
-                                       inputs,
-                                       skip_plugins_validation,
-                                       bypass_maintenance):
-        execution = models.Execution(
-            workflow_id='create_deployment_environment',
-            deployment=deployment,
-            status=ExecutionState.PENDING,
-            parameters={
-                'inputs': inputs,
-                'skip_plugins_validation': skip_plugins_validation,
-            },
-        )
-        self.sm.put(execution)
-        self.execute_workflow(
-            execution,
-            bypass_maintenance=bypass_maintenance,
-        )
-        deployment.create_execution = execution
-        self.sm.update(deployment)
 
     def _check_for_active_executions(self, execution, queue):
         running = self.list_executions(
