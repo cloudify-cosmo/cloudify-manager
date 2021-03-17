@@ -65,6 +65,8 @@ from manager_rest.storage.storage_utils import (
     create_status_reporter_user_and_assign_role
 )
 from manager_rest.constants import (
+    AttrsOperator,
+    LabelsOperator,
     DEFAULT_TENANT_NAME,
     CLOUDIFY_TENANT_HEADER,
     FILE_SERVER_BLUEPRINTS_FOLDER,
@@ -150,11 +152,17 @@ class BaseServerTestCase(unittest.TestCase):
     LABELS = [{'env': 'aws'}, {'arch': 'k8s'}]
     LABELS_2 = [{'env': 'gcp'}, {'arch': 'k8s'}]
     FILTER_ID = 'filter'
-    FILTER_RULES = [FilterRule('env', ['aws'], 'not_any_of', 'label'),
-                    FilterRule('arch', ['k8s'], 'any_of', 'label')]
+    FILTER_RULES = [
+        FilterRule('env', ['aws'], LabelsOperator.NOT_ANY_OF, 'label'),
+        FilterRule('arch', ['k8s'], LabelsOperator.ANY_OF, 'label'),
+        FilterRule('created_by', ['admin'], AttrsOperator.ANY_OF, 'attribute'),
+    ]
 
-    FILTER_RULES_2 = [FilterRule('env', ['aws'], 'any_of', 'label'),
-                      FilterRule('arch', ['k8s'], 'any_of', 'label')]
+    FILTER_RULES_2 = [
+        FilterRule('env', ['aws'], LabelsOperator.ANY_OF, 'label'),
+        FilterRule('arch', ['k8s'], LabelsOperator.ANY_OF, 'label'),
+        FilterRule('created_by', ['admin'], AttrsOperator.ANY_OF, 'attribute'),
+    ]
 
     def assertRaisesRegex(self, *a, **kw):
         return self.assertRaisesRegexp(*a, **kw)
