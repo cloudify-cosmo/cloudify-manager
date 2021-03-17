@@ -7,6 +7,7 @@
 - Add installation_status to the deployment table
 - Add deployment_status to the deployment table
 - Add latest execution FK to the deployment table
+- Add statuses and counters for sub-services and sub-environments
 
 Revision ID: 396303c07e35
 Revises: 9d261e90b1f3
@@ -56,9 +57,11 @@ def upgrade():
     _add_execgroups_concurrency()
     _add_execution_operations_columns()
     _create_deployment_labels_dependencies_table()
+    _add_deployment_sub_statuses_and_counters()
 
 
 def downgrade():
+    _drop_deployment_sub_statuses_and_counters()
     _drop_deployment_labels_dependencies_table()
     _drop_execgroups_concurrency()
     _drop_deployment_statuses()
@@ -68,6 +71,51 @@ def downgrade():
     _revert_changes_to_deployments_labels_table()
     _drop_blueprints_labels_table()
     _drop_execution_operations_columns()
+    _drop_deployment_statuses_enum_types()
+
+
+def _add_deployment_sub_statuses_and_counters():
+    op.add_column(
+        'deployments',
+        sa.Column(
+            'sub_environments_count',
+            sa.Integer(),
+            nullable=True
+        )
+    )
+    op.add_column(
+        'deployments',
+        sa.Column(
+            'sub_environments_status',
+            sa.Enum(
+                'good',
+                'in_progress',
+                'require_attention',
+                name='deployment_status'
+            ),
+            nullable=True
+        )
+    )
+    op.add_column(
+        'deployments',
+        sa.Column(
+            'sub_services_count',
+            sa.Integer(),
+            nullable=True
+        )
+    )
+    op.add_column(
+        'deployments',
+        sa.Column(
+            'sub_services_status',
+            sa.Enum('good',
+                    'in_progress',
+                    'require_attention',
+                    name='deployment_status'
+                    ),
+            nullable=True
+        )
+    )
 
 
 def _create_deployment_labels_dependencies_table():
@@ -109,6 +157,14 @@ def _create_deployment_labels_dependencies_table():
         sa.PrimaryKeyConstraint(
             '_storage_id', name=op.f('deployment_labels_dependencies_pkey')
         ),
+
+        sa.UniqueConstraint(
+            '_source_deployment',
+            '_target_deployment',
+            name=op.f(
+                'deployment_labels_dependencies__source_deployment_key'
+            )
+        )
     )
     op.create_index(
         op.f('deployment_labels_dependencies__creator_id_idx'),
@@ -415,9 +471,6 @@ def _drop_deployment_statuses():
     op.drop_column('deployments', 'installation_status')
     op.drop_column('deployments', 'deployment_status')
 
-    installation_status.drop(op.get_bind())
-    deployment_status.drop(op.get_bind())
-
 
 def _create_filters_tables():
     op.create_table(
@@ -693,3 +746,15 @@ def _drop_deployment_labels_dependencies_table():
         table_name='deployment_labels_dependencies'
     )
     op.drop_table('deployment_labels_dependencies')
+
+
+def _drop_deployment_sub_statuses_and_counters():
+    op.drop_column('deployments', 'sub_services_status')
+    op.drop_column('deployments', 'sub_services_count')
+    op.drop_column('deployments', 'sub_environments_status')
+    op.drop_column('deployments', 'sub_environments_count')
+
+
+def _drop_deployment_statuses_enum_types():
+    installation_status.drop(op.get_bind())
+    deployment_status.drop(op.get_bind())

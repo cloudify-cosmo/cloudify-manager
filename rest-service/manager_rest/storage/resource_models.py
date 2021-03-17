@@ -376,6 +376,20 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             name='deployment_status'
         )
     )
+    sub_services_status = db.Column(db.Enum(
+            DeploymentState.GOOD,
+            DeploymentState.IN_PROGRESS,
+            DeploymentState.REQUIRE_ATTENTION,
+            name='deployment_status'
+        ))
+    sub_environments_status = db.Column(db.Enum(
+            DeploymentState.GOOD,
+            DeploymentState.IN_PROGRESS,
+            DeploymentState.REQUIRE_ATTENTION,
+            name='deployment_status'
+        ))
+    sub_services_count = db.Column(db.Integer, nullable=True)
+    sub_environments_count = db.Column(db.Integer, nullable=True)
     _blueprint_fk = foreign_key(Blueprint._storage_id)
     _site_fk = foreign_key(Site._storage_id,
                            nullable=True,
@@ -472,29 +486,127 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             return None
         return DeploymentState.EXECUTION_STATES_SUMMARY.get(_execution.status)
 
+    def compare_between_statuses(
+            self,
+            first_status,
+            second_status
+    ):
+        """
+        Compare between two deployment statuses so that we can tell which
+        one is worst than others. If first_status > second_status then
+        return the first status otherwise return the second_status
+        :param first_status: The first deployment status
+        :rtype str
+        :param second_status: The second deployment status
+        :rtype str
+        :return: Return the end result status
+        :rtype str
+        """
+        class _DeploymentStatus(object):
+            def __init__(self, status):
+                self.status = status
+
+            def __gt__(self, other):
+                if not self.status:
+                    return False
+                elif self.status and not other.status:
+                    return True
+                elif (self.status == DeploymentState.REQUIRE_ATTENTION and
+                      other.status in [
+                          DeploymentState.GOOD,
+                          DeploymentState.IN_PROGRESS
+                      ]):
+                    return True
+                elif (
+                        self.status == DeploymentState.IN_PROGRESS
+                        and other.status == DeploymentState.GOOD):
+                    return True
+                return False
+
+        _source = _DeploymentStatus(first_status)
+        _target = _DeploymentStatus(second_status)
+        return _source.status if _source > _target else _target.status
+
+    def evaluate_sub_deployments_statuses(self):
+        """
+        Evaluate the deployment statuses per deployment using the following
+        three statuses
+        1. sub_environments_status
+        2. sub_services_status
+        3. deployment_status
+        This is useful and prerequisite before propagate the source
+        deployments statuses to the target
+        :return: Tuple of end result of `sub_environments_status`
+         & `sub_services_status`
+        :rtype Tuple
+        """
+        _sub_environments_status = self.sub_environments_status
+        _sub_services_status = self.sub_services_status
+        if self.is_environment:
+            _sub_environments_status = \
+                self.compare_between_statuses(
+                    self.sub_environments_status,
+                    self.deployment_status
+                )
+
+        else:
+            _sub_services_status = \
+                self.compare_between_statuses(
+                    self.sub_services_status,
+                    self.deployment_status
+                )
+        return _sub_services_status, _sub_environments_status
+
     def evaluate_deployment_status(self):
         """
         Evaluate the overall deployment status based on installation status
         and latest execution object
         :return: deployment_status: Overall deployment status
         """
-        # TODO we need to cover also aggregated statuses for deployment
-        #  children later on
         if self.latest_execution_status == DeploymentState.CANCELLED:
             if self.installation_status == DeploymentState.ACTIVE:
-                return DeploymentState.GOOD
-            return DeploymentState.REQUIRE_ATTENTION
+                deployment_status = DeploymentState.GOOD
+            else:
+                deployment_status = DeploymentState.REQUIRE_ATTENTION
         elif self.latest_execution_status == DeploymentState.IN_PROGRESS and \
                 self.installation_status == DeploymentState.INACTIVE:
-            return DeploymentState.IN_PROGRESS
+            deployment_status = DeploymentState.IN_PROGRESS
         elif self.latest_execution_status == DeploymentState.FAILED or \
                 self.installation_status == DeploymentState.INACTIVE:
-            return DeploymentState.REQUIRE_ATTENTION
+            deployment_status = DeploymentState.REQUIRE_ATTENTION
         elif self.latest_execution_status == DeploymentState.COMPLETED and \
                 self.installation_status == DeploymentState.ACTIVE:
-            return DeploymentState.GOOD
+            deployment_status = DeploymentState.GOOD
         else:
-            return DeploymentState.IN_PROGRESS
+            deployment_status = DeploymentState.IN_PROGRESS
+        if not (self.sub_services_status or self.sub_environments_status):
+            return deployment_status
+
+        # Check whether or not deployment has services or environments
+        # attached to it, so that we can consider that while evaluating the
+        # deployment status
+        if self.sub_services_status:
+            deployment_status = \
+                self.compare_between_statuses(
+                    self.sub_services_status,
+                    deployment_status
+                )
+        if self.sub_environments_status:
+            deployment_status = \
+                self.compare_between_statuses(
+                    self.sub_environments_status,
+                    deployment_status
+                )
+        return deployment_status
+
+    @property
+    def is_environment(self):
+        target_key = 'csys-obj-type'
+        target_value = 'environment'
+        for label in self.labels:
+            if label.key == target_key and label.value.lower() == target_value:
+                return True
+        return False
 
     def make_create_environment_execution(self, **params):
         self.create_execution = Execution(
@@ -1629,6 +1741,10 @@ class InterDeploymentDependencies(BaseDeploymentDependencies):
 
 class DeploymentLabelsDependencies(BaseDeploymentDependencies):
     __tablename__ = 'deployment_labels_dependencies'
+    __table_args__ = (
+        db.UniqueConstraint(
+            '_source_deployment', '_target_deployment'),
+    )
 
     _source_backref_name = 'source_of_dependency_labels'
     _target_backref_name = 'target_of_dependency_labels'
