@@ -185,7 +185,6 @@ class ExecutionGroups(SecuredResource):
             id=str(uuid.uuid4()),
             deployment_group=dep_group,
             workflow_id=workflow_id,
-            created_at=datetime.now(),
             visibility=dep_group.visibility,
             concurrency=concurrency,
         )
