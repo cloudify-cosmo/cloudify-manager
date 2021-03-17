@@ -13,6 +13,7 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import typing
 import uuid
 
 from os import path
@@ -57,6 +58,12 @@ from .relationships import (
     one_to_many_relationship,
     many_to_many_relationship
 )
+
+
+if typing.TYPE_CHECKING:
+    from manager_rest.resource_manager import ResourceManager
+    from manager_rest.storage.storage_manager import SQLStorageManager
+    from cloudify.amqp_client import SendHandler
 
 
 RELATIONSHIP = 'relationship'
@@ -898,6 +905,29 @@ class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
             f: getattr(self, f)
             for f in self.response_fields if f not in skip_fields
         }
+
+    def start_executions(self,
+                         sm: 'SQLStorageManager',
+                         rm: 'ResourceManager',
+                         send_handler: 'SendHandler',
+                         force=False):
+        """Start the executions belonging to this group.
+
+        This will only actually run executions up to the concurrency limit,
+        and queue the rest.
+        """
+        with sm.transaction():
+            for execution in self.executions[self.concurrency:]:
+                execution.status = ExecutionState.QUEUED
+                sm.update(execution, modified_attrs=('status', ))
+
+        for execution in self.executions[:self.concurrency]:
+            rm.execute_workflow(
+                execution,
+                force=force,
+                send_handler=send_handler,
+                queue=True,  # allow queue, but it will try to run
+            )
 
 
 class ExecutionSchedule(CreatedAtMixin, SQLResourceBase):

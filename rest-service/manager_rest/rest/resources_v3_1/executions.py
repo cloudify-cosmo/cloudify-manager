@@ -210,19 +210,7 @@ class ExecutionGroups(SecuredResource):
         handler = workflow_sendhandler()
         amqp_client.add_handler(handler)
         with amqp_client:
-            for execution in executions[:group.concurrency]:
-                rm.execute_workflow(
-                    execution,
-                    force=force,
-                    send_handler=handler,
-                    queue=True,  # allow queue, but it will try to run
-                )
-
-        with sm.transaction():
-            for execution in executions[group.concurrency:]:
-                execution.status = ExecutionState.QUEUED
-                sm.update(execution, modified_attrs=('status', ))
-
+            group.start_executions(sm, rm, handler, force=force)
         return group
 
 
