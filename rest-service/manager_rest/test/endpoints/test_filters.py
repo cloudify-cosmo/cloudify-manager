@@ -283,16 +283,23 @@ class FiltersBaseCase(base_test.BaseServerTestCase):
             sorted(filter_ids, reverse=True)
         )
 
-    def test_filter_create_lowercase(self):
-        # This test only handles one case in order to verify an exception is
-        # thrown during a filter creation. All cases are tested in the
-        # FiltersFunctionalityTest::test_parse_filter_rules_fails test.
-        simple_rule_uppercase = [FilterRule('A', ['B'], LabelsOperator.ANY_OF,
-                                            'label')]
+    def test_labels_filter_lowers_uppercase(self):
+        simple_rule_uppercase = [
+            FilterRule('A', ['B'], LabelsOperator.ANY_OF, 'label')]
         new_filter = self.create_filter(self.filters_client,
                                         FILTER_ID,
                                         simple_rule_uppercase)
         self.assertEqual(new_filter.value, [self.LABELS_RULE])
+
+    def test_attrs_filter_keeps_uppercase(self):
+        simple_rule_uppercase = [FilterRule('created_by', ['Joe'],
+                                            AttrsOperator.ANY_OF, 'attribute')]
+        new_filter = self.create_filter(self.filters_client, FILTER_ID,
+                                        simple_rule_uppercase)
+        self.assertEqual(new_filter.value, [
+            {'key': 'created_by', 'values': ['Joe'],
+             'operator': AttrsOperator.ANY_OF, 'type': 'attribute'}
+        ])
 
     def test_filter_create_fails(self):
         err_filter_rule = [{'key': 'a', 'values': 'b', 'operator': 'any_of',
