@@ -1303,21 +1303,17 @@ class ResourceManager(object):
             self.delete_deployment(dep)
 
     def create_deployment(self,
-                          blueprint_id,
+                          blueprint,
                           deployment_id,
                           private_resource,
                           visibility,
-                          inputs=None,
-                          bypass_maintenance=None,
                           skip_plugins_validation=False,
-                          site_name=None,
+                          site=None,
                           runtime_only_evaluation=False,
                           labels=None):
-        blueprint = self.sm.get(models.Blueprint, blueprint_id)
         verify_blueprint_uploaded_state(blueprint)
         self._cleanup_failed_deployment(deployment_id)
         plan = blueprint.plan
-        site = self.sm.get(models.Site, site_name) if site_name else None
         deployment_labels = self._handle_deployment_labels(labels, plan)
 
         visibility = self.get_resource_visibility(models.Deployment,
