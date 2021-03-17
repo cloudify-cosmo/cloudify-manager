@@ -1322,8 +1322,8 @@ class ResourceManager(object):
         if (visibility == VisibilityState.GLOBAL and
                 blueprint.visibility != VisibilityState.GLOBAL):
             raise manager_exceptions.ForbiddenError(
-                "Can't create global deployment {0} because blueprint {1} "
-                "is not global".format(deployment_id, blueprint_id)
+                f"Can't create global deployment {deployment_id} because "
+                f"blueprint {blueprint.id} is not global"
             )
 
         #  validate plugins exists on manager when
