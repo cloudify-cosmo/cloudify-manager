@@ -1285,7 +1285,7 @@ class ResourceManager(object):
                     ' while a `create_snapshot` workflow is running or queued'
                     ' (snapshot id: {0})'.format(e.id))
 
-    def _cleanup_failed_deployment(self, deployment_id):
+    def cleanup_failed_deployment(self, deployment_id):
         """If create-dep-env failed, delete the deployment.
 
         This is so that it's possible to retry creating the deployment,
@@ -1312,7 +1312,6 @@ class ResourceManager(object):
                           runtime_only_evaluation=False,
                           labels=None):
         verify_blueprint_uploaded_state(blueprint)
-        self._cleanup_failed_deployment(deployment_id)
         plan = blueprint.plan
         deployment_labels = self._handle_deployment_labels(labels, plan)
 
