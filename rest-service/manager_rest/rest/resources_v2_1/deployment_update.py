@@ -189,6 +189,7 @@ class DeploymentUpdate(SecuredResource):
         force = verify_and_convert_bool(
             'force',
             request_json.get('force', False)
+        )
         auto_correct_types = verify_and_convert_bool(
             'auto_correct_types',
             request_json.get('auto_correct_types', False)

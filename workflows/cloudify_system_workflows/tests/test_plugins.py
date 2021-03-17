@@ -103,14 +103,9 @@ class TestPluginsUpdate(unittest.TestCase):
                     status=execution_status['curr_exec_status'])
             return PropertyMock(status=ExecutionState.TERMINATED)
 
-        def _assert_update_func_raises():
-            with self.assertRaisesRegexp(
-                    RuntimeError,
-                    "Deployment update of deployment {0} with execution ID {0}"
-                    " failed, stopped this plugins update "
-                    "\\(id='my_update_id'\\)\\.".format(failed_execution_id)):
-                update_func(MagicMock(), 'my_update_id', None, dep_ids,
-                            False, False, False)
+        def _assert_update_func():
+            update_func(MagicMock(),
+                        'my_update_id', None, dep_ids, False, False, True)
             should_call_these = [call(deployment_id=i,
                                       blueprint_id=None,
                                       skip_install=True,
@@ -140,8 +135,8 @@ class TestPluginsUpdate(unittest.TestCase):
             = finalize_update_mock
         self.mock_rest_client.executions.get \
             .return_value = PropertyMock(status=ExecutionState.TERMINATED)
-        update_func(MagicMock(), '12345678', None, dep_ids,
-                False, False, False)
+        update_func(MagicMock(),
+                    '12345678', None, dep_ids,  False, False, False)
         should_call_these = [call(deployment_id=i,
                                   blueprint_id=None,
                                   skip_install=True,
