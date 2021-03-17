@@ -571,6 +571,7 @@ class DeploymentUpdateManager(object):
             allow_custom_parameters=True,
             blueprint_id=dep_update.new_blueprint_id,
             parameters=parameters,
+            status=ExecutionState.PENDING,
         )
         self.sm.put(execution)
         return get_resource_manager().execute_workflow(
