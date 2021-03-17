@@ -48,7 +48,7 @@ def add_attrs_filter_to_query(query, model_class, filter_rule,
     elif filter_rule_operator == AttrsOperator.NOT_ANY_OF:
         query = query.filter(~column.in_(filter_rule_values))
 
-    elif filter_rule_operator == AttrsOperator.CONTAIN:
+    elif filter_rule_operator == AttrsOperator.CONTAINS:
         if len(filter_rule_values) == 1:
             query = query.filter(column.contains(filter_rule_values[0]))
         else:
@@ -56,7 +56,7 @@ def add_attrs_filter_to_query(query, model_class, filter_rule,
                               filter_rule_values)
             query = query.filter(or_(*contain_filter))
 
-    elif filter_rule_operator == AttrsOperator.NOT_CONTAIN:
+    elif filter_rule_operator == AttrsOperator.NOT_CONTAINS:
         if len(filter_rule_values) == 1:
             query = query.filter(~column.contains(filter_rule_values[0]))
         else:
@@ -64,7 +64,7 @@ def add_attrs_filter_to_query(query, model_class, filter_rule,
                               filter_rule_values)
             query = query.filter(and_(*contain_filter))
 
-    elif filter_rule_operator == AttrsOperator.START_WITH:
+    elif filter_rule_operator == AttrsOperator.STARTS_WITH:
         if len(filter_rule_values) == 1:
             query = query.filter(column.ilike(f'{filter_rule_values[0]}%'))
         else:
@@ -72,7 +72,7 @@ def add_attrs_filter_to_query(query, model_class, filter_rule,
                            filter_rule_values)
             query = query.filter(or_(*like_filter))
 
-    elif filter_rule_operator == AttrsOperator.END_WITH:
+    elif filter_rule_operator == AttrsOperator.ENDS_WITH:
         if len(filter_rule_values) == 1:
             query = query.filter(column.ilike(f'%{filter_rule_values[0]}'))
         else:
