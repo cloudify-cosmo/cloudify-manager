@@ -18,6 +18,7 @@ from flask_restful_swagger import swagger
 from flask_restful.reqparse import Argument
 from flask_restful.inputs import boolean
 
+from manager_rest import manager_exceptions
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.maintenance import is_bypass_maintenance_mode
@@ -107,16 +108,27 @@ class DeploymentsId(SecuredResource):
             [Argument('private_resource', type=boolean,
                       default=False)]
         )
-        deployment = get_resource_manager().create_deployment(
-            blueprint_id,
+        skip_plugins_validation = self.get_skip_plugin_validation_flag(
+            request_dict)
+        rm = get_resource_manager()
+        sm = get_storage_manager()
+        blueprint = sm.get(models.Blueprint, blueprint_id)
+        rm.cleanup_failed_deployment(deployment_id)
+        deployment = rm.create_deployment(
+            blueprint,
             deployment_id,
             private_resource=args.private_resource,
             visibility=None,
-            inputs=request_dict.get('inputs', {}),
-            bypass_maintenance=bypass_maintenance,
-            skip_plugins_validation=self.get_skip_plugin_validation_flag(
-                request_dict)
+            skip_plugins_validation=skip_plugins_validation,
         )
+        try:
+            rm.execute_workflow(deployment.make_create_environment_execution(
+                inputs=request_dict.get('inputs', {}),
+                skip_plugins_validation=skip_plugins_validation,
+            ), bypass_maintenance=bypass_maintenance,)
+        except manager_exceptions.ExistingRunningExecutionError:
+            rm.delete_deployment(deployment)
+            raise
         return deployment, 201
 
     def create_request_schema(self):
