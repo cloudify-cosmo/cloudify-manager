@@ -237,6 +237,14 @@ def _create_deployment_labels_dependencies_table():
         sa.PrimaryKeyConstraint(
             '_storage_id', name=op.f('deployment_labels_dependencies_pkey')
         ),
+
+        sa.UniqueConstraint(
+            '_source_deployment',
+            '_target_deployment',
+            name=op.f(
+                'deployment_labels_dependencies__source_deployment_key'
+            )
+        )
     )
     op.create_index(
         op.f('deployment_labels_dependencies__creator_id_idx'),
