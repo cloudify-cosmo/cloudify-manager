@@ -711,7 +711,9 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             'upload_blueprint': 'cloudify_system_workflows.blueprint.upload'
         }.get(wf_id)
 
-    def get_workflow(self, deployment, workflow_id):
+    def get_workflow(self, deployment=None, workflow_id=None):
+        deployment = deployment or self.deployment
+        workflow_id = workflow_id or self.workflow_id
         system_task_name = self._system_workflow_task_name(workflow_id)
         if system_task_name:
             self.allow_custom_parameters = True
@@ -786,7 +788,7 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             return param
 
     def render_context(self):
-        workflow = self.get_workflow(self.deployment, self.workflow_id)
+        workflow = self.get_workflow()
         context = {
             'type': 'workflow',
             'task_id': self.id,

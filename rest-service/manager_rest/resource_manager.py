@@ -204,7 +204,7 @@ class ResourceManager(object):
     def start_queued_executions(self, finished_execution):
         for execution in self._get_queued_executions(finished_execution):
             execution.status = ExecutionState.PENDING
-            if self._should_use_system_workflow_executor(execution):
+            if execution.is_system_workflow:
                 self._execute_system_workflow(execution, queue=True)
             else:
                 self.execute_workflow(execution, queue=True)
@@ -497,10 +497,7 @@ class ResourceManager(object):
             status=ExecutionState.PENDING,
         )
         self.sm.put(execution)
-        return self._execute_system_workflow(
-            execution,
-            verify_no_executions=False,
-        )
+        return self.execute_workflow(execution)
 
     def publish_blueprint(self,
                           application_dir,
@@ -703,11 +700,7 @@ class ResourceManager(object):
             parameters={'delete_logs': delete_logs},
         )
         self.sm.put(execution)
-        self._execute_system_workflow(
-            execution,
-            bypass_maintenance=bypass_maintenance,
-            verify_no_executions=False,
-        )
+        self.execute_workflow(execution, bypass_maintenance=bypass_maintenance)
         workflow_executor.delete_source_plugins(deployment.id)
 
         return deployment
@@ -846,9 +839,10 @@ class ResourceManager(object):
                          bypass_maintenance=None, wait_after_fail=600,
                          allow_overlapping_running_wf=False,
                          send_handler: 'SendHandler' = None):
-        self._check_allow_global_execution(execution.deployment)
-        self._verify_dependencies_not_affected(
-            execution.workflow_id, execution.deployment, force)
+        if execution.deployment:
+            self._check_allow_global_execution(execution.deployment)
+            self._verify_dependencies_not_affected(
+                execution.workflow_id, execution.deployment, force)
 
         should_queue = queue
         if not allow_overlapping_running_wf:
@@ -865,7 +859,7 @@ class ResourceManager(object):
             handler=send_handler,
         )
 
-        workflow = execution.deployment.workflows[execution.workflow_id]
+        workflow = execution.get_workflow()
         is_cascading_workflow = workflow.get('is_cascading', False)
         if is_cascading_workflow:
             components_dep_ids = self._find_all_components_deployment_id(
@@ -893,23 +887,6 @@ class ResourceManager(object):
         return execution
 
     @staticmethod
-    def _should_use_system_workflow_executor(execution):
-        """
-        Both system and `regular` workflows are being de-queued, and each kind
-        should be executed using a different executor function
-        (`execute_system_workflow`/`execute_workflow`).
-        * Deployment environment creation and deletion are considered
-        system workflows
-
-        """
-        workflow_id = execution.workflow_id
-        dep_env_workflows = ('create_deployment_environment',
-                             'delete_deployment_environment')
-        if workflow_id in dep_env_workflows or execution.is_system_workflow:
-            return True
-        return False
-
-    @staticmethod
     def _verify_workflow_in_deployment(wf_id, deployment, dep_id):
         if wf_id not in deployment.workflows:
             raise manager_exceptions.NonexistentWorkflowError(
@@ -926,7 +903,7 @@ class ResourceManager(object):
         """
         system_exec_running = self._check_for_active_system_wide_execution(
             queue, execution)
-        if force:
+        if force or not execution.deployment:
             return system_exec_running
         else:
             execution_running = self._check_for_active_executions(
@@ -961,11 +938,10 @@ class ResourceManager(object):
 
     def _check_for_active_system_wide_execution(self, execution, queue):
         should_queue = False
-        for e in self.list_executions(
-                is_include_system_workflows=True,
-                filters={'status': ExecutionState.ACTIVE_STATES},
-                all_tenants=True,
-                get_all_results=True).items:
+        for e in self.sm.list(models.Execution, filters={
+                    'is_system_workflow': True,
+                    'status': ExecutionState.ACTIVE_STATES,
+                }, get_all_results=True, all_tenants=True).items:
             # When `queue` or `schedule` options are used no need to
             # raise an exception (the execution will run later)
             if e.deployment_id is None and (queue or execution.scheduled_for):
@@ -984,9 +960,7 @@ class ResourceManager(object):
             needs to be blocked while a `create_snapshot` workflow
             is running or queued.
         """
-        return wf_id in ('create_deployment_environment',
-                         'delete_deployment_environment',
-                         'uninstall_plugin')
+        return wf_id == 'uninstall_plugin'
 
     def _execute_system_workflow(self,
                                  execution,
@@ -1925,7 +1899,7 @@ class ResourceManager(object):
             },
         )
         self.sm.put(execution)
-        self._execute_system_workflow(
+        self.execute_workflow(
             execution,
             bypass_maintenance=bypass_maintenance,
         )
