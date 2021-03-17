@@ -214,7 +214,7 @@ class ResourceManager(object):
         system_executions = self.sm.list(models.Execution, filters={
             'status': ExecutionState.QUEUED_STATE,
             'is_system_workflow': True,
-        }, sort=sort_by, get_all_results=True).items
+        }, sort=sort_by, get_all_results=True, all_tenants=True).items
         if system_executions:
             yield system_executions[0]
             return
@@ -224,17 +224,17 @@ class ResourceManager(object):
             same_dep_executions = self.sm.list(models.Execution, filters={
                 'status': ExecutionState.QUEUED_STATE,
                 'deployment_id': deployment_id,
-            }, sort=sort_by, get_all_results=True).items
+            }, sort=sort_by, get_all_results=True, all_tenants=True).items
             other_queued = self.sm.list(models.Execution, filters={
                 'status': ExecutionState.QUEUED_STATE,
                 'deployment_id': lambda col: col != deployment_id,
-            }, sort=sort_by, get_all_results=True).items
+            }, sort=sort_by, get_all_results=True, all_tenants=True).items
             queued_executions = same_dep_executions + other_queued
         else:
             queued_executions = self.sm.list(models.Execution, filters={
                 'status': ExecutionState.QUEUED_STATE,
                 'is_system_workflow': False,
-            }, sort=sort_by, get_all_results=True).items
+            }, sort=sort_by, get_all_results=True, all_tenants=True).items
 
         # {deployment: whether it can run executions}
         busy_deployments = {}
@@ -1285,7 +1285,7 @@ class ResourceManager(object):
                     ' while a `create_snapshot` workflow is running or queued'
                     ' (snapshot id: {0})'.format(e.id))
 
-    def _cleanup_failed_deployment(self, deployment_id):
+    def cleanup_failed_deployment(self, deployment_id):
         """If create-dep-env failed, delete the deployment.
 
         This is so that it's possible to retry creating the deployment,
@@ -1303,21 +1303,16 @@ class ResourceManager(object):
             self.delete_deployment(dep)
 
     def create_deployment(self,
-                          blueprint_id,
+                          blueprint,
                           deployment_id,
                           private_resource,
                           visibility,
-                          inputs=None,
-                          bypass_maintenance=None,
                           skip_plugins_validation=False,
-                          site_name=None,
+                          site=None,
                           runtime_only_evaluation=False,
                           labels=None):
-        blueprint = self.sm.get(models.Blueprint, blueprint_id)
         verify_blueprint_uploaded_state(blueprint)
-        self._cleanup_failed_deployment(deployment_id)
         plan = blueprint.plan
-        site = self.sm.get(models.Site, site_name) if site_name else None
         deployment_labels = self._handle_deployment_labels(labels, plan)
 
         visibility = self.get_resource_visibility(models.Deployment,
@@ -1327,8 +1322,8 @@ class ResourceManager(object):
         if (visibility == VisibilityState.GLOBAL and
                 blueprint.visibility != VisibilityState.GLOBAL):
             raise manager_exceptions.ForbiddenError(
-                "Can't create global deployment {0} because blueprint {1} "
-                "is not global".format(deployment_id, blueprint_id)
+                f"Can't create global deployment {deployment_id} because "
+                f"blueprint {blueprint.id} is not global"
             )
 
         #  validate plugins exists on manager when
@@ -1364,14 +1359,6 @@ class ResourceManager(object):
         self.create_resource_labels(models.DeploymentLabel,
                                     new_deployment,
                                     deployment_labels)
-        try:
-            self._create_deployment_environment(new_deployment,
-                                                inputs,
-                                                skip_plugins_validation,
-                                                bypass_maintenance)
-        except manager_exceptions.ExistingRunningExecutionError as e:
-            self.delete_deployment(new_deployment)
-            raise e
 
         return new_deployment
 
@@ -1883,28 +1870,6 @@ class ResourceManager(object):
             if val:
                 filters[key] = val
         return filters or None
-
-    def _create_deployment_environment(self,
-                                       deployment,
-                                       inputs,
-                                       skip_plugins_validation,
-                                       bypass_maintenance):
-        execution = models.Execution(
-            workflow_id='create_deployment_environment',
-            deployment=deployment,
-            status=ExecutionState.PENDING,
-            parameters={
-                'inputs': inputs,
-                'skip_plugins_validation': skip_plugins_validation,
-            },
-        )
-        self.sm.put(execution)
-        self.execute_workflow(
-            execution,
-            bypass_maintenance=bypass_maintenance,
-        )
-        deployment.create_execution = execution
-        self.sm.update(deployment)
 
     def _check_for_active_executions(self, execution, queue):
         running = self.list_executions(

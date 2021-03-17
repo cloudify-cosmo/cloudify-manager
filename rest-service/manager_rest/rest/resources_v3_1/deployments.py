@@ -48,6 +48,11 @@ from manager_rest.rest import (
     rest_decorators,
     responses_v3
 )
+from manager_rest.workflow_executor import (
+    get_amqp_client,
+    workflow_sendhandler
+)
+
 
 SHARED_RESOURCE_TYPE = 'cloudify.nodes.SharedResource'
 COMPONENT_TYPE = 'cloudify.nodes.Component'
@@ -91,22 +96,36 @@ class DeploymentsId(resources_v1.DeploymentsId):
         )
         labels = (rest_utils.get_labels_list(request_dict['labels'])
                   if 'labels' in request_dict else None)
-        deployment = get_resource_manager().create_deployment(
-            blueprint_id,
+        skip_plugins_validation = self.get_skip_plugin_validation_flag(
+            request_dict)
+        rm = get_resource_manager()
+        sm = get_storage_manager()
+        blueprint = sm.get(models.Blueprint, blueprint_id)
+        site_name = _get_site_name(request_dict)
+        site = sm.get(models.Site, site_name) if site_name else None
+        rm.cleanup_failed_deployment(deployment_id)
+        deployment = rm.create_deployment(
+            blueprint,
             deployment_id,
-            inputs=request_dict.get('inputs', {}),
-            bypass_maintenance=bypass_maintenance,
             private_resource=args.private_resource,
             visibility=visibility,
-            skip_plugins_validation=self.get_skip_plugin_validation_flag(
-                request_dict),
-            site_name=_get_site_name(request_dict),
+            skip_plugins_validation=skip_plugins_validation,
+            site=site,
             runtime_only_evaluation=request_dict.get(
                 'runtime_only_evaluation', False),
             labels=labels
         )
+        try:
+            rm.execute_workflow(deployment.make_create_environment_execution(
+                inputs=request_dict.get('inputs', {}),
+                skip_plugins_validation=skip_plugins_validation,
+
+            ), bypass_maintenance=bypass_maintenance)
+        except manager_exceptions.ExistingRunningExecutionError:
+            rm.delete_deployment(deployment)
+            raise
+
         if not args.async_create:
-            sm = get_storage_manager()
             rest_utils.wait_for_execution(sm, deployment.create_execution.id)
             if deployment.create_execution.status != ExecutionState.TERMINATED:
                 raise self._error_from_create(deployment.create_execution)
@@ -571,18 +590,38 @@ class DeploymentGroupsId(SecuredResource):
             raise manager_exceptions.ConflictError(
                 'Cannot create deployments: group {0} has no '
                 'default blueprint set'.format(group.id))
-        for inputs in input_overrides:
-            deployment_inputs = (group.default_inputs or {}).copy()
-            deployment_inputs.update(inputs)
-            dep = rm.create_deployment(
-                blueprint_id=group.default_blueprint.id,
-                deployment_id='{0}-{1}'.format(group.id, deployment_count + 1),
-                private_resource=None,
-                visibility=group.visibility,
-                inputs=deployment_inputs,
-            )
-            group.deployments.append(dep)
-            deployment_count += 1
+        if not input_overrides:
+            return
+        create_exec_group = models.ExecutionGroup(
+            id=str(uuid.uuid4()),
+            deployment_group=group,
+            workflow_id='create_deployment_environment',
+            visibility=group.visibility,
+        )
+        sm.put(create_exec_group)
+        with sm.transaction():
+            for inputs in input_overrides:
+                deployment_inputs = (group.default_inputs or {}).copy()
+                deployment_inputs.update(inputs)
+                dep = rm.create_deployment(
+                    blueprint=group.default_blueprint,
+                    deployment_id=f'{group.id}-{deployment_count + 1}',
+                    private_resource=None,
+                    visibility=group.visibility,
+                )
+                group.deployments.append(dep)
+                create_execution = dep.make_create_environment_execution(
+                    inputs=deployment_inputs,
+                )
+                create_execution.is_id_unique = True
+                sm.put(create_execution)
+                create_exec_group.executions.append(create_execution)
+                deployment_count += 1
+        amqp_client = get_amqp_client()
+        handler = workflow_sendhandler()
+        amqp_client.add_handler(handler)
+        with amqp_client:
+            create_exec_group.start_executions(sm, rm, handler)
 
     def _remove_group_deployments(self, sm, group, request_dict):
         remove_ids = request_dict.get('deployment_ids') or []
