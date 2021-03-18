@@ -1,0 +1,13 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - cloudify/types/types.yaml
+
+inputs:
+  inp1:
+    default: g2
+
+deployment_settings:
+  default_groups:
+    - g1
+    - {get_input: inp1}
