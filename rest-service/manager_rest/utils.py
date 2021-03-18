@@ -365,7 +365,7 @@ def _get_label_filter_rule(mapping_key, label_key, label_values_list=None):
         return label_key + mapping[mapping_key]
 
 
-def parse_frequency(expr):
+def parse_recurrence(expr):
     match = r"(\d+)\ ?(sec(ond)?|min(ute)?|h(our)?|d(ay)?|w(eek)?|" \
             r"mo(nth)?|y(ear)?)s?$"
     parsed = re.findall(match, expr)
@@ -380,7 +380,7 @@ def get_rrule(rule, since, until):
 
     :param rule: A dictionary representing a scheduling rule.
     Rules are of the following possible formats (e.g.):
-        {'frequency': '2 weeks', 'count': 5, 'weekdays': ['SU', 'MO', 'TH']}
+        {'recurrence': '2 weeks', 'count': 5, 'weekdays': ['SU', 'MO', 'TH']}
            = run every 2 weeks, 5 times totally, only on sun. mon. or thu.
         {'count': 1'} = run exactly once, at the `since` time
         {'rrule': 'RRULE:FREQ=DAILY;INTERVAL=3'} = pass RRULE directly
@@ -397,15 +397,15 @@ def get_rrule(rule, since, until):
             parsed_rule._until = until
         return parsed_rule
 
-    if not rule.get('frequency'):
+    if not rule.get('recurrence'):
         if rule.get('count') == 1:
             frequency = rrule.DAILY
             interval = 0
         else:
             return
     else:
-        interval, frequency = parse_frequency(rule['frequency'])
-        if not frequency:
+        interval, recurrence = parse_recurrence(rule['recurrence'])
+        if not recurrence:
             return
         freqs = {'sec': rrule.SECONDLY, 'second': rrule.SECONDLY,
                  'min': rrule.MINUTELY, 'minute': rrule.MINUTELY,
@@ -414,7 +414,7 @@ def get_rrule(rule, since, until):
                  'w': rrule.WEEKLY, 'week': rrule.WEEKLY,
                  'mo': rrule.MONTHLY, 'month': rrule.MONTHLY,
                  'y': rrule.YEARLY, 'year': rrule.YEARLY}
-        frequency = freqs[frequency]
+        frequency = freqs[recurrence]
 
     weekdays = None
     if rule.get('weekdays'):

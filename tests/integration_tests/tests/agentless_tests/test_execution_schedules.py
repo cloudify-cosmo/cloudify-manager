@@ -15,7 +15,7 @@ class ExecutionsSchedulesTest(AgentlessTestCase):
             deployment.id,
             'install',
             since=datetime.utcnow().replace(second=0, microsecond=0),
-            frequency='1 min')  # run each HH:MM:00.0
+            recurrence='1 min')  # run each HH:MM:00.0
         self.verify_execution_fired(deployment)
         self.client.execution_schedules.delete('install-every-minute',
                                                deployment.id)

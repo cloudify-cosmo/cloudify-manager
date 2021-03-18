@@ -15,7 +15,7 @@ class SchedulingRulesTest(BaseServerTestCase):
         since = '2018-1-1T00:00:00.000Z'
         until = None
         rule = {
-            'frequency': '2 weeks',
+            'recurrence': '2 weeks',
             'count': 5,
             'weekdays': ['MO', 'TU']
         }
@@ -32,7 +32,7 @@ class SchedulingRulesTest(BaseServerTestCase):
         since = '2018-1-1T00:00:00.000Z'
         until = None
         rule = {
-            'frequency': '2 mo',
+            'recurrence': '2 mo',
             'count': 5,
             'weekdays': ['2MO', '3TU']
         }
@@ -65,7 +65,7 @@ class SchedulingRulesTest(BaseServerTestCase):
         since = '2018-1-1T00:00:00.000Z'
         until = '2019-1-2T00:00:00.000Z'
         rule = {
-            'frequency': '1 days',
+            'recurrence': '1 days',
             'count': 5,
             'rrule': 'FREQ=DAILY;INTERVAL=2;COUNT=6'
         }
@@ -85,7 +85,7 @@ class SchedulingRulesTest(BaseServerTestCase):
         since = '2018-1-1T08:00:00.000Z'
         until = None
         rule = {
-            'frequency': '2 months',
+            'recurrence': '2 months',
             'weekdays': ['MO']      # run on Mondays every other month
         }
         expected_dates = {          # Mondays of odd months
@@ -108,7 +108,7 @@ class SchedulingRulesTest(BaseServerTestCase):
         since = '2018-1-1T08:00:00.000Z'
         until = '2018-2-1T08:00:00.000Z'
         rule = {
-            'frequency': '1 days',
+            'recurrence': '1 days',
             'count': 10
         }
         expected_dates = {
@@ -125,7 +125,7 @@ class SchedulingRulesTest(BaseServerTestCase):
         since = '2018-1-1T08:00:00.000Z'
         until = '2018-2-1T08:00:00.000Z'    # note: `until` is inclusive
         rule = {
-            'frequency': '1 days',
+            'recurrence': '1 days',
             'count': 1000
         }
         expected_dates = {
@@ -135,7 +135,7 @@ class SchedulingRulesTest(BaseServerTestCase):
         }
         self._assert_dates(since, until, rule, 32, expected_dates)
 
-    def test_parse_rule_no_frequency_single_run(self):
+    def test_parse_rule_no_recurrence_single_run(self):
         since = '2020-3-28T12:30:45.973Z'
         until = '2021-1-1T00:00:00.000Z'
         rule = {
@@ -145,7 +145,7 @@ class SchedulingRulesTest(BaseServerTestCase):
         self._assert_dates(since, until, rule, 1, expected_dates)
 
     @staticmethod
-    def test_parse_rule_no_frequency_multiple_runs_invalid():
+    def test_parse_rule_no_recurrence_multiple_runs_invalid():
         since = '2020-3-28T12:30:45.973Z'
         until = '2021-1-1T00:00:00.000Z'
         rule = {
@@ -154,7 +154,7 @@ class SchedulingRulesTest(BaseServerTestCase):
         assert not get_rrule(rule, since, until)
 
     @staticmethod
-    def test_parse_rule_no_frequency_weekdays_given_invalid():
+    def test_parse_rule_no_recurrence_weekdays_given_invalid():
         since = '2020-3-28T12:30:45.973Z'
         until = '2021-1-1T00:00:00.000Z'
         rule = {
@@ -166,7 +166,7 @@ class SchedulingRulesTest(BaseServerTestCase):
         since = '2018-1-1T08:00:00.000Z'
         until = '2018-2-1T08:00:00.000Z'
         rule = {
-            'frequency': '1 days',
+            'recurrence': '1 days',
             'weekdays': ['AB', 'PS', 'WE']  # only Wednesdays
         }
         expected_dates = {
@@ -178,11 +178,11 @@ class SchedulingRulesTest(BaseServerTestCase):
         }
         self._assert_dates(since, until, rule, 5, expected_dates)
 
-    def test_parse_rule_frequency_dictates_weekdays(self):
+    def test_parse_rule_recurrence_dictates_weekdays(self):
         since = '2018-1-1T08:00:00.000Z'
         until = '2018-2-1T08:00:00.000Z'
         rule = {
-            'frequency': '2 days',      # only odd dates
+            'recurrence': '2 days',      # only odd dates
             'weekdays': ['WE', 'TH']    # only once a week because ^
         }
         expected_dates = {

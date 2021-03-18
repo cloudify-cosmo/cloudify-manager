@@ -35,7 +35,7 @@ from manager_rest.constants import CFY_LABELS, CFY_LABELS_PREFIX
 from manager_rest.dsl_functions import (get_secret_method,
                                         evaluate_intrinsic_functions)
 from manager_rest import manager_exceptions, config, app_context
-from manager_rest.utils import (parse_frequency,
+from manager_rest.utils import (parse_recurrence,
                                 is_administrator,
                                 get_formatted_timestamp)
 
@@ -719,15 +719,15 @@ def test_unique_labels(labels_list):
 
 def compute_rule_from_scheduling_params(request_dict, existing_rule=None):
     rrule_string = request_dict.get('rrule')
-    frequency = request_dict.get('frequency')
+    recurrence = request_dict.get('recurrence')
     weekdays = request_dict.get('weekdays')
     count = request_dict.get('count')
 
-    # we need to have at least: rrule; or count=1; or frequency
+    # we need to have at least: rrule; or count=1; or recurrence
     if rrule_string:
-        if frequency or weekdays or count:
+        if recurrence or weekdays or count:
             raise manager_exceptions.BadParametersError(
-                "`rrule` cannot be provided together with `frequency`, "
+                "`rrule` cannot be provided together with `recurrence`, "
                 "`weekdays` or `count`.")
         try:
             rrule.rrulestr(rrule_string)
@@ -738,37 +738,38 @@ def compute_rule_from_scheduling_params(request_dict, existing_rule=None):
     else:
         if count:
             count = convert_to_int(request_dict.get('count'))
-        frequency = _verify_schedule_frequency(request_dict.get('frequency'))
-        weekdays = _verify_weekdays(request_dict.get('weekdays'), frequency)
+        recurrence = _verify_schedule_recurrence(
+            request_dict.get('recurrence'))
+        weekdays = _verify_weekdays(request_dict.get('weekdays'), recurrence)
         if existing_rule:
             count = count or existing_rule.get('count')
-            frequency = frequency or existing_rule.get('frequency')
+            recurrence = recurrence or existing_rule.get('recurrence')
             weekdays = weekdays or existing_rule.get('weekdays')
 
-        if not frequency and count != 1:
+        if not recurrence and count != 1:
             raise manager_exceptions.BadParametersError(
-                "frequency must be specified for execution count larger "
+                "recurrence must be specified for execution count larger "
                 "than 1")
         return {
-            'frequency': frequency,
+            'recurrence': recurrence,
             'count': count,
             'weekdays': weekdays
         }
 
 
-def _verify_schedule_frequency(frequency_str):
-    if not frequency_str:
+def _verify_schedule_recurrence(recurrence_str):
+    if not recurrence_str:
         return
-    _, frequency = parse_frequency(frequency_str)
-    if not frequency:
+    _, recurrence = parse_recurrence(recurrence_str)
+    if not recurrence:
         raise manager_exceptions.BadParametersError(
-            "`{}` is not a legal frequency expression. Supported format "
+            "`{}` is not a legal recurrence expression. Supported format "
             "is: <number> seconds|minutes|hours|days|weeks|months|years"
-            .format(frequency_str))
-    return frequency_str
+            .format(recurrence_str))
+    return recurrence_str
 
 
-def _verify_weekdays(weekdays, frequency):
+def _verify_weekdays(weekdays, recurrence):
     if not weekdays:
         return
     if not isinstance(weekdays, list):
@@ -778,9 +779,9 @@ def _verify_weekdays(weekdays, frequency):
     valid_weekdays = {str(d) for d in rrule.weekdays}
 
     complex_weekdays_freq = False
-    if frequency:
-        _, frequency = parse_frequency(frequency)
-        complex_weekdays_freq = (frequency in ['mo', 'month', 'y', 'year'])
+    if recurrence:
+        _, recurrence = parse_recurrence(recurrence)
+        complex_weekdays_freq = (recurrence in ['mo', 'month', 'y', 'year'])
 
     for weekday in weekdays_caps:
         parsed = re.findall(r"^([1-4]|L-)?({})".format(
@@ -794,5 +795,5 @@ def _verify_weekdays(weekdays, frequency):
         if parsed[0][0] and not complex_weekdays_freq:
             raise manager_exceptions.BadParametersError(
                 "complex weekday expression {} can only be used with a months|"
-                "years frequency, but got {}.".format(weekday, frequency))
+                "years recurrence, but got {}.".format(weekday, recurrence))
     return weekdays_caps

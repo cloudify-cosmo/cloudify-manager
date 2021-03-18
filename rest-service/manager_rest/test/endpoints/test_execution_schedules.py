@@ -31,7 +31,7 @@ class ExecutionSchedulesTestCase(BaseServerTestCase):
         workflow_id = 'install'
         schedule = self.client.execution_schedules.create(
             schedule_id, self.deployment_id, workflow_id,
-            since=self.an_hour_from_now, frequency='1 minutes', count=5)
+            since=self.an_hour_from_now, recurrence='1 minutes', count=5)
 
         self.assertEqual(schedule.id, schedule_id)
         self.assertEqual(schedule.deployment_id, self.deployment_id)
@@ -49,7 +49,7 @@ class ExecutionSchedulesTestCase(BaseServerTestCase):
         schedule = self.client.execution_schedules.create(
             'sched-weekdays', self.deployment_id, 'install',
             since=self.an_hour_from_now, until=self.three_weeks_from_now,
-            frequency='1 days', weekdays='mo, tu, we, th')
+            recurrence='1 days', weekdays='mo, tu, we, th')
         self.assertEqual(len(schedule['all_next_occurrences']), 12)  # 3w * 4d
 
     def test_schedules_list(self):
@@ -57,7 +57,7 @@ class ExecutionSchedulesTestCase(BaseServerTestCase):
         for schedule_id in schedule_ids:
             self.client.execution_schedules.create(
                 schedule_id, self.deployment_id, 'install',
-                since=self.an_hour_from_now, frequency='1 minutes', count=5)
+                since=self.an_hour_from_now, recurrence='1 minutes', count=5)
 
         schedules = self.client.execution_schedules.list()
         self.assertEqual(len(schedules), 2)
@@ -66,7 +66,7 @@ class ExecutionSchedulesTestCase(BaseServerTestCase):
     def test_schedule_delete(self):
         self.client.execution_schedules.create(
             'delete-me', self.deployment_id, 'install',
-            since=self.an_hour_from_now, frequency='1 minutes', count=5)
+            since=self.an_hour_from_now, recurrence='1 minutes', count=5)
         self.assertEqual(len(self.client.execution_schedules.list()), 1)
         self.client.execution_schedules.delete('delete-me', self.deployment_id)
         self.assertEqual(len(self.client.execution_schedules.list()), 0)
@@ -75,22 +75,22 @@ class ExecutionSchedulesTestCase(BaseServerTestCase):
         schedule = self.client.execution_schedules.create(
             'update-me', self.deployment_id, 'install',
             since=self.an_hour_from_now, until=self.two_hours_from_now,
-            frequency='1 minutes')
+            recurrence='1 minutes')
 
         # `until` is inclusive
         self.assertEqual(len(schedule['all_next_occurrences']), 61)
-        self.assertEqual(schedule['rule']['frequency'], '1 minutes')
+        self.assertEqual(schedule['rule']['recurrence'], '1 minutes')
         self.assertEqual(schedule['slip'], 0)
 
         self.client.execution_schedules.update(
-            'update-me', self.deployment_id, frequency='5 minutes', slip=30)
+            'update-me', self.deployment_id, recurrence='5 minutes', slip=30)
 
         # get the schedule from the DB and not directly from .update endpoint
         schedule = self.client.execution_schedules.get('update-me',
                                                        self.deployment_id)
 
         self.assertEqual(len(schedule['all_next_occurrences']), 13)  # 60/5+1
-        self.assertEqual(schedule['rule']['frequency'], '5 minutes')
+        self.assertEqual(schedule['rule']['recurrence'], '5 minutes')
         self.assertEqual(schedule['slip'], 30)
 
         self.client.execution_schedules.update(
@@ -113,7 +113,7 @@ class ExecutionSchedulesTestCase(BaseServerTestCase):
             AssertionError,
             self.client.execution_schedules.create,
             'some_id', self.deployment_id, 'some_workflow',
-            frequency='1 minutes', count=5
+            recurrence='1 minutes', count=5
         )
 
     def test_schedule_create_invalid_time_format(self):
@@ -122,7 +122,7 @@ class ExecutionSchedulesTestCase(BaseServerTestCase):
             "'str' object has no attribute 'isoformat'",
             self.client.execution_schedules.create,
             'some_id', self.deployment_id, 'install',
-            since='long ago', frequency='1 minutes', count=5
+            since='long ago', recurrence='1 minutes', count=5
         )
 
     def test_schedule_create_invalid_workflow(self):
@@ -131,7 +131,7 @@ class ExecutionSchedulesTestCase(BaseServerTestCase):
             '400: Workflow some_workflow does not exist',
             self.client.execution_schedules.create,
             'some_id', self.deployment_id, 'some_workflow',
-            since=self.an_hour_from_now, frequency='1 minutes', count=5,
+            since=self.an_hour_from_now, recurrence='1 minutes', count=5,
         )
 
     def test_schedule_invalid_weekdays(self):
@@ -140,12 +140,12 @@ class ExecutionSchedulesTestCase(BaseServerTestCase):
             '400:.* invalid weekday',
             self.client.execution_schedules.create,
             'bad-weekdays', self.deployment_id, 'install',
-            since=self.an_hour_from_now, frequency='4 hours',
+            since=self.an_hour_from_now, recurrence='4 hours',
             weekdays='oneday, someday'
         )
         self.client.execution_schedules.create(
             'good-weekdays', self.deployment_id, 'install',
-            since=self.an_hour_from_now, frequency='4 hours', count=6,
+            since=self.an_hour_from_now, recurrence='4 hours', count=6,
             weekdays='mo,tu'
         )
         self.assertRaisesRegex(
@@ -161,48 +161,48 @@ class ExecutionSchedulesTestCase(BaseServerTestCase):
             '400:.* invalid weekday',
             self.client.execution_schedules.create,
             'bad-complex-wd', self.deployment_id, 'install',
-            since=self.an_hour_from_now, frequency='4 hours',
+            since=self.an_hour_from_now, recurrence='4 hours',
             weekdays='5tu'
         )
 
-    def test_schedule_create_invalid_frequency_with_complex_weekdays(self):
+    def test_schedule_create_invalid_recurrence_with_complex_weekdays(self):
         self.assertRaisesRegex(
             CloudifyClientError,
             '400:.* complex weekday expression',
             self.client.execution_schedules.create,
             'bad-complex-wd', self.deployment_id, 'install',
-            since=self.an_hour_from_now, frequency='4 hours',
+            since=self.an_hour_from_now, recurrence='4 hours',
             weekdays='2mo, l-tu'
         )
 
-    def test_schedule_invalid_repetition_without_frequency(self):
-        frequency_error = \
-            '400: frequency must be specified for execution count ' \
+    def test_schedule_invalid_repetition_without_recurrence(self):
+        recurrence_error = \
+            '400: recurrence must be specified for execution count ' \
             'larger than 1'
 
         self.assertRaisesRegex(
             CloudifyClientError,
-            frequency_error,
+            recurrence_error,
             self.client.execution_schedules.create,
-            'no-frequency-no-count', self.deployment_id, 'uninstall',
+            'no-recurrence-no-count', self.deployment_id, 'uninstall',
             since=self.an_hour_from_now, weekdays='su,mo,tu',
         )
         self.client.execution_schedules.create(
-            'no-frequency-count-1', self.deployment_id, 'install',
+            'no-recurrence-count-1', self.deployment_id, 'install',
             since=self.an_hour_from_now, count=1,
         )
         self.assertRaisesRegex(
             CloudifyClientError,
-            frequency_error,
+            recurrence_error,
             self.client.execution_schedules.update,
-            'no-frequency-count-1', self.deployment_id, count=2
+            'no-recurrence-count-1', self.deployment_id, count=2
         )
 
-    def test_schedule_create_invalid_frequency(self):
+    def test_schedule_create_invalid_recurrence(self):
         self.assertRaisesRegex(
             CloudifyClientError,
-            '400: `10 doboshes` is not a legal frequency expression.',
+            '400: `10 doboshes` is not a legal recurrence expression.',
             self.client.execution_schedules.create,
             'bad-freq', self.deployment_id, 'install',
-            since=self.an_hour_from_now, frequency='10 doboshes'
+            since=self.an_hour_from_now, recurrence='10 doboshes'
         )

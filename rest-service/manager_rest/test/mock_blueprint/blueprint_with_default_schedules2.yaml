@@ -10,7 +10,7 @@ deployment_settings:
       since: '2022-1-1 15:00'
       until: '+1d'
       timezone: 'Israel'
-      recurring: 12h
+      recurrence: 12h
     sc3:
       workflow: install
       since: '2022-1-1 15:00'
