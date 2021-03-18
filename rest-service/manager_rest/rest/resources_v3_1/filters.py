@@ -13,7 +13,7 @@ from manager_rest.rest.filters_utils import create_filter_rules_list
 
 
 class BlueprintsFilters(SecuredResource):
-    @authorize('filters_list')
+    @authorize('filter_list')
     @rest_decorators.marshal_with(models.BlueprintsFilter)
     @rest_decorators.paginate
     @rest_decorators.sortable(models.BlueprintsFilter)
@@ -28,7 +28,7 @@ class BlueprintsFilters(SecuredResource):
 
 
 class DeploymentsFilters(SecuredResource):
-    @authorize('filters_list')
+    @authorize('filter_list')
     @rest_decorators.marshal_with(models.DeploymentsFilter)
     @rest_decorators.paginate
     @rest_decorators.sortable(models.DeploymentsFilter)
@@ -159,46 +159,46 @@ def _get_filter_rules_by_type(filter_rules_list, filter_rule_type):
 
 
 class BlueprintsFiltersId(FiltersId):
-    @authorize('filters_create')
+    @authorize('filter_create')
     @rest_decorators.marshal_with(models.BlueprintsFilter)
     def put(self, filter_id):
         return super().put(models.BlueprintsFilter, filter_id,
                            models.Blueprint)
 
-    @authorize('filters_get')
+    @authorize('filter_get')
     @rest_decorators.marshal_with(models.BlueprintsFilter)
     def get(self, filter_id, _include=None):
         return super().get(models.BlueprintsFilter, filter_id, _include)
 
-    @authorize('filters_update')
+    @authorize('filter_update')
     @rest_decorators.marshal_with(models.BlueprintsFilter)
     def patch(self, filter_id):
         return super().patch(models.BlueprintsFilter, filter_id,
                              models.Blueprint)
 
-    @authorize('filters_delete')
+    @authorize('filter_delete')
     def delete(self, filter_id):
         return super().delete(models.BlueprintsFilter, filter_id)
 
 
 class DeploymentsFiltersId(FiltersId):
-    @authorize('filters_create')
+    @authorize('filter_create')
     @rest_decorators.marshal_with(models.DeploymentsFilter)
     def put(self, filter_id):
         return super().put(models.DeploymentsFilter, filter_id,
                            models.Deployment)
 
-    @authorize('filters_get')
+    @authorize('filter_get')
     @rest_decorators.marshal_with(models.DeploymentsFilter)
     def get(self, filter_id, _include=None):
         return super().get(models.DeploymentsFilter, filter_id, _include)
 
-    @authorize('filters_update')
+    @authorize('filter_update')
     @rest_decorators.marshal_with(models.DeploymentsFilter)
     def patch(self, filter_id):
         return super().patch(models.DeploymentsFilter, filter_id,
                              models.Deployment)
 
-    @authorize('filters_delete')
+    @authorize('filter_delete')
     def delete(self, filter_id):
         return super().delete(models.DeploymentsFilter, filter_id)

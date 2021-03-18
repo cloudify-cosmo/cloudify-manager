@@ -334,7 +334,7 @@ def get_amqp_client():
     )
 
 
-def parse_frequency(expr):
+def parse_recurrence(expr):
     match = r"(\d+)\ ?(sec(ond)?|min(ute)?|h(our)?|d(ay)?|w(eek)?|" \
             r"mo(nth)?|y(ear)?)s?$"
     parsed = re.findall(match, expr)
