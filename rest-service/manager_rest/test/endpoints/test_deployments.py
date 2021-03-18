@@ -1110,7 +1110,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
 
         sc1 = self.client.execution_schedules.get('sc1', deployment.id)
         # sc2 = self.client.execution_schedules.get('sc2', deployment.id)
-        self.assertEquals(sc1['rule']['frequency'], '1w')
+        self.assertEquals(sc1['rule']['recurrence'], '1w')
         self.assertEquals(len(sc1['all_next_occurrences']), 5)
 
     def test_update_deployment_with_default_schedules(self):
