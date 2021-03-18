@@ -2300,7 +2300,7 @@ class ResourceManager(object):
                                                                base_datetime)
             rule = compute_rule_from_scheduling_params({
                 'rrule': schedule.get('rrule'),
-                'frequency': schedule.get('recurring'),
+                'frequency': schedule.get('recurrence'),
                 'weekdays': schedule.get('weekdays'),
                 'count': schedule.get('count')
             })
