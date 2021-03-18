@@ -421,11 +421,6 @@ def composer_db_schema_get_current_revision():
         'db-migrate-current'
     ]).decode('utf-8')
     revision = output.strip()
-    if revision == '20170601133017-4_1-init.js':
-        # Old composer metadata always incorrectly put the first migration,
-        # not the last one. As we don't support anything earlier than the
-        # last migration before 5.3, this will always be the right answer
-        revision = '20171229105614-4_3-blueprint-repo.js'
     return revision
 
 
