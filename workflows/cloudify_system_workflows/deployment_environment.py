@@ -24,7 +24,20 @@ from cloudify.decorators import workflow
 from cloudify.manager import get_rest_client
 from cloudify.workflows import workflow_context
 
+from cloudify_rest_client.exceptions import CloudifyClientError
 from dsl_parser import tasks
+
+
+def _join_groups(client, deployment_id, groups):
+    for group_name in groups:
+        try:
+            client.deployment_groups.add_deployments(
+                group_name, deployment_ids=[deployment_id])
+        except CloudifyClientError as e:
+            if e.status_code != 404:
+                raise
+            client.deployment_groups.put(
+                group_name, deployment_ids=[deployment_id])
 
 
 @workflow
@@ -51,8 +64,13 @@ def create(ctx, inputs=None, skip_plugins_validation=False, **_):
         groups=deployment_plan['groups'],
         scaling_groups=deployment_plan['scaling_groups'],
         outputs=deployment_plan['outputs'],
-        capabilities=deployment_plan.get('capabilities', {})
+        capabilities=deployment_plan.get('capabilities', {}),
     )
+
+    deployment_settings = deployment_plan.get('deployment_settings', {})
+    _join_groups(client, ctx.deployment.id,
+                 deployment_settings.get('default_groups', []))
+
     ctx.logger.info('Creating deployment work directory')
     _create_deployment_workdir(
         deployment_id=ctx.deployment.id,
