@@ -17,7 +17,8 @@ class ExecutionsSchedulesTest(AgentlessTestCase):
             since=datetime.utcnow().replace(second=0, microsecond=0),
             frequency='1 min')  # run each HH:MM:00.0
         self.verify_execution_fired(deployment)
-        self.client.execution_schedules.delete('install-every-minute')
+        self.client.execution_schedules.delete('install-every-minute',
+                                               deployment.id)
 
     @retry(wait_fixed=1000, stop_max_attempt_number=120)
     def verify_execution_fired(self, deployment):
