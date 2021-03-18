@@ -12,8 +12,9 @@ from execution_scheduler.main import try_run, should_run, LoopTimer
 
 
 def _get_mock_schedule(schedule_id='default', next_occurrence=None,
-                       rule={'frequency': '1 min'}, slip=0, stop_on_fail=False,
-                       latest_execution=None, enabled=True):
+                       rule={'recurrence': '1 min'}, slip=0,
+                       stop_on_fail=False, latest_execution=None,
+                       enabled=True):
     now = utils.get_formatted_timestamp()
     blueprint = models.Blueprint(
             id='mock-bp',
