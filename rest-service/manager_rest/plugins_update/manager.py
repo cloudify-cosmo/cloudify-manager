@@ -101,12 +101,12 @@ class PluginsUpdateManager(object):
         temp_blueprint.is_hidden = True
         return self.sm.update(temp_blueprint)
 
-    def _stage_plugin_update(self, blueprint):
+    def _stage_plugin_update(self, blueprint, forced):
         update_id = str(uuid.uuid4())
         plugins_update = models.PluginsUpdate(
             id=update_id,
             created_at=utils.get_formatted_timestamp(),
-            forced=False)
+            forced=forced)
         plugins_update.set_blueprint(blueprint)
         return self.sm.put(plugins_update)
 
@@ -145,7 +145,8 @@ class PluginsUpdateManager(object):
 
         changes_required = _did_plugins_to_install_change(temp_plan,
                                                           blueprint.plan)
-        plugins_update = self._stage_plugin_update(blueprint)
+        plugins_update = self._stage_plugin_update(blueprint,
+                                                   filters.get('force', False))
         if changes_required:
             plugins_update.deployments_to_update = [
                 dep.id for dep in self._get_deployments_to_update(blueprint_id)

@@ -32,6 +32,7 @@ from manager_rest.plugins_update.constants import (PLUGIN_NAMES,
                                                    TO_MINOR,
                                                    ALL_TO_MINOR,
                                                    MAPPING,
+                                                   FORCE,
                                                    AUTO_CORRECT_TYPES,
                                                    REEVALUATE_ACTIVE_STATUSES,)
 from manager_rest.plugins_update.manager import get_plugins_updates_manager
@@ -114,6 +115,7 @@ class PluginsUpdate(SecuredResource):
                 ALL_TO_MINOR: {'type': bool, 'optional': True},
                 TO_MINOR: {'type': list, 'optional': True},
                 MAPPING: {'type': dict, 'optional': True},
+                FORCE: {'type': bool, 'optional': True},
                 AUTO_CORRECT_TYPES: {'type': bool, 'optional': True},
                 REEVALUATE_ACTIVE_STATUSES: {'type': bool, 'optional': True},
             })

@@ -194,7 +194,8 @@ class DeploymentUpdateManager(object):
                                  ignore_failure=False,
                                  install_first=False,
                                  reinstall_list=None,
-                                 update_plugins=True):
+                                 update_plugins=True,
+                                 force=False):
         # Mark deployment update as committing
         dep_update.keep_old_deployment_dependencies = skip_uninstall
         dep_update.state = STATES.UPDATING
@@ -274,7 +275,8 @@ class DeploymentUpdateManager(object):
             reinstall_list=reinstall_list,
             central_plugins_to_install=central_plugins_to_install,
             central_plugins_to_uninstall=central_plugins_to_uninstall,
-            update_plugins=update_plugins
+            update_plugins=update_plugins,
+            force=force
         )
 
         # Update deployment attributes in the storage manager
@@ -440,7 +442,8 @@ class DeploymentUpdateManager(object):
                                  reinstall_list=None,
                                  central_plugins_to_install=None,
                                  central_plugins_to_uninstall=None,
-                                 update_plugins=True):
+                                 update_plugins=True,
+                                 force=False):
         """Executed the update workflow or a custom workflow
 
         :param dep_update: deployment update object
@@ -461,6 +464,8 @@ class DeploymentUpdateManager(object):
         :param central_plugins_to_uninstall: plugins to uninstall that have the
         central_deployment_agent as the executor.
         :param update_plugins: whether or not to perform plugin updates.
+        :param force: force update (i.e. even if the blueprint is used to
+        create components).
 
         :return: an Execution object.
         """
@@ -532,7 +537,8 @@ class DeploymentUpdateManager(object):
             blueprint_id=dep_update.new_blueprint_id,
             parameters=parameters,
             allow_custom_parameters=True,
-            allow_overlapping_running_wf=True
+            allow_overlapping_running_wf=True,
+            force=force,
         )
 
     def finalize_commit(self, deployment_update_id):
