@@ -41,6 +41,8 @@ LEGAL_FILTER_RULES = [
 
 
 class FiltersFunctionalityBaseCase(base_test.BaseServerTestCase):
+    __test__ = False
+
     LABELS = [{'a': 'b'}, {'a': 'z'}, {'c': 'd'}]
     LABELS_2 = [{'a': 'b'}, {'c': 'z'}, {'e': 'f'}]
 
@@ -135,6 +137,8 @@ class FiltersFunctionalityBaseCase(base_test.BaseServerTestCase):
 
 @attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
 class BlueprintsFiltersFunctionalityCase(FiltersFunctionalityBaseCase):
+    __test__ = True
+
     def setUp(self):
         super().setUp(models.Blueprint)
 
@@ -147,6 +151,8 @@ class BlueprintsFiltersFunctionalityCase(FiltersFunctionalityBaseCase):
 
 @attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
 class DeploymentFiltersFunctionalityCase(FiltersFunctionalityBaseCase):
+    __test__ = True
+
     def setUp(self):
         super().setUp(models.Deployment)
 
@@ -224,11 +230,9 @@ class DeploymentFiltersFunctionalityCase(FiltersFunctionalityBaseCase):
         )
 
 
-# This way we avoid running it too
-del FiltersFunctionalityBaseCase
-
-
 class FiltersBaseCase(base_test.BaseServerTestCase):
+    __test__ = False
+
     LABELS_RULE = FilterRule('a', ['b'],  LabelsOperator.ANY_OF, 'label')
     ATTRS_RULE = FilterRule('created_by', ['admin'],  AttrsOperator.NOT_ANY_OF,
                             'attribute')
@@ -384,15 +388,15 @@ class FiltersBaseCase(base_test.BaseServerTestCase):
 
 @attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
 class BlueprintsFiltersCase(FiltersBaseCase):
+    __test__ = True
+
     def setUp(self):
         super().setUp('blueprints_filters')
 
 
 @attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
 class DeploymentsFiltersCase(FiltersBaseCase):
+    __test__ = True
+
     def setUp(self):
         super().setUp('deployments_filters')
-
-
-# This way we avoid running it too
-del FiltersBaseCase
