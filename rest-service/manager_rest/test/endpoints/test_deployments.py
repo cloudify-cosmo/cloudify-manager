@@ -1086,6 +1086,17 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         with self.assertRaisesRegex(CloudifyClientError, 'already set'):
             self.client.deployments.set_attributes('dep1', description='d2')
 
+    def test_create_deployment_with_default_groups(self):
+        _, _, _, deployment = self.put_deployment(
+            blueprint_file_name='blueprint_with_default_groups.yaml',
+            inputs={'inp1': 'g3'}
+        )
+
+        dep = self.sm.get(models.Deployment, deployment.id)
+        groups = dep.deployment_groups
+        assert len(groups) == 2
+        assert {g.id for g in groups} == {'g1', 'g3'}
+
     def test_create_deployment_with_default_schedules(self):
         _, _, _, deployment = self.put_deployment(
             blueprint_file_name='blueprint_with_default_schedules.yaml')
