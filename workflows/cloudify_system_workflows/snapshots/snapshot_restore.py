@@ -116,6 +116,12 @@ class SnapshotRestore(object):
             if stage_revision and self._premium_enabled:
                 stage_revision = re.sub(r".*\n", '', stage_revision)
             composer_revision = metadata.get(M_COMPOSER_SCHEMA_REVISION) or ''
+            if composer_revision == '20170601133017-4_1-init.js':
+                # Old composer metadata always incorrectly put the first
+                # migration not the last one. As we don't support anything
+                # earlier than the last migration before 5.3, this will always
+                # be the right answer
+                composer_revision = '20171229105614-4_3-blueprint-repo.js'
             if composer_revision and self._premium_enabled:
                 composer_revision = re.sub(r".*\n", '', composer_revision)
             self._validate_snapshot()
