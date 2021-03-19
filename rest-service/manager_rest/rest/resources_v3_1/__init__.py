@@ -13,7 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from .license import License                     # NOQA
+from .license import License, LicenseCheck       # NOQA
 from .tokens import UserTokens                   # NOQA
 from .sites import Sites, SitesName              # NOQA
 from .agents import Agents, AgentsName           # NOQA
