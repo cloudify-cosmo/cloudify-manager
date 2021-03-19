@@ -295,11 +295,18 @@ class DeploymentUpdatesTestCase(DeploymentUpdatesBase):
                              getattr(depup, att))
 
     def test_reevaluate_active_statuses(self):
-        orig_blueprint = self._add_blueprint('bp1')
-        # new_blueprint = self._add_blueprint('bp2')
-        self.put_blueprint(blueprint_id='bp2')
-        deployment = self._add_deployment(orig_blueprint)
-        execution = self._add_execution(deployment)
+        self.put_deployment(
+            blueprint_dir='resources/deployment_update/depup_step',
+            blueprint_file_name='one_node.yaml',
+            blueprint_id='bp1',
+            deployment_id='dep')
+        self.put_blueprint(
+            blueprint_dir='resources/deployment_update/depup_step',
+            blueprint_file_name='two_nodes.yaml',
+            blueprint_id='bp2')
+        self.wait_for_deployment_creation(self.client, 'dep')
+        deployment = self.sm.get(models.Deployment, 'dep')
+        execution = self._add_execution(deployment, workflow_id='update')
         deployment_update_updating = self._add_deployment_update(
             deployment, execution)
         deployment_update_updating.state = 'updating'
@@ -312,12 +319,9 @@ class DeploymentUpdatesTestCase(DeploymentUpdatesBase):
                 deployment.id, blueprint_id='bp2',
                 reevaluate_active_statuses=False)
 
-        with self.assertRaisesRegex(
-                CloudifyClientError,
-                r"^500: Internal error occurred in manager REST server"):
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, blueprint_id='bp2',
-                reevaluate_active_statuses=True)
+        self.client.deployment_updates.update_with_existing_blueprint(
+            deployment.id, blueprint_id='bp2',
+            reevaluate_active_statuses=True)
 
 
 @mark.skip
