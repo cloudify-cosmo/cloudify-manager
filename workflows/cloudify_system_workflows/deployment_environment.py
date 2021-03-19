@@ -41,7 +41,7 @@ def _join_groups(client, deployment_id, groups):
 
 
 @workflow
-def create(ctx, inputs=None, skip_plugins_validation=False, **_):
+def create(ctx, labels=None, inputs=None, skip_plugins_validation=False, **_):
     client = get_rest_client(tenant=ctx.tenant_name)
     bp = client.blueprints.get(ctx.blueprint.id)
     deployment_plan = tasks.prepare_deployment_plan(
@@ -54,6 +54,11 @@ def create(ctx, inputs=None, skip_plugins_validation=False, **_):
     ctx.logger.info('Creating %d node-instances', len(node_instances))
     client.node_instances.create_many(ctx.deployment.id, node_instances)
     ctx.logger.info('Setting deployment attributes')
+    labels_to_create = labels or []
+    labels_to_create += [
+        {k: v} for k, labels_def in deployment_plan.get('labels', {}).items()
+        for v in labels_def.get('values', [])
+    ]
     client.deployments.set_attributes(
         ctx.deployment.id,
         description=deployment_plan['description'],
@@ -65,6 +70,7 @@ def create(ctx, inputs=None, skip_plugins_validation=False, **_):
         scaling_groups=deployment_plan['scaling_groups'],
         outputs=deployment_plan['outputs'],
         capabilities=deployment_plan.get('capabilities', {}),
+        labels=labels_to_create,
     )
 
     deployment_settings = deployment_plan.get('deployment_settings', {})

@@ -55,7 +55,7 @@ from manager_rest.utils import (send_event,
                                 validate_deployment_and_site_visibility,
                                 extract_host_agent_plugins_from_plan)
 from manager_rest.rest.rest_utils import (
-    get_labels_from_plan, RecursiveDeploymentDependencies,
+    RecursiveDeploymentDependencies,
     update_inter_deployment_dependencies, verify_blueprint_uploaded_state,
     compute_rule_from_scheduling_params)
 from manager_rest.deployment_update.constants import STATES as UpdateStates
@@ -1313,8 +1313,6 @@ class ResourceManager(object):
                           labels=None):
         verify_blueprint_uploaded_state(blueprint)
         plan = blueprint.plan
-        deployment_labels = self._handle_deployment_labels(labels, plan)
-
         visibility = self.get_resource_visibility(models.Deployment,
                                                   deployment_id,
                                                   visibility,
@@ -1356,10 +1354,6 @@ class ResourceManager(object):
             new_deployment.site = site
 
         self.sm.put(new_deployment)
-        self.create_resource_labels(models.DeploymentLabel,
-                                    new_deployment,
-                                    deployment_labels)
-
         return new_deployment
 
     def _finalize_create_deployment(self, deployment: models.Deployment):
@@ -1368,14 +1362,6 @@ class ResourceManager(object):
         self._create_deployment_initial_dependencies(deployment)
         # RD-1603 will move this:
         self.create_deployment_schedules(deployment, deployment.blueprint.plan)
-
-    @staticmethod
-    def _handle_deployment_labels(provided_labels, plan):
-        labels_list = get_labels_from_plan(plan, constants.LABELS)
-        if provided_labels:
-            labels_list.extend(label for label in provided_labels if label
-                               not in labels_list)
-        return labels_list
 
     def install_plugin(self, plugin, manager_names=None, agent_names=None):
         """Send the plugin install task to the given managers or agents."""
