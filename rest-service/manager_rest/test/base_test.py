@@ -974,14 +974,14 @@ class BaseServerTestCase(unittest.TestCase):
         deployment = self._add_deployment(blueprint.id)
         return self._add_execution(deployment.id, execution_id)
 
-    def _add_execution(self, deployment, execution_id=None):
+    def _add_execution(self, deployment, execution_id=None, workflow_id=''):
         if not execution_id:
             unique_str = str(uuid.uuid4())
             execution_id = 'execution-{0}'.format(unique_str)
         execution = models.Execution(
             id=execution_id,
             status=ExecutionState.TERMINATED,
-            workflow_id='',
+            workflow_id=workflow_id,
             created_at=utils.get_formatted_timestamp(),
             error='',
             parameters=dict(),

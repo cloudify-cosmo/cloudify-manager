@@ -294,6 +294,34 @@ class DeploymentUpdatesTestCase(DeploymentUpdatesBase):
             self.assertEqual(getattr(depup_from_client, att),
                              getattr(depup, att))
 
+    def test_reevaluate_active_statuses(self):
+        self.put_deployment(
+            blueprint_dir='resources/deployment_update/depup_step',
+            blueprint_file_name='one_node.yaml',
+            blueprint_id='bp1',
+            deployment_id='dep')
+        self.put_blueprint(
+            blueprint_dir='resources/deployment_update/depup_step',
+            blueprint_file_name='two_nodes.yaml',
+            blueprint_id='bp2')
+        deployment = self.sm.get(models.Deployment, 'dep')
+        execution = self._add_execution(deployment, workflow_id='update')
+        deployment_update_updating = self._add_deployment_update(
+            deployment, execution)
+        deployment_update_updating.state = 'updating'
+        self.sm.update(deployment_update_updating)
+
+        with self.assertRaises(CloudifyClientError) as ex:
+            self.client.deployment_updates.update_with_existing_blueprint(
+                deployment.id, blueprint_id='bp2',
+                reevaluate_active_statuses=False)
+        assert ex.exception.status_code == 409
+        assert "still active" in str(ex.exception)
+
+        self.client.deployment_updates.update_with_existing_blueprint(
+            deployment.id, blueprint_id='bp2',
+            reevaluate_active_statuses=True)
+
 
 @mark.skip
 class DeploymentUpdatesStepAndStageTestCase(base_test.BaseServerTestCase):
