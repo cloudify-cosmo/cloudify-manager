@@ -154,6 +154,7 @@ class SnapshotRestore(object):
                 self._restore_inter_deployment_dependencies()
                 self._update_roles_and_permissions()
                 self._update_deployment_statuses()
+                self._update_node_instance_indices()
 
             if self._restore_certificates:
                 self._restore_certificate()
@@ -242,10 +243,12 @@ class SnapshotRestore(object):
                 pass
 
     def _update_roles_and_permissions(self):
+        ctx.logger.info('Updating roles and permissions')
         if os.path.exists(REST_AUTHORIZATION_CONFIG_PATH):
             utils.run(['/opt/manager/scripts/load_permissions.py'])
 
     def _update_deployment_statuses(self):
+        ctx.logger.info('Updating deployment statuses.')
         if self._snapshot_version < V_5_3_0:
             dir_path = os.path.dirname(os.path.realpath(__file__))
             scrip_path = os.path.join(
@@ -254,6 +257,19 @@ class SnapshotRestore(object):
             )
             command = [MANAGER_PYTHON, scrip_path, self._tempdir]
             utils.run(command)
+
+    def _update_node_instance_indices(self):
+        ctx.logger.info('Updating node indices.')
+        if self._snapshot_version < V_5_0_5:
+            with Postgres(self._config) as postgres:
+                postgres.run_query(
+                    'update node_instances ni set index=u.rank '
+                    'from (select node_instances._storage_id, rank() '
+                    'over (partition by node_instances._node_fk '
+                    'order by node_instances._storage_id) '
+                    'from node_instances) u '
+                    'where ni._storage_id = u._storage_id;'
+                )
 
     def _generate_new_token(self):
         dir_path = os.path.dirname(os.path.realpath(__file__))
