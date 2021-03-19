@@ -94,8 +94,6 @@ class DeploymentsId(resources_v1.DeploymentsId):
             optional=True,
             valid_values=VisibilityState.STATES
         )
-        labels = (rest_utils.get_labels_list(request_dict['labels'])
-                  if 'labels' in request_dict else None)
         skip_plugins_validation = self.get_skip_plugin_validation_flag(
             request_dict)
         rm = get_resource_manager()
@@ -113,11 +111,11 @@ class DeploymentsId(resources_v1.DeploymentsId):
             site=site,
             runtime_only_evaluation=request_dict.get(
                 'runtime_only_evaluation', False),
-            labels=labels
         )
         try:
             rm.execute_workflow(deployment.make_create_environment_execution(
                 inputs=request_dict.get('inputs', {}),
+                labels=request_dict.get('labels', []),
                 skip_plugins_validation=skip_plugins_validation,
 
             ), bypass_maintenance=bypass_maintenance)

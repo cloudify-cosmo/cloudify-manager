@@ -712,40 +712,35 @@ class BaseServerTestCase(unittest.TestCase):
         deployment = client.deployments.create(blueprint_id,
                                                deployment_id,
                                                **create_deployment_kwargs)
-        self.create_deployment_environment(
-            inputs=inputs, deployment=deployment, client=client)
+        self.create_deployment_environment(deployment, client=client)
         deployment = client.deployments.get(deployment_id)
         return blueprint_id, deployment.id, blueprint_response, deployment
 
-    def create_deployment_environment(self, deployment, inputs, client=None):
+    def create_deployment_environment(self, deployment, client=None):
         from cloudify_system_workflows.deployment_environment import create
         client = client or self.client
         m = MagicMock()
         deployment = self.sm.get(models.Deployment, deployment.id)
         blueprint = client.blueprints.get(deployment.blueprint_id)
+        m.deployment = client.deployments.get(deployment.id)
         m.blueprint = blueprint
-        m.deployment = deployment
         m.tenant_name = deployment.tenant_name
-        m.logger = MagicMock()
+        deployment.create_execution.status = ExecutionState.STARTED
+        self.sm.update(deployment.create_execution)
         get_rest_client_target = \
             'cloudify_system_workflows.deployment_environment.get_rest_client'
-        create_dep_execution = deployment.executions[0]
-        create_dep_execution.status = ExecutionState.STARTED
-        self.sm.update(create_dep_execution)
         with patch(get_rest_client_target, return_value=client), \
                 patch('cloudify_system_workflows.deployment_environment.'
                       'os.makedirs'):
             try:
-                create(m, inputs=inputs, tenant_name=deployment.tenant.name)
+                create(m, **deployment.create_execution.parameters)
             except Exception:
                 client.executions.update(
-                    deployment.executions[0].id,
-                    ExecutionState.FAILED)
+                    deployment.create_execution.id, ExecutionState.FAILED)
                 raise
             else:
                 client.executions.update(
-                    deployment.executions[0].id,
-                    ExecutionState.TERMINATED)
+                    deployment.create_execution.id, ExecutionState.TERMINATED)
 
     def delete_deployment(self, deployment_id):
         """Delete the deployment from the database.
