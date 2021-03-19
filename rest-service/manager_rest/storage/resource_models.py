@@ -487,16 +487,12 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         else:
             return DeploymentState.IN_PROGRESS
 
-    def make_create_environment_execution(
-            self, inputs=None, skip_plugins_validation=False):
+    def make_create_environment_execution(self, **params):
         self.create_execution = Execution(
             workflow_id='create_deployment_environment',
             deployment=self,
             status=ExecutionState.PENDING,
-            parameters={
-                'inputs': inputs,
-                'skip_plugins_validation': skip_plugins_validation,
-            },
+            parameters=params,
         )
         return self.create_execution
 

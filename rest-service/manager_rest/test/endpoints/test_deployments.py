@@ -922,6 +922,9 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         deployment = self.client.deployments.create(
             blueprint_id='bp1', deployment_id='dep1',
             labels=[{'new_key': 'new_value'}])
+        self.create_deployment_environment(deployment)
+        deployment = self.client.deployments.get(deployment.id)
+
         expected_labels = [{'key1': 'key1_val1'}, {'key2': 'key2_val1'},
                            {'key2': 'key2_val2'}, {'new_key': 'new_value'}]
         self.assert_resource_labels(deployment.labels, expected_labels)
