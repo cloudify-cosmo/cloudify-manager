@@ -304,7 +304,6 @@ class DeploymentUpdatesTestCase(DeploymentUpdatesBase):
             blueprint_dir='resources/deployment_update/depup_step',
             blueprint_file_name='two_nodes.yaml',
             blueprint_id='bp2')
-        self.wait_for_deployment_creation(self.client, 'dep')
         deployment = self.sm.get(models.Deployment, 'dep')
         execution = self._add_execution(deployment, workflow_id='update')
         deployment_update_updating = self._add_deployment_update(
@@ -312,12 +311,12 @@ class DeploymentUpdatesTestCase(DeploymentUpdatesBase):
         deployment_update_updating.state = 'updating'
         self.sm.update(deployment_update_updating)
 
-        with self.assertRaisesRegex(
-                CloudifyClientError,
-                r"^409: there are deployment updates still active;"):
+        with self.assertRaises(CloudifyClientError) as ex:
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, blueprint_id='bp2',
                 reevaluate_active_statuses=False)
+        assert ex.exception.status_code == 409
+        assert "still active" in str(ex.exception)
 
         self.client.deployment_updates.update_with_existing_blueprint(
             deployment.id, blueprint_id='bp2',
