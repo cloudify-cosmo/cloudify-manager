@@ -126,6 +126,7 @@ def setup_resources(api):
         'DBNodes': 'db-nodes',
         'RabbitMQBrokersId': 'brokers/<string:name>',
         'License': 'license',
+        'LicenseCheck': 'license-check',
         'Sites': 'sites',
         'SitesName': 'sites/<string:name>',
         'ClusterStatus': 'cluster-status',
