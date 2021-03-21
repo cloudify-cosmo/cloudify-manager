@@ -533,15 +533,17 @@ class TestSnapshot(AgentlessTestCase):
         failed_executions = self.client.executions.list(
             status=Execution.FAILED
         )
-        self.assertEqual(len(failed_executions), 2)
+        self.assertEqual(len(failed_executions), 4)
 
-        executions = self.client.executions.list(status=Execution.SCHEDULED)
-        self.assertEqual(len(executions), 2)
+        schedules = self.client.execution_schedules.list()
+        self.assertEqual(len(schedules), 2)
 
-        for execution in executions:
-            if execution.workflow_id == 'install':
-                self.assertEqual(execution.scheduled_for,
+        for schedule in schedules:
+            if schedule.workflow_id == 'install':
+                self.assertIn('install_restored_', schedule.id)
+                self.assertEqual(schedule.next_occurrence,
                                  '2050-01-01T12:00:00.000Z')
-            if execution.workflow_id == 'uninstall':
-                self.assertEqual(execution.scheduled_for,
+            if schedule.workflow_id == 'uninstall':
+                self.assertIn('uninstall_restored_', schedule.id)
+                self.assertEqual(schedule.next_occurrence,
                                  '2050-01-02T12:00:00.000Z')
