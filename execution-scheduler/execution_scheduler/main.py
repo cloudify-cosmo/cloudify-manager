@@ -128,8 +128,10 @@ def execute_workflow(schedule):
         deployment=schedule.deployment,
         creator=schedule.creator,
         parameters=schedule.parameters,
+        status=ExecutionState.PENDING,
         **execution_arguments,
     )
+    rm.sm.put(execution)
     return rm.execute_workflow(execution, **start_arguments)
 
 
