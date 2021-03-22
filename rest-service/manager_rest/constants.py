@@ -80,7 +80,7 @@ IS_NOT_NULL = 'is_not_null'
 CFY_LABELS = {'csys-obj-name',
               'csys-obj-type',
               'csys-env-type',
-              'csys-wrcs-services',
+              'csys-wrcp-services',
               'csys-location-name',
               'csys-location-lat',
               'csys-location-long',
