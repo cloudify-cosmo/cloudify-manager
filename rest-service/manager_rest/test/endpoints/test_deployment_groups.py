@@ -141,6 +141,31 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         )
         assert set(group.deployment_ids) == {'dep1', 'group1-2', 'group1-3'}
 
+    def test_create_from_spec(self):
+        self.put_blueprint(
+            blueprint_file_name='blueprint_with_inputs.yaml',
+            blueprint_id='bp_with_inputs')
+        inputs = {'http_web_server_port': 1234}
+        labels = [{'label1': 'label-value'}]
+        group = self.client.deployment_groups.put(
+            'group1',
+            blueprint_id='bp_with_inputs',
+            new_deployments=[
+                {
+                    'id': 'spec_dep1',
+                    'inputs': inputs,
+                    'labels': labels,
+                }
+            ]
+        )
+
+        assert set(group.deployment_ids) == {'spec_dep1'}
+        deps = self.sm.get(models.DeploymentGroup, 'group1').deployments
+        assert len(deps) == 1
+        create_exec_params = deps[0].create_execution.parameters
+        assert create_exec_params['inputs'] == inputs
+        assert create_exec_params['labels'] == labels
+
     def test_add_deployment_ids(self):
         self.client.deployment_groups.put('group1')
         group = self.client.deployment_groups.add_deployments(
