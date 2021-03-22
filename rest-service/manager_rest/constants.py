@@ -13,6 +13,10 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+
+from enum import Enum
+
+
 CONVENTION_APPLICATION_BLUEPRINT_FILE = 'blueprint.yaml'
 
 SUPPORTED_ARCHIVE_TYPES = ['zip', 'tar', 'tar.gz', 'tar.bz2']
@@ -72,11 +76,6 @@ MODELS_TO_PERMISSIONS = {
 FORBIDDEN_METHODS = ['POST', 'PATCH', 'PUT']
 SANITY_MODE_FILE_PATH = '/opt/manager/sanity_mode'
 
-EQUAL = 'equal'
-NOT_EQUAL = 'not_equal'
-IS_NULL = 'is_null'
-IS_NOT_NULL = 'is_not_null'
-
 CFY_LABELS = {'csys-obj-name',
               'csys-obj-type',
               'csys-env-type',
@@ -87,3 +86,32 @@ CFY_LABELS = {'csys-obj-name',
               'csys-obj-parent'}
 
 CFY_LABELS_PREFIX = 'csys-'
+
+
+class LabelsOperator(str, Enum):
+    ANY_OF = 'any_of'
+    NOT_ANY_OF = 'not_any_of'
+    IS_NULL = 'is_null'
+    IS_NOT_NULL = 'is_not_null'
+
+
+class AttrsOperator(str, Enum):
+    ANY_OF = 'any_of'
+    NOT_ANY_OF = 'not_any_of'
+    CONTAINS = 'contains'
+    NOT_CONTAINS = 'not_contains'
+    STARTS_WITH = 'starts_with'
+    ENDS_WITH = 'ends_with'
+    IS_NOT_EMPTY = 'is_not_empty'
+
+
+class FilterRuleType(str, Enum):
+    LABEL = 'label'
+    ATTRIBUTE = 'attribute'
+
+
+LABELS_OPERATORS = [operator.value for operator in LabelsOperator]
+
+ATTRS_OPERATORS = [attrs_operator.value for attrs_operator in AttrsOperator]
+
+FILTER_RULE_TYPES = [rule_type.value for rule_type in FilterRuleType]

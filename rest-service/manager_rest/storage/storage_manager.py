@@ -18,7 +18,7 @@ from functools import wraps
 from collections import OrderedDict
 from contextlib import contextmanager
 from flask_security import current_user
-from sqlalchemy import or_ as sql_or, func, inspect
+from sqlalchemy import or_ as sql_or, inspect, func
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from flask import current_app, has_request_context
 from sqlalchemy.orm.attributes import flag_modified
@@ -26,13 +26,14 @@ from sqlalchemy.orm.attributes import flag_modified
 from cloudify._compat import text_type
 from cloudify.models_states import VisibilityState
 
-from manager_rest.storage.models_base import db, is_orm_attribute
+from manager_rest.storage.models_base import db
 from manager_rest import manager_exceptions, config, utils
 from manager_rest.utils import (is_administrator,
                                 all_tenants_authorization,
                                 validate_global_modification)
 
-from .filters import add_labels_filters_to_query
+from .utils import get_column, get_joins
+from .filters import add_filter_rules_to_query
 
 from psycopg2 import DatabaseError as Psycopg2DBError
 sql_errors = (SQLAlchemyError, Psycopg2DBError)
@@ -181,8 +182,8 @@ class SQLStorageManager(object):
     def _add_filter_rules(query, model_class, filter_rules):
         if filter_rules:
             if hasattr(model_class, 'labels_model'):
-                return add_labels_filters_to_query(
-                    query, model_class.labels_model, filter_rules)
+                return add_filter_rules_to_query(
+                    query, model_class, filter_rules)
 
         return query
 
@@ -306,28 +307,6 @@ class SQLStorageManager(object):
         )
         return query.filter(user_filter)
 
-    @staticmethod
-    def _get_joins(model_class, columns):
-        """Get a list of all the attributes on which we need to join
-
-        :param columns: A set of all columns involved in the query
-        """
-        # Using an ordered dict because the order of the joins is important
-        joins = OrderedDict()
-        for column_name in columns:
-            column = getattr(model_class, column_name)
-            while not is_orm_attribute(column):
-                join_attr = column.local_attr
-
-                # This is a hack, to deal with the fact that SQLA doesn't
-                # fully support doing something like: `if join_attr in joins`,
-                # because some SQLA elements have their own comparators
-                join_attr_name = str(join_attr)
-                if join_attr_name not in joins:
-                    joins[join_attr_name] = join_attr
-                column = column.remote_attr
-        return joins.values()
-
     def _get_joins_and_converted_columns(self,
                                          model_class,
                                          include,
@@ -346,7 +325,7 @@ class SQLStorageManager(object):
         distinct = distinct or []
 
         all_columns = set(include) | set(filters.keys()) | set(sort.keys())
-        joins = self._get_joins(model_class, all_columns)
+        joins = get_joins(model_class, all_columns)
 
         include, filters, substr_filters, sort, distinct = \
             self._get_columns_from_field_names(model_class,
@@ -408,33 +387,14 @@ class SQLStorageManager(object):
         """Go over the optional parameters (include, filters, sort), and
         replace column names with actual SQLA column objects
         """
-        include = [self._get_column(model_class, c) for c in include]
-        filters = {self._get_column(model_class, c): filters[c]
-                   for c in filters}
-        substr_filters = {self._get_column(model_class, c): substr_filters[c]
+        include = [get_column(model_class, c) for c in include]
+        filters = {get_column(model_class, c): filters[c] for c in filters}
+        substr_filters = {get_column(model_class, c): substr_filters[c]
                           for c in substr_filters}
-        sort = OrderedDict((self._get_column(model_class, c), sort[c])
-                           for c in sort)
-        distinct = [self._get_column(model_class, c) for c in distinct]
+        sort = OrderedDict((get_column(model_class, c), sort[c]) for c in sort)
+        distinct = [get_column(model_class, c) for c in distinct]
 
         return include, filters, substr_filters, sort, distinct
-
-    @staticmethod
-    def _get_column(model_class, column_name):
-        """Return the column on which an action (filtering, sorting, etc.)
-        would need to be performed. Can be either an attribute of the class,
-        or an association proxy linked to a relationship the class has
-        """
-        column = getattr(model_class, column_name)
-        if is_orm_attribute(column):
-            return column
-        else:
-            # We need to get to the underlying attribute, so we move on to the
-            # next remote_attr until we reach one
-            while not is_orm_attribute(column.remote_attr):
-                column = column.remote_attr
-            # Put a label on the remote attribute with the name of the column
-            return column.remote_attr.label(column_name)
 
     @staticmethod
     def _paginate(query, pagination, get_all_results=False):
@@ -637,10 +597,7 @@ class SQLStorageManager(object):
                                 prevent consumption of too much memory
         :param distinct: An optional list of columns names to get distinct
                          results by.
-        :param filter_rules: A dictionary of filter rules. The keys in the
-                             dictionary specify the relevant filters, and
-                             the values are lists of rules.
-                             E.g. {'labels': ['a=b', 'c!=d']}
+        :param filter_rules: A list of filter rules.
         :return: A (possibly empty) list of `model_class` results
         """
         self._validate_available_memory()
@@ -673,11 +630,11 @@ class SQLStorageManager(object):
 
     def summarize(self, target_field, sub_field, model_class,
                   pagination, get_all_results, all_tenants, filters):
-        f = self._get_column(model_class, target_field)
+        f = get_column(model_class, target_field)
         fields = [f]
         string_fields = [target_field]
         if sub_field:
-            fields.append(self._get_column(model_class, sub_field))
+            fields.append(get_column(model_class, sub_field))
             string_fields.append(sub_field)
         entities = fields + [db.func.count('*')]
         query = self._get_query(
