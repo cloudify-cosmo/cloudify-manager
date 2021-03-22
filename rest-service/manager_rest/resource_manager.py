@@ -2091,6 +2091,8 @@ class ResourceManager(object):
         return active_component_creator_deployment_ids
 
     def _workflow_queued(self, execution):
+        execution.status = ExecutionState.QUEUED
+        self.sm.update(execution)
         message_context = {
             'message_type': 'hook',
             'is_system_workflow': execution.is_system_workflow,
