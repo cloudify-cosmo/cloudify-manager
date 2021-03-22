@@ -1355,8 +1355,6 @@ class ResourceManager(object):
         """This runs when create-deployment-environment finishes"""
         # RD-1602 will move this to the workflow:
         self._create_deployment_initial_dependencies(deployment)
-        # RD-1603 will move this:
-        self.create_deployment_schedules(deployment, deployment.blueprint.plan)
 
     def install_plugin(self, plugin, manager_names=None, agent_names=None):
         """Send the plugin install task to the given managers or agents."""
