@@ -17,6 +17,7 @@ import time
 import uuid
 import pytest
 
+from retrying import retry
 from sh import ErrorReturnCode
 
 from integration_tests import AgentlessTestCase
@@ -767,7 +768,7 @@ class ExecutionsTest(AgentlessTestCase):
         self.assertEqual('', execution.error)
 
     def _check_node_instance_state(self, expected_state, node_inst_id):
-        for retry in range(30):
+        for _ in range(30):
             instance_state = self.client.node_instances.get(node_inst_id).state
             if instance_state == expected_state:
                 break
@@ -878,13 +879,16 @@ class ExecutionsTest(AgentlessTestCase):
                    client=self.client)
         scheduled_time = generate_scheduled_for_date()
 
-        execution = self.client.executions.start(deployment_id=dep_id,
-                                                 workflow_id='install',
-                                                 schedule=scheduled_time)
-        self.assertEqual(Execution.SCHEDULED, execution.status)
+        self.client.executions.start(deployment_id=dep_id,
+                                     workflow_id='install',
+                                     schedule=scheduled_time)
+        schedule = self.client.execution_schedules.list(
+            deployment_id=dep.id)[0]
+        self.assertEqual(schedule.workflow_id, 'install')
+        self.assertIn('install_', schedule.id)
 
-        time.sleep(62)  # Wait for exec to 'wake up'
-        self.wait_for_execution_to_end(execution)
+        self.wait_for_scheduled_execution_to_fire(dep_id)
+        self.client.execution_schedules.delete(schedule.id, dep_id)
 
     def test_schedule_execution_snapshot_running_multi_tenant(self):
         """
@@ -914,17 +918,17 @@ class ExecutionsTest(AgentlessTestCase):
 
         # tenant_0: schedule an execution for 1 min in the future
         scheduled_time = generate_scheduled_for_date()
-        execution = tenant_client.executions.start(deployment_id=dep_id,
-                                                   workflow_id='install',
-                                                   schedule=scheduled_time)
-        self._assert_execution_status(execution.id, Execution.SCHEDULED,
-                                      tenant_client)
-
-        time.sleep(62)  # Wait for exec to 'wake up'
+        tenant_client.executions.start(deployment_id=dep_id,
+                                       workflow_id='install',
+                                       schedule=scheduled_time)
+        execution = self.wait_for_scheduled_execution_to_fire(dep_id)
         self._assert_execution_status(execution.id,
                                       Execution.QUEUED, tenant_client)
         self.client.executions.update(snapshot.id, Execution.TERMINATED)
         self.wait_for_execution_to_end(execution, client=tenant_client)
+        schedule = self.client.execution_schedules.list(
+            deployment_id=dep.id)[0]
+        self.client.execution_schedules.delete(schedule.id, dep_id)
 
     def test_two_scheduled_execution_same_tenant(self):
         """
@@ -946,18 +950,20 @@ class ExecutionsTest(AgentlessTestCase):
                    deployment_id=dep2_id,
                    client=self.client)
         scheduled_time = generate_scheduled_for_date()
-        execution1 = self.client.executions.start(deployment_id=dep1_id,
-                                                  workflow_id='install',
-                                                  schedule=scheduled_time)
-        execution2 = self.client.executions.start(deployment_id=dep2_id,
-                                                  workflow_id='install',
-                                                  schedule=scheduled_time)
-        self._assert_execution_status(execution1.id, Execution.SCHEDULED)
-        self._assert_execution_status(execution2.id, Execution.SCHEDULED)
-
-        time.sleep(62)  # Wait for exec to 'wake up'
-        self.wait_for_execution_to_end(execution1)
-        self.wait_for_execution_to_end(execution2)
+        self.client.executions.start(deployment_id=dep1_id,
+                                     workflow_id='install',
+                                     schedule=scheduled_time)
+        self.client.executions.start(deployment_id=dep2_id,
+                                     workflow_id='install',
+                                     schedule=scheduled_time)
+        self.wait_for_scheduled_execution_to_fire(dep1_id)
+        self.wait_for_scheduled_execution_to_fire(dep2_id)
+        schedule1 = self.client.execution_schedules.list(
+            deployment_id=dep1.id)[0]
+        schedule2 = self.client.execution_schedules.list(
+            deployment_id=dep2.id)[0]
+        self.client.execution_schedules.delete(schedule1.id, dep1_id)
+        self.client.execution_schedules.delete(schedule2.id, dep2_id)
 
     def test_schedule_execution_while_snapshot_running_same_tenant(self):
 
@@ -975,15 +981,16 @@ class ExecutionsTest(AgentlessTestCase):
             Execution.STARTED)
 
         scheduled_time = generate_scheduled_for_date()
-        execution = self.client.executions.start(deployment_id=dep_id,
-                                                 workflow_id='install',
-                                                 schedule=scheduled_time)
-        self._assert_execution_status(execution.id, Execution.SCHEDULED)
-
-        time.sleep(62)  # Wait for exec to 'wake up'
+        self.client.executions.start(deployment_id=dep_id,
+                                     workflow_id='install',
+                                     schedule=scheduled_time)
+        execution = self.wait_for_scheduled_execution_to_fire(dep_id)
         self._assert_execution_status(execution.id, Execution.QUEUED)
         self.client.executions.update(snapshot_1.id, Execution.TERMINATED)
         self.wait_for_execution_to_end(execution)
+        schedule = self.client.execution_schedules.list(
+            deployment_id=dep.id)[0]
+        self.client.execution_schedules.delete(schedule.id, dep_id)
 
     def test_schedule_execution_and_create_snapshot_same_tenant(self):
         """
@@ -1006,15 +1013,17 @@ class ExecutionsTest(AgentlessTestCase):
             Execution.STARTED)
 
         scheduled_time = generate_scheduled_for_date()
-        execution = self.client.executions.start(deployment_id=dep_id,
-                                                 workflow_id='install',
-                                                 schedule=scheduled_time)
-        self._assert_execution_status(execution.id, Execution.SCHEDULED)
+        self.client.executions.start(deployment_id=dep_id,
+                                     workflow_id='install',
+                                     schedule=scheduled_time)
 
-        time.sleep(62)  # Wait for exec to 'wake up'
+        execution = self.wait_for_scheduled_execution_to_fire(dep_id)
         self._assert_execution_status(execution.id, Execution.QUEUED)
         self.client.executions.update(snapshot.id, Execution.TERMINATED)
         self.wait_for_execution_to_end(execution)
+        schedule = self.client.execution_schedules.list(
+            deployment_id=dep.id)[0]
+        self.client.execution_schedules.delete(schedule.id, dep_id)
 
     def test_schedule_execution_while_execution_running_under_same_dep(self):
         """
@@ -1037,12 +1046,23 @@ class ExecutionsTest(AgentlessTestCase):
                                                      Execution.STARTED)
 
         scheduled_time = generate_scheduled_for_date()
-        execution2 = self.client.executions.start(deployment_id=dep_id,
-                                                  workflow_id='install',
-                                                  schedule=scheduled_time)
-        self._assert_execution_status(execution2.id, Execution.SCHEDULED)
-
+        self.client.executions.start(deployment_id=dep_id,
+                                     workflow_id='install',
+                                     schedule=scheduled_time)
         self.client.executions.update(execution1.id, Execution.TERMINATED)
 
-        time.sleep(62)  # Wait for exec to 'wake up'
-        self.wait_for_execution_to_end(execution2)
+        self.wait_for_scheduled_execution_to_fire(dep_id)
+        schedule = self.client.execution_schedules.list(
+            deployment_id=dep.id)[0]
+        self.client.execution_schedules.delete(schedule.id, dep_id)
+
+    @retry(wait_fixed=1000, stop_max_attempt_number=120)
+    def wait_for_scheduled_execution_to_fire(self, deployment_id):
+        # The execution must fire within 2 minutes.
+        # if the 1st check_schedules occurs between the creation time and the
+        # next :00, the 2nd check (1 min. from then) will run the execution
+        executions = self.client.executions.list(deployment_id=deployment_id,
+                                                 workflow_id='install',
+                                                 _all_tenants=True)
+        self.assertEqual(1, len(executions))
+        return executions[0]
