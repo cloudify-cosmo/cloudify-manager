@@ -961,3 +961,30 @@ class ExecutionQueueingTests(BaseServerTestCase):
         group1.executions.append(queued_execution)
         # execution won't run because it is in a full group now
         assert self._get_queued() == []
+
+    @mock.patch('manager_rest.resource_manager.send_event', mock.Mock())
+    def test_already_running_queues(self):
+        exc1 = self._make_execution(status=ExecutionState.STARTED)
+        exc2 = self._make_execution(status=ExecutionState.PENDING)
+        with self.assertRaises(
+                manager_exceptions.ExistingRunningExecutionError):
+            self.rm.execute_workflow(exc2)
+
+        self.rm.execute_workflow(exc2, queue=True)
+        assert exc2.status == ExecutionState.QUEUED
+
+    @mock.patch('manager_rest.resource_manager.send_event', mock.Mock())
+    def test_system_wf_already_running_queues(self):
+        exc1 = models.Execution(
+            status=ExecutionState.STARTED,
+            workflow_id='create_snapshot',
+            is_system_workflow=True,
+        )
+        self.sm.put(exc1)
+        exc2 = self._make_execution(status=ExecutionState.PENDING)
+        with self.assertRaises(
+                manager_exceptions.ExistingRunningExecutionError):
+            self.rm.execute_workflow(exc2)
+
+        self.rm.execute_workflow(exc2, queue=True)
+        assert exc2.status == ExecutionState.QUEUED
