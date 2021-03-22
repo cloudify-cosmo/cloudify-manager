@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from flask import jsonify
 
 INTERNAL_SERVER_ERROR_CODE = 'internal_server_error'
 
@@ -22,6 +23,15 @@ class ManagerException(Exception):
         super(ManagerException, self).__init__(*args, **kwargs)
         self.status_code = status_code
         self.error_code = error_code
+
+    def to_response(self):
+        return jsonify(
+            message=str(self),
+            error_code=self.error_code,
+            # useless, but v1 and v2 api clients require server_traceback
+            # remove this after dropping v1 and v2 api clients
+            server_traceback=None
+        )
 
 
 class InsufficientMemoryError(ManagerException):
@@ -643,4 +653,31 @@ class InvalidYamlFormat(ManagerException):
             InvalidYamlFormat.ERROR_CODE,
             *args,
             **kwargs
+        )
+
+
+class BadFilterRule(ManagerException):
+    ERROR_CODE = 'invalid_filter_rule'
+
+    def __init__(self, err_filter_rule, suffix='', *args, **kwargs):
+        super(BadFilterRule, self).__init__(
+            400,
+            BadFilterRule.ERROR_CODE,
+            f"The filter rule {err_filter_rule} is not in the right format. "
+            f"{suffix}",
+            *args,
+            **kwargs
+        )
+        self.err_filter_rule = err_filter_rule
+        self.error_reason = suffix
+
+    def to_response(self):
+        return jsonify(
+            message=str(self),
+            error_code=self.error_code,
+            # useless, but v1 and v2 api clients require server_traceback
+            # remove this after dropping v1 and v2 api clients
+            server_traceback=None,
+            err_filter_rule=self.err_filter_rule,
+            err_reason=self.error_reason
         )

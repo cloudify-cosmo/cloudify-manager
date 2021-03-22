@@ -27,6 +27,7 @@ from manager_rest import manager_exceptions
 from manager_rest.storage import models
 from manager_rest.constants import (DEFAULT_TENANT_NAME,
                                     FILE_SERVER_DEPLOYMENTS_FOLDER)
+from manager_rest.rest.filters_utils import FilterRule
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 
@@ -40,16 +41,11 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
 
     DEPLOYMENT_ID = 'deployment'
     SITE_NAME = 'test_site'
-    LABELS = [{'env': 'aws'}, {'arch': 'k8s'}]
-    LABELS_2 = [{'env': 'gcp'}, {'arch': 'k8s'}]
     UPDATED_LABELS = [{'env': 'gcp'}, {'arch': 'k8s'}]
     UPDATED_UPPERCASE_LABELS = [{'env': 'GCp'}, {'ArCh': 'k8s'}]
     UPPERCASE_LABELS = [{'EnV': 'aWs'}, {'aRcH': 'k8s'}]
     DUPLICATE_LABELS = [{'env': 'aws'}, {'env': 'aws'}]
     INVALID_LABELS = [{'env': 'aws', 'aRcH': 'k8s'}]
-    FILTER_ID = 'filter'
-    FILTER_RULES = ['env=aws']
-    FILTER_RULES_2 = ['env!=aws', 'arch=k8s']
 
     def test_get_empty(self):
         result = self.client.deployments.list()
@@ -1022,36 +1018,16 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
-    def test_list_deployments_with_filter_rules(self):
-        dep1 = self.put_deployment_with_labels(self.LABELS)
-        self.put_deployment_with_labels(self.LABELS_2)
-        deployments = self.client.deployments.list(
-            filter_rules={'_filter_rules': ['env=aws', 'arch=k8s']})
-        self.assertEqual(len(deployments), 1)
-        self.assertEqual(deployments[0], dep1)
-        self.assert_metadata_filtered(deployments, 1)
-
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
-    def test_list_deployments_with_filter_name(self):
+    def test_list_deployments_with_filter_id(self):
         self.put_deployment_with_labels(self.LABELS)
         dep2 = self.put_deployment_with_labels(self.LABELS_2)
-        self.create_filter(self.FILTER_ID, self.FILTER_RULES_2)
+        self.create_filter(self.client.deployments_filters,
+                           self.FILTER_ID, self.FILTER_RULES)
         deployments = self.client.deployments.list(
-            filter_rules={'_filter_id': self.FILTER_ID})
+            filter_id=self.FILTER_ID)
         self.assertEqual(len(deployments), 1)
         self.assertEqual(deployments[0], dep2)
         self.assert_metadata_filtered(deployments, 1)
-
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
-    def test_list_deployments_with_filter_rules_upper(self):
-        self.put_deployment_with_labels(self.LABELS)
-        self.put_deployment_with_labels(self.LABELS_2)
-        deployments = self.client.deployments.list(
-            filter_rules={'_filter_rules': ['aRcH=k8S']})
-        self.assertEqual(len(deployments), 2)
-        self.assert_metadata_filtered(deployments, 0)
 
     def test_update_attributes(self):
         self.put_blueprint()
@@ -1115,6 +1091,54 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         # sc2 = self.client.execution_schedules.get('sc2', deployment.id)
         self.assertEquals(sc1['rule']['recurrence'], '1w')
         self.assertEquals(len(sc1['all_next_occurrences']), 5)
+
+    def test_list_deployments_with_not_empty_filter(self):
+        self.client.sites.create(self.SITE_NAME)
+        _, _, _, dep_1 = self.put_deployment(
+            blueprint_id='dep_with_site',
+            deployment_id='dep_with_site',
+            site_name=self.SITE_NAME)
+
+        _, _, _, dep_2 = self.put_deployment(
+            blueprint_id='dep_with_no_site',
+            deployment_id='dep_with_no_site')
+
+        site_name_filter = \
+            FilterRule('site_name', [], 'is_not_empty', 'attribute')
+        filtered_dep_ids = [d['id'] for d in self.client.deployments.list(
+            filter_rules=[site_name_filter])]
+        self.assertListEqual(filtered_dep_ids, ['dep_with_site'])
+
+    def test_list_deployments_with_schedules_filter(self):
+        _, _, _, dep_1 = self.put_deployment(
+            blueprint_id='born-with-schedules',
+            deployment_id='born-with-schedules',
+            blueprint_file_name='blueprint_with_default_schedules.yaml')
+        _, _, _, dep_2 = self.put_deployment(
+            blueprint_id='born-without-schedules',
+            deployment_id='born-without-schedules')
+        schedules_filter = \
+            FilterRule('schedules', [], 'is_not_empty', 'attribute')
+
+        # dep_1 has has 2 schedules, dep_2 has none
+        filtered_dep_ids = [d['id'] for d in self.client.deployments.list(
+            filter_rules=[schedules_filter])]
+        self.assertListEqual(filtered_dep_ids, ['born-with-schedules'])
+
+        self.client.execution_schedules.create(
+            'custom-sc', dep_2.id, 'install', since=datetime.now(), count=1)
+        self.client.execution_schedules.delete('sc1', dep_1.id)
+
+        # now each deployment has 1 schedule
+        filtered_dep_ids = [d['id'] for d in self.client.deployments.list(
+            filter_rules=[schedules_filter])]
+        self.assertListEqual(filtered_dep_ids, ['born-with-schedules',
+                                                'born-without-schedules'])
+
+        self.client.execution_schedules.delete('sc2', dep_1.id)
+        filtered_dep_ids = [d['id'] for d in self.client.deployments.list(
+            filter_rules=[schedules_filter])]
+        self.assertListEqual(filtered_dep_ids, ['born-without-schedules'])
 
     def test_update_deployment_with_default_schedules(self):
         _, _, _, deployment = self.put_deployment(

@@ -27,8 +27,8 @@ from manager_rest.storage import (
     models,
 )
 from manager_rest.security.authorization import authorize
-from manager_rest.rest.filters_utils import get_filter_rules
 from manager_rest.utils import create_filter_params_list_description
+from manager_rest.rest.filters_utils import get_filter_rules_from_filter_id
 
 
 class Deployments(resources_v1.Deployments):
@@ -50,8 +50,9 @@ class Deployments(resources_v1.Deployments):
     @rest_decorators.sortable(models.Deployment)
     @rest_decorators.all_tenants
     @rest_decorators.search('id')
+    @rest_decorators.filter_id
     def get(self, _include=None, filters=None, pagination=None, sort=None,
-            all_tenants=None, search=None, **kwargs):
+            all_tenants=None, search=None, filter_id=None, **kwargs):
         """
         List deployments
         """
@@ -59,13 +60,10 @@ class Deployments(resources_v1.Deployments):
             '_get_all_results',
             request.args.get('_get_all_results', False)
         )
-        if '_group_id' in request.args:
-            filters['deployment_groups'] = lambda col: col.any(
-                models.DeploymentGroup.id == request.args['_group_id']
-            )
-        if _include:
-            if {'labels', 'deployment_groups'}.intersection(_include):
-                _include = None
+        filters, _include = rest_utils.modify_deployments_list_args(filters,
+                                                                    _include)
+        filter_rules = get_filter_rules_from_filter_id(
+            filter_id, models.DeploymentsFilter)
         result = get_storage_manager().list(
             models.Deployment,
             include=_include,
@@ -75,7 +73,7 @@ class Deployments(resources_v1.Deployments):
             sort=sort,
             all_tenants=all_tenants,
             get_all_results=get_all_results,
-            filter_rules=get_filter_rules()
+            filter_rules=filter_rules
         )
 
         if _include and 'workflows' in _include:
