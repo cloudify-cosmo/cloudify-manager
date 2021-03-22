@@ -49,7 +49,7 @@ class ExecutionSchedulesTestCase(BaseServerTestCase):
         schedule = self.client.execution_schedules.create(
             'sched-weekdays', self.deployment_id, 'install',
             since=self.an_hour_from_now, until=self.three_weeks_from_now,
-            recurrence='1 days', weekdays='mo, tu, we, th')
+            recurrence='1 days', weekdays=['mo', 'tu', 'we', 'th'])
         self.assertEqual(len(schedule['all_next_occurrences']), 12)  # 3w * 4d
 
     def test_schedules_list(self):
@@ -141,18 +141,18 @@ class ExecutionSchedulesTestCase(BaseServerTestCase):
             self.client.execution_schedules.create,
             'bad-weekdays', self.deployment_id, 'install',
             since=self.an_hour_from_now, recurrence='4 hours',
-            weekdays='oneday, someday'
+            weekdays=['oneday', 'someday']
         )
         self.client.execution_schedules.create(
             'good-weekdays', self.deployment_id, 'install',
             since=self.an_hour_from_now, recurrence='4 hours', count=6,
-            weekdays='mo,tu'
+            weekdays=['mo', 'tu']
         )
         self.assertRaisesRegex(
             CloudifyClientError,
             '400:.* invalid weekday',
             self.client.execution_schedules.update,
-            'good-weekdays', self.deployment_id, weekdays='oneday, someday'
+            'good-weekdays', self.deployment_id, weekdays=['oneday', 'someday']
         )
 
     def test_schedule_create_invalid_complex_weekdays(self):
@@ -162,7 +162,7 @@ class ExecutionSchedulesTestCase(BaseServerTestCase):
             self.client.execution_schedules.create,
             'bad-complex-wd', self.deployment_id, 'install',
             since=self.an_hour_from_now, recurrence='4 hours',
-            weekdays='5tu'
+            weekdays=['5tu']
         )
 
     def test_schedule_create_invalid_recurrence_with_complex_weekdays(self):
@@ -172,7 +172,7 @@ class ExecutionSchedulesTestCase(BaseServerTestCase):
             self.client.execution_schedules.create,
             'bad-complex-wd', self.deployment_id, 'install',
             since=self.an_hour_from_now, recurrence='4 hours',
-            weekdays='2mo, l-tu'
+            weekdays=['2mo', 'l-tu']
         )
 
     def test_schedule_invalid_repetition_without_recurrence(self):
@@ -185,7 +185,7 @@ class ExecutionSchedulesTestCase(BaseServerTestCase):
             recurrence_error,
             self.client.execution_schedules.create,
             'no-recurrence-no-count', self.deployment_id, 'uninstall',
-            since=self.an_hour_from_now, weekdays='su,mo,tu',
+            since=self.an_hour_from_now, weekdays=['su', 'mo', 'tu'],
         )
         self.client.execution_schedules.create(
             'no-recurrence-count-1', self.deployment_id, 'install',
