@@ -502,7 +502,7 @@ class DeploymentGroupsId(SecuredResource):
             'blueprint_id': {'optional': True},
             'default_inputs': {'optional': True},
             'visibility': {'optional': True},
-            'inputs': {'optional': True},
+            'new_deployments': {'optional': True},
         })
         sm = get_storage_manager()
         try:
@@ -581,45 +581,62 @@ class DeploymentGroupsId(SecuredResource):
             for dep in deployments:
                 group.deployments.append(dep)
 
-        deployment_count = len(group.deployments)
+        new_deployments = request_dict.get('new_deployments') or []
+        if new_deployments:
+            if not group.default_blueprint:
+                raise manager_exceptions.ConflictError(
+                    'Cannot create deployments: group {0} has no '
+                    'default blueprint set'.format(group.id))
+            self._create_new_deployments(sm, group, new_deployments)
+
+    def _create_new_deployments(self, sm, group, new_deployments):
+        """Create new deployments for the group based on new_deployments"""
         rm = get_resource_manager()
-        input_overrides = request_dict.get('inputs') or []
-        if input_overrides and not group.default_blueprint:
-            raise manager_exceptions.ConflictError(
-                'Cannot create deployments: group {0} has no '
-                'default blueprint set'.format(group.id))
-        if not input_overrides:
-            return
-        create_exec_group = models.ExecutionGroup(
-            id=str(uuid.uuid4()),
-            deployment_group=group,
-            workflow_id='create_deployment_environment',
-            visibility=group.visibility,
-        )
-        sm.put(create_exec_group)
         with sm.transaction():
-            for inputs in input_overrides:
-                deployment_inputs = (group.default_inputs or {}).copy()
-                deployment_inputs.update(inputs)
-                dep = rm.create_deployment(
-                    blueprint=group.default_blueprint,
-                    deployment_id=f'{group.id}-{deployment_count + 1}',
-                    private_resource=None,
-                    visibility=group.visibility,
-                )
+            deployment_count = len(group.deployments)
+            create_exec_group = models.ExecutionGroup(
+                id=str(uuid.uuid4()),
+                deployment_group=group,
+                workflow_id='create_deployment_environment',
+                visibility=group.visibility,
+            )
+            sm.put(create_exec_group)
+            for new_dep_spec in new_deployments:
+                dep = self._make_new_group_deployment(
+                    rm, group, new_dep_spec, deployment_count)
                 group.deployments.append(dep)
-                create_execution = dep.make_create_environment_execution(
-                    inputs=deployment_inputs,
-                )
-                create_execution.is_id_unique = True
-                sm.put(create_execution)
-                create_exec_group.executions.append(create_execution)
+                create_exec_group.executions.append(dep.create_execution)
                 deployment_count += 1
         amqp_client = get_amqp_client()
         handler = workflow_sendhandler()
         amqp_client.add_handler(handler)
         with amqp_client:
             create_exec_group.start_executions(sm, rm, handler)
+
+    def _make_new_group_deployment(self, rm, group, new_dep_spec, count):
+        """Create a new deployment in the group.
+
+        The new deployment will be based on the specification given
+        in the new_dep_spec dict, which can contain the keys: id, inputs,
+        labels.
+        """
+        new_id = new_dep_spec.get('id')
+        inputs = new_dep_spec.get('inputs', {})
+        labels = new_dep_spec.get('labels')
+        deployment_inputs = (group.default_inputs or {}).copy()
+        deployment_inputs.update(inputs)
+        dep = rm.create_deployment(
+            blueprint=group.default_blueprint,
+            deployment_id=new_id or f'{group.id}-{count + 1}',
+            private_resource=None,
+            visibility=group.visibility,
+        )
+        create_execution = dep.make_create_environment_execution(
+            inputs=deployment_inputs,
+            labels=labels,
+        )
+        create_execution.is_id_unique = True
+        return dep
 
     def _remove_group_deployments(self, sm, group, request_dict):
         remove_ids = request_dict.get('deployment_ids') or []
