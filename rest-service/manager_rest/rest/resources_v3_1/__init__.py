@@ -118,11 +118,18 @@ from .permissions import (  # NOQA
 )
 
 from .filters import (                           # NOQA
-    Filters,
-    FiltersId,
+    BlueprintsFilters,
+    BlueprintsFiltersId,
+    DeploymentsFilters,
+    DeploymentsFiltersId
 )
 
 from .nodes import (  # NOQA
     Nodes,
     NodeInstances,
+)
+
+from .searches import (  # NOQA
+    DeploymentsSearches,
+    BlueprintsSearches
 )
