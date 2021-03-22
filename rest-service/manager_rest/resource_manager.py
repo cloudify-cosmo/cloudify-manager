@@ -902,7 +902,7 @@ class ResourceManager(object):
             and this is set, queue the execution. Otherwise, throw.
         """
         system_exec_running = self._check_for_active_system_wide_execution(
-            queue, execution)
+            execution, queue)
         if force or not execution.deployment:
             return system_exec_running
         else:
@@ -937,22 +937,20 @@ class ResourceManager(object):
             return False
 
     def _check_for_active_system_wide_execution(self, execution, queue):
-        should_queue = False
-        for e in self.sm.list(models.Execution, filters={
-                    'is_system_workflow': True,
-                    'status': ExecutionState.ACTIVE_STATES,
-                }, get_all_results=True, all_tenants=True).items:
-            # When `queue` or `schedule` options are used no need to
-            # raise an exception (the execution will run later)
-            if e.deployment_id is None and (queue or execution.scheduled_for):
-                should_queue = True
-                break
-            elif e.deployment_id is None:
-                raise manager_exceptions.ExistingRunningExecutionError(
-                    f'You cannot start an execution if there is a running '
-                    f'system-wide execution (id: {e.id})')
-
-        return should_queue
+        executions = self.sm.list(models.Execution, filters={
+            'is_system_workflow': True,
+            'status': ExecutionState.ACTIVE_STATES,
+        }, get_all_results=True, all_tenants=True).items
+        if executions and queue:
+            return True
+        elif executions:
+            raise manager_exceptions.ExistingRunningExecutionError(
+                f'Cannot start an execution if there are running '
+                f'system-wide executions ('
+                f'{ ", ".join(e.id for e in executions) })'
+            )
+        else:
+            return False
 
     @staticmethod
     def _system_workflow_modifies_db(wf_id):
