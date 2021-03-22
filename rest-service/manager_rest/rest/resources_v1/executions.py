@@ -121,7 +121,7 @@ class Executions(SecuredResource):
                 execution_arguments={
                     'allow_custom_parameters': allow_custom_parameters,
                     'force': force,
-                    'dry_run': dry_run,
+                    'is_dry_run': dry_run,
                     'wait_after_fail': wait_after_fail,
                 },
                 stop_on_fail=False,
