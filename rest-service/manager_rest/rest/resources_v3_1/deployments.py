@@ -589,7 +589,6 @@ class DeploymentGroupsId(SecuredResource):
                     'default blueprint set'.format(group.id))
             self._create_new_deployments(sm, group, new_deployments)
 
-
     def _create_new_deployments(self, sm, group, new_deployments):
         """Create new deployments for the group based on new_deployments"""
         rm = get_resource_manager()
