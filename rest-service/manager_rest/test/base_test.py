@@ -51,8 +51,11 @@ from cloudify.cluster_status import (
 from manager_rest import server
 from manager_rest.rest import rest_utils
 from manager_rest.test.attribute import attr
+from manager_rest.storage.models_base import db
+from manager_rest.rest.filters_utils import FilterRule
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.flask_utils import set_admin_current_user
+from manager_rest.storage.filters import add_filter_rules_to_query
 from manager_rest.test.security_utils import (get_admin_user,
                                               get_status_reporters)
 from manager_rest import utils, config, constants, archiving
@@ -62,6 +65,8 @@ from manager_rest.storage.storage_utils import (
     create_status_reporter_user_and_assign_role
 )
 from manager_rest.constants import (
+    AttrsOperator,
+    LabelsOperator,
     DEFAULT_TENANT_NAME,
     CLOUDIFY_TENANT_HEADER,
     FILE_SERVER_BLUEPRINTS_FOLDER,
@@ -142,6 +147,26 @@ class TestClient(FlaskClient):
 
 @attr(client_min_version=1, client_max_version=LATEST_API_VERSION)
 class BaseServerTestCase(unittest.TestCase):
+    # hack for running tests with py2's unnitest, but using py3's
+    # assert method name; to be removed once we run unittests on py3 only
+    LABELS = [{'env': 'aws'}, {'arch': 'k8s'}]
+    LABELS_2 = [{'env': 'gcp'}, {'arch': 'k8s'}]
+    FILTER_ID = 'filter'
+    FILTER_RULES = [
+        FilterRule('env', ['aws'], LabelsOperator.NOT_ANY_OF, 'label'),
+        FilterRule('arch', ['k8s'], LabelsOperator.ANY_OF, 'label'),
+        FilterRule('created_by', ['admin'], AttrsOperator.ANY_OF, 'attribute'),
+    ]
+
+    FILTER_RULES_2 = [
+        FilterRule('env', ['aws'], LabelsOperator.ANY_OF, 'label'),
+        FilterRule('arch', ['k8s'], LabelsOperator.ANY_OF, 'label'),
+        FilterRule('created_by', ['admin'], AttrsOperator.ANY_OF, 'attribute'),
+    ]
+
+    def assertRaisesRegex(self, *a, **kw):
+        return self.assertRaisesRegexp(*a, **kw)
+
     def assertEmpty(self, obj):
         self.assertIsNotNone(obj)
         self.assertFalse(obj)
@@ -161,6 +186,23 @@ class BaseServerTestCase(unittest.TestCase):
             compared_labels_set.add((key, value))
 
         self.assertEqual(simplified_labels, compared_labels_set)
+
+    @staticmethod
+    def assert_filters_applied(filter_rules_params, resource_ids_set,
+                               resource_model=models.Deployment):
+        """Asserts the right resources return when filter rules are applied
+
+        :param filter_rules_params: List of filter rules parameters
+        :param resource_ids_set: The corresponding deployments' IDs set
+        :param resource_model: The resource model to filter.
+               Can be Deployment or Blueprint
+        """
+        filter_rules = [FilterRule(*params) for params in filter_rules_params]
+        query = db.session.query(resource_model)
+        query = add_filter_rules_to_query(query, resource_model, filter_rules)
+        results = query.all()
+
+        assert resource_ids_set == set(res.id for res in results)
 
     @classmethod
     def create_client_with_tenant(cls,
@@ -224,7 +266,8 @@ class BaseServerTestCase(unittest.TestCase):
                         client.inter_deployment_dependencies.api = \
                             mock_http_client
                         client.deployments_labels.api = mock_http_client
-                        client.filters.api = mock_http_client
+                        client.blueprints_filters.api = mock_http_client
+                        client.deployments_filters.api = mock_http_client
                         client.deployment_groups.api = mock_http_client
                         client.execution_groups.api = mock_http_client
                         client.execution_schedules.api = mock_http_client
@@ -1036,22 +1079,15 @@ class BaseServerTestCase(unittest.TestCase):
     def put_blueprint_with_labels(self, labels, **blueprint_kwargs):
         return self.put_blueprint(labels=labels, **blueprint_kwargs)
 
-    def create_filter(self, filter_name, filter_rules,
-                      visibility=VisibilityState.TENANT, client=None):
-        client = client or self.client
-        return client.filters.create(filter_name, filter_rules, visibility)
+    @staticmethod
+    def create_filter(filters_client, filter_id, filter_rules,
+                      visibility=VisibilityState.TENANT):
+        return filters_client.create(filter_id, filter_rules, visibility)
 
-    def update_filter(self, new_filter_rules=None, new_visibility=None):
-        filter_id = 'filter'
-        orig_filter = self.create_filter(filter_id, ['a=b'])
-        updated_filter = self.client.filters.update(
-            filter_id, new_filter_rules, new_visibility)
-
-        updated_rules = new_filter_rules or self.SIMPLE_RULE
-        updated_visibility = new_visibility or VisibilityState.TENANT
-        self.assertEqual(updated_filter.labels_filter, updated_rules)
-        self.assertEqual(updated_filter.visibility, updated_visibility)
-        self.assertGreater(updated_filter.updated_at, orig_filter.updated_at)
+    @staticmethod
+    def _get_filter_rules_by_type(filter_rules, filter_rules_type):
+        return [filter_rule for filter_rule in filter_rules if
+                filter_rule['type'] == filter_rules_type]
 
     def get_new_user_with_role(self, username, password, role,
                                tenant=DEFAULT_TENANT_NAME):
