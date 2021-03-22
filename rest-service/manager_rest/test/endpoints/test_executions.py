@@ -964,7 +964,7 @@ class ExecutionQueueingTests(BaseServerTestCase):
 
     @mock.patch('manager_rest.resource_manager.send_event', mock.Mock())
     def test_already_running_queues(self):
-        exc1 = self._make_execution(status=ExecutionState.STARTED)
+        self._make_execution(status=ExecutionState.STARTED)
         exc2 = self._make_execution(status=ExecutionState.PENDING)
         with self.assertRaises(
                 manager_exceptions.ExistingRunningExecutionError):
