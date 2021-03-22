@@ -137,7 +137,7 @@ class DeploymentsId(resources_v1.DeploymentsId):
         error_message = execution.error.strip().split('\n')[-1]
         return DeploymentCreationError(error_message)
 
-    @authorize('deployment_create')
+    @authorize('deployment_update')
     @rest_decorators.marshal_with(models.Deployment)
     def patch(self, deployment_id):
         """Update a deployment, setting attributes and labels.
