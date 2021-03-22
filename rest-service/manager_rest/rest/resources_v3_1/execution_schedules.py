@@ -187,11 +187,8 @@ class ExecutionSchedulesId(SecuredResource):
             'force': verify_and_convert_bool(
                 'force',
                 arguments.get('force', False)),
-            'dry_run': verify_and_convert_bool(
+            'is_dry_run': verify_and_convert_bool(
                 'dry_run',
                 arguments.get('dry_run', False)),
-            'queue': verify_and_convert_bool(
-                'queue',
-                arguments.get('queue', False)),
             'wait_after_fail': arguments.get('wait_after_fail', 600)
         }
