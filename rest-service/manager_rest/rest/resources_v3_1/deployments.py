@@ -649,7 +649,8 @@ class DeploymentGroupsId(SecuredResource):
         remove_ids = request_dict.get('deployment_ids') or []
         for remove_id in remove_ids:
             dep = sm.get(models.Deployment, remove_id)
-            group.deployments.remove(dep)
+            if dep in group.deployments:
+                group.deployments.remove(dep)
 
         filter_id = request_dict.get('filter_id')
         if filter_id is not None:
@@ -659,7 +660,8 @@ class DeploymentGroupsId(SecuredResource):
                     filter_id, models.DeploymentsFilter)
             )
             for dep in deployments:
-                group.deployments.remove(dep)
+                if dep in group.deployments:
+                    group.deployments.remove(dep)
 
         remove_group = request_dict.get('deployments_from_group')
         if remove_group:
