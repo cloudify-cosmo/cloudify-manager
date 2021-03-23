@@ -669,21 +669,17 @@ class ResourceManager(object):
             )
 
         if not force:
-            node_instances = self.sm.list(models.NodeInstance, filters={
-                'deployment_id': deployment.id,
-            }, get_all_results=True)
             # validate either all nodes for this deployment are still
             # uninitialized or have been deleted
-            if any(node.state not in ('uninitialized', 'deleted') for node in
-                   node_instances):
-                existing_instances = ','.join(
-                    node.id for node in node_instances
-                    if node.state not in ('uninitialized', 'deleted')
-                )
+            node_instances = self.sm.list(models.NodeInstance, filters={
+                'deployment_id': deployment.id,
+                'state': lambda col: ~col.in_(['uninitialized', 'deleted']),
+            }, include=['id'], get_all_results=True)
+            if node_instances:
                 raise manager_exceptions.DependentExistsError(
                     f"Can't delete deployment {deployment.id} - There are "
                     f"live nodes for this deployment. Live nodes ids: "
-                    f"{existing_instances}"
+                    f"{ ','.join(ni.id for ni in node_instances) }"
                 )
 
     def delete_deployment(self, deployment):
