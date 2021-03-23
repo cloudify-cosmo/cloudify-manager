@@ -359,6 +359,47 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         group = self.client.deployment_groups.get('group1')
         assert group.deployment_ids == []
 
+    def test_add_from_group(self):
+        self.client.deployment_groups.put(
+            'group1',
+            deployment_ids=['dep1']
+        )
+        self.client.deployment_groups.put(
+            'group2',
+            deployment_ids=['dep2']
+        )
+        group3 = self.client.deployment_groups.put(
+            'group3',
+            deployments_from_group='group1'
+        )
+        assert set(group3.deployment_ids) == {'dep1'}
+        group3 = self.client.deployment_groups.add_deployments(
+            'group3',
+            deployments_from_group='group2'
+        )
+        assert set(group3.deployment_ids) == {'dep1', 'dep2'}
+
+    def test_remove_by_group(self):
+        self.client.deployment_groups.put(
+            'group1',
+            deployment_ids=['dep1', 'dep2']
+        )
+        self.client.deployment_groups.put(
+            'group2',
+            deployment_ids=['dep1']
+        )
+        group1 = self.client.deployment_groups.remove_deployments(
+            'group1',
+            deployments_from_group='group2'
+        )
+        assert set(group1.deployment_ids) == {'dep2'}
+        # removing is idempotent
+        group1 = self.client.deployment_groups.remove_deployments(
+            'group1',
+            deployments_from_group='group2'
+        )
+        assert set(group1.deployment_ids) == {'dep2'}
+
 
 @mock.patch(
     'manager_rest.rest.resources_v3_1.executions.workflow_sendhandler',
