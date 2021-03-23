@@ -626,17 +626,10 @@ class ResourceManager(object):
 
         return self.sm.delete(blueprint)
 
-    def delete_deployment_environment(self, deployment_id,
-                                      bypass_maintenance=False, force=False,
-                                      delete_logs=False):
-        """Schedule deployment for deletion - delete environment.
-
-        Do validations and send the delete-dep-env workflow. The deployment
-        will be really actually deleted once that finishes.
-        """
-        deployment = self.sm.get(models.Deployment, deployment_id)
+    def check_deployment_delete(self, deployment, force=False):
+        """Check that deployment can be deleted"""
         executions = self.sm.list(models.Execution, filters={
-            'deployment_id': deployment_id,
+            'deployment_id': deployment.id,
             'status': (
                 ExecutionState.ACTIVE_STATES + ExecutionState.QUEUED_STATE
             )
@@ -659,7 +652,7 @@ class ResourceManager(object):
                 )
             else:
                 raise manager_exceptions.DependentExistsError(
-                    f"Can't delete deployment {deployment_id} - the following "
+                    f"Can't delete deployment {deployment.id} - the following "
                     f"existing installations depend on it:\n"
                     f"{deployment_dependencies}"
                 )
@@ -670,40 +663,24 @@ class ResourceManager(object):
                 if execution.status not in ExecutionState.END_STATES
             )
             raise manager_exceptions.DependentExistsError(
-                f"Can't delete deployment {deployment_id} - There are "
+                f"Can't delete deployment {deployment.id} - There are "
                 f"running or queued executions for this deployment. "
                 f"Running executions ids: {running_ids}"
             )
 
         if not force:
-            node_instances = self.sm.list(models.NodeInstance, filters={
-                'deployment_id': deployment_id
-            }, get_all_results=True)
             # validate either all nodes for this deployment are still
             # uninitialized or have been deleted
-            if any(node.state not in ('uninitialized', 'deleted') for node in
-                   node_instances):
-                existing_instances = ','.join(
-                    node.id for node in node_instances
-                    if node.state not in ('uninitialized', 'deleted')
-                )
+            node_instances = self.sm.list(models.NodeInstance, filters={
+                'deployment_id': deployment.id,
+                'state': lambda col: ~col.in_(['uninitialized', 'deleted']),
+            }, include=['id'], get_all_results=True)
+            if node_instances:
                 raise manager_exceptions.DependentExistsError(
-                    f"Can't delete deployment {deployment_id} - There are "
+                    f"Can't delete deployment {deployment.id} - There are "
                     f"live nodes for this deployment. Live nodes ids: "
-                    f"{existing_instances}"
+                    f"{ ','.join(ni.id for ni in node_instances) }"
                 )
-
-        execution = models.Execution(
-            workflow_id='delete_deployment_environment',
-            deployment=deployment,
-            status=ExecutionState.PENDING,
-            parameters={'delete_logs': delete_logs},
-        )
-        self.sm.put(execution)
-        self.execute_workflow(execution, bypass_maintenance=bypass_maintenance)
-        workflow_executor.delete_source_plugins(deployment.id)
-
-        return deployment
 
     def delete_deployment(self, deployment):
         """Delete the deployment.

@@ -505,6 +505,14 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         )
         return self.create_execution
 
+    def make_delete_environment_execution(self, delete_logs=True):
+        return Execution(
+            workflow_id='delete_deployment_environment',
+            deployment=self,
+            status=ExecutionState.PENDING,
+            parameters={'delete_logs': delete_logs},
+        )
+
 
 class DeploymentGroup(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'deployment_groups'

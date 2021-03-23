@@ -18,7 +18,7 @@ from flask_restful_swagger import swagger
 from flask_restful.reqparse import Argument
 from flask_restful.inputs import boolean
 
-from manager_rest import manager_exceptions
+from manager_rest import manager_exceptions, workflow_executor
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.maintenance import is_bypass_maintenance_mode
@@ -164,12 +164,15 @@ class DeploymentsId(SecuredResource):
         ])
 
         bypass_maintenance = is_bypass_maintenance_mode()
-        get_resource_manager().delete_deployment_environment(
-            deployment_id,
-            bypass_maintenance,
-            args.force,
-            args.delete_logs)
-
+        sm = get_storage_manager()
+        dep = sm.get(models.Deployment, deployment_id)
+        rm = get_resource_manager()
+        rm.check_deployment_delete(dep, force=args.force)
+        delete_execution = dep.make_delete_environment_execution(
+            delete_logs=args.delete_logs)
+        rm.execute_workflow(
+            delete_execution, bypass_maintenance=bypass_maintenance)
+        workflow_executor.delete_source_plugins(dep.id)
         return None, 204
 
 
