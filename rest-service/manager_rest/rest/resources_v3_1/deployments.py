@@ -564,11 +564,12 @@ class DeploymentGroupsId(SecuredResource):
     def put(self, group_id):
         request_dict = rest_utils.get_json_and_verify_params({
             'description': {'optional': True},
-            'deployment_ids': {'optional': True},
-            'filter_id': {'optional': True},
+            'visibility': {'optional': True},
+            'labels': {'optional': True},
             'blueprint_id': {'optional': True},
             'default_inputs': {'optional': True},
-            'visibility': {'optional': True},
+            'filter_id': {'optional': True},
+            'deployment_ids': {'optional': True},
             'new_deployments': {'optional': True},
             'deployments_from_group': {'optional': True},
         })
@@ -630,6 +631,14 @@ class DeploymentGroupsId(SecuredResource):
         if request_dict.get('blueprint_id'):
             group.default_blueprint = sm.get(
                 models.Blueprint, request_dict['blueprint_id'])
+
+        if request_dict.get('labels'):
+            rm = get_resource_manager()
+            rm.update_resource_labels(
+                models.DeploymentGroupLabel,
+                group,
+                rest_utils.get_labels_list(request_dict['labels'])
+            )
 
     def _add_group_deployments(self, sm, group, request_dict):
         deployment_ids = request_dict.get('deployment_ids')

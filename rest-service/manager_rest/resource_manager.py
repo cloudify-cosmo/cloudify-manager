@@ -2314,7 +2314,7 @@ class ResourceManager(object):
         if not labels_list:
             return
 
-        current_time = utils.get_formatted_timestamp()
+        current_time = datetime.utcnow()
         for key, value in labels_list:
             new_label = {'key': key,
                          'value': value,
@@ -2324,6 +2324,8 @@ class ResourceManager(object):
                 new_label['deployment'] = resource
             elif labels_resource_model == models.BlueprintLabel:
                 new_label['blueprint'] = resource
+            elif labels_resource_model == models.DeploymentGroupLabel:
+                new_label['deployment_group'] = resource
 
             self.sm.put(labels_resource_model(**new_label))
 

@@ -698,8 +698,16 @@ class DeploymentGroup(CreatedAtMixin, SQLResourceBase):
         fields['deployment_ids'] = flask_fields.List(
             flask_fields.String()
         )
+        fields['labels'] = flask_fields.List(
+            flask_fields.Nested(Label.resource_fields))
         fields['default_blueprint_id'] = flask_fields.String()
         return fields
+
+    def to_response(self, get_data=False, **kwargs):
+        response = super(DeploymentGroup, self).to_response()
+        if get_data:
+            response['labels'] = self.list_labels(self.labels)
+        return response
 
 
 class _Label(CreatedAtMixin, SQLModelBase):
