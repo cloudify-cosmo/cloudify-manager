@@ -504,6 +504,7 @@ class DeploymentGroupsId(SecuredResource):
             'default_inputs': {'optional': True},
             'visibility': {'optional': True},
             'new_deployments': {'optional': True},
+            'deployments_from_group': {'optional': True},
         })
         sm = get_storage_manager()
         try:
@@ -590,6 +591,11 @@ class DeploymentGroupsId(SecuredResource):
                     'default blueprint set'.format(group.id))
             self._create_new_deployments(sm, group, new_deployments)
 
+        add_group = request_dict.get('deployments_from_group')
+        if add_group:
+            group_to_clone = sm.get(models.DeploymentGroup, add_group)
+            group.deployments += group_to_clone.deployments
+
     def _create_new_deployments(self, sm, group, new_deployments):
         """Create new deployments for the group based on new_deployments"""
         rm = get_resource_manager()
@@ -643,7 +649,8 @@ class DeploymentGroupsId(SecuredResource):
         remove_ids = request_dict.get('deployment_ids') or []
         for remove_id in remove_ids:
             dep = sm.get(models.Deployment, remove_id)
-            group.deployments.remove(dep)
+            if dep in group.deployments:
+                group.deployments.remove(dep)
 
         filter_id = request_dict.get('filter_id')
         if filter_id is not None:
@@ -653,7 +660,15 @@ class DeploymentGroupsId(SecuredResource):
                     filter_id, models.DeploymentsFilter)
             )
             for dep in deployments:
-                group.deployments.remove(dep)
+                if dep in group.deployments:
+                    group.deployments.remove(dep)
+
+        remove_group = request_dict.get('deployments_from_group')
+        if remove_group:
+            group_to_remove = sm.get(models.DeploymentGroup, remove_group)
+            for dep in group_to_remove.deployments:
+                if dep in group.deployments:
+                    group.deployments.remove(dep)
 
     @authorize('deployment_group_delete')
     def delete(self, group_id):
