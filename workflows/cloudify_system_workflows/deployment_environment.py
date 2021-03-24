@@ -74,6 +74,12 @@ def _join_groups(client, deployment_id, groups):
             client.deployment_groups.put(
                 group_name, deployment_ids=[deployment_id])
 
+def _get_deployment_labels(new_labels, plan_labels):
+    labels = {l.popitem() for l in new_labels}
+    for name, label_spec in plan_labels.items():
+        labels |= {(name, value) for value in label_spec.get('values', [])}
+    return [{k: v} for k, v in labels]
+
 
 @workflow
 def create(ctx, labels=None, inputs=None, skip_plugins_validation=False, **_):
@@ -88,12 +94,12 @@ def create(ctx, labels=None, inputs=None, skip_plugins_validation=False, **_):
     client.nodes.create_many(ctx.deployment.id, nodes)
     ctx.logger.info('Creating %d node-instances', len(node_instances))
     client.node_instances.create_many(ctx.deployment.id, node_instances)
+
+    labels_to_create = _get_deployment_labels(
+        labels or [],
+        deployment_plan.get('labels', {}))
+
     ctx.logger.info('Setting deployment attributes')
-    labels_to_create = labels or []
-    labels_to_create += [
-        {k: v} for k, labels_def in deployment_plan.get('labels', {}).items()
-        for v in labels_def.get('values', [])
-    ]
     client.deployments.set_attributes(
         ctx.deployment.id,
         description=deployment_plan['description'],
