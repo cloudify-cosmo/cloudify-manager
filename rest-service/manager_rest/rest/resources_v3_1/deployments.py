@@ -676,7 +676,7 @@ class DeploymentGroupsId(SecuredResource):
         """Create new deployments for the group based on new_deployments"""
         rm = get_resource_manager()
         with sm.transaction():
-            group_labels = [{l.key: l.value} for l in group.labels]
+            group_labels = [{label.key: label.value} for label in group.labels]
             deployment_count = len(group.deployments)
             create_exec_group = models.ExecutionGroup(
                 id=str(uuid.uuid4()),
