@@ -394,6 +394,8 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                                        initially='DEFERRED',
                                        use_alter=True)
 
+    deployment_group_id = association_proxy('deployment_groups', 'id')
+
     @classproperty
     def labels_model(cls):
         return DeploymentLabel
@@ -692,6 +694,8 @@ class Execution(CreatedAtMixin, SQLResourceBase):
 
     total_operations = db.Column(db.Integer, nullable=True)
     finished_operations = db.Column(db.Integer, nullable=True)
+
+    execution_group_id = association_proxy('execution_groups', 'id')
 
     @declared_attr
     def deployment(cls):
