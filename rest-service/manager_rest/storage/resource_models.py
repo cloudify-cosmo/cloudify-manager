@@ -394,6 +394,8 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                                        initially='DEFERRED',
                                        use_alter=True)
 
+    deployment_group_id = association_proxy('deployment_groups', 'id')
+
     @classproperty
     def labels_model(cls):
         return DeploymentLabel
@@ -428,6 +430,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
     @classproperty
     def response_fields(cls):
         fields = super(Deployment, cls).response_fields
+        fields.pop('deployment_group_id')
         fields['workflows'] = flask_fields.List(
             flask_fields.Nested(Workflow.resource_fields)
         )
@@ -693,6 +696,8 @@ class Execution(CreatedAtMixin, SQLResourceBase):
     total_operations = db.Column(db.Integer, nullable=True)
     finished_operations = db.Column(db.Integer, nullable=True)
 
+    execution_group_id = association_proxy('execution_groups', 'id')
+
     @declared_attr
     def deployment(cls):
         return one_to_many_relationship(
@@ -726,6 +731,7 @@ class Execution(CreatedAtMixin, SQLResourceBase):
     def resource_fields(cls):
         fields = super(Execution, cls).resource_fields
         fields.pop('token')
+        fields.pop('execution_group_id')
         return fields
 
     @validates('deployment')
@@ -1238,6 +1244,7 @@ class DeploymentUpdate(CreatedAtMixin, SQLResourceBase):
     @classproperty
     def response_fields(cls):
         fields = super(DeploymentUpdate, cls).response_fields
+        fields.pop('deployment_update_deployment')
         fields['steps'] = flask_fields.List(
             flask_fields.Nested(DeploymentUpdateStep.response_fields)
         )
