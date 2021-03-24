@@ -560,7 +560,7 @@ class DeploymentGroupsId(SecuredResource):
         return get_storage_manager().get(models.DeploymentGroup, group_id)
 
     @authorize('deployment_group_create')
-    @rest_decorators.marshal_with(models.DeploymentGroup)
+    @rest_decorators.marshal_with(models.DeploymentGroup, force_get_data=True)
     def put(self, group_id):
         request_dict = rest_utils.get_json_and_verify_params({
             'description': {'optional': True},
@@ -598,7 +598,7 @@ class DeploymentGroupsId(SecuredResource):
         )
 
     @authorize('deployment_group_update')
-    @rest_decorators.marshal_with(models.DeploymentGroup)
+    @rest_decorators.marshal_with(models.DeploymentGroup, force_get_data=True)
     def patch(self, group_id):
         request_dict = rest_utils.get_json_and_verify_params({
             'description': {'optional': True},
