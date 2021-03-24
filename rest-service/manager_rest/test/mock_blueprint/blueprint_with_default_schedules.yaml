@@ -3,6 +3,11 @@ tosca_definitions_version: cloudify_dsl_1_3
 imports:
   - cloudify/types/types.yaml
 
+inputs:
+  param1:
+    description: parameter param1 for sc1's workflow
+    default: value1
+
 deployment_settings:
   default_schedules:
     sc1:
@@ -12,6 +17,8 @@ deployment_settings:
       recurrence: 1w
       weekdays: [mo, fr]
       count: 5
+      workflow_parameters:
+        param1: {get_input: param1}
     sc2:
       workflow: install
       since: '2022-1-1 15:00'

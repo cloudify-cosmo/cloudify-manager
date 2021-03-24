@@ -17,6 +17,8 @@ import glob
 import os
 import shutil
 import errno
+from datetime import datetime
+
 
 from retrying import retry
 
@@ -24,8 +26,41 @@ from cloudify.decorators import workflow
 from cloudify.manager import get_rest_client
 from cloudify.workflows import workflow_context
 
+from cloudify.utils import parse_utc_datetime_relative
 from cloudify_rest_client.exceptions import CloudifyClientError
 from dsl_parser import tasks
+
+
+def _parse_plan_datetime(time_expression, base_datetime):
+    """
+    :param time_expression: Either a string representing an absolute
+        datetime, or a relative time delta, such as '+4 hours' or '+1y+1d'.
+    :param base_datetime: a datetime object representing the absolute date
+        and time to which we apply the time delta.
+    :return: A naive datetime object, in UTC time.
+    """
+    time_fmt = '%Y-%m-%d %H:%M:%S'
+    if time_expression.startswith('+'):
+        return parse_utc_datetime_relative(time_expression, base_datetime)
+    return datetime.strptime(time_expression, time_fmt)
+
+
+def _create_schedules(client, deployment_id, schedules):
+    base_time = datetime.utcnow()
+    for name, spec in schedules.items():
+        workflow_id = spec.pop('workflow')
+        if 'since' in spec:
+            spec['since'] = _parse_plan_datetime(spec['since'], base_time)
+        if 'until' in spec:
+            spec['until'] = _parse_plan_datetime(spec['until'], base_time)
+        if 'workflow_parameters' in spec:
+            spec['parameters'] = spec.pop('workflow_parameters')
+        client.execution_schedules.create(
+            name,
+            deployment_id=deployment_id,
+            workflow_id=workflow_id,
+            **spec
+        )
 
 
 def _join_groups(client, deployment_id, groups):
@@ -76,6 +111,8 @@ def create(ctx, labels=None, inputs=None, skip_plugins_validation=False, **_):
     deployment_settings = deployment_plan.get('deployment_settings', {})
     _join_groups(client, ctx.deployment.id,
                  deployment_settings.get('default_groups', []))
+    _create_schedules(client, ctx.deployment.id,
+                      deployment_settings.get('default_schedules', {}))
 
     ctx.logger.info('Creating deployment work directory')
     _create_deployment_workdir(
