@@ -401,7 +401,7 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         assert set(group1.deployment_ids) == {'dep2'}
 
     def test_set_labels(self):
-        """Shrink a group providing filter_id"""
+        """Create a group with labels"""
         labels = [{'label1': 'value1'}]
         updated_labels = [{'label1': 'value2'}, {'label2': 'value3'}]
         group = self.client.deployment_groups.put(
@@ -416,7 +416,7 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         self.assert_resource_labels(group.labels, updated_labels)
 
     def test_group_labels_for_deployments(self):
-        """Shrink a group providing filter_id"""
+        """Group labels are applied to the newly-created deployments"""
         group = self.client.deployment_groups.put(
             'group1',
             labels=[{'label1': 'value1'}, {'label2': 'value2'}],
