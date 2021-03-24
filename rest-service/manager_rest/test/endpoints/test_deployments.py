@@ -1089,8 +1089,8 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
 
         sc1 = self.client.execution_schedules.get('sc1', deployment.id)
         # sc2 = self.client.execution_schedules.get('sc2', deployment.id)
-        self.assertEquals(sc1['rule']['recurrence'], '1w')
-        self.assertEquals(len(sc1['all_next_occurrences']), 5)
+        self.assertEqual(sc1['rule']['recurrence'], '1w')
+        self.assertEqual(len(sc1['all_next_occurrences']), 5)
 
     def test_list_deployments_with_not_empty_filter(self):
         self.client.sites.create(self.SITE_NAME)
@@ -1151,7 +1151,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
 
         # sc2's workflow_id of should change to `uninstall` after the update
         sc2 = self.client.execution_schedules.get('sc2', deployment.id)
-        self.assertEquals('install', sc2['workflow_id'])
+        self.assertEqual('install', sc2['workflow_id'])
 
         self.client.deployment_updates.update_with_existing_blueprint(
             deployment.id, new_blueprint_id)
@@ -1160,7 +1160,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             ['sc2', 'sc3'],
             [sc['id'] for sc in self.client.execution_schedules.list()])
         sc2 = self.client.execution_schedules.get('sc2', deployment.id)
-        self.assertEquals('uninstall', sc2['workflow_id'])
+        self.assertEqual('uninstall', sc2['workflow_id'])
 
     def test_update_deployment_with_default_schedule_manually_deleted(self):
         _, _, _, deployment = self.put_deployment(
