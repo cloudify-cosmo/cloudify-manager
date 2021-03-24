@@ -430,6 +430,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
     @classproperty
     def response_fields(cls):
         fields = super(Deployment, cls).response_fields
+        fields.pop('deployment_group_id')
         fields['workflows'] = flask_fields.List(
             flask_fields.Nested(Workflow.resource_fields)
         )
@@ -730,6 +731,7 @@ class Execution(CreatedAtMixin, SQLResourceBase):
     def resource_fields(cls):
         fields = super(Execution, cls).resource_fields
         fields.pop('token')
+        fields.pop('execution_group_id')
         return fields
 
     @validates('deployment')
