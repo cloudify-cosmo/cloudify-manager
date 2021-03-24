@@ -2184,21 +2184,25 @@ class ResourceManager(object):
         If a new label already exists, it won't be created again.
         If an existing label is not in the new labels list, it will be deleted.
         """
+        labels_to_create = self.get_labels_to_create(resource, new_labels)
 
         new_labels_set = set(new_labels)
-        existing_labels = resource.labels
-        existing_labels_tup = set(
-            (label.key, label.value) for label in existing_labels)
-
-        labels_to_create = new_labels_set - existing_labels_tup
-
-        for label in existing_labels:
+        for label in resource.labels:
             if (label.key, label.value) not in new_labels_set:
                 self.sm.delete(label)
 
         self.create_resource_labels(labels_resource_model,
                                     resource,
                                     labels_to_create)
+
+    @staticmethod
+    def get_labels_to_create(resource, new_labels):
+        new_labels_set = set(new_labels)
+        existing_labels = resource.labels
+        existing_labels_tup = set(
+            (label.key, label.value) for label in existing_labels)
+
+        return new_labels_set - existing_labels_tup
 
     def create_resource_labels(self,
                                labels_resource_model,
