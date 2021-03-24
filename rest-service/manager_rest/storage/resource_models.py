@@ -1244,6 +1244,7 @@ class DeploymentUpdate(CreatedAtMixin, SQLResourceBase):
     @classproperty
     def response_fields(cls):
         fields = super(DeploymentUpdate, cls).response_fields
+        fields.pop('deployment_update_deployment')
         fields['steps'] = flask_fields.List(
             flask_fields.Nested(DeploymentUpdateStep.response_fields)
         )
