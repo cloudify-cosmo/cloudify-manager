@@ -400,6 +400,36 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         )
         assert set(group1.deployment_ids) == {'dep2'}
 
+    def test_set_labels(self):
+        """Shrink a group providing filter_id"""
+        labels = [{'label1': 'value1'}]
+        updated_labels = [{'label1': 'value2'}, {'label2': 'value3'}]
+        group = self.client.deployment_groups.put(
+            'group1',
+            labels=labels,
+        )
+        self.assert_resource_labels(group.labels, labels)
+        group = self.client.deployment_groups.put(
+            'group1',
+            labels=updated_labels,
+        )
+        self.assert_resource_labels(group.labels, updated_labels)
+
+    def test_group_labels_for_deployments(self):
+        """Shrink a group providing filter_id"""
+        group = self.client.deployment_groups.put(
+            'group1',
+            labels=[{'label1': 'value1'}, {'label2': 'value2'}],
+            blueprint_id='blueprint',
+            new_deployments=[{
+                'labels': [{'label1': 'value1'}, {'label3': 'value3'}]
+            }]
+        )
+        dep_id = group.deployment_ids[0]
+        dep = self.sm.get(models.Deployment, dep_id)
+        self.create_deployment_environment(dep)
+        dep = self.sm.refresh(dep)
+
 
 @mock.patch(
     'manager_rest.rest.resources_v3_1.executions.workflow_sendhandler',
