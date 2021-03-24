@@ -582,8 +582,9 @@ class DeploymentGroupsId(SecuredResource):
                 description=request_dict.get('description'),
                 created_at=datetime.now()
             )
-        self._set_group_attributes(sm, group, request_dict)
-        sm.put(group)
+        with sm.transaction():
+            self._set_group_attributes(sm, group, request_dict)
+            sm.put(group)
         if self._is_overriding_deployments(request_dict):
             group.deployments.clear()
         self._add_group_deployments(sm, group, request_dict)
@@ -675,6 +676,7 @@ class DeploymentGroupsId(SecuredResource):
         """Create new deployments for the group based on new_deployments"""
         rm = get_resource_manager()
         with sm.transaction():
+            group_labels = [{l.key: l.value} for l in group.labels]
             deployment_count = len(group.deployments)
             create_exec_group = models.ExecutionGroup(
                 id=str(uuid.uuid4()),
@@ -685,7 +687,7 @@ class DeploymentGroupsId(SecuredResource):
             sm.put(create_exec_group)
             for new_dep_spec in new_deployments:
                 dep = self._make_new_group_deployment(
-                    rm, group, new_dep_spec, deployment_count)
+                    rm, group, new_dep_spec, deployment_count, group_labels)
                 group.deployments.append(dep)
                 create_exec_group.executions.append(dep.create_execution)
                 deployment_count += 1
@@ -695,7 +697,8 @@ class DeploymentGroupsId(SecuredResource):
         with amqp_client:
             create_exec_group.start_executions(sm, rm, handler)
 
-    def _make_new_group_deployment(self, rm, group, new_dep_spec, count):
+    def _make_new_group_deployment(self, rm, group, new_dep_spec, count,
+                                   group_labels):
         """Create a new deployment in the group.
 
         The new deployment will be based on the specification given
@@ -704,7 +707,7 @@ class DeploymentGroupsId(SecuredResource):
         """
         new_id = new_dep_spec.get('id')
         inputs = new_dep_spec.get('inputs', {})
-        labels = new_dep_spec.get('labels')
+        labels = (new_dep_spec.get('labels') or []) + group_labels
         deployment_inputs = (group.default_inputs or {}).copy()
         deployment_inputs.update(inputs)
         dep = rm.create_deployment(
