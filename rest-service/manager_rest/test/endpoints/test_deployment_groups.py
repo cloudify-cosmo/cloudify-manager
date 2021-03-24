@@ -422,13 +422,20 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             labels=[{'label1': 'value1'}, {'label2': 'value2'}],
             blueprint_id='blueprint',
             new_deployments=[{
-                'labels': [{'label1': 'value1'}, {'label3': 'value3'}]
+                'labels': [{'label1': 'value1'}, {'label1': 'value2'},
+                           {'label3': 'value4'}]
             }]
         )
         dep_id = group.deployment_ids[0]
         dep = self.sm.get(models.Deployment, dep_id)
         self.create_deployment_environment(dep)
-        dep = self.sm.refresh(dep)
+        client_dep = self.client.deployments.get(dep_id)
+        self.assert_resource_labels(client_dep.labels, [
+            # labels from both the group, and the deployment
+            # (note that label1=value1 occurs in both places)
+            {'label1': 'value1'}, {'label1': 'value2'}, {'label2': 'value2'},
+            {'label3': 'value4'},
+        ])
 
 
 @mock.patch(
