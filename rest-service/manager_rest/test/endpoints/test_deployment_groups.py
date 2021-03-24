@@ -164,7 +164,7 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         assert len(deps) == 1
         create_exec_params = deps[0].create_execution.parameters
         assert create_exec_params['inputs'] == inputs
-        assert create_exec_params['labels'] == labels
+        assert create_exec_params['labels'] == [('label1', 'label-value')]
 
     def test_add_deployment_ids(self):
         self.client.deployment_groups.put('group1')

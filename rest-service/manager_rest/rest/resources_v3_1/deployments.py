@@ -172,10 +172,11 @@ class DeploymentsId(resources_v1.DeploymentsId):
             runtime_only_evaluation=request_dict.get(
                 'runtime_only_evaluation', False),
         )
+        labels = rest_utils.get_labels_list(request_dict.get('labels', []))
         try:
             rm.execute_workflow(deployment.make_create_environment_execution(
                 inputs=request_dict.get('inputs', {}),
-                labels=request_dict.get('labels', []),
+                labels=labels,
                 skip_plugins_validation=skip_plugins_validation,
 
             ), bypass_maintenance=bypass_maintenance)
@@ -676,7 +677,7 @@ class DeploymentGroupsId(SecuredResource):
         """Create new deployments for the group based on new_deployments"""
         rm = get_resource_manager()
         with sm.transaction():
-            group_labels = [{label.key: label.value} for label in group.labels]
+            group_labels = [(label.key, label.value) for label in group.labels]
             deployment_count = len(group.deployments)
             create_exec_group = models.ExecutionGroup(
                 id=str(uuid.uuid4()),
@@ -707,7 +708,8 @@ class DeploymentGroupsId(SecuredResource):
         """
         new_id = new_dep_spec.get('id')
         inputs = new_dep_spec.get('inputs', {})
-        labels = (new_dep_spec.get('labels') or []) + group_labels
+        labels = rest_utils.get_labels_list(new_dep_spec.get('labels') or [])
+        labels += group_labels
         deployment_inputs = (group.default_inputs or {}).copy()
         deployment_inputs.update(inputs)
         dep = rm.create_deployment(
