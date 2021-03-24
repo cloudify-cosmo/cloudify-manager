@@ -1253,7 +1253,7 @@ class DeploymentUpdate(CreatedAtMixin, SQLResourceBase):
             'since': flask_fields.String,
             'until': flask_fields.String,
             'count': flask_fields.String,
-            'recurring': flask_fields.String,
+            'recurrence': flask_fields.String,
             'weekdays': flask_fields.List(flask_fields.String)
         }
         fields['recursive_dependencies'] = flask_fields.List(
