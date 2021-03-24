@@ -1241,6 +1241,10 @@ class DeploymentUpdate(CreatedAtMixin, SQLResourceBase):
     def schedules_to_delete(cls):
         return None
 
+    @declared_attr
+    def labels_to_create(cls):
+        return None
+
     @classproperty
     def response_fields(cls):
         fields = super(DeploymentUpdate, cls).response_fields
@@ -1268,6 +1272,7 @@ class DeploymentUpdate(CreatedAtMixin, SQLResourceBase):
         fields['schedules_to_create'] = flask_fields.List(
             flask_fields.Nested(created_scheduled_fields))
         fields['schedules_to_delete'] = flask_fields.List(flask_fields.String)
+        fields['labels_to_create'] = flask_fields.List(flask_fields.Raw)
         return fields
 
     def to_response(self, **kwargs):
@@ -1277,6 +1282,7 @@ class DeploymentUpdate(CreatedAtMixin, SQLResourceBase):
         dep_update_dict['recursive_dependencies'] = self.recursive_dependencies
         dep_update_dict['schedules_to_create'] = self.schedules_to_create
         dep_update_dict['schedules_to_delete'] = self.schedules_to_delete
+        dep_update_dict['labels_to_create'] = self.labels_to_create
         return dep_update_dict
 
     def set_deployment(self, deployment):
