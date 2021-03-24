@@ -58,9 +58,11 @@ def upgrade():
     _add_execution_operations_columns()
     _create_deployment_labels_dependencies_table()
     _add_deployment_sub_statuses_and_counters()
+    _create_depgroups_labels_table()
 
 
 def downgrade():
+    _drop_depgroups_labels_table()
     _drop_deployment_sub_statuses_and_counters()
     _drop_deployment_labels_dependencies_table()
     _drop_execgroups_concurrency()
@@ -760,3 +762,62 @@ def _drop_deployment_sub_statuses_and_counters():
 def _drop_deployment_statuses_enum_types():
     installation_status.drop(op.get_bind())
     deployment_status.drop(op.get_bind())
+
+
+def _create_depgroups_labels_table():
+    op.create_table(
+        'deployment_groups_labels',
+        sa.Column('created_at', UTCDateTime(), nullable=False),
+        sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column('key', sa.Text(), nullable=False),
+        sa.Column('value', sa.Text(), nullable=False),
+        sa.Column('_labeled_model_fk', sa.Integer(), nullable=False),
+        sa.Column('_creator_id', sa.Integer(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ['_creator_id'], ['users.id'],
+            name=op.f('deployment_groups_labels__creator_id_fkey'),
+            ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(
+            ['_labeled_model_fk'], ['deployment_groups._storage_id'],
+            name=op.f('deployment_groups_labels__labeled_model_fk_fkey'),
+            ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint(
+            'id', name=op.f('deployment_groups_labels_pkey')),
+        sa.UniqueConstraint(
+            'key', 'value', '_labeled_model_fk',
+            name=op.f('deployment_groups_labels_key_key'))
+    )
+    op.create_index(
+        op.f('deployment_groups_labels__creator_id_idx'),
+        'deployment_groups_labels', ['_creator_id'], unique=False)
+    op.create_index(
+        op.f('deployment_groups_labels__labeled_model_fk_idx'),
+        'deployment_groups_labels', ['_labeled_model_fk'], unique=False)
+    op.create_index(
+        op.f('deployment_groups_labels_created_at_idx'),
+        'deployment_groups_labels', ['created_at'], unique=False)
+    op.create_index(
+        op.f('deployment_groups_labels_key_idx'),
+        'deployment_groups_labels', ['key'], unique=False)
+    op.create_index(
+        op.f('deployment_groups_labels_value_idx'),
+        'deployment_groups_labels', ['value'], unique=False)
+
+
+def _drop_depgroups_labels_table():
+    op.drop_index(
+        op.f('deployment_groups_labels_value_idx'),
+        table_name='deployment_groups_labels')
+    op.drop_index(
+        op.f('deployment_groups_labels_key_idx'),
+        table_name='deployment_groups_labels')
+    op.drop_index(
+        op.f('deployment_groups_labels_created_at_idx'),
+        table_name='deployment_groups_labels')
+    op.drop_index(
+        op.f('deployment_groups_labels__labeled_model_fk_idx'),
+        table_name='deployment_groups_labels')
+    op.drop_index(
+        op.f('deployment_groups_labels__creator_id_idx'),
+        table_name='deployment_groups_labels')
+    op.drop_table('deployment_groups_labels')

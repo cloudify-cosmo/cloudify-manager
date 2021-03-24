@@ -763,6 +763,23 @@ class BlueprintLabel(_Label):
             backref=db.backref('labels', cascade='all, delete-orphan'))
 
 
+class DeploymentGroupLabel(_Label):
+    __tablename__ = 'deployment_groups_labels'
+    __table_args__ = (
+        db.UniqueConstraint(
+            'key', 'value', '_labeled_model_fk'),
+    )
+    labeled_model = DeploymentGroup
+
+    _labeled_model_fk = foreign_key(DeploymentGroup._storage_id)
+
+    @declared_attr
+    def deployment_group(cls):
+        return db.relationship(
+            DeploymentGroup, lazy='joined',
+            backref=db.backref('labels', cascade='all, delete-orphan'))
+
+
 class _Filter(CreatedAtMixin, SQLResourceBase):
     __abstract__ = True
     _extra_fields = {'labels_filter_rules': flask_fields.Raw,
