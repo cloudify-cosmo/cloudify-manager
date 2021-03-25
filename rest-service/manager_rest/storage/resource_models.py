@@ -376,6 +376,20 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             name='deployment_status'
         )
     )
+    sub_services_status = db.Column(db.Enum(
+            DeploymentState.GOOD,
+            DeploymentState.IN_PROGRESS,
+            DeploymentState.REQUIRE_ATTENTION,
+            name='deployment_status'
+        ))
+    sub_environments_status = db.Column(db.Enum(
+            DeploymentState.GOOD,
+            DeploymentState.IN_PROGRESS,
+            DeploymentState.REQUIRE_ATTENTION,
+            name='deployment_status'
+        ))
+    sub_services_count = db.Column(db.Integer, nullable=False, default=0)
+    sub_environments_count = db.Column(db.Integer, nullable=False, default=0)
     _blueprint_fk = foreign_key(Blueprint._storage_id)
     _site_fk = foreign_key(Site._storage_id,
                            nullable=True,
@@ -440,6 +454,9 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             flask_fields.Nested(ExecutionSchedule.resource_fields))
         fields['deployment_groups'] = flask_fields.List(flask_fields.String)
         fields['latest_execution_status'] = flask_fields.String()
+        fields['environment_type'] = flask_fields.String()
+        fields['latest_execution_total_operations'] = flask_fields.Integer()
+        fields['latest_execution_finished_operations'] = flask_fields.Integer()
         return fields
 
     @classproperty
@@ -454,6 +471,11 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         dep_dict['latest_execution_status'] = self.latest_execution_status
         if not dep_dict.get('installation_status'):
             dep_dict['installation_status'] = DeploymentState.INACTIVE
+        dep_dict['environment_type'] = self.environment_type
+        dep_dict['latest_execution_total_operations'] = \
+            self.latest_execution_total_operations
+        dep_dict['latest_execution_finished_operations'] = \
+            self.latest_execution_finished_operations
         return dep_dict
 
     @staticmethod
@@ -475,29 +497,135 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             return None
         return DeploymentState.EXECUTION_STATES_SUMMARY.get(_execution.status)
 
+    def compare_between_statuses(
+            self,
+            first_status,
+            second_status
+    ):
+        """
+        Compare between two deployment statuses so that we can tell which
+        one is worst than others. If first_status > second_status then
+        return the first status otherwise return the second_status
+        :param first_status: The first deployment status
+        :rtype str
+        :param second_status: The second deployment status
+        :rtype str
+        :return: Return the end result status
+        :rtype str
+        """
+        class _DeploymentStatus(object):
+            def __init__(self, status):
+                self.status = status
+
+            def __gt__(self, other):
+                if not self.status:
+                    return False
+                elif self.status and not other.status:
+                    return True
+                elif (self.status == DeploymentState.REQUIRE_ATTENTION and
+                      other.status in [
+                          DeploymentState.GOOD,
+                          DeploymentState.IN_PROGRESS
+                      ]):
+                    return True
+                elif (
+                        self.status == DeploymentState.IN_PROGRESS
+                        and other.status == DeploymentState.GOOD):
+                    return True
+                return False
+
+        _source = _DeploymentStatus(first_status)
+        _target = _DeploymentStatus(second_status)
+        return _source.status if _source > _target else _target.status
+
+    def evaluate_sub_deployments_statuses(self):
+        """
+        Evaluate the deployment statuses per deployment using the following
+        three statuses
+        1. sub_environments_status
+        2. sub_services_status
+        3. deployment_status
+        This is useful and prerequisite before propagate the source
+        deployments statuses to the target
+        :return: Tuple of end result of `sub_environments_status`
+         & `sub_services_status`
+        :rtype Tuple
+        """
+        _sub_environments_status = self.sub_environments_status
+        _sub_services_status = self.sub_services_status
+        if self.is_environment:
+            _sub_environments_status = \
+                self.compare_between_statuses(
+                    self.sub_environments_status,
+                    self.deployment_status
+                )
+
+        else:
+            _sub_services_status = \
+                self.compare_between_statuses(
+                    self.sub_services_status,
+                    self.deployment_status
+                )
+        return _sub_services_status, _sub_environments_status
+
     def evaluate_deployment_status(self):
         """
         Evaluate the overall deployment status based on installation status
         and latest execution object
         :return: deployment_status: Overall deployment status
         """
-        # TODO we need to cover also aggregated statuses for deployment
-        #  children later on
         if self.latest_execution_status == DeploymentState.CANCELLED:
             if self.installation_status == DeploymentState.ACTIVE:
-                return DeploymentState.GOOD
-            return DeploymentState.REQUIRE_ATTENTION
+                deployment_status = DeploymentState.GOOD
+            else:
+                deployment_status = DeploymentState.REQUIRE_ATTENTION
         elif self.latest_execution_status == DeploymentState.IN_PROGRESS and \
                 self.installation_status == DeploymentState.INACTIVE:
-            return DeploymentState.IN_PROGRESS
+            deployment_status = DeploymentState.IN_PROGRESS
         elif self.latest_execution_status == DeploymentState.FAILED or \
                 self.installation_status == DeploymentState.INACTIVE:
-            return DeploymentState.REQUIRE_ATTENTION
+            deployment_status = DeploymentState.REQUIRE_ATTENTION
         elif self.latest_execution_status == DeploymentState.COMPLETED and \
                 self.installation_status == DeploymentState.ACTIVE:
-            return DeploymentState.GOOD
+            deployment_status = DeploymentState.GOOD
         else:
-            return DeploymentState.IN_PROGRESS
+            deployment_status = DeploymentState.IN_PROGRESS
+        if not (self.sub_services_status or self.sub_environments_status):
+            return deployment_status
+
+        # Check whether or not deployment has services or environments
+        # attached to it, so that we can consider that while evaluating the
+        # deployment status
+        if self.sub_services_status:
+            deployment_status = \
+                self.compare_between_statuses(
+                    self.sub_services_status,
+                    deployment_status
+                )
+        if self.sub_environments_status:
+            deployment_status = \
+                self.compare_between_statuses(
+                    self.sub_environments_status,
+                    deployment_status
+                )
+        return deployment_status
+
+    @property
+    def is_environment(self):
+        target_key = 'csys-obj-type'
+        target_value = 'environment'
+        for label in self.labels:
+            if label.key == target_key and label.value.lower() == target_value:
+                return True
+        return False
+
+    @property
+    def deployment_parents(self):
+        parents = []
+        for label in self.labels:
+            if label.key == 'csys-obj-parent' and label.value:
+                parents.append(label.value)
+        return parents
 
     def make_create_environment_execution(self, **params):
         self.create_execution = Execution(
@@ -515,6 +643,25 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             status=ExecutionState.PENDING,
             parameters={'delete_logs': delete_logs},
         )
+
+    @property
+    def environment_type(self):
+        for label in self.labels:
+            if label.key == 'csys-env-type':
+                return label.value
+        return ''
+
+    @property
+    def latest_execution_finished_operations(self):
+        if not self.latest_execution:
+            return None
+        return self.latest_execution.finished_operations
+
+    @property
+    def latest_execution_total_operations(self):
+        if not self.latest_execution:
+            return None
+        return self.latest_execution.total_operations
 
 
 class DeploymentGroup(CreatedAtMixin, SQLResourceBase):
@@ -1587,17 +1734,16 @@ class Operation(SQLResourceBase):
         return self.type == 'NOPLocalWorkflowTask'
 
 
-class InterDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
-    __tablename__ = 'inter_deployment_dependencies'
+class BaseDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
+    __abstract__ = True
+    _source_deployment = None
+    _target_deployment = None
 
-    dependency_creator = db.Column(db.Text, nullable=False)
-    _source_deployment = foreign_key(Deployment._storage_id, nullable=True)
-    _target_deployment = foreign_key(Deployment._storage_id,
-                                     nullable=True,
-                                     ondelete='SET NULL')
-    target_deployment_func = db.Column(JSONString, nullable=True)
-    external_source = db.Column(JSONString, nullable=True)
-    external_target = db.Column(JSONString, nullable=True)
+    _source_backref_name = None
+    _target_backref_name = None
+
+    _source_cascade = 'all'
+    _target_cascade = 'all'
 
     @declared_attr
     def source_deployment(cls):
@@ -1605,7 +1751,8 @@ class InterDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
             cls,
             Deployment,
             cls._source_deployment,
-            backref=db.backref('source_of_dependency_in', cascade='all')
+            backref=db.backref(cls._source_backref_name,
+                               cascade=cls._source_cascade)
         )
 
     @declared_attr
@@ -1614,9 +1761,42 @@ class InterDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
             cls,
             Deployment,
             cls._target_deployment,
-            backref=db.backref('target_of_dependency_in'),
-            cascade='save-update, merge, refresh-expire, expunge')
+            backref=db.backref(cls._target_backref_name),
+            cascade=cls._target_cascade)
 
     source_deployment_id = association_proxy('source_deployment', 'id')
     target_deployment_id = association_proxy('target_deployment', 'id')
+
+
+class InterDeploymentDependencies(BaseDeploymentDependencies):
+    __tablename__ = 'inter_deployment_dependencies'
+
+    _source_backref_name = 'source_of_dependency_in'
+    _target_backref_name = 'target_of_dependency_in'
+
+    _target_cascade = 'save-update, merge, refresh-expire, expunge'
+
+    _source_deployment = foreign_key(Deployment._storage_id, nullable=True)
+    _target_deployment = foreign_key(Deployment._storage_id,
+                                     nullable=True,
+                                     ondelete='SET NULL')
+
+    dependency_creator = db.Column(db.Text, nullable=False)
+    target_deployment_func = db.Column(JSONString, nullable=True)
+    external_source = db.Column(JSONString, nullable=True)
+    external_target = db.Column(JSONString, nullable=True)
+
+
+class DeploymentLabelsDependencies(BaseDeploymentDependencies):
+    __tablename__ = 'deployment_labels_dependencies'
+    __table_args__ = (
+        db.UniqueConstraint(
+            '_source_deployment', '_target_deployment'),
+    )
+
+    _source_backref_name = 'source_of_dependency_labels'
+    _target_backref_name = 'target_of_dependency_labels'
+
+    _source_deployment = foreign_key(Deployment._storage_id)
+    _target_deployment = foreign_key(Deployment._storage_id)
 # endregion
