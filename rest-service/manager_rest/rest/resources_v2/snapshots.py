@@ -19,7 +19,7 @@ import shutil
 
 from flask_restful_swagger import swagger
 
-from cloudify.models_states import SnapshotState
+from cloudify.models_states import SnapshotState, ExecutionState
 
 from manager_rest.security import SecuredResource
 from manager_rest import config, manager_exceptions
@@ -133,6 +133,19 @@ class SnapshotsId(SecuredResource):
     def delete(self, snapshot_id):
         sm = get_storage_manager()
         snapshot = sm.get(models.Snapshot, snapshot_id)
+        ongoing_snapshot_execs = sm.list(
+            models.Execution,
+            get_all_results=True,
+            filters={
+                'workflow_id': ['create_snapshot', 'restore_snapshot'],
+                'status': ExecutionState.ACTIVE_STATES,
+            })
+        for execution in ongoing_snapshot_execs:
+            if execution.parameters.get('snapshot_id') == snapshot_id:
+                raise manager_exceptions.SnapshotActionError(
+                    f'Cannot delete snapshot `{snapshot_id}` which has an '
+                    f'active `{execution.workflow_id}` execution')
+
         sm.delete(snapshot)
         path = _get_snapshot_path(snapshot_id)
         shutil.rmtree(path, ignore_errors=True)
