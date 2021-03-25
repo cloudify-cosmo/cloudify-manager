@@ -142,7 +142,7 @@ class BlueprintsFiltersFunctionalityCase(FiltersFunctionalityBaseCase):
     def setUp(self):
         super().setUp(models.Blueprint)
 
-    def test_labels_filters_applied(self):
+    def test_filters_applied(self):
         bp_1 = self.put_blueprint_with_labels(self.LABELS, blueprint_id='bp_1')
         bp_2 = self.put_blueprint_with_labels(self.LABELS_2,
                                               blueprint_id='bp_2')
@@ -156,7 +156,7 @@ class DeploymentFiltersFunctionalityCase(FiltersFunctionalityBaseCase):
     def setUp(self):
         super().setUp(models.Deployment)
 
-    def test_labels_filters_applied(self):
+    def test_filters_applied(self):
         self.client.sites.create('site_1')
         self.client.sites.create('other_site')
         dep1 = self.put_deployment_with_labels(self.LABELS,
@@ -171,12 +171,12 @@ class DeploymentFiltersFunctionalityCase(FiltersFunctionalityBaseCase):
              ('c', ['y', 'z'], LabelsOperator.NOT_ANY_OF, 'label')], {dep1.id})
 
         self.assert_filters_applied(
-            [('a', ['b'], LabelsOperator.ANY_OF, 'label'),
-             ('blueprint_id', ['res_1', 'res_2'], AttrsOperator.ANY_OF,
+            [('blueprint_id', ['res_1', 'res_2'], AttrsOperator.ANY_OF,
               'attribute'),
-             ('blueprint_id', ['not_bp'], AttrsOperator.NOT_ANY_OF,
+             ('created_by', ['not_user'], AttrsOperator.NOT_ANY_OF,
               'attribute'),
-             ('site_name', ['site'], AttrsOperator.CONTAINS, 'attribute')],
+             ('site_name', ['site'], AttrsOperator.CONTAINS, 'attribute'),
+             ('a', ['b'], LabelsOperator.ANY_OF, 'label')],
             {dep1.id, dep2.id},
         )
 
