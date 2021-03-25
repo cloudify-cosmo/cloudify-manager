@@ -17,7 +17,10 @@ def add_filter_rules_to_query(query, model_class, filter_rules):
         filter_rule_type = filter_rule['type']
         if filter_rule_type == FilterRuleType.LABEL:
             if not labels_join_added:
-                query = query.join(labels_model).distinct()
+                query = query.join(
+                    labels_model,
+                    labels_model._labeled_model_fk == model_class._storage_id)\
+                    .distinct()
                 labels_join_added = True
             query = add_labels_filter_to_query(query,
                                                labels_model,
