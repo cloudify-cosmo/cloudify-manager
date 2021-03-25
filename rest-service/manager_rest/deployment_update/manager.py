@@ -46,6 +46,7 @@ from manager_rest.deployment_update.handlers import (
 from manager_rest.utils import get_formatted_timestamp
 
 from manager_rest.rest.rest_utils import (get_deployment_plan,
+                                          get_labels_from_plan,
                                           get_parsed_deployment,
                                           RecursiveDeploymentDependencies,
                                           verify_blueprint_uploaded_state)
@@ -236,6 +237,8 @@ class DeploymentUpdateManager(object):
         schedules_to_create, schedules_to_delete = \
             self._extract_schedules_changes(dep_update)
 
+        labels_to_create = self._get_deployment_labels_to_create(dep_update)
+
         # Saving the needed changes back to the storage manager for future use
         # (removing entities).
         dep_update.deployment_update_deployment = raw_updated_deployment
@@ -261,6 +264,8 @@ class DeploymentUpdateManager(object):
             dep_update.schedules_to_create = \
                 self.list_schedules(schedules_to_create)
             dep_update.schedules_to_delete = schedules_to_delete
+            dep_update.labels_to_create = [{'key': label[0], 'value': label[1]}
+                                           for label in labels_to_create]
             return dep_update
 
         # Handle inter-deployment dependencies changes
@@ -310,12 +315,16 @@ class DeploymentUpdateManager(object):
                 filters={'id': schedule_id, 'deployment_id': deployment.id})
             self.sm.delete(schedule)
 
+        rm = get_resource_manager()
         # Then, create new deployment schedules
         deployment_creation_time = datetime.strptime(
             deployment.created_at.split('.')[0], '%Y-%m-%dT%H:%M:%S'
         ).replace(second=0)
-        get_resource_manager().create_deployment_schedules_from_dict(
+        rm.create_deployment_schedules_from_dict(
             schedules_to_create, deployment, deployment_creation_time)
+
+        rm.create_resource_labels(models.DeploymentLabel, deployment,
+                                  labels_to_create)
 
         # Return the deployment update object
         return self.get_deployment_update(dep_update.id)
@@ -695,6 +704,13 @@ class DeploymentUpdateManager(object):
                 except manager_exceptions.NotFoundError:
                     continue
         return schedules_to_create, schedules_to_delete
+
+    def _get_deployment_labels_to_create(self, dep_update):
+        deployment = self.sm.get(models.Deployment, dep_update.deployment_id)
+        new_labels = get_labels_from_plan(dep_update.deployment_plan,
+                                          constants.LABELS)
+        return get_resource_manager().get_labels_to_create(deployment,
+                                                           new_labels)
 
 
 # What we need to access this manager in Flask

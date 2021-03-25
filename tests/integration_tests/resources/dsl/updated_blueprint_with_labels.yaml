@@ -6,15 +6,20 @@ imports:
 inputs:
   label_value:
     default: key2_val2
+  updated_label_value:
+    default: updated_key_val2
 
 blueprint_labels:
   bp_key1:
     values:
-      - bp_key1_val1
+      - updated_bp_key1_val1
   bp_key2:
     values:
       - bp_key2_val1
-      - bp_key2_val2
+      - updated_bp_key2_val2
+  updated_bp_key:
+    values:
+      - updated_bp_key_val1
 
 labels:
   key1:
@@ -22,5 +27,9 @@ labels:
       - key1_val1
   key2:
     values:
-      - key2_val1
+      - updated_key2_val1
       - { get_input: label_value }
+  updated_key:
+    values:
+      - updated_key_val1
+      - { get_input: updated_label_value }

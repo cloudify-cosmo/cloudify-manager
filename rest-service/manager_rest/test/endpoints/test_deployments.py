@@ -975,11 +975,20 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
-    def test_update_empty_deployments_labels(self):
+    def test_remove_deployments_labels(self):
         deployment = self.put_deployment_with_labels(self.LABELS)
         self.assert_resource_labels(deployment.labels, self.LABELS)
         updated_dep = self.client.deployments.update_labels(deployment.id, [])
         self.assertEmpty(updated_dep.labels)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_update_empty_deployments_labels(self):
+        _, _, _, deployment = self.put_deployment()
+        self.assertEqual(deployment.labels, [])
+        updated_dep = self.client.deployments.update_labels(deployment.id,
+                                                            self.LABELS)
+        self.assert_resource_labels(updated_dep.labels, self.LABELS)
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
