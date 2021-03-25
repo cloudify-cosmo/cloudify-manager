@@ -107,7 +107,6 @@ def create(ctx, labels=None, inputs=None, skip_plugins_validation=False, **_):
         capabilities=deployment_plan.get('capabilities', {}),
         labels=labels_to_create,
     )
-
     deployment_settings = deployment_plan.get('deployment_settings', {})
     _join_groups(client, ctx.deployment.id,
                  deployment_settings.get('default_groups', []))

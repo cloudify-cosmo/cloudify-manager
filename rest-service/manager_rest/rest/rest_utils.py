@@ -605,7 +605,10 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
         """
         if self.graph:
             return
-        dependencies = self.sm.list(models.DeploymentLabelsDependencies)
+        dependencies = self.sm.list(
+            models.DeploymentLabelsDependencies,
+            get_all_results=True
+        )
         self.graph = {}
         for dependency in dependencies:
             source = dependency.source_deployment_id
@@ -644,68 +647,69 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
                         visited[dependency.target_deployment_id] = True
         return results
 
-    def increase_deployment_counts_in_graph(self, target, source):
+    def increase_deployment_counts_in_graph(self, target_id, source):
         """
         Increase the deployment counts for target deployment that is
         referenced directly by the `source` deployment and then make sure to
         propagate that increase to all deployment that are referenced
         directly and indirectly by `target` deployment
-        :param target: Target Deployment node that we need to attach source to
-        :rtype Deployment
+        :param target_id: Target Deployment ID that we need to attach
+        source to
+        :rtype str
         :param source: Source deployment that reference target deployment
         :rtype Deployment
         """
-        total_services = source.sub_services_count or 0
-        total_environments = source.sub_environments_count or 0
+        total_services = source.sub_services_count
+        total_environments = source.sub_environments_count
         if source.is_environment:
             total_environments += 1
         else:
             total_services += 1
-        target_group = [target.id] + self.find_recursive_deployments(target.id)
+        target_group = [target_id] + self.find_recursive_deployments(target_id)
         for target_id in target_group:
-            target = self.sm.get(
-                models.Deployment,
-                target_id,
-                locking=True
-            )
-            if not target.sub_services_count:
-                target.sub_services_count = total_services
-            else:
-                target.sub_services_count += total_services
-            if not target.sub_environments_count:
-                target.sub_environments_count = total_environments
-            else:
-                target.sub_environments_count += total_environments
-            self.sm.update(target)
+            if total_services or total_environments:
+                with self.sm.transaction():
+                    target = self.sm.get(
+                        models.Deployment,
+                        target_id,
+                        locking=True
+                    )
+                    target.sub_services_count += total_services
+                    target.sub_environments_count += total_environments
+                    self.sm.update(target)
 
-    def decrease_deployment_counts_in_graph(self, source):
+    def decrease_deployment_counts_in_graph(self, target_id, source):
         """
         Decrease the counter for each deployment that is referenced
         directly and indirectly by `source` deployment and the counts that
         need to be update are possibly for `sub_environments_count`
         & `sub_services_count`
+        :param target_id: Target Deployment ID that we need to de-attach
+        source from
+        :rtype str
         :param source: Deployment instance
         :rtype Deployment
         """
-        target_group = self.find_recursive_deployments(source.id)
+        target_group = [target_id] + self.find_recursive_deployments(target_id)
         if target_group:
-            total_services = source.sub_services_count or 0
-            total_environments = source.sub_environments_count or 0
+            total_services = source.sub_services_count
+            total_environments = source.sub_environments_count
             if source.is_environment:
                 total_environments += 1
             else:
                 total_services += 1
             for target_id in target_group:
-                target = self.sm.get(
-                    models.Deployment,
-                    target_id,
-                    locking=True
-                )
-                if target.sub_services_count:
-                    target.sub_services_count -= total_services
-                if target.sub_environments_count:
-                    target.sub_environments_count -= total_environments
-                self.sm.update(target)
+                with self.sm.transaction():
+                    target = self.sm.get(
+                        models.Deployment,
+                        target_id,
+                        locking=True
+                    )
+                    if target.sub_services_count:
+                        target.sub_services_count -= total_services
+                    if target.sub_environments_count:
+                        target.sub_environments_count -= total_environments
+                    self.sm.update(target)
 
     def propagate_deployment_statuses(self, source):
         """

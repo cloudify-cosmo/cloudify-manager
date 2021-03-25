@@ -388,8 +388,8 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             DeploymentState.REQUIRE_ATTENTION,
             name='deployment_status'
         ))
-    sub_services_count = db.Column(db.Integer, nullable=True)
-    sub_environments_count = db.Column(db.Integer, nullable=True)
+    sub_services_count = db.Column(db.Integer, nullable=False, default=0)
+    sub_environments_count = db.Column(db.Integer, nullable=False, default=0)
     _blueprint_fk = foreign_key(Blueprint._storage_id)
     _site_fk = foreign_key(Site._storage_id,
                            nullable=True,
@@ -454,6 +454,9 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             flask_fields.Nested(ExecutionSchedule.resource_fields))
         fields['deployment_groups'] = flask_fields.List(flask_fields.String)
         fields['latest_execution_status'] = flask_fields.String()
+        fields['environment_type'] = flask_fields.String()
+        fields['latest_execution_total_operations'] = flask_fields.Integer()
+        fields['latest_execution_finished_operations'] = flask_fields.Integer()
         return fields
 
     @classproperty
@@ -468,6 +471,11 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         dep_dict['latest_execution_status'] = self.latest_execution_status
         if not dep_dict.get('installation_status'):
             dep_dict['installation_status'] = DeploymentState.INACTIVE
+        dep_dict['environment_type'] = self.environment_type
+        dep_dict['latest_execution_total_operations'] = \
+            self.latest_execution_total_operations
+        dep_dict['latest_execution_finished_operations'] = \
+            self.latest_execution_finished_operations
         return dep_dict
 
     @staticmethod
@@ -611,6 +619,14 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                 return True
         return False
 
+    @property
+    def deployment_parents(self):
+        parents = []
+        for label in self.labels:
+            if label.key == 'csys-obj-parent' and label.value:
+                parents.append(label.value)
+        return parents
+
     def make_create_environment_execution(self, **params):
         self.create_execution = Execution(
             workflow_id='create_deployment_environment',
@@ -627,6 +643,25 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             status=ExecutionState.PENDING,
             parameters={'delete_logs': delete_logs},
         )
+
+    @property
+    def environment_type(self):
+        for label in self.labels:
+            if label.key == 'csys-env-type':
+                return label.value
+        return ''
+
+    @property
+    def latest_execution_finished_operations(self):
+        if not self.latest_execution:
+            return None
+        return self.latest_execution.finished_operations
+
+    @property
+    def latest_execution_total_operations(self):
+        if not self.latest_execution:
+            return None
+        return self.latest_execution.total_operations
 
 
 class DeploymentGroup(CreatedAtMixin, SQLResourceBase):
