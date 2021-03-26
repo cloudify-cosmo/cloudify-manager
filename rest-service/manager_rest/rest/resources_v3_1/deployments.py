@@ -172,10 +172,11 @@ class DeploymentsId(resources_v1.DeploymentsId):
             runtime_only_evaluation=request_dict.get(
                 'runtime_only_evaluation', False),
         )
+        labels = rest_utils.get_labels_list(request_dict.get('labels', []))
         try:
             rm.execute_workflow(deployment.make_create_environment_execution(
                 inputs=request_dict.get('inputs', {}),
-                labels=request_dict.get('labels', []),
+                labels=labels,
                 skip_plugins_validation=skip_plugins_validation,
 
             ), bypass_maintenance=bypass_maintenance)
@@ -560,15 +561,16 @@ class DeploymentGroupsId(SecuredResource):
         return get_storage_manager().get(models.DeploymentGroup, group_id)
 
     @authorize('deployment_group_create')
-    @rest_decorators.marshal_with(models.DeploymentGroup)
+    @rest_decorators.marshal_with(models.DeploymentGroup, force_get_data=True)
     def put(self, group_id):
         request_dict = rest_utils.get_json_and_verify_params({
             'description': {'optional': True},
-            'deployment_ids': {'optional': True},
-            'filter_id': {'optional': True},
+            'visibility': {'optional': True},
+            'labels': {'optional': True},
             'blueprint_id': {'optional': True},
             'default_inputs': {'optional': True},
-            'visibility': {'optional': True},
+            'filter_id': {'optional': True},
+            'deployment_ids': {'optional': True},
             'new_deployments': {'optional': True},
             'deployments_from_group': {'optional': True},
         })
@@ -581,8 +583,9 @@ class DeploymentGroupsId(SecuredResource):
                 description=request_dict.get('description'),
                 created_at=datetime.now()
             )
-        self._set_group_attributes(sm, group, request_dict)
-        sm.put(group)
+        with sm.transaction():
+            self._set_group_attributes(sm, group, request_dict)
+            sm.put(group)
         if self._is_overriding_deployments(request_dict):
             group.deployments.clear()
         self._add_group_deployments(sm, group, request_dict)
@@ -596,7 +599,7 @@ class DeploymentGroupsId(SecuredResource):
         )
 
     @authorize('deployment_group_update')
-    @rest_decorators.marshal_with(models.DeploymentGroup)
+    @rest_decorators.marshal_with(models.DeploymentGroup, force_get_data=True)
     def patch(self, group_id):
         request_dict = rest_utils.get_json_and_verify_params({
             'description': {'optional': True},
@@ -630,6 +633,14 @@ class DeploymentGroupsId(SecuredResource):
         if request_dict.get('blueprint_id'):
             group.default_blueprint = sm.get(
                 models.Blueprint, request_dict['blueprint_id'])
+
+        if request_dict.get('labels'):
+            rm = get_resource_manager()
+            rm.update_resource_labels(
+                models.DeploymentGroupLabel,
+                group,
+                rest_utils.get_labels_list(request_dict['labels'])
+            )
 
     def _add_group_deployments(self, sm, group, request_dict):
         deployment_ids = request_dict.get('deployment_ids')
@@ -666,6 +677,7 @@ class DeploymentGroupsId(SecuredResource):
         """Create new deployments for the group based on new_deployments"""
         rm = get_resource_manager()
         with sm.transaction():
+            group_labels = [(label.key, label.value) for label in group.labels]
             deployment_count = len(group.deployments)
             create_exec_group = models.ExecutionGroup(
                 id=str(uuid.uuid4()),
@@ -676,7 +688,7 @@ class DeploymentGroupsId(SecuredResource):
             sm.put(create_exec_group)
             for new_dep_spec in new_deployments:
                 dep = self._make_new_group_deployment(
-                    rm, group, new_dep_spec, deployment_count)
+                    rm, group, new_dep_spec, deployment_count, group_labels)
                 group.deployments.append(dep)
                 create_exec_group.executions.append(dep.create_execution)
                 deployment_count += 1
@@ -686,7 +698,8 @@ class DeploymentGroupsId(SecuredResource):
         with amqp_client:
             create_exec_group.start_executions(sm, rm, handler)
 
-    def _make_new_group_deployment(self, rm, group, new_dep_spec, count):
+    def _make_new_group_deployment(self, rm, group, new_dep_spec, count,
+                                   group_labels):
         """Create a new deployment in the group.
 
         The new deployment will be based on the specification given
@@ -695,7 +708,8 @@ class DeploymentGroupsId(SecuredResource):
         """
         new_id = new_dep_spec.get('id')
         inputs = new_dep_spec.get('inputs', {})
-        labels = new_dep_spec.get('labels')
+        labels = rest_utils.get_labels_list(new_dep_spec.get('labels') or [])
+        labels += group_labels
         deployment_inputs = (group.default_inputs or {}).copy()
         deployment_inputs.update(inputs)
         dep = rm.create_deployment(

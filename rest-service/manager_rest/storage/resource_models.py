@@ -698,8 +698,16 @@ class DeploymentGroup(CreatedAtMixin, SQLResourceBase):
         fields['deployment_ids'] = flask_fields.List(
             flask_fields.String()
         )
+        fields['labels'] = flask_fields.List(
+            flask_fields.Nested(Label.resource_fields))
         fields['default_blueprint_id'] = flask_fields.String()
         return fields
+
+    def to_response(self, get_data=False, **kwargs):
+        response = super(DeploymentGroup, self).to_response()
+        if get_data:
+            response['labels'] = self.list_labels(self.labels)
+        return response
 
 
 class _Label(CreatedAtMixin, SQLModelBase):
@@ -760,6 +768,23 @@ class BlueprintLabel(_Label):
     def blueprint(cls):
         return db.relationship(
             'Blueprint', lazy='joined',
+            backref=db.backref('labels', cascade='all, delete-orphan'))
+
+
+class DeploymentGroupLabel(_Label):
+    __tablename__ = 'deployment_groups_labels'
+    __table_args__ = (
+        db.UniqueConstraint(
+            'key', 'value', '_labeled_model_fk'),
+    )
+    labeled_model = DeploymentGroup
+
+    _labeled_model_fk = foreign_key(DeploymentGroup._storage_id)
+
+    @declared_attr
+    def deployment_group(cls):
+        return db.relationship(
+            DeploymentGroup, lazy='joined',
             backref=db.backref('labels', cascade='all, delete-orphan'))
 
 

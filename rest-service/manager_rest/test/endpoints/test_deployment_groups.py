@@ -164,7 +164,7 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         assert len(deps) == 1
         create_exec_params = deps[0].create_execution.parameters
         assert create_exec_params['inputs'] == inputs
-        assert create_exec_params['labels'] == labels
+        assert create_exec_params['labels'] == [('label1', 'label-value')]
 
     def test_add_deployment_ids(self):
         self.client.deployment_groups.put('group1')
@@ -399,6 +399,43 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             deployments_from_group='group2'
         )
         assert set(group1.deployment_ids) == {'dep2'}
+
+    def test_set_labels(self):
+        """Create a group with labels"""
+        labels = [{'label1': 'value1'}]
+        updated_labels = [{'label1': 'value2'}, {'label2': 'value3'}]
+        group = self.client.deployment_groups.put(
+            'group1',
+            labels=labels,
+        )
+        self.assert_resource_labels(group.labels, labels)
+        group = self.client.deployment_groups.put(
+            'group1',
+            labels=updated_labels,
+        )
+        self.assert_resource_labels(group.labels, updated_labels)
+
+    def test_group_labels_for_deployments(self):
+        """Group labels are applied to the newly-created deployments"""
+        group = self.client.deployment_groups.put(
+            'group1',
+            labels=[{'label1': 'value1'}, {'label2': 'value2'}],
+            blueprint_id='blueprint',
+            new_deployments=[{
+                'labels': [{'label1': 'value1'}, {'label1': 'value2'},
+                           {'label3': 'value4'}]
+            }]
+        )
+        dep_id = group.deployment_ids[0]
+        dep = self.sm.get(models.Deployment, dep_id)
+        self.create_deployment_environment(dep)
+        client_dep = self.client.deployments.get(dep_id)
+        self.assert_resource_labels(client_dep.labels, [
+            # labels from both the group, and the deployment
+            # (note that label1=value1 occurs in both places)
+            {'label1': 'value1'}, {'label1': 'value2'}, {'label2': 'value2'},
+            {'label3': 'value4'},
+        ])
 
 
 @mock.patch(
