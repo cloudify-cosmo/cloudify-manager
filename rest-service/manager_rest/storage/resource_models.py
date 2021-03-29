@@ -903,6 +903,11 @@ class Execution(CreatedAtMixin, SQLResourceBase):
     def resource_fields(cls):
         fields = super(Execution, cls).resource_fields
         fields.pop('token')
+        return fields
+
+    @classproperty
+    def response_fields(cls):
+        fields = super(Execution, cls).response_fields
         fields.pop('execution_group_id')
         return fields
 
