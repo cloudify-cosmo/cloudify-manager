@@ -64,8 +64,8 @@ class BlueprintUploadTest(AgentlessTestCase):
         blueprint_id = 'bp-url-malformed'
         archive_url = 'malformed/url_is.bad'
         response = requests.put(
-            'http://{0}/api/v3.1/blueprints/{1}'.format(self.get_manager_ip(),
-                                                        blueprint_id),
+            'https://{0}/api/v3.1/blueprints/{1}'.format(self.get_manager_ip(),
+                                                         blueprint_id),
             headers=self.client._client.headers,
             params={'blueprint_archive_url': archive_url},
             verify=False
