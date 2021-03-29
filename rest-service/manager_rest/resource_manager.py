@@ -205,8 +205,13 @@ class ResourceManager(object):
         return res
 
     def start_queued_executions(self, finished_execution):
-        for execution in self._get_queued_executions(finished_execution):
-            execution.status = ExecutionState.PENDING
+        with self.sm.transaction():
+            to_run = list(self._get_queued_executions(finished_execution))
+            for execution in to_run:
+                execution.status = ExecutionState.PENDING
+                self.sm.update(execution)
+
+        for execution in to_run:
             if execution.is_system_workflow:
                 self._execute_system_workflow(execution, queue=True)
             else:
@@ -214,30 +219,57 @@ class ResourceManager(object):
 
     def _get_queued_executions(self, finished_execution):
         sort_by = {'created_at': 'asc'}
-        system_executions = self.sm.list(models.Execution, filters={
-            'status': ExecutionState.QUEUED_STATE,
-            'is_system_workflow': True,
-        }, sort=sort_by, get_all_results=True, all_tenants=True).items
+        system_executions = self.sm.list(
+            models.Execution, filters={
+                'status': ExecutionState.QUEUED_STATE,
+                'is_system_workflow': True,
+            },
+            sort=sort_by,
+            get_all_results=True,
+            all_tenants=True,
+            locking=True,
+        ).items
         if system_executions:
             yield system_executions[0]
             return
 
         if finished_execution.deployment:
             deployment_id = finished_execution.deployment.id
-            same_dep_executions = self.sm.list(models.Execution, filters={
-                'status': ExecutionState.QUEUED_STATE,
-                'deployment_id': deployment_id,
-            }, sort=sort_by, get_all_results=True, all_tenants=True).items
-            other_queued = self.sm.list(models.Execution, filters={
-                'status': ExecutionState.QUEUED_STATE,
-                'deployment_id': lambda col: col != deployment_id,
-            }, sort=sort_by, get_all_results=True, all_tenants=True).items
+            same_dep_executions = self.sm.list(
+                models.Execution,
+                filters={
+                    'status': ExecutionState.QUEUED_STATE,
+                    'deployment_id': deployment_id,
+                },
+                sort=sort_by,
+                get_all_results=True,
+                all_tenants=True,
+                locking=True,
+            ).items
+            other_queued = self.sm.list(
+                models.Execution,
+                filters={
+                    'status': ExecutionState.QUEUED_STATE,
+                    'deployment_id': lambda col: col != deployment_id,
+                },
+                sort=sort_by,
+                get_all_results=True,
+                all_tenants=True,
+                locking=True,
+            ).items
             queued_executions = same_dep_executions + other_queued
         else:
-            queued_executions = self.sm.list(models.Execution, filters={
-                'status': ExecutionState.QUEUED_STATE,
-                'is_system_workflow': False,
-            }, sort=sort_by, get_all_results=True, all_tenants=True).items
+            queued_executions = self.sm.list(
+                models.Execution,
+                filters={
+                    'status': ExecutionState.QUEUED_STATE,
+                    'is_system_workflow': False,
+                },
+                sort=sort_by,
+                get_all_results=True,
+                all_tenants=True,
+                locking=True,
+            ).items
 
         # {deployment: whether it can run executions}
         busy_deployments = {}
@@ -245,7 +277,7 @@ class ResourceManager(object):
         group_can_run = {}
         for execution in queued_executions:
             for group in execution.execution_groups:
-                if group.id not in group_can_run:
+                if group not in group_can_run:
                     group_can_run[group] = group.concurrency -\
                         len(group.currently_running_executions())
 
