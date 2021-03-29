@@ -144,7 +144,7 @@ def rest_client(manager_container):
     with tempfile.NamedTemporaryFile('w') as cert_file:
         docker.copy_file_from_manager(
             manager_container.container_id,
-            '/etc/cloudify/ssl/cloudify_external_cert.pem',
+            '/etc/cloudify/ssl/cloudify_internal_ca_cert.pem',
             cert_file.name)
         client = test_utils.create_rest_client(
             host=manager_container.container_ip,
