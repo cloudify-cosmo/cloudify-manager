@@ -1,6 +1,7 @@
 import os
 import logging
 import pytest
+import tempfile
 import threading
 import wagon
 
@@ -140,8 +141,18 @@ def manager_container(request, resource_mapping):
 
 @pytest.fixture(scope='session')
 def rest_client(manager_container):
-    client = test_utils.create_rest_client(host=manager_container.container_ip)
-    yield client
+    with tempfile.NamedTemporaryFile('w') as cert_file:
+        docker.copy_file_from_manager(
+            manager_container.container_id,
+            '/etc/cloudify/ssl/cloudify_external_cert.pem',
+            cert_file.name)
+        client = test_utils.create_rest_client(
+            host=manager_container.container_ip,
+            rest_port=443,
+            rest_protocol='https',
+            cert_path=cert_file.name,
+        )
+        yield client
 
 
 @pytest.fixture(scope='class')
