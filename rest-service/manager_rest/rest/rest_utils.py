@@ -862,13 +862,7 @@ def get_labels_list(raw_labels_list):
         [(key, raw_value)] = label.items()
         values_list = raw_value if isinstance(raw_value, list) else [raw_value]
         for value in values_list:
-            if ((not isinstance(key, text_type)) or
-                    (not isinstance(value, text_type))):
-                _raise_bad_labels_list()
             parsed_key, parsed_value = _parse_label(key, value)
-            if (parsed_key.startswith(CFY_LABELS_PREFIX) and
-                    key not in CFY_LABELS):
-                _raise_labels_prefix_not_allowed()
             labels_list.append((parsed_key, parsed_value))
 
     test_unique_labels(labels_list)
@@ -876,22 +870,40 @@ def get_labels_list(raw_labels_list):
 
 
 def _parse_label(label_key, label_value):
-    quoted_label_key = urlquote(label_key, safe='')
-    if quoted_label_key != label_key:
+    if ((not isinstance(label_key, text_type)) or
+            (not isinstance(label_value, text_type))):
+        _raise_bad_labels_list()
+
+    if len(label_key) > 256 or len(label_value) > 256:
+        raise manager_exceptions.BadParametersError(
+            'The label\'s key or value is too long. Maximum allowed length is '
+            '256 characters'
+        )
+
+    if urlquote(label_key, safe='') != label_key:
         raise manager_exceptions.BadParametersError(
             'The label\'s key {0} contains illegal characters. Only letters, '
             'digits and the characters `-`, `.` and `_` are allowed'.format(
                 label_key)
         )
 
+    parsed_label_key = label_key.lower()
     parsed_label_value = unicodedata.normalize('NFKC', label_value).casefold()
+
+    if (parsed_label_key.startswith(CFY_LABELS_PREFIX) and
+            parsed_label_key not in CFY_LABELS):
+        raise manager_exceptions.BadParametersError(
+            'All labels with a `{0}` prefix are reserved for internal use. '
+            'Allowed `{0}` prefixed labels are: {1}'.format(
+                CFY_LABELS_PREFIX, ', '.join(CFY_LABELS)))
+
     if any(char in parsed_label_value for char in ['"', '\n', '\t']):
         raise manager_exceptions.BadParametersError(
             'The label\'s value {0} contains illegal characters. `"`, `\\n` '
             'and `\\t` are not allowed'.format(label_value)
         )
 
-    return label_key.casefold(), parsed_label_value
+    return parsed_label_key, parsed_label_value
 
 
 def get_labels_from_plan(plan, labels_entry):
@@ -902,13 +914,6 @@ def get_labels_from_plan(plan, labels_entry):
         return get_labels_list(raw_plan_labels_list)
 
     return []
-
-
-def _raise_labels_prefix_not_allowed():
-    raise manager_exceptions.BadParametersError(
-        'All labels with a `{0}` prefix are reserved for internal use. '
-        'Allowed `{0}` prefixed labels are: {1}'.format(
-            CFY_LABELS_PREFIX, ', '.join(CFY_LABELS)))
 
 
 def _raise_bad_labels_list():
