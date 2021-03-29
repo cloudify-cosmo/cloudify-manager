@@ -245,7 +245,7 @@ class ResourceManager(object):
         group_can_run = {}
         for execution in queued_executions:
             for group in execution.execution_groups:
-                if group.id not in group_can_run:
+                if group not in group_can_run:
                     group_can_run[group] = group.concurrency -\
                         len(group.currently_running_executions())
 
