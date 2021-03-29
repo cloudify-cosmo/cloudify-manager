@@ -946,6 +946,43 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
+    def test_creation_failure_with_invalid_label_key(self):
+        resource_id = 'i{0}'.format(uuid.uuid4())
+        err_label = [{'k ey': 'value'}]
+        error_msg = '400: .*The label\'s key {0} contains illegal ' \
+                    'characters'.format('k ey')
+        self.assertRaisesRegex(CloudifyClientError,
+                               error_msg,
+                               self.put_deployment,
+                               blueprint_file_name='blueprint.yaml',
+                               blueprint_id=resource_id,
+                               deployment_id=resource_id,
+                               labels=err_label)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_creation_failure_with_invalid_label_value(self):
+        err_labels = [{'key': 'test\n'}, {'key': 'test\t'}, {'key': 'test"'}]
+        error_msg = '400: .*The label\'s value {0} contains illegal characters'
+        for err_label in err_labels:
+            resource_id = 'i{0}'.format(uuid.uuid4())
+            self.assertRaisesRegex(CloudifyClientError,
+                                   error_msg.format(err_label['key']),
+                                   self.put_deployment,
+                                   blueprint_file_name='blueprint.yaml',
+                                   blueprint_id=resource_id,
+                                   deployment_id=resource_id,
+                                   labels=[err_label])
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_creation_success_with_special_label_value(self):
+        labels = [{'key': '&value$'}, {'key': 'val ue'}]
+        deployment = self.put_deployment_with_labels(labels)
+        self.assert_resource_labels(deployment.labels, labels)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
     def test_creation_failure_with_duplicate_labels(self):
         resource_id = 'i{0}'.format(uuid.uuid4())
         error_msg = '400: .*You cannot define the same label twice.*'

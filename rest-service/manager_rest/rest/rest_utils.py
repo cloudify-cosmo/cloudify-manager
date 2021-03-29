@@ -1,4 +1,5 @@
 import re
+import unicodedata
 from collections import defaultdict, deque
 
 from ast import literal_eval
@@ -864,13 +865,33 @@ def get_labels_list(raw_labels_list):
             if ((not isinstance(key, text_type)) or
                     (not isinstance(value, text_type))):
                 _raise_bad_labels_list()
-            validate_inputs({'key': key, 'value': value})
-            if key.startswith(CFY_LABELS_PREFIX) and key not in CFY_LABELS:
+            parsed_key, parsed_value = _parse_label(key, value)
+            if (parsed_key.startswith(CFY_LABELS_PREFIX) and
+                    key not in CFY_LABELS):
                 _raise_labels_prefix_not_allowed()
-            labels_list.append((key.lower(), value.lower()))
+            labels_list.append((parsed_key, parsed_value))
 
     test_unique_labels(labels_list)
     return labels_list
+
+
+def _parse_label(label_key, label_value):
+    quoted_label_key = urlquote(label_key, safe='')
+    if quoted_label_key != label_key:
+        raise manager_exceptions.BadParametersError(
+            'The label\'s key {0} contains illegal characters. Only letters, '
+            'digits and the characters `-`, `.` and `_` are allowed'.format(
+                label_key)
+        )
+
+    parsed_label_value = unicodedata.normalize('NFKC', label_value).casefold()
+    if any(char in parsed_label_value for char in ['"', '\n', '\t']):
+        raise manager_exceptions.BadParametersError(
+            'The label\'s value {0} contains illegal characters. `"`, `\\n` '
+            'and `\\t` are not allowed'.format(label_value)
+        )
+
+    return label_key.casefold(), parsed_label_value
 
 
 def get_labels_from_plan(plan, labels_entry):
