@@ -15,7 +15,6 @@
 
 import uuid
 from builtins import staticmethod
-from datetime import datetime
 
 from flask import request
 from flask_restful.inputs import boolean
@@ -32,7 +31,7 @@ from cloudify.deployment_dependencies import (create_deployment_dependency,
 from manager_rest import utils, manager_exceptions
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
-from manager_rest.storage import models, get_storage_manager, db
+from manager_rest.storage import models, get_storage_manager
 from manager_rest.manager_exceptions import (
     DeploymentEnvironmentCreationInProgressError,
     DeploymentCreationError,
@@ -575,21 +574,19 @@ class DeploymentGroupsId(SecuredResource):
             'deployments_from_group': {'optional': True},
         })
         sm = get_storage_manager()
-        try:
-            group = sm.get(models.DeploymentGroup, group_id)
-        except manager_exceptions.NotFoundError:
-            group = models.DeploymentGroup(
-                id=group_id,
-                description=request_dict.get('description'),
-                created_at=datetime.now()
-            )
         with sm.transaction():
+            try:
+                group = sm.get(models.DeploymentGroup, group_id)
+            except manager_exceptions.NotFoundError:
+                group = models.DeploymentGroup(id=group_id)
+                sm.put(group)
             self._set_group_attributes(sm, group, request_dict)
-            sm.put(group)
-        if self._is_overriding_deployments(request_dict):
-            group.deployments.clear()
-        self._add_group_deployments(sm, group, request_dict)
-        db.session.commit()
+            if request_dict.get('labels') is not None:
+                self._set_group_labels(sm, group, request_dict['labels'])
+            if self._is_overriding_deployments(request_dict):
+                group.deployments.clear()
+            self._add_group_deployments(sm, group, request_dict)
+        self._create_new_deployments(sm, group, request_dict)
         return group
 
     def _is_overriding_deployments(self, request_dict):
@@ -610,14 +607,19 @@ class DeploymentGroupsId(SecuredResource):
             'remove': {'optional': True},
         })
         sm = get_storage_manager()
-        group = sm.get(models.DeploymentGroup, group_id)
-        self._set_group_attributes(sm, group, request_dict)
-        sm.put(group)
+        with sm.transaction():
+            group = sm.get(models.DeploymentGroup, group_id)
+            self._set_group_attributes(sm, group, request_dict)
+            sm.put(group)
+            if request_dict.get('labels') is not None:
+                self._set_group_labels(sm, group, request_dict['labels'])
+            if request_dict.get('add'):
+                self._add_group_deployments(sm, group, request_dict['add'])
+            if request_dict.get('remove'):
+                self._remove_group_deployments(
+                    sm, group, request_dict['remove'])
         if request_dict.get('add'):
-            self._add_group_deployments(sm, group, request_dict['add'])
-        if request_dict.get('remove'):
-            self._remove_group_deployments(sm, group, request_dict['remove'])
-        db.session.commit()
+            self._create_new_deployments(sm, group, request_dict['add'])
         return group
 
     def _set_group_attributes(self, sm, group, request_dict):
@@ -634,19 +636,62 @@ class DeploymentGroupsId(SecuredResource):
             group.default_blueprint = sm.get(
                 models.Blueprint, request_dict['blueprint_id'])
 
-        if request_dict.get('labels'):
-            rm = get_resource_manager()
-            rm.update_resource_labels(
-                models.DeploymentGroupLabel,
-                group,
-                rest_utils.get_labels_list(request_dict['labels'])
-            )
+    def _set_group_labels(self, sm, group, raw_labels):
+        rm = get_resource_manager()
+        new_labels = set(rest_utils.get_labels_list(raw_labels))
+        labels_to_create = rm.get_labels_to_create(group, new_labels)
+        labels_to_delete = {label for label in group.labels
+                            if (label.key, label.value) not in new_labels}
+
+        self._create_deployments_labels(
+            sm, rm, group.deployments, labels_to_create)
+        self._delete_deployments_labels(
+            sm, group.deployments, labels_to_delete)
+        rm.create_resource_labels(
+            models.DeploymentGroupLabel, group, labels_to_create)
+        for label in labels_to_delete:
+            sm.delete(label)
+
+    def _create_deployments_labels(self, sm, rm, deployments,
+                                   labels_to_create):
+        """Bulk create the labels for the given deployments"""
+        deployment_ids = [d._storage_id for d in deployments]
+        for key, value in labels_to_create:
+            existing_labels = sm.list(models.DeploymentLabel, filters={
+                    'key': key,
+                    'value': value,
+                    '_labeled_model_fk': deployment_ids
+            }, get_all_results=True)
+            skip_deployments = {
+                label._labeled_model_fk for label in existing_labels
+            }
+
+            for dep in deployments:
+                if dep._storage_id in skip_deployments:
+                    continue
+                rm.create_resource_labels(
+                    models.DeploymentLabel, dep, [(key, value)])
+
+    def _delete_deployments_labels(self, sm, deployments, labels_to_delete):
+        """Bulk delete the labels for the given deployments."""
+        deployment_ids = [d._storage_id for d in deployments]
+        for label in labels_to_delete:
+            dep_labels = sm.list(models.DeploymentLabel, filters={
+                'key': label.key,
+                'value': label.value,
+                '_labeled_model_fk': deployment_ids
+            }, get_all_results=True)
+            for dep_label in dep_labels:
+                sm.delete(dep_label)
 
     def _add_group_deployments(self, sm, group, request_dict):
+        rm = get_resource_manager()
+        group_labels = [(label.key, label.value) for label in group.labels]
         deployment_ids = request_dict.get('deployment_ids')
         if deployment_ids is not None:
             deployments = [sm.get(models.Deployment, dep_id)
                            for dep_id in deployment_ids]
+            self._create_deployments_labels(sm, rm, deployments, group_labels)
             for dep in deployments:
                 group.deployments.append(dep)
 
@@ -657,25 +702,27 @@ class DeploymentGroupsId(SecuredResource):
                 filter_rules=get_filter_rules_from_filter_id(
                     filter_id, models.DeploymentsFilter)
             )
+            self._create_deployments_labels(sm, rm, deployments, group_labels)
             for dep in deployments:
                 group.deployments.append(dep)
-
-        new_deployments = request_dict.get('new_deployments') or []
-        if new_deployments:
-            if not group.default_blueprint:
-                raise manager_exceptions.ConflictError(
-                    'Cannot create deployments: group {0} has no '
-                    'default blueprint set'.format(group.id))
-            self._create_new_deployments(sm, group, new_deployments)
 
         add_group = request_dict.get('deployments_from_group')
         if add_group:
             group_to_clone = sm.get(models.DeploymentGroup, add_group)
+            self._create_deployments_labels(
+                sm, rm, group_to_clone.deployments, group_labels)
             group.deployments += group_to_clone.deployments
 
-    def _create_new_deployments(self, sm, group, new_deployments):
+    def _create_new_deployments(self, sm, group, request_dict):
         """Create new deployments for the group based on new_deployments"""
         rm = get_resource_manager()
+        new_deployments = request_dict.get('new_deployments')
+        if not new_deployments:
+            return
+        if not group.default_blueprint:
+            raise manager_exceptions.ConflictError(
+                'Cannot create deployments: group {0} has no '
+                'default blueprint set'.format(group.id))
         with sm.transaction():
             group_labels = [(label.key, label.value) for label in group.labels]
             deployment_count = len(group.deployments)
