@@ -579,11 +579,7 @@ class DeploymentGroupsId(SecuredResource):
             try:
                 group = sm.get(models.DeploymentGroup, group_id)
             except manager_exceptions.NotFoundError:
-                group = models.DeploymentGroup(
-                    id=group_id,
-                    description=request_dict.get('description'),
-                    created_at=datetime.now()
-                )
+                group = models.DeploymentGroup(id=group_id)
                 sm.put(group)
             self._set_group_attributes(sm, group, request_dict)
             if request_dict.get('labels') is not None:
