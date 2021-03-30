@@ -645,12 +645,31 @@ class DeploymentGroupsId(SecuredResource):
         labels_to_delete = {label for label in group.labels
                             if (label.key, label.value) not in new_labels}
 
+        self._create_deployments_labels(
+            sm, rm, group.deployments, labels_to_create)
         self._delete_deployments_labels(
             sm, group.deployments, labels_to_delete)
         rm.create_resource_labels(
             models.DeploymentGroupLabel, group, labels_to_create)
         for label in labels_to_delete:
             sm.delete(label)
+
+    def _create_deployments_labels(self, sm, rm, deployments, labels_to_create):
+        """Bulk create the labels for the given deployments"""
+        deployment_ids = [d._storage_id for d in deployments]
+        for key, value in labels_to_create:
+            existing_labels = sm.list(models.DeploymentLabel, filters={
+                    'key': key,
+                    'value': value,
+                    '_labeled_model_fk': deployment_ids
+            }, get_all_results=True)
+            skip_deployments = {l._labeled_model_fk for l in existing_labels}
+
+            for dep in deployments:
+                if dep._storage_id in skip_deployments:
+                    continue
+                rm.create_resource_labels(
+                    models.DeploymentLabel, dep, [(key, value)])
 
     def _delete_deployments_labels(self, sm, deployments, labels_to_delete):
         """Bulk delete the labels for the given deployments."""

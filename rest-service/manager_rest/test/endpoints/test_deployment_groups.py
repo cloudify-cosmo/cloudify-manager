@@ -457,6 +457,36 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         assert group.labels == []
         client_dep = self.client.deployments.get(dep_id)
         assert client_dep.labels == []
+
+    def test_add_group_label(self):
+        self.client.deployments.update_labels('dep1', [{'label1': 'value1'}])
+        group = self.client.deployment_groups.put(
+            'group1',
+            deployment_ids=['dep1'],
+        )
+        self.client.deployment_groups.put(
+            'group1',
+            labels=[{'label2': 'value2'}],
+        )
+        dep_id = group.deployment_ids[0]
+        client_dep = self.client.deployments.get(dep_id)
+        dep = self.sm.get(models.Deployment, dep_id)
+        self.assert_resource_labels(client_dep.labels, [
+            {'label1': 'value1'}, {'label2': 'value2'}
+        ])
+
+    def test_add_labels_already_exist(self):
+        self.client.deployments.update_labels('dep1', [{'label2': 'value2'}])
+        group = self.client.deployment_groups.put(
+            'group1',
+            deployment_ids=['dep1'],
+        )
+        self.client.deployment_groups.put(  # doesn't throw
+            'group1',
+            labels=[{'label2': 'value2'}],
+        )
+
+
 @mock.patch(
     'manager_rest.rest.resources_v3_1.executions.workflow_sendhandler',
     mock.Mock()
