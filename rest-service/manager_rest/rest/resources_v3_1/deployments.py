@@ -15,7 +15,6 @@
 
 import uuid
 from builtins import staticmethod
-from datetime import datetime
 
 from flask import request
 from flask_restful.inputs import boolean
