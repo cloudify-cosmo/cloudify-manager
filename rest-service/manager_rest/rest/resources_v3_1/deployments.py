@@ -634,13 +634,31 @@ class DeploymentGroupsId(SecuredResource):
             group.default_blueprint = sm.get(
                 models.Blueprint, request_dict['blueprint_id'])
 
-        if request_dict.get('labels'):
-            rm = get_resource_manager()
-            rm.update_resource_labels(
-                models.DeploymentGroupLabel,
-                group,
-                rest_utils.get_labels_list(request_dict['labels'])
-            )
+        if request_dict.get('labels') is not None:
+            self._set_group_labels(
+                sm, group,
+                set(rest_utils.get_labels_list(request_dict['labels'])))
+
+    def _set_group_labels(self, sm, group, new_labels):
+        rm = get_resource_manager()
+        labels_to_create = rm.get_labels_to_create(group, new_labels)
+        labels_to_delete = {label for label in group.labels
+                            if (label.key, label.value) not in new_labels}
+
+        deployment_ids = [d._storage_id for d in group.deployments]
+        rm.create_resource_labels(
+            models.DeploymentGroupLabel, group, labels_to_create)
+
+        for label in labels_to_delete:
+            dep_labels = sm.list(models.DeploymentLabel, filters={
+                'key': label.key,
+                'value': label.value,
+                '_labeled_model_fk': deployment_ids
+            }, get_all_results=True)
+            for dep_label in dep_labels:
+                sm.delete(dep_label)
+            sm.delete(label)
+
 
     def _add_group_deployments(self, sm, group, request_dict):
         deployment_ids = request_dict.get('deployment_ids')

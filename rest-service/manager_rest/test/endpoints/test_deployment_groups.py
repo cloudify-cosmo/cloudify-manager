@@ -437,7 +437,26 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             {'label3': 'value4'},
         ])
 
+    def test_delete_group_label(self):
+        group = self.client.deployment_groups.put(
+            'group1',
+            labels=[{'label1': 'value1'}],
+            blueprint_id='blueprint',
+            new_deployments=[{}],
+        )
+        dep_id = group.deployment_ids[0]
+        dep = self.sm.get(models.Deployment, dep_id)
+        self.create_deployment_environment(dep)
+        client_dep = self.client.deployments.get(dep_id)
+        self.assert_resource_labels(client_dep.labels, [{'label1': 'value1'}])
 
+        group = self.client.deployment_groups.put(
+            'group1',
+            labels=[]
+        )
+        assert group.labels == []
+        client_dep = self.client.deployments.get(dep_id)
+        assert client_dep.labels == []
 @mock.patch(
     'manager_rest.rest.resources_v3_1.executions.workflow_sendhandler',
     mock.Mock()
