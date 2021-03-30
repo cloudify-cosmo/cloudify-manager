@@ -586,11 +586,10 @@ class DeploymentGroupsId(SecuredResource):
         with sm.transaction():
             self._set_group_attributes(sm, group, request_dict)
             sm.put(group)
-        if self._is_overriding_deployments(request_dict):
-            group.deployments.clear()
-        self._add_group_deployments(sm, group, request_dict)
+            if self._is_overriding_deployments(request_dict):
+                group.deployments.clear()
+            self._add_group_deployments(sm, group, request_dict)
         self._create_new_deployments(sm, group, request_dict)
-        db.session.commit()
         return group
 
     def _is_overriding_deployments(self, request_dict):
@@ -611,15 +610,16 @@ class DeploymentGroupsId(SecuredResource):
             'remove': {'optional': True},
         })
         sm = get_storage_manager()
-        group = sm.get(models.DeploymentGroup, group_id)
-        self._set_group_attributes(sm, group, request_dict)
-        sm.put(group)
+        with sm.transaction():
+            group = sm.get(models.DeploymentGroup, group_id)
+            self._set_group_attributes(sm, group, request_dict)
+            sm.put(group)
+            if request_dict.get('add'):
+                self._add_group_deployments(sm, group, request_dict['add'])
+            if request_dict.get('remove'):
+                self._remove_group_deployments(sm, group, request_dict['remove'])
         if request_dict.get('add'):
-            self._add_group_deployments(sm, group, request_dict['add'])
             self._create_new_deployments(sm, group, request_dict['add'])
-        if request_dict.get('remove'):
-            self._remove_group_deployments(sm, group, request_dict['remove'])
-        db.session.commit()
         return group
 
     def _set_group_attributes(self, sm, group, request_dict):
@@ -688,32 +688,31 @@ class DeploymentGroupsId(SecuredResource):
     def _add_group_deployments(self, sm, group, request_dict):
         rm = get_resource_manager()
         group_labels = [(l.key, l.value) for l in group.labels]
-        with sm.transaction():
-            deployment_ids = request_dict.get('deployment_ids')
-            if deployment_ids is not None:
-                deployments = [sm.get(models.Deployment, dep_id)
-                               for dep_id in deployment_ids]
-                self._create_deployments_labels(sm, rm, deployments, group_labels)
-                for dep in deployments:
-                    group.deployments.append(dep)
+        deployment_ids = request_dict.get('deployment_ids')
+        if deployment_ids is not None:
+            deployments = [sm.get(models.Deployment, dep_id)
+                           for dep_id in deployment_ids]
+            self._create_deployments_labels(sm, rm, deployments, group_labels)
+            for dep in deployments:
+                group.deployments.append(dep)
 
-            filter_id = request_dict.get('filter_id')
-            if filter_id is not None:
-                deployments = sm.list(
-                    models.Deployment,
-                    filter_rules=get_filter_rules_from_filter_id(
-                        filter_id, models.DeploymentsFilter)
-                )
-                self._create_deployments_labels(sm, rm, deployments, group_labels)
-                for dep in deployments:
-                    group.deployments.append(dep)
+        filter_id = request_dict.get('filter_id')
+        if filter_id is not None:
+            deployments = sm.list(
+                models.Deployment,
+                filter_rules=get_filter_rules_from_filter_id(
+                    filter_id, models.DeploymentsFilter)
+            )
+            self._create_deployments_labels(sm, rm, deployments, group_labels)
+            for dep in deployments:
+                group.deployments.append(dep)
 
-            add_group = request_dict.get('deployments_from_group')
-            if add_group:
-                group_to_clone = sm.get(models.DeploymentGroup, add_group)
-                self._create_deployments_labels(
-                    sm, rm, group_to_clone.deployments, group_labels)
-                group.deployments += group_to_clone.deployments
+        add_group = request_dict.get('deployments_from_group')
+        if add_group:
+            group_to_clone = sm.get(models.DeploymentGroup, add_group)
+            self._create_deployments_labels(
+                sm, rm, group_to_clone.deployments, group_labels)
+            group.deployments += group_to_clone.deployments
 
     def _create_new_deployments(self, sm, group, request_dict):
         """Create new deployments for the group based on new_deployments"""
