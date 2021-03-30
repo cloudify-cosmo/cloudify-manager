@@ -99,7 +99,8 @@ class SQLStorageManager(object):
 
         self._in_transaction = True
         try:
-            yield
+            with db.session.no_autoflush:
+                yield
         except Exception:
             self._in_transaction = False
             db.session.rollback()
