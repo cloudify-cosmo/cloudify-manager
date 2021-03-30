@@ -475,15 +475,18 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         ])
 
     def test_add_labels_already_exist(self):
-        self.client.deployments.update_labels('dep1', [{'label2': 'value2'}])
+        labels = [{'label2': 'value2'}]
+        self.client.deployments.update_labels('dep1', labels)
         self.client.deployment_groups.put(
             'group1',
             deployment_ids=['dep1'],
         )
         self.client.deployment_groups.put(  # doesn't throw
             'group1',
-            labels=[{'label2': 'value2'}],
+            labels=labels,
         )
+        dep = self.client.deployments.get('dep1')
+        self.assert_resource_labels(dep.labels, labels)
 
     def test_add_labels_to_added_deployments(self):
         """Group labels are applied to deps added to the group"""
