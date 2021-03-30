@@ -438,27 +438,26 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         ])
 
     def test_delete_group_label(self):
-        group = self.client.deployment_groups.put(
+        """Deleting a label from the group, deletes it from its deps"""
+        self.client.deployments.update_labels('dep1', [{'label1': 'value1'}])
+        self.client.deployment_groups.put(
             'group1',
             labels=[{'label1': 'value1'}],
-            blueprint_id='blueprint',
-            new_deployments=[{}],
         )
-        dep_id = group.deployment_ids[0]
-        dep = self.sm.get(models.Deployment, dep_id)
-        self.create_deployment_environment(dep)
-        client_dep = self.client.deployments.get(dep_id)
-        self.assert_resource_labels(client_dep.labels, [{'label1': 'value1'}])
-
+        self.client.deployment_groups.put(
+            'group1',
+            deployment_ids=['dep1']
+        )
         group = self.client.deployment_groups.put(
             'group1',
             labels=[]
         )
         assert group.labels == []
-        client_dep = self.client.deployments.get(dep_id)
+        client_dep = self.client.deployments.get('dep1')
         assert client_dep.labels == []
 
     def test_add_group_label(self):
+        """Adding a label to a group with deps, adds it to the deps"""
         self.client.deployments.update_labels('dep1', [{'label1': 'value1'}])
         group = self.client.deployment_groups.put(
             'group1',
