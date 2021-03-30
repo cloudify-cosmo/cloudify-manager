@@ -161,6 +161,7 @@ class DeploymentsId(resources_v1.DeploymentsId):
         blueprint = sm.get(models.Blueprint, blueprint_id)
         site_name = _get_site_name(request_dict)
         site = sm.get(models.Site, site_name) if site_name else None
+        labels = rest_utils.get_labels_list(request_dict.get('labels', []))
         rm.cleanup_failed_deployment(deployment_id)
         deployment = rm.create_deployment(
             blueprint,
@@ -172,7 +173,6 @@ class DeploymentsId(resources_v1.DeploymentsId):
             runtime_only_evaluation=request_dict.get(
                 'runtime_only_evaluation', False),
         )
-        labels = rest_utils.get_labels_list(request_dict.get('labels', []))
         try:
             rm.execute_workflow(deployment.make_create_environment_execution(
                 inputs=request_dict.get('inputs', {}),
