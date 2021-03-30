@@ -586,6 +586,8 @@ class DeploymentGroupsId(SecuredResource):
         with sm.transaction():
             self._set_group_attributes(sm, group, request_dict)
             sm.put(group)
+            if request_dict.get('labels') is not None:
+                self._set_group_labels(sm, group, request_dict['labels'])
             if self._is_overriding_deployments(request_dict):
                 group.deployments.clear()
             self._add_group_deployments(sm, group, request_dict)
@@ -614,6 +616,8 @@ class DeploymentGroupsId(SecuredResource):
             group = sm.get(models.DeploymentGroup, group_id)
             self._set_group_attributes(sm, group, request_dict)
             sm.put(group)
+            if request_dict.get('labels') is not None:
+                self._set_group_labels(sm, group, request_dict['labels'])
             if request_dict.get('add'):
                 self._add_group_deployments(sm, group, request_dict['add'])
             if request_dict.get('remove'):
@@ -636,13 +640,9 @@ class DeploymentGroupsId(SecuredResource):
             group.default_blueprint = sm.get(
                 models.Blueprint, request_dict['blueprint_id'])
 
-        if request_dict.get('labels') is not None:
-            self._set_group_labels(
-                sm, group,
-                set(rest_utils.get_labels_list(request_dict['labels'])))
-
-    def _set_group_labels(self, sm, group, new_labels):
+    def _set_group_labels(self, sm, group, raw_labels):
         rm = get_resource_manager()
+        new_labels = set(rest_utils.get_labels_list(raw_labels))
         labels_to_create = rm.get_labels_to_create(group, new_labels)
         labels_to_delete = {label for label in group.labels
                             if (label.key, label.value) not in new_labels}
