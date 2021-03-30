@@ -48,6 +48,13 @@ states_except_private.remove('private')
 VISIBILITY_EXCEPT_PRIVATE = states_except_private
 
 
+class BadLabelsList(manager_exceptions.BadParametersError):
+    def __init__(self):
+        super().__init__(
+            'Labels must be a list of 1-entry dictionaries: '
+            '[{<key1>: <value1>}, {<key2>: [<value2>, <value3>]}, ...]')
+
+
 @contextmanager
 def skip_nested_marshalling():
     request.__skip_marshalling = True
@@ -857,7 +864,7 @@ def get_labels_list(raw_labels_list):
     labels_list = []
     for label in raw_labels_list:
         if (not isinstance(label, dict)) or len(label) != 1:
-            _raise_bad_labels_list()
+            raise BadLabelsList()
 
         [(key, raw_value)] = label.items()
         values_list = raw_value if isinstance(raw_value, list) else [raw_value]
@@ -872,7 +879,7 @@ def get_labels_list(raw_labels_list):
 def _parse_label(label_key, label_value):
     if ((not isinstance(label_key, text_type)) or
             (not isinstance(label_value, text_type))):
-        _raise_bad_labels_list()
+        raise BadLabelsList()
 
     if len(label_key) > 256 or len(label_value) > 256:
         raise manager_exceptions.BadParametersError(
@@ -882,9 +889,9 @@ def _parse_label(label_key, label_value):
 
     if urlquote(label_key, safe='') != label_key:
         raise manager_exceptions.BadParametersError(
-            'The label\'s key {0} contains illegal characters. Only letters, '
-            'digits and the characters `-`, `.` and `_` are allowed'.format(
-                label_key)
+            f'The label\'s key `{label_key}` contains illegal characters. '
+            f'Only letters, digits and the characters `-`, `.` and '
+            f'`_` are allowed'
         )
 
     parsed_label_key = label_key.lower()
@@ -892,15 +899,16 @@ def _parse_label(label_key, label_value):
 
     if (parsed_label_key.startswith(CFY_LABELS_PREFIX) and
             parsed_label_key not in CFY_LABELS):
+        allowed_cfy_labels = ', '.join(CFY_LABELS)
         raise manager_exceptions.BadParametersError(
-            'All labels with a `{0}` prefix are reserved for internal use. '
-            'Allowed `{0}` prefixed labels are: {1}'.format(
-                CFY_LABELS_PREFIX, ', '.join(CFY_LABELS)))
+            f'All labels with a `{CFY_LABELS_PREFIX}` prefix are reserved for '
+            f'internal use. Allowed `{CFY_LABELS_PREFIX}` prefixed labels '
+            f'are: {allowed_cfy_labels}')
 
     if any(char in parsed_label_value for char in ['"', '\n', '\t']):
         raise manager_exceptions.BadParametersError(
-            'The label\'s value {0} contains illegal characters. `"`, `\\n` '
-            'and `\\t` are not allowed'.format(label_value)
+            f'The label\'s value `{label_value}` contains illegal characters. '
+            f'`"`, `\\n` and `\\t` are not allowed'
         )
 
     return parsed_label_key, parsed_label_value
@@ -914,12 +922,6 @@ def get_labels_from_plan(plan, labels_entry):
         return get_labels_list(raw_plan_labels_list)
 
     return []
-
-
-def _raise_bad_labels_list():
-    raise manager_exceptions.BadParametersError(
-        'Labels must be a list of 1-entry dictionaries: '
-        '[{<key1>: <value1>}, {<key2>: [<value2>, <value3>]}, ...]')
 
 
 def test_unique_labels(labels_list):
