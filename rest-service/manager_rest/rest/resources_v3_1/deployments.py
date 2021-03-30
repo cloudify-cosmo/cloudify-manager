@@ -684,10 +684,14 @@ class DeploymentGroupsId(SecuredResource):
                 sm.delete(dep_label)
 
     def _add_group_deployments(self, sm, group, request_dict):
+        rm = get_resource_manager()
+        group_labels = [(l.key, l.value) for l in group.labels]
+
         deployment_ids = request_dict.get('deployment_ids')
         if deployment_ids is not None:
             deployments = [sm.get(models.Deployment, dep_id)
                            for dep_id in deployment_ids]
+            self._create_deployments_labels(sm, rm, deployments, group_labels)
             for dep in deployments:
                 group.deployments.append(dep)
 
@@ -698,6 +702,7 @@ class DeploymentGroupsId(SecuredResource):
                 filter_rules=get_filter_rules_from_filter_id(
                     filter_id, models.DeploymentsFilter)
             )
+            self._create_deployments_labels(sm, rm, deployments, group_labels)
             for dep in deployments:
                 group.deployments.append(dep)
 
@@ -712,6 +717,8 @@ class DeploymentGroupsId(SecuredResource):
         add_group = request_dict.get('deployments_from_group')
         if add_group:
             group_to_clone = sm.get(models.DeploymentGroup, add_group)
+            self._create_deployments_labels(
+                sm, rm, group_to_clone.deployments, group_labels)
             group.deployments += group_to_clone.deployments
 
     def _create_new_deployments(self, sm, group, new_deployments):

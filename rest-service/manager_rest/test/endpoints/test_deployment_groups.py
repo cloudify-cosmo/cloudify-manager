@@ -485,6 +485,37 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             labels=[{'label2': 'value2'}],
         )
 
+    def test_add_labels_to_added_deployments(self):
+        """Group labels are applied to deps added to the group"""
+        labels = [{'label1': 'value1'}]
+        self.client.deployment_groups.put(
+            'group1',
+            labels=labels,
+        )
+        self.client.deployment_groups.put(
+            'group2',
+            deployment_ids=['dep1']
+        )
+        filter_labels = [{'label': 'filter'}]
+        self.client.deployments.update_labels('dep2', filter_labels)
+        self.client.deployments_filters.create('filter1', [
+            {'key': 'label', 'values': ['filter'],
+             'operator': 'any_of', 'type': 'label'}
+        ])
+        self.client.deployments.create('blueprint', 'dep3')
+        self.client.deployment_groups.put(
+            'group1',
+            # add a deployment using all 3 ways: by id, by clone, by filter
+            deployments_from_group=['group2'],  # dep1
+            filter_id='filter1',  # dep2
+            deployment_ids=['dep3'],
+        )
+        dep1 = self.client.deployments.get('dep1')
+        self.assert_resource_labels(dep1.labels, labels)
+        dep2 = self.client.deployments.get('dep2')
+        self.assert_resource_labels(dep2.labels, labels + filter_labels)
+        dep3 = self.client.deployments.get('dep3')
+        self.assert_resource_labels(dep3.labels, labels)
 
 @mock.patch(
     'manager_rest.rest.resources_v3_1.executions.workflow_sendhandler',
