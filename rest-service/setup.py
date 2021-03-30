@@ -26,7 +26,7 @@ install_requires = [
     'cloudify-common==5.3.0.dev1',
     'requests>=2.7.0,<3.0.0',
     'gunicorn==20.0.4',
-    'pyyaml==5.3.1',
+    'pyyaml==5.4.1',
     'psutil==5.7.2',
     'virtualenv==15.1.0',
     'wagon>=0.9.1',
