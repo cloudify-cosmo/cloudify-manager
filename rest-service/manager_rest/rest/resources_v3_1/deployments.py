@@ -32,7 +32,7 @@ from cloudify.deployment_dependencies import (create_deployment_dependency,
 from manager_rest import utils, manager_exceptions
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
-from manager_rest.storage import models, get_storage_manager, db
+from manager_rest.storage import models, get_storage_manager
 from manager_rest.manager_exceptions import (
     DeploymentEnvironmentCreationInProgressError,
     DeploymentCreationError,
@@ -621,7 +621,8 @@ class DeploymentGroupsId(SecuredResource):
             if request_dict.get('add'):
                 self._add_group_deployments(sm, group, request_dict['add'])
             if request_dict.get('remove'):
-                self._remove_group_deployments(sm, group, request_dict['remove'])
+                self._remove_group_deployments(
+                    sm, group, request_dict['remove'])
         if request_dict.get('add'):
             self._create_new_deployments(sm, group, request_dict['add'])
         return group
@@ -656,7 +657,8 @@ class DeploymentGroupsId(SecuredResource):
         for label in labels_to_delete:
             sm.delete(label)
 
-    def _create_deployments_labels(self, sm, rm, deployments, labels_to_create):
+    def _create_deployments_labels(self, sm, rm, deployments,
+                                   labels_to_create):
         """Bulk create the labels for the given deployments"""
         deployment_ids = [d._storage_id for d in deployments]
         for key, value in labels_to_create:
@@ -665,7 +667,9 @@ class DeploymentGroupsId(SecuredResource):
                     'value': value,
                     '_labeled_model_fk': deployment_ids
             }, get_all_results=True)
-            skip_deployments = {l._labeled_model_fk for l in existing_labels}
+            skip_deployments = {
+                label._labeled_model_fk for label in existing_labels
+            }
 
             for dep in deployments:
                 if dep._storage_id in skip_deployments:
@@ -687,7 +691,7 @@ class DeploymentGroupsId(SecuredResource):
 
     def _add_group_deployments(self, sm, group, request_dict):
         rm = get_resource_manager()
-        group_labels = [(l.key, l.value) for l in group.labels]
+        group_labels = [(label.key, label.value) for label in group.labels]
         deployment_ids = request_dict.get('deployment_ids')
         if deployment_ids is not None:
             deployments = [sm.get(models.Deployment, dep_id)
