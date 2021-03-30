@@ -19,6 +19,12 @@ def _get_swagger_searches_parameters():
     return [
         {
             'in': 'query',
+            'name': '_include',
+            'type': 'string',
+            'required': 'false'
+        },
+        {
+            'in': 'query',
             'name': '_size',
             'type': 'integer',
             'required': 'false'
