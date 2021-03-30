@@ -575,17 +575,17 @@ class DeploymentGroupsId(SecuredResource):
             'deployments_from_group': {'optional': True},
         })
         sm = get_storage_manager()
-        try:
-            group = sm.get(models.DeploymentGroup, group_id)
-        except manager_exceptions.NotFoundError:
-            group = models.DeploymentGroup(
-                id=group_id,
-                description=request_dict.get('description'),
-                created_at=datetime.now()
-            )
         with sm.transaction():
+            try:
+                group = sm.get(models.DeploymentGroup, group_id)
+            except manager_exceptions.NotFoundError:
+                group = models.DeploymentGroup(
+                    id=group_id,
+                    description=request_dict.get('description'),
+                    created_at=datetime.now()
+                )
+                sm.put(group)
             self._set_group_attributes(sm, group, request_dict)
-            sm.put(group)
             if request_dict.get('labels') is not None:
                 self._set_group_labels(sm, group, request_dict['labels'])
             if self._is_overriding_deployments(request_dict):
