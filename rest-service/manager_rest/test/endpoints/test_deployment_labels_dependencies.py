@@ -258,11 +258,11 @@ class DeploymentLabelsDependenciesTest(BaseServerTestCase):
         self.assertEqual(deployment.sub_environments_count, 3)
 
     def test_add_sub_deployments_after_deployment_update(self):
-        deployment = self.put_deployment(
+        _, _, _, deployment = self.put_deployment(
             deployment_id='env',
             blueprint_id='env'
         )
-        deployment_1 = self.put_deployment(
+        _, _, _, deployment_1 = self.put_deployment(
             deployment_id='env_1',
             blueprint_id='env_1'
         )

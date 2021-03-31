@@ -250,9 +250,6 @@ class DeploymentUpdateManager(object):
             include_rel_order=True)
         dep_update.central_plugins_to_install = central_plugins_to_install
         dep_update.central_plugins_to_uninstall = central_plugins_to_uninstall
-        self.sm.update(dep_update)
-
-        # If this is a preview, no need to run workflow and update DB
         deployment = self.sm.get(models.Deployment, dep_update.deployment_id)
         labels_to_create = self._get_deployment_labels_to_create(dep_update)
         parents_labels = []
@@ -263,6 +260,8 @@ class DeploymentUpdateManager(object):
             rm.verify_deployment_parent_labels(
                 parents_labels, deployment.id
             )
+        self.sm.update(dep_update)
+        # If this is a preview, no need to run workflow and update DB
         if dep_update.preview:
             dep_update.state = STATES.PREVIEW
             dep_update.id = None
