@@ -444,7 +444,7 @@ def _modify_execution_schedules_table():
     op.create_index('execution_schedules_id__deployment_fk_idx',
                     'execution_schedules',
                     ['id', '_deployment_fk', '_tenant_id'],
-                    unique=False)
+                    unique=True)
     op.create_unique_constraint(op.f('execution_schedules_id_key'),
                                 'execution_schedules',
                                 ['id', '_deployment_fk', '_tenant_id'])
