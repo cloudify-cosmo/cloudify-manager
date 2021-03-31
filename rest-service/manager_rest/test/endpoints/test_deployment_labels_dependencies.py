@@ -257,6 +257,53 @@ class DeploymentLabelsDependenciesTest(BaseServerTestCase):
                                                  all_sub_deployments=False)
         self.assertEqual(deployment.sub_environments_count, 3)
 
+    def test_add_sub_deployments_after_deployment_update(self):
+        deployment = self.put_deployment(
+            deployment_id='env',
+            blueprint_id='env'
+        )
+        deployment_1 = self.put_deployment(
+            deployment_id='env_1',
+            blueprint_id='env_1'
+        )
+
+        self.assertEqual(deployment.sub_services_count, 0)
+        self.assertEqual(deployment.sub_services_count, 0)
+        self.assertEqual(deployment_1.sub_environments_count, 0)
+        self.assertEqual(deployment_1.sub_environments_count, 0)
+
+        self.put_deployment(deployment_id='sub_srv', blueprint_id='srv')
+        self.put_deployment_with_labels(
+            [
+                {
+                    'csys-obj-type': 'Environment',
+                }
+            ],
+            resource_id='sub_env'
+        )
+
+        self.put_blueprint(
+            blueprint_id='update_sub_srv',
+            blueprint_file_name='blueprint_with_parent_labels.yaml'
+        )
+        self.put_blueprint(
+            blueprint_id='update_sub_env',
+            blueprint_file_name='blueprint_with_parent_labels.yaml'
+        )
+
+        self.client.deployment_updates.update_with_existing_blueprint(
+            'sub_srv', blueprint_id='update_sub_srv'
+        )
+        self.client.deployment_updates.update_with_existing_blueprint(
+            'sub_env', blueprint_id='update_sub_env'
+        )
+        deployment = self.client.deployments.get('env')
+        deployment_1 = self.client.deployments.get('env_1')
+        self.assertEqual(deployment.sub_services_count, 1)
+        self.assertEqual(deployment.sub_services_count, 1)
+        self.assertEqual(deployment_1.sub_environments_count, 1)
+        self.assertEqual(deployment_1.sub_environments_count, 1)
+
     def test_create_deployment_labels_dependencies_graph(self):
         self._populate_deployment_labels_dependencies()
         dep_graph = RecursiveDeploymentLabelsDependencies(self.sm)
