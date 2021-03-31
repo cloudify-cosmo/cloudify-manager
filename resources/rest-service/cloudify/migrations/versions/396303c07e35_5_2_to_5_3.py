@@ -59,9 +59,11 @@ def upgrade():
     _create_deployment_labels_dependencies_table()
     _add_deployment_sub_statuses_and_counters()
     _create_depgroups_labels_table()
+    _add_users_show_getting_started()
 
 
 def downgrade():
+    _drop_users_show_getting_started()
     _drop_depgroups_labels_table()
     _drop_deployment_sub_statuses_and_counters()
     _drop_deployment_labels_dependencies_table()
@@ -821,3 +823,17 @@ def _drop_depgroups_labels_table():
         op.f('deployment_groups_labels__creator_id_idx'),
         table_name='deployment_groups_labels')
     op.drop_table('deployment_groups_labels')
+
+
+def _add_users_show_getting_started():
+    op.add_column(
+        'users',
+        sa.Column('show_getting_started',
+                  sa.Boolean(),
+                  nullable=False,
+                  default=True)
+    )
+
+
+def _drop_users_show_getting_started():
+    op.drop_column('users', 'show_getting_started')
