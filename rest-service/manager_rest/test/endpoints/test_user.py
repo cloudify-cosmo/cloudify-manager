@@ -35,3 +35,4 @@ class UserTestCase(base_test.BaseServerTestCase):
         self.assertEqual(1, result['tenants'])
         self.assertEqual(True, result['active'])
         self.assertEqual(False, result['is_locked'])
+        self.assertEqual(True, result['show_getting_started'])
