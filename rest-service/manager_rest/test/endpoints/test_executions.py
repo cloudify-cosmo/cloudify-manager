@@ -572,6 +572,34 @@ class ExecutionsTestCase(BaseServerTestCase):
             execution, ExecutionState.STARTED)
         self._modify_execution_status(execution.id, 'pending')
 
+    def test_dequeue_set_tenant(self):
+        """After dequeueing, current_tenant is kept intact"""
+        exec1 = self.sm.put(models.Execution(
+            id=str(uuid.uuid4()),
+            created_at=datetime.now(),
+            is_system_workflow=True,
+            workflow_id='delete_deployment_environment',
+            status=ExecutionState.STARTED,
+        ))
+        self.sm.put(models.Execution(
+            id=str(uuid.uuid4()),
+            created_at=datetime.now(),
+            is_system_workflow=True,
+            workflow_id='irrelevant',
+            status=ExecutionState.QUEUED,
+        ))
+
+        def _mock_delete(*a, **kw):
+            # if the tenant was not restored correctly, but to a proxy cycle
+            # (CYBL-1139), then this will throw
+            self.assertEqual(utils.current_tenant.name, 'default_tenant')
+
+        delete_dep_patch = 'manager_rest.resource_manager.'\
+                           'ResourceManager.delete_deployment'
+        with mock.patch(delete_dep_patch, side_effect=_mock_delete) as m:
+            self._modify_execution_status(exec1.id, 'terminated')
+            m.assert_called()
+
     def test_update_execution_status_with_error(self):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
