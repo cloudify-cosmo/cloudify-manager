@@ -75,6 +75,22 @@ class SearchesTestCase(base_test.BaseServerTestCase):
         self.assertEqual(deployments[0], dep1)
         self.assert_metadata_filtered(deployments, 1)
 
+    def test_searches_with_search_and_filter_rules(self):
+        _, _, _, dep1 = self.put_deployment(deployment_id='dep1',
+                                            blueprint_id='bp1')
+        self.put_deployment(deployment_id='dep2', blueprint_id='bp2')
+        filter_rules_bp1 = [
+            FilterRule('blueprint_id', ['bp1'], 'any_of', 'attribute'),
+            FilterRule('created_by', ['admin'], 'any_of', 'attribute')
+        ]
+        deployments = self.client.deployments.list(
+            filter_rules=filter_rules_bp1, _search='dep1')
+        self.assertEqual(len(deployments), 1)
+        self.assertEqual(deployments[0], dep1)
+        deployments = self.client.deployments.list(
+            filter_rules=filter_rules_bp1, _search='dep2')
+        self.assertEqual(len(deployments), 0)
+
     def test_searches_get_filter_rules(self):
         self.create_filter(self.client.deployments_filters, self.FILTER_ID,
                            self.FILTER_RULES)
