@@ -103,21 +103,35 @@ class UsersId(SecuredMultiTenancyResource):
     @rest_decorators.marshal_with(UserResponse)
     def post(self, username, multi_tenancy):
         """
-        Set password/role for a certain user
+        Alter settings (e.g. password/role) for a certain user
         """
         request_dict = rest_utils.get_json_and_verify_params()
         password = request_dict.get('password')
         role_name = request_dict.get('role')
+
+        user_flag_names = ['show_getting_started']
+        user_flags = {}
+        for flag_name in user_flag_names:
+            flag_value = request_dict.get(flag_name)
+            if flag_value is not None:
+                user_flags[flag_name] = \
+                    rest_utils.verify_and_convert_bool(flag_name, flag_value)
+
         if password:
             if role_name:
                 raise BadParametersError('Both `password` and `role` provided')
             password = rest_utils.validate_and_decode_password(password)
             return multi_tenancy.set_user_password(username, password)
-        elif role_name:
+        if role_name:
+            if password:
+                raise BadParametersError('Both `password` and `role` provided')
             rest_utils.verify_role(role_name, is_system_role=True)
             return multi_tenancy.set_user_role(username, role_name)
-        else:
-            raise BadParametersError('Neither `password` nor `role` provided')
+        if user_flags:
+            return multi_tenancy.set_user_flags(username, user_flags)
+        raise BadParametersError(
+            f'No valid user settings provided. Available settings: '
+            f'password, role, {", ".join(user_flag_names)}')
 
     @authorize('user_get')
     @rest_decorators.marshal_with(UserResponse)
