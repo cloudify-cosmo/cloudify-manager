@@ -599,20 +599,12 @@ class DeploymentGroupsId(SecuredResource):
     @rest_decorators.marshal_with(models.DeploymentGroup, force_get_data=True)
     def patch(self, group_id):
         request_dict = rest_utils.get_json_and_verify_params({
-            'description': {'optional': True},
-            'blueprint_id': {'optional': True},
-            'default_inputs': {'optional': True},
-            'visibility': {'optional': True},
             'add': {'optional': True},
             'remove': {'optional': True},
         })
         sm = get_storage_manager()
         with sm.transaction():
             group = sm.get(models.DeploymentGroup, group_id)
-            self._set_group_attributes(sm, group, request_dict)
-            sm.put(group)
-            if request_dict.get('labels') is not None:
-                self._set_group_labels(sm, group, request_dict['labels'])
             if request_dict.get('add'):
                 self._add_group_deployments(sm, group, request_dict['add'])
             if request_dict.get('remove'):
