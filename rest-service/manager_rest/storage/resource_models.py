@@ -1147,12 +1147,13 @@ class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
         This will only actually run executions up to the concurrency limit,
         and queue the rest.
         """
+        executions = self.executions  # only retrieve this once
         with sm.transaction():
-            for execution in self.executions[self.concurrency:]:
+            for execution in executions[self.concurrency:]:
                 execution.status = ExecutionState.QUEUED
                 sm.update(execution, modified_attrs=('status', ))
 
-        for execution in self.executions[:self.concurrency]:
+        for execution in executions[:self.concurrency]:
             rm.execute_workflow(
                 execution,
                 force=force,
