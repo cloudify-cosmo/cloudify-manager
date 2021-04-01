@@ -125,17 +125,12 @@ def create_filter_rules_list(raw_filter_rules: List[dict],
                                 f"Filter rule type must be one of "
                                 f"{', '.join(FILTER_RULE_TYPES)}")
 
-        value_msg_prefix = ('The filter rule value'
-                            if len(filter_rule_values) == 1 else
-                            'One of the filter rule values')
-
         for value in filter_rule_values:
             try:
                 if filter_rule_type == FilterRuleType.LABEL:
                     parse_label(filter_rule_key, value)
                 else:
-                    validate_inputs({'filter rule value': value},
-                                    err_prefix=value_msg_prefix)
+                    validate_inputs({"attributes' filter rule value": value})
             except BadParametersError as e:
                 raise BadFilterRule(filter_rule, str(e))
 
