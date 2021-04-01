@@ -113,6 +113,12 @@ def create_filter_rules_list(raw_filter_rules: List[dict],
                         f"{AttrsOperator.IS_NOT_EMPTY}")
             if filter_rule_key not in resource_model.allowed_filter_attrs:
                 raise BadFilterRule(filter_rule, err_attr_msg)
+            if (filter_rule_key == 'schedules' and
+                    filter_rule_operator != AttrsOperator.IS_NOT_EMPTY):
+                raise BadFilterRule(
+                    filter_rule,
+                    f"Filtering by deployment schedules is only possible with "
+                    f"the {AttrsOperator.IS_NOT_EMPTY} operator")
 
         else:
             raise BadFilterRule(filter_rule,
