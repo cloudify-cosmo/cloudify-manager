@@ -85,7 +85,7 @@ def _add_deployment_sub_statuses_and_counters():
             'sub_environments_count',
             sa.Integer(),
             nullable=False,
-            default=0,
+            server_default='0',
         )
     )
     op.add_column(
@@ -107,7 +107,7 @@ def _add_deployment_sub_statuses_and_counters():
             'sub_services_count',
             sa.Integer(),
             nullable=False,
-            default=0,
+            server_default='0',
         )
     )
     op.add_column(
