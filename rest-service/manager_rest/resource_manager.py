@@ -933,7 +933,7 @@ class ResourceManager(object):
         and re-run it with the correct workflow executor.
         :param execution: an execution DB object
         """
-        current_tenant = utils.current_tenant
+        current_tenant = utils.current_tenant._get_current_object()
         deployment = execution.deployment
         deployment_id = None
         if deployment:
