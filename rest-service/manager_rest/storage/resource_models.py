@@ -388,8 +388,10 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             DeploymentState.REQUIRE_ATTENTION,
             name='deployment_status'
         ))
-    sub_services_count = db.Column(db.Integer, nullable=False, default=0)
-    sub_environments_count = db.Column(db.Integer, nullable=False, default=0)
+    sub_services_count = db.Column(
+        db.Integer, nullable=False, server_default='0')
+    sub_environments_count = db.Column(
+        db.Integer, nullable=False, server_default='0')
     _blueprint_fk = foreign_key(Blueprint._storage_id)
     _site_fk = foreign_key(Site._storage_id,
                            nullable=True,
