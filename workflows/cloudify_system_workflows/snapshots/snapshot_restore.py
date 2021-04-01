@@ -155,6 +155,7 @@ class SnapshotRestore(object):
                 self._update_roles_and_permissions()
                 self._update_deployment_statuses()
                 self._update_node_instance_indices()
+                self._set_default_user_profile_flags()
 
             if self._restore_certificates:
                 self._restore_certificate()
@@ -270,6 +271,15 @@ class SnapshotRestore(object):
                     'from node_instances) u '
                     'where ni._storage_id = u._storage_id;'
                 )
+
+    def _set_default_user_profile_flags(self):
+        if self._snapshot_version < V_5_3_0:
+            ctx.logger.info(
+                'Disabling `getting started` for all existing users.')
+            users = self._client.users.list()
+            for user in users:
+                self._client.users.set_show_getting_started(user.username,
+                                                            False)
 
     def _generate_new_token(self):
         dir_path = os.path.dirname(os.path.realpath(__file__))
