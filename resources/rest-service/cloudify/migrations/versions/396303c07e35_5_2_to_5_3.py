@@ -831,7 +831,7 @@ def _add_users_show_getting_started():
         sa.Column('show_getting_started',
                   sa.Boolean(),
                   nullable=False,
-                  default=True)
+                  server_default='t')
     )
 
 
