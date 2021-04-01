@@ -55,9 +55,12 @@ from manager_rest.utils import (send_event,
                                 validate_deployment_and_site_visibility,
                                 extract_host_agent_plugins_from_plan)
 from manager_rest.rest.rest_utils import (
-    get_labels_from_plan, RecursiveDeploymentDependencies,
-    update_inter_deployment_dependencies, verify_blueprint_uploaded_state,
-    compute_rule_from_scheduling_params)
+    RecursiveDeploymentDependencies,
+    RecursiveDeploymentLabelsDependencies,
+    update_inter_deployment_dependencies,
+    verify_blueprint_uploaded_state,
+    compute_rule_from_scheduling_params,
+)
 from manager_rest.deployment_update.constants import STATES as UpdateStates
 from manager_rest.plugins_update.constants import STATES as PluginsUpdateStates
 
@@ -202,8 +205,13 @@ class ResourceManager(object):
         return res
 
     def start_queued_executions(self, finished_execution):
-        for execution in self._get_queued_executions(finished_execution):
-            execution.status = ExecutionState.PENDING
+        with self.sm.transaction():
+            to_run = list(self._get_queued_executions(finished_execution))
+            for execution in to_run:
+                execution.status = ExecutionState.PENDING
+                self.sm.update(execution)
+
+        for execution in to_run:
             if execution.is_system_workflow:
                 self._execute_system_workflow(execution, queue=True)
             else:
@@ -211,30 +219,57 @@ class ResourceManager(object):
 
     def _get_queued_executions(self, finished_execution):
         sort_by = {'created_at': 'asc'}
-        system_executions = self.sm.list(models.Execution, filters={
-            'status': ExecutionState.QUEUED_STATE,
-            'is_system_workflow': True,
-        }, sort=sort_by, get_all_results=True, all_tenants=True).items
+        system_executions = self.sm.list(
+            models.Execution, filters={
+                'status': ExecutionState.QUEUED_STATE,
+                'is_system_workflow': True,
+            },
+            sort=sort_by,
+            get_all_results=True,
+            all_tenants=True,
+            locking=True,
+        ).items
         if system_executions:
             yield system_executions[0]
             return
 
         if finished_execution.deployment:
             deployment_id = finished_execution.deployment.id
-            same_dep_executions = self.sm.list(models.Execution, filters={
-                'status': ExecutionState.QUEUED_STATE,
-                'deployment_id': deployment_id,
-            }, sort=sort_by, get_all_results=True, all_tenants=True).items
-            other_queued = self.sm.list(models.Execution, filters={
-                'status': ExecutionState.QUEUED_STATE,
-                'deployment_id': lambda col: col != deployment_id,
-            }, sort=sort_by, get_all_results=True, all_tenants=True).items
+            same_dep_executions = self.sm.list(
+                models.Execution,
+                filters={
+                    'status': ExecutionState.QUEUED_STATE,
+                    'deployment_id': deployment_id,
+                },
+                sort=sort_by,
+                get_all_results=True,
+                all_tenants=True,
+                locking=True,
+            ).items
+            other_queued = self.sm.list(
+                models.Execution,
+                filters={
+                    'status': ExecutionState.QUEUED_STATE,
+                    'deployment_id': lambda col: col != deployment_id,
+                },
+                sort=sort_by,
+                get_all_results=True,
+                all_tenants=True,
+                locking=True,
+            ).items
             queued_executions = same_dep_executions + other_queued
         else:
-            queued_executions = self.sm.list(models.Execution, filters={
-                'status': ExecutionState.QUEUED_STATE,
-                'is_system_workflow': False,
-            }, sort=sort_by, get_all_results=True, all_tenants=True).items
+            queued_executions = self.sm.list(
+                models.Execution,
+                filters={
+                    'status': ExecutionState.QUEUED_STATE,
+                    'is_system_workflow': False,
+                },
+                sort=sort_by,
+                get_all_results=True,
+                all_tenants=True,
+                locking=True,
+            ).items
 
         # {deployment: whether it can run executions}
         busy_deployments = {}
@@ -242,7 +277,7 @@ class ResourceManager(object):
         group_can_run = {}
         for execution in queued_executions:
             for group in execution.execution_groups:
-                if group.id not in group_can_run:
+                if group not in group_can_run:
                     group_can_run[group] = group.concurrency -\
                         len(group.currently_running_executions())
 
@@ -626,17 +661,10 @@ class ResourceManager(object):
 
         return self.sm.delete(blueprint)
 
-    def delete_deployment_environment(self, deployment_id,
-                                      bypass_maintenance=False, force=False,
-                                      delete_logs=False):
-        """Schedule deployment for deletion - delete environment.
-
-        Do validations and send the delete-dep-env workflow. The deployment
-        will be really actually deleted once that finishes.
-        """
-        deployment = self.sm.get(models.Deployment, deployment_id)
+    def check_deployment_delete(self, deployment, force=False):
+        """Check that deployment can be deleted"""
         executions = self.sm.list(models.Execution, filters={
-            'deployment_id': deployment_id,
+            'deployment_id': deployment.id,
             'status': (
                 ExecutionState.ACTIVE_STATES + ExecutionState.QUEUED_STATE
             )
@@ -659,7 +687,7 @@ class ResourceManager(object):
                 )
             else:
                 raise manager_exceptions.DependentExistsError(
-                    f"Can't delete deployment {deployment_id} - the following "
+                    f"Can't delete deployment {deployment.id} - the following "
                     f"existing installations depend on it:\n"
                     f"{deployment_dependencies}"
                 )
@@ -670,40 +698,24 @@ class ResourceManager(object):
                 if execution.status not in ExecutionState.END_STATES
             )
             raise manager_exceptions.DependentExistsError(
-                f"Can't delete deployment {deployment_id} - There are "
+                f"Can't delete deployment {deployment.id} - There are "
                 f"running or queued executions for this deployment. "
                 f"Running executions ids: {running_ids}"
             )
 
         if not force:
-            node_instances = self.sm.list(models.NodeInstance, filters={
-                'deployment_id': deployment_id
-            }, get_all_results=True)
             # validate either all nodes for this deployment are still
             # uninitialized or have been deleted
-            if any(node.state not in ('uninitialized', 'deleted') for node in
-                   node_instances):
-                existing_instances = ','.join(
-                    node.id for node in node_instances
-                    if node.state not in ('uninitialized', 'deleted')
-                )
+            node_instances = self.sm.list(models.NodeInstance, filters={
+                'deployment_id': deployment.id,
+                'state': lambda col: ~col.in_(['uninitialized', 'deleted']),
+            }, include=['id'], get_all_results=True)
+            if node_instances:
                 raise manager_exceptions.DependentExistsError(
-                    f"Can't delete deployment {deployment_id} - There are "
+                    f"Can't delete deployment {deployment.id} - There are "
                     f"live nodes for this deployment. Live nodes ids: "
-                    f"{existing_instances}"
+                    f"{ ','.join(ni.id for ni in node_instances) }"
                 )
-
-        execution = models.Execution(
-            workflow_id='delete_deployment_environment',
-            deployment=deployment,
-            status=ExecutionState.PENDING,
-            parameters={'delete_logs': delete_logs},
-        )
-        self.sm.put(execution)
-        self.execute_workflow(execution, bypass_maintenance=bypass_maintenance)
-        workflow_executor.delete_source_plugins(deployment.id)
-
-        return deployment
 
     def delete_deployment(self, deployment):
         """Delete the deployment.
@@ -902,13 +914,49 @@ class ResourceManager(object):
             and this is set, queue the execution. Otherwise, throw.
         """
         system_exec_running = self._check_for_active_system_wide_execution(
-            queue, execution)
+            execution, queue)
         if force or not execution.deployment:
             return system_exec_running
         else:
             execution_running = self._check_for_active_executions(
                 execution, queue)
             return system_exec_running or execution_running
+
+    def _check_for_active_executions(self, execution, queue):
+        running = self.list_executions(
+            filters={
+                'deployment_id': execution.deployment_id,
+                'id': lambda col: col != execution.id,
+                'status': lambda col: col.notin_(ExecutionState.END_STATES)
+            },
+            is_include_system_workflows=True
+        ).items
+
+        if not running:
+            return False
+        if queue or execution.scheduled_for:
+            return True
+        else:
+            raise manager_exceptions.ExistingRunningExecutionError(
+                f'The following executions are currently running for this '
+                f'deployment: {running}. To execute this workflow anyway, '
+                f'pass "force=true" as a query parameter to this request')
+
+    def _check_for_active_system_wide_execution(self, execution, queue):
+        executions = self.sm.list(models.Execution, filters={
+            'is_system_workflow': True,
+            'status': ExecutionState.ACTIVE_STATES,
+        }, get_all_results=True, all_tenants=True).items
+        if executions and queue:
+            return True
+        elif executions:
+            raise manager_exceptions.ExistingRunningExecutionError(
+                f'Cannot start an execution if there are running '
+                f'system-wide executions ('
+                f'{ ", ".join(e.id for e in executions) })'
+            )
+        else:
+            return False
 
     def _check_for_any_active_executions(self, execution, queue):
         filters = {
@@ -935,24 +983,6 @@ class ResourceManager(object):
                 .format(executions))
         else:
             return False
-
-    def _check_for_active_system_wide_execution(self, execution, queue):
-        should_queue = False
-        for e in self.sm.list(models.Execution, filters={
-                    'is_system_workflow': True,
-                    'status': ExecutionState.ACTIVE_STATES,
-                }, get_all_results=True, all_tenants=True).items:
-            # When `queue` or `schedule` options are used no need to
-            # raise an exception (the execution will run later)
-            if e.deployment_id is None and (queue or execution.scheduled_for):
-                should_queue = True
-                break
-            elif e.deployment_id is None:
-                raise manager_exceptions.ExistingRunningExecutionError(
-                    f'You cannot start an execution if there is a running '
-                    f'system-wide execution (id: {e.id})')
-
-        return should_queue
 
     @staticmethod
     def _system_workflow_modifies_db(wf_id):
@@ -1309,12 +1339,9 @@ class ResourceManager(object):
                           visibility,
                           skip_plugins_validation=False,
                           site=None,
-                          runtime_only_evaluation=False,
-                          labels=None):
+                          runtime_only_evaluation=False):
         verify_blueprint_uploaded_state(blueprint)
         plan = blueprint.plan
-        deployment_labels = self._handle_deployment_labels(labels, plan)
-
         visibility = self.get_resource_visibility(models.Deployment,
                                                   deployment_id,
                                                   visibility,
@@ -1356,26 +1383,105 @@ class ResourceManager(object):
             new_deployment.site = site
 
         self.sm.put(new_deployment)
-        self.create_resource_labels(models.DeploymentLabel,
-                                    new_deployment,
-                                    deployment_labels)
-
         return new_deployment
 
     def _finalize_create_deployment(self, deployment: models.Deployment):
         """This runs when create-deployment-environment finishes"""
         # RD-1602 will move this to the workflow:
         self._create_deployment_initial_dependencies(deployment)
-        # RD-1603 will move this:
-        self.create_deployment_schedules(deployment, deployment.blueprint.plan)
 
     @staticmethod
-    def _handle_deployment_labels(provided_labels, plan):
-        labels_list = get_labels_from_plan(plan, constants.LABELS)
-        if provided_labels:
-            labels_list.extend(label for label in provided_labels if label
-                               not in labels_list)
-        return labels_list
+    def get_deployment_parents_from_labels(labels):
+        parents = []
+        for label, value in labels:
+            if label == 'csys-obj-parent':
+                parents.append(value)
+        return parents
+
+    def verify_deployment_parent_labels(self, parents, deployment_id):
+        if not parents:
+            return
+        result = self.sm.list(
+            models.Deployment,
+            include=['id'],
+            filters={'id': lambda col: col.in_(parents)}
+        ).items
+        _existing_parents = [_parent[0] for _parent in result]
+        missing_parents = set(parents) - set(_existing_parents)
+        if missing_parents:
+            raise manager_exceptions.DeploymentParentNotFound(
+                'Deployment {0}: is referencing deployments'
+                ' using label `csys-obj-parent` that does not exist, '
+                'make sure that deployment(s) {1} exist before creating '
+                'deployment'.format(deployment_id, ','.join(missing_parents))
+            )
+
+    def _place_deployment_label_dependency(self, source, target):
+        self.sm.put(
+            models.DeploymentLabelsDependencies(
+                id=str(uuid.uuid4()),
+                source_deployment=source,
+                target_deployment=target,
+            )
+        )
+
+    def _remove_deployment_label_dependency(self, source, target):
+        dld = self.sm.get(
+                models.DeploymentLabelsDependencies,
+                None,
+                filters={
+                    'source_deployment': source,
+                    'target_deployment': target
+                }
+            )
+        self.sm.delete(dld)
+
+    def add_deployment_to_labels_graph(self, dep_graph, source, target_id):
+        self._place_deployment_label_dependency(
+            source,
+            self.sm.get(models.Deployment, target_id)
+        )
+        dep_graph.assert_no_cyclic_dependencies(
+            source.id, target_id
+        )
+        dep_graph.add_dependency_to_graph(source.id, target_id)
+        dep_graph.increase_deployment_counts_in_graph(
+            target_id,
+            source
+        )
+
+    def delete_deployment_from_labels_graph(self,
+                                            dep_graph,
+                                            source,
+                                            target_id):
+        dep_graph.decrease_deployment_counts_in_graph(target_id, source)
+        dep_graph.remove_dependency_from_graph(source.id, target_id)
+        self._remove_deployment_label_dependency(
+            source,
+            self.sm.get(
+                models.Deployment, target_id
+            )
+        )
+
+    def handle_deployment_labels_graph(self, parents, new_deployment):
+        if not parents:
+            return
+        parents_to_add = parents.setdefault('parents_to_add', {})
+        parents_to_remove = parents.setdefault('parents_to_remove', {})
+        dep_graph = RecursiveDeploymentLabelsDependencies(self.sm)
+        dep_graph.create_dependencies_graph()
+        for parent in parents_to_add:
+            self.add_deployment_to_labels_graph(
+                dep_graph,
+                new_deployment,
+                parent
+            )
+        for parent in parents_to_remove:
+            self.delete_deployment_from_labels_graph(
+                dep_graph,
+                new_deployment,
+                parent
+            )
 
     def install_plugin(self, plugin, manager_names=None, agent_names=None):
         """Send the plugin install task to the given managers or agents."""
@@ -1871,26 +1977,6 @@ class ResourceManager(object):
                 filters[key] = val
         return filters or None
 
-    def _check_for_active_executions(self, execution, queue):
-        running = self.list_executions(
-            filters={
-                'deployment_id': execution.deployment_id,
-                'id': lambda col: col != execution.id,
-                'status': lambda col: col.notin_(ExecutionState.END_STATES)
-            },
-            is_include_system_workflows=True
-        ).items
-
-        if not running:
-            return False
-        if queue or execution.scheduled_for:
-            return True
-        else:
-            raise manager_exceptions.ExistingRunningExecutionError(
-                f'The following executions are currently running for this '
-                f'deployment: {running}. To execute this workflow anyway, '
-                f'pass "force=true" as a query parameter to this request')
-
     @staticmethod
     def _get_only_user_execution_parameters(execution_parameters):
         return {k: v for k, v in execution_parameters.items()
@@ -2105,6 +2191,8 @@ class ResourceManager(object):
         return active_component_creator_deployment_ids
 
     def _workflow_queued(self, execution):
+        execution.status = ExecutionState.QUEUED
+        self.sm.update(execution)
         message_context = {
             'message_type': 'hook',
             'is_system_workflow': execution.is_system_workflow,
@@ -2223,21 +2311,25 @@ class ResourceManager(object):
         If a new label already exists, it won't be created again.
         If an existing label is not in the new labels list, it will be deleted.
         """
+        labels_to_create = self.get_labels_to_create(resource, new_labels)
 
         new_labels_set = set(new_labels)
-        existing_labels = resource.labels
-        existing_labels_tup = set(
-            (label.key, label.value) for label in existing_labels)
-
-        labels_to_create = new_labels_set - existing_labels_tup
-
-        for label in existing_labels:
+        for label in resource.labels:
             if (label.key, label.value) not in new_labels_set:
                 self.sm.delete(label)
 
         self.create_resource_labels(labels_resource_model,
                                     resource,
                                     labels_to_create)
+
+    @staticmethod
+    def get_labels_to_create(resource, new_labels):
+        new_labels_set = set(new_labels)
+        existing_labels = resource.labels
+        existing_labels_tup = set(
+            (label.key, label.value) for label in existing_labels)
+
+        return new_labels_set - existing_labels_tup
 
     def create_resource_labels(self,
                                labels_resource_model,
@@ -2254,7 +2346,7 @@ class ResourceManager(object):
         if not labels_list:
             return
 
-        current_time = utils.get_formatted_timestamp()
+        current_time = datetime.utcnow()
         for key, value in labels_list:
             new_label = {'key': key,
                          'value': value,
@@ -2264,6 +2356,8 @@ class ResourceManager(object):
                 new_label['deployment'] = resource
             elif labels_resource_model == models.BlueprintLabel:
                 new_label['blueprint'] = resource
+            elif labels_resource_model == models.DeploymentGroupLabel:
+                new_label['deployment_group'] = resource
 
             self.sm.put(labels_resource_model(**new_label))
 
@@ -2300,7 +2394,7 @@ class ResourceManager(object):
                                                                base_datetime)
             rule = compute_rule_from_scheduling_params({
                 'rrule': schedule.get('rrule'),
-                'frequency': schedule.get('recurring'),
+                'recurrence': schedule.get('recurrence'),
                 'weekdays': schedule.get('weekdays'),
                 'count': schedule.get('count')
             })

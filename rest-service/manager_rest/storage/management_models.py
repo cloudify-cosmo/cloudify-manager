@@ -304,6 +304,7 @@ class User(SQLModelBase, UserMixin):
     api_token_key = db.Column(db.String(100))
     last_failed_login_at = db.Column(UTCDateTime)
     failed_logins_counter = db.Column(db.Integer, default=0, nullable=False)
+    show_getting_started = db.Column(db.Boolean, nullable=False, default=True)
 
     tenant_associations = db.relationship(
         'UserTenantAssoc',

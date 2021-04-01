@@ -141,6 +141,31 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         )
         assert set(group.deployment_ids) == {'dep1', 'group1-2', 'group1-3'}
 
+    def test_create_from_spec(self):
+        self.put_blueprint(
+            blueprint_file_name='blueprint_with_inputs.yaml',
+            blueprint_id='bp_with_inputs')
+        inputs = {'http_web_server_port': 1234}
+        labels = [{'label1': 'label-value'}]
+        group = self.client.deployment_groups.put(
+            'group1',
+            blueprint_id='bp_with_inputs',
+            new_deployments=[
+                {
+                    'id': 'spec_dep1',
+                    'inputs': inputs,
+                    'labels': labels,
+                }
+            ]
+        )
+
+        assert set(group.deployment_ids) == {'spec_dep1'}
+        deps = self.sm.get(models.DeploymentGroup, 'group1').deployments
+        assert len(deps) == 1
+        create_exec_params = deps[0].create_execution.parameters
+        assert create_exec_params['inputs'] == inputs
+        assert create_exec_params['labels'] == [('label1', 'label-value')]
+
     def test_add_deployment_ids(self):
         self.client.deployment_groups.put('group1')
         group = self.client.deployment_groups.add_deployments(
@@ -286,8 +311,9 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         self.client.deployments.update_labels('dep1', [
             {'label1': 'value1'}
         ])
-        self.client.filters.create('filter1', [
-            'label1=value1'
+        self.client.deployments_filters.create('filter1', [
+            {'key': 'label1', 'values': ['value1'],
+             'operator': 'any_of', 'type': 'label'}
         ])
         self.client.deployment_groups.put(
             'group1',
@@ -301,8 +327,9 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         self.client.deployments.update_labels('dep1', [
             {'label1': 'value1'}
         ])
-        self.client.filters.create('filter1', [
-            'label1=value1'
+        self.client.deployments_filters.create('filter1', [
+            {'key': 'label1', 'values': ['value1'],
+             'operator': 'any_of', 'type': 'label'}
         ])
         self.client.deployment_groups.put('group1')
         self.client.deployment_groups.add_deployments(
@@ -317,8 +344,9 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         self.client.deployments.update_labels('dep1', [
             {'label1': 'value1'}
         ])
-        self.client.filters.create('filter1', [
-            'label1=value1'
+        self.client.deployments_filters.create('filter1', [
+            {'key': 'label1', 'values': ['value1'],
+             'operator': 'any_of', 'type': 'label'}
         ])
         self.client.deployment_groups.put(
             'group1',
@@ -330,6 +358,167 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         )
         group = self.client.deployment_groups.get('group1')
         assert group.deployment_ids == []
+
+    def test_add_from_group(self):
+        self.client.deployment_groups.put(
+            'group1',
+            deployment_ids=['dep1']
+        )
+        self.client.deployment_groups.put(
+            'group2',
+            deployment_ids=['dep2']
+        )
+        group3 = self.client.deployment_groups.put(
+            'group3',
+            deployments_from_group='group1'
+        )
+        assert set(group3.deployment_ids) == {'dep1'}
+        group3 = self.client.deployment_groups.add_deployments(
+            'group3',
+            deployments_from_group='group2'
+        )
+        assert set(group3.deployment_ids) == {'dep1', 'dep2'}
+
+    def test_remove_by_group(self):
+        self.client.deployment_groups.put(
+            'group1',
+            deployment_ids=['dep1', 'dep2']
+        )
+        self.client.deployment_groups.put(
+            'group2',
+            deployment_ids=['dep1']
+        )
+        group1 = self.client.deployment_groups.remove_deployments(
+            'group1',
+            deployments_from_group='group2'
+        )
+        assert set(group1.deployment_ids) == {'dep2'}
+        # removing is idempotent
+        group1 = self.client.deployment_groups.remove_deployments(
+            'group1',
+            deployments_from_group='group2'
+        )
+        assert set(group1.deployment_ids) == {'dep2'}
+
+    def test_set_labels(self):
+        """Create a group with labels"""
+        labels = [{'label1': 'value1'}]
+        updated_labels = [{'label1': 'value2'}, {'label2': 'value3'}]
+        group = self.client.deployment_groups.put(
+            'group1',
+            labels=labels,
+        )
+        self.assert_resource_labels(group.labels, labels)
+        group = self.client.deployment_groups.put(
+            'group1',
+            labels=updated_labels,
+        )
+        self.assert_resource_labels(group.labels, updated_labels)
+
+    def test_group_labels_for_deployments(self):
+        """Group labels are applied to the newly-created deployments"""
+        group = self.client.deployment_groups.put(
+            'group1',
+            labels=[{'label1': 'value1'}, {'label2': 'value2'}],
+            blueprint_id='blueprint',
+            new_deployments=[{
+                'labels': [{'label1': 'value1'}, {'label1': 'value2'},
+                           {'label3': 'value4'}]
+            }]
+        )
+        dep_id = group.deployment_ids[0]
+        dep = self.sm.get(models.Deployment, dep_id)
+        self.create_deployment_environment(dep)
+        client_dep = self.client.deployments.get(dep_id)
+        self.assert_resource_labels(client_dep.labels, [
+            # labels from both the group, and the deployment
+            # (note that label1=value1 occurs in both places)
+            {'label1': 'value1'}, {'label1': 'value2'}, {'label2': 'value2'},
+            {'label3': 'value4'},
+        ])
+
+    def test_delete_group_label(self):
+        """Deleting a label from the group, deletes it from its deps"""
+        self.client.deployments.update_labels('dep1', [{'label1': 'value1'}])
+        self.client.deployment_groups.put(
+            'group1',
+            labels=[{'label1': 'value1'}],
+        )
+        self.client.deployment_groups.put(
+            'group1',
+            deployment_ids=['dep1']
+        )
+        group = self.client.deployment_groups.put(
+            'group1',
+            labels=[]
+        )
+        assert group.labels == []
+        client_dep = self.client.deployments.get('dep1')
+        assert client_dep.labels == []
+
+    def test_add_group_label(self):
+        """Adding a label to a group with deps, adds it to the deps"""
+        self.client.deployments.update_labels('dep1', [{'label1': 'value1'}])
+        group = self.client.deployment_groups.put(
+            'group1',
+            deployment_ids=['dep1'],
+        )
+        self.client.deployment_groups.put(
+            'group1',
+            labels=[{'label2': 'value2'}],
+        )
+        dep_id = group.deployment_ids[0]
+        client_dep = self.client.deployments.get(dep_id)
+        self.sm.get(models.Deployment, dep_id)
+        self.assert_resource_labels(client_dep.labels, [
+            {'label1': 'value1'}, {'label2': 'value2'}
+        ])
+
+    def test_add_labels_already_exist(self):
+        labels = [{'label2': 'value2'}]
+        self.client.deployments.update_labels('dep1', labels)
+        self.client.deployment_groups.put(
+            'group1',
+            deployment_ids=['dep1'],
+        )
+        self.client.deployment_groups.put(  # doesn't throw
+            'group1',
+            labels=labels,
+        )
+        dep = self.client.deployments.get('dep1')
+        self.assert_resource_labels(dep.labels, labels)
+
+    def test_add_labels_to_added_deployments(self):
+        """Group labels are applied to deps added to the group"""
+        labels = [{'label1': 'value1'}]
+        self.client.deployment_groups.put(
+            'group1',
+            labels=labels,
+        )
+        self.client.deployment_groups.put(
+            'group2',
+            deployment_ids=['dep1']
+        )
+        filter_labels = [{'label': 'filter'}]
+        self.client.deployments.update_labels('dep2', filter_labels)
+        self.client.deployments_filters.create('filter1', [
+            {'key': 'label', 'values': ['filter'],
+             'operator': 'any_of', 'type': 'label'}
+        ])
+        self.client.deployments.create('blueprint', 'dep3')
+        self.client.deployment_groups.put(
+            'group1',
+            # add a deployment using all 3 ways: by id, by clone, by filter
+            deployments_from_group=['group2'],  # dep1
+            filter_id='filter1',  # dep2
+            deployment_ids=['dep3'],
+        )
+        dep1 = self.client.deployments.get('dep1')
+        self.assert_resource_labels(dep1.labels, labels)
+        dep2 = self.client.deployments.get('dep2')
+        self.assert_resource_labels(dep2.labels, labels + filter_labels)
+        dep3 = self.client.deployments.get('dep3')
+        self.assert_resource_labels(dep3.labels, labels)
 
 
 @mock.patch(

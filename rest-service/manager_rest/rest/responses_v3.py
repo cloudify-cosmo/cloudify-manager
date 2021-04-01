@@ -59,7 +59,8 @@ class UserResponse(BaseResponse):
         'group_system_roles': fields.Raw,
         'active': fields.Boolean,
         'last_login_at': fields.String,
-        'is_locked': fields.Boolean
+        'is_locked': fields.Boolean,
+        'show_getting_started': fields.Boolean,
     }
 
 

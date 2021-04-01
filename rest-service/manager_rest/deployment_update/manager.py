@@ -45,10 +45,14 @@ from manager_rest.deployment_update.handlers import (
     DeploymentUpdateNodeInstanceHandler)
 from manager_rest.utils import get_formatted_timestamp
 
-from manager_rest.rest.rest_utils import (get_deployment_plan,
-                                          get_parsed_deployment,
-                                          RecursiveDeploymentDependencies,
-                                          verify_blueprint_uploaded_state)
+from manager_rest.rest.rest_utils import (
+    get_deployment_plan,
+    get_labels_from_plan,
+    get_parsed_deployment,
+    RecursiveDeploymentDependencies,
+    RecursiveDeploymentLabelsDependencies,
+    verify_blueprint_uploaded_state,
+)
 
 
 class DeploymentUpdateManager(object):
@@ -200,6 +204,7 @@ class DeploymentUpdateManager(object):
                                  update_plugins=True,
                                  force=False):
         # Mark deployment update as committing
+        rm = get_resource_manager()
         dep_update.keep_old_deployment_dependencies = skip_uninstall
         dep_update.state = STATES.UPDATING
         self.sm.update(dep_update)
@@ -245,8 +250,17 @@ class DeploymentUpdateManager(object):
             include_rel_order=True)
         dep_update.central_plugins_to_install = central_plugins_to_install
         dep_update.central_plugins_to_uninstall = central_plugins_to_uninstall
+        deployment = self.sm.get(models.Deployment, dep_update.deployment_id)
+        labels_to_create = self._get_deployment_labels_to_create(dep_update)
+        parents_labels = []
+        if labels_to_create:
+            parents_labels = rm.get_deployment_parents_from_labels(
+                labels_to_create
+            )
+            rm.verify_deployment_parent_labels(
+                parents_labels, deployment.id
+            )
         self.sm.update(dep_update)
-
         # If this is a preview, no need to run workflow and update DB
         if dep_update.preview:
             dep_update.state = STATES.PREVIEW
@@ -261,6 +275,8 @@ class DeploymentUpdateManager(object):
             dep_update.schedules_to_create = \
                 self.list_schedules(schedules_to_create)
             dep_update.schedules_to_delete = schedules_to_delete
+            dep_update.labels_to_create = [{'key': label[0], 'value': label[1]}
+                                           for label in labels_to_create]
             return dep_update
 
         # Handle inter-deployment dependencies changes
@@ -290,7 +306,6 @@ class DeploymentUpdateManager(object):
         )
 
         # Update deployment attributes in the storage manager
-        deployment = self.sm.get(models.Deployment, dep_update.deployment_id)
         deployment.inputs = dep_update.new_inputs
         deployment.runtime_only_evaluation = dep_update.runtime_only_evaluation
         if dep_update.new_blueprint:
@@ -314,9 +329,20 @@ class DeploymentUpdateManager(object):
         deployment_creation_time = datetime.strptime(
             deployment.created_at.split('.')[0], '%Y-%m-%dT%H:%M:%S'
         ).replace(second=0)
-        get_resource_manager().create_deployment_schedules_from_dict(
+        rm.create_deployment_schedules_from_dict(
             schedules_to_create, deployment, deployment_creation_time)
 
+        rm.create_resource_labels(models.DeploymentLabel, deployment,
+                                  labels_to_create)
+        if parents_labels:
+            dep_graph = RecursiveDeploymentLabelsDependencies(self.sm)
+            dep_graph.create_dependencies_graph()
+            for parent in parents_labels:
+                rm.add_deployment_to_labels_graph(
+                    dep_graph,
+                    deployment,
+                    parent
+                )
         # Return the deployment update object
         return self.get_deployment_update(dep_update.id)
 
@@ -695,6 +721,13 @@ class DeploymentUpdateManager(object):
                 except manager_exceptions.NotFoundError:
                     continue
         return schedules_to_create, schedules_to_delete
+
+    def _get_deployment_labels_to_create(self, dep_update):
+        deployment = self.sm.get(models.Deployment, dep_update.deployment_id)
+        new_labels = get_labels_from_plan(dep_update.deployment_plan,
+                                          constants.LABELS)
+        return get_resource_manager().get_labels_to_create(deployment,
+                                                           new_labels)
 
 
 # What we need to access this manager in Flask

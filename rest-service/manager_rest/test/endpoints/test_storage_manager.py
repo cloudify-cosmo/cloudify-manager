@@ -157,7 +157,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         self.sm.put(dep)
 
         serialized_dep = dep.to_response()
-        self.assertEqual(26, len(serialized_dep))
+        self.assertEqual(34, len(serialized_dep))
         self.assertEqual(dep.id, serialized_dep['id'])
         self.assertEqual(dep.created_at, serialized_dep['created_at'])
         self.assertEqual(dep.updated_at, serialized_dep['updated_at'])
@@ -172,6 +172,9 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         serialized_dep.pop('created_by')
         serialized_dep.pop('site_name')
         serialized_dep.pop('latest_execution_status')
+        serialized_dep.pop('environment_type')
+        serialized_dep.pop('latest_execution_total_operations')
+        serialized_dep.pop('latest_execution_finished_operations')
 
         # Deprecated columns, for backwards compatibility -
         # was added to the response

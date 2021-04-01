@@ -254,7 +254,7 @@ class SummarizeExecutionSchedules(BaseSummary):
 
     @staticmethod
     def is_recurring(rule):
-        if 'frequency' in rule and rule.get('count') != 1:
+        if 'recurrence' in rule and rule.get('count') != 1:
             return True
         if 'rrule' in rule:
             rrule_dates = rrule.rrulestr(rule['rrule'])

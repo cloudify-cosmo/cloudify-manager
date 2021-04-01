@@ -161,7 +161,6 @@ class Agents(object):
         if install_method and install_method != AGENT_INSTALL_METHOD_NONE:
             create_agent_record(cloudify_agent,
                                 state=AgentState.RESTORED,
-                                create_rabbitmq_user=False,
                                 client=client)
 
     @staticmethod

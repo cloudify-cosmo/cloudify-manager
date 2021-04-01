@@ -116,6 +116,12 @@ class SnapshotRestore(object):
             if stage_revision and self._premium_enabled:
                 stage_revision = re.sub(r".*\n", '', stage_revision)
             composer_revision = metadata.get(M_COMPOSER_SCHEMA_REVISION) or ''
+            if composer_revision == '20170601133017-4_1-init.js':
+                # Old composer metadata always incorrectly put the first
+                # migration not the last one. As we don't support anything
+                # earlier than the last migration before 5.3, this will always
+                # be the right answer
+                composer_revision = '20171229105614-4_3-blueprint-repo.js'
             if composer_revision and self._premium_enabled:
                 composer_revision = re.sub(r".*\n", '', composer_revision)
             self._validate_snapshot()
@@ -141,13 +147,15 @@ class SnapshotRestore(object):
                 self._restart_rest_service()
                 self._restart_stage_service()
                 self._restore_credentials(postgres)
-                self._restore_agents()
                 self._restore_amqp_vhosts_and_users()
+                self._restore_agents()
                 self._restore_deployment_envs()
                 self._restore_scheduled_executions()
                 self._restore_inter_deployment_dependencies()
                 self._update_roles_and_permissions()
                 self._update_deployment_statuses()
+                self._update_node_instance_indices()
+                self._set_default_user_profile_flags()
 
             if self._restore_certificates:
                 self._restore_certificate()
@@ -236,10 +244,12 @@ class SnapshotRestore(object):
                 pass
 
     def _update_roles_and_permissions(self):
+        ctx.logger.info('Updating roles and permissions')
         if os.path.exists(REST_AUTHORIZATION_CONFIG_PATH):
             utils.run(['/opt/manager/scripts/load_permissions.py'])
 
     def _update_deployment_statuses(self):
+        ctx.logger.info('Updating deployment statuses.')
         if self._snapshot_version < V_5_3_0:
             dir_path = os.path.dirname(os.path.realpath(__file__))
             scrip_path = os.path.join(
@@ -248,6 +258,28 @@ class SnapshotRestore(object):
             )
             command = [MANAGER_PYTHON, scrip_path, self._tempdir]
             utils.run(command)
+
+    def _update_node_instance_indices(self):
+        ctx.logger.info('Updating node indices.')
+        if self._snapshot_version < V_5_0_5:
+            with Postgres(self._config) as postgres:
+                postgres.run_query(
+                    'update node_instances ni set index=u.rank '
+                    'from (select node_instances._storage_id, rank() '
+                    'over (partition by node_instances._node_fk '
+                    'order by node_instances._storage_id) '
+                    'from node_instances) u '
+                    'where ni._storage_id = u._storage_id;'
+                )
+
+    def _set_default_user_profile_flags(self):
+        if self._snapshot_version < V_5_3_0:
+            ctx.logger.info(
+                'Disabling `getting started` for all existing users.')
+            users = self._client.users.list()
+            for user in users:
+                self._client.users.set_show_getting_started(user.username,
+                                                            False)
 
     def _generate_new_token(self):
         dir_path = os.path.dirname(os.path.realpath(__file__))

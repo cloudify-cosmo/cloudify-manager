@@ -17,6 +17,8 @@ import glob
 import os
 import shutil
 import errno
+from datetime import datetime
+
 
 from retrying import retry
 
@@ -24,11 +26,64 @@ from cloudify.decorators import workflow
 from cloudify.manager import get_rest_client
 from cloudify.workflows import workflow_context
 
+from cloudify.utils import parse_utc_datetime_relative
+from cloudify_rest_client.exceptions import CloudifyClientError
 from dsl_parser import tasks
 
 
+def _parse_plan_datetime(time_expression, base_datetime):
+    """
+    :param time_expression: Either a string representing an absolute
+        datetime, or a relative time delta, such as '+4 hours' or '+1y+1d'.
+    :param base_datetime: a datetime object representing the absolute date
+        and time to which we apply the time delta.
+    :return: A naive datetime object, in UTC time.
+    """
+    time_fmt = '%Y-%m-%d %H:%M:%S'
+    if time_expression.startswith('+'):
+        return parse_utc_datetime_relative(time_expression, base_datetime)
+    return datetime.strptime(time_expression, time_fmt)
+
+
+def _create_schedules(client, deployment_id, schedules):
+    base_time = datetime.utcnow()
+    for name, spec in schedules.items():
+        workflow_id = spec.pop('workflow')
+        if 'since' in spec:
+            spec['since'] = _parse_plan_datetime(spec['since'], base_time)
+        if 'until' in spec:
+            spec['until'] = _parse_plan_datetime(spec['until'], base_time)
+        if 'workflow_parameters' in spec:
+            spec['parameters'] = spec.pop('workflow_parameters')
+        client.execution_schedules.create(
+            name,
+            deployment_id=deployment_id,
+            workflow_id=workflow_id,
+            **spec
+        )
+
+
+def _join_groups(client, deployment_id, groups):
+    for group_name in groups:
+        try:
+            client.deployment_groups.add_deployments(
+                group_name, deployment_ids=[deployment_id])
+        except CloudifyClientError as e:
+            if e.status_code != 404:
+                raise
+            client.deployment_groups.put(
+                group_name, deployment_ids=[deployment_id])
+
+
+def _get_deployment_labels(new_labels, plan_labels):
+    labels = {tuple(label) for label in new_labels}
+    for name, label_spec in plan_labels.items():
+        labels |= {(name, value) for value in label_spec.get('values', [])}
+    return [{k: v} for k, v in labels]
+
+
 @workflow
-def create(ctx, inputs=None, skip_plugins_validation=False, **_):
+def create(ctx, labels=None, inputs=None, skip_plugins_validation=False, **_):
     client = get_rest_client(tenant=ctx.tenant_name)
     bp = client.blueprints.get(ctx.blueprint.id)
     deployment_plan = tasks.prepare_deployment_plan(
@@ -40,6 +95,11 @@ def create(ctx, inputs=None, skip_plugins_validation=False, **_):
     client.nodes.create_many(ctx.deployment.id, nodes)
     ctx.logger.info('Creating %d node-instances', len(node_instances))
     client.node_instances.create_many(ctx.deployment.id, node_instances)
+
+    labels_to_create = _get_deployment_labels(
+        labels or [],
+        deployment_plan.get('labels', {}))
+
     ctx.logger.info('Setting deployment attributes')
     client.deployments.set_attributes(
         ctx.deployment.id,
@@ -51,8 +111,15 @@ def create(ctx, inputs=None, skip_plugins_validation=False, **_):
         groups=deployment_plan['groups'],
         scaling_groups=deployment_plan['scaling_groups'],
         outputs=deployment_plan['outputs'],
-        capabilities=deployment_plan.get('capabilities', {})
+        capabilities=deployment_plan.get('capabilities', {}),
+        labels=labels_to_create,
     )
+    deployment_settings = deployment_plan.get('deployment_settings', {})
+    _join_groups(client, ctx.deployment.id,
+                 deployment_settings.get('default_groups', []))
+    _create_schedules(client, ctx.deployment.id,
+                      deployment_settings.get('default_schedules', {}))
+
     ctx.logger.info('Creating deployment work directory')
     _create_deployment_workdir(
         deployment_id=ctx.deployment.id,

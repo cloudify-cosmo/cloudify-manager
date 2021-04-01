@@ -1,4 +1,6 @@
 import re
+import unicodedata
+from collections import defaultdict, deque
 
 from ast import literal_eval
 from contextlib import contextmanager
@@ -28,6 +30,7 @@ from cloudify.models_states import (
     VisibilityState,
     BlueprintUploadState,
     ExecutionState,
+    DeploymentState,
 )
 
 from manager_rest.storage import models
@@ -35,7 +38,7 @@ from manager_rest.constants import CFY_LABELS, CFY_LABELS_PREFIX
 from manager_rest.dsl_functions import (get_secret_method,
                                         evaluate_intrinsic_functions)
 from manager_rest import manager_exceptions, config, app_context
-from manager_rest.utils import (parse_frequency,
+from manager_rest.utils import (parse_recurrence,
                                 is_administrator,
                                 get_formatted_timestamp)
 
@@ -43,6 +46,13 @@ from manager_rest.utils import (parse_frequency,
 states_except_private = copy.deepcopy(VisibilityState.STATES)
 states_except_private.remove('private')
 VISIBILITY_EXCEPT_PRIVATE = states_except_private
+
+
+class BadLabelsList(manager_exceptions.BadParametersError):
+    def __init__(self):
+        super().__init__(
+            'Labels must be a list of 1-entry dictionaries: '
+            '[{<key1>: <value1>}, {<key2>: [<value2>, <value3>]}, ...]')
 
 
 @contextmanager
@@ -422,49 +432,12 @@ def update_deployment_dependencies_from_plan(deployment_id,
     return new_dependencies_dict
 
 
-class RecursiveDeploymentDependencies(object):
+class BaseDeploymentDependencies(object):
+    cyclic_error_message = None
+
     def __init__(self, sm):
         self.graph = None
         self.sm = sm
-
-    def create_dependencies_graph(self):
-        if self.graph:
-            return
-        dependencies = self.sm.list(models.InterDeploymentDependencies)
-        self.graph = {}
-        for dependency in dependencies:
-            if not hasattr(dependency, 'source_deployment_id'):
-                continue
-            if dependency.source_deployment_id:
-                source = dependency.source_deployment_id
-            else:
-                source = 'EXTERNAL::{}'.format(dependency.external_source)
-            target = dependency.target_deployment_id
-            if target:
-                self.add_dependency_to_graph(source, target)
-
-    def find_recursive_components(self, source_id):
-        inv_graph = {}  # invert dependencies graph
-        for key, val in self.graph.items():
-            for item in val:
-                inv_graph.setdefault(item, set()).add(key)
-        # BFS to find components
-        queue = {source_id}
-        results = set()
-        while queue:
-            v = queue.pop()
-            if v not in inv_graph:
-                continue
-            dependencies = self.sm.list(
-                models.InterDeploymentDependencies,
-                filters={'source_deployment_id': v})
-            for dependency in dependencies:
-                if (dependency.target_deployment_id in inv_graph[v] and
-                        dependency.dependency_creator.split('.')[0] ==
-                        'component'):
-                    queue.add(dependency.target_deployment_id)
-                    results.add(dependency.target_deployment_id)
-        return results
 
     def add_dependency_to_graph(self, source_deployment, target_deployment):
         self.graph.setdefault(target_deployment, set()).add(source_deployment)
@@ -499,9 +472,60 @@ class RecursiveDeploymentDependencies(object):
             v = u
             if v in recursion_stack:
                 raise manager_exceptions.ConflictError(
-                    'Deployment creation results in cyclic inter-deployment '
-                    'dependencies.')
+                    self.cyclic_error_message
+                )
             recursion_stack.append(v)
+
+    def _get_inverted_graph(self):
+        inverted_graph_graph = {}  # invert dependencies graph
+        for key, val in self.graph.items():
+            for item in val:
+                inverted_graph_graph.setdefault(item, set()).add(key)
+        return inverted_graph_graph
+
+    def create_dependencies_graph(self):
+        raise NotImplementedError
+
+
+class RecursiveDeploymentDependencies(BaseDeploymentDependencies):
+    cyclic_error_message = 'Deployment creation results' \
+                           ' in cyclic inter-deployment dependencies.'
+
+    def create_dependencies_graph(self):
+        if self.graph:
+            return
+        dependencies = self.sm.list(models.InterDeploymentDependencies)
+        self.graph = {}
+        for dependency in dependencies:
+            if not hasattr(dependency, 'source_deployment_id'):
+                continue
+            if dependency.source_deployment_id:
+                source = dependency.source_deployment_id
+            else:
+                source = 'EXTERNAL::{}'.format(dependency.external_source)
+            target = dependency.target_deployment_id
+            if target:
+                self.add_dependency_to_graph(source, target)
+
+    def find_recursive_components(self, source_id):
+        inv_graph = self._get_inverted_graph()
+        # BFS to find components
+        queue = {source_id}
+        results = set()
+        while queue:
+            v = queue.pop()
+            if v not in inv_graph:
+                continue
+            dependencies = self.sm.list(
+                models.InterDeploymentDependencies,
+                filters={'source_deployment_id': v})
+            for dependency in dependencies:
+                if (dependency.target_deployment_id in inv_graph[v] and
+                        dependency.dependency_creator.split('.')[0] ==
+                        'component'):
+                    queue.add(dependency.target_deployment_id)
+                    results.add(dependency.target_deployment_id)
+        return results
 
     def retrieve_dependent_deployments(self, target_id):
         # BFS to traverse all deployment IDs accessing the requested one
@@ -573,6 +597,175 @@ class RecursiveDeploymentDependencies(object):
                                        type_display[d['dependency_type']],
                                        d['dependent_node'])
              for i, d in enumerate(dependencies)])
+
+
+class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
+    cyclic_error_message = 'Deployments adding labels results in ' \
+                           'cyclic deployment-labels dependencies.'
+
+    def create_dependencies_graph(self):
+        """
+        Create deployment labels dependencies from the
+        `DeploymentLabelsDependencies` model where it contains dict for all
+        graph
+        :return: Deployment labels graph
+        :rtype Dict
+        """
+        if self.graph:
+            return
+        dependencies = self.sm.list(
+            models.DeploymentLabelsDependencies,
+            get_all_results=True
+        )
+        self.graph = {}
+        for dependency in dependencies:
+            source = dependency.source_deployment_id
+            target = dependency.target_deployment_id
+            if source and target:
+                self.add_dependency_to_graph(source, target)
+
+    def find_recursive_deployments(self, source_id):
+        """
+        Find all deployments that are referenced directly and indirectly
+        referenced by Deployment id `source_id`
+        :param source_id: The deployment id that is could be connected to
+        the deployments graph
+        :return:List of recursive deployments that are connected by
+        `source_id` deployment
+        :rtype List
+        """
+        inv_graph = self._get_inverted_graph()
+        # BFS to find deployments
+        queue = [source_id]
+        results = []
+        visited = defaultdict(bool)
+        while queue:
+            v = queue.pop()
+            if v not in inv_graph:
+                continue
+            dependencies = self.sm.list(
+                models.DeploymentLabelsDependencies,
+                filters={'source_deployment_id': v})
+
+            for dependency in dependencies:
+                if dependency.target_deployment_id in inv_graph[v]:
+                    if not visited[dependency.target_deployment_id]:
+                        queue.append(dependency.target_deployment_id)
+                        results.append(dependency.target_deployment_id)
+                        visited[dependency.target_deployment_id] = True
+        return results
+
+    def increase_deployment_counts_in_graph(self, target_id, source):
+        """
+        Increase the deployment counts for target deployment that is
+        referenced directly by the `source` deployment and then make sure to
+        propagate that increase to all deployment that are referenced
+        directly and indirectly by `target` deployment
+        :param target_id: Target Deployment ID that we need to attach
+        source to
+        :rtype str
+        :param source: Source deployment that reference target deployment
+        :rtype Deployment
+        """
+        total_services = source.sub_services_count
+        total_environments = source.sub_environments_count
+        if source.is_environment:
+            total_environments += 1
+        else:
+            total_services += 1
+        target_group = [target_id] + self.find_recursive_deployments(target_id)
+        for target_id in target_group:
+            if total_services or total_environments:
+                with self.sm.transaction():
+                    target = self.sm.get(
+                        models.Deployment,
+                        target_id,
+                        locking=True
+                    )
+                    target.sub_services_count += total_services
+                    target.sub_environments_count += total_environments
+                    self.sm.update(target)
+
+    def decrease_deployment_counts_in_graph(self, target_id, source):
+        """
+        Decrease the counter for each deployment that is referenced
+        directly and indirectly by `source` deployment and the counts that
+        need to be update are possibly for `sub_environments_count`
+        & `sub_services_count`
+        :param target_id: Target Deployment ID that we need to de-attach
+        source from
+        :rtype str
+        :param source: Deployment instance
+        :rtype Deployment
+        """
+        target_group = [target_id] + self.find_recursive_deployments(target_id)
+        if target_group:
+            total_services = source.sub_services_count
+            total_environments = source.sub_environments_count
+            if source.is_environment:
+                total_environments += 1
+            else:
+                total_services += 1
+            for target_id in target_group:
+                with self.sm.transaction():
+                    target = self.sm.get(
+                        models.Deployment,
+                        target_id,
+                        locking=True
+                    )
+                    if target.sub_services_count:
+                        target.sub_services_count -= total_services
+                    if target.sub_environments_count:
+                        target.sub_environments_count -= total_environments
+                    self.sm.update(target)
+
+    def propagate_deployment_statuses(self, source):
+        """
+        Propagate deployment statuses for source deployment to all connected
+        in graph that referenced by this node directly and indirectly
+        :param source: Deployment instance
+        :rtype Deployment
+        """
+        queue = deque([source.id] + self.find_recursive_deployments(source.id))
+        while queue:
+            v = queue.popleft()
+            if v not in self.graph:
+                continue
+            from_dependencies = self.sm.list(
+                models.DeploymentLabelsDependencies,
+                filters={'target_deployment_id': v}
+            )
+            if not from_dependencies:
+                continue
+            total_env_status = None
+            total_srv_status = None
+            for from_dependency in from_dependencies:
+                if from_dependency.source_deployment_id in self.graph[v]:
+                    _source = from_dependency.source_deployment
+                    _sub_srv_status, _sub_env_status = \
+                        _source.evaluate_sub_deployments_statuses()
+                    if _sub_env_status == DeploymentState.REQUIRE_ATTENTION \
+                            and _sub_srv_status == \
+                            DeploymentState.REQUIRE_ATTENTION:
+                        total_env_status = DeploymentState.REQUIRE_ATTENTION
+                        total_srv_status = DeploymentState.REQUIRE_ATTENTION
+                        break
+
+                    total_env_status = _source.compare_between_statuses(
+                        total_env_status, _sub_env_status
+                    )
+                    total_srv_status = _source.compare_between_statuses(
+                        total_srv_status, _sub_srv_status
+                    )
+
+            if total_srv_status or total_env_status:
+                target = self.sm.get(models.Deployment, v, locking=True)
+                if total_env_status:
+                    target.sub_environments_status = total_env_status
+                if total_srv_status:
+                    target.sub_services_status = total_srv_status
+                target.deployment_status = target.evaluate_deployment_status()
+                self.sm.update(target)
 
 
 def update_inter_deployment_dependencies(sm):
@@ -671,21 +864,54 @@ def get_labels_list(raw_labels_list):
     labels_list = []
     for label in raw_labels_list:
         if (not isinstance(label, dict)) or len(label) != 1:
-            _raise_bad_labels_list()
+            raise BadLabelsList()
 
         [(key, raw_value)] = label.items()
         values_list = raw_value if isinstance(raw_value, list) else [raw_value]
         for value in values_list:
-            if ((not isinstance(key, text_type)) or
-                    (not isinstance(value, text_type))):
-                _raise_bad_labels_list()
-            validate_inputs({'key': key, 'value': value})
-            if key.startswith(CFY_LABELS_PREFIX) and key not in CFY_LABELS:
-                _raise_labels_prefix_not_allowed()
-            labels_list.append((key.lower(), value.lower()))
+            parsed_key, parsed_value = _parse_label(key, value)
+            labels_list.append((parsed_key, parsed_value))
 
     test_unique_labels(labels_list)
     return labels_list
+
+
+def _parse_label(label_key, label_value):
+    if ((not isinstance(label_key, text_type)) or
+            (not isinstance(label_value, text_type))):
+        raise BadLabelsList()
+
+    if len(label_key) > 256 or len(label_value) > 256:
+        raise manager_exceptions.BadParametersError(
+            'The label\'s key or value is too long. Maximum allowed length is '
+            '256 characters'
+        )
+
+    if urlquote(label_key, safe='') != label_key:
+        raise manager_exceptions.BadParametersError(
+            f'The label\'s key `{label_key}` contains illegal characters. '
+            f'Only letters, digits and the characters `-`, `.` and '
+            f'`_` are allowed'
+        )
+
+    parsed_label_key = label_key.lower()
+    parsed_label_value = unicodedata.normalize('NFKC', label_value).casefold()
+
+    if (parsed_label_key.startswith(CFY_LABELS_PREFIX) and
+            parsed_label_key not in CFY_LABELS):
+        allowed_cfy_labels = ', '.join(CFY_LABELS)
+        raise manager_exceptions.BadParametersError(
+            f'All labels with a `{CFY_LABELS_PREFIX}` prefix are reserved for '
+            f'internal use. Allowed `{CFY_LABELS_PREFIX}` prefixed labels '
+            f'are: {allowed_cfy_labels}')
+
+    if any(char in parsed_label_value for char in ['"', '\n', '\t']):
+        raise manager_exceptions.BadParametersError(
+            f'The label\'s value `{label_value}` contains illegal characters. '
+            f'`"`, `\\n` and `\\t` are not allowed'
+        )
+
+    return parsed_label_key, parsed_label_value
 
 
 def get_labels_from_plan(plan, labels_entry):
@@ -698,19 +924,6 @@ def get_labels_from_plan(plan, labels_entry):
     return []
 
 
-def _raise_labels_prefix_not_allowed():
-    raise manager_exceptions.BadParametersError(
-        'All labels with a `{0}` prefix are reserved for internal use. '
-        'Allowed `{0}` prefixed labels are: {1}'.format(
-            CFY_LABELS_PREFIX, ', '.join(CFY_LABELS)))
-
-
-def _raise_bad_labels_list():
-    raise manager_exceptions.BadParametersError(
-        'Labels must be a list of 1-entry dictionaries: '
-        '[{<key1>: <value1>}, {<key2>: [<value2>, <value3>]}, ...]')
-
-
 def test_unique_labels(labels_list):
     if len(set(labels_list)) != len(labels_list):
         raise manager_exceptions.BadParametersError(
@@ -719,15 +932,15 @@ def test_unique_labels(labels_list):
 
 def compute_rule_from_scheduling_params(request_dict, existing_rule=None):
     rrule_string = request_dict.get('rrule')
-    frequency = request_dict.get('frequency')
+    recurrence = request_dict.get('recurrence')
     weekdays = request_dict.get('weekdays')
     count = request_dict.get('count')
 
-    # we need to have at least: rrule; or count=1; or frequency
+    # we need to have at least: rrule; or count=1; or recurrence
     if rrule_string:
-        if frequency or weekdays or count:
+        if recurrence or weekdays or count:
             raise manager_exceptions.BadParametersError(
-                "`rrule` cannot be provided together with `frequency`, "
+                "`rrule` cannot be provided together with `recurrence`, "
                 "`weekdays` or `count`.")
         try:
             rrule.rrulestr(rrule_string)
@@ -738,37 +951,38 @@ def compute_rule_from_scheduling_params(request_dict, existing_rule=None):
     else:
         if count:
             count = convert_to_int(request_dict.get('count'))
-        frequency = _verify_schedule_frequency(request_dict.get('frequency'))
-        weekdays = _verify_weekdays(request_dict.get('weekdays'), frequency)
+        recurrence = _verify_schedule_recurrence(
+            request_dict.get('recurrence'))
+        weekdays = _verify_weekdays(request_dict.get('weekdays'), recurrence)
         if existing_rule:
             count = count or existing_rule.get('count')
-            frequency = frequency or existing_rule.get('frequency')
+            recurrence = recurrence or existing_rule.get('recurrence')
             weekdays = weekdays or existing_rule.get('weekdays')
 
-        if not frequency and count != 1:
+        if not recurrence and count != 1:
             raise manager_exceptions.BadParametersError(
-                "frequency must be specified for execution count larger "
+                "recurrence must be specified for execution count larger "
                 "than 1")
         return {
-            'frequency': frequency,
+            'recurrence': recurrence,
             'count': count,
             'weekdays': weekdays
         }
 
 
-def _verify_schedule_frequency(frequency_str):
-    if not frequency_str:
+def _verify_schedule_recurrence(recurrence_str):
+    if not recurrence_str:
         return
-    _, frequency = parse_frequency(frequency_str)
-    if not frequency:
+    _, recurrence = parse_recurrence(recurrence_str)
+    if not recurrence:
         raise manager_exceptions.BadParametersError(
-            "`{}` is not a legal frequency expression. Supported format "
+            "`{}` is not a legal recurrence expression. Supported format "
             "is: <number> seconds|minutes|hours|days|weeks|months|years"
-            .format(frequency_str))
-    return frequency_str
+            .format(recurrence_str))
+    return recurrence_str
 
 
-def _verify_weekdays(weekdays, frequency):
+def _verify_weekdays(weekdays, recurrence):
     if not weekdays:
         return
     if not isinstance(weekdays, list):
@@ -778,9 +992,9 @@ def _verify_weekdays(weekdays, frequency):
     valid_weekdays = {str(d) for d in rrule.weekdays}
 
     complex_weekdays_freq = False
-    if frequency:
-        _, frequency = parse_frequency(frequency)
-        complex_weekdays_freq = (frequency in ['mo', 'month', 'y', 'year'])
+    if recurrence:
+        _, recurrence = parse_recurrence(recurrence)
+        complex_weekdays_freq = (recurrence in ['mo', 'month', 'y', 'year'])
 
     for weekday in weekdays_caps:
         parsed = re.findall(r"^([1-4]|L-)?({})".format(
@@ -794,5 +1008,36 @@ def _verify_weekdays(weekdays, frequency):
         if parsed[0][0] and not complex_weekdays_freq:
             raise manager_exceptions.BadParametersError(
                 "complex weekday expression {} can only be used with a months|"
-                "years frequency, but got {}.".format(weekday, frequency))
+                "years recurrence, but got {}.".format(weekday, recurrence))
     return weekdays_caps
+
+
+def modify_blueprints_list_args(filters, _include):
+    """
+    As blueprints list can be retrieved both using `POST /searches/blueprints`
+    and `GET /blueprints`, we need a function to serve both endpoints to modify
+    the `filters` and `_include` arguments.
+    """
+    if _include and 'labels' in _include:
+        _include = None
+    if filters is None:
+        filters = {}
+    filters.setdefault('is_hidden', False)
+    return filters, _include
+
+
+def modify_deployments_list_args(filters, _include):
+    """
+    As blueprints list can be retrieved both using `POST /searches/blueprints`
+    and `GET /blueprints`, we need a function to serve both endpoints to modify
+    the `filters` and `_include` arguments.
+    """
+    if '_group_id' in request.args:
+        filters['deployment_groups'] = lambda col: col.any(
+            models.DeploymentGroup.id == request.args['_group_id']
+        )
+    if _include:
+        if {'labels', 'deployment_groups'}.intersection(_include):
+            _include = None
+
+    return filters, _include
