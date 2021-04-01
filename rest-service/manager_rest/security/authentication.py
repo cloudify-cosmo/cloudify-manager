@@ -82,7 +82,10 @@ class Authentication(object):
             # (User + Password), otherwise the counter will be reset on
             # every UI refresh (every 4 sec) and accounts won't be locked.
             user.failed_logins_counter = 0
-            user.last_login_at = datetime.now()
+            now = datetime.now()
+            if not user.last_login_at:
+                user.first_login_at = now
+            user.last_login_at = now
         user_datastore.commit()
         return user
 

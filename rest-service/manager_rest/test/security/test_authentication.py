@@ -45,6 +45,26 @@ class AuthenticationTests(SecurityTestBase):
         login_time = self._fetch_alice().last_login_at
         self.assertIsNotNone(login_time)
 
+    def test_first_and_last_login(self):
+        first_login_time = self._fetch_alice().first_login_at
+        last_login_time = self._fetch_alice().last_login_at
+        self.assertIsNone(first_login_time)
+        self.assertIsNone(last_login_time)
+
+        self._assert_user_authorized(username='alice',
+                                     password='alice_password')
+        first_login_time = self._fetch_alice().first_login_at
+        last_login_time = self._fetch_alice().last_login_at
+        self.assertIsNotNone(first_login_time)
+        self.assertEquals(first_login_time, last_login_time)
+
+        self._assert_user_authorized(username='alice',
+                                     password='alice_password')
+        first_login_time = self._fetch_alice().first_login_at
+        last_login_time = self._fetch_alice().last_login_at
+        self.assertIsNotNone(first_login_time)
+        self.assertGreater(last_login_time, first_login_time)
+
     def test_wrong_credentials(self):
         alice = self._fetch_alice()
         self.assertIsNone(alice.last_failed_login_at)
