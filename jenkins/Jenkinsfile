@@ -199,7 +199,7 @@ pipeline {
                         https://${env.PRIVATE_REPO_GITHUB_TOKEN}@github.com/cloudify-cosmo/cloudify-premium.git \
                         ~/cloudify-premium
                     }
-                    clone "${env.BRANCH}" || clone master
+                    clone "${env.BRANCH}" || clone "${env.CHANGE_TARGET}"
                   """
 
                   vEnv()
