@@ -298,6 +298,7 @@ class User(SQLModelBase, UserMixin):
     created_at = db.Column(UTCDateTime)
     email = db.Column(db.String(255))
     first_name = db.Column(db.String(255))
+    first_login_at = db.Column(UTCDateTime)
     last_login_at = db.Column(UTCDateTime)
     last_name = db.Column(db.String(255))
     password = db.Column(db.String(255))
