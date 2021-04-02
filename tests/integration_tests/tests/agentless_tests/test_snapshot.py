@@ -111,7 +111,6 @@ class TestSnapshot(AgentlessTestCase):
         first_agent = self.client.agents.get(agents[0].id)
         self.assertEqual(first_agent.state, AgentState.RESTORED)
         self.assertEqual(first_agent.rabbitmq_exchange, agents[0].id)
-        self.assertIsNone(first_agent.rabbitmq_username)
 
     def test_v_4_5_restore_snapshot_without_imported_blueprints(self):
         """
