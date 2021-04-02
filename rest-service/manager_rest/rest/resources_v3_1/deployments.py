@@ -791,7 +791,35 @@ class DeploymentGroupsId(SecuredResource):
 
     @authorize('deployment_group_delete')
     def delete(self, group_id):
+        args = rest_utils.get_args_and_verify_arguments([
+            Argument('delete_deployments', type=boolean, default=False),
+            Argument('force', type=boolean, default=False),
+            Argument('delete_logs', type=boolean, default=False),
+        ])
         sm = get_storage_manager()
+        rm = get_resource_manager()
+
         group = sm.get(models.DeploymentGroup, group_id)
+        if args.delete_deployments:
+            with sm.transaction():
+                delete_exc_group = models.ExecutionGroup(
+                    id=str(uuid.uuid4()),
+                    workflow_id='delete_deployment_environment',
+                    deployment_group=group,
+                )
+                sm.put(delete_exc_group)
+                for dep in group.deployments:
+                    rm.check_deployment_delete(dep, force=args.force)
+                    delete_exc = dep.make_delete_environment_execution(
+                        delete_logs=args.delete_logs
+                    )
+                    delete_exc_group.executions.append(delete_exc)
+
+            amqp_client = get_amqp_client()
+            handler = workflow_sendhandler()
+            amqp_client.add_handler(handler)
+            with amqp_client:
+                delete_exc_group.start_executions(sm, rm, handler)
+
         sm.delete(group)
         return None, 204
