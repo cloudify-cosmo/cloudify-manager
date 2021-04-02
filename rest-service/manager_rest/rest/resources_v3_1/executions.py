@@ -224,3 +224,33 @@ class ExecutionGroupsId(SecuredResource):
             include=_include,
             all_tenants=all_tenants,
         )
+
+    @authorize('execution_group_cancel')
+    @rest_decorators.marshal_with(models.ExecutionGroup)
+    def post(self, group_id, **kwargs):
+        request_dict = get_json_and_verify_params({'action'})
+        action = request_dict['action']
+
+        valid_actions = ['cancel', 'force-cancel', 'kill']
+
+        if action not in valid_actions:
+            raise BadParametersError(
+                'Invalid action: {0}, Valid action values are: {1}'.format(
+                    action, valid_actions))
+        sm = get_storage_manager()
+        rm = get_resource_manager()
+        with sm.transaction():
+            group = sm.get(models.ExecutionGroup, group_id)
+            to_cancel = []
+            for exc in group.executions:
+                if exc.status == ExecutionState.QUEUED:
+                    exc.status = ExecutionState.CANCELLED
+                else:
+                    to_cancel.append(exc)
+            for exc in to_cancel:
+                rm.cancel_execution(
+                    exc.id,
+                    force=action == 'force-cancel',
+                    kill=action == 'kill',
+                )
+        return group
