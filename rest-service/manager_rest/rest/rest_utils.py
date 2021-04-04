@@ -894,6 +894,13 @@ def parse_label(label_key, label_value):
             f'`_` are allowed'
         )
 
+    if any(unicodedata.category(char)[0] == 'C' or char == '"'
+           for char in label_value):
+        raise manager_exceptions.BadParametersError(
+            f'The value `{label_value}` contains illegal characters. '
+            f'Control characters and `"` are not allowed.'
+        )
+
     parsed_label_key = label_key.lower()
     parsed_label_value = unicodedata.normalize('NFKC', label_value).casefold()
 
@@ -904,12 +911,6 @@ def parse_label(label_key, label_value):
             f'All labels with a `{CFY_LABELS_PREFIX}` prefix are reserved for '
             f'internal use. Allowed `{CFY_LABELS_PREFIX}` prefixed labels '
             f'are: {allowed_cfy_labels}')
-
-    if any(char in parsed_label_value for char in ['"', '\n', '\t']):
-        raise manager_exceptions.BadParametersError(
-            f'The value `{label_value}` contains illegal characters. '
-            f'`"`, `\\n` and `\\t` are not allowed'
-        )
 
     return parsed_label_key, parsed_label_value
 
