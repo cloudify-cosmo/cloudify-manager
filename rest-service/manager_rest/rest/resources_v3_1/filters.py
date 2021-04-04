@@ -4,6 +4,7 @@ from cloudify.models_states import VisibilityState
 
 from manager_rest import manager_exceptions
 from manager_rest.security import SecuredResource
+from manager_rest.constants import RESERVED_PREFIX
 from manager_rest.utils import get_formatted_timestamp
 from manager_rest.rest import rest_decorators, rest_utils
 from manager_rest.security.authorization import authorize
@@ -65,6 +66,10 @@ class FiltersId(SecuredResource):
     def put(self, filters_model, filter_id, filtered_resource):
         """Create a filter"""
         rest_utils.validate_inputs({'filter_id': filter_id})
+        if filter_id.lower().startswith(RESERVED_PREFIX):
+            raise manager_exceptions.BadParametersError(
+                f'All filters with a `{RESERVED_PREFIX}` prefix are reserved '
+                f'for internal use.')
         request_dict = rest_utils.get_json_and_verify_params(
             {'filter_rules': {'type': list}})
         filter_rules = create_filter_rules_list(request_dict['filter_rules'],
@@ -98,6 +103,7 @@ class FiltersId(SecuredResource):
         rest_utils.validate_inputs({'filter_id': filter_id})
         storage_manager = get_storage_manager()
         filter_elem = storage_manager.get(filters_model, filter_id)
+        _verify_not_a_system_filter(filter_elem, 'delete')
         storage_manager.delete(filter_elem, validate_global=True)
         return None, 204
 
@@ -121,6 +127,7 @@ class FiltersId(SecuredResource):
 
         storage_manager = get_storage_manager()
         filter_elem = storage_manager.get(filters_model, filter_id)
+        _verify_not_a_system_filter(filter_elem, 'update')
         if visibility:
             get_resource_manager().validate_visibility_value(
                 filters_model, filter_elem, visibility)
@@ -156,6 +163,12 @@ class FiltersId(SecuredResource):
 def _get_filter_rules_by_type(filter_rules_list, filter_rule_type):
     return [filter_rule for filter_rule in
             filter_rules_list if filter_rule['type'] == filter_rule_type]
+
+
+def _verify_not_a_system_filter(filter_elem, action):
+    if filter_elem.is_system_filter:
+        raise manager_exceptions.IllegalActionError(
+            f'Cannot {action} a system filter')
 
 
 class BlueprintsFiltersId(FiltersId):

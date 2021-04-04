@@ -492,6 +492,8 @@ def _create_filters_tables():
         sa.Column('updated_at', UTCDateTime(), nullable=True),
         sa.Column('_tenant_id', sa.Integer(), nullable=False),
         sa.Column('_creator_id', sa.Integer(), nullable=False),
+        sa.Column('is_system_filter', sa.Boolean(), nullable=False,
+                  server_default='f'),
         sa.ForeignKeyConstraint(
             ['_creator_id'],
             ['users.id'],
@@ -530,6 +532,10 @@ def _create_filters_tables():
                     'blueprints_filters',
                     ['visibility'],
                     unique=False)
+    op.create_index(op.f('blueprints_filters_is_system_filter_idx'),
+                    'blueprints_filters',
+                    ['is_system_filter'],
+                    unique=False)
 
     op.create_table(
         'deployments_filters',
@@ -544,6 +550,8 @@ def _create_filters_tables():
         sa.Column('updated_at', UTCDateTime(), nullable=True),
         sa.Column('_tenant_id', sa.Integer(), nullable=False),
         sa.Column('_creator_id', sa.Integer(), nullable=False),
+        sa.Column('is_system_filter', sa.Boolean(), nullable=False,
+                  server_default='f'),
         sa.ForeignKeyConstraint(
             ['_creator_id'],
             ['users.id'],
@@ -582,6 +590,11 @@ def _create_filters_tables():
                     'deployments_filters',
                     ['visibility'],
                     unique=False)
+    op.create_index(op.f('deployments_filters_is_system_filter_idx'),
+                    'deployments_filters',
+                    ['is_system_filter'],
+                    unique=False)
+
     op.drop_index('filters__creator_id_idx',
                   table_name='filters')
     op.drop_index('filters__tenant_id_idx',
@@ -662,6 +675,7 @@ def _revert_filters_modifications():
                     'filters',
                     ['_creator_id'],
                     unique=False)
+
     op.drop_index(op.f('deployments_filters_visibility_idx'),
                   table_name='deployments_filters')
     op.drop_index(op.f('deployments_filters_id_idx'),
@@ -674,7 +688,10 @@ def _revert_filters_modifications():
                   table_name='deployments_filters')
     op.drop_index(op.f('deployments_filters__creator_id_idx'),
                   table_name='deployments_filters')
+    op.drop_index(op.f('deployments_filters_is_system_filter_idx'),
+                  table_name='deployments_filters')
     op.drop_table('deployments_filters')
+
     op.drop_index(op.f('blueprints_filters_visibility_idx'),
                   table_name='blueprints_filters')
     op.drop_index(op.f('blueprints_filters_id_idx'),
@@ -686,6 +703,8 @@ def _revert_filters_modifications():
     op.drop_index(op.f('blueprints_filters__tenant_id_idx'),
                   table_name='blueprints_filters')
     op.drop_index(op.f('blueprints_filters__creator_id_idx'),
+                  table_name='blueprints_filters')
+    op.drop_index(op.f('blueprints_filters_is_system_filter_idx'),
                   table_name='blueprints_filters')
     op.drop_table('blueprints_filters')
 
