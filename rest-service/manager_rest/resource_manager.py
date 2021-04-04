@@ -1398,13 +1398,19 @@ class ResourceManager(object):
                 parents.append(value)
         return parents
 
-    @staticmethod
-    def get_deployment_object_type_from_labels(labels):
-        types = set()
-        for label, value in labels:
-            if label == 'csys-obj-type' and value:
-                types.add(value.lower())
-        return types
+    def get_deployment_object_types_from_labels(self, deployment, labels):
+        new_labels = self.get_labels_to_create(deployment, labels)
+        created_types = set()
+        delete_types = set()
+        for key, value in new_labels:
+            if key == 'csys-obj-type' and value:
+                created_types.add(value.lower())
+
+        new_labels_set = set(new_labels)
+        for label in deployment.labels:
+            if (label.key, label.value) not in new_labels_set:
+                delete_types.add(label.value.lower())
+        return created_types, delete_types
 
     def verify_deployment_parent_labels(self, parents, deployment_id):
         if not parents:

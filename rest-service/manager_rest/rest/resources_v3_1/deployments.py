@@ -103,18 +103,21 @@ class DeploymentsId(resources_v1.DeploymentsId):
         return deployment
 
     @staticmethod
-    def _update_deployment_counts(rm, deployment, new_labels):
-        if deployment.deployment_parents:
-            types = rm.get_deployment_object_type_from_labels(new_labels)
-            to_srv = deployment.is_environment and 'environment' not in types
-            to_env = not deployment.is_environment and 'environment' in types
+    def _update_deployment_counts(rm, dep, new_labels):
+        if dep.deployment_parents:
+            created_types, deleted_types = \
+                rm.get_deployment_object_types_from_labels(
+                    dep, new_labels
+                )
+            to_srv = dep.is_environment and 'environment' in deleted_types
+            to_env = not dep.is_environment and 'environment' in created_types
             _type = 'service' if to_srv else 'environment' if to_env else None
             if _type:
                 sm = get_storage_manager()
                 graph = rest_utils.RecursiveDeploymentLabelsDependencies(sm)
                 graph.create_dependencies_graph()
                 graph.update_deployment_counts_after_source_conversion(
-                    deployment.id, _type
+                    dep, _type
                 )
 
     @staticmethod
