@@ -2,12 +2,13 @@ from cloudify.models_states import VisibilityState
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from manager_rest.test import base_test
-from manager_rest.storage import models
 from manager_rest.test.attribute import attr
+from manager_rest.utils import get_formatted_timestamp
+from manager_rest.manager_exceptions import BadFilterRule
+from manager_rest.storage import models, get_storage_manager
+from manager_rest.constants import AttrsOperator, LabelsOperator
 from manager_rest.rest.filters_utils import (FilterRule,
                                              create_filter_rules_list)
-from manager_rest.constants import AttrsOperator, LabelsOperator
-from manager_rest.manager_exceptions import BadFilterRule
 
 FILTER_ID = 'filter'
 LEGAL_FILTER_RULES = [
@@ -244,9 +245,10 @@ class FiltersBaseCase(base_test.BaseServerTestCase):
                                 'attribute')
     NEW_RULES = [NEW_LABELS_RULE, NEW_ATTRS_RULE]
 
-    def setUp(self, filters_resource):
+    def setUp(self, filters_resource, filters_model):
         super().setUp()
         self.filters_client = getattr(self.client, filters_resource)
+        self.filters_model = filters_model
 
     def test_create_legal_filter(self):
         new_filter = self.create_filter(self.filters_client,
@@ -306,11 +308,16 @@ class FiltersBaseCase(base_test.BaseServerTestCase):
              'operator': AttrsOperator.ANY_OF, 'type': 'attribute'}
         ])
 
-    def test_filter_create_fails(self):
+    def test_filter_create_with_invalid_filter_rule_fails(self):
         err_filter_rule = [{'key': 'a', 'values': 'b', 'operator': 'any_of',
                             'type': 'label'}]
         with self.assertRaisesRegex(CloudifyClientError, 'must be a list'):
             self.create_filter(self.filters_client, FILTER_ID, err_filter_rule)
+
+    def test_filter_create_with_reserved_filter_id_fails(self):
+        with self.assertRaisesRegex(CloudifyClientError, 'prefix'):
+            self.create_filter(self.filters_client, 'csys-filter',
+                               self.FILTER_RULES)
 
     def test_create_filter_with_duplicate_filter_rules(self):
         new_filter = self.create_filter(self.filters_client,
@@ -329,6 +336,11 @@ class FiltersBaseCase(base_test.BaseServerTestCase):
         self.assertEqual(len(self.filters_client.list().items), 1)
         self.filters_client.delete(FILTER_ID)
         self.assertEqual(len(self.filters_client.list().items), 0)
+
+    def test_delete_system_filter_fails(self):
+        self._put_system_filter()
+        with self.assertRaisesRegex(CloudifyClientError, 'system filter'):
+            self.filters_client.delete('csys-test-filter')
 
     def test_update_filter(self):
         self._update_filter(new_filter_rules=self.NEW_RULES,
@@ -354,6 +366,11 @@ class FiltersBaseCase(base_test.BaseServerTestCase):
 
     def test_update_filter_updates_only_attrs_rules(self):
         self._update_filter(new_filter_rules=[self.NEW_ATTRS_RULE])
+
+    def test_update_system_filter_fails(self):
+        self._put_system_filter()
+        with self.assertRaisesRegex(CloudifyClientError, 'system filter'):
+            self.filters_client.update('csys-test-filter', self.NEW_RULES)
 
     def _update_filter(self, new_filter_rules=None, new_visibility=None):
         orig_filter = self.create_filter(self.filters_client,
@@ -386,13 +403,28 @@ class FiltersBaseCase(base_test.BaseServerTestCase):
         self.assertEqual(updated_filter.visibility, updated_visibility)
         self.assertGreater(updated_filter.updated_at, orig_filter.updated_at)
 
+    def _put_system_filter(self):
+        # We need to use the storage manager because system filters
+        # cannot (and should not) be created using the rest-service.
+        sm = get_storage_manager()
+        now = get_formatted_timestamp()
+        new_filter = self.filters_model(
+            id='csys-test-filter',
+            value=self.FILTER_RULES,
+            created_at=now,
+            updated_at=now,
+            visibility=VisibilityState.TENANT,
+            is_system_filter=True
+        )
+        sm.put(new_filter)
+
 
 @attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
 class BlueprintsFiltersCase(FiltersBaseCase):
     __test__ = True
 
     def setUp(self):
-        super().setUp('blueprints_filters')
+        super().setUp('blueprints_filters', models.BlueprintsFilter)
 
 
 @attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
@@ -400,4 +432,4 @@ class DeploymentsFiltersCase(FiltersBaseCase):
     __test__ = True
 
     def setUp(self):
-        super().setUp('deployments_filters')
+        super().setUp('deployments_filters', models.DeploymentsFilter)
