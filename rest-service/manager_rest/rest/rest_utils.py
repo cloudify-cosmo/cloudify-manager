@@ -902,29 +902,36 @@ def get_labels_list(raw_labels_list):
         [(key, raw_value)] = label.items()
         values_list = raw_value if isinstance(raw_value, list) else [raw_value]
         for value in values_list:
-            parsed_key, parsed_value = _parse_label(key, value)
+            parsed_key, parsed_value = parse_label(key, value)
             labels_list.append((parsed_key, parsed_value))
 
     test_unique_labels(labels_list)
     return labels_list
 
 
-def _parse_label(label_key, label_value):
+def parse_label(label_key, label_value):
     if ((not isinstance(label_key, text_type)) or
             (not isinstance(label_value, text_type))):
         raise BadLabelsList()
 
     if len(label_key) > 256 or len(label_value) > 256:
         raise manager_exceptions.BadParametersError(
-            'The label\'s key or value is too long. Maximum allowed length is '
+            'The key or value is too long. Maximum allowed length is '
             '256 characters'
         )
 
     if urlquote(label_key, safe='') != label_key:
         raise manager_exceptions.BadParametersError(
-            f'The label\'s key `{label_key}` contains illegal characters. '
+            f'The key `{label_key}` contains illegal characters. '
             f'Only letters, digits and the characters `-`, `.` and '
             f'`_` are allowed'
+        )
+
+    if any(unicodedata.category(char)[0] == 'C' or char == '"'
+           for char in label_value):
+        raise manager_exceptions.BadParametersError(
+            f'The value `{label_value}` contains illegal characters. '
+            f'Control characters and `"` are not allowed.'
         )
 
     parsed_label_key = label_key.lower()
@@ -937,12 +944,6 @@ def _parse_label(label_key, label_value):
             f'All labels with a `{CFY_LABELS_PREFIX}` prefix are reserved for '
             f'internal use. Allowed `{CFY_LABELS_PREFIX}` prefixed labels '
             f'are: {allowed_cfy_labels}')
-
-    if any(char in parsed_label_value for char in ['"', '\n', '\t']):
-        raise manager_exceptions.BadParametersError(
-            f'The label\'s value `{label_value}` contains illegal characters. '
-            f'`"`, `\\n` and `\\t` are not allowed'
-        )
 
     return parsed_label_key, parsed_label_value
 

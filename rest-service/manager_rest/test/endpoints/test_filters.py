@@ -7,12 +7,13 @@ from manager_rest.test.attribute import attr
 from manager_rest.rest.filters_utils import (FilterRule,
                                              create_filter_rules_list)
 from manager_rest.constants import AttrsOperator, LabelsOperator
-from manager_rest.manager_exceptions import BadFilterRule, BadParametersError
+from manager_rest.manager_exceptions import BadFilterRule
 
 FILTER_ID = 'filter'
 LEGAL_FILTER_RULES = [
     FilterRule('a', ['b'], LabelsOperator.ANY_OF, 'label'),
-    FilterRule('e', ['f', 'g'], LabelsOperator.ANY_OF, 'label'),
+    FilterRule('a', ['b@c#d& ,:'], LabelsOperator.ANY_OF, 'label'),
+    FilterRule('e', ['f', 'g*%'], LabelsOperator.ANY_OF, 'label'),
     FilterRule('c', ['d'], LabelsOperator.NOT_ANY_OF, 'label'),
     FilterRule('h', ['i', 'j'], LabelsOperator.NOT_ANY_OF, 'label'),
     FilterRule('k', [], LabelsOperator.IS_NULL, 'label'),
@@ -124,13 +125,13 @@ class FiltersFunctionalityBaseCase(base_test.BaseServerTestCase):
 
     def test_key_and_value_validation_fails(self):
         err_filter_rules_params = [
-            (('a b', ['b'], LabelsOperator.ANY_OF, 'label'),
-             'filter rule key'),
-            (('a', ['b', 'c d'], LabelsOperator.ANY_OF, 'label'),
-             'One of the filter rule values')
+            (('a b', ['b'], LabelsOperator.ANY_OF, 'label'), 'The key'),
+            (('a', ['b', '"'], LabelsOperator.ANY_OF, 'label'), 'The value'),
+            (('a', ['b', '\t'], LabelsOperator.ANY_OF, 'label'), 'The value'),
+            (('a', ['b', '\n'], LabelsOperator.ANY_OF, 'label'), 'The value')
         ]
         for params, err_msg in err_filter_rules_params:
-            with self.assertRaisesRegex(BadParametersError, err_msg):
+            with self.assertRaisesRegex(BadFilterRule, err_msg):
                 create_filter_rules_list([FilterRule(*params)],
                                          self.resource_model)
 
