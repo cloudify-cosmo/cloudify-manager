@@ -344,6 +344,11 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             'id', '_tenant_id',
             unique=True
         ),
+        db.Index(
+            'deployments__latest_execution_fk_idx',
+            '_latest_execution_fk',
+            unique=True
+        ),
     )
     skipped_fields = dict(
         SQLResourceBase.skipped_fields,
