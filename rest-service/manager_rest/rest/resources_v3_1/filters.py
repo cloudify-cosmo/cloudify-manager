@@ -103,7 +103,7 @@ class FiltersId(SecuredResource):
         rest_utils.validate_inputs({'filter_id': filter_id})
         storage_manager = get_storage_manager()
         filter_elem = storage_manager.get(filters_model, filter_id)
-        _verify_not_a_system_filter(filter_elem)
+        _verify_not_a_system_filter(filter_elem, 'delete')
         storage_manager.delete(filter_elem, validate_global=True)
         return None, 204
 
@@ -127,7 +127,7 @@ class FiltersId(SecuredResource):
 
         storage_manager = get_storage_manager()
         filter_elem = storage_manager.get(filters_model, filter_id)
-        _verify_not_a_system_filter(filter_elem)
+        _verify_not_a_system_filter(filter_elem, 'update')
         if visibility:
             get_resource_manager().validate_visibility_value(
                 filters_model, filter_elem, visibility)
@@ -165,10 +165,10 @@ def _get_filter_rules_by_type(filter_rules_list, filter_rule_type):
             filter_rules_list if filter_rule['type'] == filter_rule_type]
 
 
-def _verify_not_a_system_filter(filter_elem):
+def _verify_not_a_system_filter(filter_elem, action):
     if filter_elem.is_system_filter:
         raise manager_exceptions.IllegalActionError(
-            'Cannot delete a system filter')
+            f'Cannot {action} a system filter')
 
 
 class BlueprintsFiltersId(FiltersId):
