@@ -670,6 +670,10 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             return None
         return self.latest_execution.total_operations
 
+    @property
+    def has_sub_deployments(self):
+        return self.sub_services_count or self.sub_environments_count
+
 
 class DeploymentGroup(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'deployment_groups'
@@ -1793,8 +1797,10 @@ class BaseDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
             cls,
             Deployment,
             cls._source_deployment,
-            backref=db.backref(cls._source_backref_name,
-                               cascade=cls._source_cascade)
+            backref=db.backref(
+                cls._source_backref_name,
+                cascade=cls._source_cascade
+            )
         )
 
     @declared_attr
@@ -1803,8 +1809,11 @@ class BaseDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
             cls,
             Deployment,
             cls._target_deployment,
-            backref=db.backref(cls._target_backref_name),
-            cascade=cls._target_cascade)
+            backref=db.backref(
+                cls._target_backref_name,
+                cascade=cls._target_cascade
+            )
+        )
 
     source_deployment_id = association_proxy('source_deployment', 'id')
     target_deployment_id = association_proxy('target_deployment', 'id')
