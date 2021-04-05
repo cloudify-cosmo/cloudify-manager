@@ -34,7 +34,7 @@ from cloudify.models_states import (
 )
 
 from manager_rest.storage import models
-from manager_rest.constants import CFY_LABELS, CFY_LABELS_PREFIX
+from manager_rest.constants import RESERVED_LABELS, RESERVED_PREFIX
 from manager_rest.dsl_functions import (get_secret_method,
                                         evaluate_intrinsic_functions)
 from manager_rest import manager_exceptions, config, app_context
@@ -937,12 +937,12 @@ def parse_label(label_key, label_value):
     parsed_label_key = label_key.lower()
     parsed_label_value = unicodedata.normalize('NFKC', label_value).casefold()
 
-    if (parsed_label_key.startswith(CFY_LABELS_PREFIX) and
-            parsed_label_key not in CFY_LABELS):
-        allowed_cfy_labels = ', '.join(CFY_LABELS)
+    if (parsed_label_key.startswith(RESERVED_PREFIX) and
+            parsed_label_key not in RESERVED_LABELS):
+        allowed_cfy_labels = ', '.join(RESERVED_LABELS)
         raise manager_exceptions.BadParametersError(
-            f'All labels with a `{CFY_LABELS_PREFIX}` prefix are reserved for '
-            f'internal use. Allowed `{CFY_LABELS_PREFIX}` prefixed labels '
+            f'All labels with a `{RESERVED_PREFIX}` prefix are reserved for '
+            f'internal use. Allowed `{RESERVED_PREFIX}` prefixed labels '
             f'are: {allowed_cfy_labels}')
 
     return parsed_label_key, parsed_label_value

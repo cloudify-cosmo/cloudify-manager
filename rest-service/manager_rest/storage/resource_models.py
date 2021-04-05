@@ -797,6 +797,10 @@ class _Filter(CreatedAtMixin, SQLResourceBase):
 
     value = db.Column(JSONString, nullable=True)
     updated_at = db.Column(UTCDateTime)
+    is_system_filter = db.Column(db.Boolean,
+                                 nullable=False,
+                                 index=True,
+                                 default=False)
 
     @property
     def labels_filter_rules(self):
