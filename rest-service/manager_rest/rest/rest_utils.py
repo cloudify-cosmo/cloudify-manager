@@ -719,6 +719,39 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
                         target.sub_environments_count -= total_environments
                     self.sm.update(target)
 
+    def update_deployment_counts_after_source_conversion(self,
+                                                         source,
+                                                         convert_type):
+        """
+        Update counter for deployment that is already connected to other
+        deployments where deployment could be changed from `service` to
+        `environment` and vice versa and we need to take care of deployment
+        counters so that count will not mess up
+        :param source: Deployment source instance that its type get changed
+        :param convert_type: The type we need to convert source deployment
+        to. It could be changed from `service` to `environment` and vice versa
+        """
+        if convert_type not in ('environment', 'service',):
+            return
+        if convert_type == 'environment':
+            env_to_update = 1
+            srv_to_update = -1
+        else:
+            env_to_update = -1
+            srv_to_update = 1
+
+        target_group = self.find_recursive_deployments(source.id)
+        for target_id in target_group:
+            with self.sm.transaction():
+                target = self.sm.get(
+                    models.Deployment,
+                    target_id,
+                    locking=True
+                )
+                target.sub_services_count += srv_to_update
+                target.sub_environments_count += env_to_update
+                self.sm.update(target)
+
     def propagate_deployment_statuses(self, source):
         """
         Propagate deployment statuses for source deployment to all connected
