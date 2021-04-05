@@ -1396,6 +1396,20 @@ class ResourceManager(object):
                 parents.append(value)
         return parents
 
+    def get_deployment_object_types_from_labels(self, deployment, labels):
+        created_types = set()
+        delete_types = set()
+        new_labels = self.get_labels_to_create(deployment, labels)
+        for key, value in new_labels:
+            if key == 'csys-obj-type' and value:
+                created_types.add(value.lower())
+
+        labels_to_delete = self.get_labels_to_delete(deployment, labels)
+        for label in labels_to_delete:
+            if label.key == 'csys-obj-type':
+                delete_types.add(label.value.lower())
+        return created_types, delete_types
+
     def verify_deployment_parent_labels(self, parents, deployment_id):
         if not parents:
             return
@@ -2310,11 +2324,9 @@ class ResourceManager(object):
         If an existing label is not in the new labels list, it will be deleted.
         """
         labels_to_create = self.get_labels_to_create(resource, new_labels)
-
-        new_labels_set = set(new_labels)
-        for label in resource.labels:
-            if (label.key, label.value) not in new_labels_set:
-                self.sm.delete(label)
+        labels_to_delete = self.get_labels_to_delete(resource, new_labels)
+        for label in labels_to_delete:
+            self.sm.delete(label)
 
         self.create_resource_labels(labels_resource_model,
                                     resource,
@@ -2328,6 +2340,15 @@ class ResourceManager(object):
             (label.key, label.value) for label in existing_labels)
 
         return new_labels_set - existing_labels_tup
+
+    @staticmethod
+    def get_labels_to_delete(resource, new_labels):
+        labels_to_delete = set()
+        new_labels_set = set(new_labels)
+        for label in resource.labels:
+            if (label.key, label.value) not in new_labels_set:
+                labels_to_delete.add(label)
+        return labels_to_delete
 
     def create_resource_labels(self,
                                labels_resource_model,

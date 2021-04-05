@@ -103,10 +103,26 @@ class DeploymentsId(resources_v1.DeploymentsId):
         return deployment
 
     @staticmethod
-    def _handle_deployment_labels(rm, deployment, raw_labels_list):
-        deployment_parents = deployment.deployment_parents
-        new_labels = rest_utils.get_labels_list(raw_labels_list)
+    def _update_deployment_counts(rm, dep, new_labels):
+        if dep.deployment_parents:
+            created_types, deleted_types = \
+                rm.get_deployment_object_types_from_labels(
+                    dep, new_labels
+                )
+            to_srv = dep.is_environment and 'environment' in deleted_types
+            to_env = not dep.is_environment and 'environment' in created_types
+            _type = 'service' if to_srv else 'environment' if to_env else None
+            if _type:
+                sm = get_storage_manager()
+                graph = rest_utils.RecursiveDeploymentLabelsDependencies(sm)
+                graph.create_dependencies_graph()
+                graph.update_deployment_counts_after_source_conversion(
+                    dep, _type
+                )
 
+    @staticmethod
+    def _update_labels_for_deployment(rm, deployment, new_labels):
+        deployment_parents = deployment.deployment_parents
         parents_labels = rm.get_deployment_parents_from_labels(
             new_labels
         )
@@ -133,6 +149,11 @@ class DeploymentsId(resources_v1.DeploymentsId):
             rm.handle_deployment_labels_graph(
                 parents, deployment
             )
+
+    def _handle_deployment_labels(self, rm, deployment, raw_labels_list):
+        new_labels = rest_utils.get_labels_list(raw_labels_list)
+        self._update_deployment_counts(rm, deployment, new_labels)
+        self._update_labels_for_deployment(rm, deployment, new_labels)
 
     @authorize('deployment_create')
     @rest_decorators.marshal_with(models.Deployment)
