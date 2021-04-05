@@ -58,6 +58,7 @@ class UserResponse(BaseResponse):
         'role': fields.String,
         'group_system_roles': fields.Raw,
         'active': fields.Boolean,
+        'first_login_at': fields.String,
         'last_login_at': fields.String,
         'is_locked': fields.Boolean,
         'show_getting_started': fields.Boolean,

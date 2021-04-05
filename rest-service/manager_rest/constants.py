@@ -76,16 +76,16 @@ MODELS_TO_PERMISSIONS = {
 FORBIDDEN_METHODS = ['POST', 'PATCH', 'PUT']
 SANITY_MODE_FILE_PATH = '/opt/manager/sanity_mode'
 
-CFY_LABELS = {'csys-obj-name',
-              'csys-obj-type',
-              'csys-env-type',
-              'csys-wrcp-services',
-              'csys-location-name',
-              'csys-location-lat',
-              'csys-location-long',
-              'csys-obj-parent'}
+RESERVED_LABELS = {'csys-obj-name',
+                   'csys-obj-type',
+                   'csys-env-type',
+                   'csys-wrcp-services',
+                   'csys-location-name',
+                   'csys-location-lat',
+                   'csys-location-long',
+                   'csys-obj-parent'}
 
-CFY_LABELS_PREFIX = 'csys-'
+RESERVED_PREFIX = 'csys-'
 
 
 class LabelsOperator(str, Enum):

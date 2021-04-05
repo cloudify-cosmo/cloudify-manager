@@ -344,6 +344,11 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             'id', '_tenant_id',
             unique=True
         ),
+        db.Index(
+            'deployments__latest_execution_fk_idx',
+            '_latest_execution_fk',
+            unique=True
+        ),
     )
     skipped_fields = dict(
         SQLResourceBase.skipped_fields,
@@ -797,6 +802,10 @@ class _Filter(CreatedAtMixin, SQLResourceBase):
 
     value = db.Column(JSONString, nullable=True)
     updated_at = db.Column(UTCDateTime)
+    is_system_filter = db.Column(db.Boolean,
+                                 nullable=False,
+                                 index=True,
+                                 default=False)
 
     @property
     def labels_filter_rules(self):

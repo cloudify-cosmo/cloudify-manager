@@ -1194,6 +1194,19 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             filter_rules=[schedules_filter])]
         self.assertListEqual(filtered_dep_ids, ['born-without-schedules'])
 
+    def test_list_deployments_with_schedules_filter_bad_operator(self):
+        _, _, _, dep_1 = self.put_deployment(
+            blueprint_id='born-with-schedules',
+            deployment_id='born-with-schedules',
+            blueprint_file_name='blueprint_with_default_schedules.yaml')
+        schedules_filter = \
+            FilterRule('schedules', ['sched-1'], 'any_of', 'attribute')
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            "400:.* only possible with the is_not_empty operator",
+            self.client.deployments.list,
+            filter_rules=[schedules_filter])
+
     def test_update_deployment_with_default_schedules(self):
         _, _, _, deployment = self.put_deployment(
             blueprint_file_name='blueprint_with_default_schedules.yaml')

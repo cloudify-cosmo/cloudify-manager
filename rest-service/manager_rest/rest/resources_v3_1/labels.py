@@ -1,6 +1,6 @@
 from flask import request
 
-from manager_rest.constants import CFY_LABELS
+from manager_rest.constants import RESERVED_LABELS
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage.storage_manager import ListResult
@@ -17,7 +17,7 @@ class DeploymentsLabels(SecuredResource):
     def get(self, pagination=None, search=None):
         """Get all deployments' labels' keys"""
         if _is_reserved_labels_keys_in_request():
-            return ListResult.from_list(items=CFY_LABELS)
+            return ListResult.from_list(items=RESERVED_LABELS)
         return get_labels_keys(models.Deployment,
                                models.DeploymentLabel,
                                pagination,
@@ -46,7 +46,7 @@ class BlueprintsLabels(SecuredResource):
     def get(self, pagination=None, search=None):
         """Get all blueprints' labels' keys"""
         if _is_reserved_labels_keys_in_request():
-            return ListResult.from_list(items=CFY_LABELS)
+            return ListResult.from_list(items=RESERVED_LABELS)
         return get_labels_keys(models.Blueprint,
                                models.BlueprintLabel,
                                pagination,

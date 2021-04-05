@@ -379,3 +379,66 @@ class DeploymentLabelsDependenciesTest(BaseServerTestCase):
         self.assertIn('dep_12', targets)
         self.assertIn('dep_13', targets)
         self.assertIn('dep_14', targets)
+
+    def test_sub_deployments_counts_after_convert_to_service(self):
+        self.put_deployment(deployment_id='env',
+                            blueprint_id='env')
+
+        self._create_deployment_objects('env', 'environment', 2)
+        self.put_deployment_with_labels(
+            [
+                {
+                    'csys-obj-parent': 'env'
+                },
+                {
+                    'csys-obj-type': 'Environment',
+                }
+            ],
+            resource_id='env_1'
+        )
+        self._create_deployment_objects('env_1', 'environment', 2)
+        deployment = self.client.deployments.get('env')
+        self.assertEqual(deployment.sub_environments_count, 5)
+
+        # Remove the csys-obj-type and convert it to service instead
+        self.client.deployments.update_labels('env_1', [
+                {
+                    'csys-obj-parent': 'env'
+                }
+            ]
+        )
+        deployment = self.client.deployments.get('env')
+        self.assertEqual(deployment.sub_environments_count, 4)
+        self.assertEqual(deployment.sub_services_count, 1)
+
+    def test_sub_deployments_counts_after_convert_to_environment(self):
+        self.put_deployment(deployment_id='env',
+                            blueprint_id='env')
+
+        self._create_deployment_objects('env', 'environment', 2)
+        self.put_deployment_with_labels(
+            [
+                {
+                    'csys-obj-parent': 'env'
+                }
+            ],
+            resource_id='srv_1'
+        )
+        self._create_deployment_objects('srv_1', 'service', 2)
+        deployment = self.client.deployments.get('env')
+        self.assertEqual(deployment.sub_environments_count, 2)
+        self.assertEqual(deployment.sub_services_count, 3)
+
+        # Add the csys-obj-type and convert it to environment instead
+        self.client.deployments.update_labels('srv_1', [
+            {
+                'csys-obj-parent': 'env'
+            },
+            {
+                'csys-obj-type': 'environment'
+            }
+        ]
+                                              )
+        deployment = self.client.deployments.get('env')
+        self.assertEqual(deployment.sub_environments_count, 3)
+        self.assertEqual(deployment.sub_services_count, 2)

@@ -59,11 +59,11 @@ def upgrade():
     _create_deployment_labels_dependencies_table()
     _add_deployment_sub_statuses_and_counters()
     _create_depgroups_labels_table()
-    _add_users_show_getting_started()
+    _modify_users_table()
 
 
 def downgrade():
-    _drop_users_show_getting_started()
+    _revert_changes_to_users_table()
     _drop_depgroups_labels_table()
     _drop_deployment_sub_statuses_and_counters()
     _drop_deployment_labels_dependencies_table()
@@ -492,6 +492,8 @@ def _create_filters_tables():
         sa.Column('updated_at', UTCDateTime(), nullable=True),
         sa.Column('_tenant_id', sa.Integer(), nullable=False),
         sa.Column('_creator_id', sa.Integer(), nullable=False),
+        sa.Column('is_system_filter', sa.Boolean(), nullable=False,
+                  server_default='f'),
         sa.ForeignKeyConstraint(
             ['_creator_id'],
             ['users.id'],
@@ -530,6 +532,10 @@ def _create_filters_tables():
                     'blueprints_filters',
                     ['visibility'],
                     unique=False)
+    op.create_index(op.f('blueprints_filters_is_system_filter_idx'),
+                    'blueprints_filters',
+                    ['is_system_filter'],
+                    unique=False)
 
     op.create_table(
         'deployments_filters',
@@ -544,6 +550,8 @@ def _create_filters_tables():
         sa.Column('updated_at', UTCDateTime(), nullable=True),
         sa.Column('_tenant_id', sa.Integer(), nullable=False),
         sa.Column('_creator_id', sa.Integer(), nullable=False),
+        sa.Column('is_system_filter', sa.Boolean(), nullable=False,
+                  server_default='f'),
         sa.ForeignKeyConstraint(
             ['_creator_id'],
             ['users.id'],
@@ -582,6 +590,11 @@ def _create_filters_tables():
                     'deployments_filters',
                     ['visibility'],
                     unique=False)
+    op.create_index(op.f('deployments_filters_is_system_filter_idx'),
+                    'deployments_filters',
+                    ['is_system_filter'],
+                    unique=False)
+
     op.drop_index('filters__creator_id_idx',
                   table_name='filters')
     op.drop_index('filters__tenant_id_idx',
@@ -662,6 +675,7 @@ def _revert_filters_modifications():
                     'filters',
                     ['_creator_id'],
                     unique=False)
+
     op.drop_index(op.f('deployments_filters_visibility_idx'),
                   table_name='deployments_filters')
     op.drop_index(op.f('deployments_filters_id_idx'),
@@ -674,7 +688,10 @@ def _revert_filters_modifications():
                   table_name='deployments_filters')
     op.drop_index(op.f('deployments_filters__creator_id_idx'),
                   table_name='deployments_filters')
+    op.drop_index(op.f('deployments_filters_is_system_filter_idx'),
+                  table_name='deployments_filters')
     op.drop_table('deployments_filters')
+
     op.drop_index(op.f('blueprints_filters_visibility_idx'),
                   table_name='blueprints_filters')
     op.drop_index(op.f('blueprints_filters_id_idx'),
@@ -686,6 +703,8 @@ def _revert_filters_modifications():
     op.drop_index(op.f('blueprints_filters__tenant_id_idx'),
                   table_name='blueprints_filters')
     op.drop_index(op.f('blueprints_filters__creator_id_idx'),
+                  table_name='blueprints_filters')
+    op.drop_index(op.f('blueprints_filters_is_system_filter_idx'),
                   table_name='blueprints_filters')
     op.drop_table('blueprints_filters')
 
@@ -825,7 +844,7 @@ def _drop_depgroups_labels_table():
     op.drop_table('deployment_groups_labels')
 
 
-def _add_users_show_getting_started():
+def _modify_users_table():
     op.add_column(
         'users',
         sa.Column('show_getting_started',
@@ -833,7 +852,10 @@ def _add_users_show_getting_started():
                   nullable=False,
                   server_default='t')
     )
+    op.add_column('users',
+                  sa.Column('first_login_at', UTCDateTime(), nullable=True))
 
 
-def _drop_users_show_getting_started():
+def _revert_changes_to_users_table():
+    op.drop_column('users', 'first_login_at')
     op.drop_column('users', 'show_getting_started')
