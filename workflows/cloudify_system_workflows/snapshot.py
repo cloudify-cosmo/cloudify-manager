@@ -39,7 +39,6 @@ def create(snapshot_id, config, **kwargs):
 
 @workflow(system_wide=True)
 def restore(snapshot_id,
-            recreate_deployments_envs,
             config,
             force,
             timeout,
@@ -54,7 +53,6 @@ def restore(snapshot_id,
     restore_snapshot = SnapshotRestore(
         config,
         snapshot_id,
-        recreate_deployments_envs,
         force,
         timeout,
         premium_enabled,
