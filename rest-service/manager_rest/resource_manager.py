@@ -391,7 +391,6 @@ class ResourceManager(object):
 
     def restore_snapshot(self,
                          snapshot_id,
-                         recreate_deployments_envs,
                          force,
                          bypass_maintenance,
                          timeout,
@@ -408,7 +407,6 @@ class ResourceManager(object):
             workflow_id='restore_snapshot',
             parameters={
                 'snapshot_id': snapshot_id,
-                'recreate_deployments_envs': recreate_deployments_envs,
                 'config': self._get_conf_for_snapshots_wf(),
                 'force': force,
                 'timeout': timeout,
