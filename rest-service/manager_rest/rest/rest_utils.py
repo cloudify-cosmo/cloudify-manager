@@ -642,10 +642,6 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
             v = queue.pop()
             if v not in inv_graph:
                 continue
-            if not visited[v]:
-                visited[v] = True
-            else:
-                continue
             dependencies = self.sm.list(
                 models.DeploymentLabelsDependencies,
                 filters={'source_deployment_id': v})
@@ -826,10 +822,6 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
         while queue:
             v = queue.pop()
             if v not in self.graph:
-                continue
-            if not visited[v]:
-                visited[v] = True
-            else:
                 continue
             from_dependencies = self.sm.list(
                 models.DeploymentLabelsDependencies,
