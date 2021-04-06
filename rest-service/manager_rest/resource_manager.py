@@ -954,7 +954,7 @@ class ResourceManager(object):
             filters={
                 'deployment_id': execution.deployment_id,
                 'id': lambda col: col != execution.id,
-                'status': lambda col: col.notin_(ExecutionState.END_STATES)
+                'status': ExecutionState.ACTIVE_STATES,
             },
             is_include_system_workflows=True
         ).items
