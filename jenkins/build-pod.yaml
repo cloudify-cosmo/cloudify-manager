@@ -6,7 +6,7 @@ spec:
     image: jenkins/inbound-agent:4.3-4
     resources:
       limits:
-        cpu: 0.3
+        cpu: 0.2
         memory: 256Mi
   - name: python
     image: circleci/python:3.6
@@ -30,10 +30,10 @@ spec:
     tty: true
     resources:
       requests:
-        cpu: 0.5
+        cpu: 0.8
         memory: 1Gi
       limits:
-        cpu: 0.5
+        cpu: 0.8
         memory: 1Gi
     securityContext:
       runAsUser: 0
