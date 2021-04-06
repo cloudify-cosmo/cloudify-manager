@@ -720,3 +720,29 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
             assert exc.status in (
                 ExecutionState.CANCELLED, ExecutionState.CANCELLING
             )
+
+    @mock.patch('manager_rest.workflow_executor.execute_workflow', mock.Mock())
+    @mock.patch('manager_rest.resource_manager.send_event', mock.Mock())
+    def test_resume_group(self):
+        """After all executions have been cancelled, resume them"""
+        self.client.deployment_groups.add_deployments(
+            'group1',
+            count=20
+        )
+        exc_group = self.client.execution_groups.start(
+            deployment_group_id='group1',
+            workflow_id='install',
+        )
+        group = self.sm.get(models.ExecutionGroup, exc_group.id)
+
+        for exc in group.executions:
+            exc.status = ExecutionState.CANCELLED
+            self.sm.update(exc)
+
+        self.client.execution_groups.resume(exc_group.id)
+
+        group = self.sm.get(models.ExecutionGroup, exc_group.id)
+        for exc in group.executions:
+            assert exc.status in (
+                ExecutionState.PENDING, ExecutionState.QUEUED
+            )
