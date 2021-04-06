@@ -15,7 +15,7 @@
 
 from manager_rest.test import base_test
 from manager_rest.test.attribute import attr
-from manager_rest.constants import CFY_LABELS
+from manager_rest.constants import RESERVED_LABELS
 
 
 @attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
@@ -47,7 +47,7 @@ class LabelsTestCase(base_test.BaseServerTestCase):
 
     def test_get_reserved_labels(self):
         reserved_labels = self.labels_client.get_reserved_labels_keys()
-        self.assertEqual(reserved_labels.items, list(CFY_LABELS))
+        self.assertEqual(reserved_labels.items, list(RESERVED_LABELS))
 
 
 class DeploymentsLabelsTestCase(LabelsTestCase):

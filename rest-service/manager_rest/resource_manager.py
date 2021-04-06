@@ -133,6 +133,10 @@ class ResourceManager(object):
         dep.latest_execution = latest_execution
         dep.deployment_status = dep.evaluate_deployment_status()
         self.sm.update(dep)
+        if dep.deployment_parents:
+            graph = RecursiveDeploymentLabelsDependencies(self.sm)
+            graph.create_dependencies_graph()
+            graph.propagate_deployment_statuses(dep.id)
 
     def update_execution_status(self, execution_id, status, error):
         execution = self.sm.get(models.Execution, execution_id)
@@ -387,7 +391,6 @@ class ResourceManager(object):
 
     def restore_snapshot(self,
                          snapshot_id,
-                         recreate_deployments_envs,
                          force,
                          bypass_maintenance,
                          timeout,
@@ -404,7 +407,6 @@ class ResourceManager(object):
             workflow_id='restore_snapshot',
             parameters={
                 'snapshot_id': snapshot_id,
-                'recreate_deployments_envs': recreate_deployments_envs,
                 'config': self._get_conf_for_snapshots_wf(),
                 'force': force,
                 'timeout': timeout,
@@ -661,6 +663,28 @@ class ResourceManager(object):
 
         return self.sm.delete(blueprint)
 
+    def retrieve_and_display_dependencies(self, deployment):
+        dep_graph = RecursiveDeploymentDependencies(self.sm)
+        excluded_ids = self._excluded_component_creator_ids(deployment)
+        deployment_dependencies = \
+            dep_graph.retrieve_and_display_dependencies(
+                deployment.id,
+                excluded_component_creator_ids=excluded_ids)
+
+        if deployment.has_sub_deployments:
+            dep_graph = RecursiveDeploymentLabelsDependencies(self.sm)
+            labels_dependencies = \
+                dep_graph.retrieve_and_display_dependencies(
+                    deployment
+                )
+            if deployment_dependencies:
+                deployment_dependencies = deployment_dependencies\
+                                          + labels_dependencies
+            else:
+                deployment_dependencies = labels_dependencies
+
+        return deployment_dependencies
+
     def check_deployment_delete(self, deployment, force=False):
         """Check that deployment can be deleted"""
         executions = self.sm.list(models.Execution, filters={
@@ -669,15 +693,8 @@ class ResourceManager(object):
                 ExecutionState.ACTIVE_STATES + ExecutionState.QUEUED_STATE
             )
         }, get_all_results=True)
-
-        # Verify deleting the deployment won't affect dependent deployments
-        dep_graph = RecursiveDeploymentDependencies(self.sm)
-        excluded_ids = self._excluded_component_creator_ids(deployment)
-        deployment_dependencies = \
-            dep_graph.retrieve_and_display_dependencies(
-                deployment.id,
-                excluded_component_creator_ids=excluded_ids)
-
+        deployment_dependencies = self.retrieve_and_display_dependencies(
+            deployment)
         if deployment_dependencies:
             if force:
                 current_app.logger.warning(
@@ -691,7 +708,6 @@ class ResourceManager(object):
                     f"existing installations depend on it:\n"
                     f"{deployment_dependencies}"
                 )
-
         if executions:
             running_ids = ','.join(
                 execution.id for execution in executions
@@ -732,6 +748,21 @@ class ResourceManager(object):
         if external_targets:
             self._clean_dependencies_from_external_targets(
                 deployment, external_targets)
+
+        parents = deployment.deployment_parents
+        if parents:
+            dep_graph = RecursiveDeploymentLabelsDependencies(self.sm)
+            dep_graph.create_dependencies_graph()
+            dep_graph.decrease_deployment_counts_in_graph(parents, deployment)
+            for _parent in parents:
+                dep_graph.remove_dependency_from_graph(deployment.id, _parent)
+                self._remove_deployment_label_dependency(
+                    deployment,
+                    self.sm.get(
+                        models.Deployment, _parent
+                    )
+                )
+                dep_graph.propagate_deployment_statuses(_parent)
 
         deployment_folder = os.path.join(
             config.instance.file_server_root,
@@ -1339,7 +1370,8 @@ class ResourceManager(object):
                           visibility,
                           skip_plugins_validation=False,
                           site=None,
-                          runtime_only_evaluation=False):
+                          runtime_only_evaluation=False,
+                          labels=None,):
         verify_blueprint_uploaded_state(blueprint)
         plan = blueprint.plan
         visibility = self.get_resource_visibility(models.Deployment,
@@ -1352,7 +1384,11 @@ class ResourceManager(object):
                 f"Can't create global deployment {deployment_id} because "
                 f"blueprint {blueprint.id} is not global"
             )
-
+        parents_labels = self.get_deployment_parents_from_labels(
+            labels
+        )
+        if parents_labels:
+            self.verify_deployment_parent_labels(parents_labels, deployment_id)
         #  validate plugins exists on manager when
         #  skip_plugins_validation is False
         if not skip_plugins_validation:
@@ -1367,7 +1403,6 @@ class ResourceManager(object):
                 plan)
             for plugin in host_agent_plugins:
                 self.validate_plugin_is_installed(plugin)
-
         now = datetime.utcnow()
         new_deployment = models.Deployment(
             id=deployment_id,
@@ -1393,12 +1428,27 @@ class ResourceManager(object):
     @staticmethod
     def get_deployment_parents_from_labels(labels):
         parents = []
-        for label, value in labels:
-            if label == 'csys-obj-parent':
-                parents.append(value)
+        labels = labels or []
+        for label_key, label_value in labels:
+            if label_key == 'csys-obj-parent':
+                parents.append(label_value)
         return parents
 
-    def verify_deployment_parent_labels(self, parents, deployment_id):
+    def get_deployment_object_types_from_labels(self, deployment, labels):
+        created_types = set()
+        delete_types = set()
+        new_labels = self.get_labels_to_create(deployment, labels)
+        for key, value in new_labels:
+            if key == 'csys-obj-type' and value:
+                created_types.add(value.lower())
+
+        labels_to_delete = self.get_labels_to_delete(deployment, labels)
+        for label in labels_to_delete:
+            if label.key == 'csys-obj-type':
+                delete_types.add(label.value.lower())
+        return created_types, delete_types
+
+    def get_missing_deployment_parents(self, parents):
         if not parents:
             return
         result = self.sm.list(
@@ -1408,6 +1458,10 @@ class ResourceManager(object):
         ).items
         _existing_parents = [_parent[0] for _parent in result]
         missing_parents = set(parents) - set(_existing_parents)
+        return missing_parents
+
+    def verify_deployment_parent_labels(self, parents, deployment_id):
+        missing_parents = self.get_missing_deployment_parents(parents)
         if missing_parents:
             raise manager_exceptions.DeploymentParentNotFound(
                 'Deployment {0}: is referencing deployments'
@@ -1454,7 +1508,7 @@ class ResourceManager(object):
                                             dep_graph,
                                             source,
                                             target_id):
-        dep_graph.decrease_deployment_counts_in_graph(target_id, source)
+        dep_graph.decrease_deployment_counts_in_graph([target_id], source)
         dep_graph.remove_dependency_from_graph(source.id, target_id)
         self._remove_deployment_label_dependency(
             source,
@@ -2123,15 +2177,11 @@ class ResourceManager(object):
                                           workflow_id, deployment, force):
         if workflow_id not in ['stop', 'uninstall', 'update']:
             return
-        dep_graph = RecursiveDeploymentDependencies(self.sm)
-
         # if we're in the middle of an execution initiated by the component
         # creator, we'd like to drop the component dependency from the list
-        excluded_ids = self._excluded_component_creator_ids(deployment)
-        deployment_dependencies = \
-            dep_graph.retrieve_and_display_dependencies(
-                deployment.id,
-                excluded_component_creator_ids=excluded_ids)
+        deployment_dependencies = self.retrieve_and_display_dependencies(
+            deployment
+        )
         if not deployment_dependencies:
             return
         if force:
@@ -2312,11 +2362,9 @@ class ResourceManager(object):
         If an existing label is not in the new labels list, it will be deleted.
         """
         labels_to_create = self.get_labels_to_create(resource, new_labels)
-
-        new_labels_set = set(new_labels)
-        for label in resource.labels:
-            if (label.key, label.value) not in new_labels_set:
-                self.sm.delete(label)
+        labels_to_delete = self.get_labels_to_delete(resource, new_labels)
+        for label in labels_to_delete:
+            self.sm.delete(label)
 
         self.create_resource_labels(labels_resource_model,
                                     resource,
@@ -2330,6 +2378,15 @@ class ResourceManager(object):
             (label.key, label.value) for label in existing_labels)
 
         return new_labels_set - existing_labels_tup
+
+    @staticmethod
+    def get_labels_to_delete(resource, new_labels):
+        labels_to_delete = set()
+        new_labels_set = set(new_labels)
+        for label in resource.labels:
+            if (label.key, label.value) not in new_labels_set:
+                labels_to_delete.add(label)
+        return labels_to_delete
 
     def create_resource_labels(self,
                                labels_resource_model,

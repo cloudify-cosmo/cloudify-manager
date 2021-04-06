@@ -41,6 +41,7 @@ from manager_rest.manager_exceptions import (
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.maintenance import is_bypass_maintenance_mode
 from manager_rest.dsl_functions import evaluate_deployment_capabilities
+
 from manager_rest.rest.filters_utils import get_filter_rules_from_filter_id
 from manager_rest.rest import (
     rest_utils,
@@ -103,10 +104,26 @@ class DeploymentsId(resources_v1.DeploymentsId):
         return deployment
 
     @staticmethod
-    def _handle_deployment_labels(rm, deployment, raw_labels_list):
-        deployment_parents = deployment.deployment_parents
-        new_labels = rest_utils.get_labels_list(raw_labels_list)
+    def _update_deployment_counts(rm, dep, new_labels):
+        if dep.deployment_parents:
+            created_types, deleted_types = \
+                rm.get_deployment_object_types_from_labels(
+                    dep, new_labels
+                )
+            to_srv = dep.is_environment and 'environment' in deleted_types
+            to_env = not dep.is_environment and 'environment' in created_types
+            _type = 'service' if to_srv else 'environment' if to_env else None
+            if _type:
+                sm = get_storage_manager()
+                graph = rest_utils.RecursiveDeploymentLabelsDependencies(sm)
+                graph.create_dependencies_graph()
+                graph.update_deployment_counts_after_source_conversion(
+                    dep, _type
+                )
 
+    @staticmethod
+    def _update_labels_for_deployment(rm, deployment, new_labels):
+        deployment_parents = deployment.deployment_parents
         parents_labels = rm.get_deployment_parents_from_labels(
             new_labels
         )
@@ -134,6 +151,11 @@ class DeploymentsId(resources_v1.DeploymentsId):
                 parents, deployment
             )
 
+    def _handle_deployment_labels(self, rm, deployment, raw_labels_list):
+        new_labels = rest_utils.get_labels_list(raw_labels_list)
+        self._update_deployment_counts(rm, deployment, new_labels)
+        self._update_labels_for_deployment(rm, deployment, new_labels)
+
     @authorize('deployment_create')
     @rest_decorators.marshal_with(models.Deployment)
     def put(self, deployment_id, **kwargs):
@@ -153,6 +175,8 @@ class DeploymentsId(resources_v1.DeploymentsId):
             optional=True,
             valid_values=VisibilityState.STATES
         )
+        labels = rest_utils.get_labels_list(request_dict.get('labels', []))
+        inputs = request_dict.get('inputs', {})
         skip_plugins_validation = self.get_skip_plugin_validation_flag(
             request_dict)
         rm = get_resource_manager()
@@ -160,7 +184,6 @@ class DeploymentsId(resources_v1.DeploymentsId):
         blueprint = sm.get(models.Blueprint, blueprint_id)
         site_name = _get_site_name(request_dict)
         site = sm.get(models.Site, site_name) if site_name else None
-        labels = rest_utils.get_labels_list(request_dict.get('labels', []))
         rm.cleanup_failed_deployment(deployment_id)
         deployment = rm.create_deployment(
             blueprint,
@@ -171,10 +194,11 @@ class DeploymentsId(resources_v1.DeploymentsId):
             site=site,
             runtime_only_evaluation=request_dict.get(
                 'runtime_only_evaluation', False),
+            labels=labels,
         )
         try:
             rm.execute_workflow(deployment.make_create_environment_execution(
-                inputs=request_dict.get('inputs', {}),
+                inputs=inputs,
                 labels=labels,
                 skip_plugins_validation=skip_plugins_validation,
 

@@ -2,8 +2,8 @@ from typing import List, Union, NewType
 
 from cloudify._compat import text_type
 
-from manager_rest.rest.rest_utils import validate_inputs
 from manager_rest.storage import get_storage_manager, models
+from manager_rest.rest.rest_utils import validate_inputs, parse_label
 from manager_rest.manager_exceptions import BadFilterRule, BadParametersError
 from manager_rest.constants import (ATTRS_OPERATORS,
                                     FilterRuleType,
@@ -125,17 +125,14 @@ def create_filter_rules_list(raw_filter_rules: List[dict],
                                 f"Filter rule type must be one of "
                                 f"{', '.join(FILTER_RULE_TYPES)}")
 
-        value_msg_prefix = (None if len(filter_rule_values) == 1 else
-                            'One of the filter rule values')
-
         for value in filter_rule_values:
             try:
-                validate_inputs({'filter rule key': filter_rule_key})
-                validate_inputs({'filter rule value': value},
-                                err_prefix=value_msg_prefix)
+                if filter_rule_type == FilterRuleType.LABEL:
+                    parse_label(filter_rule_key, value)
+                else:
+                    validate_inputs({"attributes' filter rule value": value})
             except BadParametersError as e:
-                err_msg = f'The filter rule {filter_rule} is invalid. '
-                raise BadParametersError(err_msg + str(e))
+                raise BadFilterRule(filter_rule, str(e))
 
         new_filter_rule = FilterRule(filter_rule_key,
                                      filter_rule_values,

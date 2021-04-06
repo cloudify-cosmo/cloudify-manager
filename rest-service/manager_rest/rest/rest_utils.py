@@ -34,7 +34,7 @@ from cloudify.models_states import (
 )
 
 from manager_rest.storage import models
-from manager_rest.constants import CFY_LABELS, CFY_LABELS_PREFIX
+from manager_rest.constants import RESERVED_LABELS, RESERVED_PREFIX
 from manager_rest.dsl_functions import (get_secret_method,
                                         evaluate_intrinsic_functions)
 from manager_rest import manager_exceptions, config, app_context
@@ -624,19 +624,18 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
             if source and target:
                 self.add_dependency_to_graph(source, target)
 
-    def find_recursive_deployments(self, source_id):
+    def find_recursive_deployments(self, source_ids):
         """
         Find all deployments that are referenced directly and indirectly
         referenced by Deployment id `source_id`
-        :param source_id: The deployment id that is could be connected to
-        the deployments graph
+        :param source_ids: List of deployment ids
         :return:List of recursive deployments that are connected by
-        `source_id` deployment
+        `source_ids` deployments
         :rtype List
         """
         inv_graph = self._get_inverted_graph()
         # BFS to find deployments
-        queue = [source_id]
+        queue = source_ids
         results = []
         visited = defaultdict(bool)
         while queue:
@@ -673,32 +672,37 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
             total_environments += 1
         else:
             total_services += 1
-        target_group = [target_id] + self.find_recursive_deployments(target_id)
+        target_group = [target_id] + self.find_recursive_deployments(
+            [target_id]
+        )
         for target_id in target_group:
             if total_services or total_environments:
                 with self.sm.transaction():
                     target = self.sm.get(
                         models.Deployment,
                         target_id,
-                        locking=True
+                        locking=True,
+                        fail_silently=True
                     )
-                    target.sub_services_count += total_services
-                    target.sub_environments_count += total_environments
-                    self.sm.update(target)
+                    if target:
+                        target.sub_services_count += total_services
+                        target.sub_environments_count += total_environments
+                        self.sm.update(target)
 
-    def decrease_deployment_counts_in_graph(self, target_id, source):
+    def decrease_deployment_counts_in_graph(self, target_ids, source):
         """
         Decrease the counter for each deployment that is referenced
         directly and indirectly by `source` deployment and the counts that
         need to be update are possibly for `sub_environments_count`
         & `sub_services_count`
-        :param target_id: Target Deployment ID that we need to de-attach
+        :param target_ids: Target Deployment IDs that we need to de-attach
         source from
         :rtype str
         :param source: Deployment instance
         :rtype Deployment
         """
-        target_group = [target_id] + self.find_recursive_deployments(target_id)
+        _targets = target_ids.copy()
+        target_group = target_ids + self.find_recursive_deployments(_targets)
         if target_group:
             total_services = source.sub_services_count
             total_environments = source.sub_environments_count
@@ -711,25 +715,76 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
                     target = self.sm.get(
                         models.Deployment,
                         target_id,
-                        locking=True
+                        locking=True,
+                        fail_silently=True
                     )
-                    if target.sub_services_count:
-                        target.sub_services_count -= total_services
-                    if target.sub_environments_count:
-                        target.sub_environments_count -= total_environments
-                    self.sm.update(target)
+                    if target:
+                        if target.sub_services_count:
+                            target.sub_services_count -= total_services
+                        if target.sub_environments_count:
+                            target.sub_environments_count -= total_environments
+                        self.sm.update(target)
 
-    def propagate_deployment_statuses(self, source):
+    def update_deployment_counts_after_source_conversion(self,
+                                                         source,
+                                                         convert_type):
+        """
+        Update counter for deployment that is already connected to other
+        deployments where deployment could be changed from `service` to
+        `environment` and vice versa and we need to take care of deployment
+        counters so that count will not mess up
+        :param source: Deployment source instance that its type get changed
+        :param convert_type: The type we need to convert source deployment
+        to. It could be changed from `service` to `environment` and vice versa
+        """
+        if convert_type not in ('environment', 'service',):
+            return
+        if convert_type == 'environment':
+            env_to_update = 1
+            srv_to_update = -1
+        else:
+            env_to_update = -1
+            srv_to_update = 1
+
+        target_group = self.find_recursive_deployments([source.id])
+        for target_id in target_group:
+            with self.sm.transaction():
+                target = self.sm.get(
+                    models.Deployment,
+                    target_id,
+                    locking=True
+                )
+                target.sub_services_count += srv_to_update
+                target.sub_environments_count += env_to_update
+                self.sm.update(target)
+
+    def propagate_deployment_statuses(self, source_id):
         """
         Propagate deployment statuses for source deployment to all connected
         in graph that referenced by this node directly and indirectly
-        :param source: Deployment instance
-        :rtype Deployment
+        :param source_id: Deployment id
+        :rtype str
         """
-        queue = deque([source.id] + self.find_recursive_deployments(source.id))
+        def _update_deployment_status(dep, srv_status, env_status):
+            _target = self.sm.get(
+                models.Deployment,
+                dep,
+                locking=True,
+                fail_silently=True
+            )
+            if _target:
+                _target.sub_environments_status = env_status
+                _target.sub_services_status = srv_status
+                _target.deployment_status = \
+                    _target.evaluate_deployment_status()
+                self.sm.update(_target)
+        queue = deque([source_id] + self.find_recursive_deployments(
+            [source_id]
+        ))
         while queue:
             v = queue.popleft()
             if v not in self.graph:
+                _update_deployment_status(v, None, None)
                 continue
             from_dependencies = self.sm.list(
                 models.DeploymentLabelsDependencies,
@@ -757,15 +812,40 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
                     total_srv_status = _source.compare_between_statuses(
                         total_srv_status, _sub_srv_status
                     )
+            _update_deployment_status(v, total_srv_status, total_env_status)
 
-            if total_srv_status or total_env_status:
-                target = self.sm.get(models.Deployment, v, locking=True)
-                if total_env_status:
-                    target.sub_environments_status = total_env_status
-                if total_srv_status:
-                    target.sub_services_status = total_srv_status
-                target.deployment_status = target.evaluate_deployment_status()
-                self.sm.update(target)
+    def retrieve_and_display_dependencies(self, target):
+        self.create_dependencies_graph()
+        queue = [target.id]
+        visited = defaultdict(bool)
+        dependencies = []
+        while queue:
+            v = queue.pop()
+            if v not in self.graph:
+                continue
+            from_dependencies = self.sm.list(
+                models.DeploymentLabelsDependencies,
+                filters={'target_deployment_id': v}
+            )
+            if not from_dependencies:
+                continue
+            for from_dependency in from_dependencies:
+                if from_dependency.source_deployment_id in self.graph[v]:
+                    if not visited[from_dependency.source_deployment_id]:
+                        queue.append(from_dependency.source_deployment_id)
+                        dependencies.append({
+                            'parent':
+                                from_dependency.target_deployment_id,
+                            'child':
+                                from_dependency.source_deployment_id
+                        })
+                        visited[from_dependency.source_deployment_id] = True
+        dependency_display = '  [{0}] Deployment `{1}` depends on `{2}`'
+        return '\n'.join(
+            dependency_display.format(i + 1,
+                                      d['child'],
+                                      d['parent'])
+            for i, d in enumerate(dependencies))
 
 
 def update_inter_deployment_dependencies(sm):
@@ -869,47 +949,48 @@ def get_labels_list(raw_labels_list):
         [(key, raw_value)] = label.items()
         values_list = raw_value if isinstance(raw_value, list) else [raw_value]
         for value in values_list:
-            parsed_key, parsed_value = _parse_label(key, value)
+            parsed_key, parsed_value = parse_label(key, value)
             labels_list.append((parsed_key, parsed_value))
 
     test_unique_labels(labels_list)
     return labels_list
 
 
-def _parse_label(label_key, label_value):
+def parse_label(label_key, label_value):
     if ((not isinstance(label_key, text_type)) or
             (not isinstance(label_value, text_type))):
         raise BadLabelsList()
 
     if len(label_key) > 256 or len(label_value) > 256:
         raise manager_exceptions.BadParametersError(
-            'The label\'s key or value is too long. Maximum allowed length is '
+            'The key or value is too long. Maximum allowed length is '
             '256 characters'
         )
 
     if urlquote(label_key, safe='') != label_key:
         raise manager_exceptions.BadParametersError(
-            f'The label\'s key `{label_key}` contains illegal characters. '
+            f'The key `{label_key}` contains illegal characters. '
             f'Only letters, digits and the characters `-`, `.` and '
             f'`_` are allowed'
+        )
+
+    if any(unicodedata.category(char)[0] == 'C' or char == '"'
+           for char in label_value):
+        raise manager_exceptions.BadParametersError(
+            f'The value `{label_value}` contains illegal characters. '
+            f'Control characters and `"` are not allowed.'
         )
 
     parsed_label_key = label_key.lower()
     parsed_label_value = unicodedata.normalize('NFKC', label_value).casefold()
 
-    if (parsed_label_key.startswith(CFY_LABELS_PREFIX) and
-            parsed_label_key not in CFY_LABELS):
-        allowed_cfy_labels = ', '.join(CFY_LABELS)
+    if (parsed_label_key.startswith(RESERVED_PREFIX) and
+            parsed_label_key not in RESERVED_LABELS):
+        allowed_cfy_labels = ', '.join(RESERVED_LABELS)
         raise manager_exceptions.BadParametersError(
-            f'All labels with a `{CFY_LABELS_PREFIX}` prefix are reserved for '
-            f'internal use. Allowed `{CFY_LABELS_PREFIX}` prefixed labels '
+            f'All labels with a `{RESERVED_PREFIX}` prefix are reserved for '
+            f'internal use. Allowed `{RESERVED_PREFIX}` prefixed labels '
             f'are: {allowed_cfy_labels}')
-
-    if any(char in parsed_label_value for char in ['"', '\n', '\t']):
-        raise manager_exceptions.BadParametersError(
-            f'The label\'s value `{label_value}` contains illegal characters. '
-            f'`"`, `\\n` and `\\t` are not allowed'
-        )
 
     return parsed_label_key, parsed_label_value
 

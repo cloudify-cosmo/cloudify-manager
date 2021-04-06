@@ -73,7 +73,6 @@ class SnapshotRestore(object):
     def __init__(self,
                  config,
                  snapshot_id,
-                 recreate_deployments_envs,
                  force,
                  timeout,
                  premium_enabled,
