@@ -562,7 +562,8 @@ class ExecutionsTest(AgentlessTestCase):
 
     def test_fail_to_delete_plugin_while_creating_snapshot(self):
         # Upload plugin
-        upload_mock_plugin(self.client, 'cloudify-script-plugin', '1.2')
+        plugin = upload_mock_plugin(
+            self.client, 'cloudify-script-plugin', '1.2')
         plugins_list = self.client.plugins.list()
         # 3 plugins were uploaded with the test class
         self.assertEqual(4, len(plugins_list),
@@ -570,9 +571,9 @@ class ExecutionsTest(AgentlessTestCase):
                          'got {0}'.format(len(plugins_list)))
 
         # Create snapshot and make sure it's state remains 'started'
+        self._create_snapshot_and_modify_execution_status(Execution.STARTED)
         self._execute_unpermitted_operation_and_catch_exception(
-            self._create_snapshot_and_modify_execution_status,
-            Execution.STARTED)
+            self.client.plugins.delete, plugin.id)
 
     def test_cancel_execution(self):
         execution, deployment_id = self._execute_and_cancel_execution(
