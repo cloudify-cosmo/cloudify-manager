@@ -306,6 +306,22 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         # deleting the group didn't delete the deployments themselves
         assert len(self.client.deployments.list()) == 2
 
+    def test_group_delete_deployments(self):
+        self.client.deployment_groups.put(
+            'group1',
+            deployment_ids=['dep1']
+        )
+        self.client.deployment_groups.delete(
+            'group1', delete_deployments=True)
+        assert len(self.client.deployment_groups.list()) == 0
+
+        # dep hasnt been deleted _yet_, but check that delete-dep-env for it
+        # was run
+        dep = self.sm.get(models.Deployment, 'dep1')
+        assert len(dep.executions) == 2
+        assert any(exc.workflow_id == 'delete_deployment_environment'
+                   for exc in dep.executions)
+
     def test_create_filters(self):
         """Create a group with filter_id to set the deployments"""
         self.client.deployments.update_labels('dep1', [
