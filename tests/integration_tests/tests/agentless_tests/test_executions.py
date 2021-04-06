@@ -285,52 +285,6 @@ class ExecutionsTest(AgentlessTestCase):
         self.assertIn(current_status, [Execution.PENDING, Execution.STARTED])
         self._assert_execution_status(execution.id, Execution.QUEUED)
 
-    def test_run_exec_from_queue_while_system_execution_is_queued(self):
-        """
-        - System execution (snapshot) is running
-        - Queue contains: a regular execution and another system execution
-        Once the first snapshot finishes we expect the regular execution to run
-        (even though snapshot_2 is in the queue) and the second snapshot
-        to be queued again.
-
-        """
-        # Create deployment
-        dsl_path = resource('dsl/sleep_workflows.yaml')
-        deployment = self.deploy(dsl_path)
-
-        # Create snapshot and make sure it's state remains 'started'
-        # so that new executions will be queued
-        snapshot = self._create_snapshot_and_modify_execution_status(
-            Execution.STARTED)
-
-        # Start 'install' execution
-        execution = self.execute_workflow(workflow_name='sleep',
-                                          deployment_id=deployment.id,
-                                          wait_for_execution=False,
-                                          queue=True)
-
-        # Create another system execution
-        snapshot_2 = self.client.snapshots.create('snapshot_2',
-                                                  include_credentials=True,
-                                                  include_logs=True,
-                                                  include_events=True,
-                                                  include_metrics=True,
-                                                  queue=True)
-
-        # Make sure execution and snapshot_2 are queued (since there's a
-        # running system execution)
-        self._assert_execution_status(snapshot_2.id, Execution.QUEUED)
-        self._assert_execution_status(execution.id, Execution.QUEUED)
-
-        # Update first snapshot status to terminated
-        self.client.executions.update(snapshot.id, Execution.TERMINATED)
-
-        # Make sure exeuction status is started (or pending) even though
-        # there's a queued system execution
-        current_status = self.client.executions.get(execution.id).status
-        self.assertIn(current_status, [Execution.PENDING, Execution.STARTED])
-        self._assert_execution_status(snapshot_2.id, Execution.QUEUED)
-
     def test_queue_exec_from_queue_while_exec_in_same_dep_is_running(self):
         """
         - System execution (snapshot) is running
@@ -459,8 +413,8 @@ class ExecutionsTest(AgentlessTestCase):
         - System execution (snapshot) is running
         - Queue contains: a regular execution ('install') and a system
           execution (snapshot).
-        Once the first snapshot finishes we expect the regular execution to run
-        and the third one (the snapshot) to be queued again.
+        Once the first snapshot finishes we expect the snapshot to run
+        and the regular execution to be queued again.
 
         """
         # Create deployment
@@ -493,9 +447,11 @@ class ExecutionsTest(AgentlessTestCase):
         # Update first snapshot status to terminated
         self.client.executions.update(snapshot_1.id, Execution.TERMINATED)
 
-        # Make sure snapshot_2 started while the snapshot_3 is queued again
-        self._assert_execution_status(snapshot_2.id, Execution.QUEUED)
-        self.wait_for_execution_to_end(execution)
+        # Make sure snapshot_2 started while the install is queued again
+        current_status = self.client.executions.get(snapshot_2.id).status
+        self.assertIn(current_status, [Execution.PENDING, Execution.STARTED])
+        self._assert_execution_status(execution.id, Execution.QUEUED)
+        self.wait_for_execution_to_end(snapshot_2)
 
     def test_fail_to_delete_deployment_of_queued_execution(self):
         """
