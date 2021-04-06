@@ -972,7 +972,7 @@ class ResourceManager(object):
     def _check_for_active_system_wide_execution(self, queue):
         executions = self.sm.list(models.Execution, filters={
             'is_system_workflow': True,
-            'status': ExecutionState.ACTIVE_STATES,
+            'status': ExecutionState.ACTIVE_STATES + [ExecutionState.QUEUED],
         }, get_all_results=True, all_tenants=True).items
         if executions and queue:
             return True
