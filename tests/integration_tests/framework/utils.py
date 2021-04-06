@@ -32,8 +32,6 @@ import sh
 import pika
 import ssl
 
-from . import constants
-
 from cloudify.utils import setup_logger
 from cloudify_rest_client import CloudifyClient
 from manager_rest.utils import create_auth_header

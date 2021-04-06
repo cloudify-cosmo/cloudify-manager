@@ -19,7 +19,7 @@ class DeploymentsLabelsTest(AgentlessTestCase):
         self.client.tenants.add_user('user', 'default_tenant', role='viewer')
         viewer_client = utils.create_rest_client(
             host=self.env.container_ip,
-            username='user', password='password',tenant='default_tenant',
+            username='user', password='password', tenant='default_tenant',
             rest_port=443, rest_protocol='https', cert_path=self.ca_cert,
         )
 
