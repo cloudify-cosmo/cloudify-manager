@@ -527,12 +527,10 @@ class ExecutionsTest(AgentlessTestCase):
         self._assert_execution_status(snapshot.id, Execution.CANCELLED)
 
     def _execute_unpermitted_operation_and_catch_exception(self, op, args):
-        try:
+        with self.assertRaisesRegex(
+                CloudifyClientError, '[Cc]annot start') as cm:
             op(args)
-        except CloudifyClientError as e:
-            self.assertIn('You cannot start an execution that modifies DB'
-                          ' state while a `create_snapshot`', str(e))
-            self.assertEqual(e.status_code, 400)
+        self.assertEqual(cm.exception.status_code, 400)
 
     def test_fail_to_create_deployment_while_creating_snapshot(self):
         # Create snapshot and make sure it's state remains 'started'
@@ -557,12 +555,10 @@ class ExecutionsTest(AgentlessTestCase):
     def test_fail_to_upload_plugin_while_creating_snapshot(self):
         # Create snapshot and make sure it's state remains 'started'
         self._create_snapshot_and_modify_execution_status(Execution.STARTED)
-        try:
+        with self.assertRaisesRegex(
+                CloudifyClientError, '[Cc]annot start') as cm:
             upload_mock_plugin(self.client, 'cloudify-script-plugin', '1.2')
-        except CloudifyClientError as e:
-            self.assertIn('You cannot start an execution that modifies DB'
-                          ' state while a `create_snapshot`', str(e))
-            self.assertEqual(e.status_code, 400)
+        self.assertEqual(cm.exception.status_code, 400)
 
     def test_fail_to_delete_plugin_while_creating_snapshot(self):
         # Upload plugin
