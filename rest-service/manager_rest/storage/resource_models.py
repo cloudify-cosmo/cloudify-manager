@@ -1164,7 +1164,10 @@ class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
         This will only actually run executions up to the concurrency limit,
         and queue the rest.
         """
-        executions = self.executions  # only retrieve this once
+        executions = [
+            exc for exc in self.executions
+            if exc.status == ExecutionState.PENDING
+        ]
         with sm.transaction():
             for execution in executions[self.concurrency:]:
                 execution.status = ExecutionState.QUEUED
