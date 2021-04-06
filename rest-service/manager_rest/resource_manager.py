@@ -841,7 +841,6 @@ class ResourceManager(object):
 
     def resume_execution(self, execution_id, force=False):
         execution = self.sm.get(models.Execution, execution_id)
-        execution_token = generate_execution_token(execution)
         if execution.status in {ExecutionState.CANCELLED,
                                 ExecutionState.FAILED}:
             self.reset_operations(execution, force=force)
