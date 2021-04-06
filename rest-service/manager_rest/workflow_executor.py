@@ -17,13 +17,11 @@ from manager_rest.storage import get_storage_manager, models
 def execute_workflow(execution,
                      bypass_maintenance=None,
                      wait_after_fail=600,
-                     resume=False,
                      handler: SendHandler = None,):
     sm = get_storage_manager()
     token = generate_execution_token(execution)
     context = execution.render_context()
     context.update({
-        'resume': resume,
         'wait_after_fail': wait_after_fail,
         'bypass_maintenance': bypass_maintenance,
         'execution_token': token,
