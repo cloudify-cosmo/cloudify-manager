@@ -877,6 +877,7 @@ class Execution(CreatedAtMixin, SQLResourceBase):
     scheduled_for = db.Column(UTCDateTime, nullable=True)
     is_dry_run = db.Column(db.Boolean, nullable=False, default=False)
     token = db.Column(db.String(100), nullable=True, index=True)
+    resume = db.Column(db.Boolean, nullable=False, server_default='false')
 
     _deployment_fk = foreign_key(Deployment._storage_id, nullable=True)
 
@@ -1053,6 +1054,7 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             'execution_creator_username': self.creator.username,
             'task_target': MGMTWORKER_QUEUE,
             'tenant': {'name': self.tenant.name},
+            'resume': self.resume,
         }
         if self.deployment is not None:
             context['deployment_id'] = self.deployment.id

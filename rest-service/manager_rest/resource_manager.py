@@ -859,13 +859,11 @@ class ResourceManager(object):
 
         execution.status = ExecutionState.STARTED
         execution.ended_at = None
-        self.sm.update(execution, modified_attrs=('status', 'ended_at'))
+        execution.resumed = True
+        self.sm.update(execution,
+                       modified_attrs=('status', 'ended_at', 'resume'))
 
-        workflow_executor.execute_workflow(
-            execution,
-            bypass_maintenance=False,
-            resume=True,
-        )
+        workflow_executor.execute_workflow(execution, bypass_maintenance=False)
 
         # Dealing with the inner Components' deployments
         components_executions = self._find_all_components_executions(
