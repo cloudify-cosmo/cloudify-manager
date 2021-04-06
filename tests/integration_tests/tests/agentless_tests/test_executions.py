@@ -880,9 +880,9 @@ class ExecutionsTest(AgentlessTestCase):
                                       Execution.QUEUED, tenant_client)
         self.client.executions.update(snapshot.id, Execution.TERMINATED)
         self.wait_for_execution_to_end(execution, client=tenant_client)
-        schedule = self.client.execution_schedules.list(
+        schedule = tenant_client.execution_schedules.list(
             deployment_id=dep.id)[0]
-        self.client.execution_schedules.delete(schedule.id, dep_id)
+        tenant_client.execution_schedules.delete(schedule.id, dep_id)
 
     def test_two_scheduled_execution_same_tenant(self):
         """
