@@ -16,9 +16,7 @@
 from integration_tests.framework import utils
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
-from cloudify_rest_client.exceptions import (CloudifyClientError,
-                                             UnknownDeploymentSecretError,
-                                             ForbiddenError)
+from cloudify_rest_client.exceptions import CloudifyClientError, ForbiddenError
 
 
 class SecretsTest(AgentlessTestCase):
@@ -51,11 +49,9 @@ class SecretsTest(AgentlessTestCase):
 
     def test_get_secret_intrinsic_function(self):
         dsl_path = resource("dsl/basic_get_secret.yaml")
-
-        # Fails to create deployment because the secret is missing
-        error_msg = "400: Required secrets: .* don't exist in this tenant"
+        error_msg = "Required secrets: .* don't exist in this tenant"
         self.assertRaisesRegexp(
-            UnknownDeploymentSecretError,
+            CloudifyClientError,
             error_msg,
             self.deploy_application,
             dsl_path
