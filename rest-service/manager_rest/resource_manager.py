@@ -75,7 +75,6 @@ from . import config
 from . import app_context
 from . import workflow_executor
 from . import manager_exceptions
-from .workflow_executor import generate_execution_token
 
 if typing.TYPE_CHECKING:
     from cloudify.amqp_client import SendHandler
@@ -799,19 +798,26 @@ class ResourceManager(object):
                     external_source=external_source
                 )
 
-    def _reset_operations(self, execution, execution_token, from_states=None):
-        """Force-resume the execution: restart failed operations.
+    def reset_operations(self, execution, force=False):
+        """Resume the execution: restart failed operations.
 
         All operations that were failed are going to be retried,
         the execution itself is going to be set to pending again.
         Operations that were retried by another operation, will
         not be reset.
-
-        :return: Whether to continue with running the execution
         """
-        if from_states is None:
-            from_states = {cloudify_tasks.TASK_RESCHEDULED,
-                           cloudify_tasks.TASK_FAILED}
+        from_states = {
+            cloudify_tasks.TASK_RESCHEDULED,
+            cloudify_tasks.TASK_FAILED
+        }
+        if force:
+            # with force, we resend all tasks which haven't finished yet
+            from_states |= {
+                cloudify_tasks.TASK_STARTED,
+                cloudify_tasks.TASK_SENT,
+                cloudify_tasks.TASK_SENDING,
+            }
+
         tasks_graphs = self.sm.list(models.TasksGraph,
                                     filters={'execution': execution},
                                     get_all_results=True)
@@ -835,19 +841,9 @@ class ResourceManager(object):
 
     def resume_execution(self, execution_id, force=False):
         execution = self.sm.get(models.Execution, execution_id)
-        execution_token = generate_execution_token(execution)
         if execution.status in {ExecutionState.CANCELLED,
                                 ExecutionState.FAILED}:
-            self._reset_operations(execution, execution_token)
-            if force:
-                # with force, we resend all tasks which haven't finished yet
-                self._reset_operations(execution,
-                                       execution_token,
-                                       from_states={
-                                           cloudify_tasks.TASK_STARTED,
-                                           cloudify_tasks.TASK_SENT,
-                                           cloudify_tasks.TASK_SENDING,
-                                       })
+            self.reset_operations(execution, force=force)
         elif force:
             raise manager_exceptions.ConflictError(
                 'Cannot force-resume execution: `{0}` in state: `{1}`'
@@ -860,13 +856,11 @@ class ResourceManager(object):
 
         execution.status = ExecutionState.STARTED
         execution.ended_at = None
-        self.sm.update(execution, modified_attrs=('status', 'ended_at'))
+        execution.resumed = True
+        self.sm.update(execution,
+                       modified_attrs=('status', 'ended_at', 'resume'))
 
-        workflow_executor.execute_workflow(
-            execution,
-            bypass_maintenance=False,
-            resume=True,
-        )
+        workflow_executor.execute_workflow(execution, bypass_maintenance=False)
 
         # Dealing with the inner Components' deployments
         components_executions = self._find_all_components_executions(
