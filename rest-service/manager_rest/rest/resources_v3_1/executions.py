@@ -237,10 +237,16 @@ class ExecutionGroupsId(SecuredResource):
             raise BadParametersError(
                 'Invalid action: {0}, Valid action values are: {1}'.format(
                     action, valid_actions))
+
         sm = get_storage_manager()
+        group = sm.get(models.ExecutionGroup, group_id)
+        if action in ('cancel', 'force-cancel', 'kill'):
+            self._cancel_group(sm, group, action)
+        return group
+
+    def _cancel_group(self, sm, group, action):
         rm = get_resource_manager()
         with sm.transaction():
-            group = sm.get(models.ExecutionGroup, group_id)
             to_cancel = []
             for exc in group.executions:
                 if exc.status == ExecutionState.QUEUED:
@@ -253,4 +259,3 @@ class ExecutionGroupsId(SecuredResource):
                     force=action == 'force-cancel',
                     kill=action == 'kill',
                 )
-        return group
