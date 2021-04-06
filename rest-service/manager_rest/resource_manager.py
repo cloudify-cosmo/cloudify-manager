@@ -74,7 +74,6 @@ from . import config
 from . import app_context
 from . import workflow_executor
 from . import manager_exceptions
-from .workflow_executor import generate_execution_token
 
 if typing.TYPE_CHECKING:
     from cloudify.amqp_client import SendHandler
