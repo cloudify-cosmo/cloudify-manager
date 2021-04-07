@@ -43,7 +43,7 @@ class ResourcePermissionTests(SecurityTestBase):
                 async_upload=True
             )
             # parse plan on rest service side
-            self.parse_blueprint_plan(blueprint_id, 'blueprint.yaml')
+            self.execute_upload_blueprint_workflow(blueprint_id)
 
         return blueprint_id
 

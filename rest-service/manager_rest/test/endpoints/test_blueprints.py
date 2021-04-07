@@ -22,10 +22,10 @@ from manager_rest import archiving
 from manager_rest.test import base_test
 from manager_rest.test.attribute import attr
 from manager_rest.storage.resource_models import Blueprint
-from manager_rest.manager_exceptions import DslParseException
 
 from cloudify._compat import text_type
 from cloudify_rest_client import exceptions
+from cloudify.exceptions import WorkflowFailed
 
 from .test_utils import generate_progress_func
 
@@ -162,13 +162,13 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
 
     def test_put_blueprint_non_existing_filename(self):
         blueprint_id = 'new_blueprint_id'
-        with self.assertRaisesRegexp(DslParseException, 'non-existing'):
+        with self.assertRaisesRegexp(WorkflowFailed, 'non-existing'):
             self.put_blueprint(
                 blueprint_id=blueprint_id, blueprint_file_name='non-existing')
 
     def test_put_blueprint_no_default_yaml(self):
         blueprint_id = 'new_blueprint_id'
-        with self.assertRaisesRegexp(DslParseException, 'blueprint.yaml'):
+        with self.assertRaisesRegexp(WorkflowFailed, 'blueprint.yaml'):
             self.put_blueprint(blueprint_id=blueprint_id,
                                blueprint_dir='mock_blueprint_no_default')
 
