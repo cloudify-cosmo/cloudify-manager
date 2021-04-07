@@ -450,11 +450,7 @@ class BaseDeploymentDependencies(object):
             if not self.graph[target_deployment]:
                 del self.graph[target_deployment]
 
-    def assert_no_cyclic_dependencies(self,
-                                      source_deployment, target_deployment):
-        graph = copy.deepcopy(self.graph)
-        graph.setdefault(target_deployment, set()).add(source_deployment)
-
+    def assert_cyclic_dependencies_on_graph(self, graph):
         # DFS to find cycles
         v = list(graph)[0]
         recursion_stack = [v]
@@ -475,6 +471,12 @@ class BaseDeploymentDependencies(object):
                     self.cyclic_error_message
                 )
             recursion_stack.append(v)
+
+    def assert_no_cyclic_dependencies(self,
+                                      source_deployment, target_deployment):
+        graph = copy.deepcopy(self.graph)
+        graph.setdefault(target_deployment, set()).add(source_deployment)
+        self.assert_cyclic_dependencies_on_graph(graph)
 
     def _get_inverted_graph(self):
         inverted_graph_graph = {}  # invert dependencies graph
@@ -846,6 +848,15 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
                                       d['child'],
                                       d['parent'])
             for i, d in enumerate(dependencies))
+
+    def assert_cyclic_dependencies_between_targets_and_source(self,
+                                                              targets,
+                                                              source):
+        if targets and source:
+            graph = copy.deepcopy(self.graph)
+            for target in targets:
+                graph.setdefault(target, set()).add(source)
+            self.assert_cyclic_dependencies_on_graph(graph)
 
 
 def update_inter_deployment_dependencies(sm):

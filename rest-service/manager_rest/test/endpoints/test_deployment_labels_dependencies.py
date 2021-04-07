@@ -57,7 +57,7 @@ class DeploymentLabelsDependenciesTest(BaseServerTestCase):
     @patch('manager_rest.resource_manager.ResourceManager'
            '.handle_deployment_labels_graph')
     @patch('manager_rest.resource_manager.ResourceManager'
-           '.verify_deployment_parent_labels')
+           '.verify_attaching_deployment_to_parents')
     def test_deployment_with_empty_labels(self,
                                           verify_parents_mock,
                                           handle_labels_graph_mock):
@@ -68,7 +68,7 @@ class DeploymentLabelsDependenciesTest(BaseServerTestCase):
     @patch('manager_rest.resource_manager.ResourceManager'
            '.handle_deployment_labels_graph')
     @patch('manager_rest.resource_manager.ResourceManager'
-           '.verify_deployment_parent_labels')
+           '.verify_attaching_deployment_to_parents')
     def test_deployment_with_non_parent_labels(self,
                                                verify_parents_mock,
                                                handle_labels_graph_mock):
@@ -211,6 +211,12 @@ class DeploymentLabelsDependenciesTest(BaseServerTestCase):
                     'csys-obj-parent': 'deployment_2'
                 }
             ])
+
+        deployment_1 = self.client.deployments.get('deployment_1')
+        deployment_2 = self.client.deployments.get('deployment_2')
+        self.assertEqual(deployment_1.sub_services_count, 1)
+        self.assertEqual(deployment_2.sub_services_count, 0)
+        self.assertEqual(len(deployment_1.labels))
 
     def test_number_of_direct_services_deployed_inside_environment(self):
         self.put_deployment(deployment_id='env',
