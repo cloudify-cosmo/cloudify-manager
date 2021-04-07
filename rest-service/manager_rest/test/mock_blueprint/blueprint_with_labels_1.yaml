@@ -3,20 +3,25 @@ tosca_definitions_version: cloudify_dsl_1_3
 imports:
   - cloudify/types/types.yaml
 
+inputs:
+  label_value:
+    default: key2_val2
+
 blueprint_labels:
   bp_key1:
     values:
-      - bp_key1_val1
+      - BP_key1_val1
   bp_key2:
     values:
       - bp_key2_val1
       - bp_key2_val2
 
 labels:
-  key1:
+  keY1:
     values:
       - key1_val1
   key2:
     values:
-      - key2_val1
-      - key2_val2
+      - kEy2_vaL1
+      - "va l:u,E"
+      - { get_input: label_value }
