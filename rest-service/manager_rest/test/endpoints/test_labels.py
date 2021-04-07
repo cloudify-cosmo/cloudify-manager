@@ -126,7 +126,7 @@ class LabelsBaseTestCase(base_test.BaseServerTestCase):
                                labels=self.DUPLICATE_LABELS)
 
     def test_update_failure_with_invalid_labels_list(self):
-        resource = self.put_deployment_with_labels(self.LABELS)
+        resource = self.put_resource_with_labels(self.LABELS)
         error_msg = 'Labels must be a list of 1-entry dictionaries'
         self.assertRaisesRegex(CloudifyClientError,
                                error_msg,
@@ -135,7 +135,7 @@ class LabelsBaseTestCase(base_test.BaseServerTestCase):
                                labels=self.INVALID_LABELS_LIST)
 
     def test_update_failure_with_duplicate_labels(self):
-        resource = self.put_deployment_with_labels(self.LABELS)
+        resource = self.put_resource_with_labels(self.LABELS)
         error_msg = 'You cannot define the same label twice'
         self.assertRaisesRegex(CloudifyClientError,
                                error_msg,
