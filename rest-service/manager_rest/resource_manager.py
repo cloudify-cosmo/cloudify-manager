@@ -2320,6 +2320,9 @@ class ResourceManager(object):
         send_event(event, 'hook')
 
     def _create_deployment_initial_dependencies(self, source_deployment):
+        current_app.logger.info("RD-1602: won't be needing "
+                                "_create_deployment_initial_dependencies()")
+        return
         deployment_plan = tasks.prepare_deployment_plan(
             source_deployment.blueprint.plan,
             get_secret_method,
