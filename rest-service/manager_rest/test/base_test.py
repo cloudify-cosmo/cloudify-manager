@@ -28,7 +28,7 @@ import sqlalchemy.exc
 import yaml
 import wagon
 import requests
-from setuptools import archive_util
+import traceback
 
 from flask_migrate import Migrate, upgrade
 from mock import MagicMock, patch
@@ -71,7 +71,6 @@ from manager_rest.constants import (
     CLOUDIFY_TENANT_HEADER,
     FILE_SERVER_BLUEPRINTS_FOLDER,
     CONVENTION_APPLICATION_BLUEPRINT_FILE,
-    FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
 )
 from manager_rest import premium_enabled
 
@@ -690,9 +689,7 @@ class BaseServerTestCase(unittest.TestCase):
                                  entity_id=blueprint_id,
                                  visibility=visibility,
                                  async_upload=True)
-        self.parse_blueprint_plan(blueprint_id,
-                                  CONVENTION_APPLICATION_BLUEPRINT_FILE,
-                                  client)
+        self.execute_upload_blueprint_workflow(blueprint_id, client)
         return blueprint_id
 
     def archive_mock_blueprint(self, archive_func=archiving.make_targzfile,
@@ -808,9 +805,11 @@ class BaseServerTestCase(unittest.TestCase):
             os.path.join(blueprint_dir, blueprint_file_name))
         client.blueprints.upload(path=blueprint_path,
                                  entity_id=blueprint_id,
-                                 async_upload=True)
-        return self.parse_blueprint_plan(blueprint_id, blueprint_file_name,
-                                         client=client, labels=labels)
+                                 async_upload=True,
+                                 labels=labels)
+        self.execute_upload_blueprint_workflow(blueprint_id, client)
+        blueprint = client.blueprints.get(blueprint_id)
+        return blueprint
 
     @staticmethod
     def _create_wagon_and_yaml(package_name,
@@ -932,52 +931,32 @@ class BaseServerTestCase(unittest.TestCase):
                 break
             time.sleep(3)
 
-    def parse_blueprint_plan(self, blueprint_id, app_file_name,
-                             client=None, labels=None):
-        # complete blueprint parsing without running the upload workflow
-        if not client:
-            client = self.client
+    def execute_upload_blueprint_workflow(self, blueprint_id, client=None):
+        from cloudify_system_workflows.blueprint import upload
+        client = client or self.client
+        blueprint = self.sm.get(models.Blueprint, blueprint_id)
+        executions = self.sm.list(models.Execution,
+                                  filters={'workflow_id': 'upload_blueprint'})
+        for exec in executions:
+            uploaded_blueprint_id = exec.parameters.get('blueprint_id')
+            if uploaded_blueprint_id and uploaded_blueprint_id == blueprint_id:
+                uploaded_blueprint_execution = exec
+                break
+        else:
+            raise Exception(f'No `upload_blueprint` execution was found for '
+                            f'the blueprint {blueprint_id}')
 
-        blueprint = client.blueprints.get(blueprint_id)
-        fs_root = self.server_configuration.file_server_root
-        archive_dir = os.path.join(
-            fs_root,
-            FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
-            blueprint['tenant_name'],
-            blueprint_id,
-        )
-        # The blueprints.upload endpoint puts the archive file in the
-        # appropriate dir under uploaded-blueprints in the file server.
-        # We expect the archive to be the only file there.
-        archive_file_name = os.listdir(archive_dir)[0]
-        archive_file_path = os.path.join(archive_dir, archive_file_name)
-
-        # extract the archive in-place, cleaning it up after parsing.
-        archive_util.unpack_archive(archive_file_path, archive_dir)
-
-        # archive dir now contains the archive file and the extracted app,
-        # which is supposed to consist of one folder.
-        archive_file_list = os.listdir(archive_dir)
-        archive_file_list.remove(os.path.basename(archive_file_name))
-        app_dir = os.path.join(archive_dir, archive_file_list[0])
-        plan = self.rm.parse_plan(app_dir, app_file_name, fs_root)
-        shutil.rmtree(app_dir)
-
-        # Update DB with parsed plan
-        update_dict = {
-            'plan': plan,
-            'main_file_name': app_file_name,
-            'state': BlueprintUploadState.UPLOADED,
-        }
-        if plan.get('description'):
-            update_dict['description'] = plan['description']
-        if labels:
-            parsed_labels_list = []
-            for label in labels:
-                [(label_key, label_value)] = label.items()
-                parsed_labels_list.append([label_key, label_value])
-            update_dict['labels'] = parsed_labels_list
-        return client.blueprints.update(blueprint_id, update_dict=update_dict)
+        m = MagicMock()
+        with patch('cloudify_system_workflows.blueprint.get_rest_client',
+                   return_value=client):
+            try:
+                upload(m, **uploaded_blueprint_execution.parameters)
+            except Exception as e:
+                blueprint.state = BlueprintUploadState.FAILED_UPLOADING
+                blueprint.error = str(e)
+                blueprint.error_traceback = traceback.format_exc()
+                self.sm.update(blueprint)
+                raise
 
     def _add_blueprint(self, blueprint_id=None):
         if not blueprint_id:

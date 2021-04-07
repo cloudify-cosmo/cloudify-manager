@@ -140,7 +140,17 @@ def manager_container(request, resource_mapping):
 
 
 @pytest.fixture(scope='session')
-def rest_client(manager_container):
+def ca_cert(manager_container):
+    with tempfile.NamedTemporaryFile('w') as cert_file:
+        docker.copy_file_from_manager(
+            manager_container.container_id,
+            '/etc/cloudify/ssl/cloudify_internal_ca_cert.pem',
+            cert_file.name)
+        yield cert_file.name
+
+
+@pytest.fixture(scope='session')
+def rest_client(manager_container, ca_cert):
     with tempfile.NamedTemporaryFile('w') as cert_file:
         docker.copy_file_from_manager(
             manager_container.container_id,
@@ -156,7 +166,7 @@ def rest_client(manager_container):
 
 
 @pytest.fixture(scope='class')
-def manager_class_fixtures(request, manager_container, rest_client):
+def manager_class_fixtures(request, manager_container, rest_client, ca_cert):
     """Just a hack to put some fixtures on the test class.
 
     This is for compatibility with class-based tests, who don't have
@@ -165,6 +175,7 @@ def manager_class_fixtures(request, manager_container, rest_client):
     """
     request.cls.env = manager_container
     request.cls.client = rest_client
+    request.cls.ca_cert = ca_cert
 
 
 def _clean_manager(container_id):

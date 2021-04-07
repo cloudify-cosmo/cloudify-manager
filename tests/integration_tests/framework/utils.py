@@ -32,8 +32,6 @@ import sh
 import pika
 import ssl
 
-from . import constants
-
 from cloudify.utils import setup_logger
 from cloudify_rest_client import CloudifyClient
 from manager_rest.utils import create_auth_header
@@ -62,9 +60,8 @@ def sh_bake(command):
 
 
 def get_profile_context(container_id):
-    container_ip = docker.get_manager_ip(container_id)
     profile_context_cmd =\
-        'cat /root/.cloudify/profiles/{0}/context.json'.format(container_ip)
+        'cat /root/.cloudify/profiles/manager-local/context.json'
     return json.loads(docker.execute(container_id, profile_context_cmd))
 
 
@@ -89,12 +86,11 @@ def create_rest_client(host, **kwargs):
     password = kwargs.get('password', 'admin')
     tenant = kwargs.get('tenant', 'default_tenant')
     token = kwargs.get('token')
-    rest_port = kwargs.get('rest_port',
-                           os.environ.get(constants.CLOUDIFY_REST_PORT, 80))
+    rest_port = kwargs.get('rest_port', 443)
     rest_protocol = kwargs.get('rest_protocol',
-                               'https' if rest_port == '443' else 'http')
-    cert_path = kwargs.get('cert_path', cli_env.get_ssl_cert())
-    trust_all = kwargs.get('trust_all', cli_env.get_ssl_trust_all())
+                               'https' if rest_port == 443 else 'http')
+    cert_path = kwargs.get('cert_path')
+    trust_all = kwargs.get('trust_all', False)
 
     headers = create_auth_header(username, password, token, tenant)
 

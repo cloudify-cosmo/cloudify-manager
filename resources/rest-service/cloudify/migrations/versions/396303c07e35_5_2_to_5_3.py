@@ -55,7 +55,7 @@ def upgrade():
     _create_filters_tables()
     _add_deployment_statuses()
     _add_execgroups_concurrency()
-    _add_execution_operations_columns()
+    _add_executions_columns()
     _create_deployment_labels_dependencies_table()
     _add_deployment_sub_statuses_and_counters()
     _create_depgroups_labels_table()
@@ -74,7 +74,7 @@ def downgrade():
     _revert_changes_to_execution_schedules_table()
     _revert_changes_to_deployments_labels_table()
     _drop_blueprints_labels_table()
-    _drop_execution_operations_columns()
+    _drop_execution_columns()
     _drop_deployment_statuses_enum_types()
 
 
@@ -725,7 +725,7 @@ def _drop_execgroups_concurrency():
     op.drop_column('execution_groups', 'concurrency')
 
 
-def _add_execution_operations_columns():
+def _add_executions_columns():
     op.add_column(
         'executions',
         sa.Column('finished_operations', sa.Integer(), nullable=True)
@@ -734,11 +734,17 @@ def _add_execution_operations_columns():
         'executions',
         sa.Column('total_operations', sa.Integer(), nullable=True)
     )
+    op.add_column(
+        'executions',
+        sa.Column('resume', sa.Boolean(),
+                  server_default='false', nullable=False)
+    )
 
 
-def _drop_execution_operations_columns():
+def _drop_execution_columns():
     op.drop_column('executions', 'total_operations')
     op.drop_column('executions', 'finished_operations')
+    op.drop_column('executions', 'resume')
 
 
 def _drop_deployment_labels_dependencies_table():

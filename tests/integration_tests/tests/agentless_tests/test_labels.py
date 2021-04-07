@@ -17,10 +17,11 @@ class DeploymentsLabelsTest(AgentlessTestCase):
         self._put_deployment_with_labels(self.client, self.LABELS)
         self.client.users.create('user', 'password', role='default')
         self.client.tenants.add_user('user', 'default_tenant', role='viewer')
-        viewer_client = utils.create_rest_client(host=self.env.container_ip,
-                                                 username='user',
-                                                 password='password',
-                                                 tenant='default_tenant')
+        viewer_client = utils.create_rest_client(
+            host=self.env.container_ip,
+            username='user', password='password', tenant='default_tenant',
+            rest_port=443, rest_protocol='https', cert_path=self.ca_cert,
+        )
 
         self._assert_keys_and_values(viewer_client,
                                      {'key1': {'val1', 'val2'},
@@ -33,7 +34,9 @@ class DeploymentsLabelsTest(AgentlessTestCase):
         """
         self.client.tenants.create('new_tenant')
         new_tenant_client = utils.create_rest_client(
-            host=self.env.container_ip, tenant='new_tenant')
+            host=self.env.container_ip, tenant='new_tenant',
+            rest_port=443, rest_protocol='https', cert_path=self.ca_cert,
+        )
         self._put_deployment_with_labels(self.client, self.LABELS)
         self._put_deployment_with_labels(new_tenant_client,
                                          self.LABELS_2,

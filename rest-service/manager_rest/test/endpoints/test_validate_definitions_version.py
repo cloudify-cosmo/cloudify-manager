@@ -13,10 +13,10 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from manager_rest.test import base_test
 from manager_rest.test.attribute import attr
 
-from manager_rest.test import base_test
-from manager_rest.manager_exceptions import DslParseException
+from dsl_parser.exceptions import DSLParsingException
 
 
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
@@ -50,7 +50,7 @@ class ValidateVersionTestCase(base_test.BaseServerTestCase):
         try:
             self.put_blueprint(blueprint_file_name=file_name)
             return True
-        except DslParseException:
+        except DSLParsingException:
             return False
 
     @classmethod

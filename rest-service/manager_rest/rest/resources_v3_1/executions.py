@@ -231,16 +231,25 @@ class ExecutionGroupsId(SecuredResource):
         request_dict = get_json_and_verify_params({'action'})
         action = request_dict['action']
 
-        valid_actions = ['cancel', 'force-cancel', 'kill']
+        valid_actions = ['cancel', 'force-cancel', 'kill',
+                         'resume', 'force-resume']
 
         if action not in valid_actions:
             raise BadParametersError(
                 'Invalid action: {0}, Valid action values are: {1}'.format(
                     action, valid_actions))
+
         sm = get_storage_manager()
+        group = sm.get(models.ExecutionGroup, group_id)
+        if action in ('cancel', 'force-cancel', 'kill'):
+            self._cancel_group(sm, group, action)
+        if action in ('resume', 'force-resume'):
+            self._resume_group(sm, group, action)
+        return group
+
+    def _cancel_group(self, sm, group, action):
         rm = get_resource_manager()
         with sm.transaction():
-            group = sm.get(models.ExecutionGroup, group_id)
             to_cancel = []
             for exc in group.executions:
                 if exc.status == ExecutionState.QUEUED:
@@ -253,4 +262,23 @@ class ExecutionGroupsId(SecuredResource):
                     force=action == 'force-cancel',
                     kill=action == 'kill',
                 )
-        return group
+
+    def _resume_group(self, sm, group, action):
+        rm = get_resource_manager()
+        force = action == 'force-resume'
+        resume_states = {ExecutionState.FAILED, ExecutionState.CANCELLED}
+        with sm.transaction():
+            for exc in group.executions:
+                if exc.status not in resume_states:
+                    continue
+                rm.reset_operations(exc, force=force)
+                exc.status = ExecutionState.PENDING
+                exc.ended_at = None
+                exc.resumed = True
+                sm.update(exc, modified_attrs=('status', 'ended_at', 'resume'))
+
+        amqp_client = get_amqp_client()
+        handler = workflow_sendhandler()
+        amqp_client.add_handler(handler)
+        with amqp_client:
+            group.start_executions(sm, rm, handler)

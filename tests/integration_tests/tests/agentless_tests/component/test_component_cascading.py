@@ -26,7 +26,6 @@ from integration_tests.tests.utils import (
     verify_deployment_env_created,
     do_retries,
     get_resource as resource,
-    generate_scheduled_for_date,
     wait_for_blueprint_upload)
 
 
@@ -732,27 +731,3 @@ workflows:
         executions = self.client.executions.list(
             workflow_id='nothing_workflow')
         self.assertEqual(len(executions), 4)
-
-    def test_cascading_scheduled_workflow_execution(self):
-        basic_blueprint_path = self.make_yaml_file(
-            self.component_blueprint_with_nothing_workflow)
-        self.client.blueprints.upload(basic_blueprint_path,
-                                      entity_id='workflow')
-        wait_for_blueprint_upload('workflow', self.client)
-
-        deployment_id = 'd{0}'.format(uuid.uuid4())
-        main_blueprint = self.generate_root_blueprint_with_component()
-        main_blueprint_path = self.make_yaml_file(main_blueprint)
-        self.deploy_application(main_blueprint_path,
-                                deployment_id=deployment_id)
-
-        scheduled_time = generate_scheduled_for_date()
-        self.client.executions.start(deployment_id,
-                                     'nothing_workflow',
-                                     schedule=scheduled_time)
-
-        executions = self.client.executions.list(
-            workflow_id='nothing_workflow')
-        for execution in executions:
-            self.assertEqual(Execution.SCHEDULED, execution.status)
-        self.assertEqual(len(executions), 2)

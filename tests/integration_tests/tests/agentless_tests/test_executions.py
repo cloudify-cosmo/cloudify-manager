@@ -285,52 +285,6 @@ class ExecutionsTest(AgentlessTestCase):
         self.assertIn(current_status, [Execution.PENDING, Execution.STARTED])
         self._assert_execution_status(execution.id, Execution.QUEUED)
 
-    def test_run_exec_from_queue_while_system_execution_is_queued(self):
-        """
-        - System execution (snapshot) is running
-        - Queue contains: a regular execution and another system execution
-        Once the first snapshot finishes we expect the regular execution to run
-        (even though snapshot_2 is in the queue) and the second snapshot
-        to be queued again.
-
-        """
-        # Create deployment
-        dsl_path = resource('dsl/sleep_workflows.yaml')
-        deployment = self.deploy(dsl_path)
-
-        # Create snapshot and make sure it's state remains 'started'
-        # so that new executions will be queued
-        snapshot = self._create_snapshot_and_modify_execution_status(
-            Execution.STARTED)
-
-        # Start 'install' execution
-        execution = self.execute_workflow(workflow_name='sleep',
-                                          deployment_id=deployment.id,
-                                          wait_for_execution=False,
-                                          queue=True)
-
-        # Create another system execution
-        snapshot_2 = self.client.snapshots.create('snapshot_2',
-                                                  include_credentials=True,
-                                                  include_logs=True,
-                                                  include_events=True,
-                                                  include_metrics=True,
-                                                  queue=True)
-
-        # Make sure execution and snapshot_2 are queued (since there's a
-        # running system execution)
-        self._assert_execution_status(snapshot_2.id, Execution.QUEUED)
-        self._assert_execution_status(execution.id, Execution.QUEUED)
-
-        # Update first snapshot status to terminated
-        self.client.executions.update(snapshot.id, Execution.TERMINATED)
-
-        # Make sure exeuction status is started (or pending) even though
-        # there's a queued system execution
-        current_status = self.client.executions.get(execution.id).status
-        self.assertIn(current_status, [Execution.PENDING, Execution.STARTED])
-        self._assert_execution_status(snapshot_2.id, Execution.QUEUED)
-
     def test_queue_exec_from_queue_while_exec_in_same_dep_is_running(self):
         """
         - System execution (snapshot) is running
@@ -459,8 +413,8 @@ class ExecutionsTest(AgentlessTestCase):
         - System execution (snapshot) is running
         - Queue contains: a regular execution ('install') and a system
           execution (snapshot).
-        Once the first snapshot finishes we expect the regular execution to run
-        and the third one (the snapshot) to be queued again.
+        Once the first snapshot finishes we expect the snapshot to run
+        and the regular execution to be queued again.
 
         """
         # Create deployment
@@ -493,9 +447,11 @@ class ExecutionsTest(AgentlessTestCase):
         # Update first snapshot status to terminated
         self.client.executions.update(snapshot_1.id, Execution.TERMINATED)
 
-        # Make sure snapshot_2 started while the snapshot_3 is queued again
-        self._assert_execution_status(snapshot_2.id, Execution.QUEUED)
-        self.wait_for_execution_to_end(execution)
+        # Make sure snapshot_2 started while the install is queued again
+        current_status = self.client.executions.get(snapshot_2.id).status
+        self.assertIn(current_status, [Execution.PENDING, Execution.STARTED])
+        self._assert_execution_status(execution.id, Execution.QUEUED)
+        self.wait_for_execution_to_end(snapshot_2)
 
     def test_fail_to_delete_deployment_of_queued_execution(self):
         """
@@ -527,12 +483,10 @@ class ExecutionsTest(AgentlessTestCase):
         self._assert_execution_status(snapshot.id, Execution.CANCELLED)
 
     def _execute_unpermitted_operation_and_catch_exception(self, op, args):
-        try:
+        with self.assertRaisesRegex(
+                CloudifyClientError, '[Cc]annot start') as cm:
             op(args)
-        except CloudifyClientError as e:
-            self.assertIn('You cannot start an execution that modifies DB'
-                          ' state while a `create_snapshot`', str(e))
-            self.assertEqual(e.status_code, 400)
+        self.assertEqual(cm.exception.status_code, 400)
 
     def test_fail_to_create_deployment_while_creating_snapshot(self):
         # Create snapshot and make sure it's state remains 'started'
@@ -557,16 +511,15 @@ class ExecutionsTest(AgentlessTestCase):
     def test_fail_to_upload_plugin_while_creating_snapshot(self):
         # Create snapshot and make sure it's state remains 'started'
         self._create_snapshot_and_modify_execution_status(Execution.STARTED)
-        try:
+        with self.assertRaisesRegex(
+                CloudifyClientError, '[Cc]annot start') as cm:
             upload_mock_plugin(self.client, 'cloudify-script-plugin', '1.2')
-        except CloudifyClientError as e:
-            self.assertIn('You cannot start an execution that modifies DB'
-                          ' state while a `create_snapshot`', str(e))
-            self.assertEqual(e.status_code, 400)
+        self.assertEqual(cm.exception.status_code, 400)
 
     def test_fail_to_delete_plugin_while_creating_snapshot(self):
         # Upload plugin
-        upload_mock_plugin(self.client, 'cloudify-script-plugin', '1.2')
+        plugin = upload_mock_plugin(
+            self.client, 'cloudify-script-plugin', '1.2')
         plugins_list = self.client.plugins.list()
         # 3 plugins were uploaded with the test class
         self.assertEqual(4, len(plugins_list),
@@ -574,9 +527,9 @@ class ExecutionsTest(AgentlessTestCase):
                          'got {0}'.format(len(plugins_list)))
 
         # Create snapshot and make sure it's state remains 'started'
+        self._create_snapshot_and_modify_execution_status(Execution.STARTED)
         self._execute_unpermitted_operation_and_catch_exception(
-            self._create_snapshot_and_modify_execution_status,
-            Execution.STARTED)
+            self.client.plugins.delete, plugin.id)
 
     def test_cancel_execution(self):
         execution, deployment_id = self._execute_and_cancel_execution(
@@ -903,10 +856,11 @@ class ExecutionsTest(AgentlessTestCase):
         # The token in the container is invalid, create new valid one
         create_api_token(self.env.container_id)
         create_tenants_and_add_users(client=self.client, num_of_tenants=1)
-        tenant_client = utils.create_rest_client(host=self.env.container_ip,
-                                                 username='user_0',
-                                                 password='password',
-                                                 tenant='tenant_0')
+        tenant_client = utils.create_rest_client(
+            host=self.env.container_ip,
+            username='user_0', password='password', tenant='tenant_0',
+            rest_port=443, rest_protocol='https', cert_path=self.ca_cert,
+        )
         dsl_path = resource('dsl/sleep_workflows.yaml')
         dep = self.deploy(dsl_path, wait=False, client=tenant_client)
         dep_id = dep.id
@@ -926,9 +880,9 @@ class ExecutionsTest(AgentlessTestCase):
                                       Execution.QUEUED, tenant_client)
         self.client.executions.update(snapshot.id, Execution.TERMINATED)
         self.wait_for_execution_to_end(execution, client=tenant_client)
-        schedule = self.client.execution_schedules.list(
+        schedule = tenant_client.execution_schedules.list(
             deployment_id=dep.id)[0]
-        self.client.execution_schedules.delete(schedule.id, dep_id)
+        tenant_client.execution_schedules.delete(schedule.id, dep_id)
 
     def test_two_scheduled_execution_same_tenant(self):
         """
