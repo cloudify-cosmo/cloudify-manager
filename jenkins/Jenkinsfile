@@ -15,6 +15,11 @@ def vEnv(){
 pipeline {
   agent none
 
+  parameters{
+    string(name: 'VERSION', defaultValue: '5.3.0', description: 'Cloudify version label, to be used in the filenames (eg. "5.3.0")')
+    string(name: 'PRERELEASE', defaultValue: '.dev1', description: 'A prerelase/milestone label, to be used in the filenames (eg. ".dev1")')
+  }
+
   options {
     checkoutToSubdirectory('cloudify-manager')
     buildDiscarder(logRotator(numToKeepStr:'10'))
@@ -25,17 +30,16 @@ pipeline {
   environment {
     BRANCH = "${env.BRANCH_NAME}"
     PROJECT = "cloudify-manager"
-    VERSION = getVersion("${env.PROJECT}", "${env.BRANCH_NAME}").trim()
-    PRERELEASE = getPreRelease("${env.PROJECT}", "${env.BRANCH_NAME}").trim()
+    VERSION = "${params.VERSION}"
+    PRERELEASE = "${params.PRERELEASE}"
     S3_BUILD_PATH = "${env.VERSION}/${env.PRERELEASE}-build/${env.PROJECT}/${env.BRANCH}/${env.BUILD_NUMBER}"
-    PATH = "/root/.local/bin:$PATH"
   }
 
   stages {
     stage('prepare') {
       agent {
         kubernetes {
-          defaultContainer 'jnlp'
+          label "manager-mb-tests-${env.BRANCH}-${env.BUILD_NUMBER}"
           yamlFile 'jenkins/build-pod.yaml'
         }
       }
@@ -54,7 +58,7 @@ pipeline {
         stage('test_restservice') {
           agent {
             kubernetes {
-              defaultContainer 'jnlp'
+              label "manager-mb-tests-${env.BRANCH}-${env.BUILD_NUMBER}"
               yamlFile 'jenkins/build-pod.yaml'
             }
           }
@@ -115,7 +119,7 @@ pipeline {
         stage('build_rpms') {
           agent {
             kubernetes {
-              defaultContainer 'jnlp'
+              label "manager-mb-rpmbuild-${env.BRANCH}-${env.BUILD_NUMBER}"
               yamlFile 'jenkins/rpm-pod.yaml'
             }
           }
@@ -155,7 +159,7 @@ pipeline {
         stage('flake8') {
           agent {
             kubernetes {
-              defaultContainer 'jnlp'
+              label "manager-mb-tests-${env.BRANCH}-${env.BUILD_NUMBER}"
               yamlFile 'jenkins/build-pod.yaml'
             }
           }
@@ -179,7 +183,7 @@ pipeline {
         stage ('test_amqp_postgres') {
           agent {
             kubernetes {
-              defaultContainer 'jnlp'
+              label "manager-mb-tests-${env.BRANCH}-${env.BUILD_NUMBER}"
               yamlFile 'jenkins/build-pod.yaml'
             }
           }
@@ -208,7 +212,7 @@ pipeline {
         stage('test_premium') {
           agent {
             kubernetes {
-              defaultContainer 'jnlp'
+              label "manager-mb-tests-${env.BRANCH}-${env.BUILD_NUMBER}"
               yamlFile 'jenkins/build-pod.yaml'
             }
           }
