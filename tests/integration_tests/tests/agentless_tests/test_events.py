@@ -143,7 +143,7 @@ class EventsTest(AgentlessTestCase):
         else:
             self.fail("Expected logs to be found")
 
-    @pytest.mark.skipif(reason='causes the DB deadlock in snapshot')
+    @pytest.mark.skip(reason='causes the DB deadlock in snapshot')
     def test_snapshots_events(self):
         """ Make sure snapshots events appear when using the
          'cfy events list' command """
