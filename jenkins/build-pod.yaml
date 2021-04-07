@@ -27,8 +27,8 @@ spec:
     image: rabbitmq:3.7.7
     resources:
       limits:
-        cpu: 0.2
-        memory: 256Mi
+        cpu: 0.4
+        memory: 0.5Gi
   - name: postgres
     image: circleci/postgres:9.5-alpine
     ports:
@@ -42,7 +42,7 @@ spec:
       value: cloudify_db
     resources:
       limits:
-        cpu: 0.2
-        memory: 256Mi
+        cpu: 0.4
+        memory: 0.5Gi
   nodeSelector:
     instance-type: spot-xlarge
