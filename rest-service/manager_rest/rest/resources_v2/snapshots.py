@@ -230,13 +230,7 @@ class SnapshotsIdRestore(SecuredResource):
     @authorize('snapshot_restore')
     @rest_decorators.marshal_with(models.Snapshot)
     def post(self, snapshot_id):
-        request_dict = rest_utils.get_json_and_verify_params(
-            {'recreate_deployments_envs'}
-        )
-        recreate_deployments_envs = rest_utils.verify_and_convert_bool(
-            'recreate_deployments_envs',
-            request_dict['recreate_deployments_envs']
-        )
+        request_dict = rest_utils.get_json_and_verify_params()
         force = rest_utils.verify_and_convert_bool(
             'force',
             request_dict['force']
@@ -258,7 +252,6 @@ class SnapshotsIdRestore(SecuredResource):
         timeout = rest_utils.convert_to_int(request_timeout)
         execution = get_resource_manager().restore_snapshot(
             snapshot_id,
-            recreate_deployments_envs,
             force,
             True,
             timeout,

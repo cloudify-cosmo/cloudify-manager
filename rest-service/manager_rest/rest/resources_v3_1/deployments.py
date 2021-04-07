@@ -41,6 +41,7 @@ from manager_rest.manager_exceptions import (
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.maintenance import is_bypass_maintenance_mode
 from manager_rest.dsl_functions import evaluate_deployment_capabilities
+
 from manager_rest.rest.filters_utils import get_filter_rules_from_filter_id
 from manager_rest.rest import (
     rest_utils,
@@ -81,6 +82,27 @@ class DeploymentsId(resources_v1.DeploymentsId):
             return DeploymentEnvironmentCreationInProgressError()
         error_message = execution.error.strip().split('\n')[-1]
         return DeploymentCreationError(error_message)
+
+    @staticmethod
+    def _create_label_from_deployment_inputs(deployment, inputs):
+        rm = get_resource_manager()
+        sm = get_storage_manager()
+        csys_environment = inputs.get('csys-environment')
+        rm.verify_csys_environment_input(deployment, csys_environment)
+        labels_to_add = rm.get_deployment_parents_from_inputs(csys_environment)
+        if labels_to_add:
+            rm.create_resource_labels(
+                models.DeploymentLabel,
+                deployment,
+                labels_to_add
+            )
+            dep_graph = rest_utils.RecursiveDeploymentLabelsDependencies(sm)
+            dep_graph.create_dependencies_graph()
+            rm.add_deployment_to_labels_graph(
+                dep_graph,
+                deployment,
+                csys_environment
+            )
 
     @staticmethod
     def _populate_direct_deployment_counts(deployment):
@@ -174,6 +196,8 @@ class DeploymentsId(resources_v1.DeploymentsId):
             optional=True,
             valid_values=VisibilityState.STATES
         )
+        labels = rest_utils.get_labels_list(request_dict.get('labels', []))
+        inputs = request_dict.get('inputs', {})
         skip_plugins_validation = self.get_skip_plugin_validation_flag(
             request_dict)
         rm = get_resource_manager()
@@ -181,7 +205,6 @@ class DeploymentsId(resources_v1.DeploymentsId):
         blueprint = sm.get(models.Blueprint, blueprint_id)
         site_name = _get_site_name(request_dict)
         site = sm.get(models.Site, site_name) if site_name else None
-        labels = rest_utils.get_labels_list(request_dict.get('labels', []))
         rm.cleanup_failed_deployment(deployment_id)
         deployment = rm.create_deployment(
             blueprint,
@@ -192,10 +215,11 @@ class DeploymentsId(resources_v1.DeploymentsId):
             site=site,
             runtime_only_evaluation=request_dict.get(
                 'runtime_only_evaluation', False),
+            labels=labels,
         )
         try:
             rm.execute_workflow(deployment.make_create_environment_execution(
-                inputs=request_dict.get('inputs', {}),
+                inputs=inputs,
                 labels=labels,
                 skip_plugins_validation=skip_plugins_validation,
 
@@ -241,6 +265,9 @@ class DeploymentsId(resources_v1.DeploymentsId):
                 deployment,
                 raw_labels_list
             )
+        # Check the inputs value here for `csys-environment`
+        inputs = request_dict.get('inputs', {})
+        self._create_label_from_deployment_inputs(deployment, inputs)
         sm.update(deployment)
         return deployment
 
@@ -812,7 +839,35 @@ class DeploymentGroupsId(SecuredResource):
 
     @authorize('deployment_group_delete')
     def delete(self, group_id):
+        args = rest_utils.get_args_and_verify_arguments([
+            Argument('delete_deployments', type=boolean, default=False),
+            Argument('force', type=boolean, default=False),
+            Argument('delete_logs', type=boolean, default=False),
+        ])
         sm = get_storage_manager()
+        rm = get_resource_manager()
+
         group = sm.get(models.DeploymentGroup, group_id)
+        if args.delete_deployments:
+            with sm.transaction():
+                delete_exc_group = models.ExecutionGroup(
+                    id=str(uuid.uuid4()),
+                    workflow_id='delete_deployment_environment',
+                    deployment_group=group,
+                )
+                sm.put(delete_exc_group)
+                for dep in group.deployments:
+                    rm.check_deployment_delete(dep, force=args.force)
+                    delete_exc = dep.make_delete_environment_execution(
+                        delete_logs=args.delete_logs
+                    )
+                    delete_exc_group.executions.append(delete_exc)
+
+            amqp_client = get_amqp_client()
+            handler = workflow_sendhandler()
+            amqp_client.add_handler(handler)
+            with amqp_client:
+                delete_exc_group.start_executions(sm, rm, handler)
+
         sm.delete(group)
         return None, 204

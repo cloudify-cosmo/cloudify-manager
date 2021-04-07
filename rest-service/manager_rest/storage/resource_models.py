@@ -670,6 +670,10 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             return None
         return self.latest_execution.total_operations
 
+    @property
+    def has_sub_deployments(self):
+        return self.sub_services_count or self.sub_environments_count
+
 
 class DeploymentGroup(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'deployment_groups'
@@ -873,6 +877,7 @@ class Execution(CreatedAtMixin, SQLResourceBase):
     scheduled_for = db.Column(UTCDateTime, nullable=True)
     is_dry_run = db.Column(db.Boolean, nullable=False, default=False)
     token = db.Column(db.String(100), nullable=True, index=True)
+    resume = db.Column(db.Boolean, nullable=False, server_default='false')
 
     _deployment_fk = foreign_key(Deployment._storage_id, nullable=True)
 
@@ -1049,6 +1054,7 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             'execution_creator_username': self.creator.username,
             'task_target': MGMTWORKER_QUEUE,
             'tenant': {'name': self.tenant.name},
+            'resume': self.resume,
         }
         if self.deployment is not None:
             context['deployment_id'] = self.deployment.id
@@ -1158,7 +1164,10 @@ class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
         This will only actually run executions up to the concurrency limit,
         and queue the rest.
         """
-        executions = self.executions  # only retrieve this once
+        executions = [
+            exc for exc in self.executions
+            if exc.status == ExecutionState.PENDING
+        ]
         with sm.transaction():
             for execution in executions[self.concurrency:]:
                 execution.status = ExecutionState.QUEUED
@@ -1793,8 +1802,10 @@ class BaseDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
             cls,
             Deployment,
             cls._source_deployment,
-            backref=db.backref(cls._source_backref_name,
-                               cascade=cls._source_cascade)
+            backref=db.backref(
+                cls._source_backref_name,
+                cascade=cls._source_cascade
+            )
         )
 
     @declared_attr
@@ -1803,8 +1814,11 @@ class BaseDeploymentDependencies(CreatedAtMixin, SQLResourceBase):
             cls,
             Deployment,
             cls._target_deployment,
-            backref=db.backref(cls._target_backref_name),
-            cascade=cls._target_cascade)
+            backref=db.backref(
+                cls._target_backref_name,
+                cascade=cls._target_cascade
+            )
+        )
 
     source_deployment_id = association_proxy('source_deployment', 'id')
     target_deployment_id = association_proxy('target_deployment', 'id')

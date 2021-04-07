@@ -143,6 +143,7 @@ class EventsTest(AgentlessTestCase):
         else:
             self.fail("Expected logs to be found")
 
+    @pytest.mark.skip(reason='causes the DB deadlock in snapshot')
     def test_snapshots_events(self):
         """ Make sure snapshots events appear when using the
          'cfy events list' command """
@@ -155,7 +156,6 @@ class EventsTest(AgentlessTestCase):
         self.undeploy_application(
             self.deployment_id, is_delete_deployment=True)
         execution = self.client.snapshots.restore(snapshot_id, force=True)
-
         # give the database some time to downgrade/upgrade before running
         # requests to avoid the deadlock described in CY-1455
         time.sleep(10)

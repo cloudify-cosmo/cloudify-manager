@@ -322,6 +322,33 @@ class DeploymentUpdatesTestCase(DeploymentUpdatesBase):
             deployment.id, blueprint_id='bp2',
             reevaluate_active_statuses=True)
 
+    def test_add_parent_label(self):
+        self.put_deployment(deployment_id='parent', blueprint_id='parent')
+        self._deploy_base('child', 'one_node.yaml')
+        self._update('child', 'one_label.yaml')
+        updated_deployment = \
+            self.client.deployments.get(deployment_id='parent')
+        self.assertEqual(updated_deployment.sub_services_count, 1)
+
+    def test_add_invalid_parent_label(self):
+        error_message = 'label `csys-obj-parent` that does not exist'
+        self.put_deployment(deployment_id='parent', blueprint_id='parent')
+        self._deploy_base('child', 'one_node.yaml')
+        with self.assertRaisesRegex(CloudifyClientError, error_message):
+            self._update('child', 'invalid_one_label.yaml')
+
+    def test_add_csys_environment_input(self):
+        self.put_deployment(deployment_id='parent', blueprint_id='parent')
+        self._deploy_base('child', 'one_node.yaml')
+        self._update(
+            'child',
+            'one_csys_input.yaml',
+            inputs={'csys-environment': 'parent'}
+        )
+        updated_deployment = \
+            self.client.deployments.get(deployment_id='parent')
+        self.assertEqual(updated_deployment.sub_services_count, 1)
+
 
 @mark.skip
 class DeploymentUpdatesStepAndStageTestCase(base_test.BaseServerTestCase):

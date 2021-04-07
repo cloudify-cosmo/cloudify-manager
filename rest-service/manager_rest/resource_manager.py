@@ -60,6 +60,7 @@ from manager_rest.rest.rest_utils import (
     update_inter_deployment_dependencies,
     verify_blueprint_uploaded_state,
     compute_rule_from_scheduling_params,
+    get_labels_list,
 )
 from manager_rest.deployment_update.constants import STATES as UpdateStates
 from manager_rest.plugins_update.constants import STATES as PluginsUpdateStates
@@ -74,7 +75,6 @@ from . import config
 from . import app_context
 from . import workflow_executor
 from . import manager_exceptions
-from .workflow_executor import generate_execution_token
 
 if typing.TYPE_CHECKING:
     from cloudify.amqp_client import SendHandler
@@ -133,6 +133,10 @@ class ResourceManager(object):
         dep.latest_execution = latest_execution
         dep.deployment_status = dep.evaluate_deployment_status()
         self.sm.update(dep)
+        if dep.deployment_parents:
+            graph = RecursiveDeploymentLabelsDependencies(self.sm)
+            graph.create_dependencies_graph()
+            graph.propagate_deployment_statuses(dep.id)
 
     def update_execution_status(self, execution_id, status, error):
         execution = self.sm.get(models.Execution, execution_id)
@@ -387,7 +391,6 @@ class ResourceManager(object):
 
     def restore_snapshot(self,
                          snapshot_id,
-                         recreate_deployments_envs,
                          force,
                          bypass_maintenance,
                          timeout,
@@ -404,7 +407,6 @@ class ResourceManager(object):
             workflow_id='restore_snapshot',
             parameters={
                 'snapshot_id': snapshot_id,
-                'recreate_deployments_envs': recreate_deployments_envs,
                 'config': self._get_conf_for_snapshots_wf(),
                 'force': force,
                 'timeout': timeout,
@@ -483,6 +485,7 @@ class ResourceManager(object):
         # Verify plugin exists and can be removed
         plugin = self.sm.get(models.Plugin, plugin_id)
         validate_global_modification(plugin)
+        self._check_for_active_system_wide_execution(queue=False)
 
         if not force:
             affected_blueprint_ids = []
@@ -661,6 +664,28 @@ class ResourceManager(object):
 
         return self.sm.delete(blueprint)
 
+    def retrieve_and_display_dependencies(self, deployment):
+        dep_graph = RecursiveDeploymentDependencies(self.sm)
+        excluded_ids = self._excluded_component_creator_ids(deployment)
+        deployment_dependencies = \
+            dep_graph.retrieve_and_display_dependencies(
+                deployment.id,
+                excluded_component_creator_ids=excluded_ids)
+
+        if deployment.has_sub_deployments:
+            dep_graph = RecursiveDeploymentLabelsDependencies(self.sm)
+            labels_dependencies = \
+                dep_graph.retrieve_and_display_dependencies(
+                    deployment
+                )
+            if deployment_dependencies:
+                deployment_dependencies = deployment_dependencies\
+                                          + labels_dependencies
+            else:
+                deployment_dependencies = labels_dependencies
+
+        return deployment_dependencies
+
     def check_deployment_delete(self, deployment, force=False):
         """Check that deployment can be deleted"""
         executions = self.sm.list(models.Execution, filters={
@@ -669,15 +694,8 @@ class ResourceManager(object):
                 ExecutionState.ACTIVE_STATES + ExecutionState.QUEUED_STATE
             )
         }, get_all_results=True)
-
-        # Verify deleting the deployment won't affect dependent deployments
-        dep_graph = RecursiveDeploymentDependencies(self.sm)
-        excluded_ids = self._excluded_component_creator_ids(deployment)
-        deployment_dependencies = \
-            dep_graph.retrieve_and_display_dependencies(
-                deployment.id,
-                excluded_component_creator_ids=excluded_ids)
-
+        deployment_dependencies = self.retrieve_and_display_dependencies(
+            deployment)
         if deployment_dependencies:
             if force:
                 current_app.logger.warning(
@@ -691,7 +709,6 @@ class ResourceManager(object):
                     f"existing installations depend on it:\n"
                     f"{deployment_dependencies}"
                 )
-
         if executions:
             running_ids = ','.join(
                 execution.id for execution in executions
@@ -733,6 +750,21 @@ class ResourceManager(object):
             self._clean_dependencies_from_external_targets(
                 deployment, external_targets)
 
+        parents = deployment.deployment_parents
+        if parents:
+            dep_graph = RecursiveDeploymentLabelsDependencies(self.sm)
+            dep_graph.create_dependencies_graph()
+            dep_graph.decrease_deployment_counts_in_graph(parents, deployment)
+            for _parent in parents:
+                dep_graph.remove_dependency_from_graph(deployment.id, _parent)
+                self._remove_deployment_label_dependency(
+                    deployment,
+                    self.sm.get(
+                        models.Deployment, _parent
+                    )
+                )
+                dep_graph.propagate_deployment_statuses(_parent)
+
         deployment_folder = os.path.join(
             config.instance.file_server_root,
             FILE_SERVER_DEPLOYMENTS_FOLDER,
@@ -767,19 +799,26 @@ class ResourceManager(object):
                     external_source=external_source
                 )
 
-    def _reset_operations(self, execution, execution_token, from_states=None):
-        """Force-resume the execution: restart failed operations.
+    def reset_operations(self, execution, force=False):
+        """Resume the execution: restart failed operations.
 
         All operations that were failed are going to be retried,
         the execution itself is going to be set to pending again.
         Operations that were retried by another operation, will
         not be reset.
-
-        :return: Whether to continue with running the execution
         """
-        if from_states is None:
-            from_states = {cloudify_tasks.TASK_RESCHEDULED,
-                           cloudify_tasks.TASK_FAILED}
+        from_states = {
+            cloudify_tasks.TASK_RESCHEDULED,
+            cloudify_tasks.TASK_FAILED
+        }
+        if force:
+            # with force, we resend all tasks which haven't finished yet
+            from_states |= {
+                cloudify_tasks.TASK_STARTED,
+                cloudify_tasks.TASK_SENT,
+                cloudify_tasks.TASK_SENDING,
+            }
+
         tasks_graphs = self.sm.list(models.TasksGraph,
                                     filters={'execution': execution},
                                     get_all_results=True)
@@ -803,19 +842,9 @@ class ResourceManager(object):
 
     def resume_execution(self, execution_id, force=False):
         execution = self.sm.get(models.Execution, execution_id)
-        execution_token = generate_execution_token(execution)
         if execution.status in {ExecutionState.CANCELLED,
                                 ExecutionState.FAILED}:
-            self._reset_operations(execution, execution_token)
-            if force:
-                # with force, we resend all tasks which haven't finished yet
-                self._reset_operations(execution,
-                                       execution_token,
-                                       from_states={
-                                           cloudify_tasks.TASK_STARTED,
-                                           cloudify_tasks.TASK_SENT,
-                                           cloudify_tasks.TASK_SENDING,
-                                       })
+            self.reset_operations(execution, force=force)
         elif force:
             raise manager_exceptions.ConflictError(
                 'Cannot force-resume execution: `{0}` in state: `{1}`'
@@ -828,13 +857,11 @@ class ResourceManager(object):
 
         execution.status = ExecutionState.STARTED
         execution.ended_at = None
-        self.sm.update(execution, modified_attrs=('status', 'ended_at'))
+        execution.resumed = True
+        self.sm.update(execution,
+                       modified_attrs=('status', 'ended_at', 'resume'))
 
-        workflow_executor.execute_workflow(
-            execution,
-            bypass_maintenance=False,
-            resume=True,
-        )
+        workflow_executor.execute_workflow(execution, bypass_maintenance=False)
 
         # Dealing with the inner Components' deployments
         components_executions = self._find_all_components_executions(
@@ -914,7 +941,7 @@ class ResourceManager(object):
             and this is set, queue the execution. Otherwise, throw.
         """
         system_exec_running = self._check_for_active_system_wide_execution(
-            execution, queue)
+            queue)
         if force or not execution.deployment:
             return system_exec_running
         else:
@@ -927,7 +954,7 @@ class ResourceManager(object):
             filters={
                 'deployment_id': execution.deployment_id,
                 'id': lambda col: col != execution.id,
-                'status': lambda col: col.notin_(ExecutionState.END_STATES)
+                'status': ExecutionState.ACTIVE_STATES,
             },
             is_include_system_workflows=True
         ).items
@@ -942,10 +969,10 @@ class ResourceManager(object):
                 f'deployment: {running}. To execute this workflow anyway, '
                 f'pass "force=true" as a query parameter to this request')
 
-    def _check_for_active_system_wide_execution(self, execution, queue):
+    def _check_for_active_system_wide_execution(self, queue):
         executions = self.sm.list(models.Execution, filters={
             'is_system_workflow': True,
-            'status': ExecutionState.ACTIVE_STATES,
+            'status': ExecutionState.ACTIVE_STATES + [ExecutionState.QUEUED],
         }, get_all_results=True, all_tenants=True).items
         if executions and queue:
             return True
@@ -1339,7 +1366,8 @@ class ResourceManager(object):
                           visibility,
                           skip_plugins_validation=False,
                           site=None,
-                          runtime_only_evaluation=False):
+                          runtime_only_evaluation=False,
+                          labels=None,):
         verify_blueprint_uploaded_state(blueprint)
         plan = blueprint.plan
         visibility = self.get_resource_visibility(models.Deployment,
@@ -1352,7 +1380,11 @@ class ResourceManager(object):
                 f"Can't create global deployment {deployment_id} because "
                 f"blueprint {blueprint.id} is not global"
             )
-
+        parents_labels = self.get_deployment_parents_from_labels(
+            labels
+        )
+        if parents_labels:
+            self.verify_deployment_parent_labels(parents_labels, deployment_id)
         #  validate plugins exists on manager when
         #  skip_plugins_validation is False
         if not skip_plugins_validation:
@@ -1367,7 +1399,6 @@ class ResourceManager(object):
                 plan)
             for plugin in host_agent_plugins:
                 self.validate_plugin_is_installed(plugin)
-
         now = datetime.utcnow()
         new_deployment = models.Deployment(
             id=deployment_id,
@@ -1390,12 +1421,25 @@ class ResourceManager(object):
         # RD-1602 will move this to the workflow:
         self._create_deployment_initial_dependencies(deployment)
 
+    def get_deployment_parents_from_inputs(self, csys_environment):
+        labels_to_add = []
+        if csys_environment:
+            labels_to_add = get_labels_list(
+                [
+                    {
+                        'csys-obj-parent': csys_environment
+                    }
+                ]
+            )
+        return labels_to_add
+
     @staticmethod
     def get_deployment_parents_from_labels(labels):
         parents = []
-        for label, value in labels:
-            if label == 'csys-obj-parent':
-                parents.append(value)
+        labels = labels or []
+        for label_key, label_value in labels:
+            if label_key == 'csys-obj-parent':
+                parents.append(label_value)
         return parents
 
     def get_deployment_object_types_from_labels(self, deployment, labels):
@@ -1412,7 +1456,7 @@ class ResourceManager(object):
                 delete_types.add(label.value.lower())
         return created_types, delete_types
 
-    def verify_deployment_parent_labels(self, parents, deployment_id):
+    def get_missing_deployment_parents(self, parents):
         if not parents:
             return
         result = self.sm.list(
@@ -1422,6 +1466,10 @@ class ResourceManager(object):
         ).items
         _existing_parents = [_parent[0] for _parent in result]
         missing_parents = set(parents) - set(_existing_parents)
+        return missing_parents
+
+    def verify_deployment_parent_labels(self, parents, deployment_id):
+        missing_parents = self.get_missing_deployment_parents(parents)
         if missing_parents:
             raise manager_exceptions.DeploymentParentNotFound(
                 'Deployment {0}: is referencing deployments'
@@ -1429,6 +1477,22 @@ class ResourceManager(object):
                 'make sure that deployment(s) {1} exist before creating '
                 'deployment'.format(deployment_id, ','.join(missing_parents))
             )
+
+    def verify_csys_environment_input(self, deployment, csys_environment):
+        if csys_environment:
+            try:
+                self.verify_deployment_parent_labels(
+                    [csys_environment],
+                    deployment.id
+                )
+            except Exception:
+                raise manager_exceptions.InvalidCSYSEnvironmentInput(
+                    'Deployment {0}: is referencing invalid '
+                    '`csys-environment` input. Make sure that `{1}` is '
+                    'referencing an existing deployment and valid '
+                    'format.'.format(
+                        deployment.id, csys_environment)
+                )
 
     def _place_deployment_label_dependency(self, source, target):
         self.sm.put(
@@ -1468,7 +1532,7 @@ class ResourceManager(object):
                                             dep_graph,
                                             source,
                                             target_id):
-        dep_graph.decrease_deployment_counts_in_graph(target_id, source)
+        dep_graph.decrease_deployment_counts_in_graph([target_id], source)
         dep_graph.remove_dependency_from_graph(source.id, target_id)
         self._remove_deployment_label_dependency(
             source,
@@ -2137,15 +2201,11 @@ class ResourceManager(object):
                                           workflow_id, deployment, force):
         if workflow_id not in ['stop', 'uninstall', 'update']:
             return
-        dep_graph = RecursiveDeploymentDependencies(self.sm)
-
         # if we're in the middle of an execution initiated by the component
         # creator, we'd like to drop the component dependency from the list
-        excluded_ids = self._excluded_component_creator_ids(deployment)
-        deployment_dependencies = \
-            dep_graph.retrieve_and_display_dependencies(
-                deployment.id,
-                excluded_component_creator_ids=excluded_ids)
+        deployment_dependencies = self.retrieve_and_display_dependencies(
+            deployment
+        )
         if not deployment_dependencies:
             return
         if force:

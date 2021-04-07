@@ -87,7 +87,8 @@ def create(ctx, labels=None, inputs=None, skip_plugins_validation=False, **_):
     client = get_rest_client(tenant=ctx.tenant_name)
     bp = client.blueprints.get(ctx.blueprint.id)
     deployment_plan = tasks.prepare_deployment_plan(
-        bp.plan, client.secrets.get, inputs)
+        bp.plan, client.secrets.get, inputs,
+        runtime_only_evaluation=ctx.deployment.runtime_only_evaluation)
     nodes = deployment_plan['nodes']
     node_instances = deployment_plan['node_instances']
 

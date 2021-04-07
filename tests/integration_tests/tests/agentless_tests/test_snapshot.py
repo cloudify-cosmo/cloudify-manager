@@ -446,41 +446,38 @@ class TestSnapshot(AgentlessTestCase):
         """Upload the snapshot and launch the restore workflow
         """
         snapshot_id = snapshot_id or self.SNAPSHOT_ID
-        rest_client = utils.create_rest_client(
-            tenant=tenant_name, host=self.env.container_ip)
-        self._upload_and_validate_snapshot(snapshot_path,
-                                           snapshot_id,
-                                           rest_client)
-        self.logger.debug('Restoring snapshot...')
-        rest_client.maintenance_mode.activate()
-        execution = rest_client.snapshots.restore(
-            snapshot_id,
-            ignore_plugin_failure=ignore_plugin_failure)
-        # give the database some time to downgrade/upgrade before running
-        # requests to avoid the deadlock described in CY-1455
-        time.sleep(10)
-        self.wait_for_snapshot_restore_to_end(execution.id, client=rest_client)
-        rest_client.maintenance_mode.deactivate()
-        execution = self._wait_for_restore_execution_to_end(
-            execution, rest_client, timeout_seconds=240)
+        with self.client_using_tenant(self.client, tenant_name):
+            self._upload_and_validate_snapshot(snapshot_path,
+                                               snapshot_id)
+            self.logger.debug('Restoring snapshot...')
+            self.client.maintenance_mode.activate()
+            execution = self.client.snapshots.restore(
+                snapshot_id,
+                ignore_plugin_failure=ignore_plugin_failure)
+            # give the database some time to downgrade/upgrade before running
+            # requests to avoid the deadlock described in CY-1455
+            time.sleep(10)
+            self.wait_for_snapshot_restore_to_end(execution.id)
+            self.client.maintenance_mode.deactivate()
+            execution = self._wait_for_restore_execution_to_end(
+                execution, timeout_seconds=240)
         if execution.status == error_execution_status:
             self.logger.error('Execution error: {0}'.format(execution.error))
         self.assertEqual(desired_execution_status, execution.status)
 
     def _upload_and_validate_snapshot(self,
                                       snapshot_path,
-                                      snapshot_id,
-                                      rest_client):
+                                      snapshot_id):
         self.logger.debug('Uploading snapshot: {0}'.format(snapshot_path))
-        rest_client.snapshots.upload(snapshot_path, snapshot_id)
-        snapshot = rest_client.snapshots.get(snapshot_id)
+        self.client.snapshots.upload(snapshot_path, snapshot_id)
+        snapshot = self.client.snapshots.get(snapshot_id)
         self.logger.debug('Retrieved snapshot: {0}'.format(snapshot))
         self.assertEqual(snapshot['id'], snapshot_id)
         self.assertEqual(snapshot['status'], 'uploaded')
         self.logger.info('Snapshot uploaded and validated')
 
-    def _wait_for_restore_execution_to_end(
-            self, execution, rest_client, timeout_seconds=120):
+    def _wait_for_restore_execution_to_end(self, execution,
+                                           timeout_seconds=120):
         """Can't use the `wait_for_execution_to_end` in the class because
          we need to be able to handle client errors
         """
@@ -490,7 +487,7 @@ class TestSnapshot(AgentlessTestCase):
             # This might fail due to the fact that we're changing the DB in
             # real time - it's OK. Just try again
             try:
-                execution = rest_client.executions.get(execution.id)
+                execution = self.client.executions.get(execution.id)
             except (requests.exceptions.ConnectionError, CloudifyClientError):
                 pass
             if time.time() > deadline:

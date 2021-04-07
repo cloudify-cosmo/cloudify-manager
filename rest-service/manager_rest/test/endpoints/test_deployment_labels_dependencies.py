@@ -2,6 +2,7 @@
 from mock import patch
 
 from cloudify_rest_client.exceptions import CloudifyClientError
+from cloudify.models_states import DeploymentState
 
 from manager_rest.rest.rest_utils import RecursiveDeploymentLabelsDependencies
 from manager_rest.test import base_test
@@ -83,6 +84,22 @@ class DeploymentLabelsDependenciesTest(BaseServerTestCase):
         deployment = self.client.deployments.get('parent')
         self.assertEqual(deployment.sub_services_count, 1)
         self.assertEqual(deployment.sub_environments_count, 0)
+
+    def test_upload_blueprint_with_invalid_parent_id_on_dsl(self):
+        with self.assertRaisesRegex(
+                CloudifyClientError,
+                'using label `csys-obj-parent` that does not exist'):
+            self.put_blueprint(
+                blueprint_id='bp1',
+                blueprint_file_name='blueprint_with_invalid_parent_labels.yaml'
+            )
+
+    def test_upload_blueprint_with_valid_parent_id_on_dsl(self):
+        self.put_deployment('valid-id')
+        self.put_blueprint(
+            blueprint_id='bp1',
+            blueprint_file_name='blueprint_with_valid_parent_labels.yaml'
+        )
 
     def test_deployment_with_multiple_parent_labels(self):
         self.put_deployment(deployment_id='parent_1',
@@ -304,6 +321,123 @@ class DeploymentLabelsDependenciesTest(BaseServerTestCase):
         self.assertEqual(deployment_1.sub_environments_count, 1)
         self.assertEqual(deployment_1.sub_environments_count, 1)
 
+    def test_detach_all_services_from_deployment(self):
+        self.put_deployment(
+            deployment_id='env',
+            blueprint_id='env'
+        )
+        self._create_deployment_objects('env', 'service', 2)
+        self._create_deployment_objects('env', 'environment', 2)
+
+        deployment = self.client.deployments.get('env')
+        self.assertEqual(deployment.sub_services_count, 2)
+        self.assertEqual(deployment.sub_environments_count, 2)
+
+        self.client.deployments.update_labels(
+            'service_1_env',
+            [
+                {
+                    'csys-obj-type': 'service'
+                },
+
+            ]
+        )
+        self.client.deployments.update_labels(
+            'service_2_env',
+            [
+                {
+                    'csys-obj-type': 'service'
+                },
+
+            ]
+        )
+
+        deployment = self.client.deployments.get('env')
+        self.assertEqual(deployment.sub_services_count, 0)
+        self.assertEqual(deployment.sub_environments_count, 2)
+
+    def test_detach_all_environments_from_deployment(self):
+        self.put_deployment(
+            deployment_id='env',
+            blueprint_id='env'
+        )
+        self._create_deployment_objects('env', 'service', 2)
+        self._create_deployment_objects('env', 'environment', 2)
+
+        deployment = self.client.deployments.get('env')
+        self.assertEqual(deployment.sub_services_count, 2)
+        self.assertEqual(deployment.sub_environments_count, 2)
+
+        self.client.deployments.update_labels(
+            'environment_1_env',
+            [
+                {
+                    'csys-obj-type': 'environment'
+                }
+            ]
+        )
+        self.client.deployments.update_labels(
+            'environment_2_env',
+            [
+                {
+                    'csys-obj-type': 'environment'
+                }
+            ]
+        )
+
+        deployment = self.client.deployments.get('env')
+        self.assertEqual(deployment.sub_services_count, 2)
+        self.assertEqual(deployment.sub_environments_count, 0)
+
+    def test_deployment_statuses_after_creation_without_sub_deployments(self):
+        self.put_deployment('dep1')
+        deployment = self.client.deployments.get('dep1')
+        self.assertEqual(
+            deployment.deployment_status,
+            DeploymentState.REQUIRE_ATTENTION
+        )
+        self.assertIsNone(deployment.sub_services_status)
+        self.assertIsNone(deployment.sub_environments_status)
+
+    def test_deployment_statuses_after_creation_with_sub_deployments(self):
+        self.put_deployment('parent')
+        self._create_deployment_objects('parent', 'environment', 2)
+        self._create_deployment_objects('parent', 'service', 2)
+        deployment = self.client.deployments.get('parent')
+        self.assertEqual(
+            deployment.deployment_status,
+            DeploymentState.REQUIRE_ATTENTION
+        )
+        self.assertEqual(
+            deployment.sub_environments_status,
+            DeploymentState.REQUIRE_ATTENTION
+        )
+        self.assertEqual(
+            deployment.sub_services_status,
+            DeploymentState.REQUIRE_ATTENTION
+        )
+
+    def test_delete_deployment_with_sub_deployments(self):
+        self.put_deployment('parent')
+        self._create_deployment_objects('parent', 'service', 2)
+        with self.assertRaisesRegex(
+                CloudifyClientError, 'Can\'t delete deployment'):
+            self.client.deployments.delete('parent')
+
+    def test_stop_deployment_with_sub_deployments(self):
+        self.put_deployment('parent')
+        self._create_deployment_objects('parent', 'service', 2)
+        with self.assertRaisesRegex(
+                CloudifyClientError, 'Can\'t execute workflow `stop`'):
+            self.client.executions.start('parent', 'stop')
+
+    def test_uninstall_deployment_with_sub_deployments(self):
+        self.put_deployment('parent')
+        self._create_deployment_objects('parent', 'service', 2)
+        with self.assertRaisesRegex(
+                CloudifyClientError, 'Can\'t execute workflow `uninstall`'):
+            self.client.executions.start('parent', 'uninstall')
+
     def test_create_deployment_labels_dependencies_graph(self):
         self._populate_deployment_labels_dependencies()
         dep_graph = RecursiveDeploymentLabelsDependencies(self.sm)
@@ -372,7 +506,7 @@ class DeploymentLabelsDependenciesTest(BaseServerTestCase):
         )
         dep_graph = RecursiveDeploymentLabelsDependencies(self.sm)
         dep_graph.create_dependencies_graph()
-        targets = dep_graph.find_recursive_deployments('dep_0')
+        targets = dep_graph.find_recursive_deployments(['dep_0'])
         self.assertEqual(len(targets), 5)
         self.assertIn('dep_1', targets)
         self.assertIn('dep_11', targets)
@@ -442,3 +576,25 @@ class DeploymentLabelsDependenciesTest(BaseServerTestCase):
         deployment = self.client.deployments.get('env')
         self.assertEqual(deployment.sub_environments_count, 3)
         self.assertEqual(deployment.sub_services_count, 2)
+
+    def test_failure_creation_for_automatic_label_from_input(self):
+        with self.assertRaisesRegex(
+                CloudifyClientError,
+                'referencing invalid `csys-environment` input'):
+            self.put_deployment(
+                'parent',
+                blueprint_id='bp1',
+                blueprint_file_name='blueprint_with_invalid'
+                                    '_csys_environment_input.yaml'
+            )
+
+    def test_success_creation_for_automatic_label_from_input(self):
+        self.put_deployment('parent')
+        self.put_deployment(
+            'child',
+            blueprint_id='child',
+            blueprint_file_name='blueprint_with_valid'
+                                '_csys_environment_input.yaml'
+        )
+        deployment = self.client.deployments.get('parent')
+        self.assertEqual(deployment.sub_services_count, 1)
