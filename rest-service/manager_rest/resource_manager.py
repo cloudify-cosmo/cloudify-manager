@@ -485,6 +485,7 @@ class ResourceManager(object):
         # Verify plugin exists and can be removed
         plugin = self.sm.get(models.Plugin, plugin_id)
         validate_global_modification(plugin)
+        self._check_for_active_system_wide_execution(queue=False)
 
         if not force:
             affected_blueprint_ids = []
@@ -940,7 +941,7 @@ class ResourceManager(object):
             and this is set, queue the execution. Otherwise, throw.
         """
         system_exec_running = self._check_for_active_system_wide_execution(
-            execution, queue)
+            queue)
         if force or not execution.deployment:
             return system_exec_running
         else:
@@ -953,7 +954,7 @@ class ResourceManager(object):
             filters={
                 'deployment_id': execution.deployment_id,
                 'id': lambda col: col != execution.id,
-                'status': lambda col: col.notin_(ExecutionState.END_STATES)
+                'status': ExecutionState.ACTIVE_STATES,
             },
             is_include_system_workflows=True
         ).items
@@ -968,10 +969,10 @@ class ResourceManager(object):
                 f'deployment: {running}. To execute this workflow anyway, '
                 f'pass "force=true" as a query parameter to this request')
 
-    def _check_for_active_system_wide_execution(self, execution, queue):
+    def _check_for_active_system_wide_execution(self, queue):
         executions = self.sm.list(models.Execution, filters={
             'is_system_workflow': True,
-            'status': ExecutionState.ACTIVE_STATES,
+            'status': ExecutionState.ACTIVE_STATES + [ExecutionState.QUEUED],
         }, get_all_results=True, all_tenants=True).items
         if executions and queue:
             return True

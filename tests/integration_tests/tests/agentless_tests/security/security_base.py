@@ -24,7 +24,8 @@ from integration_tests import AgentlessTestCase
 class TestAuthenticationBase(AgentlessTestCase):
     @contextmanager
     def _login_client(self, **kwargs):
-        self.logger.info('Logging in to client with {0}'.format(str(kwargs)))
+        self.logger.info('Logging in to client with {0}'.format(kwargs))
+        kwargs.setdefault('cert_path', self.ca_cert)
         client = self.client
         try:
             self.client = utils.create_rest_client(self.env.container_ip,

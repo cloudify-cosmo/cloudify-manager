@@ -241,7 +241,8 @@ class TestResumeMgmtworker(AgentlessTestCase):
         self._create_user(username, password, 'default_tenant')
         user_client = create_rest_client(
             host=self.env.container_ip,
-            username=username, password=password, tenant='default_tenant'
+            username=username, password=password, tenant='default_tenant',
+            rest_port=443, rest_protocol='https', cert_path=self.ca_cert,
         )
         self._resume_no_duplicates_test(user_client)
 

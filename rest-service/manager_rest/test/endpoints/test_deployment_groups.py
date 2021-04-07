@@ -723,8 +723,11 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
     def test_cancel_group(self):
         self.client.deployment_groups.add_deployments(
             'group1',
-            count=20
+            count=2
         )
+        for dep in self.client.deployments.list():
+            if dep.id != 'dep1':
+                self.create_deployment_environment(dep)
         exc_group = self.client.execution_groups.start(
             deployment_group_id='group1',
             workflow_id='install',
@@ -743,8 +746,11 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
         """After all executions have been cancelled, resume them"""
         self.client.deployment_groups.add_deployments(
             'group1',
-            count=20
+            count=2
         )
+        for dep in self.client.deployments.list():
+            if dep.id != 'dep1':
+                self.create_deployment_environment(dep)
         exc_group = self.client.execution_groups.start(
             deployment_group_id='group1',
             workflow_id='install',
