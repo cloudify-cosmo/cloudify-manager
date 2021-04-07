@@ -140,9 +140,13 @@ class BlueprintsId(resources_v2.BlueprintsId):
     def _get_labels_from_args(args):
         if args.labels:
             labels_list = []
-            raw_labels_list = args.labels.split(',')
+            raw_labels_list = args.labels.replace('\\,', '\x00').split(',')
             for raw_label in raw_labels_list:
+                raw_label = raw_label.replace('\x00', ',').\
+                    replace('\\=', '\x00')
                 key, value = raw_label.split('=')
+                key = key.replace('\x00', '=')
+                value = value.replace('\x00', '=')
                 labels_list.append({key: value})
             return rest_utils.get_labels_list(labels_list)
 
