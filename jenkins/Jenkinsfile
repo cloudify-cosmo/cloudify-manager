@@ -13,12 +13,7 @@ def vEnv(){
 @Library('pipeline-shared-library') _
 
 pipeline {
-  agent {
-    kubernetes {
-      defaultContainer 'jnlp'
-      yamlFile 'jenkins/build-pod.yaml'
-    }
-  }
+  agent none
 
   options {
     checkoutToSubdirectory('cloudify-manager')
@@ -38,6 +33,12 @@ pipeline {
 
   stages {
     stage('prepare') {
+      agent {
+        kubernetes {
+          defaultContainer 'jnlp'
+          yamlFile 'jenkins/build-pod.yaml'
+        }
+      }
       steps {
         repoCheckout('https://github.com/cloudify-cosmo/cloudify-manager.git',"${env.PROJECT}","${env.BRANCH}")
         container('python'){
@@ -48,64 +49,76 @@ pipeline {
         }
       }
     }
-    stage('test_restservice') {
-      steps {
-        sh script: "mkdir -p ${env.WORKSPACE}/rest && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/rest", label: "copying repo to seperate workspace"
+    stage('Run Tests & Builds') {
+      parallel {
+        stage('test_restservice') {
+          agent {
+            kubernetes {
+              defaultContainer 'jnlp'
+              yamlFile 'jenkins/build-pod.yaml'
+            }
+          }
+          steps {
+            sh script: "mkdir -p ${env.WORKSPACE}/rest && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/rest", label: "copying repo to seperate workspace"
 
-        container('python'){
-          dir("${env.WORKSPACE}/rest") {
-            vEnv()
-            sh script: '''
-                . .venv/bin/activate
-              cd rest-service
-              pip install -Ur dev-requirements.txt
-              pip install -Ur test-requirements.txt
-              pip install -e .
-            ''', label: "installing requirements for pytest"
-            echo 'Running pytest <<rest-service/manager_rest/test/endpoints>>'
-            sh '''
-              . .venv/bin/activate
-              pytest \
-                -sv \
-                -a '(client_min_version is None or client_min_version <= 3.1) and (client_max_version is None or 3.1 <= client_max_version)' \
-                rest-service/manager_rest/test/endpoints
-            '''
-            echo 'Running pytest <<rest-service/manager_rest/test/infrastructure>>'
-            sh '''
-              . .venv/bin/activate
-              pytest \
-                -sv \
-                -a '(client_min_version is None or client_min_version <= 3.1) and (client_max_version is None or 3.1 <= client_max_version)' \
-                rest-service/manager_rest/test/infrastructure
-            '''
-            echo 'Running pytest <<rest-service/manager_rest/test/security>>'
-            sh '''
-              . .venv/bin/activate
-              pytest \
-                -sv \
-                rest-service/manager_rest/test/security
-            '''
-            echo 'Running pytest <<workflows>>'
-            sh '''
-              . .venv/bin/activate
-              pytest \
-                -sv \
-                workflows
-            '''
-            echo 'Running pytest <<cloudify_types>>'
-            sh '''
-              . .venv/bin/activate
-              pytest \
-                -sv \
-                cloudify_types
-            '''
+            container('python'){
+              dir("${env.WORKSPACE}/rest") {
+                vEnv()
+                sh script: '''
+                    . .venv/bin/activate
+                  cd rest-service
+                  pip install -Ur dev-requirements.txt
+                  pip install -Ur test-requirements.txt
+                  pip install -e .
+                ''', label: "installing requirements for pytest"
+                echo 'Running pytest <<rest-service/manager_rest/test/endpoints>>'
+                sh '''
+                  . .venv/bin/activate
+                  pytest \
+                    -sv \
+                    -a '(client_min_version is None or client_min_version <= 3.1) and (client_max_version is None or 3.1 <= client_max_version)' \
+                    rest-service/manager_rest/test/endpoints
+                '''
+                echo 'Running pytest <<rest-service/manager_rest/test/infrastructure>>'
+                sh '''
+                  . .venv/bin/activate
+                  pytest \
+                    -sv \
+                    -a '(client_min_version is None or client_min_version <= 3.1) and (client_max_version is None or 3.1 <= client_max_version)' \
+                    rest-service/manager_rest/test/infrastructure
+                '''
+                echo 'Running pytest <<rest-service/manager_rest/test/security>>'
+                sh '''
+                  . .venv/bin/activate
+                  pytest \
+                    -sv \
+                    rest-service/manager_rest/test/security
+                '''
+                echo 'Running pytest <<workflows>>'
+                sh '''
+                  . .venv/bin/activate
+                  pytest \
+                    -sv \
+                    workflows
+                '''
+                echo 'Running pytest <<cloudify_types>>'
+                sh '''
+                  . .venv/bin/activate
+                  pytest \
+                    -sv \
+                    cloudify_types
+                '''
+              }
+            }
           }
         }
-      }
-    }
-    stage('Run flake & Builds') {
-      parallel {
         stage('build_rpms') {
+          agent {
+            kubernetes {
+              defaultContainer 'jnlp'
+              yamlFile 'jenkins/rpm-pod.yaml'
+            }
+          }
           steps {
             container('rpmbuild'){
               sh """
@@ -140,6 +153,12 @@ pipeline {
           }
         }
         stage('flake8') {
+          agent {
+            kubernetes {
+              defaultContainer 'jnlp'
+              yamlFile 'jenkins/build-pod.yaml'
+            }
+          }
           steps {
             sh script: "mkdir -p ${env.WORKSPACE}/flake8 && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/flake8", label: "copying repo to seperate workspace"
 
@@ -155,68 +174,84 @@ pipeline {
         }
       }
     }
-    stage('test_amqp_postgres') {
-      steps {
-        sh script: "mkdir -p ${env.WORKSPACE}/amqp_postgres && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/amqp_postgres", label: "copying repo to seperate workspace"
+    stage ('Run Tests'){
+      parallel{
+        stage ('test_amqp_postgres') {
+          agent {
+            kubernetes {
+              defaultContainer 'jnlp'
+              yamlFile 'jenkins/build-pod.yaml'
+            }
+          }
+          steps {
+            sh script: "mkdir -p ${env.WORKSPACE}/amqp_postgres && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/amqp_postgres", label: "copying repo to seperate workspace"
 
-        container('python'){
-          dir("${env.WORKSPACE}/amqp_postgres") {
-            dir("amqp-postgres"){
-              vEnv()
-              sh script: '''
-                . .venv/bin/activate
-                pip install -Ur test-requirements.txt
-                pip install -e .
-              ''', label: "installing requirements for pytest"
-              echo 'Running pytest <<amqp-postgres>>'
-              sh script: '''
-                . .venv/bin/activate
-                pytest -sv amqp_postgres
-              '''
+            container('python'){
+              dir("${env.WORKSPACE}/amqp_postgres") {
+                dir("amqp-postgres"){
+                  vEnv()
+                  sh script: '''
+                    . .venv/bin/activate
+                    pip install -Ur test-requirements.txt
+                    pip install -e .
+                  ''', label: "installing requirements for pytest"
+                  echo 'Running pytest <<amqp-postgres>>'
+                  sh script: '''
+                    . .venv/bin/activate
+                    pytest -sv amqp_postgres
+                  '''
+                }
+              }
             }
           }
         }
-      }
-    }
-    stage('test_premium') {
-      steps {
-        sh script: "mkdir -p ${env.WORKSPACE}/premium && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/premium", label: "copying repo to seperate workspace"
+        stage('test_premium') {
+          agent {
+            kubernetes {
+              defaultContainer 'jnlp'
+              yamlFile 'jenkins/build-pod.yaml'
+            }
+          }
+          steps {
+            sh script: "mkdir -p ${env.WORKSPACE}/premium && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/premium", label: "copying repo to seperate workspace"
 
-        container('python'){
-          dir("${env.WORKSPACE}/premium") {
-            withVault([configuration: configuration, vaultSecrets: secrets]) {
-              echo 'cloning cloudify-premium'
-              sh """#!/bin/bash
-                set -eux
-                function clone {
-                  branch=\$1
-                  git clone \
-                    --branch "\$1" \
-                    --single-branch \
-                    --depth 1 \
-                    https://${env.PRIVATE_REPO_GITHUB_TOKEN}@github.com/cloudify-cosmo/cloudify-premium.git \
-                    ~/cloudify-premium
+            container('python'){
+              dir("${env.WORKSPACE}/premium") {
+                withVault([configuration: configuration, vaultSecrets: secrets]) {
+                  echo 'cloning cloudify-premium'
+                  sh """#!/bin/bash
+                    set -eux
+                    function clone {
+                      branch=\$1
+                      git clone \
+                        --branch "\$1" \
+                        --single-branch \
+                        --depth 1 \
+                        https://${env.PRIVATE_REPO_GITHUB_TOKEN}@github.com/cloudify-cosmo/cloudify-premium.git \
+                        ~/cloudify-premium
+                    }
+                    clone "${env.BRANCH}" || clone master
+                  """
+
+                  vEnv()
+                  sh script: '''
+                    . .venv/bin/activate
+                    cd rest-service
+                    pip install -Ur dev-requirements.txt
+                    pip install -Ur test-requirements.txt
+                    pip install -e .
+                    cd ..
+                    pip install -e ~/cloudify-premium
+                  ''', label: "installing requirements for pytest"
+                  echo 'Replace the cloudify-manager URL in dev-requirements.txt with the local path to this checkout'
+                  sh 'sed -i "s:^.*cloudify-manager.*(rest-service)$:-e ${HOME}/project/\1/:" ~/cloudify-premium/dev-requirements.txt'
+                  echo 'Running pytest <<~/cloudify-premium/tests/unittests>>'
+                  sh script: '''
+                    . .venv/bin/activate
+                    pytest -sv ~/cloudify-premium/tests/unittests
+                  '''
                 }
-                clone "${env.BRANCH}" || clone master
-              """
-
-              vEnv()
-              sh script: '''
-                . .venv/bin/activate
-                cd rest-service
-                pip install -Ur dev-requirements.txt
-                pip install -Ur test-requirements.txt
-                pip install -e .
-                cd ..
-                pip install -e ~/cloudify-premium
-              ''', label: "installing requirements for pytest"
-              echo 'Replace the cloudify-manager URL in dev-requirements.txt with the local path to this checkout'
-              sh 'sed -i "s:^.*cloudify-manager.*(rest-service)$:-e ${HOME}/project/\1/:" ~/cloudify-premium/dev-requirements.txt'
-              echo 'Running pytest <<~/cloudify-premium/tests/unittests>>'
-              sh script: '''
-                . .venv/bin/activate
-                pytest -sv ~/cloudify-premium/tests/unittests
-              '''
+              }
             }
           }
         }

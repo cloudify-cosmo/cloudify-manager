@@ -6,49 +6,25 @@ spec:
     image: jenkins/inbound-agent:4.3-4
     resources:
       limits:
-        cpu: 0.2
+        cpu: 0.3
         memory: 256Mi
   - name: python
     image: circleci/python:3.6
     resources:
       requests:
-        cpu: 2
+        cpu: 2.6
         memory: 4Gi
       limits:
-        cpu: 2
+        cpu: 2.6
         memory: 4Gi
     command:
     - cat
     tty: true
-    securityContext:
-      runAsUser: 0
-      privileged: true
-  - name: rpmbuild
-    image: rpmbuild/centos7
-    command:
-    - cat
-    tty: true
-    resources:
-      requests:
-        cpu: 0.8
-        memory: 1Gi
-      limits:
-        cpu: 0.8
-        memory: 1Gi
     securityContext:
       runAsUser: 0
       privileged: true
   - name: rabbitmq
     image: rabbitmq:3.7.7
-    resources:
-      limits:
-        cpu: 0.2
-        memory: 256Mi
-  - name: awscli
-    image: amazon/aws-cli
-    command:
-    - cat
-    tty: true
     resources:
       limits:
         cpu: 0.2
