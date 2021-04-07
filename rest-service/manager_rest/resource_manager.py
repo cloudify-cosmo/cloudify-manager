@@ -911,7 +911,7 @@ class ResourceManager(object):
                     workflow_id=execution.workflow_id,
                     parameters=execution.parameters,
                     allow_custom_parameters=execution.allow_custom_parameters,
-                    dry_run=execution.dry_run,
+                    is_dry_run=execution.is_dry_run,
                     creator=execution.creator,
                     status=ExecutionState.PENDING,
                 )
