@@ -1532,6 +1532,7 @@ class ResourceManager(object):
             target_id,
             source
         )
+        dep_graph.propagate_deployment_statuses(target_id)
 
     def delete_deployment_from_labels_graph(self,
                                             dep_graph,
