@@ -200,9 +200,6 @@ class DeploymentUpdateManager(object):
         rm.delete_deployment_from_labels_graph(
             dep_graph, dep, old_csys_environment
         )
-        dep_graph.propagate_deployment_statuses(
-            old_csys_environment
-        )
         self._delete_single_label_from_deployment(
             'csys-obj-parent',
             old_csys_environment,
