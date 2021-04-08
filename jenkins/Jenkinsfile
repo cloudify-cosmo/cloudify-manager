@@ -15,7 +15,7 @@ def vEnv(){
 pipeline {
   agent {
     kubernetes {
-      label "manager-mb-tests-${env.BRANCH}-${env.BUILD_NUMBER}"
+      label "manager-mb-tests-${env.BRANCH_NAME}-${env.BUILD_NUMBER}"
       yamlFile 'jenkins/build-pod.yaml'
     }
   }
