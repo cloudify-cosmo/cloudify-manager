@@ -20,11 +20,6 @@ pipeline {
     }
   }
 
-  parameters{
-    string(name: 'VERSION', defaultValue: '5.3.0', description: 'Cloudify version label, to be used in the filenames (eg. "5.3.0")')
-    string(name: 'PRERELEASE', defaultValue: '.dev1', description: 'A prerelase/milestone label, to be used in the filenames (eg. ".dev1")')
-  }
-
   options {
     checkoutToSubdirectory('cloudify-manager')
     buildDiscarder(logRotator(numToKeepStr:'10'))
@@ -35,8 +30,8 @@ pipeline {
   environment {
     BRANCH = "${env.BRANCH_NAME}"
     PROJECT = "cloudify-manager"
-    VERSION = "${params.VERSION}"
-    PRERELEASE = "${params.PRERELEASE}"
+    VERSION = getVersion("${env.PROJECT}", "${env.BRANCH_NAME}").trim()
+    PRERELEASE = getPreRelease("${env.PROJECT}", "${env.BRANCH_NAME}").trim()
     S3_BUILD_PATH = "${env.VERSION}/${env.PRERELEASE}-build/${env.PROJECT}/${env.BRANCH}/${env.BUILD_NUMBER}"
   }
 
