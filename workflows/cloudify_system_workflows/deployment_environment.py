@@ -162,6 +162,10 @@ def create(ctx, labels=None, inputs=None, skip_plugins_validation=False, **_):
                     },
                 )
             else:
+                # It should be safe to assume that if the target_deployment
+                # is known, there's no point passing target_deployment_func.
+                # Also because in this case the target_deployment_func will
+                # be of type string, while REST endpoint expects a dict.
                 client.inter_deployment_dependencies.create(
                     dependency_creator=func_id,
                     source_deployment=ctx.deployment.id,
