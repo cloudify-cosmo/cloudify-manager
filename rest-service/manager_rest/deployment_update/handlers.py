@@ -497,8 +497,8 @@ class PluginHandler(ModifiableEntityHandlerBase):
         node = get_node(ctx.deployment_id, ctx.raw_node_id)
 
         # Can be either node.plugins or node.plugins_to_install
-        plugins_dict = getattr(node, ctx.plugin_key, {})
-        plugins = deepcopy(plugins_dict)
+        plugins = getattr(node, ctx.plugin_key, [])
+        plugins = deepcopy(plugins)
         plugins = mutate_func(ctx, plugins, node, return_dict)
 
         current_entities[ctx.raw_node_id][ctx.plugin_key] = plugins
