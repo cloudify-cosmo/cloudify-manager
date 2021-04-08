@@ -906,20 +906,27 @@ class ResourceManager(object):
         workflow = execution.get_workflow()
         is_cascading_workflow = workflow.get('is_cascading', False)
         if is_cascading_workflow:
-            components_dep_ids = self._find_all_components_deployment_id(
-                execution.deployment.id)
+            component_executions = []
+            with self.sm.transaction():
+                components_dep_ids = self._find_all_components_deployment_id(
+                    execution.deployment.id)
 
-            for component_dep_id in components_dep_ids:
-                dep = self.sm.get(models.Deployment, component_dep_id)
-                component_execution = models.Execution(
-                    deployment=dep,
-                    workflow_id=execution.workflow_id,
-                    parameters=execution.parameters,
-                    allow_custom_parameters=execution.allow_custom_parameters,
-                    is_dry_run=execution.is_dry_run,
-                    creator=execution.creator,
-                    status=ExecutionState.PENDING,
-                )
+                for component_dep_id in components_dep_ids:
+                    dep = self.sm.get(models.Deployment, component_dep_id)
+                    component_execution = models.Execution(
+                        deployment=dep,
+                        workflow_id=execution.workflow_id,
+                        parameters=execution.parameters,
+                        allow_custom_parameters=
+                        execution.allow_custom_parameters,
+                        is_dry_run=execution.is_dry_run,
+                        creator=execution.creator,
+                        status=ExecutionState.PENDING,
+                    )
+                    self.sm.put(component_execution)
+                    component_executions.append(component_execution)
+
+            for component_execution in component_executions:
                 self.execute_workflow(
                     component_execution,
                     force=force,
