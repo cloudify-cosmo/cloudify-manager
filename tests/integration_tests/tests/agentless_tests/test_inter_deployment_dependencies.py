@@ -215,8 +215,7 @@ class TestInterDeploymentDependenciesInfrastructure(AgentlessTestCase):
                 self.assertEqual(dependency['target_deployment_func'],
                                  'shared_resource_deployment')
             elif 'property_function' in dependency.dependency_creator:
-                self.assertEqual(dependency.target_deployment_id,
-                                 SR_DEPLOYMENT)
+                self.assertEqual(dependency.target_deployment_id, None)
                 secret_func = {'get_secret': 'shared_resource_deployment_key'}
                 assert is_function(dependency['target_deployment_func'])
                 self.assertEqual(dependency['target_deployment_func'],
