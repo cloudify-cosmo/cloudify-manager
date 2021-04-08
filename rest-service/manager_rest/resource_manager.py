@@ -912,7 +912,11 @@ class ResourceManager(object):
 
         workflow = execution.get_workflow()
         is_cascading_workflow = workflow.get('is_cascading', False)
-        if is_cascading_workflow:
+        if not is_cascading_workflow:
+            return execution
+
+        component_executions = []
+        with self.sm.transaction():
             components_dep_ids = self._find_all_components_deployment_id(
                 execution.deployment.id)
 
@@ -927,14 +931,18 @@ class ResourceManager(object):
                     creator=execution.creator,
                     status=ExecutionState.PENDING,
                 )
-                self.execute_workflow(
-                    component_execution,
-                    force=force,
-                    queue=queue,
-                    bypass_maintenance=bypass_maintenance,
-                    wait_after_fail=wait_after_fail,
-                    send_handler=send_handler,
-                )
+                self.sm.put(component_execution)
+                component_executions.append(component_execution)
+
+        for component_execution in component_executions:
+            self.execute_workflow(
+                component_execution,
+                force=force,
+                queue=queue,
+                bypass_maintenance=bypass_maintenance,
+                wait_after_fail=wait_after_fail,
+                send_handler=send_handler,
+            )
         return execution
 
     @staticmethod
