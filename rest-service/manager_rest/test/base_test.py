@@ -734,12 +734,15 @@ class BaseServerTestCase(unittest.TestCase):
                        skip_plugins_validation=None,
                        site_name=None,
                        labels=None,
-                       client=None):
+                       client=None,
+                       dep_visibility=None,
+                       bp_visibility=VisibilityState.TENANT):
         client = client or self.client
         blueprint_response = self.put_blueprint(blueprint_dir,
                                                 blueprint_file_name,
                                                 blueprint_id,
-                                                client=client)
+                                                client=client,
+                                                visibility=bp_visibility)
         blueprint_id = blueprint_response['id']
         create_deployment_kwargs = {'inputs': inputs}
         if site_name:
@@ -749,6 +752,8 @@ class BaseServerTestCase(unittest.TestCase):
         if skip_plugins_validation is not None:
             create_deployment_kwargs['skip_plugins_validation'] =\
                 skip_plugins_validation
+        if dep_visibility:
+            create_deployment_kwargs['visibility'] = dep_visibility
         deployment = client.deployments.create(blueprint_id,
                                                deployment_id,
                                                **create_deployment_kwargs)
@@ -796,7 +801,8 @@ class BaseServerTestCase(unittest.TestCase):
                       blueprint_file_name=None,
                       blueprint_id='blueprint',
                       client=None,
-                      labels=None):
+                      labels=None,
+                      visibility=VisibilityState.TENANT):
         client = client or self.client
         if not blueprint_file_name:
             blueprint_file_name = CONVENTION_APPLICATION_BLUEPRINT_FILE
@@ -806,7 +812,8 @@ class BaseServerTestCase(unittest.TestCase):
         client.blueprints.upload(path=blueprint_path,
                                  entity_id=blueprint_id,
                                  async_upload=True,
-                                 labels=labels)
+                                 labels=labels,
+                                 visibility=visibility)
         self.execute_upload_blueprint_workflow(blueprint_id, client)
         blueprint = client.blueprints.get(blueprint_id)
         return blueprint
@@ -1055,7 +1062,11 @@ class BaseServerTestCase(unittest.TestCase):
 
         return deployment
 
-    def put_blueprint_with_labels(self, labels, **blueprint_kwargs):
+    def put_blueprint_with_labels(self, labels, resource_id=None,
+                                  **blueprint_kwargs):
+        if resource_id:
+            blueprint_kwargs['blueprint_id'] = resource_id
+
         return self.put_blueprint(labels=labels, **blueprint_kwargs)
 
     @staticmethod
