@@ -13,7 +13,12 @@ def vEnv(){
 @Library('pipeline-shared-library') _
 
 pipeline {
-  agent none
+  agent {
+    kubernetes {
+      label "manager-mb-tests-${env.BRANCH}-${env.BUILD_NUMBER}"
+      yamlFile 'jenkins/build-pod.yaml'
+    }
+  }
 
   parameters{
     string(name: 'VERSION', defaultValue: '5.3.0', description: 'Cloudify version label, to be used in the filenames (eg. "5.3.0")')
@@ -37,12 +42,6 @@ pipeline {
 
   stages {
     stage('prepare') {
-      agent {
-        kubernetes {
-          label "manager-mb-tests-${env.BRANCH}-${env.BUILD_NUMBER}"
-          yamlFile 'jenkins/build-pod.yaml'
-        }
-      }
       steps {
         repoCheckout('https://github.com/cloudify-cosmo/cloudify-manager.git',"${env.PROJECT}","${env.BRANCH}")
         container('python'){
@@ -56,12 +55,6 @@ pipeline {
     stage('Run Tests & Builds') {
       parallel {
         stage('test_restservice') {
-          agent {
-            kubernetes {
-              label "manager-mb-tests-${env.BRANCH}-${env.BUILD_NUMBER}"
-              yamlFile 'jenkins/build-pod.yaml'
-            }
-          }
           steps {
             sh script: "mkdir -p ${env.WORKSPACE}/rest && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/rest", label: "copying repo to seperate workspace"
 
@@ -157,12 +150,6 @@ pipeline {
           }
         }
         stage('flake8') {
-          agent {
-            kubernetes {
-              label "manager-mb-tests-${env.BRANCH}-${env.BUILD_NUMBER}"
-              yamlFile 'jenkins/build-pod.yaml'
-            }
-          }
           steps {
             sh script: "mkdir -p ${env.WORKSPACE}/flake8 && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/flake8", label: "copying repo to seperate workspace"
 
@@ -181,12 +168,6 @@ pipeline {
     stage ('Run Tests'){
       parallel{
         stage ('test_amqp_postgres') {
-          agent {
-            kubernetes {
-              label "manager-mb-tests-${env.BRANCH}-${env.BUILD_NUMBER}"
-              yamlFile 'jenkins/build-pod.yaml'
-            }
-          }
           steps {
             sh script: "mkdir -p ${env.WORKSPACE}/amqp_postgres && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/amqp_postgres", label: "copying repo to seperate workspace"
 
@@ -210,12 +191,6 @@ pipeline {
           }
         }
         stage('test_premium') {
-          agent {
-            kubernetes {
-              label "manager-mb-tests-${env.BRANCH}-${env.BUILD_NUMBER}"
-              yamlFile 'jenkins/build-pod.yaml'
-            }
-          }
           steps {
             sh script: "mkdir -p ${env.WORKSPACE}/premium && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/premium", label: "copying repo to seperate workspace"
 
