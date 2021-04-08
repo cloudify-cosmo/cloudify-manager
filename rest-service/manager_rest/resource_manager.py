@@ -905,36 +905,37 @@ class ResourceManager(object):
 
         workflow = execution.get_workflow()
         is_cascading_workflow = workflow.get('is_cascading', False)
-        if is_cascading_workflow:
-            component_executions = []
-            with self.sm.transaction():
-                components_dep_ids = self._find_all_components_deployment_id(
-                    execution.deployment.id)
+        if not is_cascading_workflow:
+            return execution
 
-                for component_dep_id in components_dep_ids:
-                    dep = self.sm.get(models.Deployment, component_dep_id)
-                    component_execution = models.Execution(
-                        deployment=dep,
-                        workflow_id=execution.workflow_id,
-                        parameters=execution.parameters,
-                        allow_custom_parameters=
-                        execution.allow_custom_parameters,
-                        is_dry_run=execution.is_dry_run,
-                        creator=execution.creator,
-                        status=ExecutionState.PENDING,
-                    )
-                    self.sm.put(component_execution)
-                    component_executions.append(component_execution)
+        component_executions = []
+        with self.sm.transaction():
+            components_dep_ids = self._find_all_components_deployment_id(
+                execution.deployment.id)
 
-            for component_execution in component_executions:
-                self.execute_workflow(
-                    component_execution,
-                    force=force,
-                    queue=queue,
-                    bypass_maintenance=bypass_maintenance,
-                    wait_after_fail=wait_after_fail,
-                    send_handler=send_handler,
+            for component_dep_id in components_dep_ids:
+                dep = self.sm.get(models.Deployment, component_dep_id)
+                component_execution = models.Execution(
+                    deployment=dep,
+                    workflow_id=execution.workflow_id,
+                    parameters=execution.parameters,
+                    allow_custom_parameters=execution.allow_custom_parameters,
+                    is_dry_run=execution.is_dry_run,
+                    creator=execution.creator,
+                    status=ExecutionState.PENDING,
                 )
+                self.sm.put(component_execution)
+                component_executions.append(component_execution)
+
+        for component_execution in component_executions:
+            self.execute_workflow(
+                component_execution,
+                force=force,
+                queue=queue,
+                bypass_maintenance=bypass_maintenance,
+                wait_after_fail=wait_after_fail,
+                send_handler=send_handler,
+            )
         return execution
 
     @staticmethod
