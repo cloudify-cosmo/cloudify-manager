@@ -78,7 +78,8 @@ def _join_groups(client, deployment_id, groups):
 def _get_deployment_labels(new_labels, plan_labels):
     labels = {tuple(label) for label in new_labels}
     for name, label_spec in plan_labels.items():
-        labels |= {(name, value) for value in label_spec.get('values', [])}
+        labels |= {(name.lower(), value.lower()) for value in
+                   label_spec.get('values', [])}
     return [{k: v} for k, v in labels]
 
 
