@@ -571,7 +571,9 @@ class ExecutionsTest(AgentlessTestCase):
                    client=self.client)
         execution = self.client.executions.start(deployment_id=dep.id,
                                                  workflow_id='install')
-        pid = do_retries(self.read_manager_file, file_path='/tmp/pid.txt')
+        pid = do_retries(self.read_manager_file,
+                         timeout_seconds=60,
+                         file_path='/tmp/pid.txt')
         path = '/proc/{}/status'.format(pid)
         execution = self.client.executions.cancel(execution.id,
                                                   force=True, kill=True)
