@@ -301,7 +301,7 @@ class DeploymentStatuses(AgentlessTestCase):
             DeploymentState.REQUIRE_ATTENTION
         )
         # Wait for exec to 'wake up'
-        execution= self.wait_for_scheduled_execution_to_fire(deployment.id)
+        execution = self.wait_for_scheduled_execution_to_fire(deployment.id)
         self.wait_for_execution_to_end(execution)
         deployment = self.client.deployments.get(deployment.id)
         self.assertEqual(
