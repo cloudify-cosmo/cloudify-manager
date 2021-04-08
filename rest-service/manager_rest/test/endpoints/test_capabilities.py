@@ -140,18 +140,14 @@ class CapabilitiesTestCase(base_test.BaseServerTestCase):
         self.assertEqual(outputs['chain_3_output'], 'initial_value')
 
     def test_non_existent_deployment(self):
-        dep_id = 'dep_id'
-        self._deploy(dep_id, 'blueprint_with_non_existent_deployment.yaml')
-
-        # Trying to evaluate functions on the node's properties will trigger
-        # `get_capability` evaluation, which should fail
+        # Expect an error when creating a deployment with a `get_capability`
+        # on the non-existent deployment.
         self.assertRaisesRegex(
             CloudifyClientError,
-            'Requested `Deployment` with ID `wrong_id` was not found',
-            self.client.nodes.get,
-            deployment_id=dep_id,
-            node_id='node1',
-            evaluate_functions=True
+            'Given target deployment with ID `wrong_id` does not exist',
+            self._deploy,
+            'dep_id',
+            'blueprint_with_non_existent_deployment.yaml'
         )
 
     def test_non_existent_capability(self):
