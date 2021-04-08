@@ -50,7 +50,7 @@ class Nodes(v3_Nodes):
             host_id=raw_node.get('host_id'),
             properties=raw_node.get('properties') or {},
             operations=raw_node.get('operations') or {},
-            plugins=raw_node.get('plugins') or {},
+            plugins=raw_node.get('plugins') or [],
             plugins_to_install=raw_node.get('plugins_to_install'),
             relationships=self._prepare_node_relationships(raw_node)
         )
