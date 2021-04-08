@@ -26,7 +26,8 @@ from cloudify.models_states import VisibilityState, ExecutionState
 from cloudify.deployment_dependencies import (create_deployment_dependency,
                                               DEPENDENCY_CREATOR,
                                               SOURCE_DEPLOYMENT,
-                                              TARGET_DEPLOYMENT)
+                                              TARGET_DEPLOYMENT,
+                                              TARGET_DEPLOYMENT_FUNC)
 
 from manager_rest import utils, manager_exceptions
 from manager_rest.security import SecuredResource
@@ -386,6 +387,8 @@ class InterDeploymentDependencies(SecuredResource):
          deployment.
         :param target_deployment: the deployment that the source deployment
          depends on.
+        :param target_deployment_func: a function used to determine the target
+        deployment.
         :param external_source: metadata, in JSON format, of the source
         deployment (deployment name, tenant name, and the manager host(s)),
         in case it resides on an external manager. None otherwise
@@ -400,7 +403,9 @@ class InterDeploymentDependencies(SecuredResource):
         params = self._get_put_dependency_params(sm)
         now = utils.get_formatted_timestamp()
 
-        if (EXTERNAL_SOURCE not in params) and (EXTERNAL_TARGET not in params):
+        if (TARGET_DEPLOYMENT in params and
+                EXTERNAL_SOURCE not in params and
+                EXTERNAL_TARGET not in params):
             # assert no cyclic dependencies are created
             dep_graph = rest_utils.RecursiveDeploymentDependencies(sm)
             source_id = str(params[SOURCE_DEPLOYMENT].id)
@@ -413,6 +418,7 @@ class InterDeploymentDependencies(SecuredResource):
             dependency_creator=params[DEPENDENCY_CREATOR],
             source_deployment=params[SOURCE_DEPLOYMENT],
             target_deployment=params.get(TARGET_DEPLOYMENT),
+            target_deployment_func=params.get(TARGET_DEPLOYMENT_FUNC),
             external_source=params.get(EXTERNAL_SOURCE),
             external_target=params.get(EXTERNAL_TARGET),
             created_at=now)
@@ -423,6 +429,7 @@ class InterDeploymentDependencies(SecuredResource):
             sm,
             source_deployment_id,
             target_deployment_id,
+            target_deployment_func=None,
             is_component_deletion=False,
             external_source=None,
             external_target=None):
@@ -439,15 +446,20 @@ class InterDeploymentDependencies(SecuredResource):
                     'Given source deployment with ID `{0}` does not '
                     'exist.'.format(source_deployment_id)
                 )
-        target_deployment = sm.get(models.Deployment,
-                                   target_deployment_id,
-                                   fail_silently=True,
-                                   all_tenants=True)
+        if target_deployment_id:
+            target_deployment = sm.get(models.Deployment,
+                                       target_deployment_id,
+                                       fail_silently=True,
+                                       all_tenants=True)
+        else:
+            target_deployment = None
         if not (is_component_deletion or external_source or
-                external_target or target_deployment):
+                external_target or target_deployment_func or
+                target_deployment):
             raise manager_exceptions.NotFoundError(
                 'Given target deployment with ID `{0}` does not '
-                'exist.'.format(target_deployment_id)
+                'exist.  Also the target deployment function has '
+                'not been provided'.format(target_deployment_id)
             )
         return source_deployment, target_deployment
 
@@ -456,7 +468,8 @@ class InterDeploymentDependencies(SecuredResource):
         return rest_utils.get_json_and_verify_params({
             DEPENDENCY_CREATOR: {'type': text_type},
             SOURCE_DEPLOYMENT: {'type': text_type},
-            TARGET_DEPLOYMENT: {'type': text_type},
+            TARGET_DEPLOYMENT: {'optional': True, 'type': text_type},
+            TARGET_DEPLOYMENT_FUNC: {'optional': True, 'type': dict},
             EXTERNAL_SOURCE: {'optional': True, 'type': dict},
             EXTERNAL_TARGET: {'optional': True, 'type': dict},
         })
@@ -464,6 +477,7 @@ class InterDeploymentDependencies(SecuredResource):
     @staticmethod
     def _get_put_dependency_params(sm):
         request_dict = InterDeploymentDependencies._verify_dependency_params()
+        target_deployment_func = request_dict.get(TARGET_DEPLOYMENT_FUNC)
         external_source = request_dict.get(EXTERNAL_SOURCE)
         external_target = request_dict.get(EXTERNAL_TARGET)
         source_deployment, target_deployment = InterDeploymentDependencies. \
@@ -471,6 +485,7 @@ class InterDeploymentDependencies(SecuredResource):
                 sm,
                 request_dict.get(SOURCE_DEPLOYMENT),
                 request_dict.get(TARGET_DEPLOYMENT),
+                target_deployment_func=target_deployment_func,
                 external_source=external_source,
                 external_target=external_target
             )
@@ -478,8 +493,9 @@ class InterDeploymentDependencies(SecuredResource):
             request_dict.get(DEPENDENCY_CREATOR),
             source_deployment,
             target_deployment,
-            external_source,
-            external_target)
+            target_deployment_func=target_deployment_func,
+            external_source=external_source,
+            external_target=external_target)
         return dependency_params
 
     @swagger.operation(
@@ -515,10 +531,11 @@ class InterDeploymentDependencies(SecuredResource):
         """
         sm = get_storage_manager()
         params = self._get_delete_dependency_params(sm)
-        filters = create_deployment_dependency(params[DEPENDENCY_CREATOR],
-                                               params.get(SOURCE_DEPLOYMENT),
-                                               params.get(TARGET_DEPLOYMENT),
-                                               params.get(EXTERNAL_SOURCE))
+        filters = create_deployment_dependency(
+            params[DEPENDENCY_CREATOR],
+            params.get(SOURCE_DEPLOYMENT),
+            params.get(TARGET_DEPLOYMENT),
+            external_source=params.get(EXTERNAL_SOURCE))
         dependency = sm.get(
             models.InterDeploymentDependencies,
             None,
@@ -548,8 +565,8 @@ class InterDeploymentDependencies(SecuredResource):
             request_dict.get(DEPENDENCY_CREATOR),
             source_deployment,
             target_deployment,
-            external_source,
-            external_target)
+            external_source=external_source,
+            external_target=external_target)
         return dependency_params
 
     @swagger.operation(
