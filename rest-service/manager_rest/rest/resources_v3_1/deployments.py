@@ -91,13 +91,16 @@ class DeploymentsId(resources_v1.DeploymentsId):
         rm.verify_csys_environment_input(deployment, csys_environment)
         labels_to_add = rm.get_deployment_parents_from_inputs(csys_environment)
         if labels_to_add:
+            dep_graph = rest_utils.RecursiveDeploymentLabelsDependencies(sm)
+            dep_graph.create_dependencies_graph()
+            dep_graph.assert_no_cyclic_dependencies(
+                csys_environment, deployment.id
+            )
             rm.create_resource_labels(
                 models.DeploymentLabel,
                 deployment,
                 labels_to_add
             )
-            dep_graph = rest_utils.RecursiveDeploymentLabelsDependencies(sm)
-            dep_graph.create_dependencies_graph()
             rm.add_deployment_to_labels_graph(
                 dep_graph,
                 deployment,
@@ -144,6 +147,8 @@ class DeploymentsId(resources_v1.DeploymentsId):
 
     @staticmethod
     def _update_labels_for_deployment(rm, deployment, new_labels):
+        graph = None
+        sm = get_storage_manager()
         deployment_parents = deployment.deployment_parents
         parents_labels = rm.get_deployment_parents_from_labels(
             new_labels
@@ -154,22 +159,28 @@ class DeploymentsId(resources_v1.DeploymentsId):
         _parents_to_remove = set(deployment_parents) - set(
             parents_labels
         )
+        if _parents_to_add or _parents_to_remove:
+            graph = rest_utils.RecursiveDeploymentLabelsDependencies(sm)
+            graph.create_dependencies_graph()
+
         if _parents_to_add:
-            rm.verify_deployment_parent_labels(
-                _parents_to_add, deployment.id
+            rm.verify_attaching_deployment_to_parents(
+                graph,
+                _parents_to_add,
+                deployment.id
             )
         rm.update_resource_labels(
             models.DeploymentLabel,
             deployment,
             new_labels
         )
-        if _parents_to_add or _parents_to_remove:
+        if graph:
             parents = {
                 'parents_to_add': _parents_to_add,
                 'parents_to_remove': _parents_to_remove
             }
             rm.handle_deployment_labels_graph(
-                parents, deployment
+                graph, parents, deployment
             )
 
     def _handle_deployment_labels(self, rm, deployment, raw_labels_list):

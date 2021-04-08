@@ -200,9 +200,6 @@ class DeploymentUpdateManager(object):
         rm.delete_deployment_from_labels_graph(
             dep_graph, dep, old_csys_environment
         )
-        dep_graph.propagate_deployment_statuses(
-            old_csys_environment
-        )
         self._delete_single_label_from_deployment(
             'csys-obj-parent',
             old_csys_environment,
@@ -345,8 +342,12 @@ class DeploymentUpdateManager(object):
             parents_labels = rm.get_deployment_parents_from_labels(
                 labels_to_create
             )
-            rm.verify_deployment_parent_labels(
-                parents_labels, deployment.id
+            dep_graph = RecursiveDeploymentLabelsDependencies(self.sm)
+            dep_graph.create_dependencies_graph()
+            rm.verify_attaching_deployment_to_parents(
+                dep_graph,
+                parents_labels,
+                deployment.id
             )
         self.sm.update(dep_update)
         # If this is a preview, no need to run workflow and update DB
@@ -420,11 +421,12 @@ class DeploymentUpdateManager(object):
         rm.create_deployment_schedules_from_dict(
             schedules_to_create, deployment, deployment_creation_time)
 
-        rm.create_resource_labels(models.DeploymentLabel, deployment,
-                                  labels_to_create)
+        rm.create_resource_labels(
+            models.DeploymentLabel,
+            deployment,
+            labels_to_create
+        )
         if parents_labels:
-            dep_graph = RecursiveDeploymentLabelsDependencies(self.sm)
-            dep_graph.create_dependencies_graph()
             for parent in parents_labels:
                 rm.add_deployment_to_labels_graph(
                     dep_graph,

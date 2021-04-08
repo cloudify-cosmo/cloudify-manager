@@ -1389,7 +1389,13 @@ class ResourceManager(object):
             labels
         )
         if parents_labels:
-            self.verify_deployment_parent_labels(parents_labels, deployment_id)
+            dep_graph = RecursiveDeploymentLabelsDependencies(self.sm)
+            dep_graph.create_dependencies_graph()
+            self.verify_attaching_deployment_to_parents(
+                dep_graph,
+                parents_labels,
+                deployment_id
+            )
         #  validate plugins exists on manager when
         #  skip_plugins_validation is False
         if not skip_plugins_validation:
@@ -1473,7 +1479,7 @@ class ResourceManager(object):
         missing_parents = set(parents) - set(_existing_parents)
         return missing_parents
 
-    def verify_deployment_parent_labels(self, parents, deployment_id):
+    def verify_deployment_parents_existence(self, parents, deployment_id):
         missing_parents = self.get_missing_deployment_parents(parents)
         if missing_parents:
             raise manager_exceptions.DeploymentParentNotFound(
@@ -1483,10 +1489,19 @@ class ResourceManager(object):
                 'deployment'.format(deployment_id, ','.join(missing_parents))
             )
 
+    def verify_attaching_deployment_to_parents(self, graph, parents, dep_id):
+        self.verify_deployment_parents_existence(parents, dep_id)
+        graph.assert_cyclic_dependencies_between_targets_and_source(
+            parents, dep_id
+        )
+
     def verify_csys_environment_input(self, deployment, csys_environment):
         if csys_environment:
             try:
-                self.verify_deployment_parent_labels(
+                dep_graph = RecursiveDeploymentLabelsDependencies(self.sm)
+                dep_graph.create_dependencies_graph()
+                self.verify_attaching_deployment_to_parents(
+                    dep_graph,
                     [csys_environment],
                     deployment.id
                 )
@@ -1524,9 +1539,6 @@ class ResourceManager(object):
             source,
             self.sm.get(models.Deployment, target_id)
         )
-        dep_graph.assert_no_cyclic_dependencies(
-            source.id, target_id
-        )
         dep_graph.add_dependency_to_graph(source.id, target_id)
         dep_graph.increase_deployment_counts_in_graph(
             target_id,
@@ -1546,23 +1558,22 @@ class ResourceManager(object):
                 models.Deployment, target_id
             )
         )
+        dep_graph.propagate_deployment_statuses(target_id)
 
-    def handle_deployment_labels_graph(self, parents, new_deployment):
+    def handle_deployment_labels_graph(self, graph, parents, new_deployment):
         if not parents:
             return
         parents_to_add = parents.setdefault('parents_to_add', {})
         parents_to_remove = parents.setdefault('parents_to_remove', {})
-        dep_graph = RecursiveDeploymentLabelsDependencies(self.sm)
-        dep_graph.create_dependencies_graph()
         for parent in parents_to_add:
             self.add_deployment_to_labels_graph(
-                dep_graph,
+                graph,
                 new_deployment,
                 parent
             )
         for parent in parents_to_remove:
             self.delete_deployment_from_labels_graph(
-                dep_graph,
+                graph,
                 new_deployment,
                 parent
             )
