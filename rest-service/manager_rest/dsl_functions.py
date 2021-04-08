@@ -24,7 +24,8 @@ from manager_rest.storage import (get_storage_manager,
                                   get_node as get_storage_node)
 from manager_rest.storage.models import (NodeInstance,
                                          Deployment,
-                                         Secret)
+                                         Secret,
+                                         DeploymentLabel,)
 from manager_rest.manager_exceptions import (
     FunctionsEvaluationError,
     DeploymentOutputsEvaluationError,
@@ -174,3 +175,28 @@ class FunctionEvaluationStorage(object):
                 raise FunctionsEvaluationError(str(e))
 
         return capability['value']
+
+    def get_label(self, label_key, values_list_index):
+        label_values = self.sm.list(
+            DeploymentLabel,
+            include=['value'],
+            filters={'key': label_key,
+                     '_labeled_model_fk': self._deployment_id},
+            get_all_results=True,
+            sort={'value': 'asc'}  # To keep consistency between calls
+        )
+        if not label_values:
+            raise FunctionsEvaluationError(
+                "The deployment `{0}` doesn't have a label with the key {1} "
+                "assigned to it".format(self._deployment_id, label_key)
+            )
+        if values_list_index:
+            if values_list_index > (len(label_values) - 1):
+                raise FunctionsEvaluationError(
+                    'The provided label-values list index is out of range. '
+                    'The key `{0}` has {1} values'.format(
+                        label_key, len(label_values))
+                )
+            return label_values[values_list_index]
+
+        return label_values
