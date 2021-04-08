@@ -482,39 +482,3 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         self.assertEqual(len(blueprints), 1)
         self.assertEqual(blueprints[0], bp2)
         self.assert_metadata_filtered(blueprints, 1)
-
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
-    def test_update_blueprint_labels(self):
-        new_labels = [{'key2': 'val2'}, {'key3': 'val3'}]
-        blueprint = self.put_blueprint_with_labels(self.LABELS)
-        updated_bp = self.client.blueprints.update(blueprint['id'],
-                                                   {'labels': new_labels})
-        self.assert_resource_labels(updated_bp['labels'], new_labels)
-
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
-    def test_update_empty_blueprint_labels(self):
-        blueprint = self.put_blueprint_with_labels(self.LABELS)
-        updated_bp = self.client.blueprints.update(blueprint['id'],
-                                                   {'labels': []})
-        self.assert_resource_labels(updated_bp['labels'], [])
-
-    @attr(client_min_version=3.1,
-          client_max_version=base_test.LATEST_API_VERSION)
-    def test_blueprint_update_failure_with_duplicate_labels(self):
-        update_dict = {'labels': [{'key3': 'val3'}, {'key3': 'val3'}]}
-        blueprint = self.put_blueprint_with_labels(self.LABELS)
-        error_msg = '400: .*You cannot define the same label twice'
-        self.assertRaisesRegex(exceptions.CloudifyClientError,
-                               error_msg,
-                               self.client.blueprints.update,
-                               blueprint_id=blueprint['id'],
-                               update_dict=update_dict)
-
-    def test_blueprint_update_new_labels(self):
-        new_labels = [{'key': 'val1'}]
-        blueprint = self.put_blueprint()
-        updated_bp = self.client.blueprints.update(blueprint['id'],
-                                                   {'labels': new_labels})
-        self.assert_resource_labels(updated_bp['labels'], new_labels)

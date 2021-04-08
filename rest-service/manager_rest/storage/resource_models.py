@@ -721,7 +721,7 @@ class DeploymentGroup(CreatedAtMixin, SQLResourceBase):
         return response
 
 
-class _Label(CreatedAtMixin, SQLModelBase):
+class LabelBase(CreatedAtMixin, SQLModelBase):
     """An abstract class for the different labels models."""
     __abstract__ = True
 
@@ -748,7 +748,7 @@ class _Label(CreatedAtMixin, SQLModelBase):
         return cls.labeled_model._tenant_id
 
 
-class DeploymentLabel(_Label):
+class DeploymentLabel(LabelBase):
     __tablename__ = 'deployments_labels'
     __table_args__ = (
         db.UniqueConstraint(
@@ -765,7 +765,7 @@ class DeploymentLabel(_Label):
             backref=db.backref('labels', cascade='all, delete-orphan'))
 
 
-class BlueprintLabel(_Label):
+class BlueprintLabel(LabelBase):
     __tablename__ = 'blueprints_labels'
     __table_args__ = (
         db.UniqueConstraint(
@@ -782,7 +782,7 @@ class BlueprintLabel(_Label):
             backref=db.backref('labels', cascade='all, delete-orphan'))
 
 
-class DeploymentGroupLabel(_Label):
+class DeploymentGroupLabel(LabelBase):
     __tablename__ = 'deployment_groups_labels'
     __table_args__ = (
         db.UniqueConstraint(
@@ -799,7 +799,7 @@ class DeploymentGroupLabel(_Label):
             backref=db.backref('labels', cascade='all, delete-orphan'))
 
 
-class _Filter(CreatedAtMixin, SQLResourceBase):
+class FilterBase(CreatedAtMixin, SQLResourceBase):
     __abstract__ = True
     _extra_fields = {'labels_filter_rules': flask_fields.Raw,
                      'attrs_filter_rules': flask_fields.Raw}
@@ -822,7 +822,7 @@ class _Filter(CreatedAtMixin, SQLResourceBase):
                 if filter_rule['type'] == 'attribute']
 
 
-class DeploymentsFilter(_Filter):
+class DeploymentsFilter(FilterBase):
     __tablename__ = 'deployments_filters'
     __table_args__ = (
         db.Index(
@@ -833,7 +833,7 @@ class DeploymentsFilter(_Filter):
     )
 
 
-class BlueprintsFilter(_Filter):
+class BlueprintsFilter(FilterBase):
     __tablename__ = 'blueprints_filters'
     __table_args__ = (
         db.Index(

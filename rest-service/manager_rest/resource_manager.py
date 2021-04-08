@@ -756,14 +756,19 @@ class ResourceManager(object):
             dep_graph.create_dependencies_graph()
             dep_graph.decrease_deployment_counts_in_graph(parents, deployment)
             for _parent in parents:
-                dep_graph.remove_dependency_from_graph(deployment.id, _parent)
-                self._remove_deployment_label_dependency(
-                    deployment,
-                    self.sm.get(
-                        models.Deployment, _parent
-                    )
+                _parent_obj = self.sm.get(
+                    models.Deployment,
+                    _parent,
+                    fail_silently=True
                 )
-                dep_graph.propagate_deployment_statuses(_parent)
+                if _parent_obj:
+                    dep_graph.remove_dependency_from_graph(
+                        deployment.id, _parent)
+                    self._remove_deployment_label_dependency(
+                        deployment,
+                        _parent_obj
+                    )
+                    dep_graph.propagate_deployment_statuses(_parent)
 
         deployment_folder = os.path.join(
             config.instance.file_server_root,
@@ -911,7 +916,7 @@ class ResourceManager(object):
                     workflow_id=execution.workflow_id,
                     parameters=execution.parameters,
                     allow_custom_parameters=execution.allow_custom_parameters,
-                    dry_run=execution.dry_run,
+                    is_dry_run=execution.is_dry_run,
                     creator=execution.creator,
                     status=ExecutionState.PENDING,
                 )
@@ -1527,6 +1532,7 @@ class ResourceManager(object):
             target_id,
             source
         )
+        dep_graph.propagate_deployment_statuses(target_id)
 
     def delete_deployment_from_labels_graph(self,
                                             dep_graph,
