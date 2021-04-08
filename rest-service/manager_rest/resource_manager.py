@@ -1558,6 +1558,7 @@ class ResourceManager(object):
                 models.Deployment, target_id
             )
         )
+        dep_graph.propagate_deployment_statuses(target_id)
 
     def handle_deployment_labels_graph(self, graph, parents, new_deployment):
         if not parents:
