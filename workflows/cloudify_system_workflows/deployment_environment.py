@@ -27,7 +27,9 @@ from cloudify.manager import get_rest_client
 from cloudify.workflows import workflow_context
 
 from cloudify.utils import parse_utc_datetime_relative
+from cloudify_rest_client.client import CloudifyClient
 from cloudify_rest_client.exceptions import CloudifyClientError
+from dsl_parser import constants as dsl
 from dsl_parser import tasks
 
 
@@ -128,6 +130,50 @@ def create(ctx, labels=None, inputs=None, skip_plugins_validation=False, **_):
         tenant=ctx.tenant_name,
         logger=ctx.logger)
 
+    new_dependencies = deployment_plan.setdefault(
+        dsl.INTER_DEPLOYMENT_FUNCTIONS, {})
+    if new_dependencies:
+        ctx.logger.info('Creating inter-deployment dependencies')
+        manager_ips = [manager.private_ip
+                       for manager in client.manager.get_managers()]
+        ext_client, client_config, ext_deployment_id = \
+            _get_external_clients(nodes, manager_ips)
+        for func_id, deployment_id_func in new_dependencies.items():
+            deployment_id, deployment_func = deployment_id_func
+            if ext_client:
+                client.inter_deployment_dependencies.create(
+                    dependency_creator=func_id,
+                    source_deployment=ctx.deployment.id,
+                    target_deployment=None,
+                    external_target={
+                        'deployment': (ext_deployment_id if
+                                       ext_deployment_id else None),
+                        'client_config': client_config
+                    },
+                )
+                ext_client.inter_deployment_dependencies.create(
+                    dependency_creator=func_id,
+                    source_deployment=ctx.deployment.id,
+                    target_deployment=deployment_id if deployment_id else ' ',
+                    external_source={
+                        'deployment': ctx.deployment.id,
+                        'tenant': ctx.deployment.tenant_name,
+                        'host': manager_ips,
+                    },
+                )
+            else:
+                # It should be safe to assume that if the target_deployment
+                # is known, there's no point passing target_deployment_func.
+                # Also because in this case the target_deployment_func will
+                # be of type string, while REST endpoint expects a dict.
+                client.inter_deployment_dependencies.create(
+                    dependency_creator=func_id,
+                    source_deployment=ctx.deployment.id,
+                    target_deployment=deployment_id,
+                    target_deployment_func=(deployment_func
+                                            if not deployment_id else None),
+                )
+
 
 @workflow
 def delete(ctx, delete_logs, **_):
@@ -203,3 +249,25 @@ def _delete_deployment_workdir(ctx):
 def _workdir(deployment_id, tenant):
     return os.path.join('/opt', 'manager', 'resources', 'deployments',
                         tenant, deployment_id)
+
+
+def _get_external_clients(nodes: list, manager_ips: list):
+    client_config = None
+    target_deployment = None
+    for node in nodes:
+        if node['type'] in ['cloudify.nodes.Component',
+                            'cloudify.nodes.SharedResource']:
+            client_config = node['properties'].get('client')
+            target_deployment = node['properties'].get(
+                'resource_config').get('deployment')
+            break
+    external_client = None
+    if client_config:
+        internal_hosts = ({'127.0.0.1', 'localhost'} | set(manager_ips))
+        host = client_config['host']
+        host = {host} if type(host) == str else set(host)
+        if not (host & internal_hosts):
+            external_client = CloudifyClient(**client_config)
+
+    return external_client, client_config, \
+        target_deployment.get('id') if target_deployment else None

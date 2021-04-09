@@ -111,13 +111,7 @@ class InterDeploymentDependenciesTest(BaseServerTestCase):
                 target_deployment)
         mock_add_to_graph.assert_not_called()
 
-    @patch('manager_rest.rest.rest_utils.RecursiveDeploymentDependencies'
-           '.assert_no_cyclic_dependencies')
-    @patch('manager_rest.rest.rest_utils.RecursiveDeploymentDependencies'
-           '.add_dependency_to_graph')
-    def test_deployment_creation_creates_dependencies(self,
-                                                      mock_add_to_graph,
-                                                      mock_assert_no_cycles):
+    def test_deployment_creation_creates_dependencies(self):
         static_target_deployment = 'shared1'
         resource_id = 'i{0}'.format(uuid.uuid4())
         self.client.secrets.create('shared2_key', 'secret')
@@ -143,9 +137,6 @@ class InterDeploymentDependenciesTest(BaseServerTestCase):
                                        resource_id)
         self.assertEqual(target_deployment_func,
                          {'get_secret': 'shared2_key'})
-
-        mock_add_to_graph.assert_called()
-        mock_assert_no_cycles.assert_called()
 
     @staticmethod
     def _get_target_deployment_func(dependencies_list):

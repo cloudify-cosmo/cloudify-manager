@@ -212,8 +212,6 @@ class TestInterDeploymentDependenciesInfrastructure(AgentlessTestCase):
             if 'property_static' in dependency.dependency_creator:
                 self.assertEqual(dependency.target_deployment_id,
                                  SR_DEPLOYMENT)
-                self.assertEqual(dependency['target_deployment_func'],
-                                 'shared_resource_deployment')
             elif 'property_function' in dependency.dependency_creator:
                 self.assertEqual(dependency.target_deployment_id,
                                  SR_DEPLOYMENT)
