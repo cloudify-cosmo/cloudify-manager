@@ -95,9 +95,6 @@ class TestScaleBase(AgentlessTestCase):
                              if i.id not in self.previous_ids]
             existing_instances = [i for i in node_instances
                                   if i.id in self.previous_ids]
-            import pydevd
-            pydevd.settrace('192.168.43.135', port=53200, stdoutToServer=True,
-                            stderrToServer=True)
             self.assertEqual(len(new_instances),
                              new_expectation.get('install') or 0,
                              'new_instances: {0}, install_expectations: {1}'
