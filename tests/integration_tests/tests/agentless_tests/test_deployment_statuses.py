@@ -1,6 +1,5 @@
-import time
-
 import pytest
+from retrying import retry
 
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import (
@@ -302,7 +301,7 @@ class DeploymentStatuses(AgentlessTestCase):
             DeploymentState.REQUIRE_ATTENTION
         )
         # Wait for exec to 'wake up'
-        time.sleep(62)
+        execution = self.wait_for_scheduled_execution_to_fire(deployment.id)
         self.wait_for_execution_to_end(execution)
         deployment = self.client.deployments.get(deployment.id)
         self.assertEqual(
@@ -380,3 +379,14 @@ class DeploymentStatuses(AgentlessTestCase):
             deployment.deployment_status,
             DeploymentState.REQUIRE_ATTENTION,
         )
+
+    @retry(wait_fixed=1000, stop_max_attempt_number=120)
+    def wait_for_scheduled_execution_to_fire(self, deployment_id):
+        # The execution must fire within 2 minutes.
+        # if the 1st check_schedules occurs between the creation time and the
+        # next :00, the 2nd check (1 min. from then) will run the execution
+        executions = self.client.executions.list(deployment_id=deployment_id,
+                                                 workflow_id='install',
+                                                 _all_tenants=True)
+        self.assertEqual(1, len(executions))
+        return executions[0]

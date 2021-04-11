@@ -47,7 +47,6 @@ from manager_rest.constants import (DEFAULT_TENANT_NAME,
                                     FILE_SERVER_BLUEPRINTS_FOLDER,
                                     FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
                                     FILE_SERVER_DEPLOYMENTS_FOLDER)
-from manager_rest.dsl_functions import get_secret_method
 from manager_rest.utils import (send_event,
                                 get_formatted_timestamp,
                                 is_create_global_permitted,
@@ -190,15 +189,6 @@ class ResourceManager(object):
                 self.sm.update(plugin_update)
                 # Delete a temporary blueprint
                 self.sm.delete(plugin_update.temp_blueprint)
-
-        if execution.workflow_id == 'create_deployment_environment' and \
-                status == ExecutionState.TERMINATED:
-            try:
-                self._finalize_create_deployment(execution.deployment)
-            except Exception:
-                execution.status = ExecutionState.FAILED
-                self.sm.update(execution)
-                raise
 
         if execution.workflow_id == 'delete_deployment_environment' and \
                 status == ExecutionState.TERMINATED:
@@ -893,6 +883,13 @@ class ResourceManager(object):
             should_queue = self.check_for_executions(execution, force, queue)
 
         if should_queue:
+            if not execution.deployment.installation_status:
+                execution.deployment.installation_status =\
+                    DeploymentState.INACTIVE
+            execution.deployment.deployment_status =\
+                DeploymentState.IN_PROGRESS
+            execution.deployment.latest_execution = execution
+            self.sm.update(execution.deployment)
             self._workflow_queued(execution)
             return execution
 
@@ -1434,11 +1431,6 @@ class ResourceManager(object):
 
         self.sm.put(new_deployment)
         return new_deployment
-
-    def _finalize_create_deployment(self, deployment: models.Deployment):
-        """This runs when create-deployment-environment finishes"""
-        # RD-1602 will move this to the workflow:
-        self._create_deployment_initial_dependencies(deployment)
 
     def get_deployment_parents_from_inputs(self, csys_environment):
         labels_to_add = []
@@ -2318,85 +2310,6 @@ class ResourceManager(object):
         }
 
         send_event(event, 'hook')
-
-    def _create_deployment_initial_dependencies(self, source_deployment):
-        deployment_plan = tasks.prepare_deployment_plan(
-            source_deployment.blueprint.plan,
-            get_secret_method,
-            source_deployment.inputs
-        )
-        new_dependencies = deployment_plan.setdefault(
-            constants.INTER_DEPLOYMENT_FUNCTIONS, {})
-
-        # handle external client for component and shared resource
-        client_config = None
-        target_deployment_config = None
-        for node in deployment_plan['nodes']:
-            if node['type'] in ['cloudify.nodes.Component',
-                                'cloudify.nodes.SharedResource']:
-                client_config = node['properties'].get('client')
-                target_deployment_config = node['properties'].get(
-                    'resource_config').get('deployment')
-                break
-        external_client = None
-        if client_config:
-            manager_ips = [manager.private_ip for manager in
-                           self.sm.list(models.Manager)]
-            internal_hosts = ({'127.0.0.1', 'localhost'} | set(manager_ips))
-            host = client_config['host']
-            host = {host} if type(host) == str else set(host)
-            if not (host & internal_hosts):
-                external_client = CloudifyClient(**client_config)
-
-        dep_graph = RecursiveDeploymentDependencies(self.sm)
-        dep_graph.create_dependencies_graph()
-
-        for func_id, target_deployment_attr in new_dependencies.items():
-            target_deployment = target_deployment_attr[0]
-            target_deployment_func = target_deployment_attr[1]
-            target_deployment_instance = \
-                self.sm.get(models.Deployment,
-                            target_deployment,
-                            fail_silently=True,
-                            all_tenants=True) if target_deployment else None
-
-            now = utils.get_formatted_timestamp()
-            if external_client:
-                external_target = {
-                    'deployment': (target_deployment_config.get('id') if
-                                   target_deployment_config else None),
-                    'client_config': client_config
-                }
-
-            self.sm.put(models.InterDeploymentDependencies(
-                id=str(uuid.uuid4()),
-                dependency_creator=func_id,
-                source_deployment=source_deployment,
-                target_deployment=(None if external_client else
-                                   target_deployment_instance),
-                target_deployment_func=target_deployment_func,
-                external_target=(external_target if external_client else None),
-                created_at=now))
-            if external_client:
-                dependency_params = {
-                    'dependency_creator': func_id,
-                    'source_deployment': source_deployment.id,
-                    'target_deployment': (target_deployment if
-                                          target_deployment else ' '),
-                    'external_source': {
-                        'deployment': source_deployment.id,
-                        'tenant': source_deployment.tenant_name,
-                        'host': manager_ips
-                    }
-                }
-                external_client.inter_deployment_dependencies.create(
-                    **dependency_params)
-
-            if source_deployment and target_deployment_instance:
-                source_id = str(source_deployment.id)
-                target_id = str(target_deployment_instance.id)
-                dep_graph.assert_no_cyclic_dependencies(source_id, target_id)
-                dep_graph.add_dependency_to_graph(source_id, target_id)
 
     def update_resource_labels(self,
                                labels_resource_model,
