@@ -12,29 +12,14 @@ spec:
     image: circleci/python:3.6
     resources:
       requests:
-        cpu: 1.5
-        memory: 3Gi
+        cpu: 2.4
+        memory: 4Gi
       limits:
-        cpu: 1.5
-        memory: 3Gi
+        cpu: 2.4
+        memory: 4Gi
     command:
     - cat
     tty: true
-    securityContext:
-      runAsUser: 0
-      privileged: true
-  - name: rpmbuild
-    image: rpmbuild/centos7
-    command:
-    - cat
-    tty: true
-    resources:
-      requests:
-        cpu: 0.5
-        memory: 1Gi
-      limits:
-        cpu: 0.5
-        memory: 1Gi
     securityContext:
       runAsUser: 0
       privileged: true
@@ -42,17 +27,8 @@ spec:
     image: rabbitmq:3.7.7
     resources:
       limits:
-        cpu: 0.2
-        memory: 256Mi
-  - name: awscli
-    image: amazon/aws-cli
-    command:
-    - cat
-    tty: true
-    resources:
-      limits:
-        cpu: 0.2
-        memory: 256Mi
+        cpu: 0.4
+        memory: 0.5Gi
   - name: postgres
     image: circleci/postgres:9.5-alpine
     ports:
@@ -66,7 +42,7 @@ spec:
       value: cloudify_db
     resources:
       limits:
-        cpu: 0.2
-        memory: 256Mi
+        cpu: 0.4
+        memory: 0.5Gi
   nodeSelector:
     instance-type: spot-xlarge
