@@ -177,20 +177,23 @@ class FunctionEvaluationStorage(object):
         return capability['value']
 
     def get_label(self, label_key, values_list_index):
-        label_values = self.sm.list(
+        deployment = self.sm.get(Deployment, self._deployment_id)
+        results = self.sm.list(
             DeploymentLabel,
             include=['value'],
+            distinct=['value'],
             filters={'key': label_key,
-                     '_labeled_model_fk': self._deployment_id},
+                     '_labeled_model_fk': deployment._storage_id},
             get_all_results=True,
             sort={'value': 'asc'}  # To keep consistency between calls
         )
+        label_values = [label.value for label in results]
         if not label_values:
             raise FunctionsEvaluationError(
-                "The deployment `{0}` doesn't have a label with the key {1} "
+                "The deployment `{0}` does not have a label with the key {1} "
                 "assigned to it".format(self._deployment_id, label_key)
             )
-        if values_list_index:
+        if values_list_index is not None:
             if values_list_index > (len(label_values) - 1):
                 raise FunctionsEvaluationError(
                     'The provided label-values list index is out of range. '

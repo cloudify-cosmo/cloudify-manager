@@ -204,6 +204,29 @@ class DeploymentsLabelsTestCase(LabelsBaseTestCase):
         ]
         self.assert_resource_labels(deployment.labels, expected_dep_labels)
 
+    def test_get_label_intrinsic_function(self):
+        new_labels = [{'input_key': 'input_value'}, {'key1': 'key1_val3'},
+                      {'key1': 'key1_val2'}, {'key2': 'key2_val2'},
+                      {'key3': 'output_value'}]
+        self.put_deployment(
+            blueprint_file_name='blueprint_with_capabilities.yaml',
+            deployment_id='dep1')
+        deployment = self.put_deployment_with_labels(
+            new_labels,
+            blueprint_file_name='blueprint_with_get_label.yaml')
+        capabilities = self.client.deployments.capabilities.get(deployment.id)[
+            'capabilities']
+        outputs = self.client.deployments.outputs.get(deployment.id)['outputs']
+        node = self.client.nodes.get(deployment.id, 'node1',
+                                     evaluate_functions=True)
+        self.assertEqual(node.properties, {'prop1': ['key2_val1', 'key2_val2'],
+                                           'prop2': 'key1_val1'})
+        self.assertEqual(capabilities,
+                         {'cap1': 'key1_val2', 'cap2': ['input_value']})
+        self.assertEqual(outputs, {'output1': 'default_value',
+                                   'output2': 'output_value'})
+        return deployment
+
 
 @attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
 class BlueprintsLabelsTestCase(LabelsBaseTestCase):
