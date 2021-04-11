@@ -38,15 +38,20 @@ class Nodes(v3_Nodes):
             scalable = raw_node['capabilities']['scalable']['properties']
         except KeyError:
             scalable = {}
+
+        def _get_instance_num(attribute):
+            value = scalable.get(attribute)
+            return 1 if value is None else value
+
         return models.Node(
             id=raw_node['id'],
             type=node_type,
             type_hierarchy=type_hierarchy,
-            number_of_instances=scalable.get('current_instances') or 1,
-            planned_number_of_instances=scalable.get('current_instances') or 1,
-            deploy_number_of_instances=scalable.get('default_instances') or 1,
-            min_number_of_instances=scalable.get('min_instances') or 1,
-            max_number_of_instances=scalable.get('max_instances') or 1,
+            number_of_instances=_get_instance_num('current_instances'),
+            planned_number_of_instances=_get_instance_num('current_instances'),
+            deploy_number_of_instances=_get_instance_num('default_instances'),
+            min_number_of_instances=_get_instance_num('min_instances'),
+            max_number_of_instances=_get_instance_num('max_instances'),
             host_id=raw_node.get('host_id'),
             properties=raw_node.get('properties') or {},
             operations=raw_node.get('operations') or {},
