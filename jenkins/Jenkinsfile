@@ -15,7 +15,7 @@ def vEnv(){
 pipeline {
   agent {
     kubernetes {
-      defaultContainer 'jnlp'
+      label "manager-mb-tests-${env.BRANCH_NAME}-${env.BUILD_NUMBER}"
       yamlFile 'jenkins/build-pod.yaml'
     }
   }
@@ -33,7 +33,6 @@ pipeline {
     VERSION = getVersion("${env.PROJECT}", "${env.BRANCH_NAME}").trim()
     PRERELEASE = getPreRelease("${env.PROJECT}", "${env.BRANCH_NAME}").trim()
     S3_BUILD_PATH = "${env.VERSION}/${env.PRERELEASE}-build/${env.PROJECT}/${env.BRANCH}/${env.BUILD_NUMBER}"
-    PATH = "/root/.local/bin:$PATH"
   }
 
   stages {
@@ -106,6 +105,12 @@ pipeline {
           }
         }
         stage('build_rpms') {
+          agent {
+            kubernetes {
+              label "manager-mb-rpmbuild-${env.BRANCH}-${env.BUILD_NUMBER}"
+              yamlFile 'jenkins/rpm-pod.yaml'
+            }
+          }
           steps {
             container('rpmbuild'){
               sh """
@@ -155,9 +160,9 @@ pipeline {
         }
       }
     }
-    stage('Run Tests') {
-      parallel {
-        stage('test_amqp_postgres') {
+    stage ('Run Tests'){
+      parallel{
+        stage ('test_amqp_postgres') {
           steps {
             sh script: "mkdir -p ${env.WORKSPACE}/amqp_postgres && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/amqp_postgres", label: "copying repo to seperate workspace"
 
