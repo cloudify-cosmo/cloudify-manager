@@ -846,6 +846,13 @@ class BlueprintsFilter(FilterBase):
 
 
 class Execution(CreatedAtMixin, SQLResourceBase):
+    def __init__(self, **kwargs):
+        # allow-custom must be set before other attributes, necessarily
+        # before parameters
+        self.allow_custom_parameters = kwargs.pop(
+            'allow_custom_parameters', False)
+        super().__init__(**kwargs)
+
     __tablename__ = 'executions'
     STATUS_DISPLAY_NAMES = {
         ExecutionState.TERMINATED: 'completed'
