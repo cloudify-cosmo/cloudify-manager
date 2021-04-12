@@ -1291,6 +1291,13 @@ class Event(SQLResourceBase):
 
     execution_id = association_proxy('execution', 'id')
 
+    @declared_attr
+    def execution_group(cls):
+        return one_to_many_relationship(cls, ExecutionGroup,
+                                        cls._execution_group_fk)
+
+    execution_group_id = association_proxy('execution_group', 'id')
+
     def set_execution(self, execution):
         self._set_parent(execution)
         self.execution = execution
@@ -1339,6 +1346,13 @@ class Log(SQLResourceBase):
         return one_to_many_relationship(cls, Execution, cls._execution_fk)
 
     execution_id = association_proxy('execution', 'id')
+
+    @declared_attr
+    def execution_group(cls):
+        return one_to_many_relationship(cls, ExecutionGroup,
+                                        cls._execution_group_fk)
+
+    execution_group_id = association_proxy('execution_group', 'id')
 
     def set_execution(self, execution):
         self._set_parent(execution)
