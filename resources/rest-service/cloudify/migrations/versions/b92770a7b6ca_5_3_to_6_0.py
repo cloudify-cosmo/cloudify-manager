@@ -18,6 +18,24 @@ depends_on = None
 
 def upgrade():
     _add_execution_group_fk()
+    _add_new_execution_columns()
+
+
+def downgrade():
+    _drop_execution_group_fk()
+    _drop_new_execution_columns()
+
+
+def _add_new_execution_columns():
+    op.add_column(
+        'executions',
+        sa.Column('allow_custom_parameters', sa.Boolean(),
+                  server_default='false', nullable=False)
+    )
+
+
+def _drop_new_execution_columns():
+    op.drop_column('executions', 'allow_custom_parameters')
 
 
 def _add_execution_group_fk():
@@ -80,10 +98,6 @@ def _add_execution_group_fk():
         'logs',
         '(_execution_fk IS NOT NULL) != (_execution_group_fk IS NOT NULL)'
     )
-
-
-def downgrade():
-    _drop_execution_group_fk()
 
 
 def _drop_execution_group_fk():
