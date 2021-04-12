@@ -214,11 +214,13 @@ class DeploymentsLabelsTestCase(LabelsBaseTestCase):
         deployment = self.put_deployment_with_labels(
             new_labels,
             blueprint_file_name='blueprint_with_get_label.yaml')
+
         capabilities = self.client.deployments.capabilities.get(deployment.id)[
             'capabilities']
         outputs = self.client.deployments.outputs.get(deployment.id)['outputs']
         node = self.client.nodes.get(deployment.id, 'node1',
                                      evaluate_functions=True)
+
         self.assertEqual(node.properties, {'prop1': ['key2_val1', 'key2_val2'],
                                            'prop2': 'key1_val1'})
         self.assertEqual(capabilities,
@@ -226,6 +228,25 @@ class DeploymentsLabelsTestCase(LabelsBaseTestCase):
         self.assertEqual(outputs, {'output1': 'default_value',
                                    'output2': 'output_value'})
         return deployment
+
+    def test_get_label_not_exist_fails(self):
+        self.put_deployment(
+            deployment_id='dep1',
+            blueprint_file_name='blueprint_with_get_label_not_exist.yaml')
+        self.assertRaisesRegex(CloudifyClientError,
+                               'does not have a label',
+                               self.client.deployments.outputs.get,
+                               deployment_id='dep1')
+
+    def test_get_label_index_out_of_range_fails(self):
+        self.put_deployment(
+            deployment_id='dep1',
+            blueprint_file_name='blueprint_with_get_label_index_out_of_'
+                                'range.yaml')
+        self.assertRaisesRegex(CloudifyClientError,
+                               'index is out of range',
+                               self.client.deployments.outputs.get,
+                               deployment_id='dep1')
 
 
 @attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)

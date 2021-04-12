@@ -191,7 +191,7 @@ class FunctionEvaluationStorage(object):
         if not label_values:
             raise FunctionsEvaluationError(
                 f'The deployment `{self._deployment_id}` does not have a '
-                f'label with the key {label_key} assigned to it'
+                f'label with the key `{label_key}` assigned to it'
             )
         if values_list_index is not None:
             if values_list_index > (len(label_values) - 1):
