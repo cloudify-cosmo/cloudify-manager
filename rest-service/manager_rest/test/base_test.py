@@ -1049,11 +1049,13 @@ class BaseServerTestCase(unittest.TestCase):
         )
 
     def put_deployment_with_labels(self, labels, resource_id=None,
-                                   client=None, **deployment_kwargs):
+                                   client=None, blueprint_file_name=None,
+                                   **deployment_kwargs):
         client = client or self.client
         resource_id = resource_id or 'i{0}'.format(uuid.uuid4())
+        blueprint_file_name = blueprint_file_name or 'blueprint.yaml'
         _, _, _, deployment = self.put_deployment(
-            blueprint_file_name='blueprint.yaml',
+            blueprint_file_name=blueprint_file_name,
             blueprint_id=resource_id,
             deployment_id=resource_id,
             labels=labels,
