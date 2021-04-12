@@ -1019,3 +1019,25 @@ class ExecutionQueueingTests(BaseServerTestCase):
         sm_exc = self.sm.get(models.Execution, exc.id)
         sm_exc2 = self.sm.get(models.Execution, exc2.id)
         assert sm_exc.parameters == sm_exc2.parameters
+
+    @mock.patch('manager_rest.resource_manager.send_event', mock.Mock())
+    def test_queue_nonexistent_workflow(self):
+        """Dequeueing an execution of a nonexistent workflow, fails.
+        """
+        self.put_blueprint()
+        dep = self.client.deployments.create('blueprint', 'd1')
+        # mock the check so that the execution is queued
+        with mock.patch(
+                'manager_rest.resource_manager.ResourceManager.'
+                'check_for_executions', return_value=True):
+            exc = self.client.executions.start(
+                'd1', 'nonexistent', queue=True)
+            exc2 = self.client.executions.start(
+                'd1', 'install', queue=True)
+        self.create_deployment_environment(dep)
+        sm_exc = self.sm.get(models.Execution, exc.id)
+        sm_exc2 = self.sm.get(models.Execution, exc2.id)
+        assert sm_exc.status == ExecutionState.FAILED
+        assert 'nonexistent' in sm_exc.error
+        assert sm_exc2.status in (
+            ExecutionState.PENDING, ExecutionState.TERMINATED)
