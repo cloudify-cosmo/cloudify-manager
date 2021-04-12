@@ -575,7 +575,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                 )
         return _sub_services_status, _sub_environments_status
 
-    def evaluate_deployment_status(self):
+    def evaluate_deployment_status(self, exclude_sub_deployments=False):
         """
         Evaluate the overall deployment status based on installation status
         and latest execution object
@@ -597,7 +597,8 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             deployment_status = DeploymentState.GOOD
         else:
             deployment_status = DeploymentState.IN_PROGRESS
-        if not (self.sub_services_status or self.sub_environments_status):
+        has_sub_sts = self.sub_services_status or self.sub_environments_status
+        if not has_sub_sts or exclude_sub_deployments:
             return deployment_status
 
         # Check whether or not deployment has services or environments
