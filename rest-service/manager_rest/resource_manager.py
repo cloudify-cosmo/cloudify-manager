@@ -26,6 +26,7 @@ from collections import defaultdict
 
 from flask import current_app
 from flask_security import current_user
+from sqlalchemy.orm.attributes import flag_modified
 
 from cloudify.constants import TERMINATED_STATES as TERMINATED_TASK_STATES
 from cloudify.cryptography_utils import encrypt
@@ -203,6 +204,12 @@ class ResourceManager(object):
             to_run = list(self._get_queued_executions(finished_execution))
             for execution in to_run:
                 execution.status = ExecutionState.PENDING
+                execution.merge_workflow_parameters(
+                    execution.parameters,
+                    execution.deployment,
+                    execution.workflow_id
+                )
+                flag_modified(execution, 'parameters')
                 self.sm.update(execution)
 
         for execution in to_run:
