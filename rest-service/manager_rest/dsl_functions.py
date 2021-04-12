@@ -190,15 +190,14 @@ class FunctionEvaluationStorage(object):
         label_values = [label.value for label in results]
         if not label_values:
             raise FunctionsEvaluationError(
-                "The deployment `{0}` does not have a label with the key {1} "
-                "assigned to it".format(self._deployment_id, label_key)
+                f'The deployment `{self._deployment_id}` does not have a '
+                f'label with the key {label_key} assigned to it'
             )
         if values_list_index is not None:
             if values_list_index > (len(label_values) - 1):
                 raise FunctionsEvaluationError(
-                    'The provided label-values list index is out of range. '
-                    'The key `{0}` has {1} values'.format(
-                        label_key, len(label_values))
+                    f'The provided label-values list index is out of range. '
+                    f'The key `{label_key}` has {len(label_values)} values'
                 )
             return label_values[values_list_index]
 
