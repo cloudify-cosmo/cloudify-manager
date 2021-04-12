@@ -28,7 +28,7 @@ def _add_execution_group_fk():
     op.alter_column(
         'events',
         '_execution_fk',
-        existing_type=sa.INTEGER(),
+        existing_type=sa.Integer(),
         nullable=True
     )
     op.create_index(
@@ -43,7 +43,7 @@ def _add_execution_group_fk():
         'execution_groups',
         ['_execution_group_fk'],
         ['_storage_id'],
-        ondelete='CASCADE'
+        ondelete='CASCADE',
     )
     op.create_check_constraint(
         'events__one_fk_not_null',
@@ -58,7 +58,7 @@ def _add_execution_group_fk():
     op.alter_column(
         'logs',
         '_execution_fk',
-        existing_type=sa.INTEGER(),
+        existing_type=sa.Integer(),
         nullable=True
     )
     op.create_index(
@@ -104,7 +104,7 @@ def _drop_execution_group_fk():
     op.alter_column(
         'logs',
         '_execution_fk',
-        existing_type=sa.INTEGER(),
+        existing_type=sa.Integer(),
         nullable=False
     )
     op.drop_column(
@@ -129,7 +129,7 @@ def _drop_execution_group_fk():
     op.alter_column(
         'events',
         '_execution_fk',
-        existing_type=sa.INTEGER(),
+        existing_type=sa.Integer(),
         nullable=False
     )
     op.drop_column(
