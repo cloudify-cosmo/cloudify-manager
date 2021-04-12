@@ -1,7 +1,5 @@
 """5_3 to 6_0
 
-- Add _execution_group_fk to the events and logs tables
-
 Revision ID: b92770a7b6ca
 Revises: 396303c07e35
 Create Date: 2021-04-12 09:33:44.399254
@@ -23,8 +21,6 @@ def upgrade():
 
 
 def _add_execution_group_fk():
-    # * add _execution_group_fk to the logs and events tables,
-    # * make _execution_fk in these tables nullable,
     op.add_column(
         'events',
         sa.Column('_execution_group_fk', sa.Integer(), nullable=True)
@@ -80,8 +76,6 @@ def downgrade():
 
 
 def _drop_execution_group_fk():
-    # * drop _execution_group_fk from the logs and events tables,
-    # * make _execution_fk in these tables not nullable,
     op.drop_constraint(
         op.f('logs__execution_group_fk_fkey'),
         'logs',
