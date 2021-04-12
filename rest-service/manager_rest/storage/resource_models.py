@@ -27,6 +27,7 @@ from sqlalchemy import func, select, table, column
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import validates
+from sqlalchemy.sql.schema import CheckConstraint
 
 from cloudify.constants import MGMTWORKER_QUEUE
 from cloudify.models_states import (AgentState,
@@ -1255,6 +1256,10 @@ class Event(SQLResourceBase):
             'events_node_id_visibility_idx',
             'node_id', 'visibility'
         ),
+        CheckConstraint(
+            '(_execution_fk IS NOT NULL) != (_execution_group_fk IS NOT NULL)',
+            name='events__one_fk_not_null'
+        ),
     )
     timestamp = db.Column(
         UTCDateTime,
@@ -1272,7 +1277,9 @@ class Event(SQLResourceBase):
     target_id = db.Column(db.Text)
     error_causes = db.Column(JSONString)
 
-    _execution_fk = foreign_key(Execution._storage_id)
+    _execution_fk = foreign_key(Execution._storage_id, nullable=True)
+    _execution_group_fk = foreign_key(ExecutionGroup._storage_id,
+                                      nullable=True)
 
     @classmethod
     def default_sort_column(cls):
@@ -1283,6 +1290,13 @@ class Event(SQLResourceBase):
         return one_to_many_relationship(cls, Execution, cls._execution_fk)
 
     execution_id = association_proxy('execution', 'id')
+
+    @declared_attr
+    def execution_group(cls):
+        return one_to_many_relationship(cls, ExecutionGroup,
+                                        cls._execution_group_fk)
+
+    execution_group_id = association_proxy('execution_group', 'id')
 
     def set_execution(self, execution):
         self._set_parent(execution)
@@ -1296,6 +1310,10 @@ class Log(SQLResourceBase):
         db.Index(
             'logs_node_id_visibility_execution_fk_idx',
             'node_id', 'visibility', '_execution_fk'
+        ),
+        CheckConstraint(
+            '(_execution_fk IS NOT NULL) != (_execution_group_fk IS NOT NULL)',
+            name='logs__one_fk_not_null'
         ),
     )
 
@@ -1315,7 +1333,9 @@ class Log(SQLResourceBase):
     source_id = db.Column(db.Text)
     target_id = db.Column(db.Text)
 
-    _execution_fk = foreign_key(Execution._storage_id)
+    _execution_fk = foreign_key(Execution._storage_id, nullable=True)
+    _execution_group_fk = foreign_key(ExecutionGroup._storage_id,
+                                      nullable=True)
 
     @classmethod
     def default_sort_column(cls):
@@ -1326,6 +1346,13 @@ class Log(SQLResourceBase):
         return one_to_many_relationship(cls, Execution, cls._execution_fk)
 
     execution_id = association_proxy('execution', 'id')
+
+    @declared_attr
+    def execution_group(cls):
+        return one_to_many_relationship(cls, ExecutionGroup,
+                                        cls._execution_group_fk)
+
+    execution_group_id = association_proxy('execution_group', 'id')
 
     def set_execution(self, execution):
         self._set_parent(execution)
