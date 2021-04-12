@@ -185,7 +185,7 @@ class FunctionEvaluationStorage(object):
             filters={'key': label_key,
                      '_labeled_model_fk': deployment._storage_id},
             get_all_results=True,
-            sort={'value': 'asc'}  # To keep consistency between calls
+            sort={'created_at': 'asc', 'value': 'asc'}
         )
         label_values = [label.value for label in results]
         if not label_values:
