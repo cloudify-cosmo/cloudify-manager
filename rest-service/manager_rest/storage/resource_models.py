@@ -27,6 +27,7 @@ from sqlalchemy import func, select, table, column
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import validates
+from sqlalchemy.sql.schema import CheckConstraint
 
 from cloudify.constants import MGMTWORKER_QUEUE
 from cloudify.models_states import (AgentState,
@@ -1255,6 +1256,12 @@ class Event(SQLResourceBase):
             'events_node_id_visibility_idx',
             'node_id', 'visibility'
         ),
+        CheckConstraint(
+            '(_execution_fk IS NOT NULL OR _execution_group_fk IS NOT NULL) '
+            'AND NOT '
+            '(_execution_fk IS NOT NULL AND _execution_group_fk IS NOT NULL)',
+            name='events__one_not_null_fk'
+        ),
     )
     timestamp = db.Column(
         UTCDateTime,
@@ -1272,7 +1279,9 @@ class Event(SQLResourceBase):
     target_id = db.Column(db.Text)
     error_causes = db.Column(JSONString)
 
-    _execution_fk = foreign_key(Execution._storage_id)
+    _execution_fk = foreign_key(Execution._storage_id, nullable=True)
+    _execution_group_fk = foreign_key(ExecutionGroup._storage_id,
+                                      nullable=True)
 
     @classmethod
     def default_sort_column(cls):
@@ -1297,6 +1306,12 @@ class Log(SQLResourceBase):
             'logs_node_id_visibility_execution_fk_idx',
             'node_id', 'visibility', '_execution_fk'
         ),
+        CheckConstraint(
+            '(_execution_fk IS NOT NULL OR _execution_group_fk IS NOT NULL) '
+            'AND NOT '
+            '(_execution_fk IS NOT NULL AND _execution_group_fk IS NOT NULL)',
+            name='events__one_not_null_fk'
+        ),
     )
 
     timestamp = db.Column(
@@ -1315,7 +1330,9 @@ class Log(SQLResourceBase):
     source_id = db.Column(db.Text)
     target_id = db.Column(db.Text)
 
-    _execution_fk = foreign_key(Execution._storage_id)
+    _execution_fk = foreign_key(Execution._storage_id, nullable=True)
+    _execution_group_fk = foreign_key(ExecutionGroup._storage_id,
+                                      nullable=True)
 
     @classmethod
     def default_sort_column(cls):
