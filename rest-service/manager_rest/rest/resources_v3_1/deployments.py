@@ -109,23 +109,39 @@ class DeploymentsId(resources_v1.DeploymentsId):
             )
 
     @staticmethod
-    def _populate_direct_deployment_counts(deployment):
+    def _populate_direct_deployment_counts_and_statuses(deployment):
         sm = get_storage_manager()
         sub_services_count = 0
         sub_environments_count = 0
+        sub_services_status = None
+        sub_environments_status = None
         sources = sm.list(
             models.DeploymentLabelsDependencies,
             filters={
                 'target_deployment_id': deployment['id']
-            }
+            },
+            get_all_results=True
         )
         for source in sources:
-            if source.source_deployment.is_environment:
+            _dep = source.source_deployment
+            _dep_status = _dep.evaluate_deployment_status(
+                exclude_sub_deployments=True)
+            if _dep.is_environment:
                 sub_environments_count += 1
+                sub_environments_status = _dep.compare_between_statuses(
+                    sub_environments_status,
+                    _dep_status
+                )
             else:
                 sub_services_count += 1
+                sub_services_status = _dep.compare_between_statuses(
+                    sub_services_status,
+                    _dep_status
+                )
         deployment['sub_environments_count'] = sub_environments_count
         deployment['sub_services_count'] = sub_services_count
+        deployment['sub_environments_status'] = sub_environments_status
+        deployment['sub_services_status'] = sub_services_status
         return deployment
 
     @staticmethod
@@ -295,7 +311,7 @@ class DeploymentsId(resources_v1.DeploymentsId):
         # always return the deployment if `all_sub_deployments` is True
         if args.all_sub_deployments:
             return deployment
-        return self._populate_direct_deployment_counts(deployment)
+        return self._populate_direct_deployment_counts_and_statuses(deployment)
 
 
 class DeploymentsSetVisibility(SecuredResource):
