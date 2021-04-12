@@ -37,21 +37,19 @@ def _add_execution_group_fk():
         ['_execution_group_fk'],
         unique=False
     )
-    with op.batch_alter_table(
+    op.create_foreign_key(
+        op.f('events__execution_group_fk_fkey'),
         'events',
-        table_args=[sa.CheckConstraint(
-            '(_execution_fk IS NOT NULL) != (_execution_group_fk IS NOT NULL)',
-            name='events__one_fk_not_null'
-        )]
-    ) as batch_op:
-        batch_op.create_foreign_key(
-            op.f('events__execution_group_fk_fkey'),
-            'events',
-            'execution_groups',
-            ['_execution_group_fk'],
-            ['_storage_id'],
-            ondelete='CASCADE'
-        )
+        'execution_groups',
+        ['_execution_group_fk'],
+        ['_storage_id'],
+        ondelete='CASCADE'
+    )
+    op.create_check_constraint(
+        'events__one_fk_not_null',
+        'events',
+        '(_execution_fk IS NOT NULL) != (_execution_group_fk IS NOT NULL)'
+    )
 
     op.add_column(
         'logs',
@@ -69,21 +67,19 @@ def _add_execution_group_fk():
         ['_execution_group_fk'],
         unique=False
     )
-    with op.batch_alter_table(
+    op.create_foreign_key(
+        op.f('logs__execution_group_fk_fkey'),
         'logs',
-        table_args=[sa.CheckConstraint(
-            '(_execution_fk IS NOT NULL) != (_execution_group_fk IS NOT NULL)',
-            name='logs__one_fk_not_null'
-        )]
-    ) as batch_op:
-        batch_op.create_foreign_key(
-            op.f('logs__execution_group_fk_fkey'),
-            'logs',
-            'execution_groups',
-            ['_execution_group_fk'],
-            ['_storage_id'],
-            ondelete='CASCADE'
-        )
+        'execution_groups',
+        ['_execution_group_fk'],
+        ['_storage_id'],
+        ondelete='CASCADE'
+    )
+    op.create_check_constraint(
+        'logs__one_fk_not_null',
+        'logs',
+        '(_execution_fk IS NOT NULL) != (_execution_group_fk IS NOT NULL)'
+    )
 
 
 def downgrade():
