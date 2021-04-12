@@ -6,7 +6,7 @@ spec:
     image: jenkins/inbound-agent:4.3-4
     resources:
       limits:
-        cpu: 0.3Gi
+        cpu: 0.3
         memory: 256Mi
   - name: rpmbuild
     image: rpmbuild/centos7
@@ -30,10 +30,10 @@ spec:
     tty: true
     resources:
       requests:
-        cpu: 0.2Gi
+        cpu: 0.2
         memory: 256Mi
       limits:
-        cpu: 0.2Gi
+        cpu: 0.2
         memory: 256Mi
   nodeSelector:
     instance-type: spot

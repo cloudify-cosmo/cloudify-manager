@@ -6,10 +6,10 @@ spec:
     image: jenkins/inbound-agent:4.3-4
     resources:
       requests:
-        cpu: 0.3Gi
+        cpu: 0.3
         memory: 0.5Gi
       limits:
-        cpu: 0.3Gi
+        cpu: 0.3
         memory: 0.5Gi
   - name: python
     image: circleci/python:3.6
@@ -30,10 +30,10 @@ spec:
     image: rabbitmq:3.7.7
     resources:
       requests:
-        cpu: 0.3Gi
+        cpu: 0.3
         memory: 0.5Gi
       limits:
-        cpu: 0.3Gi
+        cpu: 0.3
         memory: 0.5Gi
   - name: postgres
     image: circleci/postgres:9.5-alpine
@@ -48,10 +48,10 @@ spec:
       value: cloudify_db
     resources:
       requests:
-        cpu: 0.3Gi
+        cpu: 0.3
         memory: 0.5Gi
       limits:
-        cpu: 0.3Gi
+        cpu: 0.3
         memory: 0.5Gi
   nodeSelector:
     instance-type: spot-xlarge

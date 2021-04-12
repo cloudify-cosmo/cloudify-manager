@@ -16,7 +16,6 @@ pipeline {
   agent {
     kubernetes {
       defaultContainer 'jnlp'
-      label "manager-mb-tests-${env.BRANCH_NAME}-${env.BUILD_NUMBER}"
       yamlFile 'jenkins/build-pod.yaml'
     }
   }
