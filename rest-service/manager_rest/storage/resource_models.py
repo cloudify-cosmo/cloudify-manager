@@ -1257,10 +1257,8 @@ class Event(SQLResourceBase):
             'node_id', 'visibility'
         ),
         CheckConstraint(
-            '(_execution_fk IS NOT NULL OR _execution_group_fk IS NOT NULL) '
-            'AND NOT '
-            '(_execution_fk IS NOT NULL AND _execution_group_fk IS NOT NULL)',
-            name='events__one_not_null_fk'
+            '(_execution_fk IS NOT NULL) != (_execution_group_fk IS NOT NULL)',
+            name='events__one_fk_not_null'
         ),
     )
     timestamp = db.Column(
@@ -1307,10 +1305,8 @@ class Log(SQLResourceBase):
             'node_id', 'visibility', '_execution_fk'
         ),
         CheckConstraint(
-            '(_execution_fk IS NOT NULL OR _execution_group_fk IS NOT NULL) '
-            'AND NOT '
-            '(_execution_fk IS NOT NULL AND _execution_group_fk IS NOT NULL)',
-            name='events__one_not_null_fk'
+            '(_execution_fk IS NOT NULL) != (_execution_group_fk IS NOT NULL)',
+            name='logs__one_fk_not_null'
         ),
     )
 

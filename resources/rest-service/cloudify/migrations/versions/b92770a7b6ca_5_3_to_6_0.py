@@ -37,14 +37,22 @@ def _add_execution_group_fk():
         ['_execution_group_fk'],
         unique=False
     )
-    op.create_foreign_key(
-        op.f('events__execution_group_fk_fkey'),
+    with op.batch_alter_table(
         'events',
-        'execution_groups',
-        ['_execution_group_fk'],
-        ['_storage_id'],
-        ondelete='CASCADE'
-    )
+        table_args=[sa.CheckConstraint(
+            '(_execution_fk IS NOT NULL) != (_execution_group_fk IS NOT NULL)',
+            name='events__one_fk_not_null'
+        )]
+    ) as batch_op:
+        batch_op.create_foreign_key(
+            op.f('events__execution_group_fk_fkey'),
+            'events',
+            'execution_groups',
+            ['_execution_group_fk'],
+            ['_storage_id'],
+            ondelete='CASCADE'
+        )
+
     op.add_column(
         'logs',
         sa.Column('_execution_group_fk', sa.Integer(), nullable=True)
@@ -61,14 +69,21 @@ def _add_execution_group_fk():
         ['_execution_group_fk'],
         unique=False
     )
-    op.create_foreign_key(
-        op.f('logs__execution_group_fk_fkey'),
+    with op.batch_alter_table(
         'logs',
-        'execution_groups',
-        ['_execution_group_fk'],
-        ['_storage_id'],
-        ondelete='CASCADE'
-    )
+        table_args=[sa.CheckConstraint(
+            '(_execution_fk IS NOT NULL) != (_execution_group_fk IS NOT NULL)',
+            name='logs__one_fk_not_null'
+        )]
+    ) as batch_op:
+        batch_op.create_foreign_key(
+            op.f('logs__execution_group_fk_fkey'),
+            'logs',
+            'execution_groups',
+            ['_execution_group_fk'],
+            ['_storage_id'],
+            ondelete='CASCADE'
+        )
 
 
 def downgrade():
@@ -76,6 +91,11 @@ def downgrade():
 
 
 def _drop_execution_group_fk():
+    op.drop_constraint(
+        op.f('logs__one_fk_not_null'),
+        'logs',
+        type='check',
+    )
     op.drop_constraint(
         op.f('logs__execution_group_fk_fkey'),
         'logs',
@@ -94,6 +114,12 @@ def _drop_execution_group_fk():
     op.drop_column(
         'logs',
         '_execution_group_fk'
+    )
+
+    op.drop_constraint(
+        op.f('events__one_fk_not_null'),
+        'events',
+        type='check',
     )
     op.drop_constraint(
         op.f('events__execution_group_fk_fkey'),
