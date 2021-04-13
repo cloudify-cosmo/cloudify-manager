@@ -988,3 +988,56 @@ class ExecutionQueueingTests(BaseServerTestCase):
 
         self.rm.execute_workflow(exc2, queue=True)
         assert exc2.status == ExecutionState.QUEUED
+
+    @mock.patch('manager_rest.resource_manager.send_event', mock.Mock())
+    def test_queue_before_create_finishes(self):
+        """Execs queued before create-dep-env finished, have default params.
+
+        Default params are taken from the plan, and that is only available
+        when create-dep-env parses the blueprint. It is possible to queue
+        executions beforehand, and those executions must re-evaluated
+        before actually running.
+        """
+        self.put_blueprint()
+        dep = self.client.deployments.create('blueprint', 'd1')
+        # mock the check so that the execution is queued
+        with mock.patch(
+                'manager_rest.resource_manager.ResourceManager.'
+                'check_for_executions', return_value=True):
+            exc = self.client.executions.start(
+                'd1', 'execute_operation', parameters={
+                    'operation': 'some.operation'
+                }, queue=True)
+        self.create_deployment_environment(dep)
+        with mock.patch(
+                'manager_rest.resource_manager.ResourceManager.'
+                'check_for_executions', return_value=True):
+            exc2 = self.client.executions.start(
+                'd1', 'execute_operation', parameters={
+                    'operation': 'some.operation'
+                }, queue=True)
+        sm_exc = self.sm.get(models.Execution, exc.id)
+        sm_exc2 = self.sm.get(models.Execution, exc2.id)
+        assert sm_exc.parameters == sm_exc2.parameters
+
+    @mock.patch('manager_rest.resource_manager.send_event', mock.Mock())
+    def test_queue_nonexistent_workflow(self):
+        """Dequeueing an execution of a nonexistent workflow, fails.
+        """
+        self.put_blueprint()
+        dep = self.client.deployments.create('blueprint', 'd1')
+        # mock the check so that the execution is queued
+        with mock.patch(
+                'manager_rest.resource_manager.ResourceManager.'
+                'check_for_executions', return_value=True):
+            exc = self.client.executions.start(
+                'd1', 'nonexistent', queue=True)
+            exc2 = self.client.executions.start(
+                'd1', 'install', queue=True)
+        self.create_deployment_environment(dep)
+        sm_exc = self.sm.get(models.Execution, exc.id)
+        sm_exc2 = self.sm.get(models.Execution, exc2.id)
+        assert sm_exc.status == ExecutionState.FAILED
+        assert 'nonexistent' in sm_exc.error
+        assert sm_exc2.status in (
+            ExecutionState.PENDING, ExecutionState.TERMINATED)
