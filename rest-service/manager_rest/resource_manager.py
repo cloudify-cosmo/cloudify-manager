@@ -26,6 +26,7 @@ from collections import defaultdict
 
 from flask import current_app
 from flask_security import current_user
+from sqlalchemy.orm.attributes import flag_modified
 
 from cloudify.constants import TERMINATED_STATES as TERMINATED_TASK_STATES
 from cloudify.cryptography_utils import encrypt
@@ -199,17 +200,53 @@ class ResourceManager(object):
         return res
 
     def start_queued_executions(self, finished_execution):
+        """Dequeue and start executions.
+
+        Attempt to fetch and run as many executions as we can, and if
+        any of those fail to run, try running more.
+        """
+        to_run = []
         with self.sm.transaction():
-            to_run = list(self._get_queued_executions(finished_execution))
-            for execution in to_run:
-                execution.status = ExecutionState.PENDING
-                self.sm.update(execution)
+            while True:
+                dequeued = self._get_queued_executions(finished_execution)
+                all_started = True
+                for execution in dequeued:
+                    if self._dequeue_execution(execution):
+                        to_run.append(execution)
+                    else:
+                        all_started = False
+                if all_started:
+                    break
 
         for execution in to_run:
             if execution.is_system_workflow:
                 self._execute_system_workflow(execution, queue=True)
             else:
                 self.execute_workflow(execution, queue=True)
+
+    def _dequeue_execution(self, execution: models.Execution) -> bool:
+        """Prepare the execution to be dequeued.
+
+        Re-evaluate parameters, and return if the execution can run.
+        """
+        execution.status = ExecutionState.PENDING
+        try:
+            execution.merge_workflow_parameters(
+                execution.parameters,
+                execution.deployment,
+                execution.workflow_id
+            )
+        except (manager_exceptions.IllegalExecutionParametersError,
+                manager_exceptions.NonexistentWorkflowError) as e:
+            execution.status = ExecutionState.FAILED
+            execution.error = str(e)
+            return False
+        else:
+            flag_modified(execution, 'parameters')
+            return True
+        finally:
+            self.sm.update(execution)
+            db.session.flush([execution])
 
     def _get_queued_executions(self, finished_execution):
         sort_by = {'created_at': 'asc'}

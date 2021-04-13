@@ -847,6 +847,8 @@ class BlueprintsFilter(FilterBase):
 
 class Execution(CreatedAtMixin, SQLResourceBase):
     def __init__(self, **kwargs):
+        # allow-custom must be set before other attributes, necessarily
+        # before parameters
         self.allow_custom_parameters = kwargs.pop(
             'allow_custom_parameters', False)
         super().__init__(**kwargs)
@@ -884,7 +886,8 @@ class Execution(CreatedAtMixin, SQLResourceBase):
 
     total_operations = db.Column(db.Integer, nullable=True)
     finished_operations = db.Column(db.Integer, nullable=True)
-
+    allow_custom_parameters = db.Column(db.Boolean, nullable=False,
+                                        server_default='false')
     execution_group_id = association_proxy('execution_groups', 'id')
 
     @declared_attr
