@@ -355,7 +355,6 @@ class ResourceManager(object):
     def _update_execution_group(self, execution: models.Execution):
         for execution_group in execution.execution_groups:
             event = models.Event(
-                id=str(uuid.uuid4()),
                 event_type="execution_state_change",
                 reported_timestamp=utils.get_formatted_timestamp(),
                 execution_group=execution_group,
