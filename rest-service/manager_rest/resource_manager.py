@@ -1432,8 +1432,7 @@ class ResourceManager(object):
                           visibility,
                           skip_plugins_validation=False,
                           site=None,
-                          runtime_only_evaluation=False,
-                          labels=None,):
+                          runtime_only_evaluation=False):
         verify_blueprint_uploaded_state(blueprint)
         plan = blueprint.plan
         visibility = self.get_resource_visibility(models.Deployment,
@@ -1445,17 +1444,6 @@ class ResourceManager(object):
             raise manager_exceptions.ForbiddenError(
                 f"Can't create global deployment {deployment_id} because "
                 f"blueprint {blueprint.id} is not global"
-            )
-        parents_labels = self.get_deployment_parents_from_labels(
-            labels
-        )
-        if parents_labels:
-            dep_graph = RecursiveDeploymentLabelsDependencies(self.sm)
-            dep_graph.create_dependencies_graph()
-            self.verify_attaching_deployment_to_parents(
-                dep_graph,
-                parents_labels,
-                deployment_id
             )
         #  validate plugins exists on manager when
         #  skip_plugins_validation is False

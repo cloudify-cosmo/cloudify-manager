@@ -242,7 +242,6 @@ class DeploymentsId(resources_v1.DeploymentsId):
             site=site,
             runtime_only_evaluation=request_dict.get(
                 'runtime_only_evaluation', False),
-            labels=labels,
         )
         try:
             rm.execute_workflow(deployment.make_create_environment_execution(
