@@ -148,10 +148,9 @@ class ResourceManager(object):
                         status,
                         execution.id,
                         execution.workflow_id))
-        if execution.status != status and execution.execution_groups:
-            self._update_execution_group(execution, status, error)
         execution.status = status
         execution.error = error
+        self._update_execution_group(execution)
 
         if status == ExecutionState.STARTED:
             execution.started_at = utils.get_formatted_timestamp()
@@ -353,8 +352,7 @@ class ResourceManager(object):
 
         return True
 
-    def _update_execution_group(self, execution: models.Execution,
-                                state: str, error: str):
+    def _update_execution_group(self, execution: models.Execution):
         for execution_group in execution.execution_groups:
             event = models.Event(
                 id=str(uuid.uuid4()),
@@ -362,10 +360,10 @@ class ResourceManager(object):
                 reported_timestamp=utils.get_formatted_timestamp(),
                 execution_group=execution_group,
                 message=f"execution '{execution.id}' changed state "
-                        f"to '{state}'",
+                        f"to '{execution.state}'",
             )
-            if error:
-                event.error += f" with error '{error}'"
+            if execution.error:
+                event.error += f" with error '{execution.error}'"
             self.sm.put(event)
 
     @staticmethod
