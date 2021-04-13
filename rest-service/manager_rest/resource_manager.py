@@ -148,6 +148,8 @@ class ResourceManager(object):
                         status,
                         execution.id,
                         execution.workflow_id))
+        if execution.status != status and execution.execution_groups:
+            self._update_execution_group(execution, status, error)
         execution.status = status
         execution.error = error
 
@@ -350,6 +352,22 @@ class ResourceManager(object):
             return False
 
         return True
+
+    def _update_execution_group(self, execution: models.Execution,
+                                state: str, error: str):
+        for execution_group in execution.execution_groups:
+            event_args = {
+                'id': str(uuid.uuid4()),
+                'event_type': "execution_state_change",
+                'reported_timestamp': utils.get_formatted_timestamp(),
+                'execution_group': execution_group,
+                'message': f"execution '{execution.id}' changed state "
+                           f"to '{state}'",
+            }
+            if error:
+                event_args['message'] = "{0} with error '{1}'".format(
+                    event_args['message'], error)
+            self.sm.put(models.Event(**event_args))
 
     @staticmethod
     def _get_conf_for_snapshots_wf():
