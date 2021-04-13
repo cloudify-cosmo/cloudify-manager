@@ -359,7 +359,7 @@ class ResourceManager(object):
                 reported_timestamp=utils.get_formatted_timestamp(),
                 execution_group=execution_group,
                 message=f"execution '{execution.id}' changed state "
-                        f"to '{execution.state}'",
+                        f"to '{execution.status}'",
             )
             if execution.error:
                 event.error += f" with error '{execution.error}'"
