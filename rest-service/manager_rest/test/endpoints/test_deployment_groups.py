@@ -536,6 +536,290 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         dep3 = self.client.deployments.get('dep3')
         self.assert_resource_labels(dep3.labels, labels)
 
+    def test_add_invalid_label_parent(self):
+        error_message = 'using label `csys-obj-parent` that does not exist'
+        self.client.deployment_groups.put(
+            'group1',
+            deployment_ids=['dep1', 'dep2']
+        )
+        with self.assertRaisesRegex(CloudifyClientError, error_message):
+            self.client.deployment_groups.put(
+                'group1',
+                labels=[{'csys-obj-parent': 'value2'}],
+            )
+        group = self.client.deployment_groups.get('group1')
+        dep1 = self.client.deployments.get('dep1')
+        dep2 = self.client.deployments.get('dep2')
+        self.assertEqual(len(group.labels), 0)
+        self.assertEqual(len(dep1.labels), 0)
+        self.assertEqual(len(dep2.labels), 0)
+
+    def test_add_cyclic_parent_labels_in_group(self):
+        error_message = 'results in cyclic deployment-labels dependencies'
+        self.client.deployments.update_labels(
+            'dep2', [{'csys-obj-parent': 'dep1'}])
+        self.client.deployment_groups.put(
+            'group1',
+            deployment_ids=['dep1', 'dep2']
+        )
+
+        with self.assertRaisesRegex(CloudifyClientError, error_message):
+            self.client.deployment_groups.put(
+                'group1',
+                labels=[{'csys-obj-parent': 'dep2'}],
+            )
+        group = self.client.deployment_groups.get('group1')
+        dep1 = self.client.deployments.get('dep1')
+        dep2 = self.client.deployments.get('dep2')
+        self.assertEqual(len(group.labels), 0)
+        self.assertEqual(len(dep1.labels), 0)
+        self.assertEqual(len(dep2.labels), 1)
+
+    def test_add_self_deployment_as_parent(self):
+        error_message = 'results in cyclic deployment-labels dependencies'
+        self.client.deployment_groups.put(
+            'group1',
+            deployment_ids=['dep1']
+        )
+
+        with self.assertRaisesRegex(CloudifyClientError, error_message):
+            self.client.deployment_groups.put(
+                'group1',
+                labels=[{'csys-obj-parent': 'dep1'}],
+            )
+        group = self.client.deployment_groups.get('group1')
+        dep1 = self.client.deployments.get('dep1')
+        self.assertEqual(len(group.labels), 0)
+        self.assertEqual(len(dep1.labels), 0)
+
+    def test_add_single_parent(self):
+        self.client.deployment_groups.put(
+            'group1',
+            deployment_ids=['dep1', 'dep2']
+        )
+
+        self.put_deployment(deployment_id='parent_1', blueprint_id='parent_1')
+        self.client.deployment_groups.put(
+            'group1',
+            labels=[{'csys-obj-parent': 'parent_1'}],
+        )
+        dep = self.client.deployments.get('parent_1')
+        self.assertEqual(dep.sub_services_count, 2)
+
+    def test_add_multiple_parents(self):
+        self.client.deployment_groups.put(
+            'group1',
+            deployment_ids=['dep1', 'dep2']
+        )
+
+        self.put_deployment(deployment_id='parent_1', blueprint_id='parent_1')
+        self.put_deployment(deployment_id='parent_2', blueprint_id='parent_2')
+
+        self.client.deployment_groups.put(
+            'group1',
+            labels=[{'csys-obj-parent': 'parent_1'},
+                    {'csys-obj-parent': 'parent_2'}],
+        )
+        dep1 = self.client.deployments.get('parent_1')
+        dep2 = self.client.deployments.get('parent_2')
+        self.assertEqual(dep1.sub_services_count, 2)
+        self.assertEqual(dep2.sub_services_count, 2)
+
+    def test_add_parents_before_adding_deployment(self):
+        self.put_deployment(deployment_id='parent_1', blueprint_id='parent_1')
+        self.put_deployment(deployment_id='parent_2', blueprint_id='parent_2')
+        self.client.deployment_groups.put('group1')
+        self.client.deployment_groups.put(
+            'group1',
+            labels=[{'csys-obj-parent': 'parent_1'},
+                    {'csys-obj-parent': 'parent_2'}],
+        )
+        self.client.deployment_groups.put(
+            'group1',
+            deployment_ids=['dep1', 'dep2']
+        )
+        dep1 = self.client.deployments.get('parent_1')
+        dep2 = self.client.deployments.get('parent_2')
+        self.assertEqual(dep1.sub_services_count, 2)
+        self.assertEqual(dep2.sub_services_count, 2)
+
+    def test_add_parents_before_adding_deployments_from_groups(self):
+        self.put_deployment(deployment_id='parent_1', blueprint_id='parent_1')
+        self.put_deployment(deployment_id='parent_2', blueprint_id='parent_2')
+        self.put_deployment(deployment_id='parent_3', blueprint_id='parent_3')
+        self.put_deployment(deployment_id='group2_1', blueprint_id='group2_1')
+
+        self.client.deployment_groups.put('group1')
+        self.client.deployment_groups.put(
+            'group1',
+            labels=[{'csys-obj-parent': 'parent_1'},
+                    {'csys-obj-parent': 'parent_2'},
+                    {'csys-obj-parent': 'parent_3'}],
+        )
+
+        self.client.deployment_groups.put('group2', blueprint_id='blueprint')
+        self.client.deployment_groups.put('group3', blueprint_id='blueprint')
+        self.client.deployment_groups.add_deployments(
+            'group2',
+            count=4
+        )
+        self.client.deployment_groups.add_deployments(
+            'group3',
+            deployment_ids=['dep1', 'dep2']
+        )
+        self.client.deployment_groups.add_deployments(
+            'group1',
+            deployments_from_group='group2'
+        )
+        self.client.deployment_groups.add_deployments(
+            'group1',
+            deployments_from_group='group3'
+        )
+
+        dep1 = self.client.deployments.get('parent_1')
+        dep2 = self.client.deployments.get('parent_2')
+        dep3 = self.client.deployments.get('parent_3')
+        self.assertEqual(dep1.sub_services_count, 6)
+        self.assertEqual(dep2.sub_services_count, 6)
+        self.assertEqual(dep3.sub_services_count, 6)
+
+    def test_add_parents_to_multiple_source_of_deployments(self):
+        self.put_deployment(deployment_id='parent_1', blueprint_id='parent_1')
+        self.put_deployment(deployment_id='dep3', blueprint_id='dep3')
+        self.put_deployment(deployment_id='dep4', blueprint_id='dep4')
+        self.put_deployment(deployment_id='dep5', blueprint_id='dep5')
+
+        self.client.deployment_groups.put('group1', blueprint_id='blueprint')
+        self.client.deployment_groups.put('group2', blueprint_id='blueprint')
+
+        self.client.deployment_groups.put(
+            'group1',
+            labels=[{'csys-obj-parent': 'parent_1'}],
+        )
+        self.client.deployment_groups.add_deployments(
+            'group2',
+            deployment_ids=['dep1', 'dep2']
+        )
+        self.client.deployments.update_labels('dep3', [
+            {'label1': 'value1'}
+        ])
+        self.client.deployments.update_labels('dep4', [
+            {'label1': 'value1'}
+        ])
+        self.client.deployments_filters.create('filter1', [
+            {'key': 'label1', 'values': ['value1'],
+             'operator': 'any_of', 'type': 'label'}
+        ])
+        self.client.deployment_groups.put(
+            'group1',
+            filter_id='filter1',
+            deployment_ids=['dep5'],
+            deployments_from_group='group2'
+        )
+        dep = self.client.deployments.get('parent_1')
+        self.assertEqual(dep.sub_services_count, 5)
+
+    def test_add_parents_to_environment_deployments(self):
+        self.put_deployment(deployment_id='parent_1', blueprint_id='parent_1')
+
+        self.client.deployment_groups.put('group1', blueprint_id='blueprint')
+        self.client.deployment_groups.add_deployments(
+            'group1',
+            count=4
+        )
+        self.client.deployment_groups.put(
+            'group1',
+            labels=[{'csys-obj-parent': 'parent_1'},
+                    {'csys-obj-type': 'environment'}],
+        )
+        dep = self.client.deployments.get('parent_1')
+        self.assertEqual(dep.sub_environments_count, 4)
+
+    def test_convert_service_to_environment_for_deployments(self):
+        self.put_deployment(deployment_id='parent_1', blueprint_id='parent_1')
+        self.client.deployment_groups.put('group1', blueprint_id='blueprint')
+        self.client.deployment_groups.add_deployments(
+            'group1',
+            count=4
+        )
+        self.client.deployment_groups.put(
+            'group1',
+            labels=[{'csys-obj-parent': 'parent_1'}],
+        )
+        dep = self.client.deployments.get('parent_1')
+        self.assertEqual(dep.sub_services_count, 4)
+        self.client.deployment_groups.put(
+            'group1',
+            labels=[{'csys-obj-parent': 'parent_1'},
+                    {'csys-obj-type': 'environment'}],
+        )
+        dep = self.client.deployments.get('parent_1')
+        self.assertEqual(dep.sub_environments_count, 4)
+
+    def test_convert_environment_to_service_for_deployments(self):
+        self.put_deployment(deployment_id='parent_1', blueprint_id='parent_1')
+        self.client.deployment_groups.put('group1', blueprint_id='blueprint')
+        self.client.deployment_groups.add_deployments(
+            'group1',
+            count=4
+        )
+        self.client.deployment_groups.put(
+            'group1',
+            labels=[{'csys-obj-parent': 'parent_1'},
+                    {'csys-obj-type': 'environment'}],
+        )
+        dep = self.client.deployments.get('parent_1')
+        self.assertEqual(dep.sub_environments_count, 4)
+        self.client.deployment_groups.put(
+            'group1',
+            labels=[{'csys-obj-parent': 'parent_1'}],
+        )
+        dep = self.client.deployments.get('parent_1')
+        self.assertEqual(dep.sub_services_count, 4)
+
+    def test_delete_parents_labels_from_deployments(self):
+        self.put_deployment(deployment_id='parent_1', blueprint_id='parent_1')
+        self.client.deployment_groups.put(
+            'group1',
+            labels=[{'csys-obj-parent': 'parent_1'}],
+            blueprint_id='blueprint'
+        )
+        self.client.deployment_groups.add_deployments(
+            'group1',
+            deployment_ids=['dep1', 'dep2']
+        )
+        dep = self.client.deployments.get('parent_1')
+        self.assertEqual(dep.sub_services_count, 2)
+        self.client.deployment_groups.put(
+            'group1',
+            labels=[],
+            blueprint_id='blueprint'
+        )
+        dep = self.client.deployments.get('parent_1')
+        self.assertEqual(dep.sub_services_count, 0)
+
+    @mock.patch(
+        'manager_rest.rest.rest_utils.RecursiveDeploymentLabelsDependencies'
+        '.propagate_deployment_statuses')
+    def test_validate_update_deployment_statuses_after_conversion(self,
+                                                                  mock_status):
+        self.put_deployment(deployment_id='parent_1', blueprint_id='parent_1')
+        self.client.deployment_groups.put('group1', blueprint_id='blueprint')
+        self.client.deployment_groups.add_deployments(
+            'group1',
+            count=4
+        )
+        self.client.deployment_groups.put(
+            'group1',
+            labels=[{'csys-obj-parent': 'parent_1'},
+                    {'csys-obj-type': 'environment'}],
+        )
+        self.client.deployment_groups.put(
+            'group1',
+            labels=[{'csys-obj-parent': 'parent_1'}],
+        )
+        mock_status.assert_called()
+
 
 @mock.patch(
     'manager_rest.rest.resources_v3_1.executions.workflow_sendhandler',

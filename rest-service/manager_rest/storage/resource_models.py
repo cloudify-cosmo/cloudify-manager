@@ -27,6 +27,7 @@ from sqlalchemy import func, select, table, column
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import validates
+from sqlalchemy.sql.schema import CheckConstraint
 
 from cloudify.constants import MGMTWORKER_QUEUE
 from cloudify.models_states import (AgentState,
@@ -575,7 +576,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                 )
         return _sub_services_status, _sub_environments_status
 
-    def evaluate_deployment_status(self):
+    def evaluate_deployment_status(self, exclude_sub_deployments=False):
         """
         Evaluate the overall deployment status based on installation status
         and latest execution object
@@ -597,7 +598,8 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             deployment_status = DeploymentState.GOOD
         else:
             deployment_status = DeploymentState.IN_PROGRESS
-        if not (self.sub_services_status or self.sub_environments_status):
+        has_sub_sts = self.sub_services_status or self.sub_environments_status
+        if not has_sub_sts or exclude_sub_deployments:
             return deployment_status
 
         # Check whether or not deployment has services or environments
@@ -846,6 +848,8 @@ class BlueprintsFilter(FilterBase):
 
 class Execution(CreatedAtMixin, SQLResourceBase):
     def __init__(self, **kwargs):
+        # allow-custom must be set before other attributes, necessarily
+        # before parameters
         self.allow_custom_parameters = kwargs.pop(
             'allow_custom_parameters', False)
         super().__init__(**kwargs)
@@ -883,7 +887,8 @@ class Execution(CreatedAtMixin, SQLResourceBase):
 
     total_operations = db.Column(db.Integer, nullable=True)
     finished_operations = db.Column(db.Integer, nullable=True)
-
+    allow_custom_parameters = db.Column(db.Boolean, nullable=False,
+                                        server_default='false')
     execution_group_id = association_proxy('execution_groups', 'id')
 
     @declared_attr
@@ -1255,6 +1260,10 @@ class Event(SQLResourceBase):
             'events_node_id_visibility_idx',
             'node_id', 'visibility'
         ),
+        CheckConstraint(
+            '(_execution_fk IS NOT NULL) != (_execution_group_fk IS NOT NULL)',
+            name='events__one_fk_not_null'
+        ),
     )
     timestamp = db.Column(
         UTCDateTime,
@@ -1272,7 +1281,9 @@ class Event(SQLResourceBase):
     target_id = db.Column(db.Text)
     error_causes = db.Column(JSONString)
 
-    _execution_fk = foreign_key(Execution._storage_id)
+    _execution_fk = foreign_key(Execution._storage_id, nullable=True)
+    _execution_group_fk = foreign_key(ExecutionGroup._storage_id,
+                                      nullable=True)
 
     @classmethod
     def default_sort_column(cls):
@@ -1283,6 +1294,13 @@ class Event(SQLResourceBase):
         return one_to_many_relationship(cls, Execution, cls._execution_fk)
 
     execution_id = association_proxy('execution', 'id')
+
+    @declared_attr
+    def execution_group(cls):
+        return one_to_many_relationship(cls, ExecutionGroup,
+                                        cls._execution_group_fk)
+
+    execution_group_id = association_proxy('execution_group', 'id')
 
     def set_execution(self, execution):
         self._set_parent(execution)
@@ -1296,6 +1314,10 @@ class Log(SQLResourceBase):
         db.Index(
             'logs_node_id_visibility_execution_fk_idx',
             'node_id', 'visibility', '_execution_fk'
+        ),
+        CheckConstraint(
+            '(_execution_fk IS NOT NULL) != (_execution_group_fk IS NOT NULL)',
+            name='logs__one_fk_not_null'
         ),
     )
 
@@ -1315,7 +1337,9 @@ class Log(SQLResourceBase):
     source_id = db.Column(db.Text)
     target_id = db.Column(db.Text)
 
-    _execution_fk = foreign_key(Execution._storage_id)
+    _execution_fk = foreign_key(Execution._storage_id, nullable=True)
+    _execution_group_fk = foreign_key(ExecutionGroup._storage_id,
+                                      nullable=True)
 
     @classmethod
     def default_sort_column(cls):
@@ -1326,6 +1350,13 @@ class Log(SQLResourceBase):
         return one_to_many_relationship(cls, Execution, cls._execution_fk)
 
     execution_id = association_proxy('execution', 'id')
+
+    @declared_attr
+    def execution_group(cls):
+        return one_to_many_relationship(cls, ExecutionGroup,
+                                        cls._execution_group_fk)
+
+    execution_group_id = association_proxy('execution_group', 'id')
 
     def set_execution(self, execution):
         self._set_parent(execution)

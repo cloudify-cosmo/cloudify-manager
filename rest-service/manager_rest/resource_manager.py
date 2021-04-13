@@ -26,6 +26,7 @@ from collections import defaultdict
 
 from flask import current_app
 from flask_security import current_user
+from sqlalchemy.orm.attributes import flag_modified
 
 from cloudify.constants import TERMINATED_STATES as TERMINATED_TASK_STATES
 from cloudify.cryptography_utils import encrypt
@@ -199,17 +200,53 @@ class ResourceManager(object):
         return res
 
     def start_queued_executions(self, finished_execution):
+        """Dequeue and start executions.
+
+        Attempt to fetch and run as many executions as we can, and if
+        any of those fail to run, try running more.
+        """
+        to_run = []
         with self.sm.transaction():
-            to_run = list(self._get_queued_executions(finished_execution))
-            for execution in to_run:
-                execution.status = ExecutionState.PENDING
-                self.sm.update(execution)
+            while True:
+                dequeued = self._get_queued_executions(finished_execution)
+                all_started = True
+                for execution in dequeued:
+                    if self._dequeue_execution(execution):
+                        to_run.append(execution)
+                    else:
+                        all_started = False
+                if all_started:
+                    break
 
         for execution in to_run:
             if execution.is_system_workflow:
                 self._execute_system_workflow(execution, queue=True)
             else:
                 self.execute_workflow(execution, queue=True)
+
+    def _dequeue_execution(self, execution: models.Execution) -> bool:
+        """Prepare the execution to be dequeued.
+
+        Re-evaluate parameters, and return if the execution can run.
+        """
+        execution.status = ExecutionState.PENDING
+        try:
+            execution.merge_workflow_parameters(
+                execution.parameters,
+                execution.deployment,
+                execution.workflow_id
+            )
+        except (manager_exceptions.IllegalExecutionParametersError,
+                manager_exceptions.NonexistentWorkflowError) as e:
+            execution.status = ExecutionState.FAILED
+            execution.error = str(e)
+            return False
+        else:
+            flag_modified(execution, 'parameters')
+            return True
+        finally:
+            self.sm.update(execution)
+            db.session.flush([execution])
 
     def _get_queued_executions(self, finished_execution):
         sort_by = {'created_at': 'asc'}
@@ -742,9 +779,17 @@ class ResourceManager(object):
 
         parents = deployment.deployment_parents
         if parents:
+            total_services, total_environments = \
+                self._get_total_services_and_environments_from_sources(
+                    [deployment]
+                )
             dep_graph = RecursiveDeploymentLabelsDependencies(self.sm)
             dep_graph.create_dependencies_graph()
-            dep_graph.decrease_deployment_counts_in_graph(parents, deployment)
+            dep_graph.decrease_deployment_counts_in_graph(
+                parents,
+                total_services,
+                total_environments
+            )
             for _parent in parents:
                 _parent_obj = self.sm.get(
                     models.Deployment,
@@ -758,7 +803,18 @@ class ResourceManager(object):
                         deployment,
                         _parent_obj
                     )
-                    dep_graph.propagate_deployment_statuses(_parent)
+                    from_dependencies = self.sm.list(
+                        models.DeploymentLabelsDependencies,
+                        filters={'target_deployment_id': _parent_obj.id}
+                    )
+                    if not from_dependencies:
+                        _parent_obj.sub_services_status = None
+                        _parent_obj.sub_environments_status = None
+                        _parent_obj.deployment_status = \
+                            _parent_obj.evaluate_deployment_status()
+                        self.sm.update(_parent_obj)
+                    else:
+                        dep_graph.propagate_deployment_statuses(_parent)
 
         deployment_folder = os.path.join(
             config.instance.file_server_root,
@@ -1453,18 +1509,20 @@ class ResourceManager(object):
                 parents.append(label_value)
         return parents
 
-    def get_deployment_object_types_from_labels(self, deployment, labels):
-        created_types = set()
-        delete_types = set()
-        new_labels = self.get_labels_to_create(deployment, labels)
-        for key, value in new_labels:
+    def get_object_types_from_labels(self, labels):
+        obj_types = set()
+        for key, value in labels:
             if key == 'csys-obj-type' and value:
-                created_types.add(value.lower())
+                obj_types.add(value.lower())
+        return obj_types
 
-        labels_to_delete = self.get_labels_to_delete(deployment, labels)
-        for label in labels_to_delete:
-            if label.key == 'csys-obj-type':
-                delete_types.add(label.value.lower())
+    def get_deployment_object_types_from_labels(self, resource, labels):
+        labels_to_add = self.get_labels_to_create(resource, labels)
+        labels_to_delete = self.get_labels_to_delete(resource, labels)
+        created_types = self.get_object_types_from_labels(labels_to_add)
+        delete_types = self.get_object_types_from_labels(
+            [(label.key, label.value) for label in labels_to_delete]
+        )
         return created_types, delete_types
 
     def get_missing_deployment_parents(self, parents):
@@ -1479,18 +1537,21 @@ class ResourceManager(object):
         missing_parents = set(parents) - set(_existing_parents)
         return missing_parents
 
-    def verify_deployment_parents_existence(self, parents, deployment_id):
+    def verify_deployment_parents_existence(self, parents, resource_id,
+                                            resource_type):
         missing_parents = self.get_missing_deployment_parents(parents)
         if missing_parents:
             raise manager_exceptions.DeploymentParentNotFound(
-                'Deployment {0}: is referencing deployments'
+                '{0} {1}: is referencing deployments'
                 ' using label `csys-obj-parent` that does not exist, '
-                'make sure that deployment(s) {1} exist before creating '
-                'deployment'.format(deployment_id, ','.join(missing_parents))
+                'make sure that deployment(s) {2} exist before creating '
+                '{3}'.format(resource_type.capitalize(),
+                             resource_id,
+                             ','.join(missing_parents), resource_type)
             )
 
     def verify_attaching_deployment_to_parents(self, graph, parents, dep_id):
-        self.verify_deployment_parents_existence(parents, dep_id)
+        self.verify_deployment_parents_existence(parents, dep_id, 'deployment')
         graph.assert_cyclic_dependencies_between_targets_and_source(
             parents, dep_id
         )
@@ -1534,15 +1595,45 @@ class ResourceManager(object):
             )
         self.sm.delete(dld)
 
-    def add_deployment_to_labels_graph(self, dep_graph, source, target_id):
+    def _insert_deployments_into_label_graph(self, graph, source, target_id):
         self._place_deployment_label_dependency(
             source,
             self.sm.get(models.Deployment, target_id)
         )
-        dep_graph.add_dependency_to_graph(source.id, target_id)
+        graph.add_dependency_to_graph(source.id, target_id)
+
+    def _remove_deployments_from_label_graph(self, graph, source, target_id):
+        graph.remove_dependency_from_graph(source.id, target_id)
+        self._remove_deployment_label_dependency(
+            source,
+            self.sm.get(
+                models.Deployment, target_id
+            )
+        )
+
+    def _get_total_services_and_environments_from_sources(self, deployments):
+        total_services = 0
+        total_environments = 0
+        for dep in deployments:
+            dep_services = dep.sub_services_count
+            dep_environments = dep.sub_environments_count
+            if dep.is_environment:
+                dep_environments = dep_environments + 1
+            else:
+                dep_services = dep_services + 1
+            total_environments += dep_environments
+            total_services += dep_services
+
+        return total_services, total_environments
+
+    def add_deployment_to_labels_graph(self, dep_graph, source, target_id):
+        total_services, total_environments = \
+            self._get_total_services_and_environments_from_sources([source])
+        self._insert_deployments_into_label_graph(dep_graph, source, target_id)
         dep_graph.increase_deployment_counts_in_graph(
-            target_id,
-            source
+            [target_id],
+            total_services,
+            total_environments
         )
         dep_graph.propagate_deployment_statuses(target_id)
 
@@ -1550,15 +1641,53 @@ class ResourceManager(object):
                                             dep_graph,
                                             source,
                                             target_id):
-        dep_graph.decrease_deployment_counts_in_graph([target_id], source)
-        dep_graph.remove_dependency_from_graph(source.id, target_id)
-        self._remove_deployment_label_dependency(
-            source,
-            self.sm.get(
-                models.Deployment, target_id
-            )
+        total_services, total_environments = \
+            self._get_total_services_and_environments_from_sources([source])
+        dep_graph.decrease_deployment_counts_in_graph(
+            [target_id],
+            total_services,
+            total_environments
         )
+        self._remove_deployments_from_label_graph(dep_graph, source, target_id)
         dep_graph.propagate_deployment_statuses(target_id)
+
+    def add_multiple_deployments_to_labels_graph(self,
+                                                 graph,
+                                                 sources,
+                                                 target_ids):
+        total_services, total_environments = \
+            self._get_total_services_and_environments_from_sources(sources)
+        for target_id in target_ids:
+            for source in sources:
+                self._insert_deployments_into_label_graph(
+                    graph, source, target_id
+                )
+        graph.increase_deployment_counts_in_graph(
+            target_ids,
+            total_services,
+            total_environments
+        )
+        for target_id in target_ids:
+            graph.propagate_deployment_statuses(target_id)
+
+    def remove_multiple_deployments_from_labels_graph(self,
+                                                      graph,
+                                                      sources,
+                                                      target_ids):
+        total_services, total_environments = \
+            self._get_total_services_and_environments_from_sources(sources)
+        for target_id in target_ids:
+            for source in sources:
+                self._remove_deployments_from_label_graph(
+                    graph, source, target_id
+                )
+        graph.decrease_deployment_counts_in_graph(
+            target_ids,
+            total_services,
+            total_environments
+        )
+        for target_id in target_ids:
+            graph.propagate_deployment_statuses(target_id)
 
     def handle_deployment_labels_graph(self, graph, parents, new_deployment):
         if not parents:
@@ -1577,6 +1706,27 @@ class ResourceManager(object):
                 new_deployment,
                 parent
             )
+
+    @staticmethod
+    def update_resource_counts_after_source_conversion(graph,
+                                                       resource,
+                                                       new_types,
+                                                       deleted_types):
+        if not resource:
+            return False
+        is_converted = False
+        if resource.deployment_parents and (deleted_types or new_types):
+            if not graph.graph:
+                graph.create_dependencies_graph()
+            to_srv = resource.is_environment and 'environment' in deleted_types
+            to_env = not resource.is_environment and 'environment' in new_types
+            _type = 'service' if to_srv else 'environment' if to_env else None
+            if _type:
+                graph.update_deployment_counts_after_source_conversion(
+                    resource, _type
+                )
+                is_converted = True
+        return is_converted
 
     def install_plugin(self, plugin, manager_names=None, agent_names=None):
         """Send the plugin install task to the given managers or agents."""
