@@ -998,7 +998,7 @@ class ResourceManager(object):
     def _check_for_active_executions(self, execution, queue):
         running = self.list_executions(
             filters={
-                'deployment_id': execution.deployment_id,
+                '_deployment_fk': execution._deployment_fk,
                 'id': lambda col: col != execution.id,
                 'status':
                 ExecutionState.ACTIVE_STATES + [ExecutionState.QUEUED],
