@@ -362,7 +362,7 @@ class ResourceManager(object):
                         f"to '{execution.status}'",
             )
             if execution.error:
-                event.error += f" with error '{execution.error}'"
+                event.message += f" with error '{execution.error}'"
             self.sm.put(event)
 
     @staticmethod
