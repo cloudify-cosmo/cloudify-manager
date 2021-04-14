@@ -332,6 +332,7 @@ class Events(SecuredResource):
                 Blueprint.id.label('blueprint_id'),
                 Deployment.id.label('deployment_id'),
                 Execution.id.label('execution_id'),
+                ExecutionGroup.id.label('execution_group_id'),
                 Execution.workflow_id.label('workflow_id'),
                 select_column('message'),
                 select_column('message_code'),
