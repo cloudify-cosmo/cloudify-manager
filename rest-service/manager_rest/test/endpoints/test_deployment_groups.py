@@ -5,6 +5,8 @@ from datetime import datetime
 from cloudify.models_states import VisibilityState, ExecutionState
 from cloudify_rest_client.exceptions import CloudifyClientError
 
+from manager_rest.manager_exceptions import SQLStorageException
+
 from manager_rest.storage import models
 
 from manager_rest.test import base_test
@@ -854,8 +856,8 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
     def test_get_events(self):
         """Get events by group id.
 
-        Include events for execution in the group, but not events for
-        executions not in the group.
+        Include events for execution group, but not events for the particular
+        executions (either in group or not).
         """
         group = self.client.execution_groups.start(
             deployment_group_id='group1',
@@ -867,38 +869,49 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
             force=True,  # force, because there's one already running
         )
         # refetch as ORM objects so we can pass them to Log/Event
+        execution_group = self.sm.get(models.ExecutionGroup, group.id)
         group_execution = self.sm.get(models.Execution, group.execution_ids[0])
         non_group_execution = self.sm.get(
             models.Execution, non_group_execution.id
         )
         self.sm.put(
             models.Log(
-                id='log1',
                 message='log1',
+                execution_group=execution_group,
+                reported_timestamp=datetime.utcnow()
+            )
+        )
+        self.sm.put(
+            models.Event(
+                message='event1',
+                execution_group=execution_group,
+                reported_timestamp=datetime.utcnow()
+            )
+        )
+        self.sm.put(
+            models.Log(
+                message='log2',
                 execution=group_execution,
                 reported_timestamp=datetime.utcnow()
             )
         )
         self.sm.put(
             models.Event(
-                id='event1',
-                message='event1',
+                message='event2',
                 execution=group_execution,
                 reported_timestamp=datetime.utcnow()
             )
         )
         self.sm.put(
             models.Log(
-                id='log2',
-                message='log2',
+                message='log3',
                 execution=non_group_execution,
                 reported_timestamp=datetime.utcnow()
             )
         )
         self.sm.put(
             models.Event(
-                id='event2',
-                message='event2',
+                message='event3',
                 execution=non_group_execution,
                 reported_timestamp=datetime.utcnow()
             )
@@ -908,12 +921,53 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
             include_logs=True
         )
         assert len(events) == 2
-        assert all(e['execution_id'] == group_execution.id for e in events)
+        assert all(e['execution_group_id'] == execution_group.id
+                   for e in events)
 
-    def test_get_events_both_arguments(self):
-        with self.assertRaisesRegex(CloudifyClientError, 'not both'):
-            self.client.events.list(
-                execution_group_id='group1', execution_id='exec1'
+    def test_one_fk_not_null_constraint(self):
+        group = self.client.execution_groups.start(
+            deployment_group_id='group1',
+            workflow_id='install'
+        )
+        # refetch as ORM objects so we can pass them to Log/Event
+        execution_group = self.sm.get(models.ExecutionGroup, group.id)
+        execution = self.sm.get(models.Execution, group.execution_ids[0])
+
+        with self.assertRaisesRegex(SQLStorageException,
+                                    'violates check constraint'):
+            self.sm.put(
+                models.Event(
+                    message='event',
+                    execution=execution,
+                    execution_group=execution_group,
+                    reported_timestamp=datetime.utcnow()
+                )
+            )
+        with self.assertRaisesRegex(SQLStorageException,
+                                    'violates check constraint'):
+            self.sm.put(
+                models.Event(
+                    message='event',
+                    reported_timestamp=datetime.utcnow()
+                )
+            )
+        with self.assertRaisesRegex(SQLStorageException,
+                                    'violates check constraint'):
+            self.sm.put(
+                models.Log(
+                    message='log',
+                    execution=execution,
+                    execution_group=execution_group,
+                    reported_timestamp=datetime.utcnow()
+                )
+            )
+        with self.assertRaisesRegex(SQLStorageException,
+                                    'violates check constraint'):
+            self.sm.put(
+                models.Log(
+                    message='log',
+                    reported_timestamp=datetime.utcnow()
+                )
             )
 
     def test_get_execution_by_group(self):

@@ -150,6 +150,7 @@ class ResourceManager(object):
                         execution.workflow_id))
         execution.status = status
         execution.error = error
+        self._update_execution_group(execution)
 
         if status == ExecutionState.STARTED:
             execution.started_at = utils.get_formatted_timestamp()
@@ -330,6 +331,19 @@ class ResourceManager(object):
             return False
 
         return True
+
+    def _update_execution_group(self, execution: models.Execution):
+        for execution_group in execution.execution_groups:
+            event = models.Event(
+                event_type="execution_state_change",
+                reported_timestamp=utils.get_formatted_timestamp(),
+                execution_group=execution_group,
+                message=f"execution '{execution.id}' changed state "
+                        f"to '{execution.status}'",
+            )
+            if execution.error:
+                event.message += f" with error '{execution.error}'"
+            self.sm.put(event)
 
     @staticmethod
     def _get_conf_for_snapshots_wf():

@@ -1265,6 +1265,7 @@ class Event(SQLResourceBase):
             name='events__one_fk_not_null'
         ),
     )
+    id = db.Column(db.Text, index=True, default=lambda: str(uuid.uuid4()))
     timestamp = db.Column(
         UTCDateTime,
         default=datetime.utcnow,
@@ -1321,6 +1322,7 @@ class Log(SQLResourceBase):
         ),
     )
 
+    id = db.Column(db.Text, index=True, default=lambda: str(uuid.uuid4()))
     timestamp = db.Column(
         UTCDateTime,
         default=datetime.utcnow,
