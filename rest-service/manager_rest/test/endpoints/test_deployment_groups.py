@@ -5,6 +5,8 @@ from datetime import datetime
 from cloudify.models_states import VisibilityState, ExecutionState
 from cloudify_rest_client.exceptions import CloudifyClientError
 
+from manager_rest.manager_exceptions import SQLStorageException
+
 from manager_rest.storage import models
 
 from manager_rest.test import base_test
@@ -921,6 +923,52 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
         assert len(events) == 2
         assert all(e['execution_group_id'] == execution_group.id
                    for e in events)
+
+    def test_one_fk_not_null_constraint(self):
+        group = self.client.execution_groups.start(
+            deployment_group_id='group1',
+            workflow_id='install'
+        )
+        # refetch as ORM objects so we can pass them to Log/Event
+        execution_group = self.sm.get(models.ExecutionGroup, group.id)
+        execution = self.sm.get(models.Execution, group.execution_ids[0])
+
+        with self.assertRaisesRegex(SQLStorageException,
+                                    'violates check constraint'):
+            self.sm.put(
+                models.Event(
+                    message='event',
+                    execution=execution,
+                    execution_group=execution_group,
+                    reported_timestamp=datetime.utcnow()
+                )
+            )
+        with self.assertRaisesRegex(SQLStorageException,
+                                    'violates check constraint'):
+            self.sm.put(
+                models.Event(
+                    message='event',
+                    reported_timestamp=datetime.utcnow()
+                )
+            )
+        with self.assertRaisesRegex(SQLStorageException,
+                                    'violates check constraint'):
+            self.sm.put(
+                models.Log(
+                    message='log',
+                    execution=execution,
+                    execution_group=execution_group,
+                    reported_timestamp=datetime.utcnow()
+                )
+            )
+        with self.assertRaisesRegex(SQLStorageException,
+                                    'violates check constraint'):
+            self.sm.put(
+                models.Log(
+                    message='log',
+                    reported_timestamp=datetime.utcnow()
+                )
+            )
 
     def test_get_events_both_arguments(self):
         with self.assertRaisesRegex(CloudifyClientError, 'not both'):
