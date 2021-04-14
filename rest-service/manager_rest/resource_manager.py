@@ -265,33 +265,22 @@ class ResourceManager(object):
             return
 
         if finished_execution.deployment:
-            deployment_id = finished_execution.deployment.id
-            queued_executions = self.sm.list(
-                models.Execution,
-                filters={
-                    'status': ExecutionState.QUEUED_STATE,
-                    'is_system_workflow': False
-                },
-                sort=OrderedDict([
-                    ('_deployment_fk', lambda col: col != finished_execution._deployment_fk),
-                    ('created_at', 'asc'),
-                ]),
-                get_all_results=True,
-                all_tenants=True,
-                locking=True,
-            ).items
-        else:
-            queued_executions = self.sm.list(
-                models.Execution,
-                filters={
-                    'status': ExecutionState.QUEUED_STATE,
-                    'is_system_workflow': False,
-                },
-                sort=sort_by,
-                get_all_results=True,
-                all_tenants=True,
-                locking=True,
-            ).items
+            # same deployment first
+            sort_by = OrderedDict([(
+                '_deployment_fk',
+                lambda col: col != finished_execution._deployment_fk
+            )], **sort_by)
+        queued_executions = self.sm.list(
+            models.Execution,
+            filters={
+                'status': ExecutionState.QUEUED_STATE,
+                'is_system_workflow': False
+            },
+            sort=sort_by,
+            get_all_results=True,
+            all_tenants=True,
+            locking=True,
+        ).items
 
         # {deployment: whether it can run executions}
         busy_deployments = {}
