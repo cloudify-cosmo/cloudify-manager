@@ -35,6 +35,7 @@ from manager_rest.storage.resource_models import (
     Deployment,
     Execution,
     Event,
+    ExecutionGroup,
     Log,
     Node,
     NodeInstance,
@@ -59,6 +60,7 @@ class Events(SecuredResource):
         'operation': ('operation', 'ilike'),
         'blueprint_id': (Blueprint.id, 'in'),
         'execution_id': (Execution.id, 'in'),
+        'execution_group_id': ('execution_group_id', 'in'),
         'deployment_id': (Deployment.id, 'in'),
         'event_type': (Event.event_type, 'in'),
         'level': (Log.level, 'in'),
@@ -330,6 +332,7 @@ class Events(SecuredResource):
                 Blueprint.id.label('blueprint_id'),
                 Deployment.id.label('deployment_id'),
                 Execution.id.label('execution_id'),
+                ExecutionGroup.id.label('execution_group_id'),
                 Execution.workflow_id.label('workflow_id'),
                 select_column('message'),
                 select_column('message_code'),
@@ -355,6 +358,8 @@ class Events(SecuredResource):
             .outerjoin(NodeInstance, NodeInstance.id == model.node_id)
             .outerjoin(Node, Node._storage_id == NodeInstance._node_fk)
             .outerjoin(Execution, Execution._storage_id == model._execution_fk)
+            .outerjoin(ExecutionGroup,
+                       ExecutionGroup._storage_id == model._execution_group_fk)
             .outerjoin(Deployment,
                        Deployment._storage_id == Execution._deployment_fk)
             .outerjoin(

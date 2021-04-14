@@ -32,7 +32,7 @@ from manager_rest.storage.resource_models import (
     Event,
     Log,
 )
-from manager_rest.storage import ListResult, get_storage_manager, models
+from manager_rest.storage import ListResult
 from manager_rest.security.authorization import authorize
 
 
@@ -94,19 +94,6 @@ class Events(resources_v1.Events):
         :rtype: :class:`manager_rest.storage.storage_manager.ListResult`
 
         """
-        if 'execution_group_id' in filters:
-            if filters.get('execution_id'):
-                raise manager_exceptions.BadParametersError(
-                    'Provide either execution_group_id or execution_id, '
-                    'not both'
-                )
-            sm = get_storage_manager()
-            group_id = filters.pop('execution_group_id')
-            filters['execution_id'] = [
-                e.id for e in
-                sm.get(models.ExecutionGroup, group_id).executions
-            ]
-
         size = pagination.get('size', self.DEFAULT_SEARCH_SIZE)
         offset = pagination.get('offset', 0)
         params = {
