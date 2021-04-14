@@ -138,7 +138,8 @@ class SQLStorageManager(object):
 
         :param query: Base SQL query
         :param sort: An optional dictionary where keys are column names to
-        sort by, and values are the order (asc/desc)
+            sort by, and values are the order (asc/desc), or callables that
+            return join conditions
         :return: An SQLAlchemy AppenderQuery object
         """
         if sort or distinct:
@@ -147,7 +148,10 @@ class SQLStorageManager(object):
             for column, order in sort.items():
                 if order == 'desc':
                     column = column.desc()
-                query = query.order_by(column)
+                if callable(order):
+                    query = query.order_by(order(column))
+                else:
+                    query = query.order_by(column)
         else:
             default_sort = model_class.default_sort_column()
             if default_sort:
