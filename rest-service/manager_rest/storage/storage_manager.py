@@ -139,7 +139,7 @@ class SQLStorageManager(object):
         :param query: Base SQL query
         :param sort: An optional dictionary where keys are column names to
             sort by, and values are the order (asc/desc), or callables that
-            return join conditions
+            return sort conditions
         :return: An SQLAlchemy AppenderQuery object
         """
         if sort or distinct:
