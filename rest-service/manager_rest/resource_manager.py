@@ -1000,7 +1000,8 @@ class ResourceManager(object):
             filters={
                 'deployment_id': execution.deployment_id,
                 'id': lambda col: col != execution.id,
-                'status': ExecutionState.ACTIVE_STATES,
+                'status':
+                ExecutionState.ACTIVE_STATES + [ExecutionState.QUEUED],
             },
             is_include_system_workflows=True
         ).items
