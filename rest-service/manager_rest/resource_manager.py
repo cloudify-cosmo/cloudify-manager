@@ -22,7 +22,7 @@ import itertools
 import typing
 from copy import deepcopy
 from datetime import datetime
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 
 from flask import current_app
 from flask_security import current_user
@@ -266,29 +266,20 @@ class ResourceManager(object):
 
         if finished_execution.deployment:
             deployment_id = finished_execution.deployment.id
-            same_dep_executions = self.sm.list(
+            queued_executions = self.sm.list(
                 models.Execution,
                 filters={
                     'status': ExecutionState.QUEUED_STATE,
-                    'deployment_id': deployment_id,
+                    'is_system_workflow': False
                 },
-                sort=sort_by,
+                sort=OrderedDict([
+                    ('_deployment_fk', lambda col: col != finished_execution._deployment_fk),
+                    ('created_at', 'asc'),
+                ]),
                 get_all_results=True,
                 all_tenants=True,
                 locking=True,
             ).items
-            other_queued = self.sm.list(
-                models.Execution,
-                filters={
-                    'status': ExecutionState.QUEUED_STATE,
-                    'deployment_id': lambda col: col != deployment_id,
-                },
-                sort=sort_by,
-                get_all_results=True,
-                all_tenants=True,
-                locking=True,
-            ).items
-            queued_executions = same_dep_executions + other_queued
         else:
             queued_executions = self.sm.list(
                 models.Execution,
