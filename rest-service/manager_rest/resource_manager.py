@@ -22,7 +22,7 @@ import itertools
 import typing
 from copy import deepcopy
 from datetime import datetime
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 
 from flask import current_app
 from flask_security import current_user
@@ -266,42 +266,22 @@ class ResourceManager(object):
             return
 
         if finished_execution.deployment:
-            deployment_id = finished_execution.deployment.id
-            same_dep_executions = self.sm.list(
-                models.Execution,
-                filters={
-                    'status': ExecutionState.QUEUED_STATE,
-                    'deployment_id': deployment_id,
-                },
-                sort=sort_by,
-                get_all_results=True,
-                all_tenants=True,
-                locking=True,
-            ).items
-            other_queued = self.sm.list(
-                models.Execution,
-                filters={
-                    'status': ExecutionState.QUEUED_STATE,
-                    'deployment_id': lambda col: col != deployment_id,
-                },
-                sort=sort_by,
-                get_all_results=True,
-                all_tenants=True,
-                locking=True,
-            ).items
-            queued_executions = same_dep_executions + other_queued
-        else:
-            queued_executions = self.sm.list(
-                models.Execution,
-                filters={
-                    'status': ExecutionState.QUEUED_STATE,
-                    'is_system_workflow': False,
-                },
-                sort=sort_by,
-                get_all_results=True,
-                all_tenants=True,
-                locking=True,
-            ).items
+            # same deployment first
+            sort_by = OrderedDict([(
+                '_deployment_fk',
+                lambda col: col != finished_execution._deployment_fk
+            )], **sort_by)
+        queued_executions = self.sm.list(
+            models.Execution,
+            filters={
+                'status': ExecutionState.QUEUED_STATE,
+                'is_system_workflow': False
+            },
+            sort=sort_by,
+            get_all_results=True,
+            all_tenants=True,
+            locking=True,
+        ).items
 
         # {deployment: whether it can run executions}
         busy_deployments = {}
@@ -1032,9 +1012,10 @@ class ResourceManager(object):
     def _check_for_active_executions(self, execution, queue):
         running = self.list_executions(
             filters={
-                'deployment_id': execution.deployment_id,
+                '_deployment_fk': execution._deployment_fk,
                 'id': lambda col: col != execution.id,
-                'status': ExecutionState.ACTIVE_STATES,
+                'status':
+                ExecutionState.ACTIVE_STATES + [ExecutionState.QUEUED],
             },
             is_include_system_workflows=True
         ).items
