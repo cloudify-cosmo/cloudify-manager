@@ -970,12 +970,6 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
                 )
             )
 
-    def test_get_events_both_arguments(self):
-        with self.assertRaisesRegex(CloudifyClientError, 'not both'):
-            self.client.events.list(
-                execution_group_id='group1', execution_id='exec1'
-            )
-
     def test_get_execution_by_group(self):
         execution_group = self.client.execution_groups.start(
             deployment_group_id='group1',
