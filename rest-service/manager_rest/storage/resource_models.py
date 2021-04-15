@@ -1267,7 +1267,7 @@ class Event(SQLResourceBase):
     )
     is_id_unique = False
 
-    id = None
+    id = None  # this is just to override the parent class attribute
     timestamp = db.Column(
         UTCDateTime,
         default=datetime.utcnow,
@@ -1325,7 +1325,7 @@ class Log(SQLResourceBase):
     )
     is_id_unique = False
 
-    id = None
+    id = None  # this is just to override the parent class attribute
     timestamp = db.Column(
         UTCDateTime,
         default=datetime.utcnow,
