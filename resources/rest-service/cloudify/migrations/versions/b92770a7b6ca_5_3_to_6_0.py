@@ -19,11 +19,39 @@ depends_on = None
 def upgrade():
     _add_execution_group_fk()
     _add_new_execution_columns()
+    _drop_events_id()
+    _drop_logs_id()
 
 
 def downgrade():
+    _create_logs_id()
+    _create_events_id()
     _drop_execution_group_fk()
     _drop_new_execution_columns()
+
+
+def _drop_events_id():
+    op.drop_index('events_id_idx', table_name='events')
+    op.drop_column('events', 'id')
+
+
+def _drop_logs_id():
+    op.drop_index('logs_id_idx', table_name='logs')
+    op.drop_column('logs', 'id')
+
+
+def _create_logs_id():
+    op.add_column('logs', sa.Column('id', sa.Text(),
+                  autoincrement=False, nullable=True))
+    op.create_index('logs_id_idx', 'logs', ['id'],
+                    unique=False)
+
+
+def _create_events_id():
+    op.add_column('events', sa.Column('id', sa.Text(),
+                  autoincrement=False, nullable=True))
+    op.create_index('events_id_idx', 'events', ['id'],
+                    unique=False)
 
 
 def _add_new_execution_columns():
