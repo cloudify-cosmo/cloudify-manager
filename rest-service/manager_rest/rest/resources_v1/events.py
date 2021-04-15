@@ -325,7 +325,6 @@ class Events(SecuredResource):
 
         query = (
             db.session.query(
-                select_column('id'),
                 select_column('_storage_id'),
                 select_column('timestamp'),
                 select_column('reported_timestamp'),
