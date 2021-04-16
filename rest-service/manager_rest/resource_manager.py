@@ -26,7 +26,9 @@ from collections import defaultdict, OrderedDict
 
 from flask import current_app
 from flask_security import current_user
+from sqlalchemy.orm import aliased
 from sqlalchemy.orm.attributes import flag_modified
+from sqlalchemy import or_ as sql_or, and_ as sql_and, exists
 
 from cloudify.constants import TERMINATED_STATES as TERMINATED_TASK_STATES
 from cloudify.cryptography_utils import encrypt
@@ -266,26 +268,37 @@ class ResourceManager(object):
             yield system_executions[0]
             return
 
-        if finished_execution.deployment:
-            # same deployment first
-            sort_by = OrderedDict([(
-                '_deployment_fk',
-                lambda col: col != finished_execution._deployment_fk
-            )], **sort_by)
-        queued_executions = self.sm.list(
-            models.Execution,
-            filters={
-                'status': ExecutionState.QUEUED_STATE,
-                'is_system_workflow': False
-            },
-            sort=sort_by,
-            get_all_results=True,
-            all_tenants=True,
-            locking=True,
-        ).items
-
-        # {deployment: whether it can run executions}
-        busy_deployments = {}
+        executions = aliased(models.Execution)
+        queued_query = (
+            db.session.query(executions)
+            .filter_by(
+                status=ExecutionState.QUEUED,
+                is_system_workflow=False,
+            )
+            .filter(
+                # fetch only execution belonging to deployments who have
+                # no active executions
+                ~models.Execution.query.filter(
+                    models.Execution._deployment_fk == \
+                        executions._deployment_fk,
+                    models.Execution.status.in_(ExecutionState.ACTIVE_STATES)
+                ).exists()
+            )
+        )
+        if finished_execution._deployment_fk:
+            queued_query = queued_query.order_by(
+                executions._deployment_fk
+                != finished_execution._deployment_fk
+            )
+        queued_executions = (
+            queued_query
+            .outerjoin(executions.execution_groups)
+            .order_by(executions.created_at.asc())
+            .with_for_update(of=executions)
+        )
+        # deployments we've already emitted an execution for - only emit 1
+        # execution per deployment
+        seen_deployments = set()
         # {group: how many executions can it still run}
         group_can_run = {}
         for execution in queued_executions:
@@ -298,21 +311,12 @@ class ResourceManager(object):
                 # this execution cannot run, because it would exceed one
                 # of its' groups concurrency limit
                 continue
-
-            if execution.deployment not in busy_deployments:
-                busy_deployments[execution.deployment] = any(
-                    exc.status in ExecutionState.ACTIVE_STATES
-                    for exc in execution.deployment.executions
-                )
-            if busy_deployments[execution.deployment]:
-                # this execution can't run, because there's already an
-                # execution running for this deployment
+            if execution._deployment_fk in seen_deployments:
                 continue
 
             for group in execution.execution_groups:
                 group_can_run[group] -= 1
-            busy_deployments[execution.deployment] = True
-
+            seen_deployments.add(execution._deployment_fk)
             yield execution
 
     def _validate_execution_update(self, current_status, future_status):
