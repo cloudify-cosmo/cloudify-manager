@@ -212,7 +212,7 @@ class ResourceManager(object):
                 dequeued = self._get_queued_executions(finished_execution)
                 all_started = True
                 for execution in dequeued:
-                    if self._dequeue_execution(execution):
+                    if self._refresh_execution(execution):
                         to_run.append(execution)
                     else:
                         all_started = False
@@ -225,11 +225,12 @@ class ResourceManager(object):
             else:
                 self.execute_workflow(execution, queue=True)
 
-    def _dequeue_execution(self, execution: models.Execution) -> bool:
-        """Prepare the execution to be dequeued.
+    def _refresh_execution(self, execution: models.Execution) -> bool:
+        """Prepare the execution to be started.
 
         Re-evaluate parameters, and return if the execution can run.
         """
+        self.sm.refresh(execution.deployment)
         execution.status = ExecutionState.PENDING
         try:
             execution.merge_workflow_parameters(
@@ -944,6 +945,9 @@ class ResourceManager(object):
                 self.sm.update(execution.deployment)
                 self._workflow_queued(execution)
                 return execution
+            if execution.deployment:
+                if not self._refresh_execution(execution):
+                    return
 
         workflow_executor.execute_workflow(
             execution,
