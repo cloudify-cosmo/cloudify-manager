@@ -1024,8 +1024,13 @@ class ResourceManager(object):
             filters={
                 '_deployment_fk': execution._deployment_fk,
                 'id': lambda col: col != execution.id,
-                'status':
-                ExecutionState.ACTIVE_STATES + [ExecutionState.QUEUED],
+                'status': lambda col: sql_or(
+                    col.in_(ExecutionState.ACTIVE_STATES),
+                    sql_and(
+                        col == ExecutionState.QUEUED,
+                        models.Execution.created_at < execution.created_at
+                    )
+                )
             },
             is_include_system_workflows=True
         ).items
