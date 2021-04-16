@@ -923,25 +923,27 @@ class ResourceManager(object):
                          bypass_maintenance=None, wait_after_fail=600,
                          allow_overlapping_running_wf=False,
                          send_handler: 'SendHandler' = None):
-        if execution.deployment:
-            self._check_allow_global_execution(execution.deployment)
-            self._verify_dependencies_not_affected(
-                execution.workflow_id, execution.deployment, force)
+        with self.sm.transaction():
+            if execution.deployment:
+                self._check_allow_global_execution(execution.deployment)
+                self._verify_dependencies_not_affected(
+                    execution.workflow_id, execution.deployment, force)
 
-        should_queue = queue
-        if not allow_overlapping_running_wf:
-            should_queue = self.check_for_executions(execution, force, queue)
+            should_queue = queue
+            if not allow_overlapping_running_wf:
+                should_queue = self.check_for_executions(
+                    execution, force, queue)
 
-        if should_queue:
-            if not execution.deployment.installation_status:
-                execution.deployment.installation_status =\
-                    DeploymentState.INACTIVE
-            execution.deployment.deployment_status =\
-                DeploymentState.IN_PROGRESS
-            execution.deployment.latest_execution = execution
-            self.sm.update(execution.deployment)
-            self._workflow_queued(execution)
-            return execution
+            if should_queue:
+                if not execution.deployment.installation_status:
+                    execution.deployment.installation_status =\
+                        DeploymentState.INACTIVE
+                execution.deployment.deployment_status =\
+                    DeploymentState.IN_PROGRESS
+                execution.deployment.latest_execution = execution
+                self.sm.update(execution.deployment)
+                self._workflow_queued(execution)
+                return execution
 
         workflow_executor.execute_workflow(
             execution,
