@@ -22,13 +22,13 @@ import itertools
 import typing
 from copy import deepcopy
 from datetime import datetime
-from collections import defaultdict, OrderedDict
+from collections import defaultdict
 
 from flask import current_app
 from flask_security import current_user
 from sqlalchemy.orm import aliased
 from sqlalchemy.orm.attributes import flag_modified
-from sqlalchemy import or_ as sql_or, and_ as sql_and, exists
+from sqlalchemy import or_ as sql_or, and_ as sql_and
 
 from cloudify.constants import TERMINATED_STATES as TERMINATED_TASK_STATES
 from cloudify.cryptography_utils import encrypt
@@ -280,7 +280,7 @@ class ResourceManager(object):
                 # no active executions
                 ~models.Execution.query.filter(
                     models.Execution._deployment_fk == \
-                        executions._deployment_fk,
+                    executions._deployment_fk,
                     models.Execution.status.in_(ExecutionState.ACTIVE_STATES)
                 ).exists()
             )
