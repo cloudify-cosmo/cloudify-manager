@@ -24,7 +24,8 @@ from manager_rest.rest.responses_v3 import ItemsCount
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.rest import resources_v2, rest_decorators
-from manager_rest.manager_exceptions import BadParametersError
+from manager_rest.manager_exceptions import (
+    BadParametersError, NonexistentWorkflowError)
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.rest.rest_utils import (
     get_json_and_verify_params,
@@ -195,15 +196,26 @@ class ExecutionGroups(SecuredResource):
             for dep in dep_group.deployments:
                 params = default_parameters.copy()
                 params.update(parameters.get(dep.id) or {})
-                execution = models.Execution(
-                    workflow_id=workflow_id,
-                    deployment=dep,
-                    parameters=params,
-                    status=ExecutionState.PENDING,
-                )
-                sm.put(execution)
-                executions.append(execution)
-                group.executions.append(execution)
+                try:
+                    execution = models.Execution(
+                        workflow_id=workflow_id,
+                        deployment=dep,
+                        parameters=params,
+                        status=ExecutionState.PENDING,
+                    )
+                except NonexistentWorkflowError as ex:
+                    log = models.Log(
+                        reported_timestamp=datetime.utcnow(),
+                        message=str(ex),
+                        logger='cloudify-restservice',
+                        level='info',
+                        execution_group=group
+                    )
+                    sm.put(log)
+                else:
+                    sm.put(execution)
+                    executions.append(execution)
+                    group.executions.append(execution)
 
         amqp_client = get_amqp_client()
         handler = workflow_sendhandler()
