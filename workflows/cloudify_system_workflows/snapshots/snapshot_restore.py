@@ -53,6 +53,7 @@ from .constants import (
     V_4_4_0,
     V_4_6_0,
     V_5_0_5,
+    V_5_2_0,
     SECURITY_FILE_LOCATION,
     SECURITY_FILENAME,
     REST_AUTHORIZATION_CONFIG_PATH,
@@ -132,6 +133,7 @@ class SnapshotRestore(object):
                 self._restore_scheduled_executions()
                 self._restore_inter_deployment_dependencies()
                 self._update_roles_and_permissions()
+                self._update_blueprint_statuses()
                 self._update_node_instance_indices()
 
             if self._restore_certificates:
@@ -224,6 +226,17 @@ class SnapshotRestore(object):
         ctx.logger.info('Updating roles and permissions')
         if os.path.exists(REST_AUTHORIZATION_CONFIG_PATH):
             utils.run(['/opt/manager/scripts/load_permissions.py'])
+
+    def _update_blueprint_statuses(self):
+        ctx.logger.info('Updating blueprint statuses.')
+        if self._snapshot_version < V_5_2_0:
+            dir_path = os.path.dirname(os.path.realpath(__file__))
+            scrip_path = os.path.join(
+                dir_path,
+                'populate_blueprint_statuses.py'
+            )
+            command = [MANAGER_PYTHON, scrip_path, self._tempdir]
+            utils.run(command)
 
     def _update_node_instance_indices(self):
         ctx.logger.info('Updating node indices.')
