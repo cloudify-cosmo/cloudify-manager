@@ -647,7 +647,9 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
                 continue
             dependencies = self.sm.list(
                 models.DeploymentLabelsDependencies,
-                filters={'source_deployment_id': v})
+                filters={'source_deployment_id': v},
+                get_all_results=True
+            )
 
             for dependency in dependencies:
                 if dependency.target_deployment_id in inv_graph[v]:
@@ -785,7 +787,8 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
                 continue
             from_dependencies = self.sm.list(
                 models.DeploymentLabelsDependencies,
-                filters={'target_deployment_id': v}
+                filters={'target_deployment_id': v},
+                get_all_results=True
             )
             if not from_dependencies:
                 continue
@@ -822,7 +825,8 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
                 continue
             from_dependencies = self.sm.list(
                 models.DeploymentLabelsDependencies,
-                filters={'target_deployment_id': v}
+                filters={'target_deployment_id': v},
+                get_all_results=True
             )
             if not from_dependencies:
                 continue
