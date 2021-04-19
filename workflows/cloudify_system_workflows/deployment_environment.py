@@ -271,3 +271,19 @@ def _get_external_clients(nodes: list, manager_ips: list):
 
     return external_client, client_config, \
         target_deployment.get('id') if target_deployment else None
+
+
+@workflow
+def update_deployment(ctx, **kwargs):
+    """Run an update on this deployment. Any kwargs are passed to the update.
+
+    This exposes deployment update creation as a workflow on the deployment.
+    """
+    client = get_rest_client(tenant=ctx.tenant_name)
+    deployment_update = \
+        client.deployment_updates.update_with_existing_blueprint(
+            deployment_id=ctx.deployment.id,
+            **kwargs
+        )
+    ctx.logger.info('Started update of deployment %s: %s',
+                    ctx.deployment.id, deployment_update.id)

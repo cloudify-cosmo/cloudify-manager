@@ -967,7 +967,10 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             'delete_deployment_environment':
                 'cloudify_system_workflows.deployment_environment.delete',
             'update_plugin': 'cloudify_system_workflows.plugins.update',
-            'upload_blueprint': 'cloudify_system_workflows.blueprint.upload'
+            'upload_blueprint': 'cloudify_system_workflows.blueprint.upload',
+            'update_deployment':
+            'cloudify_system_workflows.deployment_environment.'
+            'update_deployment'
         }.get(wf_id)
 
     def get_workflow(self, deployment=None, workflow_id=None):
