@@ -538,6 +538,28 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         dep3 = self.client.deployments.get('dep3')
         self.assert_resource_labels(dep3.labels, labels)
 
+    def test_add_labels_deployments_added_twice(self):
+        """Add a deployment twice, in two ways, to a group with labels.
+
+        Only adds the labels once to the deployment.
+        """
+        labels = [{'label1': 'value1'}]
+        self.client.deployment_groups.put(
+            'group1',
+            labels=labels,
+        )
+        self.client.deployment_groups.put(
+            'group2',
+            deployment_ids=['dep1']
+        )
+        self.client.deployment_groups.put(
+            'group1',
+            deployments_from_group=['group2'],  # dep1
+            deployment_ids=['dep1'],
+        )
+        dep1 = self.client.deployments.get('dep1')
+        self.assert_resource_labels(dep1.labels, labels)
+
     def test_add_invalid_label_parent(self):
         error_message = 'using label `csys-obj-parent` that does not exist'
         self.client.deployment_groups.put(
