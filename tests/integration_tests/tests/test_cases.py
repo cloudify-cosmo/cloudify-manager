@@ -339,19 +339,28 @@ class BaseTestCase(unittest.TestCase):
         node_instance = self.client.node_instances.get(node_id)
         return node_instance['state'] == 'started'
 
-    def wait_for_execution_to_end(
-            self, execution, timeout_seconds=240, client=None):
+    def wait_for_execution_to_end(self, execution, is_group=False,
+                                  timeout_seconds=240, client=None):
         client = client or self.client
+        if is_group:
+            get = client.execution_groups.get
+        else:
+            get = client.executions.get
         deadline = time.time() + timeout_seconds
         while execution.status not in Execution.END_STATES:
-            assert execution.ended_at is None
+            if not is_group:
+                assert execution.ended_at is None
             time.sleep(0.5)
-            execution = client.executions.get(execution.id)
+            execution = get(execution.id)
             if time.time() > deadline:
                 raise utils.TimeoutException(
                     'Execution timed out: \n{0}'
                     .format(json.dumps(execution, indent=2)))
         if execution.status == Execution.FAILED:
+            if is_group:
+                # no .error in exec-groups
+                raise RuntimeError(
+                    'Group execution failed: {0}'.format(execution.status))
             raise RuntimeError(
                 'Workflow execution failed: {0} [{1}]'.format(
                     execution.error,

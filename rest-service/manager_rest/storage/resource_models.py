@@ -967,22 +967,26 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             'delete_deployment_environment':
                 'cloudify_system_workflows.deployment_environment.delete',
             'update_plugin': 'cloudify_system_workflows.plugins.update',
-            'upload_blueprint': 'cloudify_system_workflows.blueprint.upload'
+            'upload_blueprint': 'cloudify_system_workflows.blueprint.upload',
+            'csys_update_deployment':
+                'cloudify_system_workflows.deployment_environment.'
+                'update_deployment'
         }.get(wf_id)
 
     def get_workflow(self, deployment=None, workflow_id=None):
         deployment = deployment or self.deployment
         workflow_id = workflow_id or self.workflow_id
+
+        if deployment and deployment.workflows\
+                and workflow_id in deployment.workflows:
+            return deployment.workflows[workflow_id]
         system_task_name = self._system_workflow_task_name(workflow_id)
         if system_task_name:
             self.allow_custom_parameters = True
             return {'operation': system_task_name}
-        try:
-            return deployment.workflows[workflow_id]
-        except KeyError:
-            raise manager_exceptions.NonexistentWorkflowError(
-                f'Workflow {workflow_id} does not exist in the '
-                f'deployment {deployment.id}') from None
+        raise manager_exceptions.NonexistentWorkflowError(
+            f'Workflow {workflow_id} does not exist in the '
+            f'deployment {deployment.id}')
 
     def merge_workflow_parameters(self, parameters, deployment, workflow_id):
         if not deployment.workflows:
