@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.sql import table, column
 
-from cloudify.models_states import VisibilityState
+from cloudify.models_states import VisibilityState, BlueprintUploadState
 from manager_rest.storage.models_base import JSONString, UTCDateTime
 
 # revision identifiers, used by Alembic.
@@ -110,6 +110,8 @@ def upgrade_blueprints_table():
     op.alter_column('blueprints', 'plan',
                     existing_type=postgresql.BYTEA(),
                     nullable=True)
+    op.execute(
+        f"update blueprints set state='{BlueprintUploadState.UPLOADED}'")
 
 
 def downgrade_blueprints_table():
