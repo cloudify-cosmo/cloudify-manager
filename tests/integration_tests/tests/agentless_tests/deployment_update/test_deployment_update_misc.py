@@ -570,3 +570,39 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
         self.assertEqual(len(deployment_update_list), len(undel_depups_ids))
         for i in deployment_update_list.items:
             self.assertIn(i['id'], undel_depups_ids)
+
+    def test_update_group(self):
+        self.upload_blueprint_resource(
+            'dsl/deployment_update/add_description/base/'
+            'add_description_base.yaml',
+            'bp1'
+        )
+        self.upload_blueprint_resource(
+            'dsl/deployment_update/add_description/modification/'
+            'add_description_modification.yaml',
+            'bp2'
+        )
+        group = self.client.deployment_groups.put(
+            'g1',
+            blueprint_id='bp1',
+            new_deployments=[{}] * 5
+        )
+        self.assertEqual(len(group.deployment_ids), 5)
+        create_dep_env_group = self.client.execution_groups.list(
+            deployment_group_id='g1',
+            workflow_id='create_deployment_environment'
+        )[0]
+        self.wait_for_execution_to_end(create_dep_env_group, is_group=True)
+        update_group = self.client.execution_groups.start(
+            deployment_group_id='g1',
+            workflow_id='csys_update_deployment',
+            default_parameters={
+                'blueprint_id': 'bp2',
+            }
+        )
+        self.wait_for_execution_to_end(update_group, is_group=True)
+        update_group = self.client.execution_groups.get(update_group['id'])
+        self.assertEqual(len(update_group.execution_ids), 10)
+        for deployment_id in group.deployment_ids:
+            dep = self.client.deployments.get(deployment_id)
+            self.assertIn('description', dep.description)
