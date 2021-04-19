@@ -976,16 +976,17 @@ class Execution(CreatedAtMixin, SQLResourceBase):
     def get_workflow(self, deployment=None, workflow_id=None):
         deployment = deployment or self.deployment
         workflow_id = workflow_id or self.workflow_id
+
+        if deployment and deployment.workflows\
+                and workflow_id in deployment.workflows:
+            return deployment.workflows[workflow_id]
         system_task_name = self._system_workflow_task_name(workflow_id)
         if system_task_name:
             self.allow_custom_parameters = True
             return {'operation': system_task_name}
-        try:
-            return deployment.workflows[workflow_id]
-        except KeyError:
-            raise manager_exceptions.NonexistentWorkflowError(
-                f'Workflow {workflow_id} does not exist in the '
-                f'deployment {deployment.id}') from None
+        raise manager_exceptions.NonexistentWorkflowError(
+            f'Workflow {workflow_id} does not exist in the '
+            f'deployment {deployment.id}')
 
     def merge_workflow_parameters(self, parameters, deployment, workflow_id):
         if not deployment.workflows:
