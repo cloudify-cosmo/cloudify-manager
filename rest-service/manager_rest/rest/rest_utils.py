@@ -637,7 +637,8 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
         """
         inv_graph = self._get_inverted_graph()
         # BFS to find deployments
-        queue = source_ids
+        _source_ids = source_ids.copy()
+        queue = _source_ids
         results = []
         visited = defaultdict(bool)
         while queue:
@@ -646,7 +647,9 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
                 continue
             dependencies = self.sm.list(
                 models.DeploymentLabelsDependencies,
-                filters={'source_deployment_id': v})
+                filters={'source_deployment_id': v},
+                get_all_results=True
+            )
 
             for dependency in dependencies:
                 if dependency.target_deployment_id in inv_graph[v]:
@@ -656,42 +659,41 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
                         visited[dependency.target_deployment_id] = True
         return results
 
-    def increase_deployment_counts_in_graph(self, target_id, source):
+    def increase_deployment_counts_in_graph(self,
+                                            target_ids,
+                                            total_services,
+                                            total_environments):
         """
         Increase the deployment counts for target deployment that is
         referenced directly by the `source` deployment and then make sure to
         propagate that increase to all deployment that are referenced
         directly and indirectly by `target` deployment
-        :param target_id: Target Deployment ID that we need to attach
+        :param target_ids: Target Deployment ID that we need to attach
         source to
-        :rtype str
-        :param source: Source deployment that reference target deployment
-        :rtype Deployment
+        :rtype list
+        :param total_services: Total number of services to add
+        :rtype int
+        :param total_environments: Total number of environments to add
+        :rtype int
         """
-        total_services = source.sub_services_count
-        total_environments = source.sub_environments_count
-        if source.is_environment:
-            total_environments += 1
-        else:
-            total_services += 1
-        target_group = [target_id] + self.find_recursive_deployments(
-            [target_id]
-        )
+        target_group = target_ids + self.find_recursive_deployments(target_ids)
         for target_id in target_group:
             if total_services or total_environments:
-                with self.sm.transaction():
-                    target = self.sm.get(
-                        models.Deployment,
-                        target_id,
-                        locking=True,
-                        fail_silently=True
-                    )
-                    if target:
-                        target.sub_services_count += total_services
-                        target.sub_environments_count += total_environments
-                        self.sm.update(target)
+                target = self.sm.get(
+                    models.Deployment,
+                    target_id,
+                    locking=True,
+                    fail_silently=True
+                )
+                if target:
+                    target.sub_services_count += total_services
+                    target.sub_environments_count += total_environments
+                    self.sm.update(target)
 
-    def decrease_deployment_counts_in_graph(self, target_ids, source):
+    def decrease_deployment_counts_in_graph(self,
+                                            target_ids,
+                                            total_services,
+                                            total_environments):
         """
         Decrease the counter for each deployment that is referenced
         directly and indirectly by `source` deployment and the counts that
@@ -699,33 +701,29 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
         & `sub_services_count`
         :param target_ids: Target Deployment IDs that we need to de-attach
         source from
-        :rtype str
-        :param source: Deployment instance
-        :rtype Deployment
+        :rtype list
+        :param total_services: Total number of services to remove
+        :rtype int
+        :param total_environments: Total number of environments to remove
+        :rtype int
         """
-        _targets = target_ids.copy()
-        target_group = target_ids + self.find_recursive_deployments(_targets)
+        target_group = target_ids + self.find_recursive_deployments(
+            target_ids
+        )
         if target_group:
-            total_services = source.sub_services_count
-            total_environments = source.sub_environments_count
-            if source.is_environment:
-                total_environments += 1
-            else:
-                total_services += 1
             for target_id in target_group:
-                with self.sm.transaction():
-                    target = self.sm.get(
-                        models.Deployment,
-                        target_id,
-                        locking=True,
-                        fail_silently=True
-                    )
-                    if target:
-                        if target.sub_services_count:
-                            target.sub_services_count -= total_services
-                        if target.sub_environments_count:
-                            target.sub_environments_count -= total_environments
-                        self.sm.update(target)
+                target = self.sm.get(
+                    models.Deployment,
+                    target_id,
+                    locking=True,
+                    fail_silently=True
+                )
+                if target:
+                    if target.sub_services_count:
+                        target.sub_services_count -= total_services
+                    if target.sub_environments_count:
+                        target.sub_environments_count -= total_environments
+                    self.sm.update(target)
 
     def update_deployment_counts_after_source_conversion(self,
                                                          source,
@@ -750,15 +748,14 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
 
         target_group = self.find_recursive_deployments([source.id])
         for target_id in target_group:
-            with self.sm.transaction():
-                target = self.sm.get(
-                    models.Deployment,
-                    target_id,
-                    locking=True
-                )
-                target.sub_services_count += srv_to_update
-                target.sub_environments_count += env_to_update
-                self.sm.update(target)
+            target = self.sm.get(
+                models.Deployment,
+                target_id,
+                locking=True
+            )
+            target.sub_services_count += srv_to_update
+            target.sub_environments_count += env_to_update
+            self.sm.update(target)
 
     def propagate_deployment_statuses(self, source_id):
         """
@@ -790,7 +787,8 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
                 continue
             from_dependencies = self.sm.list(
                 models.DeploymentLabelsDependencies,
-                filters={'target_deployment_id': v}
+                filters={'target_deployment_id': v},
+                get_all_results=True
             )
             if not from_dependencies:
                 continue
@@ -827,7 +825,8 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
                 continue
             from_dependencies = self.sm.list(
                 models.DeploymentLabelsDependencies,
-                filters={'target_deployment_id': v}
+                filters={'target_deployment_id': v},
+                get_all_results=True
             )
             if not from_dependencies:
                 continue
