@@ -31,7 +31,8 @@ from manager_rest.deployment_update.utils import extract_ids
 from manager_rest.deployment_update.validator import StepValidator
 from manager_rest.storage import (get_storage_manager,
                                   models,
-                                  get_read_only_storage_manager)
+                                  get_read_only_storage_manager,
+                                  db)
 from manager_rest.deployment_update.constants import (
     STATES,
     ENTITY_TYPES,
@@ -53,6 +54,7 @@ from manager_rest.rest.rest_utils import (
     RecursiveDeploymentLabelsDependencies,
     verify_blueprint_uploaded_state,
 )
+from manager_rest.execution_token import current_execution
 
 
 class DeploymentUpdateManager(object):
@@ -695,6 +697,13 @@ class DeploymentUpdateManager(object):
             status=ExecutionState.PENDING,
         )
         self.sm.put(execution)
+        if current_execution and \
+                current_execution.workflow_id == 'csys_update_deployment':
+            # if we're created from a update_deployment workflow, join its
+            # exec-groups, for easy tracking
+            for exec_group in current_execution.execution_groups:
+                exec_group.executions.append(execution)
+            db.session.commit()
         return get_resource_manager().execute_workflow(
             execution,
             allow_overlapping_running_wf=True,
