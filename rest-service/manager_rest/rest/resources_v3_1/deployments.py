@@ -916,50 +916,40 @@ class DeploymentGroupsId(SecuredResource):
 
     def _add_group_deployments(self, sm, group, request_dict):
         rm = get_resource_manager()
-        graph = rest_utils.RecursiveDeploymentLabelsDependencies(sm)
-        all_deployments = set()
-        new_labels = set()
+        deployments_to_add = set()
+
         deployment_ids = request_dict.get('deployment_ids')
         if deployment_ids is not None:
-            deployments = [sm.get(models.Deployment, dep_id)
-                           for dep_id in deployment_ids]
-            labels_to_add, _target_deployments = \
-                self._process_labels_after_adding_deployments_to_group(
-                    sm, rm, graph, group, deployments
-                )
-            new_labels |= labels_to_add
-            all_deployments |= _target_deployments
+            deployments_to_add |= {
+                sm.get(models.Deployment, dep_id) for dep_id in deployment_ids
+            }
 
         filter_id = request_dict.get('filter_id')
         if filter_id is not None:
-            deployments = sm.list(
+            deployments_to_add |= set(sm.list(
                 models.Deployment,
                 filter_rules=get_filter_rules_from_filter_id(
                     filter_id, models.DeploymentsFilter)
-            )
-            labels_to_add, _target_deployments = \
-                self._process_labels_after_adding_deployments_to_group(
-                    sm, rm, graph, group, deployments
-                )
-            new_labels |= labels_to_add
-            all_deployments |= _target_deployments
+            ).items)
 
         add_group = request_dict.get('deployments_from_group')
         if add_group:
             group_to_clone = sm.get(models.DeploymentGroup, add_group)
-            labels_to_add, _target_deployments = \
-                self._process_labels_after_adding_deployments_to_group(
-                    sm, rm, graph, group, group_to_clone.deployments
-                )
-            new_labels |= labels_to_add
-            all_deployments |= _target_deployments
+            deployments_to_add |= set(group_to_clone.deployments)
 
-        if all_deployments and new_labels:
-            parents = rm.get_deployment_parents_from_labels(new_labels)
-            if parents:
-                self._add_parents_to_deployments_group(
-                    graph, all_deployments, parents
+        if deployments_to_add:
+            graph = rest_utils.RecursiveDeploymentLabelsDependencies(sm)
+            new_labels, target_deployments = \
+                self._process_labels_after_adding_deployments_to_group(
+                    sm, rm, graph, group, deployments_to_add
                 )
+
+            if target_deployments and new_labels:
+                parents = rm.get_deployment_parents_from_labels(new_labels)
+                if parents:
+                    self._add_parents_to_deployments_group(
+                        graph, target_deployments, parents
+                    )
 
     def _create_new_deployments(self, sm, group, request_dict):
         """Create new deployments for the group based on new_deployments"""
