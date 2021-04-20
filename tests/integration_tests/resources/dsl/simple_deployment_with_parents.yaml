@@ -1,0 +1,14 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+- cloudify/types/types.yaml
+
+labels:
+  csys-obj-parent:
+    values:
+      - new_parent_1
+      - new_parent_2
+
+node_templates:
+  simple_node:
+    type: cloudify.nodes.Root
