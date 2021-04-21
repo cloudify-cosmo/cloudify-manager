@@ -14,6 +14,7 @@
 #  * limitations under the License.
 
 import os
+import re
 import uuid
 import yaml
 import json
@@ -347,7 +348,8 @@ class ResourceManager(object):
                         f"to '{execution.status}'",
             )
             if execution.error:
-                event.message += f" with error '{execution.error}'"
+                event.message += " with error '{0}'".format(
+                    _retrieve_error(execution.error))
             self.sm.put(event)
 
     @staticmethod
@@ -2647,3 +2649,8 @@ def add_to_dict_values(dictionary, key, value):
         dictionary[key].append(value)
         return
     dictionary[key] = [value]
+
+
+def _retrieve_error(traceback: str) -> str:
+    return re.sub(r'^Traceback.+\nRuntimeError:\s*', '', traceback,
+                  flags=re.MULTILINE | re.DOTALL).strip()
