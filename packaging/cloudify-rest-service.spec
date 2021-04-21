@@ -105,6 +105,7 @@ if [ -f "%{_localstatedir}/lib/rpm-state/cloudify-upgraded" ]; then
     fi
 
     /opt/manager/env/bin/python -m manager_rest.update_rest_db_config --commit
+    /opt/manager/env/bin/python -m manager_rest.update_managers_version {CLOUDIFY_VERSION}
     pushd /opt/manager/resources/cloudify/migrations
         /opt/manager/env/bin/alembic upgrade head
         CURRENT_DB=$(/opt/manager/env/bin/alembic current)
