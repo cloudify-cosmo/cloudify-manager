@@ -137,18 +137,6 @@ class DeploymentParentNotFound(ManagerException):
         )
 
 
-class InvalidCSYSEnvironmentInput(ManagerException):
-    INVALID_CSYS_ENV_ERROR_CODE = 'invalid_csys_environment_error'
-
-    def __init__(self, *args, **kwargs):
-        super(InvalidCSYSEnvironmentInput, self).__init__(
-            400,
-            InvalidCSYSEnvironmentInput.INVALID_CSYS_ENV_ERROR_CODE,
-            *args,
-            **kwargs
-        )
-
-
 class NonexistentWorkflowError(ManagerException):
     NONEXISTENT_WORKFLOW_ERROR_CODE = 'nonexistent_workflow_error'
 
