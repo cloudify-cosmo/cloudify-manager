@@ -624,7 +624,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         target_key = 'csys-obj-type'
         target_value = 'environment'
         for label in self.labels:
-            if label.key == target_key and label.value.lower() == target_value:
+            if label.key == target_key and label.value == target_value:
                 return True
         return False
 
