@@ -2,6 +2,8 @@ import time
 
 import pytest
 
+from retrying import retry
+
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 
@@ -68,6 +70,24 @@ class EnvironmentTest(AgentlessTestCase):
         )
         self.assertEqual(
             deployment.sub_environments_count,
+            sub_environments_count
+        )
+
+    @retry(wait_fixed=3000, stop_max_attempt_number=3)
+    def _verify_statuses_and_count_for_deployment(self,
+                                                  deployment_id,
+                                                  deployment_status,
+                                                  sub_services_status=None,
+                                                  sub_environments_status=None,
+                                                  sub_services_count=0,
+                                                  sub_environments_count=0):
+        deployment = self.client.deployments.get(deployment_id)
+        self._assert_deployment_environment_attr(
+            deployment,
+            deployment_status,
+            sub_services_status,
+            sub_environments_status,
+            sub_services_count,
             sub_environments_count
         )
 
@@ -240,10 +260,8 @@ class EnvironmentTest(AgentlessTestCase):
             'dsl/simple_deployment.yaml',
             'service'
         )
-        time.sleep(3)
-        environment = self.client.deployments.get(environment.id)
-        self._assert_deployment_environment_attr(
-            environment,
+        self._verify_statuses_and_count_for_deployment(
+            environment.id,
             deployment_status=DeploymentState.REQUIRE_ATTENTION,
             sub_services_status=DeploymentState.REQUIRE_ATTENTION,
             sub_services_count=1
@@ -264,10 +282,8 @@ class EnvironmentTest(AgentlessTestCase):
             'dsl/empty_blueprint.yaml',
             'service'
         )
-        time.sleep(3)
-        environment = self.client.deployments.get(environment.id)
-        self._assert_deployment_environment_attr(
-            environment,
+        self._verify_statuses_and_count_for_deployment(
+            environment.id,
             deployment_status=DeploymentState.REQUIRE_ATTENTION,
             sub_services_status=DeploymentState.REQUIRE_ATTENTION,
             sub_services_count=2
@@ -284,10 +300,8 @@ class EnvironmentTest(AgentlessTestCase):
             'service',
             install=True
         )
-        time.sleep(3)
-        environment = self.client.deployments.get(environment.id)
-        self._assert_deployment_environment_attr(
-            environment,
+        self._verify_statuses_and_count_for_deployment(
+            environment.id,
             deployment_status=DeploymentState.GOOD,
             sub_services_status=DeploymentState.GOOD,
             sub_services_count=1
@@ -310,10 +324,8 @@ class EnvironmentTest(AgentlessTestCase):
             'service',
             install=True
         )
-        time.sleep(3)
-        environment = self.client.deployments.get(environment.id)
-        self._assert_deployment_environment_attr(
-            environment,
+        self._verify_statuses_and_count_for_deployment(
+            environment.id,
             deployment_status=DeploymentState.GOOD,
             sub_services_status=DeploymentState.GOOD,
             sub_services_count=2
@@ -341,10 +353,8 @@ class EnvironmentTest(AgentlessTestCase):
                 },
                 wait_for_execution=True
             )
-        time.sleep(3)
-        environment = self.client.deployments.get(environment.id)
-        self._assert_deployment_environment_attr(
-            environment,
+        self._verify_statuses_and_count_for_deployment(
+            environment.id,
             deployment_status=DeploymentState.REQUIRE_ATTENTION,
             sub_services_status=DeploymentState.REQUIRE_ATTENTION,
             sub_services_count=1
@@ -379,10 +389,8 @@ class EnvironmentTest(AgentlessTestCase):
                 },
                 wait_for_execution=True
             )
-        time.sleep(3)
-        environment = self.client.deployments.get(environment.id)
-        self._assert_deployment_environment_attr(
-            environment,
+        self._verify_statuses_and_count_for_deployment(
+            environment.id,
             deployment_status=DeploymentState.REQUIRE_ATTENTION,
             sub_services_status=DeploymentState.REQUIRE_ATTENTION,
             sub_services_count=2
@@ -398,10 +406,8 @@ class EnvironmentTest(AgentlessTestCase):
             'dsl/simple_deployment.yaml',
             'environment'
         )
-        time.sleep(3)
-        environment = self.client.deployments.get(environment.id)
-        self._assert_deployment_environment_attr(
-            environment,
+        self._verify_statuses_and_count_for_deployment(
+            environment.id,
             deployment_status=DeploymentState.REQUIRE_ATTENTION,
             sub_environments_status=DeploymentState.REQUIRE_ATTENTION,
             sub_environments_count=1
@@ -422,10 +428,8 @@ class EnvironmentTest(AgentlessTestCase):
             'dsl/empty_blueprint.yaml',
             'environment'
         )
-        time.sleep(3)
-        environment = self.client.deployments.get(environment.id)
-        self._assert_deployment_environment_attr(
-            environment,
+        self._verify_statuses_and_count_for_deployment(
+            environment.id,
             deployment_status=DeploymentState.REQUIRE_ATTENTION,
             sub_environments_status=DeploymentState.REQUIRE_ATTENTION,
             sub_environments_count=2
@@ -442,10 +446,8 @@ class EnvironmentTest(AgentlessTestCase):
             'environment',
             install=True
         )
-        time.sleep(3)
-        environment = self.client.deployments.get(environment.id)
-        self._assert_deployment_environment_attr(
-            environment,
+        self._verify_statuses_and_count_for_deployment(
+            environment.id,
             deployment_status=DeploymentState.GOOD,
             sub_environments_status=DeploymentState.GOOD,
             sub_environments_count=1
@@ -468,10 +470,8 @@ class EnvironmentTest(AgentlessTestCase):
             'environment',
             install=True
         )
-        time.sleep(3)
-        environment = self.client.deployments.get(environment.id)
-        self._assert_deployment_environment_attr(
-            environment,
+        self._verify_statuses_and_count_for_deployment(
+            environment.id,
             deployment_status=DeploymentState.GOOD,
             sub_environments_status=DeploymentState.GOOD,
             sub_environments_count=2
@@ -499,10 +499,8 @@ class EnvironmentTest(AgentlessTestCase):
                 },
                 wait_for_execution=True
             )
-        time.sleep(3)
-        environment = self.client.deployments.get(environment.id)
-        self._assert_deployment_environment_attr(
-            environment,
+        self._verify_statuses_and_count_for_deployment(
+            environment.id,
             deployment_status=DeploymentState.REQUIRE_ATTENTION,
             sub_environments_status=DeploymentState.REQUIRE_ATTENTION,
             sub_environments_count=1
@@ -537,10 +535,8 @@ class EnvironmentTest(AgentlessTestCase):
                 },
                 wait_for_execution=True
             )
-        time.sleep(3)
-        environment = self.client.deployments.get(environment.id)
-        self._assert_deployment_environment_attr(
-            environment,
+        self._verify_statuses_and_count_for_deployment(
+            environment.id,
             deployment_status=DeploymentState.REQUIRE_ATTENTION,
             sub_environments_status=DeploymentState.REQUIRE_ATTENTION,
             sub_environments_count=2
@@ -564,10 +560,8 @@ class EnvironmentTest(AgentlessTestCase):
             'service',
             install=True
         )
-        time.sleep(3)
-        environment = self.client.deployments.get(environment.id)
-        self._assert_deployment_environment_attr(
-            environment,
+        self._verify_statuses_and_count_for_deployment(
+            environment.id,
             deployment_status=DeploymentState.GOOD,
             sub_environments_status=DeploymentState.GOOD,
             sub_services_status=DeploymentState.GOOD,
@@ -593,10 +587,8 @@ class EnvironmentTest(AgentlessTestCase):
             sub_services_count=1
         )
         self.delete_deployment(deployment.id, validate=True)
-        time.sleep(3)
-        environment = self.client.deployments.get(environment.id)
-        self._assert_deployment_environment_attr(
-            environment,
+        self._verify_statuses_and_count_for_deployment(
+            environment.id,
             deployment_status=DeploymentState.GOOD,
             sub_services_count=0
         )
@@ -622,10 +614,8 @@ class EnvironmentTest(AgentlessTestCase):
         self.execute_workflow(workflow_name='uninstall',
                               deployment_id=deployment.id,
                               wait_for_execution=True)
-        time.sleep(3)
-        environment = self.client.deployments.get(environment.id)
-        self._assert_deployment_environment_attr(
-            environment,
+        self._verify_statuses_and_count_for_deployment(
+            environment.id,
             deployment_status=DeploymentState.REQUIRE_ATTENTION,
             sub_services_status=DeploymentState.REQUIRE_ATTENTION,
             sub_services_count=1
@@ -649,10 +639,8 @@ class EnvironmentTest(AgentlessTestCase):
             sub_environments_count=1
         )
         self.delete_deployment(deployment.id, validate=True)
-        time.sleep(3)
-        environment = self.client.deployments.get(environment.id)
-        self._assert_deployment_environment_attr(
-            environment,
+        self._verify_statuses_and_count_for_deployment(
+            environment.id,
             deployment_status=DeploymentState.GOOD,
             sub_environments_count=0
         )
@@ -668,10 +656,8 @@ class EnvironmentTest(AgentlessTestCase):
             'environment',
             install=True
         )
-        time.sleep(3)
-        environment = self.client.deployments.get(environment.id)
-        self._assert_deployment_environment_attr(
-            environment,
+        self._verify_statuses_and_count_for_deployment(
+            environment.id,
             deployment_status=DeploymentState.GOOD,
             sub_environments_status=DeploymentState.GOOD,
             sub_environments_count=1
@@ -679,10 +665,8 @@ class EnvironmentTest(AgentlessTestCase):
         self.execute_workflow(workflow_name='uninstall',
                               deployment_id=deployment.id,
                               wait_for_execution=True)
-        time.sleep(3)
-        environment = self.client.deployments.get(environment.id)
-        self._assert_deployment_environment_attr(
-            environment,
+        self._verify_statuses_and_count_for_deployment(
+            environment.id,
             deployment_status=DeploymentState.REQUIRE_ATTENTION,
             sub_environments_status=DeploymentState.REQUIRE_ATTENTION,
             sub_environments_count=1
@@ -733,17 +717,14 @@ class EnvironmentTest(AgentlessTestCase):
             deployment.id,
             blueprint_id='updated-blueprint'
         )
-        time.sleep(3)
-        environment_1 = self.client.deployments.get(environment_1.id)
-        environment_2 = self.client.deployments.get(environment_2.id)
-        self._assert_deployment_environment_attr(
-            environment_1,
+        self._verify_statuses_and_count_for_deployment(
+            environment_1.id,
             deployment_status=DeploymentState.GOOD,
             sub_services_status=DeploymentState.GOOD,
             sub_services_count=1
         )
-        self._assert_deployment_environment_attr(
-            environment_2,
+        self._verify_statuses_and_count_for_deployment(
+            environment_2.id,
             deployment_status=DeploymentState.GOOD,
             sub_services_status=DeploymentState.GOOD,
             sub_services_count=1
@@ -784,10 +765,8 @@ class EnvironmentTest(AgentlessTestCase):
             main_environment.id, DeploymentState.GOOD
         )
         self._deploy_environment_with_two_levels(main_environment)
-        time.sleep(3)
-        main_environment = self.client.deployments.get(main_environment.id)
-        self._assert_deployment_environment_attr(
-            main_environment,
+        self._verify_statuses_and_count_for_deployment(
+            main_environment.id,
             deployment_status=DeploymentState.GOOD,
             sub_environments_status=DeploymentState.GOOD,
             sub_services_status=DeploymentState.GOOD,
@@ -802,10 +781,8 @@ class EnvironmentTest(AgentlessTestCase):
             main_environment.id, DeploymentState.GOOD
         )
         self._deploy_environment_with_three_levels(main_environment)
-        time.sleep(3)
-        main_environment = self.client.deployments.get(main_environment.id)
-        self._assert_deployment_environment_attr(
-            main_environment,
+        self._verify_statuses_and_count_for_deployment(
+            main_environment.id,
             deployment_status=DeploymentState.GOOD,
             sub_environments_status=DeploymentState.GOOD,
             sub_services_status=DeploymentState.GOOD,
@@ -826,10 +803,8 @@ class EnvironmentTest(AgentlessTestCase):
         self.execute_workflow(workflow_name='uninstall',
                               deployment_id=service.id)
         self.delete_deployment(service.id, validate=True)
-        time.sleep(3)
-        main_environment = self.client.deployments.get(main_environment.id)
-        self._assert_deployment_environment_attr(
-            main_environment,
+        self._verify_statuses_and_count_for_deployment(
+            main_environment.id,
             deployment_status=DeploymentState.GOOD,
             sub_environments_status=DeploymentState.GOOD,
             sub_environments_count=1
@@ -847,10 +822,8 @@ class EnvironmentTest(AgentlessTestCase):
             )
         self.execute_workflow(workflow_name='uninstall',
                               deployment_id=service.id)
-        time.sleep(3)
-        main_environment = self.client.deployments.get(main_environment.id)
-        self._assert_deployment_environment_attr(
-            main_environment,
+        self._verify_statuses_and_count_for_deployment(
+            main_environment.id,
             deployment_status=DeploymentState.REQUIRE_ATTENTION,
             sub_services_status=DeploymentState.REQUIRE_ATTENTION,
             sub_environments_status=DeploymentState.GOOD,
@@ -873,11 +846,8 @@ class EnvironmentTest(AgentlessTestCase):
                 'csys-obj-type': 'environment'
             }
         ])
-        time.sleep(3)
-        main_environment = self.client.deployments.get(main_environment.id)
-        # The deployment status will be good and environment counts will be 0
-        self._assert_deployment_environment_attr(
-            main_environment,
+        self._verify_statuses_and_count_for_deployment(
+            main_environment.id,
             deployment_status=DeploymentState.GOOD,
             sub_services_status=DeploymentState.GOOD,
             sub_services_count=1
@@ -900,11 +870,8 @@ class EnvironmentTest(AgentlessTestCase):
                 'csys-obj-parent': main_environment.id
             },
         ])
-
-        time.sleep(3)
-        main_environment = self.client.deployments.get(main_environment.id)
-        self._assert_deployment_environment_attr(
-            main_environment,
+        self._verify_statuses_and_count_for_deployment(
+            main_environment.id,
             deployment_status=DeploymentState.GOOD,
             sub_services_status=DeploymentState.GOOD,
             sub_services_count=2
@@ -927,10 +894,8 @@ class EnvironmentTest(AgentlessTestCase):
                 'csys-obj-parent': main_environment.id
             },
         ])
-        time.sleep(3)
-        main_environment = self.client.deployments.get(main_environment.id)
-        self._assert_deployment_environment_attr(
-            main_environment,
+        self._verify_statuses_and_count_for_deployment(
+            main_environment.id,
             deployment_status=DeploymentState.GOOD,
             sub_environments_status=DeploymentState.GOOD,
             sub_environments_count=2
@@ -949,10 +914,8 @@ class EnvironmentTest(AgentlessTestCase):
             labels_to_add=[{'csys-obj-parent': main_environment.id}]
         )
         self._execute_workflow_on_group('group1', 'install')
-        time.sleep(3)
-        main_environment = self.client.deployments.get(main_environment.id)
-        self._assert_deployment_environment_attr(
-            main_environment,
+        self._verify_statuses_and_count_for_deployment(
+            main_environment.id,
             deployment_status=DeploymentState.GOOD,
             sub_services_status=DeploymentState.GOOD,
             sub_services_count=4
@@ -976,17 +939,14 @@ class EnvironmentTest(AgentlessTestCase):
                            {'csys-obj-parent': environment2.id}]
         )
         self._execute_workflow_on_group('group1', 'install')
-        time.sleep(3)
-        environment1 = self.client.deployments.get(environment1.id)
-        environment2 = self.client.deployments.get(environment2.id)
-        self._assert_deployment_environment_attr(
-            environment1,
+        self._verify_statuses_and_count_for_deployment(
+            environment1.id,
             deployment_status=DeploymentState.GOOD,
             sub_services_status=DeploymentState.GOOD,
             sub_services_count=4
         )
-        self._assert_deployment_environment_attr(
-            environment2,
+        self._verify_statuses_and_count_for_deployment(
+            environment2.id,
             deployment_status=DeploymentState.GOOD,
             sub_services_status=DeploymentState.GOOD,
             sub_services_count=4
@@ -1005,10 +965,8 @@ class EnvironmentTest(AgentlessTestCase):
             labels_to_add=[{'csys-obj-parent': main_environment.id}]
         )
         self._execute_workflow_on_group('group1', 'install')
-        time.sleep(3)
-        main_environment = self.client.deployments.get(main_environment.id)
-        self._assert_deployment_environment_attr(
-            main_environment,
+        self._verify_statuses_and_count_for_deployment(
+            main_environment.id,
             deployment_status=DeploymentState.GOOD,
             sub_services_status=DeploymentState.GOOD,
             sub_services_count=4
@@ -1033,10 +991,8 @@ class EnvironmentTest(AgentlessTestCase):
             labels_to_add=[{'csys-obj-parent': main_environment.id}]
         )
         self._execute_workflow_on_group('group1', 'install')
-        time.sleep(3)
-        main_environment = self.client.deployments.get(main_environment.id)
-        self._assert_deployment_environment_attr(
-            main_environment,
+        self._verify_statuses_and_count_for_deployment(
+            main_environment.id,
             deployment_status=DeploymentState.GOOD,
             sub_services_status=DeploymentState.GOOD,
             sub_services_count=4
