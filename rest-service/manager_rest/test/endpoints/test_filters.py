@@ -290,23 +290,22 @@ class FiltersBaseCase(base_test.BaseServerTestCase):
             sorted(filter_ids, reverse=True)
         )
 
-    def test_labels_filter_lowers_uppercase(self):
-        simple_rule_uppercase = [
-            FilterRule('A', ['B'], LabelsOperator.ANY_OF, 'label')]
+    def test_uppercase_filter_rules(self):
+        filter_rules = [
+            FilterRule('created_by', ['Joe'], AttrsOperator.ANY_OF,
+                       'attribute'),
+            FilterRule('A', ['B'], LabelsOperator.ANY_OF, 'label')
+        ]
         new_filter = self.create_filter(self.filters_client,
                                         FILTER_ID,
-                                        simple_rule_uppercase)
-        self.assertEqual(new_filter.value, [self.LABELS_RULE])
-
-    def test_attrs_filter_keeps_uppercase(self):
-        simple_rule_uppercase = [FilterRule('created_by', ['Joe'],
-                                            AttrsOperator.ANY_OF, 'attribute')]
-        new_filter = self.create_filter(self.filters_client, FILTER_ID,
-                                        simple_rule_uppercase)
-        self.assertEqual(new_filter.value, [
+                                        filter_rules)
+        expected_filter_rules = [
             {'key': 'created_by', 'values': ['Joe'],
-             'operator': AttrsOperator.ANY_OF, 'type': 'attribute'}
-        ])
+             'operator': AttrsOperator.ANY_OF, 'type': 'attribute'},
+            {'key': 'a', 'values': ['B'],
+             'operator': AttrsOperator.ANY_OF, 'type': 'label'}
+        ]
+        self.assertEqual(new_filter.value, expected_filter_rules)
 
     def test_filter_create_with_invalid_filter_rule_fails(self):
         err_filter_rule = [{'key': 'a', 'values': 'b', 'operator': 'any_of',
