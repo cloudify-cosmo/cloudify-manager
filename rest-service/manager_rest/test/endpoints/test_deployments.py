@@ -29,7 +29,10 @@ from manager_rest.constants import (DEFAULT_TENANT_NAME,
                                     FILE_SERVER_DEPLOYMENTS_FOLDER)
 from manager_rest.rest.filters_utils import FilterRule
 
-from cloudify_rest_client.exceptions import CloudifyClientError
+from cloudify_rest_client.exceptions import (
+    CloudifyClientError,
+    MissingRequiredDeploymentInputError,
+)
 
 
 TEST_PACKAGE_NAME = 'cloudify-script-plugin'
@@ -361,14 +364,14 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                 blueprint_file_name='blueprint_with_inputs.yaml',
                 inputs='illegal'
             )
-        with self.assertRaises(dsl_exceptions.MissingRequiredInputError):
+        with self.assertRaises(MissingRequiredDeploymentInputError):
             self.put_deployment(
                 deployment_id='dep2',
                 blueprint_id='b3344',
                 blueprint_file_name='blueprint_with_inputs.yaml',
                 inputs={'some_input': '1234'}
             )
-        with self.assertRaises(dsl_exceptions.UnknownInputError):
+        with self.assertRaises(CloudifyClientError):
             self.put_deployment(
                 deployment_id='dep2',
                 blueprint_id='b7788',
