@@ -233,23 +233,26 @@ class DeploymentsId(resources_v1.DeploymentsId):
         site_name = _get_site_name(request_dict)
         site = sm.get(models.Site, site_name) if site_name else None
         rm.cleanup_failed_deployment(deployment_id)
-        deployment = rm.create_deployment(
-            blueprint,
-            deployment_id,
-            private_resource=args.private_resource,
-            visibility=visibility,
-            skip_plugins_validation=skip_plugins_validation,
-            site=site,
-            runtime_only_evaluation=request_dict.get(
-                'runtime_only_evaluation', False),
-        )
-        try:
-            rm.execute_workflow(deployment.make_create_environment_execution(
+        with sm.transaction():
+            deployment = rm.create_deployment(
+                blueprint,
+                deployment_id,
+                private_resource=args.private_resource,
+                visibility=visibility,
+                skip_plugins_validation=skip_plugins_validation,
+                site=site,
+                runtime_only_evaluation=request_dict.get(
+                    'runtime_only_evaluation', False),
+            )
+            create_execution = deployment.make_create_environment_execution(
                 inputs=inputs,
                 labels=labels,
                 skip_plugins_validation=skip_plugins_validation,
 
-            ), bypass_maintenance=bypass_maintenance)
+            )
+        try:
+            rm.execute_workflow(
+                create_execution, bypass_maintenance=bypass_maintenance)
         except manager_exceptions.ExistingRunningExecutionError:
             rm.delete_deployment(deployment)
             raise
