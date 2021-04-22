@@ -337,18 +337,6 @@ class DeploymentUpdatesTestCase(DeploymentUpdatesBase):
         with self.assertRaisesRegex(CloudifyClientError, error_message):
             self._update('child', 'invalid_one_label.yaml')
 
-    def test_add_csys_environment_input(self):
-        self.put_deployment(deployment_id='parent', blueprint_id='parent')
-        self._deploy_base('child', 'one_node.yaml')
-        self._update(
-            'child',
-            'one_csys_input.yaml',
-            inputs={'csys-environment': 'parent'}
-        )
-        updated_deployment = \
-            self.client.deployments.get(deployment_id='parent')
-        self.assertEqual(updated_deployment.sub_services_count, 1)
-
 
 @mark.skip
 class DeploymentUpdatesStepAndStageTestCase(base_test.BaseServerTestCase):
