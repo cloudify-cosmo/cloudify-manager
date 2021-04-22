@@ -104,6 +104,8 @@ if [ -f "%{_localstatedir}/lib/rpm-state/cloudify-upgraded" ]; then
         systemctl stop haproxy && systemctl disable haproxy || true
     fi
 
+    MANAGER_REST_CONFIG_PATH=%{buildroot}/opt/manager/cloudify-rest.conf
+
     /opt/manager/env/bin/python -m manager_rest.update_rest_db_config --commit
     /opt/manager/env/bin/python -m manager_rest.update_managers_version {CLOUDIFY_VERSION}
     pushd /opt/manager/resources/cloudify/migrations
