@@ -636,12 +636,21 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                 parents.append(label.value)
         return parents
 
-    def make_create_environment_execution(self, **params):
+    def make_create_environment_execution(self, inputs=None, **params):
+        if inputs is not None:
+            if self.blueprint and self.blueprint.plan:
+                allowed_inputs = set(self.blueprint.plan.get('inputs', {}))
+                undeclared_inputs = set(inputs) - allowed_inputs
+                if undeclared_inputs:
+                    raise manager_exceptions.ConflictError(
+                        f'Cannot create deployment - unknown inputs: '
+                        f'{ ", ".join(undeclared_inputs) }'
+                    )
         self.create_execution = Execution(
             workflow_id='create_deployment_environment',
             deployment=self,
             status=ExecutionState.PENDING,
-            parameters=params,
+            parameters={'inputs': inputs, **params},
         )
         return self.create_execution
 

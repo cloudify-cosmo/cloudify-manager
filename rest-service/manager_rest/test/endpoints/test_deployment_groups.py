@@ -844,6 +844,27 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         )
         mock_status.assert_called()
 
+    def test_invalid_inputs(self):
+        self.put_blueprint(
+            blueprint_file_name='blueprint_with_inputs.yaml',
+            blueprint_id='bp-inputs',
+        )
+        self.client.deployment_groups.put(
+                'group1',
+                blueprint_id='bp-inputs',
+                new_deployments=[
+                    {'inputs': {'http_web_server_port': 8080}}
+                ])
+        with self.assertRaisesRegex(CloudifyClientError, 'unknown input'):
+            self.client.deployment_groups.put(
+                'group1',
+                new_deployments=[
+                    {'inputs': {
+                        'nonexistent': 42,
+                        'http_web_server_port': 8080,
+                    }}
+                ])
+
 
 @mock.patch(
     'manager_rest.rest.resources_v3_1.executions.workflow_sendhandler',
