@@ -194,87 +194,6 @@ class DeploymentUpdateManager(object):
                                                step.entity_id,
                                                step.topology_order)
 
-    def delete_input_label_after_deployment_update(self,
-                                                   rm,
-                                                   dep_graph,
-                                                   dep,
-                                                   old_csys_environment):
-        rm.delete_deployment_from_labels_graph(
-            dep_graph, dep, old_csys_environment
-        )
-        self._delete_single_label_from_deployment(
-            'csys-obj-parent',
-            old_csys_environment,
-            dep
-        )
-
-    @staticmethod
-    def add_input_label_after_deployment_update(rm,
-                                                dep_graph,
-                                                dep,
-                                                new_csys_environment):
-        labels_to_add = rm.get_deployment_parents_from_inputs(
-            new_csys_environment
-        )
-        if labels_to_add:
-            rm.create_resource_labels(
-                models.DeploymentLabel,
-                dep,
-                labels_to_add
-            )
-            rm.add_deployment_to_labels_graph(
-                dep_graph,
-                dep,
-                new_csys_environment
-            )
-            dep_graph.propagate_deployment_statuses(
-                new_csys_environment
-            )
-
-    def update_deployment_parents_from_input(self,
-                                             rm,
-                                             dep,
-                                             old_inputs,
-                                             new_inputs):
-        old_inputs = old_inputs or {}
-        new_inputs = new_inputs or {}
-        old_csys_environment = old_inputs.get('csys-environment')
-        new_csys_environment = new_inputs.get('csys-environment')
-        if old_csys_environment or new_csys_environment:
-            dep_graph = RecursiveDeploymentLabelsDependencies(self.sm)
-            dep_graph.create_dependencies_graph()
-
-            if new_csys_environment and not old_csys_environment:
-                self.add_input_label_after_deployment_update(
-                    rm,
-                    dep_graph,
-                    dep,
-                    new_csys_environment
-                )
-
-            elif old_csys_environment and not new_csys_environment:
-                self.delete_input_label_after_deployment_update(
-                    rm,
-                    dep_graph,
-                    dep,
-                    old_csys_environment
-                )
-
-            elif old_csys_environment and new_csys_environment and \
-                    old_csys_environment != new_csys_environment:
-                self.delete_input_label_after_deployment_update(
-                    rm,
-                    dep_graph,
-                    dep,
-                    old_csys_environment
-                )
-                self.add_input_label_after_deployment_update(
-                    rm,
-                    dep_graph,
-                    dep,
-                    new_csys_environment
-                )
-
     def commit_deployment_update(self,
                                  dep_update,
                                  skip_install=False,
@@ -335,10 +254,6 @@ class DeploymentUpdateManager(object):
         dep_update.central_plugins_to_uninstall = central_plugins_to_uninstall
         deployment = self.sm.get(models.Deployment, dep_update.deployment_id)
         labels_to_create = self._get_deployment_labels_to_create(dep_update)
-        csys_environment = dep_update.new_inputs.get('csys-environment')
-        new_inputs = dep_update.new_inputs.copy()
-        old_inputs = deployment.inputs.copy()
-        rm.verify_csys_environment_input(deployment, csys_environment)
         parents_labels = []
         if labels_to_create:
             parents_labels = rm.get_deployment_parents_from_labels(
@@ -435,12 +350,6 @@ class DeploymentUpdateManager(object):
                     deployment,
                     parent
                 )
-        self.update_deployment_parents_from_input(
-            rm,
-            deployment,
-            old_inputs,
-            new_inputs
-        )
         return self.get_deployment_update(dep_update.id)
 
     def validate_no_active_updates_per_deployment(self, deployment_id):
