@@ -636,14 +636,36 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                 parents.append(label.value)
         return parents
 
-    def make_create_environment_execution(self, **params):
+    def make_create_environment_execution(self, inputs=None, **params):
+        if inputs is not None and self.blueprint and self.blueprint.plan:
+            self._validate_inputs(inputs)
         self.create_execution = Execution(
             workflow_id='create_deployment_environment',
             deployment=self,
             status=ExecutionState.PENDING,
-            parameters=params,
+            parameters={'inputs': inputs, **params},
         )
         return self.create_execution
+
+    def _validate_inputs(self, inputs):
+        blueprint_inputs = self.blueprint.plan.get('inputs', {})
+        allowed_inputs = set(blueprint_inputs)
+        required_inputs = {
+            name for name, input_spec in blueprint_inputs.items()
+            if 'default' not in input_spec
+        }
+        provided_inputs = set(inputs)
+        missing_inputs = required_inputs - provided_inputs
+        undeclared_inputs = provided_inputs - allowed_inputs
+        if missing_inputs:
+            raise manager_exceptions.MissingRequiredDeploymentInputError(
+                f'missing inputs: { ", ".join(missing_inputs) }'
+            )
+        if undeclared_inputs:
+            raise manager_exceptions.UnknownDeploymentInputError(
+                f'Cannot create deployment - unknown inputs: '
+                f'{ ", ".join(undeclared_inputs) }'
+            )
 
     def make_delete_environment_execution(self, delete_logs=True):
         return Execution(
