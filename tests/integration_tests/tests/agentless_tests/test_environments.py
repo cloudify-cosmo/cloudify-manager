@@ -1,14 +1,11 @@
 import time
-import json
 
 import pytest
 
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
-from integration_tests.framework import utils
 
 from cloudify.models_states import DeploymentState
-from cloudify.models_states import ExecutionState
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 
@@ -106,25 +103,6 @@ class EnvironmentTest(AgentlessTestCase):
         )
         return deployment
 
-    def _wait_for_execution_group_to_finish(self,
-                                            execution_group,
-                                            timeout_seconds=120):
-        deadline = time.time() + timeout_seconds
-        while execution_group.status not in ExecutionState.END_STATES:
-            time.sleep(0.5)
-            execution_group = self.client.execution_groups.get(
-                execution_group.id
-            )
-            if time.time() > deadline:
-                raise utils.TimeoutException(
-                    'Execution group timed'
-                    ' out: \n{0}'.format(json.dumps(
-                        execution_group, indent=2))
-                )
-        if execution_group.status == ExecutionState.FAILED:
-            raise RuntimeError('Workflow execution group failed')
-        return execution_group
-
     def _deploy_environment_with_two_levels(self, main_environment):
         # # First environment
         env1 = self._deploy_deployment_to_environment(
@@ -218,6 +196,13 @@ class EnvironmentTest(AgentlessTestCase):
                 labels=labels_to_add,
             )
 
+    def _execute_workflow_on_group(self, group_id, workflow_id):
+        execution_group = self.client.execution_groups.start(
+            deployment_group_id=group_id,
+            workflow_id=workflow_id
+        )
+        self.wait_for_execution_to_end(execution_group, is_group=True)
+
     def test_create_deployment_with_invalid_parent_label(self):
         dsl_path = resource('dsl/basic.yaml')
         deployment = self.deploy(dsl_path)
@@ -255,6 +240,7 @@ class EnvironmentTest(AgentlessTestCase):
             'dsl/simple_deployment.yaml',
             'service'
         )
+        time.sleep(3)
         environment = self.client.deployments.get(environment.id)
         self._assert_deployment_environment_attr(
             environment,
@@ -278,6 +264,7 @@ class EnvironmentTest(AgentlessTestCase):
             'dsl/empty_blueprint.yaml',
             'service'
         )
+        time.sleep(3)
         environment = self.client.deployments.get(environment.id)
         self._assert_deployment_environment_attr(
             environment,
@@ -297,6 +284,7 @@ class EnvironmentTest(AgentlessTestCase):
             'service',
             install=True
         )
+        time.sleep(3)
         environment = self.client.deployments.get(environment.id)
         self._assert_deployment_environment_attr(
             environment,
@@ -322,7 +310,7 @@ class EnvironmentTest(AgentlessTestCase):
             'service',
             install=True
         )
-
+        time.sleep(3)
         environment = self.client.deployments.get(environment.id)
         self._assert_deployment_environment_attr(
             environment,
@@ -348,10 +336,12 @@ class EnvironmentTest(AgentlessTestCase):
                 deployment_id=deployment.id,
                 parameters={
                     'operation': 'test.fail',
-                    'node_ids': ['test_node']
+                    'node_ids': ['test_node'],
+                    'operation_kwargs': {'non_recoverable': True}
                 },
                 wait_for_execution=True
             )
+        time.sleep(3)
         environment = self.client.deployments.get(environment.id)
         self._assert_deployment_environment_attr(
             environment,
@@ -384,10 +374,12 @@ class EnvironmentTest(AgentlessTestCase):
                 deployment_id=service2.id,
                 parameters={
                     'operation': 'test.fail',
-                    'node_ids': ['test_node']
+                    'node_ids': ['test_node'],
+                    'operation_kwargs': {'non_recoverable': True}
                 },
                 wait_for_execution=True
             )
+        time.sleep(3)
         environment = self.client.deployments.get(environment.id)
         self._assert_deployment_environment_attr(
             environment,
@@ -406,6 +398,7 @@ class EnvironmentTest(AgentlessTestCase):
             'dsl/simple_deployment.yaml',
             'environment'
         )
+        time.sleep(3)
         environment = self.client.deployments.get(environment.id)
         self._assert_deployment_environment_attr(
             environment,
@@ -429,6 +422,7 @@ class EnvironmentTest(AgentlessTestCase):
             'dsl/empty_blueprint.yaml',
             'environment'
         )
+        time.sleep(3)
         environment = self.client.deployments.get(environment.id)
         self._assert_deployment_environment_attr(
             environment,
@@ -448,6 +442,7 @@ class EnvironmentTest(AgentlessTestCase):
             'environment',
             install=True
         )
+        time.sleep(3)
         environment = self.client.deployments.get(environment.id)
         self._assert_deployment_environment_attr(
             environment,
@@ -473,7 +468,7 @@ class EnvironmentTest(AgentlessTestCase):
             'environment',
             install=True
         )
-
+        time.sleep(3)
         environment = self.client.deployments.get(environment.id)
         self._assert_deployment_environment_attr(
             environment,
@@ -499,10 +494,12 @@ class EnvironmentTest(AgentlessTestCase):
                 deployment_id=deployment.id,
                 parameters={
                     'operation': 'test.fail',
-                    'node_ids': ['test_node']
+                    'node_ids': ['test_node'],
+                    'operation_kwargs': {'non_recoverable': True}
                 },
                 wait_for_execution=True
             )
+        time.sleep(3)
         environment = self.client.deployments.get(environment.id)
         self._assert_deployment_environment_attr(
             environment,
@@ -535,10 +532,12 @@ class EnvironmentTest(AgentlessTestCase):
                 deployment_id=deployment.id,
                 parameters={
                     'operation': 'test.fail',
-                    'node_ids': ['test_node']
+                    'node_ids': ['test_node'],
+                    'operation_kwargs': {'non_recoverable': True}
                 },
                 wait_for_execution=True
             )
+        time.sleep(3)
         environment = self.client.deployments.get(environment.id)
         self._assert_deployment_environment_attr(
             environment,
@@ -565,6 +564,7 @@ class EnvironmentTest(AgentlessTestCase):
             'service',
             install=True
         )
+        time.sleep(3)
         environment = self.client.deployments.get(environment.id)
         self._assert_deployment_environment_attr(
             environment,
@@ -593,6 +593,7 @@ class EnvironmentTest(AgentlessTestCase):
             sub_services_count=1
         )
         self.delete_deployment(deployment.id, validate=True)
+        time.sleep(3)
         environment = self.client.deployments.get(environment.id)
         self._assert_deployment_environment_attr(
             environment,
@@ -621,6 +622,7 @@ class EnvironmentTest(AgentlessTestCase):
         self.execute_workflow(workflow_name='uninstall',
                               deployment_id=deployment.id,
                               wait_for_execution=True)
+        time.sleep(3)
         environment = self.client.deployments.get(environment.id)
         self._assert_deployment_environment_attr(
             environment,
@@ -647,6 +649,7 @@ class EnvironmentTest(AgentlessTestCase):
             sub_environments_count=1
         )
         self.delete_deployment(deployment.id, validate=True)
+        time.sleep(3)
         environment = self.client.deployments.get(environment.id)
         self._assert_deployment_environment_attr(
             environment,
@@ -665,6 +668,7 @@ class EnvironmentTest(AgentlessTestCase):
             'environment',
             install=True
         )
+        time.sleep(3)
         environment = self.client.deployments.get(environment.id)
         self._assert_deployment_environment_attr(
             environment,
@@ -675,6 +679,7 @@ class EnvironmentTest(AgentlessTestCase):
         self.execute_workflow(workflow_name='uninstall',
                               deployment_id=deployment.id,
                               wait_for_execution=True)
+        time.sleep(3)
         environment = self.client.deployments.get(environment.id)
         self._assert_deployment_environment_attr(
             environment,
@@ -728,6 +733,7 @@ class EnvironmentTest(AgentlessTestCase):
             deployment.id,
             blueprint_id='updated-blueprint'
         )
+        time.sleep(3)
         environment_1 = self.client.deployments.get(environment_1.id)
         environment_2 = self.client.deployments.get(environment_2.id)
         self._assert_deployment_environment_attr(
@@ -778,6 +784,7 @@ class EnvironmentTest(AgentlessTestCase):
             main_environment.id, DeploymentState.GOOD
         )
         self._deploy_environment_with_two_levels(main_environment)
+        time.sleep(3)
         main_environment = self.client.deployments.get(main_environment.id)
         self._assert_deployment_environment_attr(
             main_environment,
@@ -795,6 +802,7 @@ class EnvironmentTest(AgentlessTestCase):
             main_environment.id, DeploymentState.GOOD
         )
         self._deploy_environment_with_three_levels(main_environment)
+        time.sleep(3)
         main_environment = self.client.deployments.get(main_environment.id)
         self._assert_deployment_environment_attr(
             main_environment,
@@ -818,6 +826,7 @@ class EnvironmentTest(AgentlessTestCase):
         self.execute_workflow(workflow_name='uninstall',
                               deployment_id=service.id)
         self.delete_deployment(service.id, validate=True)
+        time.sleep(3)
         main_environment = self.client.deployments.get(main_environment.id)
         self._assert_deployment_environment_attr(
             main_environment,
@@ -838,6 +847,7 @@ class EnvironmentTest(AgentlessTestCase):
             )
         self.execute_workflow(workflow_name='uninstall',
                               deployment_id=service.id)
+        time.sleep(3)
         main_environment = self.client.deployments.get(main_environment.id)
         self._assert_deployment_environment_attr(
             main_environment,
@@ -863,6 +873,7 @@ class EnvironmentTest(AgentlessTestCase):
                 'csys-obj-type': 'environment'
             }
         ])
+        time.sleep(3)
         main_environment = self.client.deployments.get(main_environment.id)
         # The deployment status will be good and environment counts will be 0
         self._assert_deployment_environment_attr(
@@ -890,6 +901,7 @@ class EnvironmentTest(AgentlessTestCase):
             },
         ])
 
+        time.sleep(3)
         main_environment = self.client.deployments.get(main_environment.id)
         self._assert_deployment_environment_attr(
             main_environment,
@@ -915,7 +927,7 @@ class EnvironmentTest(AgentlessTestCase):
                 'csys-obj-parent': main_environment.id
             },
         ])
-
+        time.sleep(3)
         main_environment = self.client.deployments.get(main_environment.id)
         self._assert_deployment_environment_attr(
             main_environment,
@@ -936,11 +948,8 @@ class EnvironmentTest(AgentlessTestCase):
             4,
             labels_to_add=[{'csys-obj-parent': main_environment.id}]
         )
-        execution_group = self.client.execution_groups.start(
-            deployment_group_id='group1',
-            workflow_id='install'
-        )
-        self._wait_for_execution_group_to_finish(execution_group)
+        self._execute_workflow_on_group('group1', 'install')
+        time.sleep(3)
         main_environment = self.client.deployments.get(main_environment.id)
         self._assert_deployment_environment_attr(
             main_environment,
@@ -966,12 +975,8 @@ class EnvironmentTest(AgentlessTestCase):
             labels_to_add=[{'csys-obj-parent': environment1.id},
                            {'csys-obj-parent': environment2.id}]
         )
-        execution_group = self.client.execution_groups.start(
-            deployment_group_id='group1',
-            workflow_id='install'
-        )
-
-        self._wait_for_execution_group_to_finish(execution_group)
+        self._execute_workflow_on_group('group1', 'install')
+        time.sleep(3)
         environment1 = self.client.deployments.get(environment1.id)
         environment2 = self.client.deployments.get(environment2.id)
         self._assert_deployment_environment_attr(
@@ -999,13 +1004,8 @@ class EnvironmentTest(AgentlessTestCase):
             4,
             labels_to_add=[{'csys-obj-parent': main_environment.id}]
         )
-        main_environment = self.client.deployments.get(main_environment.id)
-        execution_group = self.client.execution_groups.start(
-            deployment_group_id='group1',
-            workflow_id='install'
-        )
-
-        self._wait_for_execution_group_to_finish(execution_group)
+        self._execute_workflow_on_group('group1', 'install')
+        time.sleep(3)
         main_environment = self.client.deployments.get(main_environment.id)
         self._assert_deployment_environment_attr(
             main_environment,
@@ -1032,11 +1032,8 @@ class EnvironmentTest(AgentlessTestCase):
             4,
             labels_to_add=[{'csys-obj-parent': main_environment.id}]
         )
-        execution_group = self.client.execution_groups.start(
-            deployment_group_id='group1',
-            workflow_id='install'
-        )
-        self._wait_for_execution_group_to_finish(execution_group)
+        self._execute_workflow_on_group('group1', 'install')
+        time.sleep(3)
         main_environment = self.client.deployments.get(main_environment.id)
         self._assert_deployment_environment_attr(
             main_environment,
