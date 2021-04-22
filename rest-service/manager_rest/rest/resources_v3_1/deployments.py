@@ -85,30 +85,6 @@ class DeploymentsId(resources_v1.DeploymentsId):
         return DeploymentCreationError(error_message)
 
     @staticmethod
-    def _create_label_from_deployment_inputs(deployment, inputs):
-        rm = get_resource_manager()
-        sm = get_storage_manager()
-        csys_environment = inputs.get('csys-environment')
-        rm.verify_csys_environment_input(deployment, csys_environment)
-        labels_to_add = rm.get_deployment_parents_from_inputs(csys_environment)
-        if labels_to_add:
-            dep_graph = rest_utils.RecursiveDeploymentLabelsDependencies(sm)
-            dep_graph.create_dependencies_graph()
-            dep_graph.assert_no_cyclic_dependencies(
-                csys_environment, deployment.id
-            )
-            rm.create_resource_labels(
-                models.DeploymentLabel,
-                deployment,
-                labels_to_add
-            )
-            rm.add_deployment_to_labels_graph(
-                dep_graph,
-                deployment,
-                csys_environment
-            )
-
-    @staticmethod
     def _populate_direct_deployment_counts_and_statuses(deployment):
         sm = get_storage_manager()
         sub_services_count = 0
@@ -293,9 +269,6 @@ class DeploymentsId(resources_v1.DeploymentsId):
                 deployment,
                 raw_labels_list
             )
-        # Check the inputs value here for `csys-environment`
-        inputs = request_dict.get('inputs', {})
-        self._create_label_from_deployment_inputs(deployment, inputs)
         sm.update(deployment)
         return deployment
 

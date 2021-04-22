@@ -582,25 +582,3 @@ class DeploymentLabelsDependenciesTest(BaseServerTestCase):
         deployment = self.client.deployments.get('env')
         self.assertEqual(deployment.sub_environments_count, 3)
         self.assertEqual(deployment.sub_services_count, 2)
-
-    def test_failure_creation_for_automatic_label_from_input(self):
-        with self.assertRaisesRegex(
-                CloudifyClientError,
-                'referencing invalid `csys-environment` input'):
-            self.put_deployment(
-                'parent',
-                blueprint_id='bp1',
-                blueprint_file_name='blueprint_with_invalid'
-                                    '_csys_environment_input.yaml'
-            )
-
-    def test_success_creation_for_automatic_label_from_input(self):
-        self.put_deployment('parent')
-        self.put_deployment(
-            'child',
-            blueprint_id='child',
-            blueprint_file_name='blueprint_with_valid'
-                                '_csys_environment_input.yaml'
-        )
-        deployment = self.client.deployments.get('parent')
-        self.assertEqual(deployment.sub_services_count, 1)

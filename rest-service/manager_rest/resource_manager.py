@@ -59,7 +59,6 @@ from manager_rest.rest.rest_utils import (
     update_inter_deployment_dependencies,
     verify_blueprint_uploaded_state,
     compute_rule_from_scheduling_params,
-    get_labels_list,
 )
 from manager_rest.deployment_update.constants import STATES as UpdateStates
 from manager_rest.plugins_update.constants import STATES as PluginsUpdateStates
@@ -1451,18 +1450,6 @@ class ResourceManager(object):
         self.sm.put(new_deployment)
         return new_deployment
 
-    def get_deployment_parents_from_inputs(self, csys_environment):
-        labels_to_add = []
-        if csys_environment:
-            labels_to_add = get_labels_list(
-                [
-                    {
-                        'csys-obj-parent': csys_environment
-                    }
-                ]
-            )
-        return labels_to_add
-
     @staticmethod
     def get_deployment_parents_from_labels(labels):
         parents = []
@@ -1518,25 +1505,6 @@ class ResourceManager(object):
         graph.assert_cyclic_dependencies_between_targets_and_source(
             parents, dep_id
         )
-
-    def verify_csys_environment_input(self, deployment, csys_environment):
-        if csys_environment:
-            try:
-                dep_graph = RecursiveDeploymentLabelsDependencies(self.sm)
-                dep_graph.create_dependencies_graph()
-                self.verify_attaching_deployment_to_parents(
-                    dep_graph,
-                    [csys_environment],
-                    deployment.id
-                )
-            except Exception:
-                raise manager_exceptions.InvalidCSYSEnvironmentInput(
-                    'Deployment {0}: is referencing invalid '
-                    '`csys-environment` input. Make sure that `{1}` is '
-                    'referencing an existing deployment and valid '
-                    'format.'.format(
-                        deployment.id, csys_environment)
-                )
 
     def _place_deployment_label_dependency(self, source, target):
         self.sm.put(
