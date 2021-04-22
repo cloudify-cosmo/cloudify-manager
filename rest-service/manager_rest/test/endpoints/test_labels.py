@@ -28,7 +28,7 @@ class LabelsBaseTestCase(base_test.BaseServerTestCase):
     LABELS = [{'env': 'aws'}, {'arch': 'k8s'}]
     LABELS_2 = [{'env': 'gcp'}, {'arch': 'k8s'}]
     UPDATED_LABELS = [{'env': 'gcp'}, {'arch': 'k8s'}]
-    UPDATED_UPPERCASE_LABELS = [{'env': 'GCp'}, {'ArCh': 'k8s'}]
+    UPDATED_UPPERCASE_LABELS = [{'Env': 'GCp'}, {'ArCh': 'K8s'}]
     UPPERCASE_LABELS = [{'EnV': 'aWs'}, {'aRcH': 'k8s'}]
     DUPLICATE_LABELS = [{'env': 'aws'}, {'env': 'aws'}]
     INVALID_LABELS_LIST = [{'env': 'aws', 'aRcH': 'k8s'}]
@@ -54,7 +54,8 @@ class LabelsBaseTestCase(base_test.BaseServerTestCase):
 
     def test_uppercase_labels_to_lowercase(self):
         resource = self.put_resource_with_labels(self.UPPERCASE_LABELS)
-        self.assert_resource_labels(resource.labels, self.LABELS)
+        self.assert_resource_labels(resource.labels,
+                                    [{'env': 'aWs'}, {'arch': 'k8s'}])
 
     def test_creation_success_with_special_labels(self):
         labels = [{'k.e-y': '&val\xf3e'}, {'key': ' va=l ue'},
@@ -66,7 +67,7 @@ class LabelsBaseTestCase(base_test.BaseServerTestCase):
         # Testing that the value Ó is being normalized and lowercased
         labels = [{'key': '\u004f\u0301'}]
         resource = self.put_resource_with_labels(labels)
-        self.assert_resource_labels(resource.labels, [{'key': '\u00f3'}])
+        self.assert_resource_labels(resource.labels, [{'key': '\u00d3'}])
 
     def test_update_resource_labels(self):
         resource = self.put_resource_with_labels(self.LABELS)
@@ -78,7 +79,8 @@ class LabelsBaseTestCase(base_test.BaseServerTestCase):
         resource = self.put_resource_with_labels(self.LABELS)
         updated_res = self.update_resource_labels(
             resource.id, self.UPDATED_UPPERCASE_LABELS)
-        self.assert_resource_labels(updated_res.labels, self.UPDATED_LABELS)
+        self.assert_resource_labels(updated_res.labels,
+                                    [{'env': 'GCp'}, {'arch': 'K8s'}])
 
     def test_remove_resource_labels(self):
         resource = self.put_resource_with_labels(self.LABELS)
@@ -194,13 +196,13 @@ class DeploymentsLabelsTestCase(LabelsBaseTestCase):
 
         deployment = self.client.deployments.create(
             blueprint_id='bp1', deployment_id='dep1',
-            labels=[{'key1': 'key1_val1'}, {'new_key': 'new_value'}])
+            labels=[{'key1': 'key1_val1'}, {'new_key': 'NEW_VALUe'}])
         self.create_deployment_environment(deployment)
         deployment = self.client.deployments.get(deployment.id)
 
         expected_dep_labels = [
-            {'key1': 'key1_val1'}, {'key2': 'key2_val1'}, {'key2': 'va l:u,e'},
-            {'key2': 'key2_val2'}, {'new_key': 'new_value'}
+            {'key1': 'key1_val1'}, {'key2': 'kEy2_vaL1'}, {'key2': 'va l:u,E'},
+            {'key2': 'key2_val2'}, {'new_key': 'NEW_VALUe'}
         ]
         self.assert_resource_labels(deployment.labels, expected_dep_labels)
 
@@ -270,10 +272,12 @@ class BlueprintsLabelsTestCase(LabelsBaseTestCase):
         blueprint = self.put_blueprint(
             blueprint_id='bp1',
             blueprint_file_name='blueprint_with_labels_1.yaml',
-            labels=[{'bp_key1': 'bp_key1_val1'},
-                    {'new_bp_key': 'new_bp_value'}])
+            labels=[{'bp_KEY1': 'bp_key1_val1'},
+                    {'bp_key2': 'bp_key2_val1'},
+                    {'new_bp_key': 'NEW_BP_value'}])
         expected_bp_labels = [
-            {'bp_key1': 'bp_key1_val1'}, {'bp_key2': 'bp_key2_val1'},
-            {'bp_key2': 'bp_key2_val2'}, {'new_bp_key': 'new_bp_value'}
+            {'bp_key1': 'BP_key1_val1'}, {'bp_key1': 'bp_key1_val1'},
+            {'bp_key2': 'bp_key2_val1'}, {'bp_key2': 'bp_key2_val2'},
+            {'new_bp_key': 'NEW_BP_value'}
         ]
         self.assert_resource_labels(blueprint.labels, expected_bp_labels)
