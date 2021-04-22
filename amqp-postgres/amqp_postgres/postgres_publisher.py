@@ -162,8 +162,14 @@ class DBLogEventPublisher(object):
 
     def connect(self):
         with setup_flask_app().app_context():
+            db_url = self.config.db_url
+            # This is to cope with Azure external DB urls:
+            # https://docs.microsoft.com/en-us/azure/postgresql/
+            #   quickstart-create-server-database-azure-cli
+            if db_url.count('@') > 1:
+                db_url = db_url.replace('@', '%40', 1)
             return psycopg2.connect(
-                self.config.db_url,
+                db_url,
                 cursor_factory=DictCursor,
             )
 
