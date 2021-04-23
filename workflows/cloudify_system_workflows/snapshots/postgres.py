@@ -79,7 +79,7 @@ class Postgres(object):
             'DEFERRABLE INITIALLY DEFERRED')
 
         dump_file = self._prepend_dump(
-            dump_file, clear_tables_queries + deferrable_roles_constraints)
+            dump_file, deferrable_roles_constraints + clear_tables_queries)
 
         # Remove users/roles associated with 5.0.5 status reporter
         delete_status_reporter = self._get_status_reporter_deletes()
