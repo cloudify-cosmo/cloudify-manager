@@ -132,7 +132,7 @@ def _drop_execution_group_fk():
     op.drop_constraint(
         op.f('logs__one_fk_not_null'),
         'logs',
-        type='check',
+        type_='check',
     )
     op.drop_constraint(
         op.f('logs__execution_group_fk_fkey'),
@@ -157,7 +157,7 @@ def _drop_execution_group_fk():
     op.drop_constraint(
         op.f('events__one_fk_not_null'),
         'events',
-        type='check',
+        type_='check',
     )
     op.drop_constraint(
         op.f('events__execution_group_fk_fkey'),
