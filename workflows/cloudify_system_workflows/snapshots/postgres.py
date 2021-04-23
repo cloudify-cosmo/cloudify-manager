@@ -65,35 +65,24 @@ class Postgres(object):
         self.hashed_execution_token = None
         if ':' in self._host:
             self._host, self._port = self._host.split(':')
-            ctx.logger.debug('Updating Postgres config: host: {0}, port: {1}'
-                             .format(self._host, self._port))
+            ctx.logger.debug('Updating Postgres config: host: %s, port: %s',
+                             self._host, self._port)
 
     def restore(self, tempdir, premium_enabled, license=None):
         ctx.logger.info('Restoring DB from postgres dump')
         dump_file = os.path.join(tempdir, self._POSTGRES_DUMP_FILENAME)
 
-        # Add to the beginning of the dump queries that recreate the schema
-        clear_tables_queries = self._get_clear_tables_queries()
         # Make foreign keys for the `roles` table deferrable
         deferrable_roles_constraints = self._get_roles_constraints(
             'DEFERRABLE INITIALLY DEFERRED')
-        # Prepend also BEGIN; to start a transaction (with deferrable constr.)
-        dump_file = self._prepend_dump(dump_file,
-                                       clear_tables_queries +
-                                       deferrable_roles_constraints +
-                                       ["BEGIN;"])
+
+        clear_tables_queries = self._get_clear_tables_queries()
+        dump_file = self._prepend_dump(
+            dump_file, deferrable_roles_constraints + clear_tables_queries)
 
         # Remove users/roles associated with 5.0.5 status reporter
         delete_status_reporter = self._get_status_reporter_deletes()
         self._append_dump(dump_file, '\n'.join(delete_status_reporter))
-
-        # Finish transaction (status reporter users/roles no longer exist)
-        self._append_dump(dump_file, 'COMMIT;\n')
-
-        # Make foreign keys for the `roles` table immediate (as they were)
-        immediate_roles_constraints = self._get_roles_constraints(
-            'NOT DEFERRABLE')
-        self._append_dump(dump_file, '\n'.join(immediate_roles_constraints))
 
         # Don't change admin user during the restore or the workflow will
         # fail to correctly execute (the admin user update query reverts it
@@ -102,6 +91,11 @@ class Postgres(object):
             self._get_admin_user_update_query()
         self._append_dump(dump_file, admin_query, admin_protected_query)
 
+        # Make foreign keys for the `roles` table immediate (as they were)
+        immediate_roles_constraints = self._get_roles_constraints(
+            'NOT DEFERRABLE')
+        self._append_dump(dump_file, '\n'.join(immediate_roles_constraints))
+
         self._restore_dump(dump_file, self._db_name)
 
         self._make_api_token_keys()
@@ -109,8 +103,8 @@ class Postgres(object):
         ctx.logger.debug('Postgres restored')
 
     def dump(self, tempdir, include_logs, include_events):
-        ctx.logger.info('Dumping Postgres, include logs {0} include events {1}'
-                        .format(include_logs, include_events))
+        ctx.logger.info('Dumping Postgres, include logs %s include events %s',
+                        include_logs, include_events)
         destination_path = os.path.join(tempdir, self._POSTGRES_DUMP_FILENAME)
         admin_dump_path = os.path.join(tempdir, ADMIN_DUMP_FILE)
         try:
@@ -170,10 +164,10 @@ class Postgres(object):
     def _restore_db(self, tempdir, database_name):
         if not self._db_exists(database_name):
             return
-        ctx.logger.info('Restoring {db} DB'.format(db=database_name))
+        ctx.logger.info('Restoring %s DB', database_name)
         dump_file = os.path.join(tempdir, database_name + '_data')
         self._restore_dump(dump_file, database_name)
-        ctx.logger.debug('{db} DB restored'.format(db=database_name))
+        ctx.logger.debug('%s DB restored', database_name)
 
     def restore_stage(self, tempdir):
         self._restore_db(tempdir, self._STAGE_DB_NAME)
@@ -193,7 +187,7 @@ class Postgres(object):
     def _append_delete_current_execution(self, dump_file):
         """Append to the dump file a query that deletes the current execution
         """
-        delete_current_execution_query = "DELETE FROM executions " \
+        delete_current_execution_query = "DELETE FROM public.executions " \
                                          "WHERE id = '{0}';" \
                                          .format(ctx.execution_id)
         self._append_dump(dump_file, delete_current_execution_query)
@@ -204,7 +198,7 @@ class Postgres(object):
         protected_query - hides the credentials for the logs file
         """
         username, password = self._get_admin_credentials()
-        base_query = "UPDATE users " \
+        base_query = "UPDATE public.users " \
                      "SET username='{0}', password='{1}' " \
                      "WHERE id=0;"
         return (base_query.format(username, password),
@@ -214,7 +208,7 @@ class Postgres(object):
         """Return a query that creates an execution to the DB with the ID (and
         other data) from the snapshot restore execution
         """
-        return "INSERT INTO executions (id, created_at, " \
+        return "INSERT INTO public.executions (id, created_at, " \
                "is_system_workflow, " \
                "status, workflow_id, _tenant_id, _creator_id, token) " \
                "VALUES ('{0}', '{1}', 't', 'started', 'restore_snapshot', " \
@@ -311,7 +305,7 @@ class Postgres(object):
 
     def init_current_execution_data(self):
         response = self.run_query("SELECT created_at, token "
-                                  "FROM executions "
+                                  "FROM public.executions "
                                   "WHERE id='{0}'".format(ctx.execution_id))
         if not response:
             raise NonRecoverableError('Illegal state - missing execution date '
@@ -342,8 +336,8 @@ class Postgres(object):
 
     def _dump_to_file(self, destination_path, db_name, exclude_tables=None,
                       table=None):
-        ctx.logger.debug('Creating db dump file: {0}, excluding: {1}'.
-                         format(destination_path, exclude_tables))
+        ctx.logger.debug('Creating db dump file: %s, excluding: %s',
+                         destination_path, exclude_tables)
         flags = []
         if exclude_tables:
             flags = ["--exclude-table={0}".format(t)
@@ -395,7 +389,7 @@ class Postgres(object):
     def _restore_dump(self, dump_file, db_name, table=None):
         """Execute `psql` to restore an SQL dump into the DB
         """
-        ctx.logger.debug('Restoring db dump file: {0}'.format(dump_file))
+        ctx.logger.debug('Restoring db dump file: %s', dump_file)
         command = self.get_psql_command(db_name)
         command.extend([
             '-v', 'ON_ERROR_STOP=1',
@@ -413,15 +407,14 @@ class Postgres(object):
         sensitive information, e.g. username and password.
         """
         print_query = protected_query or query
-        ctx.logger.debug('Adding to end of dump: {0}'.format(print_query))
+        ctx.logger.debug('Adding to end of dump: %s', print_query)
         with open(dump_file, 'a') as f:
             f.write('\n{0}\n'.format(query))
 
     @staticmethod
     def _prepend_dump(dump_file, queries):
         queries_str = '\n'.join(queries)
-        ctx.logger.debug('Adding to beginning of dump: {0}'
-                         .format(queries_str))
+        ctx.logger.debug('Adding to beginning of dump: %s', queries_str)
         pre_dump_file = '{0}.pre'.format(dump_file)
         new_dump_file = '{0}.new'.format(dump_file)
         with open(pre_dump_file, 'a') as f:
@@ -434,7 +427,7 @@ class Postgres(object):
 
     def run_query(self, query, vars=None, bulk_query=False):
         str_query = query.replace(u"\uFFFD", "?")
-        ctx.logger.debug('Running query: {0}'.format(str_query))
+        ctx.logger.debug('Running query: %s', str_query)
         with closing(self._connection.cursor()) as cur:
             try:
                 if bulk_query:
@@ -444,15 +437,15 @@ class Postgres(object):
                 status_message = cur.statusmessage
                 fetchall = cur.fetchall()
                 result = {'status': status_message, 'all': fetchall}
-                ctx.logger.debug('Running query result status: {0}'
-                                 .format(status_message))
+                ctx.logger.debug('Running query result status: %s',
+                                 status_message)
             except Exception as e:
                 fetchall = None
                 status_message = str(e)
                 result = {'status': status_message, 'all': fetchall}
                 if status_message != 'no results to fetch':
-                    ctx.logger.error('Running query result status: {0}'
-                                     .format(status_message))
+                    ctx.logger.error('Running query result status: %s',
+                                     status_message)
             return result
 
     def _make_api_token_keys(self):
@@ -476,11 +469,9 @@ class Postgres(object):
 
     def get_deployment_creator_ids_and_tokens(self):
         result = self.run_query(
-            "SELECT tenants.name, deployments.id,"
-            "users.id, users.api_token_key "
-            "FROM deployments, users, tenants "
-            "WHERE deployments._creator_id=users.id "
-            "AND tenants.id=deployments._tenant_id"
+            "SELECT t.name, d.id, u.id, u.api_token_key "
+            "FROM public.deployments d, public.users u, public.tenants t"
+            "WHERE d._creator_id=u.id AND t.id=d._tenant_id"
         )
 
         details = {}
@@ -516,7 +507,7 @@ class Postgres(object):
         update_query = """UPDATE {0}
                           SET {1} = encrypted_values.value
                           FROM (VALUES %s) AS encrypted_values ({2}, value)
-                          WHERE {0}.{2} = encrypted_values.{2}""" \
+                          WHERE public.{0}.{2} = encrypted_values.{2}""" \
             .format(table_name, column_name, primary_key)
         self.run_query(update_query, vars=encrypted_values, bulk_query=True)
 
@@ -548,8 +539,12 @@ class Postgres(object):
         all_tables = [table for table in all_tables if
                       table not in self._TABLES_TO_KEEP]
 
-        queries = [self._TRUNCATE_QUERY.format(table) for table in all_tables
-                   if table != 'users'] + ['DELETE FROM users;']
+        queries = (
+            ['LOCK TABLE users, maintenance_mode;'] +
+            [self._TRUNCATE_QUERY.format(table) for table in all_tables
+             if table != 'users'] +
+            ['DELETE FROM users;']
+        )
         if preserve_defaults:
             self._add_preserve_defaults_queries(queries)
         return queries
@@ -561,18 +556,20 @@ class Postgres(object):
             'users_roles',
             'users_tenants',
         )
-        return [
-            "ALTER TABLE {0} ALTER CONSTRAINT {0}_role_id_fkey {1};".format(
-                t, constraint) for t in tables
-        ]
+        return ['COMMIT;', 'BEGIN;'] + [
+            "ALTER TABLE public.{0} ALTER CONSTRAINT {0}_role_id_fkey {1};"
+            .format(t, constraint) for t in tables
+        ] + ['COMMIT;', 'BEGIN;']
 
     def _get_status_reporter_deletes(self):
         return [
-            "DELETE FROM users_roles WHERE user_id IN ( "
-            "SELECT id FROM users WHERE username IN ('db_status_reporter', "
-            "'broker_status_reporter', 'manager_status_reporter'));",
-            "DELETE FROM users WHERE username IN ('db_status_reporter', "
-            "'broker_status_reporter', 'manager_status_reporter');",
+            "DELETE FROM public.users_roles WHERE user_id IN ( "
+            "SELECT id FROM public.users WHERE username IN ("
+            "'db_status_reporter', 'broker_status_reporter', "
+            "'manager_status_reporter'));",
+            "DELETE FROM public.users WHERE username IN ("
+            "'db_status_reporter', 'broker_status_reporter', "
+            "'manager_status_reporter');",
         ]
 
     def _add_preserve_defaults_queries(self, queries):
@@ -583,7 +580,7 @@ class Postgres(object):
         """
         queries.remove(self._TRUNCATE_QUERY.format('users'))
         queries.remove(self._TRUNCATE_QUERY.format('tenants'))
-        queries.append('DELETE FROM tenants CASCADE WHERE id != 0;')
+        queries.append('DELETE FROM public.tenants CASCADE WHERE id != 0;')
 
     def _get_all_tables(self):
         result = self.run_query("SELECT tablename "
@@ -594,8 +591,8 @@ class Postgres(object):
         return [res[0] for res in result['all']]
 
     def _get_admin_credentials(self):
-        response = self.run_query("SELECT username, password "
-                                  "FROM users WHERE id=0")
+        response = self.run_query(
+            "SELECT username, password FROM public.users WHERE id=0")
         if not response:
             raise NonRecoverableError('Illegal state - '
                                       'missing admin user in db')
@@ -614,13 +611,13 @@ class Postgres(object):
         postgres_password, postgres_username = config.postgresql_password, \
                                                config.postgresql_username
         config.postgresql_password = config.postgresql_username = '********'
-        ctx.logger.debug('Init Postgres config: {0}'.format(config))
+        ctx.logger.debug('Init Postgres config: %s', config)
         config.postgresql_password, config.postgresql_username = \
             postgres_password, postgres_username
 
     def get_service_management(self):
         result = self.run_query("SELECT value "
-                                "FROM config "
+                                "FROM public.config "
                                 "WHERE name = 'service_management';")
 
         return result['all'][0][0]
