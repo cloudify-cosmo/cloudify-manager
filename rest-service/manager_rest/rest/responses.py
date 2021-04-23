@@ -48,6 +48,15 @@ class Workflow(object):
         self.plugin = kwargs.get('plugin')
         self.operation = kwargs.get('operation')
 
+    def as_dict(self):
+        return {
+            'name': self.name,
+            'created_at': self.created_at,
+            'parameters': self.parameters,
+            'plugin': self.plugin,
+            'operation': self.operation,
+        }
+
 
 @swagger.model
 class DeploymentOutputs(object):

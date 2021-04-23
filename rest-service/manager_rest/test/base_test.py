@@ -271,6 +271,7 @@ class BaseServerTestCase(unittest.TestCase):
                         client.execution_groups.api = mock_http_client
                         client.execution_schedules.api = mock_http_client
                         client.blueprints_labels.api = mock_http_client
+                        client.workflows.api = mock_http_client
 
         return client
 

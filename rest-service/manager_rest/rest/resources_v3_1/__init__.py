@@ -133,3 +133,7 @@ from .searches import (  # NOQA
     DeploymentsSearches,
     BlueprintsSearches
 )
+
+from .workflows import  (  # NOQA
+    Workflows
+)

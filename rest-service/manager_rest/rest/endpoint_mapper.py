@@ -147,7 +147,8 @@ def setup_resources(api):
         'BlueprintsLabels': 'labels/blueprints',
         'BlueprintsLabelsKey': 'labels/blueprints/<string:key>',
         'DeploymentsSearches': 'searches/deployments',
-        'BlueprintsSearches': 'searches/blueprints'
+        'BlueprintsSearches': 'searches/blueprints',
+        'Workflows': 'workflows',
     }
 
     # Set version endpoint as a non versioned endpoint
