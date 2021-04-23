@@ -30,8 +30,9 @@ import wagon
 import requests
 import traceback
 
-from flask_migrate import Migrate, upgrade
+from alembic import command as alembic_cmd
 from mock import MagicMock, patch
+from flask import current_app
 from flask.testing import FlaskClient
 
 from cloudify_rest_client import CloudifyClient
@@ -424,9 +425,10 @@ class BaseServerTestCase(unittest.TestCase):
 
     @staticmethod
     def _handle_default_db_config():
-        Migrate(app=server.app, db=server.db)
+        cfg = current_app.extensions['migrate'].migrate.get_config(
+                MIGRATION_DIR)
         try:
-            upgrade(directory=MIGRATION_DIR)
+            alembic_cmd.upgrade(cfg, revision='head', sql=False, tag=None)
         except sqlalchemy.exc.OperationalError:
             logger = logging.getLogger()
             logger.error("Could not connect to the database - is a "
