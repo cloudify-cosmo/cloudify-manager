@@ -193,7 +193,7 @@ class Postgres(object):
     def _append_delete_current_execution(self, dump_file):
         """Append to the dump file a query that deletes the current execution
         """
-        delete_current_execution_query = "DELETE FROM executions " \
+        delete_current_execution_query = "DELETE FROM public.executions " \
                                          "WHERE id = '{0}';" \
                                          .format(ctx.execution_id)
         self._append_dump(dump_file, delete_current_execution_query)
@@ -204,7 +204,7 @@ class Postgres(object):
         protected_query - hides the credentials for the logs file
         """
         username, password = self._get_admin_credentials()
-        base_query = "UPDATE users " \
+        base_query = "UPDATE public.users " \
                      "SET username='{0}', password='{1}' " \
                      "WHERE id=0;"
         return (base_query.format(username, password),
@@ -214,7 +214,7 @@ class Postgres(object):
         """Return a query that creates an execution to the DB with the ID (and
         other data) from the snapshot restore execution
         """
-        return "INSERT INTO executions (id, created_at, " \
+        return "INSERT INTO public.executions (id, created_at, " \
                "is_system_workflow, " \
                "status, workflow_id, _tenant_id, _creator_id, token) " \
                "VALUES ('{0}', '{1}', 't', 'started', 'restore_snapshot', " \
@@ -311,7 +311,7 @@ class Postgres(object):
 
     def init_current_execution_data(self):
         response = self.run_query("SELECT created_at, token "
-                                  "FROM executions "
+                                  "FROM public.executions "
                                   "WHERE id='{0}'".format(ctx.execution_id))
         if not response:
             raise NonRecoverableError('Illegal state - missing execution date '
@@ -476,11 +476,9 @@ class Postgres(object):
 
     def get_deployment_creator_ids_and_tokens(self):
         result = self.run_query(
-            "SELECT tenants.name, deployments.id,"
-            "users.id, users.api_token_key "
-            "FROM deployments, users, tenants "
-            "WHERE deployments._creator_id=users.id "
-            "AND tenants.id=deployments._tenant_id"
+            "SELECT t.name, d.id, u.id, u.api_token_key "
+            "FROM public.deployments d, public.users u, public.tenants t"
+            "WHERE d._creator_id=u.id AND t.id=d._tenant_id"
         )
 
         details = {}
@@ -516,7 +514,7 @@ class Postgres(object):
         update_query = """UPDATE {0}
                           SET {1} = encrypted_values.value
                           FROM (VALUES %s) AS encrypted_values ({2}, value)
-                          WHERE {0}.{2} = encrypted_values.{2}""" \
+                          WHERE public.{0}.{2} = encrypted_values.{2}""" \
             .format(table_name, column_name, primary_key)
         self.run_query(update_query, vars=encrypted_values, bulk_query=True)
 
@@ -562,17 +560,19 @@ class Postgres(object):
             'users_tenants',
         )
         return [
-            "ALTER TABLE {0} ALTER CONSTRAINT {0}_role_id_fkey {1};".format(
-                t, constraint) for t in tables
+            "ALTER TABLE public.{0} ALTER CONSTRAINT {0}_role_id_fkey {1};"
+            .format(t, constraint) for t in tables
         ]
 
     def _get_status_reporter_deletes(self):
         return [
-            "DELETE FROM users_roles WHERE user_id IN ( "
-            "SELECT id FROM users WHERE username IN ('db_status_reporter', "
-            "'broker_status_reporter', 'manager_status_reporter'));",
-            "DELETE FROM users WHERE username IN ('db_status_reporter', "
-            "'broker_status_reporter', 'manager_status_reporter');",
+            "DELETE FROM public.users_roles WHERE user_id IN ( "
+            "SELECT id FROM public.users WHERE username IN ("
+            "'db_status_reporter', 'broker_status_reporter', "
+            "'manager_status_reporter'));",
+            "DELETE FROM public.users WHERE username IN ("
+            "'db_status_reporter', 'broker_status_reporter', "
+            "'manager_status_reporter');",
         ]
 
     def _add_preserve_defaults_queries(self, queries):
@@ -583,7 +583,7 @@ class Postgres(object):
         """
         queries.remove(self._TRUNCATE_QUERY.format('users'))
         queries.remove(self._TRUNCATE_QUERY.format('tenants'))
-        queries.append('DELETE FROM tenants CASCADE WHERE id != 0;')
+        queries.append('DELETE FROM public.tenants CASCADE WHERE id != 0;')
 
     def _get_all_tables(self):
         result = self.run_query("SELECT tablename "
@@ -594,8 +594,8 @@ class Postgres(object):
         return [res[0] for res in result['all']]
 
     def _get_admin_credentials(self):
-        response = self.run_query("SELECT username, password "
-                                  "FROM users WHERE id=0")
+        response = self.run_query(
+            "SELECT username, password FROM public.users WHERE id=0")
         if not response:
             raise NonRecoverableError('Illegal state - '
                                       'missing admin user in db')
@@ -620,7 +620,7 @@ class Postgres(object):
 
     def get_service_management(self):
         result = self.run_query("SELECT value "
-                                "FROM config "
+                                "FROM public.config "
                                 "WHERE name = 'service_management';")
 
         return result['all'][0][0]
