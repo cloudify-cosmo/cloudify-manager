@@ -77,23 +77,13 @@ class Postgres(object):
         # Make foreign keys for the `roles` table deferrable
         deferrable_roles_constraints = self._get_roles_constraints(
             'DEFERRABLE INITIALLY DEFERRED')
-        # Prepend also BEGIN; to start a transaction (with deferrable constr.)
-        dump_file = self._prepend_dump(dump_file,
-                                       clear_tables_queries +
-                                       deferrable_roles_constraints +
-                                       ["BEGIN;"])
+
+        dump_file = self._prepend_dump(
+            dump_file, clear_tables_queries + deferrable_roles_constraints)
 
         # Remove users/roles associated with 5.0.5 status reporter
         delete_status_reporter = self._get_status_reporter_deletes()
         self._append_dump(dump_file, '\n'.join(delete_status_reporter))
-
-        # Finish transaction (status reporter users/roles no longer exist)
-        self._append_dump(dump_file, 'COMMIT;\n')
-
-        # Make foreign keys for the `roles` table immediate (as they were)
-        immediate_roles_constraints = self._get_roles_constraints(
-            'NOT DEFERRABLE')
-        self._append_dump(dump_file, '\n'.join(immediate_roles_constraints))
 
         # Don't change admin user during the restore or the workflow will
         # fail to correctly execute (the admin user update query reverts it
@@ -101,6 +91,11 @@ class Postgres(object):
         admin_query, admin_protected_query = \
             self._get_admin_user_update_query()
         self._append_dump(dump_file, admin_query, admin_protected_query)
+
+        # Make foreign keys for the `roles` table immediate (as they were)
+        immediate_roles_constraints = self._get_roles_constraints(
+            'NOT DEFERRABLE')
+        self._append_dump(dump_file, '\n'.join(immediate_roles_constraints))
 
         self._restore_dump(dump_file, self._db_name)
 
@@ -559,10 +554,10 @@ class Postgres(object):
             'users_roles',
             'users_tenants',
         )
-        return [
+        return ['COMMIT;', 'BEGIN;'] + [
             "ALTER TABLE public.{0} ALTER CONSTRAINT {0}_role_id_fkey {1};"
             .format(t, constraint) for t in tables
-        ]
+        ] + ['COMMIT;', 'BEGIN;']
 
     def _get_status_reporter_deletes(self):
         return [
