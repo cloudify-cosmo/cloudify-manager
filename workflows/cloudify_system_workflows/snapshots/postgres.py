@@ -540,8 +540,12 @@ class Postgres(object):
         all_tables = [table for table in all_tables if
                       table not in self._TABLES_TO_KEEP]
 
-        queries = [self._TRUNCATE_QUERY.format(table) for table in all_tables
-                   if table != 'users'] + ['DELETE FROM users;']
+        queries = (
+            ['LOCK TABLE users, maintenance_mode;'] +
+            [self._TRUNCATE_QUERY.format(table) for table in all_tables
+             if table != 'users'] +
+            ['DELETE FROM users;']
+        )
         if preserve_defaults:
             self._add_preserve_defaults_queries(queries)
         return queries
