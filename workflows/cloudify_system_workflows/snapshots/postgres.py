@@ -65,8 +65,8 @@ class Postgres(object):
         self.hashed_execution_token = None
         if ':' in self._host:
             self._host, self._port = self._host.split(':')
-            ctx.logger.debug('Updating Postgres config: host: {0}, port: {1}'
-                             .format(self._host, self._port))
+            ctx.logger.debug('Updating Postgres config: host: %s, port: %s',
+                             self._host, self._port)
 
     def restore(self, tempdir, premium_enabled, license=None):
         ctx.logger.info('Restoring DB from postgres dump')
@@ -104,8 +104,8 @@ class Postgres(object):
         ctx.logger.debug('Postgres restored')
 
     def dump(self, tempdir, include_logs, include_events):
-        ctx.logger.info('Dumping Postgres, include logs {0} include events {1}'
-                        .format(include_logs, include_events))
+        ctx.logger.info('Dumping Postgres, include logs %s include events %s',
+                        include_logs, include_events)
         destination_path = os.path.join(tempdir, self._POSTGRES_DUMP_FILENAME)
         admin_dump_path = os.path.join(tempdir, ADMIN_DUMP_FILE)
         try:
@@ -165,10 +165,10 @@ class Postgres(object):
     def _restore_db(self, tempdir, database_name):
         if not self._db_exists(database_name):
             return
-        ctx.logger.info('Restoring {db} DB'.format(db=database_name))
+        ctx.logger.info('Restoring %s DB', database_name)
         dump_file = os.path.join(tempdir, database_name + '_data')
         self._restore_dump(dump_file, database_name)
-        ctx.logger.debug('{db} DB restored'.format(db=database_name))
+        ctx.logger.debug('%s DB restored', database_name)
 
     def restore_stage(self, tempdir):
         self._restore_db(tempdir, self._STAGE_DB_NAME)
@@ -337,8 +337,8 @@ class Postgres(object):
 
     def _dump_to_file(self, destination_path, db_name, exclude_tables=None,
                       table=None):
-        ctx.logger.debug('Creating db dump file: {0}, excluding: {1}'.
-                         format(destination_path, exclude_tables))
+        ctx.logger.debug('Creating db dump file: %s, excluding: %s',
+                         destination_path, exclude_tables)
         flags = []
         if exclude_tables:
             flags = ["--exclude-table={0}".format(t)
@@ -390,7 +390,7 @@ class Postgres(object):
     def _restore_dump(self, dump_file, db_name, table=None):
         """Execute `psql` to restore an SQL dump into the DB
         """
-        ctx.logger.debug('Restoring db dump file: {0}'.format(dump_file))
+        ctx.logger.debug('Restoring db dump file: %s', dump_file)
         command = self.get_psql_command(db_name)
         command.extend([
             '-v', 'ON_ERROR_STOP=1',
@@ -408,15 +408,14 @@ class Postgres(object):
         sensitive information, e.g. username and password.
         """
         print_query = protected_query or query
-        ctx.logger.debug('Adding to end of dump: {0}'.format(print_query))
+        ctx.logger.debug('Adding to end of dump: %s', print_query)
         with open(dump_file, 'a') as f:
             f.write('\n{0}\n'.format(query))
 
     @staticmethod
     def _prepend_dump(dump_file, queries):
         queries_str = '\n'.join(queries)
-        ctx.logger.debug('Adding to beginning of dump: {0}'
-                         .format(queries_str))
+        ctx.logger.debug('Adding to beginning of dump: %s', queries_str)
         pre_dump_file = '{0}.pre'.format(dump_file)
         new_dump_file = '{0}.new'.format(dump_file)
         with open(pre_dump_file, 'a') as f:
@@ -429,7 +428,7 @@ class Postgres(object):
 
     def run_query(self, query, vars=None, bulk_query=False):
         str_query = query.replace(u"\uFFFD", "?")
-        ctx.logger.debug('Running query: {0}'.format(str_query))
+        ctx.logger.debug('Running query: %s', str_query)
         with closing(self._connection.cursor()) as cur:
             try:
                 if bulk_query:
@@ -439,15 +438,15 @@ class Postgres(object):
                 status_message = cur.statusmessage
                 fetchall = cur.fetchall()
                 result = {'status': status_message, 'all': fetchall}
-                ctx.logger.debug('Running query result status: {0}'
-                                 .format(status_message))
+                ctx.logger.debug('Running query result status: %s',
+                                 status_message)
             except Exception as e:
                 fetchall = None
                 status_message = str(e)
                 result = {'status': status_message, 'all': fetchall}
                 if status_message != 'no results to fetch':
-                    ctx.logger.error('Running query result status: {0}'
-                                     .format(status_message))
+                    ctx.logger.error('Running query result status: %s',
+                                     status_message)
             return result
 
     def _make_api_token_keys(self):
@@ -609,7 +608,7 @@ class Postgres(object):
         postgres_password, postgres_username = config.postgresql_password, \
                                                config.postgresql_username
         config.postgresql_password = config.postgresql_username = '********'
-        ctx.logger.debug('Init Postgres config: {0}'.format(config))
+        ctx.logger.debug('Init Postgres config: %s', config)
         config.postgresql_password, config.postgresql_username = \
             postgres_password, postgres_username
 
