@@ -72,12 +72,11 @@ class Postgres(object):
         ctx.logger.info('Restoring DB from postgres dump')
         dump_file = os.path.join(tempdir, self._POSTGRES_DUMP_FILENAME)
 
-        # Add to the beginning of the dump queries that recreate the schema
-        clear_tables_queries = self._get_clear_tables_queries()
         # Make foreign keys for the `roles` table deferrable
         deferrable_roles_constraints = self._get_roles_constraints(
             'DEFERRABLE INITIALLY DEFERRED')
 
+        clear_tables_queries = self._get_clear_tables_queries()
         dump_file = self._prepend_dump(
             dump_file, deferrable_roles_constraints + clear_tables_queries)
 
