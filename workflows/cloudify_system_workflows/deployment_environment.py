@@ -82,6 +82,7 @@ def _get_deployment_labels(new_labels, plan_labels):
     for name, label_spec in plan_labels.items():
         labels |= {(name.lower(), value) for value in
                    label_spec.get('values', [])}
+    labels.add(('csys-obj-type', 'service'))
     return [{k: v} for k, v in labels]
 
 
