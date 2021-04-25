@@ -119,7 +119,8 @@ class TestSnapshots(AgentTestCase):
         self.client.tenants.create('mike')
         mike_client = create_rest_client(
             host=self.env.container_ip,
-            tenant='mike'
+            tenant='mike',
+            rest_port=443, rest_protocol='https', cert_path=self.ca_cert
         )
         self._deploy_with_agents_multitenant(mike_client)
         snapshot_id = self._create_snapshot()
