@@ -236,7 +236,7 @@ class DeploymentLabelsDependenciesTest(BaseServerTestCase):
                     'csys-obj-parent': 'env'
                 },
                 {
-                    'csys-obj-type': 'Environment',
+                    'csys-obj-type': 'environment',
                 }
             ],
             resource_id='env_1'
@@ -267,7 +267,7 @@ class DeploymentLabelsDependenciesTest(BaseServerTestCase):
                     'csys-obj-parent': 'env'
                 },
                 {
-                    'csys-obj-type': 'Environment',
+                    'csys-obj-type': 'environment',
                 }
             ],
             resource_id='env_1'
@@ -299,7 +299,7 @@ class DeploymentLabelsDependenciesTest(BaseServerTestCase):
         self.put_deployment_with_labels(
             [
                 {
-                    'csys-obj-type': 'Environment',
+                    'csys-obj-type': 'environment',
                 }
             ],
             resource_id='sub_env'
@@ -531,7 +531,7 @@ class DeploymentLabelsDependenciesTest(BaseServerTestCase):
                     'csys-obj-parent': 'env'
                 },
                 {
-                    'csys-obj-type': 'Environment',
+                    'csys-obj-type': 'environment',
                 }
             ],
             resource_id='env_1'

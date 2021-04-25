@@ -992,7 +992,7 @@ def parse_label(label_key, label_value):
         )
 
     parsed_label_key = label_key.lower()
-    parsed_label_value = unicodedata.normalize('NFKC', label_value).casefold()
+    parsed_label_value = unicodedata.normalize('NFKC', label_value)
 
     if (parsed_label_key.startswith(RESERVED_PREFIX) and
             parsed_label_key not in RESERVED_LABELS):

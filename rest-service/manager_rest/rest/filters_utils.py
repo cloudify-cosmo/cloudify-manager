@@ -17,8 +17,7 @@ class FilterRule(dict):
     def __init__(self, key, values, operator, filter_rule_type):
         super().__init__()
         self['key'] = key.lower()
-        self['values'] = ([value.lower() for value in values] if
-                          filter_rule_type == FilterRuleType.LABEL else values)
+        self['values'] = values
         self['operator'] = operator
         self['type'] = filter_rule_type
 
