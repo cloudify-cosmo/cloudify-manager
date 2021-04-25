@@ -27,9 +27,13 @@ class SearchesTestCase(base_test.BaseServerTestCase):
         self.put_deployment_with_labels(self.LABELS)
         self.put_deployment_with_labels(self.LABELS_2)
         deployments = self.client.deployments.list(
-            filter_rules=[FilterRule('KEy1', ['VaL1'], 'any_of', 'label')])
+            filter_rules=[FilterRule('KEy1', ['val1'], 'any_of', 'label')])
         self.assertEqual(len(deployments), 2)
         self.assert_metadata_filtered(deployments, 0)
+        deployments = self.client.deployments.list(
+            filter_rules=[FilterRule('KEy1', ['VaL1'], 'any_of', 'label')])
+        self.assertEqual(len(deployments), 0)
+        self.assert_metadata_filtered(deployments, 2)
 
     def test_list_deployments_with_filter_rules_and_filter_id(self):
         self.put_deployment_with_labels(self.LABELS)
@@ -46,7 +50,7 @@ class SearchesTestCase(base_test.BaseServerTestCase):
                                blueprint_file_name=bp_file_name)
         all_blueprints = self.client.blueprints.list(
             filter_rules=[
-                FilterRule('bp_key1', ['bp_key1_val1'], 'any_of', 'label')])
+                FilterRule('bp_key1', ['BP_key1_val1'], 'any_of', 'label')])
         second_blueprint = self.client.blueprints.list(
             filter_rules=[
                 FilterRule('bp_key2', ['bp_2_val1'], 'any_of', 'label'),

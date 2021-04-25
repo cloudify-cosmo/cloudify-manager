@@ -11,7 +11,7 @@ blueprint_labels:
   bp_key1:
     values:
       - BP_key1_val1
-  BP_kEy2:
+  bp_key2:
     values:
       - bp_key2_val1
       - bp_key2_val2
