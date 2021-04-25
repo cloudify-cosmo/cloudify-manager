@@ -50,41 +50,53 @@ class LabelsBaseTestCase(base_test.BaseServerTestCase):
 
     def test_resource_creation_success_with_labels(self):
         resource = self.put_resource_with_labels(self.LABELS)
-        self.assert_resource_labels(resource.labels, self.LABELS)
+        verify_service_label = self.resource == 'deployments'
+        self.assert_resource_labels(resource.labels, self.LABELS,
+                                    verify_service_label=verify_service_label)
 
     def test_uppercase_labels_to_lowercase(self):
         resource = self.put_resource_with_labels(self.UPPERCASE_LABELS)
+        verify_service_label = self.resource == 'deployments'
         self.assert_resource_labels(resource.labels,
-                                    [{'env': 'aWs'}, {'arch': 'k8s'}])
+                                    [{'env': 'aWs'}, {'arch': 'k8s'}],
+                                    verify_service_label=verify_service_label)
 
     def test_creation_success_with_special_labels(self):
         labels = [{'k.e-y': '&val\xf3e'}, {'key': ' va=l ue'},
                   {'ke_y': 'val=\\,u:e'}]
         resource = self.put_resource_with_labels(labels)
-        self.assert_resource_labels(resource.labels, labels)
+        verify_service_label = self.resource == 'deployments'
+        self.assert_resource_labels(resource.labels, labels,
+                                    verify_service_label=verify_service_label)
 
     def test_creation_success_with_normalized_label_value(self):
         # Testing that the value Ó is being normalized and lowercased
         labels = [{'key': '\u004f\u0301'}]
         resource = self.put_resource_with_labels(labels)
-        self.assert_resource_labels(resource.labels, [{'key': '\u00d3'}])
+        verify_service_label = self.resource == 'deployments'
+        self.assert_resource_labels(resource.labels, [{'key': '\u00d3'}],
+                                    verify_service_label=verify_service_label)
 
     def test_update_resource_labels(self):
         resource = self.put_resource_with_labels(self.LABELS)
         updated_res = self.update_resource_labels(resource.id,
                                                   self.UPDATED_LABELS)
-        self.assert_resource_labels(updated_res.labels, self.UPDATED_LABELS)
+        self.assert_resource_labels(updated_res.labels, self.UPDATED_LABELS,
+                                    verify_service_label=False)
 
     def test_update_uppercase_resource_labels(self):
         resource = self.put_resource_with_labels(self.LABELS)
         updated_res = self.update_resource_labels(
             resource.id, self.UPDATED_UPPERCASE_LABELS)
         self.assert_resource_labels(updated_res.labels,
-                                    [{'env': 'GCp'}, {'arch': 'K8s'}])
+                                    [{'env': 'GCp'}, {'arch': 'K8s'}],
+                                    verify_service_label=False)
 
     def test_remove_resource_labels(self):
         resource = self.put_resource_with_labels(self.LABELS)
-        self.assert_resource_labels(resource.labels, self.LABELS)
+        verify_service_label = self.resource == 'deployments'
+        self.assert_resource_labels(resource.labels, self.LABELS,
+                                    verify_service_label=verify_service_label)
         updated_res = self.update_resource_labels(resource.id, [])
         self.assertEmpty(updated_res.labels)
 
@@ -149,7 +161,10 @@ class LabelsBaseTestCase(base_test.BaseServerTestCase):
         self.put_resource_with_labels(self.LABELS, resource_id='res1')
         self.put_resource_with_labels(self.LABELS_2, resource_id='res2')
         keys_list = self.labels_client.list_keys()
-        self.assertEqual(set(keys_list.items), {'env', 'arch'})
+        resource_keys = {'env', 'arch'}
+        if self.resource == 'deployments':
+            resource_keys.add('csys-obj-type')
+        self.assertEqual(set(keys_list.items), resource_keys)
 
     def test_list_resource_labels_key_values(self):
         self.put_resource_with_labels(self.LABELS, resource_id='res1')
@@ -179,16 +194,10 @@ class DeploymentsLabelsTestCase(LabelsBaseTestCase):
     def setUp(self):
         super().setUp('deployments', self.put_deployment_with_labels)
 
-    def test_deployment_creation_success_without_labels(self):
+    def test_deployment_creation_success_as_service(self):
         _, _, _, deployment = self.put_deployment()
-        self.assertEmpty(deployment.labels)
-
-    def test_update_empty_deployments_labels(self):
-        _, _, _, deployment = self.put_deployment()
-        self.assertEqual(deployment.labels, [])
-        updated_dep = self.client.deployments.update_labels(deployment.id,
-                                                            self.LABELS)
-        self.assert_resource_labels(updated_dep.labels, self.LABELS)
+        self.assert_resource_labels(deployment.labels,
+                                    [{'csys-obj-type': 'service'}])
 
     def test_create_deployment_labels_from_blueprint(self):
         self.put_blueprint(blueprint_id='bp1',
@@ -266,7 +275,8 @@ class BlueprintsLabelsTestCase(LabelsBaseTestCase):
         blueprint = self.put_blueprint_with_labels(self.LABELS)
         updated_bp = self.client.blueprints.update(blueprint.id,
                                                    {'labels': []})
-        self.assert_resource_labels(updated_bp.labels, [])
+        self.assert_resource_labels(updated_bp.labels, [],
+                                    verify_service_label=False)
 
     def test_create_blueprint_labels_from_blueprint(self):
         blueprint = self.put_blueprint(
@@ -280,4 +290,5 @@ class BlueprintsLabelsTestCase(LabelsBaseTestCase):
             {'bp_key2': 'bp_key2_val1'}, {'bp_key2': 'bp_key2_val2'},
             {'new_bp_key': 'NEW_BP_value'}
         ]
-        self.assert_resource_labels(blueprint.labels, expected_bp_labels)
+        self.assert_resource_labels(blueprint.labels, expected_bp_labels,
+                                    verify_service_label=False)

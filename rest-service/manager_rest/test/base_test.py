@@ -173,7 +173,8 @@ class BaseServerTestCase(unittest.TestCase):
     def assert_metadata_filtered(self, resource_list, filtered_cnt):
         self.assertEqual(resource_list.metadata.get('filtered'), filtered_cnt)
 
-    def assert_resource_labels(self, resource_labels, compared_labels):
+    def assert_resource_labels(self, resource_labels, compared_labels,
+                               verify_service_label=True):
         simplified_labels = set()
         compared_labels_set = set()
 
@@ -183,6 +184,8 @@ class BaseServerTestCase(unittest.TestCase):
         for compared_label in compared_labels:
             [(key, value)] = compared_label.items()
             compared_labels_set.add((key, value))
+        if verify_service_label:
+            compared_labels_set.add(('csys-obj-type', 'service'))
 
         self.assertEqual(simplified_labels, compared_labels_set)
 
