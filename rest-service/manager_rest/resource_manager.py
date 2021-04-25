@@ -1498,12 +1498,7 @@ class ResourceManager(object):
         obj_types = set()
         for key, value in labels:
             if key == 'csys-obj-type' and value:
-                if value in ('environment', 'service'):
-                    obj_types.add(value)
-                else:
-                    raise manager_exceptions.BadParametersError(
-                        f'The value `{value}` is invalid. The allowed '
-                        'csys-obj-type values are `environment` and `service`')
+                obj_types.add(value)
         return obj_types
 
     def get_deployment_object_types_from_labels(self, resource, labels):
