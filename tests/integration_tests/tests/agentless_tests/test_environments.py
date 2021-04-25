@@ -759,6 +759,52 @@ class EnvironmentTest(AgentlessTestCase):
         with self.assertRaises(CloudifyClientError):
             self.client.deployments.delete(environment.id)
 
+    def test_update_environment_linked_with_multiple_deployments(self):
+        environment = self._deploy_main_environment('dsl/basic.yaml')
+        self._assert_main_environment_after_installation(
+            environment.id, DeploymentState.GOOD
+        )
+        self._deploy_environment_with_service_and_environment(environment)
+        self.upload_blueprint_resource(
+            'dsl/basic_get_secret.yaml',
+            'updated_basic'
+        )
+        with self.assertRaises(CloudifyClientError):
+            self.client.deployment_updates.update_with_existing_blueprint(
+                environment.id, 'updated_basic')
+
+    def test_uninstall_environment_and_parent(self):
+        environment = self._deploy_main_environment('dsl/basic.yaml')
+        self._assert_main_environment_after_installation(
+            environment.id, DeploymentState.GOOD
+        )
+        deployment = self._deploy_deployment_to_environment(
+            environment,
+            'dsl/simple_deployment.yaml',
+            'environment',
+            install=True
+        )
+        self._verify_statuses_and_count_for_deployment(
+            environment.id,
+            deployment_status=DeploymentState.GOOD,
+            sub_environments_status=DeploymentState.GOOD,
+            sub_environments_count=1
+        )
+        self.execute_workflow(workflow_name='uninstall',
+                              deployment_id=deployment.id,
+                              wait_for_execution=True)
+        self.delete_deployment(deployment.id, validate=True)
+
+        self._verify_statuses_and_count_for_deployment(
+            environment.id,
+            deployment_status=DeploymentState.GOOD,
+            sub_services_count=0
+        )
+        self.execute_workflow(workflow_name='uninstall',
+                              deployment_id=environment.id,
+                              wait_for_execution=True)
+        self.delete_deployment(environment.id, validate=True)
+
     def test_environment_with_two_levels(self):
         main_environment = self._deploy_main_environment('dsl/basic.yaml')
         self._assert_main_environment_after_installation(
