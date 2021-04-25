@@ -23,8 +23,10 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
     def setUp(self):
         super(DeploymentGroupsTestCase, self).setUp()
         self.put_blueprint()
-        self.client.deployments.create('blueprint', 'dep1')
-        self.client.deployments.create('blueprint', 'dep2')
+        dep1 = self.client.deployments.create('blueprint', 'dep1')
+        self.create_deployment_environment(dep1)
+        dep2 = self.client.deployments.create('blueprint', 'dep2')
+        self.create_deployment_environment(dep2)
 
     def test_get_empty(self):
         result = self.client.deployment_groups.list()
@@ -470,12 +472,14 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             'group1',
             labels=labels,
         )
-        self.assert_resource_labels(group.labels, labels)
+        self.assert_resource_labels(group.labels, labels,
+                                    verify_service_label=False)
         group = self.client.deployment_groups.put(
             'group1',
             labels=updated_labels,
         )
-        self.assert_resource_labels(group.labels, updated_labels)
+        self.assert_resource_labels(group.labels, updated_labels,
+                                    verify_service_label=False)
 
     def test_group_labels_for_deployments(self):
         """Group labels are applied to the newly-created deployments"""
@@ -546,7 +550,7 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         self.sm.get(models.Deployment, dep_id)
         self.assert_resource_labels(client_dep.labels, [
             {'label1': 'value1'}, {'label2': 'value2'}
-        ])
+        ], verify_service_label=False)
 
     def test_add_labels_already_exist(self):
         labels = [{'label2': 'value2'}]
@@ -560,7 +564,8 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             labels=labels,
         )
         dep = self.client.deployments.get('dep1')
-        self.assert_resource_labels(dep.labels, labels)
+        self.assert_resource_labels(dep.labels, labels,
+                                    verify_service_label=False)
 
     def test_add_labels_to_added_deployments(self):
         """Group labels are applied to deps added to the group"""
@@ -579,7 +584,8 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             {'key': 'label', 'values': ['filter'],
              'operator': 'any_of', 'type': 'label'}
         ])
-        self.client.deployments.create('blueprint', 'dep3')
+        dep3 = self.client.deployments.create('blueprint', 'dep3')
+        self.create_deployment_environment(dep3)
         self.client.deployment_groups.put(
             'group1',
             # add a deployment using all 3 ways: by id, by clone, by filter
@@ -590,7 +596,8 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         dep1 = self.client.deployments.get('dep1')
         self.assert_resource_labels(dep1.labels, labels)
         dep2 = self.client.deployments.get('dep2')
-        self.assert_resource_labels(dep2.labels, labels + filter_labels)
+        self.assert_resource_labels(dep2.labels, labels + filter_labels,
+                                    verify_service_label=False)
         dep3 = self.client.deployments.get('dep3')
         self.assert_resource_labels(dep3.labels, labels)
 
@@ -631,8 +638,8 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         dep1 = self.client.deployments.get('dep1')
         dep2 = self.client.deployments.get('dep2')
         self.assertEqual(len(group.labels), 0)
-        self.assertEqual(len(dep1.labels), 0)
-        self.assertEqual(len(dep2.labels), 0)
+        self.assertEqual(len(dep1.labels), 1)
+        self.assertEqual(len(dep2.labels), 1)
 
     def test_add_cyclic_parent_labels_in_group(self):
         error_message = 'results in cyclic deployment-labels dependencies'
@@ -652,7 +659,7 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         dep1 = self.client.deployments.get('dep1')
         dep2 = self.client.deployments.get('dep2')
         self.assertEqual(len(group.labels), 0)
-        self.assertEqual(len(dep1.labels), 0)
+        self.assertEqual(len(dep1.labels), 1)
         self.assertEqual(len(dep2.labels), 1)
 
     def test_add_self_deployment_as_parent(self):
@@ -670,7 +677,7 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         group = self.client.deployment_groups.get('group1')
         dep1 = self.client.deployments.get('dep1')
         self.assertEqual(len(group.labels), 0)
-        self.assertEqual(len(dep1.labels), 0)
+        self.assertEqual(len(dep1.labels), 1)
 
     def test_add_single_parent(self):
         self.client.deployment_groups.put(

@@ -216,7 +216,7 @@ class DeploymentLabelsDependenciesTest(BaseServerTestCase):
         deployment_2 = self.client.deployments.get('deployment_2')
         self.assertEqual(deployment_1.sub_services_count, 1)
         self.assertEqual(deployment_2.sub_services_count, 0)
-        self.assertEqual(len(deployment_1.labels), 0)
+        self.assertEqual(len(deployment_1.labels), 1)
 
     def test_number_of_direct_services_deployed_inside_environment(self):
         self.put_deployment(deployment_id='env',
