@@ -3,7 +3,10 @@ import mock
 from datetime import datetime
 
 from cloudify.models_states import VisibilityState, ExecutionState
-from cloudify_rest_client.exceptions import CloudifyClientError
+from cloudify_rest_client.exceptions import (
+    CloudifyClientError,
+    IllegalExecutionParametersError,
+)
 
 from manager_rest.manager_exceptions import SQLStorageException
 
@@ -1200,4 +1203,20 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
         for exc in group.executions:
             assert exc.status in (
                 ExecutionState.PENDING, ExecutionState.QUEUED
+            )
+
+    def test_invalid_parameters(self):
+        with self.assertRaises(IllegalExecutionParametersError):
+            self.client.execution_groups.start(
+                deployment_group_id='group1',
+                workflow_id='install',
+                parameters={
+                    'dep1': {'invalid-input': 42}
+                }
+            )
+        with self.assertRaises(IllegalExecutionParametersError):
+            self.client.execution_groups.start(
+                deployment_group_id='group1',
+                workflow_id='install',
+                default_parameters={'invalid-input': 42}
             )
