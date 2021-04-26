@@ -20,6 +20,8 @@ from flask import request
 from flask_restful.inputs import boolean
 from flask_restful_swagger import swagger
 from flask_restful.reqparse import Argument
+from sqlalchemy import and_ as sql_and
+
 
 from cloudify._compat import text_type
 from cloudify.models_states import VisibilityState, ExecutionState
@@ -32,7 +34,7 @@ from cloudify.deployment_dependencies import (create_deployment_dependency,
 from manager_rest import utils, manager_exceptions
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
-from manager_rest.storage import models, get_storage_manager
+from manager_rest.storage import db, models, get_storage_manager
 from manager_rest.manager_exceptions import (
     DeploymentEnvironmentCreationInProgressError,
     DeploymentCreationError,
@@ -870,15 +872,19 @@ class DeploymentGroupsId(SecuredResource):
 
     def _delete_deployments_labels(self, sm, deployments, labels_to_delete):
         """Bulk delete the labels for the given deployments."""
+        dl_table = models.DeploymentLabel.__table__
         deployment_ids = [d._storage_id for d in deployments]
         for label in labels_to_delete:
-            dep_labels = sm.list(models.DeploymentLabel, filters={
-                'key': label.key,
-                'value': label.value,
-                '_labeled_model_fk': deployment_ids
-            }, get_all_results=True)
-            for dep_label in dep_labels:
-                sm.delete(dep_label)
+            db.session.execute(
+                dl_table.delete()
+                .where(
+                    sql_and(
+                        dl_table.c.key == label.key,
+                        dl_table.c.value == label.value,
+                        dl_table.c._labeled_model_fk.in_(deployment_ids),
+                    )
+                )
+            )
 
     def _get_labels_from_group(self, group):
         return [(label.key, label.value) for label in group.labels]
