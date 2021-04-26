@@ -220,11 +220,17 @@ class ResourceManager(object):
                 if all_started:
                     break
 
-        for execution in to_run:
-            if execution.is_system_workflow:
-                self._execute_system_workflow(execution, queue=True)
-            else:
-                self.execute_workflow(execution, queue=True)
+        amqp_client = workflow_executor.get_amqp_client()
+        handler = workflow_executor.workflow_sendhandler()
+        amqp_client.add_handler(handler)
+        with amqp_client:
+            for execution in to_run:
+                if execution.is_system_workflow:
+                    self._execute_system_workflow(
+                        execution, queue=True, send_handler=handler)
+                else:
+                    self.execute_workflow(
+                        execution, queue=True, send_handler=handler)
 
     def _refresh_execution(self, execution: models.Execution) -> bool:
         """Prepare the execution to be started.
@@ -1101,7 +1107,8 @@ class ResourceManager(object):
                                  *,
                                  verify_no_executions=True,
                                  bypass_maintenance=None,
-                                 queue=False):
+                                 queue=False,
+                                 send_handler: 'SendHandler' = None):
         """
         :param deployment: deployment for workflow execution
         :param wf_id: workflow id
@@ -1115,6 +1122,7 @@ class ResourceManager(object):
         :param execution: an execution DB object. If it was passed it means
         this execution was queued and now trying to run again. If the execution
         can currently run it will, if not it will be queued again.
+        :param send_handler: the amqp handler to use for sending the workflow
         :return: (async task object, execution object)
         """
 
@@ -1135,6 +1143,7 @@ class ResourceManager(object):
         workflow_executor.execute_workflow(
             execution,
             bypass_maintenance=bypass_maintenance,
+            handler=send_handler,
         )
 
         return execution
