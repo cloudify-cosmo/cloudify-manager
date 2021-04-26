@@ -174,7 +174,7 @@ class DeploymentsId(resources_v1.DeploymentsId):
     def _handle_deployment_labels(self, sm, rm, deployment, raw_labels_list):
         new_labels = rest_utils.get_labels_list(raw_labels_list)
         if self._is_create_execution(deployment):
-            new_labels = self._add_existing_labels(new_labels)
+            self._add_existing_labels(deployment, new_labels)
 
         graph = rest_utils.RecursiveDeploymentLabelsDependencies(sm)
         is_updated = self._update_deployment_counts(rm, graph, deployment,
