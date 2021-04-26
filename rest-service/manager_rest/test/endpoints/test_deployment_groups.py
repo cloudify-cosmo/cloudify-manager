@@ -3,7 +3,10 @@ import mock
 from datetime import datetime
 
 from cloudify.models_states import VisibilityState, ExecutionState
-from cloudify_rest_client.exceptions import CloudifyClientError
+from cloudify_rest_client.exceptions import (
+    CloudifyClientError,
+    IllegalExecutionParametersError,
+)
 
 from manager_rest.manager_exceptions import SQLStorageException
 
@@ -32,54 +35,67 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         assert len(result) == 0
         result = self.client.deployment_groups.put('group1')
         assert result['id'] == 'group1'
+        assert len(self.client.deployment_groups.list()) == 1
 
     def test_add_to_group(self):
         group = self.client.deployment_groups.put(
             'group1',
             deployment_ids=['dep1', 'dep2']
         )
-        assert set(group['deployment_ids']) == {'dep1', 'dep2'}
+        assert set(group.deployment_ids) == {'dep1', 'dep2'}
 
     def test_overwrite_group(self):
         group = self.client.deployment_groups.put(
             'group1',
             deployment_ids=['dep1']
         )
-        assert group['deployment_ids'] == ['dep1']
+        assert group.deployment_ids == ['dep1']
 
         group = self.client.deployment_groups.put(
             'group1',
             deployment_ids=['dep1']
         )
-        assert group['deployment_ids'] == ['dep1']
+        assert group.deployment_ids == ['dep1']
 
     def test_clear_group(self):
         group = self.client.deployment_groups.put(
             'group1',
             deployment_ids=['dep1']
         )
-        assert group['deployment_ids'] == ['dep1']
+        assert group.deployment_ids == ['dep1']
 
         group = self.client.deployment_groups.put(
             'group1',
             deployment_ids=[]
         )
-        assert group['deployment_ids'] == []
+        assert group.deployment_ids == []
 
-    def test_update_description(self):
+    def test_update_attributes(self):
         """When deployment_ids is not provided, the group is not cleared"""
         group = self.client.deployment_groups.put(
             'group1',
             deployment_ids=['dep1']
         )
-        assert group['deployment_ids'] == ['dep1']
-
+        assert group.deployment_ids == ['dep1']
+        assert not group.description
+        assert not group.default_blueprint_id
+        assert not group.default_inputs
         group = self.client.deployment_groups.put(
             'group1',
-            description='descr'
+            description='descr',
+            blueprint_id='blueprint',
+            default_inputs={'inp1': 'value'}
         )
-        assert group['description'] == 'descr'
-        assert group['deployment_ids'] == ['dep1']
+        assert group.description == 'descr'
+        assert group.deployment_ids == ['dep1']
+        assert group.default_blueprint_id == 'blueprint'
+        assert group.default_inputs == {'inp1': 'value'}
+        with self.assertRaises(CloudifyClientError) as cm:
+            self.client.deployment_groups.put(
+                'group1',
+                blueprint_id='nonexistent',
+            )
+        assert cm.exception.status_code == 404
 
     def test_create_with_blueprint(self):
         self.client.deployment_groups.put(
@@ -194,13 +210,35 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         )
         assert group.deployment_ids == ['dep1']
 
+    def test_add_nonexistent(self):
+        self.client.deployment_groups.put('group1')
+        with self.assertRaisesRegexp(CloudifyClientError, 'not found') as cm:
+            self.client.deployment_groups.add_deployments(
+                'group1',
+                deployment_ids=['nonexistent']
+            )
+        assert cm.exception.status_code == 404
+        with self.assertRaisesRegexp(CloudifyClientError, 'not found') as cm:
+            self.client.deployment_groups.add_deployments(
+                'group1',
+                filter_id='nonexistent'
+            )
+        assert cm.exception.status_code == 404
+
     def test_remove_nonexistent(self):
         self.client.deployment_groups.put('group1')
-        with self.assertRaisesRegexp(CloudifyClientError, 'not found'):
+        with self.assertRaisesRegexp(CloudifyClientError, 'not found') as cm:
             self.client.deployment_groups.remove_deployments(
                 'group1',
                 deployment_ids=['nonexistent']
             )
+        assert cm.exception.status_code == 404
+        with self.assertRaisesRegexp(CloudifyClientError, 'not found') as cm:
+            self.client.deployment_groups.remove_deployments(
+                'group1',
+                filter_id='nonexistent'
+            )
+        assert cm.exception.status_code == 404
 
     def test_remove_deployment_ids(self):
         self.client.deployment_groups.put('group1')
@@ -406,6 +444,12 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             'group2',
             deployment_ids=['dep1']
         )
+        self.client.deployment_groups.put('group3')  # empty group
+        group1 = self.client.deployment_groups.remove_deployments(
+            'group1',
+            deployments_from_group='group3'
+        )
+        assert set(group1.deployment_ids) == {'dep1', 'dep2'}
         group1 = self.client.deployment_groups.remove_deployments(
             'group1',
             deployments_from_group='group2'
@@ -485,6 +529,18 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             'group1',
             labels=[{'label2': 'value2'}],
         )
+        with self.assertRaises(CloudifyClientError) as cm:
+            self.client.deployment_groups.put(
+                'group1',
+                labels=[{'csys-invalid': 'xxx'}],
+            )
+        assert cm.exception.status_code == 400
+        with self.assertRaises(CloudifyClientError) as cm:
+            self.client.deployment_groups.put(
+                'group1',
+                labels=[{'łó-disallowed-characters': 'xxx'}],
+            )
+        assert cm.exception.status_code == 400
         dep_id = group.deployment_ids[0]
         client_dep = self.client.deployments.get(dep_id)
         self.sm.get(models.Deployment, dep_id)
@@ -1148,4 +1204,20 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
         for exc in group.executions:
             assert exc.status in (
                 ExecutionState.PENDING, ExecutionState.QUEUED
+            )
+
+    def test_invalid_parameters(self):
+        with self.assertRaises(IllegalExecutionParametersError):
+            self.client.execution_groups.start(
+                deployment_group_id='group1',
+                workflow_id='install',
+                parameters={
+                    'dep1': {'invalid-input': 42}
+                }
+            )
+        with self.assertRaises(IllegalExecutionParametersError):
+            self.client.execution_groups.start(
+                deployment_group_id='group1',
+                workflow_id='install',
+                default_parameters={'invalid-input': 42}
             )
