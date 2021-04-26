@@ -440,6 +440,12 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             'group2',
             deployment_ids=['dep1']
         )
+        self.client.deployment_groups.put('group3')  # empty group
+        group1 = self.client.deployment_groups.remove_deployments(
+            'group1',
+            deployments_from_group='group3'
+        )
+        assert set(group1.deployment_ids) == {'dep1', 'dep2'}
         group1 = self.client.deployment_groups.remove_deployments(
             'group1',
             deployments_from_group='group2'
