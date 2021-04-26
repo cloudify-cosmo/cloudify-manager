@@ -669,10 +669,21 @@ class DeploymentGroupsId(SecuredResource):
             request_dict.get('deployments_from_group')
         )
 
-    def validate_before_adding_labels(self, group):
+    def _add_deployment_creation_executions(self, group, deployments):
+        _wf_dep = 'create_deployment_environment'
+        for deployment in deployments:
+            if deployment.latest_execution.workflow_id == _wf_dep:
+                group.executions.append(deployment.latest_execution)
+
+    def _validate_before_adding_labels(self, group):
         _dep_wf = 'create_deployment_environment'
-        for _deployment in group.deployments:
-            for _execution in _deployment.executions:
+        sm = get_storage_manager()
+        executions_group = sm.list(models.ExecutionGroup, filters={
+            'deployment_group': group,
+            'workflow_id': _dep_wf,
+        }, get_all_results=True)
+        for _execution_group in executions_group:
+            for _execution in _execution_group.executions:
                 if _execution.workflow_id == _dep_wf\
                         and _execution.status not in ExecutionState.END_STATES:
                     raise ConflictError(
@@ -785,7 +796,7 @@ class DeploymentGroupsId(SecuredResource):
         _labels_to_delete = [(label.key, label.value)
                              for label in labels_to_delete]
         if labels_to_create and group._storage_id:
-            self.validate_before_adding_labels(group)
+            self._validate_before_adding_labels(group)
         # Handle all created label process
         new_parents = rm.get_deployment_parents_from_labels(labels_to_create)
         if new_parents:
@@ -927,6 +938,7 @@ class DeploymentGroupsId(SecuredResource):
             deployments_to_add |= set(group_to_clone.deployments)
 
         if deployments_to_add:
+            self._add_deployment_creation_executions(group, deployments_to_add)
             graph = rest_utils.RecursiveDeploymentLabelsDependencies(sm)
             new_labels, target_deployments = \
                 self._process_labels_after_adding_deployments_to_group(
