@@ -498,6 +498,18 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             'group1',
             labels=[{'label2': 'value2'}],
         )
+        with self.assertRaises(CloudifyClientError) as cm:
+            self.client.deployment_groups.put(
+                'group1',
+                labels=[{'csys-invalid': 'xxx'}],
+            )
+        assert cm.exception.status_code == 400
+        with self.assertRaises(CloudifyClientError) as cm:
+            self.client.deployment_groups.put(
+                'group1',
+                labels=[{'łó-disallowed-characters': 'xxx'}],
+            )
+        assert cm.exception.status_code == 400
         dep_id = group.deployment_ids[0]
         client_dep = self.client.deployments.get(dep_id)
         self.sm.get(models.Deployment, dep_id)
