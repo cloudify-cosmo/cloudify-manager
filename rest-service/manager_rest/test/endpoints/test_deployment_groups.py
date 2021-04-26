@@ -224,6 +224,7 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
                 filter_id='nonexistent'
             )
         assert cm.exception.status_code == 404
+
     def test_remove_nonexistent(self):
         self.client.deployment_groups.put('group1')
         with self.assertRaisesRegexp(CloudifyClientError, 'not found') as cm:
