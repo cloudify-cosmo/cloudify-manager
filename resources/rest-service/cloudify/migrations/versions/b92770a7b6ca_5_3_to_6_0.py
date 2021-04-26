@@ -21,6 +21,7 @@ def upgrade():
     _add_new_execution_columns()
     _drop_events_id()
     _drop_logs_id()
+    _label_each_deployment_as_service()
 
 
 def downgrade():
@@ -177,4 +178,26 @@ def _drop_execution_group_fk():
     op.drop_column(
         'events',
         '_execution_group_fk'
+    )
+
+
+def _label_each_deployment_as_service():
+    """
+    We would like to label each deployment with `csys-obj-type: service`
+    during an upgrade. This shouldn't be reverted during a downgrade, as it
+    does not affect the DB construction.
+    """
+    op.execute(
+        """
+        insert into deployments_labels (_labeled_model_fk, key, value,
+                    created_at, _creator_id)
+        select d._storage_id, 'csys-obj-type', 'service', now(), 0
+        from deployments d
+        where not exists(
+            select 1
+            from deployments_labels dl
+            where dl._labeled_model_fk=d._storage_id
+            and dl.key='csys-obj-type'
+        );
+        """
     )
