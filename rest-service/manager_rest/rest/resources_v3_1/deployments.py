@@ -224,7 +224,6 @@ class DeploymentsId(resources_v1.DeploymentsId):
                 inputs=inputs,
                 labels=labels,
                 skip_plugins_validation=skip_plugins_validation,
-
             )
         try:
             rm.execute_workflow(
@@ -250,28 +249,29 @@ class DeploymentsId(resources_v1.DeploymentsId):
         request_dict = request.json
         sm = get_storage_manager()
         rm = get_resource_manager()
-        deployment = sm.get(models.Deployment, deployment_id)
-        allowed_attribs = {
-            'description', 'workflows', 'inputs', 'policy_types',
-            'policy_triggers', 'groups', 'scaling_groups', 'outputs',
-            'capabilities'
-        }
-        for attrib in allowed_attribs:
-            if attrib not in request_dict:
-                continue
-            previous = getattr(deployment, attrib, None)
-            if previous is not None:
-                raise ConflictError('{0} is already set'.format(attrib))
-            setattr(deployment, attrib, request_dict[attrib])
-        if 'labels' in request_dict:
-            raw_labels_list = request_dict.get('labels', [])
-            self._handle_deployment_labels(
-                sm,
-                rm,
-                deployment,
-                raw_labels_list
-            )
-        sm.update(deployment)
+        with sm.transaction():
+            deployment = sm.get(models.Deployment, deployment_id, locking=True)
+            allowed_attribs = {
+                'description', 'workflows', 'inputs', 'policy_types',
+                'policy_triggers', 'groups', 'scaling_groups', 'outputs',
+                'capabilities'
+            }
+            for attrib in allowed_attribs:
+                if attrib not in request_dict:
+                    continue
+                previous = getattr(deployment, attrib, None)
+                if previous is not None:
+                    raise ConflictError(f'{attrib} is already set')
+                setattr(deployment, attrib, request_dict[attrib])
+            if 'labels' in request_dict:
+                raw_labels_list = request_dict.get('labels', [])
+                self._handle_deployment_labels(
+                    sm,
+                    rm,
+                    deployment,
+                    raw_labels_list
+                )
+            sm.update(deployment)
         return deployment
 
     @authorize('deployment_get')
