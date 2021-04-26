@@ -42,6 +42,7 @@ from manager_rest.manager_exceptions import (
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.maintenance import is_bypass_maintenance_mode
 from manager_rest.dsl_functions import evaluate_deployment_capabilities
+from manager_rest.execution_token import current_execution
 
 from manager_rest.rest.filters_utils import get_filter_rules_from_filter_id
 from manager_rest.rest import (
@@ -172,6 +173,9 @@ class DeploymentsId(resources_v1.DeploymentsId):
 
     def _handle_deployment_labels(self, sm, rm, deployment, raw_labels_list):
         new_labels = rest_utils.get_labels_list(raw_labels_list)
+        if self._is_create_execution(deployment):
+            new_labels = self._add_existing_labels(new_labels)
+
         graph = rest_utils.RecursiveDeploymentLabelsDependencies(sm)
         is_updated = self._update_deployment_counts(rm, graph, deployment,
                                                     new_labels)
@@ -179,6 +183,26 @@ class DeploymentsId(resources_v1.DeploymentsId):
         if is_updated:
             for dep in deployment.deployment_parents:
                 graph.propagate_deployment_statuses(dep)
+
+    def _is_create_execution(self, deployment):
+        """Are we running in deployment's create execution?"""
+        return current_execution and \
+            current_execution == deployment.create_execution
+
+    def _add_existing_labels(self, deployment, new_labels):
+        """Add existing deployment labels to new_labels.
+
+        This is to be run during the set-labels executed as part of
+        create-deployment-environment, so that we don't overwrite labels
+        attached to the deployment (directly or via a group) while
+        create-deployment-environment was running.
+        Instead, the labels attached in the meantime, are considered to be
+        part of the new labels set as well.
+        """
+        old_labels = [(l.key, l.value) for l in deployment.labels]
+        for l in old_labels:
+            if l not in new_labels:
+                new_labels.append(l)
 
     @authorize('deployment_create')
     @rest_decorators.marshal_with(models.Deployment)
