@@ -1,0 +1,109 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - cloudify/types/types.yaml
+
+inputs:
+  inp1:
+    default: a
+  inp2:
+    default: b
+  parent_group_id:
+    default: some-group-id
+
+
+node_types:
+  test_type:
+    derived_from: cloudify.nodes.Root
+    properties:
+      value: {}
+
+node_templates:
+  node1:
+    type: test_type
+    properties:
+      value:
+        cap1:
+          get_group_capability:
+            - { get_input: parent_group_id }
+            - cap1
+        cap2:
+          get_group_capability:
+            - { get_input: parent_group_id }
+            - cap2
+        both_caps:
+          get_group_capability:
+            - { get_input: parent_group_id }
+            - [cap1, cap2]
+        cap1_by_id:
+          get_group_capability:
+            - { get_input: parent_group_id }
+            - deployment_id:cap1
+        complex_cap:
+          get_group_capability:
+            - { get_input: parent_group_id }
+            - complex_capability
+        complex_cap_indexed:
+          get_group_capability:
+            - { get_input: parent_group_id }
+            - complex_capability
+            - level_1
+            - 1
+        complex_cap_indexed_by_id:
+          get_group_capability:
+            - { get_input: parent_group_id }
+            - deployment_id:complex_capability
+            - level_1
+            - 1
+
+capabilities:
+  cap1:
+    value: { get_input: inp1 }
+  cap2:
+    value: { get_input: inp2 }
+  complex_capability:
+    value:
+      level_1:
+        - { get_input: inp1 }
+        - { get_input: inp2 }
+
+outputs:
+  cap1:
+    value:
+      get_group_capability:
+        - { get_input: parent_group_id }
+        - cap1
+  cap2:
+    value:
+      get_group_capability:
+        - { get_input: parent_group_id }
+        - cap2
+  both_caps:
+    value:
+      get_group_capability:
+        - { get_input: parent_group_id }
+        - [cap1, cap2]
+  cap1_by_id:
+    value:
+      get_group_capability:
+        - { get_input: parent_group_id }
+        - deployment_id:cap1
+  complex_cap:
+    value:
+      get_group_capability:
+        - { get_input: parent_group_id }
+        - complex_capability
+  complex_cap_indexed:
+    value:
+      get_group_capability:
+        - { get_input: parent_group_id }
+        - complex_capability
+        - level_1
+        - 1
+  complex_cap_indexed_by_id:
+    value:
+      get_group_capability:
+        - { get_input: parent_group_id }
+        - deployment_id:complex_capability
+        - level_1
+        - 1
