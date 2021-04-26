@@ -231,8 +231,10 @@ class ResourceManager(object):
 
         Re-evaluate parameters, and return if the execution can run.
         """
-        self.sm.refresh(execution.deployment)
         execution.status = ExecutionState.PENDING
+        if not execution.deployment:
+            return True
+        self.sm.refresh(execution.deployment)
         try:
             execution.merge_workflow_parameters(
                 execution.parameters,
