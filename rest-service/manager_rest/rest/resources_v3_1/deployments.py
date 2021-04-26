@@ -199,10 +199,10 @@ class DeploymentsId(resources_v1.DeploymentsId):
         Instead, the labels attached in the meantime, are considered to be
         part of the new labels set as well.
         """
-        old_labels = [(l.key, l.value) for l in deployment.labels]
-        for l in old_labels:
-            if l not in new_labels:
-                new_labels.append(l)
+        old_labels = [(label.key, label.value) for label in deployment.labels]
+        for label in old_labels:
+            if label not in new_labels:
+                new_labels.append(label)
 
     @authorize('deployment_create')
     @rest_decorators.marshal_with(models.Deployment)
