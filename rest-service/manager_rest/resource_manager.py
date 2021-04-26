@@ -1571,14 +1571,9 @@ class ResourceManager(object):
         )
         graph.add_dependency_to_graph(source.id, target_id)
 
-    def _remove_deployments_from_label_graph(self, graph, source, target_id):
-        graph.remove_dependency_from_graph(source.id, target_id)
-        self._remove_deployment_label_dependency(
-            source,
-            self.sm.get(
-                models.Deployment, target_id
-            )
-        )
+    def _remove_deployments_from_label_graph(self, graph, source, target):
+        graph.remove_dependency_from_graph(source.id, target.id)
+        self._remove_deployment_label_dependency(source, target)
 
     def _get_total_services_and_environments_from_sources(self, deployments):
         total_services = 0
@@ -1617,7 +1612,10 @@ class ResourceManager(object):
             total_services,
             total_environments
         )
-        self._remove_deployments_from_label_graph(dep_graph, source, target_id)
+        target = self.sm.get(
+                models.Deployment, target_id
+            )
+        self._remove_deployments_from_label_graph(dep_graph, source, target)
         dep_graph.propagate_deployment_statuses(target_id)
 
     def add_multiple_deployments_to_labels_graph(self,
@@ -1646,9 +1644,10 @@ class ResourceManager(object):
         total_services, total_environments = \
             self._get_total_services_and_environments_from_sources(sources)
         for target_id in target_ids:
+            target = self.sm.get(models.Deployment, target_id)
             for source in sources:
                 self._remove_deployments_from_label_graph(
-                    graph, source, target_id
+                    graph, source, target
                 )
         graph.decrease_deployment_counts_in_graph(
             target_ids,
