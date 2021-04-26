@@ -67,20 +67,32 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         )
         assert group['deployment_ids'] == []
 
-    def test_update_description(self):
+    def test_update_attributes(self):
         """When deployment_ids is not provided, the group is not cleared"""
         group = self.client.deployment_groups.put(
             'group1',
             deployment_ids=['dep1']
         )
-        assert group['deployment_ids'] == ['dep1']
-
+        assert group.deployment_ids == ['dep1']
+        assert not group.description
+        assert not group.default_blueprint_id
+        assert not group.default_inputs
         group = self.client.deployment_groups.put(
             'group1',
-            description='descr'
+            description='descr',
+            blueprint_id='blueprint',
+            default_inputs={'inp1': 'value'}
         )
-        assert group['description'] == 'descr'
-        assert group['deployment_ids'] == ['dep1']
+        assert group.description == 'descr'
+        assert group.deployment_ids == ['dep1']
+        assert group.default_blueprint_id == 'blueprint'
+        assert group.default_inputs == {'inp1': 'value'}
+        with self.assertRaises(CloudifyClientError) as cm:
+            self.client.deployment_groups.put(
+                'group1',
+                blueprint_id='nonexistent',
+            )
+        assert cm.exception.status_code == 404
 
     def test_create_with_blueprint(self):
         self.client.deployment_groups.put(
