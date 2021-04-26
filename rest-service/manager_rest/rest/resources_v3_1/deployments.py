@@ -669,27 +669,36 @@ class DeploymentGroupsId(SecuredResource):
             request_dict.get('deployments_from_group')
         )
 
-    def _add_deployment_creation_executions(self, group, deployments):
-        _wf_dep = 'create_deployment_environment'
-        for deployment in deployments:
-            if deployment.latest_execution.workflow_id == _wf_dep:
-                group.executions.append(deployment.latest_execution)
-
-    def _validate_before_adding_labels(self, group):
+    def _get_executions_group_for_deployment_creation(self, group):
         _dep_wf = 'create_deployment_environment'
         sm = get_storage_manager()
         executions_group = sm.list(models.ExecutionGroup, filters={
             'deployment_group': group,
             'workflow_id': _dep_wf,
         }, get_all_results=True)
-        for _execution_group in executions_group:
-            for _execution in _execution_group.executions:
-                if _execution.workflow_id == _dep_wf\
-                        and _execution.status not in ExecutionState.END_STATES:
-                    raise ConflictError(
-                        f'Cannot add labels to deployment group `{group.id}`'
-                        ' while deployments are still creating'
-                    )
+        if not executions_group:
+            return None
+        return executions_group[0]
+
+    def _add_deployment_creation_executions(self, group, deployments):
+        _wf_dep = 'create_deployment_environment'
+        group = self._get_executions_group_for_deployment_creation(group)
+        for deployment in deployments:
+            if deployment.latest_execution and \
+                    deployment.latest_execution.workflow_id == _wf_dep:
+                group.executions.append(deployment.latest_execution)
+
+    def _validate_before_adding_labels(self, group):
+        _dep_wf = 'create_deployment_environment'
+        group = self._get_executions_group_for_deployment_creation(group)
+        _executions = group.executions if group else []
+        for _execution in _executions:
+            if _execution.workflow_id == _dep_wf\
+                    and _execution.status not in ExecutionState.END_STATES:
+                raise ConflictError(
+                    f'Cannot add labels to deployment group `{group.id}`'
+                    ' while deployments are still creating'
+                )
 
     @authorize('deployment_group_update')
     @rest_decorators.marshal_with(models.DeploymentGroup, force_get_data=True)
