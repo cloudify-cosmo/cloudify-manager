@@ -32,6 +32,7 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         assert len(result) == 0
         result = self.client.deployment_groups.put('group1')
         assert result['id'] == 'group1'
+        assert len(self.client.deployment_groups.list()) == 1
 
     def test_add_to_group(self):
         group = self.client.deployment_groups.put(
