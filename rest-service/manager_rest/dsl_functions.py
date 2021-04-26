@@ -25,7 +25,8 @@ from manager_rest.storage import (get_storage_manager,
 from manager_rest.storage.models import (NodeInstance,
                                          Deployment,
                                          Secret,
-                                         DeploymentLabel,)
+                                         DeploymentLabel,
+                                         DeploymentGroup)
 from manager_rest.manager_exceptions import (
     FunctionsEvaluationError,
     DeploymentOutputsEvaluationError,
@@ -162,19 +163,79 @@ class FunctionEvaluationStorage(object):
             payload=capability,
             deployment_id=shared_dep_id,
             context={EVAL_FUNCS_PATH_PREFIX_KEY: CAPABILITIES}
-        )
+        )['value']
+        return self._get_capability_by_path(capability, capability_path)
 
-        # If it's a nested property of the capability
-        if len(capability_path) > 2:
+    def _get_capability_by_path(self, value, path):
+        if len(path) <= 2:
+            return value
+        try:
+            return functions.get_nested_attribute_value_of_capability(
+                value, path)['value']
+        except parser_exceptions.FunctionEvaluationError as e:
+            raise FunctionsEvaluationError(str(e))
+
+    def get_group_capability(self, capability_path):
+        """Backend for the get_group_capability function.
+
+        Supports several modes:
+            - {get_group_cap: [gr_id, cap1]} -> just a list of cap1 from
+              each deployment in the group
+            - {get_group_cap: [gr_id, [cap1, cap2]]} -> a list of pairs,
+              ie. a [value1, value2] 2-list for each deployment in the group
+            - {get_group_cap: [gr_id, deployment_id:cap1]} -> instead of
+              returning a list, returns a dict keyed by the deployment id
+            - {get_group_cap: [gr_id, cap1, key, index]} -> also traverse
+              each capability value, like c[key][index]. All deployments who
+              have that capability at all, must have it in the correct format
+              for this traversal.
+
+        Deployments who don't have any of the requested capabilities are
+        skipped in the output.
+        """
+        dep_group_id, element_ids = capability_path[0], capability_path[1]
+        get_with_ids, element_ids = self._normalize_group_cap_element_id(
+            element_ids)
+
+        capabilities = {}
+        for dep in self.sm.get(DeploymentGroup, dep_group_id).deployments:
             try:
-                capability = \
-                    functions.get_nested_attribute_value_of_capability(
-                        capability['value'],
-                        capability_path)
-            except parser_exceptions.FunctionEvaluationError as e:
-                raise FunctionsEvaluationError(str(e))
+                capabilities[dep.id] = self._get_deployment_group_caps(
+                    dep, element_ids, capability_path)
+            except ValueError:
+                continue
 
-        return capability['value']
+        if get_with_ids:
+            return capabilities
+        else:
+            return [caps for dep_id, caps in
+                    sorted(capabilities.items(), key=lambda item: item[0])]
+
+    def _normalize_group_cap_element_id(self, element_ids):
+        get_with_ids = False
+        if not isinstance(element_ids, list):
+            if element_ids.startswith('deployment_id:'):
+                get_with_ids = True
+                element_ids = element_ids[len('deployment_id:'):]
+            element_ids = [element_ids]
+        return get_with_ids, element_ids
+
+    def _get_deployment_group_caps(self, dep, element_ids, capability_path):
+        if all(cap_id not in dep.capabilities for cap_id in element_ids):
+            raise ValueError(dep.id)
+
+        cap_values = []
+        for cap_id in element_ids:
+            try:
+                cap = self._get_capability_by_path(
+                    dep.capabilities[cap_id]['value'], capability_path)
+            except KeyError:
+                cap = None
+            cap_values.append(cap)
+
+        if len(cap_values) == 1:
+            return cap_values[0]
+        return cap_values
 
     def get_label(self, label_key, values_list_index):
         deployment = self.sm.get(Deployment, self._deployment_id)
