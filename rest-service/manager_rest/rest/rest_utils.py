@@ -33,7 +33,7 @@ from cloudify.models_states import (
     DeploymentState,
 )
 
-from manager_rest.storage import models
+from manager_rest.storage import db, models
 from manager_rest.constants import RESERVED_LABELS, RESERVED_PREFIX
 from manager_rest.dsl_functions import (get_secret_method,
                                         evaluate_intrinsic_functions)
@@ -689,6 +689,7 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
                     target.sub_services_count += total_services
                     target.sub_environments_count += total_environments
                     self.sm.update(target)
+                    db.session.flush()
 
     def decrease_deployment_counts_in_graph(self,
                                             target_ids,
@@ -724,6 +725,7 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
                     if target.sub_environments_count:
                         target.sub_environments_count -= total_environments
                     self.sm.update(target)
+                    db.session.flush()
 
     def update_deployment_counts_after_source_conversion(self,
                                                          source,
@@ -756,6 +758,7 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
             target.sub_services_count += srv_to_update
             target.sub_environments_count += env_to_update
             self.sm.update(target)
+            db.session.flush()
 
     def propagate_deployment_statuses(self, source_id):
         """
@@ -777,6 +780,7 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
                 _target.deployment_status = \
                     _target.evaluate_deployment_status()
                 self.sm.update(_target)
+                db.session.flush()
         queue = deque([source_id] + self.find_recursive_deployments(
             [source_id]
         ))
