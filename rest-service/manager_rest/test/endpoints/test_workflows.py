@@ -25,36 +25,36 @@ class WorkflowsTestCase(base_test.BaseServerTestCase):
 
     def setUp(self):
         super().setUp()
-        _, self.dep1_id, _, _ = self.put_deployment(
-            deployment_id='dep1',
+        self.put_deployment(
+            deployment_id='d1',
             blueprint_id='b1',
             blueprint_file_name='blueprint.yaml',
         )
-        _, self.dep2_id, _, _ = self.put_deployment(
-            deployment_id='dep2',
+        self.put_deployment(
+            deployment_id='d2',
             blueprint_id='b2',
             blueprint_file_name='blueprint_with_workflows.yaml',
         )
-        _, self.dep3_id, _, _ = self.put_deployment(
-            deployment_id='dep3',
+        self.put_deployment(
+            deployment_id='d3',
             blueprint_id='b3',
             blueprint_file_name='blueprint_with_workflows_with_parameters_'
                                 'types.yaml',
         )
 
     def test_workflows_list_default_workflows(self):
-        workflows = self.client.workflows.list(id=self.dep1_id)
+        workflows = self.client.workflows.list(id='d1')
         assert set(w.name for w in workflows.items) == {
             'install', 'update', 'uninstall', 'start', 'stop', 'restart',
             'execute_operation', 'heal', 'scale', 'install_new_agents',
             'validate_agents', 'rollback', 'pull'}
 
     def test_workflows_list_with_additional_workflow(self):
-        workflows = self.client.workflows.list(id=self.dep2_id)
+        workflows = self.client.workflows.list(id='d2')
         assert 'mock_workflow' in (w.get('name') for w in workflows.items)
 
     def test_workflows_list_workflow_with_params(self):
-        workflows = self.client.workflows.list(id=self.dep3_id)
+        workflows = self.client.workflows.list(id='d3')
         mock_workflows = [w for w in workflows if w.name == 'mock_workflow']
         assert len(mock_workflows) == 1
         assert len(mock_workflows[0].parameters.keys()) > 0
@@ -64,7 +64,8 @@ class WorkflowsTestCase(base_test.BaseServerTestCase):
         assert workflows.items == []
 
     def test_workflows_list_group(self):
-        self.client.deployment_groups.put(
-            'g1', deployment_ids=['dep2', 'dep3'])
-        workflows = self.client.workflows.list(deployment_group_id='g1')
-        assert workflows.items
+        self.client.deployment_groups.put('g1', deployment_ids=['d2', 'd3'])
+        workflows_for_g1 = self.client.workflows.list(deployment_group_id='g1')
+        assert workflows_for_g1
+        workflows_for_d2 = self.client.workflows.list(id='d2')
+        assert len(workflows_for_g1.items) == len(workflows_for_d2.items)
