@@ -1553,15 +1553,16 @@ class ResourceManager(object):
         )
 
     def _remove_deployment_label_dependency(self, source, target):
-        dld = self.sm.get(
-                models.DeploymentLabelsDependencies,
-                None,
-                filters={
-                    'source_deployment': source,
-                    'target_deployment': target
-                }
+        dld = models.DeploymentLabelsDependencies.__table__
+        db.session.execute(
+            dld.delete()
+            .where(
+                sql_and(
+                    dld.c._source_deployment == source._storage_id,
+                    dld.c._target_deployment == target._storage_id,
+                )
             )
-        self.sm.delete(dld)
+        )
 
     def _insert_deployments_into_label_graph(self, graph, source, target_id):
         self._place_deployment_label_dependency(
