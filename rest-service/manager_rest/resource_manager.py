@@ -2443,7 +2443,8 @@ class ResourceManager(object):
         labels_to_delete = self.get_labels_to_delete(resource, new_labels)
         for label in labels_to_delete:
             self.sm.delete(label)
-            resource.labels.remove(label)
+            if label in resource.labels:
+                resource.labels.remove(label)
 
         self.create_resource_labels(labels_resource_model,
                                     resource,
