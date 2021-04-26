@@ -301,6 +301,7 @@ class ResourceManager(object):
             queued_query
             .outerjoin(executions.execution_groups)
             .order_by(executions.created_at.asc())
+            .limit(5)
             .with_for_update(of=executions)
         )
         # deployments we've already emitted an execution for - only emit 1
