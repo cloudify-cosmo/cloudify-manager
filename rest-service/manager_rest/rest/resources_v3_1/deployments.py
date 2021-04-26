@@ -669,6 +669,17 @@ class DeploymentGroupsId(SecuredResource):
             request_dict.get('deployments_from_group')
         )
 
+    def validate_before_adding_labels(self, group):
+        _dep_wf = 'create_deployment_environment'
+        for _deployment in group.deployments:
+            for _execution in _deployment.executions:
+                if _execution.workflow_id == _dep_wf\
+                        and _execution.status not in ExecutionState.END_STATES:
+                    raise ConflictError(
+                        f'Cannot add labels to deployment group `{group.id}`'
+                        ' while deployments are still creating'
+                    )
+
     @authorize('deployment_group_update')
     @rest_decorators.marshal_with(models.DeploymentGroup, force_get_data=True)
     def patch(self, group_id):
@@ -773,6 +784,8 @@ class DeploymentGroupsId(SecuredResource):
                             if (label.key, label.value) not in new_labels}
         _labels_to_delete = [(label.key, label.value)
                              for label in labels_to_delete]
+        if labels_to_create and group._storage_id:
+            self.validate_before_adding_labels(group)
         # Handle all created label process
         new_parents = rm.get_deployment_parents_from_labels(labels_to_create)
         if new_parents:

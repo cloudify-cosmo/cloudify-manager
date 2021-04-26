@@ -26,6 +26,17 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         self.client.deployments.create('blueprint', 'dep1')
         self.client.deployments.create('blueprint', 'dep2')
 
+    def _terminate_group_executions(self, group_id):
+        group = self.sm.get(models.DeploymentGroup, group_id)
+        executions_group = self.sm.list(models.ExecutionGroup, filters={
+            'deployment_group': group,
+            'workflow_id': 'create_deployment_environment',
+        }, get_all_results=True)
+        for _execution_group in executions_group:
+            for _execution in _execution_group.executions:
+                _execution.status = ExecutionState.TERMINATED
+                self.sm.update(_execution)
+
     def test_get_empty(self):
         result = self.client.deployment_groups.list()
         assert len(result) == 0
@@ -477,6 +488,26 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         )
         self.assert_resource_labels(group.labels, updated_labels)
 
+    def test_validation_before_add_labels_to_group(self):
+        err_msg = 'Cannot add labels to deployment group'
+        self.client.deployment_groups.put(
+            'group1',
+            blueprint_id='blueprint',
+            new_deployments=[{}]
+        )
+        with self.assertRaisesRegex(CloudifyClientError, err_msg):
+            self.client.deployment_groups.add_deployments(
+                'group1',
+                count=3
+            )
+
+            self.client.deployment_groups.put(
+                'group1',
+                labels=[{'label2': 'value2'}],
+            )
+            group = self.client.deployment_groups.get('group1')
+            assert group.labels == []
+
     def test_group_labels_for_deployments(self):
         """Group labels are applied to the newly-created deployments"""
         group = self.client.deployment_groups.put(
@@ -807,6 +838,7 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             'group1',
             count=4
         )
+        self._terminate_group_executions('group1')
         self.client.deployment_groups.put(
             'group1',
             labels=[{'csys-obj-parent': 'parent_1'},
@@ -822,6 +854,7 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             'group1',
             count=4
         )
+        self._terminate_group_executions('group1')
         self.client.deployment_groups.put(
             'group1',
             labels=[{'csys-obj-parent': 'parent_1'}],
@@ -843,6 +876,7 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             'group1',
             count=4
         )
+        self._terminate_group_executions('group1')
         self.client.deployment_groups.put(
             'group1',
             labels=[{'csys-obj-parent': 'parent_1'},
@@ -889,6 +923,7 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             'group1',
             count=4
         )
+        self._terminate_group_executions('group1')
         self.client.deployment_groups.put(
             'group1',
             labels=[{'csys-obj-parent': 'parent_1'},
