@@ -42,33 +42,33 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             'group1',
             deployment_ids=['dep1', 'dep2']
         )
-        assert set(group['deployment_ids']) == {'dep1', 'dep2'}
+        assert set(group.deployment_ids) == {'dep1', 'dep2'}
 
     def test_overwrite_group(self):
         group = self.client.deployment_groups.put(
             'group1',
             deployment_ids=['dep1']
         )
-        assert group['deployment_ids'] == ['dep1']
+        assert group.deployment_ids == ['dep1']
 
         group = self.client.deployment_groups.put(
             'group1',
             deployment_ids=['dep1']
         )
-        assert group['deployment_ids'] == ['dep1']
+        assert group.deployment_ids == ['dep1']
 
     def test_clear_group(self):
         group = self.client.deployment_groups.put(
             'group1',
             deployment_ids=['dep1']
         )
-        assert group['deployment_ids'] == ['dep1']
+        assert group.deployment_ids == ['dep1']
 
         group = self.client.deployment_groups.put(
             'group1',
             deployment_ids=[]
         )
-        assert group['deployment_ids'] == []
+        assert group.deployment_ids == []
 
     def test_update_attributes(self):
         """When deployment_ids is not provided, the group is not cleared"""
