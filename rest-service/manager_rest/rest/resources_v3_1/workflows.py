@@ -46,5 +46,4 @@ class Workflows(SecuredResource):
                               'total': len(workflows),
                               'size': len(workflows),
                               'offset': 0,
-                          }}
-        )
+                          }})

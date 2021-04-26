@@ -57,9 +57,7 @@ class WorkflowsTestCase(base_test.BaseServerTestCase):
         workflows = self.client.workflows.list(id=self.dep3_id)
         mock_workflows = [w for w in workflows if w.name == 'mock_workflow']
         assert len(mock_workflows) == 1
-        mock_workflow = mock_workflows[0]
-        assert mock_workflow.operation == 'workflows.default.install'
-        assert len(mock_workflow.parameters) == 20
+        assert len(mock_workflows[0].parameters.keys()) > 0
 
     def test_workflows_list_nonexistent(self):
         workflows = self.client.workflows.list(id='nonexistent')
@@ -70,6 +68,3 @@ class WorkflowsTestCase(base_test.BaseServerTestCase):
             'g1', deployment_ids=['dep2', 'dep3'])
         workflows = self.client.workflows.list(deployment_group_id='g1')
         assert workflows.items
-
-
-
