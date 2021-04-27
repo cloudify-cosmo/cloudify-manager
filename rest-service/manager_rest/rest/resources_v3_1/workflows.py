@@ -11,6 +11,7 @@ from manager_rest.storage import (get_storage_manager,
 from ..responses_v2 import ListResponse
 
 if typing.TYPE_CHECKING:
+    from typing import List, Iterable
     from manager_rest.rest.responses import Workflow
 
 
@@ -47,7 +48,7 @@ class Workflows(SecuredResource):
         return workflows_list_response(result)
 
 
-def workflows_list_response(deployments: typing.Iterable) -> ListResponse:
+def workflows_list_response(deployments: 'Iterable') -> ListResponse:
     workflows = _extract_workflows(deployments)
     pagination = {
         'total': len(workflows),
@@ -58,7 +59,8 @@ def workflows_list_response(deployments: typing.Iterable) -> ListResponse:
                         metadata={'pagination': pagination})
 
 
-def _extract_workflows(deployments: 'List[Deployment]') -> 'List[Workflow]':
+def _extract_workflows(
+        deployments: 'List[models.Deployment]') -> 'List[Workflow]':
     workflows = []
     for dep in deployments:
         workflows = _merge_workflows(
