@@ -61,13 +61,10 @@ def workflows_list_response(deployments: 'Iterable') -> ListResponse:
 
 def _extract_workflows(
         deployments: 'List[models.Deployment]') -> 'List[Workflow]':
-    workflows = []
+    workflows = set()
     for dep in deployments:
-        workflows = _merge_workflows(
-            workflows,
-            models.Deployment._list_workflows(dep.workflows)
-        )
-    return workflows
+        workflows |= set(models.Deployment._list_workflows(dep.workflows))
+    return list(workflows)
 
 
 def _merge_workflows(w1: 'List[Workflow]',

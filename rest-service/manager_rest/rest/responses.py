@@ -57,6 +57,13 @@ class Workflow(object):
             'operation': self.operation,
         }
 
+    def __hash__(self):
+        return hash(self.name)
+
+    def __eq__(self, other):
+        # could also consider params but currently it just merges by name
+        return self.name == other.name
+
 
 @swagger.model
 class DeploymentOutputs(object):
