@@ -58,7 +58,7 @@ class Workflows(SecuredResource):
                           }})
 
 
-def _merge_workflows(w1: list('Workflow'),
+def _merge_workflows(w1: 'List[Workflow]',
                      w2: list('Workflow')) -> list('Workflow'):
     workflows = {}
     for w in w1 + w2:
