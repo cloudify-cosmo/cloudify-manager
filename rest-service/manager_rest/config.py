@@ -57,7 +57,7 @@ class Config(object):
     service_management = Setting('service_management', default='systemd')
 
     public_ip = Setting('public_ip')
-    manager_hostname = Setting('manager_hostname')
+    manager_hostname = Setting('manager_hostname', from_db=False)
 
     # database settings
     postgresql_db_name = Setting('postgresql_db_name', from_db=False)
