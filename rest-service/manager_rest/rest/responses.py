@@ -48,6 +48,22 @@ class Workflow(object):
         self.plugin = kwargs.get('plugin')
         self.operation = kwargs.get('operation')
 
+    def as_dict(self):
+        return {
+            'name': self.name,
+            'created_at': self.created_at,
+            'parameters': self.parameters,
+            'plugin': self.plugin,
+            'operation': self.operation,
+        }
+
+    def __hash__(self):
+        return hash(self.name)
+
+    def __eq__(self, other):
+        # could also consider params but currently it just merges by name
+        return self.name == other.name
+
 
 @swagger.model
 class DeploymentOutputs(object):

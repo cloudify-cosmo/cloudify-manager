@@ -14,6 +14,8 @@ from ..filters_utils import (create_filter_rules_list,
                              FilterRule,
                              get_filter_rules_from_filter_id)
 
+from .workflows import workflows_list_response
+
 
 def _get_swagger_searches_parameters():
     return [
@@ -164,3 +166,32 @@ class BlueprintsSearches(ResourceSearches):
         return super().post(models.Blueprint, models.BlueprintsFilter,
                             _include, filters, pagination, sort, all_tenants,
                             search, filter_id, **kwargs)
+
+
+class WorkflowsSearches(ResourceSearches):
+    @swagger.operation(
+        responseClass='List[dict]',
+        nickname='list',
+        notes='Returns a filtered list of existing workflows, '
+              'based on the provided filter rules.',
+        parameters=_get_swagger_searches_parameters(),
+        allowed_filter_rules_attrs=models.Deployment.allowed_filter_attrs,
+        filter_rules_attributes_operators=ATTRS_OPERATORS,
+        filter_rules_labels_operators=LABELS_OPERATORS,
+        filter_rules_types=FILTER_RULE_TYPES)
+    @authorize('deployment_list', allow_all_tenants=True)
+    @rest_decorators.marshal_list_response
+    @rest_decorators.all_tenants
+    @rest_decorators.search('id')
+    @rest_decorators.filter_id
+    def post(self, all_tenants=None, search=None, filter_id=None, **kwargs):
+        """List workflows using filter rules"""
+        _include = ['id', 'workflows']
+        filters, _include = rest_utils.modify_deployments_list_args({},
+                                                                    _include)
+
+        result = super().post(models.Deployment, models.DeploymentsFilter,
+                              _include, filters, None, None, all_tenants,
+                              search, filter_id, **kwargs)
+
+        return workflows_list_response(result)
