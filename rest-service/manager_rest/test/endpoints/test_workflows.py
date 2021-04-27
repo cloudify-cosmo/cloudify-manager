@@ -16,6 +16,8 @@
 
 # from cloudify_rest_client.exceptions import CloudifyClientError
 
+from manager_rest.constants import LabelsOperator
+from manager_rest.rest.filters_utils import FilterRule
 from manager_rest.test import base_test
 from manager_rest.test.attribute import attr
 
@@ -29,17 +31,20 @@ class WorkflowsTestCase(base_test.BaseServerTestCase):
             deployment_id='d1',
             blueprint_id='b1',
             blueprint_file_name='blueprint.yaml',
+            labels=[{'zxc': '1'}, {'asd': '1'}]
         )
         self.put_deployment(
             deployment_id='d2',
             blueprint_id='b2',
             blueprint_file_name='blueprint_with_workflows.yaml',
+            labels=[{'zxc': '1'}, {'asd': '2'}]
         )
         self.put_deployment(
             deployment_id='d3',
             blueprint_id='b3',
             blueprint_file_name='blueprint_with_workflows_with_parameters_'
                                 'types.yaml',
+            labels=[{'zxc': '2'}, {'asd': '2'}]
         )
 
     def test_workflows_list_default_workflows(self):
@@ -69,3 +74,18 @@ class WorkflowsTestCase(base_test.BaseServerTestCase):
         assert workflows_for_g1
         workflows_for_d2 = self.client.workflows.list(id='d2')
         assert len(workflows_for_g1.items) == len(workflows_for_d2.items)
+
+    def test_workflows_by_filter_id(self):
+        self.create_filter(
+            self.client.deployments_filters, 'f1',
+            [FilterRule('zxc', ['1'], LabelsOperator.ANY_OF, 'label'),
+             FilterRule('asd', ['1'], LabelsOperator.ANY_OF, 'label')])
+        self.create_filter(
+            self.client.deployments_filters, 'f2',
+            [FilterRule('asd', ['3'], LabelsOperator.NOT_ANY_OF, 'label')])
+        workflows_for_f1 = self.client.workflows.list(filter_id='f1')
+        assert len(workflows_for_f1) == 13
+        workflows_for_f2 = self.client.workflows.list(filter_id='f2')
+        assert len(workflows_for_f2) == 14
+        assert (set(w.name for w in workflows_for_f2) -
+                set(w.name for w in workflows_for_f1)) == {'mock_workflow'}
