@@ -47,7 +47,7 @@ class Workflows(SecuredResource):
         return workflows_list_response(result)
 
 
-def workflows_list_response(deployments: 'List[Deployment]') -> ListResponse:
+def workflows_list_response(deployments: typing.Iterable) -> ListResponse:
     workflows = _extract_workflows(deployments)
     pagination = {
         'total': len(workflows),
