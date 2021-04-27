@@ -1,0 +1,26 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - cloudify/types/types.yaml
+
+labels:
+  csys-obj-parent:
+    values:
+      - shared
+
+capabilities:
+  node_1_key:
+    # `node_1_key` is exposed by environment `shared`
+    value: { get_environment_capability: node_1_key }
+  node_2_key:
+    # `node_2_key` is exposed by environment `shared`
+    value: { get_environment_capability: node_2_key }
+  node_1_key_nested:
+    # `node_1_key_nested` is exposed by environment `shared`
+    value: { get_environment_capability: node_1_key_nested }
+  node_2_key_nested:
+    # `node_2_key_nested` is exposed by environment `shared`
+    value: { get_environment_capability: node_2_key_nested }
+  complex_capability:
+    # `complex_capability` is exposed by environment `shared`
+    value: { get_environment_capability: complex_capability }

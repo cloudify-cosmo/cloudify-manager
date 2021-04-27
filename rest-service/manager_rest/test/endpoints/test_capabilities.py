@@ -318,3 +318,26 @@ class TestGetGroupCapability(base_test.BaseServerTestCase):
             'dep1': 'd1-inp2',
             'dep2': 'd2-inp2',
         }
+
+
+class TestGetEnvironmentCapability(base_test.BaseServerTestCase):
+
+    def test_get_environment_capability(self):
+        shared_dep_id = 'shared'
+        other_dep_id = 'child'
+        shared_bl_name = 'blueprint_with_capabilities.yaml'
+        other_bl_name = 'blueprint_with_get_environment_capabilities.yaml'
+
+        self.put_deployment(
+            blueprint_file_name=shared_bl_name,
+            blueprint_id=shared_dep_id,
+            deployment_id=shared_dep_id)
+
+        self.put_deployment(
+            blueprint_file_name=other_bl_name,
+            blueprint_id=other_dep_id,
+            deployment_id=other_dep_id)
+
+        parent_cap = self.client.deployments.capabilities.get(shared_dep_id)
+        child_cap = self.client.deployments.capabilities.get(other_dep_id)
+        assert parent_cap['capabilities'] == child_cap['capabilities']
