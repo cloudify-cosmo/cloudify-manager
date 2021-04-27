@@ -220,11 +220,17 @@ class ResourceManager(object):
                 if all_started:
                     break
 
-        for execution in to_run:
-            if execution.is_system_workflow:
-                self._execute_system_workflow(execution, queue=True)
-            else:
-                self.execute_workflow(execution, queue=True)
+        amqp_client = workflow_executor.get_amqp_client()
+        handler = workflow_executor.workflow_sendhandler()
+        amqp_client.add_handler(handler)
+        with amqp_client:
+            for execution in to_run:
+                if execution.is_system_workflow:
+                    self._execute_system_workflow(
+                        execution, queue=True, send_handler=handler)
+                else:
+                    self.execute_workflow(
+                        execution, queue=True, send_handler=handler)
 
     def _refresh_execution(self, execution: models.Execution) -> bool:
         """Prepare the execution to be started.
@@ -295,6 +301,7 @@ class ResourceManager(object):
             queued_query
             .outerjoin(executions.execution_groups)
             .order_by(executions.created_at.asc())
+            .limit(5)
             .with_for_update(of=executions)
         )
         # deployments we've already emitted an execution for - only emit 1
@@ -1101,7 +1108,8 @@ class ResourceManager(object):
                                  *,
                                  verify_no_executions=True,
                                  bypass_maintenance=None,
-                                 queue=False):
+                                 queue=False,
+                                 send_handler: 'SendHandler' = None):
         """
         :param deployment: deployment for workflow execution
         :param wf_id: workflow id
@@ -1115,6 +1123,7 @@ class ResourceManager(object):
         :param execution: an execution DB object. If it was passed it means
         this execution was queued and now trying to run again. If the execution
         can currently run it will, if not it will be queued again.
+        :param send_handler: the amqp handler to use for sending the workflow
         :return: (async task object, execution object)
         """
 
@@ -1135,6 +1144,7 @@ class ResourceManager(object):
         workflow_executor.execute_workflow(
             execution,
             bypass_maintenance=bypass_maintenance,
+            handler=send_handler,
         )
 
         return execution
@@ -1553,15 +1563,16 @@ class ResourceManager(object):
         )
 
     def _remove_deployment_label_dependency(self, source, target):
-        dld = self.sm.get(
-                models.DeploymentLabelsDependencies,
-                None,
-                filters={
-                    'source_deployment': source,
-                    'target_deployment': target
-                }
+        dld = models.DeploymentLabelsDependencies.__table__
+        db.session.execute(
+            dld.delete()
+            .where(
+                sql_and(
+                    dld.c._source_deployment == source._storage_id,
+                    dld.c._target_deployment == target._storage_id,
+                )
             )
-        self.sm.delete(dld)
+        )
 
     def _insert_deployments_into_label_graph(self, graph, source, target_id):
         self._place_deployment_label_dependency(
@@ -1570,14 +1581,9 @@ class ResourceManager(object):
         )
         graph.add_dependency_to_graph(source.id, target_id)
 
-    def _remove_deployments_from_label_graph(self, graph, source, target_id):
-        graph.remove_dependency_from_graph(source.id, target_id)
-        self._remove_deployment_label_dependency(
-            source,
-            self.sm.get(
-                models.Deployment, target_id
-            )
-        )
+    def _remove_deployments_from_label_graph(self, graph, source, target):
+        graph.remove_dependency_from_graph(source.id, target.id)
+        self._remove_deployment_label_dependency(source, target)
 
     def _get_total_services_and_environments_from_sources(self, deployments):
         total_services = 0
@@ -1616,7 +1622,10 @@ class ResourceManager(object):
             total_services,
             total_environments
         )
-        self._remove_deployments_from_label_graph(dep_graph, source, target_id)
+        target = self.sm.get(
+                models.Deployment, target_id
+            )
+        self._remove_deployments_from_label_graph(dep_graph, source, target)
         dep_graph.propagate_deployment_statuses(target_id)
 
     def add_multiple_deployments_to_labels_graph(self,
@@ -1645,9 +1654,10 @@ class ResourceManager(object):
         total_services, total_environments = \
             self._get_total_services_and_environments_from_sources(sources)
         for target_id in target_ids:
+            target = self.sm.get(models.Deployment, target_id)
             for source in sources:
                 self._remove_deployments_from_label_graph(
-                    graph, source, target_id
+                    graph, source, target
                 )
         graph.decrease_deployment_counts_in_graph(
             target_ids,

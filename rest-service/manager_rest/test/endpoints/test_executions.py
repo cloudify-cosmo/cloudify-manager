@@ -872,6 +872,10 @@ class TestExecutionModelValidationTests(unittest.TestCase):
         assert exc.tenant == d.tenant
 
 
+@mock.patch(
+    'manager_rest.resource_manager.workflow_executor.workflow_sendhandler',
+    mock.Mock()
+)
 class ExecutionQueueingTests(BaseServerTestCase):
     def setUp(self):
         super().setUp()
