@@ -385,9 +385,29 @@ def _create_blueprints_labels_table():
                     unique=False)
 
 
+dl_table = sa.table(
+    'deployments_labels',
+    sa.Column('_labeled_model_fk'),
+    sa.Column('_deployment_fk')
+)
+
+
 def _modify_deployments_labels_table():
     op.add_column('deployments_labels',
-                  sa.Column('_labeled_model_fk', sa.Integer(), nullable=False))
+                  sa.Column('_labeled_model_fk', sa.Integer(), nullable=True))
+    op.execute(
+        dl_table
+        .update()
+        .where(dl_table.c._labeled_model_fk.is_(None))
+        .values(_labeled_model_fk=dl_table.c._deployment_fk)
+    )
+    op.alter_column(
+        'deployments_labels',
+        '_labeled_model_fk',
+        existing_type=sa.Integer(),
+        nullable=False
+    )
+
     op.drop_index('deployments_labels__deployment_fk_idx',
                   table_name='deployments_labels')
     op.drop_constraint('deployments_labels_key_key',
@@ -416,8 +436,12 @@ def _revert_changes_to_deployments_labels_table():
     op.add_column('deployments_labels',
                   sa.Column('_deployment_fk',
                             sa.INTEGER(),
-                            autoincrement=False,
-                            nullable=False))
+                            autoincrement=False))
+    op.execute(
+        dl_table
+        .update()
+        .values(_deployment_fk=dl_table.c._labeled_model_fk)
+    )
     op.drop_constraint(op.f('deployments_labels__labeled_model_fk_fkey'),
                        'deployments_labels',
                        type_='foreignkey')
