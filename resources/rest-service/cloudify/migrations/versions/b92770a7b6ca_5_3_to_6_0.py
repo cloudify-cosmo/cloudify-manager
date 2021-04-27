@@ -8,6 +8,7 @@ Create Date: 2021-04-12 09:33:44.399254
 from alembic import op
 import sqlalchemy as sa
 
+from manager_rest.storage import models
 
 # revision identifiers, used by Alembic.
 revision = 'b92770a7b6ca'
@@ -143,6 +144,11 @@ def _drop_execution_group_fk():
         op.f('logs__execution_group_fk_idx'),
         table_name='logs'
     )
+    op.execute(
+        models.Log.__table__
+        .delete()
+        .where(models.Log.__table__.c._execution_fk.is_(None))
+    )
     op.alter_column(
         'logs',
         '_execution_fk',
@@ -167,6 +173,11 @@ def _drop_execution_group_fk():
     op.drop_index(
         op.f('events__execution_group_fk_idx'),
         table_name='events'
+    )
+    op.execute(
+        models.Event.__table__
+        .delete()
+        .where(models.Event.__table__.c._execution_fk.is_(None))
     )
     op.alter_column(
         'events',
