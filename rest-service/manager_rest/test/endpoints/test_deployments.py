@@ -1120,3 +1120,20 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             'contains illegal characters',
             self.put_deployment,
             display_name='ab\u0000cd')
+
+    def test_deployments_list_search_by_display_name(self):
+        dep1_name = 'Dep$lo(y.m_e#nt 1'
+        dep2_name = 'D\\e%pl\u004f\u0301y/me&n*t 2'
+        _, _, _, dep1 = self.put_deployment(deployment_id='dep1',
+                                            blueprint_id='bp1',
+                                            display_name=dep1_name)
+        _, _, _, dep2 = self.put_deployment(deployment_id='dep2',
+                                            blueprint_id='bp2',
+                                            display_name=dep2_name)
+        dep_list_1 = self.client.deployments.list(_search='dep',
+                                                  _search_name=dep1_name)
+        self.assertEqual(len(dep_list_1), 1)
+        self.assertEqual(dep_list_1[0].id, dep1.id)
+        dep_list_2 = self.client.deployments.list(_search_name=dep2_name)
+        self.assertEqual(len(dep_list_2), 1)
+        self.assertEqual(dep_list_2[0].id, dep2.id)
