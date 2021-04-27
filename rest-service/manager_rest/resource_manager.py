@@ -1453,7 +1453,8 @@ class ResourceManager(object):
                           visibility,
                           skip_plugins_validation=False,
                           site=None,
-                          runtime_only_evaluation=False):
+                          runtime_only_evaluation=False,
+                          display_name=None):
         verify_blueprint_uploaded_state(blueprint)
         plan = blueprint.plan
         visibility = self.get_resource_visibility(models.Deployment,
@@ -1483,6 +1484,7 @@ class ResourceManager(object):
         now = datetime.utcnow()
         new_deployment = models.Deployment(
             id=deployment_id,
+            display_name=display_name,
             created_at=now,
             updated_at=now,
         )

@@ -14,6 +14,7 @@
 #  * limitations under the License.
 
 import uuid
+import unicodedata
 from builtins import staticmethod
 
 from flask import request
@@ -75,6 +76,7 @@ class DeploymentsId(resources_v1.DeploymentsId):
         request_schema['runtime_only_evaluation'] = {
             'optional': True, 'type': bool
         }
+        request_schema['display_name'] = {'optional': True, 'type': text_type}
         return request_schema
 
     def get_skip_plugin_validation_flag(self, request_dict):
@@ -234,6 +236,7 @@ class DeploymentsId(resources_v1.DeploymentsId):
         blueprint = sm.get(models.Blueprint, blueprint_id)
         site_name = _get_site_name(request_dict)
         site = sm.get(models.Site, site_name) if site_name else None
+        display_name = _get_display_name(request_dict, deployment_id)
         rm.cleanup_failed_deployment(deployment_id)
         with sm.transaction():
             deployment = rm.create_deployment(
@@ -245,6 +248,7 @@ class DeploymentsId(resources_v1.DeploymentsId):
                 site=site,
                 runtime_only_evaluation=request_dict.get(
                     'runtime_only_evaluation', False),
+                display_name=display_name,
             )
             create_execution = deployment.make_create_environment_execution(
                 inputs=inputs,
@@ -381,6 +385,29 @@ def _get_site_name(request_dict):
     site_name = request_dict['site_name']
     rest_utils.validate_inputs({'site_name': site_name})
     return site_name
+
+
+def _get_display_name(request_dict, deployment_id):
+    if 'display_name' not in request_dict:
+        return deployment_id
+
+    display_name = request_dict['display_name']
+    if not display_name:
+        raise manager_exceptions.BadParametersError(
+            'The deployment display name is empty'
+        )
+    if display_name > 256:
+        raise manager_exceptions.BadParametersError(
+            'The deployment display name is too long. '
+            'Maximum allowed length is 256 characters'
+        )
+    if any(unicodedata.category(char)[0] == 'C' for char in display_name):
+        raise manager_exceptions.BadParametersError(
+            'The deployment display name contains illegal characters. '
+            'Control characters are not allowed'
+        )
+
+    return unicodedata.normalize('NFKC', display_name)
 
 
 class InterDeploymentDependencies(SecuredResource):

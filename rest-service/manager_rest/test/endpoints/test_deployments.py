@@ -1088,3 +1088,35 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             self.client.deployment_updates.update_with_existing_blueprint,
             deployment.id,
             new_blueprint_id)
+
+    def test_create_deployment_with_display_name(self):
+        display_name = 'New Deployment'
+        _, _, _, deployment = self.put_deployment(display_name=display_name)
+        self.assertEqual(deployment.display_name, display_name)
+
+    def test_deployment_display_name_is_normalized(self):
+        _, _, _, deployment = self.put_deployment(
+            display_name='ab\u004f\u0301cd')
+        self.assertEqual(deployment.display_name, 'ab\u00d3cd')
+
+    def test_deployment_display_name_defaults_to_id(self):
+        _, _, _, deployment = self.put_deployment('dep1')
+        self.assertEqual(deployment.display_name, 'dep1')
+
+    def test_deployment_display_name_not_unique(self):
+        display_name = 'New Deployment'
+        _, _, _, dep1 = self.put_deployment(deployment_id='dep1',
+                                            blueprint_id='bp1',
+                                            display_name=display_name)
+        _, _, _, dep2 = self.put_deployment(deployment_id='dep2',
+                                            blueprint_id='bp2',
+                                            display_name=display_name)
+        self.assertEqual(dep1.display_name, display_name)
+        self.assertEqual(dep2.display_name, display_name)
+
+    def test_deployment_display_name_with_control_chars_fails(self):
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            'contains illegal characters',
+            self.put_deployment,
+            display_name='ab\u0000cd')

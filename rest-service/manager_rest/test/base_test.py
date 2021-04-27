@@ -737,7 +737,8 @@ class BaseServerTestCase(unittest.TestCase):
                        labels=None,
                        client=None,
                        dep_visibility=None,
-                       bp_visibility=VisibilityState.TENANT):
+                       bp_visibility=VisibilityState.TENANT,
+                       display_name=None):
         client = client or self.client
         blueprint_response = self.put_blueprint(blueprint_dir,
                                                 blueprint_file_name,
@@ -755,6 +756,8 @@ class BaseServerTestCase(unittest.TestCase):
                 skip_plugins_validation
         if dep_visibility:
             create_deployment_kwargs['visibility'] = dep_visibility
+        if display_name:
+            create_deployment_kwargs['display_name'] = display_name
         deployment = client.deployments.create(blueprint_id,
                                                deployment_id,
                                                **create_deployment_kwargs)
