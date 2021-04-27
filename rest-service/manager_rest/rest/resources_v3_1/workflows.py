@@ -7,7 +7,8 @@ from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import (get_storage_manager,
                                   models)
-from manager_rest.storage.storage_manager import ListResult
+
+from ..responses_v2 import ListResponse
 
 if typing.TYPE_CHECKING:
     from manager_rest.rest.responses import Workflow
@@ -43,23 +44,32 @@ class Workflows(SecuredResource):
             distinct=['_blueprint_fk'],
         )
 
-        workflows = []
-        for dep in result:
-            workflows = _merge_workflows(
-                workflows,
-                models.Deployment._list_workflows(dep.workflows)
-            )
+        return workflows_list_response(result)
 
-        return ListResult([w.as_dict() for w in workflows],
-                          {'pagination': {
-                              'total': len(workflows),
-                              'size': len(workflows),
-                              'offset': 0,
-                          }})
+
+def workflows_list_response(deployments: 'List[Deployment]') -> ListResponse:
+    workflows = _extract_workflows(deployments)
+    pagination = {
+        'total': len(workflows),
+        'size': len(workflows),
+        'offset': 0,
+    }
+    return ListResponse(items=[w.as_dict() for w in workflows],
+                        metadata={'pagination': pagination})
+
+
+def _extract_workflows(deployments: 'List[Deployment]') -> 'List[Workflow]':
+    workflows = []
+    for dep in deployments:
+        workflows = _merge_workflows(
+            workflows,
+            models.Deployment._list_workflows(dep.workflows)
+        )
+    return workflows
 
 
 def _merge_workflows(w1: 'List[Workflow]',
-                     w2: list('Workflow')) -> list('Workflow'):
+                     w2: 'List[Workflow]') -> 'List[Workflow]':
     workflows = {}
     for w in w1 + w2:
         workflows[w.name] = w

@@ -131,9 +131,10 @@ from .nodes import (  # NOQA
 
 from .searches import (  # NOQA
     DeploymentsSearches,
-    BlueprintsSearches
+    BlueprintsSearches,
+    WorkflowsSearches,
 )
 
-from .workflows import  (  # NOQA
-    Workflows
+from .workflows import (  # NOQA
+    Workflows,
 )

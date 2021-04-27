@@ -75,6 +75,13 @@ class WorkflowsTestCase(base_test.BaseServerTestCase):
         workflows_for_d2 = self.client.workflows.list(id='d2')
         assert len(workflows_for_g1.items) == len(workflows_for_d2.items)
 
+    def test_workflows_by_filter_rule(self):
+        workflows_by_filter = self.client.workflows.list(
+            filter_rules=[FilterRule('zxc', ['1'], LabelsOperator.NOT_ANY_OF,
+                                     'label')])
+        workflows_for_d3 = self.client.workflows.list(id='d3')
+        assert workflows_by_filter.items == workflows_for_d3.items
+
     def test_workflows_by_filter_id(self):
         self.create_filter(
             self.client.deployments_filters, 'f1',
