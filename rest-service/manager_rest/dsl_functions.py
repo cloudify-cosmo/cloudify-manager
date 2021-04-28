@@ -263,3 +263,10 @@ class FunctionEvaluationStorage(object):
             return label_values[values_list_index]
 
         return label_values
+
+    def get_environment_capability(self, capability_path):
+        # Represent the shared deployment
+        label_value = self.get_label('csys-obj-parent', 0)
+        # Represent the capability path
+        capability_path = [label_value] + capability_path
+        return self.get_capability(capability_path)
