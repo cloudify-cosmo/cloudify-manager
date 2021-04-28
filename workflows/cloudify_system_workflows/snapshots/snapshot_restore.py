@@ -501,7 +501,8 @@ class SnapshotRestore(object):
         permissions_dump_path = postgres.dump_permissions_table(self._tempdir)
         with utils.db_schema(schema_revision, config=self._config):
             admin_user_update_command = postgres.restore(
-                self._tempdir, premium_enabled=self._premium_enabled)
+                self._tempdir, premium_enabled=self._premium_enabled,
+                snapshot_version=self._snapshot_version)
         if self._snapshot_version <= V_4_6_0:
             postgres.restore_manager_tables(mgr_tables_dump_path)
         postgres.restore_config_tables(config_dump_path)
