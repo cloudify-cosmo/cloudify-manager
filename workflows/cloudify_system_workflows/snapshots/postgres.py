@@ -25,7 +25,7 @@ from cloudify.workflows import ctx
 from cloudify.cryptography_utils import encrypt
 from cloudify.exceptions import NonRecoverableError
 
-from .constants import ADMIN_DUMP_FILE, LICENSE_DUMP_FILE
+from .constants import ADMIN_DUMP_FILE, LICENSE_DUMP_FILE, V_5_1_0
 from .utils import run as run_shell
 
 POSTGRESQL_DEFAULT_PORT = 5432
@@ -68,7 +68,8 @@ class Postgres(object):
             ctx.logger.debug('Updating Postgres config: host: %s, port: %s',
                              self._host, self._port)
 
-    def restore(self, tempdir, premium_enabled, license=None):
+    def restore(self, tempdir, premium_enabled, license=None,
+                snapshot_version=None):
         ctx.logger.info('Restoring DB from postgres dump')
         dump_file = os.path.join(tempdir, self._POSTGRES_DUMP_FILENAME)
 
@@ -76,7 +77,7 @@ class Postgres(object):
         deferrable_roles_constraints = self._get_roles_constraints(
             'DEFERRABLE INITIALLY DEFERRED')
 
-        clear_tables_queries = self._get_clear_tables_queries()
+        clear_tables_queries = self._get_clear_tables_queries(snapshot_version)
         dump_file = self._prepend_dump(
             dump_file, deferrable_roles_constraints + clear_tables_queries)
 
@@ -534,13 +535,18 @@ class Postgres(object):
         if self._connection:
             self._connection.close()
 
-    def _get_clear_tables_queries(self, preserve_defaults=False):
+    def _get_clear_tables_queries(self, snapshot_version,
+                                  preserve_defaults=False):
         all_tables = self._get_all_tables()
         all_tables = [table for table in all_tables if
                       table not in self._TABLES_TO_KEEP]
 
+        if snapshot_version <= V_5_1_0:
+            lock_tables_upfront = ['LOCK TABLE users;']
+        else:
+            lock_tables_upfront = ['LOCK TABLE users, maintenance_mode;']
         queries = (
-            ['LOCK TABLE users, maintenance_mode;'] +
+            lock_tables_upfront +
             [self._TRUNCATE_QUERY.format(table) for table in all_tables
              if table != 'users'] +
             ['DELETE FROM users;']
