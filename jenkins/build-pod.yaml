@@ -44,5 +44,7 @@ spec:
       limits:
         cpu: 0.4
         memory: 0.5Gi
+  imagePullSecrets:
+    - name: dockerhub      
   nodeSelector:
     instance-type: spot-xlarge
