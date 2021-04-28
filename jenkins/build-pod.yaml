@@ -42,5 +42,7 @@ spec:
       value: cloudify
     - name: POSTGRES_DB
       value: cloudify_db
+  imagePullSecrets:
+    - name: dockerhub
   nodeSelector:
     instance-type: spot-xlarge
