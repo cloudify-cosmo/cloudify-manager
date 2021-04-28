@@ -68,6 +68,7 @@ V_4_4_0 = ManagerVersion('4.4.0')
 V_4_5_5 = ManagerVersion('4.5.5')
 V_4_6_0 = ManagerVersion('4.6.0')
 V_5_0_5 = ManagerVersion('5.0.5')
+V_5_1_0 = ManagerVersion('5.1.0')
 V_5_3_0 = ManagerVersion('5.3.0')
 
 
