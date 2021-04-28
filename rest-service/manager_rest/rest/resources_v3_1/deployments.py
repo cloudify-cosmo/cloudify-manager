@@ -1079,7 +1079,8 @@ class DeploymentGroupsId(SecuredResource):
         in the new_dep_spec dict, which can contain the keys: id, inputs,
         labels.
         """
-        new_id = new_dep_spec.get('id')
+
+        new_id, is_id_unique = self._new_deployment_id(group, new_dep_spec)
         inputs = new_dep_spec.get('inputs', {})
         labels = rest_utils.get_labels_list(new_dep_spec.get('labels') or [])
         labels += group_labels
@@ -1087,16 +1088,56 @@ class DeploymentGroupsId(SecuredResource):
         deployment_inputs.update(inputs)
         dep = rm.create_deployment(
             blueprint=group.default_blueprint,
-            deployment_id=new_id or f'{group.id}-{count + 1}',
+            deployment_id=new_id,
             private_resource=None,
             visibility=group.visibility,
         )
+        dep.is_id_unique = not is_id_unique
         create_execution = dep.make_create_environment_execution(
             inputs=deployment_inputs,
             labels=labels,
         )
-        create_execution.is_id_unique = True
+        create_execution.is_id_unique = False
         return dep
+
+    def _new_deployment_id(self, group, new_dep_spec):
+        """Figure out the new deployment ID.
+
+        Check if the ID is unique as well (if it contains a uuid): in that
+        case, the uniqueness check in storage-manager isn't needed.
+        Also, if there is no variable part at all, that means all deployments
+        would have the same ID, and that's an error.
+
+        :return: a pair of the deployment ID, and a boolean saying whether
+            we can guarantee the ID is unique
+        """
+        has_variable = False
+        is_unique = False
+        new_id = new_dep_spec.get('id')
+        if new_id:
+            # provided by the user, assume the user knows what they're doing,
+            # but we will still check that it's unique
+            has_variable = True
+        else:
+            try:
+                new_id = group.default_blueprint.plan[
+                    'deployment_settings']['id_template']
+            except KeyError:
+                pass
+            new_id = new_id or '{group_id}-{uuid}'
+
+        if '{group_id}' in new_id:
+            new_id = new_id.replace('{group_id}', group.id)
+        if '{uuid}' in new_id:
+            has_variable = True
+            new_id = new_id.replace('{uuid}', str(uuid.uuid4()))
+            is_unique = True
+
+        if not has_variable:
+            raise manager_exceptions.ConflictError(
+                'When creating new deployments in a group, deployment ID '
+                'template must contain a variable part, eg. `{uuid}`')
+        return new_id, is_unique
 
     def _remove_group_deployments(self, sm, group, request_dict):
         remove_ids = request_dict.get('deployment_ids') or []
