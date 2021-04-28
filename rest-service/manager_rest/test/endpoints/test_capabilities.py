@@ -318,3 +318,41 @@ class TestGetGroupCapability(base_test.BaseServerTestCase):
             'dep1': 'd1-inp2',
             'dep2': 'd2-inp2',
         }
+
+
+class TestGetEnvironmentCapability(base_test.BaseServerTestCase):
+
+    def test_get_environment_capability(self):
+        shared_dep_id = 'shared'
+        other_dep_id = 'child'
+        shared_bl_name = 'blueprint_with_capabilities.yaml'
+        other_bl_name = 'blueprint_with_get_environment_capabilities.yaml'
+
+        self.put_deployment(
+            blueprint_file_name=shared_bl_name,
+            blueprint_id=shared_dep_id,
+            deployment_id=shared_dep_id)
+
+        self.put_deployment(
+            blueprint_file_name=other_bl_name,
+            blueprint_id=other_dep_id,
+            deployment_id=other_dep_id)
+
+        # Expose capabilities
+        capabilities = self.client.deployments.capabilities.get(shared_dep_id)
+        node_1_key = capabilities['capabilities']['node_1_key']
+        node_2_key = capabilities['capabilities']['node_2_key']
+        node_1_key_nested = capabilities['capabilities']['node_1_key_nested']
+        node_2_key_nested = capabilities['capabilities']['node_2_key_nested']
+        complex_capability = capabilities['capabilities']['complex_capability']
+
+        # outputs referencing `capabilities` using `get_environment_capability`
+        outputs = self.client.deployments.outputs.get(other_dep_id)
+        assert outputs['outputs']['node_1_key'] == node_1_key
+        assert outputs['outputs']['node_2_key'] == node_2_key
+        assert outputs['outputs']['node_1_key_nested'] == node_1_key_nested
+        assert outputs['outputs']['node_2_key_nested'] == node_2_key_nested
+        assert outputs['outputs']['level2_key_1'] == complex_capability[
+            'level_1']['level_2']['key_1']
+        assert outputs['outputs']['level1_key_2'] == complex_capability[
+            'level_1']['key_2']
