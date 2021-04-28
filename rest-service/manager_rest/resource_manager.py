@@ -1482,6 +1482,7 @@ class ResourceManager(object):
             for plugin in host_agent_plugins:
                 self.validate_plugin_is_installed(plugin)
         now = datetime.utcnow()
+        display_name = display_name or deployment_id
         new_deployment = models.Deployment(
             id=deployment_id,
             display_name=display_name,

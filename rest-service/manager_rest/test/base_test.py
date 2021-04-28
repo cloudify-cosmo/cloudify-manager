@@ -988,6 +988,7 @@ class BaseServerTestCase(unittest.TestCase):
             deployment_id = 'deployment-{0}'.format(unique_str)
         now = utils.get_formatted_timestamp()
         deployment = models.Deployment(id=deployment_id,
+                                       display_name=deployment_id,
                                        created_at=now,
                                        updated_at=now,
                                        permalink=None,
@@ -1108,6 +1109,7 @@ class BaseServerTestCase(unittest.TestCase):
         now = utils.get_formatted_timestamp()
         deployment = models.Deployment(
             id=deployment_id,
+            display_name=deployment_id,
             created_at=now,
             updated_at=now,
         )

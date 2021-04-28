@@ -881,9 +881,13 @@ class ExecutionQueueingTests(BaseServerTestCase):
         super().setUp()
         bp = models.Blueprint(id='abc')
         self.sm.put(bp)
-        self.deployment1 = models.Deployment(id='dep1', blueprint=bp)
+        self.deployment1 = models.Deployment(id='dep1',
+                                             display_name='dep1',
+                                             blueprint=bp)
         self.sm.put(self.deployment1)
-        self.deployment2 = models.Deployment(id='dep2', blueprint=bp)
+        self.deployment2 = models.Deployment(id='dep2',
+                                             display_name='dep2',
+                                             blueprint=bp)
         self.sm.put(self.deployment2)
         self.execution1 = models.Execution(
             deployment=self.deployment1,

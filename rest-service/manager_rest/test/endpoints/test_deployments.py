@@ -56,12 +56,6 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                                self.client.deployments.create,
                                'blueprint_id',
                                'illegal deployment id')
-        # try id that starts with a number
-        self.assertRaisesRegex(CloudifyClientError,
-                               'must begin with a letter',
-                               self.client.deployments.create,
-                               'blueprint_id',
-                               '0')
 
     def test_put(self):
         (blueprint_id,
@@ -910,6 +904,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         bp = self.sm.get(models.Blueprint, 'blueprint')
         self.sm.put(models.Deployment(
             id='dep1',
+            display_name='dep1',
             blueprint=bp,
             created_at=datetime.now()
         ))
@@ -934,6 +929,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         bp = self.sm.get(models.Blueprint, 'blueprint')
         self.sm.put(models.Deployment(
             id='dep1',
+            display_name='dep1',
             blueprint=bp,
             description='d1',
             created_at=datetime.now()

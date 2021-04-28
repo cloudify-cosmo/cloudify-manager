@@ -68,6 +68,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         self.sm.put(another_blueprint)
 
         deployment1 = models.Deployment(id='dep-1',
+                                        display_name='dep-1',
                                         created_at=now,
                                         updated_at=now,
                                         permalink=None,
@@ -83,6 +84,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         self.sm.put(deployment1)
 
         deployment2 = models.Deployment(id='dep-2',
+                                        display_name='dep-2',
                                         created_at=now,
                                         updated_at=now,
                                         permalink=None,
@@ -98,6 +100,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         self.sm.put(deployment2)
 
         deployment3 = models.Deployment(id='dep-3',
+                                        display_name='dep-3',
                                         created_at=now,
                                         updated_at=now,
                                         description=None,
@@ -140,6 +143,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
 
         now2 = utils.get_formatted_timestamp()
         dep = models.Deployment(id='dep-id',
+                                display_name='dep-id',
                                 created_at=now2,
                                 updated_at=now2,
                                 permalink=None,
@@ -157,7 +161,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         self.sm.put(dep)
 
         serialized_dep = dep.to_response()
-        self.assertEqual(34, len(serialized_dep))
+        self.assertEqual(35, len(serialized_dep))
         self.assertEqual(dep.id, serialized_dep['id'])
         self.assertEqual(dep.created_at, serialized_dep['created_at'])
         self.assertEqual(dep.updated_at, serialized_dep['updated_at'])
