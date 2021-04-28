@@ -8,7 +8,7 @@ labels:
     values:
       - shared
 
-capabilities:
+outputs:
   node_1_key:
     # `node_1_key` is exposed by environment `shared`
     value: { get_environment_capability: node_1_key }
@@ -21,6 +21,9 @@ capabilities:
   node_2_key_nested:
     # `node_2_key_nested` is exposed by environment `shared`
     value: { get_environment_capability: node_2_key_nested }
-  complex_capability:
+  level2_key_1:
     # `complex_capability` is exposed by environment `shared`
-    value: { get_environment_capability: complex_capability }
+    value: { get_environment_capability: [ complex_capability, level_1, level_2, key_1 ] }
+  level1_key_2:
+    # `complex_capability` is exposed by environment `shared`
+    value: { get_environment_capability: [ complex_capability, level_1, key_2 ] }
