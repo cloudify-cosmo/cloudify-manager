@@ -214,7 +214,8 @@ class DeploymentsId(resources_v1.DeploymentsId):
         """
         Create a deployment
         """
-        rest_utils.validate_inputs({'deployment_id': deployment_id})
+        rest_utils.validate_inputs({'deployment_id': deployment_id},
+                                   validate_value_begins_with_letter=False)
         request_schema = self.create_request_schema()
         request_dict = rest_utils.get_json_and_verify_params(request_schema)
         blueprint_id = request_dict['blueprint_id']
@@ -396,7 +397,7 @@ def _get_display_name(request_dict, deployment_id):
         raise manager_exceptions.BadParametersError(
             'The deployment display name is empty'
         )
-    if display_name > 256:
+    if len(display_name) > 256:
         raise manager_exceptions.BadParametersError(
             'The deployment display name is too long. '
             'Maximum allowed length is 256 characters'
@@ -407,7 +408,7 @@ def _get_display_name(request_dict, deployment_id):
             'Control characters are not allowed'
         )
 
-    return unicodedata.normalize('NFKC', display_name)
+    return rest_utils.normalize_value(display_name)
 
 
 class InterDeploymentDependencies(SecuredResource):

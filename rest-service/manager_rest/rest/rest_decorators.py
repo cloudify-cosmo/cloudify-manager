@@ -40,6 +40,7 @@ from ..security.authentication import authenticator
 from manager_rest import config, manager_exceptions
 from manager_rest.storage.models_base import SQLModelBase
 from manager_rest.rest.rest_utils import (
+    normalize_value,
     verify_and_convert_bool,
     request_use_all_tenants,
     is_system_in_snapshot_restore_process
@@ -376,6 +377,7 @@ def all_tenants(func):
 def _get_search_pattern(parameter):
     pattern = request.args.get(parameter)
     if pattern:
+        pattern = normalize_value(pattern)
         for char in SPECIAL_CHARS:
             pattern = pattern.replace(char, '\\{0}'.format(char))
     return pattern
