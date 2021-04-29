@@ -95,6 +95,7 @@ class LabelsOperator(str, Enum):
     NOT_ANY_OF = 'not_any_of'
     IS_NULL = 'is_null'
     IS_NOT_NULL = 'is_not_null'
+    IS_NOT = 'is_not'
 
 
 class AttrsOperator(str, Enum):

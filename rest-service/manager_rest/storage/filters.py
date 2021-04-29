@@ -17,7 +17,7 @@ def add_filter_rules_to_query(query, model_class, filter_rules):
         filter_rule_type = filter_rule['type']
         if filter_rule_type == FilterRuleType.LABEL:
             if not labels_join_added:
-                query = query.join(
+                query = query.outerjoin(
                     labels_model,
                     labels_model._labeled_model_fk == model_class._storage_id)\
                     .distinct()
@@ -117,6 +117,10 @@ def add_labels_filter_to_query(query, labels_model, filter_rule):
     elif filter_rule_operator == LabelsOperator.IS_NOT_NULL:
         query = query.filter(key_exist(labels_model, filter_rule_key))
 
+    elif filter_rule_operator == LabelsOperator.IS_NOT:
+        query = query.filter(key_not_any_of_values_or_not_exist(
+            labels_model, filter_rule_key, filter_rule_values))
+
     else:
         raise BadFilterRule(filter_rule)
 
@@ -139,6 +143,18 @@ def key_not_any_of_values(labels_model, label_key, label_values):
         .filter(labels_model.key == label_key,
                 ~labels_model.value.in_(label_values))
         .subquery())
+
+
+def key_not_any_of_values_or_not_exist(labels_model, label_key, label_values):
+    return labels_model._labeled_model_fk.in_(
+        db.session.query(labels_model._labeled_model_fk)
+        .filter(
+            or_(and_(labels_model.key == label_key,
+                     ~labels_model.value.in_(label_values)),
+                key_not_exist(labels_model, label_key))
+        )
+        .subquery()
+    )
 
 
 def key_not_exist(labels_model, label_key):

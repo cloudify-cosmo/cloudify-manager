@@ -76,8 +76,9 @@ def create_filter_rules_list(raw_filter_rules: List[dict],
         if filter_rule_type == FilterRuleType.LABEL:
             null_operators = [LabelsOperator.IS_NULL,
                               LabelsOperator.IS_NOT_NULL]
-            any_of_operators = [LabelsOperator.ANY_OF,
-                                LabelsOperator.NOT_ANY_OF]
+            multiple_values_operators = [LabelsOperator.ANY_OF,
+                                         LabelsOperator.NOT_ANY_OF,
+                                         LabelsOperator.IS_NOT]
             if filter_rule_operator not in LABELS_OPERATORS:
                 raise BadFilterRule(
                     filter_rule, f"The operator for filtering by labels must "
@@ -93,7 +94,8 @@ def create_filter_rules_list(raw_filter_rules: List[dict],
                     raise BadFilterRule(
                         filter_rule,
                         f"Values list must include at least one item if the "
-                        f"operator is one of {', '.join(any_of_operators)}")
+                        f"operator is one of "
+                        f"{', '.join(multiple_values_operators)}")
 
         elif filter_rule_type == FilterRuleType.ATTRIBUTE:
             err_attr_msg = f"Allowed attributes to filter " \
