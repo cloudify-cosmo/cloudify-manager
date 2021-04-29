@@ -662,7 +662,7 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
         return results
 
     def _modify_deployment_counts_in_graph(
-            self, target_ids,services_delta, envs_delta):
+            self, target_ids, services_delta, envs_delta):
         if not services_delta and not envs_delta:
             return
         target_group = target_ids + self.find_recursive_deployments(target_ids)
