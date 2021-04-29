@@ -22,9 +22,11 @@ def upgrade():
     _add_new_execution_columns()
     _drop_events_id()
     _drop_logs_id()
+    _add_deployments_display_name_column()
 
 
 def downgrade():
+    _drop_deployments_display_name_column()
     _create_logs_id()
     _create_events_id()
     _drop_execution_group_fk()
@@ -189,3 +191,25 @@ def _drop_execution_group_fk():
         'events',
         '_execution_group_fk'
     )
+
+
+def _add_deployments_display_name_column():
+    op.add_column('deployments',
+                  sa.Column('display_name', sa.Text(), nullable=True))
+    op.execute(models.Deployment.__table__.update().values(
+        display_name=models.Deployment.__table__.c.id))
+
+    op.alter_column(
+        'deployments',
+        'display_name',
+        existing_type=sa.Text(),
+        nullable=False
+    )
+    op.create_index(op.f('deployments_display_name_idx'),
+                    'deployments', ['display_name'], unique=False)
+
+
+def _drop_deployments_display_name_column():
+    op.drop_index(op.f('deployments_display_name_idx'),
+                  table_name='deployments')
+    op.drop_column('deployments', 'display_name')

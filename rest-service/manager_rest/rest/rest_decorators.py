@@ -40,6 +40,7 @@ from ..security.authentication import authenticator
 from manager_rest import config, manager_exceptions
 from manager_rest.storage.models_base import SQLModelBase
 from manager_rest.rest.rest_utils import (
+    normalize_value,
     verify_and_convert_bool,
     request_use_all_tenants,
     is_system_in_snapshot_restore_process
@@ -373,6 +374,15 @@ def all_tenants(func):
     return is_all_tenants
 
 
+def _get_search_pattern(parameter):
+    pattern = request.args.get(parameter)
+    if pattern:
+        pattern = normalize_value(pattern)
+        for char in SPECIAL_CHARS:
+            pattern = pattern.replace(char, '\\{0}'.format(char))
+    return pattern
+
+
 def search(attribute):
     """
     Decorator for enabling searching of a resource id by substring
@@ -380,12 +390,29 @@ def search(attribute):
     def search_dec(func):
         @wraps(func)
         def wrapper(*args, **kw):
-            pattern = request.args.get('_search', None)
-            if pattern:
-                for char in SPECIAL_CHARS:
-                    pattern = pattern.replace(char, '\\{0}'.format(char))
-                pattern = {attribute: pattern}
-            return func(search=pattern, *args, **kw)
+            pattern = _get_search_pattern('_search')
+            search_dict = {attribute: pattern} if pattern else None
+            return func(search=search_dict, *args, **kw)
+        return wrapper
+    return search_dec
+
+
+def search_multiple_parameters(parameters_dict):
+    """
+    Decorator for enabling searching of a resource using multiple columns
+    :param parameters_dict: A dictionary containing the search parameters as
+        keys, and the required attributes as values
+    """
+    def search_dec(func):
+        @wraps(func)
+        def wrapper(*args, **kw):
+            search_dict = {}
+            for param, attribute in parameters_dict.items():
+                pattern = _get_search_pattern(param)
+                if pattern:
+                    search_dict[attribute] = pattern
+            search_dict = search_dict or None
+            return func(search=search_dict, *args, **kw)
         return wrapper
     return search_dec
 

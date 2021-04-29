@@ -49,7 +49,8 @@ class Deployments(resources_v1.Deployments):
     @rest_decorators.paginate
     @rest_decorators.sortable(models.Deployment)
     @rest_decorators.all_tenants
-    @rest_decorators.search('id')
+    @rest_decorators.search_multiple_parameters(
+        {'_search': 'id', '_search_name': 'display_name'})
     @rest_decorators.filter_id
     def get(self, _include=None, filters=None, pagination=None, sort=None,
             all_tenants=None, search=None, filter_id=None, **kwargs):

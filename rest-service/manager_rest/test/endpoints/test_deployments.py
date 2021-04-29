@@ -56,12 +56,6 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                                self.client.deployments.create,
                                'blueprint_id',
                                'illegal deployment id')
-        # try id that starts with a number
-        self.assertRaisesRegex(CloudifyClientError,
-                               'must begin with a letter',
-                               self.client.deployments.create,
-                               'blueprint_id',
-                               '0')
 
     def test_put(self):
         (blueprint_id,
@@ -910,6 +904,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         bp = self.sm.get(models.Blueprint, 'blueprint')
         self.sm.put(models.Deployment(
             id='dep1',
+            display_name='dep1',
             blueprint=bp,
             created_at=datetime.now()
         ))
@@ -934,6 +929,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         bp = self.sm.get(models.Blueprint, 'blueprint')
         self.sm.put(models.Deployment(
             id='dep1',
+            display_name='dep1',
             blueprint=bp,
             description='d1',
             created_at=datetime.now()
@@ -1088,3 +1084,52 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             self.client.deployment_updates.update_with_existing_blueprint,
             deployment.id,
             new_blueprint_id)
+
+    def test_create_deployment_with_display_name(self):
+        display_name = 'New Deployment'
+        _, _, _, deployment = self.put_deployment(display_name=display_name)
+        self.assertEqual(deployment.display_name, display_name)
+
+    def test_deployment_display_name_is_normalized(self):
+        _, _, _, deployment = self.put_deployment(
+            display_name='ab\u004f\u0301cd')
+        self.assertEqual(deployment.display_name, 'ab\u00d3cd')
+
+    def test_deployment_display_name_defaults_to_id(self):
+        _, _, _, deployment = self.put_deployment('dep1')
+        self.assertEqual(deployment.display_name, 'dep1')
+
+    def test_deployment_display_name_not_unique(self):
+        display_name = 'New Deployment'
+        _, _, _, dep1 = self.put_deployment(deployment_id='dep1',
+                                            blueprint_id='bp1',
+                                            display_name=display_name)
+        _, _, _, dep2 = self.put_deployment(deployment_id='dep2',
+                                            blueprint_id='bp2',
+                                            display_name=display_name)
+        self.assertEqual(dep1.display_name, display_name)
+        self.assertEqual(dep2.display_name, display_name)
+
+    def test_deployment_display_name_with_control_chars_fails(self):
+        self.assertRaisesRegex(
+            CloudifyClientError,
+            'contains illegal characters',
+            self.put_deployment,
+            display_name='ab\u0000cd')
+
+    def test_deployments_list_search_by_display_name(self):
+        dep1_name = 'Dep$lo(y.m_e#nt 1'
+        dep2_name = 'D\\e%pl\u004f\u0301y/me&n*t 2'
+        _, _, _, dep1 = self.put_deployment(deployment_id='dep1',
+                                            blueprint_id='bp1',
+                                            display_name=dep1_name)
+        _, _, _, dep2 = self.put_deployment(deployment_id='dep2',
+                                            blueprint_id='bp2',
+                                            display_name=dep2_name)
+        dep_list_1 = self.client.deployments.list(_search='dep',
+                                                  _search_name=dep1_name)
+        self.assertEqual(len(dep_list_1), 1)
+        self.assertEqual(dep_list_1[0].id, dep1.id)
+        dep_list_2 = self.client.deployments.list(_search_name=dep2_name)
+        self.assertEqual(len(dep_list_2), 1)
+        self.assertEqual(dep_list_2[0].id, dep2.id)

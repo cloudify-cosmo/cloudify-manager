@@ -173,7 +173,8 @@ def make_streaming_response(res_id, res_path, archive_type):
     return response
 
 
-def validate_inputs(input_dict, len_input_value=256, err_prefix=None):
+def validate_inputs(input_dict, len_input_value=256, err_prefix=None,
+                    validate_value_begins_with_letter=True):
     for input_name, input_value in input_dict.items():
         prefix = err_prefix or 'The `{0}` argument'.format(input_name)
 
@@ -196,7 +197,8 @@ def validate_inputs(input_dict, len_input_value=256, err_prefix=None):
                 ' characters "-", "." and "_" are allowed'.format(prefix)
             )
 
-        if input_value[0] not in ascii_letters:
+        if validate_value_begins_with_letter and \
+                input_value[0] not in ascii_letters:
             raise manager_exceptions.BadParametersError(
                 '{0} must begin with a letter'.format(prefix)
             )
@@ -996,7 +998,7 @@ def parse_label(label_key, label_value):
         )
 
     parsed_label_key = label_key.lower()
-    parsed_label_value = unicodedata.normalize('NFKC', label_value)
+    parsed_label_value = normalize_value(label_value)
 
     if (parsed_label_key.startswith(RESERVED_PREFIX) and
             parsed_label_key not in RESERVED_LABELS):
@@ -1136,3 +1138,7 @@ def modify_deployments_list_args(filters, _include):
             _include = None
 
     return filters, _include
+
+
+def normalize_value(value):
+    return unicodedata.normalize('NFKC', value)
