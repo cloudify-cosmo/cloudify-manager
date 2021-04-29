@@ -47,12 +47,13 @@ class FiltersFunctionalityBaseCase(base_test.BaseServerTestCase):
 
     LABELS = [{'a': 'b'}, {'a': 'z'}, {'c': 'd'}]
     LABELS_2 = [{'a': 'b'}, {'c': 'z'}, {'e': 'f'}]
+    LABELS_3 = [{'g': 'f'}]
 
     def setUp(self, resource_model):
         super().setUp()
         self.resource_model = resource_model
 
-    def _test_labels_filters_applied(self, res_1_id, res_2_id):
+    def _test_labels_filters_applied(self, res_1_id, res_2_id, res_3_id):
         self.assert_filters_applied([('a', ['b'], LabelsOperator.ANY_OF,
                                       'label')],
                                     {res_1_id, res_2_id}, self.resource_model)
@@ -75,7 +76,10 @@ class FiltersFunctionalityBaseCase(base_test.BaseServerTestCase):
                                       'label')],
                                     {res_1_id}, self.resource_model)
         self.assert_filters_applied([('a', [], LabelsOperator.IS_NULL,
-                                      'label')], set(),
+                                      'label')], {res_3_id},
+                                    self.resource_model)
+        self.assert_filters_applied([('c', ['z'], LabelsOperator.IS_NOT,
+                                      'label')], {res_1_id, res_3_id},
                                     self.resource_model)
 
     def test_filter_rule_not_dictionary_fails(self):
@@ -148,7 +152,9 @@ class BlueprintsFiltersFunctionalityCase(FiltersFunctionalityBaseCase):
         bp_1 = self.put_blueprint_with_labels(self.LABELS, blueprint_id='bp_1')
         bp_2 = self.put_blueprint_with_labels(self.LABELS_2,
                                               blueprint_id='bp_2')
-        self._test_labels_filters_applied(bp_1['id'], bp_2['id'])
+        bp_3 = self.put_blueprint_with_labels(self.LABELS_3,
+                                              blueprint_id='bp_3')
+        self._test_labels_filters_applied(bp_1['id'], bp_2['id'], bp_3['id'])
 
 
 @attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
@@ -167,7 +173,10 @@ class DeploymentFiltersFunctionalityCase(FiltersFunctionalityBaseCase):
         dep2 = self.put_deployment_with_labels(self.LABELS_2,
                                                resource_id='res_2',
                                                site_name='other_site')
-        self._test_labels_filters_applied(dep1.id, dep2.id)
+        dep3 = self.put_deployment_with_labels(self.LABELS_3,
+                                               resource_id='res_3',
+                                               site_name='other_site')
+        self._test_labels_filters_applied(dep1.id, dep2.id, dep3.id)
         self.assert_filters_applied(
             [('a', ['b'], LabelsOperator.ANY_OF, 'label'),
              ('c', ['y', 'z'], LabelsOperator.NOT_ANY_OF, 'label')], {dep1.id})
@@ -203,12 +212,12 @@ class DeploymentFiltersFunctionalityCase(FiltersFunctionalityBaseCase):
 
         self.assert_filters_applied(
             [('site_name', ['site_1'], AttrsOperator.NOT_CONTAINS,
-              'attribute')], {dep2.id}
+              'attribute')], {dep2.id, dep3.id}
         )
 
         self.assert_filters_applied(
             [('site_name', ['site_1', 'site_3'], AttrsOperator.NOT_CONTAINS,
-              'attribute')], {dep2.id}
+              'attribute')], {dep2.id, dep3.id}
         )
 
         self.assert_filters_applied(
@@ -218,12 +227,12 @@ class DeploymentFiltersFunctionalityCase(FiltersFunctionalityBaseCase):
 
         self.assert_filters_applied(
             [('site_name', ['other', 'blah'], AttrsOperator.STARTS_WITH,
-              'attribute')], {dep2.id}
+              'attribute')], {dep2.id, dep3.id}
         )
 
         self.assert_filters_applied(
             [('site_name', ['site'], AttrsOperator.ENDS_WITH, 'attribute')],
-            {dep2.id}
+            {dep2.id, dep3.id}
         )
 
         self.assert_filters_applied(
