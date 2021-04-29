@@ -251,11 +251,7 @@ def _get_or_create_deployment(storage_manager, deployment_id, blueprint):
     try:
         return storage_manager.get(Deployment, deployment_id)
     except manager_exceptions.NotFoundError:
-        deployment = Deployment(
-            id=deployment_id,
-            display_name=deployment_id,
-            created_at=datetime.now()
-        )
+        deployment = Deployment(id=deployment_id)
         deployment.blueprint = blueprint
         return storage_manager.put(deployment)
 

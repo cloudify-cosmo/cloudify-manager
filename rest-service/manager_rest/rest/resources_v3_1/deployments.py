@@ -288,11 +288,12 @@ class DeploymentsId(resources_v1.DeploymentsId):
                 'policy_triggers', 'groups', 'scaling_groups', 'outputs',
                 'capabilities', 'display_name',
             }
+            allow_change = {'display_name'}
             for attrib in allowed_attribs:
                 if attrib not in request_dict:
                     continue
                 previous = getattr(deployment, attrib, None)
-                if previous is not None:
+                if previous is not None and attrib not in allow_change:
                     raise ConflictError(f'{attrib} is already set')
                 setattr(deployment, attrib, request_dict[attrib])
             if 'labels' in request_dict:
