@@ -747,16 +747,8 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
             srv_to_update = 1
 
         target_group = self.find_recursive_deployments([source.id])
-        for target_id in target_group:
-            target = self.sm.get(
-                models.Deployment,
-                target_id,
-                locking=True
-            )
-            target.sub_services_count += srv_to_update
-            target.sub_environments_count += env_to_update
-            self.sm.update(target)
-            db.session.flush()
+        self._modify_deployment_counts(
+            target_group, srv_to_update, env_to_update)
 
     def propagate_deployment_statuses(self, source_id):
         """
