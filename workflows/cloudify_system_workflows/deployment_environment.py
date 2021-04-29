@@ -18,7 +18,7 @@ import os
 import shutil
 import errno
 from datetime import datetime
-
+import unicodedata
 
 from retrying import retry
 
@@ -32,6 +32,23 @@ from cloudify_rest_client.client import CloudifyClient
 from cloudify_rest_client.exceptions import CloudifyClientError
 from dsl_parser import constants as dsl
 from dsl_parser import tasks
+
+
+def _get_display_name(display_name):
+    if not display_name:
+        return None
+    if len(display_name) > 256:
+        raise ValueError(
+            'The deployment display name is too long. '
+            'Maximum allowed length is 256 characters'
+        )
+    if any(unicodedata.category(char)[0] == 'C' for char in display_name):
+        raise ValueError(
+            'The deployment display name contains illegal characters. '
+            'Control characters are not allowed'
+        )
+
+    return unicodedata.normalize('NFKC', display_name)
 
 
 def _parse_plan_datetime(time_expression, base_datetime):
@@ -87,7 +104,8 @@ def _get_deployment_labels(new_labels, plan_labels):
 
 
 @workflow
-def create(ctx, labels=None, inputs=None, skip_plugins_validation=False, **_):
+def create(ctx, labels=None, inputs=None, skip_plugins_validation=False,
+           display_name=None, **_):
     client = get_rest_client(tenant=ctx.tenant_name)
     bp = client.blueprints.get(ctx.blueprint.id)
     deployment_plan = tasks.prepare_deployment_plan(
@@ -108,6 +126,7 @@ def create(ctx, labels=None, inputs=None, skip_plugins_validation=False, **_):
     ctx.logger.info('Setting deployment attributes')
     client.deployments.set_attributes(
         ctx.deployment.id,
+        display_name=_get_display_name(display_name) or ctx.deployment.id,
         description=deployment_plan['description'],
         workflows=deployment_plan['workflows'],
         inputs=deployment_plan['inputs'],
