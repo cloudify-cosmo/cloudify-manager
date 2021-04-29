@@ -661,11 +661,10 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
                         visited[dependency.target_deployment_id] = True
         return results
 
-    def _modify_deployment_counts_in_graph(
-            self, target_ids, services_delta, envs_delta):
+    def _modify_deployment_counts(
+            self, target_group, services_delta, envs_delta):
         if not services_delta and not envs_delta:
             return
-        target_group = target_ids + self.find_recursive_deployments(target_ids)
         dep_table = models.Deployment.__table__
         update_query = (
             dep_table.update()
@@ -701,8 +700,9 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
         :param total_environments: Total number of environments to add
         :rtype int
         """
-        self._modify_deployment_counts_in_graph(
-            target_ids, total_services, total_environments)
+        target_group = target_ids + self.find_recursive_deployments(target_ids)
+        self._modify_deployment_counts(
+            target_group, total_services, total_environments)
 
     def decrease_deployment_counts_in_graph(self,
                                             target_ids,
@@ -721,8 +721,9 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
         :param total_environments: Total number of environments to remove
         :rtype int
         """
-        self._modify_deployment_counts_in_graph(
-            target_ids, -total_services, -total_environments)
+        target_group = target_ids + self.find_recursive_deployments(target_ids)
+        self._modify_deployment_counts(
+            target_group, -total_services, -total_environments)
 
     def update_deployment_counts_after_source_conversion(self,
                                                          source,
