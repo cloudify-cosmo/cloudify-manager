@@ -673,13 +673,13 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
         )
         if services_delta:
             update_query = update_query.values(
-                sub_services_count=
-                dep_table.c.sub_services_count + services_delta,
+                sub_services_count=dep_table.c.sub_services_count
+                + services_delta,
             )
         if envs_delta:
             update_query = update_query.values(
-                sub_environments_count=
-                dep_table.c.sub_environments_count + envs_delta,
+                sub_environments_count=dep_table.c.sub_environments_count
+                + envs_delta,
             )
         db.session.execute(update_query)
 
