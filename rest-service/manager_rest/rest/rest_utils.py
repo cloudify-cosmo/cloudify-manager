@@ -661,6 +661,28 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
                         visited[dependency.target_deployment_id] = True
         return results
 
+    def _modify_deployment_counts(
+            self, target_group, services_delta, envs_delta):
+        if not services_delta and not envs_delta:
+            return
+        dep_table = models.Deployment.__table__
+        update_query = (
+            dep_table.update()
+            .where(dep_table.c.id.in_(target_group))
+        )
+        if services_delta:
+            update_query = update_query.values(
+                sub_services_count=dep_table.c.sub_services_count
+                + services_delta,
+            )
+        if envs_delta:
+            update_query = update_query.values(
+                sub_environments_count=dep_table.c.sub_environments_count
+                + envs_delta,
+            )
+        db.session.execute(update_query)
+        db.session.flush()
+
     def increase_deployment_counts_in_graph(self,
                                             target_ids,
                                             total_services,
@@ -679,19 +701,8 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
         :rtype int
         """
         target_group = target_ids + self.find_recursive_deployments(target_ids)
-        for target_id in target_group:
-            if total_services or total_environments:
-                target = self.sm.get(
-                    models.Deployment,
-                    target_id,
-                    locking=True,
-                    fail_silently=True
-                )
-                if target:
-                    target.sub_services_count += total_services
-                    target.sub_environments_count += total_environments
-                    self.sm.update(target)
-                    db.session.flush()
+        self._modify_deployment_counts(
+            target_group, total_services, total_environments)
 
     def decrease_deployment_counts_in_graph(self,
                                             target_ids,
@@ -710,24 +721,9 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
         :param total_environments: Total number of environments to remove
         :rtype int
         """
-        target_group = target_ids + self.find_recursive_deployments(
-            target_ids
-        )
-        if target_group:
-            for target_id in target_group:
-                target = self.sm.get(
-                    models.Deployment,
-                    target_id,
-                    locking=True,
-                    fail_silently=True
-                )
-                if target:
-                    if target.sub_services_count:
-                        target.sub_services_count -= total_services
-                    if target.sub_environments_count:
-                        target.sub_environments_count -= total_environments
-                    self.sm.update(target)
-                    db.session.flush()
+        target_group = target_ids + self.find_recursive_deployments(target_ids)
+        self._modify_deployment_counts(
+            target_group, -total_services, -total_environments)
 
     def update_deployment_counts_after_source_conversion(self,
                                                          source,
@@ -751,16 +747,8 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
             srv_to_update = 1
 
         target_group = self.find_recursive_deployments([source.id])
-        for target_id in target_group:
-            target = self.sm.get(
-                models.Deployment,
-                target_id,
-                locking=True
-            )
-            target.sub_services_count += srv_to_update
-            target.sub_environments_count += env_to_update
-            self.sm.update(target)
-            db.session.flush()
+        self._modify_deployment_counts(
+            target_group, srv_to_update, env_to_update)
 
     def propagate_deployment_statuses(self, source_id):
         """
