@@ -1112,7 +1112,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
 
     def test_deployment_display_name_with_control_chars_fails(self):
         self.assertRaisesRegex(
-            CloudifyClientError,
+            ValueError,
             'contains illegal characters',
             self.put_deployment,
             display_name='ab\u0000cd')
