@@ -678,20 +678,25 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
         :param total_environments: Total number of environments to add
         :rtype int
         """
+        if not total_services and not total_environments:
+            return
         target_group = target_ids + self.find_recursive_deployments(target_ids)
-        for target_id in target_group:
-            if total_services or total_environments:
-                target = self.sm.get(
-                    models.Deployment,
-                    target_id,
-                    locking=True,
-                    fail_silently=True
-                )
-                if target:
-                    target.sub_services_count += total_services
-                    target.sub_environments_count += total_environments
-                    self.sm.update(target)
-                    db.session.flush()
+        dep_table = models.Deployment.__table__
+        update_query = (
+            dep_table.update()
+            .where(dep_table.c.id.in_(target_group))
+        )
+        if total_services:
+            update_query = update_query.values(
+                sub_services_count=
+                dep_table.c.sub_services_count + total_services,
+            )
+        if total_environments:
+            update_query = update_query.values(
+                sub_environments_count=
+                dep_table.c.sub_environments_count + total_environments,
+            )
+        db.session.execute(update_query)
 
     def decrease_deployment_counts_in_graph(self,
                                             target_ids,
