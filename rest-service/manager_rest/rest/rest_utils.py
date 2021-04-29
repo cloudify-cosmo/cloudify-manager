@@ -682,6 +682,7 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
                 + envs_delta,
             )
         db.session.execute(update_query)
+        db.session.flush()
 
     def increase_deployment_counts_in_graph(self,
                                             target_ids,
