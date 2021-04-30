@@ -14,7 +14,6 @@
 #  * limitations under the License.
 
 import uuid
-import unicodedata
 from builtins import staticmethod
 
 from flask import request
@@ -239,7 +238,7 @@ class DeploymentsId(resources_v1.DeploymentsId):
         blueprint = sm.get(models.Blueprint, blueprint_id)
         site_name = _get_site_name(request_dict)
         site = sm.get(models.Site, site_name) if site_name else None
-        display_name = _get_display_name(request_dict, deployment_id)
+
         rm.cleanup_failed_deployment(deployment_id)
         with sm.transaction():
             deployment = rm.create_deployment(
@@ -251,12 +250,12 @@ class DeploymentsId(resources_v1.DeploymentsId):
                 site=site,
                 runtime_only_evaluation=request_dict.get(
                     'runtime_only_evaluation', False),
-                display_name=display_name,
             )
             create_execution = deployment.make_create_environment_execution(
                 inputs=inputs,
                 labels=labels,
                 skip_plugins_validation=skip_plugins_validation,
+                display_name=request_dict.get('display_name'),
             )
         try:
             rm.execute_workflow(
@@ -287,13 +286,14 @@ class DeploymentsId(resources_v1.DeploymentsId):
             allowed_attribs = {
                 'description', 'workflows', 'inputs', 'policy_types',
                 'policy_triggers', 'groups', 'scaling_groups', 'outputs',
-                'capabilities'
+                'capabilities', 'display_name',
             }
+            allow_change = {'display_name'}
             for attrib in allowed_attribs:
                 if attrib not in request_dict:
                     continue
                 previous = getattr(deployment, attrib, None)
-                if previous is not None:
+                if previous is not None and attrib not in allow_change:
                     raise ConflictError(f'{attrib} is already set')
                 setattr(deployment, attrib, request_dict[attrib])
             if 'labels' in request_dict:
@@ -388,29 +388,6 @@ def _get_site_name(request_dict):
     site_name = request_dict['site_name']
     rest_utils.validate_inputs({'site_name': site_name})
     return site_name
-
-
-def _get_display_name(request_dict, deployment_id):
-    if 'display_name' not in request_dict:
-        return deployment_id
-
-    display_name = request_dict['display_name']
-    if not display_name:
-        raise manager_exceptions.BadParametersError(
-            'The deployment display name is empty'
-        )
-    if len(display_name) > 256:
-        raise manager_exceptions.BadParametersError(
-            'The deployment display name is too long. '
-            'Maximum allowed length is 256 characters'
-        )
-    if any(unicodedata.category(char)[0] == 'C' for char in display_name):
-        raise manager_exceptions.BadParametersError(
-            'The deployment display name contains illegal characters. '
-            'Control characters are not allowed'
-        )
-
-    return rest_utils.normalize_value(display_name)
 
 
 class InterDeploymentDependencies(SecuredResource):
@@ -1131,7 +1108,8 @@ class DeploymentGroupsId(SecuredResource):
         in the new_dep_spec dict, which can contain the keys: id, inputs,
         labels.
         """
-        new_id = new_dep_spec.get('id')
+
+        new_id, is_id_unique = self._new_deployment_id(group, new_dep_spec)
         inputs = new_dep_spec.get('inputs', {})
         labels = rest_utils.get_labels_list(new_dep_spec.get('labels') or [])
         labels += group_labels
@@ -1139,21 +1117,63 @@ class DeploymentGroupsId(SecuredResource):
         deployment_inputs.update(inputs)
         dep = rm.create_deployment(
             blueprint=group.default_blueprint,
-            deployment_id=new_id or f'{group.id}-{count + 1}',
+            deployment_id=new_id,
             private_resource=None,
             visibility=group.visibility,
             runtime_only_evaluation=new_dep_spec.get(
                 'runtime_only_evaluation', False),
             site=new_dep_spec.get('site'),
         )
+        dep.is_id_unique = not is_id_unique
         create_execution = dep.make_create_environment_execution(
             inputs=deployment_inputs,
             labels=labels,
             skip_plugins_validation=new_dep_spec.get(
                 'skip_plugins_validation', False),
         )
-        create_execution.is_id_unique = True
+        create_execution.is_id_unique = False
         return dep
+
+    def _new_deployment_id(self, group, new_dep_spec):
+        """Figure out the new deployment ID.
+
+        Check if the ID is unique as well (if it contains a uuid): in that
+        case, the uniqueness check in storage-manager isn't needed.
+        Also, if there is no variable part at all, that means all deployments
+        would have the same ID, and that's an error.
+
+        :return: a pair of the deployment ID, and a boolean saying whether
+            we can guarantee the ID is unique
+        """
+        has_variable = False
+        is_unique = False
+        new_id = new_dep_spec.get('id')
+        if new_id:
+            # provided by the user, assume the user knows what they're doing,
+            # but we will still check that it's unique
+            has_variable = True
+        else:
+            try:
+                new_id = group.default_blueprint.plan[
+                    'deployment_settings']['id_template']
+            except KeyError:
+                pass
+            new_id = new_id or '{group_id}-{uuid}'
+
+        for template, replace, makes_unique, makes_variable in [
+            ('{group_id}', group.id, False, False),
+            ('{uuid}', str(uuid.uuid4()), True, True),
+        ]:
+            if template in new_id:
+                new_id = new_id.replace(template, replace)
+                is_unique |= makes_unique
+                has_variable |= makes_variable
+
+        if not has_variable:
+            raise manager_exceptions.ConflictError(
+                'When creating new deployments in a group, deployment ID '
+                'template must contain a variable part, eg. `{uuid}`')
+        return new_id, is_unique
 
     def _remove_group_deployments(self, sm, group, request_dict):
         remove_ids = request_dict.get('deployment_ids') or []
