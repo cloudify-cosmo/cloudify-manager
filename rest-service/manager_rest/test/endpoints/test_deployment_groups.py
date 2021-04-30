@@ -139,7 +139,7 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         assert len(group.deployments) == 1
         dep = group.deployments[0]
         assert dep.blueprint.id == 'blueprint'
-        assert dep.id == 'group1-1'
+        assert dep.id.startswith('group1-')
 
     def test_add_deployments(self):
         group = self.client.deployment_groups.put(
@@ -152,12 +152,13 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             'group1',
             new_deployments=[{}]
         )
-        assert set(group.deployment_ids) == {'dep1', 'group1-2'}
+        assert len(group.deployment_ids) == 2
         group = self.client.deployment_groups.put(
             'group1',
             new_deployments=[{}]
         )
-        assert set(group.deployment_ids) == {'dep1', 'group1-2', 'group1-3'}
+        assert 'dep1' in group.deployment_ids
+        assert len(group.deployment_ids) == 3
 
     def test_create_from_spec(self):
         self.put_blueprint(
