@@ -1126,12 +1126,14 @@ class DeploymentGroupsId(SecuredResource):
                 pass
             new_id = new_id or '{group_id}-{uuid}'
 
-        if '{group_id}' in new_id:
-            new_id = new_id.replace('{group_id}', group.id)
-        if '{uuid}' in new_id:
-            has_variable = True
-            new_id = new_id.replace('{uuid}', str(uuid.uuid4()))
-            is_unique = True
+        for template, replace, makes_unique, makes_variable in [
+            ('{group_id}', group.id, False, False),
+            ('{uuid}', str(uuid.uuid4()), True, True),
+        ]:
+            if template in new_id:
+                new_id = new_id.replace(template, replace)
+                is_unique |= makes_unique
+                has_variable |= makes_variable
 
         if not has_variable:
             raise manager_exceptions.ConflictError(
