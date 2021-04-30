@@ -59,6 +59,8 @@ from manager_rest.workflow_executor import (
     workflow_sendhandler
 )
 
+from ..responses_v2 import ListResponse
+
 
 SHARED_RESOURCE_TYPE = 'cloudify.nodes.SharedResource'
 COMPONENT_TYPE = 'cloudify.nodes.Component'
@@ -468,6 +470,81 @@ class InterDeploymentDependencies(SecuredResource):
             external_target=params.get(EXTERNAL_TARGET),
             created_at=now)
         return sm.put(deployment_dependency)
+
+    @swagger.operation(
+        responseClass=models.InterDeploymentDependencies,
+        nickname="DeploymentDependenciesCreate",
+        notes="Creates a batch of inter-deployment dependency.",
+        parameters=list(utils.create_filter_params_list_description(
+            models.InterDeploymentDependencies.response_fields,
+            'deployment_dependency'))
+    )
+    @authorize('inter_deployment_dependency_create')
+    @rest_decorators.marshal_list_response
+    def post(self):
+        """Creates an inter-deployment dependency.
+
+        :param source_deployment_id: ID of the source deployment
+         (the one which depends on the target deployment).
+        :param inter_deployment_dependencies: a list containing
+         inter_deployment_dependencies descriptions.
+        :return: a list of InterDeploymentDependency IDs.
+        """
+        sm = get_storage_manager()
+
+        params = rest_utils.get_json_and_verify_params({
+            'source_deployment_id': {'type': str},
+            'inter_deployment_dependencies': {'type': list}
+        })
+        source_deployment = sm.get(models.Deployment,
+                                   params['source_deployment_id'])
+
+        dep_graph = rest_utils.RecursiveDeploymentDependencies(sm)
+        dep_graph.create_dependencies_graph()
+
+        created_ids = []
+        with sm.transaction():
+            for dependency in params.get('inter_deployment_dependencies'):
+                now = utils.get_formatted_timestamp()
+
+                if (TARGET_DEPLOYMENT in dependency and
+                        EXTERNAL_SOURCE not in dependency and
+                        EXTERNAL_TARGET not in dependency):
+                    target_deployment = sm.get(models.Deployment,
+                                               dependency[TARGET_DEPLOYMENT],
+                                               fail_silently=True)
+                else:
+                    target_deployment = None
+
+                deployment_dependency = models.InterDeploymentDependencies(
+                    id=str(uuid.uuid4()),
+                    dependency_creator=dependency[DEPENDENCY_CREATOR],
+                    source_deployment=source_deployment,
+                    target_deployment=target_deployment,
+                    target_deployment_func=dependency.get(
+                        TARGET_DEPLOYMENT_FUNC),
+                    external_source=dependency.get(EXTERNAL_SOURCE),
+                    external_target=dependency.get(EXTERNAL_TARGET),
+                    created_at=now)
+                record = sm.put(deployment_dependency)
+
+                if source_deployment and target_deployment:
+                    source_id = str(source_deployment.id)
+                    target_id = str(target_deployment.id)
+                    dep_graph.assert_no_cyclic_dependencies(source_id,
+                                                            target_id)
+                    dep_graph.add_dependency_to_graph(source_id, target_id)
+
+                created_ids += [record.id]
+
+        return ListResponse(
+            items=[{'id': i} for i in created_ids],
+            metadata={'pagination': {
+                'total': len(created_ids),
+                'size': len(created_ids),
+                'offset': 0,
+            }}
+        )
 
     @staticmethod
     def _verify_and_get_source_and_target_deployments(
