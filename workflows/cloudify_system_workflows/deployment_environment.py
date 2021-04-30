@@ -23,6 +23,7 @@ from datetime import datetime
 from retrying import retry
 
 from cloudify.decorators import workflow
+from cloudify.deployment_dependencies import create_deployment_dependency
 from cloudify.manager import get_rest_client
 from cloudify.workflows import workflow_context
 
@@ -138,41 +139,18 @@ def create(ctx, labels=None, inputs=None, skip_plugins_validation=False, **_):
                        for manager in client.manager.get_managers()]
         ext_client, client_config, ext_deployment_id = \
             _get_external_clients(nodes, manager_ips)
-        for func_id, deployment_id_func in new_dependencies.items():
-            deployment_id, deployment_func = deployment_id_func
-            if ext_client:
-                client.inter_deployment_dependencies.create(
-                    dependency_creator=func_id,
-                    source_deployment=ctx.deployment.id,
-                    target_deployment=None,
-                    external_target={
-                        'deployment': (ext_deployment_id if
-                                       ext_deployment_id else None),
-                        'client_config': client_config
-                    },
-                )
-                ext_client.inter_deployment_dependencies.create(
-                    dependency_creator=func_id,
-                    source_deployment=ctx.deployment.id,
-                    target_deployment=deployment_id if deployment_id else ' ',
-                    external_source={
-                        'deployment': ctx.deployment.id,
-                        'tenant': ctx.deployment.tenant_name,
-                        'host': manager_ips,
-                    },
-                )
-            else:
-                # It should be safe to assume that if the target_deployment
-                # is known, there's no point passing target_deployment_func.
-                # Also because in this case the target_deployment_func will
-                # be of type string, while REST endpoint expects a dict.
-                client.inter_deployment_dependencies.create(
-                    dependency_creator=func_id,
-                    source_deployment=ctx.deployment.id,
-                    target_deployment=deployment_id,
-                    target_deployment_func=(deployment_func
-                                            if not deployment_id else None),
-                )
+        local_idds, external_idds = _create_inter_deployment_dependencies(
+            [manager.private_ip for manager in client.manager.get_managers()],
+            client_config, new_dependencies, ctx.deployment.id,
+            ctx.deployment.tenant_name, bool(ext_client), ext_deployment_id)
+        if local_idds:
+            client.inter_deployment_dependencies.create_many(
+                ctx.deployment.id,
+                local_idds)
+        if external_idds:
+            ext_client.inter_deployment_dependencies.create_many(
+                ctx.deployment.id,
+                external_idds)
 
 
 @workflow
@@ -249,6 +227,53 @@ def _delete_deployment_workdir(ctx):
 def _workdir(deployment_id, tenant):
     return os.path.join('/opt', 'manager', 'resources', 'deployments',
                         tenant, deployment_id)
+
+
+def _create_inter_deployment_dependencies(manager_ips: list,
+                                          client_config,
+                                          new_dependencies: dict,
+                                          local_deployment_id: str,
+                                          local_tenant_name: str,
+                                          external: bool,
+                                          ext_deployment_id: str) -> tuple:
+    local_idds = []
+    external_idds = []
+    for func_id, deployment_id_func in new_dependencies.items():
+        target_deployment_id, target_deployment_func = deployment_id_func
+        if external:
+            local_idds += [
+                create_deployment_dependency(
+                    dependency_creator=func_id,
+                    target_deployment=None,
+                    external_target={
+                        'deployment': (ext_deployment_id
+                                       if ext_deployment_id else None),
+                        'client_config': client_config
+                    })]
+            external_idds += [
+                create_deployment_dependency(
+                    dependency_creator=func_id,
+                    target_deployment=(target_deployment_id
+                                       if target_deployment_id else ' '),
+                    external_source={
+                        'deployment': local_deployment_id,
+                        'tenant': local_tenant_name,
+                        'host': manager_ips,
+                    })]
+        else:
+            # It should be safe to assume that if the target_deployment
+            # is known, there's no point passing target_deployment_func.
+            # Also because in this case the target_deployment_func will
+            # be of type string, while REST endpoint expects a dict.
+            local_idds += [
+                create_deployment_dependency(
+                    dependency_creator=func_id,
+                    target_deployment=target_deployment_id,
+                    target_deployment_func=(
+                        target_deployment_func if not target_deployment_id
+                        else None)
+                )]
+    return local_idds, external_idds
 
 
 def _get_external_clients(nodes: list, manager_ips: list):
