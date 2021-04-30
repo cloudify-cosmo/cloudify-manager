@@ -1112,7 +1112,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
 
     def test_deployment_display_name_with_control_chars_fails(self):
         self.assertRaisesRegex(
-            CloudifyClientError,
+            ValueError,
             'contains illegal characters',
             self.put_deployment,
             display_name='ab\u0000cd')
@@ -1133,3 +1133,11 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         dep_list_2 = self.client.deployments.list(_search_name=dep2_name)
         self.assertEqual(len(dep_list_2), 1)
         self.assertEqual(dep_list_2[0].id, dep2.id)
+
+    def test_display_name_from_dsl(self):
+        self.put_deployment(
+            deployment_id='dep1',
+            blueprint_file_name='blueprint_with_display_name.yaml'
+        )
+        dep = self.sm.get(models.Deployment, 'dep1')
+        assert dep.display_name == 'y'

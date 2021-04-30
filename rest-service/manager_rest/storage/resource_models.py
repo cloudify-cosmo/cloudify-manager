@@ -398,7 +398,10 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         db.Integer, nullable=False, server_default='0')
     sub_environments_count = db.Column(
         db.Integer, nullable=False, server_default='0')
-    display_name = db.Column(db.Text, nullable=False, index=True)
+    display_name = db.Column(
+        db.Text, nullable=False, index=True,
+        default=lambda ctx: ctx.get_current_parameters().get('id')
+    )
     _blueprint_fk = foreign_key(Blueprint._storage_id)
     _site_fk = foreign_key(Site._storage_id,
                            nullable=True,

@@ -1,4 +1,6 @@
 import mock
+import pytest
+import unittest
 
 from datetime import datetime
 
@@ -8,9 +10,9 @@ from cloudify_rest_client.exceptions import (
     IllegalExecutionParametersError,
 )
 
-from manager_rest.manager_exceptions import SQLStorageException
-
+from manager_rest.manager_exceptions import SQLStorageException, ConflictError
 from manager_rest.storage import models
+from manager_rest.rest.resources_v3_1.deployments import DeploymentGroupsId
 
 from manager_rest.test import base_test
 
@@ -139,7 +141,7 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         assert len(group.deployments) == 1
         dep = group.deployments[0]
         assert dep.blueprint.id == 'blueprint'
-        assert dep.id == 'group1-1'
+        assert dep.id.startswith('group1-')
 
     def test_add_deployments(self):
         group = self.client.deployment_groups.put(
@@ -152,12 +154,13 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
             'group1',
             new_deployments=[{}]
         )
-        assert set(group.deployment_ids) == {'dep1', 'group1-2'}
+        assert len(group.deployment_ids) == 2
         group = self.client.deployment_groups.put(
             'group1',
             new_deployments=[{}]
         )
-        assert set(group.deployment_ids) == {'dep1', 'group1-2', 'group1-3'}
+        assert 'dep1' in group.deployment_ids
+        assert len(group.deployment_ids) == 3
 
     def test_create_from_spec(self):
         self.put_blueprint(
@@ -1221,3 +1224,63 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
                 workflow_id='install',
                 default_parameters={'invalid-input': 42}
             )
+
+
+class TestGenerateID(unittest.TestCase):
+    def setUp(self):
+        self.endpoint = DeploymentGroupsId()
+
+    def _mock_blueprint(self, id_template=None):
+        bp = mock.MagicMock()
+        bp.plan = {
+            'deployment_settings': {'id_template': id_template}
+        }
+        return bp
+
+    def _generate_id(self, group, new_dep_spec):
+        return self.endpoint._new_deployment_id(group, new_dep_spec)
+
+    def test_from_blueprint(self):
+        group = models.DeploymentGroup(id='g1')
+        group.default_blueprint = self._mock_blueprint('hello-{uuid}')
+        new_id, is_unique = self._generate_id(group, {})
+        assert is_unique
+        assert new_id.startswith('hello')
+        assert len(new_id) > 36
+
+    def test_from_blueprint_no_variable(self):
+        group = models.DeploymentGroup(id='g1')
+        group.default_blueprint = self._mock_blueprint('hello')
+        with pytest.raises(ConflictError):
+            self._generate_id(group, {})
+
+    def test_group_id(self):
+        group = models.DeploymentGroup(id='g1')
+        group.default_blueprint = self._mock_blueprint()
+        new_id, is_unique = self._generate_id(group, {})
+        assert is_unique
+        assert new_id.startswith('g1')
+        assert len(new_id) > 36
+
+    def test_spec_no_variable(self):
+        group = models.DeploymentGroup(id='g1')
+        group.default_blueprint = self._mock_blueprint()
+        new_id, is_unique = self._generate_id(group, {'id': 'hello'})
+        assert not is_unique
+        assert new_id == 'hello'
+
+    def test_spec_template(self):
+        group = models.DeploymentGroup(id='g1')
+        group.default_blueprint = self._mock_blueprint()
+        new_id, is_unique = self._generate_id(
+            group, {'id': 'hello-{group_id}'})
+        assert not is_unique
+        assert new_id == 'hello-g1'
+
+    def test_spec_uuid(self):
+        group = models.DeploymentGroup(id='g1')
+        group.default_blueprint = self._mock_blueprint()
+        new_id, is_unique = self._generate_id(group, {'id': 'hello-{uuid}'})
+        assert is_unique
+        assert new_id.startswith('hello')
+        assert len(new_id) > 36
