@@ -1005,6 +1005,7 @@ class DeploymentGroupsId(SecuredResource):
                 visibility=group.visibility,
             )
             sm.put(create_exec_group)
+            self._prepare_sites(sm, new_deployments)
             for new_dep_spec in new_deployments:
                 dep = self._make_new_group_deployment(
                     rm, group, new_dep_spec, deployment_count, group_labels)
@@ -1016,6 +1017,34 @@ class DeploymentGroupsId(SecuredResource):
         amqp_client.add_handler(handler)
         with amqp_client:
             create_exec_group.start_executions(sm, rm, handler)
+
+    def _prepare_sites(self, sm, new_deployments):
+        """If new-deployment specs contain a site name, fetch those sites
+
+        This is to only fetch the sites once, to avoid fetching them
+        for each deployment separately.
+        Adds the 'site' to each new_dep_spec that declared site_name.
+        """
+        site_names = set()
+        for new_dep_spec in new_deployments:
+            site_name = new_dep_spec.get('site_name')
+            if site_name:
+                site_names.add(site_name)
+
+        sites = {s.name: s for s in sm.list(models.Site, filters={
+            'name': list(site_names)
+        }, get_all_results=True)}
+
+        for new_dep_spec in new_deployments:
+            site_name = new_dep_spec.get('site_name')
+            if not site_name:
+                continue
+            try:
+                new_dep_spec['site'] = sites[site_name]
+            except KeyError:
+                raise manager_exceptions.NotFoundError(
+                    f'Site {site_name} does not exist'
+                )
 
     def _make_new_group_deployment(self, rm, group, new_dep_spec, count,
                                    group_labels):
@@ -1036,10 +1065,15 @@ class DeploymentGroupsId(SecuredResource):
             deployment_id=new_id or f'{group.id}-{count + 1}',
             private_resource=None,
             visibility=group.visibility,
+            runtime_only_evaluation=new_dep_spec.get(
+                'runtime_only_evaluation', False),
+            site=new_dep_spec.get('site'),
         )
         create_execution = dep.make_create_environment_execution(
             inputs=deployment_inputs,
             labels=labels,
+            skip_plugins_validation=new_dep_spec.get(
+                'skip_plugins_validation', False),
         )
         create_execution.is_id_unique = True
         return dep
