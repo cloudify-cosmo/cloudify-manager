@@ -507,7 +507,6 @@ class TestSnapshot(AgentlessTestCase):
         self.copy_file_to_manager(tmp_config_path,
                                   self.REST_SEC_CONFIG_PATH,
                                   owner='cfyuser:')
-        time.sleep(0.2)  # give time for file to be copied
         self.restart_service('cloudify-restservice')
 
     def test_restore_snapshot_scheduled_tasks(self):
