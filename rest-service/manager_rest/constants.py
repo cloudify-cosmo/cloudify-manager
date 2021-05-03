@@ -57,7 +57,7 @@ LOCAL_ADDRESS = '127.0.0.1'
 ALLOWED_ENDPOINTS = [
     'brokers', 'managers', 'db-nodes', 'cluster', 'config',
     'status', 'version', 'license', 'maintenance',
-    'cluster-status', 'file-server-auth',
+    'cluster-status', 'file-server-auth', 'ok',
 ]
 ALLOWED_MAINTENANCE_ENDPOINTS = ALLOWED_ENDPOINTS + [
     'snapshots',
