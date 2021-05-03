@@ -86,6 +86,7 @@ class ExecutionsTest(AgentlessTestCase):
                                            _offset=0,
                                            _size=1000).items
 
+    @retry(wait_fixed=300, stop_max_attempt_number=10)
     def _assert_execution_status(self, execution_id,
                                  wanted_status, client=None):
         client = client or self.client
@@ -773,6 +774,7 @@ class ExecutionsTest(AgentlessTestCase):
             execution = self.client.executions.get(execution.id)
         return execution, deployment_id
 
+    @retry(wait_fixed=300, stop_max_attempt_number=10)
     def _assert_execution_cancelled(self, execution, deployment_id):
         self.assertEqual(Execution.CANCELLED, execution.status)
         self.assertIsNotNone(execution.ended_at)
