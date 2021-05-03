@@ -214,7 +214,7 @@ def do_retries_boolean(func, timeout_seconds=10, **kwargs):
                     'function {0} did not return True in {1} seconds'
                     .format(func.__name__, timeout_seconds)
                 )
-            time.sleep(1)
+            time.sleep(0.5)
 
 
 def create_self_signed_certificate(target_certificate_path,

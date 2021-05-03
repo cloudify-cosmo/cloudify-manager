@@ -45,7 +45,8 @@ from integration_tests.tests.utils import (
     wait_for_deployment_deletion_to_complete,
     verify_deployment_env_created,
     run_postgresql_command,
-    do_retries
+    do_retries,
+    do_retries_boolean
 )
 
 from cloudify_rest_client.executions import Execution
@@ -121,6 +122,9 @@ class BaseTestCase(unittest.TestCase):
                 self.env.container_id,
                 ['chown', owner, target]
             )
+        do_retries_boolean(docker.file_exists,
+                           container_id=self.env.container_id,
+                           file_path=target)
         return ret_val
 
     def copy_file_from_manager(self, source, target, owner=None):
