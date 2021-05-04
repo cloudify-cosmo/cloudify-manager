@@ -1301,3 +1301,10 @@ class TestGenerateID(unittest.TestCase):
         group.creation_counter = 42
         new_id, _ = self._generate_id(group, {'id': '{group_id}-{count}'})
         assert new_id == 'g1-42'
+
+    def test_site_name(self):
+        group = models.DeploymentGroup(id='g1')
+        group.default_blueprint = self._mock_blueprint()
+        new_id, _ = self._generate_id(
+            group, {'id': '{site_name}-{uuid}', 'site_name': 'a'})
+        assert new_id.startswith('a-')

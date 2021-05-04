@@ -1167,6 +1167,7 @@ class DeploymentGroupsId(SecuredResource):
             ('{uuid}', uuid.uuid4(), True, True),
             ('{blueprint_id}', group.default_blueprint.id, False, False),
             ('{count}', group.creation_counter, False, True),
+            ('{site_name}', new_dep_spec.get('site_name', ''), False, False),
         ]:
             if template in new_id:
                 new_id = new_id.replace(template, str(replace))
