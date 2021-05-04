@@ -120,6 +120,7 @@ class MgmtworkerServiceTaskConsumer(ServiceTaskConsumer):
     service_tasks['broker-removed'] = 'broker_removed'
     service_tasks['db-updated'] = 'db_updated'
     service_tasks['restart-restservice'] = 'restart_restservice'
+    service_tasks['clean-tenant-dirs'] = 'clean_tenant_dirs'
 
     def __init__(self, *args, **kwargs):
         self._workflow_registry = kwargs.pop('workflow_registry')
@@ -129,6 +130,25 @@ class MgmtworkerServiceTaskConsumer(ServiceTaskConsumer):
         super(MgmtworkerServiceTaskConsumer, self).__init__(
             name, queue_name, *args, **kwargs)
         self.exchange = 'cloudify-mgmtworker-service'
+
+    def clean_tenant_dirs(self, tenant_name):
+        if not tenant_name:
+            logger.error('Clean tenant dirs called with empty tenant name')
+            return
+
+        logger.info('Cleaning directories for tenant %s', tenant_name)
+
+        paths = [
+            '/opt/mgmtworker/env/plugins/{tenant}',
+            '/opt/manager/resources/blueprints/{tenant}',
+            '/opt/manager/resources/uploaded-blueprints/{tenant}',
+            '/opt/manager/resources/deployments/{tenant}',
+        ]
+
+        for path in paths:
+            full_path = path.format(tenant=tenant_name)
+            logger.info('Purging %s', full_path)
+            shutil.rmtree(full_path, ignore_errors=True)
 
     def restart_restservice(self, service_management):
         logger.info('Restarting restservice.')

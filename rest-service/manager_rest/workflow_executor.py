@@ -248,3 +248,15 @@ def delete_source_plugins(deployment_id):
                 }
             }
         })
+
+
+def clean_tenant_dirs(tenant_name):
+    _broadcast_mgmtworker_task(
+        message={
+            'service_task': {
+                'task_name': 'clean-tenant-dirs',
+                'kwargs': {
+                    'tenant_name': tenant_name,
+                }
+            }
+        })
