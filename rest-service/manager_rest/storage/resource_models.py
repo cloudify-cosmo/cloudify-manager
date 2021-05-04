@@ -707,6 +707,7 @@ class DeploymentGroup(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'deployment_groups'
     description = db.Column(db.Text)
     default_inputs = db.Column(JSONString)
+    creation_counter = db.Column(db.Integer, default=0, nullable=False)
     _default_blueprint_fk = foreign_key(
         Blueprint._storage_id,
         ondelete='SET NULL',
