@@ -1164,6 +1164,7 @@ class DeploymentGroupsId(SecuredResource):
         for template, replace, makes_unique, makes_variable in [
             ('{group_id}', group.id, False, False),
             ('{uuid}', str(uuid.uuid4()), True, True),
+            ('{blueprint_id}', group.default_blueprint.id, False, False),
         ]:
             if template in new_id:
                 new_id = new_id.replace(template, replace)

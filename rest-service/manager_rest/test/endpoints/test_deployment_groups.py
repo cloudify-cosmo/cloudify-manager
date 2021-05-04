@@ -1232,6 +1232,7 @@ class TestGenerateID(unittest.TestCase):
 
     def _mock_blueprint(self, id_template=None):
         bp = mock.MagicMock()
+        bp.id = 'blueprint_id'
         bp.plan = {
             'deployment_settings': {'id_template': id_template}
         }
@@ -1284,3 +1285,10 @@ class TestGenerateID(unittest.TestCase):
         assert is_unique
         assert new_id.startswith('hello')
         assert len(new_id) > 36
+
+    def test_blueprint_id(self):
+        group = models.DeploymentGroup(id='g1')
+        group.default_blueprint = self._mock_blueprint()
+        new_id, is_unique = self._generate_id(
+            group, {'id': '{blueprint_id}-{uuid}'})
+        assert new_id.startswith(group.default_blueprint.id)
