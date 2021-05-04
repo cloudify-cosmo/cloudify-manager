@@ -1130,6 +1130,7 @@ class DeploymentGroupsId(SecuredResource):
             labels=labels,
             skip_plugins_validation=new_dep_spec.get(
                 'skip_plugins_validation', False),
+            display_name=new_dep_spec.get('display_name'),
         )
         create_execution.is_id_unique = False
         return dep
