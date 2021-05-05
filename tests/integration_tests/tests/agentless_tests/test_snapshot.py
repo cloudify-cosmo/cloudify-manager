@@ -45,19 +45,6 @@ class TestSnapshot(AgentlessTestCase):
         self._save_security_config()
         self.addCleanup(self._restore_security_config)
 
-    def _select(self, query):
-        """Run a SELECT query on the manager.
-
-        Note that this will not parse the results, so the calling
-        functions must deal with strings as returned by psql
-        (eg. false is the string 'f', NULL is the empty string, etc.)
-        """
-        out = docker.execute(self.env.container_id, [
-            'sudo', '-upostgres', 'psql', '-t', '-F,', 'cloudify_db',
-            '-c', '\\copy ({0}) to stdout with csv'.format(query)
-        ])
-        return [line.split(',') for line in out.split('\n') if line.strip()]
-
     def test_4_4_snapshot_restore_with_bad_plugin(self):
         """A bad plugin is still restored with a snapshot
 
