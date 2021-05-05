@@ -23,7 +23,6 @@ from cloudify.utils import setup_logger
 
 from manager_rest.storage import db, models
 from manager_rest.constants import SECURITY_FILE_LOCATION
-from manager_rest.flask_utils import setup_flask_app as _setup_flask_app
 
 from integration_tests.framework import constants, utils
 from integration_tests.framework.docker import (execute,
@@ -63,20 +62,6 @@ def prepare_reset_storage_script(container_id):
                 [MANAGER_PYTHON, PREPARE_SCRIPT_PATH, '--config', CONFIG_PATH])
     finally:
         os.unlink(f.name)
-
-
-def setup_flask_app():
-    global security_config
-    if not security_config:
-        conf_file_str = read_manager_file('/opt/manager/rest-security.conf')
-        security_config = yaml.load(conf_file_str)
-
-    manager_ip = utils.get_manager_ip()
-    return _setup_flask_app(
-        manager_ip=manager_ip,
-        hash_salt=security_config['hash_salt'],
-        secret_key=security_config['secret_key']
-    )
 
 
 def reset_storage(container_id):
