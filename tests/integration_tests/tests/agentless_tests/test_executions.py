@@ -16,9 +16,9 @@
 import time
 import uuid
 import pytest
+import subprocess
 
 from retrying import retry
-from sh import ErrorReturnCode
 
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import (
@@ -578,10 +578,12 @@ class ExecutionsTest(AgentlessTestCase):
                                                   force=True, kill=True)
         self.assertEqual(Execution.KILL_CANCELLING, execution.status)
 
-        # If the process is still running docl.read_file will raise an error.
+        # If the process is still running self.read_manager_file will raise
+        # an error.
         # We use do_retries to give the kill cancel operation time to kill
         # the process.
-        do_retries(self.assertRaises, expected_exception=ErrorReturnCode,
+        do_retries(self.assertRaises,
+                   expected_exception=subprocess.CalledProcessError,
                    callableObj=self.read_manager_file,
                    file_path=path)
 
