@@ -23,9 +23,11 @@ def upgrade():
     _drop_events_id()
     _drop_logs_id()
     _add_deployments_display_name_column()
+    _add_depgroups_creation_counter()
 
 
 def downgrade():
+    _drop_depgroups_creation_counter()
     _drop_deployments_display_name_column()
     _create_logs_id()
     _create_events_id()
@@ -213,3 +215,15 @@ def _drop_deployments_display_name_column():
     op.drop_index(op.f('deployments_display_name_idx'),
                   table_name='deployments')
     op.drop_column('deployments', 'display_name')
+
+
+def _add_depgroups_creation_counter():
+    op.add_column(
+        'deployment_groups',
+        sa.Column('creation_counter', sa.Integer(), nullable=False,
+                  server_default='0')
+    )
+
+
+def _drop_depgroups_creation_counter():
+    op.drop_column('deployment_groups', 'creation_counter')

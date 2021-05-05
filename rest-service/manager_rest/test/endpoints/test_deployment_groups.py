@@ -181,7 +181,9 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         )
 
         assert set(group.deployment_ids) == {'spec_dep1'}
-        deps = self.sm.get(models.DeploymentGroup, 'group1').deployments
+        sm_group = self.sm.get(models.DeploymentGroup, 'group1')
+        assert sm_group.creation_counter == 1
+        deps = sm_group.deployments
         assert len(deps) == 1
         create_exec_params = deps[0].create_execution.parameters
         assert create_exec_params['inputs'] == inputs
@@ -1232,6 +1234,7 @@ class TestGenerateID(unittest.TestCase):
 
     def _mock_blueprint(self, id_template=None):
         bp = mock.MagicMock()
+        bp.id = 'blueprint_id'
         bp.plan = {
             'deployment_settings': {'id_template': id_template}
         }
@@ -1284,3 +1287,24 @@ class TestGenerateID(unittest.TestCase):
         assert is_unique
         assert new_id.startswith('hello')
         assert len(new_id) > 36
+
+    def test_blueprint_id(self):
+        group = models.DeploymentGroup(id='g1')
+        group.default_blueprint = self._mock_blueprint()
+        new_id, _ = self._generate_id(
+            group, {'id': '{blueprint_id}-{uuid}'})
+        assert new_id.startswith(group.default_blueprint.id)
+
+    def test_creation_counter(self):
+        group = models.DeploymentGroup(id='g1')
+        group.default_blueprint = self._mock_blueprint()
+        group.creation_counter = 42
+        new_id, _ = self._generate_id(group, {'id': '{group_id}-{count}'})
+        assert new_id == 'g1-42'
+
+    def test_site_name(self):
+        group = models.DeploymentGroup(id='g1')
+        group.default_blueprint = self._mock_blueprint()
+        new_id, _ = self._generate_id(
+            group, {'id': '{site_name}-{uuid}', 'site_name': 'a'})
+        assert new_id.startswith('a-')

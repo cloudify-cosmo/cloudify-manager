@@ -1124,6 +1124,7 @@ class DeploymentGroupsId(SecuredResource):
                 'runtime_only_evaluation', False),
             site=new_dep_spec.get('site'),
         )
+        group.creation_counter += 1
         dep.is_id_unique = not is_id_unique
         create_execution = dep.make_create_environment_execution(
             inputs=deployment_inputs,
@@ -1163,10 +1164,13 @@ class DeploymentGroupsId(SecuredResource):
 
         for template, replace, makes_unique, makes_variable in [
             ('{group_id}', group.id, False, False),
-            ('{uuid}', str(uuid.uuid4()), True, True),
+            ('{uuid}', uuid.uuid4(), True, True),
+            ('{blueprint_id}', group.default_blueprint.id, False, False),
+            ('{count}', group.creation_counter, False, True),
+            ('{site_name}', new_dep_spec.get('site_name', ''), False, False),
         ]:
             if template in new_id:
-                new_id = new_id.replace(template, replace)
+                new_id = new_id.replace(template, str(replace))
                 is_unique |= makes_unique
                 has_variable |= makes_variable
 
