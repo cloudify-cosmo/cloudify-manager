@@ -140,29 +140,24 @@ def manager_container(request, resource_mapping):
 
 
 @pytest.fixture(scope='session')
-def ca_cert(manager_container):
-    with tempfile.NamedTemporaryFile('w') as cert_file:
-        docker.copy_file_from_manager(
-            manager_container.container_id,
-            '/etc/cloudify/ssl/cloudify_internal_ca_cert.pem',
-            cert_file.name)
-        yield cert_file.name
+def ca_cert(manager_container, tmpdir_factory):
+    cert_path = tmpdir_factory.mktemp('certs').join('internal_ca_cert.pem')
+    docker.copy_file_from_manager(
+        manager_container.container_id,
+        '/etc/cloudify/ssl/cloudify_internal_ca_cert.pem',
+        cert_path)
+    yield cert_path
 
 
 @pytest.fixture(scope='session')
 def rest_client(manager_container, ca_cert):
-    with tempfile.NamedTemporaryFile('w') as cert_file:
-        docker.copy_file_from_manager(
-            manager_container.container_id,
-            '/etc/cloudify/ssl/cloudify_internal_ca_cert.pem',
-            cert_file.name)
-        client = test_utils.create_rest_client(
-            host=manager_container.container_ip,
-            rest_port=443,
-            rest_protocol='https',
-            cert_path=cert_file.name,
-        )
-        yield client
+    client = test_utils.create_rest_client(
+        host=manager_container.container_ip,
+        rest_port=443,
+        rest_protocol='https',
+        cert_path=ca_cert
+    )
+    yield client
 
 
 @pytest.fixture(scope='class')
