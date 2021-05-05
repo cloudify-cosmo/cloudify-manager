@@ -860,10 +860,8 @@ class ExecutionsTest(AgentlessTestCase):
         # The token in the container is invalid, create new valid one
         create_api_token(self.env.container_id)
         create_tenants_and_add_users(client=self.client, num_of_tenants=1)
-        tenant_client = utils.create_rest_client(
-            host=self.env.container_ip,
+        tenant_client = self.create_rest_client(
             username='user_0', password='password', tenant='tenant_0',
-            rest_port=443, rest_protocol='https', cert_path=self.ca_cert,
         )
         dsl_path = resource('dsl/sleep_workflows.yaml')
         dep = self.deploy(dsl_path, wait=False, client=tenant_client)

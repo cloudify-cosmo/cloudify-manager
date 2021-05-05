@@ -22,10 +22,7 @@ from cloudify_rest_client.executions import Execution
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from integration_tests import AgentlessTestCase
-from integration_tests.tests.utils import (
-    get_resource as resource,
-    create_rest_client
-)
+from integration_tests.tests.utils import get_resource as resource
 
 
 @pytest.mark.usefixtures('cloudmock_plugin')
@@ -239,10 +236,8 @@ class TestResumeMgmtworker(AgentlessTestCase):
         username = 'test-user'
         password = 'test-password'
         self._create_user(username, password, 'default_tenant')
-        user_client = create_rest_client(
-            host=self.env.container_ip,
+        user_client = self.create_rest_client(
             username=username, password=password, tenant='default_tenant',
-            rest_port=443, rest_protocol='https', cert_path=self.ca_cert,
         )
         self._resume_no_duplicates_test(user_client)
 

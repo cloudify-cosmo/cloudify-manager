@@ -416,6 +416,14 @@ class BaseTestCase(unittest.TestCase):
     def _restore_marker_file_exists(self):
         return self.file_exists(SNAPSHOT_RESTORE_FLAG_FILE)
 
+    def create_rest_client(self, **kwargs):
+        params = {
+            'host': self.env.container_ip,
+            'cert_path': self.ca_cert,
+            **kwargs
+        }
+        return utils.create_rest_client(**params)
+
     @contextmanager
     def client_using_tenant(self, client, tenant_name):
         curr_tenant = client._client.headers.get(CLOUDIFY_TENANT_HEADER)
