@@ -18,8 +18,7 @@ import uuid
 
 from integration_tests import AgentTestCase
 from cloudify.models_states import AgentState
-from integration_tests.tests.utils import (get_resource as resource,
-                                           create_rest_client)
+from integration_tests.tests.utils import get_resource as resource
 
 CREATE_SNAPSHOT_SUCCESS_MSG =\
     "'create_snapshot' workflow execution succeeded"
@@ -117,11 +116,7 @@ class TestSnapshots(AgentTestCase):
 
     def test_snapshot_with_agents_multitenant(self):
         self.client.tenants.create('mike')
-        mike_client = create_rest_client(
-            host=self.env.container_ip,
-            tenant='mike',
-            rest_port=443, rest_protocol='https', cert_path=self.ca_cert
-        )
+        mike_client = self.create_rest_client(tenant='mike')
         self._deploy_with_agents_multitenant(mike_client)
         snapshot_id = self._create_snapshot()
         self._undeploy_multitenant(mike_client)

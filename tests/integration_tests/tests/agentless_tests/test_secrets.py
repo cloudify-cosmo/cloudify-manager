@@ -13,7 +13,6 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-from integration_tests.framework import utils
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 from cloudify_rest_client.exceptions import CloudifyClientError, ForbiddenError
@@ -65,10 +64,8 @@ class SecretsTest(AgentlessTestCase):
         self.client.secrets.create('key', 'value')
         self.client.users.create('user', 'password', 'default')
         self.client.tenants.add_user('user', 'default_tenant', 'viewer')
-        viewer_client = utils.create_rest_client(
-            host=self.env.container_ip,
+        viewer_client = self.create_rest_client(
             username='user', password='password', tenant='default_tenant',
-            rest_port=443, rest_protocol='https', cert_path=self.ca_cert,
         )
         self.assertRaisesRegexp(ForbiddenError,
                                 '403: User `user` is not permitted to perform'

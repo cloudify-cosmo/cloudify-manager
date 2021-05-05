@@ -17,19 +17,16 @@ from contextlib import contextmanager
 
 from cloudify_rest_client.exceptions import UserUnauthorizedError
 
-from integration_tests.framework import utils
 from integration_tests import AgentlessTestCase
 
 
 class TestAuthenticationBase(AgentlessTestCase):
     @contextmanager
     def _login_client(self, **kwargs):
-        self.logger.info('Logging in to client with {0}'.format(kwargs))
-        kwargs.setdefault('cert_path', self.ca_cert)
+        self.logger.info('Logging in to client with %s', kwargs)
         client = self.client
         try:
-            self.client = utils.create_rest_client(self.env.container_ip,
-                                                   **kwargs)
+            self.client = self.create_rest_client(**kwargs)
             yield
         finally:
             self.client = client

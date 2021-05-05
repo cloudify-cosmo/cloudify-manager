@@ -16,8 +16,7 @@
 import pytest
 from manager_rest import premium_enabled
 from integration_tests import AgentTestCase
-from integration_tests.tests.utils import (get_resource as resource,
-                                           create_rest_client)
+from integration_tests.tests.utils import get_resource as resource
 
 
 class TestListAgents(AgentTestCase):
@@ -59,10 +58,7 @@ class TestListAgents(AgentTestCase):
                                ' multi-tenancy')
     def test_list_agents_all_tenants(self):
         self.client.tenants.create('mike')
-        mike_client = create_rest_client(
-            host=self.env.container_ip,
-            tenant='mike'
-        )
+        mike_client = self.create_rest_client(tenant='mike')
         deployment1, _ = self.deploy_application(resource(
             "dsl/agent_tests/with_agent.yaml"), deployment_id='at1')
         deployment2 = self.deploy(resource("dsl/agent_tests/with_agent.yaml"),
