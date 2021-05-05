@@ -75,11 +75,6 @@ def set_ldap(config_data):
                     cfg_data=json.dumps(config_data)))
 
 
-def close_session(app):
-    db.session.remove()
-    db.get_engine(app).dispose()
-
-
 def load_user(app, username=None):
     if username:
         user = models.User.query.filter(username=username).first()
