@@ -1,4 +1,3 @@
-from integration_tests.framework import utils
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.constants import USER_ROLE
 from integration_tests.tests.utils import get_resource as resource

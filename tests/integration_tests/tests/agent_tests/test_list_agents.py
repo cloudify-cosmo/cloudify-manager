@@ -19,7 +19,6 @@ from integration_tests import AgentTestCase
 from integration_tests.tests.utils import get_resource as resource
 
 
-
 class TestListAgents(AgentTestCase):
 
     def test_list_agents(self):

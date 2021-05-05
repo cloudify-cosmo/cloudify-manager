@@ -22,7 +22,7 @@ import binascii
 import requests
 from collections import Counter
 
-from integration_tests.framework import utils, docker
+from integration_tests.framework import utils
 from integration_tests import AgentlessTestCase
 
 from cloudify.snapshots import STATES

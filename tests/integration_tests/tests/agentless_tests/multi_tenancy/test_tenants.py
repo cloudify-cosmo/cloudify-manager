@@ -2,12 +2,10 @@ import json
 from collections import namedtuple
 
 from cloudify.cryptography_utils import decrypt
-from cloudify.cluster_status import MANAGER_STATUS_REPORTER
 
 from manager_rest.constants import (DEFAULT_TENANT_NAME,
                                     DEFAULT_TENANT_ROLE,
                                     SECURITY_FILE_LOCATION)
-from integration_tests.framework import utils
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.constants import USER_ROLE, USER_IN_TENANT_ROLE
 from integration_tests.tests.utils import get_resource as resource

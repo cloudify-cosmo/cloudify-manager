@@ -1,5 +1,3 @@
-from os.path import join, dirname
-
 from cloudify_rest_client.exceptions import ForbiddenError, NotModifiedError
 from integration_tests.tests.test_cases import AgentlessTestCase
 from integration_tests.tests.constants import USER_ROLE, ADMIN_ROLE
@@ -92,6 +90,7 @@ class AuthorizationTest(AgentlessTestCase):
         except NotModifiedError:
             pass
         return True
+
     def _can_perform_user_action(self, client):
         try:
             client.maintenance_mode.status()

@@ -1,11 +1,7 @@
-from flask_security.utils import verify_password
-
 from cloudify_rest_client.exceptions import CloudifyClientError
-from manager_rest.storage import user_datastore
 from manager_rest.constants import DEFAULT_TENANT_NAME
 
 from integration_tests import AgentlessTestCase
-from integration_tests.framework.flask_utils import setup_flask_app
 from integration_tests.tests.constants import ADMIN_ROLE, USER_ROLE
 
 

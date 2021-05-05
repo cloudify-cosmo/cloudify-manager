@@ -17,7 +17,6 @@ from contextlib import contextmanager
 
 from cloudify_rest_client.exceptions import UserUnauthorizedError
 
-from integration_tests.framework import utils
 from integration_tests import AgentlessTestCase
 
 

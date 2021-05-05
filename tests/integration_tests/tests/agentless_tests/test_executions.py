@@ -21,7 +21,6 @@ from retrying import retry
 from sh import ErrorReturnCode
 
 from integration_tests import AgentlessTestCase
-from integration_tests.framework import utils
 from integration_tests.tests.utils import (
     verify_deployment_env_created,
     do_retries,
