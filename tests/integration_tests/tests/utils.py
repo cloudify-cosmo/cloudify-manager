@@ -278,12 +278,7 @@ def run_postgresql_command(container_id, cmd):
     )
 
 
-def delete_provider_context(container_id):
-    run_postgresql_command(container_id, 'DELETE from provider_context')
-
-
 def generate_scheduled_for_date():
-
     now = datetime.utcnow()
     # Schedule the execution for 1 minute in the future
     scheduled_for = now + timedelta(minutes=1)

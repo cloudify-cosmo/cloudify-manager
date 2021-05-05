@@ -30,11 +30,7 @@ from integration_tests.framework.docker import (execute,
                                                 copy_file_to_manager,
                                                 get_manager_ip,
                                                 read_file as read_manager_file)
-from integration_tests.tests.constants import (
-    MANAGER_CONFIG,
-    MANAGER_PYTHON,
-    PROVIDER_CONTEXT,
-)
+from integration_tests.tests.constants import MANAGER_CONFIG, MANAGER_PYTHON
 from integration_tests.tests.utils import get_resource
 
 
@@ -59,7 +55,6 @@ def prepare_reset_storage_script(container_id):
             },
             'ip': get_manager_ip(container_id),
             'username': 'admin',
-            'provider_context': PROVIDER_CONTEXT,
             'manager_config': MANAGER_CONFIG
         }, f)
     try:

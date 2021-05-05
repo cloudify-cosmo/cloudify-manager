@@ -26,7 +26,6 @@ from manager_rest.storage import db, models
 from manager_rest.amqp_manager import AMQPManager
 from manager_rest.flask_utils import setup_flask_app
 from manager_rest.constants import (
-    PROVIDER_CONTEXT_ID,
     DEFAULT_TENANT_NAME,
     CURRENT_TENANT_CONFIG
 )
@@ -64,20 +63,7 @@ def safe_drop_all(keep_tables):
 
 
 def _add_defaults(app, amqp_manager, script_config):
-    """Add default tenant, admin user and provider context to the DB
-    """
-    # Add the default network to the provider context
-    context = script_config['provider_context']
-    networks = context['cloudify']['cloudify_agent']['networks']
-    networks['default'] = script_config['ip']
-
-    provider_context = models.ProviderContext(
-        id=PROVIDER_CONTEXT_ID,
-        name=PROVIDER_NAME,
-        context=context
-    )
-    db.session.add(provider_context)
-
+    """Add default tenant and admin user to the DB"""
     default_tenant = create_default_user_tenant_and_roles(
         admin_username=script_config['username'],
         admin_password=None,
@@ -109,18 +95,14 @@ def reset_storage(script_config):
 
     # Clear the old RabbitMQ resources
     amqp_manager.remove_tenant_vhost_and_user(DEFAULT_TENANT_NAME)
-
     # Rebuild the DB
     safe_drop_all(keep_tables=['roles', 'config', 'rabbitmq_brokers',
                                'certificates', 'managers', 'db_nodes',
                                'licenses', 'usage_collector',
-                               'permissions'])
+                               'permissions', 'provider_context'])
     upgrade(directory=migrations_dir)
-
     # Add default tenant, admin user and provider context
     _add_defaults(app, amqp_manager, script_config)
-
-    # Clear the connection
     close_session(app)
     with open(AUTH_TOKEN_LOCATION, 'w') as f:
         f.write(script_config['admin_token'])

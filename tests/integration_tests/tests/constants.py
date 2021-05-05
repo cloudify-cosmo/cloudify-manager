@@ -13,17 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-PROVIDER_CONTEXT = {
-    'cloudify': {
-        'cloudify_agent':
-            {
-                'broker_ip': '',
-                'broker_user': 'cloudify',
-                'broker_pass': 'c10udify',
-                'networks': {}
-            },
-    }
-}
 MANAGER_CONFIG = {
     'workflow': {
         'task_retries': 0,
