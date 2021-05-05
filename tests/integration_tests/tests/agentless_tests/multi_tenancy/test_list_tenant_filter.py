@@ -43,25 +43,25 @@ class ListResourcesTest(AgentlessTestCase):
         self._upload_blueprints_to_different_tenants()
 
         result = self.alice_client.blueprints.list(_all_tenants=True)
-        self.assertEquals(len(result), 2)
+        self.assertEqual(len(result), 2)
 
         blueprint_ids = [result[0].id, result[1].id]
         self.assertIn('alice_bp', blueprint_ids)
         self.assertIn('fred_bp', blueprint_ids)
 
         result = self.alice_client.blueprints.list()
-        self.assertEquals(len(result), 1)
+        self.assertEqual(len(result), 1)
 
         with self.client_using_tenant(self.alice_client,
                                       tenant_name=DEFAULT_TENANT_NAME):
             result = self.alice_client.blueprints.list()
-        self.assertEquals(len(result), 1)
+        self.assertEqual(len(result), 1)
         self.assertEqual(result[0].id, 'alice_bp')
 
         with self.client_using_tenant(self.alice_client,
                                       tenant_name='TEST_TENANT'):
             result = self.alice_client.blueprints.list()
-        self.assertEquals(len(result), 1)
+        self.assertEqual(len(result), 1)
         self.assertEqual(result[0].id, 'fred_bp')
 
     def test_list_blueprints_not_authorized(self):

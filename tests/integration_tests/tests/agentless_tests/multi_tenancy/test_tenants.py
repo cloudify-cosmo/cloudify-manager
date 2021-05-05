@@ -178,7 +178,7 @@ class TenantsTest(AgentlessTestCase):
             tenant='test_tenant_1'
         )
         tenants = fred_client.tenants.list()
-        self.assertEquals(len(tenants.items), 1)
+        self.assertEqual(len(tenants.items), 1)
 
     def test_list_tenants_non_admin_with_group(self):
         fred = user('fred', 'fred_password')
@@ -202,7 +202,7 @@ class TenantsTest(AgentlessTestCase):
             tenant='test_tenant_1'
         )
         tenants = fred_client.tenants.list()
-        self.assertEquals(len(tenants), 2)
+        self.assertEqual(len(tenants), 2)
         tenant_names = [tenant.name for tenant in tenants]
         self.assertIn('test_tenant_1', tenant_names)
         self.assertIn('test_tenant_2', tenant_names)
