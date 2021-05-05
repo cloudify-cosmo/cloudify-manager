@@ -416,6 +416,14 @@ class BaseTestCase(unittest.TestCase):
     def _restore_marker_file_exists(self):
         return self.file_exists(SNAPSHOT_RESTORE_FLAG_FILE)
 
+    def create_rest_client(self, **kwargs):
+        params = {
+            'host': self.env.container_ip,
+            'cert_path': self.ca_cert,
+            **kwargs
+        }
+        return utils.create_rest_client(**params)
+
     @contextmanager
     def client_using_tenant(self, client, tenant_name):
         curr_tenant = client._client.headers.get(CLOUDIFY_TENANT_HEADER)
@@ -513,6 +521,19 @@ class BaseTestCase(unittest.TestCase):
 
 
 class AgentlessTestCase(BaseTestCase):
+    def _select(self, query):
+        """Run a SELECT query on the manager.
+
+        Note that this will not parse the results, so the calling
+        functions must deal with strings as returned by psql
+        (eg. false is the string 'f', NULL is the empty string, etc.)
+        """
+        out = docker.execute(self.env.container_id, [
+            'sudo', '-upostgres', 'psql', '-t', '-F,', 'cloudify_db',
+            '-c', '\\copy ({0}) to stdout with csv'.format(query)
+        ])
+        return [line.split(',') for line in out.split('\n') if line.strip()]
+
     def _get_latest_execution(self, workflow_id):
         execution_list = self.client.executions.list(
             include_system_workflows=True,
