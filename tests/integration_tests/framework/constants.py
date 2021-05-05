@@ -21,13 +21,6 @@ BRANCH_NAME_CORE = 'BRANCH_NAME_CORE'
 
 # Internal framework environment variables
 ##########################################
-DOCL_CONTAINER_IP = 'DOCL_CONTAINER_IP'
-CLOUDIFY_REST_PORT = 'CLOUDIFY_REST_PORT'
-
-PLUGIN_STORAGE_DIR = '/tmp/integration-plugin-storage'
-DOCKER_COMPUTE_DIR = '/etc/cloudify/dockercompute'
-
-CLOUDIFY_USER = 'cfyuser'
 ADMIN_TOKEN_SCRIPT = '/opt/cloudify/mgmtworker/create-admin-token.py'
 
 INSERT_MOCK_LICENSE_QUERY = "INSERT INTO licenses(customer_id, " \

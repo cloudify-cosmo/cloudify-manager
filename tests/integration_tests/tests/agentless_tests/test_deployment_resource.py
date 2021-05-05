@@ -21,7 +21,6 @@ from os.path import join
 import pytest
 
 from integration_tests import AgentlessTestCase
-from integration_tests.framework.constants import CLOUDIFY_USER
 from integration_tests.tests.utils import (
     get_resource as resource,
     wait_for_deployment_deletion_to_complete
@@ -53,10 +52,7 @@ class DeploymentResourceTest(AgentlessTestCase):
                                   deployment_id,
                                   RESOURCE_PATH)
         self.execute_on_manager('mkdir -p {0}'.format(dep_resources_dir))
-        self.execute_on_manager(
-            'chown -R {0}. {1}'
-            ''.format(CLOUDIFY_USER, base_dep_dir)
-        )
+        self.execute_on_manager(f'chown -R cfyuser. {base_dep_dir}')
         with tempfile.NamedTemporaryFile(mode='w') as f:
             f.write(RESOURCE_CONTENT)
             f.flush()

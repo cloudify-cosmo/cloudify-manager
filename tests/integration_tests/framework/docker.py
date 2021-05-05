@@ -28,7 +28,6 @@ from functools import partial
 import proxy_tools
 import cloudify.utils
 
-from integration_tests.framework import constants
 from integration_tests.framework.constants import INSERT_MOCK_LICENSE_QUERY
 
 # All container specific docl commands that are executed with no explicit
@@ -212,15 +211,6 @@ def copy_file_from_manager(container_id, source, target):
     subprocess.check_call([
         'docker', 'cp', '{0}:{1}'.format(container_id, source), target
     ])
-
-
-def _set_container_id_and_ip(container_details):
-    logger.info('Setting container details')
-    global default_container_id
-    default_container_id = container_details['id']
-    os.environ[constants.DOCL_CONTAINER_IP] = container_details['ip']
-    os.environ['DOCL_CONTAINER_ID'] = default_container_id
-    _save_docl_container_details(container_details)
 
 
 def get_manager_ip(container_id):

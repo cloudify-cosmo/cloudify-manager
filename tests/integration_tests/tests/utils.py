@@ -290,12 +290,6 @@ def generate_scheduled_for_date():
     return date
 
 
-def create_api_token(container_id):
-    """ Create a new valid API token """
-    command = 'sudo {0}'.format(ADMIN_TOKEN_SCRIPT)
-    docker.execute(container_id, command)
-
-
 def create_tenants_and_add_users(client, num_of_tenants):
     for i in range(num_of_tenants):
         tenant_name = 'tenant_{0}'.format(i)
