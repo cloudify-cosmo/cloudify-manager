@@ -1162,6 +1162,7 @@ class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
 
         The group status is:
             - pending, if all executions are pending
+            - queued, if all executions are queued
             - started, if some executions are already not pending, and not
                 all are finished yet
             - failed, if all executions are finished, and some have failed
@@ -1172,6 +1173,9 @@ class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
 
         if all(s == ExecutionState.PENDING for s in states):
             return ExecutionState.PENDING
+
+        if all(s == ExecutionState.QUEUED for s in states):
+            return ExecutionState.QUEUED
 
         if all(s in ExecutionState.END_STATES for s in states):
             if ExecutionState.FAILED in states:
