@@ -27,7 +27,6 @@ from os import path
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 
-from .constants import SCHEDULED_TIME_FORMAT
 from cloudify.utils import setup_logger
 from cloudify.models_states import BlueprintUploadState
 from cloudify_rest_client.executions import Execution
@@ -282,12 +281,7 @@ def generate_scheduled_for_date():
     now = datetime.utcnow()
     # Schedule the execution for 1 minute in the future
     scheduled_for = now + timedelta(minutes=1)
-    date = SCHEDULED_TIME_FORMAT.format(year=scheduled_for.strftime('%Y'),
-                                        month=scheduled_for.strftime('%m'),
-                                        day=scheduled_for.strftime('%d'),
-                                        hour=scheduled_for.strftime('%H'),
-                                        minute=scheduled_for.strftime('%M'))
-    return date
+    return scheduled_for.strftime('%Y%m%d%H%M+0000')
 
 
 def create_tenants_and_add_users(client, num_of_tenants):
