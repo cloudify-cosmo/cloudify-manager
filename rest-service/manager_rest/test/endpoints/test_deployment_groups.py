@@ -1227,6 +1227,43 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
                 default_parameters={'invalid-input': 42}
             )
 
+    @mock.patch('manager_rest.workflow_executor.execute_workflow', mock.Mock())
+    @mock.patch('manager_rest.resource_manager.send_event', mock.Mock())
+    def test_group_status_queued(self):
+        self.client.deployment_groups.add_deployments('group1', count=2)
+        for dep in self.client.deployments.list():
+            if dep.id.startswith('group1'):
+                self.create_deployment_environment(dep)
+        exc_group = self.client.execution_groups.start(
+            deployment_group_id='group1',
+            workflow_id='install',
+            concurrency=1,
+        )
+
+        group = self.sm.get(models.ExecutionGroup, exc_group.id)
+        for exc in group.executions:
+            assert exc.status in (
+                ExecutionState.PENDING, ExecutionState.QUEUED,
+            )
+        assert group.status == ExecutionState.QUEUED
+
+    @mock.patch('manager_rest.workflow_executor.execute_workflow', mock.Mock())
+    @mock.patch('manager_rest.resource_manager.send_event', mock.Mock())
+    def test_group_status_pending(self):
+        self.client.deployment_groups.add_deployments('group1', count=2)
+        for dep in self.client.deployments.list():
+            if dep.id.startswith('group1'):
+                self.create_deployment_environment(dep)
+        exc_group = self.client.execution_groups.start(
+            deployment_group_id='group1',
+            workflow_id='install',
+        )
+
+        group = self.sm.get(models.ExecutionGroup, exc_group.id)
+        for exc in group.executions:
+            assert exc.status == ExecutionState.PENDING
+        assert group.status == ExecutionState.PENDING
+
 
 class TestGenerateID(unittest.TestCase):
     def setUp(self):
