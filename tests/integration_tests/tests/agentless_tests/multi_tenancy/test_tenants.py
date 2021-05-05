@@ -24,7 +24,6 @@ from manager_rest.constants import (DEFAULT_TENANT_NAME,
                                     SECURITY_FILE_LOCATION)
 from integration_tests.framework import utils
 from integration_tests import AgentlessTestCase
-from integration_tests.framework import postgresql
 from integration_tests.tests.constants import USER_ROLE, USER_IN_TENANT_ROLE
 from integration_tests.tests.utils import get_resource as resource
 
@@ -227,10 +226,9 @@ class TenantsTest(AgentlessTestCase):
 
     def test_create_tenant_rabbitmq_password_encrypted(self):
         self.client.tenants.create('tenant_1')
-        result = postgresql.run_query("SELECT rabbitmq_password "
-                                      "FROM tenants "
-                                      "WHERE name='tenant_1';")
-        password_encrypted = result['all'][0][0]
+        password_encrypted = self._select(
+            "SELECT rabbitmq_password FROM tenants WHERE name='tenant_1'"
+        )[0][0]
         security_conf = self.read_manager_file(SECURITY_FILE_LOCATION)
         security_conf = json.loads(security_conf)
 
