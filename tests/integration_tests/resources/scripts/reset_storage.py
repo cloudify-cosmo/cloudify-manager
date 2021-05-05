@@ -78,7 +78,8 @@ def _add_defaults(app, amqp_manager, script_config):
 
     default_tenant = create_default_user_tenant_and_roles(
         admin_username=script_config['username'],
-        admin_password=script_config['password'],
+        admin_password=None,
+        password_hash=script_config['password_hash'],
         amqp_manager=amqp_manager
     )
     for scope, configs in script_config['manager_config'].items():
