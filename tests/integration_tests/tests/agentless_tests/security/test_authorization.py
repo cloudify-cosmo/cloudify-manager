@@ -15,8 +15,7 @@
 
 from os.path import join, dirname
 
-from cloudify_rest_client.exceptions import ForbiddenError
-from integration_tests.framework.utils import create_rest_client
+from cloudify_rest_client.exceptions import ForbiddenError, NotModifiedError
 from integration_tests.tests.test_cases import AgentlessTestCase
 from integration_tests.tests.constants import USER_ROLE, ADMIN_ROLE
 
@@ -101,35 +100,50 @@ class AuthorizationTest(AgentlessTestCase):
                 self.client.tenants.add_user_group(
                     group, tenant, TENANTS[tenant]['groups'][group])
 
+    def _can_perform_admin_only_action(self, client):
+        try:
+            client.maintenance_mode.deactivate()
+        except ForbiddenError:
+            return False
+        except NotModifiedError:
+            pass
+        return True
+    def _can_perform_user_action(self, client):
+        try:
+            client.maintenance_mode.status()
+        except ForbiddenError:
+            return False
+        return True
+
     def test_authorization(self):
         for user in USERS:
             for tenant in TENANTS:
                 self._test_user_in_tenant(user, tenant)
 
     def test_change_role(self):
-        client = create_rest_client(username='u2',
-                                    password='12345',
-                                    tenant='t1')
+        client = self.create_rest_client(
+            username='u2',
+            password='12345',
+            tenant='t1'
+        )
 
-        # can view ssl mode but can't change it
-        client.manager.ssl_status()
-        self.assertRaises(ForbiddenError, client.manager.set_ssl, False)
+        assert self._can_perform_user_action(client)
+        assert not self._can_perform_admin_only_action(client)
 
-        # as an admin, can change ssl mode
         self.client.users.set_role('u2', ADMIN_ROLE)
-        client.manager.ssl_status()
-        client.manager.set_ssl(False)
+        assert self._can_perform_user_action(client)
+        assert self._can_perform_admin_only_action(client)
 
         # back as a simple user, can't change ssl mode
         self.client.users.set_role('u2', USER_ROLE)
-        client.manager.ssl_status()
-        self.assertRaises(ForbiddenError, client.manager.set_ssl, False)
+        assert self._can_perform_user_action(client)
+        assert not self._can_perform_admin_only_action(client)
 
         # now adding the user to a new admins group, so it can change ssl mode
         self.client.user_groups.create('g5', ADMIN_ROLE)
         self.client.user_groups.add_user('u2', 'g5')
-        client.manager.ssl_status()
-        client.manager.set_ssl(False)
+        assert self._can_perform_user_action(client)
+        assert self._can_perform_admin_only_action(client)
 
     def _test_user_in_tenant(self, user, tenant):
         client = create_rest_client(
