@@ -15,6 +15,7 @@
 
 from flask_security.utils import verify_password
 
+from cloudify_rest_client.exceptions import CloudifyClientError
 from manager_rest.storage import user_datastore
 from manager_rest.constants import DEFAULT_TENANT_NAME
 
@@ -111,17 +112,21 @@ class UsersTest(AgentlessTestCase):
         self._validate_user(self.test_username)
 
     def test_set_password(self):
-        setup_flask_app()
         self._add_and_validate_test_user()
-        storage_user = user_datastore.get_user(self.test_username)
-        self.assertTrue(verify_password(self.test_password,
-                                        storage_user.password))
-        user_datastore.commit()
-
+        old_password_client = self.create_rest_client(
+            username=self.test_username,
+            password=self.test_password,
+        )
+        old_password_client.manager.get_status()  # doesn't throw
         self.client.users.set_password(self.test_username, 'new_password')
-        storage_user = user_datastore.get_user(self.test_username)
-        self.assertTrue(verify_password('new_password', storage_user.password))
-        user_datastore.commit()
+        new_password_client = self.create_rest_client(
+            username=self.test_username,
+            password='new_password',
+        )
+        new_password_client.manager.get_status()  # doesn't throw
+        with self.assertRaises(CloudifyClientError) as cm:
+            old_password_client.manager.get_status()
+        self.assertEqual(cm.exception.status_code, 401)
 
     def _test_list_users(self, get_data):
         # Only the manager status reporter exists at this point

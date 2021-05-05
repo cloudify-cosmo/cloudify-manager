@@ -46,14 +46,16 @@ class ListResourcesTest(AgentlessTestCase):
                                      DEFAULT_TENANT_ROLE)
 
         # Create clients for each user
-        self.alice_client = utils.create_rest_client(
+        self.alice_client = self.create_rest_client(
             username='alice',
             password='alice_password',
-            tenant=DEFAULT_TENANT_NAME
+            tenant=DEFAULT_TENANT_NAME,
         )
-        self.fred_client = utils.create_rest_client(username='fred',
-                                                    password='fred_password',
-                                                    tenant='TEST_TENANT')
+        self.fred_client = self.create_rest_client(
+            username='fred',
+            password='fred_password',
+            tenant='TEST_TENANT',
+        )
 
     def test_list_blueprints_with_tenants_filter(self):
 

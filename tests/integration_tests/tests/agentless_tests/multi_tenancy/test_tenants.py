@@ -152,13 +152,12 @@ class TenantsTest(AgentlessTestCase):
                                      tenant_2,
                                      DEFAULT_TENANT_ROLE)
 
-        user_1_client = utils.create_rest_client(
+        user_1_client = self.create_rest_client(
             username=user_1.username,
             password=user_1.password,
             tenant=tenant_1
         )
-
-        user_2_client = utils.create_rest_client(
+        user_2_client = self.create_rest_client(
             username=user_2.username,
             password=user_2.password,
             tenant=tenant_2
@@ -196,9 +195,11 @@ class TenantsTest(AgentlessTestCase):
                                      'test_tenant_1',
                                      DEFAULT_TENANT_ROLE)
 
-        fred_client = utils.create_rest_client(username=fred.username,
-                                               password=fred.password,
-                                               tenant='test_tenant_1')
+        fred_client = self.create_rest_client(
+            username=fred.username,
+            password=fred.password,
+            tenant='test_tenant_1'
+        )
         tenants = fred_client.tenants.list()
         self.assertEquals(len(tenants.items), 1)
 
@@ -218,9 +219,11 @@ class TenantsTest(AgentlessTestCase):
         )
         self.client.user_groups.add_user(fred.username, 'test_group')
 
-        fred_client = utils.create_rest_client(username=fred.username,
-                                               password=fred.password,
-                                               tenant='test_tenant_1')
+        fred_client = self.create_rest_client(
+            username=fred.username,
+            password=fred.password,
+            tenant='test_tenant_1'
+        )
         tenants = fred_client.tenants.list()
         self.assertEquals(len(tenants), 2)
         tenant_names = [tenant.name for tenant in tenants]
