@@ -35,8 +35,8 @@ from manager_rest.storage.storage_utils import (
 # This is a hacky way to get to the migrations folder
 migrations_dir = '/opt/manager/resources/cloudify/migrations'
 PROVIDER_NAME = 'integration_tests'
-ADMIN_TOKEN_RESET_SCRIPT = '/opt/cloudify/mgmtworker/create-admin-token.py'
 DEFAULT_CA_CERT = "/etc/cloudify/ssl/cloudify_internal_ca_cert.pem"
+AUTH_TOKEN_LOCATION = '/opt/mgmtworker/work/admin_token'
 
 
 def setup_amqp_manager():
@@ -120,8 +120,8 @@ def reset_storage(script_config):
 
     # Clear the connection
     close_session(app)
-
-    subprocess.check_call(['sudo', ADMIN_TOKEN_RESET_SCRIPT])
+    with open(AUTH_TOKEN_LOCATION, 'w') as f:
+        f.write(script_config['admin_token'])
 
 
 if __name__ == '__main__':
