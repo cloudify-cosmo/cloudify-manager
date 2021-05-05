@@ -1,8 +1,0 @@
-cli_source_url: ''
-rest_service_source_url: ''
-dsl_parser_source_url: ''
-rest_client_source_url: ''
-plugins_common_source_url: ''
-script_plugin_source_url: ''
-agent_source_url: ''
-sanity_app_source_url: cloudify-hello-world-example-4.0m2.tar.gz
