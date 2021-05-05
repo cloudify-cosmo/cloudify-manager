@@ -40,13 +40,17 @@ from integration_tests.tests.utils import get_resource
 
 logger = setup_logger('Flask Utils', logging.INFO)
 security_config = None
+
+PREPARE_SCRIPT_PATH = '/tmp/prepare_reset_storage.py'
 SCRIPT_PATH = '/tmp/reset_storage.py'
 CONFIG_PATH = '/tmp/reset_storage_config.json'
 
 
 def prepare_reset_storage_script(container_id):
     reset_script = get_resource('scripts/reset_storage.py')
+    prepare = get_resource('scripts/prepare_reset_storage.py')
     copy_file_to_manager(container_id, reset_script, SCRIPT_PATH)
+    copy_file_to_manager(container_id, prepare, PREPARE_SCRIPT_PATH)
     with tempfile.NamedTemporaryFile(delete=False, mode='w') as f:
         json.dump({
             'config': {
@@ -55,12 +59,13 @@ def prepare_reset_storage_script(container_id):
             },
             'ip': get_manager_ip(container_id),
             'username': 'admin',
-            'password': 'admin',
             'provider_context': PROVIDER_CONTEXT,
             'manager_config': MANAGER_CONFIG
         }, f)
     try:
         copy_file_to_manager(container_id, f.name, CONFIG_PATH)
+        execute(container_id,
+                [MANAGER_PYTHON, PREPARE_SCRIPT_PATH, '--config', CONFIG_PATH])
     finally:
         os.unlink(f.name)
 
