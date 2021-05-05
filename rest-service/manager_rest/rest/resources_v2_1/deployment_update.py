@@ -92,16 +92,21 @@ class DeploymentUpdate(SecuredResource):
             config.instance.file_server_root, blueprint)
         deployment_dir = join(FILE_SERVER_DEPLOYMENTS_FOLDER,
                               current_tenant.name,
-                              id)
+                              id,
+                              'updated_blueprint')
         dep_dir_abs = join(config.instance.file_server_root, deployment_dir)
         rmtree(dep_dir_abs, ignore_errors=True)
         copytree(blueprint_dir_abs, dep_dir_abs)
         file_name = blueprint.main_file_name
-        deployment_update = manager.stage_deployment_update(
-            id, deployment_dir, file_name, inputs, blueprint.id, preview,
-            runtime_only_evaluation=runtime_eval,
-            auto_correct_types=auto_correct_args,
-            reevaluate_active_statuses=reevaluate_active_statuses)
+        try:
+            deployment_update = manager.stage_deployment_update(
+                id, deployment_dir, file_name, inputs, blueprint.id, preview,
+                runtime_only_evaluation=runtime_eval,
+                auto_correct_types=auto_correct_args,
+                reevaluate_active_statuses=reevaluate_active_statuses)
+        finally:
+            rmtree(dep_dir_abs, ignore_errors=True)
+
         manager.extract_steps_from_deployment_update(deployment_update)
         return manager.commit_deployment_update(deployment_update,
                                                 skip_install,
