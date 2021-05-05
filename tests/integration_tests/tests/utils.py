@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import os
-import sh
 import json
 import time
 import wagon
@@ -210,23 +209,6 @@ def do_retries_boolean(func, timeout_seconds=10, **kwargs):
                     .format(func.__name__, timeout_seconds)
                 )
             time.sleep(0.5)
-
-
-def create_self_signed_certificate(target_certificate_path,
-                                   target_key_path,
-                                   common_name):
-    openssl = sh.openssl
-    # Includes SAN to allow this cert to be valid for localhost (by name),
-    # 127.0.0.1 (IP), and including the CN in the IP list, as some clients
-    # ignore the CN when SAN is present. While this may only apply to
-    # HTTPS (RFC 2818), including it here is probably best in case of SSL
-    # library implementation 'fun'.
-    openssl.req(
-        '-x509', '-newkey', 'rsa:2048', '-sha256',
-        '-keyout', target_key_path,
-        '-out', target_certificate_path,
-        '-days', '365', '-nodes',
-        '-subj', '/CN={0}'.format(common_name))
 
 
 def tar_blueprint(blueprint_path, dest_dir):
