@@ -14,21 +14,14 @@
 # limitations under the License.
 
 import os
-import yaml
 import json
 import logging
 import tempfile
 
 from cloudify.utils import setup_logger
 
-from manager_rest.storage import db, models
-from manager_rest.constants import SECURITY_FILE_LOCATION
-
-from integration_tests.framework import utils
 from integration_tests.framework.docker import (execute,
-                                                copy_file_to_manager,
-                                                get_manager_ip,
-                                                read_file as read_manager_file)
+                                                copy_file_to_manager)
 from integration_tests.tests.constants import MANAGER_CONFIG, MANAGER_PYTHON
 from integration_tests.tests.utils import get_resource
 
@@ -73,21 +66,6 @@ def set_ldap(config_data):
             .format(manager_python=MANAGER_PYTHON,
                     script_path='/tmp/set_ldap.py',
                     cfg_data=json.dumps(config_data)))
-
-
-def load_user(app, username=None):
-    if username:
-        user = models.User.query.filter(username=username).first()
-    else:
-        user = models.User.query.get(0)  # Admin
-
-    # This line is necessary for the `reload_user` method - we add a mock
-    # request context to the flask stack
-    app.test_request_context().push()
-
-    # And then load the admin as the currently active user
-    app.extensions['security'].login_manager.reload_user(user)
-    return user
 
 
 def _prepare_set_ldap_script():

@@ -1,5 +1,3 @@
-import sys
-import yaml
 import shlex
 import logging
 import tempfile

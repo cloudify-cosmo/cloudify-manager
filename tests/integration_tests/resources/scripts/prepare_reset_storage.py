@@ -10,7 +10,7 @@ AUTH_TOKEN_LOCATION = '/opt/mgmtworker/work/admin_token'
 
 
 def get_password_hash():
-    app = setup_flask_app()
+    setup_flask_app()
     return db.session.query(models.User).first().password
 
 

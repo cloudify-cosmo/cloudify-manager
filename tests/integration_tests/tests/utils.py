@@ -30,7 +30,6 @@ from cloudify.utils import setup_logger
 from cloudify.models_states import BlueprintUploadState
 from cloudify_rest_client.executions import Execution
 from integration_tests.framework import utils, docker
-from integration_tests.framework.constants import ADMIN_TOKEN_SCRIPT
 
 logger = setup_logger('testenv.utils')
 

@@ -1,7 +1,6 @@
 import os
 import logging
 import pytest
-import tempfile
 import threading
 import wagon
 
