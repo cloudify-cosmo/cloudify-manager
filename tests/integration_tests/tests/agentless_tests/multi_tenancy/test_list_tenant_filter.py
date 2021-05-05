@@ -124,7 +124,7 @@ class ListResourcesTest(AgentlessTestCase):
     def _upload_blueprints_to_different_tenants(self,
                                                 alice_bp_id='alice_bp',
                                                 fred_bp_id='fred_bp'):
-        blueprint_path = resource('dsl/basic.yaml')
+        blueprint_path = resource('dsl/empty_blueprint.yaml')
         self.alice_client.blueprints.upload(path=blueprint_path,
                                             entity_id=alice_bp_id)
         self.fred_client.blueprints.upload(path=blueprint_path,

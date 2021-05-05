@@ -132,7 +132,7 @@ class TenantsTest(AgentlessTestCase):
 
         blueprint_id_1 = 'blueprint_id_1'
         blueprint_id_2 = 'blueprint_id_2'
-        blueprint_path = resource('dsl/basic.yaml')
+        blueprint_path = resource('dsl/empty_blueprint.yaml')
 
         self.client.users.create(user_1.username, user_1.password, USER_ROLE)
         self.client.users.create(user_2.username, user_2.password, USER_ROLE)
