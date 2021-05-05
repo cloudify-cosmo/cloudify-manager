@@ -27,8 +27,6 @@ CLOUDIFY_REST_PORT = 'CLOUDIFY_REST_PORT'
 PLUGIN_STORAGE_DIR = '/tmp/integration-plugin-storage'
 DOCKER_COMPUTE_DIR = '/etc/cloudify/dockercompute'
 
-CONFIG_FILE_LOCATION = '/opt/manager/cloudify-rest.conf'
-
 CLOUDIFY_USER = 'cfyuser'
 ADMIN_TOKEN_SCRIPT = '/opt/cloudify/mgmtworker/create-admin-token.py'
 

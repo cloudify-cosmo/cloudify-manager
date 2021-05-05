@@ -24,7 +24,7 @@ from cloudify.utils import setup_logger
 from manager_rest.storage import db, models
 from manager_rest.constants import SECURITY_FILE_LOCATION
 
-from integration_tests.framework import constants, utils
+from integration_tests.framework import utils
 from integration_tests.framework.docker import (execute,
                                                 copy_file_to_manager,
                                                 get_manager_ip,
@@ -48,13 +48,7 @@ def prepare_reset_storage_script(container_id):
     copy_file_to_manager(container_id, prepare, PREPARE_SCRIPT_PATH)
     with tempfile.NamedTemporaryFile(delete=False, mode='w') as f:
         json.dump({
-            'config': {
-                '': constants.CONFIG_FILE_LOCATION,
-                'security': SECURITY_FILE_LOCATION,
-            },
-            'ip': get_manager_ip(container_id),
-            'username': 'admin',
-            'manager_config': MANAGER_CONFIG
+            'manager_config': MANAGER_CONFIG,
         }, f)
     try:
         copy_file_to_manager(container_id, f.name, CONFIG_PATH)

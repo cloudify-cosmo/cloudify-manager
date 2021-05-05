@@ -65,7 +65,7 @@ def safe_drop_all(keep_tables):
 def _add_defaults(app, amqp_manager, script_config):
     """Add default tenant and admin user to the DB"""
     default_tenant = create_default_user_tenant_and_roles(
-        admin_username=script_config['username'],
+        admin_username='admin',
         admin_password=None,
         password_hash=script_config['password_hash'],
         amqp_manager=amqp_manager
@@ -134,7 +134,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
     with args.config as f:
         script_config = json.load(f)
-    for namespace, path in script_config['config'].items():
-        config.instance.load_from_file(path, namespace=namespace)
+    config.instance.load_from_file('/opt/manager/cloudify-rest.conf')
     reset_storage(script_config)
     clean_dirs()

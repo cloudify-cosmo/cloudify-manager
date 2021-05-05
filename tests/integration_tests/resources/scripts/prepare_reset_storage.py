@@ -20,9 +20,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     with open(args.config) as f:
         script_config = json.load(f)
-    for namespace, path in script_config['config'].items():
-        config.instance.load_from_file(path, namespace=namespace)
-    config.instance.load_configuration()
+    config.instance.load_from_file('/opt/manager/cloudify-rest.conf')
 
     script_config['password_hash'] = get_password_hash()
     with open(AUTH_TOKEN_LOCATION) as f:
