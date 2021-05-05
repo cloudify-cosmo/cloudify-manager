@@ -14,6 +14,8 @@
 #    * limitations under the License.
 
 import json
+import os
+import shutil
 import subprocess
 
 import argparse
@@ -124,6 +126,26 @@ def reset_storage(script_config):
         f.write(script_config['admin_token'])
 
 
+def clean_dirs():
+    dirs_to_clean = [
+        '/opt/mgmtworker/env/plugins',
+        '/opt/mgmtworker/env/source_plugins',
+        '/opt/mgmtworker/work/deployments',
+        '/opt/manager/resources/blueprints',
+        '/opt/manager/resources/uploaded-blueprints',
+        '/opt/manager/resources/snapshots/'
+    ]
+    for directory in dirs_to_clean:
+        if not os.path.isdir(directory):
+            continue
+        for item in os.listdir(directory):
+            full_item = os.path.join(directory, item)
+            if os.path.isdir(full_item):
+                shutil.rmtree(full_item)
+            else:
+                os.unlink(full_item)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', dest='config', type=argparse.FileType('r'))
@@ -133,3 +155,4 @@ if __name__ == '__main__':
     for namespace, path in script_config['config'].items():
         config.instance.load_from_file(path, namespace=namespace)
     reset_storage(script_config)
+    clean_dirs()

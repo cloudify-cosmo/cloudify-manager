@@ -118,7 +118,7 @@ def manager_container(request, resource_mapping):
     container_id = request.config.getoption("--container-id")
     service_management = request.config.getoption("--service-management")
     if container_id:
-        _clean_manager(container_id)
+        reset_storage(container_id)
         keep_container = True
     else:
         container_id = docker.run_manager(
@@ -173,22 +173,6 @@ def manager_class_fixtures(request, manager_container, rest_client, ca_cert):
     request.cls.ca_cert = ca_cert
 
 
-def _clean_manager(container_id):
-    dirs_to_clean = [
-        '/opt/mgmtworker/env/plugins',
-        '/opt/mgmtworker/env/source_plugins',
-        '/opt/mgmtworker/work/deployments',
-        '/opt/manager/resources/blueprints',
-        '/opt/manager/resources/uploaded-blueprints',
-        '/opt/manager/resources/snapshots/'
-    ]
-    reset_storage(container_id)
-    for directory in dirs_to_clean:
-        docker.execute(
-            container_id,
-            ['sh', '-c', 'rm -rf {0}/*'.format(directory)])
-
-
 @pytest.fixture(autouse=True)
 def prepare_manager_storage(request, manager_container):
     """Make sure that for each test, the manager storage is the same.
@@ -203,7 +187,7 @@ def prepare_manager_storage(request, manager_container):
         request.session.testsfinished = \
             getattr(request.session, 'testsfinished', 0) + 1
         if request.session.testsfinished != request.session.testscollected:
-            _clean_manager(container_id)
+            reset_storage(container_id)
 
 
 @pytest.fixture(scope='session')
