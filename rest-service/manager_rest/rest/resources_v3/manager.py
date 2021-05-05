@@ -41,7 +41,8 @@ class FileServerAuth(SecuredResource):
         ]
         tenanted_resources = [r.strip('/') for r in tenanted_resources]
         uri = uri.strip('/')
-
+        if uri.startswith('resources/'):
+            uri = uri.replace('resources/', '', 1)
         # verifying that the only tenant that can be accessed is the one in
         # the header
         for resource in tenanted_resources:
