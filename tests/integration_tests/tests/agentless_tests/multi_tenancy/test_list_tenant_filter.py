@@ -65,29 +65,22 @@ class ListResourcesTest(AgentlessTestCase):
         self.assertEqual(result[0].id, 'fred_bp')
 
     def test_list_blueprints_not_authorized(self):
-        error_msg = '403: User `fred` is not permitted to perform the ' \
-                    'action blueprint_list in the tenant `default_tenant`'
+        error_msg = '403.*blueprint_list.*default_tenant'
         with self.client_using_tenant(self.fred_client, DEFAULT_TENANT_NAME):
-            self.assertRaisesRegexp(CloudifyClientError,
-                                    error_msg,
-                                    self.fred_client.blueprints.list)
-
-    def test_admin_list_blueprints_non_existing_tenant(self):
-        error_msg = '403: Authorization failed: Tried to authenticate with ' \
-                    'invalid tenant name: non_existing_tenant'
-        with self.client_using_tenant(self.client, 'non_existing_tenant'):
-            self.assertRaisesRegexp(CloudifyClientError,
-                                    error_msg,
-                                    self.client.blueprints.list)
+            self.assertRaisesRegex(CloudifyClientError, error_msg,
+                                   self.fred_client.blueprints.list)
 
     def test_list_blueprints_non_existing_tenant(self):
-        error_msg = '403: Authorization failed: Tried to authenticate with ' \
-                    'invalid tenant name: non_existing_tenant'
+        error_msg = '403.*invalid tenant name.*non_existing_tenant'
+        with self.client_using_tenant(self.client, 'non_existing_tenant'):
+            self.assertRaisesRegex(CloudifyClientError,
+                                   error_msg,
+                                   self.client.blueprints.list)
         with self.client_using_tenant(self.alice_client,
                                       tenant_name='non_existing_tenant'):
-            self.assertRaisesRegexp(CloudifyClientError,
-                                    error_msg,
-                                    self.alice_client.blueprints.list)
+            self.assertRaisesRegex(CloudifyClientError,
+                                   error_msg,
+                                   self.alice_client.blueprints.list)
 
     # Assert that if no tenants were passed, response will contain only the
     # blueprints associated with the current tenant.
