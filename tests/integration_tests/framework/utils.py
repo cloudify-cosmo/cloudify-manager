@@ -28,7 +28,6 @@ from functools import wraps
 from multiprocessing import Process
 from contextlib import contextmanager
 
-import sh
 import pika
 import ssl
 
@@ -118,12 +117,6 @@ def create_pika_connection(container_id):
                                   port=5671,
                                   ssl_options=pika.SSLOptions(ssl_ctx),
                                   credentials=credentials))
-
-
-def get_cfy():
-    return sh.cfy.bake(_err_to_out=True,
-                       _out=lambda l: sys.stdout.write(l),
-                       _tee=True)
 
 
 def timeout(seconds=60):

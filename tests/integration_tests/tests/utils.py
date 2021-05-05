@@ -36,10 +36,6 @@ from integration_tests.framework.constants import ADMIN_TOKEN_SCRIPT
 logger = setup_logger('testenv.utils')
 
 
-def get_cfy():
-    return utils.get_cfy()
-
-
 def upload_mock_plugin(client,
                        package_name,
                        package_version,
