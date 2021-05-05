@@ -39,7 +39,7 @@ class TenantsTest(AgentlessTestCase):
             {
                 'name': DEFAULT_TENANT_NAME,
                 'groups': 0,
-                'users': 2,
+                'users': 1,
                 'user_roles': None
             },
             tenants[0]
@@ -55,15 +55,10 @@ class TenantsTest(AgentlessTestCase):
                         'tenant-role': USER_IN_TENANT_ROLE,
                         'roles': [USER_IN_TENANT_ROLE],
                     },
-                    MANAGER_STATUS_REPORTER: {
-                        'tenant-role': MANAGER_STATUS_REPORTER,
-                        'roles': [MANAGER_STATUS_REPORTER],
-                    }
                 },
                 'user_roles': {
                     'direct': {
                         'admin': USER_IN_TENANT_ROLE,
-                        MANAGER_STATUS_REPORTER: MANAGER_STATUS_REPORTER
                     },
                     'groups': {}
                 }

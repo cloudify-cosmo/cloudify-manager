@@ -78,8 +78,7 @@ class UsersTest(AgentlessTestCase):
 
     def test_default_user(self):
         users = self.client.users.list()
-        # Admin + the Manager Status Reporter
-        self.assertEqual(len(users), 2)
+        self.assertEqual(len(users), 1)
         self.assertDictContainsSubset(
             self._get_user_dict(
                 'admin',
@@ -129,8 +128,6 @@ class UsersTest(AgentlessTestCase):
         self.assertEqual(cm.exception.status_code, 401)
 
     def _test_list_users(self, get_data):
-        # Only the manager status reporter exists at this point
-        status_reporters_cnt = 1
         for i in range(1, 6):
             self.client.users.create(
                 username='{0}_{1}'.format(self.test_username, i),
@@ -142,12 +139,11 @@ class UsersTest(AgentlessTestCase):
             self.client.users.list(_get_data=get_data).items,
             key=lambda k: k['username']
         )
-        # admin + 5 new users + status reporters
-        self.assertEqual(len(users), 6 + status_reporters_cnt)
-        for i in range(1 + status_reporters_cnt, 6 + status_reporters_cnt):
-            test_user_index = i - status_reporters_cnt
+        # admin + 5 new users
+        self.assertEqual(len(users), 6)
+        for i in range(1, 6):
             user_dict = self._get_user_dict(
-                username='{0}_{1}'.format(self.test_username, test_user_index),
+                username='{0}_{1}'.format(self.test_username, i),
                 get_data=get_data
             )
             self.assertDictContainsSubset(user_dict, users[i])
