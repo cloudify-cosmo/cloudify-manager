@@ -78,7 +78,6 @@ def _is_authorized(user, tenant, allowed_roles):
 class AuthorizationTest(AgentlessTestCase):
     def setUp(self):
         super(AuthorizationTest, self).setUp()
-
         # create users
         for user in USERS:
             self.client.users.create(user, '12345', USERS[user])
@@ -146,7 +145,7 @@ class AuthorizationTest(AgentlessTestCase):
         assert self._can_perform_admin_only_action(client)
 
     def _test_user_in_tenant(self, user, tenant):
-        client = create_rest_client(
+        client = self.create_rest_client(
             username=user,
             password='12345',
             tenant=tenant
@@ -160,13 +159,6 @@ class AuthorizationTest(AgentlessTestCase):
         self._test_action(
             user,
             tenant,
-            [ADMIN_ROLE],
-            client.manager.set_ssl,
-            False
-        )
-        self._test_action(
-            user,
-            tenant,
             [ADMIN_ROLE, TENANT_MANAGER, TENANT_USER, TENANT_VIEWER],
             client.blueprints.list
         )
@@ -174,9 +166,9 @@ class AuthorizationTest(AgentlessTestCase):
             user,
             tenant,
             [ADMIN_ROLE, TENANT_MANAGER, TENANT_USER],
-            client.blueprints.upload,
-            join(dirname(__file__), 'resources', 'bp.yaml'),
-            user
+            client.secrets.create,  # any non-viewer action
+            'secret1', 'value1',
+            update_if_exists=True
         )
         self._test_action(
             user,
