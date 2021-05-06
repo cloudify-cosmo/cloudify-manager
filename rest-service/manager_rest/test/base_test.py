@@ -893,7 +893,7 @@ class BaseServerTestCase(unittest.TestCase):
         module_src = '{0}=={1}'.format(package_name, package_version)
         return wagon.create(
             module_src,
-            archive_destination_dir=tempfile.gettempdir(),
+            archive_destination_dir=tempfile.mkdtemp(),
             force=True
         )
 
