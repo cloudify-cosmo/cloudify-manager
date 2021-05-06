@@ -71,7 +71,6 @@ from manager_rest.constants import (
     LabelsOperator,
     DEFAULT_TENANT_NAME,
     CLOUDIFY_TENANT_HEADER,
-    FILE_SERVER_BLUEPRINTS_FOLDER,
     CONVENTION_APPLICATION_BLUEPRINT_FILE,
 )
 from manager_rest import premium_enabled
