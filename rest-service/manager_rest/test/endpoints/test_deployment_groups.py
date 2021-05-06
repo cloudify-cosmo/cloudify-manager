@@ -383,7 +383,7 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         group = self.client.deployment_groups.get('group1')
         assert group.deployment_ids == ['dep1']
 
-    def test_add_from_filters(self):
+    def test_add_from_filter_ids(self):
         """Extend a group providing filter_id"""
         self.client.deployments.update_labels('dep1', [
             {'label1': 'value1'}
@@ -400,10 +400,53 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         group = self.client.deployment_groups.get('group1')
         assert group.deployment_ids == ['dep1']
 
-    def test_remove_from_filters(self):
-        """Shrink a group providing filter_id"""
+    def test_add_from_filter_rules(self):
+        """Extend a group providing filter_rules"""
         self.client.deployments.update_labels('dep1', [
             {'label1': 'value1'}
+        ])
+        self.client.deployment_groups.put('group1')
+        self.client.deployment_groups.add_deployments(
+            'group1',
+            filter_rules=[{'key': 'label1',
+                           'values': ['value1'],
+                           'operator': 'any_of',
+                           'type': 'label'}]
+        )
+        group = self.client.deployment_groups.get('group1')
+        assert group.deployment_ids == ['dep1']
+
+    def test_add_from_filters(self):
+        """Extend a group providing filter_id and filter_rules"""
+        self.client.deployments.update_labels('dep1', [
+            {'label1': 'value1'}
+        ])
+        self.client.deployments.update_labels('dep2', [
+            {'label1': 'value2'}
+        ])
+        self.client.deployments_filters.create('filter1', [
+            {'key': 'label1', 'values': ['value1'],
+             'operator': 'any_of', 'type': 'label'}
+        ])
+        self.client.deployment_groups.put('group1')
+        self.client.deployment_groups.add_deployments(
+            'group1',
+            filter_id='filter1',
+            filter_rules=[{'key': 'label1',
+                           'values': ['value2'],
+                           'operator': 'any_of',
+                           'type': 'label'}]
+        )
+        group = self.client.deployment_groups.get('group1')
+        assert set(group.deployment_ids) == {'dep2', 'dep1'}
+
+    def test_remove_from_filters(self):
+        """Shrink a group providing filter_id and filter_rules"""
+        self.client.deployments.update_labels('dep1', [
+            {'label1': 'value1'}
+        ])
+        self.client.deployments.update_labels('dep2', [
+            {'label1': 'value2'}
         ])
         self.client.deployments_filters.create('filter1', [
             {'key': 'label1', 'values': ['value1'],
@@ -411,11 +454,15 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
         ])
         self.client.deployment_groups.put(
             'group1',
-            deployment_ids=['dep1']
+            deployment_ids=['dep1', 'dep2']
         )
         self.client.deployment_groups.remove_deployments(
             'group1',
-            filter_id='filter1'
+            filter_id='filter1',
+            filter_rules=[{'key': 'label1',
+                           'values': ['value2'],
+                           'operator': 'any_of',
+                           'type': 'label'}]
         )
         group = self.client.deployment_groups.get('group1')
         assert group.deployment_ids == []

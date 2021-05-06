@@ -744,6 +744,7 @@ class DeploymentGroupsId(SecuredResource):
             'blueprint_id': {'optional': True},
             'default_inputs': {'optional': True},
             'filter_id': {'optional': True},
+            'filter_rules': {'optional': True},
             'deployment_ids': {'optional': True},
             'new_deployments': {'optional': True},
             'deployments_from_group': {'optional': True},
@@ -1020,6 +1021,12 @@ class DeploymentGroupsId(SecuredResource):
                     filter_id, models.DeploymentsFilter)
             ).items)
 
+        filter_rules = request_dict.get('filter_rules')
+        if filter_rules is not None:
+            deployments_to_add |= set(sm.list(
+                models.Deployment,
+                filter_rules=filter_rules).items)
+
         add_group = request_dict.get('deployments_from_group')
         if add_group:
             group_to_clone = sm.get(models.DeploymentGroup, add_group)
@@ -1193,6 +1200,16 @@ class DeploymentGroupsId(SecuredResource):
                 models.Deployment,
                 filter_rules=get_filter_rules_from_filter_id(
                     filter_id, models.DeploymentsFilter)
+            )
+            for dep in deployments:
+                if dep in group.deployments:
+                    group.deployments.remove(dep)
+
+        filter_rules = request_dict.get('filter_rules')
+        if filter_rules is not None:
+            deployments = sm.list(
+                models.Deployment,
+                filter_rules=filter_rules
             )
             for dep in deployments:
                 if dep in group.deployments:
