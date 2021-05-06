@@ -21,7 +21,7 @@ import argparse
 from flask_migrate import upgrade
 
 from manager_rest import config
-from manager_rest.storage import db, models, idencoder, get_storage_manager
+from manager_rest.storage import db, models, idencoder
 from manager_rest.amqp_manager import AMQPManager
 from manager_rest.flask_utils import setup_flask_app
 from manager_rest.constants import (

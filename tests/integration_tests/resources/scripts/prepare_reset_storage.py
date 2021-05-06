@@ -3,7 +3,7 @@ import json
 import argparse
 
 from manager_rest import config
-from manager_rest.storage import db, models
+from manager_rest.storage import models
 from manager_rest.flask_utils import setup_flask_app
 
 
