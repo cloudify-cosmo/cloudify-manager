@@ -1,8 +1,9 @@
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.constants import USER_ROLE
 
-from cloudify_premium.constants import DEFAULT_TENANT_ROLE
 from cloudify_rest_client.exceptions import CloudifyClientError
+
+DEFAULT_TENANT_ROLE = 'user'
 
 
 class UserGroupsTest(AgentlessTestCase):
