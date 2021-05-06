@@ -1205,6 +1205,16 @@ class DeploymentGroupsId(SecuredResource):
                 if dep in group.deployments:
                     group.deployments.remove(dep)
 
+        filter_rules = request_dict.get('filter_rules')
+        if filter_rules is not None:
+            deployments = sm.list(
+                models.Deployment,
+                filter_rules=filter_rules
+            )
+            for dep in deployments:
+                if dep in group.deployments:
+                    group.deployments.remove(dep)
+
         remove_group = request_dict.get('deployments_from_group')
         if remove_group:
             group_to_remove = sm.get(models.DeploymentGroup, remove_group)
