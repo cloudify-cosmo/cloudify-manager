@@ -505,6 +505,8 @@ class BaseServerTestCase(unittest.TestCase):
 
     @classmethod
     def _db_exists(cls, test_config, dbname):
+        if os.environ.get('DB_EXISTS') == dbname:
+            return True
         try:
             conn = psycopg2.connect(
                 host=test_config.postgresql_host,
@@ -529,6 +531,7 @@ class BaseServerTestCase(unittest.TestCase):
             conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
             with conn.cursor() as cur:
                 cur.execute(f'CREATE DATABASE {dbname}')
+            os.environ['DB_EXISTS'] = dbname
 
     @classmethod
     def _find_db_name(cls, test_config):
