@@ -68,6 +68,7 @@ pipeline {
                   . .venv/bin/activate
                   pytest \
                     -sv \
+                    -n 2 \
                     -a '(client_min_version is None or client_min_version <= 3.1) and (client_max_version is None or 3.1 <= client_max_version)' \
                     rest-service/manager_rest/test/endpoints
                 '''
@@ -76,6 +77,7 @@ pipeline {
                   . .venv/bin/activate
                   pytest \
                     -sv \
+                    -n 2 \
                     -a '(client_min_version is None or client_min_version <= 3.1) and (client_max_version is None or 3.1 <= client_max_version)' \
                     rest-service/manager_rest/test/infrastructure
                 '''
