@@ -266,6 +266,8 @@ class ExecutionGroupsId(SecuredResource):
             for exc in group.executions:
                 if exc.status == ExecutionState.QUEUED:
                     exc.status = ExecutionState.CANCELLED
+                elif exc.status in ExecutionState.END_STATES:
+                    continue
                 else:
                     to_cancel.append(exc)
             for exc in to_cancel:

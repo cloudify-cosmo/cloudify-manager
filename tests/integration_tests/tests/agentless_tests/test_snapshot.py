@@ -316,45 +316,6 @@ class TestSnapshot(AgentlessTestCase):
         assert (not secret_string.is_hidden_value and
                 not secret_file.is_hidden_value)
 
-    def _assert_snapshot_restored(self,
-                                  blueprint_id,
-                                  deployment_id,
-                                  node_ids,
-                                  node_instance_ids,
-                                  num_of_workflows,
-                                  num_of_inputs,
-                                  num_of_outputs,
-                                  num_of_executions,
-                                  num_of_events=4,
-                                  tenant_name=DEFAULT_TENANT_NAME):
-        with self.client_using_tenant(self.client, tenant_name):
-            self.client.blueprints.get(blueprint_id)
-        self._assert_deployment_restored(
-            blueprint_id=blueprint_id,
-            deployment_id=deployment_id,
-            num_of_workflows=num_of_workflows,
-            num_of_inputs=num_of_inputs,
-            num_of_outputs=num_of_outputs,
-            tenant_name=tenant_name
-        )
-
-        execution_id = self._assert_execution_restored(
-            deployment_id,
-            num_of_executions,
-            tenant_name,
-        )
-        self._assert_events_restored(
-            execution_id,
-            num_of_events,
-            tenant_name,
-        )
-
-        with self.client_using_tenant(self.client, tenant_name):
-            for node_id in node_ids:
-                self.client.nodes.get(deployment_id, node_id)
-            for node_instance_id in node_instance_ids:
-                self.client.node_instances.get(node_instance_id)
-
     def _assert_4_4_0_plugins_restored_bad_plugin(
             self,
             tenant_name=DEFAULT_TENANT_NAME,
@@ -404,17 +365,6 @@ class TestSnapshot(AgentlessTestCase):
                       in executions if condition(execution)]
         self.assertEqual(len(executions), 1)
         return executions[0].id
-
-    def _assert_events_restored(self,
-                                execution_id,
-                                num_of_events,
-                                tenant_name):
-        output = self.cfy.events.list(
-            execution_id=execution_id,
-            tenant_name=tenant_name
-        )
-        expected_output = 'Showing {0} of {0} events'.format(num_of_events)
-        self.assertIn(expected_output, output)
 
     def _get_snapshot(self, name):
         snapshot_url = os.path.join(SNAPSHOTS, name)

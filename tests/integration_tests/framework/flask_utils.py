@@ -14,69 +14,41 @@
 # limitations under the License.
 
 import os
-import yaml
 import json
 import logging
 import tempfile
 
 from cloudify.utils import setup_logger
 
-from manager_rest.storage import db, models
-from manager_rest.constants import SECURITY_FILE_LOCATION
-from manager_rest.flask_utils import setup_flask_app as _setup_flask_app
-
-from integration_tests.framework import constants, utils
 from integration_tests.framework.docker import (execute,
-                                                copy_file_to_manager,
-                                                get_manager_ip,
-                                                read_file as read_manager_file)
-from integration_tests.tests.constants import (
-    MANAGER_CONFIG,
-    MANAGER_PYTHON,
-    PROVIDER_CONTEXT,
-)
+                                                copy_file_to_manager)
+from integration_tests.tests.constants import MANAGER_CONFIG, MANAGER_PYTHON
 from integration_tests.tests.utils import get_resource
 
 
 logger = setup_logger('Flask Utils', logging.INFO)
 security_config = None
+
+PREPARE_SCRIPT_PATH = '/tmp/prepare_reset_storage.py'
 SCRIPT_PATH = '/tmp/reset_storage.py'
 CONFIG_PATH = '/tmp/reset_storage_config.json'
 
 
 def prepare_reset_storage_script(container_id):
     reset_script = get_resource('scripts/reset_storage.py')
+    prepare = get_resource('scripts/prepare_reset_storage.py')
     copy_file_to_manager(container_id, reset_script, SCRIPT_PATH)
+    copy_file_to_manager(container_id, prepare, PREPARE_SCRIPT_PATH)
     with tempfile.NamedTemporaryFile(delete=False, mode='w') as f:
         json.dump({
-            'config': {
-                '': constants.CONFIG_FILE_LOCATION,
-                'security': SECURITY_FILE_LOCATION,
-            },
-            'ip': get_manager_ip(container_id),
-            'username': 'admin',
-            'password': 'admin',
-            'provider_context': PROVIDER_CONTEXT,
-            'manager_config': MANAGER_CONFIG
+            'manager_config': MANAGER_CONFIG,
         }, f)
     try:
         copy_file_to_manager(container_id, f.name, CONFIG_PATH)
+        execute(container_id,
+                [MANAGER_PYTHON, PREPARE_SCRIPT_PATH, '--config', CONFIG_PATH])
     finally:
         os.unlink(f.name)
-
-
-def setup_flask_app():
-    global security_config
-    if not security_config:
-        conf_file_str = read_manager_file('/opt/manager/rest-security.conf')
-        security_config = yaml.load(conf_file_str)
-
-    manager_ip = utils.get_manager_ip()
-    return _setup_flask_app(
-        manager_ip=manager_ip,
-        hash_salt=security_config['hash_salt'],
-        secret_key=security_config['secret_key']
-    )
 
 
 def reset_storage(container_id):
@@ -94,26 +66,6 @@ def set_ldap(config_data):
             .format(manager_python=MANAGER_PYTHON,
                     script_path='/tmp/set_ldap.py',
                     cfg_data=json.dumps(config_data)))
-
-
-def close_session(app):
-    db.session.remove()
-    db.get_engine(app).dispose()
-
-
-def load_user(app, username=None):
-    if username:
-        user = models.User.query.filter(username=username).first()
-    else:
-        user = models.User.query.get(0)  # Admin
-
-    # This line is necessary for the `reload_user` method - we add a mock
-    # request context to the flask stack
-    app.test_request_context().push()
-
-    # And then load the admin as the currently active user
-    app.extensions['security'].login_manager.reload_user(user)
-    return user
 
 
 def _prepare_set_ldap_script():

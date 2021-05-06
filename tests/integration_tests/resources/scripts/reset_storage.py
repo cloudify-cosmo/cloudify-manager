@@ -14,7 +14,8 @@
 #    * limitations under the License.
 
 import json
-import subprocess
+import os
+import shutil
 
 import argparse
 from flask_migrate import upgrade
@@ -24,7 +25,6 @@ from manager_rest.storage import db, models
 from manager_rest.amqp_manager import AMQPManager
 from manager_rest.flask_utils import setup_flask_app
 from manager_rest.constants import (
-    PROVIDER_CONTEXT_ID,
     DEFAULT_TENANT_NAME,
     CURRENT_TENANT_CONFIG
 )
@@ -35,8 +35,8 @@ from manager_rest.storage.storage_utils import (
 # This is a hacky way to get to the migrations folder
 migrations_dir = '/opt/manager/resources/cloudify/migrations'
 PROVIDER_NAME = 'integration_tests'
-ADMIN_TOKEN_RESET_SCRIPT = '/opt/cloudify/mgmtworker/create-admin-token.py'
 DEFAULT_CA_CERT = "/etc/cloudify/ssl/cloudify_internal_ca_cert.pem"
+AUTH_TOKEN_LOCATION = '/opt/mgmtworker/work/admin_token'
 
 
 def setup_amqp_manager():
@@ -62,23 +62,11 @@ def safe_drop_all(keep_tables):
 
 
 def _add_defaults(app, amqp_manager, script_config):
-    """Add default tenant, admin user and provider context to the DB
-    """
-    # Add the default network to the provider context
-    context = script_config['provider_context']
-    networks = context['cloudify']['cloudify_agent']['networks']
-    networks['default'] = script_config['ip']
-
-    provider_context = models.ProviderContext(
-        id=PROVIDER_CONTEXT_ID,
-        name=PROVIDER_NAME,
-        context=context
-    )
-    db.session.add(provider_context)
-
+    """Add default tenant and admin user to the DB"""
     default_tenant = create_default_user_tenant_and_roles(
-        admin_username=script_config['username'],
-        admin_password=script_config['password'],
+        admin_username='admin',
+        admin_password=None,
+        password_hash=script_config['password_hash'],
         amqp_manager=amqp_manager
     )
     for scope, configs in script_config['manager_config'].items():
@@ -106,21 +94,37 @@ def reset_storage(script_config):
 
     # Clear the old RabbitMQ resources
     amqp_manager.remove_tenant_vhost_and_user(DEFAULT_TENANT_NAME)
-
     # Rebuild the DB
     safe_drop_all(keep_tables=['roles', 'config', 'rabbitmq_brokers',
                                'certificates', 'managers', 'db_nodes',
                                'licenses', 'usage_collector',
-                               'permissions'])
+                               'permissions', 'provider_context'])
     upgrade(directory=migrations_dir)
-
     # Add default tenant, admin user and provider context
     _add_defaults(app, amqp_manager, script_config)
-
-    # Clear the connection
     close_session(app)
+    with open(AUTH_TOKEN_LOCATION, 'w') as f:
+        f.write(script_config['admin_token'])
 
-    subprocess.check_call(['sudo', ADMIN_TOKEN_RESET_SCRIPT])
+
+def clean_dirs():
+    dirs_to_clean = [
+        '/opt/mgmtworker/env/plugins',
+        '/opt/mgmtworker/env/source_plugins',
+        '/opt/mgmtworker/work/deployments',
+        '/opt/manager/resources/blueprints',
+        '/opt/manager/resources/uploaded-blueprints',
+        '/opt/manager/resources/snapshots/'
+    ]
+    for directory in dirs_to_clean:
+        if not os.path.isdir(directory):
+            continue
+        for item in os.listdir(directory):
+            full_item = os.path.join(directory, item)
+            if os.path.isdir(full_item):
+                shutil.rmtree(full_item)
+            else:
+                os.unlink(full_item)
 
 
 if __name__ == '__main__':
@@ -129,6 +133,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
     with args.config as f:
         script_config = json.load(f)
-    for namespace, path in script_config['config'].items():
-        config.instance.load_from_file(path, namespace=namespace)
+    config.instance.load_from_file('/opt/manager/cloudify-rest.conf')
     reset_storage(script_config)
+    clean_dirs()

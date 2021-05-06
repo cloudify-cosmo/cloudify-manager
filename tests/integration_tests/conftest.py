@@ -1,7 +1,6 @@
 import os
 import logging
 import pytest
-import tempfile
 import threading
 import wagon
 
@@ -118,7 +117,7 @@ def manager_container(request, resource_mapping):
     container_id = request.config.getoption("--container-id")
     service_management = request.config.getoption("--service-management")
     if container_id:
-        _clean_manager(container_id)
+        reset_storage(container_id)
         keep_container = True
     else:
         container_id = docker.run_manager(
@@ -140,29 +139,24 @@ def manager_container(request, resource_mapping):
 
 
 @pytest.fixture(scope='session')
-def ca_cert(manager_container):
-    with tempfile.NamedTemporaryFile('w') as cert_file:
-        docker.copy_file_from_manager(
-            manager_container.container_id,
-            '/etc/cloudify/ssl/cloudify_internal_ca_cert.pem',
-            cert_file.name)
-        yield cert_file.name
+def ca_cert(manager_container, tmpdir_factory):
+    cert_path = tmpdir_factory.mktemp('certs').join('internal_ca_cert.pem')
+    docker.copy_file_from_manager(
+        manager_container.container_id,
+        '/etc/cloudify/ssl/cloudify_internal_ca_cert.pem',
+        cert_path)
+    yield cert_path
 
 
 @pytest.fixture(scope='session')
 def rest_client(manager_container, ca_cert):
-    with tempfile.NamedTemporaryFile('w') as cert_file:
-        docker.copy_file_from_manager(
-            manager_container.container_id,
-            '/etc/cloudify/ssl/cloudify_internal_ca_cert.pem',
-            cert_file.name)
-        client = test_utils.create_rest_client(
-            host=manager_container.container_ip,
-            rest_port=443,
-            rest_protocol='https',
-            cert_path=cert_file.name,
-        )
-        yield client
+    client = test_utils.create_rest_client(
+        host=manager_container.container_ip,
+        rest_port=443,
+        rest_protocol='https',
+        cert_path=ca_cert
+    )
+    yield client
 
 
 @pytest.fixture(scope='class')
@@ -176,22 +170,6 @@ def manager_class_fixtures(request, manager_container, rest_client, ca_cert):
     request.cls.env = manager_container
     request.cls.client = rest_client
     request.cls.ca_cert = ca_cert
-
-
-def _clean_manager(container_id):
-    dirs_to_clean = [
-        '/opt/mgmtworker/env/plugins',
-        '/opt/mgmtworker/env/source_plugins',
-        '/opt/mgmtworker/work/deployments',
-        '/opt/manager/resources/blueprints',
-        '/opt/manager/resources/uploaded-blueprints',
-        '/opt/manager/resources/snapshots/'
-    ]
-    reset_storage(container_id)
-    for directory in dirs_to_clean:
-        docker.execute(
-            container_id,
-            ['sh', '-c', 'rm -rf {0}/*'.format(directory)])
 
 
 @pytest.fixture(autouse=True)
@@ -208,7 +186,7 @@ def prepare_manager_storage(request, manager_container):
         request.session.testsfinished = \
             getattr(request.session, 'testsfinished', 0) + 1
         if request.session.testsfinished != request.session.testscollected:
-            _clean_manager(container_id)
+            reset_storage(container_id)
 
 
 @pytest.fixture(scope='session')

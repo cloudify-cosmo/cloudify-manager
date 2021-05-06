@@ -37,7 +37,6 @@ from manager_rest.constants import CLOUDIFY_TENANT_HEADER
 
 from integration_tests.framework import utils, docker
 from integration_tests.tests import utils as test_utils
-from integration_tests.framework.constants import PLUGIN_STORAGE_DIR
 from integration_tests.tests.utils import (
     get_resource,
     wait_for_blueprint_upload,
@@ -60,7 +59,6 @@ class BaseTestCase(unittest.TestCase):
     A test case for cloudify integration tests.
     """
     def setUp(self):
-        self.cfy = test_utils.get_cfy()
         self._set_tests_framework_logger()
 
     def _set_tests_framework_logger(self):
@@ -630,8 +628,7 @@ class AgentTestWithPlugins(AgentTestCase):
     def get_plugin_data(self, plugin_name, deployment_id):
         """Reading plugin data from agent containers"""
 
-        plugin_path = os.path.join(PLUGIN_STORAGE_DIR,
-                                   '{0}.json'.format(plugin_name))
+        plugin_path = f'/tmp/integration-plugin-storage/{plugin_name}.json'
         data = self.read_host_file(plugin_path,
                                    self.setup_deployment_id,
                                    self.setup_node_id)
