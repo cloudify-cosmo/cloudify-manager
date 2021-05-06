@@ -1,18 +1,3 @@
-########
-# Copyright (c) 2015 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#        http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#    * See the License for the specific language governing permissions and
-#    * limitations under the License.
-
 import os
 import json
 import shlex
@@ -339,28 +324,31 @@ def db_schema(revision, config=None):
     :param revision: Revision to downgrade to before performing any operation.
     :type revision: str
     """
+    current = db_schema_get_current_revision(config=config)
     db_schema_downgrade(revision, config=config)
     yield
-    db_schema_upgrade(config=config)
+    db_schema_upgrade(current, config=config)
 
 
-def db_schema_downgrade(revision='-1', config=None):
+def db_schema_downgrade(revision, config=None):
     """Downgrade database schema.
     Used before restoring a snapshot to make sure that the schema matches the
     one that was used when the snapshot was created.
     :param revision: Revision to downgrade to.
     :type revision: str
     """
-    _alembic(config, ['downgrade', revision])
+    if db_schema_get_current_revision(config) != revision:
+        _alembic(config, ['downgrade', revision])
 
 
-def db_schema_upgrade(revision='head', config=None):
+def db_schema_upgrade(revision, config=None):
     """Upgrade database schema.
     Used after restoring snapshot to get an up-to-date schema.
     :param revision: Revision to upgrade to.
     :type revision: str
     """
-    _alembic(config, ['upgrade', revision])
+    if db_schema_get_current_revision(config) != revision:
+        _alembic(config, ['upgrade', revision])
 
 
 def db_schema_get_current_revision(config=None):
