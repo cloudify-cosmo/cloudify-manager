@@ -123,11 +123,6 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         resp = self.delete('/blueprints/nonexistent-blueprint')
         self.assertEqual(404, resp.status_code)
 
-    def test_zipped_plugin(self):
-        self.put_file(*self.put_blueprint_args())
-        self.check_if_resource_on_fileserver('hello_world',
-                                             'plugins/stub-installer.zip')
-
     def test_put_blueprint_archive_from_url_and_data(self):
         blueprint_id = 'new_blueprint_id'
         resource_path = '/blueprints/{0}'.format(blueprint_id)
