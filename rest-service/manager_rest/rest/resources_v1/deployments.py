@@ -18,6 +18,8 @@ from flask_restful_swagger import swagger
 from flask_restful.reqparse import Argument
 from flask_restful.inputs import boolean
 
+from cloudify.models_states import DeploymentState
+
 from manager_rest import manager_exceptions, workflow_executor
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
@@ -166,6 +168,8 @@ class DeploymentsId(SecuredResource):
         bypass_maintenance = is_bypass_maintenance_mode()
         sm = get_storage_manager()
         dep = sm.get(models.Deployment, deployment_id)
+        dep.deployment_status = DeploymentState.IN_PROGRESS
+        sm.update(dep, modified_attrs=('deployment_status',))
         rm = get_resource_manager()
         rm.check_deployment_delete(dep, force=args.force)
         delete_execution = dep.make_delete_environment_execution(
