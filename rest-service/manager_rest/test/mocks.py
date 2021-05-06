@@ -68,11 +68,11 @@ class MockClientResponse(object):
 
 class MockHTTPClient(HTTPClient):
 
-    def __init__(self, app, headers=None, file_server=None):
+    def __init__(self, app, headers=None, root_path=None):
         super(MockHTTPClient, self).__init__(host='localhost',
                                              headers=headers)
         self.app = app
-        self._file_server = file_server
+        self._root_path = root_path
 
     def do_request(self,
                    requests_method,
@@ -143,7 +143,7 @@ class MockHTTPClient(HTTPClient):
             self._raise_client_error(MockClientResponse(response), request_url)
 
         if stream:
-            return MockStreamedResponse(response, self._file_server)
+            return MockStreamedResponse(response, self._root_path)
 
         if response.status_code == 204:
             return None
@@ -152,10 +152,10 @@ class MockHTTPClient(HTTPClient):
 
 class MockStreamedResponse(object):
 
-    def __init__(self, response, file_server):
+    def __init__(self, response, root_path):
         self._response = response
         self._response.headers.pop('Content-Length', None)
-        self._root = file_server.root_path
+        self._root = root_path
         self.local_path = self._response.headers['X-Accel-Redirect'].replace(
             '/resources',
             self._root

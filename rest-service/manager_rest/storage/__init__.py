@@ -13,7 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from .file_server import FileServer                                                 # NOQA
 from .models_base import db                                                         # NOQA
 from .models import user_datastore                                                  # NOQA
 from .storage_manager import ListResult                                             # NOQA
