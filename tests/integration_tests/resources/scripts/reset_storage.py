@@ -21,7 +21,7 @@ import argparse
 from flask_migrate import upgrade
 
 from manager_rest import config
-from manager_rest.storage import db, models
+from manager_rest.storage import db, models, idencoder, get_storage_manager
 from manager_rest.amqp_manager import AMQPManager
 from manager_rest.flask_utils import setup_flask_app
 from manager_rest.constants import (
@@ -100,8 +100,13 @@ def reset_storage(app, script_config):
     upgrade(directory=migrations_dir)
     # Add default tenant, admin user and provider context
     _add_defaults(app, amqp_manager, script_config)
+
+
+def regenerate_auth_token():
+    token_key = models.User.query.get(0).api_token_key
+    enc_uid = idencoder.get_encoder().encode(0)
     with open(AUTH_TOKEN_LOCATION, 'w') as f:
-        f.write(script_config['admin_token'])
+        f.write(enc_uid + token_key)
 
 
 def clean_dirs():
@@ -131,9 +136,12 @@ if __name__ == '__main__':
     with args.config as f:
         script_config = json.load(f)
     config.instance.load_from_file('/opt/manager/cloudify-rest.conf')
+    config.instance.load_from_file('/opt/manager/rest-security.conf',
+                                   namespace='security')
     config.instance.load_configuration()
 
     app = setup_flask_app()
     reset_storage(app, script_config)
+    regenerate_auth_token()
     clean_dirs()
     close_session(app)
