@@ -42,6 +42,7 @@ def _get_rest_client(manager_ip):
     return CloudifyClient(host=manager_ip, headers=headers)
 
 
-out = run_test()
-with open(env['result_path'], 'w') as f:
-    json.dump(out, f)
+if __name__ == '__main__':
+    out = run_test()
+    with open(env['result_path'], 'w') as f:
+        json.dump(out, f)

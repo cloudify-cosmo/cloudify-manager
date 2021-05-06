@@ -90,20 +90,18 @@ class UserGroupsTest(AgentlessTestCase):
                                        role=USER_ROLE,
                                        ldap_group_dn='cd=test_group')
 
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             CloudifyClientError,
-            '409: A group with the same name already exists: '
-            '<Group name=`test_group` ldap_dn=`cd=test_group`>',
+            '409.* already exists.*test_group',
             self.client.user_groups.create,
             group_name='TEST_group',
             role=USER_ROLE,
             ldap_group_dn='cd=test_group'
         )
 
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             CloudifyClientError,
-            '409: A group with the same LDAP DN already exists: '
-            '<Group name=`test_group` ldap_dn=`cd=test_group`>',
+            '409.* already exists.*test_group',
             self.client.user_groups.create,
             group_name='test_group_2',
             role=USER_ROLE,

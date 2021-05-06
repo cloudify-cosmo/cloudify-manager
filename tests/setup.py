@@ -26,7 +26,6 @@ setup(
     install_requires=[
         'pika==1.1.0',
         'fasteners==0.16',
-        'sh==1.14.1',
         'requests>=2.18,<3.0.0',
         'pytest'
     ]

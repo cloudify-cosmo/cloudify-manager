@@ -42,7 +42,8 @@ def get_node(deployment_id, node_id):
 
 def create_default_user_tenant_and_roles(admin_username,
                                          admin_password,
-                                         amqp_manager):
+                                         amqp_manager,
+                                         password_hash=None):
     """
     Create the bootstrap admin, the default tenant and the security roles,
     as well as a RabbitMQ vhost and user corresponding to the default tenant
@@ -57,7 +58,7 @@ def create_default_user_tenant_and_roles(admin_username,
     admin_user = user_datastore.create_user(
         id=constants.BOOTSTRAP_ADMIN_ID,
         username=admin_username,
-        password=hash_password(admin_password),
+        password=password_hash or hash_password(admin_password),
         roles=[admin_role]
     )
 

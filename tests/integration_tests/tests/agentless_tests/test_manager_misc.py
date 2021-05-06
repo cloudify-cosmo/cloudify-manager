@@ -13,7 +13,6 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-import sh
 import os
 
 from integration_tests import AgentlessTestCase
@@ -60,13 +59,6 @@ class MiscManagerTest(AgentlessTestCase):
         self.logger.info('Installing crontab on manager')
         self.execute_on_manager('yum install -y cronie')
 
-        def exists(path):
-            try:
-                self.execute_on_manager('test -f {0}'.format(path))
-                return True
-            except sh.ErrorReturnCode:
-                return False
-
         for rotation in range(1, 7):
             for log_file in test_log_files:
                 full_log_path = os.path.join(logs_dir, log_file)
@@ -84,14 +76,15 @@ class MiscManagerTest(AgentlessTestCase):
                     self.logger.info(
                         'Verifying overshot rotation did not occur: {0}...'
                         .format(compressed_log_path))
-                    self.assertFalse(exists(compressed_log_path))
+                    self.assertFalse(self.file_exists(compressed_log_path))
                 elif rotation == 1:
+                    does_exist = self.file_exists(rotated_log_path)
                     self.logger.info(
                         'Verifying rotated log exists: {0}... {1}'.format(
-                            rotated_log_path, exists(rotated_log_path)))
-                    self.assertTrue(exists(rotated_log_path))
+                            rotated_log_path, does_exist))
+                    self.assertTrue(does_exist)
                 else:
                     self.logger.info(
                         'Verifying compressed log exists: {0}...'.format(
                             compressed_log_path))
-                    self.assertTrue(exists(compressed_log_path))
+                    self.assertTrue(self.file_exists(compressed_log_path))

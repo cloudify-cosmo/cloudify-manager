@@ -16,9 +16,9 @@
 import time
 import uuid
 import pytest
+import subprocess
 
 from retrying import retry
-from sh import ErrorReturnCode
 
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import (
@@ -27,7 +27,6 @@ from integration_tests.tests.utils import (
     get_resource as resource,
     upload_mock_plugin,
     generate_scheduled_for_date,
-    create_api_token,
     create_tenants_and_add_users)
 from integration_tests.tests.utils import (run_postgresql_command,
                                            wait_for_blueprint_upload)
@@ -579,10 +578,12 @@ class ExecutionsTest(AgentlessTestCase):
                                                   force=True, kill=True)
         self.assertEqual(Execution.KILL_CANCELLING, execution.status)
 
-        # If the process is still running docl.read_file will raise an error.
+        # If the process is still running self.read_manager_file will raise
+        # an error.
         # We use do_retries to give the kill cancel operation time to kill
         # the process.
-        do_retries(self.assertRaises, expected_exception=ErrorReturnCode,
+        do_retries(self.assertRaises,
+                   expected_exception=subprocess.CalledProcessError,
                    callableObj=self.read_manager_file,
                    file_path=path)
 
@@ -823,9 +824,6 @@ class ExecutionsTest(AgentlessTestCase):
             self.assertEqual(instance['state'], 'uninitialized')
 
     def test_scheduled_execution(self):
-
-        # The token in the container is invalid, create new valid one
-        create_api_token(self.env.container_id)
         dsl_path = resource('dsl/basic.yaml')
         dep = self.deploy(dsl_path, wait=False, client=self.client)
         dep_id = dep.id
@@ -854,10 +852,7 @@ class ExecutionsTest(AgentlessTestCase):
         Scheduled execution 'wakes up' while snapshot is running in a different
         tenant, we expect scheduled execution to become 'queued', and
         start only when the snapshot terminates.
-
         """
-        # The token in the container is invalid, create new valid one
-        create_api_token(self.env.container_id)
         create_tenants_and_add_users(client=self.client, num_of_tenants=1)
         tenant_client = self.create_rest_client(
             username='user_0', password='password', tenant='tenant_0',
@@ -889,8 +884,6 @@ class ExecutionsTest(AgentlessTestCase):
         """
         Schedule 2 executions to start a second apart.
         """
-        # The token in the container is invalid, create new valid one
-        create_api_token(self.env.container_id)
         dsl_path = resource('dsl/basic.yaml')
         dep1 = self.deploy(dsl_path, wait=False, client=self.client)
         dep2 = self.deploy(dsl_path, wait=False, client=self.client)
@@ -921,9 +914,6 @@ class ExecutionsTest(AgentlessTestCase):
         self.client.execution_schedules.delete(schedule2.id, dep2_id)
 
     def test_schedule_execution_while_snapshot_running_same_tenant(self):
-
-        # The token in the container is invalid, create new valid one
-        create_api_token(self.env.container_id)
         dsl_path = resource('dsl/sleep_workflows.yaml')
         dep = self.deploy(dsl_path, wait=False, client=self.client)
         dep_id = dep.id
@@ -953,8 +943,6 @@ class ExecutionsTest(AgentlessTestCase):
         Execution 'wakes up' while snapshot is still running, so it becomes
         'queued' and start when snapshot terminates.
         """
-        # The token in the container is invalid, create new valid one
-        create_api_token(self.env.container_id)
         dsl_path = resource('dsl/sleep_workflows.yaml')
         dep = self.deploy(dsl_path, wait=False, client=self.client)
         dep_id = dep.id
@@ -984,10 +972,7 @@ class ExecutionsTest(AgentlessTestCase):
         """
         Start an execution and while it is running schedule an execution
         for the future, under the same deployment.
-
         """
-        # The token in the container is invalid, create new valid one
-        create_api_token(self.env.container_id)
         dsl_path = resource('dsl/sleep_workflows.yaml')
         dep = self.deploy(dsl_path, wait=False, client=self.client)
         dep_id = dep.id
