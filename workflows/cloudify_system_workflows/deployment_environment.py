@@ -170,7 +170,7 @@ def create(ctx, labels=None, inputs=None, skip_plugins_validation=False,
         ext_client, client_config, ext_deployment_id = \
             _get_external_clients(nodes, manager_ips)
 
-        local_tenant_name = ctx.deployment.tenant_name if ext_client else None
+        local_tenant_name = ctx.tenant_name if ext_client else None
         local_idds, external_idds = _create_inter_deployment_dependencies(
             [manager.private_ip for manager in client.manager.get_managers()],
             client_config, new_dependencies, ctx.deployment.id,
