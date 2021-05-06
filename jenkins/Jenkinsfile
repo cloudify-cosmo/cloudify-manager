@@ -207,7 +207,7 @@ pipeline {
                   echo 'Running pytest <<~/cloudify-premium/tests/unittests>>'
                   sh script: '''
                     . .venv/bin/activate
-                    pytest -sv ~/cloudify-premium/tests/unittests
+                    pytest -sv -n 3 ~/cloudify-premium/tests/unittests
                   '''
                 }
               }
