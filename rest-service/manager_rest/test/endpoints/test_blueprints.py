@@ -101,10 +101,15 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
     def test_delete_blueprint(self):
         post_blueprints_response = self.put_blueprint()
 
-        # testing if resources are on fileserver
-        self.assertTrue(
-            self.check_if_resource_on_fileserver(
-                post_blueprints_response['id'], 'blueprint.yaml'))
+        # testing if resources are uploaded
+        blueprint_path = os.path.join(
+            self.tmpdir,
+            'blueprints',
+            'default_tenant',
+            post_blueprints_response['id'],
+            'blueprint.yaml'
+        )
+        self.assertTrue(os.path.exists(blueprint_path))
 
         # deleting the blueprint that was just uploaded
         self.delete('/blueprints/{0}'.format(post_blueprints_response['id']))
@@ -114,10 +119,8 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
                         'id']))
         self.assertEqual(404, resp.status_code)
 
-        # verifying deletion of fileserver resources
-        self.assertFalse(
-            self.check_if_resource_on_fileserver(
-                post_blueprints_response['id'], 'blueprint.yaml'))
+        # verifying deletion of files
+        self.assertFalse(os.path.exists(blueprint_path))
 
         # trying to delete a nonexistent blueprint
         resp = self.delete('/blueprints/nonexistent-blueprint')
