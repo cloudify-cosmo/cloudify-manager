@@ -27,12 +27,14 @@ import sqlalchemy.exc
 
 import yaml
 import wagon
+import psycopg2
 import requests
 import traceback
 
 from flask_migrate import Migrate, upgrade
 from mock import MagicMock, patch
 from flask.testing import FlaskClient
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
 from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.exceptions import CloudifyClientError
@@ -503,18 +505,63 @@ class BaseServerTestCase(unittest.TestCase):
         cls.sm.put(provider_context)
 
     @classmethod
+    def _db_exists(cls, test_config, dbname):
+        try:
+            conn = psycopg2.connect(
+                host=test_config.postgresql_host,
+                user=test_config.postgresql_username,
+                password=test_config.postgresql_password,
+                dbname=dbname)
+        except psycopg2.OperationalError as e:
+            if 'does not exist' in str(e):
+                return False
+            raise
+        else:
+            conn.close()
+        return True
+
+    @classmethod
+    def _create_db(cls, test_config, dbname):
+        with psycopg2.connect(
+                host=test_config.postgresql_host,
+                user=test_config.postgresql_username,
+                password=test_config.postgresql_password,
+                dbname='cloudify_db') as conn:
+            conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+            with conn.cursor() as cur:
+                cur.execute(f'CREATE DATABASE {dbname}')
+
+    @classmethod
+    def _find_db_name(cls, test_config):
+        """Figure out the db name to use.
+
+        By default, use cloudify_db. But if we're running under pytest-xdist,
+        magically create more databases to run on! Each process gets its own.
+        With pytest-xdist, the workers are named gw0, gw1, gw2, etc.
+        The first one gets to use cloudify_db, all other ones create more
+        databases.
+        """
+        dbname = 'cloudify_db'
+        worker_id = os.environ.get('PYTEST_XDIST_WORKER')
+        if worker_id and worker_id != 'gw0':
+            dbname += '_' + worker_id
+            if not cls._db_exists(test_config, dbname):
+                cls._create_db(test_config, dbname)
+        return dbname
+
+    @classmethod
     def create_configuration(cls):
         test_config = config.Config()
         test_config.can_load_from_db = False
 
         test_config.test_mode = True
-        test_config.postgresql_db_name = 'cloudify_db'
         test_config.postgresql_host = 'localhost'
         test_config.postgresql_username = 'cloudify'
         test_config.postgresql_password = 'cloudify'
         test_config.postgresql_connection_options = {
             'connect_timeout': 2
         }
+        test_config.postgresql_db_name = cls._find_db_name(test_config)
         test_config.file_server_root = cls.tmpdir
         test_config.file_server_url = 'http://localhost:53229'
 
