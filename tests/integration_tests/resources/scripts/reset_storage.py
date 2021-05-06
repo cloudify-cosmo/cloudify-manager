@@ -87,9 +87,7 @@ def close_session(app):
     db.get_engine(app).dispose()
 
 
-def reset_storage(script_config):
-    app = setup_flask_app()
-    config.instance.load_configuration()
+def reset_storage(app, script_config):
     amqp_manager = setup_amqp_manager()
 
     # Clear the old RabbitMQ resources
@@ -102,7 +100,6 @@ def reset_storage(script_config):
     upgrade(directory=migrations_dir)
     # Add default tenant, admin user and provider context
     _add_defaults(app, amqp_manager, script_config)
-    close_session(app)
     with open(AUTH_TOKEN_LOCATION, 'w') as f:
         f.write(script_config['admin_token'])
 
@@ -134,5 +131,9 @@ if __name__ == '__main__':
     with args.config as f:
         script_config = json.load(f)
     config.instance.load_from_file('/opt/manager/cloudify-rest.conf')
-    reset_storage(script_config)
+    config.instance.load_configuration()
+
+    app = setup_flask_app()
+    reset_storage(app, script_config)
     clean_dirs()
+    close_session(app)
