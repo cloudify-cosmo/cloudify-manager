@@ -6,4 +6,5 @@ wagon>0.10
 pytest
 pytest-cov
 pytest-attrib
+pytest-xdist
 -e ../workflows

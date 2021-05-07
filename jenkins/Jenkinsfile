@@ -63,29 +63,14 @@ pipeline {
                   pip install -Ur test-requirements.txt
                   pip install -e .
                 ''', label: "installing requirements for pytest"
-                echo 'Running pytest <<rest-service/manager_rest/test/endpoints>>'
-                sh '''
+                sh script: '''
                   . .venv/bin/activate
                   pytest \
                     -sv \
+                    -n 3 \
                     -a '(client_min_version is None or client_min_version <= 3.1) and (client_max_version is None or 3.1 <= client_max_version)' \
-                    rest-service/manager_rest/test/endpoints
-                '''
-                echo 'Running pytest <<rest-service/manager_rest/test/infrastructure>>'
-                sh '''
-                  . .venv/bin/activate
-                  pytest \
-                    -sv \
-                    -a '(client_min_version is None or client_min_version <= 3.1) and (client_max_version is None or 3.1 <= client_max_version)' \
-                    rest-service/manager_rest/test/infrastructure
-                '''
-                echo 'Running pytest <<rest-service/manager_rest/test/security>>'
-                sh '''
-                  . .venv/bin/activate
-                  pytest \
-                    -sv \
-                    rest-service/manager_rest/test/security
-                '''
+                    rest-service/manager_rest
+                ''', label: "restservice tests"
                 echo 'Running pytest <<workflows>>'
                 sh '''
                   . .venv/bin/activate
@@ -222,7 +207,7 @@ pipeline {
                   echo 'Running pytest <<~/cloudify-premium/tests/unittests>>'
                   sh script: '''
                     . .venv/bin/activate
-                    pytest -sv ~/cloudify-premium/tests/unittests
+                    pytest -sv -n 3 ~/cloudify-premium/tests/unittests
                   '''
                 }
               }
