@@ -13,16 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import json
 import logging
-import tempfile
 
 from cloudify.utils import setup_logger
 
 from integration_tests.framework.docker import (execute,
                                                 copy_file_to_manager)
-from integration_tests.tests.constants import MANAGER_CONFIG, MANAGER_PYTHON
+from integration_tests.tests.constants import MANAGER_PYTHON
 from integration_tests.tests.utils import get_resource
 
 
@@ -39,16 +37,8 @@ def prepare_reset_storage_script(container_id):
     prepare = get_resource('scripts/prepare_reset_storage.py')
     copy_file_to_manager(container_id, reset_script, SCRIPT_PATH)
     copy_file_to_manager(container_id, prepare, PREPARE_SCRIPT_PATH)
-    with tempfile.NamedTemporaryFile(delete=False, mode='w') as f:
-        json.dump({
-            'manager_config': MANAGER_CONFIG,
-        }, f)
-    try:
-        copy_file_to_manager(container_id, f.name, CONFIG_PATH)
-        execute(container_id,
-                [MANAGER_PYTHON, PREPARE_SCRIPT_PATH, '--config', CONFIG_PATH])
-    finally:
-        os.unlink(f.name)
+    execute(container_id,
+            [MANAGER_PYTHON, PREPARE_SCRIPT_PATH, '--config', CONFIG_PATH])
 
 
 def reset_storage(container_id):
