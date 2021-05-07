@@ -1022,7 +1022,7 @@ class DeploymentGroupsId(SecuredResource):
             ).items)
 
         filter_rules = request_dict.get('filter_rules')
-        if filter_rules is not None:
+        if filter_rules:
             deployments_to_add |= set(sm.list(
                 models.Deployment,
                 filter_rules=filter_rules).items)
@@ -1206,7 +1206,7 @@ class DeploymentGroupsId(SecuredResource):
                     group.deployments.remove(dep)
 
         filter_rules = request_dict.get('filter_rules')
-        if filter_rules is not None:
+        if filter_rules:
             deployments = sm.list(
                 models.Deployment,
                 filter_rules=filter_rules
