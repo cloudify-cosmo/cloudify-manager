@@ -111,7 +111,7 @@ class ComponentCascadingCancelAndResume(AgentlessTestCase):
         execution = self.client.executions.cancel(execution.id,
                                                   force,
                                                   kill=kill_cancel)
-        time.sleep(0.2)  # give time for the cancel to take place
+        self.wait_for_execution_to_end(execution, timeout_seconds=10)
         self._verify_cancel_install_execution(execution,
                                               force,
                                               kill_cancel,
