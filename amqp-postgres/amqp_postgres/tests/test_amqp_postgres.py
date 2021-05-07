@@ -20,7 +20,6 @@ from time import sleep
 from dateutil import parser as date_parser
 
 from cloudify.models_states import VisibilityState
-from cloudify.amqp_client import create_events_publisher
 
 from manager_rest.storage import models
 from manager_rest.config import instance
@@ -28,28 +27,23 @@ from manager_rest.amqp_manager import AMQPManager
 from manager_rest.utils import get_formatted_timestamp
 from manager_rest.test.base_test import BaseServerTestCase
 
+from amqp_postgres.postgres_publisher import BATCH_DELAY, DBLogEventPublisher
 
-from amqp_postgres.main import _create_connections
-from amqp_postgres.postgres_publisher import BATCH_DELAY
-
-LOG_MESSAGE = 'log'
-EVENT_MESSAGE = 'event'
+LOG_MESSAGE = 'cloudify-logs'
+EVENT_MESSAGE = 'cloudify-events-topic'
 
 
 class TestAMQPPostgres(BaseServerTestCase):
     def setUp(self):
         super(TestAMQPPostgres, self).setUp()
-        with mock.patch('amqp_postgres.main.config.instance',
-                        self.server_configuration):
-            amqp_client, _ = _create_connections()
-            amqp_client.consume_in_thread()
-            self.addCleanup(amqp_client.close)
-            self.events_publisher = create_events_publisher()
+        self._mock_amqp_conn = mock.Mock()
+        self.db_publisher = DBLogEventPublisher(
+            self.server_configuration, self._mock_amqp_conn)
+        self.db_publisher.start()
 
     def publish_messages(self, messages):
         for message, message_type in messages:
-            self.events_publisher.publish_message(
-                message, message_type=message_type)
+            self.db_publisher.process(message, message_type, 0)
 
         # The messages are dumped to the DB every BATCH_DELAY seconds, so
         # we should wait before trying to query SQL

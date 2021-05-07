@@ -23,12 +23,6 @@ spec:
     securityContext:
       runAsUser: 0
       privileged: true
-  - name: rabbitmq
-    image: rabbitmq:3.7.7
-    resources:
-      limits:
-        cpu: 0.4
-        memory: 0.5Gi
   - name: postgres
     image: circleci/postgres:9.5-alpine
     ports:
