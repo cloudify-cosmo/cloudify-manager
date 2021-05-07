@@ -27,12 +27,14 @@ import sqlalchemy.exc
 
 import yaml
 import wagon
+import psycopg2
 import requests
 import traceback
 
 from flask_migrate import Migrate, upgrade
 from mock import MagicMock, patch
 from flask.testing import FlaskClient
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
 from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.exceptions import CloudifyClientError
@@ -59,7 +61,7 @@ from manager_rest.storage.filters import add_filter_rules_to_query
 from manager_rest.test.security_utils import (get_admin_user,
                                               get_status_reporters)
 from manager_rest import utils, config, constants, archiving
-from manager_rest.storage import FileServer, get_storage_manager, models
+from manager_rest.storage import get_storage_manager, models
 from manager_rest.storage.storage_utils import (
     create_default_user_tenant_and_roles,
     create_status_reporter_user_and_assign_role
@@ -69,7 +71,6 @@ from manager_rest.constants import (
     LabelsOperator,
     DEFAULT_TENANT_NAME,
     CLOUDIFY_TENANT_HEADER,
-    FILE_SERVER_BLUEPRINTS_FOLDER,
     CONVENTION_APPLICATION_BLUEPRINT_FILE,
 )
 from manager_rest import premium_enabled
@@ -88,7 +89,6 @@ MIGRATION_DIR = os.path.normpath(os.path.join(
     'cloudify', 'migrations'
 ))
 
-FILE_SERVER_PORT = 53229
 LATEST_API_VERSION = 3.1  # to be used by max_client_version test attribute
 
 permitted_roles = ['sys_admin', 'manager', 'user', 'operations', 'viewer']
@@ -221,9 +221,8 @@ class BaseServerTestCase(unittest.TestCase):
             app = cls.app
         client = CloudifyClient(host='localhost',
                                 headers=headers)
-        mock_http_client = MockHTTPClient(app,
-                                          headers=headers,
-                                          file_server=cls.file_server)
+        mock_http_client = MockHTTPClient(
+            app, headers=headers, root_path=cls.tmpdir)
         client._client = mock_http_client
         client.blueprints.api = mock_http_client
         client.deployments.api = mock_http_client
@@ -281,7 +280,6 @@ class BaseServerTestCase(unittest.TestCase):
 
         cls._patchers = []
         cls._create_temp_files_and_folders()
-        cls._init_file_server()
         cls._mock_amqp_modules()
         cls._mock_swagger()
 
@@ -358,17 +356,12 @@ class BaseServerTestCase(unittest.TestCase):
 
     @classmethod
     def _create_temp_files_and_folders(cls):
-        cls.tmpdir = tempfile.mkdtemp(prefix='fileserver-')
+        cls.tmpdir = tempfile.mkdtemp()
         fd, cls.rest_service_log = tempfile.mkstemp(prefix='rest-log-')
         os.close(fd)
         cls.maintenance_mode_dir = tempfile.mkdtemp(prefix='maintenance-')
         fd, cls.tmp_conf_file = tempfile.mkstemp(prefix='conf-file-')
         os.close(fd)
-
-    @classmethod
-    def _init_file_server(cls):
-        cls.file_server = FileServer(cls.tmpdir)
-        cls.file_server.start()
 
     @classmethod
     def _create_config_and_reset_app(cls):
@@ -498,9 +491,6 @@ class BaseServerTestCase(unittest.TestCase):
         cls.quiet_delete_directory(cls.maintenance_mode_dir)
         cls.quiet_delete_directory(cls.tmpdir)
 
-        if cls.file_server:
-            cls.file_server.stop()
-
         for patcher in cls._patchers:
             patcher.stop()
 
@@ -514,21 +504,68 @@ class BaseServerTestCase(unittest.TestCase):
         cls.sm.put(provider_context)
 
     @classmethod
+    def _db_exists(cls, test_config, dbname):
+        if os.environ.get('DB_EXISTS') == dbname:
+            return True
+        try:
+            conn = psycopg2.connect(
+                host=test_config.postgresql_host,
+                user=test_config.postgresql_username,
+                password=test_config.postgresql_password,
+                dbname=dbname)
+        except psycopg2.OperationalError as e:
+            if 'does not exist' in str(e):
+                return False
+            raise
+        else:
+            conn.close()
+        return True
+
+    @classmethod
+    def _create_db(cls, test_config, dbname):
+        with psycopg2.connect(
+                host=test_config.postgresql_host,
+                user=test_config.postgresql_username,
+                password=test_config.postgresql_password,
+                dbname='cloudify_db') as conn:
+            conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+            with conn.cursor() as cur:
+                cur.execute(f'CREATE DATABASE {dbname}')
+            os.environ['DB_EXISTS'] = dbname
+
+    @classmethod
+    def _find_db_name(cls, test_config):
+        """Figure out the db name to use.
+
+        By default, use cloudify_db. But if we're running under pytest-xdist,
+        magically create more databases to run on! Each process gets its own.
+        With pytest-xdist, the workers are named gw0, gw1, gw2, etc.
+        The first one gets to use cloudify_db, all other ones create more
+        databases.
+        """
+        dbname = 'cloudify_db'
+        worker_id = os.environ.get('PYTEST_XDIST_WORKER')
+        if worker_id and worker_id != 'gw0':
+            dbname += '_' + worker_id
+            if not cls._db_exists(test_config, dbname):
+                cls._create_db(test_config, dbname)
+        return dbname
+
+    @classmethod
     def create_configuration(cls):
         test_config = config.Config()
         test_config.can_load_from_db = False
 
         test_config.test_mode = True
-        test_config.postgresql_db_name = 'cloudify_db'
         test_config.postgresql_host = 'localhost'
         test_config.postgresql_username = 'cloudify'
         test_config.postgresql_password = 'cloudify'
         test_config.postgresql_connection_options = {
             'connect_timeout': 2
         }
+        test_config.postgresql_db_name = cls._find_db_name(test_config)
         test_config.file_server_root = cls.tmpdir
-        test_config.file_server_url = 'http://localhost:{0}'.format(
-            cls.file_server.port)
+        test_config.file_server_url = 'http://localhost:53229'
 
         test_config.rest_service_log_level = 'INFO'
         test_config.rest_service_log_path = cls.rest_service_log
@@ -654,23 +691,6 @@ class BaseServerTestCase(unittest.TestCase):
         result = self.app.delete(urlquote(url),
                                  query_string=build_query_string(query_params))
         return result
-
-    def _check_if_resource_on_fileserver(self,
-                                         folder,
-                                         container_id,
-                                         resource_path):
-        url = 'http://localhost:{0}/{1}/{2}/{3}'.format(
-            FILE_SERVER_PORT, folder, container_id, resource_path)
-        try:
-            requests.get(url).raise_for_status()
-            return True
-        except requests.exceptions.RequestException:
-            return False
-
-    def check_if_resource_on_fileserver(self, blueprint_id, resource_path):
-        return self._check_if_resource_on_fileserver(
-            os.path.join(FILE_SERVER_BLUEPRINTS_FOLDER, DEFAULT_TENANT_NAME),
-            blueprint_id, resource_path)
 
     def get_blueprint_path(self, blueprint_dir_name):
         return os.path.join(os.path.dirname(
@@ -873,7 +893,7 @@ class BaseServerTestCase(unittest.TestCase):
         module_src = '{0}=={1}'.format(package_name, package_version)
         return wagon.create(
             module_src,
-            archive_destination_dir=tempfile.gettempdir(),
+            archive_destination_dir=tempfile.mkdtemp(),
             force=True
         )
 
