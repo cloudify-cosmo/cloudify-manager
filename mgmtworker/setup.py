@@ -16,15 +16,15 @@
 from setuptools import setup, find_packages
 
 install_requires = [
-    'cloudify-common==6.0.0',
-    'cloudify-agent==6.0.0',
+    'cloudify-common==6.1.0.dev1',
+    'cloudify-agent==6.1.0.dev1',
     'packaging==17.1',
 ]
 
 
 setup(
     name='cloudify-mgmtworker',
-    version='6.0.0',
+    version='6.1.0.dev1',
     author='Cloudify',
     author_email='cosmo-admin@cloudify.co',
     packages=find_packages(include='mgmtworker*'),
