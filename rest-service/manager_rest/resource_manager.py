@@ -1451,7 +1451,6 @@ class ResourceManager(object):
                           deployment_id,
                           private_resource,
                           visibility,
-                          skip_plugins_validation=False,
                           site=None,
                           runtime_only_evaluation=False,
                           display_name=None):
@@ -1467,20 +1466,6 @@ class ResourceManager(object):
                 f"Can't create global deployment {deployment_id} because "
                 f"blueprint {blueprint.id} is not global"
             )
-        #  validate plugins exists on manager when
-        #  skip_plugins_validation is False
-        if not skip_plugins_validation:
-            plugins_list = plan.get(
-                constants.DEPLOYMENT_PLUGINS_TO_INSTALL, [])
-            # validate that all central-deployment plugins are installed
-            for plugin in plugins_list:
-                self.validate_plugin_is_installed(plugin)
-
-            # validate that all host_agent plugins are installed
-            host_agent_plugins = extract_host_agent_plugins_from_plan(
-                plan)
-            for plugin in host_agent_plugins:
-                self.validate_plugin_is_installed(plugin)
         now = datetime.utcnow()
         display_name = display_name or deployment_id
         new_deployment = models.Deployment(
@@ -1761,6 +1746,17 @@ class ResourceManager(object):
             pstate.state = state
             pstate.error = error
             self.sm.update(pstate)
+
+    def check_blueprint_plugins_installed(self, plan):
+        plugins_list = plan.get(constants.DEPLOYMENT_PLUGINS_TO_INSTALL, [])
+        # validate that all central-deployment plugins are installed
+        for plugin in plugins_list:
+            self.validate_plugin_is_installed(plugin)
+
+        # validate that all host_agent plugins are installed
+        host_agent_plugins = extract_host_agent_plugins_from_plan(plan)
+        for plugin in host_agent_plugins:
+            self.validate_plugin_is_installed(plugin)
 
     def validate_plugin_is_installed(self, plugin):
         """
