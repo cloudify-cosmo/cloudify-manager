@@ -147,14 +147,13 @@ class ResourceManager(object):
                 deployment = execution.deployment
             else:
                 deployment = None
+            deployment_storage_id = execution._deployment_fk
+            workflow_id = execution.workflow_id
             if not self._validate_execution_update(execution.status, status):
                 raise manager_exceptions.InvalidExecutionUpdateStatus(
-                    'Invalid relationship - can\'t change status from {0} to {1}'
-                    ' for "{2}" execution while running "{3}" workflow.'
-                    .format(execution.status,
-                            status,
-                            execution.id,
-                            execution.workflow_id))
+                    f"Invalid relationship - can't change status from "
+                    f'{execution.status} to {status} for "{execution.id}" '
+                    f'execution while running "{workflow_id}" workflow.')
             execution.status = status
             execution.error = error
             self._update_execution_group(execution)
@@ -173,8 +172,6 @@ class ResourceManager(object):
             execution = self.sm.update(execution)
             self.update_deployment_statuses(execution)
 
-            deployment_storage_id = execution._deployment_fk
-            workflow_id = execution.workflow_id
             res = execution.to_response()
             # do not use `execution` after this transaction ends, because it
             # would possibly require refetching the related objects, and by
