@@ -241,12 +241,13 @@ class DeploymentsId(resources_v1.DeploymentsId):
 
         rm.cleanup_failed_deployment(deployment_id)
         with sm.transaction():
+            if not skip_plugins_validation:
+                rm.check_blueprint_plugins_installed(blueprint.plan)
             deployment = rm.create_deployment(
                 blueprint,
                 deployment_id,
                 private_resource=args.private_resource,
                 visibility=visibility,
-                skip_plugins_validation=skip_plugins_validation,
                 site=site,
                 runtime_only_evaluation=request_dict.get(
                     'runtime_only_evaluation', False),
@@ -254,7 +255,6 @@ class DeploymentsId(resources_v1.DeploymentsId):
             create_execution = deployment.make_create_environment_execution(
                 inputs=inputs,
                 labels=labels,
-                skip_plugins_validation=skip_plugins_validation,
                 display_name=request_dict.get('display_name'),
             )
         try:
@@ -1052,11 +1052,15 @@ class DeploymentGroupsId(SecuredResource):
         new_deployments = request_dict.get('new_deployments')
         if not new_deployments:
             return
-        if not group.default_blueprint:
-            raise manager_exceptions.ConflictError(
-                'Cannot create deployments: group {0} has no '
-                'default blueprint set'.format(group.id))
         with sm.transaction():
+            if not group.default_blueprint:
+                raise manager_exceptions.ConflictError(
+                    'Cannot create deployments: group {0} has no '
+                    'default blueprint set'.format(group.id))
+            if not all(spec.get('skip_plugins_validation')
+                       for spec in new_deployments):
+                rm.check_blueprint_plugins_installed(
+                    group.default_blueprint.plan)
             group_labels = [(label.key, label.value) for label in group.labels]
             deployment_count = len(group.deployments)
             create_exec_group = models.ExecutionGroup(
@@ -1136,8 +1140,6 @@ class DeploymentGroupsId(SecuredResource):
         create_execution = dep.make_create_environment_execution(
             inputs=deployment_inputs,
             labels=labels,
-            skip_plugins_validation=new_dep_spec.get(
-                'skip_plugins_validation', False),
             display_name=new_dep_spec.get('display_name'),
         )
         create_execution.is_id_unique = False

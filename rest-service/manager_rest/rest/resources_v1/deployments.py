@@ -116,18 +116,18 @@ class DeploymentsId(SecuredResource):
         sm = get_storage_manager()
         blueprint = sm.get(models.Blueprint, blueprint_id)
         rm.cleanup_failed_deployment(deployment_id)
+        if not skip_plugins_validation:
+            rm.check_blueprint_plugins_installed(blueprint.plan)
         deployment = rm.create_deployment(
             blueprint,
             deployment_id,
             private_resource=args.private_resource,
             visibility=None,
-            skip_plugins_validation=skip_plugins_validation,
         )
         try:
             rm.execute_workflow(deployment.make_create_environment_execution(
                 inputs=request_dict.get('inputs', {}),
-                skip_plugins_validation=skip_plugins_validation,
-            ), bypass_maintenance=bypass_maintenance,)
+            ), bypass_maintenance=bypass_maintenance)
         except manager_exceptions.ExistingRunningExecutionError:
             rm.delete_deployment(deployment)
             raise
