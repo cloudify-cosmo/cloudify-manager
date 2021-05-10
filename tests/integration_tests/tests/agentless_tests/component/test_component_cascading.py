@@ -72,7 +72,11 @@ class ComponentCascadingCancelAndResume(AgentlessTestCase):
             expected_status = Execution.KILL_CANCELLING
 
         if verify_intermediate_state:
-            self.assertEqual(expected_status, execution.status)
+            do_retries(
+                self.assertEqual,
+                first=expected_status,
+                second=execution.status,
+            )
 
         executions = self.client.executions.list(workflow_id='install')
         for execution in executions:
@@ -111,7 +115,6 @@ class ComponentCascadingCancelAndResume(AgentlessTestCase):
         execution = self.client.executions.cancel(execution.id,
                                                   force,
                                                   kill=kill_cancel)
-        self.wait_for_execution_to_end(execution, timeout_seconds=10)
         self._verify_cancel_install_execution(execution,
                                               force,
                                               kill_cancel,
