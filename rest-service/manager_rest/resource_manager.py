@@ -141,7 +141,8 @@ class ResourceManager(object):
 
     def update_execution_status(self, execution_id, status, error):
         with self.sm.transaction():
-            execution = self.sm.get(models.Execution, execution_id)
+            execution = self.sm.get(models.Execution, execution_id,
+                                    locking=True)
             if execution._deployment_fk:
                 deployment = execution.deployment
             else:
