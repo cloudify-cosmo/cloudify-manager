@@ -898,7 +898,8 @@ class ExecutionQueueingTests(BaseServerTestCase):
         self.sm.put(self.execution1)
 
     def _get_queued(self):
-        return list(self.rm._get_queued_executions(self.execution1))
+        return list(
+            self.rm._get_queued_executions(self.deployment1._storage_id))
 
     def _make_execution(self, status=None, deployment=None):
         execution = models.Execution(
