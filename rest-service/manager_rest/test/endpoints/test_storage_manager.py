@@ -14,7 +14,6 @@
 #  * limitations under the License.
 
 from datetime import datetime
-from unittest import TestCase
 import mock
 
 from cloudify.models_states import VisibilityState
@@ -22,7 +21,6 @@ from cloudify.models_states import VisibilityState
 from manager_rest import manager_exceptions, utils
 from manager_rest.test import base_test
 from manager_rest.storage import models, db
-from manager_rest.storage.storage_manager import SQLStorageManager
 from manager_rest.test.attribute import attr
 
 
@@ -297,30 +295,37 @@ class TestTransactions(base_test.BaseServerTestCase):
                     pass
 
 
-class TestGetErrorFormat(TestCase):
+class TestGetErrorFormat(base_test.BaseServerTestCase):
     """Tests for the 404 not found error message formatting"""
-    def setUp(self):
-        self.sm = SQLStorageManager()
-
     def test_get_by_id(self):
-        # Requested `Node` with ID `0` was not found
-        message = self.sm._format_not_found_message(models.Node, {'id': 0})
+        # Requested `Deployment` with ID `dep` was not found
+        message = self._get_err_message('dep')
         assert 'not found' in message
-        assert 'with ID `0`' in message
+        assert 'with ID `dep`' in message
         assert 'filters' not in message
 
     def test_get_by_id_and_filters(self):
-        # Requested `Node` with ID `0` was not found (filters: {'x': 'y'})
-        message = self.sm._format_not_found_message(
-            models.Node, {'id': 0, 'x': 'y'})
+        # Requested `Deployment` with ID `dep` was not found
+        # (filters: {'blueprint_id': 'bp'})
+        message = self._get_err_message('dep',
+                                        {'id': 'dep', 'blueprint_id': 'bp'})
         assert 'not found' in message
-        assert 'with ID `0`' in message
+        assert 'with ID `dep`' in message
         assert 'filters' in message
 
     def test_get_by_filters(self):
-        # Requested `Node` was not found (filters: {'x': 'y'})"
-        message = self.sm._format_not_found_message(
-            models.Node, {'x': 'y'})
+        # Requested `Deployment` was not found
+        # (filters: {'blueprint_id': 'bp'})"
+        message = self._get_err_message('dep', {'blueprint_id': 'bp'})
         assert 'ID' not in message
         assert 'filters' in message
-        assert "'x': 'y'" in message
+        assert "'blueprint_id': 'bp'" in message
+
+    def _get_err_message(self, element_id, filters=None):
+        message = ''
+        try:
+            self.sm.get(models.Deployment, element_id, filters=filters)
+        except manager_exceptions.NotFoundError as e:
+            message = str(e)
+
+        return message
