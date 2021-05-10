@@ -545,14 +545,6 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
             filters={'deployment_id': dep_update.deployment_id},
             get_all_results=True
         )
-
-        circular_dependencies = deployment_update_utils.\
-            find_nodes_cycles(current_nodes)
-        if circular_dependencies:
-            raise manager_exceptions.ConflictError(
-                "Circular dependencies between nodes have been "
-                f"detected: {', '.join(circular_dependencies)}")
-
         nodes_dict = {node.id: deepcopy(node.to_dict())
                       for node in current_nodes}
         modified_entities = deployment_update_utils.ModifiedEntitiesDict()
@@ -564,6 +556,13 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
             modified_entities=modified_entities,
             current_entities_dict=nodes_dict
         )
+
+        circular_dependencies = deployment_update_utils.\
+            find_relationship_cycles(modified_entities['relationship'])
+        if circular_dependencies:
+            raise manager_exceptions.ConflictError(
+                "Circular dependencies between nodes have been detected")
+
         return modified_entities, list(nodes_dict.values())
 
     def finalize(self, dep_update):

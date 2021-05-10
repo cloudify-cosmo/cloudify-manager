@@ -1,7 +1,5 @@
 import copy
 
-import networkx as nx
-
 from .constants import ENTITY_TYPES, PATH_SEPARATOR
 
 
@@ -145,14 +143,25 @@ def index_to_str(index):
         return '[{0}]'.format(index)
 
 
-def find_nodes_cycles(nodes) -> list:
-    graph = _build_nodes_graph(nodes)
-    return [' -- '.join(c) for c in nx.simple_cycles(graph)]
+def find_relationship_cycles(relationships: list) -> list:
+    # solution from https://codereview.stackexchange.com/questions/86021/check-if-a-directed-graph-contains-a-cycle/86067
+    graph = _build_graph(relationships)
+    path = set()
+    visited = set()
+
+    def visit(vertex):
+        if vertex in visited:
+            return False
+        visited.add(vertex)
+        path.add(vertex)
+        for neighbour in g.get(vertex, ()):
+            if neighbour in path or visit(neighbour):
+                return True
+        path.remove(vertex)
+        return False
+
+    return any(visit(v) for v in graph.keys())
 
 
-def _build_nodes_graph(nodes) -> nx.DiGraph:
-    raw_graph = {}
-    for node in nodes:
-        raw_graph[node.id] = [n.get('target_id')
-                              for n in node.relationships]
-    return nx.DiGraph(raw_graph)
+def _build_graph(relationships: list) -> dict:
+    return {r[0]: set(r[1:]) for r in relationships}
