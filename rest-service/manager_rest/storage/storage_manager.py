@@ -20,6 +20,7 @@ from contextlib import contextmanager
 from flask_security import current_user
 from sqlalchemy import or_ as sql_or, inspect, func
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
+from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from flask import current_app, has_request_context
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -532,21 +533,32 @@ class SQLStorageManager(object):
                                 all_tenants=all_tenants)
         if locking:
             query = query.with_for_update()
-        result = query.first()
 
-        if not result:
-            err_msg = self._format_not_found_message(
-                model_class, filters)
+        try:
+            result = query.one()
+        except (NoResultFound, MultipleResultsFound) as e:
+            id_message, filters_message = self._get_err_msg_elements(filters)
+            if isinstance(e, NoResultFound):
+                prefix = 'was not found'
+                exc_class = manager_exceptions.NotFoundError
+            else:
+                prefix = 'returned multiple results'
+                exc_class = manager_exceptions.AmbiguousName
+
+            err_msg = f'Requested `{model_class.__name__}`{id_message} ' \
+                      f'{prefix}{filters_message}'
 
             if fail_silently:
                 current_app.logger.debug(err_msg)
+                result = None
             else:
-                raise manager_exceptions.NotFoundError(err_msg)
+                raise exc_class(err_msg)
 
         current_app.logger.debug('Returning {0}'.format(result))
         return result
 
-    def _format_not_found_message(self, model_class, filters):
+    @staticmethod
+    def _get_err_msg_elements(filters):
         element_id = filters.pop('id', None)
         if element_id is not None:
             id_message = ' with ID `{0}`'.format(element_id)
@@ -556,8 +568,8 @@ class SQLStorageManager(object):
             filters_message = ' (filters: {0})'.format(filters)
         else:
             filters_message = ''
-        return 'Requested `{0}`{1} was not found{2}'.format(
-            model_class.__name__, id_message, filters_message)
+
+        return id_message, filters_message
 
     @staticmethod
     def _validate_available_memory():
