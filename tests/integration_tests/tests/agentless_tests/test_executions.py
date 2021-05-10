@@ -91,13 +91,6 @@ class ExecutionsTest(AgentlessTestCase):
         current_status = client.executions.get(execution_id).status
         self.assertEqual(current_status, wanted_status)
 
-    @retry(wait_fixed=300, stop_max_attempt_number=10)
-    def _assert_execution_status_in(self, execution_id,
-                                    wanted_statuses, client=None):
-        client = client or self.client
-        current_status = client.executions.get(execution_id).status
-        self.assertIn(current_status, wanted_statuses)
-
     def test_queue_execution_while_system_execution_is_running(self):
 
         dsl_path = resource("dsl/basic.yaml")
@@ -287,8 +280,8 @@ class ExecutionsTest(AgentlessTestCase):
 
         # Make sure snapshot_2 started (or pending) while the execution
         # is queued again
-        self._assert_execution_status_in(
-            snapshot_2.id, [Execution.PENDING, Execution.STARTED])
+        current_status = self.client.executions.get(snapshot_2.id).status
+        self.assertIn(current_status, [Execution.PENDING, Execution.STARTED])
         self._assert_execution_status(execution.id, Execution.QUEUED)
 
     def test_queue_exec_from_queue_while_exec_in_same_dep_is_running(self):
@@ -330,8 +323,8 @@ class ExecutionsTest(AgentlessTestCase):
 
         # Make sure exeuction_1 status is started (or pending) and that
         #  execution_2 is still queued
-        self._assert_execution_status_in(
-            execution_1.id, [Execution.PENDING, Execution.STARTED])
+        current_status = self.client.executions.get(execution_1.id).status
+        self.assertIn(current_status, [Execution.PENDING, Execution.STARTED])
         self._assert_execution_status(execution_2.id, Execution.QUEUED)
 
     def test_run_exec_from_queue_while_exec_in_diff_dep_is_running(self):
@@ -454,8 +447,8 @@ class ExecutionsTest(AgentlessTestCase):
         self.client.executions.update(snapshot_1.id, Execution.TERMINATED)
 
         # Make sure snapshot_2 started while the install is queued again
-        self._assert_execution_status_in(
-            snapshot_2.id, [Execution.PENDING, Execution.STARTED])
+        current_status = self.client.executions.get(snapshot_2.id).status
+        self.assertIn(current_status, [Execution.PENDING, Execution.STARTED])
         self._assert_execution_status(execution.id, Execution.QUEUED)
         self.wait_for_execution_to_end(snapshot_2)
 
