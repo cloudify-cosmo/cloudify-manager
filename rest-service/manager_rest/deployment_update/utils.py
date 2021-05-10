@@ -1,5 +1,7 @@
 import copy
 
+import networkx as nx
+
 from .constants import ENTITY_TYPES, PATH_SEPARATOR
 
 
@@ -141,3 +143,16 @@ def parse_index(s):
 def index_to_str(index):
     if check_is_int(index):
         return '[{0}]'.format(index)
+
+
+def find_nodes_cycles(nodes) -> list:
+    graph = _build_nodes_graph(nodes)
+    return [' -- '.join(c) for c in nx.simple_cycles(graph)]
+
+
+def _build_nodes_graph(nodes) -> nx.DiGraph:
+    raw_graph = {}
+    for node in nodes:
+        raw_graph[node.id] = [n.get('target_id')
+                              for n in node.relationships]
+    return nx.DiGraph(raw_graph)
