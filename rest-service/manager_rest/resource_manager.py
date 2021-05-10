@@ -140,40 +140,53 @@ class ResourceManager(object):
             graph.propagate_deployment_statuses(dep.id)
 
     def update_execution_status(self, execution_id, status, error):
-        execution = self.sm.get(models.Execution, execution_id)
-        if not self._validate_execution_update(execution.status, status):
-            raise manager_exceptions.InvalidExecutionUpdateStatus(
-                'Invalid relationship - can\'t change status from {0} to {1}'
-                ' for "{2}" execution while running "{3}" workflow.'
-                .format(execution.status,
-                        status,
-                        execution.id,
-                        execution.workflow_id))
-        execution.status = status
-        execution.error = error
-        self._update_execution_group(execution)
+        with self.sm.transaction():
+            execution = self.sm.get(models.Execution, execution_id)
+            if execution._deployment_fk:
+                deployment = execution.deployment
+            else:
+                deployment = None
+            if not self._validate_execution_update(execution.status, status):
+                raise manager_exceptions.InvalidExecutionUpdateStatus(
+                    'Invalid relationship - can\'t change status from {0} to {1}'
+                    ' for "{2}" execution while running "{3}" workflow.'
+                    .format(execution.status,
+                            status,
+                            execution.id,
+                            execution.workflow_id))
+            execution.status = status
+            execution.error = error
+            self._update_execution_group(execution)
 
-        if status == ExecutionState.STARTED:
-            execution.started_at = utils.get_formatted_timestamp()
-            if execution.deployment:
-                execution.deployment.deployment_status = \
-                    DeploymentState.IN_PROGRESS
-                execution.deployment.latest_execution = execution
-                self.sm.update(execution.deployment)
+            if status == ExecutionState.STARTED:
+                execution.started_at = utils.get_formatted_timestamp()
+                if deployment:
+                    execution.deployment.deployment_status = \
+                        DeploymentState.IN_PROGRESS
+                    execution.deployment.latest_execution = execution
+                    self.sm.update(deployment)
 
-        if status in ExecutionState.END_STATES:
-            execution.ended_at = utils.get_formatted_timestamp()
+            if status in ExecutionState.END_STATES:
+                execution.ended_at = utils.get_formatted_timestamp()
 
-        res = self.sm.update(execution)
-        self.update_deployment_statuses(res)
+            execution = self.sm.update(execution)
+            self.update_deployment_statuses(execution)
+
+            deployment_storage_id = execution._deployment_fk
+            workflow_id = execution.workflow_id
+            res = execution.to_response()
+            # do not use `execution` after this transaction ends, because it
+            # would possibly require refetching the related objects, and by
+            # then, the execution could've been deleted already
+            del execution
 
         if status in ExecutionState.END_STATES:
             update_inter_deployment_dependencies(self.sm)
-            self.start_queued_executions(execution)
+            self.start_queued_executions(deployment_storage_id)
 
         # If the execution is a deployment update, and the status we're
         # updating to is one which should cause the update to fail - do it here
-        if execution.workflow_id == 'update' and \
+        if workflow_id == 'update' and \
                 status in [ExecutionState.FAILED, ExecutionState.CANCELLED]:
             dep_update = self.sm.get(models.DeploymentUpdate, None,
                                      filters={'execution_id': execution_id})
@@ -182,7 +195,7 @@ class ResourceManager(object):
                 self.sm.update(dep_update)
 
         # Similarly for a plugin update
-        if execution.workflow_id == 'update_plugin' and \
+        if workflow_id == 'update_plugin' and \
                 status in [ExecutionState.FAILED,
                            ExecutionState.CANCELLED]:
             plugin_update = self.sm.get(models.PluginsUpdate, None,
@@ -193,12 +206,11 @@ class ResourceManager(object):
                 # Delete a temporary blueprint
                 self.sm.delete(plugin_update.temp_blueprint)
 
-        if execution.workflow_id == 'delete_deployment_environment' and \
+        if workflow_id == 'delete_deployment_environment' and \
                 status == ExecutionState.TERMINATED:
             # render the execution here, because immediately afterwards
             # we'll delete it, and then we won't be able to render it anymore
-            res = res.to_response()
-            self.delete_deployment(execution.deployment)
+            self.delete_deployment(deployment)
         return res
 
     def start_queued_executions(self, deployment_storage_id):
