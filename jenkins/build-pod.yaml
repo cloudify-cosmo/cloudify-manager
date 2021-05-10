@@ -6,17 +6,16 @@ spec:
     image: jenkins/inbound-agent:4.3-4
     resources:
       limits:
-        cpu: 0.3
+        cpu: 0.5
         memory: 256Mi
   - name: python
     image: circleci/python:3.6
     resources:
       requests:
-        cpu: 2.4
+        cpu: 2
         memory: 4Gi
       limits:
-        cpu: 2.4
-        memory: 4Gi
+        memory: 5Gi
     command:
     - cat
     tty: true
@@ -36,7 +35,6 @@ spec:
       value: cloudify_db
     resources:
       limits:
-        cpu: 1
         memory: 1Gi
   imagePullSecrets:
     - name: dockerhub
