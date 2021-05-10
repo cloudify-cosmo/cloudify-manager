@@ -201,7 +201,7 @@ class ResourceManager(object):
             self.delete_deployment(execution.deployment)
         return res
 
-    def start_queued_executions(self, finished_execution):
+    def start_queued_executions(self, deployment_storage_id):
         """Dequeue and start executions.
 
         Attempt to fetch and run as many executions as we can, and if
@@ -210,7 +210,7 @@ class ResourceManager(object):
         to_run = []
         with self.sm.transaction():
             while True:
-                dequeued = self._get_queued_executions(finished_execution)
+                dequeued = self._get_queued_executions(deployment_storage_id)
                 all_started = True
                 for execution in dequeued:
                     if self._refresh_execution(execution):
@@ -259,7 +259,7 @@ class ResourceManager(object):
             self.sm.update(execution)
             db.session.flush([execution])
 
-    def _get_queued_executions(self, finished_execution):
+    def _get_queued_executions(self, deployment_storage_id):
         sort_by = {'created_at': 'asc'}
         system_executions = self.sm.list(
             models.Execution, filters={
@@ -292,10 +292,9 @@ class ResourceManager(object):
                 ).exists()
             )
         )
-        if finished_execution._deployment_fk:
+        if deployment_storage_id:
             queued_query = queued_query.order_by(
-                executions._deployment_fk
-                != finished_execution._deployment_fk
+                executions._deployment_fk != deployment_storage_id
             )
         queued_executions = (
             queued_query
