@@ -1455,7 +1455,6 @@ class ResourceManager(object):
                           runtime_only_evaluation=False,
                           display_name=None):
         verify_blueprint_uploaded_state(blueprint)
-        plan = blueprint.plan
         visibility = self.get_resource_visibility(models.Deployment,
                                                   deployment_id,
                                                   visibility,
