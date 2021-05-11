@@ -1489,3 +1489,18 @@ class TestGenerateID(unittest.TestCase):
         new_id, _ = self._generate_id(
             group, {'id': '{site_name}-{uuid}', 'site_name': 'a'})
         assert new_id.startswith('a-')
+
+    def test_display_name(self):
+        group = models.DeploymentGroup(id='g1')
+        group.default_blueprint = self._mock_blueprint()
+        dep_spec = {'display_name': '{group_id}'}
+        self._generate_id(group, dep_spec)
+        assert dep_spec['display_name'] == 'g1'
+
+    def test_display_name_same_uuid(self):
+        group = models.DeploymentGroup(id='g1')
+        group.default_blueprint = self._mock_blueprint()
+        dep_spec = {'id': '{group_id}-{uuid}',
+                    'display_name': '{group_id}-{uuid}'}
+        new_id, _ = self._generate_id(group, dep_spec)
+        assert dep_spec['display_name'] == new_id
