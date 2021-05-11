@@ -17,6 +17,7 @@ import uuid
 from datetime import datetime
 
 from flask import request
+from sqlalchemy.dialects.postgresql import insert
 
 from cloudify.models_states import ExecutionState
 from manager_rest.rest.responses_v3 import ItemsCount
@@ -32,7 +33,7 @@ from manager_rest.rest.rest_utils import (
     verify_and_convert_bool,
     parse_datetime_multiple_formats
 )
-from manager_rest.storage import models, get_storage_manager, ListResult
+from manager_rest.storage import models, db, get_storage_manager, ListResult
 from manager_rest.workflow_executor import (
     get_amqp_client,
     workflow_sendhandler
@@ -296,3 +297,56 @@ class ExecutionGroupsId(SecuredResource):
         amqp_client.add_handler(handler)
         with amqp_client:
             group.start_executions(sm, rm, handler)
+
+    @authorize('execution_group_update')
+    @rest_decorators.marshal_with(models.ExecutionGroup)
+    def patch(self, group_id, **kwargs):
+        request_dict = get_json_and_verify_params({
+            'success_group_id': {'optional': True},
+            'failure_group_id': {'optional': True},
+        })
+        sm = get_storage_manager()
+
+        with sm.transaction():
+            group = sm.get(models.ExecutionGroup, group_id)
+            success_group_id = request_dict.get('success_group_id')
+            if success_group_id:
+                group.success_group = sm.get(
+                    models.DeploymentGroup, success_group_id)
+                self._add_deps_to_group(group)
+            failure_group_id = request_dict.get('failure_group_id')
+            if failure_group_id:
+                group.failed_group = sm.get(
+                    models.DeploymentGroup, failure_group_id)
+                self._add_deps_to_group(group, success=False)
+            sm.update(group)
+        return group
+
+    def _add_deps_to_group(self, group, success=True):
+        deployment_ids = (
+            db.session.query(models.Execution._deployment_fk)
+            .filter(models.Execution.execution_group_id == group.id)
+            .filter(
+                models.Execution.status == (
+                    ExecutionState.TERMINATED if success
+                    else ExecutionState.FAILED
+                )
+            )
+            .all()
+        )
+        if success:
+            target_group_id = group.success_group._storage_id
+        else:
+            target_group_id = group.failed_group._storage_id
+        # low-level sqlalchemy core, to avoid having to fetch all the deps
+        tb = models.Deployment.deployment_groups.property.secondary
+        db.session.execute(
+            insert(tb)
+            .values([
+                {
+                    'deployment_group_id': target_group_id,
+                    'deployment_id': dep_id
+                } for dep_id, in deployment_ids
+            ])
+            .on_conflict_do_nothing()
+        )

@@ -24,9 +24,13 @@ def upgrade():
     _drop_logs_id()
     _add_deployments_display_name_column()
     _add_depgroups_creation_counter()
+    _add_execgroups_dep_fks()
+    _create_depgroup_dep_constraint()
 
 
 def downgrade():
+    _drop_depgroup_dep_constraint()
+    _drop_execgroups_dep_fks()
     _drop_depgroups_creation_counter()
     _drop_deployments_display_name_column()
     _create_logs_id()
@@ -227,3 +231,81 @@ def _add_depgroups_creation_counter():
 
 def _drop_depgroups_creation_counter():
     op.drop_column('deployment_groups', 'creation_counter')
+
+
+def _add_execgroups_dep_fks():
+    op.add_column(
+        'execution_groups',
+        sa.Column('_success_group_fk', sa.Integer(), nullable=True)
+    )
+    op.add_column(
+        'execution_groups',
+        sa.Column('_failed_group_fk', sa.Integer(), nullable=True)
+    )
+    op.create_index(
+        op.f('execution_groups__failed_group_fk_idx'),
+        'execution_groups',
+        ['_failed_group_fk'],
+        unique=False
+    )
+    op.create_index(
+        op.f('execution_groups__success_group_fk_idx'),
+        'execution_groups',
+        ['_success_group_fk'],
+        unique=False
+    )
+    op.create_foreign_key(
+        op.f('execution_groups__success_group_fk_fkey'),
+        'execution_groups',
+        'deployment_groups',
+        ['_success_group_fk'],
+        ['_storage_id'],
+        ondelete='SET NULL'
+    )
+    op.create_foreign_key(
+        op.f('execution_groups__failed_group_fk_fkey'),
+        'execution_groups',
+        'deployment_groups',
+        ['_failed_group_fk'],
+        ['_storage_id'],
+        ondelete='SET NULL'
+    )
+
+
+def _drop_execgroups_dep_fks():
+    op.drop_constraint(
+        op.f('execution_groups__failed_group_fk_fkey'),
+        'execution_groups',
+        type_='foreignkey'
+    )
+    op.drop_constraint(
+        op.f('execution_groups__success_group_fk_fkey'),
+        'execution_groups',
+        type_='foreignkey'
+    )
+    op.drop_index(
+        op.f('execution_groups__success_group_fk_idx'),
+        table_name='execution_groups'
+    )
+    op.drop_index(
+        op.f('execution_groups__failed_group_fk_idx'),
+        table_name='execution_groups'
+    )
+    op.drop_column('execution_groups', '_failed_group_fk')
+    op.drop_column('execution_groups', '_success_group_fk')
+
+
+def _create_depgroup_dep_constraint():
+    op.create_unique_constraint(
+        op.f('deployment_groups_deployments_deployment_group_id_key'),
+        'deployment_groups_deployments',
+        ['deployment_group_id', 'deployment_id']
+    )
+
+
+def _drop_depgroup_dep_constraint():
+    op.drop_constraint(
+        op.f('deployment_groups_deployments_deployment_group_id_key'),
+        'deployment_groups_deployments',
+        type_='unique'
+    )
