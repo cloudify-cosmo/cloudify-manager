@@ -1121,11 +1121,27 @@ class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
         DeploymentGroup._storage_id, nullable=True)
     workflow_id = db.Column(db.Text, nullable=False)
     concurrency = db.Column(db.Integer, server_default='5', nullable=False)
+    _success_group_fk = foreign_key(DeploymentGroup._storage_id, nullable=True,
+                                    ondelete='SET NULL')
+    _failed_group_fk = foreign_key(DeploymentGroup._storage_id, nullable=True,
+                                   ondelete='SET NULL')
 
     @declared_attr
     def deployment_group(cls):
         return one_to_many_relationship(
             cls, DeploymentGroup, cls._deployment_group_fk)
+
+    @declared_attr
+    def success_group(cls):
+        return one_to_many_relationship(
+            cls, DeploymentGroup, cls._success_group_fk,
+            backref='success_source_execution_group')
+
+    @declared_attr
+    def failed_group(cls):
+        return one_to_many_relationship(
+            cls, DeploymentGroup, cls._failed_group_fk,
+            backref='failed_source_execution_group')
 
     deployment_group_id = association_proxy('deployment_group', 'id')
 
