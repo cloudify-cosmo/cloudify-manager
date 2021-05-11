@@ -283,6 +283,8 @@ class ExecutionsTest(AgentlessTestCase):
         current_status = self.client.executions.get(snapshot_2.id).status
         self.assertIn(current_status, [Execution.PENDING, Execution.STARTED])
         self._assert_execution_status(execution.id, Execution.QUEUED)
+        self.wait_for_execution_to_end(snapshot_2)
+        self.wait_for_execution_to_end(execution)
 
     def test_queue_exec_from_queue_while_exec_in_same_dep_is_running(self):
         """
@@ -326,6 +328,8 @@ class ExecutionsTest(AgentlessTestCase):
         current_status = self.client.executions.get(execution_1.id).status
         self.assertIn(current_status, [Execution.PENDING, Execution.STARTED])
         self._assert_execution_status(execution_2.id, Execution.QUEUED)
+        self.wait_for_execution_to_end(execution_1)
+        self.wait_for_execution_to_end(execution_2)
 
     def test_run_exec_from_queue_while_exec_in_diff_dep_is_running(self):
         """
@@ -406,6 +410,7 @@ class ExecutionsTest(AgentlessTestCase):
         # Make sure snapshot_2 started while the snapshot_3 is queued again
         self._assert_execution_status(snapshot_3.id, Execution.QUEUED)
         self.wait_for_execution_to_end(snapshot_2)
+        self.wait_for_execution_to_end(snapshot_3)
 
     def test_queue_system_exec_from_queue_while_exec_is_running(self):
         """
@@ -451,6 +456,7 @@ class ExecutionsTest(AgentlessTestCase):
         self.assertIn(current_status, [Execution.PENDING, Execution.STARTED])
         self._assert_execution_status(execution.id, Execution.QUEUED)
         self.wait_for_execution_to_end(snapshot_2)
+        self.wait_for_execution_to_end(execution)
 
     def test_fail_to_delete_deployment_of_queued_execution(self):
         """
