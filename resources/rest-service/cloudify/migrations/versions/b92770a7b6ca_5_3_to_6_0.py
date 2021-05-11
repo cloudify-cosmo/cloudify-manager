@@ -5,6 +5,8 @@ Revises: 396303c07e35
 Create Date: 2021-04-12 09:33:44.399254
 
 """
+from datetime import datetime
+
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.sql import table, column
@@ -338,7 +340,7 @@ def _drop_depgroup_dep_constraint():
 
 
 def _add_system_filters():
-    now = sa.func.current_timestamp()
+    now = datetime.utcnow()
     op.bulk_insert(deployments_filters_table, [
         dict(
             id='csys-environment-filter',
