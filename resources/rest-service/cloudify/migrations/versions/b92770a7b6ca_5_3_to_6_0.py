@@ -7,14 +7,38 @@ Create Date: 2021-04-12 09:33:44.399254
 """
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.sql import table, column
+from sqlalchemy.dialects import postgresql
 
+from manager_rest import constants
 from manager_rest.storage import models
+from cloudify.models_states import VisibilityState
+from manager_rest.storage.models_base import JSONString, UTCDateTime
 
 # revision identifiers, used by Alembic.
 revision = 'b92770a7b6ca'
 down_revision = '396303c07e35'
 branch_labels = None
 depends_on = None
+
+VISIBILITY_ENUM = postgresql.ENUM(
+    *VisibilityState.STATES,
+    name='visibility_states',
+    create_type=False
+)
+
+
+deployments_filters_table = table(
+    'deployments_filters',
+    column('id', sa.Text),
+    column('value', JSONString()),
+    column('visibility', VISIBILITY_ENUM),
+    column('created_at', UTCDateTime()),
+    column('updated_at', UTCDateTime()),
+    column('_tenant_id', sa.Integer),
+    column('_creator_id', sa.Integer),
+    column('is_system_filter', sa.Boolean),
+)
 
 
 def upgrade():
@@ -26,9 +50,11 @@ def upgrade():
     _add_depgroups_creation_counter()
     _add_execgroups_dep_fks()
     _create_depgroup_dep_constraint()
+    _add_system_filters()
 
 
 def downgrade():
+    _drop_system_filters()
     _drop_depgroup_dep_constraint()
     _drop_execgroups_dep_fks()
     _drop_depgroups_creation_counter()
@@ -308,4 +334,68 @@ def _drop_depgroup_dep_constraint():
         op.f('deployment_groups_deployments_deployment_group_id_key'),
         'deployment_groups_deployments',
         type_='unique'
+    )
+
+
+def _add_system_filters():
+    now = sa.func.current_timestamp()
+    op.bulk_insert(deployments_filters_table, [
+        dict(
+            id='csys-environment-filter',
+            value=[
+                {
+                    'key': 'csys-obj-type',
+                    'values': ['environment'],
+                    'operator': 'any_of',
+                    'type': 'label'
+                },
+                {
+                    'key': 'csys-obj-parent',
+                    'values': [],
+                    'operator': 'is_null',
+                    'type': 'label'
+                }
+            ],
+            visibility=VisibilityState.GLOBAL,
+            created_at=now,
+            updated_at=now,
+            _tenant_id=constants.DEFAULT_TENANT_ID,
+            _creator_id=constants.BOOTSTRAP_ADMIN_ID,
+            is_system_filter=True
+        ),
+        dict(
+            id='csys-service-filter',
+            value=[
+                {
+                    'key': 'csys-obj-type',
+                    'values': ['environment'],
+                    'operator': 'is_not',
+                    'type': 'label'
+                }
+            ],
+            visibility=VisibilityState.GLOBAL,
+            created_at=now,
+            updated_at=now,
+            _tenant_id=constants.DEFAULT_TENANT_ID,
+            _creator_id=constants.BOOTSTRAP_ADMIN_ID,
+            is_system_filter=True
+        )
+    ])
+
+
+def _drop_system_filters():
+    op.execute(
+        deployments_filters_table
+        .delete()
+        .where(
+            (deployments_filters_table.c.id == op.inline_literal('csys-environment-filter')) # NOQA
+        )
+    )
+
+    op.execute(
+        deployments_filters_table
+        .delete()
+        .where(
+            (deployments_filters_table.c.id == op.inline_literal('csys-service-filter')) # NOQA
+        )
     )
