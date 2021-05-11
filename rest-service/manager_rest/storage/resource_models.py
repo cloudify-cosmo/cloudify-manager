@@ -720,7 +720,7 @@ class DeploymentGroup(CreatedAtMixin, SQLResourceBase):
 
     @declared_attr
     def deployments(cls):
-        return many_to_many_relationship(cls, Deployment)
+        return many_to_many_relationship(cls, Deployment, unique=True)
 
     @property
     def deployment_ids(self):
