@@ -107,11 +107,11 @@ if [ -f "%{_localstatedir}/lib/rpm-state/cloudify-upgraded" ]; then
     export MANAGER_REST_CONFIG_PATH=/opt/manager/cloudify-rest.conf
 
     /opt/manager/env/bin/python -m manager_rest.update_rest_db_config --commit
-    /opt/manager/env/bin/python -m manager_rest.update_managers_version %{CLOUDIFY_VERSION}
     pushd /opt/manager/resources/cloudify/migrations
         /opt/manager/env/bin/alembic upgrade head
         CURRENT_DB=$(/opt/manager/env/bin/alembic current)
     popd
+    /opt/manager/env/bin/python -m manager_rest.update_managers_version %{CLOUDIFY_VERSION}
     chown cfyuser: /opt/manager/resources
 
     echo "
