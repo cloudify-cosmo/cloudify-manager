@@ -413,6 +413,7 @@ class ExecutionsTest(AgentlessTestCase):
         # Make sure snapshot_2 started while the snapshot_3 is queued again
         self._assert_execution_status(snapshot_3.id, Execution.QUEUED)
         self.wait_for_execution_to_end(snapshot_2)
+        self.wait_for_execution_to_end(snapshot_3)
 
     def test_queue_system_exec_from_queue_while_exec_is_running(self):
         """
