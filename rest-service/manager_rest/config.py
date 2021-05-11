@@ -268,8 +268,25 @@ class Config(object):
             if not entry.is_editable and not force:
                 raise ConflictError('{0} is not editable'.format(entry.name))
             if entry.schema:
+                entry_value = config_dict[entry.name]
+                if entry.schema['type'] == 'number':
+                    try:
+                        entry_value = float(entry_value)
+                    except ValueError:
+                        raise ConflictError(
+                            f'Error validating {name}: {entry_value} is not '
+                            f'a number')
+                elif entry.schema['type'] == 'boolean':
+                    if entry_value.lower() == 'true':
+                        entry_value = True
+                    elif entry_value.lower() == 'false':
+                        entry_value = False
+                    else:
+                        raise ConflictError(
+                            f'Error validating {name}: must be <true/false>, '
+                            f'got {entry_value}')
                 try:
-                    jsonschema.validate(config_dict[entry.name], entry.schema)
+                    jsonschema.validate(entry_value, entry.schema)
                 except jsonschema.ValidationError as e:
                     raise ConflictError(
                         'Error validating {name}: {err}'.format(
