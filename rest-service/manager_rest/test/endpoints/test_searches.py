@@ -20,7 +20,7 @@ class SearchesTestCase(base_test.BaseServerTestCase):
         deployments = self.client.deployments.list(
             filter_rules=self.FILTER_RULES)
         self.assertEqual(len(deployments), 1)
-        self.assertEqual(deployments[0], dep1)
+        self.assertEqual(deployments[0].id, dep1.id)
         self.assert_metadata_filtered(deployments, 1)
 
     def test_list_deployments_with_filter_rules_upper(self):
@@ -76,7 +76,7 @@ class SearchesTestCase(base_test.BaseServerTestCase):
         deployments = self.client.deployments.list(
             filter_rules=self.FILTER_RULES, filter_id=self.FILTER_ID)
         self.assertEqual(len(deployments), 1)
-        self.assertEqual(deployments[0], dep1)
+        self.assertEqual(deployments[0].id, dep1.id)
         self.assert_metadata_filtered(deployments, 1)
 
     def test_searches_with_search_and_filter_rules(self):
@@ -90,7 +90,7 @@ class SearchesTestCase(base_test.BaseServerTestCase):
         deployments = self.client.deployments.list(
             filter_rules=filter_rules_bp1, _search='dep1')
         self.assertEqual(len(deployments), 1)
-        self.assertEqual(deployments[0], dep1)
+        self.assertEqual(deployments[0].id, dep1.id)
         deployments = self.client.deployments.list(
             filter_rules=filter_rules_bp1, _search='dep2')
         self.assertEqual(len(deployments), 0)
