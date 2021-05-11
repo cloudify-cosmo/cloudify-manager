@@ -1171,6 +1171,10 @@ class DeploymentGroupsId(SecuredResource):
                 pass
             new_id = new_id or '{group_id}-{uuid}'
 
+        display_name_template = ''
+        if isinstance(new_dep_spec.get('display_name'), str):
+            display_name_template = new_dep_spec['display_name']
+
         for template, replace, makes_unique, makes_variable in [
             ('{group_id}', group.id, False, False),
             ('{uuid}', uuid.uuid4(), True, True),
@@ -1182,6 +1186,12 @@ class DeploymentGroupsId(SecuredResource):
                 new_id = new_id.replace(template, str(replace))
                 is_unique |= makes_unique
                 has_variable |= makes_variable
+            if template in display_name_template:
+                display_name_template = \
+                    display_name_template.replace(template, str(replace))
+
+        if display_name_template:
+            new_dep_spec['display_name'] = display_name_template
 
         if not has_variable:
             raise manager_exceptions.ConflictError(
