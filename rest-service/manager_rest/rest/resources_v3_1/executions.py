@@ -300,7 +300,7 @@ class ExecutionGroupsId(SecuredResource):
 
     @authorize('execution_group_update')
     @rest_decorators.marshal_with(models.ExecutionGroup)
-    def put(self, group_id, **kwargs):
+    def patch(self, group_id, **kwargs):
         request_dict = get_json_and_verify_params({
             'success_group_id': {'optional': True},
             'failure_group_id': {'optional': True},
