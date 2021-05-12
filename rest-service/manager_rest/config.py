@@ -269,29 +269,27 @@ class Config(object):
             if not entry.is_editable and not force:
                 raise ConflictError('{0} is not editable'.format(entry.name))
             if entry.schema:
-                entry_value = config_dict[entry.name]
                 if entry.schema['type'] == 'number':
                     try:
-                        entry_value = float(entry_value)
+                        value = float(value)
                     except ValueError:
                         raise ConflictError(
-                            f'Error validating {name}: {entry_value} is not '
+                            f'Error validating {name}: {value} is not '
                             f'a number')
                 elif entry.schema['type'] == 'boolean':
-                    if entry_value.lower() == 'true':
-                        entry_value = True
-                    elif entry_value.lower() == 'false':
-                        entry_value = False
+                    if value.lower() == 'true':
+                        value = True
+                    elif value.lower() == 'false':
+                        value = False
                     else:
                         raise ConflictError(
                             f'Error validating {name}: must be <true/false>, '
-                            f'got {entry_value}')
+                            f'got {value}')
                 try:
-                    jsonschema.validate(entry_value, entry.schema)
+                    jsonschema.validate(value, entry.schema)
                 except jsonschema.ValidationError as e:
                     raise ConflictError(
-                        'Error validating {name}: {err}'.format(
-                            name=name, err=e.args[0]))
+                        f'Error validating {name}: {e.args[0]}')
             config_mappings.append({
                 'name': entry.name,
                 'scope': entry.scope,
