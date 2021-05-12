@@ -198,7 +198,8 @@ class EventsAlternativeTimezoneTest(EventsTest):
         )
         # restart all users of the db so that they get a new session which
         # uses the just-set timezone
-        docker.execute(self.env.container_id,
+        docker.execute(
+            self.env.container_id,
             self.get_service_management_command() +
             ' restart cloudify-amqp-postgres cloudify-restservice '
             'cloudify-execution-scheduler'
@@ -222,8 +223,8 @@ class EventsAlternativeTimezoneTest(EventsTest):
             "ALTER DATABASE cloudify_db SET TIME ZONE '{}'"
             .format(self.original_tz)
         )
-        service_command = self.get_service_management_command()
-        docker.execute(self.env.container_id,
+        docker.execute(
+            self.env.container_id,
             self.get_service_management_command() +
             ' restart cloudify-amqp-postgres cloudify-restservice '
             'cloudify-execution-scheduler'
