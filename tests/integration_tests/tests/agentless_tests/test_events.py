@@ -189,6 +189,8 @@ class EventsAlternativeTimezoneTest(EventsTest):
 
     def setUp(self):
         """Update postgres timezone and create a deployment."""
+        self.original_tz = run_postgresql_command(
+            self.env.container_id, 'SHOW TIME ZONE').split('\n')[2].strip()
         run_postgresql_command(
             self.env.container_id,
             "ALTER DATABASE cloudify_db  SET TIME ZONE '{}'"
@@ -196,18 +198,10 @@ class EventsAlternativeTimezoneTest(EventsTest):
         )
         # restart all users of the db so that they get a new session which
         # uses the just-set timezone
-        service_command = \
-            self.get_service_management_command()
-
-        docker.execute(
-            self.env.container_id,
-            "{0} restart cloudify-amqp-postgres "
-            "cloudify-restservice".format(service_command)
-        )
-        docker.execute(
-            self.env.container_id,
-            "{0} restart cloudify-amqp-postgres "
-            "cloudify-restservice".format(service_command)
+        docker.execute(self.env.container_id,
+            self.get_service_management_command() +
+            ' restart cloudify-amqp-postgres cloudify-restservice '
+            'cloudify-execution-scheduler'
         )
         # Make sure that database timezone is correctly set
         query_result = run_postgresql_command(self.env.container_id,
@@ -220,6 +214,20 @@ class EventsAlternativeTimezoneTest(EventsTest):
         # log storing is async, add a few seconds to allow for that
         self.stop_timestamp = \
             (datetime.utcnow() + timedelta(seconds=3)).isoformat()
+
+    def tearDown(self):
+        super(EventsAlternativeTimezoneTest, self).tearDown()
+        run_postgresql_command(
+            self.env.container_id,
+            "ALTER DATABASE cloudify_db SET TIME ZONE '{}'"
+            .format(self.original_tz)
+        )
+        service_command = self.get_service_management_command()
+        docker.execute(self.env.container_id,
+            self.get_service_management_command() +
+            ' restart cloudify-amqp-postgres cloudify-restservice '
+            'cloudify-execution-scheduler'
+        )
 
     def test_timestamp_in_utc(self):
         """Make sure events timestamp field is in UTC."""
