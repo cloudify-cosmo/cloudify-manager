@@ -366,6 +366,15 @@ class ResourceManager(object):
             if execution.error:
                 event.message += f" with error '{execution.error}'"
             self.sm.put(event)
+            if execution.deployment:
+                if execution.status == ExecutionState.TERMINATED and \
+                        execution_group.success_group:
+                    execution_group.success_group.deployments.append(
+                        execution.deployment)
+                if execution.status == ExecutionState.FAILED and \
+                        execution_group.failed_group:
+                    execution_group.failed_group.deployments.append(
+                        execution.deployment)
 
     @staticmethod
     def _get_conf_for_snapshots_wf():

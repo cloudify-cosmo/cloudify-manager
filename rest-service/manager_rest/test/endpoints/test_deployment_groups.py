@@ -1311,6 +1311,103 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
             assert exc.status == ExecutionState.PENDING
         assert group.status == ExecutionState.PENDING
 
+    @mock.patch('manager_rest.workflow_executor.execute_workflow', mock.Mock())
+    @mock.patch('manager_rest.resource_manager.send_event', mock.Mock())
+    def test_success_group(self):
+        # executions are already terminated when we add success_group, so
+        # they should be in the success group
+        exc_group = self.client.execution_groups.start(
+            deployment_group_id='group1',
+            workflow_id='install',
+        )
+        sm_exc_group = self.sm.get(models.ExecutionGroup, exc_group.id)
+        for exc in sm_exc_group.executions:
+            exc.status = ExecutionState.TERMINATED
+            self.sm.put(exc)
+        self.client.deployment_groups.put('group2')
+        self.client.execution_groups.set_target_group(
+            exc_group.id, success_group='group2')
+        target_group = self.sm.get(models.DeploymentGroup, 'group2')
+        assert len(target_group.deployments) == 1
+
+        # executions terminate after we add the success group
+        exc_group = self.client.execution_groups.start(
+            deployment_group_id='group1',
+            workflow_id='install',
+        )
+        self.client.deployment_groups.put('group3')
+        self.client.execution_groups.set_target_group(
+            exc_group.id, success_group='group3')
+        sm_exc_group = self.sm.get(models.ExecutionGroup, exc_group.id)
+        for exc in sm_exc_group.executions:
+            self.client.executions.update(
+                exc.id, status=ExecutionState.TERMINATED)
+        target_group = self.sm.get(models.DeploymentGroup, 'group3')
+        assert len(target_group.deployments) == 1
+
+        # same as above, but the deployment already is in the target group
+        exc_group = self.client.execution_groups.start(
+            deployment_group_id='group1',
+            workflow_id='install',
+        )
+        self.client.deployment_groups.put('group3', deployment_ids=['dep1'])
+        self.client.execution_groups.set_target_group(
+            exc_group.id, success_group='group3')
+        sm_exc_group = self.sm.get(models.ExecutionGroup, exc_group.id)
+        for exc in sm_exc_group.executions:
+            self.client.executions.update(
+                exc.id, status=ExecutionState.TERMINATED)
+        target_group = self.sm.get(models.DeploymentGroup, 'group3')
+        assert len(target_group.deployments) == 1
+
+    @mock.patch('manager_rest.workflow_executor.execute_workflow', mock.Mock())
+    @mock.patch('manager_rest.resource_manager.send_event', mock.Mock())
+    def test_failed_group(self):
+        # similar to test_success_group, but for the failed group
+        exc_group = self.client.execution_groups.start(
+            deployment_group_id='group1',
+            workflow_id='install',
+        )
+        sm_exc_group = self.sm.get(models.ExecutionGroup, exc_group.id)
+        for exc in sm_exc_group.executions:
+            exc.status = ExecutionState.FAILED
+            self.sm.put(exc)
+        self.client.deployment_groups.put('group2')
+        self.client.execution_groups.set_target_group(
+            exc_group.id, failed_group='group2')
+        target_group = self.sm.get(models.DeploymentGroup, 'group2')
+        assert len(target_group.deployments) == 1
+
+        # executions terminate after we add the success group
+        exc_group = self.client.execution_groups.start(
+            deployment_group_id='group1',
+            workflow_id='install',
+        )
+        self.client.deployment_groups.put('group3')
+        self.client.execution_groups.set_target_group(
+            exc_group.id, failed_group='group3')
+        sm_exc_group = self.sm.get(models.ExecutionGroup, exc_group.id)
+        for exc in sm_exc_group.executions:
+            self.client.executions.update(
+                exc.id, status=ExecutionState.FAILED)
+        target_group = self.sm.get(models.DeploymentGroup, 'group3')
+        assert len(target_group.deployments) == 1
+
+        # same as above, but the deployment already is in the target group
+        exc_group = self.client.execution_groups.start(
+            deployment_group_id='group1',
+            workflow_id='install',
+        )
+        self.client.deployment_groups.put('group3', deployment_ids=['dep1'])
+        self.client.execution_groups.set_target_group(
+            exc_group.id, failed_group='group3')
+        sm_exc_group = self.sm.get(models.ExecutionGroup, exc_group.id)
+        for exc in sm_exc_group.executions:
+            self.client.executions.update(
+                exc.id, status=ExecutionState.FAILED)
+        target_group = self.sm.get(models.DeploymentGroup, 'group3')
+        assert len(target_group.deployments) == 1
+
 
 class TestGenerateID(unittest.TestCase):
     def setUp(self):
@@ -1392,3 +1489,18 @@ class TestGenerateID(unittest.TestCase):
         new_id, _ = self._generate_id(
             group, {'id': '{site_name}-{uuid}', 'site_name': 'a'})
         assert new_id.startswith('a-')
+
+    def test_display_name(self):
+        group = models.DeploymentGroup(id='g1')
+        group.default_blueprint = self._mock_blueprint()
+        dep_spec = {'display_name': '{group_id}'}
+        self._generate_id(group, dep_spec)
+        assert dep_spec['display_name'] == 'g1'
+
+    def test_display_name_same_uuid(self):
+        group = models.DeploymentGroup(id='g1')
+        group.default_blueprint = self._mock_blueprint()
+        dep_spec = {'id': '{group_id}-{uuid}',
+                    'display_name': '{group_id}-{uuid}'}
+        new_id, _ = self._generate_id(group, dep_spec)
+        assert dep_spec['display_name'] == new_id

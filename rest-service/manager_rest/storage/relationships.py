@@ -69,7 +69,7 @@ def one_to_many_relationship(child_class,
 
 def many_to_many_relationship(current_class, other_class, table_prefix=None,
                               primary_key_tuple=False, ondelete=None,
-                              **relationship_kwargs):
+                              unique=False, **relationship_kwargs):
     """Return a many-to-many SQL relationship object
 
     Notes:
@@ -114,6 +114,7 @@ def many_to_many_relationship(current_class, other_class, table_prefix=None,
         current_foreign_key,
         other_foreign_key,
         primary_key_tuple,
+        unique=unique,
         ondelete=ondelete
     )
     return db.relationship(
@@ -130,6 +131,7 @@ def get_secondary_table(helper_table_name,
                         first_foreign_key,
                         second_foreign_key,
                         primary_key_tuple,
+                        unique=False,
                         ondelete=None):
     """Create a helper table for a many-to-many relationship
 
@@ -143,6 +145,10 @@ def get_secondary_table(helper_table_name,
     which will also index them.
     :return: A Table object
     """
+    table_args = []
+    if unique:
+        table_args.append(
+            db.UniqueConstraint(first_column_name, second_column_name))
     return db.Table(
         helper_table_name,
         db.Column(
@@ -156,5 +162,6 @@ def get_secondary_table(helper_table_name,
             db.Integer,
             db.ForeignKey(second_foreign_key, ondelete=ondelete),
             primary_key=primary_key_tuple
-        )
+        ),
+        *table_args
     )
