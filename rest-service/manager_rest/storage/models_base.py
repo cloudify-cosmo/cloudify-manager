@@ -58,11 +58,13 @@ class UTCDateTime(db.TypeDecorator):
                 return '{0}.000Z'.format(value.isoformat())
 
     def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
         if isinstance(value, text_type):
-            # SQLite only accepts datetime objects
+            value = value.strip('Z')
             return date_parser.parse(value)
         else:
-            return value
+            return value.replace(tzinfo=None)
 
 
 class JSONString(db.TypeDecorator):
