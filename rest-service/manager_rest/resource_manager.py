@@ -312,6 +312,7 @@ class ResourceManager(object):
             .order_by(executions.created_at.asc())
             .limit(5)
             .with_for_update(of=executions)
+            .all()
         )
         # deployments we've already emitted an execution for - only emit 1
         # execution per deployment
