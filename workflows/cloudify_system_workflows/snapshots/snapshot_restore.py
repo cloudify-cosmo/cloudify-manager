@@ -166,31 +166,17 @@ class SnapshotRestore(object):
 
     @contextmanager
     def _pause_services(self):
-        """Stop cloudify-amqp-postgres for the duration of this context"""
+        """Stop db-using services for the duration of this context"""
         # While the snapshot is being restored, the database is downgraded
-        # and upgraded back, and the snapshot execution itself might not
-        # be in the database during that time.
-        # If we try to insert logs during that time, they won't be stored,
-        # because they can't have a FK to a non-existent execution.
-        # Pause amqp-postgres so that all the logs are only stored after
-        # the database has finished restoring
-        # Also for manager's status reporter that uses manager's rest
-        # endpoint and in turn uses the DB for auth, that could cause
-        # failure for migration of the users table.
-        process_to_pause = 'cloudify-amqp-postgres'
-        utils.run_service(
-            self._service_management,
-            'stop',
-            process_to_pause
-        )
+        # and upgraded back, and these services must not attempt to use it
+        to_pause = ['cloudify-amqp-postgres', 'cloudify-execution-scheduler']
+        for service in to_pause:
+            utils.run_service(self._service_management, 'stop', service)
         try:
             yield
         finally:
-            utils.run_service(
-                self._service_management,
-                'start',
-                process_to_pause
-            )
+            for service in to_pause:
+                utils.run_service(self._service_management, 'start', service)
 
     def _generate_new_rest_token(self):
         """
