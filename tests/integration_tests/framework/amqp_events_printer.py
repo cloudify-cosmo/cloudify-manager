@@ -17,7 +17,7 @@ import os
 import json
 import time
 
-from pika.exceptions import ConnectionClosed, StreamLostError
+from pika.exceptions import AMQPConnectionError
 
 import cloudify.event
 import cloudify.logs
@@ -90,6 +90,6 @@ def print_events(container_id):
         try:
             connection = utils.create_pika_connection(container_id)
             _consume_events(connection)
-        except (ConnectionClosed, StreamLostError) as e:
+        except AMQPConnectionError as e:
             logger.debug('print_events got: %s', e)
             time.sleep(3)
