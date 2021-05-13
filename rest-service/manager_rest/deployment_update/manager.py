@@ -258,6 +258,14 @@ class DeploymentUpdateManager(object):
         # Handle inter-deployment dependencies changes
         self._deployment_dependency_handler.handle(dep_update)
 
+        # Update deployment attributes in the storage manager
+        deployment = self.sm.get(models.Deployment, dep_update.deployment_id)
+        deployment.inputs = dep_update.new_inputs
+        deployment.runtime_only_evaluation = dep_update.runtime_only_evaluation
+        if dep_update.new_blueprint:
+            deployment.blueprint = dep_update.new_blueprint
+        self.sm.update(deployment)
+
         # Execute the default 'update' workflow or a custom workflow using
         # added and related instances. Any workflow executed should call
         # finalize_update, since removing entities should be done after the
@@ -280,14 +288,6 @@ class DeploymentUpdateManager(object):
             update_plugins=update_plugins,
             force=force
         )
-
-        # Update deployment attributes in the storage manager
-        deployment = self.sm.get(models.Deployment, dep_update.deployment_id)
-        deployment.inputs = dep_update.new_inputs
-        deployment.runtime_only_evaluation = dep_update.runtime_only_evaluation
-        if dep_update.new_blueprint:
-            deployment.blueprint = dep_update.new_blueprint
-        self.sm.update(deployment)
 
         # Update deployment update attributes in the storage manager
         dep_update.execution = execution
