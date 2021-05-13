@@ -32,5 +32,7 @@ spec:
       limits:
         cpu: 0.2
         memory: 256Mi
+  imagePullSecrets:
+    - name: dockerhub
   nodeSelector:
     instance-type: spot
