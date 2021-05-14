@@ -27,7 +27,6 @@ setup(
         'pika==1.1.0',
         'fasteners==0.13.0',
         'sh==1.11',
-        'awscli==1.11.14',
         'docker==4.0.2',
         'requests>=2.18,<3.0.0',
         'pytest'
