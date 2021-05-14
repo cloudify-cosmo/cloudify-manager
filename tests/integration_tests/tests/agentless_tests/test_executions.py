@@ -854,8 +854,9 @@ class ExecutionsTest(AgentlessTestCase):
         self.assertEqual(schedule.workflow_id, 'install')
         self.assertIn('install_', schedule.id)
 
-        self.wait_for_scheduled_execution_to_fire(dep_id)
+        exc = self.wait_for_scheduled_execution_to_fire(dep_id)
         self.client.execution_schedules.delete(schedule.id, dep_id)
+        self.wait_for_execution_to_end(exc)
 
     def test_schedule_execution_snapshot_running_multi_tenant(self):
         """
@@ -917,14 +918,16 @@ class ExecutionsTest(AgentlessTestCase):
         self.client.executions.start(deployment_id=dep2_id,
                                      workflow_id='install',
                                      schedule=scheduled_time)
-        self.wait_for_scheduled_execution_to_fire(dep1_id)
-        self.wait_for_scheduled_execution_to_fire(dep2_id)
+        exc1 = self.wait_for_scheduled_execution_to_fire(dep1_id)
+        exc2 = self.wait_for_scheduled_execution_to_fire(dep2_id)
         schedule1 = self.client.execution_schedules.list(
             deployment_id=dep1.id)[0]
         schedule2 = self.client.execution_schedules.list(
             deployment_id=dep2.id)[0]
         self.client.execution_schedules.delete(schedule1.id, dep1_id)
         self.client.execution_schedules.delete(schedule2.id, dep2_id)
+        self.wait_for_execution_to_end(exc1)
+        self.wait_for_execution_to_end(exc2)
 
     def test_schedule_execution_while_snapshot_running_same_tenant(self):
         dsl_path = resource('dsl/sleep_workflows.yaml')
@@ -1004,10 +1007,11 @@ class ExecutionsTest(AgentlessTestCase):
                                      schedule=scheduled_time)
         self.client.executions.update(execution1.id, Execution.TERMINATED)
 
-        self.wait_for_scheduled_execution_to_fire(dep_id)
+        exc = self.wait_for_scheduled_execution_to_fire(dep_id)
         schedule = self.client.execution_schedules.list(
             deployment_id=dep.id)[0]
         self.client.execution_schedules.delete(schedule.id, dep_id)
+        self.wait_for_execution_to_end(exc)
 
     @retry(wait_fixed=1000, stop_max_attempt_number=120)
     def wait_for_scheduled_execution_to_fire(self, deployment_id):
