@@ -21,6 +21,7 @@ def foreign_key(foreign_key_column,
                 index=True,
                 primary_key=False,
                 ondelete='CASCADE',
+                unique=False,
                 **fk_kwargs):
     """Return a ForeignKey object with the relevant
 
@@ -36,6 +37,7 @@ def foreign_key(foreign_key_column,
         nullable=nullable,
         index=index,
         primary_key=primary_key,
+        unique=unique,
     )
 
 
