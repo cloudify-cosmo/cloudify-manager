@@ -586,22 +586,14 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         and latest execution object
         :return: deployment_status: Overall deployment status
         """
-        if self.latest_execution_status == DeploymentState.CANCELLED:
-            if self.installation_status == DeploymentState.ACTIVE:
-                deployment_status = DeploymentState.GOOD
-            else:
-                deployment_status = DeploymentState.REQUIRE_ATTENTION
-        elif self.latest_execution_status == DeploymentState.IN_PROGRESS and \
-                self.installation_status == DeploymentState.INACTIVE:
+        if self.latest_execution_status == DeploymentState.IN_PROGRESS:
             deployment_status = DeploymentState.IN_PROGRESS
-        elif self.latest_execution_status == DeploymentState.FAILED or \
-                self.installation_status == DeploymentState.INACTIVE:
+        elif self.latest_execution_status == DeploymentState.FAILED \
+                or self.installation_status == DeploymentState.INACTIVE:
             deployment_status = DeploymentState.REQUIRE_ATTENTION
-        elif self.latest_execution_status == DeploymentState.COMPLETED and \
-                self.installation_status == DeploymentState.ACTIVE:
-            deployment_status = DeploymentState.GOOD
         else:
-            deployment_status = DeploymentState.IN_PROGRESS
+            deployment_status = DeploymentState.GOOD
+
         has_sub_sts = self.sub_services_status or self.sub_environments_status
         if not has_sub_sts or exclude_sub_deployments:
             return deployment_status
