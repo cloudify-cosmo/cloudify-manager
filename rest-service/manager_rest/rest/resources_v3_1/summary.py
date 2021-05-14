@@ -109,6 +109,7 @@ class SummarizeDeployments(BaseSummary):
         'tenant_name',
         'visibility',
         'site_name',
+        'deployment_status',
     ]
     auth_req = 'deployment_list'
     model = models.Deployment
