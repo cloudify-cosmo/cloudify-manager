@@ -28,7 +28,7 @@ setup(
         'cloudify-common==5.2.2',
         'retrying==1.3.3',
         'psycopg2==2.7.4',
-        'cryptography==3.3.1',
+        'cryptography==3.3.2',
         'python-dateutil==2.5.3',
         'pytz==2018.4',
     ]
