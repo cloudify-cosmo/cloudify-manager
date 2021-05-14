@@ -418,7 +418,8 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                                        ondelete='SET NULL',
                                        deferrable=True,
                                        initially='DEFERRED',
-                                       use_alter=True)
+                                       use_alter=True,
+                                       unique=True)
 
     deployment_group_id = association_proxy('deployment_groups', 'id')
 
