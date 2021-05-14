@@ -847,8 +847,9 @@ class ExecutionsTest(AgentlessTestCase):
         self.assertEqual(schedule.workflow_id, 'install')
         self.assertIn('install_', schedule.id)
 
-        self.wait_for_scheduled_execution_to_fire(dep_id)
+        exc = self.wait_for_scheduled_execution_to_fire(dep_id)
         self.client.execution_schedules.delete(schedule.id, dep_id)
+        self.wait_for_execution_to_end(exc)
 
     def test_schedule_execution_snapshot_running_multi_tenant(self):
         """
@@ -999,10 +1000,11 @@ class ExecutionsTest(AgentlessTestCase):
                                      schedule=scheduled_time)
         self.client.executions.update(execution1.id, Execution.TERMINATED)
 
-        self.wait_for_scheduled_execution_to_fire(dep_id)
+        exc = self.wait_for_scheduled_execution_to_fire(dep_id)
         schedule = self.client.execution_schedules.list(
             deployment_id=dep.id)[0]
         self.client.execution_schedules.delete(schedule.id, dep_id)
+        self.wait_for_execution_to_end(exc)
 
     @retry(wait_fixed=1000, stop_max_attempt_number=120)
     def wait_for_scheduled_execution_to_fire(self, deployment_id):
