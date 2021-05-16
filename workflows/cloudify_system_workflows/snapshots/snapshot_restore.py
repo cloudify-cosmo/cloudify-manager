@@ -56,6 +56,7 @@ from .constants import (
     V_4_6_0,
     V_5_0_5,
     V_5_3_0,
+    V_6_0_0,
     SECURITY_FILE_LOCATION,
     SECURITY_FILENAME,
     REST_AUTHORIZATION_CONFIG_PATH,
@@ -232,6 +233,11 @@ class SnapshotRestore(object):
         ctx.logger.info('Updating roles and permissions')
         if os.path.exists(REST_AUTHORIZATION_CONFIG_PATH):
             utils.run(['/opt/manager/scripts/load_permissions.py'])
+
+    def _create_system_filters(self):
+        ctx.logger.info('Creating system filters')
+        if self._snapshot_version < V_6_0_0:
+            utils.run(['/opt/manager/scripts/create_system_filters.py'])
 
     def _update_deployment_statuses(self):
         ctx.logger.info('Updating deployment statuses.')
