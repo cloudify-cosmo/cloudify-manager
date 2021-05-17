@@ -27,8 +27,7 @@ def _set_latest_execution():
     upd_query = (
         dep_table.update()
         .values(
-            _latest_execution_fk=
-            select([
+            _latest_execution_fk=select([
                 exc_table.c._storage_id
             ]).where(
                 exc_table.c._deployment_fk == dep_table.c._storage_id
