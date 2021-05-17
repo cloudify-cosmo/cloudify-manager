@@ -14,17 +14,11 @@ def create_system_filters():
         current_deployment_filters = db.session.query(models.DeploymentsFilter)
         curr_dep_filters_ids = {dep_filter.id for dep_filter
                                 in current_deployment_filters}
-        if ({'csys-environment-filter', 'csys-service-filter'} ==
-                curr_dep_filters_ids):
-            # System filters already exist
-            return
+        creator = models.User.query.get(constants.BOOTSTRAP_ADMIN_ID)
+        tenant = models.Tenant.query.get(constants.DEFAULT_TENANT_ID)
         now = datetime.utcnow()
-        creator = db.session.query(models.User).filter_by(
-            id=constants.BOOTSTRAP_ADMIN_ID).first()
-        tenant = db.session.query(models.Tenant).filter_by(
-            id=constants.DEFAULT_TENANT_ID).first()
-        system_filters = [
-            {
+        if 'csys-environment-filter' not in curr_dep_filters_ids:
+            env_filter = {
                 'id': 'csys-environment-filter',
                 'value': [
                     {
@@ -40,8 +34,10 @@ def create_system_filters():
                         'type': 'label'
                     }
                 ]
-            },
-            {
+            }
+            _add_filter(env_filter, creator, tenant, now)
+        if 'csys-service-filter' not in curr_dep_filters_ids:
+            service_filter = {
                 'id': 'csys-service-filter',
                 'value': [
                     {
@@ -52,17 +48,19 @@ def create_system_filters():
                     }
                 ]
             }
-        ]
-        for sys_filter in system_filters:
-            sys_filter['created_at'] = now
-            sys_filter['updated_at'] = now
-            sys_filter['visibility'] = 'global'
-            sys_filter['is_system_filter'] = True
-            sys_filter['creator'] = creator
-            sys_filter['tenant'] = tenant
-            db.session.add(models.DeploymentsFilter(**sys_filter))
+            _add_filter(service_filter, creator, tenant, now)
 
         db.session.commit()
+
+
+def _add_filter(sys_filter_dict, creator, tenant, now):
+    sys_filter_dict['created_at'] = now
+    sys_filter_dict['updated_at'] = now
+    sys_filter_dict['visibility'] = 'global'
+    sys_filter_dict['is_system_filter'] = True
+    sys_filter_dict['creator'] = creator
+    sys_filter_dict['tenant'] = tenant
+    db.session.add(models.DeploymentsFilter(**sys_filter_dict))
 
 
 if __name__ == '__main__':
