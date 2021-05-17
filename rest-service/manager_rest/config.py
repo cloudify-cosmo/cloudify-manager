@@ -276,6 +276,13 @@ class Config(object):
                         raise ConflictError(
                             f'Error validating {name}: {value} is not '
                             f'a number')
+                elif entry.schema['type'] == 'integer':
+                    try:
+                        value = int(value)
+                    except ValueError:
+                        raise ConflictError(
+                            f'Error validating {name}: {value} is not '
+                            f'an integer')
                 elif entry.schema['type'] == 'boolean':
                     if value.lower() == 'true':
                         value = True
