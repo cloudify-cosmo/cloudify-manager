@@ -1,4 +1,4 @@
-"""empty message
+"""Cloudify 6.0 to 6.1 DB migration
 
 Revision ID: a31cb9e704d3
 Revises: b92770a7b6ca
@@ -47,9 +47,6 @@ CONFIG_SCHEMA_UPDATE = [
     config_row(name='min_workers', scope='mgmtworker',
                schema_6_0='{"type": "number", "minimum": 1}',
                schema_6_1='{"type": "integer", "minimum": 1}'),
-    config_row(name='account_lock_period', scope='rest',
-               schema_6_0='{"type": "number", "minimum": -1}',
-               schema_6_1='{"type": "integer", "minimum": -1}'),
     config_row(name='blueprint_folder_max_files', scope='rest',
                schema_6_0='{"type": "number", "minimum": 0}',
                schema_6_1='{"type": "integer", "minimum": 0}'),
