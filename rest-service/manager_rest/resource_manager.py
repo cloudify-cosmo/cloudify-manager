@@ -2116,28 +2116,24 @@ class ResourceManager(object):
                                  get_all_results=True,
                                  all_tenants=True)[0]
         graph = models.TasksGraph(
-            id=uuid.uuid4().hex,
             name=name,
             _execution_fk=execution._storage_id,
             created_at=utils.get_formatted_timestamp(),
             _tenant_id=execution._tenant_id,
             _creator_id=execution._creator_id
         )
-        self.sm.put(graph)
+        db.session.add(graph)
         if operations:
-            created_at = utils.get_formatted_timestamp()
             created_ops = []
             for operation in operations:
                 operation.setdefault('state', 'pending')
                 op = models.Operation(
                     tenant=utils.current_tenant,
                     creator=current_user,
-                    _tasks_graph_fk=graph._storage_id,
-                    created_at=created_at,
+                    tasks_graph=graph,
                     **operation)
                 created_ops.append(op)
                 db.session.add(op)
-            self.sm._safe_commit()
         if execution.total_operations is None:
             execution.total_operations = 0
             execution.finished_operations = 0

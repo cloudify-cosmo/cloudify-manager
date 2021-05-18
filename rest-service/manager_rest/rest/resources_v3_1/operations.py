@@ -159,11 +159,13 @@ class TasksGraphsId(SecuredResource):
             'execution_id': {'type': text_type, 'required': True},
             'operations': {'required': False}
         })
-        tasks_graph = get_resource_manager().create_tasks_graph(
-            name=params['name'],
-            execution_id=params['execution_id'],
-            operations=params.get('operations', [])
-        )
+        sm = get_storage_manager()
+        with sm.transaction():
+            tasks_graph = get_resource_manager().create_tasks_graph(
+                name=params['name'],
+                execution_id=params['execution_id'],
+                operations=params.get('operations', [])
+            )
         return tasks_graph, 201
 
     @authorize('operations')
