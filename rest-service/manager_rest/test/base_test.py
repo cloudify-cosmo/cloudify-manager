@@ -163,9 +163,6 @@ class BaseServerTestCase(unittest.TestCase):
         FilterRule('created_by', ['admin'], AttrsOperator.ANY_OF, 'attribute'),
     ]
 
-    def assertRaisesRegex(self, *a, **kw):
-        return self.assertRaisesRegexp(*a, **kw)
-
     def assertEmpty(self, obj):
         self.assertIsNotNone(obj)
         self.assertFalse(obj)

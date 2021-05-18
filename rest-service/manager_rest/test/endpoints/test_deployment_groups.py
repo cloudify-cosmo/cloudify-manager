@@ -217,13 +217,13 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
 
     def test_add_nonexistent(self):
         self.client.deployment_groups.put('group1')
-        with self.assertRaisesRegexp(CloudifyClientError, 'not found') as cm:
+        with self.assertRaisesRegex(CloudifyClientError, 'not found') as cm:
             self.client.deployment_groups.add_deployments(
                 'group1',
                 deployment_ids=['nonexistent']
             )
         assert cm.exception.status_code == 404
-        with self.assertRaisesRegexp(CloudifyClientError, 'not found') as cm:
+        with self.assertRaisesRegex(CloudifyClientError, 'not found') as cm:
             self.client.deployment_groups.add_deployments(
                 'group1',
                 filter_id='nonexistent'
@@ -232,13 +232,13 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
 
     def test_remove_nonexistent(self):
         self.client.deployment_groups.put('group1')
-        with self.assertRaisesRegexp(CloudifyClientError, 'not found') as cm:
+        with self.assertRaisesRegex(CloudifyClientError, 'not found') as cm:
             self.client.deployment_groups.remove_deployments(
                 'group1',
                 deployment_ids=['nonexistent']
             )
         assert cm.exception.status_code == 404
-        with self.assertRaisesRegexp(CloudifyClientError, 'not found') as cm:
+        with self.assertRaisesRegex(CloudifyClientError, 'not found') as cm:
             self.client.deployment_groups.remove_deployments(
                 'group1',
                 filter_id='nonexistent'

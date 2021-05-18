@@ -67,7 +67,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
 
     def test_post_blueprint_already_exists(self):
         self.put_blueprint()
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             exceptions.CloudifyClientError,
             '409: blueprint with id=blueprint already exists',
             callable_obj=self.put_blueprint)
@@ -160,13 +160,13 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
 
     def test_put_blueprint_non_existing_filename(self):
         blueprint_id = 'new_blueprint_id'
-        with self.assertRaisesRegexp(WorkflowFailed, 'non-existing'):
+        with self.assertRaisesRegex(WorkflowFailed, 'non-existing'):
             self.put_blueprint(
                 blueprint_id=blueprint_id, blueprint_file_name='non-existing')
 
     def test_put_blueprint_no_default_yaml(self):
         blueprint_id = 'new_blueprint_id'
-        with self.assertRaisesRegexp(WorkflowFailed, 'blueprint.yaml'):
+        with self.assertRaisesRegex(WorkflowFailed, 'blueprint.yaml'):
             self.put_blueprint(blueprint_id=blueprint_id,
                                blueprint_dir='mock_blueprint_no_default')
 
@@ -422,7 +422,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         self.put_blueprint('mock_blueprint',
                            'blueprint_with_inputs.yaml',
                            blueprint_id)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             exceptions.CloudifyClientError,
             'Invalid state: `{0}`'.format(new_state),
             self.client.blueprints.update,
@@ -437,7 +437,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         self.put_blueprint('mock_blueprint',
                            'blueprint_with_inputs.yaml',
                            blueprint_id)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             exceptions.CloudifyClientError,
             'Unknown parameters: abc',
             self.client.blueprints.update,
@@ -452,7 +452,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         self.put_blueprint('mock_blueprint',
                            'blueprint_with_inputs.yaml',
                            blueprint_id)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             exceptions.CloudifyClientError,
             'visibility parameter is expected to be of type {}'.format(
                 text_type.__name__),
@@ -460,7 +460,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
             blueprint_id,
             {'visibility': 123}
         )
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             exceptions.CloudifyClientError,
             'plan parameter is expected to be of type dict',
             self.client.blueprints.update,
