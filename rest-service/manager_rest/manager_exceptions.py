@@ -34,6 +34,12 @@ class ManagerException(Exception):
         )
 
 
+class UnknownAction(ManagerException):
+    def __init__(self, action, *args, **kwargs):
+        super(UnknownAction, self).__init__(
+            400, 'unknown_action', f'Unknown action: {action}')
+
+
 class InsufficientMemoryError(ManagerException):
     INSUFFICIENT_MEMORY_ERROR_CODE = 'insufficient_memory_error'
 
