@@ -56,7 +56,7 @@ class AuthenticationTests(SecurityTestBase):
         first_login_time = self._fetch_alice().first_login_at
         last_login_time = self._fetch_alice().last_login_at
         self.assertIsNotNone(first_login_time)
-        self.assertEquals(first_login_time, last_login_time)
+        self.assertEqual(first_login_time, last_login_time)
 
         self._assert_user_authorized(username='alice',
                                      password='alice_password')

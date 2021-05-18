@@ -156,7 +156,7 @@ class PluginsUpdateTest(PluginsUpdatesBaseTest):
         self.assertEqual(['dep'], plugins_update.deployments_to_update)
         execution = self.client.executions.get(plugins_update.execution_id)
         self.assertIn('auto_correct_types', execution.parameters)
-        self.assertEquals(True, execution.parameters.get('auto_correct_types'))
+        self.assertEqual(True, execution.parameters.get('auto_correct_types'))
 
     def test_raises_while_plugins_updates_are_active(self):
         self.put_blueprint(blueprint_id='hello_world')
