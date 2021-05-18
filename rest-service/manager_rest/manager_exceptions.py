@@ -19,10 +19,8 @@ INTERNAL_SERVER_ERROR_CODE = 'internal_server_error'
 
 
 class ManagerException(Exception):
-    def __init__(self, status_code, error_code, *args, **kwargs):
-        super(ManagerException, self).__init__(*args, **kwargs)
-        self.status_code = status_code
-        self.error_code = error_code
+    error_code = INTERNAL_SERVER_ERROR_CODE
+    status_code = 500
 
     def to_response(self):
         return jsonify(
@@ -35,153 +33,94 @@ class ManagerException(Exception):
 
 
 class UnknownAction(ManagerException):
-    def __init__(self, action, *args, **kwargs):
-        super(UnknownAction, self).__init__(
-            400, 'unknown_action', f'Unknown action: {action}')
+    error_code = 'unknown_action'
+    status_code = 400
 
 
 class InsufficientMemoryError(ManagerException):
-    INSUFFICIENT_MEMORY_ERROR_CODE = 'insufficient_memory_error'
-
-    def __init__(self, *args, **kwargs):
-        super(InsufficientMemoryError, self).__init__(
-            503, InsufficientMemoryError.INSUFFICIENT_MEMORY_ERROR_CODE,
-            *args, **kwargs)
+    error_code = 'insufficient_memory_error'
+    status_code = 503
 
 
 class SystemInSnapshotRestoreError(ManagerException):
-    IN_SNAPSHOT_RESTORE_ERROR_CODE = 'in_snapshot_restore_error'
-
-    def __init__(self, *args, **kwargs):
-        super(SystemInSnapshotRestoreError, self).__init__(
-            503,
-            SystemInSnapshotRestoreError.IN_SNAPSHOT_RESTORE_ERROR_CODE,
-            *args, **kwargs)
+    error_code = 'in_snapshot_restore_error'
+    status_code = 503
 
 
 class FileSyncServiceError(ManagerException):
-    FILE_SYNC_SERVICE_ERROR_CODE = 'file_sync_service_error'
-
-    def __init__(self, *args, **kwargs):
-        super(FileSyncServiceError, self).__init__(
-            503,
-            FileSyncServiceError.FILE_SYNC_SERVICE_ERROR_CODE,
-            *args, **kwargs)
+    error_code = 'file_sync_service_error'
+    status_code = 503
 
 
 class MissingPremiumPackage(ManagerException):
-    MISSING_PREMIUM_ERROR_CODE = 'missing_premium_package_error'
+    error_code = 'missing_premium_package_error'
+    status_code = 404
 
     def __init__(self, *args, **kwargs):
         message = ('This feature exists only in the premium edition of '
                    'Cloudify.\nPlease contact sales for additional info.')
-        super(MissingPremiumPackage, self).__init__(
-            404, MissingPremiumPackage.MISSING_PREMIUM_ERROR_CODE,
-            message, *args, **kwargs)
+        super(MissingPremiumPackage, self).__init__(message, *args, **kwargs)
 
 
 class ConflictError(ManagerException):
-    CONFLICT_ERROR_CODE = 'conflict_error'
-
-    def __init__(self, *args, **kwargs):
-        super(ConflictError, self).__init__(
-            409, ConflictError.CONFLICT_ERROR_CODE, *args, **kwargs)
+    error_code = 'conflict_error'
+    status_code = 409
 
 
 class AmbiguousName(ManagerException):
-    AMBIGUOUS_NAME_CODE = 'ambiguous_name'
-
-    def __init__(self, *args, **kwargs):
-        super(AmbiguousName, self).__init__(
-            409, AmbiguousName.AMBIGUOUS_NAME_CODE, *args, **kwargs)
+    error_code = 'ambiguous_name'
+    status_code = 409
 
 
 class SQLStorageException(ManagerException):
-    STORAGE_ERROR_CODE = 'storage_error'
-
-    def __init__(self, *args, **kwargs):
-        super(SQLStorageException, self).__init__(
-            409, SQLStorageException.STORAGE_ERROR_CODE, *args, **kwargs)
+    error_code = 'storage_error'
+    status_code = 409
 
 
 class NotFoundError(ManagerException):
-    NOT_FOUND_ERROR_CODE = 'not_found_error'
-
-    def __init__(self, *args, **kwargs):
-        super(NotFoundError, self).__init__(
-            404, NotFoundError.NOT_FOUND_ERROR_CODE, *args, **kwargs)
+    error_code = 'not_found_error'
+    status_code = 404
 
 
 class ParamUrlNotFoundError(ManagerException):
-    PARAM_URL_NOT_FOUND_ERROR_CODE = 'param_url_not_found_error'
-
-    def __init__(self, *args, **kwargs):
-        super(ParamUrlNotFoundError, self).__init__(
-            400, ParamUrlNotFoundError.PARAM_URL_NOT_FOUND_ERROR_CODE,
-            *args, **kwargs)
+    error_code = 'param_url_not_found_error'
+    status_code = 400
 
 
 class DependentExistsError(ManagerException):
-    DEPENDENT_EXISTS_ERROR_CODE = 'dependent_exists_error'
-
-    def __init__(self, *args, **kwargs):
-        super(DependentExistsError, self).__init__(
-            400, DependentExistsError.DEPENDENT_EXISTS_ERROR_CODE,
-            *args, **kwargs)
+    error_code = 'dependent_exists_error'
+    status_code = 400
 
 
 class DeploymentParentNotFound(ManagerException):
-    DEPLOYMENT_PARENT_NOT_FOUND_ERROR_CODE = \
-        'deployment_parent_not_found_error'
-
-    def __init__(self, *args, **kwargs):
-        super(DeploymentParentNotFound, self).__init__(
-            400,
-            DeploymentParentNotFound.DEPLOYMENT_PARENT_NOT_FOUND_ERROR_CODE,
-            *args,
-            **kwargs
-        )
+    error_code = 'deployment_parent_not_found_error'
+    status_code = 400
 
 
 class NonexistentWorkflowError(ManagerException):
-    NONEXISTENT_WORKFLOW_ERROR_CODE = 'nonexistent_workflow_error'
-
-    def __init__(self, *args, **kwargs):
-        super(NonexistentWorkflowError, self).__init__(
-            400,
-            NonexistentWorkflowError.NONEXISTENT_WORKFLOW_ERROR_CODE,
-            *args,
-            **kwargs)
+    error_code = 'nonexistent_workflow_error'
+    status_code = 400
 
 
 class AppNotSecuredError(ManagerException):
-    APP_NOT_SECURED_ERROR_CODE = 'application_not_secured_error'
-
-    def __init__(self, *args, **kwargs):
-        super(AppNotSecuredError, self).__init__(
-            401, AppNotSecuredError.APP_NOT_SECURED_ERROR_CODE,
-            *args, **kwargs)
+    error_code = 'application_not_secured_error'
+    status_code = 401
 
 
 class NoTokenGeneratorError(ManagerException):
-    NO_TOKEN_GENERATOR_ERROR_CODE = 'no_token_generator_error'
-
-    def __init__(self, *args, **kwargs):
-        super(NoTokenGeneratorError, self).__init__(
-            401, NoTokenGeneratorError.NO_TOKEN_GENERATOR_ERROR_CODE,
-            *args, **kwargs)
+    error_code = 'no_token_generator_error'
+    status_code = 401
 
 
 class UnauthorizedError(ManagerException):
-    UNAUTHORIZED_ERROR_CODE = 'unauthorized_error'
+    error_code = 'unauthorized_error'
+    status_code = 401
 
     def __init__(self, extra_info, *args, **kwargs):
         message = 'User unauthorized'
         if extra_info:
-            message = '{0}: {1}'.format(message, extra_info)
-        super(UnauthorizedError, self).__init__(
-            401, UnauthorizedError.UNAUTHORIZED_ERROR_CODE,
-            message, *args, **kwargs)
+            message = f'{message}: {extra_info}'
+        super(UnauthorizedError, self).__init__(message, *args, **kwargs)
 
 
 class NoAuthProvided(UnauthorizedError):
@@ -192,393 +131,179 @@ class NoAuthProvided(UnauthorizedError):
 
 
 class ForbiddenError(ManagerException):
-    FORBIDDEN_ERROR_CODE = 'forbidden_error'
-
-    def __init__(self, *args, **kwargs):
-        super(ForbiddenError, self).__init__(
-            403, ForbiddenError.FORBIDDEN_ERROR_CODE,
-            *args, **kwargs)
+    error_code = 'forbidden_error'
+    status_code = 403
 
 
 class UnsupportedContentTypeError(ManagerException):
-    UNSUPPORTED_CONTENT_TYPE_ERROR_CODE = 'unsupported_content_type_error'
-
-    def __init__(self, *args, **kwargs):
-        super(UnsupportedContentTypeError, self).__init__(
-            415,
-            UnsupportedContentTypeError.UNSUPPORTED_CONTENT_TYPE_ERROR_CODE,
-            *args,
-            **kwargs)
+    error_code = 'unsupported_content_type_error'
+    status_code = 415
 
 
 class BadParametersError(ManagerException):
-    BAD_PARAMETERS_ERROR_CODE = 'bad_parameters_error'
-
-    def __init__(self, *args, **kwargs):
-        super(BadParametersError, self).__init__(
-            400, BadParametersError.BAD_PARAMETERS_ERROR_CODE, *args, **kwargs)
+    error_code = 'bad_parameters_error'
+    status_code = 400
 
 
 class InvalidBlueprintError(ManagerException):
-    INVALID_BLUEPRINT_ERROR_CODE = 'invalid_blueprint_error'
-
-    def __init__(self, *args, **kwargs):
-        super(InvalidBlueprintError, self).__init__(
-            400, InvalidBlueprintError.INVALID_BLUEPRINT_ERROR_CODE,
-            *args, **kwargs)
+    error_code = 'invalid_blueprint_error'
+    status_code = 400
 
 
 class InvalidPluginError(ManagerException):
-    INVALID_PLUGIN_ERROR_CODE = 'invalid_plugin_error'
-
-    def __init__(self, *args, **kwargs):
-        super(InvalidPluginError, self).__init__(
-            400, InvalidPluginError.INVALID_PLUGIN_ERROR_CODE,
-            *args, **kwargs)
+    error_code = 'invalid_plugin_error'
+    status_code = 400
 
 
 class ExistingRunningExecutionError(ManagerException):
-    EXISTING_RUNNING_EXECUTION_ERROR_CODE = 'existing_running_execution_error'
-
-    def __init__(self, *args, **kwargs):
-        super(ExistingRunningExecutionError, self).__init__(
-            400, ExistingRunningExecutionError
-            .EXISTING_RUNNING_EXECUTION_ERROR_CODE, *args, **kwargs)
+    error_code = 'existing_running_execution_error'
+    status_code = 400
 
 
 class GlobalParallelRunningExecutionsLimitReachedError(ManagerException):
-    GLOBAL_PARALLEL_RUNNING_EXECUTIONS_LIMIT_REACHED_ERROR_CODE = \
-        'global_parallel_running_executions_limit_reached_error'
-
-    def __init__(self, *args, **kwargs):
-        super(GlobalParallelRunningExecutionsLimitReachedError, self).__init__(
-            400,
-            GlobalParallelRunningExecutionsLimitReachedError
-            .GLOBAL_PARALLEL_RUNNING_EXECUTIONS_LIMIT_REACHED_ERROR_CODE,
-            *args, **kwargs)
+    error_code = 'global_parallel_running_executions_limit_reached_error'
+    status_code = 400
 
 
 class InvalidExecutionUpdateStatus(ManagerException):
-    INVALID_STATUS_UPDATE = 'invalid_exception_status_update'
-
-    def __init__(self, *args, **kwargs):
-        super(InvalidExecutionUpdateStatus, self).__init__(
-            400,
-            self.INVALID_STATUS_UPDATE,
-            *args, **kwargs)
+    error_code = 'invalid_exception_status_update'
+    status_code = 400
 
 
 class UnsupportedChangeInDeploymentUpdate(ManagerException):
-    UNSUPPORTED_CHANGE_IN_DEPLOYMENT_UPDATE = \
-        'unsupported_change_in_deployment_update'
-
-    def __init__(self, *args, **kwargs):
-        super(UnsupportedChangeInDeploymentUpdate, self).__init__(
-            400, UnsupportedChangeInDeploymentUpdate
-            .UNSUPPORTED_CHANGE_IN_DEPLOYMENT_UPDATE, *args, **kwargs)
+    error_code = 'unsupported_change_in_deployment_update'
+    status_code = 400
 
 
 class PluginsUpdateError(ManagerException):
-    PLUGINS_UPDATE_FAILED = \
-        'plugins_update_failed'
-
-    def __init__(self, *args, **kwargs):
-        super(PluginsUpdateError, self).__init__(
-            400,
-            PluginsUpdateError.PLUGINS_UPDATE_FAILED,
-            *args,
-            **kwargs)
+    error_code = 'plugins_update_failed'
+    status_code = 400
 
 
 class ExistingStartedDeploymentModificationError(ManagerException):
-    EXISTING_STARTED_DEPLOYMENT_MODIFICATION_ERROR = \
-        'existing_started_deployment_modification_error'
-
-    def __init__(self, *args, **kwargs):
-        super(ExistingStartedDeploymentModificationError, self).__init__(
-            400, ExistingStartedDeploymentModificationError
-            .EXISTING_STARTED_DEPLOYMENT_MODIFICATION_ERROR, *args, **kwargs)
+    error_code = 'existing_started_deployment_modification_error'
+    status_code = 400
 
 
 class DeploymentModificationAlreadyEndedError(ManagerException):
-    DEPLOYMENT_MODIFICATION_ALREADY_ENDED_ERROR = \
-        'deployment_modification_already_ended_error'
-
-    def __init__(self, *args, **kwargs):
-        super(DeploymentModificationAlreadyEndedError, self).__init__(
-            400, DeploymentModificationAlreadyEndedError
-            .DEPLOYMENT_MODIFICATION_ALREADY_ENDED_ERROR, *args, **kwargs)
+    error_code = 'deployment_modification_already_ended_error'
+    status_code = 400
 
 
 class IllegalActionError(ManagerException):
-    ILLEGAL_ACTION_ERROR_CODE = 'illegal_action_error'
-
-    def __init__(self, *args, **kwargs):
-        super(IllegalActionError, self).__init__(
-            400, IllegalActionError.ILLEGAL_ACTION_ERROR_CODE,
-            *args, **kwargs)
+    error_code = 'illegal_action_error'
+    status_code = 400
 
 
 class IllegalExecutionParametersError(ManagerException):
-    ILLEGAL_EXECUTION_PARAMETERS_ERROR_CODE =\
-        'illegal_execution_parameters_error'
-
-    def __init__(self, *args, **kwargs):
-        super(IllegalExecutionParametersError, self).__init__(
-            400, IllegalExecutionParametersError.
-            ILLEGAL_EXECUTION_PARAMETERS_ERROR_CODE,
-            *args, **kwargs)
+    error_code = 'illegal_execution_parameters_error'
+    status_code = 400
 
 
 class NoSuchIncludeFieldError(ManagerException):
-    NO_SUCH_INCLUDE_FIELD_ERROR = 'no_such_include_field_error'
-
-    def __init__(self, *args, **kwargs):
-        super(NoSuchIncludeFieldError, self).__init__(
-            400,
-            NoSuchIncludeFieldError.NO_SUCH_INCLUDE_FIELD_ERROR,
-            *args,
-            **kwargs
-        )
+    error_code = 'no_such_include_field_error'
+    status_code = 400
 
 
 class DeploymentCreationError(ManagerException):
     """An error during create-deployment-environment"""
-    DEPLOYMENT_CREATION_ERROR_CODE = 'deployment_creation_error'
-
-    def __init__(self, *args, **kwargs):
-        super(DeploymentCreationError, self).__init__(
-            400,
-            DeploymentCreationError.DEPLOYMENT_CREATION_ERROR_CODE,
-            *args, **kwargs)
+    error_code = 'deployment_creation_error'
+    status_code = 400
 
 
 class DeploymentEnvironmentCreationInProgressError(ManagerException):
-    DEPLOYMENT_ENVIRONMENT_CREATION_IN_PROGRESS_ERROR_CODE = \
-        'deployment_environment_creation_in_progress_error'
-
-    def __init__(self, *args, **kwargs):
-        super(DeploymentEnvironmentCreationInProgressError, self).__init__(
-            400,
-            DeploymentEnvironmentCreationInProgressError
-            .DEPLOYMENT_ENVIRONMENT_CREATION_IN_PROGRESS_ERROR_CODE,
-            *args, **kwargs)
+    error_code = 'deployment_environment_creation_in_progress_error'
+    status_code = 400
 
 
 class DeploymentEnvironmentCreationPendingError(ManagerException):
-    DEPLOYMENT_ENVIRONMENT_CREATION_PENDING_ERROR_CODE = \
-        'deployment_environment_creation_pending_error'
-
-    def __init__(self, *args, **kwargs):
-        super(DeploymentEnvironmentCreationPendingError, self).__init__(
-            400,
-            DeploymentEnvironmentCreationPendingError
-            .DEPLOYMENT_ENVIRONMENT_CREATION_PENDING_ERROR_CODE,
-            *args, **kwargs)
+    error_code = 'deployment_environment_creation_pending_error'
+    status_code = 400
 
 
 class MissingRequiredDeploymentInputError(ManagerException):
-    ERROR_CODE = 'missing_required_deployment_input_error'
-
-    def __init__(self, *args, **kwargs):
-        super(MissingRequiredDeploymentInputError, self).__init__(
-            400,
-            MissingRequiredDeploymentInputError.ERROR_CODE,
-            *args,
-            **kwargs
-        )
+    error_code = 'missing_required_deployment_input_error'
+    status_code = 400
 
 
 class UnknownDeploymentInputError(ManagerException):
-    ERROR_CODE = 'unknown_deployment_input_error'
-
-    def __init__(self, *args, **kwargs):
-        super(UnknownDeploymentInputError, self).__init__(
-            400,
-            UnknownDeploymentInputError.ERROR_CODE,
-            *args,
-            **kwargs
-        )
+    error_code = 'unknown_deployment_input_error'
+    status_code = 400
 
 
 class DeploymentInputEvaluationError(ManagerException):
-    ERROR_CODE = 'deployment_input_evaluation_error'
-
-    def __init__(self, *args, **kwargs):
-        super(DeploymentInputEvaluationError, self).__init__(
-            400,
-            DeploymentInputEvaluationError.ERROR_CODE,
-            *args,
-            **kwargs
-        )
+    error_code = 'deployment_input_evaluation_error'
+    status_code = 400
 
 
 class ConstraintError(ManagerException):
-    ERROR_CODE = 'constraint_error'
-
-    def __init__(self, *args, **kwargs):
-        super(ConstraintError, self).__init__(
-            400,
-            ConstraintError.ERROR_CODE,
-            *args,
-            **kwargs
-        )
+    error_code = 'constraint_error'
+    status_code = 400
 
 
 class UnknownDeploymentSecretError(ManagerException):
-    ERROR_CODE = 'unknown_deployment_secret_error'
-
-    def __init__(self, *args, **kwargs):
-        super(UnknownDeploymentSecretError, self).__init__(
-            400,
-            UnknownDeploymentSecretError.ERROR_CODE,
-            *args,
-            **kwargs
-        )
+    error_code = 'unknown_deployment_secret_error'
+    status_code = 400
 
 
 class UnsupportedDeploymentGetSecretError(ManagerException):
-    ERROR_CODE = 'unknown_deployment_secret_error'
-
-    def __init__(self, *args, **kwargs):
-        super(UnsupportedDeploymentGetSecretError, self).__init__(
-            400,
-            UnsupportedDeploymentGetSecretError.ERROR_CODE,
-            *args,
-            **kwargs
-        )
+    error_code = 'unknown_deployment_secret_error'
+    status_code = 400
 
 
 class DeploymentOutputsEvaluationError(ManagerException):
-    ERROR_CODE = 'deployment_outputs_evaluation_error'
-
-    def __init__(self, *args, **kwargs):
-        super(DeploymentOutputsEvaluationError, self).__init__(
-            400,
-            DeploymentOutputsEvaluationError.ERROR_CODE,
-            *args,
-            **kwargs
-        )
+    error_code = 'deployment_outputs_evaluation_error'
+    status_code = 400
 
 
 class DeploymentCapabilitiesEvaluationError(ManagerException):
-    ERROR_CODE = 'deployment_capabilities_evaluation_error'
-
-    def __init__(self, *args, **kwargs):
-        super(DeploymentCapabilitiesEvaluationError, self).__init__(
-            400,
-            DeploymentCapabilitiesEvaluationError.ERROR_CODE,
-            *args,
-            **kwargs
-        )
+    error_code = 'deployment_capabilities_evaluation_error'
+    status_code = 400
 
 
 class FunctionsEvaluationError(ManagerException):
-    ERROR_CODE = 'functions_evaluation_error'
-
-    def __init__(self, *args, **kwargs):
-        super(FunctionsEvaluationError, self).__init__(
-            400,
-            FunctionsEvaluationError.ERROR_CODE,
-            *args,
-            **kwargs
-        )
+    error_code = 'functions_evaluation_error'
+    status_code = 400
 
 
 class UnknownModificationStageError(ManagerException):
-    ERROR_CODE = 'unknown_modification_stage_error'
-
-    def __init__(self, *args, **kwargs):
-        super(UnknownModificationStageError, self).__init__(
-            400,
-            UnknownModificationStageError.ERROR_CODE,
-            *args,
-            **kwargs
-        )
+    error_code = 'unknown_modification_stage_error'
+    status_code = 400
 
 
 class ResolverInstantiationError(ManagerException):
-    ERROR_CODE = 'resolver_instantiation_error'
-
-    def __init__(self, *args, **kwargs):
-        super(ResolverInstantiationError, self).__init__(
-            400,
-            ResolverInstantiationError.ERROR_CODE,
-            *args,
-            **kwargs
-        )
+    error_code = 'resolver_instantiation_error'
+    status_code = 400
 
 
 class MethodNotAllowedError(ManagerException):
-    ERROR_CODE = 'method_not_allowed_error'
-
-    def __init__(self, *args, **kwargs):
-        super(MethodNotAllowedError, self).__init__(
-            405,
-            MethodNotAllowedError.ERROR_CODE,
-            *args,
-            **kwargs
-        )
+    error_code = 'method_not_allowed_error'
+    status_code = 405
 
 
 class SnapshotActionError(ManagerException):
-    ERROR_CODE = 'snapshot_action_error'
-
-    def __init__(self, *args, **kwargs):
-        super(SnapshotActionError, self).__init__(
-            400,
-            SnapshotActionError.ERROR_CODE,
-            *args,
-            **kwargs
-        )
+    error_code = 'snapshot_action_error'
+    status_code = 400
 
 
 class PluginInUseError(ManagerException):
-    ERROR_CODE = 'plugin_in_use'
-
-    def __init__(self, *args, **kwargs):
-        super(PluginInUseError, self).__init__(
-            405,
-            PluginInUseError.ERROR_CODE,
-            *args,
-            **kwargs
-        )
+    error_code = 'plugin_in_use'
+    status_code = 405
 
 
 class BlueprintInUseError(ManagerException):
-    ERROR_CODE = 'blueprint_in_use'
-
-    def __init__(self, *args, **kwargs):
-        super(BlueprintInUseError, self).__init__(
-            405,
-            BlueprintInUseError.ERROR_CODE,
-            *args,
-            **kwargs
-        )
+    error_code = 'blueprint_in_use'
+    status_code = 405
 
 
 class PluginInstallationError(ManagerException):
-    ERROR_CODE = 'plugin_installation_error'
-
-    def __init__(self, *args, **kwargs):
-        super(PluginInstallationError, self).__init__(
-                400,
-                PluginInstallationError.ERROR_CODE,
-                *args,
-                **kwargs
-        )
+    error_code = 'plugin_installation_error'
+    status_code = 400
 
 
 class PluginInstallationTimeout(ManagerException):
-    ERROR_CODE = 'plugin_installation_timeout'
-
-    def __init__(self, *args, **kwargs):
-        super(PluginInstallationTimeout, self).__init__(
-            400,
-            PluginInstallationTimeout.ERROR_CODE,
-            *args,
-            **kwargs
-        )
+    error_code = 'plugin_installation_timeout'
+    status_code = 400
 
 
 class PluginDistributionNotSupported(PluginInstallationError):
@@ -610,20 +335,12 @@ class BlueprintAlreadyExistsException(Exception):
 class DeploymentPluginNotFound(ManagerException):
     """ Raised when a plugin is listed in the blueprint but not installed
         on the manager"""
-    ERROR_CODE = 'deployment_plugin_not_found'
-
-    def __init__(self, *args, **kwargs):
-        super(DeploymentPluginNotFound, self).__init__(
-            400,
-            DeploymentPluginNotFound.ERROR_CODE,
-            *args,
-            **kwargs
-        )
+    error_code = 'deployment_plugin_not_found'
+    status_code = 400
 
 
 class TenantNotProvided(ForbiddenError):
-    def __init__(self, *args, **kwargs):
-        super(TenantNotProvided, self).__init__(*args, **kwargs)
+    pass
 
 
 class IncompatibleClusterArchitectureError(ManagerException):
@@ -633,15 +350,8 @@ class IncompatibleClusterArchitectureError(ManagerException):
 
     i.e: Master is all-in-one and slave has an external database
     """
-    ERROR_CODE = 'incompatible_cluster_architecture'
-
-    def __init__(self, *args, **kwargs):
-        super(IncompatibleClusterArchitectureError, self).__init__(
-            400,
-            IncompatibleClusterArchitectureError.ERROR_CODE,
-            *args,
-            **kwargs
-        )
+    error_code = 'incompatible_cluster_architecture'
+    status_code = 400
 
 
 class InvalidCloudifyLicense(ManagerException):
@@ -652,36 +362,21 @@ class InvalidCloudifyLicense(ManagerException):
        match.
     2. The license version is older than the Manager`s version.
     """
-    ERROR_CODE = 'unverified_cloudify_license'
-
-    def __init__(self, *args, **kwargs):
-        super(InvalidCloudifyLicense, self).__init__(
-            400,
-            InvalidCloudifyLicense.ERROR_CODE,
-            *args,
-            **kwargs
-        )
+    error_code = 'unverified_cloudify_license'
+    status_code = 400
 
 
 class InvalidYamlFormat(ManagerException):
-    ERROR_CODE = 'invalid_yaml_format'
-
-    def __init__(self, *args, **kwargs):
-        super(InvalidYamlFormat, self).__init__(
-            400,
-            InvalidYamlFormat.ERROR_CODE,
-            *args,
-            **kwargs
-        )
+    error_code = 'invalid_yaml_format'
+    status_code = 400
 
 
 class BadFilterRule(ManagerException):
-    ERROR_CODE = 'invalid_filter_rule'
+    error_code = 'invalid_filter_rule'
+    status_code = 400
 
     def __init__(self, err_filter_rule, suffix='', *args, **kwargs):
         super(BadFilterRule, self).__init__(
-            400,
-            BadFilterRule.ERROR_CODE,
             f"The filter rule {err_filter_rule} is not in the right format. "
             f"{suffix}",
             *args,
