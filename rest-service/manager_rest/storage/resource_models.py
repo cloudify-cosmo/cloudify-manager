@@ -1846,7 +1846,9 @@ class TasksGraph(SQLResourceBase):
             unique=True
         ),
     )
+    is_id_unique = False
 
+    id = db.Column(db.Text, index=True, default=lambda: str(uuid.uuid4()))
     name = db.Column(db.Text, index=True)
     created_at = db.Column(UTCDateTime, nullable=False, index=True)
 
@@ -1859,12 +1861,13 @@ class TasksGraph(SQLResourceBase):
     execution_id = association_proxy('execution', 'id')
 
 
-class Operation(SQLResourceBase):
+class Operation(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'operations'
+    is_id_unique = False
 
+    id = db.Column(db.Text, index=True, default=lambda: str(uuid.uuid4()))
     name = db.Column(db.Text)
     state = db.Column(db.Text, nullable=False)
-    created_at = db.Column(UTCDateTime, nullable=False, index=True)
 
     dependencies = db.Column(db.ARRAY(db.Text))
     type = db.Column(db.Text)
