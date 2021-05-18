@@ -596,11 +596,11 @@ class DeploymentLabelsDependenciesTest(BaseServerTestCase):
         self.put_deployment_with_labels([{'csys-env-type': 'acidic'},
                                          {'key2': 'val2'},
                                          {'key3': 'val3'}],
-                                        'acidic')
+                                        'basic')
         self.put_deployment_with_labels([{'csys-env-type': 'controller'},
                                          {'key1': 'val1'},
                                          {'key3': 'val3'}],
                                         'controller')
         deployments = self.client.deployments.list(sort='environment_type')
         self.assertEqual([dep.id for dep in deployments],
-                         ['dep1', 'dep2', 'acidic', 'controller', 'subcloud'])
+                         ['dep1', 'dep2', 'basic', 'controller', 'subcloud'])
