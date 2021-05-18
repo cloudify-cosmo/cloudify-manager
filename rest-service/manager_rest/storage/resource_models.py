@@ -467,7 +467,6 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             flask_fields.Nested(ExecutionSchedule.resource_fields))
         fields['deployment_groups'] = flask_fields.List(flask_fields.String)
         fields['latest_execution_status'] = flask_fields.String()
-        fields['environment_type'] = flask_fields.String()
         fields['latest_execution_total_operations'] = flask_fields.Integer()
         fields['latest_execution_finished_operations'] = flask_fields.Integer()
         return fields
@@ -484,7 +483,6 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         dep_dict['latest_execution_status'] = self.latest_execution_status
         if not dep_dict.get('installation_status'):
             dep_dict['installation_status'] = DeploymentState.INACTIVE
-        dep_dict['environment_type'] = self.environment_type
         dep_dict['latest_execution_total_operations'] = \
             self.latest_execution_total_operations
         dep_dict['latest_execution_finished_operations'] = \
