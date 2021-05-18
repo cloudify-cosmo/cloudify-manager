@@ -23,7 +23,7 @@ from flask_restful import fields as flask_fields
 
 from sqlalchemy import case
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy import func, select, table, column
+from sqlalchemy import func, select, table, column, exists
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import validates
@@ -467,7 +467,6 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             flask_fields.Nested(ExecutionSchedule.resource_fields))
         fields['deployment_groups'] = flask_fields.List(flask_fields.String)
         fields['latest_execution_status'] = flask_fields.String()
-        fields['environment_type'] = flask_fields.String()
         fields['latest_execution_total_operations'] = flask_fields.Integer()
         fields['latest_execution_finished_operations'] = flask_fields.Integer()
         return fields
@@ -484,7 +483,6 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         dep_dict['latest_execution_status'] = self.latest_execution_status
         if not dep_dict.get('installation_status'):
             dep_dict['installation_status'] = DeploymentState.INACTIVE
-        dep_dict['environment_type'] = self.environment_type
         dep_dict['latest_execution_total_operations'] = \
             self.latest_execution_total_operations
         dep_dict['latest_execution_finished_operations'] = \
@@ -672,12 +670,28 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             parameters={'delete_logs': delete_logs},
         )
 
-    @property
+    @hybrid_property
     def environment_type(self):
         for label in self.labels:
             if label.key == 'csys-env-type':
                 return label.value
         return ''
+
+    @environment_type.expression
+    def environment_type(cls):
+        labels_table = DeploymentLabel.__table__
+        env_type_stmt = (
+            select([labels_table.c.value]).
+            where(db.and_(
+                    labels_table.c.key == 'csys-env-type',
+                    labels_table.c._labeled_model_fk == cls._storage_id)).
+            distinct().
+            limit(1)
+        )
+
+        return case([(exists(env_type_stmt),
+                      env_type_stmt.label('environment_type'))],
+                    else_='')
 
     @property
     def latest_execution_finished_operations(self):
