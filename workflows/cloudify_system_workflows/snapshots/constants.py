@@ -71,6 +71,7 @@ V_5_0_5 = ManagerVersion('5.0.5')
 V_5_1_0 = ManagerVersion('5.1.0')
 V_5_2_0 = ManagerVersion('5.2.0')
 V_5_3_0 = ManagerVersion('5.3.0')
+V_6_0_0 = ManagerVersion('6.0.0')
 
 
 class VisibilityState(object):
