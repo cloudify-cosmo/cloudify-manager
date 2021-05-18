@@ -8,6 +8,7 @@ Create Date: 2021-05-17 15:10:26.844406
 
 from typing import NamedTuple
 
+from alembic import op
 import sqlalchemy as sa
 
 from manager_rest.storage import models_base
@@ -81,15 +82,19 @@ def downgrade():
 
 def _change_number_to_integer_in_config_schema():
     for config_row in CONFIG_SCHEMA_UPDATE:
-        config_table.update().\
+        op.execute(
+            config_table.update().
             where(sa.and_(config_table.c.name == config_row.name,
-                          config_table.c.scope == config_row.scope)).\
+                          config_table.c.scope == config_row.scope)).
             values(schema=config_row.schema_6_1)
+        )
 
 
 def _change_integer_to_number_in_config_schema():
     for config_row in CONFIG_SCHEMA_UPDATE:
-        config_table.update().\
+        op.execute(
+            config_table.update().
             where(sa.and_(config_table.c.name == config_row.name,
-                          config_table.c.scope == config_row.scope)).\
+                          config_table.c.scope == config_row.scope)).
             values(schema=config_row.schema_6_0)
+        )
