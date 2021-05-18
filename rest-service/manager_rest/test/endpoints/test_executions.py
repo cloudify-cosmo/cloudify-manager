@@ -138,7 +138,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                                          'mock_workflow',
                                          'not_a_dictionary')
         self.assertEqual(
-            manager_exceptions.BadParametersError.BAD_PARAMETERS_ERROR_CODE,
+            manager_exceptions.BadParametersError.error_code,
             cm.exception.error_code)
 
         with self.assertRaises(exceptions.CloudifyClientError) as cm:
@@ -146,7 +146,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                                          'mock_workflow',
                                          '[still_not_a_dictionary]')
         self.assertEqual(
-            manager_exceptions.BadParametersError.BAD_PARAMETERS_ERROR_CODE,
+            manager_exceptions.BadParametersError.error_code,
             cm.exception.error_code)
 
     def test_passing_parameters_parameter_to_execute(self):
@@ -172,7 +172,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         self.assertTrue('status' in resp.json['message'])
         self.assertEqual(
             resp.json['error_code'],
-            manager_exceptions.BadParametersError.BAD_PARAMETERS_ERROR_CODE)
+            manager_exceptions.BadParametersError.error_code)
 
     def test_bad_update_execution_status(self):
         execution = self.test_get_execution_by_id()
@@ -341,8 +341,7 @@ class ExecutionsTestCase(BaseServerTestCase):
             if expect_failure:
                 self.assertEqual(400, cancel_response.status_code)
                 self.assertEqual(
-                    manager_exceptions.IllegalActionError.
-                    ILLEGAL_ACTION_ERROR_CODE,
+                    manager_exceptions.IllegalActionError.error_code,
                     cancel_response.json['error_code'])
             else:
                 self.assertEqual(200, cancel_response.status_code)
@@ -381,7 +380,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         self.assertEqual(cancel_response.status_code, 404)
         self.assertEqual(
             cancel_response.json['error_code'],
-            manager_exceptions.NotFoundError.NOT_FOUND_ERROR_CODE)
+            manager_exceptions.NotFoundError.error_code)
 
     def test_execution_bad_action(self):
         execution = self.test_get_execution_by_id()
@@ -392,7 +391,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         self.assertEqual(cancel_response.status_code, 400)
         self.assertEqual(
             cancel_response.json['error_code'],
-            manager_exceptions.BadParametersError.BAD_PARAMETERS_ERROR_CODE)
+            manager_exceptions.BadParametersError.error_code)
 
     def test_cancel_no_action(self):
         execution = self.test_get_execution_by_id()

@@ -113,7 +113,7 @@ class ManagerConfigTestCase(base_test.BaseServerTestCase):
             self.client.manager.get_config(name='x')
         self.assertEqual(
             cm.exception.error_code,
-            manager_exceptions.AmbiguousName.AMBIGUOUS_NAME_CODE)
+            manager_exceptions.AmbiguousName.error_code)
         self.assertIn('Expected 1 value, but found 2', str(cm.exception))
 
         result = self.client.manager.get_config(name='rest.x')
