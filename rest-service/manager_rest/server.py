@@ -159,7 +159,9 @@ class CloudifyFlaskApp(Flask):
         Set SQLAlchemy specific configurations, init the db object and create
         the tables if necessary
         """
-        self.config['SQLALCHEMY_POOL_SIZE'] = 1
+        self.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+            'pool_size': 1
+        }
         self.update_db_uri()
         self.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
         db.init_app(self)  # Prepare the app for use with flask-sqlalchemy
