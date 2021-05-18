@@ -14,12 +14,6 @@
 # limitations under the License.
 ############
 
-from imp import find_module
+from importlib.util import find_spec
 
-
-try:
-    find_module('cloudify_premium')
-except ImportError:
-    premium_enabled = False
-else:
-    premium_enabled = True
+premium_enabled = find_spec('cloudify_premium') is not None
