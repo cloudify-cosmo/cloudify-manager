@@ -590,7 +590,7 @@ class DeploymentLabelsDependenciesTest(BaseServerTestCase):
         dep2 = self.put_deployment_with_labels([{'key1': 'val1'},
                                                 {'key2': 'val3'},
                                                 {'key3': 'val3'}],
-                                                'dep2')
+                                               'dep2')
         self.assertEqual(dep2.environment_type, '')
 
         subcloud = self.put_deployment_with_labels(
