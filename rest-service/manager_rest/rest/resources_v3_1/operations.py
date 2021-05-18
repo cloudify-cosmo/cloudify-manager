@@ -28,7 +28,8 @@ from manager_rest.rest.rest_decorators import (
 )
 from manager_rest.storage import (
     get_storage_manager,
-    models
+    models,
+    db
 )
 from manager_rest.security.authorization import authorize
 from manager_rest.resource_manager import get_resource_manager
@@ -94,12 +95,31 @@ class OperationsId(SecuredResource):
             if not instance.is_nop and \
                     old_state not in TERMINATED_STATES and \
                     instance.state in TERMINATED_STATES:
-                execution = self._get_execution(sm, instance)
-                if execution and execution.finished_operations is not None:
-                    execution.finished_operations += 1
-                sm.update(execution, modified_attrs=('finished_operations',))
-            instance = sm.update(instance)
+                self._increase_executions_finished_count(instance)
+            instance = sm.update(instance, modified_attrs=('state',))
         return instance
+
+    def _increase_executions_finished_count(self, operation):
+        """Increase finished_operations for this operation's execution
+
+        This is a separate sql-level update query, rather than ORM-level
+        calls, for performance: the operation state-update call is on
+        the critical path for all operations in a workflow; this saves
+        about 3ms over the ORM approach (which requires fetching the
+        execution; more if the DB is not local).
+        """
+        exc_table = models.Execution.__table__
+        tg_table = models.TasksGraph.__table__
+        db.session.execute(
+            exc_table.update()
+            .where(db.and_(
+                tg_table.c._execution_fk == exc_table.c._storage_id,
+                tg_table.c._storage_id == operation._tasks_graph_fk,
+            ))
+            .values(
+                finished_operations=exc_table.c.finished_operations + 1
+            )
+        )
 
     @authorize('operations')
     @marshal_with(models.Operation)
