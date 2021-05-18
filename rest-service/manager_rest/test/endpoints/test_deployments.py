@@ -105,8 +105,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                       str(context.exception))
         self.assertEqual(
             context.exception.error_code,
-            manager_exceptions.DependentExistsError.
-            DEPENDENT_EXISTS_ERROR_CODE)
+            manager_exceptions.DependentExistsError.error_code)
 
     def test_deployment_already_exists(self):
         (blueprint_id,
@@ -120,7 +119,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                         deployment_response.json['message'])
         self.assertEqual(409, deployment_response.status_code)
         self.assertEqual(deployment_response.json['error_code'],
-                         manager_exceptions.ConflictError.CONFLICT_ERROR_CODE)
+                         manager_exceptions.ConflictError.error_code)
 
     def test_get_by_id(self):
         (blueprint_id, deployment_id, blueprint_response,
@@ -184,9 +183,9 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             self.fail()
         except CloudifyClientError as e:
             self.assertEqual(400, e.status_code)
-            error = manager_exceptions.NonexistentWorkflowError
-            self.assertEqual(error.NONEXISTENT_WORKFLOW_ERROR_CODE,
-                             e.error_code)
+            self.assertEqual(
+                manager_exceptions.NonexistentWorkflowError.error_code,
+                e.error_code)
 
     def test_listing_executions_for_nonexistent_deployment(self):
         result = self.client.executions.list(deployment_id='doesnotexist')
@@ -256,8 +255,9 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             self.client.deployments.delete(deployment_id)
         except CloudifyClientError as e:
             self.assertEqual(e.status_code, 400)
-            self.assertEqual(e.error_code, manager_exceptions.
-                             DependentExistsError.DEPENDENT_EXISTS_ERROR_CODE)
+            self.assertEqual(
+                e.error_code,
+                manager_exceptions.DependentExistsError.error_code)
 
     def test_delete_deployment_with_uninitialized_nodes(self):
         # simulates a deletion of a deployment right after its creation
@@ -299,7 +299,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         self.assertEqual(404, resp.status_code)
         self.assertEqual(
             resp.json['error_code'],
-            manager_exceptions.NotFoundError.NOT_FOUND_ERROR_CODE)
+            manager_exceptions.NotFoundError.error_code)
 
     def test_get_nodes_of_deployment(self):
 
@@ -522,9 +522,9 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                 deployment_id=id_)
 
         self.assertEqual(400, cm.exception.status_code)
-        self.assertEqual(manager_exceptions.DeploymentPluginNotFound.
-                         ERROR_CODE,
-                         cm.exception.error_code)
+        self.assertEqual(
+            manager_exceptions.DeploymentPluginNotFound.error_code,
+            cm.exception.error_code)
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
@@ -538,9 +538,9 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                 blueprint_id=id_,
                 deployment_id=id_)
         self.assertEqual(400, cm.exception.status_code)
-        self.assertEqual(manager_exceptions.DeploymentPluginNotFound.
-                         ERROR_CODE,
-                         cm.exception.error_code)
+        self.assertEqual(
+            manager_exceptions.DeploymentPluginNotFound.error_code,
+            cm.exception.error_code)
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
@@ -584,8 +584,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                 deployment_id=id_,
                 skip_plugins_validation='invalid_arg')
         self.assertEqual(400, cm.exception.status_code)
-        self.assertEqual(manager_exceptions.BadParametersError.
-                         BAD_PARAMETERS_ERROR_CODE,
+        self.assertEqual(manager_exceptions.BadParametersError.error_code,
                          cm.exception.error_code)
 
     @attr(client_min_version=3.1,

@@ -210,8 +210,7 @@ class PluginsId(resources_v2_1.PluginsId):
             )
             return get_resource_manager().install_plugin(plugin)
         else:
-            raise manager_exceptions.ManagerException(
-                400, 'Unknown action: {0}'.format(action_dict.get('action')))
+            raise manager_exceptions.UnknownAction(action_dict.get('action'))
 
     @authorize('plugin_upload')
     def put(self, plugin_id, **kwargs):

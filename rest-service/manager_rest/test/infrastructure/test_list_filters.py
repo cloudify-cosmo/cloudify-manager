@@ -156,8 +156,8 @@ class ResourceListFiltersTestCase(BaseListTest):
 
     def assert_bad_parameter_error(self, fields, e):
         self.assertEqual(400, e.status_code)
-        error = manager_exceptions.BadParametersError
-        self.assertEqual(error.BAD_PARAMETERS_ERROR_CODE, e.error_code)
+        self.assertEqual(
+          manager_exceptions.BadParametersError.error_code, e.error_code)
         for filter_val in fields:
             self.assertIn(filter_val,
                           str(e),
