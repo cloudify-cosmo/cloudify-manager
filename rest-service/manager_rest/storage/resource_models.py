@@ -684,10 +684,9 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         labels_table = DeploymentLabel.__table__
         env_type_stmt = (
             select([labels_table.c.value]).
-            select_from(
-                labels_table.outerjoin(
-                cls, labels_table.c._labeled_model_fk == cls._storage_id)).
-            where(labels_table.c.key == 'csys-env-type').
+            where(db.and_(
+                    labels_table.c.key == 'csys-env-type',
+                    labels_table.c._labeled_model_fk == cls._storage_id)).
             distinct().
             limit(1)
         )
