@@ -59,7 +59,7 @@ class MissingPremiumPackage(ManagerException):
     def __init__(self, *args, **kwargs):
         message = ('This feature exists only in the premium edition of '
                    'Cloudify.\nPlease contact sales for additional info.')
-        super(MissingPremiumPackage, self).__init__(message, *args, **kwargs)
+        super().__init__(message, *args, **kwargs)
 
 
 class ConflictError(ManagerException):
@@ -120,14 +120,13 @@ class UnauthorizedError(ManagerException):
         message = 'User unauthorized'
         if extra_info:
             message = f'{message}: {extra_info}'
-        super(UnauthorizedError, self).__init__(message, *args, **kwargs)
+        super().__init__(message, *args, **kwargs)
 
 
 class NoAuthProvided(UnauthorizedError):
     """Not authorized, because authentication was not provided."""
     def __init__(self, *args, **kwargs):
-        super(NoAuthProvided, self).__init__(
-            'No authentication info provided', *args, **kwargs)
+        super().__init__('No authentication info provided', *args, **kwargs)
 
 
 class ForbiddenError(ManagerException):
@@ -327,8 +326,8 @@ class ArchiveTypeError(RuntimeError):
 
 
 class BlueprintAlreadyExistsException(Exception):
-    def __init__(self, blueprint_id, *args):
-        Exception.__init__(self, args)
+    def __init__(self, blueprint_id, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.blueprint_id = blueprint_id
 
 
@@ -376,7 +375,7 @@ class BadFilterRule(ManagerException):
     status_code = 400
 
     def __init__(self, err_filter_rule, suffix='', *args, **kwargs):
-        super(BadFilterRule, self).__init__(
+        super().__init__(
             f"The filter rule {err_filter_rule} is not in the right format. "
             f"{suffix}",
             *args,
