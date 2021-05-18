@@ -332,8 +332,7 @@ class BlueprintAlreadyExistsException(Exception):
 
 
 class DeploymentPluginNotFound(ManagerException):
-    """ Raised when a plugin is listed in the blueprint but not installed
-        on the manager"""
+    """A plugin is listed in the blueprint but not installed on the manager"""
     error_code = 'deployment_plugin_not_found'
     status_code = 400
 
@@ -343,19 +342,17 @@ class TenantNotProvided(ForbiddenError):
 
 
 class IncompatibleClusterArchitectureError(ManagerException):
-    """
-    Raised when a cluster node with architecture X is trying to join a cluster
-    with architecture Y
+    """Node is trying to join a cluster with a different architecture
 
-    i.e: Master is all-in-one and slave has an external database
+    eg. node A is all-in-one and node B has an external database
     """
     error_code = 'incompatible_cluster_architecture'
     status_code = 400
 
 
 class InvalidCloudifyLicense(ManagerException):
-    """
-    Raised when the uploaded Cloudify license can't be verified.
+    """The uploaded Cloudify license can't be verified.
+
     This can happen when:
     1. The license has been tampered and the signature does not
        match.
