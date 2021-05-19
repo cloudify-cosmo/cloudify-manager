@@ -28,7 +28,10 @@ from manager_rest.resource_manager import (
     get_resource_manager,
 )
 from manager_rest.rest import requests_schema
-from manager_rest.rest.rest_decorators import marshal_with
+from manager_rest.rest.rest_decorators import (
+    marshal_with,
+    not_while_cancelling
+)
 from manager_rest.rest.rest_utils import (
     get_args_and_verify_arguments,
     get_json_and_verify_params,
@@ -82,6 +85,7 @@ class Executions(SecuredResource):
             filters=deployment_id_filter).items
 
     @authorize('execution_start')
+    @not_while_cancelling
     @marshal_with(models.Execution)
     def post(self, **kwargs):
         """Execute a workflow"""

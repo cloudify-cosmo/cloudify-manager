@@ -211,6 +211,7 @@ class DeploymentsId(resources_v1.DeploymentsId):
 
     @authorize('deployment_create')
     @rest_decorators.marshal_with(models.Deployment)
+    @rest_decorators.not_while_cancelling
     def put(self, deployment_id, **kwargs):
         """
         Create a deployment
