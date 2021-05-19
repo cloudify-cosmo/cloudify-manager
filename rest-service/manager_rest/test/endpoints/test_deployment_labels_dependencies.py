@@ -582,3 +582,38 @@ class DeploymentLabelsDependenciesTest(BaseServerTestCase):
         deployment = self.client.deployments.get('env')
         self.assertEqual(deployment.sub_environments_count, 3)
         self.assertEqual(deployment.sub_services_count, 2)
+
+    def test_csys_env_type(self):
+        _, _, _, dep1 = self.put_deployment(deployment_id='dep1')
+        self.assertEqual(dep1.environment_type, '')
+
+        dep2 = self.put_deployment_with_labels([{'key1': 'val1'},
+                                                {'key2': 'val3'},
+                                                {'key3': 'val3'}],
+                                               'dep2')
+        self.assertEqual(dep2.environment_type, '')
+
+        subcloud = self.put_deployment_with_labels(
+            [{'csys-env-type': 'subcloud'},
+             {'key1': 'val1'},
+             {'key2': 'val2'}],
+            'subcloud')
+        self.assertEqual(subcloud.environment_type, 'subcloud')
+
+        basic = self.put_deployment_with_labels(
+            [{'csys-env-type': 'basic'},
+             {'key2': 'val2'},
+             {'key3': 'val3'}],
+            'basic')
+        self.assertEqual(basic.environment_type, 'basic')
+
+        controller = self.put_deployment_with_labels(
+            [{'csys-env-type': 'controller'},
+             {'key1': 'val1'},
+             {'key3': 'val3'}],
+            'controller')
+        self.assertEqual(controller.environment_type, 'controller')
+
+        deployments = self.client.deployments.list(sort='environment_type')
+        self.assertEqual([dep.id for dep in deployments],
+                         ['dep1', 'dep2', 'basic', 'controller', 'subcloud'])
