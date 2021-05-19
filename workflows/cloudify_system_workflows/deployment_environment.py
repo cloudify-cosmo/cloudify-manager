@@ -116,11 +116,6 @@ def create(ctx, labels=None, inputs=None, skip_plugins_validation=False,
     nodes = deployment_plan['nodes']
     node_instances = deployment_plan['node_instances']
 
-    ctx.logger.info('Creating %d nodes', len(nodes))
-    client.nodes.create_many(ctx.deployment.id, nodes)
-    ctx.logger.info('Creating %d node-instances', len(node_instances))
-    client.node_instances.create_many(ctx.deployment.id, node_instances)
-
     labels_to_create = _get_deployment_labels(
         labels or [],
         deployment_plan.get('labels', {}))
@@ -139,6 +134,12 @@ def create(ctx, labels=None, inputs=None, skip_plugins_validation=False,
         capabilities=deployment_plan.get('capabilities', {}),
         labels=labels_to_create,
     )
+
+    ctx.logger.info('Creating %d nodes', len(nodes))
+    client.nodes.create_many(ctx.deployment.id, nodes)
+    ctx.logger.info('Creating %d node-instances', len(node_instances))
+    client.node_instances.create_many(ctx.deployment.id, node_instances)
+
     # deployment_settings can depend on labels etc, so we must evaluate
     # functions in it after setting labels
     deployment_settings = client.evaluate.functions(
