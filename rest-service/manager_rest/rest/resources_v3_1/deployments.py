@@ -737,6 +737,7 @@ class DeploymentGroupsId(SecuredResource):
 
     @authorize('deployment_group_create')
     @rest_decorators.marshal_with(models.DeploymentGroup, force_get_data=True)
+    @rest_decorators.not_while_cancelling
     def put(self, group_id):
         request_dict = rest_utils.get_json_and_verify_params({
             'description': {'optional': True},
@@ -781,6 +782,7 @@ class DeploymentGroupsId(SecuredResource):
 
     @authorize('deployment_group_update')
     @rest_decorators.marshal_with(models.DeploymentGroup, force_get_data=True)
+    @rest_decorators.not_while_cancelling
     def patch(self, group_id):
         request_dict = rest_utils.get_json_and_verify_params({
             'add': {'optional': True},
