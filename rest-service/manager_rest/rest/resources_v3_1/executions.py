@@ -165,6 +165,7 @@ class ExecutionGroups(SecuredResource):
 
     @authorize('execution_group_create')
     @rest_decorators.marshal_with(models.ExecutionGroup, force_get_data=True)
+    @rest_decorators.not_while_cancelling
     def post(self):
         request_dict = get_json_and_verify_params({
             'deployment_group_id': {'type': str},

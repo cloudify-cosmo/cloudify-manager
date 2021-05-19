@@ -18,9 +18,12 @@ import time
 from cloudify import manager, ctx
 from cloudify._compat import urlparse
 from cloudify.constants import COMPONENT
-from cloudify.exceptions import NonRecoverableError
+from cloudify.exceptions import NonRecoverableError, OperationRetry
 from cloudify_rest_client.client import CloudifyClient
-from cloudify_rest_client.exceptions import CloudifyClientError
+from cloudify_rest_client.exceptions import (
+    CloudifyClientError,
+    ForbiddenWhileCancelling,
+)
 from cloudify.deployment_dependencies import (dependency_creator_generator,
                                               create_deployment_dependency)
 
@@ -139,6 +142,8 @@ class Component(object):
 
         try:
             return option_client(**request_args)
+        except ForbiddenWhileCancelling:
+            raise OperationRetry()
         except CloudifyClientError as ex:
             raise NonRecoverableError(
                 'Client action "{0}" failed: {1}.'.format(request_action,

@@ -134,6 +134,10 @@ class ForbiddenError(ManagerException):
     status_code = 403
 
 
+class ForbiddenWhileCancelling(ForbiddenError):
+    error_code = 'forbidden_while_cancelling'
+
+
 class UnsupportedContentTypeError(ManagerException):
     error_code = 'unsupported_content_type_error'
     status_code = 415

@@ -36,9 +36,11 @@ from voluptuous import (
     Schema,
 )
 from cloudify._compat import text_type
+from cloudify.models_states import ExecutionState
 from ..security.authentication import authenticator
 from manager_rest import config, manager_exceptions
 from manager_rest.storage.models_base import SQLModelBase
+from manager_rest.execution_token import current_execution
 from manager_rest.rest.rest_utils import (
     normalize_value,
     verify_and_convert_bool,
@@ -546,3 +548,21 @@ def filter_id(func):
     return get_filter_id
 
 # endregion
+
+
+def not_while_cancelling(f):
+    """This endpoint cannot be called from an execution in a cancelling state
+
+    It's forbidden to call this using an execution token, from an execution
+    that is CANCELLING, FORCE_CANCELLING, or KILL_CANCELLING.
+    """
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if current_execution and current_execution.status in {
+            ExecutionState.CANCELLING,
+            ExecutionState.FORCE_CANCELLING,
+            ExecutionState.KILL_CANCELLING
+        }:
+            raise manager_exceptions.ForbiddenWhileCancelling()
+        return f(*args, **kwargs)
+    return wrapper
