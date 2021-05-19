@@ -9,9 +9,9 @@ from manager_rest.flask_utils import setup_flask_app
 
 MANAGER_CONFIG = {
     'workflow': {
-        'task_retries': 0,
-        'task_retry_interval': 0,
-        'subgraph_retries': 0
+        'task_retries': 5,
+        'task_retry_interval': 1,
+        'subgraph_retries': 5,
     },
 }
 
