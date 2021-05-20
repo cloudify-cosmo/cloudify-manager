@@ -1504,3 +1504,22 @@ class TestGenerateID(unittest.TestCase):
                     'display_name': '{group_id}-{uuid}'}
         new_id, _ = self._generate_id(group, dep_spec)
         assert dep_spec['display_name'] == new_id
+
+    def test_display_name_from_dsl(self):
+        group = models.DeploymentGroup(id='g1')
+        group.default_blueprint = self._mock_blueprint()
+        group.default_blueprint.plan['deployment_settings']['display_name'] =\
+            'display-name-{uuid}'
+        dep_spec = {}
+        new_id, _ = self._generate_id(group, dep_spec)
+        assert dep_spec['display_name'].startswith('display-name')
+        assert len(dep_spec['display_name']) > 36
+
+    def test_display_name_from_dsl_function(self):
+        group = models.DeploymentGroup(id='g1')
+        group.default_blueprint = self._mock_blueprint()
+        group.default_blueprint.plan['deployment_settings']['display_name'] =\
+            {'concat': ['display', 'name']}
+        dep_spec = {}
+        new_id, _ = self._generate_id(group, dep_spec)
+        assert not dep_spec.get('display_name')
