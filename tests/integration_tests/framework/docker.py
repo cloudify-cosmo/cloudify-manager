@@ -16,6 +16,9 @@ validations:
     skip_validations: true
 sanity:
     skip_sanity: true
+restservice:
+    gunicorn:
+        max_worker_count: 4
 service_management: {0}
 """.format(service_management))
     command = [
