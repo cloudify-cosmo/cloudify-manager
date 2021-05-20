@@ -153,9 +153,10 @@ class SQLStorageManager(object):
                     query = query.order_by(order(column))
                 else:
                     query = query.order_by(column)
-        default_sort = model_class.default_sort_column()
-        if default_sort:
-            query = query.order_by(default_sort)
+        else:
+            default_sort = model_class.default_sort_column()
+            if default_sort:
+                query = query.order_by(default_sort)
         return query
 
     def _filter_query(self,
