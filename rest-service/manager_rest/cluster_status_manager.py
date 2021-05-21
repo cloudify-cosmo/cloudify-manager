@@ -1,4 +1,5 @@
 from datetime import datetime
+import typing
 
 from flask import current_app
 
@@ -123,7 +124,7 @@ def get_cluster_status(detailed=False):
     return cluster_status
 
 
-def _add_monitoring_data(cluster_nodes: dict):
+def _add_monitoring_data(cluster_nodes: dict) -> None:
     """Add metrics data and information on services for the cluster nodes."""
     query_string = ' or '.join(QUERY_STRINGS.values())
     global_results = prometheus_query(
@@ -132,7 +133,6 @@ def _add_monitoring_data(cluster_nodes: dict):
         timeout=config.monitoring_timeout,
     )
 
-    # find unexpected metrics
     unexpected_metrics = [
         result for result in global_results
         if not _host_matches(result.get('metric'), cluster_nodes.keys())
@@ -319,7 +319,8 @@ def _service_expected(service, service_type):
     return unit_id in SERVICE_ASSIGNMENTS[service_type]
 
 
-def _host_matches(metric: dict, node_private_ips: list) -> bool:
+def _host_matches(metric: dict,
+                  node_private_ips: typing.Iterable[str]) -> bool:
     if metric and metric.get('host'):
         return metric.get('host') in node_private_ips
     return False
