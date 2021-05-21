@@ -140,7 +140,7 @@ def _add_monitoring_data(cluster_nodes: dict):
     if unexpected_metrics:
         current_app.logger.warning(
             'These metrics do not match monitored IP address%s (%s): %s',
-            '' if len(cluster_nodes.keys()) == 1 else 'es',
+            '' if len(cluster_nodes) == 1 else 'es',
             ', '.join(cluster_nodes.keys()),
             unexpected_metrics,
         )
