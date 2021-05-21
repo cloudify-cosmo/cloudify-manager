@@ -252,13 +252,19 @@ class ResourceManager(object):
             return True
         self.sm.refresh(execution.deployment)
         try:
+            if execution and execution.deployment and \
+                    execution.deployment.create_execution:
+                create_execution = execution.deployment.create_execution
+                if create_execution.status == ExecutionState.FAILED:
+                    raise RuntimeError('create_deployment_environment failed')
+
             execution.merge_workflow_parameters(
                 execution.parameters,
                 execution.deployment,
                 execution.workflow_id
             )
-        except (manager_exceptions.IllegalExecutionParametersError,
-                manager_exceptions.NonexistentWorkflowError) as e:
+            execution.render_context()  # try this here to fail early
+        except Exception as e:
             execution.status = ExecutionState.FAILED
             execution.error = str(e)
             return False
@@ -980,12 +986,18 @@ class ResourceManager(object):
                 if not self._refresh_execution(execution):
                     return
 
-        workflow_executor.execute_workflow(
-            execution,
-            bypass_maintenance=bypass_maintenance,
-            wait_after_fail=wait_after_fail,
-            handler=send_handler,
-        )
+        try:
+            workflow_executor.execute_workflow(
+                execution,
+                bypass_maintenance=bypass_maintenance,
+                wait_after_fail=wait_after_fail,
+                handler=send_handler,
+            )
+        except Exception as e:
+            execution.status = ExecutionState.FAILED
+            execution.error = str(e)
+            self.sm.update(execution)
+            return
 
         workflow = execution.get_workflow()
         is_cascading_workflow = workflow.get('is_cascading', False)
