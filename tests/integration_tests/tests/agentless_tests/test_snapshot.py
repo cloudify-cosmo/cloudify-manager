@@ -264,12 +264,11 @@ class TestSnapshot(AgentlessTestCase):
             snapshot_id, False)
         self.wait_for_execution_to_end(snapshot_create_execution)
 
-        snapshot_restore_execution_id = self.client.snapshots.restore(
-            snapshot_id).id
+        self.client.snapshots.restore(snapshot_id)
         self.client.maintenance_mode.activate()
         self._wait_for_restore_marker_file_to_be_created()
         self._assert_snapshot_restore_status(is_running=True)
-        self.wait_for_snapshot_restore_to_end(snapshot_restore_execution_id)
+        self.wait_for_snapshot_restore_to_end()
         self.client.maintenance_mode.deactivate()
 
         assert not self._restore_marker_file_exists()
@@ -391,10 +390,7 @@ class TestSnapshot(AgentlessTestCase):
             execution = self.client.snapshots.restore(
                 snapshot_id,
                 ignore_plugin_failure=ignore_plugin_failure)
-            # give the database some time to downgrade/upgrade before running
-            # requests to avoid the deadlock described in CY-1455
-            time.sleep(10)
-            self.wait_for_snapshot_restore_to_end(execution.id)
+            self.wait_for_snapshot_restore_to_end()
             self.client.maintenance_mode.deactivate()
             execution = self._wait_for_restore_execution_to_end(
                 execution, timeout_seconds=240)
