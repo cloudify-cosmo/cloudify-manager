@@ -1,4 +1,5 @@
 from datetime import datetime
+import typing
 
 from flask import current_app
 
@@ -123,9 +124,8 @@ def get_cluster_status(detailed=False):
     return cluster_status
 
 
-def _add_monitoring_data(cluster_nodes):
-    # Get all the data in one fell swoop (thanks to the underlying Prometheus
-    # federation).
+def _add_monitoring_data(cluster_nodes: dict) -> None:
+    """Add metrics data and information on services for the cluster nodes."""
     query_string = ' or '.join(QUERY_STRINGS.values())
     global_results = prometheus_query(
         query_string=query_string,
@@ -133,10 +133,22 @@ def _add_monitoring_data(cluster_nodes):
         timeout=config.monitoring_timeout,
     )
 
+    unexpected_metrics = [
+        result for result in global_results
+        if not _host_matches(result.get('metric'), cluster_nodes.keys())
+    ]
+    if unexpected_metrics:
+        current_app.logger.warning(
+            'These metrics do not match monitored IP address%s (%s): %s',
+            '' if len(cluster_nodes) == 1 else 'es',
+            ', '.join(cluster_nodes.keys()),
+            unexpected_metrics,
+        )
+
     for address in cluster_nodes.keys():
         service_results, metric_results = _parse_prometheus_results([
             result for result in global_results
-            if _host_matches(result.get('metric', {}), address)
+            if _host_matches(result.get('metric'), [address])
         ])
         cluster_nodes[address]['service_results'] = service_results
         cluster_nodes[address]['metric_results'] = metric_results
@@ -150,12 +162,6 @@ def _get_cluster_details():
         CloudifyNodeType.BROKER: storage_manager.list(models.RabbitMQBroker),
     }
 
-    ca_paths = {
-        CloudifyNodeType.DB: config.postgresql_ca_cert_path,
-        CloudifyNodeType.BROKER: config.amqp_ca_path,
-        CloudifyNodeType.MANAGER: config.ca_cert_path,
-    }
-
     mapping = {}
     version = None
 
@@ -165,9 +171,6 @@ def _get_cluster_details():
                 version = node.version
             if node.private_ip not in mapping:
                 mapping[node.private_ip] = {
-                    'username': node.monitoring_username,
-                    'password': node.monitoring_password,
-                    'ca_path': ca_paths[service_type],
                     'node_name': node.name,
                     'public_ip': node.public_ip,
                     'private_ip': node.private_ip,
@@ -232,12 +235,12 @@ def _get_cluster_service_state(cluster_nodes, cloudify_version, detailed,
                 name: _strip_keys(service, 'host') for name, service
                 in service_node['service_results'].items()
                 if _service_expected(service, service_type) and
-                _host_matches(service, service_node['private_ip'])
+                _host_matches(service, [service_node['private_ip']])
             },
             'metrics': [
                 _strip_keys(metric, 'host') for metric in
                 service_node['metric_results'].get(service_type, [])
-                if _host_matches(metric, service_node['private_ip'])
+                if _host_matches(metric, [service_node['private_ip']])
             ],
         }
         for service_node in service_nodes.values()
@@ -316,11 +319,11 @@ def _service_expected(service, service_type):
     return unit_id in SERVICE_ASSIGNMENTS[service_type]
 
 
-def _host_matches(struct, node_private_ip):
-    if struct.get('host'):
-        return struct.get('host') == node_private_ip
-    else:
-        return struct.get('metric_name', '').endswith(node_private_ip)
+def _host_matches(metric: dict,
+                  node_private_ips: typing.Iterable[str]) -> bool:
+    if metric and metric.get('host'):
+        return metric.get('host') in node_private_ips
+    return False
 
 
 def _strip_keys(struct, keys):
