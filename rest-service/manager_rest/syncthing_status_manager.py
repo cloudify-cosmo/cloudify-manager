@@ -63,7 +63,7 @@ def _is_syncthing_valid(syncthing_config, device_stats):
         )
         return True
 
-    current_app.logger.debug(
+    current_app.logger.error(
         'Inactive File Sync Service - no other devices were seen by it'
     )
     return False
