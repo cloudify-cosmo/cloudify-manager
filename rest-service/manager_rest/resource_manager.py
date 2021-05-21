@@ -252,6 +252,12 @@ class ResourceManager(object):
             return True
         self.sm.refresh(execution.deployment)
         try:
+            if execution and execution.deployment and \
+                    execution.deployment.create_execution:
+                create_execution = execution.deployment.create_execution
+                if create_execution.status == ExecutionState.FAILED:
+                    raise RuntimeError('create_deployment_environment failed')
+
             execution.merge_workflow_parameters(
                 execution.parameters,
                 execution.deployment,
