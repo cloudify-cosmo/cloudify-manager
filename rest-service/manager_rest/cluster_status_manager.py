@@ -320,7 +320,7 @@ def _service_expected(service, service_type):
 
 
 def _host_matches(metric: dict, node_private_ips: list) -> bool:
-    if metrics and metric.get('host'):
+    if metric and metric.get('host'):
         return metric.get('host') in node_private_ips
     return False
 
