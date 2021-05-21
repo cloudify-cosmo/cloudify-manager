@@ -150,12 +150,6 @@ def _get_cluster_details():
         CloudifyNodeType.BROKER: storage_manager.list(models.RabbitMQBroker),
     }
 
-    ca_paths = {
-        CloudifyNodeType.DB: config.postgresql_ca_cert_path,
-        CloudifyNodeType.BROKER: config.amqp_ca_path,
-        CloudifyNodeType.MANAGER: config.ca_cert_path,
-    }
-
     mapping = {}
     version = None
 
@@ -165,9 +159,6 @@ def _get_cluster_details():
                 version = node.version
             if node.private_ip not in mapping:
                 mapping[node.private_ip] = {
-                    'username': node.monitoring_username,
-                    'password': node.monitoring_password,
-                    'ca_path': ca_paths[service_type],
                     'node_name': node.name,
                     'public_ip': node.public_ip,
                     'private_ip': node.private_ip,
