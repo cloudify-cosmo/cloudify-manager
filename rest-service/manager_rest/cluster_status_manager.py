@@ -136,7 +136,7 @@ def _add_monitoring_data(cluster_nodes):
     for address in cluster_nodes.keys():
         service_results, metric_results = _parse_prometheus_results([
             result for result in global_results
-            if _host_matches(result.get('metric', {}), address)
+            if _host_matches(result.get('metric'), [address])
         ])
         cluster_nodes[address]['service_results'] = service_results
         cluster_nodes[address]['metric_results'] = metric_results
@@ -232,12 +232,12 @@ def _get_cluster_service_state(cluster_nodes, cloudify_version, detailed,
                 name: _strip_keys(service, 'host') for name, service
                 in service_node['service_results'].items()
                 if _service_expected(service, service_type) and
-                _host_matches(service, service_node['private_ip'])
+                _host_matches(service, [service_node['private_ip']])
             },
             'metrics': [
                 _strip_keys(metric, 'host') for metric in
                 service_node['metric_results'].get(service_type, [])
-                if _host_matches(metric, service_node['private_ip'])
+                if _host_matches(metric, [service_node['private_ip']])
             ],
         }
         for service_node in service_nodes.values()
@@ -316,11 +316,10 @@ def _service_expected(service, service_type):
     return unit_id in SERVICE_ASSIGNMENTS[service_type]
 
 
-def _host_matches(struct, node_private_ip):
-    if struct.get('host'):
-        return struct.get('host') == node_private_ip
-    else:
-        return struct.get('metric_name', '').endswith(node_private_ip)
+def _host_matches(metric: dict, node_private_ips: list) -> bool:
+    if metrics and metric.get('host'):
+        return metric.get('host') in node_private_ips
+    return False
 
 
 def _strip_keys(struct, keys):
