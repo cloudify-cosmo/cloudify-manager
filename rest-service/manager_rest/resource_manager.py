@@ -980,12 +980,18 @@ class ResourceManager(object):
                 if not self._refresh_execution(execution):
                     return
 
-        workflow_executor.execute_workflow(
-            execution,
-            bypass_maintenance=bypass_maintenance,
-            wait_after_fail=wait_after_fail,
-            handler=send_handler,
-        )
+        try:
+            workflow_executor.execute_workflow(
+                execution,
+                bypass_maintenance=bypass_maintenance,
+                wait_after_fail=wait_after_fail,
+                handler=send_handler,
+            )
+        except Exception as e:
+            execution.status = ExecutionState.FAILED
+            execution.error = str(e)
+            self.sm.update(execution)
+            return
 
         workflow = execution.get_workflow()
         is_cascading_workflow = workflow.get('is_cascading', False)
