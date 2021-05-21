@@ -123,15 +123,27 @@ def get_cluster_status(detailed=False):
     return cluster_status
 
 
-def _add_monitoring_data(cluster_nodes):
-    # Get all the data in one fell swoop (thanks to the underlying Prometheus
-    # federation).
+def _add_monitoring_data(cluster_nodes: dict):
+    """Add metrics data and information on services for the cluster nodes."""
     query_string = ' or '.join(QUERY_STRINGS.values())
     global_results = prometheus_query(
         query_string=query_string,
         logger=current_app.logger,
         timeout=config.monitoring_timeout,
     )
+
+    # find unexpected metrics
+    unexpected_metrics = [
+        result for result in global_results
+        if not _host_matches(result.get('metric'), cluster_nodes.keys())
+    ]
+    if unexpected_metrics:
+        current_app.logger.warning(
+            'These metrics do not match monitored IP address%s (%s): %s',
+            '' if len(cluster_nodes.keys()) == 1 else 'es',
+            ', '.join(cluster_nodes.keys()),
+            unexpected_metrics,
+        )
 
     for address in cluster_nodes.keys():
         service_results, metric_results = _parse_prometheus_results([
