@@ -257,8 +257,8 @@ class ResourceManager(object):
                 execution.deployment,
                 execution.workflow_id
             )
-        except (manager_exceptions.IllegalExecutionParametersError,
-                manager_exceptions.NonexistentWorkflowError) as e:
+            execution.render_context()  # try this here to fail early
+        except Exception as e:
             execution.status = ExecutionState.FAILED
             execution.error = str(e)
             return False
