@@ -255,7 +255,9 @@ class ResourceManager(object):
             if execution and execution.deployment and \
                     execution.deployment.create_execution:
                 create_execution = execution.deployment.create_execution
-                if create_execution.status == ExecutionState.FAILED:
+                delete_dep_env = 'delete_deployment_environment'
+                if (create_execution.status == ExecutionState.FAILED and
+                        execution.workflow_id != delete_dep_env):
                     raise RuntimeError('create_deployment_environment failed')
 
             execution.merge_workflow_parameters(
