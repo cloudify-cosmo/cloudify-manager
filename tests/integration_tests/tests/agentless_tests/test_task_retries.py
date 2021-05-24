@@ -31,6 +31,7 @@ class TaskRetriesTest(AgentlessTestCase):
 
     def configure(self, retries, retry_interval):
         self.client.manager.put_config('task_retries', retries)
+        self.client.manager.put_config('subgraph_retries', 0)
         self.client.manager.put_config('task_retry_interval', retry_interval)
 
     def test_retries_and_retry_interval(self):
