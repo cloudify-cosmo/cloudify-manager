@@ -18,7 +18,7 @@ from setuptools import setup
 
 setup(
     name='cloudify-types',
-    version='5.2.2',
+    version='5.2.3.dev1',
     author='Cloudify',
     author_email='cosmo-admin@cloudify.co',
     packages=[
@@ -29,7 +29,7 @@ setup(
     license='LICENSE',
     description='Various special Cloudify types implementation.',
     install_requires=[
-        'cloudify-common==5.2.2',
+        'cloudify-common==5.2.3.dev1',
         'requests>=2.25.0,<3.0.0',
         'PyYAML==5.3.1'
     ]
