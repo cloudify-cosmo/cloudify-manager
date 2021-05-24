@@ -99,17 +99,6 @@ class BaseTestCase(unittest.TestCase):
         """
         return docker.execute(self.env.container_id, command)
 
-    def clear_directory(self, dir_path):
-        """
-        Remove all contents from a directory
-        """
-        # Add a wildcard to the end, to remove everything *inside* the folder
-        command = 'rm -rf {0}/*'.format(dir_path)
-
-        # Need to invoke a shell directly, because `docker exec` ignores
-        # wildcards by default
-        return docker.execute(self.env.container_id, ['sh', '-c', command])
-
     def copy_file_to_manager(self, source, target, owner=None):
         """Copy a file to the cloudify manager filesystem"""
         ret_val = docker.copy_file_to_manager(
