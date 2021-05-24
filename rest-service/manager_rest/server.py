@@ -113,6 +113,7 @@ def query_service_settings():
             config_last_updated > config.instance.last_updated):
         current_app.logger.warning('Config has changed - reloading')
         config.instance.load_from_db()
+        current_app.logger.setLevel(config.instance.rest_service_log_level)
 
 
 class CloudifyFlaskApp(Flask):
