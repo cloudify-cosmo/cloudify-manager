@@ -54,6 +54,9 @@ class Config(object):
     # whether or not the config can be implicitly loaded from db on first use
     can_load_from_db = True
 
+    # when was the config last changed? it will be reloaded when this increases
+    last_updated = None
+
     service_management = Setting('service_management', default='systemd')
 
     public_ip = Setting('public_ip')
@@ -178,14 +181,17 @@ class Config(object):
 
     def load_from_db(self):
         from manager_rest.storage import models
+        last_changed = {self.last_updated}
         engine = create_engine(self.db_url)
         session = orm.Session(bind=engine)
         stored_config = (
             session.query(models.Config)
-            .filter(models.Config.scope == 'rest')
             .all()
         )
         for conf_value in stored_config:
+            last_changed.add(conf_value.updated_at)
+            if conf_value.scope != 'rest':
+                continue
             setattr(self, conf_value.name, conf_value.value)
 
         stored_brokers = session.query(
@@ -214,9 +220,11 @@ class Config(object):
             models.Role.id,
             models.Role.name,
             models.Role.type,
-            models.Role.description
+            models.Role.description,
+            models.Role.updated_at
         ).all()
         role_names = {r.id: r.name for r in stored_roles}
+        last_changed |= {r.updated_at for r in stored_roles}
         stored_permissions = session.query(
             models.Permission.id,
             models.Permission.role_id,
@@ -241,6 +249,9 @@ class Config(object):
         session.close()
         engine.dispose()
 
+        self.last_updated = max((dt for dt in last_changed if dt), default=None)
+        current_app.logger.warning('Loaded config: last update at %s',
+                                   self.last_updated)
         # disallow implicit loading
         self.can_load_from_db = False
 
