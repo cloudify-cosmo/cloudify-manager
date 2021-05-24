@@ -88,6 +88,7 @@ def cope_with_db_failover():
                 attempt, max_attempts, err,
             )
 
+
 def query_service_settings():
     """Check for when was the config updated, and if needed, reload it.
 
@@ -106,7 +107,7 @@ def query_service_settings():
     ).scalar()
     current_app.logger.debug('Last updated locally: %s, in db: %s',
                              config.instance.last_updated,
-                            config_last_updated)
+                             config_last_updated)
     if config_last_updated is not None and (
             config.instance.last_updated is None or
             config_last_updated > config.instance.last_updated):

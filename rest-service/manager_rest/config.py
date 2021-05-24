@@ -249,7 +249,8 @@ class Config(object):
         session.close()
         engine.dispose()
 
-        self.last_updated = max((dt for dt in last_changed if dt), default=None)
+        self.last_updated = max((dt for dt in last_changed if dt),
+                                default=None)
         current_app.logger.warning('Loaded config: last update at %s',
                                    self.last_updated)
         # disallow implicit loading
