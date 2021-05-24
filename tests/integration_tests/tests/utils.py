@@ -270,17 +270,6 @@ def create_tenants_and_add_users(client, num_of_tenants):
         client.tenants.add_user(username, tenant_name, role='manager')
 
 
-def wait_for_rest(obj, timeout_sec):
-    end = time.time() + timeout_sec
-    while not time.time() > end:
-        docker_host = obj.get_docker_host()
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        p_open = sock.connect_ex((docker_host, 80)) == 0
-        if p_open:
-            return True
-    return False
-
-
 def assert_messages_in_log(container_id, workdir, messages, log_path):
     tmp_log_path = str(workdir / 'test_log')
     docker.copy_file_from_manager(container_id, log_path, tmp_log_path)

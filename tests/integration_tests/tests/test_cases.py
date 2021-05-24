@@ -138,11 +138,6 @@ class BaseTestCase(unittest.TestCase):
             '{0} start {1}'.format(service_command, service_name)
         )
 
-    @staticmethod
-    def get_docker_host():
-        """returns the host IP"""
-        return 'localhost'
-
     def get_runtime_property(self, deployment_id, property_name):
         property_list = []
         for inst in self.client.node_instances.list(
