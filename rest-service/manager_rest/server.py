@@ -102,15 +102,15 @@ def query_service_settings():
             db.session.query(models.Role.updated_at.label('updated_at'))
         ).subquery()
     )
-    config_last_updated = db.session.query(
+    db_config_last_updated = db.session.query(
         db.func.max(last_updated_subquery.c.updated_at)
     ).scalar()
     current_app.logger.debug('Last updated locally: %s, in db: %s',
                              config.instance.last_updated,
-                             config_last_updated)
-    if config_last_updated is not None and (
+                             db_config_last_updated)
+    if db_config_last_updated is not None and (
             config.instance.last_updated is None or
-            config_last_updated > config.instance.last_updated):
+            db_config_last_updated > config.instance.last_updated):
         current_app.logger.warning('Config has changed - reloading')
         config.instance.load_from_db()
         current_app.logger.setLevel(config.instance.rest_service_log_level)
