@@ -135,6 +135,7 @@ pipeline {
             success {
               echo 'Upload artifacts to S3'
               uploadToReleaseS3("${env.WORKSPACE}/rpm/","${env.S3_BUILD_PATH}")
+              archiveArtifacts '**/rpm/*.rpm'
             }
           }
         }
