@@ -53,7 +53,7 @@ pipeline {
       parallel {
         stage('test_restservice') {
           steps {
-            sh script: "mkdir -p ${env.WORKSPACE}/rest && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/rest", label: "copying repo to seperate workspace"
+            sh script: "mkdir -p ${env.WORKSPACE}/rest && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/rest", label: "copying repo to separate workspace"
 
             container('python'){
               dir("${env.WORKSPACE}/rest") {
@@ -87,6 +87,26 @@ pipeline {
                     -sv \
                     cloudify_types
                 '''
+              }
+            }
+          }
+        }
+        stage('run_mypy') {
+          steps {
+            sh script: "mkdir -p ${env.WORKSPACE}/mypy && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/mypy", label: "copying repo to separate workspace"
+
+            container('python'){
+              dir("${env.WORKSPACE}/mypy") {
+                vEnv()
+                sh script: '''
+                  . .venv/bin/activate
+                  cd rest-service
+                  pip install "mypy>=0.812,<1"
+                  mypy \
+                    -p \
+                    manager_rest \
+                  || exit 0
+                ''', label: "Static type checking (information only)"
               }
             }
           }
