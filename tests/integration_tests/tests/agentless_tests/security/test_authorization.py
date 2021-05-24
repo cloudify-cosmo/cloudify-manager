@@ -12,7 +12,7 @@ USERS = {
     'u2': USER_ROLE,
     'u3': USER_ROLE,
     'u4': USER_ROLE,
-    'u5': USER_ROLE
+    'u5': USER_ROLE,
 }
 
 GROUPS = {'g1': ['u2', 'u4'], 'g2': [], 'g3': ['u1', 'u3'], 'g4': ['u3']}
@@ -167,3 +167,17 @@ class AuthorizationTest(AgentlessTestCase):
             func(*args, **kwargs)
         else:
             self.assertRaises(ForbiddenError, func, *args, **kwargs)
+
+    def test_change_role_permissions(self):
+        username, password = 'viewer_user', '12345'
+        self.client.users.create(username, password, USER_ROLE)
+        client = self.create_rest_client(
+            username=username,
+            password=password,
+            tenant='default_tenant'
+        )
+        assert self._can_perform_user_action(client)
+        self.client.permissions.delete('maintenance_mode_get', USER_ROLE)
+        self.addCleanup(self.client.permissions.add,
+                        'maintenance_mode_get', USER_ROLE)
+        assert not self._can_perform_user_action(client)
