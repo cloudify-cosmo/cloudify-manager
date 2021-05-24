@@ -58,6 +58,7 @@ class Role(SQLModelBase, RoleMixin):
     name = db.Column(db.Text, unique=True, nullable=False, index=True)
     type = db.Column(db.Text, nullable=False)
     description = db.Column(db.Text)
+    updated_at = db.Column(UTCDateTime)
 
     def _get_identifier_dict(self):
         return OrderedDict({'name': self.name})
