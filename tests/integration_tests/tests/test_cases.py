@@ -541,51 +541,9 @@ class AgentlessTestCase(BaseTestCase):
         )
 
 
-class BaseAgentTestCase(BaseTestCase):
-    def read_host_file(self, file_path, deployment_id, node_id):
-        """
-        Read a file from a dockercompute node instance container filesystem.
-        """
-        container_id = self.env.container_id
-        return docker.read_file(container_id, file_path)
-
-    def get_host_ip(self, deployment_id, node_id):
-        """
-        Get the ip of a dockercompute node instance container.
-        """
-        return self.env.container_ip
-
-    def get_host_key_path(self, deployment_id, node_id):
-        """
-        Get the the path on the manager container to the private key
-        used to SSH into the dockercompute node instance container.
-        """
-        runtime_props = self._get_runtime_properties(
-            deployment_id=deployment_id, node_id=node_id)
-        return runtime_props['cloudify_agent']['key']
-
-    def _get_runtime_properties(self, deployment_id, node_id):
-        instance = self.client.node_instances.list(
-            deployment_id=deployment_id,
-            node_id=node_id)[0]
-        return instance.runtime_properties
-
-    def _create_secrets(self, secrets):
-        self.logger.info('Adding secrets...')
-        for key, value in secrets.items():
-            self.logger.info('Adding secret {0} {1}...'.format(key, value))
-            while not any([secret for secret in
-                           self.client.secrets.list()
-                           if key in secret.key]):
-                self.client.secrets.create(key, value, update_if_exists=True)
-                time.sleep(0.5)
-            self.logger.info('Finished adding secret {0}...'.format(key))
-        self.logger.info('Finished adding secrets...')
-
-
 @pytest.mark.usefixtures('dockercompute_plugin')
 @pytest.mark.usefixtures('allow_agent')
-class AgentTestCase(BaseAgentTestCase):
+class AgentTestCase(BaseTestCase):
     pass
 
 
