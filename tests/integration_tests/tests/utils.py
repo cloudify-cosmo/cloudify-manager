@@ -17,13 +17,11 @@ import os
 import json
 import time
 import wagon
-import socket
 import shutil
 import tarfile
 import tempfile
 
 from os import path
-from contextlib import contextmanager
 from datetime import datetime, timedelta
 
 from cloudify.utils import setup_logger
@@ -237,14 +235,6 @@ def tar_file(file_to_tar, destination_dir, tar_name=''):
     with tarfile.open(tar_path, "w:gz") as tar:
         tar.add(file_to_tar, arcname=tar_name)
     return tar_path
-
-
-@contextmanager
-def patch_yaml(yaml_path, is_json=False, default_flow_style=True):
-    with utils.YamlPatcher(yaml_path,
-                           is_json=is_json,
-                           default_flow_style=default_flow_style) as patch:
-        yield patch
 
 
 def run_postgresql_command(container_id, cmd):
