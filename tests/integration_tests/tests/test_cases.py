@@ -504,22 +504,6 @@ class AgentlessTestCase(BaseTestCase):
         ])
         return [line.split(',') for line in out.split('\n') if line.strip()]
 
-    def _get_latest_execution(self, workflow_id):
-        execution_list = self.client.executions.list(
-            include_system_workflows=True,
-            sort='created_at',
-            is_descending=True,
-            workflow_id=workflow_id).items
-        self.assertGreater(
-            len(execution_list),
-            0,
-            msg='Expected to find at least one execution with '
-                'workflow_id `{workflow_id}`, but found: '
-                '{execution_list}'.format(
-                workflow_id=workflow_id, execution_list=execution_list)
-        )
-        return execution_list[0]
-
     def assert_labels(self, labels_list_1, labels_list_2):
         simplified_labels = set()
         compared_labels_set = set()
