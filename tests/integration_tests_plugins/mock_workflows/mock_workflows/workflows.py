@@ -35,13 +35,13 @@ def sleep(ctx, **kwargs):
     node_instance.execute_operation(
         'test_interface.operation',
         kwargs={'key': 'before-sleep',
-                'value': None})
-    node_instance.set_state('asleep')
+                'value': None}).get()
+    node_instance.set_state('asleep').get()
     time.sleep(10)
     node_instance.execute_operation(
         'test_interface.operation',
         kwargs={'key': 'after-sleep',
-                'value': None})
+                'value': None}).get()
 
 
 @workflow
@@ -51,9 +51,9 @@ def sleep_with_cancel_support(ctx, use_legacy_cancel, **kwargs):
     node_instance.execute_operation(
         'test_interface.operation',
         kwargs={'key': 'before-sleep',
-                'value': None})
+                'value': None}).get()
 
-    node_instance.set_state('asleep')
+    node_instance.set_state('asleep').get()
     is_cancelled = False
     for i in range(10):
         if api.has_cancel_request():
@@ -70,7 +70,7 @@ def sleep_with_cancel_support(ctx, use_legacy_cancel, **kwargs):
     node_instance.execute_operation(
         'test_interface.operation',
         kwargs={'key': 'after-sleep',
-                'value': None})
+                'value': None}).get()
 
 
 @workflow

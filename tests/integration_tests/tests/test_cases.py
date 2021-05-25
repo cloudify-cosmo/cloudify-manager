@@ -99,17 +99,6 @@ class BaseTestCase(unittest.TestCase):
         """
         return docker.execute(self.env.container_id, command)
 
-    def clear_directory(self, dir_path):
-        """
-        Remove all contents from a directory
-        """
-        # Add a wildcard to the end, to remove everything *inside* the folder
-        command = 'rm -rf {0}/*'.format(dir_path)
-
-        # Need to invoke a shell directly, because `docker exec` ignores
-        # wildcards by default
-        return docker.execute(self.env.container_id, ['sh', '-c', command])
-
     def copy_file_to_manager(self, source, target, owner=None):
         """Copy a file to the cloudify manager filesystem"""
         ret_val = docker.copy_file_to_manager(
@@ -148,11 +137,6 @@ class BaseTestCase(unittest.TestCase):
             self.env.container_id,
             '{0} start {1}'.format(service_command, service_name)
         )
-
-    @staticmethod
-    def get_docker_host():
-        """returns the host IP"""
-        return 'localhost'
 
     def get_runtime_property(self, deployment_id, property_name):
         property_list = []
@@ -515,22 +499,6 @@ class AgentlessTestCase(BaseTestCase):
         ])
         return [line.split(',') for line in out.split('\n') if line.strip()]
 
-    def _get_latest_execution(self, workflow_id):
-        execution_list = self.client.executions.list(
-            include_system_workflows=True,
-            sort='created_at',
-            is_descending=True,
-            workflow_id=workflow_id).items
-        self.assertGreater(
-            len(execution_list),
-            0,
-            msg='Expected to find at least one execution with '
-                'workflow_id `{workflow_id}`, but found: '
-                '{execution_list}'.format(
-                workflow_id=workflow_id, execution_list=execution_list)
-        )
-        return execution_list[0]
-
     def assert_labels(self, labels_list_1, labels_list_2):
         simplified_labels = set()
         compared_labels_set = set()
@@ -552,51 +520,9 @@ class AgentlessTestCase(BaseTestCase):
         )
 
 
-class BaseAgentTestCase(BaseTestCase):
-    def read_host_file(self, file_path, deployment_id, node_id):
-        """
-        Read a file from a dockercompute node instance container filesystem.
-        """
-        container_id = self.env.container_id
-        return docker.read_file(container_id, file_path)
-
-    def get_host_ip(self, deployment_id, node_id):
-        """
-        Get the ip of a dockercompute node instance container.
-        """
-        return self.env.container_ip
-
-    def get_host_key_path(self, deployment_id, node_id):
-        """
-        Get the the path on the manager container to the private key
-        used to SSH into the dockercompute node instance container.
-        """
-        runtime_props = self._get_runtime_properties(
-            deployment_id=deployment_id, node_id=node_id)
-        return runtime_props['cloudify_agent']['key']
-
-    def _get_runtime_properties(self, deployment_id, node_id):
-        instance = self.client.node_instances.list(
-            deployment_id=deployment_id,
-            node_id=node_id)[0]
-        return instance.runtime_properties
-
-    def _create_secrets(self, secrets):
-        self.logger.info('Adding secrets...')
-        for key, value in secrets.items():
-            self.logger.info('Adding secret {0} {1}...'.format(key, value))
-            while not any([secret for secret in
-                           self.client.secrets.list()
-                           if key in secret.key]):
-                self.client.secrets.create(key, value, update_if_exists=True)
-                time.sleep(0.5)
-            self.logger.info('Finished adding secret {0}...'.format(key))
-        self.logger.info('Finished adding secrets...')
-
-
 @pytest.mark.usefixtures('dockercompute_plugin')
 @pytest.mark.usefixtures('allow_agent')
-class AgentTestCase(BaseAgentTestCase):
+class AgentTestCase(BaseTestCase):
     pass
 
 
