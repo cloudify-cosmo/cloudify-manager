@@ -1,3 +1,4 @@
+from datetime import datetime
 from functools import wraps
 from manager_rest.security import SecuredResource
 from manager_rest.storage import models, get_storage_manager
@@ -56,16 +57,23 @@ class PermissionsRoleId(SecuredResource):
             role=role,
             name=permission_name
         )
-        sm.put(perm)
+        with sm.transaction():
+            role.updated_at = datetime.utcnow()
+            sm.put(perm)
+            sm.put(role)
         return perm
 
     @_admin_only
     def delete(self, role_name, permission_name):
         """Disallow role_name the permission permission_name"""
         sm = get_storage_manager()
+        role = sm.get(models.Role, None, filters={'name': role_name})
         perm = sm.get(models.Permission, None, filters={
             'role_name': role_name,
             'name': permission_name
         })
-        sm.delete(perm)
+        with sm.transaction():
+            role.updated_at = datetime.utcnow()
+            sm.delete(perm)
+            sm.put(role)
         return None, 204

@@ -16,7 +16,7 @@ from werkzeug.exceptions import InternalServerError
 from cloudify._compat import StringIO
 
 from manager_rest import config, premium_enabled, manager_exceptions
-from manager_rest.storage import db, user_datastore
+from manager_rest.storage import db, user_datastore, models
 from manager_rest.security.user_handler import user_loader
 from manager_rest.maintenance import maintenance_mode_handler
 from manager_rest.rest.endpoint_mapper import setup_resources
@@ -89,6 +89,33 @@ def cope_with_db_failover():
             )
 
 
+def query_service_settings():
+    """Check for when was the config updated, and if needed, reload it.
+
+    This makes sure that config updates will (eventually) be propagated
+    to all workers, and that every worker always has the most recent
+    config/permissions settings available.
+    """
+    last_updated_subquery = (
+        db.session.query(models.Config.updated_at.label('updated_at'))
+        .union_all(
+            db.session.query(models.Role.updated_at.label('updated_at'))
+        ).subquery()
+    )
+    db_config_last_updated = db.session.query(
+        db.func.max(last_updated_subquery.c.updated_at)
+    ).scalar()
+    current_app.logger.debug('Last updated locally: %s, in db: %s',
+                             config.instance.last_updated,
+                             db_config_last_updated)
+    if db_config_last_updated is not None and (
+            config.instance.last_updated is None or
+            db_config_last_updated > config.instance.last_updated):
+        current_app.logger.warning('Config has changed - reloading')
+        config.instance.load_from_db()
+        current_app.logger.setLevel(config.instance.rest_service_log_level)
+
+
 class CloudifyFlaskApp(Flask):
     def __init__(self, load_config=True):
         _detect_debug_environment()
@@ -114,6 +141,7 @@ class CloudifyFlaskApp(Flask):
             self.external_auth = None
 
         self.before_request(log_request)
+        self.before_request(query_service_settings)
         self.before_request(maintenance_mode_handler)
         self.after_request(log_response)
         self._set_flask_security()

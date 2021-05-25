@@ -576,6 +576,7 @@ class BaseServerTestCase(unittest.TestCase):
         test_config.security_encoding_block_size = 24
         test_config.security_encoding_min_length = 5
         test_config.authorization_permissions = auth_dict['permissions']
+        test_config.authorization_roles = []
         test_config.security_encryption_key = (
             'lF88UP5SJKluylJIkPDYrw5UMKOgv9w8TikS0Ds8m2UmM'
             'SzFe0qMRa0EcTgHst6LjmF_tZbq_gi_VArepMsrmw=='

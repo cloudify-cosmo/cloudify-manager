@@ -12,6 +12,7 @@ from alembic import op
 import sqlalchemy as sa
 
 from manager_rest.storage import models_base
+from manager_rest.storage.models_base import UTCDateTime
 
 
 # revision identifiers, used by Alembic.
@@ -73,10 +74,21 @@ CONFIG_SCHEMA_UPDATE = [
 
 def upgrade():
     _change_number_to_integer_in_config_schema()
+    _add_roles_updated_at()
 
 
 def downgrade():
     _change_integer_to_number_in_config_schema()
+    _drop_roles_updated_at()
+
+
+def _add_roles_updated_at():
+    op.add_column('roles',
+                  sa.Column('updated_at', UTCDateTime(), nullable=True))
+
+
+def _drop_roles_updated_at():
+    op.drop_column('roles', 'updated_at')
 
 
 def _change_number_to_integer_in_config_schema():
