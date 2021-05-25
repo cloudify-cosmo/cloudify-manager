@@ -235,12 +235,17 @@ class ResourceManager(object):
         amqp_client.add_handler(handler)
         with amqp_client:
             for execution in to_run:
-                if execution.is_system_workflow:
-                    self._execute_system_workflow(
-                        execution, queue=True, send_handler=handler)
-                else:
-                    self.execute_workflow(
-                        execution, queue=True, send_handler=handler)
+                try:
+                    if execution.is_system_workflow:
+                        self._execute_system_workflow(
+                            execution, queue=True, send_handler=handler)
+                    else:
+                        self.execute_workflow(
+                            execution, queue=True, send_handler=handler)
+                except Exception as e:
+                    current_app.logger.warning(
+                        'Could not dequeue execution %s: %s',
+                        execution, e)
 
     def _refresh_execution(self, execution: models.Execution) -> bool:
         """Prepare the execution to be started.
