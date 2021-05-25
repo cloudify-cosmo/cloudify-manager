@@ -963,9 +963,16 @@ class ResourceManager(object):
                          send_handler: 'SendHandler' = None):
         with self.sm.transaction():
             if execution.deployment:
-                self._check_allow_global_execution(execution.deployment)
-                self._verify_dependencies_not_affected(
-                    execution.workflow_id, execution.deployment, force)
+                try:
+                    self._check_allow_global_execution(execution.deployment)
+                    self._verify_dependencies_not_affected(
+                        execution.workflow_id, execution.deployment, force)
+                except Exception as e:
+                    execution.status = ExecutionState.FAILED
+                    execution.error = str(e)
+                    self.sm.update(execution)
+                    db.session.commit()
+                    raise
 
             should_queue = queue
             if not allow_overlapping_running_wf:
