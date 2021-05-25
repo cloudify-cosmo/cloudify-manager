@@ -925,6 +925,12 @@ class Execution(CreatedAtMixin, SQLResourceBase):
                                         server_default='false')
     execution_group_id = association_proxy('execution_groups', 'id')
 
+    def __repr__(self):
+        return (
+            f'<Execution id=`{self.id}` tenant=`{self.tenant_name}` '
+            f'status=`{self.status}` workflow_id=`{self.workflow_id}`>'
+        )
+
     @declared_attr
     def deployment(cls):
         return one_to_many_relationship(
