@@ -257,6 +257,22 @@ class ExecutionsTestCase(BaseServerTestCase):
             execution, ExecutionState.STARTED)
         self._modify_execution_status(execution.id, 'pending')
 
+    def test_failed_when_global_disallowed(self):
+        """When check_allow_global throws, the execution is failed"""
+        self.put_deployment(self.DEPLOYMENT_ID)
+
+        with mock.patch('manager_rest.resource_manager.ResourceManager'
+                        '._check_allow_global_execution',
+                        side_effect=manager_exceptions.ForbiddenError()):
+            with self.assertRaises(exceptions.CloudifyClientError):
+                self.client.executions.start(self.DEPLOYMENT_ID, 'install')
+        executions = self.client.executions.list(
+            deployment_id=self.DEPLOYMENT_ID,
+            workflow_id='install')
+        self.assertEqual(len(executions), 1)
+        execution = executions[0]
+        self.assertEqual(ExecutionState.FAILED, execution.status)
+
     def test_update_execution_status_with_error(self):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
