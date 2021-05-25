@@ -47,7 +47,5 @@ class PluginWorkdirTest(AgentTestCase):
                                  filename)
         out = self.read_manager_file(central_file)
         self.assertEqual(central_content, out)
-        out = self.read_host_file(host_file,
-                                  deployment_id=deployment.id,
-                                  node_id='host')
+        out = self.read_manager_file(host_file)
         self.assertEqual(host_content, out)

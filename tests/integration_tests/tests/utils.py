@@ -17,13 +17,11 @@ import os
 import json
 import time
 import wagon
-import socket
 import shutil
 import tarfile
 import tempfile
 
 from os import path
-from contextlib import contextmanager
 from datetime import datetime, timedelta
 
 from cloudify.utils import setup_logger
@@ -239,14 +237,6 @@ def tar_file(file_to_tar, destination_dir, tar_name=''):
     return tar_path
 
 
-@contextmanager
-def patch_yaml(yaml_path, is_json=False, default_flow_style=True):
-    with utils.YamlPatcher(yaml_path,
-                           is_json=is_json,
-                           default_flow_style=default_flow_style) as patch:
-        yield patch
-
-
 def run_postgresql_command(container_id, cmd):
     return docker.execute(
         container_id,
@@ -268,17 +258,6 @@ def create_tenants_and_add_users(client, num_of_tenants):
         client.tenants.create(tenant_name)
         client.users.create(username, 'password', role='default')
         client.tenants.add_user(username, tenant_name, role='manager')
-
-
-def wait_for_rest(obj, timeout_sec):
-    end = time.time() + timeout_sec
-    while not time.time() > end:
-        docker_host = obj.get_docker_host()
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        p_open = sock.connect_ex((docker_host, 80)) == 0
-        if p_open:
-            return True
-    return False
 
 
 def assert_messages_in_log(container_id, workdir, messages, log_path):

@@ -30,18 +30,6 @@ class BaseExistingVMTest(AgentTestWithPlugins):
         self.deploy_application(dsl_path,
                                 deployment_id=self.setup_deployment_id)
 
-    def _get_ssh_key_content(self):
-        return self.get_host_key(
-            node_id=self.setup_node_id,
-            deployment_id=self.setup_deployment_id
-        )
-
-    def _get_host_ip(self):
-        return self.get_host_ip(
-            node_id=self.setup_node_id,
-            deployment_id=self.setup_deployment_id
-        )
-
 
 @pytest.mark.usefixtures('testmockoperations_plugin')
 class ExistingVMTest(BaseExistingVMTest):
