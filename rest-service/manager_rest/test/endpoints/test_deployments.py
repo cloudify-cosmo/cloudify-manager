@@ -905,7 +905,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             id='dep1',
             display_name='dep1',
             blueprint=bp,
-            created_at=datetime.now()
+            created_at=datetime.utcnow()
         ))
         new_attributes = {
             'description': 'descr1',
@@ -931,7 +931,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             display_name='dep1',
             blueprint=bp,
             description='d1',
-            created_at=datetime.now()
+            created_at=datetime.utcnow()
         ))
         with self.assertRaisesRegex(CloudifyClientError, 'already set'):
             self.client.deployments.set_attributes('dep1', description='d2')
@@ -998,7 +998,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         self.assertListEqual(filtered_dep_ids, ['born-with-schedules'])
 
         self.client.execution_schedules.create(
-            'custom-sc', dep_2.id, 'install', since=datetime.now(), count=1)
+            'custom-sc', dep_2.id, 'install', since=datetime.utcnow(), count=1)
         self.client.execution_schedules.delete('sc1', dep_1.id)
 
         # now each deployment has 1 schedule
@@ -1068,7 +1068,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             blueprint_file_name='blueprint_with_default_schedules.yaml')
 
         self.client.execution_schedules.create(
-            'sc3', deployment.id, 'install', since=datetime.now(), count=1)
+            'sc3', deployment.id, 'install', since=datetime.utcnow(), count=1)
 
         new_blueprint_id = 'updated_schedules'
         self.put_blueprint(

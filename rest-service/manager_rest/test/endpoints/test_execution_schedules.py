@@ -13,13 +13,13 @@ class ExecutionSchedulesTestCase(BaseServerTestCase):
     DEPLOYMENT_ID = 'deployment'
     fmt = '%Y-%m-%dT%H:%M:%S.%fZ'
     an_hour_from_now = \
-        datetime.now().replace(microsecond=0) + timedelta(hours=1)
+        datetime.utcnow().replace(microsecond=0) + timedelta(hours=1)
     two_hours_from_now = \
-        datetime.now().replace(microsecond=0) + timedelta(hours=2)
+        datetime.utcnow().replace(microsecond=0) + timedelta(hours=2)
     three_hours_from_now = \
-        datetime.now().replace(microsecond=0) + timedelta(hours=3)
+        datetime.utcnow().replace(microsecond=0) + timedelta(hours=3)
     three_weeks_from_now = \
-        datetime.now().replace(microsecond=0) + timedelta(weeks=3)
+        datetime.utcnow().replace(microsecond=0) + timedelta(weeks=3)
     deployment_id = None
 
     def setUp(self):

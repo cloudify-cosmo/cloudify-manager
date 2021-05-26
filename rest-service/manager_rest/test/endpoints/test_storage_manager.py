@@ -238,7 +238,7 @@ class TestTransactions(base_test.BaseServerTestCase):
     def _make_secret(self, id, value):
         # these tests are using secrets, but they could just as well
         # use any other model, we just need to create _something_ in the db
-        now = datetime.now()
+        now = datetime.utcnow()
         return models.Secret(
             id=id,
             value=value,

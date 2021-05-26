@@ -257,6 +257,22 @@ class ExecutionsTestCase(BaseServerTestCase):
             execution, ExecutionState.STARTED)
         self._modify_execution_status(execution.id, 'pending')
 
+    def test_failed_when_global_disallowed(self):
+        """When check_allow_global throws, the execution is failed"""
+        self.put_deployment(self.DEPLOYMENT_ID)
+
+        with mock.patch('manager_rest.resource_manager.ResourceManager'
+                        '._check_allow_global_execution',
+                        side_effect=manager_exceptions.ForbiddenError()):
+            with self.assertRaises(exceptions.CloudifyClientError):
+                self.client.executions.start(self.DEPLOYMENT_ID, 'install')
+        executions = self.client.executions.list(
+            deployment_id=self.DEPLOYMENT_ID,
+            workflow_id='install')
+        self.assertEqual(len(executions), 1)
+        execution = executions[0]
+        self.assertEqual(ExecutionState.FAILED, execution.status)
+
     def test_update_execution_status_with_error(self):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
@@ -463,7 +479,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         execution = self.sm.put(models.Execution(
             id=str(uuid.uuid4()),
             _deployment_fk=deployment._storage_id,
-            created_at=datetime.now(),
+            created_at=datetime.utcnow(),
             is_system_workflow=False,
             workflow_id='install',
             status=status,
@@ -473,13 +489,13 @@ class ExecutionsTestCase(BaseServerTestCase):
         tasks_graph = self.sm.put(models.TasksGraph(
             _execution_fk=execution._storage_id,
             name='install',
-            created_at=datetime.now()
+            created_at=datetime.utcnow()
         ))
         operation = self.sm.put(models.Operation(
             _tasks_graph_fk=tasks_graph._storage_id,
             parameters={'current_retries': 20},
             state=cloudify_tasks.TASK_FAILED,
-            created_at=datetime.now()
+            created_at=datetime.utcnow()
         ))
 
         self.client.executions.resume(execution.id, force=True)
@@ -525,7 +541,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         execution = self.sm.put(models.Execution(
             id='execution-1',
             _deployment_fk=deployment._storage_id,
-            created_at=datetime.now(),
+            created_at=datetime.utcnow(),
             is_system_workflow=False,
             workflow_id='install',
             blueprint_id=deployment.blueprint_id
@@ -555,7 +571,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         execution = self.sm.put(models.Execution(
             id='execution-1',
             _deployment_fk=deployment._storage_id,
-            created_at=datetime.now(),
+            created_at=datetime.utcnow(),
             is_system_workflow=False,
             workflow_id='install',
             blueprint_id=deployment.blueprint_id

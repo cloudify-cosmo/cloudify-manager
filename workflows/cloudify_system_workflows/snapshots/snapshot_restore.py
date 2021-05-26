@@ -157,6 +157,7 @@ class SnapshotRestore(object):
                 self._update_node_instance_indices()
                 self._set_default_user_profile_flags()
                 self._create_system_filters()
+                postgres.refresh_roles()
 
             if self._restore_certificates:
                 self._restore_certificate()
