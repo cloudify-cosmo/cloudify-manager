@@ -438,10 +438,13 @@ class InterDeploymentDependencies(SecuredResource):
             dep_graph.create_dependencies_graph()
             dep_graph.assert_no_cyclic_dependencies(source_id, target_id)
 
+        source_deployment = None if EXTERNAL_SOURCE in params \
+            else params[SOURCE_DEPLOYMENT]
+
         deployment_dependency = models.InterDeploymentDependencies(
             id=str(uuid.uuid4()),
             dependency_creator=params[DEPENDENCY_CREATOR],
-            source_deployment=params[SOURCE_DEPLOYMENT],
+            source_deployment=source_deployment,
             target_deployment=params.get(TARGET_DEPLOYMENT),
             target_deployment_func=params.get(TARGET_DEPLOYMENT_FUNC),
             external_source=params.get(EXTERNAL_SOURCE),
@@ -474,15 +477,20 @@ class InterDeploymentDependencies(SecuredResource):
             'source_deployment_id': {'type': str},
             'inter_deployment_dependencies': {'type': list}
         })
-        source_deployment = sm.get(models.Deployment,
-                                   params['source_deployment_id'])
+
+        dependencies = params.get('inter_deployment_dependencies')
+        if len(dependencies) > 0 and EXTERNAL_SOURCE in dependencies[0]:
+            source_deployment = None
+        else:
+            source_deployment = sm.get(models.Deployment,
+                                       params['source_deployment_id'])
 
         dep_graph = rest_utils.RecursiveDeploymentDependencies(sm)
         dep_graph.create_dependencies_graph()
 
         created_ids = []
         with sm.transaction():
-            for dependency in params.get('inter_deployment_dependencies'):
+            for dependency in dependencies:
                 now = utils.get_formatted_timestamp()
 
                 if (TARGET_DEPLOYMENT in dependency and
