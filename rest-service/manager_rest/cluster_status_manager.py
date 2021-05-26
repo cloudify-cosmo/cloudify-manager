@@ -124,37 +124,6 @@ def get_cluster_status(detailed=False) -> typing.Dict[str, typing.Any]:
     return cluster_status
 
 
-def _add_monitoring_data(cluster_nodes: typing.Dict[str, dict]) -> None:
-    """Add metrics data and information on services for the cluster nodes."""
-    query_string = ' or '.join(QUERY_STRINGS.values())
-    global_results = prometheus_query(
-        query_string=query_string,
-        logger=current_app.logger,
-        timeout=config.monitoring_timeout,
-    )
-
-    unexpected_metrics = [
-        result for result in global_results
-        if not _host_matches(result.get('metric'), cluster_nodes.keys())
-    ]
-    if unexpected_metrics:
-        current_app.logger.warning(
-            'These metrics do not match monitored IP address%s (%s): %s',
-            '' if len(cluster_nodes) == 1 else 'es',
-            ', '.join(cluster_nodes.keys()),
-            unexpected_metrics,
-        )
-
-    for address in cluster_nodes.keys():
-        service_results, metric_results = _parse_prometheus_results([
-            result for result in global_results
-            if 'metrics' in result
-               and _host_matches(result.get('metric'), [address])
-        ])
-        cluster_nodes[address]['service_results'] = service_results
-        cluster_nodes[address]['metric_results'] = metric_results
-
-
 def _get_cluster_details() -> typing.Tuple[typing.Dict[str, dict], str]:
     storage_manager = get_storage_manager()
     cluster_services = {
@@ -177,13 +146,45 @@ def _get_cluster_details() -> typing.Tuple[typing.Dict[str, dict], str]:
                     'private_ip': node.private_ip,
                     'services': [],
                     'external_services': [],
-                    'service_results': [],
+                    'service_results': {},
                     'metric_results': {},
                 }
 
             target = 'external_services' if node.is_external else 'services'
             mapping[node.private_ip][target].append(service_type)
     return mapping, version or 'UNKNOWN'
+
+
+def _add_monitoring_data(cluster_nodes: typing.Dict[str, dict]) -> None:
+    """Add metrics data and information on services for the cluster nodes."""
+    query_string = ' or '.join(QUERY_STRINGS.values())
+    prometheus_results = prometheus_query(
+        query_string=query_string,
+        logger=current_app.logger,
+        timeout=config.monitoring_timeout,
+    )
+
+    warning_msg_prefix = \
+        'These metrics do not match monitored IP address{0} ({1})'.format(
+            '' if len(cluster_nodes) == 1 else 'es',
+            ', '.join(cluster_nodes.keys()))
+
+    while prometheus_results:
+        result = prometheus_results.pop()
+
+        if 'metric' not in result or \
+                not _host_matches(result['metric'], cluster_nodes.keys()):
+            current_app.logger.warning(f'{warning_msg_prefix}: {result}')
+            continue
+
+        address = result['metric'].get('host')
+        service_results, metric_results = _parse_prometheus_results(result)
+        if service_results:
+            _append_service_results(cluster_nodes[address]['service_results'],
+                                    service_results)
+        if metric_results:
+            _append_metric_results(cluster_nodes[address]['metric_results'],
+                                   metric_results)
 
 
 def _get_broker_state(cluster_nodes: typing.Dict[str, dict],
@@ -337,7 +338,8 @@ def _host_matches(metric: dict,
     return False
 
 
-def _strip_keys(struct: typing.Dict, keys: typing.Union[list, str]) -> typing.Dict:
+def _strip_keys(struct: typing.Dict,
+                keys: typing.Union[list, str]) -> typing.Dict:
     """Return copy of struct but without the keys listed."""
     if not isinstance(keys, list):
         keys = [keys]
@@ -377,77 +379,78 @@ def _get_node_state(node: dict):
     return ServiceStatus.HEALTHY
 
 
-def _parse_prometheus_results(prometheus_results: typing.List[dict]) \
-        -> typing.Tuple[typing.Dict[str, dict], typing.Dict[str, list]]:
-    service_results: typing.Dict[str, dict] = {}
-    metric_results: typing.Dict[str, list] = {}
+def _parse_prometheus_results(prometheus_result: dict) \
+        -> typing.Tuple[typing.Dict[str, dict], typing.Dict[str, dict]]:
 
-    def append_service_result(pm: str, res: dict):
-        dm = res.get('extra_info', {}).get(pm, {}).get('display_name')
-        if not dm:
-            return
+    metric = prometheus_result.get('metric', {})
+    # Technically the second element in the tuple is the metric value, but
+    # we only use it to indicate health currently
+    timestamp, healthy = prometheus_result.get('value', [0, ''])
+    healthy = bool(int(healthy)) if healthy else False
 
-        if dm not in service_results:
-            service_results[dm] = res
-            return
+    process_manager = metric.get('process_manager', '')
 
-        # If any instance is not active, report the service as such
-        if service_results[dm].get(
-                'status') == NodeServiceStatus.ACTIVE:
-            service_results[dm]['status'] = res['status']
+    if process_manager:
+        service_id = metric.get('name', '')
+        service = _get_cloudify_service_description(service_id)
 
-        # Update the instances part
-        if pm in service_results[dm].get('extra_info', {}):
-            # res' process manager is already present in corresponding result
-            if 'instances' not in service_results[dm]['extra_info'][pm]:
-                service_results[dm]['extra_info'][pm]['instances'] = []
-            # keep only one instance per host
-            instance_hosts = [
-                instance.get('host') for instance
-                in service_results[dm]['extra_info'][pm]['instances']
-            ]
-            for res_instance in res['extra_info'][pm].get('instances'):
-                if res_instance.get('host') not in instance_hosts:
-                    # ... append an instance to the list of instances
-                    service_results[dm]['extra_info'][pm]['instances'].append(
-                        res_instance)
+        # Only process services we care about
+        if service:
+            return _get_service_status(service_id, service, process_manager,
+                                       healthy, metric.get('host')), {}
+    else:
+        if metric.get('host'):
+            processed_data, service_type = _process_metric(
+                metric, timestamp, healthy)
+            return {}, {service_type: processed_data}
         else:
-            # if res' process manager is not present in corr. result
-            service_results[dm]['extra_info'][pm] = res['extra_info'][pm]
+            # TODO: Log something
+            pass
 
-    for result in prometheus_results:
-        metric = result.get('metric', {})
-        # Technically the second element in the tuple is the metric value, but
-        # we only use it to indicate health currently
-        timestamp, healthy = result.get('value', [0, ''])
-        healthy = bool(int(healthy)) if healthy else False
+    return {}, {}
 
-        process_manager = metric.get('process_manager', '')
 
-        if process_manager:
-            service_id = metric.get('name', '')
-            service = _get_cloudify_service_description(service_id)
+def _append_service_results(service_results: dict, res: dict):
+    pm = list(res.get('extra_info', {}).keys())[0]
+    dn = res.get('extra_info', {}).get(pm, {}).get('display_name')
 
-            # Only process services we care about
-            if service:
-                append_service_result(process_manager, _get_service_status(
-                    service_id=service_id,
-                    service=service,
-                    process_manager=process_manager,
-                    is_running=healthy,
-                    host=metric.get('host'),
-                ))
+    if not dn:
+        return
+
+    if dn not in service_results:
+        service_results[dn] = res
+        return
+
+    # If any instance is not active, report the service as such
+    if service_results[dn].get('status') == NodeServiceStatus.ACTIVE:
+        service_results[dn]['status'] = res['status']
+
+    # Update the instances part
+    if pm in service_results[dn].get('extra_info', {}):
+        # res' process manager is already present in corresponding result
+        if 'instances' not in service_results[dn]['extra_info'][pm]:
+            service_results[dn]['extra_info'][pm]['instances'] = []
+        # keep only one instance per host
+        instance_hosts = [
+            instance.get('host') for instance
+            in service_results[dn]['extra_info'][pm]['instances']
+        ]
+        for res_instance in res['extra_info'][pm].get('instances'):
+            if res_instance.get('host') not in instance_hosts:
+                # ... append an instance to the list of instances
+                service_results[dn]['extra_info'][pm]['instances'].append(
+                    res_instance)
+    else:
+        # if res' process manager is not present in corr. result
+        service_results[dn]['extra_info'][pm] = res['extra_info'][pm]
+
+
+def _append_metric_results(metric_results: dict, res: dict):
+    for service_type, metrics in res.items():
+        if service_type in metric_results:
+            metric_results[service_type].append(metrics)
         else:
-            if metric.get('host'):
-                processed_data, service_type = _process_metric(
-                    metric, timestamp, healthy)
-                if service_type not in metric_results:
-                    metric_results[service_type] = []
-                metric_results[service_type].append(processed_data)
-            else:
-                # TODO: Log something
-                pass
-    return service_results, metric_results
+            metric_results[service_type] = [metrics]
 
 
 def _get_service_status(service_id: str,
