@@ -102,7 +102,7 @@ QUERY_STRINGS = {
 }
 
 
-def get_cluster_status(detailed=False):
+def get_cluster_status(detailed=False) -> typing.Dict[str, typing.Any]:
     cluster_nodes, cloudify_version = _get_cluster_details()
     _add_monitoring_data(cluster_nodes)
 
@@ -124,7 +124,7 @@ def get_cluster_status(detailed=False):
     return cluster_status
 
 
-def _add_monitoring_data(cluster_nodes: dict) -> None:
+def _add_monitoring_data(cluster_nodes: typing.Dict[str, dict]) -> None:
     """Add metrics data and information on services for the cluster nodes."""
     query_string = ' or '.join(QUERY_STRINGS.values())
     global_results = prometheus_query(
@@ -148,13 +148,14 @@ def _add_monitoring_data(cluster_nodes: dict) -> None:
     for address in cluster_nodes.keys():
         service_results, metric_results = _parse_prometheus_results([
             result for result in global_results
-            if _host_matches(result.get('metric'), [address])
+            if 'metrics' in result
+               and _host_matches(result.get('metric'), [address])
         ])
         cluster_nodes[address]['service_results'] = service_results
         cluster_nodes[address]['metric_results'] = metric_results
 
 
-def _get_cluster_details():
+def _get_cluster_details() -> typing.Tuple[typing.Dict[str, dict], str]:
     storage_manager = get_storage_manager()
     cluster_services = {
         CloudifyNodeType.MANAGER: storage_manager.list(models.Manager),
@@ -182,10 +183,12 @@ def _get_cluster_details():
 
             target = 'external_services' if node.is_external else 'services'
             mapping[node.private_ip][target].append(service_type)
-    return mapping, version
+    return mapping, version or 'UNKNOWN'
 
 
-def _get_broker_state(cluster_nodes, cloudify_version, detailed):
+def _get_broker_state(cluster_nodes: typing.Dict[str, dict],
+                      cloudify_version: str,
+                      detailed: bool) -> typing.Dict[str, typing.Any]:
     return _get_cluster_service_state(
         cluster_nodes,
         cloudify_version,
@@ -194,7 +197,9 @@ def _get_broker_state(cluster_nodes, cloudify_version, detailed):
     )
 
 
-def _get_db_state(cluster_nodes, cloudify_version, detailed):
+def _get_db_state(cluster_nodes: typing.Dict[str, dict],
+                  cloudify_version: str,
+                  detailed: bool) -> typing.Dict[str, typing.Any]:
     return _get_cluster_service_state(
         cluster_nodes,
         cloudify_version,
@@ -203,7 +208,9 @@ def _get_db_state(cluster_nodes, cloudify_version, detailed):
     )
 
 
-def _get_manager_state(cluster_nodes, cloudify_version, detailed):
+def _get_manager_state(cluster_nodes: typing.Dict[str, dict],
+                       cloudify_version: str,
+                       detailed: bool) -> typing.Dict[str, typing.Any]:
     return _get_cluster_service_state(
         cluster_nodes,
         cloudify_version,
@@ -212,8 +219,11 @@ def _get_manager_state(cluster_nodes, cloudify_version, detailed):
     )
 
 
-def _get_cluster_service_state(cluster_nodes, cloudify_version, detailed,
-                               service_type):
+def _get_cluster_service_state(cluster_nodes: typing.Dict[str, dict],
+                               cloudify_version: str,
+                               detailed: bool,
+                               service_type: str) -> typing.Dict[str,
+                                                                 typing.Any]:
     is_external = _is_external(cluster_nodes, service_type)
 
     state = {
@@ -279,7 +289,8 @@ def _get_cluster_service_state(cluster_nodes, cloudify_version, detailed,
     return state
 
 
-def _get_cluster_service_status(nodes, quorum):
+def _get_cluster_service_status(nodes: typing.Dict[str, dict],
+                                quorum: int) -> str:
     healthy_nodes_count = len([
         node for node in nodes.values()
         if node['status'] == ServiceStatus.HEALTHY
@@ -293,7 +304,7 @@ def _get_cluster_service_status(nodes, quorum):
         return ServiceStatus.FAIL
 
 
-def _get_overall_state(cluster_status):
+def _get_overall_state(cluster_status: typing.Dict[str, dict]) -> str:
     found_degraded = False
 
     for service in cluster_status['services'].values():
@@ -305,14 +316,14 @@ def _get_overall_state(cluster_status):
     return ServiceStatus.DEGRADED if found_degraded else ServiceStatus.HEALTHY
 
 
-def _get_unit_id(service):
+def _get_unit_id(service: typing.Dict) -> str:
     if 'systemd' in service['extra_info']:
         return service['extra_info']['systemd']['unit_id']
     else:
         return service['extra_info']['supervisord']['unit_id']
 
 
-def _service_expected(service, service_type):
+def _service_expected(service: typing.Dict, service_type: str) -> bool:
     unit_id = _get_unit_id(service)
     if unit_id.endswith('.service'):
         unit_id = unit_id[:-len('.service')]
@@ -322,18 +333,19 @@ def _service_expected(service, service_type):
 def _host_matches(metric: dict,
                   node_private_ips: typing.Iterable[str]) -> bool:
     if metric and metric.get('host'):
-        return metric.get('host') in node_private_ips
+        return metric['host'] in node_private_ips
     return False
 
 
-def _strip_keys(struct, keys):
+def _strip_keys(struct: typing.Dict, keys: typing.Union[list, str]) -> typing.Dict:
     """Return copy of struct but without the keys listed."""
     if not isinstance(keys, list):
         keys = [keys]
     return {k: v for k, v in struct.items() if k not in keys}
 
 
-def _get_nodes_of_type(cluster_nodes, service_type):
+def _get_nodes_of_type(cluster_nodes: typing.Dict[str, dict],
+                       service_type: str) -> typing.Dict:
     requested_nodes = {}
     for node, details in cluster_nodes.items():
         if service_type in details['services']:
@@ -341,14 +353,15 @@ def _get_nodes_of_type(cluster_nodes, service_type):
     return requested_nodes
 
 
-def _is_external(cluster_nodes, service_type):
+def _is_external(cluster_nodes: typing.Dict[str, dict],
+                 service_type: str) -> bool:
     for node_details in cluster_nodes.values():
         if service_type in node_details['external_services']:
             return True
     return False
 
 
-def _get_node_state(node):
+def _get_node_state(node: dict):
     if not node['services'] or not node['metrics']:
         # Absence of failure (and everything else) is not success
         return ServiceStatus.FAIL
@@ -364,11 +377,12 @@ def _get_node_state(node):
     return ServiceStatus.HEALTHY
 
 
-def _parse_prometheus_results(prometheus_results):
-    service_results = {}
-    metric_results = {}
+def _parse_prometheus_results(prometheus_results: typing.List[dict]) \
+        -> typing.Tuple[typing.Dict[str, dict], typing.Dict[str, list]]:
+    service_results: typing.Dict[str, dict] = {}
+    metric_results: typing.Dict[str, list] = {}
 
-    def append_service_result(pm, res):
+    def append_service_result(pm: str, res: dict):
         dm = res.get('extra_info', {}).get(pm, {}).get('display_name')
         if not dm:
             return
@@ -408,7 +422,7 @@ def _parse_prometheus_results(prometheus_results):
         timestamp, healthy = result.get('value', [0, ''])
         healthy = bool(int(healthy)) if healthy else False
 
-        process_manager = metric.get('process_manager')
+        process_manager = metric.get('process_manager', '')
 
         if process_manager:
             service_id = metric.get('name', '')
@@ -436,8 +450,11 @@ def _parse_prometheus_results(prometheus_results):
     return service_results, metric_results
 
 
-def _get_service_status(service_id, service,
-                        process_manager, is_running, host):
+def _get_service_status(service_id: str,
+                        service: dict,
+                        process_manager: str,
+                        is_running: bool,
+                        host: str) -> typing.Dict[str, typing.Any]:
     return {
         'status': (NodeServiceStatus.ACTIVE if is_running
                    else NodeServiceStatus.INACTIVE),
@@ -491,7 +508,8 @@ def _process_metric(metric, timestamp, healthy):
     }, service_type
 
 
-def _get_cloudify_service_description(metric_name):
+def _get_cloudify_service_description(
+        metric_name: str) -> typing.Optional[typing.Dict[str, str]]:
     if metric_name in SERVICE_DESCRIPTIONS:
         return SERVICE_DESCRIPTIONS[metric_name]
     elif metric_name.endswith('.service'):

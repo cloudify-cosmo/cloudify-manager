@@ -1,8 +1,10 @@
+import typing
+
 import requests
 LOCAL_QUERY_URL = 'http://127.0.0.1:9090/monitoring/api/v1/query'
 
 
-def query(query_string, logger, timeout=None):
+def query(query_string: str, logger, timeout=None) -> typing.List[dict]:
     query_url = LOCAL_QUERY_URL
     url_with_query_string = (
         query_url + '?query=' + requests.utils.quote(query_string)
@@ -33,7 +35,8 @@ def query(query_string, logger, timeout=None):
     return result
 
 
-def _format_prometheus_response(response):
+def _format_prometheus_response(
+        response: requests.Response) -> typing.Optional[list]:
     if response.status_code == requests.codes.ok and 'data' in response.json():
         response_data = response.json()['data']
         if 'result' in response_data and 'resultType' in response_data:
