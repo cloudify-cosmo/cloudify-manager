@@ -240,7 +240,7 @@ def _get_or_create_blueprint(storage_manager, blueprint_id):
     except manager_exceptions.NotFoundError:
         blueprint = Blueprint(
             id=blueprint_id,
-            created_at=datetime.now(),
+            created_at=datetime.utcnow(),
             main_file_name='',
             plan={}
         )
@@ -276,7 +276,7 @@ def _get_or_create_node(storage_manager, node_id, deployment):
 def upload_mock_cloudify_license(storage_manager):
     license = License(
         customer_id='mock_customer',
-        expiration_date=datetime.now(),
+        expiration_date=datetime.utcnow(),
         license_edition='Spire',
         cloudify_version='4.6',
         capabilities='mock-capabilities',

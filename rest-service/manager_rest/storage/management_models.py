@@ -481,7 +481,7 @@ class User(SQLModelBase, UserMixin):
                 minutes=config.instance.account_lock_period)
             last_failed_login = date_parser.parse(
                 self.last_failed_login_at, ignoretz=True)
-            if last_failed_login + lockout_period > datetime.now():
+            if last_failed_login + lockout_period > datetime.utcnow():
                 return True
         return False
 

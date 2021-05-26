@@ -311,7 +311,7 @@ class Config(object):
                 'name': entry.name,
                 'scope': entry.scope,
                 'value': value,
-                'updated_at': datetime.now(),
+                'updated_at': datetime.utcnow(),
                 '_updater_id': current_user.id,
             })
         session.bulk_update_mappings(models.Config, config_mappings)

@@ -57,7 +57,7 @@ class Authentication(object):
 
     @staticmethod
     def _increment_failed_logins_counter(user):
-        user.last_failed_login_at = datetime.now()
+        user.last_failed_login_at = datetime.utcnow()
         user.failed_logins_counter += 1
         user_datastore.commit()
 
@@ -82,7 +82,7 @@ class Authentication(object):
             # (User + Password), otherwise the counter will be reset on
             # every UI refresh (every 4 sec) and accounts won't be locked.
             user.failed_logins_counter = 0
-            now = datetime.now()
+            now = datetime.utcnow()
             if not user.last_login_at:
                 user.first_login_at = now
             user.last_login_at = now

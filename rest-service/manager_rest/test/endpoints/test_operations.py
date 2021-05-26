@@ -40,7 +40,7 @@ class OperationsTestCase(base_test.BaseServerTestCase):
         session.commit()
 
         self.execution = models.Execution(
-            created_at=datetime.now(),
+            created_at=datetime.utcnow(),
             id='execution_{}'.format(self.fake.uuid4()),
             is_system_workflow=False,
             workflow_id='install',

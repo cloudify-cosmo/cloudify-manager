@@ -479,7 +479,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         execution = self.sm.put(models.Execution(
             id=str(uuid.uuid4()),
             _deployment_fk=deployment._storage_id,
-            created_at=datetime.now(),
+            created_at=datetime.utcnow(),
             is_system_workflow=False,
             workflow_id='install',
             status=status,
@@ -489,13 +489,13 @@ class ExecutionsTestCase(BaseServerTestCase):
         tasks_graph = self.sm.put(models.TasksGraph(
             _execution_fk=execution._storage_id,
             name='install',
-            created_at=datetime.now()
+            created_at=datetime.utcnow()
         ))
         operation = self.sm.put(models.Operation(
             _tasks_graph_fk=tasks_graph._storage_id,
             parameters={'current_retries': 20},
             state=cloudify_tasks.TASK_FAILED,
-            created_at=datetime.now()
+            created_at=datetime.utcnow()
         ))
 
         self.client.executions.resume(execution.id, force=True)
@@ -541,7 +541,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         execution = self.sm.put(models.Execution(
             id='execution-1',
             _deployment_fk=deployment._storage_id,
-            created_at=datetime.now(),
+            created_at=datetime.utcnow(),
             is_system_workflow=False,
             workflow_id='install',
             blueprint_id=deployment.blueprint_id
@@ -571,7 +571,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         execution = self.sm.put(models.Execution(
             id='execution-1',
             _deployment_fk=deployment._storage_id,
-            created_at=datetime.now(),
+            created_at=datetime.utcnow(),
             is_system_workflow=False,
             workflow_id='install',
             blueprint_id=deployment.blueprint_id

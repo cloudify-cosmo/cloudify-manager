@@ -80,7 +80,7 @@ class PluginsUpdateManager(object):
                 return f'{description}\n{comment}'
             return comment
 
-        timestamp = datetime.now().strftime('%Y%m%dT%H%M%S.%f')
+        timestamp = datetime.utcnow().strftime('%Y%m%dT%H%M%S.%f')
         temp_blueprint_id = f'plugins-update-{timestamp}-{blueprint.id}'
         kwargs = {
             'application_file_name': blueprint.main_file_name,
