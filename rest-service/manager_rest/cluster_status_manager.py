@@ -404,8 +404,9 @@ def _parse_prometheus_results(prometheus_result: dict) \
                 metric, timestamp, healthy)
             return {}, {service_type: processed_data}
         else:
-            # TODO: Log something
-            pass
+            current_app.logger.warning(
+                'These metrics have not got a `host` label, this should '
+                f'not happen: {metric}')
 
     return {}, {}
 
