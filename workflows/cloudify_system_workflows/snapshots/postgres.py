@@ -238,6 +238,14 @@ class Postgres(object):
     def restore_permissions_table(self, permissions_path):
         self._restore_dump(permissions_path, self._db_name)
 
+    def refresh_roles(self):
+        """Bump updated_at for all roles, so that restservice reloads them
+
+        This is useful for when the snapshot restored permissions for some
+        roles, so that the restservice knows to reload them.
+        """
+        self.run_query("UPDATE public.roles SET updated_at=NOW()")
+
     def dump_config_tables(self, tempdir):
         pg_dump_bin = os.path.join(self._bin_dir, 'pg_dump')
         path = os.path.join(tempdir, 'config.dump')
