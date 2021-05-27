@@ -128,6 +128,22 @@ class TestRuntimeFunctionEvaluation(AgentlessTestCase):
         self.execute_workflow('install', deployment.id)
         self._assert_properties(deployment, self.CHANGED_VALUE)
 
+    def test_manual_update_non_runtime(self):
+        # no runtime evaluation - outputs are not re-evaluated
+        deployment = self.deploy(
+            self.bp_path,
+            inputs={'input1': self.BASE_VALUE},
+            runtime_only_evaluation=False)
+        self.execute_workflow('install', deployment.id)
+        self._assert_properties(deployment, self.BASE_VALUE)
+        self.execute_workflow('uninstall', deployment.id)
+        self._manual_deployment_update(deployment)
+        self.execute_workflow('install', deployment.id)
+        outputs = self.client.deployments.outputs.get(deployment.id)['outputs']
+        self.assertEqual(outputs['out1'], self.BASE_VALUE)
+        self.assertEqual(outputs['out2'], self.BASE_VALUE)
+        self.assertEqual(outputs['out3'], self.BASE_VALUE)
+
     def test_manual_update_resume(self):
         deployment = self.deploy(
             self.bp_path,
