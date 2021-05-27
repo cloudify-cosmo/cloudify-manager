@@ -187,6 +187,155 @@ def _add_monitoring_data(cluster_nodes: typing.Dict[str, dict]) -> None:
                                    metric_results)
 
 
+def _host_matches(metric: dict,
+                  node_private_ips: typing.Iterable[str]) -> bool:
+    if metric and metric.get('host'):
+        return metric['host'] in node_private_ips
+    return False
+
+
+def _parse_prometheus_results(prometheus_result: dict) \
+        -> typing.Tuple[typing.Dict[str, dict], typing.Dict[str, dict]]:
+
+    metric = prometheus_result.get('metric', {})
+    # Technically the second element in the tuple is the metric value, but
+    # we only use it to indicate health currently
+    timestamp, healthy = prometheus_result.get('value', [0, ''])
+    healthy = bool(int(healthy)) if healthy else False
+
+    process_manager = metric.get('process_manager', '')
+
+    if process_manager:
+        service_id = metric.get('name', '')
+        service = _get_cloudify_service_description(service_id)
+
+        # Only process services we care about
+        if service:
+            return _get_service_status(service_id, service, process_manager,
+                                       healthy, metric.get('host')), {}
+    else:
+        if metric.get('host'):
+            processed_data, service_type = _process_metric(
+                metric, timestamp, healthy)
+            return {}, {service_type: processed_data}
+        else:
+            current_app.logger.warning(
+                'These metrics have not got a `host` label, this should '
+                f'not happen: {metric}')
+
+    return {}, {}
+
+
+def _get_cloudify_service_description(
+        metric_name: str) -> typing.Optional[typing.Dict[str, str]]:
+    if metric_name in SERVICE_DESCRIPTIONS:
+        return SERVICE_DESCRIPTIONS[metric_name]
+    elif metric_name.endswith('.service'):
+        return _get_cloudify_service_description(metric_name[:-8])
+    return None
+
+
+def _get_service_status(service_id: str,
+                        service: dict,
+                        process_manager: str,
+                        is_running: bool,
+                        host: str) -> typing.Dict[str, typing.Any]:
+    return {
+        'status': (NodeServiceStatus.ACTIVE if is_running
+                   else NodeServiceStatus.INACTIVE),
+        'host': host,
+        'extra_info': {
+            process_manager: {
+                'instances': [
+                    {
+                        'Description': service['description'],
+                        'state': ('running' if is_running else 'stopped'),
+                        'Id': service_id,
+                    },
+                ],
+                'display_name': service['name'],
+                'unit_id': service_id,
+            },
+        },
+    }
+
+
+def _process_metric(metric, timestamp, healthy):
+    job = metric.get('job', '')
+    metric_name = job
+
+    if job.endswith('postgresql'):
+        service_type = CloudifyNodeType.DB
+    elif job.endswith('rabbitmq'):
+        service_type = CloudifyNodeType.BROKER
+    else:
+        service_type = CloudifyNodeType.MANAGER
+        metric_name = 'http endpoints'
+
+    if timestamp:
+        last_check = datetime.fromtimestamp(timestamp).strftime(
+            '%Y-%m-%dT%H:%M:%S.%fZ',
+        )
+    else:
+        last_check = 'unknown'
+
+    if metric.get('instance'):
+        metric_name += ' ({})'.format(metric.get('instance'))
+    if metric.get('host'):
+        metric_name += ' on {}'.format(metric.get('host'))
+
+    return {
+        'last_check': last_check,
+        'healthy': healthy,
+        'metric_type': metric.get('__name__', 'unknown'),
+        'metric_name': metric_name,
+        'host': metric.get('host', 'localhost'),
+    }, service_type
+
+
+def _append_service_results(service_results: dict, res: dict):
+    pm = list(res.get('extra_info', {}).keys())[0]
+    dn = res.get('extra_info', {}).get(pm, {}).get('display_name')
+
+    if not dn:
+        return
+
+    if dn not in service_results:
+        service_results[dn] = res
+        return
+
+    # If any instance is not active, report the service as such
+    if service_results[dn].get('status') == NodeServiceStatus.ACTIVE:
+        service_results[dn]['status'] = res['status']
+
+    # Update the instances part
+    if pm in service_results[dn].get('extra_info', {}):
+        # res' process manager is already present in corresponding result
+        if 'instances' not in service_results[dn]['extra_info'][pm]:
+            service_results[dn]['extra_info'][pm]['instances'] = []
+        # keep only one instance per host
+        instance_hosts = [
+            instance.get('host') for instance
+            in service_results[dn]['extra_info'][pm]['instances']
+        ]
+        for res_instance in res['extra_info'][pm].get('instances'):
+            if res_instance.get('host') not in instance_hosts:
+                # ... append an instance to the list of instances
+                service_results[dn]['extra_info'][pm]['instances'].append(
+                    res_instance)
+    else:
+        # if res' process manager is not present in corr. result
+        service_results[dn]['extra_info'][pm] = res['extra_info'][pm]
+
+
+def _append_metric_results(metric_results: dict, res: dict):
+    for service_type, metrics in res.items():
+        if service_type in metric_results:
+            metric_results[service_type].append(metrics)
+        else:
+            metric_results[service_type] = [metrics]
+
+
 def _get_broker_state(cluster_nodes: typing.Dict[str, dict],
                       cloudify_version: str,
                       detailed: bool) -> typing.Dict[str, typing.Any]:
@@ -290,60 +439,12 @@ def _get_cluster_service_state(cluster_nodes: typing.Dict[str, dict],
     return state
 
 
-def _get_cluster_service_status(nodes: typing.Dict[str, dict],
-                                quorum: int) -> str:
-    healthy_nodes_count = len([
-        node for node in nodes.values()
-        if node['status'] == ServiceStatus.HEALTHY
-    ])
-
-    if healthy_nodes_count == len(nodes):
-        return ServiceStatus.HEALTHY
-    elif healthy_nodes_count >= quorum:
-        return ServiceStatus.DEGRADED
-    else:
-        return ServiceStatus.FAIL
-
-
-def _get_overall_state(cluster_status: typing.Dict[str, dict]) -> str:
-    found_degraded = False
-
-    for service in cluster_status['services'].values():
-        if service['status'] == ServiceStatus.FAIL:
-            return ServiceStatus.FAIL
-        elif service['status'] == ServiceStatus.DEGRADED:
-            found_degraded = True
-
-    return ServiceStatus.DEGRADED if found_degraded else ServiceStatus.HEALTHY
-
-
-def _get_unit_id(service: typing.Dict) -> str:
-    if 'systemd' in service['extra_info']:
-        return service['extra_info']['systemd']['unit_id']
-    else:
-        return service['extra_info']['supervisord']['unit_id']
-
-
-def _service_expected(service: typing.Dict, service_type: str) -> bool:
-    unit_id = _get_unit_id(service)
-    if unit_id.endswith('.service'):
-        unit_id = unit_id[:-len('.service')]
-    return unit_id in SERVICE_ASSIGNMENTS[service_type]
-
-
-def _host_matches(metric: dict,
-                  node_private_ips: typing.Iterable[str]) -> bool:
-    if metric and metric.get('host'):
-        return metric['host'] in node_private_ips
+def _is_external(cluster_nodes: typing.Dict[str, dict],
+                 service_type: str) -> bool:
+    for node_details in cluster_nodes.values():
+        if service_type in node_details['external_services']:
+            return True
     return False
-
-
-def _strip_keys(struct: typing.Dict,
-                keys: typing.Union[list, str]) -> typing.Dict:
-    """Return copy of struct but without the keys listed."""
-    if not isinstance(keys, list):
-        keys = [keys]
-    return {k: v for k, v in struct.items() if k not in keys}
 
 
 def _get_nodes_of_type(cluster_nodes: typing.Dict[str, dict],
@@ -355,12 +456,19 @@ def _get_nodes_of_type(cluster_nodes: typing.Dict[str, dict],
     return requested_nodes
 
 
-def _is_external(cluster_nodes: typing.Dict[str, dict],
-                 service_type: str) -> bool:
-    for node_details in cluster_nodes.values():
-        if service_type in node_details['external_services']:
-            return True
-    return False
+def _service_expected(service: typing.Dict, service_type: str) -> bool:
+    unit_id = _get_unit_id(service)
+    if unit_id.endswith('.service'):
+        unit_id = unit_id[:-len('.service')]
+    return unit_id in SERVICE_ASSIGNMENTS[service_type]
+
+
+def _strip_keys(struct: typing.Dict,
+                keys: typing.Union[list, str]) -> typing.Dict:
+    """Return copy of struct but without the keys listed."""
+    if not isinstance(keys, list):
+        keys = [keys]
+    return {k: v for k, v in struct.items() if k not in keys}
 
 
 def _get_node_state(node: dict):
@@ -379,143 +487,35 @@ def _get_node_state(node: dict):
     return ServiceStatus.HEALTHY
 
 
-def _parse_prometheus_results(prometheus_result: dict) \
-        -> typing.Tuple[typing.Dict[str, dict], typing.Dict[str, dict]]:
+def _get_cluster_service_status(nodes: typing.Dict[str, dict],
+                                quorum: int) -> str:
+    healthy_nodes_count = len([
+        node for node in nodes.values()
+        if node['status'] == ServiceStatus.HEALTHY
+    ])
 
-    metric = prometheus_result.get('metric', {})
-    # Technically the second element in the tuple is the metric value, but
-    # we only use it to indicate health currently
-    timestamp, healthy = prometheus_result.get('value', [0, ''])
-    healthy = bool(int(healthy)) if healthy else False
-
-    process_manager = metric.get('process_manager', '')
-
-    if process_manager:
-        service_id = metric.get('name', '')
-        service = _get_cloudify_service_description(service_id)
-
-        # Only process services we care about
-        if service:
-            return _get_service_status(service_id, service, process_manager,
-                                       healthy, metric.get('host')), {}
+    if healthy_nodes_count == len(nodes):
+        return ServiceStatus.HEALTHY
+    elif healthy_nodes_count >= quorum:
+        return ServiceStatus.DEGRADED
     else:
-        if metric.get('host'):
-            processed_data, service_type = _process_metric(
-                metric, timestamp, healthy)
-            return {}, {service_type: processed_data}
-        else:
-            current_app.logger.warning(
-                'These metrics have not got a `host` label, this should '
-                f'not happen: {metric}')
-
-    return {}, {}
+        return ServiceStatus.FAIL
 
 
-def _append_service_results(service_results: dict, res: dict):
-    pm = list(res.get('extra_info', {}).keys())[0]
-    dn = res.get('extra_info', {}).get(pm, {}).get('display_name')
-
-    if not dn:
-        return
-
-    if dn not in service_results:
-        service_results[dn] = res
-        return
-
-    # If any instance is not active, report the service as such
-    if service_results[dn].get('status') == NodeServiceStatus.ACTIVE:
-        service_results[dn]['status'] = res['status']
-
-    # Update the instances part
-    if pm in service_results[dn].get('extra_info', {}):
-        # res' process manager is already present in corresponding result
-        if 'instances' not in service_results[dn]['extra_info'][pm]:
-            service_results[dn]['extra_info'][pm]['instances'] = []
-        # keep only one instance per host
-        instance_hosts = [
-            instance.get('host') for instance
-            in service_results[dn]['extra_info'][pm]['instances']
-        ]
-        for res_instance in res['extra_info'][pm].get('instances'):
-            if res_instance.get('host') not in instance_hosts:
-                # ... append an instance to the list of instances
-                service_results[dn]['extra_info'][pm]['instances'].append(
-                    res_instance)
+def _get_unit_id(service: typing.Dict) -> str:
+    if 'systemd' in service['extra_info']:
+        return service['extra_info']['systemd']['unit_id']
     else:
-        # if res' process manager is not present in corr. result
-        service_results[dn]['extra_info'][pm] = res['extra_info'][pm]
+        return service['extra_info']['supervisord']['unit_id']
 
 
-def _append_metric_results(metric_results: dict, res: dict):
-    for service_type, metrics in res.items():
-        if service_type in metric_results:
-            metric_results[service_type].append(metrics)
-        else:
-            metric_results[service_type] = [metrics]
+def _get_overall_state(cluster_status: typing.Dict[str, dict]) -> str:
+    found_degraded = False
 
+    for service in cluster_status['services'].values():
+        if service['status'] == ServiceStatus.FAIL:
+            return ServiceStatus.FAIL
+        elif service['status'] == ServiceStatus.DEGRADED:
+            found_degraded = True
 
-def _get_service_status(service_id: str,
-                        service: dict,
-                        process_manager: str,
-                        is_running: bool,
-                        host: str) -> typing.Dict[str, typing.Any]:
-    return {
-        'status': (NodeServiceStatus.ACTIVE if is_running
-                   else NodeServiceStatus.INACTIVE),
-        'host': host,
-        'extra_info': {
-            process_manager: {
-                'instances': [
-                    {
-                        'Description': service['description'],
-                        'state': ('running' if is_running else 'stopped'),
-                        'Id': service_id,
-                    },
-                ],
-                'display_name': service['name'],
-                'unit_id': service_id,
-            },
-        },
-    }
-
-
-def _process_metric(metric, timestamp, healthy):
-    job = metric.get('job', '')
-    metric_name = job
-
-    if job.endswith('postgresql'):
-        service_type = CloudifyNodeType.DB
-    elif job.endswith('rabbitmq'):
-        service_type = CloudifyNodeType.BROKER
-    else:
-        service_type = CloudifyNodeType.MANAGER
-        metric_name = 'http endpoints'
-
-    if timestamp:
-        last_check = datetime.fromtimestamp(timestamp).strftime(
-            '%Y-%m-%dT%H:%M:%S.%fZ',
-        )
-    else:
-        last_check = 'unknown'
-
-    if metric.get('instance'):
-        metric_name += ' ({})'.format(metric.get('instance'))
-    if metric.get('host'):
-        metric_name += ' on {}'.format(metric.get('host'))
-
-    return {
-        'last_check': last_check,
-        'healthy': healthy,
-        'metric_type': metric.get('__name__', 'unknown'),
-        'metric_name': metric_name,
-        'host': metric.get('host', 'localhost'),
-    }, service_type
-
-
-def _get_cloudify_service_description(
-        metric_name: str) -> typing.Optional[typing.Dict[str, str]]:
-    if metric_name in SERVICE_DESCRIPTIONS:
-        return SERVICE_DESCRIPTIONS[metric_name]
-    elif metric_name.endswith('.service'):
-        return _get_cloudify_service_description(metric_name[:-8])
-    return None
+    return ServiceStatus.DEGRADED if found_degraded else ServiceStatus.HEALTHY
