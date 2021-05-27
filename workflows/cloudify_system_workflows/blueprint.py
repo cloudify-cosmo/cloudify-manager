@@ -186,6 +186,9 @@ def upload(ctx, **kwargs):
     else:
         ctx.logger.info('Blueprint parsed. Updating DB with blueprint plan.')
 
+    # Warn users re: using multiple rel's berween the same source and target
+    check_multiple_relationship_to_one_target(ctx, plan)
+
     # Update DB with parsed plan
     update_dict = {
         'plan': plan,
@@ -237,3 +240,13 @@ def handle_failed_extracting(ctx, client, blueprint_id, error_msg,
                      'error_traceback': traceback.format_exc()})
     remove(archive_path)
     raise WorkflowFailed(error_msg)
+
+
+def check_multiple_relationship_to_one_target(ctx, plan):
+    for node in plan['nodes']:
+        rel_targets = [x['target_id'] for x in node['relationships']]
+        if len(rel_targets) > len(set(rel_targets)):
+            ctx.logger.warning(
+                "Node '%s' contains multiple relationships with the same "
+                "target. Only the last of these will have its interface "
+                "operations executed.", node['name'])
