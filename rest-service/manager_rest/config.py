@@ -13,6 +13,8 @@ from flask_security import current_user
 from flask import current_app
 from sqlalchemy import create_engine, orm
 
+from cloudify._compat import text_type
+
 from manager_rest.manager_exceptions import (
     ConflictError,
     AmbiguousName,
@@ -275,7 +277,15 @@ class Config(object):
                         raise ConflictError(
                             f'Error validating {name}: {value} is not '
                             f'a number')
-                elif entry.schema['type'] == 'boolean':
+                elif entry.schema['type'] == 'integer':
+                    try:
+                        value = int(value)
+                    except ValueError:
+                        raise ConflictError(
+                            f'Error validating {name}: {value} is not '
+                            f'an integer')
+                elif entry.schema['type'] == 'boolean'\
+                        and isinstance(value, text_type):
                     if value.lower() == 'true':
                         value = True
                     elif value.lower() == 'false':
