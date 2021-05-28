@@ -25,7 +25,7 @@ from cloudify.workflows import ctx
 from cloudify.cryptography_utils import encrypt
 from cloudify.exceptions import NonRecoverableError
 
-from .constants import ADMIN_DUMP_FILE, LICENSE_DUMP_FILE, V_5_1_0
+from .constants import ADMIN_DUMP_FILE, LICENSE_DUMP_FILE, V_4_6_0, V_5_1_0
 from .utils import run as run_shell
 
 POSTGRESQL_DEFAULT_PORT = 5432
@@ -549,12 +549,13 @@ class Postgres(object):
         all_tables = [table for table in all_tables if
                       table not in self._TABLES_TO_KEEP]
 
-        if snapshot_version <= V_5_1_0:
-            lock_tables_upfront = ['LOCK TABLE users;']
-        else:
-            lock_tables_upfront = ['LOCK TABLE users, maintenance_mode;']
+        tables_to_lock = ['users', 'roles']
+        if snapshot_version > V_4_6_0:
+            tables_to_lock.append('config')
+        if snapshot_version > V_5_1_0:
+            tables_to_lock.append('maintenance_mode')
         queries = (
-            lock_tables_upfront +
+            ['LOCK TABLE {0};'.format(', '.join(tables_to_lock))] +
             [self._TRUNCATE_QUERY.format(table) for table in all_tables
              if table != 'users'] +
             ['DELETE FROM users;']
