@@ -372,13 +372,8 @@ def _get_cluster_service_state(cluster_nodes: typing.Dict[str, dict],
                                                                  typing.Any]:
     is_external = _is_external(cluster_nodes, service_type)
 
-    state = {
-        'is_external': is_external,
-    }
-
     if is_external:
-        state['status'] = ServiceStatus.HEALTHY
-        return state
+        return {'is_external': True, 'status': ServiceStatus.HEALTHY}
 
     service_nodes = _get_nodes_of_type(cluster_nodes, service_type)
 
@@ -421,18 +416,15 @@ def _get_cluster_service_state(cluster_nodes: typing.Dict[str, dict],
     else:
         quorum = (node_count // 2) + 1
 
-    state['status'] = _get_cluster_service_status(
-        nodes=nodes, quorum=quorum,
-    )
-
     if not detailed:
         for node in nodes.values():
             node.pop('services')
             node.pop('metrics')
-
-    state['nodes'] = nodes
-
-    return state
+    return {
+        'is_external': False,
+        'status': _get_cluster_service_status(nodes=nodes, quorum=quorum),
+        'nodes': nodes,
+    }
 
 
 def _is_external(cluster_nodes: typing.Dict[str, dict],
