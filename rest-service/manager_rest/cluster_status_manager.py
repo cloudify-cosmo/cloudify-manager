@@ -106,22 +106,18 @@ def get_cluster_status(detailed=False) -> typing.Dict[str, typing.Any]:
     cluster_nodes, cloudify_version = _get_cluster_details()
     _add_monitoring_data(cluster_nodes)
 
-    cluster_status = {
-        'services': {
-            CloudifyNodeType.BROKER: _get_broker_state(cluster_nodes,
-                                                       cloudify_version,
-                                                       detailed),
-            CloudifyNodeType.DB: _get_db_state(cluster_nodes,
-                                               cloudify_version,
-                                               detailed),
-            CloudifyNodeType.MANAGER: _get_manager_state(cluster_nodes,
-                                                         cloudify_version,
-                                                         detailed),
-        },
+    cluster_services = {
+        CloudifyNodeType.BROKER:
+        _get_broker_state(cluster_nodes, cloudify_version, detailed),
+        CloudifyNodeType.DB:
+        _get_db_state(cluster_nodes, cloudify_version, detailed),
+        CloudifyNodeType.MANAGER:
+        _get_manager_state(cluster_nodes, cloudify_version, detailed),
     }
-    cluster_status['status'] = _get_overall_state(cluster_status)
-
-    return cluster_status
+    return {
+        'services': cluster_services,
+        'status': _get_overall_state(cluster_services)
+    }
 
 
 def _get_cluster_details() -> typing.Tuple[typing.Dict[str, dict], str]:
@@ -376,13 +372,8 @@ def _get_cluster_service_state(cluster_nodes: typing.Dict[str, dict],
                                                                  typing.Any]:
     is_external = _is_external(cluster_nodes, service_type)
 
-    state = {
-        'is_external': is_external,
-    }
-
     if is_external:
-        state['status'] = ServiceStatus.HEALTHY
-        return state
+        return {'is_external': True, 'status': ServiceStatus.HEALTHY}
 
     service_nodes = _get_nodes_of_type(cluster_nodes, service_type)
 
@@ -425,18 +416,15 @@ def _get_cluster_service_state(cluster_nodes: typing.Dict[str, dict],
     else:
         quorum = (node_count // 2) + 1
 
-    state['status'] = _get_cluster_service_status(
-        nodes=nodes, quorum=quorum,
-    )
-
     if not detailed:
         for node in nodes.values():
             node.pop('services')
             node.pop('metrics')
-
-    state['nodes'] = nodes
-
-    return state
+    return {
+        'is_external': False,
+        'status': _get_cluster_service_status(nodes=nodes, quorum=quorum),
+        'nodes': nodes,
+    }
 
 
 def _is_external(cluster_nodes: typing.Dict[str, dict],
@@ -509,10 +497,10 @@ def _get_unit_id(service: typing.Dict) -> str:
         return service['extra_info']['supervisord']['unit_id']
 
 
-def _get_overall_state(cluster_status: typing.Dict[str, dict]) -> str:
+def _get_overall_state(cluster_services: dict) -> str:
     found_degraded = False
 
-    for service in cluster_status['services'].values():
+    for service in cluster_services.values():
         if service['status'] == ServiceStatus.FAIL:
             return ServiceStatus.FAIL
         elif service['status'] == ServiceStatus.DEGRADED:
