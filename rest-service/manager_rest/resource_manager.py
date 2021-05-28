@@ -682,7 +682,7 @@ class ResourceManager(object):
 
         if blueprint.state in BlueprintUploadState.FAILED_STATES:
             return self.sm.delete(blueprint)
-        if (blueprint.state and
+        if (blueprint.state and not force and
                 blueprint.state != BlueprintUploadState.UPLOADED):
             # don't allow deleting blueprints while still uploading,
             # so we don't leave a dirty file system
