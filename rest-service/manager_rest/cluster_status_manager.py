@@ -505,10 +505,10 @@ def _get_unit_id(service: typing.Dict) -> str:
         return service['extra_info']['supervisord']['unit_id']
 
 
-def _get_overall_state(cluster_status: typing.Dict[str, dict]) -> str:
+def _get_overall_state(cluster_services: dict) -> str:
     found_degraded = False
 
-    for service in cluster_status['services'].values():
+    for service in cluster_services.values():
         if service['status'] == ServiceStatus.FAIL:
             return ServiceStatus.FAIL
         elif service['status'] == ServiceStatus.DEGRADED:
