@@ -106,22 +106,18 @@ def get_cluster_status(detailed=False) -> typing.Dict[str, typing.Any]:
     cluster_nodes, cloudify_version = _get_cluster_details()
     _add_monitoring_data(cluster_nodes)
 
-    cluster_status = {
-        'services': {
-            CloudifyNodeType.BROKER: _get_broker_state(cluster_nodes,
-                                                       cloudify_version,
-                                                       detailed),
-            CloudifyNodeType.DB: _get_db_state(cluster_nodes,
-                                               cloudify_version,
-                                               detailed),
-            CloudifyNodeType.MANAGER: _get_manager_state(cluster_nodes,
-                                                         cloudify_version,
-                                                         detailed),
-        },
+    cluster_services = {
+        CloudifyNodeType.BROKER:
+        _get_broker_state(cluster_nodes, cloudify_version, detailed),
+        CloudifyNodeType.DB:
+        _get_db_state(cluster_nodes, cloudify_version, detailed),
+        CloudifyNodeType.MANAGER:
+        _get_manager_state(cluster_nodes, cloudify_version, detailed),
     }
-    cluster_status['status'] = _get_overall_state(cluster_status)
-
-    return cluster_status
+    return {
+        'services': cluster_services,
+        'status': _get_overall_state(cluster_services)
+    }
 
 
 def _get_cluster_details() -> typing.Tuple[typing.Dict[str, dict], str]:
