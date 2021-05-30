@@ -235,12 +235,17 @@ class ResourceManager(object):
         amqp_client.add_handler(handler)
         with amqp_client:
             for execution in to_run:
-                if execution.is_system_workflow:
-                    self._execute_system_workflow(
-                        execution, queue=True, send_handler=handler)
-                else:
-                    self.execute_workflow(
-                        execution, queue=True, send_handler=handler)
+                try:
+                    if execution.is_system_workflow:
+                        self._execute_system_workflow(
+                            execution, queue=True, send_handler=handler)
+                    else:
+                        self.execute_workflow(
+                            execution, queue=True, send_handler=handler)
+                except Exception as e:
+                    current_app.logger.warning(
+                        'Could not dequeue execution %s: %s',
+                        execution, e)
 
     def _refresh_execution(self, execution: models.Execution) -> bool:
         """Prepare the execution to be started.
@@ -252,13 +257,21 @@ class ResourceManager(object):
             return True
         self.sm.refresh(execution.deployment)
         try:
+            if execution and execution.deployment and \
+                    execution.deployment.create_execution:
+                create_execution = execution.deployment.create_execution
+                delete_dep_env = 'delete_deployment_environment'
+                if (create_execution.status == ExecutionState.FAILED and
+                        execution.workflow_id != delete_dep_env):
+                    raise RuntimeError('create_deployment_environment failed')
+
             execution.merge_workflow_parameters(
                 execution.parameters,
                 execution.deployment,
                 execution.workflow_id
             )
-        except (manager_exceptions.IllegalExecutionParametersError,
-                manager_exceptions.NonexistentWorkflowError) as e:
+            execution.render_context()  # try this here to fail early
+        except Exception as e:
             execution.status = ExecutionState.FAILED
             execution.error = str(e)
             return False
@@ -957,9 +970,16 @@ class ResourceManager(object):
                          send_handler: 'SendHandler' = None):
         with self.sm.transaction():
             if execution.deployment:
-                self._check_allow_global_execution(execution.deployment)
-                self._verify_dependencies_not_affected(
-                    execution.workflow_id, execution.deployment, force)
+                try:
+                    self._check_allow_global_execution(execution.deployment)
+                    self._verify_dependencies_not_affected(
+                        execution.workflow_id, execution.deployment, force)
+                except Exception as e:
+                    execution.status = ExecutionState.FAILED
+                    execution.error = str(e)
+                    self.sm.update(execution)
+                    db.session.commit()
+                    raise
 
             should_queue = queue
             if not allow_overlapping_running_wf:
@@ -980,12 +1000,18 @@ class ResourceManager(object):
                 if not self._refresh_execution(execution):
                     return
 
-        workflow_executor.execute_workflow(
-            execution,
-            bypass_maintenance=bypass_maintenance,
-            wait_after_fail=wait_after_fail,
-            handler=send_handler,
-        )
+        try:
+            workflow_executor.execute_workflow(
+                execution,
+                bypass_maintenance=bypass_maintenance,
+                wait_after_fail=wait_after_fail,
+                handler=send_handler,
+            )
+        except Exception as e:
+            execution.status = ExecutionState.FAILED
+            execution.error = str(e)
+            self.sm.update(execution)
+            return
 
         workflow = execution.get_workflow()
         is_cascading_workflow = workflow.get('is_cascading', False)

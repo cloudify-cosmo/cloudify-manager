@@ -146,6 +146,7 @@ exit 0
 /usr/lib/systemd/system/cloudify-execution-scheduler.service
 
 %attr(750,cfyuser,adm) /opt/manager/scripts/load_permissions.py
+%attr(750,cfyuser,adm) /opt/manager/scripts/create_system_filters.py
 %attr(750,cfyuser,adm) /var/log/cloudify/rest
 %attr(750,cfyuser,adm) /opt/manager/snapshot_status
 %attr(750,cfyuser,adm) /var/log/cloudify/amqp-postgres

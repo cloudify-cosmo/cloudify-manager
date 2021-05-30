@@ -19,7 +19,9 @@ pipeline {
       yamlFile 'jenkins/build-pod.yaml'
     }
   }
-
+  parameters{
+    string(name: 'BASE_BRANCH', defaultValue: 'master', description: 'Base Branch to pull from cloudify-premium')
+  }
   options {
     checkoutToSubdirectory('cloudify-manager')
     buildDiscarder(logRotator(numToKeepStr:'10'))
@@ -190,7 +192,7 @@ pipeline {
                         https://${env.PRIVATE_REPO_GITHUB_TOKEN}@github.com/cloudify-cosmo/cloudify-premium.git \
                         ~/cloudify-premium
                     }
-                    clone "${env.BRANCH}" || clone master
+                    clone "${env.BRANCH}" || clone "${params.BASE_BRANCH}"
                   """
 
                   vEnv()
