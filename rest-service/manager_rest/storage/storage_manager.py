@@ -134,7 +134,8 @@ class SQLStorageManager(object):
         return query
 
     @staticmethod
-    def _sort_query(query, model_class, sort=None, distinct=None):
+    def _sort_query(query, model_class, sort=None, distinct=None,
+                    default_sorting=True):
         """Add sorting clauses to the query
 
         :param query: Base SQL query
@@ -153,10 +154,10 @@ class SQLStorageManager(object):
                     query = query.order_by(order(column))
                 else:
                     query = query.order_by(column)
-        else:
-            default_sort = model_class.default_sort_column()
-            if default_sort:
-                query = query.order_by(default_sort)
+        if default_sorting:
+            default_sort_column = model_class.default_sort_column()
+            if default_sort_column:
+                query = query.order_by(default_sort_column)
         return query
 
     def _filter_query(self,
@@ -350,7 +351,8 @@ class SQLStorageManager(object):
                    sort=None,
                    all_tenants=None,
                    distinct=None,
-                   filter_rules=None):
+                   filter_rules=None,
+                   default_sorting=True):
         """Get an SQL query object based on the params passed
 
         :param model_class: SQL DB table class
@@ -380,7 +382,8 @@ class SQLStorageManager(object):
                                    substr_filters,
                                    all_tenants,
                                    filter_rules)
-        query = self._sort_query(query, model_class, sort, distinct)
+        query = self._sort_query(query, model_class, sort, distinct,
+                                 default_sorting)
         return query
 
     def _get_columns_from_field_names(self,
@@ -666,6 +669,7 @@ class SQLStorageManager(object):
             filters=filters,
             sort={target_field: f.desc()},
             include=string_fields,
+            default_sorting=False,
         ).with_entities(*entities).group_by(*fields)
 
         results, total, size, offset = self._paginate(query,
