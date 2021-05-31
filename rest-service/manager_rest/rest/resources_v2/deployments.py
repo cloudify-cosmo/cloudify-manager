@@ -61,10 +61,6 @@ class Deployments(resources_v1.Deployments):
             '_get_all_results',
             request.args.get('_get_all_results', False)
         )
-        search_on_id_or_display_name = rest_utils.verify_and_convert_bool(
-            '_search_on_id_or_display_name',
-            request.args.get('_search_on_id_or_display_name', False)
-        )
         filters, _include = rest_utils.modify_deployments_list_args(filters,
                                                                     _include)
         filter_rules = get_filter_rules_from_filter_id(
@@ -78,8 +74,7 @@ class Deployments(resources_v1.Deployments):
             sort=sort,
             all_tenants=all_tenants,
             get_all_results=get_all_results,
-            filter_rules=filter_rules,
-            use_or_on_substr_filters=search_on_id_or_display_name
+            filter_rules=filter_rules
         )
 
         if _include and 'workflows' in _include:

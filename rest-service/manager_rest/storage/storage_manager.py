@@ -18,7 +18,7 @@ from functools import wraps
 from collections import OrderedDict
 from contextlib import contextmanager
 from flask_security import current_user
-from sqlalchemy import or_ as sql_or, and_ as sql_and, inspect, func
+from sqlalchemy import or_ as sql_or, inspect, func
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from flask import current_app, has_request_context
@@ -166,8 +166,7 @@ class SQLStorageManager(object):
                       filters,
                       substr_filters,
                       all_tenants,
-                      filter_rules,
-                      use_or_on_substr_filters):
+                      filter_rules):
         """Add filter clauses to the query
 
         :param query: Base SQL query
@@ -182,8 +181,7 @@ class SQLStorageManager(object):
         query = self._add_tenant_filter(query, model_class, all_tenants)
         query = self._add_permissions_filter(query, model_class)
         query = self._add_value_filter(query, filters)
-        query = self._add_substr_filter(query, substr_filters,
-                                        use_or_on_substr_filters)
+        query = self._add_substr_filter(query, substr_filters)
         query = self._add_filter_rules(query, model_class, filter_rules)
         return query
 
@@ -212,8 +210,7 @@ class SQLStorageManager(object):
                 query = query.filter(column == value)
         return query
 
-    def _add_substr_filter(self, query, filters,
-                           use_or_on_substr_filters=False):
+    def _add_substr_filter(self, query, filters):
         substr_conditions = []
         for column, value in filters.items():
             column, value = self._update_case_insensitive(column, value, True)
@@ -223,10 +220,8 @@ class SQLStorageManager(object):
                 raise manager_exceptions.BadParametersError(
                     'Substring filtering is only supported for strings'
                 )
-        if use_or_on_substr_filters:
-            query.filter(sql_or(*substr_conditions))
-        else:
-            query.filter(sql_and(*substr_conditions))
+        if substr_conditions:
+            query = query.filter(sql_or(*substr_conditions))
 
         return query
 
@@ -361,8 +356,7 @@ class SQLStorageManager(object):
                    all_tenants=None,
                    distinct=None,
                    filter_rules=None,
-                   default_sorting=True,
-                   use_or_on_substr_filters=False):
+                   default_sorting=True):
         """Get an SQL query object based on the params passed
 
         :param model_class: SQL DB table class
@@ -391,8 +385,7 @@ class SQLStorageManager(object):
                                    filters,
                                    substr_filters,
                                    all_tenants,
-                                   filter_rules,
-                                   use_or_on_substr_filters)
+                                   filter_rules)
         query = self._sort_query(query, model_class, sort, distinct,
                                  default_sorting)
         return query
@@ -611,8 +604,7 @@ class SQLStorageManager(object):
              get_all_results=False,
              distinct=None,
              locking=False,
-             filter_rules=None,
-             use_or_on_substr_filters=False):
+             filter_rules=None):
         """Return a list of `model_class` results
 
         :param model_class: SQL DB table class
@@ -651,8 +643,7 @@ class SQLStorageManager(object):
                                 sort,
                                 all_tenants,
                                 distinct,
-                                filter_rules,
-                                use_or_on_substr_filters)
+                                filter_rules)
 
         results, total, size, offset = self._paginate(
             query,

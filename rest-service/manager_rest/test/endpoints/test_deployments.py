@@ -1125,7 +1125,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         _, _, _, dep2 = self.put_deployment(deployment_id='dep2',
                                             blueprint_id='bp2',
                                             display_name=dep2_name)
-        dep_list_1 = self.client.deployments.list(_search='dep',
+        dep_list_1 = self.client.deployments.list(_search='dep1',
                                                   _search_name=dep1_name)
         self.assertEqual(len(dep_list_1), 1)
         self.assertEqual(dep_list_1[0].id, dep1.id)
@@ -1140,3 +1140,14 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         )
         dep = self.sm.get(models.Deployment, 'dep1')
         assert dep.display_name == 'y'
+
+    def test_deployments_list_search_by_search_name_or_id(self):
+        for i in range(3):
+            self.put_deployment(deployment_id=f'dep{i}',
+                                blueprint_id=f'bp{i}',
+                                display_name=f'display{i}')
+
+        dep_list = self.client.deployments.list(_search='dep0',
+                                                _search_name='display1')
+
+        self.assertEqual({dep.id for dep in dep_list}, {'dep0', 'dep1'})
