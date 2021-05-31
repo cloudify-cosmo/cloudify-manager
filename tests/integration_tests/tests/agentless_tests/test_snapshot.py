@@ -16,6 +16,7 @@
 import os
 import time
 import json
+import pytest
 import pickle
 import binascii
 
@@ -33,6 +34,7 @@ from manager_rest.constants import DEFAULT_TENANT_NAME
 from cloudify_rest_client.executions import Execution
 from cloudify_rest_client.exceptions import CloudifyClientError
 
+pytestmark = pytest.mark.group_snapshots
 SNAPSHOTS = 'http://cloudify-tests-files.s3-eu-west-1.amazonaws.com/snapshots/'
 
 

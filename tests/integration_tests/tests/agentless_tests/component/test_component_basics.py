@@ -24,6 +24,8 @@ from integration_tests.tests.utils import (get_resource as resource,
                                            upload_mock_plugin,
                                            wait_for_blueprint_upload)
 
+pytestmark = pytest.mark.group_service_composition
+
 
 @pytest.mark.usefixtures('cloudmock_plugin')
 class ComponentTypeTest(AgentlessTestCase):

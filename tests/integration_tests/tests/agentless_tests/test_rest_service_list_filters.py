@@ -19,6 +19,8 @@ from integration_tests import AgentlessTestCase
 from integration_tests.tests import utils as test_utils
 from integration_tests.tests.utils import get_resource as resource
 
+pytestmark = pytest.mark.group_rest
+
 TEST_PACKAGE_NAME = 'cloudify-script-plugin'
 TEST_PACKAGE_VERSION = '1.2'
 OLD_TEST_PACKAGE_VERSION = '1.1'

@@ -13,6 +13,7 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import pytest
 import tempfile
 from datetime import datetime, timedelta
 
@@ -28,6 +29,7 @@ from cloudify_rest_client.exceptions import (
 )
 from integration_tests.tests.utils import run_postgresql_command
 
+pytestmark = pytest.mark.group_premium
 LICENSE_ENGINE_URL = 'https://us-central1-omer-tenant.cloudfunctions' \
                      '.net/LicenseEngineHubSpot'
 

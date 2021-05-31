@@ -1,7 +1,10 @@
+import pytest
+
 from cloudify_rest_client.exceptions import ForbiddenError, NotModifiedError
 from integration_tests.tests.test_cases import AgentlessTestCase
 from integration_tests.tests.constants import USER_ROLE, ADMIN_ROLE
 
+pytestmark = pytest.mark.group_premium
 
 TENANT_USER = 'user'
 TENANT_VIEWER = 'viewer'

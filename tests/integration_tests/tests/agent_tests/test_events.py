@@ -22,6 +22,8 @@ from integration_tests import AgentTestWithPlugins
 from integration_tests.tests.utils import get_resource as resource
 from integration_tests.tests.utils import run_postgresql_command
 
+pytestmark = pytest.mark.group_events_logs
+
 
 @pytest.mark.usefixtures('dockercompute_plugin')
 class TimezoneTest(AgentTestWithPlugins):

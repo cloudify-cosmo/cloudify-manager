@@ -23,6 +23,8 @@ from integration_tests.tests.utils import (
     wait_for_blueprint_upload,
     wait_for_deployment_creation_to_complete)
 
+pytestmark = pytest.mark.group_rest
+
 
 @pytest.mark.usefixtures('cloudmock_plugin')
 class RestAPITest(AgentlessTestCase):

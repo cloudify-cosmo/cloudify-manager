@@ -1,9 +1,12 @@
-from datetime import datetime
+import pytest
 
+from datetime import datetime
 from retrying import retry
 
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
+
+pytestmark = pytest.mark.group_deployments
 
 
 class ExecutionsSchedulesTest(AgentlessTestCase):

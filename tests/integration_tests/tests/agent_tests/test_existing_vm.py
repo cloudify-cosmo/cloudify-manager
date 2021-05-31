@@ -20,6 +20,8 @@ from os.path import join
 from integration_tests import AgentTestWithPlugins
 from integration_tests.tests.utils import get_resource as resource
 
+pytestmark = pytest.mark.group_plugins
+
 
 class BaseExistingVMTest(AgentTestWithPlugins):
     def setUp(self):

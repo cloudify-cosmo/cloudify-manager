@@ -22,6 +22,8 @@ from cloudify.models_states import PluginInstallationState
 from integration_tests import AgentTestCase
 from integration_tests.tests.utils import get_resource as resource
 
+pytestmark = pytest.mark.group_plugins
+
 
 @pytest.mark.usefixtures('dockercompute_plugin')
 @pytest.mark.usefixtures('cloudmock_plugin')

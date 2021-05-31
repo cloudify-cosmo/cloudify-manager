@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+import pytest
 import json
 import os
 import subprocess
@@ -22,6 +22,8 @@ from functools import wraps
 from integration_tests.framework import utils
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
+
+pytestmark = pytest.mark.group_rest
 
 
 def skip_if_supervisord(test_method):

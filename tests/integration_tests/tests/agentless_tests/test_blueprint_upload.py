@@ -15,6 +15,7 @@
 
 import copy
 import time
+import pytest
 import requests
 
 from cloudify.models_states import BlueprintUploadState
@@ -24,6 +25,8 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 from integration_tests.tests.utils import wait_for_blueprint_upload
+
+pytestmark = pytest.mark.group_deployments
 
 
 class BlueprintUploadTest(AgentlessTestCase):

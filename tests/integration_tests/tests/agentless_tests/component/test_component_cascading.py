@@ -28,6 +28,8 @@ from integration_tests.tests.utils import (
     get_resource as resource,
     wait_for_blueprint_upload)
 
+pytestmark = pytest.mark.group_service_composition
+
 
 @pytest.mark.usefixtures('testmockoperations_plugin')
 class ComponentCascadingCancelAndResume(AgentlessTestCase):

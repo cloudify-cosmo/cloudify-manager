@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import uuid
+import pytest
 
 import requests
 import requests.status_codes
@@ -25,6 +26,8 @@ from cloudify.utils import ipv6_url_compat
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 from integration_tests.tests.utils import wait_for_blueprint_upload
+
+pytestmark = pytest.mark.group_general
 
 
 class ResourcesAvailableTest(AgentlessTestCase):

@@ -1,8 +1,12 @@
+import pytest
+
 from cloudify_rest_client.exceptions import CloudifyClientError
 from manager_rest.constants import DEFAULT_TENANT_NAME
 
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.constants import ADMIN_ROLE, USER_ROLE
+
+pytestmark = pytest.mark.group_premium
 
 
 class UsersTest(AgentlessTestCase):

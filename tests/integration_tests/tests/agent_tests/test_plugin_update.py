@@ -31,6 +31,8 @@ from integration_tests.tests.utils import (
 )
 from integration_tests.framework.utils import zip_files
 
+pytestmark = pytest.mark.group_plugins
+
 
 def setup_for_sourced_plugins(f):
     @wraps(f)

@@ -17,6 +17,8 @@ import pytest
 
 from . import TestScaleBase
 
+pytestmark = pytest.mark.group_scale
+
 
 @pytest.mark.usefixtures('testmockoperations_plugin')
 class TestScaleGroup(TestScaleBase):

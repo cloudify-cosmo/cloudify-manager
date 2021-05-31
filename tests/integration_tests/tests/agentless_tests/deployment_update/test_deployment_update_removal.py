@@ -18,6 +18,8 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 from . import DeploymentUpdateBase, BLUEPRINT_ID
 from integration_tests.tests.utils import wait_for_blueprint_upload
 
+pytestmark = mark.group_deployments
+
 
 class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
 

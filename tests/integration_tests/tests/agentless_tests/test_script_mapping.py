@@ -15,12 +15,15 @@
 
 
 import os
+import pytest
 import tempfile
 
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 
 from manager_rest.constants import DEFAULT_TENANT_NAME
+
+pytestmark = pytest.mark.group_dsl
 
 
 class TestScriptMapping(AgentlessTestCase):

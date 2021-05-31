@@ -14,8 +14,11 @@
 #    * limitations under the License.
 
 import os
+import pytest
 
 from integration_tests import AgentlessTestCase
+
+pytestmark = pytest.mark.group_general
 
 
 class MiscManagerTest(AgentlessTestCase):

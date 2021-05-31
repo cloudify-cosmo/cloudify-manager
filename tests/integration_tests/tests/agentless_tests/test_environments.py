@@ -11,6 +11,8 @@ from cloudify.models_states import DeploymentState
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 
+pytestmark = pytest.mark.group_environments
+
 
 @pytest.mark.usefixtures('cloudmock_plugin')
 @pytest.mark.usefixtures('mock_workflows_plugin')

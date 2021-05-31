@@ -23,6 +23,8 @@ from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import run_postgresql_command
 from integration_tests.tests.utils import get_resource as resource
 
+pytestmark = pytest.mark.group_events_logs
+
 CREATE_SNAPSHOT_SUCCESS_MSG =\
     "'create_snapshot' workflow execution succeeded"
 RESTORE_SNAPSHOT_SUCCESS_MSG =\

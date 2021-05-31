@@ -14,6 +14,7 @@
 #    * limitations under the License.
 
 import time
+import pytest
 import retrying
 
 from cloudify_rest_client.exceptions import CloudifyClientError
@@ -21,6 +22,7 @@ from cloudify.cluster_status import ServiceStatus, NodeServiceStatus
 
 from integration_tests import AgentlessTestCase
 
+pytestmark = pytest.mark.group_general
 
 SERVICES = {
     'Management Worker': 'cloudify-mgmtworker',

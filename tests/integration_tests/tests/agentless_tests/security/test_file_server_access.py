@@ -1,3 +1,4 @@
+import pytest
 import requests
 
 from cloudify_cli.env import get_auth_header
@@ -6,6 +7,8 @@ from manager_rest.constants import DEFAULT_TENANT_ROLE
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.constants import USER_ROLE
 from integration_tests.tests.utils import get_resource as resource
+
+pytestmark = pytest.mark.group_premium
 
 
 class ResourcesAvailableTest(AgentlessTestCase):

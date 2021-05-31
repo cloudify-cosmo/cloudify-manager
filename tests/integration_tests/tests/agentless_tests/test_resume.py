@@ -24,6 +24,8 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 
+pytestmark = pytest.mark.group_workflows
+
 
 @pytest.mark.usefixtures('cloudmock_plugin')
 class TestResumeMgmtworker(AgentlessTestCase):

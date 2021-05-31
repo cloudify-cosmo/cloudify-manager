@@ -28,7 +28,7 @@ from integration_tests.tests.utils import (
 
 from manager_rest.constants import DEFAULT_TENANT_NAME
 
-
+pytestmark = pytest.mark.group_deployments
 RESOURCE_PATH = 'resources/resource.txt'
 RESOURCE_CONTENT = 'this is a deployment resource'
 
