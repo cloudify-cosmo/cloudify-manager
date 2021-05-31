@@ -26,7 +26,7 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy import func, select, table, column, exists
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
-from sqlalchemy.orm import validates
+from sqlalchemy.orm import validates, aliased
 from sqlalchemy.sql.schema import CheckConstraint
 
 from cloudify.constants import MGMTWORKER_QUEUE
@@ -679,7 +679,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
 
     @environment_type.expression
     def environment_type(cls):
-        labels_table = DeploymentLabel.__table__
+        labels_table = aliased(DeploymentLabel.__table__)
         env_type_stmt = (
             select([labels_table.c.value]).
             where(db.and_(
