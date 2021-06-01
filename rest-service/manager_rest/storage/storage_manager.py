@@ -211,14 +211,18 @@ class SQLStorageManager(object):
         return query
 
     def _add_substr_filter(self, query, filters):
+        substr_conditions = []
         for column, value in filters.items():
             column, value = self._update_case_insensitive(column, value, True)
             if isinstance(value, text_type):
-                query = query.filter(column.contains(value))
+                substr_conditions.append(column.contains(value))
             else:
                 raise manager_exceptions.BadParametersError(
                     'Substring filtering is only supported for strings'
                 )
+        if substr_conditions:
+            query = query.filter(sql_or(*substr_conditions))
+
         return query
 
     @staticmethod

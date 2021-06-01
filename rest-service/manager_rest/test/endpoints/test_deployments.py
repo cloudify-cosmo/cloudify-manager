@@ -1125,7 +1125,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         _, _, _, dep2 = self.put_deployment(deployment_id='dep2',
                                             blueprint_id='bp2',
                                             display_name=dep2_name)
-        dep_list_1 = self.client.deployments.list(_search='dep',
+        dep_list_1 = self.client.deployments.list(_search='dep1',
                                                   _search_name=dep1_name)
         self.assertEqual(len(dep_list_1), 1)
         self.assertEqual(dep_list_1[0].id, dep1.id)
