@@ -1140,14 +1140,3 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         )
         dep = self.sm.get(models.Deployment, 'dep1')
         assert dep.display_name == 'y'
-
-    def test_deployments_list_search_by_search_name_or_id(self):
-        for i in range(3):
-            self.put_deployment(deployment_id=f'dep{i}',
-                                blueprint_id=f'bp{i}',
-                                display_name=f'display{i}')
-
-        dep_list = self.client.deployments.list(_search='dep0',
-                                                _search_name='display1')
-
-        self.assertEqual({dep.id for dep in dep_list}, {'dep0', 'dep1'})

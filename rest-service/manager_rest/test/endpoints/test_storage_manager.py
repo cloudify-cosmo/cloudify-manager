@@ -233,6 +233,23 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         )
         self.assertEqual(20, len(secret_list))
 
+    def test_substr_filter_uses_or_operator(self):
+        now = utils.get_formatted_timestamp()
+        for i in range(3):
+            secret = models.Secret(id=f'secret_{i}',
+                                   value=f'value_{i}',
+                                   created_at=now,
+                                   updated_at=now,
+                                   visibility=VisibilityState.TENANT)
+            self.sm.put(secret)
+
+        secrets_list = self.sm.list(
+            models.Secret,
+            substr_filters={'id': 'secret_0', 'value': 'value_2'}
+        )
+        self.assertEqual({secret.id for secret in secrets_list},
+                         {'secret_0', 'secret_2'})
+
 
 class TestTransactions(base_test.BaseServerTestCase):
     def _make_secret(self, id, value):
