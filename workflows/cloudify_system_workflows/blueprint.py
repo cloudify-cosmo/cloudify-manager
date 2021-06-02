@@ -199,7 +199,16 @@ def upload(ctx, **kwargs):
         update_dict['description'] = plan['description']
     if labels:
         update_dict['labels'] = labels
-    client.blueprints.update(blueprint_id, update_dict=update_dict)
+    try:
+        client.blueprints.update(blueprint_id, update_dict=update_dict)
+    except Exception as e:
+        error_msg = 'Failed uploading blueprint - {}'.format(e)
+        client.blueprints.update(
+            blueprint_id,
+            update_dict={'state': BlueprintUploadState.FAILED_UPLOADING,
+                         'error': error_msg,
+                         'error_traceback': traceback.format_exc()})
+        raise
 
 
 def extract_parser_context(context, resolver_parameters):
