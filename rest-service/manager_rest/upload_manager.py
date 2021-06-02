@@ -622,8 +622,15 @@ class UploadedBlueprintsManager(UploadedDataManager):
             FILE_SERVER_BLUEPRINTS_FOLDER,
             tenant)
         mkdirs(tenant_dir)
-        shutil.move(os.path.join(file_server_root, app_dir),
-                    os.path.join(tenant_dir, blueprint_id))
+        bp_from = os.path.join(file_server_root, app_dir)
+        bp_dir = os.path.join(tenant_dir, blueprint_id)
+        try:
+            # use os.rename - bp_from is already in file_server_root, ie.
+            # same filesystem as the target dir
+            os.rename(bp_from, bp_dir)
+        except OSError as e:  # eg. directory not empty
+            shutil.rmtree(bp_from)
+            raise manager_exceptions.ConflictError(str(e))
         self._process_plugins(file_server_root, blueprint_id)
 
     @staticmethod
