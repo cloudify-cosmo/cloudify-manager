@@ -20,6 +20,7 @@ import requests.status_codes
 from requests.exceptions import ConnectionError
 
 from cloudify_cli.env import get_auth_header
+from cloudify.utils import ipv6_url_compat
 
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
@@ -36,7 +37,7 @@ class ResourcesAvailableTest(AgentlessTestCase):
         self.client.blueprints.upload(blueprint_path,
                                       entity_id=blueprint_id)
         invalid_resource_url = 'https://{0}:{1}/resources/blueprints/{1}/{2}' \
-            .format(container_ip, 53229, blueprint_id)
+            .format(ipv6_url_compat(container_ip), 53229, blueprint_id)
         try:
             result = requests.head(invalid_resource_url)
             self.assertEqual(
@@ -76,8 +77,8 @@ class ResourcesAvailableTest(AgentlessTestCase):
         self.assertEqual(
             expected_status_code,
             requests.get(
-                'https://{0}:53333/resources{1}'.format(self.get_manager_ip(),
-                                                        path),
+                'https://{0}:53333/resources{1}'.format(
+                    ipv6_url_compat(self.get_manager_ip()), path),
                 headers=headers,
                 verify=False
             ).status_code
