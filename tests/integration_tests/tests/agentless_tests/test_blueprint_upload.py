@@ -18,6 +18,7 @@ import time
 import requests
 
 from cloudify.models_states import BlueprintUploadState
+from cloudify.utils import ipv6_url_compat
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from integration_tests import AgentlessTestCase
@@ -60,8 +61,8 @@ class BlueprintUploadTest(AgentlessTestCase):
         blueprint_id = 'bp-url-malformed'
         archive_url = 'malformed/url_is.bad'
         response = requests.put(
-            'https://{0}/api/v3.1/blueprints/{1}'.format(self.get_manager_ip(),
-                                                         blueprint_id),
+            'https://{0}/api/v3.1/blueprints/{1}'.format(
+                ipv6_url_compat(self.get_manager_ip()), blueprint_id),
             headers=self.client._client.headers,
             params={'blueprint_archive_url': archive_url},
             verify=False
@@ -191,7 +192,7 @@ class BlueprintUploadTest(AgentlessTestCase):
         admin_headers = self.client._client.headers
         resp = requests.get(
             'https://{0}:53333/resources/blueprints/default_tenant/'
-            '{1}/{2}'.format(self.get_manager_ip(),
+            '{1}/{2}'.format(ipv6_url_compat(self.get_manager_ip()),
                              blueprint_id,
                              blueprint_filename),
             headers=admin_headers,
@@ -202,7 +203,7 @@ class BlueprintUploadTest(AgentlessTestCase):
         resp = requests.get(
             'https://{0}:53333/uploaded-blueprints/default_tenant/'
             '{1}/{1}.tar.gz'.format(
-                self.get_manager_ip(),
+                ipv6_url_compat(self.get_manager_ip()),
                 blueprint_id),
             headers=admin_headers,
             verify=False
@@ -273,7 +274,8 @@ class BlueprintValidateTest(AgentlessTestCase):
         # blueprint folder deleted from uploaded blueprints
         resp = requests.get(
             'https://{0}:53333/resources/uploaded-blueprints/'
-            'default_tenant/{1}'.format(self.get_manager_ip(), blueprint_id),
+            'default_tenant/{1}'.format(ipv6_url_compat(self.get_manager_ip()),
+                                        blueprint_id),
             headers=admin_headers,
             verify=False
         )
