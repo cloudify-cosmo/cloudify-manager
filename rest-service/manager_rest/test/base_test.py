@@ -296,6 +296,7 @@ class BaseServerTestCase(unittest.TestCase):
         self.initialize_provider_context()
         self._setup_current_user()
         self.addCleanup(self._drop_db, keep_tables=['config'])
+        self.addCleanup(self._clean_tmpdir)
 
     @staticmethod
     def _drop_db(keep_tables=None):
@@ -312,6 +313,12 @@ class BaseServerTestCase(unittest.TestCase):
                 continue
             server.db.session.execute(table.delete())
         server.db.session.commit()
+
+    def _clean_tmpdir(self):
+        shutil.rmtree(os.path.join(self.tmpdir, 'blueprints'),
+                      ignore_errors=True)
+        shutil.rmtree(os.path.join(self.tmpdir, 'uploaded-blueprints'),
+                      ignore_errors=True)
 
     @classmethod
     def _mock_verify_role(cls):
