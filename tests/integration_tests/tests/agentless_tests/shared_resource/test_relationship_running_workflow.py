@@ -17,6 +17,8 @@ from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 from integration_tests.tests.utils import wait_for_blueprint_upload
 
+pytestmark = pytest.mark.group_service_composition
+
 
 @pytest.mark.usefixtures('mock_workflows_plugin')
 class TestRelationshipRunningRemoteWorkflow(AgentlessTestCase):

@@ -14,6 +14,7 @@
 #    * limitations under the License.
 
 import os
+import pytest
 import shutil
 import tempfile
 from functools import partial
@@ -24,6 +25,7 @@ from integration_tests.framework import utils
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 
+pytestmark = pytest.mark.group_rest
 MAX_RESULT_FOR_TESTING = 9
 
 

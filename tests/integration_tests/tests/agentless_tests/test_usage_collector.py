@@ -19,6 +19,8 @@ from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 from integration_tests.tests.usage_collector_base import TestUsageCollectorBase
 
+pytestmark = pytest.mark.group_usage_collector
+
 
 @pytest.mark.usefixtures('cloudmock_plugin')
 @pytest.mark.usefixtures('testmockoperations_plugin')

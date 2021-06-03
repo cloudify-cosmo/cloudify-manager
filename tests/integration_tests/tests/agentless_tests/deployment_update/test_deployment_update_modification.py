@@ -13,9 +13,12 @@
 #  * limitations under the License.
 
 import re
+import pytest
 
 from . import DeploymentUpdateBase, BLUEPRINT_ID
 from integration_tests.tests.utils import wait_for_blueprint_upload
+
+pytestmark = pytest.mark.group_deployments
 
 
 class TestDeploymentUpdateModification(DeploymentUpdateBase):

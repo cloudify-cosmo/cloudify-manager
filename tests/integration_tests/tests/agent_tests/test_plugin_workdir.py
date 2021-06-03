@@ -19,6 +19,8 @@ import pytest
 from integration_tests import AgentTestCase
 from integration_tests.tests.utils import get_resource as resource
 
+pytestmark = pytest.mark.group_plugins
+
 
 @pytest.mark.usefixtures('testmockoperations_plugin')
 @pytest.mark.usefixtures('allow_agent')

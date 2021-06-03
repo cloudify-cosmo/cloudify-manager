@@ -13,12 +13,16 @@
 #  * limitations under the License.
 
 import os
+import pytest
 from uuid import uuid4
+
 from integration_tests.tests.utils import (
     wait_for_blueprint_upload,
     wait_for_deployment_deletion_to_complete
 )
 from . import DeploymentUpdateBase, BLUEPRINT_ID
+
+pytestmark = pytest.mark.group_deployments
 
 
 class TestDeploymentUpdateMisc(DeploymentUpdateBase):

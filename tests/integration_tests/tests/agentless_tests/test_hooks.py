@@ -25,6 +25,8 @@ from integration_tests.tests import utils
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import upload_mock_plugin
 
+pytestmark = pytest.mark.group_general
+
 
 @pytest.mark.usefixtures('cloudmock_plugin')
 @pytest.mark.usefixtures('target_aware_mock_plugin')

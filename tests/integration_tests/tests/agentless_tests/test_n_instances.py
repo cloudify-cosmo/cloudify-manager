@@ -24,6 +24,7 @@ from integration_tests.tests.utils import get_resource as resource
 @pytest.mark.usefixtures('testmockoperations_plugin')
 class TestMultiInstanceApplication(AgentlessTestCase):
 
+    @pytest.mark.group_deployments
     def test_deploy_multi_instance_application(self):
         dsl_path = resource("dsl/multi_instance.yaml")
         deployment, _ = self.deploy_application(dsl_path)
@@ -42,6 +43,7 @@ class TestMultiInstanceApplication(AgentlessTestCase):
             )
         assert machines == machines_with_apps
 
+    @pytest.mark.group_deployments
     def test_deploy_multi_instance_many_different_hosts(self):
         dsl_path = resource('dsl/multi_instance_many_different_hosts.yaml')
         deployment, _ = self.deploy_application(dsl_path, timeout_seconds=180)
@@ -60,6 +62,7 @@ class TestMultiInstanceApplication(AgentlessTestCase):
         self.assertEqual(
             5, len([ma for ma in machines if ma.startswith('host3')]))
 
+    @pytest.mark.group_deployments_large_scale
     def test_deploy_multi_large_scale(self):
         dsl_path = resource('dsl/multi_instance_large_scale.yaml')
         start = time.time()

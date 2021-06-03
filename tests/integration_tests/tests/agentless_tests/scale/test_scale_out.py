@@ -18,6 +18,8 @@ from contextlib import contextmanager
 
 from . import TestScaleBase
 
+pytestmark = pytest.mark.group_scale
+
 
 @pytest.mark.usefixtures('testmockoperations_plugin')
 class TestScaleOut(TestScaleBase):

@@ -18,6 +18,8 @@ import pytest
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 
+pytestmark = pytest.mark.group_agents
+
 
 @pytest.mark.usefixtures('mock_workflows_plugin')
 @pytest.mark.usefixtures('cloudmock_plugin')

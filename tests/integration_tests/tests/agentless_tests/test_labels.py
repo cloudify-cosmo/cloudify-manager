@@ -4,6 +4,8 @@ import pytest
 from integration_tests.tests import utils
 from integration_tests import AgentlessTestCase
 
+pytestmark = pytest.mark.group_deployments
+
 
 @pytest.mark.usefixtures('cloudmock_plugin')
 class DeploymentsLabelsTest(AgentlessTestCase):

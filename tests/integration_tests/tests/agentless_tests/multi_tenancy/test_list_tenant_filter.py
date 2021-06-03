@@ -1,3 +1,5 @@
+import pytest
+
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.constants import USER_ROLE
 from integration_tests.tests.utils import get_resource as resource
@@ -5,6 +7,8 @@ from integration_tests.tests.utils import get_resource as resource
 from manager_rest.constants import DEFAULT_TENANT_NAME, DEFAULT_TENANT_ROLE
 
 from cloudify_rest_client.exceptions import CloudifyClientError
+
+pytestmark = pytest.mark.group_premium
 
 
 class ListResourcesTest(AgentlessTestCase):

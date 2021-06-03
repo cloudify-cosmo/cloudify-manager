@@ -25,6 +25,8 @@ from cloudify_rest_client.deployment_modifications import (
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 
+pytestmark = pytest.mark.group_deployments
+
 
 @pytest.mark.usefixtures('testmockoperations_plugin')
 @pytest.mark.usefixtures('mock_workflows_plugin')

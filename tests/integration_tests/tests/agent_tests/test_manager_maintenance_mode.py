@@ -26,6 +26,8 @@ from integration_tests.tests.utils import (
     wait_for_deployment_creation_to_complete
 )
 
+pytestmark = pytest.mark.group_rest
+
 
 @pytest.mark.usefixtures('testmockoperations_plugin')
 class ManagerMaintenanceModeTest(AgentTestCase):

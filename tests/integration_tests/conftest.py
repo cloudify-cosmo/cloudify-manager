@@ -18,6 +18,20 @@ from integration_tests.framework.flask_utils import \
 logger = logging.getLogger('TESTENV')
 Env = namedtuple('Env', ['container_id', 'container_ip', 'service_management'])
 
+test_groups = [
+    'group_deployments', 'group_service_composition', 'group_scale',
+    'group_snapshots', 'group_premium', 'group_agents', 'group_rest',
+    'group_plugins', 'group_workflows', 'group_environments', 'group_dsl',
+    'group_events_logs', 'group_usage_collector', 'group_general'
+]
+
+
+def pytest_collection_modifyitems(items, config):
+    for item in items:
+        if not [m for m in item.iter_markers() if m.name in test_groups]:
+            raise Exception('Test {} not marked as belonging to any known '
+                            'test group!'.format(item.nodeid))
+
 
 def pytest_addoption(parser):
     parser.addoption(

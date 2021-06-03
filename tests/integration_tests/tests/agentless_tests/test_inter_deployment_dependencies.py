@@ -24,6 +24,8 @@ from dsl_parser.constants import NODES, OUTPUTS, PROPERTIES
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource
 
+pytestmark = pytest.mark.group_deployments
+
 MAIN_DEPLOYMENT = 'main_deployment'
 MAIN_BLUEPRINT_ID = 'main_blueprint'
 MOD_BLUEPRINT_ID = 'mod_blueprint'

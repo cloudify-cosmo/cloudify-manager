@@ -10,6 +10,8 @@ from integration_tests.tests.utils import (
 from cloudify.models_states import ExecutionState as Execution
 from cloudify.models_states import DeploymentState
 
+pytestmark = pytest.mark.group_deployments
+
 
 @pytest.mark.usefixtures('cloudmock_plugin')
 @pytest.mark.usefixtures('mock_workflows_plugin')

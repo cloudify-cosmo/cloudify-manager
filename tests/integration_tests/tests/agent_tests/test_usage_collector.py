@@ -12,9 +12,12 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
+import pytest
 
 from integration_tests import AgentTestCase
 from integration_tests.tests.usage_collector_base import TestUsageCollectorBase
+
+pytestmark = pytest.mark.group_usage_collector
 
 
 class TestUsageCollectorWithAgent(AgentTestCase, TestUsageCollectorBase):

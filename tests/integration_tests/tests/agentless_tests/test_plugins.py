@@ -22,6 +22,8 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 from integration_tests import AgentlessTestCase
 from integration_tests.tests import utils as test_utils
 
+pytestmark = pytest.mark.group_plugins
+
 TEST_PACKAGE_NAME = 'cloudify-aria-plugin'
 TEST_PACKAGE_VERSION = '1.1'
 TEST_PACKAGE2_NAME = 'cloudify-diamond-plugin'

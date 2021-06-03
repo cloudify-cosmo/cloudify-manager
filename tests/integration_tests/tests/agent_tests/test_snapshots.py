@@ -15,10 +15,13 @@
 
 import time
 import uuid
+import pytest
 
 from integration_tests import AgentTestCase
 from cloudify.models_states import AgentState
 from integration_tests.tests.utils import get_resource as resource
+
+pytestmark = pytest.mark.group_snapshots
 
 CREATE_SNAPSHOT_SUCCESS_MSG =\
     "'create_snapshot' workflow execution succeeded"

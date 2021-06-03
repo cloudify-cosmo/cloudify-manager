@@ -19,6 +19,7 @@ import pytest
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 
+pytestmark = pytest.mark.group_events_logs
 ansi_escape = re.compile(r'\x1b[^m]*m')
 
 

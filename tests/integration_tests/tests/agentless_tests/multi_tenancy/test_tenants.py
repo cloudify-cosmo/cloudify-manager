@@ -1,4 +1,5 @@
 import json
+import pytest
 from collections import namedtuple
 
 from cloudify.cryptography_utils import decrypt
@@ -10,6 +11,7 @@ from integration_tests import AgentlessTestCase
 from integration_tests.tests.constants import USER_ROLE, USER_IN_TENANT_ROLE
 from integration_tests.tests.utils import get_resource as resource
 
+pytestmark = pytest.mark.group_premium
 user = namedtuple('user', 'username password')
 
 

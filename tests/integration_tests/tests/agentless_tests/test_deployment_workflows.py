@@ -27,6 +27,8 @@ from integration_tests.tests.utils import (
 )
 from integration_tests.tests.utils import do_retries
 
+pytestmark = pytest.mark.group_workflows
+
 
 @pytest.mark.usefixtures('testmockoperations_plugin')
 @pytest.mark.usefixtures('cloudmock_plugin')

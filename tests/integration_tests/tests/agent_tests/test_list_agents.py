@@ -18,6 +18,8 @@ from manager_rest import premium_enabled
 from integration_tests import AgentTestCase
 from integration_tests.tests.utils import get_resource as resource
 
+pytestmark = pytest.mark.group_agents
+
 
 class TestListAgents(AgentTestCase):
 

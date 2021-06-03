@@ -37,6 +37,8 @@ from integration_tests.tests.utils import (get_resource,
 
 from manager_rest.constants import DEFAULT_TENANT_NAME
 
+pytestmark = pytest.mark.group_workflows
+
 
 class BasicWorkflowsTest(AgentlessTestCase):
     @pytest.mark.usefixtures('cloudmock_plugin')
