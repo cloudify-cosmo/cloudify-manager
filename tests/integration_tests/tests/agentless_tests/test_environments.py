@@ -2,8 +2,6 @@ import time
 
 import pytest
 
-from retrying import retry
-
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 
@@ -75,7 +73,6 @@ class EnvironmentTest(AgentlessTestCase):
             sub_environments_count
         )
 
-    @retry(wait_fixed=3000, stop_max_attempt_number=3)
     def _verify_statuses_and_count_for_deployment(self,
                                                   deployment_id,
                                                   deployment_status,
@@ -715,10 +712,12 @@ class EnvironmentTest(AgentlessTestCase):
             'dsl/simple_deployment_with_parents.yaml',
             'updated-blueprint'
         )
-        self.client.deployment_updates.update_with_existing_blueprint(
+        dep_up = self.client.deployment_updates.update_with_existing_blueprint(
             deployment.id,
             blueprint_id='updated-blueprint'
         )
+        self.wait_for_execution_to_end(
+            self.client.executions.get(dep_up.execution_id))
         self._verify_statuses_and_count_for_deployment(
             environment_1.id,
             deployment_status=DeploymentState.GOOD,
