@@ -782,7 +782,8 @@ class RecursiveDeploymentLabelsDependencies(BaseDeploymentDependencies):
             from_dependencies = self.sm.list(
                 models.DeploymentLabelsDependencies,
                 filters={'target_deployment_id': v},
-                get_all_results=True
+                get_all_results=True,
+                locking=True,
             )
             if not from_dependencies:
                 continue
