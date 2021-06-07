@@ -75,7 +75,6 @@ class EnvironmentTest(AgentlessTestCase):
             sub_environments_count
         )
 
-    @retry(wait_fixed=3000, stop_max_attempt_number=3)
     def _verify_statuses_and_count_for_deployment(self,
                                                   deployment_id,
                                                   deployment_status,
