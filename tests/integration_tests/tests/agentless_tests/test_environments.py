@@ -715,10 +715,12 @@ class EnvironmentTest(AgentlessTestCase):
             'dsl/simple_deployment_with_parents.yaml',
             'updated-blueprint'
         )
-        self.client.deployment_updates.update_with_existing_blueprint(
+        dep_up = self.client.deployment_updates.update_with_existing_blueprint(
             deployment.id,
             blueprint_id='updated-blueprint'
         )
+        self.wait_for_execution_to_end(
+            self.client.executions.get(dep_up.execution_id))
         self._verify_statuses_and_count_for_deployment(
             environment_1.id,
             deployment_status=DeploymentState.GOOD,
