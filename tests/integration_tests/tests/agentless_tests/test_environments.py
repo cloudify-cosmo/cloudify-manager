@@ -2,8 +2,6 @@ import time
 
 import pytest
 
-from retrying import retry
-
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 
