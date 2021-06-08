@@ -26,6 +26,7 @@ from manager_rest.rest.rest_decorators import marshal_with
 from manager_rest.rest.rest_utils import (
     get_args_and_verify_arguments,
     get_json_and_verify_params,
+    verify_and_convert_bool,
 )
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
@@ -208,13 +209,16 @@ class NodeInstancesId(SecuredResource):
         # Added for backwards compatibility with older client versions that
         # had version=0 by default
         version = request_dict['version'] or 1
-
+        force = verify_and_convert_bool(
+            'force',
+            request.args.get('force', False)
+        )
         instance = get_storage_manager().get(
             models.NodeInstance,
             node_instance_id,
             locking=True
         )
-        if instance.version > version:
+        if not force and instance.version > version:
             raise manager_exceptions.ConflictError(
                 'Node instance update conflict [current version={0}, '
                 'update version={1}]'.format(instance.version, version)
