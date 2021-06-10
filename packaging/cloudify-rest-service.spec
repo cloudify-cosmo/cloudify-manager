@@ -100,8 +100,14 @@ if [ -f "%{_localstatedir}/lib/rpm-state/cloudify-upgraded" ]; then
 
     if [ -e "/var/run/supervisord.sock" ]; then
         supervisorctl stop haproxy && supervisorctl remove haproxy || true
+        supervisorctl stop cloudify-restservice
+        supervisorctl stop cloudify-execution-scheduler
+        supervisorctl stop cloudify-amqp-postgres
     else
         systemctl stop haproxy && systemctl disable haproxy || true
+        systemctl stop cloudify-restservice
+        systemctl stop cloudify-execution-scheduler
+        systemctl stop cloudify-amqp-postgres
     fi
 
     export MANAGER_REST_CONFIG_PATH=/opt/manager/cloudify-rest.conf
@@ -113,6 +119,16 @@ if [ -f "%{_localstatedir}/lib/rpm-state/cloudify-upgraded" ]; then
     popd
     /opt/manager/env/bin/python -m manager_rest.update_managers_version %{CLOUDIFY_VERSION}
     chown cfyuser: /opt/manager/resources
+
+    if [ -e "/var/run/supervisord.sock" ]; then
+        supervisorctl start cloudify-restservice
+        supervisorctl start cloudify-execution-scheduler
+        supervisorctl start cloudify-amqp-postgres
+    else
+        systemctl start cloudify-restservice
+        systemctl start cloudify-execution-scheduler
+        systemctl start cloudify-amqp-postgres
+    fi
 
     echo "
 #############################################################
