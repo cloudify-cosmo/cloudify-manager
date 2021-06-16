@@ -20,7 +20,6 @@ from unittest import TestCase
 from faker import Faker
 from flask import Flask
 from mock import patch
-from manager_rest.test.attribute import attr
 
 from manager_rest.test import base_test
 from manager_rest.manager_exceptions import BadParametersError
@@ -250,7 +249,6 @@ class SelectEventsBaseTest(base_test.BaseServerTestCase):
         self.events = sorted_events
 
 
-@attr(client_min_version=1, client_max_version=1)
 class SelectEventsFilterTest(SelectEventsBaseTest):
 
     """Filter events by blueprint, deployment, execution, etc."""
@@ -498,7 +496,6 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             )
 
 
-@attr(client_min_version=1, client_max_version=1)
 class SelectEventsFilterTypeTest(SelectEventsBaseTest):
 
     """Filter events by type."""
@@ -580,7 +577,6 @@ class SelectEventsFilterTypeTest(SelectEventsBaseTest):
         self._get_events_by_type(['cloudify_log'])
 
 
-@attr(client_min_version=1, client_max_version=1)
 class SelectEventsSortTest(SelectEventsBaseTest):
 
     """Sort events by timestamp ascending/descending."""
@@ -653,7 +649,6 @@ class SelectEventsSortTest(SelectEventsBaseTest):
         self._sort_by_timestamp('@timestamp', 'desc')
 
 
-@attr(client_min_version=1, client_max_version=1)
 class SelectEventsRangeFilterTest(SelectEventsBaseTest):
 
     """Filter out events not included in a range."""
@@ -748,7 +743,6 @@ class SelectEventsRangeFilterTest(SelectEventsBaseTest):
         self._filter_by_timestamp_range('timestamp', include_to=False)
 
 
-@attr(client_min_version=1, client_max_version=1)
 class SelectEventTenantTest(SelectEventsBaseTest):
     DEFAULT_FILTERS = {
         'type': ['cloudify_event', 'cloudify_log']
@@ -777,7 +771,6 @@ class SelectEventTenantTest(SelectEventsBaseTest):
         self.assertEqual(event_count, 0)
 
 
-@attr(client_min_version=1, client_max_version=1)
 class BuildSelectQueryTest(TestCase):
 
     """Event retrieval query."""
@@ -803,7 +796,6 @@ class BuildSelectQueryTest(TestCase):
             EventsV1._build_select_query(**params)
 
 
-@attr(client_min_version=1, client_max_version=1)
 class BuildCountQueryTest(TestCase):
 
     """Event count query."""
@@ -826,7 +818,6 @@ class BuildCountQueryTest(TestCase):
             EventsV1._build_select_query(filters, {}, {}, tenant_id=1)
 
 
-@attr(client_min_version=1, client_max_version=1)
 class MapEventToDictTestV1(TestCase):
 
     """Map event information to a dictionary."""
@@ -930,23 +921,17 @@ class EventsTest(base_test.BaseServerTestCase):
         self.assertEqual(total, response.metadata.pagination.total)
         self.assertEqual(len(hits), len(response.items))
 
-    @attr(client_min_version=3,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_delete_events(self):
         response = self.client.events.delete(
             '<deployment_id>', include_logs=True)
         self.assertEqual(response.items, [0])
 
-    @attr(client_min_version=3,
-          client_max_version=base_test.LATEST_API_VERSION)
     def test_delete_events_timestamp_range(self):
         response = self.client.events.delete(
             '<deployment_id>', include_logs=True,
             from_datetime='2020-01-01', to_datetime='2020-02-02')
         self.assertEqual(response.items, [0])
 
-    @attr(client_min_version=3,
-          client_max_version=base_test.LATEST_API_VERSION)
     @patch('manager_rest.rest.resources_v2.events.Events._store_log_entries')
     def test_delete_events_store_before(self, store_log_entries):
         response = self.client.events.delete(
