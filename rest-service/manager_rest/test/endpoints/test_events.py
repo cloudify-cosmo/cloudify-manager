@@ -22,6 +22,7 @@ from flask import Flask
 from mock import patch
 from manager_rest.test.attribute import attr
 
+from manager_rest.test import base_test
 from manager_rest.manager_exceptions import BadParametersError
 from manager_rest.rest.resources_v1 import Events as EventsV1
 from manager_rest.storage import db
@@ -74,7 +75,7 @@ class EventResult(EventResultTuple):
         return self._fields
 
 
-class SelectEventsBaseTest(TestCase):
+class SelectEventsBaseTest(base_test.BaseServerTestCase):
 
     """Select events test case base with database."""
 
@@ -106,26 +107,8 @@ class SelectEventsBaseTest(TestCase):
     ]
 
     def setUp(self):
-        """Initialize mock application with in memory sql database."""
-        app = Flask(__name__)
-        app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-        app.config['SQLALCHEMY_DATABASE_URI'] =\
-            'postgresql://cloudify:cloudify@localhost/cloudify_db'
-        context = app.app_context()
-        context.push()
-        self.addCleanup(context.pop)
-
-        db.init_app(app)
-        db.create_all()
-        self.addCleanup(self._clean_db)
+        super().setUp()
         self._populate_db()
-
-    def _clean_db(self):
-        db.session.remove()
-        meta = db.metadata
-        for table in reversed(meta.sorted_tables):
-            db.session.execute(table.delete())
-        db.session.commit()
 
     def _populate_db(self):
         """Populate database with events and logs."""
@@ -294,7 +277,7 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             self.tenant.id
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
-        event_ids = [event.id for event in events]
+        event_ids = [event._storage_id for event in events]
 
         expected_deployment_ids = [
             deployment._storage_id
@@ -311,7 +294,7 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             for event in self.events
             if event._execution_fk in expected_executions_id
         ]
-        expected_event_ids = [event.id for event in expected_events]
+        expected_event_ids = [event._storage_id for event in expected_events]
         self.assertListEqual(event_ids, expected_event_ids)
         self.assertEqual(event_count, len(expected_events))
 
@@ -330,7 +313,7 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             self.tenant.id
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
-        event_ids = [event.id for event in events]
+        event_ids = [event._storage_id for event in events]
 
         expected_execution_ids = [
             execution._storage_id
@@ -342,7 +325,7 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             for event in self.events
             if event._execution_fk in expected_execution_ids
         ]
-        expected_event_ids = [event.id for event in expected_events]
+        expected_event_ids = [event._storage_id for event in expected_events]
         self.assertListEqual(event_ids, expected_event_ids)
         self.assertEqual(event_count, len(expected_events))
 
@@ -360,14 +343,14 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             self.tenant.id
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
-        event_ids = [event.id for event in events]
+        event_ids = [event._storage_id for event in events]
 
         expected_events = [
             event
             for event in self.events
             if event._execution_fk == execution._storage_id
         ]
-        expected_event_ids = [event.id for event in expected_events]
+        expected_event_ids = [event._storage_id for event in expected_events]
         self.assertListEqual(event_ids, expected_event_ids)
         self.assertEqual(event_count, len(expected_events))
 
@@ -386,14 +369,14 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             self.tenant.id
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
-        event_ids = [event.id for event in events]
+        event_ids = [event._storage_id for event in events]
 
         expected_events = [
             event
             for event in self.events
             if getattr(event, 'event_type', None) == event_type
         ]
-        expected_event_ids = [event.id for event in expected_events]
+        expected_event_ids = [event._storage_id for event in expected_events]
         self.assertListEqual(event_ids, expected_event_ids)
         self.assertEqual(event_count, len(expected_events))
 
@@ -433,14 +416,14 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             self.tenant.id
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
-        event_ids = [event.id for event in events]
+        event_ids = [event._storage_id for event in events]
 
         expected_events = [
             event
             for event in self.events
             if getattr(event, 'level', None) == level
         ]
-        expected_event_ids = [event.id for event in expected_events]
+        expected_event_ids = [event._storage_id for event in expected_events]
         self.assertListEqual(event_ids, expected_event_ids)
         self.assertEqual(event_count, len(expected_events))
 
@@ -480,14 +463,14 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             self.tenant.id
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
-        event_ids = [event.id for event in events]
+        event_ids = [event._storage_id for event in events]
 
         expected_events = [
             event
             for event in self.events
             if word.lower() in event.message.lower()
         ]
-        expected_event_ids = [event.id for event in expected_events]
+        expected_event_ids = [event._storage_id for event in expected_events]
         self.assertListEqual(event_ids, expected_event_ids)
         self.assertEqual(event_count, len(expected_events))
 
@@ -554,14 +537,14 @@ class SelectEventsFilterTypeTest(SelectEventsBaseTest):
             self.tenant.id
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
-        event_ids = [event.id for event in events]
+        event_ids = [event._storage_id for event in events]
 
         expected_events = [
             event
             for event in self.events
             if isinstance(event, event_classes)
         ]
-        expected_event_ids = [event.id for event in expected_events]
+        expected_event_ids = [event._storage_id for event in expected_events]
         self.assertListEqual(event_ids, expected_event_ids)
         self.assertEqual(event_count, len(expected_events))
 
@@ -580,10 +563,10 @@ class SelectEventsFilterTypeTest(SelectEventsBaseTest):
             self.tenant.id
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
-        event_ids = [event.id for event in events]
+        event_ids = [event._storage_id for event in events]
 
         expected_events = self.events
-        expected_event_ids = [event.id for event in expected_events]
+        expected_event_ids = [event._storage_id for event in expected_events]
         self.assertListEqual(event_ids, expected_event_ids)
         self.assertEqual(event_count, len(expected_events))
 
