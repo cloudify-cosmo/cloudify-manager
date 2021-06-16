@@ -20,7 +20,6 @@ from random import choice
 from unittest import TestCase
 
 from faker import Faker
-from flask import Flask
 from mock import patch, Mock
 
 from cloudify_rest_client.exceptions import CloudifyClientError

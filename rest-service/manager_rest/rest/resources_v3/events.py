@@ -21,7 +21,7 @@ from ..resources_v2 import Events as v2_Events
 from manager_rest import manager_exceptions
 from manager_rest.storage import get_storage_manager, models, db
 from manager_rest.security.authorization import authorize
-from manager_rest.rest import rest_decorators, rest_utils
+from manager_rest.rest import rest_utils
 from manager_rest.execution_token import current_execution
 
 
