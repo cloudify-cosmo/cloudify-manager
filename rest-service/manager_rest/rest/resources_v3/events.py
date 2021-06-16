@@ -13,7 +13,24 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from datetime import datetime
+import json
+
 from ..resources_v2 import Events as v2_Events
+
+from manager_rest import manager_exceptions
+from manager_rest.storage import get_storage_manager, models, db
+from manager_rest.security.authorization import authorize
+from manager_rest.rest import rest_decorators, rest_utils
+from manager_rest.execution_token import current_execution
+
+
+def _strip_nul(text):
+    """Remove NUL values from the text, so that it can be treated as text
+
+    There should likely be no NUL values in human-readable logs anyway.
+    """
+    return text.replace('\x00', '<NUL>')
 
 
 class Events(v2_Events):
@@ -21,10 +38,73 @@ class Events(v2_Events):
 
     Through the events endpoint a user can retrieve both events and logs as
     stored in the SQL database.
-
     """
 
     UNUSED_FIELDS = ['id', 'node_id', 'message_code']
+
+    @authorize('event_create')
+    def post(self):
+        request_dict = rest_utils.get_json_and_verify_params({
+            'events': {'optional': True},
+            'logs': {'optional': True},
+        })
+        sm = get_storage_manager()
+        exc = current_execution._get_current_object()
+        if exc is None:
+            raise manager_exceptions.UnauthorizedError(
+                'events can only be created by an execution')
+        exc_params = {
+            '_execution_fk': exc._storage_id,
+            '_tenant_id': exc._tenant_id,
+            '_creator_id': exc._creator_id,
+            'visibility': exc.visibility,
+        }
+        raw_events = request_dict.get('events') or []
+        raw_logs = request_dict.get('logs') or []
+        if not raw_events and not raw_logs:
+            return None, 204
+
+        with sm.transaction():
+            for ev in raw_events:
+                db.session.execute(
+                    self._event_from_raw_event(sm, ev, exc_params))
+            for log in raw_logs:
+                db.session.execute(
+                    self._log_from_raw_log(sm, log, exc_params))
+        return None, 201
+
+    def _event_from_raw_event(self, sm, raw_event, exc_params):
+        task_error_causes = raw_event['context'].get('task_error_causes')
+        if task_error_causes is not None:
+            task_error_causes = json.dumps(task_error_causes)
+        return models.Event.__table__.insert().values(
+            timestamp=datetime.utcnow(),
+            reported_timestamp=datetime.utcnow(),
+            event_type=raw_event['event_type'],
+            message=_strip_nul(raw_event['message']['text']),
+            message_code=raw_event.get('message_code'),
+            operation=raw_event.get('operation'),
+            node_id=raw_event['context'].get('node_id'),
+            source_id=raw_event['context'].get('source_id'),
+            target_id=raw_event['context'].get('target_id'),
+            error_causes=task_error_causes,
+            **exc_params,
+        )
+
+    def _log_from_raw_log(self, sm, raw_log, exc_params):
+        return models.Log.__table__.insert().values(
+            timestamp=datetime.utcnow(),
+            reported_timestamp=datetime.utcnow(),
+            logger=raw_log['logger'],
+            level=raw_log['level'],
+            message=_strip_nul(raw_log['message']['text']),
+            message_code=raw_log.get('message_code'),
+            operation=raw_log.get('operation'),
+            node_id=raw_log['context'].get('node_id'),
+            source_id=raw_log['context'].get('source_id'),
+            target_id=raw_log['context'].get('target_id'),
+            **exc_params,
+        )
 
     @staticmethod
     def _map_event_to_dict(_include, sql_event):
