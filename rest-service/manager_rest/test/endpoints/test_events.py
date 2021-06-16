@@ -25,6 +25,7 @@ from manager_rest.test.attribute import attr
 from manager_rest.test import base_test
 from manager_rest.manager_exceptions import BadParametersError
 from manager_rest.rest.resources_v1 import Events as EventsV1
+from manager_rest.rest.resources_v3 import Events as EventsV3
 from manager_rest.storage import db
 from manager_rest.storage.management_models import Tenant, User
 from manager_rest.storage.resource_models import (
@@ -910,5 +911,130 @@ class MapEventToDictTestV1(TestCase):
         }
 
         es_log = EventsV1._map_event_to_dict(None, sql_log)
+
+        self.assertDictEqual(es_log, expected_es_log)
+
+
+class EventsTest(base_test.BaseServerTestCase):
+    def test_list_events(self):
+        response = self.client.events.list(
+            execution_id='<execution_id>',
+            _sort='@timestamp',
+            _size=100,
+            _offset=0,
+        )
+
+        # TBD: Add events to the database to check results
+        total = 0
+        hits = []
+        self.assertEqual(total, response.metadata.pagination.total)
+        self.assertEqual(len(hits), len(response.items))
+
+    @attr(client_min_version=3,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_delete_events(self):
+        response = self.client.events.delete(
+            '<deployment_id>', include_logs=True)
+        self.assertEqual(response.items, [0])
+
+    @attr(client_min_version=3,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_delete_events_timestamp_range(self):
+        response = self.client.events.delete(
+            '<deployment_id>', include_logs=True,
+            from_datetime='2020-01-01', to_datetime='2020-02-02')
+        self.assertEqual(response.items, [0])
+
+    @attr(client_min_version=3,
+          client_max_version=base_test.LATEST_API_VERSION)
+    @patch('manager_rest.rest.resources_v2.events.Events._store_log_entries')
+    def test_delete_events_store_before(self, store_log_entries):
+        response = self.client.events.delete(
+            '<deployment_id>', include_logs=False,
+            store_before='true')
+        self.assertEqual(store_log_entries.call_count, 1)
+        self.assertEqual(response.items, [0])
+        response = self.client.events.delete(
+            '<deployment_id>', include_logs=True,
+            store_before='true')
+        self.assertEqual(store_log_entries.call_count, 3)
+        self.assertEqual(response.items, [0])
+
+
+class MapEventToDictTestV3(TestCase):
+
+    """Map event v3 information to a dictionary."""
+
+    def test_map_event(self):
+        """Map event as returned by SQL query to elasticsearch style output."""
+        sql_event = EventResult(
+            timestamp='2016-12-09T00:00Z',
+            reported_timestamp='2017-05-22T00:00Z',
+            deployment_id='<deployment_id>',
+            execution_id='<execution_id>',
+            workflow_id='<workflow_id>',
+            message='<message>',
+            message_code=None,
+            event_type='<event_type>',
+            operation='<operation>',
+            node_id='<node_id>',
+            node_instance_id='<node_instance_id>',
+            node_name='<node_name>',
+            logger=None,
+            level=None,
+            type='cloudify_event',
+        )
+        expected_es_event = {
+            'deployment_id': '<deployment_id>',
+            'execution_id': '<execution_id>',
+            'workflow_id': '<workflow_id>',
+            'operation': '<operation>',
+            'node_instance_id': '<node_instance_id>',
+            'node_name': '<node_name>',
+            'event_type': '<event_type>',
+            'timestamp': '2016-12-09T00:00Z',
+            'reported_timestamp': '2017-05-22T00:00Z',
+            'message': '<message>',
+            'type': 'cloudify_event',
+        }
+
+        es_event = EventsV3._map_event_to_dict(None, sql_event)
+        self.assertDictEqual(es_event, expected_es_event)
+
+    def test_map_log(self):
+        """Map log as returned by SQL query to elasticsearch style output."""
+        sql_log = EventResult(
+            timestamp='2016-12-09T00:00Z',
+            reported_timestamp='2017-05-22T00:00Z',
+            deployment_id='<deployment_id>',
+            execution_id='<execution_id>',
+            workflow_id='<workflow_id>',
+            message='<message>',
+            message_code=None,
+            event_type=None,
+            operation='<operation>',
+            node_id='<node_id>',
+            node_instance_id='<node_instance_id>',
+            node_name='<node_name>',
+            level='<level>',
+            logger='<logger>',
+            type='cloudify_log',
+        )
+        expected_es_log = {
+            'deployment_id': '<deployment_id>',
+            'execution_id': '<execution_id>',
+            'workflow_id': '<workflow_id>',
+            'operation': '<operation>',
+            'node_instance_id': '<node_instance_id>',
+            'node_name': '<node_name>',
+            'level': '<level>',
+            'timestamp': '2016-12-09T00:00Z',
+            'reported_timestamp': '2017-05-22T00:00Z',
+            'message': '<message>',
+            'type': 'cloudify_log',
+            'logger': '<logger>',
+        }
+
+        es_log = EventsV3._map_event_to_dict(None, sql_log)
 
         self.assertDictEqual(es_log, expected_es_log)
