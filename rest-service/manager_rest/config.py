@@ -14,6 +14,7 @@ from flask import current_app
 from sqlalchemy import create_engine, orm
 
 from cloudify._compat import text_type
+from cloudify.utils import ipv6_url_compat
 
 from manager_rest.manager_exceptions import (
     ConflictError,
@@ -365,7 +366,7 @@ class Config(object):
             dialect=SQL_DIALECT,
             username=self.postgresql_username,
             password=self.postgresql_password,
-            host=host,
+            host=ipv6_url_compat(host),
             db_name=self.postgresql_db_name
         )
         if any(params.values()):
@@ -389,7 +390,7 @@ class Config(object):
         for i, candidate in enumerate(itertools.cycle(postgresql_host)):
             try:
                 result = requests.get(
-                    'https://{}:8008'.format(candidate),
+                    'https://{}:8008'.format(ipv6_url_compat(candidate)),
                     verify=self.postgresql_ca_cert_path,
                     timeout=5,
                 )
