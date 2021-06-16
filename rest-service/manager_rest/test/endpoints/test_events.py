@@ -12,6 +12,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import pytest
+
 from collections import namedtuple
 from copy import deepcopy
 from random import choice
@@ -19,8 +21,9 @@ from unittest import TestCase
 
 from faker import Faker
 from flask import Flask
-from mock import patch
+from mock import patch, Mock
 
+from cloudify_rest_client.exceptions import CloudifyClientError
 from manager_rest.test import base_test
 from manager_rest.manager_exceptions import BadParametersError
 from manager_rest.rest.resources_v1 import Events as EventsV1
@@ -944,6 +947,34 @@ class EventsTest(base_test.BaseServerTestCase):
             store_before='true')
         self.assertEqual(store_log_entries.call_count, 3)
         self.assertEqual(response.items, [0])
+
+    def test_create_event_not_execution(self):
+        with pytest.raises(CloudifyClientError) as cm:
+            self.client.events.create(events=[])
+        assert cm.value.status_code == 401
+
+    def test_create_event_with_execution(self):
+        tenant = Tenant.query.first()
+        creator = User.query.first()
+        exc = Execution(workflow_id='wf', tenant=tenant, creator=creator)
+        mock_current_exc = Mock()
+        mock_current_exc._get_current_object.return_value = exc
+        with patch('manager_rest.rest.resources_v3.events.current_execution',
+                   mock_current_exc):
+            self.client.events.create(events=[{
+                'message': {'text': 'hello'},
+                'event_type': 'type1',
+                'context': {},
+            }], logs=[{
+                'message': {'text': 'log-hello'},
+                'logger': 'root',
+                'level': 'info',
+                'context': {},
+            }])
+        events = Event.query.all()
+        logs = Log.query.all()
+        assert len(events) == 1
+        assert len(logs) == 1
 
 
 class MapEventToDictTestV3(TestCase):
