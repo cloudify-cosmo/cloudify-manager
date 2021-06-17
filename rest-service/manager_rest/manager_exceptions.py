@@ -395,3 +395,8 @@ class BadFilterRule(ManagerException):
             err_filter_rule=self.err_filter_rule,
             err_reason=self.error_reason
         )
+
+
+class NotListeningLDAPServer(ManagerException):
+    error_code = 'not_running_ldap_server'
+    status_code = 400
