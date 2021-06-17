@@ -12,18 +12,21 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import pytest
+
 from collections import namedtuple
 from copy import deepcopy
 from random import choice
 from unittest import TestCase
 
 from faker import Faker
-from flask import Flask
-from mock import patch
-from manager_rest.test.attribute import attr
+from mock import patch, Mock
 
+from cloudify_rest_client.exceptions import CloudifyClientError
+from manager_rest.test import base_test
 from manager_rest.manager_exceptions import BadParametersError
 from manager_rest.rest.resources_v1 import Events as EventsV1
+from manager_rest.rest.resources_v3 import Events as EventsV3
 from manager_rest.storage import db
 from manager_rest.storage.management_models import Tenant, User
 from manager_rest.storage.resource_models import (
@@ -74,7 +77,7 @@ class EventResult(EventResultTuple):
         return self._fields
 
 
-class SelectEventsBaseTest(TestCase):
+class SelectEventsBaseTest(base_test.BaseServerTestCase):
 
     """Select events test case base with database."""
 
@@ -106,26 +109,8 @@ class SelectEventsBaseTest(TestCase):
     ]
 
     def setUp(self):
-        """Initialize mock application with in memory sql database."""
-        app = Flask(__name__)
-        app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-        app.config['SQLALCHEMY_DATABASE_URI'] =\
-            'postgresql://cloudify:cloudify@localhost/cloudify_db'
-        context = app.app_context()
-        context.push()
-        self.addCleanup(context.pop)
-
-        db.init_app(app)
-        db.create_all()
-        self.addCleanup(self._clean_db)
+        super().setUp()
         self._populate_db()
-
-    def _clean_db(self):
-        db.session.remove()
-        meta = db.metadata
-        for table in reversed(meta.sorted_tables):
-            db.session.execute(table.delete())
-        db.session.commit()
 
     def _populate_db(self):
         """Populate database with events and logs."""
@@ -266,7 +251,6 @@ class SelectEventsBaseTest(TestCase):
         self.events = sorted_events
 
 
-@attr(client_min_version=1, client_max_version=1)
 class SelectEventsFilterTest(SelectEventsBaseTest):
 
     """Filter events by blueprint, deployment, execution, etc."""
@@ -294,7 +278,7 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             self.tenant.id
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
-        event_ids = [event.id for event in events]
+        event_ids = [event._storage_id for event in events]
 
         expected_deployment_ids = [
             deployment._storage_id
@@ -311,7 +295,7 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             for event in self.events
             if event._execution_fk in expected_executions_id
         ]
-        expected_event_ids = [event.id for event in expected_events]
+        expected_event_ids = [event._storage_id for event in expected_events]
         self.assertListEqual(event_ids, expected_event_ids)
         self.assertEqual(event_count, len(expected_events))
 
@@ -330,7 +314,7 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             self.tenant.id
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
-        event_ids = [event.id for event in events]
+        event_ids = [event._storage_id for event in events]
 
         expected_execution_ids = [
             execution._storage_id
@@ -342,7 +326,7 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             for event in self.events
             if event._execution_fk in expected_execution_ids
         ]
-        expected_event_ids = [event.id for event in expected_events]
+        expected_event_ids = [event._storage_id for event in expected_events]
         self.assertListEqual(event_ids, expected_event_ids)
         self.assertEqual(event_count, len(expected_events))
 
@@ -360,14 +344,14 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             self.tenant.id
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
-        event_ids = [event.id for event in events]
+        event_ids = [event._storage_id for event in events]
 
         expected_events = [
             event
             for event in self.events
             if event._execution_fk == execution._storage_id
         ]
-        expected_event_ids = [event.id for event in expected_events]
+        expected_event_ids = [event._storage_id for event in expected_events]
         self.assertListEqual(event_ids, expected_event_ids)
         self.assertEqual(event_count, len(expected_events))
 
@@ -386,14 +370,14 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             self.tenant.id
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
-        event_ids = [event.id for event in events]
+        event_ids = [event._storage_id for event in events]
 
         expected_events = [
             event
             for event in self.events
             if getattr(event, 'event_type', None) == event_type
         ]
-        expected_event_ids = [event.id for event in expected_events]
+        expected_event_ids = [event._storage_id for event in expected_events]
         self.assertListEqual(event_ids, expected_event_ids)
         self.assertEqual(event_count, len(expected_events))
 
@@ -433,14 +417,14 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             self.tenant.id
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
-        event_ids = [event.id for event in events]
+        event_ids = [event._storage_id for event in events]
 
         expected_events = [
             event
             for event in self.events
             if getattr(event, 'level', None) == level
         ]
-        expected_event_ids = [event.id for event in expected_events]
+        expected_event_ids = [event._storage_id for event in expected_events]
         self.assertListEqual(event_ids, expected_event_ids)
         self.assertEqual(event_count, len(expected_events))
 
@@ -480,14 +464,14 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             self.tenant.id
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
-        event_ids = [event.id for event in events]
+        event_ids = [event._storage_id for event in events]
 
         expected_events = [
             event
             for event in self.events
             if word.lower() in event.message.lower()
         ]
-        expected_event_ids = [event.id for event in expected_events]
+        expected_event_ids = [event._storage_id for event in expected_events]
         self.assertListEqual(event_ids, expected_event_ids)
         self.assertEqual(event_count, len(expected_events))
 
@@ -514,7 +498,6 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             )
 
 
-@attr(client_min_version=1, client_max_version=1)
 class SelectEventsFilterTypeTest(SelectEventsBaseTest):
 
     """Filter events by type."""
@@ -554,14 +537,14 @@ class SelectEventsFilterTypeTest(SelectEventsBaseTest):
             self.tenant.id
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
-        event_ids = [event.id for event in events]
+        event_ids = [event._storage_id for event in events]
 
         expected_events = [
             event
             for event in self.events
             if isinstance(event, event_classes)
         ]
-        expected_event_ids = [event.id for event in expected_events]
+        expected_event_ids = [event._storage_id for event in expected_events]
         self.assertListEqual(event_ids, expected_event_ids)
         self.assertEqual(event_count, len(expected_events))
 
@@ -580,10 +563,10 @@ class SelectEventsFilterTypeTest(SelectEventsBaseTest):
             self.tenant.id
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
-        event_ids = [event.id for event in events]
+        event_ids = [event._storage_id for event in events]
 
         expected_events = self.events
-        expected_event_ids = [event.id for event in expected_events]
+        expected_event_ids = [event._storage_id for event in expected_events]
         self.assertListEqual(event_ids, expected_event_ids)
         self.assertEqual(event_count, len(expected_events))
 
@@ -596,7 +579,6 @@ class SelectEventsFilterTypeTest(SelectEventsBaseTest):
         self._get_events_by_type(['cloudify_log'])
 
 
-@attr(client_min_version=1, client_max_version=1)
 class SelectEventsSortTest(SelectEventsBaseTest):
 
     """Sort events by timestamp ascending/descending."""
@@ -669,7 +651,6 @@ class SelectEventsSortTest(SelectEventsBaseTest):
         self._sort_by_timestamp('@timestamp', 'desc')
 
 
-@attr(client_min_version=1, client_max_version=1)
 class SelectEventsRangeFilterTest(SelectEventsBaseTest):
 
     """Filter out events not included in a range."""
@@ -764,7 +745,6 @@ class SelectEventsRangeFilterTest(SelectEventsBaseTest):
         self._filter_by_timestamp_range('timestamp', include_to=False)
 
 
-@attr(client_min_version=1, client_max_version=1)
 class SelectEventTenantTest(SelectEventsBaseTest):
     DEFAULT_FILTERS = {
         'type': ['cloudify_event', 'cloudify_log']
@@ -793,7 +773,6 @@ class SelectEventTenantTest(SelectEventsBaseTest):
         self.assertEqual(event_count, 0)
 
 
-@attr(client_min_version=1, client_max_version=1)
 class BuildSelectQueryTest(TestCase):
 
     """Event retrieval query."""
@@ -819,7 +798,6 @@ class BuildSelectQueryTest(TestCase):
             EventsV1._build_select_query(**params)
 
 
-@attr(client_min_version=1, client_max_version=1)
 class BuildCountQueryTest(TestCase):
 
     """Event count query."""
@@ -842,7 +820,6 @@ class BuildCountQueryTest(TestCase):
             EventsV1._build_select_query(filters, {}, {}, tenant_id=1)
 
 
-@attr(client_min_version=1, client_max_version=1)
 class MapEventToDictTestV1(TestCase):
 
     """Map event information to a dictionary."""
@@ -927,5 +904,152 @@ class MapEventToDictTestV1(TestCase):
         }
 
         es_log = EventsV1._map_event_to_dict(None, sql_log)
+
+        self.assertDictEqual(es_log, expected_es_log)
+
+
+class EventsTest(base_test.BaseServerTestCase):
+    def test_list_events(self):
+        response = self.client.events.list(
+            execution_id='<execution_id>',
+            _sort='@timestamp',
+            _size=100,
+            _offset=0,
+        )
+
+        # TBD: Add events to the database to check results
+        total = 0
+        hits = []
+        self.assertEqual(total, response.metadata.pagination.total)
+        self.assertEqual(len(hits), len(response.items))
+
+    def test_delete_events(self):
+        response = self.client.events.delete(
+            '<deployment_id>', include_logs=True)
+        self.assertEqual(response.items, [0])
+
+    def test_delete_events_timestamp_range(self):
+        response = self.client.events.delete(
+            '<deployment_id>', include_logs=True,
+            from_datetime='2020-01-01', to_datetime='2020-02-02')
+        self.assertEqual(response.items, [0])
+
+    @patch('manager_rest.rest.resources_v2.events.Events._store_log_entries')
+    def test_delete_events_store_before(self, store_log_entries):
+        response = self.client.events.delete(
+            '<deployment_id>', include_logs=False,
+            store_before='true')
+        self.assertEqual(store_log_entries.call_count, 1)
+        self.assertEqual(response.items, [0])
+        response = self.client.events.delete(
+            '<deployment_id>', include_logs=True,
+            store_before='true')
+        self.assertEqual(store_log_entries.call_count, 3)
+        self.assertEqual(response.items, [0])
+
+    def test_create_event_not_execution(self):
+        with pytest.raises(CloudifyClientError) as cm:
+            self.client.events.create(events=[])
+        assert cm.value.status_code == 401
+
+    def test_create_event_with_execution(self):
+        tenant = Tenant.query.first()
+        creator = User.query.first()
+        exc = Execution(workflow_id='wf', tenant=tenant, creator=creator)
+        mock_current_exc = Mock()
+        mock_current_exc._get_current_object.return_value = exc
+        with patch('manager_rest.rest.resources_v3.events.current_execution',
+                   mock_current_exc):
+            self.client.events.create(events=[{
+                'message': {'text': 'hello'},
+                'event_type': 'type1',
+                'context': {},
+            }], logs=[{
+                'message': {'text': 'log-hello'},
+                'logger': 'root',
+                'level': 'info',
+                'context': {},
+            }])
+        events = Event.query.all()
+        logs = Log.query.all()
+        assert len(events) == 1
+        assert len(logs) == 1
+
+
+class MapEventToDictTestV3(TestCase):
+
+    """Map event v3 information to a dictionary."""
+
+    def test_map_event(self):
+        """Map event as returned by SQL query to elasticsearch style output."""
+        sql_event = EventResult(
+            timestamp='2016-12-09T00:00Z',
+            reported_timestamp='2017-05-22T00:00Z',
+            deployment_id='<deployment_id>',
+            execution_id='<execution_id>',
+            workflow_id='<workflow_id>',
+            message='<message>',
+            message_code=None,
+            event_type='<event_type>',
+            operation='<operation>',
+            node_id='<node_id>',
+            node_instance_id='<node_instance_id>',
+            node_name='<node_name>',
+            logger=None,
+            level=None,
+            type='cloudify_event',
+        )
+        expected_es_event = {
+            'deployment_id': '<deployment_id>',
+            'execution_id': '<execution_id>',
+            'workflow_id': '<workflow_id>',
+            'operation': '<operation>',
+            'node_instance_id': '<node_instance_id>',
+            'node_name': '<node_name>',
+            'event_type': '<event_type>',
+            'timestamp': '2016-12-09T00:00Z',
+            'reported_timestamp': '2017-05-22T00:00Z',
+            'message': '<message>',
+            'type': 'cloudify_event',
+        }
+
+        es_event = EventsV3._map_event_to_dict(None, sql_event)
+        self.assertDictEqual(es_event, expected_es_event)
+
+    def test_map_log(self):
+        """Map log as returned by SQL query to elasticsearch style output."""
+        sql_log = EventResult(
+            timestamp='2016-12-09T00:00Z',
+            reported_timestamp='2017-05-22T00:00Z',
+            deployment_id='<deployment_id>',
+            execution_id='<execution_id>',
+            workflow_id='<workflow_id>',
+            message='<message>',
+            message_code=None,
+            event_type=None,
+            operation='<operation>',
+            node_id='<node_id>',
+            node_instance_id='<node_instance_id>',
+            node_name='<node_name>',
+            level='<level>',
+            logger='<logger>',
+            type='cloudify_log',
+        )
+        expected_es_log = {
+            'deployment_id': '<deployment_id>',
+            'execution_id': '<execution_id>',
+            'workflow_id': '<workflow_id>',
+            'operation': '<operation>',
+            'node_instance_id': '<node_instance_id>',
+            'node_name': '<node_name>',
+            'level': '<level>',
+            'timestamp': '2016-12-09T00:00Z',
+            'reported_timestamp': '2017-05-22T00:00Z',
+            'message': '<message>',
+            'type': 'cloudify_log',
+            'logger': '<logger>',
+        }
+
+        es_log = EventsV3._map_event_to_dict(None, sql_log)
 
         self.assertDictEqual(es_log, expected_es_log)
