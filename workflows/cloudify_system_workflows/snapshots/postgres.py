@@ -244,7 +244,9 @@ class Postgres(object):
         This is useful for when the snapshot restored permissions for some
         roles, so that the restservice knows to reload them.
         """
-        self.run_query("UPDATE public.roles SET updated_at=NOW()")
+        self.run_query(
+            "UPDATE public.roles SET updated_at=NOW() AT TIME ZONE 'UTC'"
+        )
 
     def dump_config_tables(self, tempdir):
         pg_dump_bin = os.path.join(self._bin_dir, 'pg_dump')
