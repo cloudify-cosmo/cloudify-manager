@@ -183,10 +183,7 @@ class EventsTest(AgentlessTestCase):
         return test_deployment.id
 
 
-class EventsAlternativeTimezoneTest(EventsTest):
-
-    """Events test cases using an alternative timezone (Asia/Jerusalem)."""
-
+class _SetAlternateTimezone(object):
     TIMEZONE = 'Asia/Jerusalem'
 
     def setUp(self):
@@ -213,13 +210,13 @@ class EventsAlternativeTimezoneTest(EventsTest):
 
         time.sleep(1)   # give time for services to restart
         self.start_timestamp = datetime.utcnow().isoformat()
-        super(EventsAlternativeTimezoneTest, self).setUp()
+        super().setUp()
         # log storing is async, add a few seconds to allow for that
         self.stop_timestamp = \
             (datetime.utcnow() + timedelta(seconds=3)).isoformat()
 
     def tearDown(self):
-        super(EventsAlternativeTimezoneTest, self).tearDown()
+        super().tearDown()
         run_postgresql_command(
             self.env.container_id,
             "ALTER DATABASE cloudify_db SET TIME ZONE '{}'"
@@ -231,6 +228,10 @@ class EventsAlternativeTimezoneTest(EventsTest):
             ' restart cloudify-amqp-postgres cloudify-restservice '
             'cloudify-execution-scheduler'
         )
+
+
+class EventsAlternativeTimezoneTest(_SetAlternateTimezone, EventsTest):
+    """Events test cases using an alternative timezone (Asia/Jerusalem)."""
 
     def test_timestamp_in_utc(self):
         """Make sure events timestamp field is in UTC."""

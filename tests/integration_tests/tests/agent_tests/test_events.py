@@ -20,25 +20,17 @@ import pytest
 
 from integration_tests import AgentTestWithPlugins
 from integration_tests.tests.utils import get_resource as resource
-from integration_tests.tests.utils import run_postgresql_command
+from integration_tests.tests.agentless_tests.test_events import (
+    _SetAlternateTimezone
+)
+
 
 pytestmark = pytest.mark.group_events_logs
 
 
 @pytest.mark.usefixtures('dockercompute_plugin')
-class TimezoneTest(AgentTestWithPlugins):
-
+class TimezoneTest(_SetAlternateTimezone, AgentTestWithPlugins):
     """Events test cases using an alternative timezone (Asia/Jerusalem)."""
-
-    TIMEZONE = 'Asia/Jerusalem'
-
-    def setUp(self):
-        """Update postgres timezone and create a deployment."""
-        super(TimezoneTest, self).setUp()
-        run_postgresql_command(
-            self.env.container_id,
-            "ALTER USER cloudify SET TIME ZONE '{}'".format(self.TIMEZONE)
-        )
 
     def test_event_timezone(self):
         """Check timestamp values in agent machine.
