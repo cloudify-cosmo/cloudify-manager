@@ -1,4 +1,4 @@
-git+https://github.com/cloudify-cosmo/cloudify-common@6.1.0-build#egg=cloudify-common[dispatcher]
+git+https://github.com/cloudify-cosmo/cloudify-common@master#egg=cloudify-common[dispatcher]
 -e ../rest-service
 mock
 pytest
