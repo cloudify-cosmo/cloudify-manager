@@ -955,6 +955,11 @@ class Execution(CreatedAtMixin, SQLResourceBase):
         ]
         return case(cases, else_=db.cast(table.c.status, db.Text))
 
+    @property
+    def deployment_display_name(self):
+        if self.deployment:
+            return self.deployment.display_name
+
     def _get_identifier_dict(self):
         id_dict = super(Execution, self)._get_identifier_dict()
         id_dict['status'] = self.status
@@ -964,6 +969,7 @@ class Execution(CreatedAtMixin, SQLResourceBase):
     def resource_fields(cls):
         fields = super(Execution, cls).resource_fields
         fields.pop('token')
+        fields['deployment_display_name'] = flask_fields.String()
         return fields
 
     @classproperty
