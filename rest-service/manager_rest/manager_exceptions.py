@@ -399,4 +399,4 @@ class BadFilterRule(ManagerException):
 
 class NotListeningLDAPServer(ManagerException):
     error_code = 'not_running_ldap_server'
-    status_code = 400
+    status_code = 500
