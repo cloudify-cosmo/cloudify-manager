@@ -13,10 +13,12 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from datetime import datetime
 from flask_restful.reqparse import Argument
 
 from cloudify._compat import text_type
-from cloudify.constants import TERMINATED_STATES
+from cloudify import constants as common_constants
+from cloudify.workflows import events as common_events
 
 from manager_rest.rest.rest_utils import (
     get_args_and_verify_arguments,
@@ -34,6 +36,7 @@ from manager_rest.storage import (
 from manager_rest.security.authorization import authorize
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.security import SecuredResource
+from manager_rest.execution_token import current_execution
 
 
 class Operations(SecuredResource):
@@ -84,20 +87,75 @@ class OperationsId(SecuredResource):
     @authorize('operations')
     @marshal_with(models.Operation)
     def patch(self, operation_id, **kwargs):
-        request_dict = get_json_and_verify_params(
-            {'state': {'type': text_type}}
-        )
+        request_dict = get_json_and_verify_params({
+            'state': {'type': text_type},
+            'result': {'optional': True},
+            'exception': {'optional': True},
+            'exception_causes': {'optional': True},
+        })
         sm = get_storage_manager()
         with sm.transaction():
             instance = sm.get(models.Operation, operation_id, locking=True)
             old_state = instance.state
             instance.state = request_dict.get('state', instance.state)
+            self._insert_event(
+                instance,
+                request_dict.get('result'),
+                request_dict.get('exception'),
+                request_dict.get('exception_causes')
+            )
             if not instance.is_nop and \
-                    old_state not in TERMINATED_STATES and \
-                    instance.state in TERMINATED_STATES:
+                    old_state not in common_constants.TERMINATED_STATES and \
+                    instance.state in common_constants.TERMINATED_STATES:
                 self._modify_execution_operations_counts(instance, 1)
             instance = sm.update(instance, modified_attrs=('state',))
         return instance
+
+    def _insert_event(self, operation, result=None, exception=None,
+                      exception_causes=None):
+        if operation.type != 'RemoteWorkflowTask':
+            return
+        if not current_execution:
+            return
+        try:
+            context = operation.parameters['task_kwargs']['kwargs'][
+                '__cloudify_context']
+        except (KeyError, TypeError):
+            return
+        if exception is not None:
+            operation.parameters.setdefault('error', str(exception))
+        current_retries = context.get('current_retries') or 0
+        total_retries = context.get('total_retries') or 0
+
+        try:
+            message = common_events.format_event_message(
+                operation.name,
+                operation.state,
+                result,
+                exception,
+                current_retries,
+                total_retries,
+            )
+            event_type = common_events.get_event_type(operation.state)
+        except RuntimeError:
+            return
+
+        db.session.execute(models.Event.__table__.insert().values(
+            timestamp=datetime.utcnow(),
+            reported_timestamp=datetime.utcnow(),
+            event_type=event_type,
+            message=message,
+            message_code=None,
+            operation=operation.name,
+            node_id=context.get('node_id'),
+            source_id=context.get('source_id'),
+            target_id=context.get('target_id'),
+            error_causes=exception_causes,
+            _execution_fk=current_execution._storage_id,
+            _tenant_id=current_execution._tenant_id,
+            _creator_id=current_execution._creator_id,
+            visibility=current_execution.visibility,
+        ))
 
     def _modify_execution_operations_counts(self, operation, finished_delta,
                                             total_delta=0):
@@ -134,8 +192,11 @@ class OperationsId(SecuredResource):
         with sm.transaction():
             instance = sm.get(models.Operation, operation_id, locking=True)
             if not instance.is_nop:
-                finished_delta = \
-                    -1 if instance.state in TERMINATED_STATES else 0
+                finished_delta = (
+                    -1
+                    if instance.state in common_constants.TERMINATED_STATES
+                    else 0
+                )
                 self._modify_execution_operations_counts(
                     instance, finished_delta, total_delta=-1)
             sm.delete(instance)
