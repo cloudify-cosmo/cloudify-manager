@@ -115,3 +115,25 @@ class SearchesTestCase(base_test.BaseServerTestCase):
         self.assertEqual(len(resources), 1)
         self.assertEqual(resources[0].keys(), {'id'})
         self.assertEqual(resources[0]['id'], compared_resource['id'])
+
+    def test_searches_with_search_and_search_name(self):
+        self.put_deployment(deployment_id='qwe1', blueprint_id='bp1',
+                            display_name='a coil', labels=[{'key': 'a'}])
+        self.put_deployment(deployment_id='asd2', blueprint_id='bp2',
+                            display_name='a coin', labels=[{'key': 'b'}])
+        self.put_deployment(deployment_id='asd3', blueprint_id='bp3',
+                            display_name='a toy', labels=[{'key': 'c'}])
+        any_blueprint = [
+            FilterRule('key', [], 'is_not_null', 'label'),
+        ]
+        # filter_rules because we want to test a POST to /searches/deployments
+        deployments = self.client.deployments.list(
+            filter_rules=any_blueprint, _search='asd')
+        self.assertEqual(len(deployments), 2)
+        deployments = self.client.deployments.list(
+            filter_rules=any_blueprint, _search_name='a coi')
+        self.assertEqual(len(deployments), 2)
+        deployments = self.client.deployments.list(
+            filter_rules=any_blueprint, _search='asd', _search_name='coi')
+        self.assertEqual(len(deployments), 3)
+        self.assertEqual(deployments[0].id, 'qwe1')
