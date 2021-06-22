@@ -84,7 +84,7 @@ class OperationsId(SecuredResource):
         )
         return operation, 201
 
-    @authorize('operations')
+    @authorize('operations', allow_if_execution=True)
     @marshal_with(models.Operation)
     def patch(self, operation_id, **kwargs):
         request_dict = get_json_and_verify_params({
