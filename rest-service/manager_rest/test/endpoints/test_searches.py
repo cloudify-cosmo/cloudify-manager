@@ -118,11 +118,11 @@ class SearchesTestCase(base_test.BaseServerTestCase):
 
     def test_searches_with_search_and_search_name(self):
         self.put_deployment(deployment_id='qwe1', blueprint_id='bp1',
-                            display_name='a coil', labels=[{'key': 'a'},])
+                            display_name='a coil', labels=[{'key': 'a'}])
         self.put_deployment(deployment_id='asd2', blueprint_id='bp2',
-                            display_name='a coin', labels=[{'key': 'b'},])
+                            display_name='a coin', labels=[{'key': 'b'}])
         self.put_deployment(deployment_id='asd3', blueprint_id='bp3',
-                            display_name='a toy', labels=[{'key': 'c'},])
+                            display_name='a toy', labels=[{'key': 'c'}])
         any_blueprint = [
             FilterRule('key', [], 'is_not_null', 'label'),
         ]
