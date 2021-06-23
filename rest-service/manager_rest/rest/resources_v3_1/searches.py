@@ -16,6 +16,8 @@ from ..filters_utils import (create_filter_rules_list,
 
 from .workflows import workflows_list_response
 
+DEPLOYMENT_SEARCHES_MAP = {'_search': 'id', '_search_name': 'display_name'}
+
 
 def _get_swagger_searches_parameters():
     return [
@@ -136,7 +138,7 @@ class DeploymentsSearches(ResourceSearches):
     @rest_decorators.paginate
     @rest_decorators.sortable(models.Deployment)
     @rest_decorators.all_tenants
-    @rest_decorators.search('id')
+    @rest_decorators.search_multiple_parameters(DEPLOYMENT_SEARCHES_MAP)
     @rest_decorators.filter_id
     def post(self, _include=None, pagination=None, sort=None,
              all_tenants=None, search=None, filter_id=None, **kwargs):
