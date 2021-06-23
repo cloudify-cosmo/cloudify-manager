@@ -6,7 +6,7 @@ from flask_security import current_user
 
 from cloudify._compat import text_type
 
-from manager_rest import config, utils
+from manager_rest import config, utils, execution_token
 from manager_rest.storage.models import Tenant
 from manager_rest.storage import get_storage_manager
 from manager_rest.constants import CLOUDIFY_TENANT_HEADER
@@ -18,10 +18,15 @@ from manager_rest.rest.rest_utils import (get_json_and_verify_params,
 def authorize(action,
               tenant_for_auth=None,
               get_tenant_from='header',
-              allow_all_tenants=False):
+              allow_all_tenants=False,
+              allow_if_execution=False):
     def authorize_dec(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
+            execution = execution_token.current_execution
+            if execution and allow_if_execution:
+                utils.set_current_tenant(execution.tenant)
+                return func(*args, **kwargs)
 
             # getting the tenant name
             if get_tenant_from == 'header':

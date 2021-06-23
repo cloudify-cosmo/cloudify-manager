@@ -42,7 +42,7 @@ class Events(v2_Events):
 
     UNUSED_FIELDS = ['id', 'node_id', 'message_code']
 
-    @authorize('event_create')
+    @authorize('event_create', allow_if_execution=True)
     def post(self):
         request_dict = rest_utils.get_json_and_verify_params({
             'events': {'optional': True},
