@@ -20,6 +20,7 @@ from cloudify._compat import text_type
 from cloudify import constants as common_constants
 from cloudify.workflows import events as common_events
 
+from manager_rest import manager_exceptions
 from manager_rest.rest.rest_utils import (
     get_args_and_verify_arguments,
     get_json_and_verify_params,
@@ -36,6 +37,7 @@ from manager_rest.storage import (
 from manager_rest.security.authorization import authorize
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.security import SecuredResource
+from manager_rest.security.authorization import is_user_action_allowed
 from manager_rest.execution_token import current_execution
 
 
@@ -98,6 +100,8 @@ class OperationsId(SecuredResource):
             instance = sm.get(models.Operation, operation_id, locking=True)
             old_state = instance.state
             instance.state = request_dict.get('state', instance.state)
+            if instance.state == common_constants.TASK_SUCCEEDED:
+                self._on_task_success(sm, instance)
             self._insert_event(
                 instance,
                 request_dict.get('result'),
@@ -110,6 +114,27 @@ class OperationsId(SecuredResource):
                 self._modify_execution_operations_counts(instance, 1)
             instance = sm.update(instance, modified_attrs=('state',))
         return instance
+
+    def _on_task_success(self, sm, operation):
+        if operation.type == 'SetNodeInstanceStateTask':
+            required_permission = 'node_instance_update'
+            tenant_name = current_execution.tenant.name
+            if not is_user_action_allowed(required_permission,
+                                          tenant_name=tenant_name):
+                raise manager_exceptions.ForbiddenError(
+                    f'Execution is not permitted to perform the action '
+                    f'{required_permission} in the tenant {tenant_name}'
+                )
+            try:
+                # yes, double task kwargs. This is how the task is serialized.
+                kwargs = operation.parameters['task_kwargs']['task_kwargs']
+            except KeyError:
+                return
+            node_instance_id = kwargs['node_instance_id']
+            state = kwargs['state']
+            node_instance = sm.get(models.NodeInstance, node_instance_id)
+            node_instance.state = state
+            sm.update(node_instance)
 
     def _insert_event(self, operation, result=None, exception=None,
                       exception_causes=None):
