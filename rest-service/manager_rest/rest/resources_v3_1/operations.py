@@ -130,11 +130,11 @@ class OperationsId(SecuredResource):
                 f'{required_permission} in the tenant {tenant_name}'
             )
         try:
-            kwargs = operation.parameters['task_kwargs']['task_kwargs']
+            kwargs = operation.parameters['task_kwargs']
+            node_instance_id = kwargs['node_instance_id']
+            state = kwargs['state']
         except KeyError:
             return
-        node_instance_id = kwargs['node_instance_id']
-        state = kwargs['state']
         node_instance = sm.get(models.NodeInstance, node_instance_id)
         node_instance.state = state
         sm.update(node_instance)
