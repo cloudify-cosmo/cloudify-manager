@@ -116,25 +116,28 @@ class OperationsId(SecuredResource):
         return instance
 
     def _on_task_success(self, sm, operation):
-        if operation.type == 'SetNodeInstanceStateTask':
-            required_permission = 'node_instance_update'
-            tenant_name = current_execution.tenant.name
-            if not is_user_action_allowed(required_permission,
-                                          tenant_name=tenant_name):
-                raise manager_exceptions.ForbiddenError(
-                    f'Execution is not permitted to perform the action '
-                    f'{required_permission} in the tenant {tenant_name}'
-                )
-            try:
-                # yes, double task kwargs. This is how the task is serialized.
-                kwargs = operation.parameters['task_kwargs']['task_kwargs']
-            except KeyError:
-                return
-            node_instance_id = kwargs['node_instance_id']
-            state = kwargs['state']
-            node_instance = sm.get(models.NodeInstance, node_instance_id)
-            node_instance.state = state
-            sm.update(node_instance)
+        handler = getattr(self, f'_on_success_{operation.type}', None)
+        if handler:
+            handler(sm, operation)
+
+    def _on_success_SetNodeInstanceStateTask(self, sm, operation):
+        required_permission = 'node_instance_update'
+        tenant_name = current_execution.tenant.name
+        if not is_user_action_allowed(required_permission,
+                                      tenant_name=tenant_name):
+            raise manager_exceptions.ForbiddenError(
+                f'Execution is not permitted to perform the action '
+                f'{required_permission} in the tenant {tenant_name}'
+            )
+        try:
+            kwargs = operation.parameters['task_kwargs']['task_kwargs']
+        except KeyError:
+            return
+        node_instance_id = kwargs['node_instance_id']
+        state = kwargs['state']
+        node_instance = sm.get(models.NodeInstance, node_instance_id)
+        node_instance.state = state
+        sm.update(node_instance)
 
     def _insert_event(self, operation, result=None, exception=None,
                       exception_causes=None):
