@@ -1711,6 +1711,17 @@ class Node(SQLResourceBase):
 
     instances = db.relationship('NodeInstance', lazy='subquery')
 
+    @classproperty
+    def resource_fields(cls):
+        fields = super(Node, cls).resource_fields
+        fields['deployment_display_name'] = flask_fields.String()
+        return fields
+
+    @property
+    def deployment_display_name(self):
+        if self.deployment:
+            return self.deployment.display_name
+
     @hybrid_property
     def actual_number_of_instances(self):
         return len(self.instances)
