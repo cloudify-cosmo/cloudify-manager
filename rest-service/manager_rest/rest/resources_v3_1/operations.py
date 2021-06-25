@@ -139,6 +139,25 @@ class OperationsId(SecuredResource):
         node_instance.state = state
         sm.update(node_instance)
 
+    def _on_success_SendNodeEventTask(self, sm, operation):
+        try:
+            kwargs = operation.parameters['task_kwargs']
+        except KeyError:
+            pass
+        db.session.execute(models.Event.__table__.insert().values(
+            timestamp=datetime.utcnow(),
+            reported_timestamp=datetime.utcnow(),
+            event_type='workflow_node_event',
+            message=kwargs['event'],
+            message_code=None,
+            operation=None,
+            node_id=kwargs['node_instance_id'],
+            _execution_fk=current_execution._storage_id,
+            _tenant_id=current_execution._tenant_id,
+            _creator_id=current_execution._creator_id,
+            visibility=current_execution.visibility,
+        ))
+
     def _insert_event(self, operation, result=None, exception=None,
                       exception_causes=None):
         if operation.type != 'RemoteWorkflowTask':
