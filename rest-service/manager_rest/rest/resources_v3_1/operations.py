@@ -88,7 +88,6 @@ class OperationsId(SecuredResource):
         return operation, 201
 
     @authorize('operations', allow_if_execution=True)
-    @marshal_with(models.Operation)
     @detach_globals
     def patch(self, operation_id, **kwargs):
         request_dict = get_json_and_verify_params({
@@ -114,8 +113,8 @@ class OperationsId(SecuredResource):
                     old_state not in common_constants.TERMINATED_STATES and \
                     instance.state in common_constants.TERMINATED_STATES:
                 self._modify_execution_operations_counts(instance, 1)
-            instance = sm.update(instance, modified_attrs=('state',))
-        return instance
+            sm.update(instance, modified_attrs=('state',))
+        return None, 204
 
     def _on_task_success(self, sm, operation):
         handler = getattr(self, f'_on_success_{operation.type}', None)
