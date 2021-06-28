@@ -22,6 +22,7 @@ from manager_rest import manager_exceptions
 from manager_rest.storage import get_storage_manager, models, db
 from manager_rest.security.authorization import authorize
 from manager_rest.rest import rest_utils
+from manager_rest.rest.rest_decorators import detach_globals
 from manager_rest.execution_token import current_execution
 
 
@@ -43,6 +44,7 @@ class Events(v2_Events):
     UNUSED_FIELDS = ['id', 'node_id', 'message_code']
 
     @authorize('event_create', allow_if_execution=True)
+    @detach_globals
     def post(self):
         request_dict = rest_utils.get_json_and_verify_params({
             'events': {'optional': True},

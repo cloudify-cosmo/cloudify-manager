@@ -39,7 +39,8 @@ from cloudify._compat import text_type
 from cloudify.models_states import ExecutionState
 from ..security.authentication import authenticator
 from manager_rest import config, manager_exceptions
-from manager_rest.storage.models_base import SQLModelBase
+from manager_rest.utils import current_tenant
+from manager_rest.storage.models_base import SQLModelBase, db
 from manager_rest.execution_token import current_execution
 from manager_rest.rest.rest_utils import (
     normalize_value,
@@ -564,5 +565,26 @@ def not_while_cancelling(f):
             ExecutionState.KILL_CANCELLING
         }:
             raise manager_exceptions.ForbiddenWhileCancelling()
+        return f(*args, **kwargs)
+    return wrapper
+
+
+def detach_globals(f):
+    """Detach current_execution and current_tenant from the db session.
+
+    This means the current_execution and current_tenant objects can be
+    used in multiple transactions, and they won't be automatically reloaded
+    from the db - saving a query, but not loading additional relationships.
+
+    Use this when access to current_* is limited to direct attributes
+    (not relationships) and the request must avoid additional queries
+    for performance reasons.
+    """
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if current_execution:
+            db.session.expunge(current_execution)
+        if current_tenant:
+            db.session.expunge(current_tenant)
         return f(*args, **kwargs)
     return wrapper

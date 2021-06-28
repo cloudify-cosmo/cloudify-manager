@@ -27,7 +27,8 @@ from manager_rest.rest.rest_utils import (
 )
 from manager_rest.rest.rest_decorators import (
     marshal_with,
-    paginate
+    paginate,
+    detach_globals,
 )
 from manager_rest.storage import (
     get_storage_manager,
@@ -87,6 +88,7 @@ class OperationsId(SecuredResource):
         return operation, 201
 
     @authorize('operations', allow_if_execution=True)
+    @detach_globals
     def patch(self, operation_id, **kwargs):
         request_dict = get_json_and_verify_params({
             'state': {'type': text_type},
