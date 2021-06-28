@@ -540,6 +540,7 @@ class PluginInstallationTimeout(ManagerException):
             **kwargs
         )
 
+
 class DSLParsingException(ManagerException):
     ERROR_CODE = 'dsl_parsing_exception'
 
@@ -550,7 +551,6 @@ class DSLParsingException(ManagerException):
             *args,
             **kwargs
         )
-
 
 
 class PluginDistributionNotSupported(PluginInstallationError):
