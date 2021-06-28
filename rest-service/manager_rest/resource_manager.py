@@ -1479,6 +1479,8 @@ class ResourceManager(object):
         except parser_exceptions.UnsupportedGetSecretError as e:
             raise manager_exceptions.UnsupportedDeploymentGetSecretError(
                 str(e))
+        except parser_exceptions.DSLParsingException as e:
+            raise manager_exceptions.DSLParsingException(str(e))
 
         #  validate plugins exists on manager when
         #  skip_plugins_validation is False
