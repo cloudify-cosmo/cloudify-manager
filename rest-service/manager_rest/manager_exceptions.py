@@ -541,6 +541,18 @@ class PluginInstallationTimeout(ManagerException):
         )
 
 
+class DSLParsingException(ManagerException):
+    ERROR_CODE = 'dsl_parsing_exception'
+
+    def __init__(self, *args, **kwargs):
+        super(DSLParsingException, self).__init__(
+            400,
+            DSLParsingException.ERROR_CODE,
+            *args,
+            **kwargs
+        )
+
+
 class PluginDistributionNotSupported(PluginInstallationError):
     pass
 
