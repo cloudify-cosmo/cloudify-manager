@@ -582,7 +582,9 @@ def detach_globals(f):
     """
     @wraps(f)
     def wrapper(*args, **kwargs):
-        db.session.expunge(current_execution)
-        db.session.expunge(current_tenant)
+        if current_execution:
+            db.session.expunge(current_execution)
+        if current_tenant:
+            db.session.expunge(current_tenant)
         return f(*args, **kwargs)
     return wrapper
