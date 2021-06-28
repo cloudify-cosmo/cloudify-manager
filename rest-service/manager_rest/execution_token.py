@@ -17,9 +17,10 @@ import hashlib
 
 from flask import g
 from werkzeug.local import LocalProxy
+from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
 
 from cloudify import constants
-from manager_rest.storage import get_storage_manager, models
+from manager_rest.storage import models, db
 
 
 @LocalProxy
@@ -28,20 +29,23 @@ def current_execution():
 
 
 def set_current_execution(execution):
-    """
-    Sets the current execution, lasts for the lifetime of the request.
-    """
+    """Sets the current execution, lasts for the lifetime of the request."""
     g.current_execution = execution
 
 
 def get_current_execution_by_token(execution_token):
-    sm = get_storage_manager()
     hashed = hashlib.sha256(execution_token.encode('ascii')).hexdigest()
-    token_filter = {models.Execution.token: hashed}
-    executions = sm.full_access_list(models.Execution, filters=token_filter)
-    if len(executions) != 1:  # Only one execution should match the token
+    try:
+        return (
+            models.Execution.query
+            .filter_by(token=hashed)
+            # tenant and creator are going to be fetched soon, so join them
+            .options(db.joinedload(models.Execution.tenant))
+            .options(db.joinedload(models.Execution.creator))
+            .one()  # Only one execution should match the token
+        )
+    except (MultipleResultsFound, NoResultFound):
         return None
-    return executions[0]
 
 
 def get_execution_token_from_request(request):
