@@ -1701,22 +1701,15 @@ class Node(SQLResourceBase):
 
     _deployment_fk = foreign_key(Deployment._storage_id)
 
+    # These are for fixing a bug where wrong number of instances was returned
+    # for deployments with group scaling policy
     _extra_fields = {
-        # These are for fixing a bug where wrong number of instances was
-        # returned for deployments with group scaling policy
         'actual_number_of_instances': flask_fields.Integer,
         'actual_planned_number_of_instances': flask_fields.Integer,
-        # This one is for displaying deployment.display_name
-        'deployment_display_name': flask_fields.String,
     }
     actual_planned_number_of_instances = 0
 
     instances = db.relationship('NodeInstance', lazy='subquery')
-
-    @property
-    def deployment_display_name(self):
-        if self.deployment:
-            return self.deployment.display_name
 
     @hybrid_property
     def actual_number_of_instances(self):
@@ -1735,6 +1728,7 @@ class Node(SQLResourceBase):
 
     deployment_id = association_proxy('deployment', 'id')
     blueprint_id = association_proxy('deployment', 'blueprint_id')
+    deployment_display_name = association_proxy('deployment', 'display_name')
 
     def to_dict(self, suppress_error=False):
         # some usages of the dict want 'name' instead of 'id' (notably,
