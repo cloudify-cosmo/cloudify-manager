@@ -1728,6 +1728,7 @@ class Node(SQLResourceBase):
 
     deployment_id = association_proxy('deployment', 'id')
     blueprint_id = association_proxy('deployment', 'blueprint_id')
+    deployment_display_name = association_proxy('deployment', 'display_name')
 
     def to_dict(self, suppress_error=False):
         # some usages of the dict want 'name' instead of 'id' (notably,
