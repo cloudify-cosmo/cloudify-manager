@@ -1,4 +1,4 @@
-git+https://github.com/cloudify-cosmo/cloudify-common@5.2.3-build#egg=cloudify-common[dispatcher]
+git+https://github.com/cloudify-cosmo/cloudify-common@5.2.4-build#egg=cloudify-common[dispatcher]
 
 # For dealing with the binary leftovers of psycopg2 in the 2.7.x version
 psycopg2==2.7.4 --no-binary psycopg2
