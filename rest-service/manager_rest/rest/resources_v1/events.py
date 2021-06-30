@@ -330,6 +330,7 @@ class Events(SecuredResource):
                 select_column('reported_timestamp'),
                 Blueprint.id.label('blueprint_id'),
                 Deployment.id.label('deployment_id'),
+                Deployment.display_name.label('deployment_display_name'),
                 Execution.id.label('execution_id'),
                 ExecutionGroup.id.label('execution_group_id'),
                 Execution.workflow_id.label('workflow_id'),
