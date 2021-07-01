@@ -42,7 +42,6 @@ from .constants import (
     INTERNAL_CA_KEY_FILENAME,
     INTERNAL_CERT_FILENAME,
     INTERNAL_KEY_FILENAME,
-    INTERNAL_P12_FILENAME,
     METADATA_FILENAME,
     M_SCHEMA_REVISION,
     M_STAGE_SCHEMA_REVISION,
@@ -359,23 +358,16 @@ class SnapshotRestore(object):
         # Put the certificates where we need them
         utils.copy_snapshot_path(archive_cert_dir, restored_cert_dir)
 
-        certs = [
-            INTERNAL_CA_CERT_FILENAME,
-            INTERNAL_CA_KEY_FILENAME,
-            INTERNAL_CERT_FILENAME,
-            INTERNAL_KEY_FILENAME,
-            INTERNAL_P12_FILENAME,
-        ]
         # Restore each cert from the snapshot over the current manager one
-        for cert in certs:
-            self._post_restore_commands.append(
-                'mv -f {source_dir}/{cert} {dest_dir}/{cert}'.format(
-                    dest_dir=existing_cert_dir,
-                    source_dir=restored_cert_dir,
-                    cert=cert,
-                )
+        self._post_restore_commands.append(
+            'mv -f {source_dir}/* {dest_dir}/'.format(
+                source_dir=restored_cert_dir,
+                dest_dir=existing_cert_dir,
             )
+        )
 
+        # This is to cope with old managers where we once did self signed
+        # certs.
         if not os.path.exists(
                 os.path.join(archive_cert_dir, INTERNAL_CA_CERT_FILENAME)):
             for source, target in \
