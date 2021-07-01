@@ -512,7 +512,8 @@ class Postgres(object):
 
         encrypted_values = []
         for value in values['all']:
-            encrypted_value = encrypt(value[1], encryption_key)
+            encrypted_value = encrypt(value[1], encryption_key) \
+                if value[1] is not None else None
             encrypted_values.append((value[0], encrypted_value))
 
         update_query = """UPDATE {0}
