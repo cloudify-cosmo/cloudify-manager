@@ -81,6 +81,7 @@ class Postgres(object):
         dump_file = self._prepend_dump(
             dump_file, deferrable_roles_constraints + clear_tables_queries)
 
+        self._append_dump(dump_file, self._get_execution_restore_query())
         # Remove users/roles associated with 5.0.5 status reporter
         delete_status_reporter = self._get_status_reporter_deletes()
         self._append_dump(dump_file, '\n'.join(delete_status_reporter))
@@ -310,9 +311,6 @@ class Postgres(object):
         status_reporter_roles_path = self.dump_status_reporter_roles(
             tempdir)
         return status_reporter_roles_path, status_reporter_users_path
-
-    def restore_current_execution(self):
-        self.run_query(self._get_execution_restore_query())
 
     def init_current_execution_data(self):
         response = self.run_query("SELECT created_at, token "
