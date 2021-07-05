@@ -548,7 +548,6 @@ class SnapshotRestore(object):
         postgres.restore_config_tables(config_dump_path)
         if not self._permissions_exist(postgres):
             postgres.restore_permissions_table(permissions_dump_path)
-        postgres.restore_current_execution()
         try:
             self._restore_stage(postgres, self._tempdir, stage_revision)
         except Exception as e:
