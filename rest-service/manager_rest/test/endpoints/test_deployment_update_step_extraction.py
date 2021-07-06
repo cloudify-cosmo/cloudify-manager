@@ -141,10 +141,10 @@ class StepExtractorTestCase(unittest.TestCase):
         ]
         steps, _ = extract_steps([], self.deployment, self.deployment_plan)
         order_by_id = {s.entity_id: s.topology_order for s in steps}
-        assert order_by_id['nodes:node_a'] > order_by_id['nodes:node_c']
-        assert order_by_id['nodes:node_b'] > order_by_id['nodes:node_c']
-        assert order_by_id['nodes:node_c'] > order_by_id['nodes:node_e']
-        assert order_by_id['nodes:node_d'] > order_by_id['nodes:node_e']
+        assert order_by_id['nodes:node_c'] > order_by_id['nodes:node_a']
+        assert order_by_id['nodes:node_c'] > order_by_id['nodes:node_b']
+        assert order_by_id['nodes:node_e'] > order_by_id['nodes:node_c']
+        assert order_by_id['nodes:node_e'] > order_by_id['nodes:node_d']
 
     def test_description_no_change(self):
         self.deployment.description = 'description'
