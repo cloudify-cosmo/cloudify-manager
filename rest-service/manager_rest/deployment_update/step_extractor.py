@@ -481,6 +481,7 @@ def extract_steps(nodes, deployment, new_plan):
     :return: a pair of lists: the supported steps, and the unsupported steps
     """
     nodes = {node['id']: node for node in nodes}
+    new_nodes = {node['id']: node for node in new_plan[NODES]}
     supported_steps = []
     unsupported_steps = []
     for step in _create_steps(nodes, deployment, new_plan):
@@ -488,5 +489,5 @@ def extract_steps(nodes, deployment, new_plan):
             supported_steps.append(step)
         else:
             unsupported_steps.append(step)
-    _sort_supported_steps(nodes, supported_steps)
+    _sort_supported_steps(new_nodes, supported_steps)
     return supported_steps, unsupported_steps
