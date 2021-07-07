@@ -539,12 +539,14 @@ class SnapshotRestore(object):
         if self._snapshot_version <= V_4_6_0:
             mgr_tables_dump_path = postgres.dump_manager_tables(self._tempdir)
         permissions_dump_path = postgres.dump_permissions_table(self._tempdir)
+        ctx.logger.info('Restoring DB')
         admin_user_update_command = postgres.restore(
             self._tempdir, schema_revision,
             premium_enabled=self._premium_enabled,
             config=self._config, snapshot_version=self._snapshot_version)
         if not self._license_exists(postgres):
             postgres.restore_license_from_dump(self._tempdir)
+        ctx.logger.info('DB restored')
         if self._snapshot_version <= V_4_6_0:
             postgres.restore_manager_tables(mgr_tables_dump_path)
         postgres.restore_config_tables(config_dump_path)
