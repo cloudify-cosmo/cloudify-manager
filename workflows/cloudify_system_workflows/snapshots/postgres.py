@@ -83,9 +83,8 @@ class Postgres(object):
         # Don't change admin user during the restore or the workflow will
         # fail to correctly execute (the admin user update query reverts it
         # to the one from before the restore)
-        admin_query, admin_protected_query = \
-            self._get_admin_user_update_query()
-        self._append_dump(dump_file, admin_query, admin_protected_query)
+        admin_query = self._get_admin_user_update_query()
+        self._append_dump(dump_file, admin_query)
 
         # Make foreign keys for the `roles` table immediate (as they were)
         immediate_roles_constraints = self._get_roles_constraints(
@@ -197,8 +196,7 @@ class Postgres(object):
         base_query = "UPDATE public.users " \
                      "SET username='{0}', password='{1}' " \
                      "WHERE id=0;"
-        return (base_query.format(username, password),
-                base_query.format('*'*8, '*'*8))
+        return base_query.format(username, password)
 
     def _get_execution_restore_query(self):
         """Return a query that creates an execution to the DB with the ID (and
@@ -403,12 +401,7 @@ class Postgres(object):
         run_shell(command)
 
     @staticmethod
-    def _append_dump(dump_file, query, protected_query=None):
-        """
-        `protected_query` is the same string as `query` only that it hides
-        sensitive information, e.g. username and password.
-        """
-        print_query = protected_query or query
+    def _append_dump(dump_file, query):
         with open(dump_file, 'a') as f:
             f.write('\n{0}\n'.format(query))
 
@@ -426,7 +419,6 @@ class Postgres(object):
         return new_dump_file
 
     def run_query(self, query, vars=None, bulk_query=False):
-        str_query = query.replace(u"\uFFFD", "?")
         with closing(self._connection.cursor()) as cur:
             try:
                 if bulk_query:
