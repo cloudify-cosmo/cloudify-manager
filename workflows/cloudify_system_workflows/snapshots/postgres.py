@@ -26,7 +26,7 @@ from cloudify.cryptography_utils import encrypt
 from cloudify.exceptions import NonRecoverableError
 
 from .constants import ADMIN_DUMP_FILE, LICENSE_DUMP_FILE, V_4_6_0, V_5_1_0
-from .utils import run as run_shell
+from .utils import run as run_shell, db_schema
 
 POSTGRESQL_DEFAULT_PORT = 5432
 
@@ -68,7 +68,7 @@ class Postgres(object):
             ctx.logger.debug('Updating Postgres config: host: %s, port: %s',
                              self._host, self._port)
 
-    def restore(self, tempdir, premium_enabled, license=None,
+    def restore(self, tempdir, schema_revision, premium_enabled, config,
                 snapshot_version=None):
         dump_file = os.path.join(tempdir, self._POSTGRES_DUMP_FILENAME)
 
@@ -76,11 +76,6 @@ class Postgres(object):
         deferrable_roles_constraints = self._get_roles_constraints(
             'DEFERRABLE INITIALLY DEFERRED')
 
-        clear_tables_queries = self._get_clear_tables_queries(snapshot_version)
-        dump_file = self._prepend_dump(
-            dump_file, deferrable_roles_constraints + clear_tables_queries)
-
-        self._append_dump(dump_file, self._get_execution_restore_query())
         # Remove users/roles associated with 5.0.5 status reporter
         delete_status_reporter = self._get_status_reporter_deletes()
         self._append_dump(dump_file, '\n'.join(delete_status_reporter))
@@ -96,8 +91,12 @@ class Postgres(object):
         immediate_roles_constraints = self._get_roles_constraints(
             'NOT DEFERRABLE')
         self._append_dump(dump_file, '\n'.join(immediate_roles_constraints))
-
-        self._restore_dump(dump_file, self._db_name)
+        with db_schema(schema_revision, config=config):
+            clear_tables_queries = self._get_clear_tables_queries(snapshot_version)
+            dump_file = self._prepend_dump(
+                dump_file, deferrable_roles_constraints + clear_tables_queries)
+            self._restore_dump(dump_file, self._db_name)
+        self.run_query(self._get_execution_restore_query())
 
         self._make_api_token_keys()
 
