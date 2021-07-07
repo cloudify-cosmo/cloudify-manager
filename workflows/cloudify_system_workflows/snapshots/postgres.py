@@ -70,7 +70,6 @@ class Postgres(object):
 
     def restore(self, tempdir, premium_enabled, license=None,
                 snapshot_version=None):
-        ctx.logger.info('Restoring DB from postgres dump')
         dump_file = os.path.join(tempdir, self._POSTGRES_DUMP_FILENAME)
 
         # Make foreign keys for the `roles` table deferrable
@@ -101,8 +100,6 @@ class Postgres(object):
         self._restore_dump(dump_file, self._db_name)
 
         self._make_api_token_keys()
-
-        ctx.logger.debug('Postgres restored')
 
     def dump(self, tempdir, include_logs, include_events):
         ctx.logger.info('Dumping Postgres, include logs %s include events %s',
@@ -166,10 +163,8 @@ class Postgres(object):
     def _restore_db(self, tempdir, database_name):
         if not self._db_exists(database_name):
             return
-        ctx.logger.info('Restoring %s DB', database_name)
         dump_file = os.path.join(tempdir, database_name + '_data')
         self._restore_dump(dump_file, database_name)
-        ctx.logger.debug('%s DB restored', database_name)
 
     def restore_stage(self, tempdir):
         self._restore_db(tempdir, self._STAGE_DB_NAME)
@@ -398,7 +393,6 @@ class Postgres(object):
     def _restore_dump(self, dump_file, db_name, table=None):
         """Execute `psql` to restore an SQL dump into the DB
         """
-        ctx.logger.debug('Restoring db dump file: %s', dump_file)
         command = self.get_psql_command(db_name)
         command.extend([
             '-v', 'ON_ERROR_STOP=1',
@@ -416,14 +410,12 @@ class Postgres(object):
         sensitive information, e.g. username and password.
         """
         print_query = protected_query or query
-        ctx.logger.debug('Adding to end of dump: %s', print_query)
         with open(dump_file, 'a') as f:
             f.write('\n{0}\n'.format(query))
 
     @staticmethod
     def _prepend_dump(dump_file, queries):
         queries_str = '\n'.join(queries)
-        ctx.logger.debug('Adding to beginning of dump: %s', queries_str)
         pre_dump_file = '{0}.pre'.format(dump_file)
         new_dump_file = '{0}.new'.format(dump_file)
         with open(pre_dump_file, 'a') as f:
@@ -436,7 +428,6 @@ class Postgres(object):
 
     def run_query(self, query, vars=None, bulk_query=False):
         str_query = query.replace(u"\uFFFD", "?")
-        ctx.logger.debug('Running query: %s', str_query)
         with closing(self._connection.cursor()) as cur:
             try:
                 if bulk_query:
@@ -446,15 +437,10 @@ class Postgres(object):
                 status_message = cur.statusmessage
                 fetchall = cur.fetchall()
                 result = {'status': status_message, 'all': fetchall}
-                ctx.logger.debug('Running query result status: %s',
-                                 status_message)
             except Exception as e:
                 fetchall = None
                 status_message = str(e)
                 result = {'status': status_message, 'all': fetchall}
-                if status_message != 'no results to fetch':
-                    ctx.logger.error('Running query result status: %s',
-                                     status_message)
             return result
 
     def _make_api_token_keys(self):

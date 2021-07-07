@@ -599,26 +599,22 @@ class SnapshotRestore(object):
     def _restore_stage(self, postgres, tempdir, migration_version):
         if not self._premium_enabled:
             return
-        ctx.logger.info('Restoring stage DB')
         npm.clear_db(STAGE_APP, STAGE_USER)
         npm.downgrade_app_db(STAGE_APP, STAGE_USER, migration_version)
         try:
             postgres.restore_stage(tempdir)
         finally:
             npm.upgrade_app_db(STAGE_APP, STAGE_USER)
-        ctx.logger.debug('Stage DB restored')
 
     def _restore_composer(self, postgres, tempdir, migration_version):
         if not (self._snapshot_version >= V_4_2_0 and self._premium_enabled):
             return
-        ctx.logger.info('Restoring composer DB')
         npm.clear_db(COMPOSER_APP, COMPOSER_USER)
         npm.downgrade_app_db(COMPOSER_APP, COMPOSER_USER, migration_version)
         try:
             postgres.restore_composer(tempdir)
         finally:
             npm.upgrade_app_db(COMPOSER_APP, COMPOSER_USER)
-        ctx.logger.debug('Composer DB restored')
 
     def _should_clean_old_db_for_3_x_snapshot(self):
         """The one case in which the DB should be cleared is when restoring
