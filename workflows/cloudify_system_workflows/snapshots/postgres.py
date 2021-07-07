@@ -91,7 +91,8 @@ class Postgres(object):
             'NOT DEFERRABLE')
         self._append_dump(dump_file, '\n'.join(immediate_roles_constraints))
         with db_schema(schema_revision, config=config):
-            clear_tables_queries = self._get_clear_tables_queries(snapshot_version)
+            clear_tables_queries = self._get_clear_tables_queries(
+                snapshot_version)
             dump_file = self._prepend_dump(
                 dump_file, deferrable_roles_constraints + clear_tables_queries)
             self._restore_dump(dump_file, self._db_name)
