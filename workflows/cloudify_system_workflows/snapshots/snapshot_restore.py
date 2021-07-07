@@ -543,6 +543,8 @@ class SnapshotRestore(object):
             self._tempdir, schema_revision,
             premium_enabled=self._premium_enabled,
             config=self._config, snapshot_version=self._snapshot_version)
+        if not self._license_exists(postgres):
+            postgres.restore_license_from_dump(self._tempdir)
         if self._snapshot_version <= V_4_6_0:
             postgres.restore_manager_tables(mgr_tables_dump_path)
         postgres.restore_config_tables(config_dump_path)
@@ -557,8 +559,6 @@ class SnapshotRestore(object):
                 raise
         if composer_revision:
             self._restore_composer(postgres, self._tempdir, composer_revision)
-        if not self._license_exists(postgres):
-            postgres.restore_license_from_dump(self._tempdir)
         ctx.logger.info('Successfully restored database')
         # This is returned so that we can decide whether to restore the admin
         # user depending on whether we have the hash salt
