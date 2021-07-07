@@ -194,7 +194,7 @@ class OperationsId(SecuredResource):
             event_type=event_type,
             message=message,
             message_code=None,
-            operation=operation.name,
+            operation=context.get('operation', {}).get('name'),
             node_id=context.get('node_id'),
             source_id=context.get('source_id'),
             target_id=context.get('target_id'),
