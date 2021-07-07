@@ -172,8 +172,8 @@ class OperationsId(SecuredResource):
             return
         if exception is not None:
             operation.parameters.setdefault('error', str(exception))
-        current_retries = context.get('current_retries') or 0
-        total_retries = context.get('total_retries') or 0
+        current_retries = operation.parameters.get('current_retries') or 0
+        total_retries = operation.parameters.get('total_retries') or 0
 
         try:
             message = common_events.format_event_message(
