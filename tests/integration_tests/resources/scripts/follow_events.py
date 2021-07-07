@@ -48,7 +48,7 @@ def make_notify_func(conn):
                 begin
                     perform pg_notify(
                         'event_inserted'::text,
-                        row_to_json(NEW)::text
+                        substring(row_to_json(NEW)::text from 0 for 6000)
                     );
                     return NEW;
                 end;
