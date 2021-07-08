@@ -26,6 +26,9 @@ spec:
     image: circleci/postgres:9.5-alpine
     ports:
       - containerPort: 5432
+    args:
+      - "-c"
+      - "max_connections=800"
     env:
     - name: POSTGRES_USER
       value: cloudify
