@@ -539,10 +539,14 @@ class SnapshotRestore(object):
         if self._snapshot_version <= V_4_6_0:
             mgr_tables_dump_path = postgres.dump_manager_tables(self._tempdir)
         permissions_dump_path = postgres.dump_permissions_table(self._tempdir)
-        with utils.db_schema(schema_revision, config=self._config):
-            admin_user_update_command = postgres.restore(
-                self._tempdir, premium_enabled=self._premium_enabled,
-                snapshot_version=self._snapshot_version)
+        ctx.logger.info('Restoring DB')
+        admin_user_update_command = postgres.restore(
+            self._tempdir, schema_revision,
+            premium_enabled=self._premium_enabled,
+            config=self._config, snapshot_version=self._snapshot_version)
+        if not self._license_exists(postgres):
+            postgres.restore_license_from_dump(self._tempdir)
+        ctx.logger.info('DB restored')
         if self._snapshot_version <= V_4_6_0:
             postgres.restore_manager_tables(mgr_tables_dump_path)
         postgres.restore_config_tables(config_dump_path)
@@ -557,8 +561,6 @@ class SnapshotRestore(object):
                 raise
         if composer_revision:
             self._restore_composer(postgres, self._tempdir, composer_revision)
-        if not self._license_exists(postgres):
-            postgres.restore_license_from_dump(self._tempdir)
         ctx.logger.info('Successfully restored database')
         # This is returned so that we can decide whether to restore the admin
         # user depending on whether we have the hash salt
@@ -599,26 +601,22 @@ class SnapshotRestore(object):
     def _restore_stage(self, postgres, tempdir, migration_version):
         if not self._premium_enabled:
             return
-        ctx.logger.info('Restoring stage DB')
         npm.clear_db(STAGE_APP, STAGE_USER)
         npm.downgrade_app_db(STAGE_APP, STAGE_USER, migration_version)
         try:
             postgres.restore_stage(tempdir)
         finally:
             npm.upgrade_app_db(STAGE_APP, STAGE_USER)
-        ctx.logger.debug('Stage DB restored')
 
     def _restore_composer(self, postgres, tempdir, migration_version):
         if not (self._snapshot_version >= V_4_2_0 and self._premium_enabled):
             return
-        ctx.logger.info('Restoring composer DB')
         npm.clear_db(COMPOSER_APP, COMPOSER_USER)
         npm.downgrade_app_db(COMPOSER_APP, COMPOSER_USER, migration_version)
         try:
             postgres.restore_composer(tempdir)
         finally:
             npm.upgrade_app_db(COMPOSER_APP, COMPOSER_USER)
-        ctx.logger.debug('Composer DB restored')
 
     def _should_clean_old_db_for_3_x_snapshot(self):
         """The one case in which the DB should be cleared is when restoring
