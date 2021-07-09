@@ -20,8 +20,9 @@ import shutil
 import typing
 from datetime import datetime, timezone
 from functools import lru_cache
-from os import chmod, environ, stat, rename
+from os import chmod, environ, stat
 from os.path import exists, isfile, join
+from shutil import move
 from tempfile import TemporaryDirectory, mktemp
 
 import click
@@ -656,7 +657,7 @@ def update_archive(blueprint: models.Blueprint, updated_file_name: str):
         new_archive_file_name = shutil.make_archive(new_archive_base,
                                                     archive_format,
                                                     root_dir=working_dir)
-        rename(new_archive_file_name, blueprint_archive_file_name)
+        move(new_archive_file_name, blueprint_archive_file_name)
         chmod(blueprint_archive_file_name, 0o644)
 
 
@@ -706,7 +707,7 @@ def correct_blueprint(blueprint: models.Blueprint,
     write_blueprint_diff(file_name, new_file_name,
                          blueprint_diff_file_name(blueprint))
     update_archive(blueprint, new_file_name)
-    rename(new_file_name, file_name)
+    move(new_file_name, file_name)
     return UPDATES
 
 
