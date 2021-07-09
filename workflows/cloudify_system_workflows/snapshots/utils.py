@@ -203,12 +203,9 @@ def run(command, ignore_failures=False, redirect_output_path=None, cwd=None):
         command = shlex.split(command)
     command_str = ' '.join(command)
 
-    ctx.logger.debug('Running command: {0}'.format(command_str))
     stderr = subprocess.PIPE
     stdout = subprocess.PIPE
     if redirect_output_path:
-        ctx.logger.debug('Command: {0} Redirect output to: {1}'.
-                         format(' '.join(command), redirect_output_path))
         with open(redirect_output_path, 'a') as output:
             proc = subprocess.Popen(command, stdout=output, stderr=stderr,
                                     cwd=cwd)

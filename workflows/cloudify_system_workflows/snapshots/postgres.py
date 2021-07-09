@@ -26,7 +26,7 @@ from cloudify.cryptography_utils import encrypt
 from cloudify.exceptions import NonRecoverableError
 
 from .constants import ADMIN_DUMP_FILE, LICENSE_DUMP_FILE, V_4_6_0, V_5_1_0
-from .utils import run as run_shell
+from .utils import run as run_shell, db_schema
 
 POSTGRESQL_DEFAULT_PORT = 5432
 
@@ -68,18 +68,13 @@ class Postgres(object):
             ctx.logger.debug('Updating Postgres config: host: %s, port: %s',
                              self._host, self._port)
 
-    def restore(self, tempdir, premium_enabled, license=None,
+    def restore(self, tempdir, schema_revision, premium_enabled, config,
                 snapshot_version=None):
-        ctx.logger.info('Restoring DB from postgres dump')
         dump_file = os.path.join(tempdir, self._POSTGRES_DUMP_FILENAME)
 
         # Make foreign keys for the `roles` table deferrable
         deferrable_roles_constraints = self._get_roles_constraints(
             'DEFERRABLE INITIALLY DEFERRED')
-
-        clear_tables_queries = self._get_clear_tables_queries(snapshot_version)
-        dump_file = self._prepend_dump(
-            dump_file, deferrable_roles_constraints + clear_tables_queries)
 
         # Remove users/roles associated with 5.0.5 status reporter
         delete_status_reporter = self._get_status_reporter_deletes()
@@ -88,20 +83,22 @@ class Postgres(object):
         # Don't change admin user during the restore or the workflow will
         # fail to correctly execute (the admin user update query reverts it
         # to the one from before the restore)
-        admin_query, admin_protected_query = \
-            self._get_admin_user_update_query()
-        self._append_dump(dump_file, admin_query, admin_protected_query)
+        admin_query = self._get_admin_user_update_query()
+        self._append_dump(dump_file, admin_query)
 
         # Make foreign keys for the `roles` table immediate (as they were)
         immediate_roles_constraints = self._get_roles_constraints(
             'NOT DEFERRABLE')
         self._append_dump(dump_file, '\n'.join(immediate_roles_constraints))
-
-        self._restore_dump(dump_file, self._db_name)
+        with db_schema(schema_revision, config=config):
+            clear_tables_queries = self._get_clear_tables_queries(
+                snapshot_version)
+            dump_file = self._prepend_dump(
+                dump_file, deferrable_roles_constraints + clear_tables_queries)
+            self._restore_dump(dump_file, self._db_name)
+        self.run_query(self._get_execution_restore_query())
 
         self._make_api_token_keys()
-
-        ctx.logger.debug('Postgres restored')
 
     def dump(self, tempdir, include_logs, include_events):
         ctx.logger.info('Dumping Postgres, include logs %s include events %s',
@@ -165,10 +162,8 @@ class Postgres(object):
     def _restore_db(self, tempdir, database_name):
         if not self._db_exists(database_name):
             return
-        ctx.logger.info('Restoring %s DB', database_name)
         dump_file = os.path.join(tempdir, database_name + '_data')
         self._restore_dump(dump_file, database_name)
-        ctx.logger.debug('%s DB restored', database_name)
 
     def restore_stage(self, tempdir):
         self._restore_db(tempdir, self._STAGE_DB_NAME)
@@ -202,8 +197,7 @@ class Postgres(object):
         base_query = "UPDATE public.users " \
                      "SET username='{0}', password='{1}' " \
                      "WHERE id=0;"
-        return (base_query.format(username, password),
-                base_query.format('*'*8, '*'*8))
+        return base_query.format(username, password)
 
     def _get_execution_restore_query(self):
         """Return a query that creates an execution to the DB with the ID (and
@@ -311,9 +305,6 @@ class Postgres(object):
             tempdir)
         return status_reporter_roles_path, status_reporter_users_path
 
-    def restore_current_execution(self):
-        self.run_query(self._get_execution_restore_query())
-
     def init_current_execution_data(self):
         response = self.run_query("SELECT created_at, token "
                                   "FROM public.executions "
@@ -400,7 +391,6 @@ class Postgres(object):
     def _restore_dump(self, dump_file, db_name, table=None):
         """Execute `psql` to restore an SQL dump into the DB
         """
-        ctx.logger.debug('Restoring db dump file: %s', dump_file)
         command = self.get_psql_command(db_name)
         command.extend([
             '-v', 'ON_ERROR_STOP=1',
@@ -412,20 +402,13 @@ class Postgres(object):
         run_shell(command)
 
     @staticmethod
-    def _append_dump(dump_file, query, protected_query=None):
-        """
-        `protected_query` is the same string as `query` only that it hides
-        sensitive information, e.g. username and password.
-        """
-        print_query = protected_query or query
-        ctx.logger.debug('Adding to end of dump: %s', print_query)
+    def _append_dump(dump_file, query):
         with open(dump_file, 'a') as f:
             f.write('\n{0}\n'.format(query))
 
     @staticmethod
     def _prepend_dump(dump_file, queries):
         queries_str = '\n'.join(queries)
-        ctx.logger.debug('Adding to beginning of dump: %s', queries_str)
         pre_dump_file = '{0}.pre'.format(dump_file)
         new_dump_file = '{0}.new'.format(dump_file)
         with open(pre_dump_file, 'a') as f:
@@ -437,8 +420,6 @@ class Postgres(object):
         return new_dump_file
 
     def run_query(self, query, vars=None, bulk_query=False):
-        str_query = query.replace(u"\uFFFD", "?")
-        ctx.logger.debug('Running query: %s', str_query)
         with closing(self._connection.cursor()) as cur:
             try:
                 if bulk_query:
@@ -448,15 +429,10 @@ class Postgres(object):
                 status_message = cur.statusmessage
                 fetchall = cur.fetchall()
                 result = {'status': status_message, 'all': fetchall}
-                ctx.logger.debug('Running query result status: %s',
-                                 status_message)
             except Exception as e:
                 fetchall = None
                 status_message = str(e)
                 result = {'status': status_message, 'all': fetchall}
-                if status_message != 'no results to fetch':
-                    ctx.logger.error('Running query result status: %s',
-                                     status_message)
             return result
 
     def _make_api_token_keys(self):

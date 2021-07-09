@@ -1,7 +1,7 @@
 import os
+import subprocess
 import logging
 import pytest
-import threading
 import wagon
 
 import integration_tests_plugins
@@ -10,7 +10,6 @@ from collections import namedtuple
 from integration_tests.tests import utils as test_utils
 from integration_tests.framework import docker
 from integration_tests.framework.utils import zip_files
-from integration_tests.framework.amqp_events_printer import print_events
 from integration_tests.framework.flask_utils import \
     prepare_reset_storage_script, reset_storage
 
@@ -125,6 +124,21 @@ def resource_mapping(request):
     yield resources
 
 
+def prepare_events_follower(container_id):
+    docker.copy_file_to_manager(
+        container_id,
+        test_utils.get_resource('scripts/follow_events.py'),
+        '/tmp/follow_events.py'
+    )
+
+
+def start_events_follower(container_id):
+    return subprocess.Popen([
+        'docker', 'exec', container_id,
+        '/opt/manager/env/bin/python', '-u', '/tmp/follow_events.py',
+    ])
+
+
 @pytest.fixture(scope='session')
 def manager_container(request, resource_mapping):
     image_name = request.config.getoption("--image-name")
@@ -141,16 +155,13 @@ def manager_container(request, resource_mapping):
     container_ip = docker.get_manager_ip(container_id)
     container = Env(container_id, container_ip, service_management)
     prepare_reset_storage_script(container_id)
-    amqp_events_printer_thread = threading.Thread(
-        target=print_events, args=(container_id, ))
-    amqp_events_printer_thread.daemon = True
-    amqp_events_printer_thread.start()
+    prepare_events_follower(container_id)
+    events_follower = start_events_follower(container_id)
     _disable_cron_jobs(container_id)
-    try:
-        yield container
-    finally:
-        if not keep_container:
-            docker.clean(container_id)
+    yield container
+    events_follower.kill()
+    if not keep_container:
+        docker.clean(container_id)
 
 
 @pytest.fixture(scope='session')

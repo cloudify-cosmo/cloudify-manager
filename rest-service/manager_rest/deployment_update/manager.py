@@ -172,8 +172,11 @@ class DeploymentUpdateManager(object):
         return self.sm.put(step)
 
     def extract_steps_from_deployment_update(self, deployment_update):
+        nodes = [node.to_dict() for node in deployment_update.deployment.nodes]
         supported_steps, unsupported_steps = step_extractor.extract_steps(
-            deployment_update)
+            nodes,
+            deployment_update.deployment,
+            deployment_update.deployment_plan)
 
         if unsupported_steps:
             deployment_update.state = STATES.FAILED

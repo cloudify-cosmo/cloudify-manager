@@ -11,9 +11,6 @@ from functools import wraps
 from multiprocessing import Process
 from contextlib import contextmanager
 
-import pika
-import ssl
-
 from cloudify.utils import setup_logger
 from cloudify_rest_client import CloudifyClient
 from manager_rest.utils import create_auth_header
@@ -83,23 +80,6 @@ def create_rest_client(host, **kwargs):
         headers=headers,
         trust_all=trust_all,
         cert=cert_path)
-
-
-def create_pika_connection(container_id):
-    host = docker.get_manager_ip(container_id)
-    ca_data = docker.read_file(
-        container_id,
-        '/etc/cloudify/ssl/cloudify_internal_ca_cert.pem')
-
-    credentials = pika.credentials.PlainCredentials(
-        username='cloudify',
-        password='c10udify')
-    ssl_ctx = ssl.create_default_context(cadata=ca_data)
-    return pika.BlockingConnection(
-        pika.ConnectionParameters(host=host,
-                                  port=5671,
-                                  ssl_options=pika.SSLOptions(ssl_ctx),
-                                  credentials=credentials))
 
 
 def timeout(seconds=60):

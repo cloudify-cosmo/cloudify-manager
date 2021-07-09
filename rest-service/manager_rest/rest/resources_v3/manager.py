@@ -10,7 +10,8 @@ from manager_rest.storage import models, get_storage_manager
 from manager_rest.manager_exceptions import (BadParametersError,
                                              MethodNotAllowedError,
                                              UnauthorizedError,
-                                             NotFoundError)
+                                             NotFoundError,
+                                             NotListeningLDAPServer)
 from manager_rest.workflow_executor import restart_restservice
 from manager_rest.constants import (
     FILE_SERVER_BLUEPRINTS_FOLDER,
@@ -118,14 +119,20 @@ class LdapAuthentication(SecuredResource):
             auth = LdapAuthentication()
             auth.configure(current_app.logger)
             try:
+                auth.validate_connection()
                 auth.authenticate_user(ldap_config.get('ldap_username'),
                                        ldap_config.get('ldap_password'))
-            except UnauthorizedError:
+            except (UnauthorizedError, NotListeningLDAPServer) as _ex:
                 # reload previous configuration.
+                error_msg = 'Failed setting LDAP' \
+                            ' authenticator: Invalid parameters provided.'
                 config.instance.load_configuration()
-                raise BadParametersError(
-                    'Failed setting LDAP authenticator: Invalid parameters '
-                    'provided.')
+                if isinstance(_ex, NotListeningLDAPServer):
+                    error_msg = \
+                        'Failed setting LDAP: Unable to connect to ' \
+                        'LDAP Server {0}'.format(ldap_config['ldap_server'])
+
+                raise BadParametersError(error_msg)
 
         restart_restservice()
 

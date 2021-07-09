@@ -86,7 +86,7 @@ class Authentication(object):
             if not user.last_login_at:
                 user.first_login_at = now
             user.last_login_at = now
-        user_datastore.commit()
+            user_datastore.commit()
         return user
 
     def _internal_auth(self, request):

@@ -13,18 +13,22 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from datetime import datetime
 from flask_restful.reqparse import Argument
 
 from cloudify._compat import text_type
-from cloudify.constants import TERMINATED_STATES
+from cloudify import constants as common_constants
+from cloudify.workflows import events as common_events
 
+from manager_rest import manager_exceptions
 from manager_rest.rest.rest_utils import (
     get_args_and_verify_arguments,
     get_json_and_verify_params,
 )
 from manager_rest.rest.rest_decorators import (
     marshal_with,
-    paginate
+    paginate,
+    detach_globals,
 )
 from manager_rest.storage import (
     get_storage_manager,
@@ -34,6 +38,8 @@ from manager_rest.storage import (
 from manager_rest.security.authorization import authorize
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.security import SecuredResource
+from manager_rest.security.authorization import is_user_action_allowed
+from manager_rest.execution_token import current_execution
 
 
 class Operations(SecuredResource):
@@ -81,23 +87,123 @@ class OperationsId(SecuredResource):
         )
         return operation, 201
 
-    @authorize('operations')
-    @marshal_with(models.Operation)
+    @authorize('operations', allow_if_execution=True)
+    @detach_globals
     def patch(self, operation_id, **kwargs):
-        request_dict = get_json_and_verify_params(
-            {'state': {'type': text_type}}
-        )
+        request_dict = get_json_and_verify_params({
+            'state': {'type': text_type},
+            'result': {'optional': True},
+            'exception': {'optional': True},
+            'exception_causes': {'optional': True},
+        })
         sm = get_storage_manager()
         with sm.transaction():
             instance = sm.get(models.Operation, operation_id, locking=True)
             old_state = instance.state
             instance.state = request_dict.get('state', instance.state)
+            if instance.state == common_constants.TASK_SUCCEEDED:
+                self._on_task_success(sm, instance)
+            self._insert_event(
+                instance,
+                request_dict.get('result'),
+                request_dict.get('exception'),
+                request_dict.get('exception_causes')
+            )
             if not instance.is_nop and \
-                    old_state not in TERMINATED_STATES and \
-                    instance.state in TERMINATED_STATES:
+                    old_state not in common_constants.TERMINATED_STATES and \
+                    instance.state in common_constants.TERMINATED_STATES:
                 self._modify_execution_operations_counts(instance, 1)
-            instance = sm.update(instance, modified_attrs=('state',))
-        return instance
+            sm.update(instance, modified_attrs=('state',))
+        return None, 204
+
+    def _on_task_success(self, sm, operation):
+        handler = getattr(self, f'_on_success_{operation.type}', None)
+        if handler:
+            handler(sm, operation)
+
+    def _on_success_SetNodeInstanceStateTask(self, sm, operation):
+        required_permission = 'node_instance_update'
+        tenant_name = current_execution.tenant.name
+        if not is_user_action_allowed(required_permission,
+                                      tenant_name=tenant_name):
+            raise manager_exceptions.ForbiddenError(
+                f'Execution is not permitted to perform the action '
+                f'{required_permission} in the tenant {tenant_name}'
+            )
+        try:
+            kwargs = operation.parameters['task_kwargs']
+            node_instance_id = kwargs['node_instance_id']
+            state = kwargs['state']
+        except KeyError:
+            return
+        node_instance = sm.get(models.NodeInstance, node_instance_id)
+        node_instance.state = state
+        sm.update(node_instance)
+
+    def _on_success_SendNodeEventTask(self, sm, operation):
+        try:
+            kwargs = operation.parameters['task_kwargs']
+        except KeyError:
+            pass
+        db.session.execute(models.Event.__table__.insert().values(
+            timestamp=datetime.utcnow(),
+            reported_timestamp=datetime.utcnow(),
+            event_type='workflow_node_event',
+            message=kwargs['event'],
+            message_code=None,
+            operation=None,
+            node_id=kwargs['node_instance_id'],
+            _execution_fk=current_execution._storage_id,
+            _tenant_id=current_execution._tenant_id,
+            _creator_id=current_execution._creator_id,
+            visibility=current_execution.visibility,
+        ))
+
+    def _insert_event(self, operation, result=None, exception=None,
+                      exception_causes=None):
+        if operation.type != 'RemoteWorkflowTask':
+            return
+        if not current_execution:
+            return
+        try:
+            context = operation.parameters['task_kwargs']['kwargs'][
+                '__cloudify_context']
+        except (KeyError, TypeError):
+            return
+        if exception is not None:
+            operation.parameters.setdefault('error', str(exception))
+        current_retries = operation.parameters.get('current_retries') or 0
+        total_retries = operation.parameters.get('total_retries') or 0
+
+        try:
+            message = common_events.format_event_message(
+                operation.name,
+                operation.state,
+                result,
+                exception,
+                current_retries,
+                total_retries,
+            )
+            event_type = common_events.get_event_type(operation.state)
+        except RuntimeError:
+            return
+
+        db.session.execute(models.Event.__table__.insert().values(
+            timestamp=datetime.utcnow(),
+            reported_timestamp=datetime.utcnow(),
+            event_type=event_type,
+            message=message,
+            message_code=None,
+            operation=context.get('operation', {}).get('name'),
+            node_id=context.get('node_id'),
+            source_id=context.get('source_id'),
+            target_id=context.get('target_id'),
+            error_causes=exception_causes,
+            _execution_fk=current_execution._storage_id,
+            _tenant_id=current_execution._tenant_id,
+            _creator_id=current_execution._creator_id,
+            visibility=current_execution.visibility,
+        ))
 
     def _modify_execution_operations_counts(self, operation, finished_delta,
                                             total_delta=0):
@@ -134,8 +240,11 @@ class OperationsId(SecuredResource):
         with sm.transaction():
             instance = sm.get(models.Operation, operation_id, locking=True)
             if not instance.is_nop:
-                finished_delta = \
-                    -1 if instance.state in TERMINATED_STATES else 0
+                finished_delta = (
+                    -1
+                    if instance.state in common_constants.TERMINATED_STATES
+                    else 0
+                )
                 self._modify_execution_operations_counts(
                     instance, finished_delta, total_delta=-1)
             sm.delete(instance)

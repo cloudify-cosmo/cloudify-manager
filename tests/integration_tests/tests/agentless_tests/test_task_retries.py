@@ -146,8 +146,8 @@ class TaskRetriesTest(AgentlessTestCase):
                 ),
             )
             self.assertEqual([e['event_type'] for e in retry_events],
-                             ['sending_task', 'task_rescheduled'] * 3 +
-                             ['sending_task', 'task_succeeded'])
+                             ['task_started', 'task_rescheduled'] * 3 +
+                             ['task_started', 'task_succeeded'])
 
             self.assertTrue(retry_events[2]['message'].endswith('[retry 1/5]'))
             self.assertTrue(retry_events[3]['message'].endswith('[retry 1/5]'))
