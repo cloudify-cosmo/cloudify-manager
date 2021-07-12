@@ -316,7 +316,7 @@ hooks:
 
     def _update_hooks_config(self, new_config):
         with tempfile.NamedTemporaryFile(mode='w') as f:
-            yaml.dump(yaml.load(new_config), f, default_flow_style=False)
+            yaml.dump(yaml.safe_load(new_config), f, default_flow_style=False)
             f.flush()
             self.copy_file_to_manager(source=f.name,
                                       target=self.HOOKS_CONFIG_PATH,
