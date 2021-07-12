@@ -171,7 +171,7 @@ class ResourceManager(object):
 
             execution = self.sm.update(execution)
             self.update_deployment_statuses(execution)
-
+            self._send_hook(execution)
             res = execution.to_response()
             # do not use `execution` after this transaction ends, because it
             # would possibly require refetching the related objects, and by
@@ -2451,6 +2451,31 @@ class ResourceManager(object):
     def _workflow_queued(self, execution):
         execution.status = ExecutionState.QUEUED
         self.sm.update(execution)
+        self._send_hook(execution)
+
+    def _send_hook(self, execution):
+        try:
+            event_type = {
+                ExecutionState.QUEUED: 'workflow_queued',
+                ExecutionState.STARTED: 'workflow_started',
+                ExecutionState.TERMINATED: 'workflow_succeeded',
+                ExecutionState.FAILED: 'workflow_failed',
+                ExecutionState.CANCELLED: 'workflow_cancelled',
+            }[execution.status]
+        except KeyError:
+            return
+        if execution.status == ExecutionState.STARTED:
+            start_resume = 'Resuming' if execution.resume else 'Starting'
+            dry_run = ' (dry run)' if execution.is_dry_run else ''
+            message = (
+                f"{start_resume} '{execution.workflow_id}' "
+                f"workflow execution{dry_run}"
+            )
+        else:
+            message = (
+                f"'{execution.workflow_id}' workflow "
+                f"execution {execution.status}"
+            )
         message_context = {
             'message_type': 'hook',
             'is_system_workflow': execution.is_system_workflow,
@@ -2458,7 +2483,11 @@ class ResourceManager(object):
             'deployment_id': execution.deployment_id,
             'execution_id': execution.id,
             'workflow_id': execution.workflow_id,
-            'tenant_name': execution.tenant_name
+            'tenant_name': execution.tenant_name,
+            'rest_token': execution.creator.get_auth_token(),
+            'tenant': {
+                'name': execution.tenant_name,
+            }
         }
 
         if not execution.is_system_workflow:
@@ -2466,12 +2495,10 @@ class ResourceManager(object):
 
         event = {
             'type': 'cloudify_event',
-            'event_type': 'workflow_queued',
+            'event_type': event_type,
             'context': message_context,
             'message': {
-                'text': "'{0}' workflow execution was queued".format(
-                    execution.workflow_id
-                ),
+                'text': message,
                 'arguments': None
             }
         }
