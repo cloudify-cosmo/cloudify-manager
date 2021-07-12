@@ -49,12 +49,17 @@ class Events(v2_Events):
         request_dict = rest_utils.get_json_and_verify_params({
             'events': {'optional': True},
             'logs': {'optional': True},
+            'execution_id': {'optional': True},
         })
         sm = get_storage_manager()
         exc = current_execution._get_current_object()
         if exc is None:
-            raise manager_exceptions.UnauthorizedError(
-                'events can only be created by an execution')
+            exc_id = request_dict.get('execution_id')
+            if exc_id is None:
+                raise manager_exceptions.ConflictError(
+                    'No execution passed, and not authenticated by '
+                    'an execution token')
+            exc = sm.get(models.Execution, request_dict.get('execution_id'))
         exc_params = {
             '_execution_fk': exc._storage_id,
             '_tenant_id': exc._tenant_id,

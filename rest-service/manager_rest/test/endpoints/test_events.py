@@ -950,7 +950,7 @@ class EventsTest(base_test.BaseServerTestCase):
     def test_create_event_not_execution(self):
         with pytest.raises(CloudifyClientError) as cm:
             self.client.events.create(events=[])
-        assert cm.value.status_code == 401
+        assert cm.value.status_code == 409
 
     def test_create_event_with_execution(self):
         tenant = Tenant.query.first()
