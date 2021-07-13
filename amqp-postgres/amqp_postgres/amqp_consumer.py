@@ -66,6 +66,9 @@ class AMQPLogsEventsConsumer(object):
 
     def process(self, channel, method, properties, body):
         try:
+            if method.routing_key == 'events.hooks':
+                channel.basic_ack(method.delivery_tag)
+                return
             parsed_body = json.loads(body)
             self._message_processor(parsed_body, method.exchange,
                                     (channel, method.delivery_tag))
