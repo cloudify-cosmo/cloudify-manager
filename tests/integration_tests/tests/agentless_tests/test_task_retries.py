@@ -146,15 +146,18 @@ class TaskRetriesTest(AgentlessTestCase):
                 ),
             )
             self.assertEqual([e['event_type'] for e in retry_events],
-                             ['task_started', 'task_rescheduled'] * 3 +
-                             ['task_started', 'task_succeeded'])
+                             ['sending_task', 'task_started', 'task_rescheduled'] * 3 +
+                             ['sending_task', 'task_started', 'task_succeeded'])
 
-            self.assertTrue(retry_events[2]['message'].endswith('[retry 1/5]'))
-            self.assertTrue(retry_events[3]['message'].endswith('[retry 1/5]'))
-            self.assertTrue(retry_events[4]['message'].endswith('[retry 2/5]'))
-            self.assertTrue(retry_events[5]['message'].endswith('[retry 2/5]'))
-            self.assertTrue(retry_events[6]['message'].endswith('[retry 3/5]'))
-            self.assertTrue(retry_events[7]['message'].endswith('[retry 3/5]'))
+            postfixes = {
+                (3, 4, 5): '[retry 1/5]',
+                (6, 7, 8): '[retry 2/5]',
+                (9, 10, 11): '[retry 3/5]',
+            }
+            for indexes, expected_postfix in postfixes.items():
+                for evt_ix in indexes:
+                    self.assertTrue(retry_events[evt_ix]['message']
+                                    .endswith(expected_postfix))
 
         # events are async so we may have to wait some
         self.do_assertions(assertion, timeout=10)
