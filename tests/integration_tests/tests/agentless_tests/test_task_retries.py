@@ -110,54 +110,55 @@ class TaskRetriesTest(AgentlessTestCase):
         # 2 asserting that task events contain current_retries/total_retries
         #   only asserting that the properties exists and nothing logical
         #   because this is already covered in the local workflow tests
-        def assertion():
-            events = self.client.events.list(deployment_id=deployment_id,
-                                             include_logs=True)
-            self.assertGreater(len(events), 0)
-            self.assertTrue(any(
-                'Task rescheduled' in event['message']
-                for event in events))
-            self.assertTrue(any(
-                'Retrying operation' in event['message']
-                for event in events))
+        events = self.client.events.list(deployment_id=deployment_id,
+                                         include_logs=True)
+        self.assertGreater(len(events), 0)
+        self.assertTrue(any(
+            'Task rescheduled' in event['message']
+            for event in events))
+        self.assertTrue(any(
+            'Retrying operation' in event['message']
+            for event in events))
 
-            # We're looking only at the events from the create operation
-            retry_events = [
-                event
-                for event in events
-                if event['operation'] == 'cloudify.interfaces.lifecycle.create'
-            ]
+        # We're looking only at the events from the create operation
+        retry_events = [
+            event
+            for event in events
+            if event['operation'] == 'cloudify.interfaces.lifecycle.create'
+        ]
 
-            # Note: sorting by timestamp and event_type to guarantee
-            # that tasks will be correctly ordered
-            # even if they have the same timestamp
-            event_type_sort_order = {
-                'sending_task': 0,
-                'task_started': 1,
-                'task_rescheduled': 2,
-                'task_succeeded': 3
-            }
-            retry_events = [e for e in retry_events if 'event_type' in e]
-            retry_events = sorted(
-                retry_events,
-                key=lambda e: (
-                    e['timestamp'],
-                    event_type_sort_order[e['event_type']],
-                ),
-            )
-            self.assertEqual([e['event_type'] for e in retry_events],
-                             ['task_started', 'task_rescheduled'] * 3 +
-                             ['task_started', 'task_succeeded'])
+        # Note: sorting by timestamp and event_type to guarantee
+        # that tasks will be correctly ordered
+        # even if they have the same timestamp
+        event_type_sort_order = {
+            'sending_task': 0,
+            'task_started': 1,
+            'task_rescheduled': 2,
+            'task_succeeded': 3
+        }
+        retry_events = [e for e in retry_events if 'event_type' in e]
+        retry_events = sorted(
+            retry_events,
+            key=lambda e: (
+                e['timestamp'],
+                event_type_sort_order[e['event_type']],
+            ),
+        )
+        self.assertEqual(
+            [e['event_type'] for e in retry_events],
+            ['sending_task', 'task_started', 'task_rescheduled'] * 3 +
+            ['sending_task', 'task_started', 'task_succeeded']
+        )
 
-            self.assertTrue(retry_events[2]['message'].endswith('[retry 1/5]'))
-            self.assertTrue(retry_events[3]['message'].endswith('[retry 1/5]'))
-            self.assertTrue(retry_events[4]['message'].endswith('[retry 2/5]'))
-            self.assertTrue(retry_events[5]['message'].endswith('[retry 2/5]'))
-            self.assertTrue(retry_events[6]['message'].endswith('[retry 3/5]'))
-            self.assertTrue(retry_events[7]['message'].endswith('[retry 3/5]'))
-
-        # events are async so we may have to wait some
-        self.do_assertions(assertion, timeout=10)
+        postfixes = {
+            (3, 4, 5): '[retry 1/5]',
+            (6, 7, 8): '[retry 2/5]',
+            (9, 10, 11): '[retry 3/5]',
+        }
+        for indexes, expected_postfix in postfixes.items():
+            for evt_ix in indexes:
+                self.assertTrue(retry_events[evt_ix]['message']
+                                .endswith(expected_postfix))
 
     def _test_retries_and_retry_interval_impl(self,
                                               blueprint,
