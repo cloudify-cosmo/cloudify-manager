@@ -12,10 +12,11 @@ from .utils import get_column, get_joins
 def add_filter_rules_to_query(query, model_class, filter_rules):
     labels_join_added = False
     joined_columns_set = set()
-    labels_model = model_class.labels_model
     for filter_rule in filter_rules:
         filter_rule_type = filter_rule['type']
-        if filter_rule_type == FilterRuleType.LABEL:
+        if filter_rule_type == FilterRuleType.LABEL \
+                and hasattr(model_class, 'labels_model'):
+            labels_model = model_class.labels_model
             if not labels_join_added:
                 query = query.outerjoin(
                     labels_model,

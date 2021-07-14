@@ -188,10 +188,7 @@ class SQLStorageManager(object):
     @staticmethod
     def _add_filter_rules(query, model_class, filter_rules):
         if filter_rules:
-            if hasattr(model_class, 'labels_model'):
-                return add_filter_rules_to_query(
-                    query, model_class, filter_rules)
-
+            return add_filter_rules_to_query(query, model_class, filter_rules)
         return query
 
     def _add_value_filter(self, query, filters):
