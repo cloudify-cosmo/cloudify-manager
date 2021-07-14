@@ -34,7 +34,7 @@ FilteredModels = NewType('FilteredModels',
 
 
 def get_filter_rules_from_filter_id(filter_id, filters_model):
-    if not filter_id:
+    if not filter_id or not filters_model:
         return None
 
     validate_inputs({'filter_id': filter_id})
