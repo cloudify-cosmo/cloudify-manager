@@ -136,6 +136,7 @@ def setup_resources(api):
         'BlueprintsSearches': 'searches/blueprints',
         'Workflows': 'workflows',
         'WorkflowsSearches': 'searches/workflows',
+        'NodeInstancesSearches': 'searches/node-instances',
     }
 
     # Set version endpoint as a non versioned endpoint
