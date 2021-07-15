@@ -117,8 +117,8 @@ def correct_blueprint(blueprint: models.Blueprint,
             start_at, end_at = common.get_imports_position(blueprint_file)
             separator = common.get_line_separator(blueprint_file)
     except (FileNotFoundError, PermissionError) as ex:
-        raise common.UpdateException('Cannot load blueprint from {0}: {1}'.format(
-            file_name, ex))
+        raise common.UpdateException('Cannot load blueprint from {0}: {1}'
+                                     .format(file_name, ex))
     update_blueprint(file_name, new_file_name, start_at, end_at,
                      mapping.replacement(separator))
 
@@ -178,8 +178,8 @@ def main(all_tenants, tenant_names, blueprint_ids, mapping_file):
                                 f"blueprint `{blueprint.id}`")
                     correct_blueprint(blueprint, mapping)
                 else:
-                    logger.debug(f"Tenant's `{tenant.name}` blueprint does not "
-                                 f"require upgrading: `{blueprint.id}`")
+                    logger.debug(f"Tenant's `{tenant.name}` blueprint does "
+                                 f"not require upgrading: `{blueprint.id}`")
             except common.UpdateException as ex:
                 logger.error(f"Error updating tenant's {tenant.name} "
                              f"blueprint {blueprint.id}: {ex}")

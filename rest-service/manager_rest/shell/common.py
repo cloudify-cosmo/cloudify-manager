@@ -79,12 +79,11 @@ def blueprint_updated_file_name(blueprint: models.Blueprint) -> str:
     base_file_name = '.'.join(blueprint.main_file_name.split('.')[:-1])
     index = 0
     updated_file_name = '{0}-new.yaml'.format(base_file_name)
-    while exists(join(
-        config.instance.file_server_root,
-        FILE_SERVER_BLUEPRINTS_FOLDER,
-        blueprint.tenant.name,
-        blueprint.id,
-        updated_file_name)):
+    while exists(join(config.instance.file_server_root,
+                      FILE_SERVER_BLUEPRINTS_FOLDER,
+                      blueprint.tenant.name,
+                      blueprint.id,
+                      updated_file_name)):
         updated_file_name = '{0}-{1:02d}.yaml'.format(base_file_name, index)
         index += 1
     return join(
@@ -100,12 +99,11 @@ def blueprint_diff_file_name(blueprint: models.Blueprint) -> str:
     base_file_name = '.'.join(blueprint.main_file_name.split('.')[:-1])
     index = 0
     diff_file_name = '{0}.diff'.format(base_file_name)
-    while exists(join(
-        config.instance.file_server_root,
-        FILE_SERVER_BLUEPRINTS_FOLDER,
-        blueprint.tenant.name,
-        blueprint.id,
-        diff_file_name)):
+    while exists(join(config.instance.file_server_root,
+                      FILE_SERVER_BLUEPRINTS_FOLDER,
+                      blueprint.tenant.name,
+                      blueprint.id,
+                      diff_file_name)):
         diff_file_name = '{0}-{1:02d}.diff'.format(base_file_name, index)
         index += 1
     return join(
@@ -140,8 +138,9 @@ def get_imports_position(blueprint_file: typing.BinaryIO) -> tuple:
 
             token_length = t.end_mark.index - t.start_mark.index
 
-            if level >= 1 and imports_token and \
-                token_length < MAX_IMPORT_TOKEN_LENGTH:
+            if (level >= 1
+                    and imports_token
+                    and token_length < MAX_IMPORT_TOKEN_LENGTH):
                 if not start_pos:
                     start_pos = t.start_mark.index
                 end_pos = t.end_mark.index
