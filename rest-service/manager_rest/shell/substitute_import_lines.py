@@ -1,11 +1,12 @@
 """Substitute import lines in blueprints, based on hardcoded mapping"""
-from copy import copy
-from os.path import basename, join
+import logging
+import shutil
 import sys
 import typing
+from copy import copy
+from os.path import basename, join
 
 import click
-import logging
 import yaml
 
 from manager_rest.flask_utils import get_tenant_by_name, set_tenant_in_app
@@ -95,21 +96,11 @@ def find_mapping(blueprint: models.Blueprint,
     return None
 
 
-def update_blueprint(input_file_name: str, output_file_name: str,
-                     start_at: int, end_at: int,
-                     replacement: str):
-    with open(input_file_name, 'rb') as input_file:
-        with open(output_file_name, 'wb') as output_file:
-            content = input_file.read(start_at - input_file.tell())
-            output_file.write(content)
-            output_file.write(replacement.encode('utf-8', 'ignore'))
-            input_file.read(end_at - start_at)
-            content = input_file.read()
-            output_file.write(content)
-
-
 def correct_blueprint(blueprint: models.Blueprint,
                       mapping: Mapping):
+    """Replace `blueprint`'s import lines with those defined by `mapping`.
+    Moreover create a diff file which stores modification details and also
+    update blueprint's archive."""
     file_name = common.blueprint_file_name(blueprint)
     new_file_name = common.blueprint_updated_file_name(blueprint)
     try:
@@ -117,10 +108,35 @@ def correct_blueprint(blueprint: models.Blueprint,
             start_at, end_at = common.get_imports_position(blueprint_file)
             separator = common.get_line_separator(blueprint_file)
     except (FileNotFoundError, PermissionError) as ex:
-        raise common.UpdateException('Cannot load blueprint from {0}: {1}'
-                                     .format(file_name, ex))
-    update_blueprint(file_name, new_file_name, start_at, end_at,
-                     mapping.replacement(separator))
+        raise common.UpdateException(
+            'Cannot load blueprint from {0}: {1}'.format(file_name, ex))
+
+    try:
+        common.update_blueprint(file_name, new_file_name, start_at, end_at,
+                                mapping.replacement(separator))
+    except OSError as ex:
+        raise common.UpdateException(
+            'Cannot update blueprint into {0}: {1}'.format(new_file_name, ex))
+
+    diff_file_name = common.blueprint_diff_file_name(blueprint)
+    try:
+        common.write_blueprint_diff(file_name, new_file_name, diff_file_name)
+    except OSError as ex:
+        raise common.UpdateException(
+            'Cannot create a diff file {0}: {1}'.format(diff_file_name, ex))
+
+    try:
+        common.update_archive(blueprint, new_file_name)
+    except OSError as ex:
+        fn = common.archive_file_name(blueprint)
+        raise common.UpdateException(
+            'Cannot update the blueprint archive {0}: {1}'.format(fn, ex))
+
+    try:
+        shutil.move(new_file_name, file_name)
+    except OSError as ex:
+        raise common.UpdateException(
+            'Cannot update the blueprint file {0}: {1}'.format(file_name, ex))
 
 
 @click.command()

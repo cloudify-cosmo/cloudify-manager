@@ -8,13 +8,13 @@ from tempfile import TemporaryDirectory, mktemp
 
 import yaml
 
+from manager_rest import config
 from manager_rest.constants import (FILE_SERVER_BLUEPRINTS_FOLDER,
                                     FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
                                     SUPPORTED_ARCHIVE_TYPES)
 from manager_rest.flask_utils import (setup_flask_app, set_admin_current_user,
                                       get_tenant_by_name, set_tenant_in_app)
 from manager_rest.storage import models
-from manager_rest import config
 
 DEFAULT_TENANT = 'default_tenant'
 END_POS = 'end_pos'
@@ -188,18 +188,10 @@ def write_blueprint_diff(from_file_name: str,
                                    timezone.utc)
         return t.astimezone().isoformat()
 
-    try:
-        with open(from_file_name, 'r') as from_file:
-            from_lines = from_file.readlines()
-    except (FileNotFoundError, PermissionError) as ex:
-        raise UpdateException('Cannot read a blueprint file {0}: {1}'.format(
-                              from_file_name, ex))
-    try:
-        with open(to_file_name, 'r') as to_file:
-            to_lines = to_file.readlines()
-    except (FileNotFoundError, PermissionError) as ex:
-        raise UpdateException('Cannot read a blueprint file {0}: {1}'.format(
-                              from_file_name, ex))
+    with open(from_file_name, 'r') as from_file:
+        from_lines = from_file.readlines()
+    with open(to_file_name, 'r') as to_file:
+        to_lines = to_file.readlines()
     diff = difflib.context_diff(
         from_lines,
         to_lines,
@@ -208,14 +200,8 @@ def write_blueprint_diff(from_file_name: str,
         file_mtime(from_file_name),
         file_mtime(to_file_name)
     )
-    try:
-        with open(diff_file_name, 'w') as diff_file:
-            diff_file.writelines(diff)
-    except (FileNotFoundError, PermissionError) as ex:
-        raise UpdateException('Cannot write a diff file {0}: {1}'.format(
-                              diff_file_name, ex))
-    print('An diff file was generated for your change: {0}'.format(
-          diff_file_name))
+    with open(diff_file_name, 'w') as diff_file:
+        diff_file.writelines(diff)
 
 
 def format_from_file_name(file_name: str) -> typing.Optional[str]:
