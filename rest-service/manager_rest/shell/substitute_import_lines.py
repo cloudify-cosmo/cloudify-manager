@@ -39,11 +39,12 @@ class Mapping:
 
 
 DEFAULT_MAPPING = [
-    Mapping(src=['http://repo/get/cloudify/4.3/td/types/td-linux-type.yaml',
-                 'http://repo/get/cloudify/4.3/td/types/td-pm2-type.yaml'],
-            dst=['https://repo/get/cloudify/4.3/cloudify/types/types.yaml',
-                 'plugin:td-deploy-plugin-central',
-                 'plugin:td-deploy-plugin']),
+    Mapping(src=['https://example.com/cloudify/5.1.0/types/linux-type.yaml',
+                 'https://example.com/cloudify/5.1.0/types/foo-type.yaml'],
+            dst=['https://www.getcloudify.org/spec/cloudify/5.1.0/types.yaml',
+                 'plugin:example-deploy-plugin',
+                 'plugin:example-linux',
+                 'plugin:example-foo']),
 ]
 
 
