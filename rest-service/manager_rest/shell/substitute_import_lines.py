@@ -34,7 +34,7 @@ class Mapping:
         return len(imports_copy) == 0
 
     def replacement(self, separator='\n'):
-        replacement = separator.join([f'  - {line}' for line in self._to])
+        replacement = separator.join(f'  - {line}' for line in self._to)
         return f'{separator}{replacement}'
 
 
