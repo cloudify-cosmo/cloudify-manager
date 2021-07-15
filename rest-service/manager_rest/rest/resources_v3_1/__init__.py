@@ -118,6 +118,7 @@ from .searches import (  # NOQA
     DeploymentsSearches,
     BlueprintsSearches,
     WorkflowsSearches,
+    NodeInstancesSearches,
 )
 
 from .workflows import (  # NOQA
