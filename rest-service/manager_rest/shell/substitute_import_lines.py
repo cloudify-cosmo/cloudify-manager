@@ -138,7 +138,7 @@ def main(all_tenants, tenant_names, blueprint_ids, mapping_file):
         format='%(asctime)s.%(msecs)03d %(levelname)s '
                '[%(module)s.%(funcName)s] %(message)s',
         datefmt='%H:%M:%S',
-        level=logging.DEBUG)
+        level=logging.INFO)
     logger = logging.getLogger(basename(sys.argv[0]))
 
     if all_tenants and tenant_names:
