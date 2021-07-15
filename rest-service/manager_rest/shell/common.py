@@ -218,6 +218,7 @@ def format_from_file_name(file_name: str) -> typing.Optional[str]:
             (file_name_split[-2].upper() == 'TAR' and
              file_name_split[-1].upper() == 'GZ'):
         return 'gztar'
+    return None
 
 
 def update_archive(blueprint: models.Blueprint, updated_file_name: str):

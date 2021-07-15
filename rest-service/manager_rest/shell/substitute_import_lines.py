@@ -24,19 +24,6 @@ class Mapping:
         self._from = src
         self._to = dst
 
-    def __str__(self):
-        def get_list_repr(items: typing.List[str], n=32) -> str:
-            def first_n(s: str, n=32) -> str:
-                return f'{s[:n - 3]}...' if len(s) > n - 3 else s
-            if len(items) < 1:
-                return 'empty'
-            elif len(items) == 1:
-                return first_n(items[0], n)
-            else:
-                return first_n(f'{items[0]}, ...', n)
-        return f'Mapping [{get_list_repr(self._from)}] → ' \
-               f'[{get_list_repr(self._to)}]'
-
     def matches(self, imports: typing.List[str]) -> bool:
         if len(imports) != len(self._from):
             return False
@@ -52,13 +39,11 @@ class Mapping:
 
 
 DEFAULT_MAPPING = [
-    Mapping(['http://repo/get/cloudify/4.3/td/types/td-linux-type.yaml',
-             'http://repo/get/cloudify/4.3/td/types/td-openstack-type.yaml',
-             'http://repo/get/cloudify/4.3/td/types/td-pm2-type.yaml'],
-            ['http://repo/get/cloudify/4.3/cloudify/types/types.yaml',
-             'plugin:td-deploy-plugin-central',
-             'plugin:td-deploy-plugin',
-             'plugin:cloudify-openstack-plugin']),
+    Mapping(src=['http://repo/get/cloudify/4.3/td/types/td-linux-type.yaml',
+                 'http://repo/get/cloudify/4.3/td/types/td-pm2-type.yaml'],
+            dst=['https://repo/get/cloudify/4.3/cloudify/types/types.yaml',
+                 'plugin:td-deploy-plugin-central',
+                 'plugin:td-deploy-plugin']),
 ]
 
 
@@ -71,9 +56,9 @@ def load_mappings(file_name: str) -> typing.List[Mapping]:
             except yaml.YAMLError as ex:
                 raise common.UpdateException(
                     'Cannot load mappings from {0}: {1}'.format(file_name, ex))
-    except (FileNotFoundError, PermissionError):
+    except OSError as ex:
         raise common.UpdateException(
-            'Mappings file {0} cannot be read'.format(file_name))
+            'Mappings file {0} cannot be read: {1}'.format(file_name, ex))
     return mappings
 
 
@@ -160,7 +145,7 @@ def main(all_tenants, tenant_names, blueprint_ids, mapping_file):
     if all_tenants and tenant_names:
         logger.critical('--all-tenants and --tenant-name options are '
                         'mutually exclusive')
-        exit(1)
+        sys.exit(1)
     if not tenant_names:
         tenant_names = (DEFAULT_TENANT,)
 
@@ -190,16 +175,12 @@ def main(all_tenants, tenant_names, blueprint_ids, mapping_file):
             try:
                 mapping = find_mapping(blueprint, mappings)
                 if mapping:
-                    logger.info(f"Updating tenant's `{tenant.name}` "
-                                f"blueprint `{blueprint.id}`")
+                    logger.info("Updating tenant's `%s` blueprint `%s`",
+                                tenant.name, blueprint.id)
                     correct_blueprint(blueprint, mapping)
                 else:
-                    logger.debug(f"Tenant's `{tenant.name}` blueprint does "
-                                 f"not require upgrading: `{blueprint.id}`")
+                    logger.debug("Tenant's `%s` blueprint does not require "
+                                 "upgrading: `%s`", tenant.name, blueprint.id)
             except common.UpdateException as ex:
-                logger.error(f"Error updating tenant's {tenant.name} "
-                             f"blueprint {blueprint.id}: {ex}")
-
-
-if __name__ == '__main__':
-    main()
+                logger.error("Error updating tenant's `%s` blueprint `%s`: %s",
+                             tenant.name, blueprint.id, ex)
