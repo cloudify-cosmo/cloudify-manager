@@ -3,7 +3,6 @@ import logging
 import shutil
 import sys
 import typing
-from copy import copy
 from os.path import basename, join
 
 import click
@@ -27,11 +26,8 @@ class Mapping:
     def matches(self, imports: typing.List[str]) -> bool:
         if len(imports) != len(self._from):
             return False
-        imports_copy = copy(imports)
-        while imports_copy:
-            if imports_copy.pop() not in self._from:
-                return False
-        return len(imports_copy) == 0
+        return all(part in self._from for part in imports) \
+            and all(part in imports for part in self._from)
 
     def replacement(self, separator='\n'):
         replacement = separator.join(f'  - {line}' for line in self._to)
