@@ -150,3 +150,13 @@ def get_imports_position(blueprint_file: typing.BinaryIO) -> tuple:
             break
 
     return start_pos, end_pos
+
+
+def get_line_separator(blueprint_file: typing.BinaryIO) -> str:
+    blueprint_file.seek(0, 0)
+    blueprint_excerpt = blueprint_file.read(1000)
+    if b'\r\n' in blueprint_excerpt:
+        return '\r\n'
+    if b'\r' in blueprint_excerpt:
+        return '\r'
+    return '\n'

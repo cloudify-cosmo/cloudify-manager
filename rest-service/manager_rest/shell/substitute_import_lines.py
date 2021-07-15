@@ -115,13 +115,7 @@ def correct_blueprint(blueprint: models.Blueprint,
     try:
         with open(file_name, 'rb') as blueprint_file:
             start_at, end_at = common.get_imports_position(blueprint_file)
-            blueprint_excerpt = blueprint_file.read(1000)
-            if b'\r\n' in blueprint_excerpt:
-                separator = '\r\n'
-            elif b'\r' in blueprint_excerpt:
-                separator = '\r'
-            else:
-                separator = '\n'
+            separator = common.get_line_separator(blueprint_file)
     except (FileNotFoundError, PermissionError) as ex:
         raise common.UpdateException('Cannot load blueprint from {0}: {1}'.format(
             file_name, ex))
