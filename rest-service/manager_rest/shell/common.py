@@ -1,6 +1,10 @@
-from os import environ
-from os.path import exists, isfile, join
+import difflib
+import shutil
 import typing
+from datetime import datetime, timezone
+from os import chdir, chmod, environ, listdir, stat
+from os.path import exists, isfile, join
+from tempfile import TemporaryDirectory, mktemp
 
 import yaml
 
@@ -159,3 +163,94 @@ def get_line_separator(blueprint_file: typing.BinaryIO) -> str:
     if b'\r' in blueprint_excerpt:
         return '\r'
     return '\n'
+
+
+def update_blueprint(input_file_name: str, output_file_name: str,
+                     start_position: int, end_position: int,
+                     replacement: str):
+    """Replace input file's content from `start_position` to `end_position`
+    with `replacement`, write the output to `output_file_name`."""
+    with open(input_file_name, 'rb') as input_file:
+        with open(output_file_name, 'wb') as output_file:
+            content = input_file.read(start_position - input_file.tell())
+            output_file.write(content)
+            output_file.write(replacement.encode('utf-8', 'ignore'))
+            input_file.read(end_position - start_position)
+            content = input_file.read()
+            output_file.write(content)
+
+
+def write_blueprint_diff(from_file_name: str,
+                         to_file_name: str,
+                         diff_file_name: str):
+    def file_mtime(path):
+        t = datetime.fromtimestamp(stat(path).st_mtime,
+                                   timezone.utc)
+        return t.astimezone().isoformat()
+
+    try:
+        with open(from_file_name, 'r') as from_file:
+            from_lines = from_file.readlines()
+    except (FileNotFoundError, PermissionError) as ex:
+        raise UpdateException('Cannot read a blueprint file {0}: {1}'.format(
+                              from_file_name, ex))
+    try:
+        with open(to_file_name, 'r') as to_file:
+            to_lines = to_file.readlines()
+    except (FileNotFoundError, PermissionError) as ex:
+        raise UpdateException('Cannot read a blueprint file {0}: {1}'.format(
+                              from_file_name, ex))
+    diff = difflib.context_diff(
+        from_lines,
+        to_lines,
+        from_file_name,
+        to_file_name,
+        file_mtime(from_file_name),
+        file_mtime(to_file_name)
+    )
+    try:
+        with open(diff_file_name, 'w') as diff_file:
+            diff_file.writelines(diff)
+    except (FileNotFoundError, PermissionError) as ex:
+        raise UpdateException('Cannot write a diff file {0}: {1}'.format(
+                              diff_file_name, ex))
+    print('An diff file was generated for your change: {0}'.format(
+          diff_file_name))
+
+
+def format_from_file_name(file_name: str) -> typing.Optional[str]:
+    file_name_split = file_name.split('.')
+    if file_name_split[-1].upper() == 'ZIP':
+        return 'zip'
+    if file_name_split[-1].upper() == 'TAR':
+        return 'tar'
+    if file_name_split[-1].upper() == 'TBZ2' or \
+            (file_name_split[-2].upper() == 'TAR' and
+             file_name_split[-1].upper() == 'BZ2'):
+        return 'bztar'
+    if file_name_split[-1].upper() == 'TGZ' or \
+            (file_name_split[-2].upper() == 'TAR' and
+             file_name_split[-1].upper() == 'GZ'):
+        return 'gztar'
+
+
+def update_archive(blueprint: models.Blueprint, updated_file_name: str):
+    blueprint_archive_file_name = archive_file_name(blueprint)
+    archive_format = format_from_file_name(blueprint_archive_file_name)
+    if not archive_format:
+        raise UpdateException('Unknown archive format: {0}'.format(
+            blueprint_archive_file_name))
+    with TemporaryDirectory() as working_dir:
+        chdir(working_dir)
+        shutil.unpack_archive(blueprint_archive_file_name, working_dir)
+        archive_base_dir = listdir(working_dir)[0]
+        shutil.copy(updated_file_name,
+                    join(working_dir,
+                         archive_base_dir,
+                         blueprint.main_file_name))
+        new_archive_base = mktemp()
+        new_archive_file_name = shutil.make_archive(new_archive_base,
+                                                    archive_format,
+                                                    root_dir=working_dir)
+        shutil.move(new_archive_file_name, blueprint_archive_file_name)
+        chmod(blueprint_archive_file_name, 0o644)
