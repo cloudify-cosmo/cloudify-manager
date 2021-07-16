@@ -19,12 +19,14 @@ class Mapping:
         self._to = dst
 
     def matches(self, imports: typing.List[str]) -> bool:
+        """Check if imports contains exactly the same entries as self._from."""
         if len(imports) != len(self._from):
             return False
         return all(part in self._from for part in imports) \
             and all(part in imports for part in self._from)
 
-    def replacement(self, separator='\n'):
+    def replacement(self, separator='\n') -> str:
+        """Produces an import lines' substitution."""
         replacement = separator.join(f'  - {line}' for line in self._to)
         return f'{separator}{replacement}'
 
@@ -40,6 +42,23 @@ DEFAULT_MAPPING = [
 
 
 def load_mappings(file_name: str) -> typing.List[Mapping]:
+    """Load mappings from a YAML file and return a list of Mapping objects.
+
+    Example mapping.yaml:
+    ---
+    - from:
+        - https://example.com/cloudify/5.1.0/types/deploy-type.yaml
+        - https://example.com/cloudify/5.1.0/types/linux-type.yaml
+      to:
+        - https://www.getcloudify.org/spec/cloudify/5.1.0/types.yaml
+        - plugin:example-deploy-plugin
+        - plugin:example-linux
+    - from:
+        - https://example.com/cloudify/5.1.0/types/foo-type.yaml
+      to:
+        - https://www.getcloudify.org/spec/cloudify/5.1.0/types.yaml
+        - plugin:example-foo
+    """
     try:
         with open(file_name, 'r') as mapping_file:
             try:
@@ -57,6 +76,8 @@ def load_mappings(file_name: str) -> typing.List[Mapping]:
 def find_mapping(blueprint: models.Blueprint,
                  mappings: typing.List[Mapping],
                  ) -> typing.Optional[Mapping]:
+    """Find the first mapping matching a specified blueprint.  Returns the
+    first matching mapping or `None` in case there was no match."""
     file_name = common.blueprint_file_name(blueprint)
     with open(file_name, 'r') as blueprint_file:
         try:
