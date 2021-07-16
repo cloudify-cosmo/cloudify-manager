@@ -53,7 +53,7 @@ class Agents(object):
         agents = client.agents.list(_all_tenants=True)
         agent_ids = [agent.id for agent in agents.items]
         node_instances = client.node_instances.search(
-            agent_ids, _all_tenants=True)
+            agent_ids, all_tenants=True)
         for instance in node_instances:
             self._add_node_instance_to_result(instance, result)
         self._dump_result_to_file(tempdir, result)
