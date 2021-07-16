@@ -259,8 +259,7 @@ def plugin_spec(resolver: ResolverWithCatalogSupport,
         name, version = spec_from_url(resolver, import_line)
         if name and version:
             return IS_PINNED, IS_NOT_UNKNOWN, IMPORT_FROM_URL, name, version
-        else:
-            return IS_PINNED, IS_UNKNOWN, IMPORT_FROM_URL, None, None
+        return IS_PINNED, IS_UNKNOWN, IMPORT_FROM_URL, None, None
     if import_line.startswith('plugin:'):
         name, version = spec_from_import(import_line)
         if version and version.startswith('>'):
@@ -297,7 +296,7 @@ def suggest_version(plugin_name: str, plugin_version: str) -> str:
         return plugin_version
     if CLOUDIFY_PLUGINS[plugin_name].get(EXACT_VERSION) is not None:
         return CLOUDIFY_PLUGINS[plugin_name].get(EXACT_VERSION)
-    elif CLOUDIFY_PLUGINS[plugin_name].get(AT_LEAST) and \
+    if CLOUDIFY_PLUGINS[plugin_name].get(AT_LEAST) and \
             (parse_version(CLOUDIFY_PLUGINS[plugin_name][AT_LEAST]) >
              parse_version(plugin_version)):
         base_version = CLOUDIFY_PLUGINS[plugin_name][AT_LEAST]
@@ -428,7 +427,7 @@ def write_updated_blueprint(input_file_name: str, output_file_name: str,
     try:
         with open(input_file_name, 'rb') as input_file:
             with open(output_file_name, 'wb') as output_file:
-                for idx, update in enumerate(import_updates):
+                for update in import_updates:
                     content = input_file.read(update[START_POS] -
                                               input_file.tell())
                     output_file.write(content)
@@ -459,8 +458,7 @@ def correct_blueprint(blueprint: models.Blueprint,
     if not mappings.get(UPDATES):
         if mappings.get(UNKNOWN):
             return UNKNOWN
-        else:
-            return FINE
+        return FINE
     file_name = common.blueprint_file_name(blueprint)
     new_file_name = common.blueprint_updated_file_name(blueprint)
     try:

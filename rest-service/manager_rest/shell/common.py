@@ -50,9 +50,9 @@ def setup_environment():
     set_tenant_in_app(get_tenant_by_name(DEFAULT_TENANT))
 
 
-def get_resolver(sm):
-    cloudify_section = sm.get(models.ProviderContext, PROVIDER_CONTEXT_ID). \
-        context.get(CLOUDIFY, {})
+def get_resolver(storage_manager):
+    cloudify_section = storage_manager.get(
+        models.ProviderContext, PROVIDER_CONTEXT_ID).context.get(CLOUDIFY, {})
     resolver_section = cloudify_section.get(IMPORT_RESOLVER_KEY, {})
     resolver_section.setdefault(
         'implementation',
