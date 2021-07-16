@@ -150,10 +150,7 @@ def main(all_tenants, tenant_names, blueprint_ids, mapping_file):
     sm = get_storage_manager()
     tenants = sm.list(models.Tenant, get_all_results=True) if all_tenants \
         else [get_tenant_by_name(name) for name in tenant_names]
-    blueprint_filter = {
-        'tenant': None,
-        'state': 'uploaded',
-    }
+    blueprint_filter = {'state': 'uploaded'}
     if blueprint_ids:
         blueprint_filter['id'] = blueprint_ids
     mappings = load_mappings(mapping_file) if mapping_file else DEFAULT_MAPPING
@@ -161,7 +158,6 @@ def main(all_tenants, tenant_names, blueprint_ids, mapping_file):
     for tenant in tenants:
         set_tenant_in_app(get_tenant_by_name(tenant.name))
         sm = get_storage_manager()
-        blueprint_filter['tenant'] = tenant
         blueprints = sm.list(
             models.Blueprint,
             filters=blueprint_filter,
@@ -173,11 +169,12 @@ def main(all_tenants, tenant_names, blueprint_ids, mapping_file):
                 mapping = find_mapping(blueprint, mappings)
                 if mapping:
                     logger.info("Updating tenant's `%s` blueprint `%s`",
-                                tenant.name, blueprint.id)
+                                blueprint.tenant.name, blueprint.id)
                     correct_blueprint(blueprint, mapping)
                 else:
                     logger.debug("Tenant's `%s` blueprint does not require "
-                                 "upgrading: `%s`", tenant.name, blueprint.id)
+                                 "upgrading: `%s`",
+                                 blueprint.tenant.name, blueprint.id)
             except common.UpdateException as ex:
                 logger.error("Error updating tenant's `%s` blueprint `%s`: %s",
-                             tenant.name, blueprint.id, ex)
+                             blueprint.tenant.name, blueprint.id, ex)
