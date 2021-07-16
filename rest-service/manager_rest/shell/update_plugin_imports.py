@@ -14,22 +14,18 @@
 #  * limitations under the License.
 
 import collections
-import difflib
-import os
-import shutil
 import typing
-from datetime import datetime, timezone
 from functools import lru_cache
-from os import chmod, environ, stat
-from os.path import exists, isfile, join
+from os import chmod
+from os.path import join
 from shutil import move
-from tempfile import TemporaryDirectory, mktemp
 
 import click
 import yaml
 
 from cloudify._compat import parse_qs, parse_version
-
+from dsl_parser import exceptions as dsl_parser_exceptions
+from dsl_parser import utils as dsl_parser_utils
 from dsl_parser.constants import (CLOUDIFY,
                                   IMPORT_RESOLVER_KEY,
                                   WORKFLOW_PLUGINS_TO_INSTALL,
@@ -38,32 +34,24 @@ from dsl_parser.constants import (CLOUDIFY,
                                   PLUGIN_PACKAGE_NAME,
                                   PLUGIN_PACKAGE_VERSION)
 from dsl_parser.models import Plan
-from dsl_parser import exceptions as dsl_parser_exceptions
-from dsl_parser import utils as dsl_parser_utils
 
-from manager_rest.constants import (FILE_SERVER_BLUEPRINTS_FOLDER,
-                                    FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
-                                    PROVIDER_CONTEXT_ID,
-                                    SUPPORTED_ARCHIVE_TYPES)
-from manager_rest.flask_utils import (setup_flask_app, set_admin_current_user,
-                                      get_tenant_by_name, set_tenant_in_app)
+from manager_rest.constants import PROVIDER_CONTEXT_ID
+from manager_rest.flask_utils import get_tenant_by_name, set_tenant_in_app
 from manager_rest.resolver_with_catalog_support import (
     ResolverWithCatalogSupport
 )
+from manager_rest.shell import common
 from manager_rest.storage import models, get_storage_manager
-from manager_rest import config
 
-REST_HOME_DIR = '/opt/manager'
-REST_CONFIG_PATH = join(REST_HOME_DIR, 'cloudify-rest.conf')
-REST_SECURITY_CONFIG_PATH = join(REST_HOME_DIR, 'rest-security.conf')
-REST_AUTHORIZATION_CONFIG_PATH = join(REST_HOME_DIR, 'authorization.conf')
+
+REST_AUTHORIZATION_CONFIG_PATH = join(common.REST_HOME_DIR,
+                                      'authorization.conf')
 
 AT_LEAST = 'at_least'
 BLUEPRINT_LINE = 'blueprint_line'
 CURRENT_IMPORT_FROM = 'current_import_from'
 CURRENT_IS_PINNED = 'current_is_pinned'
 CURRENT_VERSION = 'current_version'
-DEFAULT_TENANT = 'default_tenant'
 END_POS = 'end_pos'
 EXECUTORS = [DEPLOYMENT_PLUGINS_TO_INSTALL,
              WORKFLOW_PLUGINS_TO_INSTALL,
@@ -94,7 +82,10 @@ class UpdateException(Exception):
     pass
 
 
-CLOUDIFY_PLUGINS = {
+CLOUDIFY_PLUGINS: typing.Dict[
+    str, typing.Dict[
+        str, typing.Union[typing.List[str], str, None]
+    ]] = {
     'cloudify-aws-plugin': {
         VERSIONS: sorted(['2.5.11', '2.4.4', '2.4.3', '2.4.2', '2.4.0',
                           '2.3.5', '2.3.4', '2.3.2', '2.3.1', '2.3.0',
@@ -240,99 +231,8 @@ CLOUDIFY_PLUGINS = {
 }
 
 
-def setup_environment():
-    for value, envvar in [
-            (REST_CONFIG_PATH, 'MANAGER_REST_CONFIG_PATH'),
-            (REST_SECURITY_CONFIG_PATH, 'MANAGER_REST_SECURITY_CONFIG_PATH'),
-    ]:
-        if value is not None:
-            environ[envvar] = value
-
-    app = setup_flask_app()
-    with app.app_context():
-        config.instance.load_configuration()
-    set_admin_current_user(app)
-
-
-def blueprint_file_name(blueprint: models.Blueprint) -> str:
-    return join(
-        config.instance.file_server_root,
-        FILE_SERVER_BLUEPRINTS_FOLDER,
-        blueprint.tenant.name,
-        blueprint.id,
-        blueprint.main_file_name
-    )
-
-
-def archive_file_name(blueprint: models.Blueprint) -> str:
-    for arc_type in SUPPORTED_ARCHIVE_TYPES:
-        # attempting to find the archive file on the file system
-        local_path = join(
-            config.instance.file_server_root,
-            FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
-            blueprint.tenant.name,
-            blueprint.id,
-            '{0}.{1}'.format(blueprint.id, arc_type))
-
-        if isfile(local_path):
-            archive_type = arc_type
-            break
-    else:
-        raise UpdateException("Could not find blueprint's archive; "
-                              "Blueprint ID: {0}".format(blueprint.id))
-    return join(
-        config.instance.file_server_root,
-        FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
-        blueprint.tenant.name,
-        blueprint.id,
-        '{0}.{1}'.format(blueprint.id, archive_type)
-    )
-
-
-def blueprint_updated_file_name(blueprint: models.Blueprint) -> str:
-    base_file_name = '.'.join(blueprint.main_file_name.split('.')[:-1])
-    index = 0
-    updated_file_name = '{0}-new.yaml'.format(base_file_name)
-    while exists(join(
-            config.instance.file_server_root,
-            FILE_SERVER_BLUEPRINTS_FOLDER,
-            blueprint.tenant.name,
-            blueprint.id,
-            updated_file_name)):
-        updated_file_name = '{0}-{1:02d}.yaml'.format(base_file_name, index)
-        index += 1
-    return join(
-        config.instance.file_server_root,
-        FILE_SERVER_BLUEPRINTS_FOLDER,
-        blueprint.tenant.name,
-        blueprint.id,
-        updated_file_name
-    )
-
-
-def blueprint_diff_file_name(blueprint: models.Blueprint) -> str:
-    base_file_name = '.'.join(blueprint.main_file_name.split('.')[:-1])
-    index = 0
-    diff_file_name = '{0}.diff'.format(base_file_name)
-    while exists(join(
-            config.instance.file_server_root,
-            FILE_SERVER_BLUEPRINTS_FOLDER,
-            blueprint.tenant.name,
-            blueprint.id,
-            diff_file_name)):
-        diff_file_name = '{0}-{1:02d}.diff'.format(base_file_name, index)
-        index += 1
-    return join(
-        config.instance.file_server_root,
-        FILE_SERVER_BLUEPRINTS_FOLDER,
-        blueprint.tenant.name,
-        blueprint.id,
-        diff_file_name
-    )
-
-
-def load_imports(blueprint: models.Blueprint) -> dict:
-    file_name = blueprint_file_name(blueprint)
+def load_imports(blueprint: models.Blueprint) -> typing.List[str]:
+    file_name = common.blueprint_file_name(blueprint)
     try:
         with open(file_name, 'rb') as blueprint_file:
             try:
@@ -476,9 +376,9 @@ def scan_blueprint(resolver: ResolverWithCatalogSupport,
             stats[SUGGESTED_IS_PINNED] += 1
 
     imports = load_imports(blueprint)
-    mappings = {}
+    mappings: typing.Dict[str, typing.List] = {}
     plugins_install_suggestions = {}
-    stats = {
+    stats: typing.Dict[str, typing.Union[typing.Dict[str, int], int]] = {
         CURRENT_IMPORT_FROM: collections.defaultdict(lambda: 0),
         CURRENT_IS_PINNED: 0,
         SUGGESTED_IMPORT_FROM: collections.defaultdict(lambda: 0),
@@ -531,7 +431,7 @@ def scan_blueprint(resolver: ResolverWithCatalogSupport,
     return mappings, stats, plugins_install_suggestions
 
 
-def get_imports(blueprint_file: typing.TextIO) -> dict:
+def get_imports(blueprint_file: typing.BinaryIO) -> dict:
     level = 0
     imports_token = None
     import_lines = {}
@@ -587,85 +487,11 @@ def write_updated_blueprint(input_file_name: str, output_file_name: str,
                                   input_file_name, output_file_name, ex))
 
 
-def write_blueprint_diff(from_file_name: str, to_file_name: str,
-                         diff_file_name: str):
-    def file_mtime(path):
-        t = datetime.fromtimestamp(stat(path).st_mtime,
-                                   timezone.utc)
-        return t.astimezone().isoformat()
-
-    try:
-        with open(from_file_name, 'r') as from_file:
-            from_lines = from_file.readlines()
-    except (FileNotFoundError, PermissionError) as ex:
-        raise UpdateException('Cannot read a blueprint file {0}: {1}'.format(
-                              from_file_name, ex))
-    try:
-        with open(to_file_name, 'r') as to_file:
-            to_lines = to_file.readlines()
-    except (FileNotFoundError, PermissionError) as ex:
-        raise UpdateException('Cannot read a blueprint file {0}: {1}'.format(
-                              from_file_name, ex))
-    diff = difflib.context_diff(
-        from_lines,
-        to_lines,
-        from_file_name,
-        to_file_name,
-        file_mtime(from_file_name),
-        file_mtime(to_file_name)
-    )
-    try:
-        with open(diff_file_name, 'w') as diff_file:
-            diff_file.writelines(diff)
-    except (FileNotFoundError, PermissionError) as ex:
-        raise UpdateException('Cannot write a diff file {0}: {1}'.format(
-                              diff_file_name, ex))
-    print('An diff file was generated for your change: {0}'.format(
-          diff_file_name))
-
-
-def update_archive(blueprint: models.Blueprint, updated_file_name: str):
-    def format_from_file_name(file_name: str) -> str:
-        file_name_split = file_name.split('.')
-        if file_name_split[-1].upper() == 'ZIP':
-            return 'zip'
-        if file_name_split[-1].upper() == 'TAR':
-            return 'tar'
-        if file_name_split[-1].upper() == 'TBZ2' or \
-                (file_name_split[-2].upper() == 'TAR' and
-                 file_name_split[-1].upper() == 'BZ2'):
-            return 'bztar'
-        if file_name_split[-1].upper() == 'TGZ' or \
-                (file_name_split[-2].upper() == 'TAR' and
-                 file_name_split[-1].upper() == 'GZ'):
-            return 'gztar'
-
-    blueprint_archive_file_name = archive_file_name(blueprint)
-    archive_format = format_from_file_name(blueprint_archive_file_name)
-    if not archive_format:
-        raise UpdateException('Unknown archive format: {0}'.format(
-            blueprint_archive_file_name))
-    with TemporaryDirectory() as working_dir:
-        os.chdir(working_dir)
-        shutil.unpack_archive(blueprint_archive_file_name, working_dir)
-        archive_base_dir = os.listdir(working_dir)[0]
-        shutil.copy(updated_file_name,
-                    join(working_dir,
-                         archive_base_dir,
-                         blueprint.main_file_name))
-        new_archive_base = mktemp()
-        new_archive_file_name = shutil.make_archive(new_archive_base,
-                                                    archive_format,
-                                                    root_dir=working_dir)
-        move(new_archive_file_name, blueprint_archive_file_name)
-        chmod(blueprint_archive_file_name, 0o644)
-
-
 def correct_blueprint(blueprint: models.Blueprint,
                       plugin_names: tuple,
-                      mappings: dict) -> str:
-    def line_replacement(mapping_spec: dict) -> str:
-        suggested_version = mapping_spec.get(SUGGESTED_VERSION)
+                      mappings: typing.Dict[str, typing.List]) -> str:
+    def line_replacement(mapping_spec: typing.Dict[str, str]) -> str:
+        suggested_version = mapping_spec.get(SUGGESTED_VERSION, '')
         next_major_version = int(suggested_version.split('.')[0]) + 1
         return 'plugin:{0}?version=>={1},<{2}'.format(
             mapping_spec.get(PLUGIN_NAME),
@@ -679,8 +505,8 @@ def correct_blueprint(blueprint: models.Blueprint,
             return UNKNOWN
         else:
             return FINE
-    file_name = blueprint_file_name(blueprint)
-    new_file_name = blueprint_updated_file_name(blueprint)
+    file_name = common.blueprint_file_name(blueprint)
+    new_file_name = common.blueprint_updated_file_name(blueprint)
     try:
         with open(file_name, 'rb') as blueprint_file:
             import_lines = get_imports(blueprint_file)
@@ -688,7 +514,7 @@ def correct_blueprint(blueprint: models.Blueprint,
         raise UpdateException('Cannot load blueprint from {0}: {1}'.format(
             file_name, ex))
     import_updates = []
-    for mapping_updates in mappings.get(UPDATES):
+    for mapping_updates in mappings.get(UPDATES, []):
         for blueprint_line, spec in mapping_updates.items():
             if blueprint_line not in import_lines:
                 continue
@@ -704,9 +530,9 @@ def correct_blueprint(blueprint: models.Blueprint,
         file_name, new_file_name,
         sorted(import_updates, key=lambda u: u[START_POS])
     )
-    write_blueprint_diff(file_name, new_file_name,
-                         blueprint_diff_file_name(blueprint))
-    update_archive(blueprint, new_file_name)
+    common.write_blueprint_diff(file_name, new_file_name,
+                                common.blueprint_diff_file_name(blueprint))
+    common.update_archive(blueprint, new_file_name)
     move(new_file_name, file_name)
     return UPDATES
 
@@ -814,10 +640,9 @@ def main(tenant_names, all_tenants, plugin_names, blueprint_ids,
         print('--all-tenants and --tenant-name options are mutually exclusive')
         exit(1)
     if not tenant_names:
-        tenant_names = (DEFAULT_TENANT,)
+        tenant_names = (common.DEFAULT_TENANT,)
 
-    setup_environment()
-    set_tenant_in_app(get_tenant_by_name(DEFAULT_TENANT))
+    common.setup_environment()
     sm = get_storage_manager()
 
     # Prepare the resolver
