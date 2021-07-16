@@ -3,7 +3,7 @@ import logging
 import shutil
 import sys
 import typing
-from os.path import basename, join
+from os.path import basename
 
 import click
 import yaml
@@ -12,11 +12,6 @@ from manager_rest.flask_utils import get_tenant_by_name, set_tenant_in_app
 from manager_rest.shell import common
 from manager_rest.storage import models, get_storage_manager
 
-DEFAULT_TENANT = 'default_tenant'
-REST_HOME_DIR = '/opt/manager'
-REST_CONFIG_PATH = join(REST_HOME_DIR, 'cloudify-rest.conf')
-REST_SECURITY_CONFIG_PATH = join(REST_HOME_DIR, 'rest-security.conf')
-
 
 class Mapping:
     def __init__(self, src: typing.List[str], dst: typing.List[str]):
@@ -24,12 +19,14 @@ class Mapping:
         self._to = dst
 
     def matches(self, imports: typing.List[str]) -> bool:
+        """Check if imports contains exactly the same entries as self._from."""
         if len(imports) != len(self._from):
             return False
         return all(part in self._from for part in imports) \
             and all(part in imports for part in self._from)
 
-    def replacement(self, separator='\n'):
+    def replacement(self, separator='\n') -> str:
+        """Produces an import lines' substitution."""
         replacement = separator.join(f'  - {line}' for line in self._to)
         return f'{separator}{replacement}'
 
@@ -45,6 +42,23 @@ DEFAULT_MAPPING = [
 
 
 def load_mappings(file_name: str) -> typing.List[Mapping]:
+    """Load mappings from a YAML file and return a list of Mapping objects.
+
+    Example mapping.yaml:
+    ---
+    - from:
+        - https://example.com/cloudify/5.1.0/types/deploy-type.yaml
+        - https://example.com/cloudify/5.1.0/types/linux-type.yaml
+      to:
+        - https://www.getcloudify.org/spec/cloudify/5.1.0/types.yaml
+        - plugin:example-deploy-plugin
+        - plugin:example-linux
+    - from:
+        - https://example.com/cloudify/5.1.0/types/foo-type.yaml
+      to:
+        - https://www.getcloudify.org/spec/cloudify/5.1.0/types.yaml
+        - plugin:example-foo
+    """
     try:
         with open(file_name, 'r') as mapping_file:
             try:
@@ -62,8 +76,9 @@ def load_mappings(file_name: str) -> typing.List[Mapping]:
 def find_mapping(blueprint: models.Blueprint,
                  mappings: typing.List[Mapping],
                  ) -> typing.Optional[Mapping]:
+    """Find the first mapping matching a specified blueprint.  Returns the
+    first matching mapping or `None` in case there was no match."""
     file_name = common.blueprint_file_name(blueprint)
-
     with open(file_name, 'r') as blueprint_file:
         try:
             imports = yaml.safe_load(blueprint_file).get('imports', [])
@@ -144,16 +159,13 @@ def main(all_tenants, tenant_names, blueprint_ids, mapping_file):
                         'mutually exclusive')
         sys.exit(1)
     if not tenant_names:
-        tenant_names = (DEFAULT_TENANT,)
+        tenant_names = (common.DEFAULT_TENANT,)
 
     common.setup_environment()
     sm = get_storage_manager()
     tenants = sm.list(models.Tenant, get_all_results=True) if all_tenants \
         else [get_tenant_by_name(name) for name in tenant_names]
-    blueprint_filter = {
-        'tenant': None,
-        'state': 'uploaded',
-    }
+    blueprint_filter = {'state': 'uploaded'}
     if blueprint_ids:
         blueprint_filter['id'] = blueprint_ids
     mappings = load_mappings(mapping_file) if mapping_file else DEFAULT_MAPPING
@@ -161,7 +173,6 @@ def main(all_tenants, tenant_names, blueprint_ids, mapping_file):
     for tenant in tenants:
         set_tenant_in_app(get_tenant_by_name(tenant.name))
         sm = get_storage_manager()
-        blueprint_filter['tenant'] = tenant
         blueprints = sm.list(
             models.Blueprint,
             filters=blueprint_filter,
@@ -173,11 +184,12 @@ def main(all_tenants, tenant_names, blueprint_ids, mapping_file):
                 mapping = find_mapping(blueprint, mappings)
                 if mapping:
                     logger.info("Updating tenant's `%s` blueprint `%s`",
-                                tenant.name, blueprint.id)
+                                blueprint.tenant.name, blueprint.id)
                     correct_blueprint(blueprint, mapping)
                 else:
                     logger.debug("Tenant's `%s` blueprint does not require "
-                                 "upgrading: `%s`", tenant.name, blueprint.id)
+                                 "upgrading: `%s`",
+                                 blueprint.tenant.name, blueprint.id)
             except common.UpdateException as ex:
                 logger.error("Error updating tenant's `%s` blueprint `%s`: %s",
-                             tenant.name, blueprint.id, ex)
+                             blueprint.tenant.name, blueprint.id, ex)
