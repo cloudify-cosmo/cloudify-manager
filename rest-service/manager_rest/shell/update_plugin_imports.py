@@ -25,17 +25,13 @@ import yaml
 
 from cloudify._compat import parse_qs, parse_version
 from dsl_parser import exceptions as dsl_parser_exceptions
-from dsl_parser import utils as dsl_parser_utils
-from dsl_parser.constants import (CLOUDIFY,
-                                  IMPORT_RESOLVER_KEY,
-                                  WORKFLOW_PLUGINS_TO_INSTALL,
+from dsl_parser.constants import (WORKFLOW_PLUGINS_TO_INSTALL,
                                   DEPLOYMENT_PLUGINS_TO_INSTALL,
                                   HOST_AGENT_PLUGINS_TO_INSTALL,
                                   PLUGIN_PACKAGE_NAME,
                                   PLUGIN_PACKAGE_VERSION)
 from dsl_parser.models import Plan
 
-from manager_rest.constants import PROVIDER_CONTEXT_ID
 from manager_rest.flask_utils import get_tenant_by_name, set_tenant_in_app
 from manager_rest.resolver_with_catalog_support import (
     ResolverWithCatalogSupport
@@ -599,22 +595,10 @@ def main(tenant_names, all_tenants, plugin_names, blueprint_ids,
 
     common.setup_environment()
     sm = get_storage_manager()
-
-    # Prepare the resolver
-    cloudify_section = sm.get(models.ProviderContext, PROVIDER_CONTEXT_ID).\
-        context.get(CLOUDIFY, {})
-    resolver_section = cloudify_section.get(IMPORT_RESOLVER_KEY, {})
-    resolver_section.setdefault(
-        'implementation',
-        'manager_rest.'
-        'resolver_with_catalog_support:ResolverWithCatalogSupport')
-    resolver = dsl_parser_utils.create_import_resolver(resolver_section)
-
-    if all_tenants:
-        tenants = sm.list(models.Tenant, get_all_results=True)
-    else:
-        tenants = [get_tenant_by_name(name) for name in tenant_names]
-    blueprint_filter = {'tenant': None}
+    resolver = common.get_resolver(sm)
+    tenants = sm.list(models.Tenant, get_all_results=True) if all_tenants \
+        else [get_tenant_by_name(name) for name in tenant_names]
+    blueprint_filter = {'state': 'uploaded'}
     if blueprint_ids:
         blueprint_filter['id'] = blueprint_ids
 

@@ -8,13 +8,19 @@ from tempfile import TemporaryDirectory, mktemp
 
 import yaml
 
+from dsl_parser import utils as dsl_parser_utils
+from dsl_parser.constants import (CLOUDIFY,
+                                  IMPORT_RESOLVER_KEY)
+
 from manager_rest import config
 from manager_rest.constants import (FILE_SERVER_BLUEPRINTS_FOLDER,
                                     FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
+                                    PROVIDER_CONTEXT_ID,
                                     SUPPORTED_ARCHIVE_TYPES)
 from manager_rest.flask_utils import (setup_flask_app, set_admin_current_user,
                                       get_tenant_by_name, set_tenant_in_app)
 from manager_rest.storage import models
+
 
 DEFAULT_TENANT = 'default_tenant'
 END_POS = 'end_pos'
@@ -42,6 +48,17 @@ def setup_environment():
         config.instance.load_configuration()
     set_admin_current_user(app)
     set_tenant_in_app(get_tenant_by_name(DEFAULT_TENANT))
+
+
+def get_resolver(sm):
+    cloudify_section = sm.get(models.ProviderContext, PROVIDER_CONTEXT_ID). \
+        context.get(CLOUDIFY, {})
+    resolver_section = cloudify_section.get(IMPORT_RESOLVER_KEY, {})
+    resolver_section.setdefault(
+        'implementation',
+        'manager_rest.'
+        'resolver_with_catalog_support:ResolverWithCatalogSupport')
+    return dsl_parser_utils.create_import_resolver(resolver_section)
 
 
 def blueprint_file_name(blueprint: models.Blueprint) -> str:
