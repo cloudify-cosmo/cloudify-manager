@@ -14,10 +14,12 @@
 #  * limitations under the License.
 
 import collections
+import logging
+import sys
 import typing
 from functools import lru_cache
 from os import chmod
-from os.path import join
+from os.path import basename, join
 from shutil import move
 
 import click
@@ -72,6 +74,14 @@ UNKNOWN = 'unknown'
 UPDATES = 'updates'
 VERSIONS = 'versions'
 MAX_IMPORT_TOKEN_LENGTH = 200
+
+
+logging.basicConfig(
+    format='%(asctime)s.%(msecs)03d %(levelname)s '
+           '[%(module)s.%(funcName)s] %(message)s',
+    datefmt='%H:%M:%S',
+    level=logging.INFO)
+logger = logging.getLogger(basename(sys.argv[0]))
 
 
 class UpdateException(Exception):
@@ -220,12 +230,12 @@ def spec_from_url(resolver: ResolverWithCatalogSupport, url: str) -> tuple:
     try:
         response_text = resolver.fetch_import(url)
     except dsl_parser_exceptions.DSLParsingLogicException as ex:
-        print('Cannot retrieve {0}: {1}'.format(url, ex))
+        logger.warning('Cannot retrieve %s: %s', url, ex)
         return None, None
     try:
         plugin_yaml = yaml.safe_load(response_text)
     except yaml.YAMLError as ex:
-        print('Cannot load imports from {0}: {1}'.format(url, ex))
+        logger.warning('Cannot load imports from %s: %s', url, ex)
         return None, None
     for _, spec in plugin_yaml.get('plugins', {}).items():
         if spec.get(PLUGIN_PACKAGE_NAME) and \
@@ -588,8 +598,9 @@ def main(tenant_names, all_tenants, plugin_names, blueprint_ids,
                 install_suggestions[plugin_name].append(plugin_version)
 
     if all_tenants and tenant_names:
-        print('--all-tenants and --tenant-name options are mutually exclusive')
-        exit(1)
+        logger.critical('--all-tenants and --tenant-name options are '
+                        'mutually exclusive')
+        sys.exit(1)
     if not tenant_names:
         tenant_names = (common.DEFAULT_TENANT,)
 
@@ -601,7 +612,6 @@ def main(tenant_names, all_tenants, plugin_names, blueprint_ids,
     blueprint_filter = {'state': 'uploaded'}
     if blueprint_ids:
         blueprint_filter['id'] = blueprint_ids
-
     mappings = load_mappings(mapping_file) if correct else {}
     stats, install_suggestions, blueprints_processed = {}, {}, 0
 
@@ -616,10 +626,10 @@ def main(tenant_names, all_tenants, plugin_names, blueprint_ids,
         )
 
         for blueprint in blueprints:
-            print('Processing blueprint of {0}: {1} '.format(tenant.name,
-                                                             blueprint.id))
             blueprint_identifier = '{0}::{1}'.format(tenant.name, blueprint.id)
             if correct:
+                logger.info("Correcting tenant's `%s` blueprint `%s`",
+                            blueprint.tenant.name, blueprint.id)
                 try:
                     result = correct_blueprint(
                         blueprint,
@@ -627,7 +637,9 @@ def main(tenant_names, all_tenants, plugin_names, blueprint_ids,
                         mappings.get(tenant.name, {}).get(blueprint.id)
                     )
                 except UpdateException as ex:
-                    print(ex)
+                    logger.error(
+                        "Error updating tenant's `%s` blueprint `%s`: %s",
+                        blueprint.tenant.name, blueprint.id, ex)
                 else:
                     blueprints_processed += 1
                     if result not in stats:
@@ -635,11 +647,15 @@ def main(tenant_names, all_tenants, plugin_names, blueprint_ids,
                     else:
                         stats[result].append(blueprint_identifier)
             else:
+                logger.info("Scanning tenant's `%s` blueprint `%s`",
+                            blueprint.tenant.name, blueprint.id)
                 try:
                     a_mapping, a_statistic, a_suggestion = \
                         scan_blueprint(resolver, blueprint, plugin_names)
                 except UpdateException as ex:
-                    print(ex)
+                    logger.error(
+                        "Error scanning tenant's `%s` blueprint `%s`: %s",
+                        blueprint.tenant.name, blueprint.id, ex)
                 else:
                     blueprints_processed += 1
                     if a_mapping:
@@ -658,10 +674,7 @@ def main(tenant_names, all_tenants, plugin_names, blueprint_ids,
         with open(mapping_file, 'w') as output_file:
             yaml.dump(mappings, output_file, default_flow_style=False)
         chmod(mapping_file, 0o644)
-        print('\nSaved mapping file to the {0}'.format(mapping_file))
+        logger.info('Mapping file saved: %s', mapping_file)
         printout_scanning_stats(blueprints_processed, mappings, stats)
-        printout_install_suggestions(install_suggestions)
-
-
-if __name__ == '__main__':
-    main()
+        if install_suggestions:
+            printout_install_suggestions(install_suggestions)
