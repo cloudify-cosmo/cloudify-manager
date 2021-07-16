@@ -84,10 +84,6 @@ logging.basicConfig(
 logger = logging.getLogger(basename(sys.argv[0]))
 
 
-class UpdateException(Exception):
-    pass
-
-
 CLOUDIFY_PLUGINS: typing.Dict[
     str, typing.Dict[
         str, typing.Union[typing.List[str], str, None]
@@ -199,15 +195,14 @@ def load_imports(blueprint: models.Blueprint) -> typing.List[str]:
             try:
                 return yaml.safe_load(blueprint_file)[IMPORTS]
             except yaml.YAMLError as ex:
-                raise UpdateException(
-                    'Cannot load imports from {0}: '
-                    '{1}'.format(file_name, ex))
-            except KeyError:
-                raise UpdateException(
-                    'Cannot find imports definition in {0}'.format(file_name))
-    except (FileNotFoundError, PermissionError):
-        raise UpdateException(
-            'Blueprint file {0} cannot be read'.format(file_name))
+                raise common.UpdateException(
+                    f'Cannot load imports from {file_name}: {ex}')
+            except KeyError as ex:
+                raise common.UpdateException(
+                    f'Cannot find imports definition in {file_name}: {ex}')
+    except OSError as ex:
+        raise common.UpdateException(
+            f'Blueprint file {file_name} cannot be read: {ex}')
     return []
 
 
@@ -217,11 +212,11 @@ def load_mappings(file_name: str) -> list:
             try:
                 mappings = yaml.safe_load(mapping_file)
             except yaml.YAMLError as ex:
-                raise UpdateException(
-                    'Cannot load mappings from {0}: {1}'.format(file_name, ex))
-    except (FileNotFoundError, PermissionError):
-        raise UpdateException(
-            'Mappings file {0} cannot be read'.format(file_name))
+                raise common.UpdateException(
+                    f'Cannot load mappings from {file_name}: {ex}')
+    except OSError as ex:
+        raise common.UpdateException(
+            f'Mappings file {file_name} cannot be read: {ex}')
     return mappings
 
 
@@ -442,10 +437,10 @@ def write_updated_blueprint(input_file_name: str, output_file_name: str,
                     input_file.read(update[END_POS] - update[START_POS])
                 content = input_file.read()
                 output_file.write(content)
-    except (FileNotFoundError, PermissionError) as ex:
-        raise UpdateException('Cannot update blueprint file source {0}, '
-                              'destination {1}: {2}'.format(
-                                  input_file_name, output_file_name, ex))
+    except OSError as ex:
+        raise common.UpdateException(
+            f'Cannot update blueprint file source {input_file_name}, '
+            f'destination {output_file_name}: {ex}')
 
 
 def correct_blueprint(blueprint: models.Blueprint,
@@ -471,9 +466,9 @@ def correct_blueprint(blueprint: models.Blueprint,
     try:
         with open(file_name, 'rb') as blueprint_file:
             import_lines = get_imports(blueprint_file)
-    except (FileNotFoundError, PermissionError) as ex:
-        raise UpdateException('Cannot load blueprint from {0}: {1}'.format(
-            file_name, ex))
+    except OSError as ex:
+        raise common.UpdateException(
+            f'Cannot load blueprint from {file_name}: {ex}')
     import_updates = []
     for mapping_updates in mappings.get(UPDATES, []):
         for blueprint_line, spec in mapping_updates.items():
@@ -636,7 +631,7 @@ def main(tenant_names, all_tenants, plugin_names, blueprint_ids,
                         plugin_names,
                         mappings.get(tenant.name, {}).get(blueprint.id)
                     )
-                except UpdateException as ex:
+                except common.UpdateException as ex:
                     logger.error(
                         "Error updating tenant's `%s` blueprint `%s`: %s",
                         blueprint.tenant.name, blueprint.id, ex)
@@ -652,7 +647,7 @@ def main(tenant_names, all_tenants, plugin_names, blueprint_ids,
                 try:
                     a_mapping, a_statistic, a_suggestion = \
                         scan_blueprint(resolver, blueprint, plugin_names)
-                except UpdateException as ex:
+                except common.UpdateException as ex:
                     logger.error(
                         "Error scanning tenant's `%s` blueprint `%s`: %s",
                         blueprint.tenant.name, blueprint.id, ex)
