@@ -3,7 +3,7 @@ import logging
 import shutil
 import sys
 import typing
-from os.path import basename, join
+from os.path import basename
 
 import click
 import yaml
@@ -11,11 +11,6 @@ import yaml
 from manager_rest.flask_utils import get_tenant_by_name, set_tenant_in_app
 from manager_rest.shell import common
 from manager_rest.storage import models, get_storage_manager
-
-DEFAULT_TENANT = 'default_tenant'
-REST_HOME_DIR = '/opt/manager'
-REST_CONFIG_PATH = join(REST_HOME_DIR, 'cloudify-rest.conf')
-REST_SECURITY_CONFIG_PATH = join(REST_HOME_DIR, 'rest-security.conf')
 
 
 class Mapping:
@@ -63,7 +58,6 @@ def find_mapping(blueprint: models.Blueprint,
                  mappings: typing.List[Mapping],
                  ) -> typing.Optional[Mapping]:
     file_name = common.blueprint_file_name(blueprint)
-
     with open(file_name, 'r') as blueprint_file:
         try:
             imports = yaml.safe_load(blueprint_file).get('imports', [])
@@ -144,7 +138,7 @@ def main(all_tenants, tenant_names, blueprint_ids, mapping_file):
                         'mutually exclusive')
         sys.exit(1)
     if not tenant_names:
-        tenant_names = (DEFAULT_TENANT,)
+        tenant_names = (common.DEFAULT_TENANT,)
 
     common.setup_environment()
     sm = get_storage_manager()
