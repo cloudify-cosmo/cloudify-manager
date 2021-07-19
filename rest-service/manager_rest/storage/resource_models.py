@@ -1785,6 +1785,10 @@ class NodeInstance(SQLResourceBase):
         self._set_parent(node)
         self.node = node
 
+    @classproperty
+    def allowed_filter_attrs(cls):
+        return ['id']
+
 
 class Agent(CreatedAtMixin, SQLResourceBase):
     __tablename__ = 'agents'

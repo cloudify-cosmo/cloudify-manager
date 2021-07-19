@@ -197,3 +197,21 @@ class WorkflowsSearches(ResourceSearches):
                               search, filter_id, **kwargs)
 
         return workflows_list_response(result)
+
+
+class NodeInstancesSearches(ResourceSearches):
+    @swagger.operation(**_swagger_searches_docs(models.NodeInstance,
+                                                'node_instances'))
+    @authorize('node_list', allow_all_tenants=True)
+    @rest_decorators.marshal_with(models.NodeInstance)
+    @rest_decorators.paginate
+    @rest_decorators.sortable(models.NodeInstance)
+    @rest_decorators.all_tenants
+    @rest_decorators.search('id')
+    @rest_decorators.filter_id
+    def post(self, _include=None, pagination=None, sort=None,
+             all_tenants=None, search=None, filter_id=None, **kwargs):
+        """List NodeInstances using filter rules"""
+        return super().post(models.NodeInstance, None,
+                            _include, {}, pagination, sort, all_tenants,
+                            search, filter_id, **kwargs)
