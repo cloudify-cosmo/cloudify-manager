@@ -24,8 +24,6 @@ from manager_rest import manager_exceptions, config
 from manager_rest.security.authorization import authorize
 from manager_rest.deployment_update.constants import PHASES
 from manager_rest.storage import models, get_storage_manager
-from manager_rest.upload_manager import \
-    UploadedBlueprintsDeploymentUpdateManager
 from manager_rest.deployment_update.manager import \
     get_deployment_updates_manager
 from manager_rest.constants import (FILE_SERVER_BLUEPRINTS_FOLDER,
@@ -42,29 +40,16 @@ class DeploymentUpdate(SecuredResource):
     @rest_decorators.marshal_with(models.DeploymentUpdate)
     def post(self, id, phase):
         """
-        Provides support for two phases of deployment update. The phase is
-        chosen according to the phase arg, and the id is used by this step.
-
-        In the first phase the deployment update is
-        1. Staged (from a new blueprint)
-        2. The steps are extracted and saved onto the data model.
-        3. The data storage is manipulated according to the
-        addition/modification steps.
-        4. The update workflow is run, executing any lifecycles of add/removed
-        nodes or relationships.
-
-        The second step finalizes the commit by manipulating the data model
-        according to any removal steps.
+        This is used to finalize a deployment update by manipulating the data
+        model according to any removal steps.
 
         In order
         :param id: for the initiate step it's the deployment_id, and for the
         finalize step it's the update_id
-        :param phase: initiate or finalize
+        :param phase: finalize
         :return: update response
         """
-        if phase == PHASES.INITIAL:
-            return self._commit(id)
-        elif phase == PHASES.FINAL:
+        if phase == PHASES.FINAL:
             return get_deployment_updates_manager().finalize_commit(id)
 
     @authorize('deployment_update_create')
@@ -119,27 +104,6 @@ class DeploymentUpdate(SecuredResource):
                                                 update_plugins=update_plugins,
                                                 force=force)
 
-    def _commit(self, deployment_id):
-        request_json = request.args
-        manager, skip_install, skip_uninstall, _, workflow_id, \
-            ignore_failure, install_first, _, update_plugins, \
-            runtime_eval, _, _, force = self._parse_args(
-                deployment_id, request_json, using_post_request=True)
-        manager.validate_no_active_updates_per_deployment(deployment_id)
-        deployment_update, _ = \
-            UploadedBlueprintsDeploymentUpdateManager(). \
-            receive_uploaded_data(
-                deployment_id, runtime_only_evaluation=runtime_eval)
-        manager.extract_steps_from_deployment_update(deployment_update)
-        return manager.commit_deployment_update(deployment_update,
-                                                skip_install,
-                                                skip_uninstall,
-                                                workflow_id,
-                                                ignore_failure,
-                                                install_first,
-                                                update_plugins=update_plugins,
-                                                force=force)
-
     @staticmethod
     def _get_and_validate_blueprint_and_inputs(deployment_id, request_json):
         inputs = request_json.get('inputs', {})
@@ -154,7 +118,7 @@ class DeploymentUpdate(SecuredResource):
         if not blueprint_id and not inputs:
             raise manager_exceptions.BadParametersError(
                 'Must supply either the `blueprint_id` parameter, or new '
-                'inputs, in order the preform a deployment update')
+                'inputs, in order the perform a deployment update')
         if blueprint_id is None:
             deployment = get_storage_manager().get(models.Deployment,
                                                    deployment_id)

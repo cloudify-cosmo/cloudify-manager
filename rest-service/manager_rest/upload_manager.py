@@ -31,16 +31,12 @@ from flask import request, current_app
 from flask_restful.reqparse import Argument
 from flask_restful.inputs import boolean
 
-from cloudify._compat import unquote
 from cloudify.models_states import SnapshotState, BlueprintUploadState
 from manager_rest.manager_exceptions import ArchiveTypeError
 from manager_rest.constants import (FILE_SERVER_PLUGINS_FOLDER,
                                     FILE_SERVER_SNAPSHOTS_FOLDER,
                                     FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
-                                    FILE_SERVER_BLUEPRINTS_FOLDER,
-                                    FILE_SERVER_DEPLOYMENTS_FOLDER)
-from manager_rest.deployment_update.manager import \
-    get_deployment_updates_manager
+                                    FILE_SERVER_BLUEPRINTS_FOLDER)
 from manager_rest.archiving import get_archive_type
 from manager_rest.storage.models import Blueprint, Plugin
 from manager_rest import config, chunked, manager_exceptions
@@ -51,8 +47,7 @@ from manager_rest.utils import (mkdirs,
                                 files_in_folder,
                                 remove)
 from manager_rest.resource_manager import get_resource_manager
-from manager_rest.constants import (CONVENTION_APPLICATION_BLUEPRINT_FILE,
-                                    SUPPORTED_ARCHIVE_TYPES)
+from manager_rest.constants import (SUPPORTED_ARCHIVE_TYPES)
 from manager_rest.rest.rest_utils import get_args_and_verify_arguments
 
 _PRIVATE_RESOURCE = 'private_resource'
@@ -331,143 +326,6 @@ class UploadedSnapshotsManager(UploadedDataManager):
             data_id,
             status=SnapshotState.UPLOADED
         ), None
-
-
-class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
-
-    def _get_kind(self):
-        return 'deployment'
-
-    def _get_data_url_key(self):
-        return 'blueprint_archive_url'
-
-    def _get_target_dir_path(self):
-        return os.path.join(FILE_SERVER_DEPLOYMENTS_FOLDER,
-                            current_tenant.name)
-
-    def _get_archive_type(self, archive_path):
-        return get_archive_type(archive_path)
-
-    def _prepare_and_process_doc(self,
-                                 data_id,
-                                 file_server_root,
-                                 archive_target_path,
-                                 additional_inputs=None,
-                                 runtime_only_evaluation=False,
-                                 **kwargs):
-        application_dir = self._extract_file_to_file_server(
-            archive_target_path,
-            file_server_root
-        )
-        return self._prepare_and_submit_blueprint(
-            file_server_root,
-            application_dir,
-            data_id,
-            additional_inputs,
-            runtime_only_evaluation), archive_target_path
-
-    def _move_archive_to_uploaded_dir(self, *args, **kwargs):
-        pass
-
-    @classmethod
-    def _prepare_and_submit_blueprint(cls,
-                                      file_server_root,
-                                      app_dir,
-                                      deployment_id,
-                                      additional_inputs=None,
-                                      runtime_only_evaluation=False):
-
-        app_file_name = cls._extract_application_file(file_server_root,
-                                                      app_dir)
-
-        # add to deployment update manager (will also dsl_parse it)
-        try:
-            cls._process_plugins(file_server_root, app_dir)
-            update = get_deployment_updates_manager().stage_deployment_update(
-                deployment_id,
-                app_dir,
-                app_file_name,
-                additional_inputs=additional_inputs or {},
-                runtime_only_evaluation=runtime_only_evaluation
-            )
-
-            # Moving the contents of the app dir to the dest dir, while
-            # overwriting any file encountered
-
-            # create the destination root dir
-            file_server_deployment_root = \
-                os.path.join(file_server_root,
-                             FILE_SERVER_DEPLOYMENTS_FOLDER,
-                             current_tenant.name,
-                             deployment_id)
-
-            app_root_dir = os.path.join(file_server_root, app_dir)
-
-            for root, dirs, files in os.walk(app_root_dir):
-                # Creates a corresponding dir structure in the deployment dir
-                dest_rel_dir = os.path.relpath(root, app_root_dir)
-                dest_dir = os.path.abspath(
-                    os.path.join(file_server_deployment_root, dest_rel_dir))
-                mkdirs(dest_dir)
-
-                # Calculate source dir
-                source_dir = os.path.join(file_server_root, app_dir, root)
-
-                for file_name in files:
-                    source_file = os.path.join(source_dir, file_name)
-                    relative_dest_path = os.path.relpath(source_file,
-                                                         app_root_dir)
-                    dest_file = os.path.join(file_server_deployment_root,
-                                             relative_dest_path)
-                    shutil.copy(source_file, dest_file)
-
-            return update
-        finally:
-            shutil.rmtree(os.path.join(file_server_root, app_dir))
-
-    @classmethod
-    def _extract_application_file(cls, file_server_root, application_dir):
-
-        full_application_dir = os.path.join(file_server_root, application_dir)
-
-        if 'application_file_name' in request.args:
-            application_file_name = unquote(
-                request.args['application_file_name'])
-            application_file = os.path.join(full_application_dir,
-                                            application_file_name)
-            if not os.path.isfile(application_file):
-                raise manager_exceptions.BadParametersError(
-                    '{0} does not exist in the application '
-                    'directory'.format(application_file_name)
-                )
-        else:
-            application_file_name = CONVENTION_APPLICATION_BLUEPRINT_FILE
-            application_file = os.path.join(full_application_dir,
-                                            application_file_name)
-            if not os.path.isfile(application_file):
-                raise manager_exceptions.BadParametersError(
-                    'application directory is missing blueprint.yaml and '
-                    'application_file_name query parameter was not passed')
-
-        # return relative path from the file server root since this path
-        # is appended to the file server base uri
-        return application_file_name
-
-    @classmethod
-    def _process_plugins(cls, file_server_root, app_dir):
-        plugins_directory = os.path.join(file_server_root, app_dir, 'plugins')
-        if not os.path.isdir(plugins_directory):
-            return
-        plugins = [os.path.join(plugins_directory, directory)
-                   for directory in os.listdir(plugins_directory)
-                   if os.path.isdir(os.path.join(plugins_directory,
-                                                 directory))]
-
-        for plugin_dir in plugins:
-            final_zip_name = '{0}.zip'.format(os.path.basename(plugin_dir))
-            target_zip_path = os.path.join(file_server_root, app_dir,
-                                           'plugins', final_zip_name)
-            cls._zip_dir(plugin_dir, target_zip_path)
 
 
 class UploadedBlueprintsManager(UploadedDataManager):
