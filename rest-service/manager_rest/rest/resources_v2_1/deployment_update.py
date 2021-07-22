@@ -40,44 +40,67 @@ class DeploymentUpdate(SecuredResource):
     @rest_decorators.marshal_with(models.DeploymentUpdate)
     def post(self, id, phase):
         """
-        This is used to finalize a deployment update by manipulating the data
-        model according to any removal steps.
+        Provides support for two phases of deployment update. The phase is
+        chosen according to the phase arg, and the id is used by this step.
+
+        In the first phase ("initiate") the deployment update is:
+
+        1. Staged (from a new blueprint)
+        2. The steps are extracted and saved onto the data model.
+        3. The data storage is manipulated according to the
+           addition/modification steps.
+        4. The update workflow is run, executing any lifecycles of add/removed
+           nodes or relationships.
+
+        Prerequisites:
+
+        * The blueprint for the deployment update has already been uploaded
+          to the manager.
+        * The request should contain a blueprint id.
+        * The inputs are supplied as a json dict - just like in deployment
+          creation.
+
+        Note: the blueprint id of the deployment will be updated to the given
+        blueprint id.
+
+        The second step ("finalize") finalizes the commit by manipulating the
+        data model according to any removal steps.
 
         In order
         :param id: for the initiate step it's the deployment_id, and for the
         finalize step it's the update_id
-        :param phase: finalize
+        :param phase: initiate or finalize
         :return: update response
         """
+        if phase == PHASES.INITIAL:
+            return self._initiate(id)
         if phase == PHASES.FINAL:
             return get_deployment_updates_manager().finalize_commit(id)
 
     @authorize('deployment_update_create')
     @rest_decorators.marshal_with(models.DeploymentUpdate)
     def put(self, id, phase):
-        """
-        Supports a newer form of deployment update, when the blueprint for the
-        update has already been uploaded to the manager.
-        The request should contain a blueprint id (instead of a new blueprint
-        to upload)
-        The inputs are now supplied as a json dict - just like in deployment
-        creation.
+        """DEPRECATED.  Please use POST method instead.
 
-        Note: the blueprint id of the deployment will be updated to the given
-        blueprint id.
+        This method is implemented for backward-compatibility only.
         """
+        return self._initiate(id)
+
+    @rest_decorators.marshal_with(models.DeploymentUpdate)
+    def _initiate(self, deployment_id):
         manager, skip_install, skip_uninstall, skip_reinstall, workflow_id, \
             ignore_failure, install_first, preview, update_plugins, \
             runtime_eval, auto_correct_args, reevaluate_active_statuses, \
             force = \
-            self._parse_args(id, request.json)
+            self._parse_args(deployment_id, request.json)
         blueprint, inputs, reinstall_list = \
-            self._get_and_validate_blueprint_and_inputs(id, request.json)
+            self._get_and_validate_blueprint_and_inputs(deployment_id,
+                                                        request.json)
         blueprint_dir_abs = _get_plugin_update_blueprint_abs_path(
             config.instance.file_server_root, blueprint)
         deployment_dir = join(FILE_SERVER_DEPLOYMENTS_FOLDER,
                               current_tenant.name,
-                              id,
+                              deployment_id,
                               'updated_blueprint')
         dep_dir_abs = join(config.instance.file_server_root, deployment_dir)
         rmtree(dep_dir_abs, ignore_errors=True)
@@ -85,7 +108,8 @@ class DeploymentUpdate(SecuredResource):
         file_name = blueprint.main_file_name
         try:
             deployment_update = manager.stage_deployment_update(
-                id, deployment_dir, file_name, inputs, blueprint.id, preview,
+                deployment_id, deployment_dir, file_name, inputs,
+                blueprint.id, preview,
                 runtime_only_evaluation=runtime_eval,
                 auto_correct_types=auto_correct_args,
                 reevaluate_active_statuses=reevaluate_active_statuses)
