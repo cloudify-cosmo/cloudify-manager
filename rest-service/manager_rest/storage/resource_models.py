@@ -138,9 +138,10 @@ class Blueprint(CreatedAtMixin, SQLResourceBase):
     def allowed_filter_attrs(cls):
         return ['created_by']
 
-    def to_response(self, **kwargs):
-        blueprint_dict = super(Blueprint, self).to_response()
-        blueprint_dict['labels'] = self.list_labels(self.labels)
+    def to_response(self, include, **kwargs):
+        blueprint_dict = super(Blueprint, self).to_response(include, **kwargs)
+        if 'labels' in include:
+            blueprint_dict['labels'] = self.list_labels(self.labels)
         return blueprint_dict
 
 
@@ -224,11 +225,12 @@ class Plugin(SQLResourceBase):
         fields['yaml_url_path'] = flask_fields.String
         return fields
 
-    def to_response(self, get_data=False, **kwargs):
-        plugin_dict = super(Plugin, self).to_response()
+    def to_response(self, include, get_data=False, **kwargs):
+        plugin_dict = super(Plugin, self).to_response(include, **kwargs)
         if not get_data:
             plugin_dict['file_server_path'] = ''
-        if 'installation_state' in plugin_dict:
+        if 'installation_state' in plugin_dict \
+                and 'installation_state' in include:
             plugin_dict['installation_state'] = [
                 s.to_dict() for s in plugin_dict['installation_state']]
         return plugin_dict
@@ -475,18 +477,27 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
     def allowed_filter_attrs(cls):
         return ['blueprint_id', 'created_by', 'site_name', 'schedules']
 
-    def to_response(self, **kwargs):
-        dep_dict = super(Deployment, self).to_response()
-        dep_dict['workflows'] = self._list_workflows(self.workflows)
-        dep_dict['labels'] = self.list_labels(self.labels)
-        dep_dict['deployment_groups'] = [g.id for g in self.deployment_groups]
-        dep_dict['latest_execution_status'] = self.latest_execution_status
-        if not dep_dict.get('installation_status'):
-            dep_dict['installation_status'] = DeploymentState.INACTIVE
-        dep_dict['latest_execution_total_operations'] = \
-            self.latest_execution_total_operations
-        dep_dict['latest_execution_finished_operations'] = \
-            self.latest_execution_finished_operations
+    def to_response(self, include, **kwargs):
+        dep_dict = super(Deployment, self).to_response(
+            include=include, **kwargs)
+        if 'workflows' in include:
+            dep_dict['workflows'] = self._list_workflows(self.workflows)
+        if 'labels' in include:
+            dep_dict['labels'] = self.list_labels(self.labels)
+        if 'deployment_groups' in include:
+            dep_dict['deployment_groups'] = \
+                [g.id for g in self.deployment_groups]
+        if 'latest_execution_status' in include:
+            dep_dict['latest_execution_status'] = self.latest_execution_status
+        if 'installation_status' in include:
+            if not dep_dict.get('installation_status'):
+                dep_dict['installation_status'] = DeploymentState.INACTIVE
+        if 'latest_execution_total_operations' in include:
+            dep_dict['latest_execution_total_operations'] = \
+                self.latest_execution_total_operations
+        if 'latest_execution_finished_operations' in include:
+            dep_dict['latest_execution_finished_operations'] = \
+                self.latest_execution_finished_operations
         return dep_dict
 
     @staticmethod
@@ -750,9 +761,9 @@ class DeploymentGroup(CreatedAtMixin, SQLResourceBase):
         fields['default_blueprint_id'] = flask_fields.String()
         return fields
 
-    def to_response(self, get_data=False, **kwargs):
-        response = super(DeploymentGroup, self).to_response()
-        if get_data:
+    def to_response(self, include, get_data=False, **kwargs):
+        response = super(DeploymentGroup, self).to_response(include, **kwargs)
+        if get_data or 'labels' in include:
             response['labels'] = self.list_labels(self.labels)
         return response
 
@@ -1221,14 +1232,15 @@ class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
 
         return ExecutionState.STARTED
 
-    def to_response(self, get_data=False, **kwargs):
+    def to_response(self, include, get_data=False, **kwargs):
         if get_data:
             skip_fields = []
         else:
             skip_fields = ['execution_ids', 'status']
         return {
             f: getattr(self, f)
-            for f in self.response_fields if f not in skip_fields
+            for f in self.response_fields
+            if f not in skip_fields and f in include
         }
 
     def start_executions(self,
@@ -1581,14 +1593,20 @@ class DeploymentUpdate(CreatedAtMixin, SQLResourceBase):
         fields['labels_to_create'] = flask_fields.List(flask_fields.Raw)
         return fields
 
-    def to_response(self, **kwargs):
-        dep_update_dict = super(DeploymentUpdate, self).to_response()
-        # Taking care of the fact the DeploymentSteps are objects
-        dep_update_dict['steps'] = [step.to_dict() for step in self.steps]
-        dep_update_dict['recursive_dependencies'] = self.recursive_dependencies
-        dep_update_dict['schedules_to_create'] = self.schedules_to_create
-        dep_update_dict['schedules_to_delete'] = self.schedules_to_delete
-        dep_update_dict['labels_to_create'] = self.labels_to_create
+    def to_response(self, include, **kwargs):
+        dep_update_dict = super(DeploymentUpdate, self).to_response(
+            include, **kwargs)
+        if 'steps' in include:
+            dep_update_dict['steps'] = [step.to_dict() for step in self.steps]
+        if 'recursive_dependencies' in include:
+            dep_update_dict['recursive_dependencies'] = \
+                self.recursive_dependencies
+        if 'schedules_to_create' in include:
+            dep_update_dict['schedules_to_create'] = self.schedules_to_create
+        if 'schedules_to_delete' in include:
+            dep_update_dict['schedules_to_delete'] = self.schedules_to_delete
+        if 'labels_to_create' in include:
+            dep_update_dict['labels_to_create'] = self.labels_to_create
         return dep_update_dict
 
     def set_deployment(self, deployment):
@@ -1847,8 +1865,8 @@ class Agent(CreatedAtMixin, SQLResourceBase):
         self._set_parent(node_instance)
         self.node_instance = node_instance
 
-    def to_response(self, **kwargs):
-        agent_dict = super(Agent, self).to_response()
+    def to_response(self, include, **kwargs):
+        agent_dict = super(Agent, self).to_response(include, **kwargs)
         agent_dict.pop('rabbitmq_username')
         agent_dict.pop('rabbitmq_password')
         return agent_dict
