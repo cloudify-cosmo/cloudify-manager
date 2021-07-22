@@ -1098,29 +1098,14 @@ def _verify_weekdays(weekdays, recurrence):
     return weekdays_caps
 
 
-def modify_blueprints_list_args(filters, _include):
-    """
-    As blueprints list can be retrieved both using `POST /searches/blueprints`
-    and `GET /blueprints`, we need a function to serve both endpoints to modify
-    the `filters` and `_include` arguments.
-    """
-    if filters is None:
-        filters = {}
-    filters.setdefault('is_hidden', False)
-    return filters, _include
-
-
-def modify_deployments_list_args(filters, _include):
-    """
-    As blueprints list can be retrieved both using `POST /searches/blueprints`
-    and `GET /blueprints`, we need a function to serve both endpoints to modify
-    the `filters` and `_include` arguments.
-    """
+def deployment_group_id_filter():
+    """Format the deployment group_id filter"""
     if '_group_id' in request.args:
-        filters['deployment_groups'] = lambda col: col.any(
-            models.DeploymentGroup.id == request.args['_group_id']
-        )
-    return filters, _include
+        return {
+            'deployment_groups': lambda col: col.any(
+                models.DeploymentGroup.id == request.args['_group_id'])
+        }
+    return {}
 
 
 def normalize_value(value):
