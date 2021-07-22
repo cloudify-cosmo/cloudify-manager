@@ -428,6 +428,16 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
     deployment_group_id = association_proxy('deployment_groups', 'id')
 
     @classproperty
+    def autoload_relationships(cls):
+        return [
+            cls.create_execution,
+            cls.latest_execution,
+            cls.deployment_groups,
+            cls.labels,
+            cls.schedules,
+        ]
+
+    @classproperty
     def labels_model(cls):
         return DeploymentLabel
 
