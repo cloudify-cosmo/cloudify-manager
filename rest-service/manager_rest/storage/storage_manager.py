@@ -118,14 +118,21 @@ class SQLStorageManager(object):
         the query
         :return: An SQLAlchemy AppenderQuery object
         """
-        # If only some columns are included, query through the session object
+        query = model_class.query
         if include:
-            # Make sure that attributes come before association proxies
-            include.sort(key=lambda x: x.is_clause_element)
-            query = db.session.query(*include)
-        else:
-            # If all columns should be returned, query directly from the model
-            query = model_class.query
+            attrs = set()
+            rels = set()
+            for field in include:
+                if isinstance(field.prop, RelationshipProperty):
+                    rels.add(field)
+                else:
+                    attrs.add(field)
+            if model_class.is_resource:
+                attrs.add(model_class._tenant_id)
+            if attrs:
+                query = query.options(db.load_only(*attrs))
+            if rels:
+                query = query.options(db.joinedload(*rels))
 
         if distinct:
             query = query.distinct(*distinct)
