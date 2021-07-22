@@ -1104,8 +1104,6 @@ def modify_blueprints_list_args(filters, _include):
     and `GET /blueprints`, we need a function to serve both endpoints to modify
     the `filters` and `_include` arguments.
     """
-    if _include and 'labels' in _include:
-        _include = None
     if filters is None:
         filters = {}
     filters.setdefault('is_hidden', False)
@@ -1122,10 +1120,6 @@ def modify_deployments_list_args(filters, _include):
         filters['deployment_groups'] = lambda col: col.any(
             models.DeploymentGroup.id == request.args['_group_id']
         )
-    if _include:
-        if {'labels', 'deployment_groups'}.intersection(_include):
-            _include = None
-
     return filters, _include
 
 
