@@ -101,9 +101,10 @@ class SQLResourceBase(SQLModelBase):
         # For backwards compatibility - adding it to the response.
         return self.visibility == VisibilityState.PRIVATE
 
-    def to_response(self, **kwargs):
-        fields = {f: getattr(self, f) for f in self.response_fields}
-        return fields
+    def to_response(self, include, **kwargs):
+        return {
+            f: getattr(self, f) for f in self.response_fields if f in include
+        }
 
     def _get_identifier_dict(self):
         id_dict = super(SQLResourceBase, self)._get_identifier_dict()

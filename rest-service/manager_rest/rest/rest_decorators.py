@@ -122,7 +122,8 @@ class marshal_with(object):
             response = f(*args, **kwargs)
 
             def wrap_list_items(response):
-                wrapped_items = self.wrap_with_response_object(response.items)
+                wrapped_items = self.wrap_with_response_object(
+                    response.items, fields_to_include)
                 response.items = marshal(wrapped_items, fields_to_include)
                 return response
 
@@ -140,22 +141,28 @@ class marshal_with(object):
                             code,
                             headers)
                 else:
-                    data = self.wrap_with_response_object(data)
+                    data = self.wrap_with_response_object(
+                        data, fields_to_include)
                     return marshal(data, fields_to_include), code, headers
             else:
-                response = self.wrap_with_response_object(response)
+                response = self.wrap_with_response_object(
+                    response, fields_to_include)
                 return marshal(response, fields_to_include)
 
         return wrapper
 
-    def wrap_with_response_object(self, data):
+    def wrap_with_response_object(self, data, fields_to_include):
         if isinstance(data, dict):
             return data
         elif isinstance(data, list):
-            return [self.wrap_with_response_object(item) for item in data]
+            return [
+                self.wrap_with_response_object(item, fields_to_include)
+                for item in data
+            ]
         elif isinstance(data, SQLModelBase):
             return data.to_response(
-                get_data=self._get_data() or self.force_get_data)
+                get_data=self._get_data() or self.force_get_data,
+                include=fields_to_include)
         # Support for partial results from SQLAlchemy (i.e. only
         # certain columns, and not the whole model class)
         elif isinstance(data, sql_alchemy_collection):
