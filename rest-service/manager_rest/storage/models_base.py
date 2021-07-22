@@ -177,6 +177,10 @@ class SQLModelBase(db.Model):
         return {f: getattr(self, f) for f in self.resource_fields}
 
     @classproperty
+    def autoload_relationships(cls):
+        return []
+
+    @classproperty
     def resource_fields(cls):
         """Return a mapping of available field names and their corresponding
         flask types
