@@ -48,9 +48,11 @@ class SQLResourceBase(SQLModelBase):
 
     @classproperty
     def response_fields(cls):
-        fields = cls.resource_fields.copy()
-        fields.update(cls._extra_fields)
-        return fields
+        if not hasattr(cls, '_cached_fields'):
+            fields = cls.resource_fields.copy()
+            fields.update(cls._extra_fields)
+            cls._cached_fields = fields
+        return cls._cached_fields
 
     @classmethod
     def unique_id(cls):

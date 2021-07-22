@@ -326,9 +326,11 @@ class Site(CreatedAtMixin, SQLResourceBase):
 
     @classproperty
     def response_fields(cls):
-        fields = super(Site, cls).response_fields
-        fields.pop('id')
-        return fields
+        if not hasattr(cls, '_cached_site_fields'):
+            fields = super(Site, cls).response_fields
+            fields.pop('id')
+            cls._cached_site_fields = fields
+        return cls._cached_site_fields
 
 # endregion
 
@@ -458,20 +460,25 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
 
     @classproperty
     def response_fields(cls):
-        fields = super(Deployment, cls).response_fields
-        fields.pop('deployment_group_id')
-        fields['workflows'] = flask_fields.List(
-            flask_fields.Nested(Workflow.resource_fields)
-        )
-        fields['labels'] = flask_fields.List(
-            flask_fields.Nested(Label.resource_fields))
-        fields['schedules'] = flask_fields.List(
-            flask_fields.Nested(ExecutionSchedule.resource_fields))
-        fields['deployment_groups'] = flask_fields.List(flask_fields.String)
-        fields['latest_execution_status'] = flask_fields.String()
-        fields['latest_execution_total_operations'] = flask_fields.Integer()
-        fields['latest_execution_finished_operations'] = flask_fields.Integer()
-        return fields
+        if not hasattr(cls, '_cached_deployment_fields'):
+            fields = super(Deployment, cls).response_fields
+            fields['labels'] = flask_fields.List(
+                flask_fields.Nested(Label.resource_fields))
+            fields.pop('deployment_group_id', None)
+            fields['workflows'] = flask_fields.List(
+                flask_fields.Nested(Workflow.resource_fields)
+            )
+            fields['schedules'] = flask_fields.List(
+                flask_fields.Nested(ExecutionSchedule.resource_fields))
+            fields['deployment_groups'] = \
+                flask_fields.List(flask_fields.String)
+            fields['latest_execution_status'] = flask_fields.String()
+            fields['latest_execution_total_operations'] = \
+                flask_fields.Integer()
+            fields['latest_execution_finished_operations'] = \
+                flask_fields.Integer()
+            cls._cached_deployment_fields = fields
+        return cls._cached_deployment_fields
 
     @classproperty
     def allowed_filter_attrs(cls):
@@ -985,9 +992,11 @@ class Execution(CreatedAtMixin, SQLResourceBase):
 
     @classproperty
     def response_fields(cls):
-        fields = super(Execution, cls).response_fields
-        fields.pop('execution_group_id')
-        return fields
+        if not hasattr(cls, '_cached_execution_fields'):
+            fields = super(Execution, cls).response_fields
+            fields.pop('execution_group_id')
+            cls._cached_execution_fields = fields
+        return cls._cached_execution_fields
 
     @validates('deployment')
     def _set_deployment(self, key, deployment):
@@ -1565,33 +1574,36 @@ class DeploymentUpdate(CreatedAtMixin, SQLResourceBase):
 
     @classproperty
     def response_fields(cls):
-        fields = super(DeploymentUpdate, cls).response_fields
-        fields.pop('deployment_update_deployment')
-        fields['steps'] = flask_fields.List(
-            flask_fields.Nested(DeploymentUpdateStep.response_fields)
-        )
-        dependency_fields = {
-            'deployment': flask_fields.String,
-            'dependency_type': flask_fields.String,
-            'dependent_node': flask_fields.String,
-            'tenant': flask_fields.String
-        }
-        created_scheduled_fields = {
-            'id': flask_fields.String,
-            'workflow': flask_fields.String,
-            'since': flask_fields.String,
-            'until': flask_fields.String,
-            'count': flask_fields.String,
-            'recurrence': flask_fields.String,
-            'weekdays': flask_fields.List(flask_fields.String)
-        }
-        fields['recursive_dependencies'] = flask_fields.List(
-            flask_fields.Nested(dependency_fields))
-        fields['schedules_to_create'] = flask_fields.List(
-            flask_fields.Nested(created_scheduled_fields))
-        fields['schedules_to_delete'] = flask_fields.List(flask_fields.String)
-        fields['labels_to_create'] = flask_fields.List(flask_fields.Raw)
-        return fields
+        if not hasattr(cls, '_cached_depupdate_fields'):
+            fields = super(DeploymentUpdate, cls).response_fields
+            fields.pop('deployment_update_deployment')
+            fields['steps'] = flask_fields.List(
+                flask_fields.Nested(DeploymentUpdateStep.response_fields)
+            )
+            dependency_fields = {
+                'deployment': flask_fields.String,
+                'dependency_type': flask_fields.String,
+                'dependent_node': flask_fields.String,
+                'tenant': flask_fields.String
+            }
+            created_scheduled_fields = {
+                'id': flask_fields.String,
+                'workflow': flask_fields.String,
+                'since': flask_fields.String,
+                'until': flask_fields.String,
+                'count': flask_fields.String,
+                'recurrence': flask_fields.String,
+                'weekdays': flask_fields.List(flask_fields.String)
+            }
+            fields['recursive_dependencies'] = flask_fields.List(
+                flask_fields.Nested(dependency_fields))
+            fields['schedules_to_create'] = flask_fields.List(
+                flask_fields.Nested(created_scheduled_fields))
+            fields['schedules_to_delete'] = \
+                flask_fields.List(flask_fields.String)
+            fields['labels_to_create'] = flask_fields.List(flask_fields.Raw)
+            cls._cached_depupdate_fields = fields
+        return cls._cached_depupdate_fields
 
     def to_response(self, include, **kwargs):
         dep_update_dict = super(DeploymentUpdate, self).to_response(
