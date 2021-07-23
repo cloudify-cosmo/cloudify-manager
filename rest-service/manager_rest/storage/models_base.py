@@ -174,9 +174,9 @@ class SQLModelBase(db.Model):
         return res
 
     def to_response(self, include=None, **kwargs):
+        include = include or self.resource_fields
         return {
-            f: getattr(self, f) for f in self.resource_fields
-            if not include or f in include
+            f: getattr(self, f) for f in self.resource_fields if f in include
         }
 
     @classproperty

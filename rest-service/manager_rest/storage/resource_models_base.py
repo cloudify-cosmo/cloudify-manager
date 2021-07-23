@@ -104,9 +104,9 @@ class SQLResourceBase(SQLModelBase):
         return self.visibility == VisibilityState.PRIVATE
 
     def to_response(self, include=None, **kwargs):
+        include = include or self.response_fields
         return {
-            f: getattr(self, f) for f in self.response_fields
-            if not include or f in include
+            f: getattr(self, f) for f in self.response_fields if f in include
         }
 
     def _get_identifier_dict(self):
