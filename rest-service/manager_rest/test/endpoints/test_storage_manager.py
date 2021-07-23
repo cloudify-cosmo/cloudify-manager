@@ -206,10 +206,10 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         self.assertEqual('blueprint-id', blueprint_restored.id)
         self.assertEqual(now, blueprint_restored.created_at)
         db.session.expunge(blueprint_restored)
-        for attr in ['updated_at', 'plan', 'main_file_name']:
+        for attrname in ['updated_at', 'plan', 'main_file_name']:
             with self.assertRaises(DetachedInstanceError):
                 # the attribute cannot be loaded - and it was not loaded before
-                getattr(blueprint_restored, attr)
+                getattr(blueprint_restored, attrname)
 
     @mock.patch('manager_rest.storage.storage_manager.'
                 'config.instance.default_page_size',
