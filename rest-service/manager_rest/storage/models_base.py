@@ -173,8 +173,11 @@ class SQLModelBase(db.Model):
                     full_response['resource_availability']
         return res
 
-    def to_response(self, **kwargs):
-        return {f: getattr(self, f) for f in self.resource_fields}
+    def to_response(self, include=None, **kwargs):
+        return {
+            f: getattr(self, f) for f in self.resource_fields
+            if not include or f in include
+        }
 
     @classproperty
     def autoload_relationships(cls):
