@@ -1889,8 +1889,8 @@ class Agent(CreatedAtMixin, SQLResourceBase):
 
     def to_response(self, include=None, **kwargs):
         agent_dict = super(Agent, self).to_response(include, **kwargs)
-        agent_dict.pop('rabbitmq_username')
-        agent_dict.pop('rabbitmq_password')
+        agent_dict.pop('rabbitmq_username', None)
+        agent_dict.pop('rabbitmq_password', None)
         return agent_dict
 
 
