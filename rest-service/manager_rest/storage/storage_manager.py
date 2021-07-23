@@ -125,6 +125,8 @@ class SQLStorageManager(object):
             attrs = set()
             rels = set()
             for field in include:
+                if not hasattr(field, 'prop'):
+                    continue
                 if isinstance(field.prop, RelationshipProperty):
                     rels.add(field)
                 else:
