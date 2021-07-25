@@ -1258,10 +1258,9 @@ class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
     def to_response(self, include=None, get_data=False, **kwargs):
         include = include or self.response_fields
         if not get_data:
-            skip_fields = []
-        else:
             skip_fields = ['execution_ids', 'status']
-
+        else:
+            skip_fields = []
         return {
             f: getattr(self, f)
             for f in self.response_fields
