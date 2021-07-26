@@ -987,12 +987,6 @@ class ResourceManager(object):
                     execution, force, queue)
 
             if should_queue:
-                if not execution.deployment.installation_status:
-                    execution.deployment.installation_status =\
-                        DeploymentState.INACTIVE
-                execution.deployment.deployment_status =\
-                    DeploymentState.IN_PROGRESS
-                self.sm.update(execution.deployment)
                 self._workflow_queued(execution)
                 return execution
             if execution.deployment:
