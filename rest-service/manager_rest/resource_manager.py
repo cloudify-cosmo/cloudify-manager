@@ -992,7 +992,6 @@ class ResourceManager(object):
                         DeploymentState.INACTIVE
                 execution.deployment.deployment_status =\
                     DeploymentState.IN_PROGRESS
-                execution.deployment.latest_execution = execution
                 self.sm.update(execution.deployment)
                 self._workflow_queued(execution)
                 return execution
