@@ -895,7 +895,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         deployments = self.client.deployments.list(
             filter_id=self.FILTER_ID)
         self.assertEqual(len(deployments), 1)
-        self.assertEqual(deployments[0], dep2)
+        self.assertEqual(deployments[0].id, dep2.id)
         self.assert_metadata_filtered(deployments, 1)
 
     def test_update_attributes(self):

@@ -21,7 +21,7 @@ import shutil
 from manager_rest import archiving
 from manager_rest.test import base_test
 from manager_rest.test.attribute import attr
-from manager_rest.storage.resource_models import Blueprint
+from manager_rest.storage.resource_models import Blueprint, db
 
 from cloudify._compat import text_type
 from cloudify_rest_client import exceptions
@@ -398,7 +398,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         blueprint = self.sm.get(Blueprint, blueprint_id, include=[
             'plan', 'created_at', 'updated_at', 'visibility', 'state',
             'error'])
-
+        db.session.expunge(blueprint)
         self.client.blueprints.update(blueprint_id, {'state': new_state,
                                                      'error': new_error})
         updated_blueprint = self.sm.get(Blueprint, blueprint_id, include=[

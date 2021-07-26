@@ -19,6 +19,7 @@ from collections import OrderedDict
 from contextlib import contextmanager
 from flask_security import current_user
 from sqlalchemy import or_ as sql_or, inspect, func
+from sqlalchemy.orm import RelationshipProperty
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from flask import current_app, has_request_context
@@ -110,7 +111,8 @@ class SQLStorageManager(object):
             self._in_transaction = False
             self._safe_commit()
 
-    def _get_base_query(self, model_class, include, joins, distinct=None):
+    def _get_base_query(self, model_class, include, joins, distinct=None,
+                        load_relationships=False):
         """Create the initial query from the model class and included columns
 
         :param model_class: SQL DB table class
@@ -118,14 +120,29 @@ class SQLStorageManager(object):
         the query
         :return: An SQLAlchemy AppenderQuery object
         """
-        # If only some columns are included, query through the session object
+        query = model_class.query
         if include:
-            # Make sure that attributes come before association proxies
-            include.sort(key=lambda x: x.is_clause_element)
-            query = db.session.query(*include)
-        else:
-            # If all columns should be returned, query directly from the model
-            query = model_class.query
+            attrs = set()
+            rels = set()
+            for field in include:
+                if not hasattr(field, 'prop'):
+                    continue
+                if isinstance(field.prop, RelationshipProperty):
+                    rels.add(field)
+                else:
+                    attrs.add(field)
+            if model_class.is_resource:
+                attrs.add(model_class._tenant_id)
+            if attrs:
+                query = query.options(db.load_only(*attrs))
+            if rels:
+                query = query.options(db.joinedload(*rels))
+
+        if load_relationships and not include:
+            query = query.options(
+                db.joinedload(attr)
+                for attr in model_class.autoload_relationships
+            )
 
         if distinct:
             query = query.distinct(*distinct)
@@ -353,7 +370,8 @@ class SQLStorageManager(object):
                    all_tenants=None,
                    distinct=None,
                    filter_rules=None,
-                   default_sorting=True):
+                   default_sorting=True,
+                   load_relationships=False):
         """Get an SQL query object based on the params passed
 
         :param model_class: SQL DB table class
@@ -365,6 +383,8 @@ class SQLStorageManager(object):
                                when the results are filtered by substrings
         :param sort: An optional dictionary where keys are column names to
         sort by, and values are the order (asc/desc)
+        :param load_relationships: automatically join all relationships
+                                   declared in model.autoload_relationships
         :return: A sorted and filtered query with only the relevant
         columns
         """
@@ -376,7 +396,8 @@ class SQLStorageManager(object):
                                                   sort,
                                                   distinct)
 
-        query = self._get_base_query(model_class, include, joins, distinct)
+        query = self._get_base_query(
+            model_class, include, joins, distinct, load_relationships)
         query = self._filter_query(query,
                                    model_class,
                                    filters,
@@ -601,7 +622,8 @@ class SQLStorageManager(object):
              get_all_results=False,
              distinct=None,
              locking=False,
-             filter_rules=None):
+             filter_rules=None,
+             load_relationships=False):
         """Return a list of `model_class` results
 
         :param model_class: SQL DB table class
@@ -640,7 +662,8 @@ class SQLStorageManager(object):
                                 sort,
                                 all_tenants,
                                 distinct,
-                                filter_rules)
+                                filter_rules,
+                                load_relationships=load_relationships)
 
         results, total, size, offset = self._paginate(
             query,

@@ -1555,7 +1555,7 @@ class ResourceManager(object):
             include=['id'],
             filters={'id': lambda col: col.in_(parents)}
         ).items
-        _existing_parents = [_parent[0] for _parent in result]
+        _existing_parents = [_parent.id for _parent in result]
         missing_parents = set(parents) - set(_existing_parents)
         return missing_parents
 
