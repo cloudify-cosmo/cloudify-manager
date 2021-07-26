@@ -48,9 +48,11 @@ class SQLResourceBase(SQLModelBase):
 
     @classproperty
     def response_fields(cls):
-        fields = cls.resource_fields.copy()
-        fields.update(cls._extra_fields)
-        return fields
+        if not hasattr(cls, '_cached_fields'):
+            fields = cls.resource_fields.copy()
+            fields.update(cls._extra_fields)
+            cls._cached_fields = fields
+        return cls._cached_fields
 
     @classmethod
     def unique_id(cls):
@@ -101,9 +103,11 @@ class SQLResourceBase(SQLModelBase):
         # For backwards compatibility - adding it to the response.
         return self.visibility == VisibilityState.PRIVATE
 
-    def to_response(self, **kwargs):
-        fields = {f: getattr(self, f) for f in self.response_fields}
-        return fields
+    def to_response(self, include=None, **kwargs):
+        include = include or self.response_fields
+        return {
+            f: getattr(self, f) for f in self.response_fields if f in include
+        }
 
     def _get_identifier_dict(self):
         id_dict = super(SQLResourceBase, self)._get_identifier_dict()

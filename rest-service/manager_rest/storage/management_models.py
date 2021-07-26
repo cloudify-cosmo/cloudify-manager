@@ -73,7 +73,7 @@ class Permission(SQLModelBase):
     role = db.relationship(Role)
     role_name = association_proxy('role', 'name')
 
-    def to_response(self, get_data=False):
+    def to_response(self, include=None, get_data=False, **kwargs):
         return {
             'role': self.role_name,
             'permission': self.name
@@ -140,8 +140,8 @@ class Tenant(SQLModelBase):
             for user, roles in self.all_users.items()
         }
 
-    def to_response(self, get_data=False):
-        tenant_dict = super(Tenant, self).to_response()
+    def to_response(self, include=None, get_data=False, **kwargs):
+        tenant_dict = super(Tenant, self).to_response(include, **kwargs)
         tenant_dict['groups'] = self._get_groups_response()
         tenant_dict['users'] = self._get_users_response()
 
@@ -245,8 +245,8 @@ class Group(SQLModelBase):
         """Get users that have been added to the group."""
         return sorted(user.username for user in self.users)
 
-    def to_response(self, get_data=False):
-        group_dict = super(Group, self).to_response()
+    def to_response(self, include=None, get_data=False, **kwargs):
+        group_dict = super(Group, self).to_response(include, **kwargs)
         group_dict['tenants'] = self._get_tenants_response()
         group_dict['users'] = self._get_users_response()
         group_dict['role'] = self.role
@@ -431,8 +431,8 @@ class User(SQLModelBase, UserMixin):
             for tenant in self.group_tenants
         }
 
-    def to_response(self, get_data=False):
-        user_dict = super(User, self).to_response()
+    def to_response(self, include=None, get_data=False, **kwargs):
+        user_dict = super(User, self).to_response(include, **kwargs)
         user_dict['tenants'] = self._get_tenants_response()
         user_dict['groups'] = self._get_groups_response()
         user_dict['role'] = self.role
@@ -536,8 +536,8 @@ class License(SQLModelBase):
                                             '%Y-%m-%dT%H:%M:%S.%fZ')
         return expiration_date < now
 
-    def to_response(self, get_data=False):
-        user_dict = super(License, self).to_response()
+    def to_response(self, include=None, get_data=False, **kwargs):
+        user_dict = super(License, self).to_response(include, **kwargs)
         user_dict['expired'] = self.expired
         return user_dict
 

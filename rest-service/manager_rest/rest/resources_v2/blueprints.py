@@ -55,8 +55,8 @@ class Blueprints(resources_v1.Blueprints):
             '_get_all_results',
             request.args.get('_get_all_results', False)
         )
-        filters, _include = rest_utils.modify_blueprints_list_args(filters,
-                                                                   _include)
+        filters = filters or {}
+        filters.setdefault('is_hidden', False)
         filter_rules = get_filter_rules_from_filter_id(filter_id,
                                                        models.BlueprintsFilter)
         return get_storage_manager().list(

@@ -143,8 +143,7 @@ class DeploymentsSearches(ResourceSearches):
     def post(self, _include=None, pagination=None, sort=None,
              all_tenants=None, search=None, filter_id=None, **kwargs):
         """List deployments using filter rules"""
-        filters, _include = rest_utils.modify_deployments_list_args({},
-                                                                    _include)
+        filters = rest_utils.deployment_group_id_filter()
         return super().post(models.Deployment, models.DeploymentsFilter,
                             _include, filters, pagination, sort, all_tenants,
                             search, filter_id, **kwargs)
@@ -163,8 +162,7 @@ class BlueprintsSearches(ResourceSearches):
     def post(self, _include=None, pagination=None, sort=None,
              all_tenants=None, search=None, filter_id=None, **kwargs):
         """List blueprints using filter rules"""
-        filters, _include = rest_utils.modify_blueprints_list_args({},
-                                                                   _include)
+        filters = {'is_hidden': False}
         return super().post(models.Blueprint, models.BlueprintsFilter,
                             _include, filters, pagination, sort, all_tenants,
                             search, filter_id, **kwargs)
@@ -189,9 +187,7 @@ class WorkflowsSearches(ResourceSearches):
     def post(self, all_tenants=None, search=None, filter_id=None, **kwargs):
         """List workflows using filter rules"""
         _include = ['id', 'workflows']
-        filters, _include = rest_utils.modify_deployments_list_args({},
-                                                                    _include)
-
+        filters = rest_utils.deployment_group_id_filter()
         result = super().post(models.Deployment, models.DeploymentsFilter,
                               _include, filters, None, None, all_tenants,
                               search, filter_id, **kwargs)

@@ -31,8 +31,8 @@ class Workflows(SecuredResource):
         List workflows defined for deployments filtered by kwargs.
         """
         _include = ['id', 'workflows']
-        filters, _include = rest_utils.modify_deployments_list_args(filters,
-                                                                    _include)
+        filters = filters or {}
+        filters.update(rest_utils.deployment_group_id_filter())
         filter_rules = filters_utils.get_filter_rules_from_filter_id(
             filter_id, models.DeploymentsFilter)
         result = get_storage_manager().list(
