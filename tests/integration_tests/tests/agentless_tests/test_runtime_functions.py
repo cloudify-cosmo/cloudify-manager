@@ -97,6 +97,7 @@ class TestRuntimeFunctionEvaluation(AgentlessTestCase):
                 "prop2: '{0}'".format(self.BASE_VALUE),
                 "prop2: '{0}'".format(self.CHANGED_VALUE))
             new_bp.write(bp_content)
+        self.upload_blueprint_resource(new_bp.name, 'updated_blueprint')
 
         params = {}
         if skip:
@@ -107,9 +108,9 @@ class TestRuntimeFunctionEvaluation(AgentlessTestCase):
             }
         if add_flag:
             params['runtime_only_evaluation'] = True
-        dep_update = self.client.deployment_updates.update(
+        dep_update = self.client.deployment_updates.update_with_existing_blueprint(
             deployment_id=deployment.id,
-            blueprint_or_archive_path=new_bp.name,
+            blueprint_id='updated_blueprint',
             inputs={'input1': self.CHANGED_VALUE, 'fail_create': False},
             **params
         )
