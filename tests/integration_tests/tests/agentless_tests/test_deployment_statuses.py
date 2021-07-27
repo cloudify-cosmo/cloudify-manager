@@ -319,25 +319,6 @@ class DeploymentStatuses(AgentlessTestCase):
             DeploymentState.GOOD,
         )
 
-    def test_deployment_statuses_for_queued_execution(self):
-        dsl_path = resource("dsl/basic.yaml")
-        deployment = self.deploy(dsl_path)
-        self._force_deployment_to_be_queued(deployment.id)
-
-        deployment = self.client.deployments.get(deployment.id)
-        self.assertEqual(
-            deployment.latest_execution_status,
-            DeploymentState.IN_PROGRESS
-        )
-        self.assertEqual(
-            deployment.installation_status,
-            DeploymentState.INACTIVE
-        )
-        self.assertEqual(
-            deployment.deployment_status,
-            DeploymentState.IN_PROGRESS
-        )
-
     def test_deployment_statuses_after_queued_execution_finish(self):
         dsl_path = resource("dsl/basic.yaml")
         deployment = self.deploy(dsl_path)
