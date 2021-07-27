@@ -272,7 +272,9 @@ class Events(SecuredResource):
                 _, sort_direction = dict(sort).popitem()
             else:
                 sort_direction = 'asc'
-            query = Events._apply_sort(query, {'_storage_id': sort_direction})
+            query = Events._apply_sort(query, {
+                'timestamp': sort_direction, '_storage_id': sort_direction
+            })
             query = (
                 query
                 .limit(bindparam('limit'))
