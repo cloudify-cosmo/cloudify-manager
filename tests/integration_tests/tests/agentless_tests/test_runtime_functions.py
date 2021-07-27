@@ -108,12 +108,13 @@ class TestRuntimeFunctionEvaluation(AgentlessTestCase):
             }
         if add_flag:
             params['runtime_only_evaluation'] = True
-        dep_update = self.client.deployment_updates.update_with_existing_blueprint(
-            deployment_id=deployment.id,
-            blueprint_id='updated_blueprint',
-            inputs={'input1': self.CHANGED_VALUE, 'fail_create': False},
-            **params
-        )
+        dep_update = self.client.deployment_updates\
+            .update_with_existing_blueprint(
+                deployment_id=deployment.id,
+                blueprint_id='updated_blueprint',
+                inputs={'input1': self.CHANGED_VALUE, 'fail_create': False},
+                **params
+            )
         execution = self.client.executions.get(dep_update.execution_id)
         self.wait_for_execution_to_end(execution)
         dep_update = self.client.deployment_updates.finalize_commit(
