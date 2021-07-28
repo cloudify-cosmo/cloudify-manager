@@ -77,18 +77,6 @@ class Deployments(resources_v1.Deployments):
             filter_rules=filter_rules,
             load_relationships=True,
         )
-
-        if _include and 'workflows' in _include:
-            # Because we coerce this into a list in the model, but our ORM
-            # won't return a model instance when filtering results, we have
-            # to coerce this here as well. This is unpleasant.
-            for index, item in enumerate(result.items):
-                r = item._asdict()
-                r['workflows'] = models.Deployment._list_workflows(
-                    r['workflows'],
-                )
-                result.items[index] = r
-
         return result
 
 
