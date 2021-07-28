@@ -802,7 +802,7 @@ class ExecutionsTest(AgentlessTestCase):
     def test_dry_run_execution(self):
         expected_messages = [
             "Starting 'install' workflow execution \\(dry run\\)",
-            "Subgraph started '[^\']+' \\(dry run\\)",
+            "Subgraph started '[^']+' \\(dry run\\)",
             "Validating node instance before creation: nothing to do",
             "Precreating node instance: nothing to do",
             "Creating node instance",
@@ -814,7 +814,7 @@ class ExecutionsTest(AgentlessTestCase):
             "Task succeeded 'cloudmock.tasks.get_state' \\(dry run\\)",
             "Poststarting node instance: nothing to do",
             "Node instance started",
-            "Subgraph succeeded '[^\']+' \\(dry run\\)",
+            "Subgraph succeeded '[^']+' \\(dry run\\)",
             "'install' workflow execution succeeded \\(dry run\\)",
         ]
 
