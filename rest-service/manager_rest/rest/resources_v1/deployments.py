@@ -74,11 +74,6 @@ class DeploymentsId(SecuredResource):
             deployment_id,
             include=_include
         )
-        if _include and 'workflows' in _include:  # Similar to CY-760
-            result = result._asdict()
-            result['workflows'] = models.Deployment._list_workflows(
-                result['workflows'],
-            )
         return result
 
     @swagger.operation(
