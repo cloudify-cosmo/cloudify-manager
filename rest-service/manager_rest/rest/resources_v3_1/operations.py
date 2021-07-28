@@ -178,6 +178,7 @@ class OperationsId(SecuredResource):
         try:
             message = common_events.format_event_message(
                 operation.name,
+                operation.type,
                 operation.state,
                 result,
                 exception,
