@@ -168,7 +168,7 @@ class OperationsId(SecuredResource):
         try:
             context = operation.parameters['task_kwargs']['kwargs'][
                 '__cloudify_context']
-        except (KeyError, TypeError) as e:
+        except (KeyError, TypeError):
             context = {}
         if exception is not None:
             operation.parameters.setdefault('error', str(exception))
