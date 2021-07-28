@@ -13,6 +13,7 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import re
 import time
 import uuid
 import pytest
@@ -799,27 +800,23 @@ class ExecutionsTest(AgentlessTestCase):
         self.assertDictEqual(invocations[0], {'before-sleep': None})
 
     def test_dry_run_execution(self):
-        expected_messages = {
-            "Starting 'install' workflow execution (dry run)",
+        expected_messages = [
+            "Starting 'install' workflow execution \\(dry run\\)",
+            "Subgraph started '[^']+' \\(dry run\\)",
             "Validating node instance before creation: nothing to do",
             "Precreating node instance: nothing to do",
             "Creating node instance",
-            "Sending task 'cloudmock.tasks.provision'",
-            "Task started 'cloudmock.tasks.provision'",
-            "Task succeeded 'cloudmock.tasks.provision (dry run)'",
+            "Task succeeded 'cloudmock.tasks.provision' \\(dry run\\)",
             "Node instance created",
             "Configuring node instance: nothing to do",
             "Starting node instance",
-            "Sending task 'cloudmock.tasks.start'",
-            "Task started 'cloudmock.tasks.start'",
-            "Task succeeded 'cloudmock.tasks.start (dry run)'",
-            "Sending task 'cloudmock.tasks.get_state'",
-            "Task started 'cloudmock.tasks.get_state'",
-            "Task succeeded 'cloudmock.tasks.get_state (dry run)'",
+            "Task succeeded 'cloudmock.tasks.start' \\(dry run\\)",
+            "Task succeeded 'cloudmock.tasks.get_state' \\(dry run\\)",
             "Poststarting node instance: nothing to do",
             "Node instance started",
-            "'install' workflow execution succeeded (dry run)"
-        }
+            "Subgraph succeeded '[^']+' \\(dry run\\)",
+            "'install' workflow execution succeeded \\(dry run\\)",
+        ]
 
         dsl_path = resource("dsl/basic.yaml")
         _, execution_id = self.deploy_application(dsl_path,
@@ -830,9 +827,13 @@ class ExecutionsTest(AgentlessTestCase):
         # "terminated", because it arrives via a different mechanism
         time.sleep(3)
         events = self.client.events.list(execution_id=execution_id)
-        event_messages = {event['message'] for event in events}
-
-        self.assertEqual(event_messages, expected_messages)
+        event_messages = [event['message'] for event in events]
+        self.assertEqual(len(event_messages), len(expected_messages))
+        for message, expected_regex in zip(event_messages, expected_messages):
+            self.assertIsNotNone(
+                re.match(expected_regex, message),
+                "{0!r} did not match {1!r}".format(message, expected_regex)
+            )
 
         # We expect the instances to remain unchaged after a dry run
         for instance in self.client.node_instances.list():

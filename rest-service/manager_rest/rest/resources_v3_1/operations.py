@@ -161,7 +161,7 @@ class OperationsId(SecuredResource):
 
     def _insert_event(self, operation, result=None, exception=None,
                       exception_causes=None):
-        if operation.type != 'RemoteWorkflowTask':
+        if operation.type not in ('RemoteWorkflowTask', 'SubgraphTask'):
             return
         if not current_execution:
             return
@@ -169,7 +169,7 @@ class OperationsId(SecuredResource):
             context = operation.parameters['task_kwargs']['kwargs'][
                 '__cloudify_context']
         except (KeyError, TypeError):
-            return
+            context = {}
         if exception is not None:
             operation.parameters.setdefault('error', str(exception))
         current_retries = operation.parameters.get('current_retries') or 0
@@ -178,6 +178,7 @@ class OperationsId(SecuredResource):
         try:
             message = common_events.format_event_message(
                 operation.name,
+                operation.type,
                 operation.state,
                 result,
                 exception,
