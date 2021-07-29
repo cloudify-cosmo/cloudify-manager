@@ -469,6 +469,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         return one_to_many_relationship(cls, Site, cls._site_fk, cascade=False)
 
     site_name = association_proxy('site', 'name')
+    latest_execution_status = association_proxy('latest_execution', 'status')
 
     @classproperty
     def response_fields(cls):
@@ -508,7 +509,9 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             dep_dict['deployment_groups'] = \
                 [g.id for g in self.deployment_groups]
         if 'latest_execution_status' in include:
-            dep_dict['latest_execution_status'] = self.latest_execution_status
+            dep_dict['latest_execution_status'] = \
+                DeploymentState.EXECUTION_STATES_SUMMARY.get(
+                    self.latest_execution_status)
         if 'installation_status' in include:
             if not dep_dict.get('installation_status'):
                 dep_dict['installation_status'] = DeploymentState.INACTIVE
@@ -531,13 +534,6 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                          operation=wf.get('operation', ''),
                          parameters=wf.get('parameters', dict()))
                 for wf_name, wf in deployment_workflows.items()]
-
-    @property
-    def latest_execution_status(self):
-        _execution = self.latest_execution or self.create_execution
-        if not _execution:
-            return None
-        return DeploymentState.EXECUTION_STATES_SUMMARY.get(_execution.status)
 
     def compare_between_statuses(
             self,
@@ -616,9 +612,11 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
         and latest execution object
         :return: deployment_status: Overall deployment status
         """
-        if self.latest_execution_status == DeploymentState.IN_PROGRESS:
+        latest_status = DeploymentState.EXECUTION_STATES_SUMMARY.get(
+            self.latest_execution_status)
+        if latest_status == DeploymentState.IN_PROGRESS:
             deployment_status = DeploymentState.IN_PROGRESS
-        elif self.latest_execution_status == DeploymentState.FAILED \
+        elif latest_status == DeploymentState.FAILED \
                 or self.installation_status == DeploymentState.INACTIVE:
             deployment_status = DeploymentState.REQUIRE_ATTENTION
         else:
@@ -671,6 +669,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             status=ExecutionState.PENDING,
             parameters={'inputs': inputs, **params},
         )
+        self.latest_execution = self.create_execution
         return self.create_execution
 
     def _validate_inputs(self, inputs):
