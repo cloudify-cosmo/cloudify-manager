@@ -65,7 +65,10 @@ class TestWorkflow(AgentTestWithPlugins):
         # 1 new exchange
         agent_queues = self._get_queues(vhost) - tenant_queues
         agent_exchanges = self._get_exchanges(vhost) - tenant_exchanges
-        assert len(agent_queues) == 2
+        assert len(agent_queues) == 2, (
+            "expected 2 agent queues, but found {0}: {1}"
+            .format(len(agent_queues), agent_queues)
+        )
         assert any(queue.endswith('_service') for queue in agent_queues)
         assert any(queue.endswith('_operation') for queue in agent_queues)
         assert any(exc.startswith('agent_host') for exc in agent_exchanges)
