@@ -534,7 +534,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
 
     @property
     def latest_execution_status(self):
-        _execution = self.latest_execution or self.create_execution
+        _execution = self.latest_execution
         if not _execution:
             return None
         return DeploymentState.EXECUTION_STATES_SUMMARY.get(_execution.status)
@@ -671,6 +671,7 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
             status=ExecutionState.PENDING,
             parameters={'inputs': inputs, **params},
         )
+        self.latest_execution = self.create_execution
         return self.create_execution
 
     def _validate_inputs(self, inputs):
