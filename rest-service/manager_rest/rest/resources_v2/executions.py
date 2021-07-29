@@ -76,5 +76,6 @@ class Executions(resources_v1.Executions):
             is_include_system_workflows=is_include_system_workflows,
             include=_include,
             all_tenants=all_tenants,
-            get_all_results=get_all_results
+            get_all_results=get_all_results,
+            load_relationships=True,
         )

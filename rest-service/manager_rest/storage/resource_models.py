@@ -956,6 +956,12 @@ class Execution(CreatedAtMixin, SQLResourceBase):
                                         server_default='false')
     execution_group_id = association_proxy('execution_groups', 'id')
 
+    @classproperty
+    def autoload_relationships(cls):
+        return [
+            cls.deployment,
+        ]
+
     def __repr__(self):
         return (
             f'<Execution id=`{self.id}` tenant=`{self.tenant_name}` '
