@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import logging
 import argparse
+from contextlib import contextmanager
 
 from cloudify import broker_config, dispatch
 from cloudify.logs import setup_agent_logger
@@ -61,6 +62,12 @@ class CloudifyWorkflowConsumer(CloudifyOperationConsumer):
     routing_key = 'workflow'
     handler = dispatch.WorkflowHandler
     late_ack = True
+
+    @contextmanager
+    def _update_operation_state(self, ctx):
+        # noop - override superclass method, which tries to update the
+        # operation state: we're not working with operations, but workflows
+        yield
 
     def handle_task(self, full_task):
         if self.is_scheduled_execution(full_task):
