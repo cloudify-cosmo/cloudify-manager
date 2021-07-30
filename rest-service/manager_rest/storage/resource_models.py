@@ -428,6 +428,10 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                                        unique=True)
 
     deployment_group_id = association_proxy('deployment_groups', 'id')
+    latest_execution_finished_operations = association_proxy(
+        'latest_execution', 'finished_operations')
+    latest_execution_total_operations = association_proxy(
+        'latest_execution', 'total_operations')
 
     @classproperty
     def autoload_relationships(cls):
@@ -490,6 +494,8 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                 flask_fields.Integer()
             fields['latest_execution_finished_operations'] = \
                 flask_fields.Integer()
+            fields['has_sub_deployments'] = \
+                flask_fields.Boolean()
             cls._cached_deployment_fields = fields
         return cls._cached_deployment_fields
 
@@ -723,21 +729,13 @@ class Deployment(CreatedAtMixin, SQLResourceBase):
                       env_type_stmt.label('environment_type'))],
                     else_='')
 
-    @property
-    def latest_execution_finished_operations(self):
-        if not self.latest_execution:
-            return None
-        return self.latest_execution.finished_operations
-
-    @property
-    def latest_execution_total_operations(self):
-        if not self.latest_execution:
-            return None
-        return self.latest_execution.total_operations
-
-    @property
+    @hybrid_property
     def has_sub_deployments(self):
         return self.sub_services_count or self.sub_environments_count
+
+    @has_sub_deployments.expression
+    def has_sub_deployments(self):
+        return (self.sub_services_count + self.sub_environments_count) > 0
 
 
 class DeploymentGroup(CreatedAtMixin, SQLResourceBase):
@@ -750,6 +748,9 @@ class DeploymentGroup(CreatedAtMixin, SQLResourceBase):
         ondelete='SET NULL',
         nullable=True)
 
+    deployment_ids = association_proxy('deployments', 'id')
+    default_blueprint_id = association_proxy('default_blueprint', 'id')
+
     @declared_attr
     def default_blueprint(cls):
         return one_to_many_relationship(
@@ -758,16 +759,6 @@ class DeploymentGroup(CreatedAtMixin, SQLResourceBase):
     @declared_attr
     def deployments(cls):
         return many_to_many_relationship(cls, Deployment, unique=True)
-
-    @property
-    def deployment_ids(self):
-        return [dep.id for dep in self.deployments]
-
-    @property
-    def default_blueprint_id(self):
-        if not self.default_blueprint:
-            return None
-        return self.default_blueprint.id
 
     @classproperty
     def response_fields(cls):
@@ -955,6 +946,7 @@ class Execution(CreatedAtMixin, SQLResourceBase):
     allow_custom_parameters = db.Column(db.Boolean, nullable=False,
                                         server_default='false')
     execution_group_id = association_proxy('execution_groups', 'id')
+    deployment_display_name = association_proxy('deployment', 'display_name')
 
     @classproperty
     def autoload_relationships(cls):
@@ -991,11 +983,6 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             for status, label in cls.STATUS_DISPLAY_NAMES.items()
         ]
         return case(cases, else_=db.cast(table.c.status, db.Text))
-
-    @property
-    def deployment_display_name(self):
-        if self.deployment:
-            return self.deployment.display_name
 
     def _get_identifier_dict(self):
         id_dict = super(Execution, self)._get_identifier_dict()
@@ -1183,6 +1170,7 @@ class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
                                     ondelete='SET NULL')
     _failed_group_fk = foreign_key(DeploymentGroup._storage_id, nullable=True,
                                    ondelete='SET NULL')
+    execution_ids = association_proxy('executions', 'id')
 
     @declared_attr
     def deployment_group(cls):
@@ -1215,10 +1203,6 @@ class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
             exc for exc in self.executions
             if exc.status in ExecutionState.IN_PROGRESS_STATES
         ]
-
-    @property
-    def execution_ids(self):
-        return [exc.id for exc in self.executions]
 
     @classproperty
     def response_fields(cls):
