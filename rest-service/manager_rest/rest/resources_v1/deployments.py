@@ -63,18 +63,9 @@ class DeploymentsId(SecuredResource):
     @authorize('deployment_get')
     @marshal_with(models.Deployment)
     def get(self, deployment_id, _include=None, **kwargs):
-        """
-        Get deployment by id
-        """
-        if _include:
-            if {'labels', 'deployment_groups'}.intersection(_include):
-                _include = None
-        result = get_storage_manager().get(
-            models.Deployment,
-            deployment_id,
-            include=_include
-        )
-        return result
+        """Get deployment by id"""
+        return get_storage_manager().get(
+            models.Deployment, deployment_id, include=_include)
 
     @swagger.operation(
         responseClass=models.Deployment,

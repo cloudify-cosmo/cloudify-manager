@@ -314,12 +314,17 @@ class DeploymentsId(resources_v1.DeploymentsId):
         args = rest_utils.get_args_and_verify_arguments([
             Argument('all_sub_deployments', type=boolean, default=True),
         ])
-        deployment = super(DeploymentsId, self).get(
-            deployment_id, _include=_include, kwargs=kwargs
-        )
+        if not args.all_sub_deployments \
+                and _include and ('id' not in _include):
+            # we will need to use id in the _populate_direct method, so it
+            # must be included
+            _include.append('id')
+        deployment = get_storage_manager().get(
+            models.Deployment, deployment_id, include=_include)
         # always return the deployment if `all_sub_deployments` is True
         if args.all_sub_deployments:
             return deployment
+        deployment = deployment.to_response(include=_include)
         return self._populate_direct_deployment_counts_and_statuses(deployment)
 
 
