@@ -1,6 +1,7 @@
 import asyncio
 import os
 import json
+from datetime import datetime, timedelta
 
 import psycopg2
 
@@ -9,7 +10,10 @@ from manager_rest import config
 
 def print_event(event):
     try:
-        print(f"\t{event['timestamp']:<26}\t{event['message']}")
+        timestamp = datetime.strptime(
+            event['timestamp'], '%Y-%m-%dT%H:%M:%S.%f')
+        if (datetime.now() - timestamp) < timedelta(days=1):
+            print(f"\t{event['timestamp']:<26}\t{event['message']}")
     except KeyError:
         pass
 

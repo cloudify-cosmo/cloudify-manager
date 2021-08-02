@@ -423,8 +423,10 @@ class TestSnapshot(AgentlessTestCase):
             # real time - it's OK. Just try again
             try:
                 execution = self.client.executions.get(execution.id)
-            except (requests.exceptions.ConnectionError, CloudifyClientError):
-                pass
+            except (
+                requests.exceptions.ConnectionError, CloudifyClientError
+            ) as e:
+                self.logger.error('Error fetching snapshot execution: %s', e)
             if time.time() > deadline:
                 raise utils.TimeoutException(
                     'Execution timed out: \n{0}'.format(

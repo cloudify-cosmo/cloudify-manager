@@ -132,11 +132,14 @@ def prepare_events_follower(container_id):
     )
 
 
-def start_events_follower(container_id):
-    return subprocess.Popen([
-        'docker', 'exec', container_id,
+@pytest.fixture(autouse=True)
+def start_events_follower(manager_container):
+    follower = subprocess.Popen([
+        'docker', 'exec', manager_container.container_id,
         '/opt/manager/env/bin/python', '-u', '/tmp/follow_events.py',
     ])
+    yield
+    follower.kill()
 
 
 @pytest.fixture(scope='session')
@@ -156,10 +159,8 @@ def manager_container(request, resource_mapping):
     container = Env(container_id, container_ip, service_management)
     prepare_reset_storage_script(container_id)
     prepare_events_follower(container_id)
-    events_follower = start_events_follower(container_id)
     _disable_cron_jobs(container_id)
     yield container
-    events_follower.kill()
     if not keep_container:
         docker.clean(container_id)
 
