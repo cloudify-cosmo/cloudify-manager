@@ -319,6 +319,7 @@ class DeploymentsId(resources_v1.DeploymentsId):
         # always return the deployment if `all_sub_deployments` is True
         if args.all_sub_deployments:
             return deployment
+        deployment = deployment.to_response(include=_include)
         return self._populate_direct_deployment_counts_and_statuses(deployment)
 
 
