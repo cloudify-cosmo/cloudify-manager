@@ -314,9 +314,8 @@ class DeploymentsId(resources_v1.DeploymentsId):
         args = rest_utils.get_args_and_verify_arguments([
             Argument('all_sub_deployments', type=boolean, default=True),
         ])
-        deployment = super(DeploymentsId, self).get(
-            deployment_id, _include=_include, kwargs=kwargs
-        )
+        deployment = get_storage_manager().get(
+            models.Deployment, deployment_id, include=_include)
         # always return the deployment if `all_sub_deployments` is True
         if args.all_sub_deployments:
             return deployment
