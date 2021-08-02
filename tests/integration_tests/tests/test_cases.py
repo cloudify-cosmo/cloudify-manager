@@ -364,6 +364,31 @@ class BaseTestCase(unittest.TestCase):
         wait_for_snapshot_status(STATES.RUNNING)
         wait_for_snapshot_status(STATES.NOT_RUNNING)
 
+    def wait_for_snapshot_restore_execution(self, execution,
+                                            timeout_seconds=120):
+        """Can't use the `wait_for_execution_to_end` in the class because
+         we need to be able to handle client errors
+        """
+        deadline = time.time() + timeout_seconds
+        while execution.status not in Execution.END_STATES:
+            time.sleep(0.5)
+            # This might fail due to the fact that we're changing the DB in
+            # real time - it's OK. Just try again
+            try:
+                execution = self.client.executions.get(execution.id)
+            except (
+                requests.exceptions.ConnectionError, CloudifyClientError
+            ) as e:
+                self.logger.error('Error fetching snapshot execution: %s', e)
+            if time.time() > deadline:
+                raise utils.TimeoutException(
+                    'Execution timed out: \n{0}'.format(
+                        json.dumps(execution, indent=2)
+                    )
+                )
+        return execution
+
+
     def _wait_for_restore_marker_file_to_be_created(self, timeout_seconds=40):
         self.logger.debug("Waiting for snapshot restore marker to be "
                           "created...")

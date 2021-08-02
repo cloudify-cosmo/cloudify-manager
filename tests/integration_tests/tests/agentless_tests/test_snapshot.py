@@ -394,7 +394,7 @@ class TestSnapshot(AgentlessTestCase):
                 ignore_plugin_failure=ignore_plugin_failure)
             self.wait_for_snapshot_restore_to_end()
             self.client.maintenance_mode.deactivate()
-            execution = self._wait_for_restore_execution_to_end(
+            execution = self.wait_for_snapshot_restore_execution(
                 execution, timeout_seconds=240)
         if execution.status == error_execution_status:
             self.logger.error('Execution error: {0}'.format(execution.error))
@@ -410,30 +410,6 @@ class TestSnapshot(AgentlessTestCase):
         self.assertEqual(snapshot['id'], snapshot_id)
         self.assertEqual(snapshot['status'], 'uploaded')
         self.logger.info('Snapshot uploaded and validated')
-
-    def _wait_for_restore_execution_to_end(self, execution,
-                                           timeout_seconds=120):
-        """Can't use the `wait_for_execution_to_end` in the class because
-         we need to be able to handle client errors
-        """
-        deadline = time.time() + timeout_seconds
-        while execution.status not in Execution.END_STATES:
-            time.sleep(0.5)
-            # This might fail due to the fact that we're changing the DB in
-            # real time - it's OK. Just try again
-            try:
-                execution = self.client.executions.get(execution.id)
-            except (
-                requests.exceptions.ConnectionError, CloudifyClientError
-            ) as e:
-                self.logger.error('Error fetching snapshot execution: %s', e)
-            if time.time() > deadline:
-                raise utils.TimeoutException(
-                    'Execution timed out: \n{0}'.format(
-                        json.dumps(execution, indent=2)
-                    )
-                )
-        return execution
 
     def _save_security_config(self):
         tmp_config_path = str(self.workdir / 'rest-security.conf')
