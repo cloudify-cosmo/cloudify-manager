@@ -17,6 +17,8 @@ import time
 import uuid
 import pytest
 
+from cloudify_rest_client.executions import Execution
+
 from integration_tests import AgentTestCase
 from cloudify.models_states import AgentState
 from integration_tests.tests.utils import get_resource as resource
@@ -46,7 +48,7 @@ class TestSnapshots(AgentTestCase):
     def _create_snapshot(self):
         snapshot_id = 's{0}'.format(uuid.uuid4())
         execution = self.client.snapshots.create(snapshot_id, False, False)
-        self.wait_for_event(execution, CREATE_SNAPSHOT_SUCCESS_MSG)
+        self.wait_for_execution_to_end(execution)
         return snapshot_id
 
     def _undeploy(self, states, deployments):
@@ -55,12 +57,8 @@ class TestSnapshots(AgentTestCase):
         self.assertEqual(len(self.client.agents.list(state=states).items), 0)
 
     def _restore_snapshot(self, states, deployments, snapshot_id):
-        # force restore since the manager will be unclean between tests
-        execution = self.client.snapshots.restore(snapshot_id, force=True)
-        # give the database some time to downgrade/upgrade before running
-        # requests to avoid the deadlock described in CY-1455
-        time.sleep(15)
-        self.wait_for_event(execution, RESTORE_SNAPSHOT_SUCCESS_MSG)
+        execution = self.client.snapshots.restore(snapshot_id)
+        self.wait_for_snapshot_restore_execution(execution)
         for state in states:
             self.assertEqual(len(self.client.agents.list(state=state)), 1)
         agent_list = self.client.agents.list(state=states)
@@ -90,9 +88,8 @@ class TestSnapshots(AgentTestCase):
         self.assertEqual(len(agents_list.items), 0)
 
     def _restore_snapshot_multitenant(self, snapshot_id):
-        execution = self.client.snapshots.restore(snapshot_id, force=True)
-        time.sleep(15)
-        self.wait_for_event(execution, RESTORE_SNAPSHOT_SUCCESS_MSG)
+        execution = self.client.snapshots.restore(snapshot_id)
+        self.wait_for_snapshot_restore_execution(execution)
         agents_list = self.client.agents.list(
             _all_tenants=True, deployment_id=['mt_default', 'mt_new'])
         self.assertEqual(len(agents_list.items), 2)
