@@ -15,12 +15,10 @@
 
 import os
 import time
-import json
 import pytest
 import pickle
 import binascii
 
-import requests
 from collections import Counter
 
 from integration_tests.framework import utils
@@ -28,11 +26,9 @@ from integration_tests import AgentlessTestCase
 
 from cloudify.snapshots import STATES
 from cloudify.models_states import AgentState
-
 from manager_rest.constants import DEFAULT_TENANT_NAME
-
 from cloudify_rest_client.executions import Execution
-from cloudify_rest_client.exceptions import CloudifyClientError
+
 
 pytestmark = pytest.mark.group_snapshots
 SNAPSHOTS = 'http://cloudify-tests-files.s3-eu-west-1.amazonaws.com/snapshots/'

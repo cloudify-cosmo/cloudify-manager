@@ -13,11 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import time
 import uuid
 import pytest
-
-from cloudify_rest_client.executions import Execution
 
 from integration_tests import AgentTestCase
 from cloudify.models_states import AgentState

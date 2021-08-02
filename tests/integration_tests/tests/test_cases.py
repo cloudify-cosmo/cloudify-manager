@@ -27,6 +27,7 @@ from contextlib import contextmanager
 
 import wagon
 import pytest
+import requests
 from retrying import retry
 from requests.exceptions import ConnectionError
 
@@ -387,7 +388,6 @@ class BaseTestCase(unittest.TestCase):
                     )
                 )
         return execution
-
 
     def _wait_for_restore_marker_file_to_be_created(self, timeout_seconds=40):
         self.logger.debug("Waiting for snapshot restore marker to be "
