@@ -553,7 +553,12 @@ class SQLStorageManager(object):
         current_app.logger.debug(
             'Get `{0}` with ID `{1}`'.format(model_class.__name__, element_id)
         )
-        filters = filters or {'id': element_id}
+        filters = filters or {}
+        if element_id is not None and 'id' in filters:
+            raise RuntimeError(
+                'Providing an element_id with an id in filters is ambiguous.'
+            )
+        filters['id'] = element_id
         query = self._get_query(model_class, include, filters,
                                 all_tenants=all_tenants)
         if locking:
