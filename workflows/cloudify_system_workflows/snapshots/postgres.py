@@ -25,7 +25,7 @@ from cloudify.workflows import ctx
 from cloudify.cryptography_utils import encrypt
 from cloudify.exceptions import NonRecoverableError
 
-from .constants import ADMIN_DUMP_FILE, LICENSE_DUMP_FILE, V_4_6_0, V_5_1_0
+from .constants import ADMIN_DUMP_FILE, LICENSE_DUMP_FILE
 from .utils import run as run_shell, db_schema
 
 POSTGRESQL_DEFAULT_PORT = 5432
