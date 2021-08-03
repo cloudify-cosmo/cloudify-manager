@@ -527,13 +527,7 @@ class Postgres(object):
         all_tables = [table for table in all_tables if
                       table not in self._TABLES_TO_KEEP]
 
-        tables_to_lock = ['users', 'roles']
-        if snapshot_version > V_4_6_0:
-            tables_to_lock.append('config')
-        if snapshot_version > V_5_1_0:
-            tables_to_lock.append('maintenance_mode')
         queries = (
-            ['LOCK TABLE {0};'.format(', '.join(tables_to_lock))] +
             [self._TRUNCATE_QUERY.format(table) for table in all_tables
              if table != 'users'] +
             ['DELETE FROM users;']
