@@ -46,7 +46,7 @@ class TestSnapshots(AgentTestCase):
     def _create_snapshot(self):
         snapshot_id = 's{0}'.format(uuid.uuid4())
         execution = self.client.snapshots.create(snapshot_id, False, False)
-        self.wait_for_event(execution, CREATE_SNAPSHOT_SUCCESS_MSG)
+        self.wait_for_execution_to_end(execution)
         return snapshot_id
 
     def _undeploy(self, states, deployments):
