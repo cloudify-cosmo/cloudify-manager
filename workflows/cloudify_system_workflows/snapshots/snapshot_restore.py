@@ -171,7 +171,11 @@ class SnapshotRestore(object):
         """Stop db-using services for the duration of this context"""
         # While the snapshot is being restored, the database is downgraded
         # and upgraded back, and these services must not attempt to use it
-        to_pause = ['cloudify-amqp-postgres', 'cloudify-execution-scheduler']
+        to_pause = [
+            'cloudify-amqp-postgres',
+            'cloudify-execution-scheduler',
+            'cloudify-restservice'
+        ]
         for service in to_pause:
             utils.run_service(self._service_management, 'stop', service)
         try:
@@ -179,6 +183,7 @@ class SnapshotRestore(object):
         finally:
             for service in to_pause:
                 utils.run_service(self._service_management, 'start', service)
+            self._wait_for_rest_to_restart()
 
     def _generate_new_rest_token(self):
         """
