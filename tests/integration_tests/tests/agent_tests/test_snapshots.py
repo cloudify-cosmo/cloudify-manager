@@ -46,7 +46,7 @@ class TestSnapshots(AgentTestCase):
     def _create_snapshot(self):
         snapshot_id = 's{0}'.format(uuid.uuid4())
         execution = self.client.snapshots.create(snapshot_id, False, False)
-        self.wait_for_event(execution, CREATE_SNAPSHOT_SUCCESS_MSG)
+        self.wait_for_execution_to_end(execution)
         return snapshot_id
 
     def _undeploy(self, states, deployments):
@@ -57,10 +57,9 @@ class TestSnapshots(AgentTestCase):
     def _restore_snapshot(self, states, deployments, snapshot_id):
         # force restore since the manager will be unclean between tests
         execution = self.client.snapshots.restore(snapshot_id, force=True)
-        # give the database some time to downgrade/upgrade before running
-        # requests to avoid the deadlock described in CY-1455
-        time.sleep(15)
         self.wait_for_event(execution, RESTORE_SNAPSHOT_SUCCESS_MSG)
+        # still give some time for the post-restore actions to run
+        time.sleep(15)
         for state in states:
             self.assertEqual(len(self.client.agents.list(state=state)), 1)
         agent_list = self.client.agents.list(state=states)
@@ -91,8 +90,8 @@ class TestSnapshots(AgentTestCase):
 
     def _restore_snapshot_multitenant(self, snapshot_id):
         execution = self.client.snapshots.restore(snapshot_id, force=True)
-        time.sleep(15)
         self.wait_for_event(execution, RESTORE_SNAPSHOT_SUCCESS_MSG)
+        time.sleep(15)
         agents_list = self.client.agents.list(
             _all_tenants=True, deployment_id=['mt_default', 'mt_new'])
         self.assertEqual(len(agents_list.items), 2)

@@ -67,6 +67,35 @@ from .constants import (
 from .utils import is_later_than_now, parse_datetime_string
 
 
+class BufferLogger(object):
+    def __init__(self):
+        self._buffer = []
+
+    def send(self):
+        for method, args, kwargs in self._buffer:
+            getattr(ctx.logger, method)(*args, **kwargs)
+
+    def __getattr__(self, name):
+        return lambda *a, **kw: self._buffer.append((name, a, kw))
+
+
+@contextmanager
+def buffer_logs():
+    """Buffer all ctx.logger calls, and send them after exiting this.
+
+    This is needed for when the restservice is stopped, so that logs are
+    only sent after it's started again.
+    """
+    original_logger = ctx._logger
+    buffer_logger = BufferLogger()
+    ctx._logger = buffer_logger
+    try:
+        yield
+    finally:
+        ctx._logger = original_logger
+        buffer_logger.send()
+
+
 class SnapshotRestore(object):
     SCHEMA_REVISION_4_0 = '333998bc1627'
 
@@ -131,7 +160,7 @@ class SnapshotRestore(object):
                 utils.sudo(DENY_DB_CLIENT_CERTS_SCRIPT)
                 self._service_management = \
                     json.loads(postgres.get_service_management())
-                with self._pause_services():
+                with buffer_logs(), self._pause_services():
                     self._restore_db(
                         postgres,
                         schema_revision,
@@ -171,7 +200,11 @@ class SnapshotRestore(object):
         """Stop db-using services for the duration of this context"""
         # While the snapshot is being restored, the database is downgraded
         # and upgraded back, and these services must not attempt to use it
-        to_pause = ['cloudify-amqp-postgres', 'cloudify-execution-scheduler']
+        to_pause = [
+            'cloudify-amqp-postgres',
+            'cloudify-execution-scheduler',
+            'cloudify-restservice'
+        ]
         for service in to_pause:
             utils.run_service(self._service_management, 'stop', service)
         try:
@@ -179,6 +212,7 @@ class SnapshotRestore(object):
         finally:
             for service in to_pause:
                 utils.run_service(self._service_management, 'start', service)
+            self._wait_for_rest_to_restart()
 
     def _generate_new_rest_token(self):
         """
