@@ -551,9 +551,14 @@ class SQLStorageManager(object):
         """Return a single result based on the model class and element ID
         """
         current_app.logger.debug(
-            'Get `{0}` with ID `{1}`'.format(model_class.__name__, element_id)
+            'Get `%s` with ID `%s`', model_class.__name__, element_id,
         )
-        filters = filters or {'id': element_id}
+        if element_id is not None and filters:
+            raise RuntimeError(
+                'Providing an element_id with filters is ambiguous.'
+            )
+        if not filters:
+            filters = {'id': element_id}
         query = self._get_query(model_class, include, filters,
                                 all_tenants=all_tenants)
         if locking:
@@ -579,7 +584,7 @@ class SQLStorageManager(object):
             else:
                 raise exc_class(err_msg)
 
-        current_app.logger.debug('Returning {0}'.format(result))
+        current_app.logger.debug('Returning %s', result)
         return result
 
     @staticmethod

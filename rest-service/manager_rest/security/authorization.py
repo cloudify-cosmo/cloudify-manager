@@ -45,7 +45,7 @@ def authorize(action,
                 try:
                     tenant = get_storage_manager().get(
                         Tenant,
-                        tenant_name,
+                        None,
                         filters={'name': tenant_name}
                     )
                     utils.set_current_tenant(tenant)
