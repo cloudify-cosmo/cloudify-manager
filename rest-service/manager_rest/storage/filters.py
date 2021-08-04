@@ -9,9 +9,12 @@ from manager_rest.constants import (AttrsOperator,
 from .utils import get_column, get_joins
 
 
-def add_filter_rules_to_query(query, model_class, filter_rules):
+def add_filter_rules_to_query(query, model_class, filter_rules,
+                              already_joined=None):
     labels_join_added = False
     joined_columns_set = set()
+    if already_joined:
+        joined_columns_set.update(already_joined)
     for filter_rule in filter_rules:
         filter_rule_type = filter_rule['type']
         if filter_rule_type == FilterRuleType.LABEL \
@@ -42,11 +45,14 @@ def add_attrs_filter_to_query(query, model_class, filter_rule,
     column_name = filter_rule['key']
     filter_rule_values = filter_rule['values']
 
+    joins = get_joins(model_class, [column_name])
     column = get_column(model_class, column_name)
-    if column_name not in joined_columns_set:
-        joined_columns_set.add(column_name)
-        join = get_joins(model_class, [column_name])
-        query = query.outerjoin(*join)
+    for joined_attr in joins:
+        target_mapper = joined_attr.prop.mapper
+        if target_mapper not in joined_columns_set:
+            joined_columns_set.add(target_mapper)
+            query = query.outerjoin(joined_attr)
+
     if filter_rule_operator == AttrsOperator.ANY_OF:
         query = query.filter(column.in_(filter_rule_values))
 
