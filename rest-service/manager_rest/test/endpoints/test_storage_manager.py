@@ -327,18 +327,19 @@ class TestGetErrorFormat(base_test.BaseServerTestCase):
         assert 'filters' not in message
 
     def test_get_by_id_and_filters(self):
-        # Requested `Deployment` with ID `dep` was not found
+        # `Providing an element_id with filters is ambiguous`
         # (filters: {'blueprint_id': 'bp'})
         message = self._get_err_message('dep',
                                         {'id': 'dep', 'blueprint_id': 'bp'})
-        assert 'not found' in message
-        assert 'with ID `dep`' in message
+        assert 'element_id' in message
         assert 'filters' in message
+        assert 'ambiguous' in message
 
     def test_get_by_filters(self):
         # Requested `Deployment` was not found
         # (filters: {'blueprint_id': 'bp'})"
-        message = self._get_err_message('dep', {'blueprint_id': 'bp'})
+        message = self._get_err_message(None, {'id': 'dep',
+                                               'blueprint_id': 'bp'})
         assert 'ID' not in message
         assert 'filters' in message
         assert "'blueprint_id': 'bp'" in message
