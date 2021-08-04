@@ -555,7 +555,7 @@ class SQLStorageManager(object):
         )
         if element_id is not None and filters:
             raise RuntimeError(
-                'Providing an element_id with an id in filters is ambiguous.'
+                'Providing an element_id with filters is ambiguous.'
             )
         if not filters:
             filters = {'id': element_id}
