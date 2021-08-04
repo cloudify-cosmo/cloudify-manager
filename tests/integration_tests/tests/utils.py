@@ -22,6 +22,7 @@ import tarfile
 import tempfile
 
 from os import path
+from functools import wraps
 from datetime import datetime, timedelta
 
 from cloudify.utils import setup_logger
@@ -267,3 +268,28 @@ def assert_messages_in_log(container_id, workdir, messages, log_path):
         data = f.readlines()
     for message in messages:
         assert message in str(data)
+
+
+def _wait_for_executions_after_call(f):
+    @wraps(f)
+    def _inner(self, *a, **kw):
+        try:
+            return f(self, *a, **kw)
+        finally:
+            self.wait_for_all_executions_to_end()
+    return _inner
+
+
+def wait_for_executions(cls):
+    """Decorate a class with this to make every test wait for all executions
+
+    If a test case might end up leaving unfinished executions around that
+    the test doesn't explicitly wait for, this will make sure that they
+    don't leak out.
+    """
+    for name, attribute in vars(cls).items():
+        if not callable(attribute) or not name.startswith('test_'):
+            continue
+        attribute = _wait_for_executions_after_call(attribute)
+        setattr(cls, name, attribute)
+    return cls

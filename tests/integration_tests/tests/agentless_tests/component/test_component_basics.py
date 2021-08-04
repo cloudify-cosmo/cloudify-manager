@@ -20,14 +20,18 @@ import pytest
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from integration_tests import AgentlessTestCase
-from integration_tests.tests.utils import (get_resource as resource,
-                                           upload_mock_plugin,
-                                           wait_for_blueprint_upload)
+from integration_tests.tests.utils import (
+    get_resource as resource,
+    upload_mock_plugin,
+    wait_for_blueprint_upload,
+    wait_for_executions,
+)
 
 pytestmark = pytest.mark.group_service_composition
 
 
 @pytest.mark.usefixtures('cloudmock_plugin')
+@wait_for_executions
 class ComponentTypeTest(AgentlessTestCase):
     component_name = 'component'
     basic_blueprint_id = 'basic'
@@ -107,6 +111,7 @@ capabilities:
                           deployment_id)
 
 
+@wait_for_executions
 class ComponentPluginsTest(AgentlessTestCase):
     TEST_PACKAGE_NAME = 'cloudify-script-plugin'
     TEST_PACKAGE_VERSION = '1.2'
@@ -194,6 +199,7 @@ node_templates:
 
 
 @pytest.mark.usefixtures('cloudmock_plugin')
+@wait_for_executions
 class ComponentSecretsTypesTest(AgentlessTestCase):
     basic_blueprint_id = 'basic'
 
@@ -240,6 +246,7 @@ node_templates:
         self.assertEqual(self.client.secrets.get('regex')['value'], u'^.$')
 
 
+@wait_for_executions
 class ComponentInputsTypesTest(AgentlessTestCase):
     basic_blueprint_id = 'basic'
 
@@ -345,6 +352,7 @@ node_templates:
                           blueprint_path, deployment_id=deployment_id)
 
 
+@wait_for_executions
 class ComponentTypeFailuresTest(AgentlessTestCase):
 
     def test_component_creation_with_not_existing_blueprint_id(self):
