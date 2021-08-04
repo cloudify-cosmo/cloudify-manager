@@ -140,6 +140,10 @@ def start_events_follower(manager_container):
     ])
     yield
     follower.kill()
+    subprocess.run([
+        'docker', 'exec', manager_container.container_id,
+        'pkill', '-f', 'follow_events.py'
+    ])
 
 
 @pytest.fixture(scope='session')
