@@ -32,8 +32,8 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
     def test_add_node_bp(self):
         self._test_add_node(archive_mode=False)
 
-    # def test_add_node_archive(self):
-    #     self._test_add_node(archive_mode=True)
+    def test_add_node_archive(self):
+        self._test_add_node(archive_mode=True)
 
     def _test_add_node(self, archive_mode=False):
         """
