@@ -26,12 +26,15 @@ from integration_tests.tests.utils import (
     verify_deployment_env_created,
     do_retries,
     get_resource as resource,
-    wait_for_blueprint_upload)
+    wait_for_blueprint_upload,
+    wait_for_executions,
+)
 
 pytestmark = pytest.mark.group_service_composition
 
 
 @pytest.mark.usefixtures('testmockoperations_plugin')
+@wait_for_executions
 class ComponentCascadingCancelAndResume(AgentlessTestCase):
     def _wait_for_component_deployment(self,
                                        deployment_id,
@@ -300,6 +303,7 @@ node_templates:
 
 
 @pytest.mark.usefixtures('mock_workflows_plugin')
+@wait_for_executions
 class ComponentCascadingWorkflows(AgentlessTestCase):
     component_blueprint_with_nothing_workflow = """
 tosca_definitions_version: cloudify_dsl_1_3

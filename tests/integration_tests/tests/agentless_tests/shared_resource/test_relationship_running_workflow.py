@@ -14,13 +14,17 @@
 import pytest
 
 from integration_tests import AgentlessTestCase
-from integration_tests.tests.utils import get_resource as resource
-from integration_tests.tests.utils import wait_for_blueprint_upload
+from integration_tests.tests.utils import (
+    get_resource as resource,
+    wait_for_blueprint_upload,
+    wait_for_executions
+)
 
 pytestmark = pytest.mark.group_service_composition
 
 
 @pytest.mark.usefixtures('mock_workflows_plugin')
+@wait_for_executions
 class TestRelationshipRunningRemoteWorkflow(AgentlessTestCase):
     shared_resource_blueprint = """
 tosca_definitions_version: cloudify_dsl_1_3

@@ -14,10 +14,12 @@
 
 import pytest
 from integration_tests import AgentlessTestCase
+from integration_tests.tests.utils import wait_for_executions
 
 pytestmark = pytest.mark.group_service_composition
 
 
+@wait_for_executions
 class TestSharedResourceType(AgentlessTestCase):
     def setUp(self):
         super(TestSharedResourceType, self).setUp()
