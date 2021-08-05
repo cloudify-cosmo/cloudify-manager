@@ -14,9 +14,6 @@
 
 import os
 
-from cloudify.utils import wait_for
-from cloudify.models_states import ExecutionState
-
 from manager_rest.deployment_update.constants import STATES
 
 from integration_tests import AgentlessTestCase
@@ -32,27 +29,13 @@ class TimeoutException(Exception):
 
 
 class DeploymentUpdateBase(AgentlessTestCase):
-
-    def _wait_for_successful_state(self, depup_id):
-        error_msg = 'deployment update {0} failed to commit'.format(depup_id)
-        return wait_for(self.client.deployment_updates.get,
-                        depup_id,
-                        'state',
-                        lambda x: x == STATES.SUCCESSFUL,
-                        TimeoutException,
-                        error_msg)
-
-    def _wait_for_execution(self, execution, timeout=900):
-        # Poll for execution status until execution ends
-        error_msg = 'execution of operation {0} for deployment {1} timed out' \
-            .format(execution.workflow_id, execution.deployment_id)
-        return wait_for(self.client.executions.get,
-                        execution.id,
-                        'status',
-                        lambda x: x in ExecutionState.END_STATES,
-                        TimeoutException,
-                        error_msg,
-                        timeout)
+    def _wait_for_update(self, dep_update):
+        self.wait_for_execution_to_end(
+            self.client.executions.get(dep_update.execution_id))
+        self.assertEqual(
+            self.client.deployment_updates.get(dep_update.id).state,
+            STATES.SUCCESSFUL
+        )
 
     def _assert_relationship(self,
                              relationships,
@@ -112,14 +95,6 @@ class DeploymentUpdateBase(AgentlessTestCase):
                 os.path.join(blueprints_base_path,
                              blueprint_folder,
                              blueprint_file))
-
-    def _wait_for_execution_to_terminate(self, deployment_id, workflow_id):
-        # wait for 'update' workflow to finish
-        executions = \
-            self.client.executions.list(deployment_id=deployment_id,
-                                        workflow_id=workflow_id)
-        for execution in executions:
-            self._wait_for_execution(execution)
 
     def _map_node_and_node_instances(self, deployment_id, dct):
         nodes_dct = {k: [] for k, _ in dct.items()}
