@@ -56,10 +56,7 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
             dep_update = \
                 self.client.deployment_updates.update_with_existing_blueprint(
                     dep.id, blueprint_id)
-
-            # assert that 'update' workflow was executed
-            self._wait_for_execution_to_terminate(dep.id, 'update')
-            self._wait_for_successful_state(dep_update.id)
+            self._wait_for_update(dep_update)
 
             # verify deployment output
             dep = self.client.deployments.get(dep_update.deployment_id)
@@ -114,10 +111,7 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
             dep_update = \
                 self.client.deployment_updates.update_with_existing_blueprint(
                     dep.id, blueprint_id)
-
-            # assert that 'update' workflow was executed
-            self._wait_for_execution_to_terminate(dep.id, 'update')
-            self._wait_for_successful_state(dep_update.id)
+            self._wait_for_update(dep_update)
 
             # verify deployment output value
             outputs = self.client.deployments.outputs.get(
@@ -190,13 +184,9 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)
-
-        # wait for 'update' workflow to finish
-        self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_successful_state(dep_update.id)
+        self._wait_for_update(dep_update)
 
         # Get all related and affected nodes and node instances
-
         modified_nodes, modified_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
 
@@ -245,10 +235,7 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
                 BLUEPRINT_ID,
                 inputs={'input_prop3': 'custom_input3'}
             )
-
-        # wait for 'update' workflow to finish
-        self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_successful_state(dep_update.id)
+        self._wait_for_update(dep_update)
 
         modified_nodes, modified_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
@@ -296,11 +283,7 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
                 BLUEPRINT_ID,
                 workflow_id='custom_workflow'
             )
-
-        # wait for 'update' workflow to finish
-        self._wait_for_execution_to_terminate(deployment.id,
-                                              workflow_id='custom_workflow')
-        self._wait_for_successful_state(dep_update.id)
+        self._wait_for_update(dep_update)
 
         modified_nodes, modified_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
@@ -351,10 +334,7 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
                 BLUEPRINT_ID,
                 skip_install=skip
             )
-
-        # wait for 'update' workflow to finish
-        self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_successful_state(dep_update.id)
+        self._wait_for_update(dep_update)
 
         modified_nodes, modified_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
@@ -424,10 +404,7 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
                 BLUEPRINT_ID,
                 skip_uninstall=skip
             )
-
-        # wait for 'update' workflow to finish
-        self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_successful_state(dep_update.id)
+        self._wait_for_update(dep_update)
 
         modified_nodes, modified_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
@@ -470,10 +447,7 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
                 skip_install=skip,
                 skip_uninstall=skip
             )
-
-        # wait for 'update' workflow to finish
-        self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_successful_state(dep_update.id)
+        self._wait_for_update(dep_update)
 
         modified_nodes, modified_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
@@ -517,45 +491,46 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
         blu_id = BLUEPRINT_ID + '-del-1'
         self.client.blueprints.upload(mod_del_dep_bp1, blu_id)
         wait_for_blueprint_upload(blu_id, self.client)
-        del_depups_ids = \
-            [self.client.deployment_updates.update_with_existing_blueprint(
-                del_deployment.id, blu_id).id]
+        del_dep_update1 = \
+            self.client.deployment_updates.update_with_existing_blueprint(
+                del_deployment.id, blu_id)
+        self._wait_for_update(del_dep_update1)
+
         blu_id = BLUEPRINT_ID + '-undel-1'
         self.client.blueprints.upload(mod_undel_dep_bp1, blu_id)
         wait_for_blueprint_upload(blu_id, self.client)
-        undel_depups_ids = \
-            [self.client.deployment_updates.update_with_existing_blueprint(
-                undel_deployment.id, blu_id).id]
+        undel_dep_update = \
+            self.client.deployment_updates.update_with_existing_blueprint(
+                undel_deployment.id, blu_id)
+        self._wait_for_update(del_dep_update1)
 
         mod_del_dep_bp2 = self._get_blueprint_path(
             os.path.join('remove_deployment', 'modification2'),
             'remove_deployment_modification2.yaml')
-
-        self._wait_for_execution_to_terminate(del_deployment.id, 'update')
-        self._wait_for_successful_state(del_depups_ids[0])
         blu_id = BLUEPRINT_ID + '-del-2'
         self.client.blueprints.upload(mod_del_dep_bp2, blu_id)
         wait_for_blueprint_upload(blu_id, self.client)
-        del_depups_ids.append(
+        del_dep_update2 = \
             self.client.deployment_updates.update_with_existing_blueprint(
-                del_deployment.id, blu_id).id)
-        self._wait_for_execution_to_terminate(del_deployment.id, 'update')
-        self._wait_for_successful_state(del_depups_ids[0])
+                del_deployment.id, blu_id)
+        self._wait_for_update(del_dep_update2)
 
         deployment_update_list = self.client.deployment_updates.list(
             deployment_id=del_deployment.id,
             _include=['id']
         )
 
-        # Assert there are 2 deployment updates for del_deployment
-        self.assertEqual(len(deployment_update_list.items),
-                         len(del_depups_ids))
-        for i in deployment_update_list.items:
-            self.assertIn(i['id'], del_depups_ids)
+        self.assertEqual(len(deployment_update_list.items), 2)
+        self.assertEqual(
+            {d['id'] for d in deployment_update_list},
+            {del_dep_update1.id, del_dep_update2.id}
+        )
 
         # Delete deployment and assert deployment updates were removed
-        self.client.executions.start(del_deployment.id, 'uninstall')
-        self._wait_for_execution_to_terminate(del_deployment.id, 'uninstall')
+        uninstall = self.client.executions.start(
+            del_deployment.id, 'uninstall')
+        self.wait_for_execution_to_end(uninstall)
+
         self.client.deployments.delete(del_deployment.id)
         wait_for_deployment_deletion_to_complete(
             del_deployment.id, self.client
@@ -571,9 +546,8 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
             deployment_id=undel_deployment.id,
             _include=['id']
         )
-        self.assertEqual(len(deployment_update_list), len(undel_depups_ids))
-        for i in deployment_update_list.items:
-            self.assertIn(i['id'], undel_depups_ids)
+        self.assertEqual(len(deployment_update_list), 1)
+        self.assertEqual(deployment_update_list[0]['id'], undel_dep_update.id)
 
     def test_update_group(self):
         self.upload_blueprint_resource(

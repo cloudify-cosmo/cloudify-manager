@@ -49,10 +49,7 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)
-
-        # wait for 'update' workflow to finish
-        self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_successful_state(dep_update.id)
+        self._wait_for_update(dep_update)
 
         modified_nodes, modified_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
@@ -112,15 +109,14 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         }
 
         # Execute the newly modified operation
-        self.client.executions.start(
+        execution = self.client.executions.start(
                 deployment.id,
                 'execute_operation',
                 parameters={
                     'operation': 'cloudify.interfaces.lifecycle.stop'
                 }
         )
-        self._wait_for_execution_to_terminate(deployment.id,
-                                              'execute_operation')
+        self.wait_for_execution_to_end(execution)
 
         base_nodes, base_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
@@ -135,10 +131,7 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID, skip_reinstall=True)
-
-        # wait for 'update' workflow to finish
-        self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_successful_state(dep_update.id)
+        self._wait_for_update(dep_update)
 
         # assert nothing changed except for plugins and operations
         modified_nodes, modified_node_instances = \
@@ -158,15 +151,14 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         )
 
         # Execute the newly modified operation
-        self.client.executions.start(
+        execution = self.client.executions.start(
                 deployment.id,
                 'execute_operation',
                 parameters={
                     'operation': 'cloudify.interfaces.lifecycle.stop'
                 }
         )
-        self._wait_for_execution_to_terminate(deployment.id,
-                                              'execute_operation')
+        self.wait_for_execution_to_end(execution)
 
         # Check again for the nodes and node instances and check
         # their runtime properties
@@ -226,14 +218,11 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)
+        self._wait_for_update(dep_update)
 
-        # wait for 'update' workflow to finish
-        self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_successful_state(dep_update.id)
-
-        self.client.executions.start(deployment.id, 'custom_workflow',
-                                     parameters={'node_id': 'site2'})
-        self._wait_for_execution_to_terminate(deployment.id, 'custom_workflow')
+        execution = self.client.executions.start(
+            deployment.id, 'custom_workflow', parameters={'node_id': 'site2'})
+        self.wait_for_execution_to_end(execution)
 
         modified_nodes, modified_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
@@ -311,10 +300,7 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)
-
-        # wait for 'update' workflow to finish
-        self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_successful_state(dep_update.id)
+        self._wait_for_update(dep_update)
 
         modified_nodes, modified_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
@@ -340,18 +326,14 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)
+        self._wait_for_update(dep_update)
 
-        # assert that 'update' workflow was executed
-        self._wait_for_execution_to_terminate(deployment.id,
-                                              'update')
+        execution = self.client.executions.start(
+            dep_update.deployment_id,
+            workflow_id='my_custom_workflow',
+            parameters={'node_id': 'site1'})
+        self.wait_for_execution_to_end(execution)
 
-        self.client.executions.start(dep_update.deployment_id,
-                                     workflow_id='my_custom_workflow',
-                                     parameters={'node_id': 'site1'})
-
-        # assert that 'update' workflow was executed
-        self._wait_for_execution_to_terminate(deployment.id,
-                                              'my_custom_workflow')
         affected_node = self.client.node_instances.list(
             deployment_id=dep_update.deployment_id,
             node_id='site1'
@@ -374,10 +356,7 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)
-
-        # assert that 'update' workflow was executed
-        self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_successful_state(dep_update.id)
+        self._wait_for_update(dep_update)
 
         deployment = self.client.deployments.get(dep_update.deployment_id)
         self._assertDictContainsSubset({'custom_output': {'value': 1}},
@@ -394,10 +373,7 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)
-
-        # assert that 'update' workflow was executed
-        self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_successful_state(dep_update.id)
+        self._wait_for_update(dep_update)
 
         deployment = self.client.deployments.get(dep_update.deployment_id)
         self.assertRegexpMatches(deployment['description'], 'new description')
@@ -414,9 +390,8 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, inputs={u'test_list': new_test_list},
             )
-        # assert that 'update' workflow was executed
-        self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_successful_state(dep_update.id)
+        self._wait_for_update(dep_update)
+
         execution_ids = [en.id for en in self.client.executions.list(
             deployment_id=deployment.id,
             workflow_id='update',

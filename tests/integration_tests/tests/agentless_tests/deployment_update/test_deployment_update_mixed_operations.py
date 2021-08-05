@@ -62,13 +62,9 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)
-
-        # wait for 'update' workflow to finish
-        self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_successful_state(dep_update.id)
+        self._wait_for_update(dep_update)
 
         # Get all related and affected nodes and node instances
-
         modified_nodes, modified_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
 
@@ -162,8 +158,7 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)
-        self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_successful_state(dep_update.id)
+        self._wait_for_update(dep_update)
 
         node_mapping = {'source': 'site0'}
         modified_nodes, modified_node_instances = \
@@ -235,10 +230,7 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)
-
-        # wait for 'update' workflow to finish
-        self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_successful_state(dep_update.id)
+        self._wait_for_update(dep_update)
 
         nodes, node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)

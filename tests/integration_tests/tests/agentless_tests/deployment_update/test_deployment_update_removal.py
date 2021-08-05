@@ -28,9 +28,10 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
             self._deploy_and_get_modified_bp_path('uninstall_execution_order')
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
         wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
-        self.client.deployment_updates.update_with_existing_blueprint(
-            deployment.id, BLUEPRINT_ID)
-        self._wait_for_execution_to_terminate(deployment.id, 'update')
+        dep_update = \
+            self.client.deployment_updates.update_with_existing_blueprint(
+                deployment.id, BLUEPRINT_ID)
+        self._wait_for_update(dep_update)
 
         self.assertFalse(self.client.node_instances.list(
                 node_id='site1').items[0].runtime_properties['is_op_started'],
@@ -82,10 +83,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)
-
-        # wait for 'update' workflow to finish
-        self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_successful_state(dep_update.id)
+        self._wait_for_update(dep_update)
 
         modified_nodes, modified_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
@@ -131,15 +129,14 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         operation_id = 'custom_lifecycle.custom_operation'
 
         # Execute the newly modified operation
-        self.client.executions.start(
+        execution = self.client.executions.start(
                 deployment.id,
                 'execute_operation',
                 parameters={
                     'operation': operation_id
                 }
         )
-        self._wait_for_execution_to_terminate(deployment.id,
-                                              'execute_operation')
+        self.wait_for_execution_to_end(execution)
 
         base_nodes, base_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
@@ -154,10 +151,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)
-
-        # wait for 'update' workflow to finish
-        self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_successful_state(dep_update.id)
+        self._wait_for_update(dep_update)
 
         # assert nothing changed except for plugins and operations
         modified_nodes, modified_node_instances = \
@@ -190,12 +184,15 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
                 workflow_id='execute_operation',
                 parameters={'operation': operation_id}
         )
-
-        execution_state = self._wait_for_execution(execution)
+        self.assertRaises(
+            RuntimeError,
+            self.wait_for_execution_to_end, execution
+        )
+        execution = self.client.executions.get(execution.id)
 
         self.assertIn('{0} operation of node instance {1} does not exist'
                       .format(operation_id, modified_node_instance.id),
-                      execution_state.error)
+                      execution.error)
 
     def test_remove_relationship(self):
         deployment, modified_bp_path = \
@@ -215,10 +212,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)
-
-        # wait for 'update' workflow to finish
-        self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_successful_state(dep_update.id)
+        self._wait_for_update(dep_update)
 
         # Get all related and affected nodes and node instances
         modified_nodes, modified_node_instances = \
@@ -285,10 +279,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)
-
-        # assert that 'update' workflow was executed
-        self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_successful_state(dep_update.id)
+        self._wait_for_update(dep_update)
 
         self.assertRaisesRegexp(CloudifyClientError,
                                 'Workflow {0} does not exist in deployment {1}'
@@ -322,17 +313,17 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)
-
-        # wait for 'update' workflow to finish
-        self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_successful_state(dep_update.id)
+        self._wait_for_update(dep_update)
 
         execution = self.client.executions.start(
                 deployment.id,
                 'custom_workflow',
                 parameters={'node_id': 'site2'}
         )
-        self._wait_for_execution_to_terminate(deployment.id, 'custom_workflow')
+        self.assertRaises(
+            RuntimeError,
+            self.wait_for_execution_to_end, execution
+        )
         execution = self.client.executions.get(execution.id)
         self.assertEqual(execution.status, 'failed')
         self.assertIn('{0} operation of node instance {1} does not exist'
@@ -402,10 +393,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)
-
-        # wait for 'update' workflow to finish
-        self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_successful_state(dep_update.id)
+        self._wait_for_update(dep_update)
 
         modified_nodes, modified_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
@@ -431,10 +419,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)
-
-        # assert that 'update' workflow was executed
-        self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_successful_state(dep_update.id)
+        self._wait_for_update(dep_update)
 
         deployment = self.client.deployments.get(dep_update.deployment_id)
         self.assertNotIn('custom_output', deployment.outputs)
@@ -449,10 +434,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         dep_update = \
             self.client.deployment_updates.update_with_existing_blueprint(
                 deployment.id, BLUEPRINT_ID)
-
-        # assert that 'update' workflow was executed
-        self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_successful_state(dep_update.id)
+        self._wait_for_update(dep_update)
 
         deployment = self.client.deployments.get(dep_update.deployment_id)
         self.assertFalse(deployment.get('description'))
