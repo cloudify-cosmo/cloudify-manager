@@ -57,7 +57,7 @@ class FileServerAuth(SecuredResource):
                 # first load requested tenant to config then check if global
                 tenant = get_storage_manager().get(
                     models.Tenant,
-                    uri_tenant,
+                    None,
                     filters={'name': uri_tenant}
                 )
                 utils.set_current_tenant(tenant)
