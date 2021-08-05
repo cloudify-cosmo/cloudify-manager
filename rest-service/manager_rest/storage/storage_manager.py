@@ -183,7 +183,8 @@ class SQLStorageManager(object):
                       filters,
                       substr_filters,
                       all_tenants,
-                      filter_rules):
+                      filter_rules,
+                      joins):
         """Add filter clauses to the query
 
         :param query: Base SQL query
@@ -199,13 +200,16 @@ class SQLStorageManager(object):
         query = self._add_permissions_filter(query, model_class)
         query = self._add_value_filter(query, filters)
         query = self._add_substr_filter(query, substr_filters)
-        query = self._add_filter_rules(query, model_class, filter_rules)
+        query = self._add_filter_rules(query, model_class, filter_rules, joins)
         return query
 
     @staticmethod
-    def _add_filter_rules(query, model_class, filter_rules):
+    def _add_filter_rules(query, model_class, filter_rules, joins):
         if filter_rules:
-            return add_filter_rules_to_query(query, model_class, filter_rules)
+            return add_filter_rules_to_query(
+                query, model_class, filter_rules,
+                already_joined={j.prop.mapper for j in joins}
+            )
         return query
 
     def _add_value_filter(self, query, filters):
@@ -403,7 +407,8 @@ class SQLStorageManager(object):
                                    filters,
                                    substr_filters,
                                    all_tenants,
-                                   filter_rules)
+                                   filter_rules,
+                                   joins)
         query = self._sort_query(query, model_class, sort, distinct,
                                  default_sorting)
         return query
