@@ -201,7 +201,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         db.session.expunge(blueprint)
         blueprint_restored = self.sm.get(
             models.Blueprint,
-            'blueprint-id',
+            None,
             include=['id', 'created_at']
         )
         self.assertEqual('blueprint-id', blueprint_restored.id)
