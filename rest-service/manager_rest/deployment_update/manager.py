@@ -296,6 +296,8 @@ class DeploymentUpdateManager(object):
         deployment.runtime_only_evaluation = dep_update.runtime_only_evaluation
         if dep_update.new_blueprint:
             deployment.blueprint = dep_update.new_blueprint
+        deployment.capabilities = \
+            dep_update.deployment_plan.get('capabilities', {})
         self.sm.update(deployment)
 
         # Execute the default 'update' workflow or a custom workflow using
