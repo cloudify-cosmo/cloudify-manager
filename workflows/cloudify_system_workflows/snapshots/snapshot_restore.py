@@ -64,7 +64,7 @@ from .constants import (
     COMPOSER_USER,
     COMPOSER_APP
 )
-from .utils import is_later_than_now, parse_datetime_string
+from .utils import is_later_than_now, parse_datetime_string, get_tenants_list
 
 
 class BufferLogger(object):
@@ -338,13 +338,18 @@ class SnapshotRestore(object):
             ])
 
     def _restore_deployment_envs(self):
-        deps = utils.get_dep_contexts(self._snapshot_version)
-        for tenant, deployments in deps:
-            ctx.logger.info('Creating deployment dirs for %s', tenant)
-            for deployment_id in deployments:
+        tenants = get_tenants_list(self._snapshot_version)
+        for tenant_name in tenants:
+            ctx.logger.info('Creating deployment dirs for %s', tenant_name)
+            client = get_rest_client(tenant_name)
+            deployments = client.deployments.list(
+                _include=['id'],
+                _get_all_results=True
+            )
+            for deployment in deployments:
                 _create_deployment_workdir(
-                    deployment_id=deployment_id,
-                    tenant=tenant,
+                    deployment_id=deployment.id,
+                    tenant=tenant_name,
                     logger=ctx.logger,
                 )
         ctx.logger.info('Successfully created deployment dirs.')

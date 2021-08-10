@@ -25,7 +25,7 @@ from cloudify.manager import get_rest_client
 from cloudify.workflows import ctx
 
 from .constants import V_4_1_0, SECRET_STORE_AGENT_KEY_PREFIX
-from .utils import is_compute, run, get_dep_contexts, get_tenants_list
+from .utils import is_compute, run, get_tenants_list
 
 ALLOWED_KEY_CHARS = string.ascii_letters + string.digits + '-._'
 CRED_DIR = 'snapshot-credentials'
@@ -51,33 +51,34 @@ class Credentials(object):
                          '{0}'.format(self._ARCHIVE_CRED_PATH))
         os.makedirs(self._ARCHIVE_CRED_PATH)
 
-        for tenant, value in self._get_hosts(version):
-            for dep_id, nodes in value.items():
-                for node in nodes:
-                    agent_config = get_agent_config(node.properties)
-                    agent_key = agent_config.get('key')
-                    # Don't do anything with empty or {get_secret} agent keys
-                    if agent_key and isinstance(agent_key, text_type):
-                        agent_dirname = _get_agent_dirname(
-                            version, tenant, dep_id, node.id
-                        )
-                        self._dump_agent_key(agent_dirname, agent_key)
+        for tenant, dep_id, node in self._get_hosts(version):
+            agent_config = get_agent_config(node.properties)
+            agent_key = agent_config.get('key')
+            # Don't do anything with empty or {get_secret} agent keys
+            if agent_key and isinstance(agent_key, text_type):
+                agent_dirname = _get_agent_dirname(
+                    version, tenant, dep_id, node.id
+                )
+                self._dump_agent_key(agent_dirname, agent_key)
 
     @staticmethod
     def _get_hosts(version):
-        """
-        Return a dict with tenants as keys, and dicts as values, in which
-        deployment IDs are keys and a list of nodes is the value
-        """
-        hosts = {}
-        for tenant, deployments in get_dep_contexts(version):
-            for deployment_id, dep_ctx in deployments.items():
-                for node in dep_ctx.nodes:
+        """Find host nodes, and yield (tenant_name, dep_id, node)"""
+        tenants = get_tenants_list(version)
+        for tenant_name in tenants:
+            client = get_rest_client(tenant_name)
+            deployments = client.deployments.list(
+                _include=['id'],
+                _get_all_results=True
+            )
+            for deployment in deployments:
+                nodes = client.nodes.list(
+                    deployment_id=deployment.id,
+                    _get_all_results=True
+                )
+                for node in nodes:
                     if is_compute(node):
-                        tenant_hosts = hosts.setdefault(tenant, {})
-                        deps = tenant_hosts.setdefault(deployment_id, [])
-                        deps.append(node)
-        return iter(hosts.items())
+                        yield tenant_name, deployment.id, node
 
     def _dump_agent_key(self, agent_dirname, agent_key):
         """Copy an agent key from its location on the manager to the snapshot
@@ -146,7 +147,7 @@ def restore(tempdir, postgres, version):
 
     credential_dirs = set(os.listdir(dump_cred_dir))
 
-    for tenant in get_tenants_list():
+    for tenant in get_tenants_list(version):
         client = get_rest_client(tenant=tenant)
 
         # !! mapping key CONTENTS to their secret store keys
