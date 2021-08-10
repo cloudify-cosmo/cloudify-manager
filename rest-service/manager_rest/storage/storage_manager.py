@@ -148,7 +148,8 @@ class SQLStorageManager(object):
         if distinct:
             query = query.distinct(*distinct)
 
-        query = query.outerjoin(*joins)
+        if joins:
+            query = query.outerjoin(*joins)
         return query
 
     @staticmethod
