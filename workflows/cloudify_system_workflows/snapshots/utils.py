@@ -14,7 +14,7 @@ from cloudify import constants, manager
 from . import constants as snapshot_constants
 from .constants import SECURITY_FILE_LOCATION, SECURITY_FILENAME
 from cloudify.utils import ManagerVersion, get_local_rest_certificate
-from cloudify.utils import get_tenant_name, internal as internal_utils
+from cloudify.utils import get_tenant_name
 
 
 class DictToAttributes(dict):
@@ -243,30 +243,15 @@ def get_manager_version(client):
     return ManagerVersion(client.manager.get_version()['version'])
 
 
-def get_tenants_list():
+def get_tenants_list(version):
+    if version < snapshot_constants.V_4_0_0:
+        return [get_tenant_name()]
     client = manager.get_rest_client(snapshot_constants.DEFAULT_TENANT_NAME)
     version = client.manager.get_version()
     if version['edition'] != 'premium':
         return [snapshot_constants.DEFAULT_TENANT_NAME]
     tenants = client.tenants.list(_include=['name'], _get_all_results=True)
     return [tenant.name for tenant in tenants]
-
-
-def get_dep_contexts(version):
-    deps = {}
-    tenants = [get_tenant_name()] if version < snapshot_constants.V_4_0_0 \
-        else get_tenants_list()
-    for tenant_name in tenants:
-        # Temporarily assign the context a different tenant name so that
-        # we can retrieve that tenant's deployment contexts
-        with internal_utils._change_tenant(ctx, tenant_name):
-            # We have to zero this out each time or the cached version for
-            # the previous tenant will be used
-            ctx._dep_contexts = None
-
-            # Get deployment contexts for this tenant
-            deps[tenant_name] = ctx.deployments_contexts
-    return list(deps.items())
 
 
 def is_compute(node):
