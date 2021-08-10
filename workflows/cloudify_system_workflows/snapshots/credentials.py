@@ -25,7 +25,7 @@ from cloudify.manager import get_rest_client
 from cloudify.workflows import ctx
 
 from .constants import V_4_1_0, SECRET_STORE_AGENT_KEY_PREFIX
-from .utils import is_compute, run, get_dep_contexts, get_tenants_list
+from .utils import is_compute, run, get_tenants_list
 
 ALLOWED_KEY_CHARS = string.ascii_letters + string.digits + '-._'
 CRED_DIR = 'snapshot-credentials'
