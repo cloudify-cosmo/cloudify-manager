@@ -28,6 +28,7 @@ from cloudify.deployment_dependencies import (dependency_creator_generator,
                                               create_deployment_dependency)
 
 from .constants import (
+    DEPLOYMENTS_CREATE_RETRIES,
     EXECUTIONS_TIMEOUT,
     POLLING_INTERVAL,
     EXTERNAL_RESOURCE)
@@ -146,8 +147,14 @@ class Component(object):
             raise OperationRetry()
         except CloudifyClientError as ex:
             raise NonRecoverableError(
-                'Client action "{0}" failed: {1}.'.format(request_action,
-                                                          ex))
+                'Client action "{0}" failed: {1}.'.format(request_action, ex),
+                causes=[{
+                    'option': option,
+                    'request_action': request_action,
+                    'request_args': request_args,
+                    'error_code': ex.error_code,
+                }]
+            )
 
     @staticmethod
     def _is_valid_url(candidate):
@@ -311,25 +318,43 @@ class Component(object):
             ctx.instance.runtime_properties['deployment'] = dict()
 
         if self.deployment_auto_suffix:
-            self.deployment_id = self._generate_suffix_deployment_id(
-                self.client, self.deployment_id)
+            base_deployment_id = self.deployment_id
         elif deployment_id_exists(self.client, self.deployment_id):
             raise NonRecoverableError(
                 'Component\'s deployment ID "{0}" already exists, '
                 'please verify the chosen name.'.format(
                     self.deployment_id))
-        self._inter_deployment_dependency['target_deployment'] = \
-            self.deployment_id
 
-        update_runtime_properties('deployment', 'id', self.deployment_id)
-        ctx.logger.info('Creating "{0}" component deployment.'
-                        .format(self.deployment_id))
+        retries = DEPLOYMENTS_CREATE_RETRIES
+        while True:
+            if self.deployment_auto_suffix:
+                self.deployment_id = self._generate_suffix_deployment_id(
+                    self.client, base_deployment_id)
+            self._inter_deployment_dependency['target_deployment'] = \
+                self.deployment_id
 
-        self._http_client_wrapper('deployments', 'create', {
-            'blueprint_id': self.blueprint_id,
-            'deployment_id': self.deployment_id,
-            'inputs': self.deployment_inputs
-        })
+            update_runtime_properties('deployment', 'id', self.deployment_id)
+            ctx.logger.info('Creating "{0}" component deployment.'
+                            .format(self.deployment_id))
+            try:
+                self._http_client_wrapper('deployments', 'create', {
+                    'blueprint_id': self.blueprint_id,
+                    'deployment_id': self.deployment_id,
+                    'inputs': self.deployment_inputs
+                })
+                break
+            except NonRecoverableError as ex:
+                if (ex.causes
+                        and ex.causes[-1].get('error_code') == 'conflict_error'
+                        and self.deployment_auto_suffix
+                        and retries > 0):
+                    ctx.logger.info(
+                        f'Component\'s deployment ID "{self.deployment_id}" '
+                        'already exists, will try to automatically create an '
+                        'ID with a new suffix.')
+                    retries -= 1
+                else:
+                    raise ex
 
         self._http_client_wrapper('inter_deployment_dependencies',
                                   'create',
