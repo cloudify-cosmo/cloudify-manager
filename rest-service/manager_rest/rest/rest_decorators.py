@@ -22,7 +22,6 @@ from dateutil.parser import parse as parse_datetime
 from flask_restful import marshal
 from flask_restful.utils import unpack
 from flask import request
-from sqlalchemy.util._collections import _LW as sql_alchemy_collection
 from voluptuous import (
     All,
     Any,
@@ -130,10 +129,7 @@ class marshal_with(object):
             if isinstance(response, ListResponse):
                 return marshal(wrap_list_items(response),
                                ListResponse.resource_fields)
-            # SQLAlchemy returns a class that subtypes tuple, but acts
-            # differently (it's taken care of in `wrap_with_response_object`)
-            if isinstance(response, tuple) and \
-                    not isinstance(response, sql_alchemy_collection):
+            if isinstance(response, tuple):
                 data, code, headers = unpack(response)
                 if isinstance(data, ListResponse):
                     data = wrap_list_items(data)
@@ -163,10 +159,6 @@ class marshal_with(object):
             return data.to_response(
                 get_data=self._get_data() or self.force_get_data,
                 include=fields_to_include)
-        # Support for partial results from SQLAlchemy (i.e. only
-        # certain columns, and not the whole model class)
-        elif isinstance(data, sql_alchemy_collection):
-            return data._asdict()
         raise RuntimeError('Unexpected response data (type {0}) {1}'.format(
             type(data), data))
 
