@@ -11,7 +11,7 @@ MANAGER_CONFIG = {
     'workflow': {
         'task_retries': 5,
         'task_retry_interval': 1,
-        'subgraph_retries': 5,
+        'subgraph_retries': 0,
     },
 }
 
