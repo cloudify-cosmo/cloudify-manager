@@ -894,36 +894,38 @@ class TestExecutionModelValidationTests(unittest.TestCase):
 class ExecutionQueueingTests(BaseServerTestCase):
     def setUp(self):
         super().setUp()
-        bp = models.Blueprint(id='abc')
-        self.sm.put(bp)
-        self.deployment1 = models.Deployment(id='dep1',
-                                             display_name='dep1',
-                                             blueprint=bp)
-        self.sm.put(self.deployment1)
-        self.deployment2 = models.Deployment(id='dep2',
-                                             display_name='dep2',
-                                             blueprint=bp)
-        self.sm.put(self.deployment2)
-        self.execution1 = models.Execution(
-            deployment=self.deployment1,
-            workflow_id='install',
-            parameters={},
-            status=ExecutionState.TERMINATED,
-        )
-        self.sm.put(self.execution1)
+        with self.sm.transaction():
+            bp = models.Blueprint(id='abc')
+            self.sm.put(bp)
+            self.deployment1 = models.Deployment(id='dep1',
+                                                 display_name='dep1',
+                                                 blueprint=bp)
+            self.sm.put(self.deployment1)
+            self.deployment2 = models.Deployment(id='dep2',
+                                                 display_name='dep2',
+                                                 blueprint=bp)
+            self.sm.put(self.deployment2)
+            self.execution1 = models.Execution(
+                deployment=self.deployment1,
+                workflow_id='install',
+                parameters={},
+                status=ExecutionState.TERMINATED,
+            )
+            self.sm.put(self.execution1)
 
     def _get_queued(self):
         return list(
             self.rm._get_queued_executions(self.deployment1._storage_id))
 
     def _make_execution(self, status=None, deployment=None):
-        execution = models.Execution(
-            deployment=deployment or self.deployment2,
-            workflow_id='install',
-            parameters={},
-            status=status or ExecutionState.QUEUED,
-        )
-        self.sm.put(execution)
+        with self.sm.transaction():
+            execution = models.Execution(
+                deployment=deployment or self.deployment2,
+                workflow_id='install',
+                parameters={},
+                status=status or ExecutionState.QUEUED,
+            )
+            self.sm.put(execution)
         return execution
 
     def test_unrelated_execution(self):
