@@ -146,7 +146,7 @@ def restore(tempdir, postgres, version):
 
     credential_dirs = set(os.listdir(dump_cred_dir))
 
-    for tenant in get_tenants_list():
+    for tenant in get_tenants_list(version):
         client = get_rest_client(tenant=tenant)
 
         # !! mapping key CONTENTS to their secret store keys

@@ -243,7 +243,9 @@ def get_manager_version(client):
     return ManagerVersion(client.manager.get_version()['version'])
 
 
-def get_tenants_list():
+def get_tenants_list(version):
+    if version < snapshot_constants.V_4_0_0:
+        return [get_tenant_name()]
     client = manager.get_rest_client(snapshot_constants.DEFAULT_TENANT_NAME)
     version = client.manager.get_version()
     if version['edition'] != 'premium':
@@ -254,9 +256,7 @@ def get_tenants_list():
 
 def get_dep_contexts(version):
     deps = {}
-    tenants = [get_tenant_name()] if version < snapshot_constants.V_4_0_0 \
-        else get_tenants_list()
-    for tenant_name in tenants:
+    for tenant_name in get_tenants_list(version):
         # Temporarily assign the context a different tenant name so that
         # we can retrieve that tenant's deployment contexts
         with internal_utils._change_tenant(ctx, tenant_name):
