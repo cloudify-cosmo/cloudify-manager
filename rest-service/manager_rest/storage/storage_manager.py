@@ -38,7 +38,8 @@ from .utils import get_column, get_joins
 from .filters import add_filter_rules_to_query
 
 from psycopg2 import DatabaseError as Psycopg2DBError
-sql_errors = (SQLAlchemyError, Psycopg2DBError)
+from psycopg2.errors import CheckViolation
+sql_errors = (SQLAlchemyError, Psycopg2DBError, CheckViolation, IntegrityError)
 
 
 def no_autoflush(f):
@@ -147,7 +148,8 @@ class SQLStorageManager(object):
         if distinct:
             query = query.distinct(*distinct)
 
-        query = query.outerjoin(*joins)
+        if joins:
+            query = query.outerjoin(*joins)
         return query
 
     @staticmethod
@@ -684,7 +686,7 @@ class SQLStorageManager(object):
         pagination = {'total': total, 'size': size, 'offset': offset}
         filtered = (self.count(model_class) - total) if filter_rules else None
 
-        current_app.logger.debug('Returning: {0}'.format(results))
+        current_app.logger.debug('Returning: %s', results)
         return ListResult(items=results, metadata={'pagination': pagination,
                                                    'filtered': filtered})
 
@@ -757,7 +759,7 @@ class SQLStorageManager(object):
         :return: The same instance, with the tenant set, if necessary
         """
         self._associate_users_and_tenants(instance)
-        current_app.logger.debug('Put {0}'.format(instance))
+        current_app.logger.debug('Put %s', instance)
         self.update(instance, log=False)
 
         self._validate_unique_resource_id_per_tenant(instance)
@@ -768,7 +770,7 @@ class SQLStorageManager(object):
         """
         if instance.is_resource and validate_global:
             validate_global_modification(instance)
-        current_app.logger.debug('Delete {0}'.format(instance))
+        current_app.logger.debug('Delete %s', instance)
         db.session.delete(instance)
         self._safe_commit()
         return instance
@@ -792,7 +794,7 @@ class SQLStorageManager(object):
         if instance.is_resource and validate_global:
             validate_global_modification(instance)
         if log:
-            current_app.logger.debug('Update {0}'.format(instance))
+            current_app.logger.debug('Update %s', instance)
         db.session.add(instance)
         self._validate_unique_resource_id_per_tenant(instance)
         for attr in modified_attrs:
@@ -806,7 +808,7 @@ class SQLStorageManager(object):
         :param instance: Instance to be re-loaded from the DB
         :return: The refreshed instance
         """
-        current_app.logger.debug('Refresh {0}'.format(instance))
+        current_app.logger.debug('Refresh %s', instance)
         db.session.refresh(instance)
         self._load_relationships(instance)
         return instance

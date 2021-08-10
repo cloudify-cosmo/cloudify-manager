@@ -528,15 +528,18 @@ class BaseServerTestCase(unittest.TestCase):
 
     @classmethod
     def _create_db(cls, test_config, dbname):
-        with psycopg2.connect(
-                host=test_config.postgresql_host,
-                user=test_config.postgresql_username,
-                password=test_config.postgresql_password,
-                dbname='cloudify_db') as conn:
+        conn = psycopg2.connect(
+            host=test_config.postgresql_host,
+            user=test_config.postgresql_username,
+            password=test_config.postgresql_password,
+            dbname='cloudify_db')
+        try:
             conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
             with conn.cursor() as cur:
                 cur.execute(f'CREATE DATABASE {dbname}')
-            os.environ['DB_EXISTS'] = dbname
+        finally:
+            conn.close()
+        os.environ['DB_EXISTS'] = dbname
 
     @classmethod
     def _find_db_name(cls, test_config):

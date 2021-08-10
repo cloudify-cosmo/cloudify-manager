@@ -43,7 +43,7 @@ db = SQLAlchemy(metadata=MetaData(naming_convention={
 
 
 class UTCDateTime(db.TypeDecorator):
-
+    cache_ok = True
     impl = db.DateTime
 
     def process_result_value(self, value, engine):
@@ -76,7 +76,7 @@ class JSONString(db.TypeDecorator):
     implementations.
 
     """
-
+    cache_ok = True
     impl = db.Text
 
     def process_bind_param(self, value, dialect):

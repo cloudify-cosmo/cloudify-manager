@@ -142,7 +142,9 @@ def key_any_of_values(labels_model, label_key, label_values):
         db.session.query(labels_model._labeled_model_fk)
         .filter(labels_model.key == label_key,
                 labels_model.value.in_(label_values))
-        .subquery())
+        .subquery()
+        .select()
+    )
 
 
 def key_not_any_of_values(labels_model, label_key, label_values):
@@ -151,7 +153,9 @@ def key_not_any_of_values(labels_model, label_key, label_values):
         db.session.query(labels_model._labeled_model_fk)
         .filter(labels_model.key == label_key,
                 ~labels_model.value.in_(label_values))
-        .subquery())
+        .subquery()
+        .select()
+    )
 
 
 def key_not_any_of_values_or_not_exist(model_class, labels_model, label_key,
@@ -165,6 +169,7 @@ def key_not_any_of_values_or_not_exist(model_class, labels_model, label_key,
         .filter(labels_model.key == label_key,
                 labels_model.value.in_(label_values))
         .subquery()
+        .select()
     )
 
 
@@ -181,6 +186,9 @@ def key_exist(labels_model, label_key):
 
 
 def _labels_key_subquery(labels_model, label_key):
-    return (db.session.query(labels_model._labeled_model_fk)
-            .filter(labels_model.key == label_key)
-            .subquery())
+    return (
+        db.session.query(labels_model._labeled_model_fk)
+        .filter(labels_model.key == label_key)
+        .subquery()
+        .select()
+    )
