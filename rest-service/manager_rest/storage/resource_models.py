@@ -1744,8 +1744,6 @@ class Node(SQLResourceBase):
     }
     actual_planned_number_of_instances = 0
 
-    instances = db.relationship('NodeInstance', lazy='subquery')
-
     @hybrid_property
     def actual_number_of_instances(self):
         return len(self.instances)
@@ -1811,7 +1809,11 @@ class NodeInstance(SQLResourceBase):
 
     @declared_attr
     def node(cls):
-        return one_to_many_relationship(cls, Node, cls._node_fk)
+        return one_to_many_relationship(
+            cls, Node, cls._node_fk,
+            backref=db.backref(
+                'instances', lazy='subquery', cascade='all, delete')
+        )
 
     node_id = association_proxy('node', 'id')
     deployment_id = association_proxy('node', 'deployment_id')
