@@ -38,7 +38,8 @@ from .utils import get_column, get_joins
 from .filters import add_filter_rules_to_query
 
 from psycopg2 import DatabaseError as Psycopg2DBError
-sql_errors = (SQLAlchemyError, Psycopg2DBError)
+from psycopg2.errors import CheckViolation
+sql_errors = (SQLAlchemyError, Psycopg2DBError, CheckViolation, IntegrityError)
 
 
 def no_autoflush(f):
