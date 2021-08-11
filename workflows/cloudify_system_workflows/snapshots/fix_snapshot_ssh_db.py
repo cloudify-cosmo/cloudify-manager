@@ -94,7 +94,7 @@ def main(original_string, secret_name):
     res = sm.list(model_class=Deployment, get_all_results=True)
     for deployment in res:
         for node in deployment.nodes:
-            for node_instance in node.node_instances:
+            for node_instance in node.instances:
                 runtime_properties = node_instance.runtime_properties
                 changed = update_agent_properties(runtime_properties,
                                                   original_string,
