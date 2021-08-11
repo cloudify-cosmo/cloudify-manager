@@ -247,9 +247,10 @@ def run_postgresql_command(container_id, cmd):
 
 def generate_scheduled_for_date():
     now = datetime.utcnow()
-    # Schedule the execution for 1 minute in the future, or 2 in case it's past
-    # 20 seconds after a whole minute.
-    minutes_in_the_future = 1 if now.second <= 20 else 2
+    # Because seconds (and milliseconds) are trimmed from the `scheduled_for`
+    # timestamp, let us be more generous by adding more time in case it is
+    # "almost a full minute".
+    minutes_in_the_future = 1 if now.second <= 40 else 2
     scheduled_for = now + timedelta(minutes=minutes_in_the_future)
     return scheduled_for.strftime('%Y%m%d%H%M+0000')
 
