@@ -27,7 +27,7 @@ setup(
     install_requires=[
         'cloudify-common==6.2.0.dev1',
         'retrying==1.3.3',
-        'psycopg2==2.7.4',
+        'psycopg2==2.9.1',
         'cryptography==3.3.2',
         'python-dateutil==2.8.1',
         'pytz==2021.1',
