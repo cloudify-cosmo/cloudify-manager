@@ -777,6 +777,15 @@ class ResourceManager(object):
                     f"existing installations depend on it:\n"
                     f"{deployment_dependencies}"
                 )
+        inter_deployment_dependencies = self.sm.list(
+            models.InterDeploymentDependencies,
+            filters={'target_deployment': deployment})
+        idd_list = [i for i in inter_deployment_dependencies]
+        raise Exception(
+            'MATEUSZ there are some deployment dependencies targeting '
+            f'{deployment}: {idd_list}'
+        )
+
         if executions:
             running_ids = ','.join(
                 execution.id for execution in executions
