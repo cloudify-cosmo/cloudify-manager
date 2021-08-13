@@ -181,8 +181,8 @@ class AgentsName(SecuredResource):
                 self._get_amqp_manager().create_agent_user(new_agent)
             except manager_exceptions.ConflictError:
                 # Assuming the agent user was already created
-                current_app.logger.info(f'Not creating agent user "{name}" '
-                                        'because it already exists')
+                current_app.logger.info('Not creating agent user "%s" because '
+                                        'it already exists', name)
         return response
 
     @rest_decorators.marshal_with(models.Agent)
