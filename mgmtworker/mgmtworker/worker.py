@@ -64,7 +64,7 @@ class CloudifyWorkflowConsumer(CloudifyOperationConsumer):
     late_ack = True
 
     @contextmanager
-    def _update_operation_state(self, ctx):
+    def _update_operation_state(self, *args, **kwargs):
         # noop - override superclass method, which tries to update the
         # operation state: we're not working with operations, but workflows
         yield
