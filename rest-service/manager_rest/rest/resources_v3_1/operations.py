@@ -114,7 +114,7 @@ class OperationsId(SecuredResource):
                     instance.state in common_constants.TERMINATED_STATES:
                 self._modify_execution_operations_counts(instance, 1)
             sm.update(instance, modified_attrs=('state',))
-        return None, 204
+        return {}, 200
 
     def _on_task_success(self, sm, operation):
         handler = getattr(self, f'_on_success_{operation.type}', None)
