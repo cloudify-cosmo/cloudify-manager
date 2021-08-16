@@ -63,6 +63,8 @@ setup(
         'console_scripts': [
             'update-plugin-imports = '
             'manager_rest.shell.update_plugin_imports:main',
+            'substitute-import-lines = '
+            'manager_rest.shell.substitute_import_lines:main',
         ]
     },
     extras_require={
