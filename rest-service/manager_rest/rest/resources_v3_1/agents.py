@@ -176,13 +176,8 @@ class AgentsName(SecuredResource):
             new_agent = get_storage_manager().get(models.Agent, name)
 
         if request_dict.get('create_rabbitmq_user'):
-            try:
-                # Create rabbitmq user
-                self._get_amqp_manager().create_agent_user(new_agent)
-            except manager_exceptions.ConflictError:
-                # Assuming the agent user was already created
-                current_app.logger.info('Not creating agent user "%s" because '
-                                        'it already exists', name)
+            # Create rabbitmq user
+            self._get_amqp_manager().create_agent_user(new_agent)
         return response
 
     @rest_decorators.marshal_with(models.Agent)
