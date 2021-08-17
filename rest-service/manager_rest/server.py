@@ -85,7 +85,7 @@ def cope_with_db_failover():
             current_app.logger.warning(
                 'Database reconnection occurred. This is expected to happen '
                 'when there has been a recent failover or DB proxy restart. '
-                'Attempt numer %s/%s. Error was: %s',
+                'Attempt number %s/%s. Error was: %s',
                 attempt, max_attempts, err,
             )
 
