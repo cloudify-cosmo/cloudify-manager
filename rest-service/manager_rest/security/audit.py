@@ -16,7 +16,7 @@ def set_tenant(tenant: str):
     g.audit_tenant = tenant
 
 
-def extend_headers(response: flask.Response):
+def extend_headers(response: flask.Response) -> flask.Response:
     audit_headers = _prepare_headers()
     response.headers.extend(audit_headers)
     return response
