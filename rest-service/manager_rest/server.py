@@ -18,6 +18,7 @@ from cloudify._compat import StringIO
 from manager_rest import config, premium_enabled, manager_exceptions
 from manager_rest.storage import db, user_datastore, models
 from manager_rest.security.user_handler import user_loader
+from manager_rest.security import audit
 from manager_rest.maintenance import maintenance_mode_handler
 from manager_rest.rest.endpoint_mapper import setup_resources
 from manager_rest.flask_utils import set_flask_security_config
@@ -84,7 +85,7 @@ def cope_with_db_failover():
             current_app.logger.warning(
                 'Database reconnection occurred. This is expected to happen '
                 'when there has been a recent failover or DB proxy restart. '
-                'Attempt numer %s/%s. Error was: %s',
+                'Attempt number %s/%s. Error was: %s',
                 attempt, max_attempts, err,
             )
 
@@ -144,6 +145,7 @@ class CloudifyFlaskApp(Flask):
         self.before_request(query_service_settings)
         self.before_request(maintenance_mode_handler)
         self.after_request(log_response)
+        self.after_request(audit.extend_headers)
         self._set_flask_security()
 
         with self.app_context():
