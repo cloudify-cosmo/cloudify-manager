@@ -38,7 +38,25 @@ LEGAL_FILTER_RULES = [
     FilterRule('created_by', ['user'], AttrsOperator.ENDS_WITH, 'attribute'),
     FilterRule('created_by', ['user', 'admin'], AttrsOperator.ENDS_WITH,
                'attribute'),
-    FilterRule('created_by', [], AttrsOperator.IS_NOT_EMPTY, 'attribute')
+    FilterRule('created_by', [], AttrsOperator.IS_NOT_EMPTY, 'attribute'),
+    FilterRule('state', ['uploaded'], AttrsOperator.ANY_OF, 'attribute'),
+    FilterRule('state', ['uploaded', 'invalid'], AttrsOperator.ANY_OF,
+               'attribute'),
+    FilterRule('state', ['uploaded'], AttrsOperator.NOT_ANY_OF, 'attribute'),
+    FilterRule('state', ['uploaded', 'invalid'], AttrsOperator.NOT_ANY_OF,
+               'attribute'),
+    FilterRule('state', ['uploaded'], AttrsOperator.CONTAINS, 'attribute'),
+    FilterRule('state', ['uploaded', 'invalid'], AttrsOperator.CONTAINS,
+               'attribute'),
+    FilterRule('state', ['uploaded'], AttrsOperator.NOT_CONTAINS, 'attribute'),
+    FilterRule('state', ['uploaded', 'invalid'], AttrsOperator.NOT_CONTAINS,
+               'attribute'),
+    FilterRule('state', ['uploaded'], AttrsOperator.STARTS_WITH, 'attribute'),
+    FilterRule('state', ['uploaded', 'invalid'], AttrsOperator.STARTS_WITH,
+               'attribute'),
+    FilterRule('state', ['uploaded'], AttrsOperator.ENDS_WITH, 'attribute'),
+    FilterRule('state', ['uploaded', 'invalid'], AttrsOperator.ENDS_WITH,
+               'attribute'),
 ]
 
 
