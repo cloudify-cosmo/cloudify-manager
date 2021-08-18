@@ -39,6 +39,8 @@ LEGAL_FILTER_RULES = [
     FilterRule('created_by', ['user', 'admin'], AttrsOperator.ENDS_WITH,
                'attribute'),
     FilterRule('created_by', [], AttrsOperator.IS_NOT_EMPTY, 'attribute'),
+]
+BLUEPRINT_SPECIFIC_FILTER_RULES = [
     FilterRule('state', ['uploaded'], AttrsOperator.ANY_OF, 'attribute'),
     FilterRule('state', ['uploaded', 'invalid'], AttrsOperator.ANY_OF,
                'attribute'),
@@ -306,16 +308,17 @@ class FiltersBaseCase(base_test.BaseServerTestCase):
                                 'attribute')
     NEW_RULES = [NEW_LABELS_RULE, NEW_ATTRS_RULE]
 
-    def setUp(self, filters_resource, filters_model):
+    def setUp(self, filters_resource, filters_model, legal_filter_rules):
         super().setUp()
         self.filters_client = getattr(self.client, filters_resource)
         self.filters_model = filters_model
+        self.legal_filter_rules = legal_filter_rules
 
     def test_create_legal_filter(self):
         new_filter = self.create_filter(self.filters_client,
                                         FILTER_ID,
-                                        LEGAL_FILTER_RULES)
-        self.assertEqual(new_filter.value, LEGAL_FILTER_RULES)
+                                        self.legal_filter_rules)
+        self.assertEqual(new_filter.value, self.legal_filter_rules)
 
     def test_list_filters(self):
         for i in range(3):
@@ -484,7 +487,8 @@ class BlueprintsFiltersCase(FiltersBaseCase):
     __test__ = True
 
     def setUp(self):
-        super().setUp('blueprints_filters', models.BlueprintsFilter)
+        super().setUp('blueprints_filters', models.BlueprintsFilter,
+                      LEGAL_FILTER_RULES + BLUEPRINT_SPECIFIC_FILTER_RULES)
 
 
 @attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
@@ -492,4 +496,5 @@ class DeploymentsFiltersCase(FiltersBaseCase):
     __test__ = True
 
     def setUp(self):
-        super().setUp('deployments_filters', models.DeploymentsFilter)
+        super().setUp('deployments_filters', models.DeploymentsFilter,
+                      LEGAL_FILTER_RULES)
