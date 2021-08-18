@@ -38,7 +38,27 @@ LEGAL_FILTER_RULES = [
     FilterRule('created_by', ['user'], AttrsOperator.ENDS_WITH, 'attribute'),
     FilterRule('created_by', ['user', 'admin'], AttrsOperator.ENDS_WITH,
                'attribute'),
-    FilterRule('created_by', [], AttrsOperator.IS_NOT_EMPTY, 'attribute')
+    FilterRule('created_by', [], AttrsOperator.IS_NOT_EMPTY, 'attribute'),
+]
+BLUEPRINT_SPECIFIC_FILTER_RULES = [
+    FilterRule('state', ['uploaded'], AttrsOperator.ANY_OF, 'attribute'),
+    FilterRule('state', ['uploaded', 'invalid'], AttrsOperator.ANY_OF,
+               'attribute'),
+    FilterRule('state', ['uploaded'], AttrsOperator.NOT_ANY_OF, 'attribute'),
+    FilterRule('state', ['uploaded', 'invalid'], AttrsOperator.NOT_ANY_OF,
+               'attribute'),
+    FilterRule('state', ['uploaded'], AttrsOperator.CONTAINS, 'attribute'),
+    FilterRule('state', ['uploaded', 'invalid'], AttrsOperator.CONTAINS,
+               'attribute'),
+    FilterRule('state', ['uploaded'], AttrsOperator.NOT_CONTAINS, 'attribute'),
+    FilterRule('state', ['uploaded', 'invalid'], AttrsOperator.NOT_CONTAINS,
+               'attribute'),
+    FilterRule('state', ['uploaded'], AttrsOperator.STARTS_WITH, 'attribute'),
+    FilterRule('state', ['uploaded', 'invalid'], AttrsOperator.STARTS_WITH,
+               'attribute'),
+    FilterRule('state', ['uploaded'], AttrsOperator.ENDS_WITH, 'attribute'),
+    FilterRule('state', ['uploaded', 'invalid'], AttrsOperator.ENDS_WITH,
+               'attribute'),
 ]
 
 
@@ -163,6 +183,31 @@ class BlueprintsFiltersFunctionalityCase(FiltersFunctionalityBaseCase):
         self._test_labels_filters_applied(bp_1['id'], bp_2['id'], bp_3['id'],
                                           bp_4['id'])
 
+    def test_filter_by_state_uploaded(self):
+        bp_1 = self.put_blueprint(blueprint_id='bp_1')
+        bp_2 = self.put_blueprint(blueprint_id='bp_2')
+        bp_3 = self.put_blueprint(blueprint_id='bp_3')
+        self.assert_filters_applied(
+            [('state', ['uploaded'], AttrsOperator.ANY_OF,
+              'attribute'),
+             ('state', ['invalid', 'failed', ], AttrsOperator.NOT_ANY_OF,
+              'attribute')],
+            {bp_1.id, bp_2.id, bp_3.id},
+            models.Blueprint
+        )
+
+    def test_filter_by_state_invalid(self):
+        bp = self.put_blueprint(blueprint_id='invalid_blueprint')
+        self.client.blueprints.update(bp.id, {'state': 'invalid'})
+        self.assert_filters_applied(
+            [('state', ['invalid'], AttrsOperator.ANY_OF, 'attribute'),
+             ('state', ['uploaded'], AttrsOperator.NOT_ANY_OF, 'attribute'),
+             ('state', ['invalid'], AttrsOperator.CONTAINS, 'attribute'),
+             ('state', ['uploaded'], AttrsOperator.NOT_CONTAINS, 'attribute')],
+            {bp.id},
+            models.Blueprint
+        )
+
 
 @attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
 class DeploymentFiltersFunctionalityCase(FiltersFunctionalityBaseCase):
@@ -263,16 +308,17 @@ class FiltersBaseCase(base_test.BaseServerTestCase):
                                 'attribute')
     NEW_RULES = [NEW_LABELS_RULE, NEW_ATTRS_RULE]
 
-    def setUp(self, filters_resource, filters_model):
+    def setUp(self, filters_resource, filters_model, legal_filter_rules):
         super().setUp()
         self.filters_client = getattr(self.client, filters_resource)
         self.filters_model = filters_model
+        self.legal_filter_rules = legal_filter_rules
 
     def test_create_legal_filter(self):
         new_filter = self.create_filter(self.filters_client,
                                         FILTER_ID,
-                                        LEGAL_FILTER_RULES)
-        self.assertEqual(new_filter.value, LEGAL_FILTER_RULES)
+                                        self.legal_filter_rules)
+        self.assertEqual(new_filter.value, self.legal_filter_rules)
 
     def test_list_filters(self):
         for i in range(3):
@@ -441,7 +487,8 @@ class BlueprintsFiltersCase(FiltersBaseCase):
     __test__ = True
 
     def setUp(self):
-        super().setUp('blueprints_filters', models.BlueprintsFilter)
+        super().setUp('blueprints_filters', models.BlueprintsFilter,
+                      LEGAL_FILTER_RULES + BLUEPRINT_SPECIFIC_FILTER_RULES)
 
 
 @attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
@@ -449,4 +496,5 @@ class DeploymentsFiltersCase(FiltersBaseCase):
     __test__ = True
 
     def setUp(self):
-        super().setUp('deployments_filters', models.DeploymentsFilter)
+        super().setUp('deployments_filters', models.DeploymentsFilter,
+                      LEGAL_FILTER_RULES)
