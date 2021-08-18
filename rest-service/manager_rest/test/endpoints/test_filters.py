@@ -181,6 +181,31 @@ class BlueprintsFiltersFunctionalityCase(FiltersFunctionalityBaseCase):
         self._test_labels_filters_applied(bp_1['id'], bp_2['id'], bp_3['id'],
                                           bp_4['id'])
 
+    def test_filter_by_state_uploaded(self):
+        bp_1 = self.put_blueprint(blueprint_id='bp_1')
+        bp_2 = self.put_blueprint(blueprint_id='bp_2')
+        bp_3 = self.put_blueprint(blueprint_id='bp_3')
+        self.assert_filters_applied(
+            [('state', ['uploaded'], AttrsOperator.ANY_OF,
+              'attribute'),
+             ('state', ['invalid', 'failed', ], AttrsOperator.NOT_ANY_OF,
+              'attribute')],
+            {bp_1.id, bp_2.id, bp_3.id},
+            models.Blueprint
+        )
+
+    def test_filter_by_state_invalid(self):
+        bp = self.put_blueprint(blueprint_id='invalid_blueprint')
+        self.client.blueprints.update(bp.id, {'state': 'invalid'})
+        self.assert_filters_applied(
+            [('state', ['invalid'], AttrsOperator.ANY_OF, 'attribute'),
+             ('state', ['uploaded'], AttrsOperator.NOT_ANY_OF, 'attribute'),
+             ('state', ['invalid'], AttrsOperator.CONTAINS, 'attribute'),
+             ('state', ['uploaded'], AttrsOperator.NOT_CONTAINS, 'attribute')],
+            {bp.id},
+            models.Blueprint
+        )
+
 
 @attr(client_min_version=3.1, client_max_version=base_test.LATEST_API_VERSION)
 class DeploymentFiltersFunctionalityCase(FiltersFunctionalityBaseCase):
