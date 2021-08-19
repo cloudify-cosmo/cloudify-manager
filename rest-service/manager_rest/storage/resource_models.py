@@ -29,7 +29,6 @@ from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import validates, aliased
 from sqlalchemy.sql.schema import CheckConstraint
 
-from cloudify.audit import Operation as AuditOperation
 from cloudify.constants import MGMTWORKER_QUEUE
 from cloudify.models_states import (AgentState,
                                     SnapshotState,
@@ -47,7 +46,8 @@ from manager_rest.utils import (get_rrule,
                                 files_in_folder)
 from manager_rest.deployment_update.constants import ACTION_TYPES, ENTITY_TYPES
 from manager_rest.constants import (FILE_SERVER_PLUGINS_FOLDER,
-                                    FILE_SERVER_RESOURCES_FOLDER)
+                                    FILE_SERVER_RESOURCES_FOLDER,
+                                    AUDIT_OPERATIONS)
 
 from .models_base import (
     db,
@@ -2046,8 +2046,7 @@ class AuditLog(CreatedAtMixin, SQLModelBase):
     _storage_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     ref_table = db.Column(db.Text, nullable=False, index=True)
     ref_id = db.Column(db.Integer, nullable=False)
-    operation = db.Column(db.Enum(*AuditOperation.OPERATIONS,
-                                  name='audit_operation'),
+    operation = db.Column(db.Enum(*AUDIT_OPERATIONS, name='audit_operation'),
                           nullable=False)
     creator_name = db.Column(db.Text, nullable=True)
     execution_id = db.Column(db.Text, nullable=True)
