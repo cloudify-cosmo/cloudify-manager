@@ -46,7 +46,8 @@ from manager_rest.utils import (get_rrule,
                                 files_in_folder)
 from manager_rest.deployment_update.constants import ACTION_TYPES, ENTITY_TYPES
 from manager_rest.constants import (FILE_SERVER_PLUGINS_FOLDER,
-                                    FILE_SERVER_RESOURCES_FOLDER)
+                                    FILE_SERVER_RESOURCES_FOLDER,
+                                    AUDIT_OPERATIONS)
 
 from .models_base import (
     db,
@@ -2027,4 +2028,26 @@ class DeploymentLabelsDependencies(BaseDeploymentDependencies):
 
     _source_deployment = foreign_key(Deployment._storage_id)
     _target_deployment = foreign_key(Deployment._storage_id)
+
+
+class AuditLog(CreatedAtMixin, SQLModelBase):
+    __tablename__ = 'audit_log'
+    __table_args__ = (
+        db.Index(
+            'audit_log_ref_idx',
+            'ref_table', 'ref_id',
+            unique=False
+        ),
+        CheckConstraint(
+            '(creator_name IS NULL) != (execution_id IS NULL)',
+            name='audit_log_creator_or_user_not_null'
+        ),
+    )
+    _storage_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    ref_table = db.Column(db.Text, nullable=False, index=True)
+    ref_id = db.Column(db.Integer, nullable=False)
+    operation = db.Column(db.Enum(*AUDIT_OPERATIONS, name='audit_operation'),
+                          nullable=False)
+    creator_name = db.Column(db.Text, nullable=True)
+    execution_id = db.Column(db.Text, nullable=True)
 # endregion

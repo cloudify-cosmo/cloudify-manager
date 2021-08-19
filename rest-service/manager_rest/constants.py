@@ -118,3 +118,11 @@ LABELS_OPERATORS = [operator.value for operator in LabelsOperator]
 ATTRS_OPERATORS = [attrs_operator.value for attrs_operator in AttrsOperator]
 
 FILTER_RULE_TYPES = [rule_type.value for rule_type in FilterRuleType]
+
+
+AUDIT_OPERATION_CREATE = 'create'
+AUDIT_OPERATION_UPDATE = 'update'
+AUDIT_OPERATION_DELETE = 'delete'
+AUDIT_OPERATIONS = [AUDIT_OPERATION_CREATE,
+                    AUDIT_OPERATION_UPDATE,
+                    AUDIT_OPERATION_DELETE]
