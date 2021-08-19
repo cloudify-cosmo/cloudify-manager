@@ -29,6 +29,7 @@ from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import validates, aliased
 from sqlalchemy.sql.schema import CheckConstraint
 
+from cloudify.audit import Operation as AuditOperation
 from cloudify.constants import MGMTWORKER_QUEUE
 from cloudify.models_states import (AgentState,
                                     SnapshotState,
@@ -2027,4 +2028,27 @@ class DeploymentLabelsDependencies(BaseDeploymentDependencies):
 
     _source_deployment = foreign_key(Deployment._storage_id)
     _target_deployment = foreign_key(Deployment._storage_id)
+
+
+class AuditLog(CreatedAtMixin, SQLModelBase):
+    __tablename__ = 'audit_log'
+    __table_args__ = (
+        db.Index(
+            'audit_log_ref_idx',
+            'ref_table', 'ref_id',
+            unique=False
+        ),
+        CheckConstraint(
+            '(creator_name IS NULL) != (execution_id IS NULL)',
+            name='audit_log_creator_or_user_not_null'
+        ),
+    )
+    _storage_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    ref_table = db.Column(db.Text, nullable=False, index=True)
+    ref_id = db.Column(db.Integer, nullable=False)
+    operation = db.Column(db.Enum(*AuditOperation.OPERATIONS,
+                                  name='audit_operation'),
+                          nullable=False)
+    creator_name = db.Column(db.Text, nullable=True)
+    execution_id = db.Column(db.Text, nullable=True)
 # endregion
