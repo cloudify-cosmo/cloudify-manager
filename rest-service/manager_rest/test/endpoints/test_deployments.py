@@ -204,7 +204,6 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         workflow = next((workflow for workflow in workflows if
                         workflow['name'] == 'mock_workflow'), None)
         self.assertIsNotNone(workflow)
-        self.assertTrue('created_at' in workflow)
         parameters = {
             'optional_param': {'default': 'test_default_value'},
             'mandatory_param': {},
