@@ -1045,7 +1045,10 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             'upload_blueprint': 'cloudify_system_workflows.blueprint.upload',
             'csys_update_deployment':
                 'cloudify_system_workflows.deployment_environment.'
-                'update_deployment'
+                'update_deployment',
+            'csys_new_deployment_update':
+                'cloudify_system_workflows.deployment_update.workflow.'
+                'update_deployment',
         }.get(wf_id)
 
     def get_workflow(self, deployment=None, workflow_id=None):
