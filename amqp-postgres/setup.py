@@ -19,7 +19,7 @@ from setuptools import setup
 
 setup(
     name='cloudify-amqp-postgres',
-    version='5.2.5.dev1',
+    version='5.2.5',
     author='Cloudify',
     author_email='cosmo-admin@cloudify.co',
     packages=['amqp_postgres'],
@@ -31,6 +31,6 @@ setup(
     install_requires=[
         'pika==1.1.0',
         'psycopg2==2.7.4',
-        'cloudify-common==5.2.5.dev1',
+        'cloudify-common==5.2.5',
     ],
 )
