@@ -11,6 +11,8 @@ from manager_rest.flask_utils import setup_flask_app
 
 def create_system_filters():
     with setup_flask_app().app_context():
+        db.session.execute("SET SESSION audit.execution_id = :id",
+                           params={'id': 'create_system_filters'})
         current_deployment_filters = db.session.query(models.DeploymentsFilter)
         curr_dep_filters_ids = {dep_filter.id for dep_filter
                                 in current_deployment_filters}

@@ -17,6 +17,8 @@ def load_permissions(authorization_file_path, debug=False):
         auth_data = yaml.safe_load(f)
 
     with setup_flask_app().app_context():
+        db.session.execute("SET SESSION audit.execution_id = :id",
+                           params={'id': 'load_permissions'})
         existing_roles = db.session.query(models.Role)
         existing_role_names = [
             role.name for role in existing_roles
