@@ -2,6 +2,7 @@ import typing
 
 import flask
 from flask import g
+from manager_rest.storage.models_base import db
 
 
 def set_audit_method(method: str):
@@ -10,6 +11,8 @@ def set_audit_method(method: str):
 
 def set_username(username: str):
     g.audit_username = username
+    db.session.execute("SET SESSION audit.username = :name",
+                       params={'name': username})
 
 
 def set_tenant(tenant: str):
