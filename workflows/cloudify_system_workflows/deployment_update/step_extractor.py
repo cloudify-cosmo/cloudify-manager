@@ -1,7 +1,6 @@
 import operator
 
 from functools import total_ordering
-from contextlib import contextmanager
 
 import networkx as nx
 
@@ -42,7 +41,6 @@ PLUGINS_TO_INSTALL = 'plugins_to_install'
 DESCRIPTION = 'description'
 CONTAINED_IN_RELATIONSHIP_TYPE = 'cloudify.relationships.contained_in'
 TYPE_HIERARCHY = 'type_hierarchy'
-# flake8: noqa
 
 
 @total_ordering
@@ -107,7 +105,7 @@ class DeploymentUpdateStep(object):
                 if other.entity_type == NODE:
                     # higher topology order before lower topology order
                     return self.topology_order > other.topology_order
-        if self.action =='remove':
+        if self.action == 'remove':
             # remove relationships before removing nodes
             if self.entity_type == RELATIONSHIP and other.entity_type == NODE:
                 return True
@@ -165,8 +163,7 @@ def _create_steps(nodes, deployment, new_plan):
         )
     for action, key in _diff_dicts(
             new_plan[GROUPS], deployment.groups,
-            compare=_compare_groups
-        ):
+            compare=_compare_groups):
         yield DeploymentUpdateStep(
             action=action,
             entity_type=GROUP,
