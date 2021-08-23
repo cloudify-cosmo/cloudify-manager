@@ -186,7 +186,7 @@ class ResourceManager(object):
 
         # If the execution is a deployment update, and the status we're
         # updating to is one which should cause the update to fail - do it here
-        if workflow_id == 'update' and \
+        if workflow_id in ('update', 'csys_new_deployment_update') and \
                 status in [ExecutionState.FAILED, ExecutionState.CANCELLED]:
             dep_update = self.sm.get(models.DeploymentUpdate, None,
                                      filters={'execution_id': execution_id})
