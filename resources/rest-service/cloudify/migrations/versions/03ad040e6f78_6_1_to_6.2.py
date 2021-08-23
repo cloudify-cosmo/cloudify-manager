@@ -51,7 +51,7 @@ def _create_audit_log_table():
             'created_at', UTCDateTime(),
             nullable=False),
         sa.CheckConstraint(
-            '(creator_name IS NULL) != (execution_id IS NULL)',
+            'creator_name IS NOT NULL OR execution_id IS NOT NULL',
             name='audit_log_creator_or_user_not_null'),
         sa.PrimaryKeyConstraint(
             '_storage_id',
