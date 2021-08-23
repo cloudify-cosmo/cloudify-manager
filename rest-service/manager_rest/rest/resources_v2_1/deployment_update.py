@@ -13,16 +13,23 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import uuid
 from os.path import join
 from shutil import copytree, rmtree
 
 from flask import request
 from flask_restful_swagger import swagger
 
+from cloudify._compat import text_type
+
 from manager_rest.security import SecuredResource
 from manager_rest import manager_exceptions, config
 from manager_rest.security.authorization import authorize
-from manager_rest.deployment_update.constants import PHASES
+from manager_rest.deployment_update.constants import (
+    PHASES,
+    STATES
+)
+from manager_rest.execution_token import current_execution
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.deployment_update.manager import \
     get_deployment_updates_manager
@@ -32,7 +39,7 @@ from manager_rest.utils import (create_filter_params_list_description,
                                 current_tenant)
 
 from .. import rest_decorators
-from ..rest_utils import verify_and_convert_bool
+from ..rest_utils import verify_and_convert_bool, get_json_and_verify_params
 
 
 class DeploymentUpdate(SecuredResource):
@@ -223,6 +230,60 @@ class DeploymentUpdateId(SecuredResource):
         return get_deployment_updates_manager().get_deployment_update(
             update_id,
             include=_include)
+
+    @authorize('deployment_update_create')
+    @rest_decorators.marshal_with(models.DeploymentUpdate)
+    def put(self, update_id):
+        params = get_json_and_verify_params({
+            'deployment_id': {'type': text_type, 'required': True},
+            'state': {'optional': True},
+            'inputs': {'optional': True}
+        })
+        sm = get_storage_manager()
+        if not current_execution:
+            raise manager_exceptions.ForbiddenError(
+                'Deployment update objects can only be created by executions')
+
+        with sm.transaction():
+            dep = sm.get(models.Deployment, params['deployment_id'])
+            dep_upd = sm.get(models.DeploymentUpdate, update_id,
+                             fail_silently=True)
+            if dep_upd is None:
+                dep_upd = models.DeploymentUpdate(
+                    id=update_id,
+                    _execution_fk=current_execution._storage_id
+                )
+            dep_upd.state = params.get('state') or STATES.UPDATING
+            dep_upd.new_inputs = params.get('inputs')
+            dep_upd.set_deployment(dep)
+            return dep_upd
+
+    @authorize('deployment_update_update')
+    @rest_decorators.marshal_with(models.DeploymentUpdate)
+    def patch(self, update_id):
+        params = get_json_and_verify_params({
+            'state': {'optional': True},
+            'plan': {'optional': True},
+            'steps': {'optional': True},
+            'nodes': {'optional': True},
+        })
+        sm = get_storage_manager()
+        with sm.transaction():
+            dep_upd = sm.get(models.DeploymentUpdate, update_id)
+            if params.get('state'):
+                dep_upd.state = params['state']
+            if params.get('plan'):
+                dep_upd.deployment_plan = params['plan']
+            if params.get('steps'):
+                for step_spec in params['steps']:
+                    step = models.DeploymentUpdateStep(
+                        id=str(uuid.uuid4()),
+                        **step_spec
+                    )
+                    step.set_deployment_update(dep_upd)
+            if params.get('nodes'):
+                dep_upd.deployment_update_nodes = params['nodes']
+            return dep_upd
 
 
 class DeploymentUpdates(SecuredResource):
