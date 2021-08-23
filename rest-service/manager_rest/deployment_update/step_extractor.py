@@ -20,11 +20,6 @@ from contextlib import contextmanager
 
 import networkx as nx
 
-import manager_rest.resource_manager
-
-from manager_rest.storage import get_storage_manager, models
-
-
 RELEVANT_DEPLOYMENT_FIELDS = ['blueprint_id', 'id', 'inputs', 'nodes',
                               'outputs', 'workflows', 'groups', 'policy_types',
                               'policy_triggers', 'description',
