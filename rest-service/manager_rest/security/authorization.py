@@ -7,6 +7,7 @@ from flask_security import current_user
 from cloudify._compat import text_type
 
 from manager_rest import config, utils, execution_token
+from manager_rest.security import audit
 from manager_rest.storage.models import Tenant
 from manager_rest.storage import get_storage_manager
 from manager_rest.constants import CLOUDIFY_TENANT_HEADER
@@ -49,6 +50,7 @@ def authorize(action,
                         filters={'name': tenant_name}
                     )
                     utils.set_current_tenant(tenant)
+                    audit.set_tenant(tenant.name)
                 except NotFoundError:
                     raise ForbiddenError(
                         'Authorization failed: Tried to authenticate with '

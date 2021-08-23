@@ -25,6 +25,7 @@ from cloudify.models_states import ExecutionState
 from manager_rest.security import user_handler
 from manager_rest.storage import user_datastore
 from manager_rest.security.hash_request_cache import HashVerifyRequestCache
+from manager_rest.security import audit
 from manager_rest.execution_token import (
     current_execution,
     get_execution_token_from_request
@@ -75,6 +76,7 @@ class Authentication(object):
             user = response
         if not user:
             raise NoAuthProvided()
+        audit.set_username(user.username)
         self.logger.debug('Authenticated user: {0}'.format(user))
 
         if request.authorization:
@@ -100,14 +102,18 @@ class Authentication(object):
             user = user_handler.get_user_from_auth(auth)
             self._check_if_user_is_locked(user, auth)
             user = self._authenticate_password(user, auth)
+            audit.set_audit_method('http_basic')
         elif execution_token:  # Execution Token authentication
             user = self._authenticate_execution_token()
+            audit.set_audit_method('execution_token')
         elif token:  # Token authentication
             user = self._authenticate_token(token)
+            audit.set_audit_method('token')
         elif api_token:  # API token authentication
             user, user_token_key = user_handler.extract_api_token(api_token)
             if not user or user.api_token_key != user_token_key:
                 raise UnauthorizedError('API token authentication failed')
+            audit.set_audit_method('api_token')
         return user
 
     def _check_if_user_is_locked(self, user, auth):

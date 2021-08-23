@@ -36,6 +36,8 @@ from cloudify.models_states import (AgentState,
                                     DeploymentModificationState,
                                     DeploymentState)
 from dsl_parser.constants import WORKFLOW_PLUGINS_TO_INSTALL
+from dsl_parser.constraints import extract_constraints, validate_input_value
+from dsl_parser import exceptions as dsl_exceptions
 
 from manager_rest import config, manager_exceptions
 from manager_rest.rest.responses import Workflow, Label
@@ -44,7 +46,8 @@ from manager_rest.utils import (get_rrule,
                                 files_in_folder)
 from manager_rest.deployment_update.constants import ACTION_TYPES, ENTITY_TYPES
 from manager_rest.constants import (FILE_SERVER_PLUGINS_FOLDER,
-                                    FILE_SERVER_RESOURCES_FOLDER)
+                                    FILE_SERVER_RESOURCES_FOLDER,
+                                    AUDIT_OPERATIONS)
 
 from .models_base import (
     db,
@@ -136,7 +139,7 @@ class Blueprint(CreatedAtMixin, SQLResourceBase):
 
     @classproperty
     def allowed_filter_attrs(cls):
-        return ['created_by']
+        return ['created_by', 'state']
 
     def to_response(self, include=None, **kwargs):
         include = include or self.response_fields
@@ -1096,6 +1099,22 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             if 'default' in param:
                 parameters.setdefault(name, param['default'])
 
+        constraint_violations = {}
+        for name, param in workflow_parameters.items():
+            constraints = extract_constraints(param)
+            if not constraints or name not in parameters:
+                continue
+            try:
+                validate_input_value(name, constraints, parameters[name])
+            except (dsl_exceptions.DSLParsingException,
+                    dsl_exceptions.ConstraintException) as ex:
+                constraint_violations[name] = ex
+        if constraint_violations:
+            raise manager_exceptions.IllegalExecutionParametersError('\n'.join(
+                f'Parameter "{n}" does not meet its constraints: {e}'
+                for n, e in constraint_violations.items()
+            ))
+
         missing_parameters = workflow_parameters.keys() - parameters.keys()
         if missing_parameters:
             raise manager_exceptions.IllegalExecutionParametersError(
@@ -2012,4 +2031,26 @@ class DeploymentLabelsDependencies(BaseDeploymentDependencies):
 
     _source_deployment = foreign_key(Deployment._storage_id)
     _target_deployment = foreign_key(Deployment._storage_id)
+
+
+class AuditLog(CreatedAtMixin, SQLModelBase):
+    __tablename__ = 'audit_log'
+    __table_args__ = (
+        db.Index(
+            'audit_log_ref_idx',
+            'ref_table', 'ref_id',
+            unique=False
+        ),
+        CheckConstraint(
+            '(creator_name IS NULL) != (execution_id IS NULL)',
+            name='audit_log_creator_or_user_not_null'
+        ),
+    )
+    _storage_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    ref_table = db.Column(db.Text, nullable=False, index=True)
+    ref_id = db.Column(db.Integer, nullable=False)
+    operation = db.Column(db.Enum(*AUDIT_OPERATIONS, name='audit_operation'),
+                          nullable=False)
+    creator_name = db.Column(db.Text, nullable=True)
+    execution_id = db.Column(db.Text, nullable=True)
 # endregion

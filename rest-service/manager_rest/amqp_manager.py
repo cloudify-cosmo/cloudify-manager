@@ -22,7 +22,6 @@ from cloudify.utils import generate_user_password
 from cloudify.cryptography_utils import encrypt, decrypt
 from cloudify.rabbitmq_client import RabbitMQClient, USERNAME_PATTERN
 
-from manager_rest.manager_exceptions import ConflictError
 from manager_rest.storage import get_storage_manager
 from manager_rest.storage.models import Tenant, Agent
 
@@ -116,11 +115,6 @@ class AMQPManager(object):
         encrypted_password = resource.rabbitmq_password or \
             encrypt(new_password)
 
-        # Validate we're not overwriting the existing user
-        for existing_user in self._client.get_users():
-            if existing_user['name'] == username:
-                raise ConflictError('Cowardly refusing to overwrite the '
-                                    f'existing RabbitMQ user "{username}".')
         self._client.create_user(username, password)
         return username, encrypted_password
 

@@ -798,6 +798,76 @@ class TestExecutionModelValidationTests(unittest.TestCase):
         assert 'int_param' in error_message
         assert 'float_param' in error_message
 
+    def test_parameters_constraints(self):
+        d = models.Deployment(workflows={
+            'wf': {
+                'parameters': {
+                    'foo': {'type': 'string', 'constraints': [
+                        {'min_length': 1},
+                        {'max_length': 2},
+                        {'valid_values': ['Hi', 'Ho']}
+                    ]},
+                    'bar': {'type': 'string', 'default': 'Q', 'constraints': [
+                        {'max_length': 8},
+                        {'pattern': r'[A-Z]+'},
+                    ]},
+                    'baz': {'type': 'integer', 'constraints': [
+                        {'greater_than': 100},
+                        {'less_than': 1000},
+                    ]},
+                }
+            }
+        })
+        exc = models.Execution(
+            parameters={
+                'foo': 'Hi',
+                'baz': '500',
+            },
+            deployment=d,
+            workflow_id='wf',
+        )
+        assert exc.parameters == {
+            'foo': 'Hi',
+            'bar': 'Q',
+            'baz': 500,
+        }
+
+    def test_parameters_constraints_violated(self):
+        d = models.Deployment(workflows={
+            'wf': {
+                'parameters': {
+                    'foo': {'type': 'string', 'constraints': [
+                        {'min_length': 1},
+                        {'max_length': 2},
+                        {'valid_values': ['Hi', 'Ho']},
+                    ]},
+                    'bar': {'type': 'string', 'default': 'Q', 'constraints': [
+                        {'max_length': 8},
+                        {'pattern': r'[A-Z]+'},
+                    ]},
+                    'baz': {'type': 'integer', 'constraints': [
+                        {'greater_than': 100},
+                        {'less_than': 1000},
+                    ]},
+                }
+            }
+        })
+        with self.assertRaises(
+                manager_exceptions.IllegalExecutionParametersError) as cm:
+            models.Execution(
+                parameters={
+                    'foo': 'Ab',
+                    'bar': 'anything',
+                    'baz': 1,
+                },
+                deployment=d,
+                workflow_id='wf',
+            )
+        error_message = str(cm.exception)
+        assert 'foo' in error_message
+        assert 'bar' in error_message
+        assert 'baz' in error_message
+
     def test_missing_mandatory_param(self):
         d = models.Deployment(workflows={
             'wf': {
