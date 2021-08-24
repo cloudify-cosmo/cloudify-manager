@@ -1,7 +1,8 @@
 import difflib
+import re
 import shutil
 import typing
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from os import chdir, chmod, environ, listdir, stat
 from os.path import exists, isfile, join
 from tempfile import TemporaryDirectory, mktemp
@@ -258,3 +259,22 @@ def update_archive(blueprint: models.Blueprint, updated_file_name: str):
                                                     root_dir=working_dir)
         shutil.move(new_archive_file_name, blueprint_archive_file_name)
         chmod(blueprint_archive_file_name, 0o644)
+
+
+def parse_time_interval(interval: str) -> timedelta:
+    m = re.match(r'^(\d+)\ (\w+)$', interval)
+    if len(m.groups()) != 2:
+        return None
+    count = int(m.groups()[0])
+    unit = m.groups()[1].lower()
+    if unit.startswith('s'):
+        return timedelta(seconds=count)
+    elif unit.startswith('m'):
+        return timedelta(minutes=count)
+    elif unit.startswith('h'):
+        return timedelta(hours=count)
+    elif unit.startswith('d'):
+        return timedelta(days=count)
+    elif unit.startswith('w'):
+        return timedelta(weeks=count)
+    return None
