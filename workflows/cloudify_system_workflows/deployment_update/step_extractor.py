@@ -1,22 +1,6 @@
-#########
-# Copyright (c) 2016 GigaSpaces Technologies Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-
 import operator
 
 from functools import total_ordering
-from contextlib import contextmanager
 
 import networkx as nx
 
@@ -57,7 +41,6 @@ PLUGINS_TO_INSTALL = 'plugins_to_install'
 DESCRIPTION = 'description'
 CONTAINED_IN_RELATIONSHIP_TYPE = 'cloudify.relationships.contained_in'
 TYPE_HIERARCHY = 'type_hierarchy'
-# flake8: noqa
 
 
 @total_ordering
@@ -77,6 +60,17 @@ class DeploymentUpdateStep(object):
     @property
     def entity_name(self):
         return self.entity_id.split(':')[-1]
+
+    def as_dict(self):
+        if not self.supported:
+            raise RuntimeError(
+                'Unsupported steps cannot be represented as dicts')
+        return {
+            'action': self.action,
+            'entity_id': self.entity_id,
+            'entity_type': self.entity_type,
+            'topology_order': self.topology_order,
+        }
 
     def __hash__(self):
         return hash(self.entity_id)
@@ -111,7 +105,7 @@ class DeploymentUpdateStep(object):
                 if other.entity_type == NODE:
                     # higher topology order before lower topology order
                     return self.topology_order > other.topology_order
-        if self.action =='remove':
+        if self.action == 'remove':
             # remove relationships before removing nodes
             if self.entity_type == RELATIONSHIP and other.entity_type == NODE:
                 return True
@@ -169,8 +163,7 @@ def _create_steps(nodes, deployment, new_plan):
         )
     for action, key in _diff_dicts(
             new_plan[GROUPS], deployment.groups,
-            compare=_compare_groups
-        ):
+            compare=_compare_groups):
         yield DeploymentUpdateStep(
             action=action,
             entity_type=GROUP,
@@ -344,6 +337,8 @@ def _diff_dicts(new, old, compare=operator.eq):
         elif key in old and key not in new:
             yield 'remove', key
         elif not compare(new[key], old[key]):
+            from cloudify.state import workflow_ctx
+            workflow_ctx.logger.info('diff %s != %s', new[key], old[key])
             yield 'modify', key
 
 
@@ -355,21 +350,6 @@ def _compare_groups(new, old):
     return old_members == new_members and old_clone == new_clone
 
 
-def _extract_steps_from_operations(operations_type_name,
-                                   operations,
-                                   old_operations):
-    # with self.entity_id_builder.extend_id(operations_type_name):
-    for operation_name in operations:
-        # with self.entity_id_builder.extend_id(operation_name):
-        if operation_name in old_operations:
-            old_operation = old_operations[operation_name]
-            if old_operation != operations[operation_name]:
-                self._create_step(
-                    OPERATION, modify=True)
-        else:
-            self._create_step(OPERATION)
-
-
 def _get_matching_relationship(relationship, relationships):
     r_type = relationship[TYPE]
     target_id = relationship[TARGET_ID]
@@ -379,47 +359,6 @@ def _get_matching_relationship(relationship, relationships):
         if r_type == other_r_type and other_target_id == target_id:
             return other_relationship, rel_index
     return None, None
-
-
-def _extract_steps_from_relationships(self,
-                                      relationships,
-                                      old_relationships):
-    with self.entity_id_builder.extend_id(RELATIONSHIPS):
-        for relationship_index, relationship in enumerate(relationships):
-            with self.entity_id_builder.extend_id(
-                    '[{0}]'.format(relationship_index)):
-                matching_relationship, old_rel_index = \
-                    self._get_matching_relationship(relationship,
-                                                    old_relationships)
-                if matching_relationship:
-                    # relationship has been reordered to a different index
-                    if old_rel_index != relationship_index:
-                        with self.entity_id_builder.\
-                                prepend_id_last_element(
-                                '[{0}]'.format(old_rel_index)):
-                            self._create_step(RELATIONSHIP,
-                                              modify=True)
-                    for field_name in relationship:
-                        if field_name in [SOURCE_OPERATIONS,
-                                          TARGET_OPERATIONS]:
-                            self._extract_steps_from_operations(
-                                operations_type_name=field_name,
-                                operations=relationship[field_name],
-                                old_operations=matching_relationship[
-                                    field_name]
-                            )
-                        elif field_name == PROPERTIES:
-                            # modifying relationship properties is not
-                            # supported yet
-                            self._extract_steps_from_entities(
-                                entities_name=PROPERTIES,
-                                new_entities=relationship[PROPERTIES],
-                                old_entities=matching_relationship[
-                                    PROPERTIES],
-                                supported=False
-                            )
-                else:
-                    self._create_step(RELATIONSHIP)
 
 
 def _extract_added_nodes_names(supported_steps):

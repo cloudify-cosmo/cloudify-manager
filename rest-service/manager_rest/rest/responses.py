@@ -35,26 +35,26 @@ class Workflow(object):
 
     resource_fields = {
         'name': fields.String,
-        'created_at': fields.String,
         'plugin': fields.String,
         'operation': fields.String,
-        'parameters': fields.Raw
+        'parameters': fields.Raw,
+        'is_cascading': fields.Boolean
     }
 
     def __init__(self, **kwargs):
         self.name = kwargs.get('name')
-        self.created_at = kwargs.get('created_at')
         self.parameters = kwargs.get('parameters')
         self.plugin = kwargs.get('plugin')
         self.operation = kwargs.get('operation')
+        self.is_cascading = kwargs.get('is_cascading', False)
 
     def as_dict(self):
         return {
             'name': self.name,
-            'created_at': self.created_at,
             'parameters': self.parameters,
             'plugin': self.plugin,
             'operation': self.operation,
+            'is_cascading': self.is_cascading,
         }
 
     def __hash__(self):
