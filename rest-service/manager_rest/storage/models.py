@@ -66,4 +66,5 @@ from .resource_models import (
     ExecutionSchedule,
     BlueprintLabel,
     DeploymentGroupLabel,
+    AuditLog,
 )
