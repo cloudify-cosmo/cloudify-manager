@@ -65,6 +65,8 @@ setup(
             'manager_rest.shell.update_plugin_imports:main',
             'substitute-import-lines = '
             'manager_rest.shell.substitute_import_lines:main',
+            'truncate-audit-log = '
+            'manager_rest.shell.truncate_audit_log:main',
         ]
     },
     extras_require={
