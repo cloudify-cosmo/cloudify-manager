@@ -44,7 +44,7 @@ def create_steps(*, update_id):
     nodes = client.nodes.list(deployment_id=dep_up.deployment_id)
 
     # step-extractor expects workflows in this format - this is the same format
-    # as retuend by prepare_deployment_plan
+    # as returned by prepare_deployment_plan
     deployment['workflows'] = {
         workflow.id: dict(workflow) for workflow in deployment['workflows']
     }
