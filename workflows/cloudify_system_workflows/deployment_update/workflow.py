@@ -7,7 +7,7 @@ from dsl_parser import tasks
 from .step_extractor import extract_steps
 
 
-def create_update(*, update_id, new_inputs):
+def create_update(*, update_id, blueprint_id, new_inputs):
     client = get_rest_client()
     dep = client.deployments.get(workflow_ctx.deployment.id)
 
@@ -17,15 +17,16 @@ def create_update(*, update_id, new_inputs):
     client.deployment_updates.create(
         update_id,
         workflow_ctx.deployment.id,
-        inputs=inputs
+        blueprint_id=blueprint_id,
+        inputs=inputs,
     )
 
 
-def prepare_plan(*, blueprint_id, update_id):
+def prepare_plan(*, update_id):
     """Prepare the new deployment plan for a deployment update"""
     client = get_rest_client()
-    bp = client.blueprints.get(blueprint_id)
     dep_up = client.deployment_updates.get(update_id)
+    bp = client.blueprints.get(dep_up.new_blueprint_id)
 
     deployment_plan = tasks.prepare_deployment_plan(
         bp.plan,
@@ -79,11 +80,11 @@ def _prepare_update_graph(
     seq.add(
         ctx.local_task(create_update, kwargs={
             'update_id': update_id,
+            'blueprint_id': blueprint_id,
             'new_inputs': inputs or {},
         }, total_retries=0),
         ctx.local_task(prepare_plan, kwargs={
             'update_id': update_id,
-            'blueprint_id': blueprint_id,
         }, total_retries=0),
         ctx.local_task(create_steps, kwargs={
             'update_id': update_id,

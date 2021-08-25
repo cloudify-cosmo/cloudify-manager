@@ -237,7 +237,8 @@ class DeploymentUpdateId(SecuredResource):
         params = get_json_and_verify_params({
             'deployment_id': {'type': text_type, 'required': True},
             'state': {'optional': True},
-            'inputs': {'optional': True}
+            'inputs': {'optional': True},
+            'blueprint_id': {'optional': True}
         })
         sm = get_storage_manager()
         if not current_execution:
@@ -255,6 +256,9 @@ class DeploymentUpdateId(SecuredResource):
                 )
             dep_upd.state = params.get('state') or STATES.UPDATING
             dep_upd.new_inputs = params.get('inputs')
+            if params.get('blueprint_id'):
+                dep_upd.new_blueprint = sm.get(
+                    models.Blueprint, params['blueprint_id'])
             dep_upd.set_deployment(dep)
             return dep_upd
 
