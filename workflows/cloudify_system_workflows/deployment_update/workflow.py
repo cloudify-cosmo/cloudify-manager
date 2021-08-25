@@ -103,6 +103,11 @@ def _prepare_update_graph(
         inputs=None,
         blueprint_id=None,
         **kwargs):
+    """Make a tasks-graph that prepares the deployment-update.
+
+    Those operations only plan the update and prepare the
+    things-to-be-changed. They're safe to be rerun any number of times.
+    """
     graph = ctx.graph_mode()
     seq = graph.sequence()
     seq.add(
@@ -158,6 +163,11 @@ def create_new_instances(*, update_id):
 
 
 def _perform_update_graph(ctx, update_id, **kwargs):
+    """Make a tasks-graph that performs the deployment-update.
+
+    This is for the destructive operations that actually change the
+    deployment.
+    """
     graph = ctx.graph_mode()
     seq = graph.sequence()
     seq.add(
