@@ -5,10 +5,9 @@ Revises: a31cb9e704d3
 Create Date: 2021-08-19 11:21:00.361811
 
 """
-from alembic import op
 import sqlalchemy as sa
-
-from manager_rest.storage.models_base import UTCDateTime
+from alembic import op
+from manager_rest.storage.models_base import JSONString, UTCDateTime
 
 # revision identifiers, used by Alembic.
 revision = '03ad040e6f78'
@@ -21,12 +20,24 @@ audit_operation = sa.Enum(
     name='audit_operation',
 )
 
+config_table = sa.table(
+    'config',
+    sa.Column('name', sa.Text),
+    sa.Column('value', JSONString()),
+    sa.Column('schema', JSONString()),
+    sa.Column('is_editable', sa.Boolean),
+    sa.Column('updated_at', UTCDateTime()),
+    sa.Column('scope', sa.Text),
+)
+
 
 def upgrade():
     _create_audit_log_table()
+    _add_config_manager_service_log()
 
 
 def downgrade():
+    _drop_config_manager_service_log()
     _drop_audit_log_table()
 
 
@@ -82,3 +93,47 @@ def _drop_audit_log_table():
     op.drop_index(op.f('audit_log_created_at_idx'), table_name='audit_log')
     op.drop_table('audit_log')
     audit_operation.drop(op.get_bind())
+
+
+def _add_config_manager_service_log():
+    log_level_enums = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
+    op.bulk_insert(
+        config_table,
+        [
+            dict(
+                name='api_service_log_path',
+                value='/var/log/cloudify/rest/cloudify-api-service.log',
+                scope='rest',
+                schema=None,
+                is_editable=False
+            ),
+            dict(
+                name='api_service_log_level',
+                value='INFO',
+                scope='rest',
+                schema={'type': 'string', 'enum': log_level_enums},
+                is_editable=True
+            ),
+        ]
+    )
+
+
+def _drop_config_manager_service_log():
+    op.execute(
+        config_table
+        .delete()
+        .where(
+            (config_table.c.name == op.inline_literal(
+                'api_service_log_path')) &  # NOQA
+            (config_table.c.scope == op.inline_literal('rest'))
+        )
+    )
+    op.execute(
+        config_table
+        .delete()
+        .where(
+            (config_table.c.name == op.inline_literal(
+                'api_service_log_level')) &  # NOQA
+            (config_table.c.scope == op.inline_literal('rest'))
+        )
+    )
