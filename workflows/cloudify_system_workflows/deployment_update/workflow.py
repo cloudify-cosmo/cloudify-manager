@@ -140,7 +140,6 @@ def create_new_nodes(*, update_id):
         for plan_node in plan_nodes:
             if plan_node['name'] == node_name:
                 create_nodes.append(plan_node)
-                new_node = plan_node
                 break
         else:
             raise RuntimeError(f'New node {node_name} not found in the plan')
@@ -192,7 +191,6 @@ def update_deployment(ctx, *, preview=False, **kwargs):
     update_id = '{0}_{1}'.format(ctx.deployment.id, ctx.execution_id)
     graph = _prepare_update_graph(ctx, update_id, **kwargs)
     graph.execute()
-
 
     if not preview:
         _clear_graph(graph)
