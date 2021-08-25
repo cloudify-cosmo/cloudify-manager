@@ -270,6 +270,7 @@ class DeploymentUpdateId(SecuredResource):
             'plan': {'optional': True},
             'steps': {'optional': True},
             'nodes': {'optional': True},
+            'node_instances': {'optional': True},
         })
         sm = get_storage_manager()
         with sm.transaction():
@@ -287,6 +288,9 @@ class DeploymentUpdateId(SecuredResource):
                     step.set_deployment_update(dep_upd)
             if params.get('nodes'):
                 dep_upd.deployment_update_nodes = params['nodes']
+            if params.get('node_instances'):
+                dep_upd.deployment_update_node_instances = \
+                    params['node_instances']
             return dep_upd
 
 
