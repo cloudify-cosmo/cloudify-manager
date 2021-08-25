@@ -190,9 +190,8 @@ class ResourceManager(object):
                 status in [ExecutionState.FAILED, ExecutionState.CANCELLED]:
             dep_update = self.sm.get(models.DeploymentUpdate, None,
                                      filters={'execution_id': execution_id})
-            if dep_update:
-                dep_update.state = UpdateStates.FAILED
-                self.sm.update(dep_update)
+            dep_update.state = UpdateStates.FAILED
+            self.sm.update(dep_update)
 
         # Similarly for a plugin update
         if workflow_id == 'update_plugin' and \
