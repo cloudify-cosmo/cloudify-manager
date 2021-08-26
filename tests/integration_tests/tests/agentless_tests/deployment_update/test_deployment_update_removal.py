@@ -28,10 +28,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
             self._deploy_and_get_modified_bp_path('uninstall_execution_order')
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
         wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
-        self._wait_for_update(dep_update)
+        self._do_update(deployment.id, BLUEPRINT_ID)
 
         self.assertFalse(self.client.node_instances.list(
                 node_id='site1').items[0].runtime_properties['is_op_started'],
@@ -55,8 +52,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
 
         # an update preview should have no effect
-        self.client.deployment_updates.update_with_existing_blueprint(
-            deployment.id, BLUEPRINT_ID, preview=True)
+        self._do_update(deployment.id, BLUEPRINT_ID, preview=True)
 
         unmodified_nodes, unmodified_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
@@ -80,10 +76,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         self.assertEqual(1, len(unmodified_nodes['removed']))
         self.assertEqual(1, len(unmodified_node_instances['removed']))
 
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
-        self._wait_for_update(dep_update)
+        self._do_update(deployment.id, BLUEPRINT_ID)
 
         modified_nodes, modified_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
@@ -148,10 +141,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
         wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
-        self._wait_for_update(dep_update)
+        self._do_update(deployment.id, BLUEPRINT_ID)
 
         # assert nothing changed except for plugins and operations
         modified_nodes, modified_node_instances = \
@@ -209,10 +199,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
         wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
-        self._wait_for_update(dep_update)
+        self._do_update(deployment.id, BLUEPRINT_ID)
 
         # Get all related and affected nodes and node instances
         modified_nodes, modified_node_instances = \
@@ -276,10 +263,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
             self._deploy_and_get_modified_bp_path('remove_workflow')
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
         wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
-        self._wait_for_update(dep_update)
+        dep_update = self._do_update(deployment.id, BLUEPRINT_ID)
 
         self.assertRaisesRegexp(CloudifyClientError,
                                 'Workflow {0} does not exist in deployment {1}'
@@ -310,10 +294,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
         wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
-        self._wait_for_update(dep_update)
+        self._do_update(deployment.id, BLUEPRINT_ID)
 
         execution = self.client.executions.start(
                 deployment.id,
@@ -390,10 +371,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
         wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
-        self._wait_for_update(dep_update)
+        self._do_update(deployment.id, BLUEPRINT_ID)
 
         modified_nodes, modified_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
@@ -431,10 +409,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
         wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
-        self._wait_for_update(dep_update)
+        dep_update = self._do_update(deployment.id, BLUEPRINT_ID)
 
         deployment = self.client.deployments.get(dep_update.deployment_id)
         self.assertFalse(deployment.get('description'))

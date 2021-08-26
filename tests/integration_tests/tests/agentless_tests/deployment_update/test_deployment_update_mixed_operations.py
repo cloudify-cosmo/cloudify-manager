@@ -59,10 +59,7 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
         wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
-        self._wait_for_update(dep_update)
+        self._do_update(deployment.id, BLUEPRINT_ID)
 
         # Get all related and affected nodes and node instances
         modified_nodes, modified_node_instances = \
@@ -155,10 +152,7 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
                 'add_remove_and_modify_relationship')
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
         wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
-        self._wait_for_update(dep_update)
+        self._do_update(deployment.id, BLUEPRINT_ID)
 
         node_mapping = {'source': 'site0'}
         modified_nodes, modified_node_instances = \
@@ -227,10 +221,7 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
         wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
-        self._wait_for_update(dep_update)
+        self._do_update(deployment.id, BLUEPRINT_ID)
 
         nodes, node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)

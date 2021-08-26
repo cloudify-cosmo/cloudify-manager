@@ -29,6 +29,15 @@ class TimeoutException(Exception):
 
 
 class DeploymentUpdateBase(AgentlessTestCase):
+    def _do_update(self, deployment_id, blueprint_id=None,
+                   preview=False, **kwargs):
+        dep_update = \
+            self.client.deployment_updates.update_with_existing_blueprint(
+                deployment_id, blueprint_id, preview=preview, **kwargs)
+        if not preview:
+            self._wait_for_update(dep_update)
+        return dep_update
+
     def _wait_for_update(self, dep_update):
         self.wait_for_execution_to_end(
             self.client.executions.get(dep_update.execution_id))
