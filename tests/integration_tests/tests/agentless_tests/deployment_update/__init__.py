@@ -169,4 +169,4 @@ class DeploymentUpdateBase(AgentlessTestCase):
 
     @staticmethod
     def _assertDictContainsSubset(subset, containing_dict):
-        subset.items() <= containing_dict.items()
+        assert subset.items() <= containing_dict.items()
