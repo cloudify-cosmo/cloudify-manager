@@ -19,7 +19,7 @@ class CloudifyManagerService(FastAPI):
             title: str = "Cloudify Manager Service",
             version: str = "6.2.0.dev1",
             **kwargs):
-        super(CloudifyManagerService, self).__init__(
+        super().__init__(
             title=title,
             version=version,
             **kwargs)
