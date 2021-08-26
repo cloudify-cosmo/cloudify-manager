@@ -12,28 +12,17 @@ def setup_logger(
         level: str = DEFAULT_LOG_LEVEL,
         warnings: Sequence = None) -> logging.Logger:
     logger = logging.getLogger('manager_service')
-    handlers = [
-        logging.handlers.WatchedFileHandler(filename=path)
-    ]
-    _setup_python_logger(
-        logger=logger,
-        level=level,
-        handlers=handlers
-    )
+    logger.addHandler(_setup_file_handler(path))
+    logger.setLevel(level)
     for w in warnings or []:
         logger.warning(w)
     return logger
 
 
-def _setup_python_logger(
-        logger: logging.Logger,
-        level: str = DEFAULT_LOG_LEVEL,
-        handlers: Sequence[logging.Handler] = None) -> logging.Logger:
+def _setup_file_handler(path: str) -> logging.handlers.WatchedFileHandler:
     formatter = logging.Formatter(fmt='%(asctime)s [%(levelname)s] '
                                       '[%(name)s] %(message)s',
                                   datefmt='%d/%m/%Y %H:%M:%S')
-    for handler in handlers or []:
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-    logger.setLevel(level)
-    return logger
+    handler = logging.handlers.WatchedFileHandler(filename=path)
+    handler.setFormatter(formatter)
+    return handler
