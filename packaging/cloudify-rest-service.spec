@@ -36,9 +36,9 @@ python3 -m venv %_manager_env
 
 %_manager_env/bin/pip install --upgrade pip"<20.0" setuptools
 %_manager_env/bin/pip install -r "${RPM_SOURCE_DIR}/rest-service/dev-requirements.txt"
-%_manager_env/bin/pip install -r "${RPM_SOURCE_DIR}/manager/requirements.txt"
+%_manager_env/bin/pip install -r "${RPM_SOURCE_DIR}/api-service/requirements.txt"
 %_manager_env/bin/pip install "${RPM_SOURCE_DIR}/rest-service"[dbus]
-%_manager_env/bin/pip install "${RPM_SOURCE_DIR}/manager"
+%_manager_env/bin/pip install "${RPM_SOURCE_DIR}/api-service"
 %_manager_env/bin/pip install "${RPM_SOURCE_DIR}/amqp-postgres"
 %_manager_env/bin/pip install "${RPM_SOURCE_DIR}/execution-scheduler"
 
@@ -103,13 +103,13 @@ if [ -f "%{_localstatedir}/lib/rpm-state/cloudify-upgraded" ]; then
     if [ -e "/var/run/supervisord.sock" ]; then
         supervisorctl stop haproxy && supervisorctl remove haproxy || true
         supervisorctl stop cloudify-restservice
-        supervisorctl stop cloudify-manager
+        supervisorctl stop cloudify-api
         supervisorctl stop cloudify-execution-scheduler
         supervisorctl stop cloudify-amqp-postgres
     else
         systemctl stop haproxy && systemctl disable haproxy || true
         systemctl stop cloudify-restservice
-        systemctl stop cloudify-manager
+        systemctl stop cloudify-api
         systemctl stop cloudify-execution-scheduler
         systemctl stop cloudify-amqp-postgres
     fi
@@ -126,12 +126,12 @@ if [ -f "%{_localstatedir}/lib/rpm-state/cloudify-upgraded" ]; then
 
     if [ -e "/var/run/supervisord.sock" ]; then
         supervisorctl start cloudify-restservice
-        supervisorctl start cloudify-manager
+        supervisorctl start cloudify-api
         supervisorctl start cloudify-execution-scheduler
         supervisorctl start cloudify-amqp-postgres
     else
         systemctl start cloudify-restservice
-        systemctl start cloudify-manager
+        systemctl start cloudify-api
         systemctl start cloudify-execution-scheduler
         systemctl start cloudify-amqp-postgres
     fi

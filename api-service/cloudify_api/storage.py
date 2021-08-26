@@ -5,7 +5,7 @@ from sqlalchemy.engine import Engine
 
 from sqlalchemy.orm import sessionmaker, Session
 
-from manager_service.models import Base
+from cloudify_api.models import Base
 
 
 def db_engine(

@@ -124,8 +124,8 @@ class Config(object):
     maintenance_folder = Setting('maintenance_folder')
     rest_service_log_level = Setting('rest_service_log_level')
     rest_service_log_path = Setting('rest_service_log_path')
-    manager_service_log_level = Setting('manager_service_log_level')
-    manager_service_log_path = Setting('manager_service_log_path')
+    api_service_log_level = Setting('api_service_log_level')
+    api_service_log_path = Setting('api_service_log_path')
 
     rest_service_log_file_size_MB = Setting('rest_service_log_file_size_MB')
     rest_service_log_files_backup_count = Setting(

@@ -2,16 +2,16 @@ from fastapi import FastAPI
 
 from manager_rest import config
 
-from manager_service.config import Settings
-from manager_service.log import setup_logger
-from manager_service.storage import db_engine, db_session_maker
+from cloudify_api.config import Settings
+from cloudify_api.log import setup_logger
+from cloudify_api.storage import db_engine, db_session_maker
 
 
 def get_settings():
     return Settings()
 
 
-class CloudifyManagerService(FastAPI):
+class CloudifyAPI(FastAPI):
     def __init__(
             self,
             *,
@@ -34,8 +34,8 @@ class CloudifyManagerService(FastAPI):
             config.instance.can_load_from_db = False
 
         self.logger = setup_logger(
-            config.instance.manager_service_log_path,
-            config.instance.manager_service_log_level,
+            config.instance.api_service_log_path,
+            config.instance.api_service_log_level,
             config.instance.warnings)
 
         self._setup_sqlalchemy()
