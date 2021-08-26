@@ -164,7 +164,6 @@ exit 0
 /etc/sudoers.d/cloudify-restservice
 /opt/restservice
 /usr/lib/systemd/system/cloudify-restservice.service
-/usr/lib/systemd/system/cloudify-manager.service
 /usr/lib/systemd/system/cloudify-amqp-postgres.service
 /usr/lib/systemd/system/cloudify-execution-scheduler.service
 
