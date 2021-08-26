@@ -18,5 +18,5 @@ def db_session_maker(engine: Engine) -> sessionmaker:
     return sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
-def db_list(db: Session, model: Base, skip: int = 0, limit: int = 100):
-    return db.query(model).offset(skip).limit(limit).all()
+def db_list(db: Session, model: Base, offset: int = 0, size: int = 100):
+    return db.query(model).offset(offset).limit(size).all()

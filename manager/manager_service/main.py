@@ -14,9 +14,9 @@ manager = server.CloudifyManagerService()
              response_model=List[schemas.AuditLog],
              tags=["Audit Log"])
 async def list_audit_log(
-        skip: int = 0,
-        limit: int = 100,
+        size: int = 100,
+        offset: int = 0,
         db: Session = Depends(manager.db_session)) -> List[schemas.AuditLog]:
-    manager.logger.info(f"list_audit_log, skip={skip}, limit={limit}")
-    db_audit_logs = db_list(db, models.AuditLog, skip=skip, limit=limit)
+    manager.logger.debug(f"list_audit_log, offset={offset}, size={size}")
+    db_audit_logs = db_list(db, models.AuditLog, offset, size)
     return db_audit_logs
