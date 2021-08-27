@@ -51,7 +51,8 @@ class CloudifyAPI(FastAPI):
 
     def _update_database_dsn(self):
         current = self.settings.sqlalchemy_database_dsn
-        self.settings.sqlalchemy_database_dsn = config.instance.db_url
+        self.settings.sqlalchemy_database_dsn = \
+            _with_asyncpg_protocol(config.instance.db_url)
         if current != self.settings.sqlalchemy_database_dsn:
             new_host = self.settings.sqlalchemy_database_dsn \
                 .split('@')[1] \
@@ -61,9 +62,26 @@ class CloudifyAPI(FastAPI):
             else:
                 self.logger.info('DB leader set to %s', new_host)
 
-    def db_session(self):
-        session = self.db_session_maker()
-        try:
+    async def db_session(self):
+        async with self.db_session_maker() as session:
             yield session
-        finally:
-            session.close()
+
+
+def _with_asyncpg_protocol(dsn: str) -> str:
+    # This function transforms psycopg2-based SQLAlchemy dsn string into
+    # an asyncpg-compatible one.
+    dsn_split = dsn.split(':', 1)
+    if dsn_split[0] != "postgresql":
+        return dsn
+    dsn_params = dsn_split[1].split('?', 1)
+    result = f"postgresql+asyncpg:{dsn_params[0]}"
+    if len(dsn_params) == 1:
+        return result
+    asyncpg_params = {}
+    for param in dsn_params[1].split("&"):
+        k, v = param.split('=', 1)
+        if k != 'connect_timeout':
+            asyncpg_params[k] = v
+    if not asyncpg_params:
+        return result
+    return f"{result}?{'&'.join(f'{k}={v}' for k, v in asyncpg_params)}"

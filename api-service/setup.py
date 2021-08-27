@@ -4,7 +4,8 @@ DEPENDENCIES = [
     'fastapi',
     'async-exit-stack',
     'async-generator',
-    'SQLAlchemy>',
+    'SQLAlchemy',
+    'asyncpg',
     'uvicorn',
     'cloudify-rest-service',
 ]

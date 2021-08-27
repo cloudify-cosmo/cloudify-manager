@@ -17,7 +17,9 @@ class MockConfig:
 
 class CloudifyManagerServiceTest(testtools.TestCase):
     def test_server_init(self):
-        with mock.patch('manager_rest.config.instance', MockConfig()) as c:
+        with mock.patch('manager_rest.config.instance', MockConfig()):
             s = CloudifyAPI(load_config=False)
-            self.assertEqual(c.db_url, s.settings.sqlalchemy_database_dsn)
+            self.assertEqual(
+                'postgresql+asyncpg://user:secret@localhost/database',
+                s.settings.sqlalchemy_database_dsn)
             self.assertEqual(logging.WARNING, s.logger.level)
