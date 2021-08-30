@@ -29,6 +29,7 @@ CONFIG_TYPES = [
 SKIP_RESET_WRITE = ['authorization']
 NOT_SET = object()
 SQL_DIALECT = 'postgresql'
+SQL_ASYNC_DIALECT = 'postgresql+asyncpg'
 LDAP_CA_NAME = '_auth-ldap-ca'
 
 
@@ -377,6 +378,30 @@ class Config(object):
                              if value)
             db_url = '{0}?{1}'.format(db_url, query)
         return db_url
+
+    @property
+    def async_dsn(self):
+        host = ipv6_url_compat(self._find_db_host(self.postgresql_host))
+        dsn = f'{SQL_ASYNC_DIALECT}://'\
+              f'{self.postgresql_username}:'\
+              f'{self.postgresql_password}@'\
+              f'{host}/'\
+              f'{self.postgresql_db_name}'
+        params = {}
+        if self.postgresql_ssl_enabled:
+            if self.postgresql_ssl_client_verification:
+                params.update({
+                    'sslcert': self.postgresql_ssl_cert_path,
+                    'sslkey': self.postgresql_ssl_key_path,
+                })
+            params.update({
+                'sslmode': 'vefify-full',
+                'sslrootcert': self.postgresql_ca_cert_path,
+            })
+        if any(params.values()):
+            query_string = '&'.join(f'{k}={v}' for k, v in params.items() if v)
+            dsn = f'{dsn}?{query_string}'
+        return dsn
 
     @property
     def db_host(self):
