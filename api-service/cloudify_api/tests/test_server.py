@@ -2,7 +2,7 @@ import logging
 from typing import List
 
 import mock
-import testtools
+import unittest
 
 from cloudify_api.server import CloudifyAPI
 
@@ -15,7 +15,7 @@ class MockConfig:
     warnings: List = []
 
 
-class CloudifyManagerServiceTest(testtools.TestCase):
+class CloudifyManagerServiceTest(unittest.TestCase):
     def test_server_init(self):
         with mock.patch('manager_rest.config.instance', MockConfig()):
             s = CloudifyAPI(load_config=False)
