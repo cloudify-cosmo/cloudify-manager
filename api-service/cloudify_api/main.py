@@ -3,7 +3,7 @@ from cloudify_api.routers import audit as audit_router
 
 
 TITLE = "Cloudify API"
-VERSION = "6.2.0.dev1"
+VERSION = "6.3.0.dev1"
 DEBUG = False
 
 

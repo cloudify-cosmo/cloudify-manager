@@ -2,7 +2,7 @@ from typing import List
 
 from fastapi import Depends, APIRouter
 
-from cloudify_api.common import get_app, make_db_session, common_parameters
+from cloudify_api.common import common_parameters, get_app, make_db_session
 from cloudify_api.storage import db_list
 from cloudify_api import models, schemas
 
