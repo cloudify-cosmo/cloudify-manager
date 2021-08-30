@@ -1,14 +1,4 @@
-from setuptools import setup, find_packages
-
-DEPENDENCIES = [
-    'fastapi',
-    'async-exit-stack',
-    'async-generator',
-    'SQLAlchemy',
-    'asyncpg',
-    'uvicorn',
-    'cloudify-rest-service',
-]
+from setuptools import find_packages, setup
 
 setup(
     name='cloudify-api',
@@ -19,5 +9,17 @@ setup(
         include='cloudify_api*', exclude=('cloudify_api.tests*',)
     ),
     description='Cloudify Manager Service',
-    install_requires=DEPENDENCIES,
+    install_requires=[
+        'fastapi',
+        'async-exit-stack',
+        'async-generator',
+        'SQLAlchemy',
+        'asyncpg',
+        'uvicorn',
+        'cloudify-rest-service',
+        ],
+    test_requires=[
+        'mock',
+        'pytest',
+    ]
 )

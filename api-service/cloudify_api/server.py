@@ -16,12 +16,8 @@ class CloudifyAPI(FastAPI):
             self,
             *,
             load_config: bool = True,
-            title: str = "Cloudify Manager Service",
-            version: str = "6.2.0.dev1",
             **kwargs):
         super().__init__(
-            title=title,
-            version=version,
             **kwargs)
 
         self.settings = get_settings()
@@ -62,10 +58,6 @@ class CloudifyAPI(FastAPI):
             else:
                 self.logger.info('DB leader set to %s', new_host)
 
-    async def db_session(self):
-        async with self.db_session_maker() as session:
-            yield session
-
 
 def _with_asyncpg_protocol(dsn: str) -> str:
     # This function transforms psycopg2-based SQLAlchemy dsn string into
@@ -84,4 +76,5 @@ def _with_asyncpg_protocol(dsn: str) -> str:
             asyncpg_params[k] = v
     if not asyncpg_params:
         return result
-    return f"{result}?{'&'.join(f'{k}={v}' for k, v in asyncpg_params)}"
+    query_string = '&'.join(f'{k}={v}' for k, v in asyncpg_params.items())
+    return f"{result}?{query_string}"

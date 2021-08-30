@@ -1,23 +1,16 @@
-from typing import List
-
-from fastapi import Depends
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from cloudify_api import models, schemas, server
-from cloudify_api.storage import db_list
+from cloudify_api import CloudifyAPI
+from cloudify_api.routers import audit as audit_router
 
 
-app = server.CloudifyAPI()
+TITLE = "Cloudify API"
+VERSION = "6.2.0.dev1"
+DEBUG = False
 
 
-@app.get("/audit",
-         response_model=List[schemas.AuditLog],
-         tags=["Audit Log"])
-async def list_audit_log(
-        size: int = 100,
-        offset: int = 0,
-        session: AsyncSession = Depends(app.db_session)
-        ) -> List[schemas.AuditLog]:
-    app.logger.debug("list_audit_log, offset=%d, size=%d", offset, size)
-    db_audit_logs = await db_list(session, models.AuditLog, offset, size)
-    return db_audit_logs
+def create_application() -> CloudifyAPI:
+    application = CloudifyAPI(title=TITLE, version=VERSION, debug=DEBUG)
+    application.include_router(audit_router, prefix="/api/v3.1")
+    return application
+
+
+app = create_application()
