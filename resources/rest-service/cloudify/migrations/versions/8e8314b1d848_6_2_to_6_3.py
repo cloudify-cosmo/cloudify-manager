@@ -97,15 +97,12 @@ def _create_functions_write_audit_log():
             IF (TG_OP = 'INSERT') THEN
                 INSERT INTO audit_log (ref_table, ref_id, operation, creator_name, execution_id, created_at)
                     VALUES (_table, NEW._storage_id, 'create', _user, _execution_id, now());
-                RETURN NEW;
             ELSEIF (TG_OP = 'UPDATE') THEN
                 INSERT INTO audit_log (ref_table, ref_id, operation, creator_name, execution_id, created_at)
                     VALUES (_table, NEW._storage_id, 'update', _user, _execution_id, now());
-                RETURN NEW;
             ELSEIF (TG_OP = 'DELETE') THEN
                 INSERT INTO audit_log (ref_table, ref_id, operation, creator_name, execution_id, created_at)
                     VALUES (_table, OLD._storage_id, 'delete', _user, _execution_id, now());
-                RETURN OLD;
             END IF;
             RETURN NULL;
         END;
@@ -121,15 +118,12 @@ def _create_functions_write_audit_log():
             IF (TG_OP = 'INSERT') THEN
                 INSERT INTO audit_log (ref_table, ref_id, operation, creator_name, execution_id, created_at)
                     VALUES (_table, NEW.id, 'create', _user, _execution_id, now());
-                RETURN NEW;
             ELSEIF (TG_OP = 'UPDATE') THEN
                 INSERT INTO audit_log (ref_table, ref_id, operation, creator_name, execution_id, created_at)
                     VALUES (_table, NEW.id, 'update', _user, _execution_id, now());
-                RETURN NEW;
             ELSEIF (TG_OP = 'DELETE') THEN
                 INSERT INTO audit_log (ref_table, ref_id, operation, creator_name, execution_id, created_at)
                     VALUES (_table, OLD.id, 'delete', _user, _execution_id, now());
-                RETURN OLD;
             END IF;
             RETURN NULL;
         END;
@@ -147,15 +141,12 @@ def _create_functions_write_audit_log():
             IF (TG_OP = 'INSERT') THEN
                 INSERT INTO audit_log (ref_table, ref_id, operation, creator_name, execution_id, created_at)
                     VALUES (_table, NEW._storage_id, 'create', _user, _execution_id, now());
-                RETURN NEW;
             ELSEIF (TG_OP = 'UPDATE') THEN
                 INSERT INTO audit_log (ref_table, ref_id, operation, creator_name, execution_id, created_at)
                     VALUES (_table, NEW._storage_id, 'update', _user, _execution_id, now());
-                RETURN NEW;
             ELSEIF (TG_OP = 'DELETE') THEN
                 INSERT INTO audit_log (ref_table, ref_id, operation, creator_name, execution_id, created_at)
                     VALUES (_table, OLD._storage_id, 'delete', _user, _execution_id, now());
-                RETURN OLD;
             END IF;
             RETURN NULL;
         END;
