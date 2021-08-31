@@ -198,12 +198,17 @@ class NodeInstancesId(SecuredResource):
     def patch(self, node_instance_id, **kwargs):
         """Update node instance by id."""
         request_dict = get_json_and_verify_params(
-            {'version': {'optional': True}}
+            {'version': {'type': int}}
         )
 
         if not isinstance(request.json, collections.Mapping):
             raise manager_exceptions.BadParametersError(
                 'Request body needs to be a mapping')
+        version = request_dict['version'] or 1
+        force = verify_and_convert_bool(
+            'force',
+            request.args.get('force', False)
+        )
 
         instance = get_storage_manager().get(
             models.NodeInstance,
@@ -213,11 +218,6 @@ class NodeInstancesId(SecuredResource):
         if 'runtime_properties' in request_dict or 'state' in request_dict:
             # Added for backwards compatibility with older client versions that
             # had version=0 by default
-            version = request_dict['version'] or 1
-            force = verify_and_convert_bool(
-                'force',
-                request.args.get('force', False)
-            )
             if not force and instance.version > version:
                 raise manager_exceptions.ConflictError(
                     'Node instance update conflict [current version={0}, '
