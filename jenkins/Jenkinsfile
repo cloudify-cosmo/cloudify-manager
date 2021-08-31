@@ -55,7 +55,7 @@ pipeline {
       parallel {
         stage('test_restservice') {
           steps {
-            sh script: "mkdir -p ${env.WORKSPACE}/rest && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/rest", label: "copying repo to seperate workspace"
+            sh script: "mkdir -p ${env.WORKSPACE}/rest && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/rest", label: "copying repo to separate workspace"
 
             container('python'){
               dir("${env.WORKSPACE}/rest") {
@@ -137,7 +137,7 @@ pipeline {
         }
         stage('flake8') {
           steps {
-            sh script: "mkdir -p ${env.WORKSPACE}/flake8 && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/flake8", label: "copying repo to seperate workspace"
+            sh script: "mkdir -p ${env.WORKSPACE}/flake8 && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/flake8", label: "copying repo to separate workspace"
 
             container('python'){
               dir("${env.WORKSPACE}/flake8") {
@@ -155,7 +155,7 @@ pipeline {
       parallel{
         stage ('test_amqp_postgres') {
           steps {
-            sh script: "mkdir -p ${env.WORKSPACE}/amqp_postgres && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/amqp_postgres", label: "copying repo to seperate workspace"
+            sh script: "mkdir -p ${env.WORKSPACE}/amqp_postgres && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/amqp_postgres", label: "copying repo to separate workspace"
 
             container('python'){
               dir("${env.WORKSPACE}/amqp_postgres") {
@@ -178,7 +178,7 @@ pipeline {
         }
         stage('test_premium') {
           steps {
-            sh script: "mkdir -p ${env.WORKSPACE}/premium && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/premium", label: "copying repo to seperate workspace"
+            sh script: "mkdir -p ${env.WORKSPACE}/premium && cp -rf ${env.WORKSPACE}/${env.PROJECT}/. ${env.WORKSPACE}/premium", label: "copying repo to separate workspace"
 
             container('python'){
               dir("${env.WORKSPACE}/premium") {
