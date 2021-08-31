@@ -29,14 +29,12 @@ TABLES_TO_AUDIT = [('agents', 'storage_id'),
                    ('deployments', 'storage_id'),
                    ('deployments_filters', 'storage_id'),
                    ('deployments_labels', 'id'),
-                   ('events', 'storage_id'),
                    ('execution_groups', 'storage_id'),
                    ('execution_schedules', 'storage_id'),
                    ('executions', 'storage_id'),
                    ('groups', 'id'),
                    ('inter_deployment_dependencies', 'storage_id'),
                    ('licenses', 'id'),
-                   ('logs', 'storage_id'),
                    ('maintenance_mode', 'id'),
                    ('managers', 'id'),
                    ('node_instances', 'storage_id'),
@@ -135,24 +133,59 @@ def _create_functions_write_audit_log():
             END IF;
             RETURN NULL;
         END;
+    $$ LANGUAGE plpgsql;
+
+    CREATE OR REPLACE FUNCTION write_audit_log_for_events_logs() RETURNS TRIGGER AS $$
+        DECLARE
+            _table TEXT := TG_ARGV[0]::TEXT;
+            _user TEXT := audit_username();
+            _execution_id TEXT := audit_execution_id();
+        BEGIN
+            IF (_execution_id != 'system task') THEN
+                RETURN NULL;
+            END IF;
+            IF (TG_OP = 'INSERT') THEN
+                INSERT INTO audit_log (ref_table, ref_id, operation, creator_name, execution_id, created_at)
+                    VALUES (_table, NEW._storage_id, 'create', _user, _execution_id, now());
+                RETURN NEW;
+            ELSEIF (TG_OP = 'UPDATE') THEN
+                INSERT INTO audit_log (ref_table, ref_id, operation, creator_name, execution_id, created_at)
+                    VALUES (_table, NEW._storage_id, 'update', _user, _execution_id, now());
+                RETURN NEW;
+            ELSEIF (TG_OP = 'DELETE') THEN
+                INSERT INTO audit_log (ref_table, ref_id, operation, creator_name, execution_id, created_at)
+                    VALUES (_table, OLD._storage_id, 'delete', _user, _execution_id, now());
+                RETURN OLD;
+            END IF;
+            RETURN NULL;
+        END;
     $$ LANGUAGE plpgsql;""")
 
 
 def _drop_functions_write_audit_log():
+    op.execute("""DROP FUNCTION write_audit_log_for_events_logs();""")
     op.execute("""DROP FUNCTION write_audit_log_id();""")
     op.execute("""DROP FUNCTION write_audit_log_storage_id();""")
     op.execute("""DROP FUNCTION audit_execution_id();""")
     op.execute("""DROP FUNCTION audit_username();""")
 
 
+# flake8: noqa
 def _create_audit_triggers():
     for table_name, id_field in TABLES_TO_AUDIT:
         op.execute(f"""
             CREATE TRIGGER audit_{table_name}
             AFTER INSERT OR UPDATE OR DELETE ON {table_name} FOR EACH ROW
             EXECUTE PROCEDURE write_audit_log_{id_field}('{table_name}');""")
+    for table_name in ['events', 'logs']:
+        op.execute(f"""
+            CREATE TRIGGER audit_{table_name}
+            AFTER INSERT OR UPDATE OR DELETE ON {table_name} FOR EACH ROW
+            EXECUTE PROCEDURE write_audit_log_for_events_logs('{table_name}');""")
 
 
 def _drop_audit_triggers():
     for table_name, _ in TABLES_TO_AUDIT:
+        op.execute(f"""DROP TRIGGER audit_{table_name} ON {table_name};""")
+    for table_name in ['events', 'logs']:
         op.execute(f"""DROP TRIGGER audit_{table_name} ON {table_name};""")
