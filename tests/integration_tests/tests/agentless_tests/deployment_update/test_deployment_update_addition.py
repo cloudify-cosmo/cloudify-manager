@@ -559,3 +559,16 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
 
         deployment = self.client.deployments.get(deployment.id)
         self.assertRegexpMatches(deployment['description'], 'new description')
+
+
+class NewTestDeploymentUpdateAddition(TestDeploymentUpdateAddition):
+    def _do_update(self, deployment_id, blueprint_id=None,
+                   preview=False, **kwargs):
+        params = {
+            'blueprint_id': blueprint_id,
+        }
+        if preview:
+            params['preview'] = preview
+        exc = self.client.executions.start(
+            deployment_id, 'csys_new_deployment_update', parameters=params)
+        self.wait_for_execution_to_end(exc)
