@@ -81,7 +81,7 @@ def _create_functions_write_audit_log():
             RETURN current_setting('audit.execution_id');
         EXCEPTION WHEN syntax_error_or_access_rule_violation THEN
             IF (SELECT audit_username() IS NULL) THEN
-                RETURN 'administrative task';
+                RETURN 'system task';
             END IF;
             RETURN NULL;
         END;
@@ -137,7 +137,10 @@ def _create_functions_write_audit_log():
 
 
 def _drop_functions_write_audit_log():
-    op.execute("""DROP FUNCTION write_audit_log();""")
+    op.execute("""DROP FUNCTION write_audit_log_id();""")
+    op.execute("""DROP FUNCTION write_audit_log_storage_id();""")
+    op.execute("""DROP FUNCTION audit_execution_id();""")
+    op.execute("""DROP FUNCTION audit_username();""")
 
 
 def _create_audit_triggers():
