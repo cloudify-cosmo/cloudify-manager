@@ -178,8 +178,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
 
         # the operation doesnt exist anymore - the execution was a no-op, so
         # runtime-properties haven't changed
-        ni = self.client.node_instances.get(
-            modified_node_instances['modified'][0]['id'])
+        ni = self.client.node_instances.get(modified_node_instance['id'])
         self.assertEqual(ni['runtime_properties']['source_ops_counter'], '1')
 
     def test_remove_relationship(self):
