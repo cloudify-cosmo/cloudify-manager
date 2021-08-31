@@ -224,7 +224,8 @@ class NodeInstancesId(SecuredResource):
                     'update version={1}]'.format(instance.version, version)
                 )
             if 'runtime_properties' in request_dict:
-                instance.runtime_properties = request_dict['runtime_properties']
+                instance.runtime_properties = \
+                    request_dict['runtime_properties']
             if 'state' in request_dict:
                 instance.state = request_dict['state']
         if 'relationships' in request_dict:
