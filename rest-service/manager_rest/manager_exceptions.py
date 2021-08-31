@@ -138,6 +138,11 @@ class ForbiddenWhileCancelling(ForbiddenError):
     error_code = 'forbidden_while_cancelling'
 
 
+class OnlyDeploymentUpdate(ForbiddenError):
+    """This request is only allowed from a deployment-update workflow."""
+    error_code = 'only_deployment_update'
+
+
 class UnsupportedContentTypeError(ManagerException):
     error_code = 'unsupported_content_type_error'
     status_code = 415
