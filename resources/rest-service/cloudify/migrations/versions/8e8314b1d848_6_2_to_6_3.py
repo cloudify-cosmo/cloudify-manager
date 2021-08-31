@@ -55,6 +55,7 @@ TABLES_TO_AUDIT = [('agents', 'storage_id'),
 
 
 def upgrade():
+    _drop_audit_log_creator_or_user_not_null_constraint()
     _create_functions_write_audit_log()
     _create_audit_triggers()
 
@@ -62,6 +63,7 @@ def upgrade():
 def downgrade():
     _drop_audit_triggers()
     _drop_functions_write_audit_log()
+    _create_audit_log_creator_or_user_not_null_constraint()
 
 
 # flake8: noqa
@@ -80,9 +82,6 @@ def _create_functions_write_audit_log():
         BEGIN
             RETURN current_setting('audit.execution_id');
         EXCEPTION WHEN syntax_error_or_access_rule_violation THEN
-            IF (SELECT audit_username() IS NULL) THEN
-                RETURN 'system task';
-            END IF;
             RETURN NULL;
         END;
     $$ LANGUAGE plpgsql;
@@ -135,7 +134,7 @@ def _create_functions_write_audit_log():
             _user TEXT := audit_username();
             _execution_id TEXT := audit_execution_id();
         BEGIN
-            IF (_execution_id != 'system task') THEN
+            IF (_execution_id IS NOT NULL) THEN
                 RETURN NULL;
             END IF;
             IF (TG_OP = 'INSERT') THEN
@@ -180,3 +179,14 @@ def _drop_audit_triggers():
         op.execute(f"""DROP TRIGGER audit_{table_name} ON {table_name};""")
     for table_name in ['events', 'logs']:
         op.execute(f"""DROP TRIGGER audit_{table_name} ON {table_name};""")
+
+
+def _create_audit_log_creator_or_user_not_null_constraint():
+    op.execute('ALTER TABLE audit_log '
+               'ADD CONSTRAINT audit_log_creator_or_user_not_null '
+               'CHECK (creator_name IS NOT NULL OR execution_id IS NOT NULL);')
+
+
+def _drop_audit_log_creator_or_user_not_null_constraint():
+    op.execute('ALTER TABLE audit_log '
+               'DROP CONSTRAINT audit_log_creator_or_user_not_null;')
