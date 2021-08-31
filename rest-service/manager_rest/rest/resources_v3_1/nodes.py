@@ -6,6 +6,7 @@ from ..resources_v2 import NodeInstances as v2_NodeInstances
 from manager_rest.rest import rest_utils
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import get_storage_manager, models
+from manager_rest.security import SecuredResource
 
 
 class Nodes(v3_Nodes):
@@ -75,6 +76,32 @@ class Nodes(v3_Nodes):
             }
             prepared_relationships.append(relationship)
         return prepared_relationships
+
+
+class NodesId(SecuredResource):
+    @authorize('node_update')
+    def patch(self, deployment_id, node_id):
+        request_dict = rest_utils.get_json_and_verify_params({
+            'plugins': {'optional': True},
+            'operations': {'optional': True},
+            'relationships': {'optional': True},
+            'properties': {'optional': True},
+        })
+        sm = get_storage_manager()
+        with sm.transaction():
+            deployment = sm.get(models.Deployment, deployment_id)
+            node = sm.get(models.Node, None,
+                          filters={'id': node_id, 'deployment': deployment})
+            if request_dict.get('plugins'):
+                node.plugins = request_dict['plugins']
+            if request_dict.get('operations'):
+                node.operations = request_dict['operations']
+            if request_dict.get('relationships'):
+                node.relationships = request_dict['relationships']
+            if request_dict.get('properties'):
+                node.properties = request_dict['properties']
+            sm.update(node)
+        return None, 204
 
 
 class NodeInstances(v2_NodeInstances):
