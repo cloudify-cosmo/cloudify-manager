@@ -227,6 +227,6 @@ class NodeInstancesId(SecuredResource):
             if 'state' in request_dict:
                 instance.state = request_dict['state']
         if 'relationships' in request_dict:
-            instance.relationships = instance.relationships + \
-                request_dict['relationships']
+
+            instance.relationships = request_dict['relationships']
         return get_storage_manager().update(instance)
