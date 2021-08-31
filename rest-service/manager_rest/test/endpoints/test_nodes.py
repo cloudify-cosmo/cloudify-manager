@@ -76,9 +76,8 @@ class NodesTest(base_test.BaseServerTestCase):
         response = self.patch('/node-instances/1234', 'not a dictionary')
         self.assertEqual(400, response.status_code)
         response = self.patch('/node-instances/1234', {
-            'a dict': 'without '
-                      'state_version'
-                      ' key'})
+            'a dict': 'without a version key'
+        })
         self.assertEqual(400, response.status_code)
         response = self.patch('/node-instances/1234', {
             'runtime_properties': {},
