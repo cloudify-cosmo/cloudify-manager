@@ -45,6 +45,7 @@ def setup_resources(api):
                                              '<string:modification_id>/'
                                              'rollback',
         'Nodes': 'nodes',
+        'NodesId': 'nodes/<string:deployment_id>/<string:node_id>',
         'NodeInstances': 'node-instances',
         'NodeInstancesId': 'node-instances/<string:node_instance_id>',
         'Events': 'events',

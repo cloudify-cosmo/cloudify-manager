@@ -294,9 +294,20 @@ class DeploymentsId(resources_v1.DeploymentsId):
                 if attrib not in request_dict:
                     continue
                 previous = getattr(deployment, attrib, None)
-                if previous is not None and attrib not in allow_change:
+                if rest_utils.is_deployment_update():
+                    change_allowed = True
+                else:
+                    change_allowed = attrib in allow_change
+                if previous is not None and not change_allowed:
                     raise ConflictError(f'{attrib} is already set')
                 setattr(deployment, attrib, request_dict[attrib])
+            if 'blueprint_id' in request_dict:
+                if not rest_utils.is_deployment_update():
+                    raise manager_exceptions.OnlyDeploymentUpdate(
+                        'Changing the blueprint is only possible via '
+                        'deployment-update')
+                deployment.blueprint = sm.get(
+                    models.Blueprint, request_dict['blueprint_id'])
             if 'labels' in request_dict:
                 raw_labels_list = request_dict.get('labels', [])
                 self._handle_deployment_labels(

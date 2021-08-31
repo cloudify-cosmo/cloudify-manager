@@ -45,7 +45,8 @@ from manager_rest.rest.rest_utils import (
     normalize_value,
     verify_and_convert_bool,
     request_use_all_tenants,
-    is_system_in_snapshot_restore_process
+    is_system_in_snapshot_restore_process,
+    is_deployment_update
 )
 
 from .responses_v2 import ListResponse
@@ -585,5 +586,19 @@ def detach_globals(f):
             db.session.expunge(current_execution)
         if current_tenant:
             db.session.expunge(current_tenant)
+        return f(*args, **kwargs)
+    return wrapper
+
+
+def only_deployment_update(f):
+    """Only allow running this request from a deployment-update workflow.
+
+    This prevents the user from updating things in an ad-hoc manner, only
+    reserving some update endpoints for the deployment-update workflows.
+    """
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if not is_deployment_update():
+            raise manager_exceptions.OnlyDeploymentUpdate()
         return f(*args, **kwargs)
     return wrapper
