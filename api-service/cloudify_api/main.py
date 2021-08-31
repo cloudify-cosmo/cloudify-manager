@@ -9,6 +9,7 @@ DEBUG = False
 
 def create_application() -> CloudifyAPI:
     application = CloudifyAPI(title=TITLE, version=VERSION, debug=DEBUG)
+    application.configure()
     application.include_router(audit_router, prefix="/api/v3.1")
     return application
 

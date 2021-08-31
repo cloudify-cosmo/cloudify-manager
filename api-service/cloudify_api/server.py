@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import FastAPI
 
 from manager_rest import config
@@ -14,20 +16,17 @@ def get_settings():
 class CloudifyAPI(FastAPI):
     def __init__(
             self,
-            *,
-            load_config: bool = True,
+            *args,
             **kwargs):
-        super().__init__(
-            **kwargs)
-
+        super().__init__(*args, **kwargs)
         self.settings = get_settings()
+        self.logger = logging.getLogger('cloudify_api')
+
+    def configure(self):
         if config.instance.postgresql_host is None:
             config.instance.load_from_file(
                 self.settings.cloudify_rest_config_file)
-        if load_config:
-            config.instance.load_configuration()
-        else:
-            config.instance.can_load_from_db = False
+        config.instance.load_configuration()
 
         self.logger = setup_logger(
             config.instance.api_service_log_path,
