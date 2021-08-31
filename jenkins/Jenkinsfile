@@ -89,6 +89,17 @@ pipeline {
                     -sv \
                     cloudify_types
                 '''
+                echo 'Running pytest <<api-service>>'
+                sh script: '''
+                  . .venv/bin/activate
+                  cd api-service
+                  pip install -Ur requirements.txt
+                  pip install -Ur test-requirements.txt
+                  pip install -e .
+                  pytest \
+                    -sv \
+                    cloudify_api/tests
+                '''
               }
             }
           }

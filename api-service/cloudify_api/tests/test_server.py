@@ -1,9 +1,7 @@
 import logging
-from typing import List
+import unittest
 
 import mock
-import pytest
-import unittest
 
 from cloudify_api.server import CloudifyAPI
 
@@ -13,7 +11,7 @@ class MockConfig:
     postgresql_host = 'localhost'
     api_service_log_path = '/dev/null'
     api_service_log_level = 'WARNING'
-    warnings: List = []
+    warnings: list = []
 
 
 class CloudifyManagerServiceTest(unittest.TestCase):
@@ -23,6 +21,8 @@ class CloudifyManagerServiceTest(unittest.TestCase):
             self.assertEqual(c.async_dsn, s.settings.sqlalchemy_database_dsn)
             self.assertEqual(logging.WARNING, s.logger.level)
 
-    def test_server_load_config(self):
-        # it's either FileNotFoundError or sqlalchemy.exc.OperationalError
-        pytest.raises(Exception, CloudifyAPI, load_config=True)
+    def test_server_load_config_raises(self):
+        with mock.patch('manager_rest.config.Config.load_from_file') as m:
+            # TypeError when checking if postgresql_host address is IPv6
+            self.assertRaises(TypeError, CloudifyAPI, load_config=True)
+            m.assert_called_with('/opt/manager/cloudify-rest.conf')
