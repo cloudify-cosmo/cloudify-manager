@@ -4,6 +4,7 @@ from ..resources_v3 import Nodes as v3_Nodes
 from ..resources_v2 import NodeInstances as v2_NodeInstances
 
 from manager_rest.rest import rest_utils
+from manager_rest.rest.rest_decorators import only_deployment_update
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import get_storage_manager, models
 from manager_rest.security import SecuredResource
@@ -80,6 +81,7 @@ class Nodes(v3_Nodes):
 
 class NodesId(SecuredResource):
     @authorize('node_update')
+    @only_deployment_update
     def patch(self, deployment_id, node_id):
         request_dict = rest_utils.get_json_and_verify_params({
             'plugins': {'optional': True},
