@@ -27,6 +27,7 @@ from manager_rest.rest.rest_utils import (
     get_args_and_verify_arguments,
     get_json_and_verify_params,
     verify_and_convert_bool,
+    is_deployment_update
 )
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
@@ -227,6 +228,7 @@ class NodeInstancesId(SecuredResource):
             if 'state' in request_dict:
                 instance.state = request_dict['state']
         if 'relationships' in request_dict:
-
+            if not is_deployment_update():
+                raise manager_exceptions.OnlyDeploymentUpdate()
             instance.relationships = request_dict['relationships']
         return get_storage_manager().update(instance)
