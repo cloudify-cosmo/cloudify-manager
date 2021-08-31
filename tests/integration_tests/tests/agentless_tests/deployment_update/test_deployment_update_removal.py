@@ -174,15 +174,13 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
                 workflow_id='execute_operation',
                 parameters={'operation': operation_id}
         )
-        self.assertRaises(
-            RuntimeError,
-            self.wait_for_execution_to_end, execution
-        )
-        execution = self.client.executions.get(execution.id)
+        self.wait_for_execution_to_end(execution)
 
-        self.assertIn('{0} operation of node instance {1} does not exist'
-                      .format(operation_id, modified_node_instance.id),
-                      execution.error)
+        # the operation doesnt exist anymore - the execution was a no-op, so
+        # runtime-properties haven't changed
+        ni = self.client.node_instances.get(
+            modified_node_instances['modified'][0]['id'])
+        self.assertEqual(ni['runtime_properties']['source_ops_counter'], '1')
 
     def test_remove_relationship(self):
         deployment, modified_bp_path = \
@@ -301,16 +299,14 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
                 'custom_workflow',
                 parameters={'node_id': 'site2'}
         )
-        self.assertRaises(
-            RuntimeError,
-            self.wait_for_execution_to_end, execution
-        )
-        execution = self.client.executions.get(execution.id)
-        self.assertEqual(execution.status, 'failed')
-        self.assertIn('{0} operation of node instance {1} does not exist'
-                      .format(operation_id,
-                              base_node_instances['source'][0]['id']),
-                      execution.error)
+        self.wait_for_execution_to_end(execution)
+
+        # the operation doesnt exist anymore - the execution was a no-op, so
+        # the runtime-property was not inserted
+        ni = self.client.node_instances.list(
+            deployment_id=deployment.id, node_id='site2'
+        )[0]
+        self.assertNotIn('source_ops_counter', ni['runtime_properties'])
 
         modified_nodes, modified_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
