@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import (create_async_engine,
 from sqlalchemy.future import select
 from sqlalchemy.orm import sessionmaker
 
-from cloudify_api.models import Base
+from cloudify_api.models import BaseModel
 
 
 def db_engine(database_dsn: str, connect_args: Dict) -> AsyncEngine:
@@ -19,7 +19,7 @@ def db_session_maker(engine: AsyncEngine) -> sessionmaker:
 
 async def db_list(
         session: AsyncSession,
-        model: Base,
+        model: BaseModel,
         offset: int = 0,
         size: int = 100):
     stmt = select(model).offset(offset).limit(size)

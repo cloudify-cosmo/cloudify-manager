@@ -10,7 +10,7 @@ from cloudify_api import models, schemas
 router = APIRouter(prefix="/audit")
 
 
-@router.get("/",
+@router.get("",
             response_model=List[schemas.AuditLog],
             tags=["Audit Log"])
 async def list_audit_log(
