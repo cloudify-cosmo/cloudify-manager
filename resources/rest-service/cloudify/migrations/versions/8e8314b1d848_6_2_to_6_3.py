@@ -63,7 +63,6 @@ def upgrade():
 def downgrade():
     _drop_audit_triggers()
     _drop_functions_write_audit_log()
-    _create_audit_log_creator_or_user_not_null_constraint()
 
 
 # flake8: noqa
@@ -90,17 +89,17 @@ def _create_functions_write_audit_log():
     CREATE OR REPLACE FUNCTION write_audit_log_storage_id() RETURNS TRIGGER AS $$
         DECLARE
             _table TEXT := TG_ARGV[0]::TEXT;
-            _user TEXT := audit_username();
-            _execution_id TEXT := audit_execution_id();
+            _user TEXT := public.audit_username();
+            _execution_id TEXT := public.audit_execution_id();
         BEGIN
             IF (TG_OP = 'INSERT') THEN
-                INSERT INTO audit_log (ref_table, ref_id, operation, creator_name, execution_id, created_at)
+                INSERT INTO public.audit_log (ref_table, ref_id, operation, creator_name, execution_id, created_at)
                     VALUES (_table, NEW._storage_id, 'create', _user, _execution_id, now());
             ELSEIF (TG_OP = 'UPDATE') THEN
-                INSERT INTO audit_log (ref_table, ref_id, operation, creator_name, execution_id, created_at)
+                INSERT INTO public.audit_log (ref_table, ref_id, operation, creator_name, execution_id, created_at)
                     VALUES (_table, NEW._storage_id, 'update', _user, _execution_id, now());
             ELSEIF (TG_OP = 'DELETE') THEN
-                INSERT INTO audit_log (ref_table, ref_id, operation, creator_name, execution_id, created_at)
+                INSERT INTO public.audit_log (ref_table, ref_id, operation, creator_name, execution_id, created_at)
                     VALUES (_table, OLD._storage_id, 'delete', _user, _execution_id, now());
             END IF;
             RETURN NULL;
@@ -111,17 +110,17 @@ def _create_functions_write_audit_log():
     CREATE OR REPLACE FUNCTION write_audit_log_id() RETURNS TRIGGER AS $$
         DECLARE
             _table TEXT := TG_ARGV[0]::TEXT;
-            _user TEXT := audit_username();
-            _execution_id TEXT := audit_execution_id();
+            _user TEXT := public.audit_username();
+            _execution_id TEXT := public.audit_execution_id();
         BEGIN
             IF (TG_OP = 'INSERT') THEN
-                INSERT INTO audit_log (ref_table, ref_id, operation, creator_name, execution_id, created_at)
+                INSERT INTO public.audit_log (ref_table, ref_id, operation, creator_name, execution_id, created_at)
                     VALUES (_table, NEW.id, 'create', _user, _execution_id, now());
             ELSEIF (TG_OP = 'UPDATE') THEN
-                INSERT INTO audit_log (ref_table, ref_id, operation, creator_name, execution_id, created_at)
+                INSERT INTO public.audit_log (ref_table, ref_id, operation, creator_name, execution_id, created_at)
                     VALUES (_table, NEW.id, 'update', _user, _execution_id, now());
             ELSEIF (TG_OP = 'DELETE') THEN
-                INSERT INTO audit_log (ref_table, ref_id, operation, creator_name, execution_id, created_at)
+                INSERT INTO public.audit_log (ref_table, ref_id, operation, creator_name, execution_id, created_at)
                     VALUES (_table, OLD.id, 'delete', _user, _execution_id, now());
             END IF;
             RETURN NULL;
@@ -131,20 +130,20 @@ def _create_functions_write_audit_log():
     CREATE OR REPLACE FUNCTION write_audit_log_for_events_logs() RETURNS TRIGGER AS $$
         DECLARE
             _table TEXT := TG_ARGV[0]::TEXT;
-            _user TEXT := audit_username();
-            _execution_id TEXT := audit_execution_id();
+            _user TEXT := public.audit_username();
+            _execution_id TEXT := public.audit_execution_id();
         BEGIN
             IF (_execution_id IS NOT NULL) THEN
                 RETURN NULL;
             END IF;
             IF (TG_OP = 'INSERT') THEN
-                INSERT INTO audit_log (ref_table, ref_id, operation, creator_name, execution_id, created_at)
+                INSERT INTO public.audit_log (ref_table, ref_id, operation, creator_name, execution_id, created_at)
                     VALUES (_table, NEW._storage_id, 'create', _user, _execution_id, now());
             ELSEIF (TG_OP = 'UPDATE') THEN
-                INSERT INTO audit_log (ref_table, ref_id, operation, creator_name, execution_id, created_at)
+                INSERT INTO public.audit_log (ref_table, ref_id, operation, creator_name, execution_id, created_at)
                     VALUES (_table, NEW._storage_id, 'update', _user, _execution_id, now());
             ELSEIF (TG_OP = 'DELETE') THEN
-                INSERT INTO audit_log (ref_table, ref_id, operation, creator_name, execution_id, created_at)
+                INSERT INTO public.audit_log (ref_table, ref_id, operation, creator_name, execution_id, created_at)
                     VALUES (_table, OLD._storage_id, 'delete', _user, _execution_id, now());
             END IF;
             RETURN NULL;
@@ -181,12 +180,6 @@ def _drop_audit_triggers():
         op.execute(f"""DROP TRIGGER audit_{table_name} ON {table_name};""")
 
 
-def _create_audit_log_creator_or_user_not_null_constraint():
-    op.execute('ALTER TABLE audit_log '
-               'ADD CONSTRAINT audit_log_creator_or_user_not_null '
-               'CHECK (creator_name IS NOT NULL OR execution_id IS NOT NULL);')
-
-
 def _drop_audit_log_creator_or_user_not_null_constraint():
     op.execute('ALTER TABLE audit_log '
-               'DROP CONSTRAINT audit_log_creator_or_user_not_null;')
+               'DROP CONSTRAINT IF EXISTS audit_log_creator_or_user_not_null;')

@@ -27,6 +27,7 @@ from manager_rest.rest.rest_utils import (
     get_args_and_verify_arguments,
     get_json_and_verify_params,
     verify_and_convert_bool,
+    is_deployment_update
 )
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
@@ -202,31 +203,33 @@ class NodeInstancesId(SecuredResource):
 
         if not isinstance(request.json, collections.Mapping):
             raise manager_exceptions.BadParametersError(
-                'Request body is expected to be a map containing a "version" '
-                'field and optionally "runtimeProperties" and/or "state" '
-                'fields')
-
-        # Added for backwards compatibility with older client versions that
-        # had version=0 by default
+                'Request body needs to be a mapping')
         version = request_dict['version'] or 1
         force = verify_and_convert_bool(
             'force',
             request.args.get('force', False)
         )
+
         instance = get_storage_manager().get(
             models.NodeInstance,
             node_instance_id,
             locking=True
         )
-        if not force and instance.version > version:
-            raise manager_exceptions.ConflictError(
-                'Node instance update conflict [current version={0}, '
-                'update version={1}]'.format(instance.version, version)
-            )
-        # Only update if new values were included in the request
-        instance.runtime_properties = request_dict.get(
-            'runtime_properties',
-            instance.runtime_properties
-        )
-        instance.state = request_dict.get('state', instance.state)
+        if 'runtime_properties' in request_dict or 'state' in request_dict:
+            # Added for backwards compatibility with older client versions that
+            # had version=0 by default
+            if not force and instance.version > version:
+                raise manager_exceptions.ConflictError(
+                    'Node instance update conflict [current version={0}, '
+                    'update version={1}]'.format(instance.version, version)
+                )
+            if 'runtime_properties' in request_dict:
+                instance.runtime_properties = \
+                    request_dict['runtime_properties']
+            if 'state' in request_dict:
+                instance.state = request_dict['state']
+        if 'relationships' in request_dict:
+            if not is_deployment_update():
+                raise manager_exceptions.OnlyDeploymentUpdate()
+            instance.relationships = request_dict['relationships']
         return get_storage_manager().update(instance)
