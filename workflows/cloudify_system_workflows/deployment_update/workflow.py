@@ -3,6 +3,7 @@ from collections import defaultdict
 from cloudify.decorators import workflow
 from cloudify.state import workflow_ctx
 from cloudify.manager import get_rest_client
+from cloudify.plugins import lifecycle
 
 from dsl_parser import tasks
 
@@ -283,6 +284,44 @@ def _clear_graph(graph):
         graph.remove_task(task)
 
 
+def _install_new_nodes(ctx, graph, added_and_related, **kwargs):
+    added_instances = [
+        ctx.get_node_instance(ni['id'])
+        for ni in added_and_related
+        if ni.get('modification') == 'added'
+    ]
+    related_instances = [
+        ctx.get_node_instance(ni['id'])
+        for ni in added_and_related
+        if ni.get('modification') != 'added'
+    ]
+    lifecycle.install_node_instances(
+        graph=graph,
+        node_instances=added_instances,
+        related_nodes=related_instances
+    )
+
+
+def _establish_relationships(ctx, graph, extended_and_related, **kwargs):
+    node_instances = [
+        ctx.get_node_instance(ni['id'])
+        for ni in extended_and_related
+    ]
+
+    modified_relationship_ids = defaultdict(list)
+    for ni in extended_and_related:
+        if ni.get('modification') != 'extended':
+            continue
+        node_id = ni['node_id']
+        for new_rel in ni['relationships']:
+            modified_relationship_ids[node_id].append(new_rel['target_name'])
+    lifecycle.execute_establish_relationships(
+        graph=graph,
+        node_instances=node_instances,
+        modified_relationship_ids=modified_relationship_ids
+    )
+
+
 @workflow
 def update_deployment(ctx, *, preview=False, **kwargs):
     client = get_rest_client()
@@ -294,6 +333,19 @@ def update_deployment(ctx, *, preview=False, **kwargs):
         _clear_graph(graph)
         graph = _perform_update_graph(ctx, update_id)
         graph.execute()
+        ctx.refresh_node_instances()
+
+        graph = ctx.graph_mode()
+        dep_up = client.deployment_updates.get(update_id)
+        update_instances = dep_up['deployment_update_node_instances']
+        if update_instances.get('added_and_related'):
+            _clear_graph(graph)
+            _install_new_nodes(
+                ctx, graph, update_instances['added_and_related'], **kwargs)
+        if update_instances.get('extended_and_related'):
+            _clear_graph(graph)
+            _establish_relationships(
+                ctx, graph, update_instances['extended_and_related'], **kwargs)
 
     client.deployment_updates.set_attributes(
         update_id,
