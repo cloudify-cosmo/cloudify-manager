@@ -160,6 +160,7 @@ def create_new_instances(*, update_id):
             update_instances['added_and_related']
         )
 
+
 def set_deployment_attributes(*, update_id):
     client = get_rest_client()
     dep_up = client.deployment_updates.get(update_id)
