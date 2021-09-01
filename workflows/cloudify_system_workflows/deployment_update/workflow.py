@@ -163,7 +163,6 @@ def create_new_instances(*, update_id):
 def set_deployment_attributes(*, update_id):
     client = get_rest_client()
     dep_up = client.deployment_updates.get(update_id)
-    dep = client.deployments.get(dep_up.deployment_id)
     client.deployments.set_attributes(
         dep_up.deployment_id,
         blueprint_id=dep_up.new_blueprint_id,
