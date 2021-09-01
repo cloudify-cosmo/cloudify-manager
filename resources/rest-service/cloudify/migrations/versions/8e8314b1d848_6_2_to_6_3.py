@@ -63,7 +63,6 @@ def upgrade():
 def downgrade():
     _drop_audit_triggers()
     _drop_functions_write_audit_log()
-    _create_audit_log_creator_or_user_not_null_constraint()
 
 
 # flake8: noqa
@@ -181,12 +180,6 @@ def _drop_audit_triggers():
         op.execute(f"""DROP TRIGGER audit_{table_name} ON {table_name};""")
 
 
-def _create_audit_log_creator_or_user_not_null_constraint():
-    op.execute('ALTER TABLE audit_log '
-               'ADD CONSTRAINT audit_log_creator_or_user_not_null '
-               'CHECK (creator_name IS NOT NULL OR execution_id IS NOT NULL);')
-
-
 def _drop_audit_log_creator_or_user_not_null_constraint():
     op.execute('ALTER TABLE audit_log '
-               'DROP CONSTRAINT audit_log_creator_or_user_not_null;')
+               'DROP CONSTRAINT IF EXISTS audit_log_creator_or_user_not_null;')
