@@ -164,12 +164,30 @@ def _prepare_update_graph(
     return graph
 
 
-def create_new_nodes(*, update_id):
+def update_deployment_nodes(*, update_id):
+    """Bring deployment nodes in line with the plan.
+
+    Create new nodes, update existing modified nodes.
+    """
     client = get_rest_client()
     dep_up = client.deployment_updates.get(update_id)
     update_nodes = dep_up['deployment_update_nodes'] or {}
     plan_nodes = dep_up.deployment_plan['nodes']
     create_nodes = []
+    for node_name, changed_attrs in update_nodes.get(
+            'modify_attributes', {}).items():
+        for plan_node in plan_nodes:
+            if plan_node['name'] == node_name:
+                break
+        else:
+            raise RuntimeError(f'Node {node_name} not found in the plan')
+        new_attributes = {
+            attr_name: plan_node[attr_name] for attr_name in changed_attrs
+        }
+        client.nodes.update(
+            dep_up.deployment_id, node_name,
+            **new_attributes
+        )
     for node_path in update_nodes.get('add', []):
         node_name = node_path.split(':')[-1]
         for plan_node in plan_nodes:
@@ -223,7 +241,7 @@ def _perform_update_graph(ctx, update_id, **kwargs):
         ctx.local_task(set_deployment_attributes, kwargs={
             'update_id': update_id,
         }, total_retries=0),
-        ctx.local_task(create_new_nodes, kwargs={
+        ctx.local_task(update_deployment_nodes, kwargs={
             'update_id': update_id,
         }, total_retries=0),
         ctx.local_task(create_new_instances, kwargs={
