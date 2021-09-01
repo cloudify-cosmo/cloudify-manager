@@ -202,16 +202,43 @@ def update_deployment_nodes(*, update_id):
     )
 
 
-def create_new_instances(*, update_id):
+def _format_old_relationships(node_instance):
+    """Dump ni's relationships to a dict that can be parsed by RESTservice"""
+    return [
+        {
+            'target_id': old_rel.relationship.target_id,
+            'target_name': old_rel.relationship.target_node.id,
+            'type': old_rel.relationship.type,
+        }
+        for old_rel in node_instance.relationships
+    ]
+
+
+def update_deployment_node_instances(*, update_id):
     client = get_rest_client()
     dep_up = client.deployment_updates.get(update_id)
 
     update_instances = dep_up['deployment_update_node_instances']
     if update_instances.get('added_and_related'):
+        added_instances = [
+            ni for ni in update_instances['added_and_related']
+            if ni.get('modification') == 'added'
+        ]
         client.node_instances.create_many(
             dep_up.deployment_id,
-            update_instances['added_and_related']
+            added_instances
         )
+    if update_instances.get('extended_and_related'):
+        for ni in update_instances['extended_and_related']:
+            if ni.get('modification') != 'extended':
+                continue
+            old_rels = _format_old_relationships(
+                workflow_ctx.get_node_instance(ni['id']))
+            client.node_instances.update(
+                ni['id'],
+                relationships=old_rels + ni['relationships'],
+                force=True
+            )
 
 
 def set_deployment_attributes(*, update_id):
@@ -244,7 +271,7 @@ def _perform_update_graph(ctx, update_id, **kwargs):
         ctx.local_task(update_deployment_nodes, kwargs={
             'update_id': update_id,
         }, total_retries=0),
-        ctx.local_task(create_new_instances, kwargs={
+        ctx.local_task(update_deployment_node_instances, kwargs={
             'update_id': update_id,
         }, total_retries=0),
     )
