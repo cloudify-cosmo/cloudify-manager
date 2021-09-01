@@ -170,6 +170,9 @@ def set_deployment_attributes(*, update_id):
         workflows=dep_up.deployment_plan['workflows'],
         outputs=dep_up.deployment_plan['outputs']
     )
+    # in the currently-running execution, update the current context as well,
+    # so that later graphs downlod scripts from the new blueprint. Unfortunate,
+    # but no public method for this just yet
     workflow_ctx._context['blueprint_id'] = dep_up.new_blueprint_id
 
 
