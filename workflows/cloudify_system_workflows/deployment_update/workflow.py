@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from cloudify.decorators import workflow
 from cloudify.state import workflow_ctx
 from cloudify.manager import get_rest_client
@@ -68,6 +70,41 @@ def create_steps(*, update_id):
     )
 
 
+def _modified_attr_nodes(steps):
+    """Based on the steps, find what attributes changed for every node.
+
+    Returns a dict of {node-id: [attributes that changed]}.
+    """
+    modified = defaultdict(list)
+    modified_entity_type = {
+        'plugin': 'plugins',
+        'relationship': 'relationships',
+        'property': 'properties'
+    }
+    for step in steps:
+        parts = step['entity_id'].split(':')
+        node_id = parts[1]
+        entity_type = step['entity_type']
+        if entity_type in modified_entity_type:
+            modified[node_id].append(modified_entity_type[entity_type])
+        if entity_type == 'operation':
+            if 'relationships' in parts:
+                modified[node_id].append('relationships')
+            else:
+                modified[node_id].append('operations')
+    return modified
+
+
+def _added_nodes(steps):
+    """Based on the steps, find node ids that were added.
+    """
+    added = set()
+    for step in steps:
+        if step['entity_type'] == 'node' and step['action'] == 'add':
+            added.add(step['entity_id'])
+    return list(added)
+
+
 def prepare_update_nodes(*, update_id):
     client = get_rest_client()
     dep_up = client.deployment_updates.get(update_id)
@@ -76,23 +113,21 @@ def prepare_update_nodes(*, update_id):
     new_nodes = dep_up.deployment_plan['nodes'].copy()
     old_instances = client.node_instances.list(
         deployment_id=dep_up.deployment_id)
-    changed_instances = tasks.modify_deployment(
+    instance_changes = tasks.modify_deployment(
         nodes=new_nodes,
         previous_nodes=old_nodes,
         previous_node_instances=old_instances,
         scaling_groups=deployment.scaling_groups,
         modified_nodes=()
     )
-    workflow_ctx.logger.info('changed_instances %s', changed_instances)
-    update_nodes = {}
-    for step in dep_up.steps:
-        if step['entity_type'] != 'node':
-            continue
-        update_nodes.setdefault(step['action'], []).append(step['entity_id'])
+    node_changes = {
+        'modify_attributes': _modified_attr_nodes(dep_up.steps),
+        'add': _added_nodes(dep_up.steps),
+    }
     client.deployment_updates.set_attributes(
         update_id,
-        nodes=update_nodes,
-        node_instances=changed_instances
+        nodes=node_changes,
+        node_instances=instance_changes
     )
 
 
