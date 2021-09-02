@@ -35,7 +35,7 @@ def create_system_filters():
                     }
                 ]
             }
-            _add_filter(env_filter, creator, tenant, now)
+            _add_deployments_filter(env_filter, creator, tenant, now)
         if 'csys-service-filter' not in curr_dep_filters_ids:
             service_filter = {
                 'id': 'csys-service-filter',
@@ -48,12 +48,25 @@ def create_system_filters():
                     }
                 ]
             }
-            _add_filter(service_filter, creator, tenant, now)
+            _add_deployments_filter(service_filter, creator, tenant, now)
+        if 'csys-k8s-filter' not in curr_dep_filters_ids:
+            service_filter = {
+                'id': 'csys-k8s-filter',
+                'value': [
+                    {
+                        'key': 'obj-type',  # 'csys-obj-type'?
+                        'values': ['k8s'],
+                        'operator': 'any_of',
+                        'type': 'label',
+                    }
+                ]
+            }
+            _add_blueprints_filter(service_filter, creator, tenant, now)
 
         db.session.commit()
 
 
-def _add_filter(sys_filter_dict, creator, tenant, now):
+def _add_deployments_filter(sys_filter_dict, creator, tenant, now):
     sys_filter_dict['created_at'] = now
     sys_filter_dict['updated_at'] = now
     sys_filter_dict['visibility'] = 'global'
@@ -61,6 +74,16 @@ def _add_filter(sys_filter_dict, creator, tenant, now):
     sys_filter_dict['creator'] = creator
     sys_filter_dict['tenant'] = tenant
     db.session.add(models.DeploymentsFilter(**sys_filter_dict))
+
+
+def _add_blueprints_filter(sys_filter_dict, creator, tenant, now):
+    sys_filter_dict['created_at'] = now
+    sys_filter_dict['updated_at'] = now
+    sys_filter_dict['visibility'] = 'global'
+    sys_filter_dict['is_system_filter'] = True
+    sys_filter_dict['creator'] = creator
+    sys_filter_dict['tenant'] = tenant
+    db.session.add(models.BlueprintsFilter(**sys_filter_dict))
 
 
 if __name__ == '__main__':
