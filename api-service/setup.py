@@ -8,7 +8,7 @@ setup(
     packages=find_packages(
         include='cloudify_api*', exclude=('cloudify_api.tests*',)
     ),
-    description='Cloudify Manager Service',
+    description='Cloudify API',
     install_requires=[
         'fastapi',
         'async-exit-stack',
