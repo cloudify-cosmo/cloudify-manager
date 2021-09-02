@@ -15,7 +15,7 @@ async def make_db_session(request: Request) -> AsyncSession:
         yield session
 
 
-async def common_parameters(
+def common_parameters(
         q: Optional[str] = None,
         offset: int = 0,
         size: int = 1000) -> Dict[str, Union[None, str, int]]:
