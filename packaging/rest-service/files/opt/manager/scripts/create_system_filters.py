@@ -54,7 +54,7 @@ def create_system_filters():
                 'id': 'csys-k8s-filter',
                 'value': [
                     {
-                        'key': 'obj-type',  # 'csys-obj-type'?
+                        'key': 'obj-type',
                         'values': ['k8s'],
                         'operator': 'any_of',
                         'type': 'label',
