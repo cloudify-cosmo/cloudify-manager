@@ -1,11 +1,10 @@
 from typing import List
 
 from fastapi import Depends, APIRouter
+from sqlalchemy.future import select
 
-from cloudify_api.common import common_parameters, get_app, make_db_session
-from cloudify_api.storage import db_list
 from cloudify_api import models, schemas
-
+from cloudify_api.common import common_parameters, get_app, make_db_session
 
 router = APIRouter(prefix="/audit")
 
@@ -20,5 +19,9 @@ async def list_audit_log(
         ) -> List[schemas.AuditLog]:
     offset, size = params["offset"], params["size"]
     app.logger.debug("list_audit_log, offset=%d, size=%d", offset, size)
-    db_audit_logs = await db_list(session, models.AuditLog, offset, size)
-    return db_audit_logs
+    result = await session.execute(
+        select(models.AuditLog)
+        .offset(offset)
+        .limit(size)
+    )
+    return result.scalars().all()

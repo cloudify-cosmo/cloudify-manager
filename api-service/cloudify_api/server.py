@@ -6,7 +6,7 @@ from manager_rest import config
 
 from cloudify_api.config import Settings
 from cloudify_api.log import setup_logger
-from cloudify_api.storage import db_engine, db_session_maker
+from cloudify_api import db
 
 
 def get_settings():
@@ -40,8 +40,8 @@ class CloudifyAPI(FastAPI):
             'pool_size': 1,
         }
         self._update_database_dsn()
-        self.db_session_maker = db_session_maker(
-            db_engine(self.settings.sqlalchemy_database_dsn,
+        self.db_session_maker = db.session_maker(
+            db.engine(self.settings.sqlalchemy_database_dsn,
                       self.settings.sqlalchemy_engine_options))
 
     def _update_database_dsn(self):
