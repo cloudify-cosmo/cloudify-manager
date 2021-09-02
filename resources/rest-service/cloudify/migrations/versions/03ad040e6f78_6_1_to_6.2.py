@@ -16,6 +16,11 @@ down_revision = 'a31cb9e704d3'
 branch_labels = None
 depends_on = None
 
+audit_operation = sa.Enum(
+    'create', 'update', 'delete',
+    name='audit_operation',
+)
+
 
 def upgrade():
     _create_audit_log_table()
@@ -39,7 +44,7 @@ def _create_audit_log_table():
             nullable=False),
         sa.Column(
             'operation',
-            sa.Enum('create', 'update', 'delete', name='audit_operation'),
+            audit_operation,
             nullable=False),
         sa.Column(
             'creator_name', sa.Text(),
@@ -76,3 +81,4 @@ def _drop_audit_log_table():
     op.drop_index('audit_log_ref_idx', table_name='audit_log')
     op.drop_index(op.f('audit_log_created_at_idx'), table_name='audit_log')
     op.drop_table('audit_log')
+    audit_operation.drop(op.get_bind())

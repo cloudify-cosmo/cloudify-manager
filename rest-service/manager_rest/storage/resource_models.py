@@ -2041,10 +2041,6 @@ class AuditLog(CreatedAtMixin, SQLModelBase):
             'ref_table', 'ref_id',
             unique=False
         ),
-        CheckConstraint(
-            '(creator_name IS NULL) != (execution_id IS NULL)',
-            name='audit_log_creator_or_user_not_null'
-        ),
     )
     _storage_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     ref_table = db.Column(db.Text, nullable=False, index=True)

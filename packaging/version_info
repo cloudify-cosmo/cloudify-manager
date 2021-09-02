@@ -1,3 +1,3 @@
-export CLOUDIFY_VERSION=6.2.0
+export CLOUDIFY_VERSION=6.3.0
 # Until GA release this version must start with 0. !
 export CLOUDIFY_PACKAGE_RELEASE=.dev1

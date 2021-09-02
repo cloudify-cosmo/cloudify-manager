@@ -1,0 +1,16 @@
+asgiref==3.4.1
+async-exit-stack==1.0.1
+async-generator==1.10
+asyncpg==0.24.0
+click==7.1.2
+dataclasses==0.8
+fastapi==0.68.1
+greenlet==1.1.1
+h11==0.12.0
+importlib-metadata==4.7.1
+pydantic==1.8.2
+SQLAlchemy==1.4.22
+starlette==0.14.2
+typing-extensions==3.10.0.0
+uvicorn==0.15.0
+zipp==3.5.0

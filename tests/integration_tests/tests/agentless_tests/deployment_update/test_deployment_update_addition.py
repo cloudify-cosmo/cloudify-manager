@@ -68,8 +68,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
             wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
 
             # an update preview should have no effect
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID, preview=True)
+            self._do_update(deployment.id, BLUEPRINT_ID, preview=True)
 
             unmodified_nodes, unmodified_node_instances = \
                 self._map_node_and_node_instances(deployment.id, node_mapping)
@@ -93,10 +92,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
             self.assertEqual(0, len(unmodified_nodes['added']))
             self.assertEqual(0, len(unmodified_node_instances['added']))
 
-            dep_update = \
-                self.client.deployment_updates.update_with_existing_blueprint(
-                    deployment.id, BLUEPRINT_ID)
-            self._wait_for_update(dep_update)
+            self._do_update(deployment.id, BLUEPRINT_ID)
 
             modified_nodes, modified_node_instances = \
                 self._map_node_and_node_instances(deployment.id, node_mapping)
@@ -159,10 +155,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
             self._deploy_and_get_modified_bp_path('install_execution_order')
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
         wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
-        self._wait_for_update(dep_update)
+        self._do_update(deployment.id, BLUEPRINT_ID)
 
         self.assertFalse(self.client.node_instances.list(
                 node_id='site2').items[0].runtime_properties['is_op_started'],
@@ -183,10 +176,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
         wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
-        self._wait_for_update(dep_update)
+        self._do_update(deployment.id, BLUEPRINT_ID)
 
         # assert nothing changed except for plugins and operations
         modified_nodes, modified_node_instances = \
@@ -261,10 +251,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
         wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
-        self._wait_for_update(dep_update)
+        self._do_update(deployment.id, BLUEPRINT_ID)
 
         modified_nodes, modified_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
@@ -332,10 +319,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
         wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
-        self._wait_for_update(dep_update)
+        self._do_update(deployment.id, BLUEPRINT_ID)
 
         modified_nodes, modified_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
@@ -428,10 +412,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
         wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
-        self._wait_for_update(dep_update)
+        self._do_update(deployment.id, BLUEPRINT_ID)
 
         execution = self.client.executions.start(
             deployment.id, 'custom_workflow', parameters={'node_id': 'site2'})
@@ -512,10 +493,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
         wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
-        self._wait_for_update(dep_update)
+        self._do_update(deployment.id, BLUEPRINT_ID)
 
         modified_nodes, modified_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
@@ -539,13 +517,10 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
             self._deploy_and_get_modified_bp_path('add_workflow')
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
         wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
-        self._wait_for_update(dep_update)
+        self._do_update(deployment.id, BLUEPRINT_ID)
 
         execution = self.client.executions.start(
-            dep_update.deployment_id,
+            deployment.id,
             workflow_id='my_custom_workflow',
             parameters={
                 'node_id': 'site1',
@@ -555,11 +530,11 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         self.wait_for_execution_to_end(execution)
 
         affected_node = self.client.node_instances.list(
-            deployment_id=dep_update.deployment_id,
+            deployment_id=deployment.id,
             node_id='site1'
         )
         self.assertEqual(len(affected_node), 3)
-        deployment = self.client.deployments.get(dep_update.deployment_id)
+        deployment = self.client.deployments.get(deployment.id)
         self.assertIn('my_custom_workflow',
                       [w['name'] for w in deployment.workflows])
 
@@ -568,12 +543,8 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
             self._deploy_and_get_modified_bp_path('add_output')
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
         wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
-        self._wait_for_update(dep_update)
-
-        deployment = self.client.deployments.get(dep_update.deployment_id)
+        self._do_update(deployment.id, BLUEPRINT_ID)
+        deployment = self.client.deployments.get(deployment.id)
         self._assertDictContainsSubset({'custom_output': {'value': 0}},
                                        deployment.outputs)
 
@@ -584,10 +555,20 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
 
         self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
         wait_for_blueprint_upload(BLUEPRINT_ID, self.client)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
-        self._wait_for_update(dep_update)
+        self._do_update(deployment.id, BLUEPRINT_ID)
 
-        deployment = self.client.deployments.get(dep_update.deployment_id)
+        deployment = self.client.deployments.get(deployment.id)
         self.assertRegexpMatches(deployment['description'], 'new description')
+
+
+class NewTestDeploymentUpdateAddition(TestDeploymentUpdateAddition):
+    def _do_update(self, deployment_id, blueprint_id=None,
+                   preview=False, **kwargs):
+        params = {
+            'blueprint_id': blueprint_id,
+        }
+        if preview:
+            params['preview'] = preview
+        exc = self.client.executions.start(
+            deployment_id, 'csys_new_deployment_update', parameters=params)
+        self.wait_for_execution_to_end(exc)

@@ -34,6 +34,7 @@ from cloudify.models_states import (
 )
 
 from manager_rest.storage import db, models
+from manager_rest.execution_token import current_execution
 from manager_rest.constants import RESERVED_LABELS, RESERVED_PREFIX
 from manager_rest.dsl_functions import (get_secret_method,
                                         evaluate_intrinsic_functions)
@@ -1110,3 +1111,9 @@ def deployment_group_id_filter():
 
 def normalize_value(value):
     return unicodedata.normalize('NFKC', value)
+
+
+def is_deployment_update():
+    """Is the current request within a deployment-update execution?"""
+    return current_execution and current_execution.workflow_id in (
+        'update', 'csys_new_deployment_update')

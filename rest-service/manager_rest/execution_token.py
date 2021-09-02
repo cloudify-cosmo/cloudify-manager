@@ -31,6 +31,9 @@ def current_execution():
 def set_current_execution(execution):
     """Sets the current execution, lasts for the lifetime of the request."""
     g.current_execution = execution
+    if execution:
+        db.session.execute("SET SESSION audit.execution_id = :id",
+                           params={'id': execution.id})
 
 
 def get_current_execution_by_token(execution_token):
