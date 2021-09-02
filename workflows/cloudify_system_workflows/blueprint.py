@@ -186,7 +186,7 @@ def upload(ctx, **kwargs):
     else:
         ctx.logger.info('Blueprint parsed. Updating DB with blueprint plan.')
 
-    # Warn users re: using multiple rel's berween the same source and target
+    # Warn users re: using multiple rel's between the same source and target
     check_multiple_relationship_to_one_target(ctx, plan)
 
     # Update DB with parsed plan

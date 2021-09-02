@@ -15,6 +15,14 @@
 
 import os
 import glob
+import json
+import zipfile
+import tempfile
+import requests
+import urllib
+import shutil
+from contextlib import closing
+
 from packaging.specifiers import SpecifierSet, InvalidSpecifier
 from packaging.version import parse as parse_version
 
@@ -33,6 +41,9 @@ FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
 PLUGIN_PREFIX = 'plugin:'
 BLUEPRINT_PREFIX = 'blueprint:'
 EXTRA_VERSION_CONSTRAINT = 'additional_version_constraint'
+PLUGIN_CATALOG_URL = "https://repository.cloudifysource.org/cloudify/wagons/" \
+                     "plugins_allversions.json"
+                     # this should NOT be hard-coded
 
 
 class ResolverWithCatalogSupport(DefaultImportResolver):
@@ -130,6 +141,83 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
         plugin = self._find_plugin(name, plugin_filters)
         return self._make_plugin_yaml_url(plugin)
 
+    @staticmethod
+    def _create_zip(source, destination, include_folder=True):
+        with closing(zipfile.ZipFile(destination, 'w')) as zip_file:
+            for root, _, files in os.walk(source):
+                for filename in files:
+                    file_path = os.path.join(root, filename)
+                    source_dir = os.path.dirname(source) if include_folder \
+                        else source
+                    zip_file.write(
+                        file_path, os.path.relpath(file_path, source_dir))
+        return destination
+
+    @staticmethod
+    def _download_file(url, dest_path, target_filename=None):
+        with requests.get(url, stream=True, timeout=(5, None)) as resp:
+            resp.raise_for_status()
+            if not target_filename:
+                target_filename = os.path.basename(url)
+            file_path = os.path.join(dest_path, target_filename)
+            with open(file_path, 'wb') as f:
+                for chunk in resp.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+        return file_path
+
+    def _upload_missing_plugin(self, name, specifier_set, distribution):
+        plugins_data = urllib.request.urlopen(PLUGIN_CATALOG_URL).read()
+        plugins_data = json.loads(plugins_data)
+        requested_plugin_data = [x for x in plugins_data if x["name"] == name]
+
+        matching_versions = []
+        for plugin in requested_plugin_data:
+            p_icon = plugin['icon']
+            matching_versions.extend([
+                (v, parse_version(v)) for v in plugin['versions'].keys()
+                if (parse_version(v) in specifier_set
+                    and plugin['versions'][v]['yaml']
+                    and plugin['versions'][v]['wagons'])
+            ])
+        if not matching_versions:
+            raise FileNotFoundError
+
+        max_item = max(matching_versions, key=lambda v_p: v_p[1])
+        matching_plugin_data = plugin['versions'][max_item[0]]
+
+        p_yaml = matching_plugin_data['yaml']
+        p_wagons = [x['url'] for x in matching_plugin_data['wagons'] if
+                    x['name'].lower() == distribution]
+
+        if not p_wagons:
+            raise FileNotFoundError
+        p_wagon = p_wagons[0]
+
+        plugin_target_path = tempfile.mkdtemp()
+        self._download_file(p_yaml, plugin_target_path)
+        self._download_file(p_wagon, plugin_target_path)
+        if p_icon:
+            self._download_file(p_icon, plugin_target_path, 'icon.png')
+
+        plugin_zip = plugin_target_path + '.zip'
+        self._create_zip(plugin_target_path, plugin_zip,
+                         include_folder=False)
+        shutil.rmtree(plugin_target_path)
+        self.client.plugins.upload(plugin_zip)
+
+    @staticmethod
+    def _find_matching_plugin_versions(plugins, specifier_set,
+                                       extra_constraint=None):
+        plugin_versions = [(i, parse_version(p.package_version))
+                           for i, p in enumerate(plugins)]
+        matching_versions = [(i, v) for i, v in plugin_versions
+                             if v in specifier_set]
+        if extra_constraint:
+            matching_versions = [(i, v) for i, v in matching_versions
+                                 if v in SpecifierSet(extra_constraint)]
+        return matching_versions
+
     def _find_plugin(self, name, filters):
         def _get_specifier_set(package_versions):
             # Flat out the versions, in case one of them contains a few
@@ -151,7 +239,6 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
         filters['package_name'] = name
         version_specified = 'package_version' in filters
         versions = filters.pop('package_version', [])
-        extra_constraint_specified = EXTRA_VERSION_CONSTRAINT in filters
         extra_constraint = filters.pop(EXTRA_VERSION_CONSTRAINT, None)
         if not version_specified:
             specifier_set = SpecifierSet()
@@ -164,26 +251,29 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
                     'invalid form. Please refer to the documentation for '
                     'valid forms of versions'.format(versions, name))
         plugins = self.client.plugins.list(**filters)
-        if not plugins:
-            if version_specified:
-                filters['package_version'] = versions
-            version_message = ' (query: {0})'.format(filters) \
-                if filters else ''
-            raise InvalidBlueprintImport(
-                'Plugin {0}{1} not found'.format(name, version_message))
-        plugin_versions = (
-            (i, parse_version(p.package_version))
-            for i, p in enumerate(plugins))
-        matching_versions = [(i, v)
-                             for i, v in plugin_versions if v in specifier_set]
-        if extra_constraint_specified:
-            matching_versions = [(i, v)
-                                 for i, v in matching_versions
-                                 if v in SpecifierSet(extra_constraint)]
-        if not matching_versions:
-            raise InvalidBlueprintImport('No matching version was found for '
-                                         'plugin {0} and version(s) '
-                                         '{1}.'.format(name, versions))
+        if plugins:  # find whether we have a matching version uploaded
+            matching_versions = self._find_matching_plugin_versions(
+                plugins, specifier_set, extra_constraint)
+
+        if not plugins or not matching_versions:
+            try:
+                manager_data = self.client.manager.get_managers()[0]
+                distribution = f'{manager_data["distribution"]} ' \
+                               f'{manager_data["distro_release"]}'.lower()
+                self._upload_missing_plugin(name, specifier_set, distribution)
+            except FileNotFoundError:
+                version_message = ''
+                if version_specified:
+                    version_message = ' with version {}'.format(specifier_set)
+                raise InvalidBlueprintImport(
+                    'Couldn\'t find plugin "{0}"{1} for {2} in the plugins '
+                    'catalog. please upload the plugin manually'.format(
+                        name, version_message, distribution))
+            # update matching versions once the plugin uploaded
+            plugins = self.client.plugins.list(**filters)
+            matching_versions = self._find_matching_plugin_versions(
+                plugins, specifier_set, extra_constraint)
+
         max_item = max(matching_versions, key=lambda i_v: i_v[1])
         return plugins[max_item[0]]
 
