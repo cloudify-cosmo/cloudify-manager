@@ -84,6 +84,8 @@ def _modified_attr_nodes(steps):
     }
     for step in steps:
         parts = step['entity_id'].split(':')
+        if len(parts) < 2:
+            continue
         node_id = parts[1]
         entity_type = step['entity_type']
         if entity_type in modified_entity_type:
@@ -249,7 +251,8 @@ def set_deployment_attributes(*, update_id):
         dep_up.deployment_id,
         blueprint_id=dep_up.new_blueprint_id,
         workflows=dep_up.deployment_plan['workflows'],
-        outputs=dep_up.deployment_plan['outputs']
+        outputs=dep_up.deployment_plan['outputs'],
+        description=dep_up.deployment_plan['description'],
     )
     # in the currently-running execution, update the current context as well,
     # so that later graphs downlod scripts from the new blueprint. Unfortunate,
