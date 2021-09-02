@@ -1,0 +1,19 @@
+[Unit]
+Description=Cloudify API Service
+Wants=network-online.target dbus.service
+After=network-online.target
+
+[Service]
+User=cfyuser
+Group=cfyuser
+TimeoutStartSec=0
+Restart=on-failure
+Environment="LC_ALL=en_US.utf8"
+EnvironmentFile=-/etc/sysconfig/cloudify-api
+ExecStart=/bin/sh -c '/opt/manager/env/bin/uvicorn --host 127.0.0.1 --port ${UVICORN_PORT} --workers ${UVICORN_WORKER_COUNT} --limit-max-requests ${UVICORN_MAX_REQUESTS} --timeout-keep-alive 300  --no-server-header --root-path / --access-log cloudify_api.main:app'
+
+RuntimeDirectory=cloudify-api
+RuntimeDirectoryMode=0750
+
+[Install]
+WantedBy=multi-user.target
