@@ -18,19 +18,11 @@ def execute_workflow(execution,
                      bypass_maintenance=None,
                      wait_after_fail=600,
                      handler: SendHandler = None,):
-    context = execution.render_context(
+    message = execution.render_message(
         wait_after_fail=wait_after_fail,
         bypass_maintenance=bypass_maintenance,
     )
     db.session.commit()
-    execution_parameters = execution.parameters.copy()
-    execution_parameters['__cloudify_context'] = context
-    message = {
-        'cloudify_task': {'kwargs': execution_parameters},
-        'id': execution.id,
-        'execution_creator': execution.creator.id
-    }
-
     if handler is not None:
         handler.publish(message)
     else:

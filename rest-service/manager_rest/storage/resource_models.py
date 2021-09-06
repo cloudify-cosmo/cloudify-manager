@@ -1145,7 +1145,7 @@ class Execution(CreatedAtMixin, SQLResourceBase):
         else:
             return param
 
-    def render_context(self, wait_after_fail=600, bypass_maintenance=None):
+    def render_message(self, wait_after_fail=600, bypass_maintenance=None):
         workflow = self.get_workflow()
         session = db.session.object_session(self)
 
@@ -1204,9 +1204,21 @@ class Execution(CreatedAtMixin, SQLResourceBase):
                         visibility=managed_plugin.visibility,
                         tenant_name=managed_plugin.tenant_name
                     )
+        self.merge_workflow_parameters(
+            self.parameters,
+            self.deployment,
+            self.workflow_id
+        )
+        parameters = self.parameters.copy()
+        parameters['__cloudify_context'] = context
+
         self.token = hashlib.sha256(token.encode('ascii')).hexdigest()
         session.add(self)
-        return context
+        return {
+            'cloudify_task': {'kwargs': parameters},
+            'id': self.id,
+            'execution_creator': self.creator.id
+        }
 
 
 class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
