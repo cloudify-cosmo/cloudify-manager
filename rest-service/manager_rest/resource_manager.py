@@ -271,7 +271,7 @@ class ResourceManager(object):
                 execution.deployment,
                 execution.workflow_id
             )
-            execution.render_context()  # try this here to fail early
+            execution.get_workflow()  # try this here to fail early
         except Exception as e:
             execution.status = ExecutionState.FAILED
             execution.error = str(e)
