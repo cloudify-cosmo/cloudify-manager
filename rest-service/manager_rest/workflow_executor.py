@@ -11,34 +11,18 @@ from cloudify.constants import (
 )
 
 from manager_rest import config, utils
-from manager_rest.storage import get_storage_manager, models
+from manager_rest.storage import get_storage_manager, models, db
 
 
 def execute_workflow(execution,
                      bypass_maintenance=None,
                      wait_after_fail=600,
                      handler: SendHandler = None,):
-    sm = get_storage_manager()
-    token = generate_execution_token(execution)
-    context = execution.render_context()
-    context.update({
-        'wait_after_fail': wait_after_fail,
-        'bypass_maintenance': bypass_maintenance,
-        'execution_token': token,
-        'rest_host': [
-            manager.private_ip for manager in sm.list(models.Manager)
-        ],
-        'rest_token': execution.creator.get_auth_token(),
-    })
-    if context.get('plugin'):
-        managed_plugins = sm.list(models.Plugin, filters={
-            'package_name': context['plugin'].get('package_name'),
-            'package_version': context['plugin'].get('package_version'),
-        }).items
-        if managed_plugins:
-            context['plugin']['visibility'] = managed_plugins[0].visibility
-            context['plugin']['tenant_name'] = managed_plugins[0].tenant_name
-
+    context = execution.render_context(
+        wait_after_fail=wait_after_fail,
+        bypass_maintenance=bypass_maintenance,
+    )
+    db.session.commit()
     execution_parameters = execution.parameters.copy()
     execution_parameters['__cloudify_context'] = context
     message = {

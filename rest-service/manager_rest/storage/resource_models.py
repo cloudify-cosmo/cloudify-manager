@@ -13,6 +13,7 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import hashlib
 import typing
 import uuid
 
@@ -54,7 +55,7 @@ from .models_base import (
     JSONString,
     UTCDateTime,
 )
-from .management_models import User
+from .management_models import User, Manager
 from .resource_models_base import SQLResourceBase, SQLModelBase
 from .relationships import (
     foreign_key,
@@ -1144,8 +1145,11 @@ class Execution(CreatedAtMixin, SQLResourceBase):
         else:
             return param
 
-    def render_context(self):
+    def render_context(self, wait_after_fail=600, bypass_maintenance=None):
         workflow = self.get_workflow()
+        session = db.session.object_session(self)
+
+        token = uuid.uuid4().hex
         context = {
             'type': 'workflow',
             'task_id': self.id,
@@ -1158,6 +1162,13 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             'task_target': MGMTWORKER_QUEUE,
             'tenant': {'name': self.tenant.name},
             'resume': self.resume,
+            'wait_after_fail': wait_after_fail,
+            'bypass_maintenance': bypass_maintenance,
+            'execution_token': token,
+            'rest_token': self.creator.get_auth_token(),
+            'rest_host': [
+                mgr.private_ip for mgr in session.query(Manager).all()
+            ],
         }
         if self.deployment is not None:
             context['deployment_id'] = self.deployment.id
@@ -1179,6 +1190,22 @@ class Execution(CreatedAtMixin, SQLResourceBase):
                     'tenant_name': plugin.get('tenant_name'),
                     'source': plugin.get('source')
                 }
+                managed_plugin = (
+                    session.query(Plugin)
+                    .tenant(self.tenant)
+                    .filter_by(
+                        package_name=plugin.get('package_name'),
+                        package_version=plugin.get('package_version'),
+                    )
+                    .first()
+                )
+                if managed_plugin:
+                    context['plugin'].update(
+                        visibility=managed_plugin.visibility,
+                        tenant_name=managed_plugin.tenant_name
+                    )
+        self.token = hashlib.sha256(token.encode('ascii')).hexdigest()
+        session.add(self)
         return context
 
 
