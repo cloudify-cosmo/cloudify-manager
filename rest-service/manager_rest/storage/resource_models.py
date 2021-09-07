@@ -1063,12 +1063,16 @@ class Execution(CreatedAtMixin, SQLResourceBase):
         if system_task_name:
             self.allow_custom_parameters = True
             return {'operation': system_task_name}
-        raise manager_exceptions.NonexistentWorkflowError(
-            f'Workflow {workflow_id} does not exist in the '
-            f'deployment {deployment.id}')
+        if deployment:
+            raise manager_exceptions.NonexistentWorkflowError(
+                f'Workflow {workflow_id} does not exist in the '
+                f'deployment {deployment.id}')
+        else:
+            raise manager_exceptions.NonexistentWorkflowError(
+                f'Builtin workflow {workflow_id} does not exist')
 
     def merge_workflow_parameters(self, parameters, deployment, workflow_id):
-        if not deployment.workflows:
+        if not deployment or not deployment.workflows:
             return
         workflow = self.get_workflow(deployment, workflow_id)
         workflow_parameters = workflow.get('parameters', {})
