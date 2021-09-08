@@ -219,11 +219,7 @@ class ExecutionGroups(SecuredResource):
                     executions.append(execution)
                     group.executions.append(execution)
 
-        amqp_client = get_amqp_client()
-        handler = workflow_sendhandler()
-        amqp_client.add_handler(handler)
-        with amqp_client:
-            group.start_executions(sm, rm, handler, force=force)
+        group.start_executions(sm, rm, force=force)
         return group
 
 
@@ -292,12 +288,7 @@ class ExecutionGroupsId(SecuredResource):
                 exc.ended_at = None
                 exc.resumed = True
                 sm.update(exc, modified_attrs=('status', 'ended_at', 'resume'))
-
-        amqp_client = get_amqp_client()
-        handler = workflow_sendhandler()
-        amqp_client.add_handler(handler)
-        with amqp_client:
-            group.start_executions(sm, rm, handler)
+        group.start_executions(sm, rm)
 
     @authorize('execution_group_update')
     @rest_decorators.marshal_with(models.ExecutionGroup)

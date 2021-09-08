@@ -231,22 +231,18 @@ class ResourceManager(object):
                 if all_started:
                     break
 
-        amqp_client = workflow_executor.get_amqp_client()
-        handler = workflow_executor.workflow_sendhandler()
-        amqp_client.add_handler(handler)
-        with amqp_client:
-            for execution in to_run:
-                try:
-                    if execution.is_system_workflow:
-                        self._execute_system_workflow(
-                            execution, queue=True, send_handler=handler)
-                    else:
-                        self.execute_workflow(
-                            execution, queue=True, send_handler=handler)
-                except Exception as e:
-                    current_app.logger.warning(
-                        'Could not dequeue execution %s: %s',
-                        execution, e)
+        for execution in to_run:
+            try:
+                if execution.is_system_workflow:
+                    _, messages = self._execute_system_workflow(
+                        execution, queue=True)
+                else:
+                    messages = self.prepare_executions([execution], queue=True)
+                workflow_executor.execute_workflow(messages)
+            except Exception as e:
+                current_app.logger.warning(
+                    'Could not dequeue execution %s: %s',
+                    execution, e)
 
     def _refresh_execution(self, execution: models.Execution) -> bool:
         """Prepare the execution to be started.
@@ -443,7 +439,7 @@ class ResourceManager(object):
                 status=ExecutionState.PENDING,
             )
             self.sm.put(execution)
-            execution = self._execute_system_workflow(
+            return self._execute_system_workflow(
                 execution,
                 bypass_maintenance=bypass_maintenance,
                 queue=queue,
@@ -453,8 +449,6 @@ class ResourceManager(object):
             self.sm.delete(snapshot)
             self.sm.delete(execution)
             raise
-
-        return execution
 
     def restore_snapshot(self,
                          snapshot_id,
@@ -486,11 +480,10 @@ class ResourceManager(object):
             status=ExecutionState.PENDING,
         )
         self.sm.put(execution)
-        execution = self._execute_system_workflow(
+        return self._execute_system_workflow(
             execution,
             bypass_maintenance=bypass_maintenance
         )
-        return execution
 
     def _validate_plugin_yaml(self, plugin):
         """Is the plugin YAML file valid?"""
@@ -541,7 +534,7 @@ class ResourceManager(object):
         if no_changes_required:
             execution.status = ExecutionState.TERMINATED
             self.sm.put(execution)
-            return execution
+            return execution, []
         else:
             self.sm.put(execution)
             return self._execute_system_workflow(
@@ -602,7 +595,9 @@ class ResourceManager(object):
             status=ExecutionState.PENDING,
         )
         self.sm.put(execution)
-        return self.execute_workflow(execution)
+        messages = self.prepare_executions([execution])
+        workflow_executor.execute_workflow(messages)
+        return execution
 
     def publish_blueprint(self,
                           application_dir,
@@ -952,7 +947,8 @@ class ResourceManager(object):
         self.sm.update(execution,
                        modified_attrs=('status', 'ended_at', 'resume'))
 
-        workflow_executor.execute_workflow(execution, bypass_maintenance=False)
+        message = execution.render_message(bypass_maintenance=False)
+        workflow_executor.execute_workflow([message])
 
         # Dealing with the inner Components' deployments
         components_executions = self._find_all_components_executions(
@@ -965,22 +961,36 @@ class ResourceManager(object):
 
         return execution
 
+    def get_component_executions(self, execution):
+        workflow = execution.get_workflow()
+        if not workflow.get('is_cascading', False):
+            return []
+
+        component_executions = []
+        components_dep_ids = self._find_all_components_deployment_id(
+            execution.deployment.id)
+
+        for component_dep_id in components_dep_ids:
+            dep = self.sm.get(models.Deployment, component_dep_id)
+            component_execution = models.Execution(
+                deployment=dep,
+                workflow_id=execution.workflow_id,
+                parameters=execution.parameters,
+                allow_custom_parameters=execution.allow_custom_parameters,
+                is_dry_run=execution.is_dry_run,
+                creator=execution.creator,
+                status=ExecutionState.PENDING,
+            )
+            self.sm.put(component_execution)
+            component_executions.append(component_execution)
+        return component_executions
+
+
     def execute_workflow(self, execution, *, force=False, queue=False,
                          bypass_maintenance=None, wait_after_fail=600,
                          allow_overlapping_running_wf=False,
                          send_handler: 'SendHandler' = None):
         with self.sm.transaction():
-            if execution.deployment:
-                try:
-                    self._check_allow_global_execution(execution.deployment)
-                    self._verify_dependencies_not_affected(
-                        execution.workflow_id, execution.deployment, force)
-                except Exception as e:
-                    execution.status = ExecutionState.FAILED
-                    execution.error = str(e)
-                    self.sm.update(execution)
-                    db.session.commit()
-                    raise
 
             should_queue = queue
             if not allow_overlapping_running_wf:
@@ -1006,41 +1016,46 @@ class ResourceManager(object):
             execution.error = str(e)
             self.sm.update(execution)
             return
-
-        workflow = execution.get_workflow()
-        is_cascading_workflow = workflow.get('is_cascading', False)
-        if not is_cascading_workflow:
-            return execution
-
-        component_executions = []
-        with self.sm.transaction():
-            components_dep_ids = self._find_all_components_deployment_id(
-                execution.deployment.id)
-
-            for component_dep_id in components_dep_ids:
-                dep = self.sm.get(models.Deployment, component_dep_id)
-                component_execution = models.Execution(
-                    deployment=dep,
-                    workflow_id=execution.workflow_id,
-                    parameters=execution.parameters,
-                    allow_custom_parameters=execution.allow_custom_parameters,
-                    is_dry_run=execution.is_dry_run,
-                    creator=execution.creator,
-                    status=ExecutionState.PENDING,
-                )
-                self.sm.put(component_execution)
-                component_executions.append(component_execution)
-
-        for component_execution in component_executions:
-            self.execute_workflow(
-                component_execution,
-                force=force,
-                queue=queue,
-                bypass_maintenance=bypass_maintenance,
-                wait_after_fail=wait_after_fail,
-                send_handler=send_handler,
-            )
         return execution
+
+    def prepare_executions(self, executions, *, force=False, queue=False,
+                           bypass_maintenance=None, wait_after_fail=600,
+                           allow_overlapping_running_wf=False):
+        executions = list(executions)
+        messages = []
+        while executions:
+            exc = executions.pop()
+            if exc.deployment:
+                try:
+                    self._check_allow_global_execution(exc.deployment)
+                    self._verify_dependencies_not_affected(
+                        exc.workflow_id, exc.deployment, force)
+                except Exception as e:
+                    exc.status = ExecutionState.FAILED
+                    exc.error = str(e)
+                    self.sm.update(exc)
+
+            should_queue = queue
+            if not allow_overlapping_running_wf:
+                should_queue = self.check_for_executions(
+                    exc, force, queue)
+            if should_queue:
+                self._workflow_queued(exc)
+                continue
+
+            message = exc.render_message(
+                wait_after_fail=wait_after_fail,
+                bypass_maintenance=bypass_maintenance
+            )
+            messages.append(message)
+            workflow = exc.get_workflow()
+            if not workflow.get('is_cascading', False):
+                continue
+            component_executions = self.get_component_executions(exc)
+            executions.extend(component_executions)
+        db.session.commit()
+        return messages
+
 
     @staticmethod
     def _verify_workflow_in_deployment(wf_id, deployment, dep_id):
@@ -1178,15 +1193,10 @@ class ResourceManager(object):
         if should_queue:
             self.sm.put(execution)
             self._workflow_queued(execution)
-            return execution
-
-        workflow_executor.execute_workflow(
-            execution,
-            bypass_maintenance=bypass_maintenance,
-            handler=send_handler,
-        )
-
-        return execution
+            return execution, []
+        message = execution.render_message(
+            bypass_maintenance=bypass_maintenance)
+        return execution, [message]
 
     def _retrieve_components_from_deployment(self, deployment_id_filter):
         return [node.id for node in

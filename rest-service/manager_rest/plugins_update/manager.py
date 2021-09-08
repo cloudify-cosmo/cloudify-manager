@@ -160,12 +160,13 @@ class PluginsUpdateManager(object):
             plugins_update.state = STATES.UPDATING
             self.sm.update(plugins_update)
 
-        plugins_update.execution = \
+        plugins_update.execution, messages = \
             get_resource_manager(self.sm).update_plugins(
                 plugins_update, not changes_required, auto_correct_types,
                 reevaluate_active_statuses)
         plugins_update.state = (STATES.EXECUTING_WORKFLOW if changes_required
                                 else STATES.NO_CHANGES_REQUIRED)
+        workflow_executor.execute_workflow(messages)
         return self.sm.update(plugins_update)
 
     def finalize(self, plugins_update_id):

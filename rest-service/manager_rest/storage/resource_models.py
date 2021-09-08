@@ -1324,7 +1324,6 @@ class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
     def start_executions(self,
                          sm: 'SQLStorageManager',
                          rm: 'ResourceManager',
-                         send_handler: 'SendHandler',
                          force=False):
         """Start the executions belonging to this group.
 
@@ -1340,13 +1339,10 @@ class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
                 execution.status = ExecutionState.QUEUED
                 sm.update(execution, modified_attrs=('status', ))
 
-        for execution in executions[:self.concurrency]:
-            rm.execute_workflow(
-                execution,
-                force=force,
-                send_handler=send_handler,
-                queue=True,  # allow queue, but it will try to run
-            )
+        messages = rm.prepare_executions(
+            executions[:self.concurrency], force=force, queue=True)
+        from manager_rest import workflow_executor
+        workflow_executor.execute_workflow(messages)
 
 
 class ExecutionSchedule(CreatedAtMixin, SQLResourceBase):

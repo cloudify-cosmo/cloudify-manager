@@ -14,19 +14,13 @@ from manager_rest import config, utils
 from manager_rest.storage import get_storage_manager, models, db
 
 
-def execute_workflow(execution,
-                     bypass_maintenance=None,
-                     wait_after_fail=600,
-                     handler: SendHandler = None,):
-    message = execution.render_message(
-        wait_after_fail=wait_after_fail,
-        bypass_maintenance=bypass_maintenance,
-    )
-    db.session.commit()
-    if handler is not None:
-        handler.publish(message)
-    else:
-        _send_mgmtworker_task(message)
+def execute_workflow(messages):
+    client = get_amqp_client()
+    handler = workflow_sendhandler()
+    client.add_handler(handler)
+    with client:
+        for message in messages:
+            handler.publish(message)
 
 
 def generate_execution_token(execution):

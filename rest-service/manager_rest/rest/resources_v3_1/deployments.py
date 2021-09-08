@@ -31,7 +31,7 @@ from cloudify.deployment_dependencies import (create_deployment_dependency,
                                               TARGET_DEPLOYMENT,
                                               TARGET_DEPLOYMENT_FUNC)
 
-from manager_rest import utils, manager_exceptions
+from manager_rest import utils, manager_exceptions, workflow_executor
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import db, models, get_storage_manager
@@ -259,8 +259,11 @@ class DeploymentsId(resources_v1.DeploymentsId):
                 display_name=request_dict.get('display_name'),
             )
         try:
-            rm.execute_workflow(
-                create_execution, bypass_maintenance=bypass_maintenance)
+            messages = rm.prepare_executions(
+                [create_execution],
+                bypass_maintenance=bypass_maintenance
+            )
+            workflow_executor.execute_workflow(messages)
         except manager_exceptions.ExistingRunningExecutionError:
             rm.delete_deployment(deployment)
             raise
@@ -1104,11 +1107,7 @@ class DeploymentGroupsId(SecuredResource):
                 group.deployments.append(dep)
                 create_exec_group.executions.append(dep.create_execution)
                 deployment_count += 1
-        amqp_client = get_amqp_client()
-        handler = workflow_sendhandler()
-        amqp_client.add_handler(handler)
-        with amqp_client:
-            create_exec_group.start_executions(sm, rm, handler)
+        create_exec_group.start_executions(sm, rm)
 
     def _prepare_sites(self, sm, new_deployments):
         """If new-deployment specs contain a site name, fetch those sites
@@ -1295,12 +1294,7 @@ class DeploymentGroupsId(SecuredResource):
                         delete_logs=args.delete_logs
                     )
                     delete_exc_group.executions.append(delete_exc)
-
-            amqp_client = get_amqp_client()
-            handler = workflow_sendhandler()
-            amqp_client.add_handler(handler)
-            with amqp_client:
-                delete_exc_group.start_executions(sm, rm, handler)
+            delete_exc_group.start_executions(sm, rm)
 
         sm.delete(group)
         return None, 204
