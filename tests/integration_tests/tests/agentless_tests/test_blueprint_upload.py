@@ -309,9 +309,7 @@ class BlueprintImportedTest(AgentlessTestCase):
             entity_id='imported')
         self.client.blueprints.upload(
             resource(os.path.join('dsl', 'deployment_with_import.yaml')),
-            entity_id='main',
-            async_upload=True)
-        wait_for_blueprint_upload('main', self.client)
+            entity_id='main')
         self.client.blueprints.delete('main')
         self.client.blueprints.delete('imported')
 
@@ -326,16 +324,14 @@ class BlueprintImportedTest(AgentlessTestCase):
         self.client.blueprints.delete('imported')
         wait_for_blueprint_upload('main', self.client, require_success=False)
 
-        # assert `upload_blueprint` execution failure for the `main` blueprint
         message = ''
-        for execution in get_executions(
-                self.client,
-                workflow_id='upload_blueprint',
-                parameters__blueprint_id='main'):
-            for event in get_events(
-                    self.client,
-                    execution_id=execution['id'],
-                    event_type='workflow_failed'):
+        for execution in get_executions(self.client,
+                                        workflow_id='upload_blueprint',
+                                        parameters__blueprint_id='main'):
+            assert execution['status'] == 'failed'
+            for event in get_events(self.client,
+                                    execution_id=execution['id'],
+                                    event_type='workflow_failed'):
                 message = event['message']
         assert "Requested blueprint import `imported` was not found" in message
         self.client.blueprints.delete('main')

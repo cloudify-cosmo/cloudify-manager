@@ -298,14 +298,16 @@ def wait_for_executions(cls):
     return cls
 
 
-def get_executions(client, **kwargs):
-    for execution in client.executions.list(_get_all_results=True):
+def get_executions(client, workflow_id, **kwargs):
+    for execution in client.executions.list(workflow_id=workflow_id,
+                                            _get_all_results=True):
         if _dict_matches(execution, **kwargs):
             yield execution
 
 
-def get_events(client, **kwargs):
-    for event in client.events.list(_get_all_request=True):
+def get_events(client, execution_id, **kwargs):
+    for event in client.events.list(execution_id=execution_id,
+                                    _get_all_request=True):
         if _dict_matches(event, **kwargs):
             yield event
 
