@@ -1,0 +1,13 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - cloudify/types/types.yaml
+  - ns--blueprint:imported
+
+
+node_templates:
+  main_node:
+    type: cloudify.nodes.Root
+    relationships:
+      - type: cloudify.relationships.connected_to
+        target: ns--simple_node
