@@ -326,7 +326,8 @@ class BaseTestCase(unittest.TestCase):
         return node_instance['state'] == 'started'
 
     def wait_for_execution_to_end(self, execution, is_group=False,
-                                  timeout_seconds=240, client=None):
+                                  timeout_seconds=240, client=None,
+                                  require_success=True):
         client = client or self.client
         if is_group:
             get = client.execution_groups.get
@@ -342,7 +343,7 @@ class BaseTestCase(unittest.TestCase):
                 raise utils.TimeoutException(
                     'Execution timed out: \n{0}'
                     .format(json.dumps(execution, indent=2)))
-        if execution.status == Execution.FAILED:
+        if require_success and execution.status == Execution.FAILED:
             if is_group:
                 # no .error in exec-groups
                 raise RuntimeError(
@@ -413,11 +414,12 @@ class BaseTestCase(unittest.TestCase):
         filename_path = self.make_file_with_name(content, filename)
         return filename_path
 
-    def wait_for_all_executions_to_end(self):
+    def wait_for_all_executions_to_end(self, require_success=True):
         executions = self.client.executions.list(include_system_workflows=True)
         for execution in executions:
             if execution['status'] not in Execution.END_STATES:
-                self.wait_for_execution_to_end(execution)
+                self.wait_for_execution_to_end(execution,
+                                               require_success=require_success)
 
     def wait_for_event(self, execution, message, timeout_seconds=240,
                        allow_connection_error=True, client=None):

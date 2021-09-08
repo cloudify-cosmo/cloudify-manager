@@ -324,7 +324,7 @@ class BlueprintImportedTest(AgentlessTestCase):
             async_upload=True)
         self.client.blueprints.delete('imported')
         wait_for_blueprint_upload('main', self.client, require_success=False)
-        self.wait_for_all_executions_to_end()
+        self.wait_for_all_executions_to_end(require_success=False)
 
         message = ''
         for execution in get_executions(self.client,
