@@ -42,7 +42,9 @@ from manager_rest.rest.rest_utils import (get_labels_from_plan,
 from manager_rest.manager_exceptions import (ConflictError,
                                              IllegalActionError,
                                              BadParametersError,
-                                             DeploymentParentNotFound,)
+                                             DeploymentParentNotFound,
+                                             ImportedBlueprintNotFound,
+                                             )
 from manager_rest import config
 from manager_rest.constants import FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER
 
@@ -237,21 +239,11 @@ class BlueprintsId(resources_v2.BlueprintsId):
 
         if request_dict.get('plan'):
             dsl_labels = request_dict['plan'].get('labels', {})
-            csys_obj_parents = dsl_labels.get('csys-obj-parent')
-            if csys_obj_parents:
-                dep_parents = csys_obj_parents['values']
-                missing_parents = rm.get_missing_deployment_parents(
-                    dep_parents
-                )
-                if missing_parents:
-                    raise DeploymentParentNotFound(
-                        'Blueprint {0}: is referencing deployments'
-                        ' using label `csys-obj-parent` that does not exist, '
-                        'make sure that deployment(s) {1} exist before '
-                        'creating blueprint'.format(
-                            blueprint.id, ','.join(missing_parents)
-                        )
-                    )
+            _validate_csys_obj_parents(rm, blueprint,
+                                       dsl_labels.get('csys-obj-parent'))
+            imported_blueprints = request_dict['plan']\
+                .get(constants.IMPORTED_BLUEPRINTS, {})
+            _validate_imported_blueprints(sm, blueprint, imported_blueprints)
         # set blueprint state
         state = request_dict.get('state')
         if state:
@@ -312,6 +304,32 @@ def _create_blueprint_labels(blueprint, provided_labels):
                            tuple(label) not in labels_list)
     rm = get_resource_manager()
     rm.create_resource_labels(models.BlueprintLabel, blueprint, labels_list)
+
+
+def _validate_csys_obj_parents(rm, blueprint, csys_obj_parents):
+    if not csys_obj_parents:
+        return
+    dep_parents = csys_obj_parents['values']
+    missing_parents = rm.get_missing_deployment_parents(
+        dep_parents
+    )
+    if missing_parents:
+        raise DeploymentParentNotFound(
+            'Blueprint {0}: is referencing deployments'
+            ' using label `csys-obj-parent` that does not exist, '
+            'make sure that deployment(s) {1} exist before '
+            'creating blueprint'.format(
+                blueprint.id, ','.join(missing_parents)
+            )
+        )
+
+
+def _validate_imported_blueprints(sm, blueprint, imported_blueprints):
+    for imported_blueprint in imported_blueprints:
+        if not sm.get(models.Blueprint, imported_blueprint, include=['id']):
+            raise ImportedBlueprintNotFound(
+                f'Blueprint {blueprint.id} uses an imported blueprint which '
+                f'is unavailable: {imported_blueprint}')
 
 
 class BlueprintsIdValidate(BlueprintsId):
