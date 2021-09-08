@@ -296,3 +296,35 @@ def wait_for_executions(cls):
         attribute = _wait_for_executions_after_call(attribute)
         setattr(cls, name, attribute)
     return cls
+
+
+def get_executions(client, workflow_id, **kwargs):
+    for execution in client.executions.list(workflow_id=workflow_id,
+                                            _get_all_results=True):
+        if _dict_matches(execution, **kwargs):
+            yield execution
+
+
+def get_events(client, execution_id, **kwargs):
+    for event in client.events.list(execution_id=execution_id,
+                                    _get_all_request=True):
+        if _dict_matches(event, **kwargs):
+            yield event
+
+
+def _dict_matches(d, **kwargs):
+    # Check if `d` dictionary matches `**kwargs`, e.g. if `d` is
+    # {'a': 1, 'b': 2}, then _dict_matches(d, a=1) returns True, and
+    # _dict_matches(d, c=3) returns False.  Nested matching is supported, e.g.:
+    # for d = {'a': {'q': 0, 'w': 1}, 'b': 'foo'}, _dict_matches(d, a__w==1)
+    # will return True.
+    for k, v in kwargs.items():
+        head, _, tail = k.partition('__')
+        if head not in d:
+            return False
+        if tail and isinstance(d[head], dict):
+            if not _dict_matches(d[head], **{tail: v}):
+                return False
+        elif d[head] != v:
+            return False
+    return True
