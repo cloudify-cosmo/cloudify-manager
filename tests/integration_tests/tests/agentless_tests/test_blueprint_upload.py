@@ -301,6 +301,7 @@ class BlueprintImportedTest(AgentlessTestCase):
             async_upload=True)
         self.client.blueprints.delete('first')
         wait_for_blueprint_upload('second', self.client)
+        self.wait_for_all_executions_to_end()
         self.client.blueprints.delete('second')
 
     def test_blueprints_imported_upload_success(self):
@@ -323,6 +324,7 @@ class BlueprintImportedTest(AgentlessTestCase):
             async_upload=True)
         self.client.blueprints.delete('imported')
         wait_for_blueprint_upload('main', self.client, require_success=False)
+        self.wait_for_all_executions_to_end()
 
         message = ''
         for execution in get_executions(self.client,
