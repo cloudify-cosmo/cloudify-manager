@@ -317,10 +317,7 @@ def _dict_matches(d, **kwargs):
     # for d = {'a': {'q': 0, 'w': 1}, 'b': 'foo'}, _dict_matches(d, a__w==1)
     # will return True.
     for k, v in kwargs.items():
-        try:
-            head, tail = k.split('__', 1)
-        except ValueError:
-            head, tail = k, None
+        head, _, tail = k.partition('__')
         if head not in d:
             return False
         if tail and isinstance(d[head], dict):
