@@ -53,11 +53,6 @@ from manager_rest.rest import (
     rest_decorators,
     responses_v3
 )
-from manager_rest.workflow_executor import (
-    get_amqp_client,
-    workflow_sendhandler
-)
-
 from ..responses_v2 import ListResponse
 
 

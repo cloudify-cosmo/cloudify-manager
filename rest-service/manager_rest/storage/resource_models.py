@@ -67,7 +67,6 @@ from .relationships import (
 if typing.TYPE_CHECKING:
     from manager_rest.resource_manager import ResourceManager
     from manager_rest.storage.storage_manager import SQLStorageManager
-    from cloudify.amqp_client import SendHandler
 
 
 RELATIONSHIP = 'relationship'

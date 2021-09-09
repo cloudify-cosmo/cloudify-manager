@@ -11,7 +11,7 @@ from cloudify.constants import (
 )
 
 from manager_rest import config, utils
-from manager_rest.storage import get_storage_manager, models, db
+from manager_rest.storage import get_storage_manager, models
 
 
 def execute_workflow(messages):

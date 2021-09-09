@@ -20,8 +20,9 @@ from flask import request
 from sqlalchemy.dialects.postgresql import insert
 
 from cloudify.models_states import ExecutionState
-from manager_rest.rest.responses_v3 import ItemsCount
 
+from manager_rest import workflow_executor
+from manager_rest.rest.responses_v3 import ItemsCount
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.rest import resources_v2, rest_decorators
@@ -34,10 +35,6 @@ from manager_rest.rest.rest_utils import (
     parse_datetime_multiple_formats
 )
 from manager_rest.storage import models, db, get_storage_manager, ListResult
-from manager_rest.workflow_executor import (
-    get_amqp_client,
-    workflow_sendhandler
-)
 
 
 class Executions(resources_v2.Executions):

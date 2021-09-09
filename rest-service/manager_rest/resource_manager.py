@@ -983,7 +983,6 @@ class ResourceManager(object):
             component_executions.append(component_execution)
         return component_executions
 
-
     def execute_workflow(self, execution, *, force=False, queue=False,
                          bypass_maintenance=None, wait_after_fail=600,
                          allow_overlapping_running_wf=False,

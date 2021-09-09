@@ -39,7 +39,7 @@ from manager_rest.constants import (FILE_SERVER_PLUGINS_FOLDER,
                                     FILE_SERVER_BLUEPRINTS_FOLDER)
 from manager_rest.archiving import get_archive_type
 from manager_rest.storage.models import Blueprint, Plugin
-from manager_rest import config, chunked, manager_exceptions
+from manager_rest import config, chunked, manager_exceptions, workflow_executor
 from manager_rest.utils import (mkdirs,
                                 get_formatted_timestamp,
                                 current_tenant,

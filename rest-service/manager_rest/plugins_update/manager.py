@@ -29,7 +29,7 @@ from dsl_parser.constants import (PLUGIN_NAME_KEY,
                                   PLUGIN_PACKAGE_NAME,
                                   PLUGIN_PACKAGE_VERSION)
 
-from manager_rest import config, utils
+from manager_rest import config, utils, workflow_executor
 from manager_rest.storage import get_storage_manager, models
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.plugins_update.constants import (STATES,
