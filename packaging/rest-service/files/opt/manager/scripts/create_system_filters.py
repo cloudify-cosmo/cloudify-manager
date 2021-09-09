@@ -61,7 +61,7 @@ def create_system_filters():
                     }
                 ]
             }
-            _add_blueprints_filter(service_filter, creator, tenant, now)
+            _add_deployments_filter(service_filter, creator, tenant, now)
 
         db.session.commit()
 
