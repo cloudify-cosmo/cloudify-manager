@@ -1081,17 +1081,24 @@ class ResourceManager(object):
             return system_exec_running or execution_running
 
     def _check_for_active_executions(self, execution, queue):
+        if execution.created_at is not None:
+            status_filter = sql_or(
+                modelsExecution.status.in_(ExecutionState.ACTIVE_STATES),
+                sql_and(
+                    models.Execution.status == ExecutionState.QUEUED,
+                    models.Execution.created_at < execution.created_at
+                )
+            )
+        else:
+            status_filter = models.Execution.status.in_(
+                ExecutionState.ACTIVE_STATES + [ExecutionState.QUEUED]
+            )
+
         running = self.list_executions(
             filters={
-                '_deployment_fk': execution._deployment_fk,
+                'deployment': execution.deployment,
                 'id': lambda col: col != execution.id,
-                'status': lambda col: sql_or(
-                    col.in_(ExecutionState.ACTIVE_STATES),
-                    sql_and(
-                        col == ExecutionState.QUEUED,
-                        models.Execution.created_at < execution.created_at
-                    )
-                )
+                'status': status_filter
             },
             is_include_system_workflows=True
         ).items
