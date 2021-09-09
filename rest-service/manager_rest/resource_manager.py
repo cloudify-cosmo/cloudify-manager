@@ -219,30 +219,29 @@ class ResourceManager(object):
         any of those fail to run, try running more.
         """
         to_run = []
-        with self.sm.transaction():
-            while True:
+        while True:
+            with self.sm.transaction():
                 dequeued = self._get_queued_executions(deployment_storage_id)
                 all_started = True
                 for execution in dequeued:
                     if self._refresh_execution(execution):
-                        to_run.append(execution)
+                        try:
+                            if execution.is_system_workflow:
+                                _, messages = self._execute_system_workflow(
+                                    execution, queue=True)
+                            else:
+                                messages = self.prepare_executions(
+                                    [execution], queue=True)
+                            to_run.extend(messages)
+                        except Exception as e:
+                            current_app.logger.warning(
+                                'Could not dequeue execution %s: %s',
+                                execution, e)
                     else:
                         all_started = False
                 if all_started:
                     break
-
-        for execution in to_run:
-            try:
-                if execution.is_system_workflow:
-                    _, messages = self._execute_system_workflow(
-                        execution, queue=True)
-                else:
-                    messages = self.prepare_executions([execution], queue=True)
-                workflow_executor.execute_workflow(messages)
-            except Exception as e:
-                current_app.logger.warning(
-                    'Could not dequeue execution %s: %s',
-                    execution, e)
+        workflow_executor.execute_workflow(to_run)
 
     def _refresh_execution(self, execution: models.Execution) -> bool:
         """Prepare the execution to be started.
