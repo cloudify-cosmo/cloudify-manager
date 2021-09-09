@@ -1055,7 +1055,6 @@ class ResourceManager(object):
             db.session.commit()
         return messages
 
-
     @staticmethod
     def _verify_workflow_in_deployment(wf_id, deployment, dep_id):
         if wf_id not in deployment.workflows:
@@ -1073,7 +1072,7 @@ class ResourceManager(object):
         """
         system_exec_running = self._check_for_active_system_wide_execution(
             queue)
-        if force or not execution.deployment:
+        if force or not execution._deployment_fk:
             return system_exec_running
         else:
             execution_running = self._check_for_active_executions(
