@@ -169,6 +169,24 @@ class SQLModelBase(db.Model):
         'Float': flask_fields.Float
     }
 
+    def ensure_defaults(self):
+        """Synchronously set the defaults for this model's properties.
+
+        Normally the python-side defaults are only applied when the
+        model is committed, but if you need them to be applied _right now_,
+        call this.
+
+        This will only apply scalar and callable defaults, of course it
+        cannot apply defaults that are db-side (eg. a selectable).
+        """
+        for col_name, col in self.__table__.c.items():
+            if getattr(self, col_name, None) is None and col.default:
+                if col.default.is_scalar:
+                    value = col.default.arg
+                elif col.default.is_callable:
+                    value = col.default.arg(self)
+                setattr(self, col_name, value)
+
     def to_dict(self, suppress_error=False):
         """Return a dict representation of the model
 

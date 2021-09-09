@@ -1149,6 +1149,7 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             return param
 
     def render_message(self, wait_after_fail=600, bypass_maintenance=None):
+        self.ensure_defaults()
         workflow = self.get_workflow()
         session = db.session.object_session(self)
 
