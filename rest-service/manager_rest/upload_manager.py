@@ -399,7 +399,7 @@ class UploadedBlueprintsManager(UploadedDataManager):
             self.upload_archive_to_file_server(data_id)
 
         try:
-            new_blueprint.upload_execution = rm.upload_blueprint(
+            new_blueprint.upload_execution, messages = rm.upload_blueprint(
                 data_id,
                 application_file_name,
                 blueprint_url,
@@ -407,6 +407,7 @@ class UploadedBlueprintsManager(UploadedDataManager):
                 labels=labels
             )
             rm.sm.update(new_blueprint)
+            workflow_executor.execute_workflow(messages)
         except manager_exceptions.ExistingRunningExecutionError as e:
             new_blueprint.state = BlueprintUploadState.FAILED_UPLOADING
             new_blueprint.error = str(e)
@@ -582,13 +583,14 @@ class UploadedBlueprintsValidator(UploadedBlueprintsManager):
             self.upload_archive_to_file_server(data_id)
 
         try:
-            temp_blueprint.upload_execution = rm.upload_blueprint(
+            temp_blueprint.upload_execution, messages = rm.upload_blueprint(
                 data_id,
                 application_file_name,
                 blueprint_url,
                 config.instance.file_server_root,   # for the import resolver
                 validate_only=True,
             )
+            workflow_executor.execute_workflow(messages)
         except manager_exceptions.ExistingRunningExecutionError:
             rm.sm.delete(temp_blueprint)
             self.cleanup_blueprint_archive_from_file_server(

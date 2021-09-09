@@ -596,8 +596,7 @@ class ResourceManager(object):
         )
         self.sm.put(execution)
         messages = self.prepare_executions([execution])
-        workflow_executor.execute_workflow(messages)
-        return execution
+        return execution, messages
 
     def publish_blueprint(self,
                           application_dir,
