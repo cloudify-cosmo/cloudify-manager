@@ -218,8 +218,8 @@ class ExecutionGroups(SecuredResource):
                     sm.put(execution)
                     executions.append(execution)
                     group.executions.append(execution)
-
-        group.start_executions(sm, rm, force=force)
+            messages = group.start_executions(sm, rm, force=force)
+        workflow_executor.execute_workflow(messages)
         return group
 
 
@@ -288,7 +288,8 @@ class ExecutionGroupsId(SecuredResource):
                 exc.ended_at = None
                 exc.resumed = True
                 sm.update(exc, modified_attrs=('status', 'ended_at', 'resume'))
-        group.start_executions(sm, rm)
+            messages = group.start_executions(sm, rm)
+        workflow_executor.execute_workflow(messages)
 
     @authorize('execution_group_update')
     @rest_decorators.marshal_with(models.ExecutionGroup)

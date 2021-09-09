@@ -1107,7 +1107,8 @@ class DeploymentGroupsId(SecuredResource):
                 group.deployments.append(dep)
                 create_exec_group.executions.append(dep.create_execution)
                 deployment_count += 1
-        create_exec_group.start_executions(sm, rm)
+            messages = create_exec_group.start_executions(sm, rm)
+        workflow_executor.execute_workflow(messages)
 
     def _prepare_sites(self, sm, new_deployments):
         """If new-deployment specs contain a site name, fetch those sites
@@ -1294,7 +1295,8 @@ class DeploymentGroupsId(SecuredResource):
                         delete_logs=args.delete_logs
                     )
                     delete_exc_group.executions.append(delete_exc)
-            delete_exc_group.start_executions(sm, rm)
+                messages = delete_exc_group.start_executions(sm, rm)
+            workflow_executor.execute_workflow(messages)
 
         sm.delete(group)
         return None, 204

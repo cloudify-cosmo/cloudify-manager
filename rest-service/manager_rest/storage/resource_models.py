@@ -1334,15 +1334,12 @@ class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
             exc for exc in self.executions
             if exc.status == ExecutionState.PENDING
         ]
-        with sm.transaction():
-            for execution in executions[self.concurrency:]:
-                execution.status = ExecutionState.QUEUED
-                sm.update(execution, modified_attrs=('status', ))
+        for execution in executions[self.concurrency:]:
+            execution.status = ExecutionState.QUEUED
+            sm.update(execution, modified_attrs=('status', ))
 
-        messages = rm.prepare_executions(
+        return rm.prepare_executions(
             executions[:self.concurrency], force=force, queue=True)
-        from manager_rest import workflow_executor
-        workflow_executor.execute_workflow(messages)
 
 
 class ExecutionSchedule(CreatedAtMixin, SQLResourceBase):
