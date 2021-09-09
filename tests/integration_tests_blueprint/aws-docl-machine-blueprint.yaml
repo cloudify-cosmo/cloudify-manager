@@ -6,7 +6,7 @@ description: >
   S3 for use in other test executions.
 
 imports:
-  - http://www.getcloudify.org/spec/cloudify/5.2.5/types.yaml
+  - http://www.getcloudify.org/spec/cloudify/5.2.6.dev1/types.yaml
   - http://www.getcloudify.org/spec/fabric-plugin/1.5.2/plugin.yaml
   - http://www.getcloudify.org/spec/aws-plugin/1.4.10/plugin.yaml
   - docl-base-types.yaml
@@ -71,7 +71,7 @@ inputs:
     default:
       - {'source_path': 'http://www.getcloudify.org/spec/aws-plugin/1.4.10/plugin.yaml', 'destination_path': '/spec/aws-plugin/1.4.10/plugin.yaml'}
       - {'source_path': 'http://www.getcloudify.org/spec/fabric-plugin/1.5.2/plugin.yaml', 'destination_path': '/spec/fabric-plugin/1.5.2/plugin.yaml'}
-      - {'source_path': 'http://www.getcloudify.org/spec/cloudify/5.2.5/types.yaml', 'destination_path': '/spec/cloudify/5.2.5/types.yaml'}
+      - {'source_path': 'http://www.getcloudify.org/spec/cloudify/5.2.6.dev1/types.yaml', 'destination_path': '/spec/cloudify/5.2.6.dev1/types.yaml'}
 
 dsl_definitions:
   aws_configuration: &aws_configuration
