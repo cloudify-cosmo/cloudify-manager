@@ -108,6 +108,9 @@ def correct_blueprint(blueprint: models.Blueprint,
         raise common.UpdateException(
             'Cannot load blueprint from {0}: {1}'.format(file_name, ex))
 
+    if start_at >= end_at:
+        raise common.UpdateException('Invalid syntax: {0}'.format(file_name))
+
     try:
         common.update_blueprint(file_name, new_file_name, start_at, end_at,
                                 mapping.replacement(separator))
