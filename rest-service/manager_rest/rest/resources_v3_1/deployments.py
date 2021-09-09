@@ -258,16 +258,16 @@ class DeploymentsId(resources_v1.DeploymentsId):
                 labels=labels,
                 display_name=request_dict.get('display_name'),
             )
-        try:
-            messages = rm.prepare_executions(
-                [create_execution],
-                bypass_maintenance=bypass_maintenance
-            )
-            workflow_executor.execute_workflow(messages)
-        except manager_exceptions.ExistingRunningExecutionError:
-            rm.delete_deployment(deployment)
-            raise
-
+            try:
+                messages = rm.prepare_executions(
+                    [create_execution],
+                    bypass_maintenance=bypass_maintenance,
+                    commit=False
+                )
+            except manager_exceptions.ExistingRunningExecutionError:
+                rm.delete_deployment(deployment)
+                raise
+        workflow_executor.execute_workflow(messages)
         if not args.async_create:
             rest_utils.wait_for_execution(sm, deployment.create_execution.id)
             if deployment.create_execution.status != ExecutionState.TERMINATED:

@@ -153,13 +153,13 @@ class Executions(SecuredResource):
                 allow_custom_parameters=allow_custom_parameters,
             )
             sm.put(execution)
-        messages = rm.prepare_executions(
-            [execution],
-            bypass_maintenance=is_bypass_maintenance_mode(),
-            force=force,
-            queue=queue,
-            wait_after_fail=wait_after_fail,
-        )
+            messages = rm.prepare_executions(
+                [execution],
+                bypass_maintenance=is_bypass_maintenance_mode(),
+                force=force,
+                queue=queue,
+                wait_after_fail=wait_after_fail,
+            )
         workflow_executor.execute_workflow(messages)
         return execution, 201
 

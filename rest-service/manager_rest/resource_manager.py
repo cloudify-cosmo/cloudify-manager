@@ -1019,7 +1019,8 @@ class ResourceManager(object):
 
     def prepare_executions(self, executions, *, force=False, queue=False,
                            bypass_maintenance=None, wait_after_fail=600,
-                           allow_overlapping_running_wf=False):
+                           allow_overlapping_running_wf=False,
+                           commit=True):
         executions = list(executions)
         messages = []
         while executions:
@@ -1052,7 +1053,8 @@ class ResourceManager(object):
                 continue
             component_executions = self.get_component_executions(exc)
             executions.extend(component_executions)
-        db.session.commit()
+        if commit:
+            db.session.commit()
         return messages
 
 
