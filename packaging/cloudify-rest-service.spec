@@ -34,7 +34,7 @@ Cloudify's REST Service.
 
 python3 -m venv %_manager_env
 
-%_manager_env/bin/pip install --upgrade pip"<20.0" setuptools
+%_manager_env/bin/pip install --upgrade pip"<20.0" setuptools"<58.0"
 %_manager_env/bin/pip install -r "${RPM_SOURCE_DIR}/rest-service/dev-requirements.txt"
 %_manager_env/bin/pip install "${RPM_SOURCE_DIR}/rest-service"[dbus]
 %_manager_env/bin/pip install "${RPM_SOURCE_DIR}/amqp-postgres"
