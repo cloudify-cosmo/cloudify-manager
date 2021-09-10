@@ -135,6 +135,8 @@ class Blueprint(CreatedAtMixin, SQLResourceBase):
         fields = super(Blueprint, cls).response_fields
         fields['labels'] = flask_fields.List(
             flask_fields.Nested(Label.resource_fields))
+        fields['upload_execution'] = flask_fields.Nested(
+            Execution.resource_fields)
         return fields
 
     @classproperty
