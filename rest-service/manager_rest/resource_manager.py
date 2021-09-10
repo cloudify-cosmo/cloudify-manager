@@ -983,38 +983,6 @@ class ResourceManager(object):
             component_executions.append(component_execution)
         return component_executions
 
-    def execute_workflow(self, execution, *, force=False, queue=False,
-                         bypass_maintenance=None, wait_after_fail=600,
-                         allow_overlapping_running_wf=False,
-                         send_handler: 'SendHandler' = None):
-        with self.sm.transaction():
-
-            should_queue = queue
-            if not allow_overlapping_running_wf:
-                should_queue = self.check_for_executions(
-                    execution, force, queue)
-
-            if should_queue:
-                self._workflow_queued(execution)
-                return execution
-            if execution.deployment:
-                if not self._refresh_execution(execution):
-                    return
-
-        try:
-            workflow_executor.execute_workflow(
-                execution,
-                bypass_maintenance=bypass_maintenance,
-                wait_after_fail=wait_after_fail,
-                handler=send_handler,
-            )
-        except Exception as e:
-            execution.status = ExecutionState.FAILED
-            execution.error = str(e)
-            self.sm.update(execution)
-            return
-        return execution
-
     def prepare_executions(self, executions, *, force=False, queue=False,
                            bypass_maintenance=None, wait_after_fail=600,
                            allow_overlapping_running_wf=False,
