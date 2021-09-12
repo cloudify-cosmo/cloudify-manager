@@ -38,6 +38,7 @@ install_requires = [
     'pytz==2018.4',
     'packaging==17.1',
     'jsonschema==3.0.0',
+    'Alembic==1.6.5',
     'SQLAlchemy==1.3.19',
     'cachetools==3.1.0',
     'email-validator>1.0.0,<2.0.0',
