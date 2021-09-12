@@ -155,15 +155,21 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
 
     @staticmethod
     def _download_file(url, dest_path, target_filename=None):
-        with requests.get(url, stream=True, timeout=(5, None)) as resp:
-            resp.raise_for_status()
-            if not target_filename:
-                target_filename = os.path.basename(url)
-            file_path = os.path.join(dest_path, target_filename)
-            with open(file_path, 'wb') as f:
-                for chunk in resp.iter_content(chunk_size=8192):
-                    if chunk:
-                        f.write(chunk)
+        try:
+            with requests.get(url, stream=True, timeout=(5, None)) as resp:
+                resp.raise_for_status()
+                if not target_filename:
+                    target_filename = os.path.basename(url)
+                file_path = os.path.join(dest_path, target_filename)
+                with open(file_path, 'wb') as f:
+                    for chunk in resp.iter_content(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
+        except Exception:
+            raise InvalidBlueprintImport(
+                'Couldn\'t download plugin from "{0}". Please check your '
+                'network connection and/or upload the plugin manually'.format(
+                    url))
         return file_path
 
     def _upload_missing_plugin(self, name, specifier_set, distribution):
@@ -267,7 +273,7 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
                     version_message = ' with version {}'.format(specifier_set)
                 raise InvalidBlueprintImport(
                     'Couldn\'t find plugin "{0}"{1} for {2} in the plugins '
-                    'catalog. please upload the plugin manually'.format(
+                    'catalog. Please upload the plugin manually'.format(
                         name, version_message, distribution))
             # update matching versions once the plugin uploaded
             plugins = self.client.plugins.list(**filters)
