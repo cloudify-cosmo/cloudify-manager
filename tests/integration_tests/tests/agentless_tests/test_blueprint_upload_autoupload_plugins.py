@@ -13,9 +13,6 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-import copy
-import os.path
-import time
 import pytest
 import requests
 
@@ -24,8 +21,8 @@ from cloudify.utils import ipv6_url_compat
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from integration_tests import AgentlessTestCase
+from integration_tests.framework import docker
 from integration_tests.tests.utils import get_resource as resource
-from integration_tests.tests.utils import wait_for_blueprint_upload
 
 from packaging.version import parse as parse_version
 
@@ -39,8 +36,8 @@ class BlueprintUploadAutouploadPluginsTest(AgentlessTestCase):
             'bp',
             'blueprint_with_plugins_from_catalog.yaml')
 
-        plugins = {p.package_name: p.package_version for p in \
-                self.client.plugins.list()}
+        plugins = {p.package_name: p.package_version
+                   for p in self.client.plugins.list()}
         self.assertEqual(plugins["cloudify-openstack-plugin"], "3.2.16")
         self.assertIn("cloudify-utilities-plugin", plugins)
         self.assertGreater(parse_version(plugins["cloudify-fabric-plugin"]),
@@ -90,8 +87,8 @@ class BlueprintUploadAutouploadPluginsTest(AgentlessTestCase):
             'bp1_os2',
             'blueprint_with_plugins_from_catalog_os2.yaml')
 
-        plugin_versions = sorted(p.package_version for p in \
-                   self.client.plugins.list())
+        plugin_versions = sorted(p.package_version
+                                 for p in self.client.plugins.list())
         self.assertEqual(len(plugin_versions), 1)
         self.assertRegex(plugin_versions[0], "2.*")
 
@@ -99,8 +96,8 @@ class BlueprintUploadAutouploadPluginsTest(AgentlessTestCase):
             'bp1_os3',
             'blueprint_with_plugins_from_catalog_os3.yaml')
 
-        plugin_versions = sorted(p.package_version for p in \
-                   self.client.plugins.list())
+        plugin_versions = sorted(p.package_version for
+                                 p in self.client.plugins.list())
         self.assertEqual(len(plugin_versions), 2)
         self.assertRegex(plugin_versions[0], "2.*")
         self.assertGreater(parse_version(plugin_versions[1]),
@@ -111,8 +108,8 @@ class BlueprintUploadAutouploadPluginsTest(AgentlessTestCase):
             'bp1_os3',
             'blueprint_with_plugins_from_catalog_os3.yaml')
 
-        plugin_versions = sorted(p.package_version for p in \
-                   self.client.plugins.list())
+        plugin_versions = sorted(p.package_version
+                                 for p in self.client.plugins.list())
         self.assertEqual(len(plugin_versions), 1)
         self.assertGreater(parse_version(plugin_versions[0]),
                            parse_version("3"))
@@ -121,16 +118,14 @@ class BlueprintUploadAutouploadPluginsTest(AgentlessTestCase):
             'bp1_os2',
             'blueprint_with_plugins_from_catalog_os2.yaml')
 
-        plugin_versions = sorted(p.package_version for p in \
-                   self.client.plugins.list())
+        plugin_versions = sorted(p.package_version
+                                 for p in self.client.plugins.list())
         self.assertEqual(len(plugin_versions), 2)
         self.assertRegex(plugin_versions[0], "2.*")
         self.assertGreater(parse_version(plugin_versions[1]),
                            parse_version("3"))
 
     def test_blueprint_upload_autoupload_plugins_network_error(self):
-        from integration_tests.framework import utils, docker
-
         # block github in /etc/hosts
         docker.execute(
             self.env.container_id,
@@ -162,13 +157,13 @@ class BlueprintUploadAutouploadPluginsTest(AgentlessTestCase):
             resource('dsl/{}'.format(blueprint_filename)),
             entity_id=blueprint_id)
         self.assertEqual(blueprint['state'], BlueprintUploadState.UPLOADED)
-#
+
     def _verify_blueprint_uploaded(self, blueprint, blueprint_filename):
         self.assertEqual(blueprint.state, BlueprintUploadState.UPLOADED)
         self.assertEqual(blueprint.main_file_name, blueprint_filename)
         self.assertNotEqual(blueprint.plan, None)
         self._verify_blueprint_files(blueprint.id, blueprint_filename)
-#
+
     def _verify_blueprint_files(self, blueprint_id, blueprint_filename):
         # blueprint available in manager resources
         admin_headers = self.client._client.headers
