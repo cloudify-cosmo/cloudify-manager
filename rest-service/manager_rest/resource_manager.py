@@ -993,6 +993,7 @@ class ResourceManager(object):
         errors = []
         while executions:
             exc = executions.pop()
+            exc.ensure_defaults()
             if exc.deployment:
                 try:
                     self._check_allow_global_execution(exc.deployment)
@@ -1017,6 +1018,7 @@ class ResourceManager(object):
                 wait_after_fail=wait_after_fail,
                 bypass_maintenance=bypass_maintenance
             )
+            exc.status = ExecutionState.PENDING
             messages.append(message)
             workflow = exc.get_workflow()
             if not workflow.get('is_cascading', False):
