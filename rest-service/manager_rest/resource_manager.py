@@ -1296,12 +1296,14 @@ class ResourceManager(object):
             if execution.status not in (ExecutionState.PENDING,
                                         ExecutionState.STARTED,
                                         ExecutionState.SCHEDULED) and \
-                    (not force_execution or execution.status != ExecutionState.CANCELLING)\
+                    (not force_execution
+                     or execution.status != ExecutionState.CANCELLING)\
                     and not kill_execution:
                 raise manager_exceptions.IllegalActionError(
                     "Can't {0} cancel execution {1} because it's in status {2}"
                     .format(
-                        'kill-' if kill_execution else 'force-' if force_execution else '',
+                        'kill-' if kill_execution
+                        else 'force-' if force_execution else '',
                         execution_id,
                         execution.status))
 
