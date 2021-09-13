@@ -946,6 +946,7 @@ class ResourceManager(object):
                        modified_attrs=('status', 'ended_at', 'resume'))
 
         message = execution.render_message(bypass_maintenance=False)
+        db.session.commit()
         workflow_executor.execute_workflow([message])
 
         # Dealing with the inner Components' deployments
@@ -1171,6 +1172,7 @@ class ResourceManager(object):
             return execution, []
         message = execution.render_message(
             bypass_maintenance=bypass_maintenance)
+        db.session.commit()
         return execution, [message]
 
     def _retrieve_components_from_deployment(self, deployment_id_filter):
