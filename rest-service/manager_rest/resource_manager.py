@@ -685,24 +685,15 @@ class ResourceManager(object):
                                                      blueprint.state))
 
         if not force:
-            imported_blueprints_list = []
             for b in self.sm.list(models.Blueprint,
                                   include=['id', 'plan', 'state'],
                                   get_all_results=True):
                 # we can't know whether the blueprint's plan will use the
                 # blueprint we try to delete, before we actually have a plan
-                if b.state not in BlueprintUploadState.FAILED_STATES:
-                    if b.plan:
-                        imported_blueprints_list.append(
-                            b.plan.get(constants.IMPORTED_BLUEPRINTS, []))
-                    else:
-                        raise manager_exceptions.BlueprintInUseError(
-                            'Some blueprints have not yet finished parsing. '
-                            'Please wait for them to finish and then try'
-                            ' again.')
-
-            for imported in imported_blueprints_list:
-                if blueprint_id in imported:
+                if b.state not in BlueprintUploadState.FAILED_STATES \
+                        and b.plan \
+                        and blueprint_id in \
+                            b.plan.get(constants.IMPORTED_BLUEPRINTS):
                     raise manager_exceptions.BlueprintInUseError(
                         'Blueprint {} is currently in use. You can "force" '
                         'blueprint removal.'.format(blueprint_id))

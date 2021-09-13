@@ -340,6 +340,11 @@ class BlueprintAlreadyExistsException(Exception):
         self.blueprint_id = blueprint_id
 
 
+class ImportedBlueprintNotFound(ManagerException):
+    error_code = 'imported_blueprint_not_found'
+    status_code = 404
+
+
 class DeploymentPluginNotFound(ManagerException):
     """A plugin is listed in the blueprint but not installed on the manager"""
     error_code = 'deployment_plugin_not_found'

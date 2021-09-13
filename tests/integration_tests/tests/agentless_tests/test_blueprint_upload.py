@@ -14,6 +14,7 @@
 #    * limitations under the License.
 
 import copy
+import os.path
 import time
 import pytest
 import requests
@@ -24,7 +25,9 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
-from integration_tests.tests.utils import wait_for_blueprint_upload
+from integration_tests.tests.utils import (wait_for_blueprint_upload,
+                                           get_executions,
+                                           get_events)
 
 pytestmark = pytest.mark.group_deployments
 
@@ -284,3 +287,53 @@ class BlueprintValidateTest(AgentlessTestCase):
         )
         self.assertEqual(resp.status_code,
                          requests.status_codes.codes.not_found)
+
+
+class BlueprintImportedTest(AgentlessTestCase):
+
+    def test_blueprints_separate_delete_success(self):
+        self.client.blueprints.upload(
+            resource(os.path.join('dsl', 'simple_deployment.yaml')),
+            entity_id='first')
+        self.client.blueprints.upload(
+            resource(os.path.join('dsl', 'simple_deployment.yaml')),
+            entity_id='second',
+            async_upload=True)
+        self.client.blueprints.delete('first')
+        wait_for_blueprint_upload('second', self.client)
+        self.wait_for_all_executions_to_end()
+        self.client.blueprints.delete('second')
+
+    def test_blueprints_imported_upload_success(self):
+        self.client.blueprints.upload(
+            resource(os.path.join('dsl', 'simple_deployment.yaml')),
+            entity_id='imported')
+        self.client.blueprints.upload(
+            resource(os.path.join('dsl', 'deployment_with_import.yaml')),
+            entity_id='main')
+        self.client.blueprints.delete('main')
+        self.client.blueprints.delete('imported')
+
+    def test_blueprints_imported_upload_failure(self):
+        self.client.blueprints.upload(
+            resource(os.path.join('dsl', 'simple_deployment.yaml')),
+            entity_id='imported')
+        self.client.blueprints.upload(
+            resource(os.path.join('dsl', 'deployment_with_import.yaml')),
+            entity_id='main',
+            async_upload=True)
+        self.client.blueprints.delete('imported')
+        wait_for_blueprint_upload('main', self.client, require_success=False)
+        self.wait_for_all_executions_to_end(require_success=False)
+
+        message = ''
+        for execution in get_executions(self.client,
+                                        workflow_id='upload_blueprint',
+                                        parameters__blueprint_id='main'):
+            assert execution['status'] == 'failed'
+            for event in get_events(self.client,
+                                    execution_id=execution['id'],
+                                    event_type='workflow_failed'):
+                message = event['message']
+        assert "Requested blueprint import `imported` was not found" in message
+        self.client.blueprints.delete('main')
