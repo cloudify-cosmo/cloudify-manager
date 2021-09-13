@@ -98,7 +98,6 @@ def cancel_execution(execution):
                 'execution_id': execution.id,
                 'rest_token': current_user.get_auth_token(),
                 'tenant': _get_tenant_dict(),
-                'execution_token': generate_execution_token(execution)
             }
         }
     }

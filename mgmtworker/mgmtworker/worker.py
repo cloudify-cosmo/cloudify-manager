@@ -242,7 +242,7 @@ class MgmtworkerServiceTaskConsumer(ServiceTaskConsumer):
         shutil.rmtree(dep_dir, ignore_errors=True)
 
     def cancel_workflow_task(self, execution_id, rest_token, tenant,
-                             execution_token, rest_host):
+                             rest_host):
         logger.info('Cancelling workflow {0}'.format(execution_id))
 
         class CancelCloudifyContext(object):
@@ -252,7 +252,7 @@ class MgmtworkerServiceTaskConsumer(ServiceTaskConsumer):
                 self.rest_host = rest_host
                 self.tenant_name = tenant['name']
                 self.rest_token = rest_token
-                self.execution_token = execution_token
+                self.execution_token = None
                 # always bypass - this is a kill, as forceful as we can get
                 self.bypass_maintenance = True
 
