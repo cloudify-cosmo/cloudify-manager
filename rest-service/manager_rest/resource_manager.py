@@ -1265,49 +1265,54 @@ class ResourceManager(object):
         """
         if kill:
             force = True
-        execution = self.sm.get(models.Execution, execution_id)
-        # When a user cancels queued execution automatically use the kill flag
-        if execution.status in (ExecutionState.QUEUED,
-                                ExecutionState.SCHEDULED):
-            kill = True
-            force = True
-        if execution.status not in (ExecutionState.PENDING,
-                                    ExecutionState.STARTED,
-                                    ExecutionState.SCHEDULED) and \
-                (not force or execution.status != ExecutionState.CANCELLING)\
-                and not kill:
-            raise manager_exceptions.IllegalActionError(
-                "Can't {0} cancel execution {1} because it's in status {2}"
-                .format(
-                    'kill-' if kill else 'force-' if force else '',
-                    execution_id,
-                    execution.status))
-
         if kill:
             new_status = ExecutionState.KILL_CANCELLING
         elif force:
             new_status = ExecutionState.FORCE_CANCELLING
         else:
             new_status = ExecutionState.CANCELLING
-        execution.status = new_status
-        execution.error = ''
-        if kill:
-            workflow_executor.cancel_execution(execution)
 
-        # Dealing with the inner Components' deployments
-        components_executions = self._find_all_components_executions(
-            execution.deployment_id)
-        for exec_id in components_executions:
-            execution = self.sm.get(models.Execution, exec_id)
-            if execution.status not in ExecutionState.END_STATES:
-                self.cancel_execution(exec_id, force, kill)
+        executions = [self.sm.get(models.Execution, execution_id)]
+        while executions:
+            execution = executions.pop()
+            kill_execution, force_execution = kill, force
+            # When a user cancels queued execution automatically
+            # use the kill flag
+            if execution.status in (ExecutionState.QUEUED,
+                                    ExecutionState.SCHEDULED):
+                kill_execution = True
+                force_execution = True
+            if execution.status not in (ExecutionState.PENDING,
+                                        ExecutionState.STARTED,
+                                        ExecutionState.SCHEDULED) and \
+                    (not force_execution or execution.status != ExecutionState.CANCELLING)\
+                    and not kill_execution:
+                raise manager_exceptions.IllegalActionError(
+                    "Can't {0} cancel execution {1} because it's in status {2}"
+                    .format(
+                        'kill-' if kill_execution else 'force-' if force_execution else '',
+                        execution_id,
+                        execution.status))
 
-        execution = self.sm.update(execution)
-        if execution.deployment_id:
-            dep = execution.deployment
-            dep.latest_execution = execution
-            dep.deployment_status = dep.evaluate_deployment_status()
-            self.sm.update(dep)
+            execution.status = new_status
+            execution.error = ''
+            if kill_execution:
+                workflow_executor.cancel_execution(execution)
+
+            execution = self.sm.update(execution)
+            if execution.deployment_id:
+                dep = execution.deployment
+                dep.latest_execution = execution
+                dep.deployment_status = dep.evaluate_deployment_status()
+                self.sm.update(dep)
+
+            # Dealing with the inner Components' deployments
+            components_executions = self._find_all_components_executions(
+                execution.deployment_id)
+            for exec_id in components_executions:
+                component_execution = self.sm.get(models.Execution, exec_id)
+                if component_execution.status not in ExecutionState.END_STATES:
+                    executions.append(component_execution)
 
         return execution
 
