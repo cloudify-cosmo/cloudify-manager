@@ -941,7 +941,7 @@ class ResourceManager(object):
 
         execution.status = ExecutionState.STARTED
         execution.ended_at = None
-        execution.resumed = True
+        execution.resume = True
         self.sm.update(execution,
                        modified_attrs=('status', 'ended_at', 'resume'))
 
