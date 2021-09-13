@@ -43,7 +43,6 @@ BLUEPRINT_PREFIX = 'blueprint:'
 EXTRA_VERSION_CONSTRAINT = 'additional_version_constraint'
 PLUGIN_CATALOG_URL = "https://repository.cloudifysource.org/cloudify/wagons/" \
                      "plugins_allversions.json"
-                     # this should NOT be hard-coded
 
 
 class ResolverWithCatalogSupport(DefaultImportResolver):
