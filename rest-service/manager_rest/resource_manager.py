@@ -990,6 +990,7 @@ class ResourceManager(object):
                            commit=True):
         executions = list(executions)
         messages = []
+        errors = []
         while executions:
             exc = executions.pop()
             if exc.deployment:
@@ -998,9 +999,11 @@ class ResourceManager(object):
                     self._verify_dependencies_not_affected(
                         exc.workflow_id, exc.deployment, force)
                 except Exception as e:
+                    errors.append(e)
                     exc.status = ExecutionState.FAILED
                     exc.error = str(e)
                     self.sm.update(exc)
+                    continue
 
             should_queue = queue
             if not allow_overlapping_running_wf:
@@ -1022,6 +1025,8 @@ class ResourceManager(object):
             executions.extend(component_executions)
         if commit:
             db.session.commit()
+        if errors:
+            raise errors[0]
         return messages
 
     @staticmethod
