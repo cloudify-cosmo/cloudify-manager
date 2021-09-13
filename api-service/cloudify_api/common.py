@@ -15,14 +15,12 @@ async def make_db_session(request: Request) -> AsyncSession:
         yield session
 
 
-async def common_parameters(
-        q: Optional[str] = None,
+def common_parameters(
         order_by: Optional[str] = None,
         desc: bool = False,
         offset: int = 0,
         size: int = 100) -> Dict[str, Union[None, str, int]]:
     return {
-        "q": q,
         "order_by": order_by,
         "desc": desc,
         "offset": offset,
