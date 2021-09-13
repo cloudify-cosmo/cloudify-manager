@@ -174,17 +174,17 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
     def _upload_missing_plugin(self, name, specifier_set, distribution):
         plugins_data = urllib.request.urlopen(PLUGIN_CATALOG_URL).read()
         plugins_data = json.loads(plugins_data)
-        requested_plugin_data = [x for x in plugins_data if x["name"] == name]
+        try:
+            plugin = next(x for x in plugins_data if x["name"] == name)
+        except StopIteration:
+            raise FileNotFoundError
 
-        matching_versions = []
-        for plugin in requested_plugin_data:
-            p_icon = plugin['icon']
-            matching_versions.extend([
-                (v, parse_version(v)) for v in plugin['versions'].keys()
-                if (parse_version(v) in specifier_set
-                    and plugin['versions'][v]['yaml']
-                    and plugin['versions'][v]['wagons'])
-            ])
+        matching_versions = [
+            (v, parse_version(v)) for v in plugin['versions'].keys()
+            if (parse_version(v) in specifier_set
+                and plugin['versions'][v]['yaml']
+                and plugin['versions'][v]['wagons'])
+        ]
         if not matching_versions:
             raise FileNotFoundError
 
@@ -202,14 +202,15 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
         plugin_target_path = tempfile.mkdtemp()
         self._download_file(p_yaml, plugin_target_path)
         self._download_file(p_wagon, plugin_target_path)
-        if p_icon:
-            self._download_file(p_icon, plugin_target_path, 'icon.png')
+        if plugin['icon']:
+            self._download_file(plugin['icon'], plugin_target_path, 'icon.png')
 
         plugin_zip = plugin_target_path + '.zip'
         self._create_zip(plugin_target_path, plugin_zip,
                          include_folder=False)
         shutil.rmtree(plugin_target_path)
         self.client.plugins.upload(plugin_zip)
+        os.remove(plugin_zip)
 
     @staticmethod
     def _find_matching_plugin_versions(plugins, specifier_set,
