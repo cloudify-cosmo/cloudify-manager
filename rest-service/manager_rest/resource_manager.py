@@ -1040,26 +1040,28 @@ class ResourceManager(object):
         """
         system_exec_running = self._check_for_active_system_wide_execution(
             queue)
-        if force or not execution._deployment_fk:
+        if system_exec_running:
+            return True
+        if force:
             return system_exec_running
-        else:
-            execution_running = self._check_for_active_executions(
-                execution, queue)
-            return system_exec_running or execution_running
+        if not execution.deployment or not execution.deployment._storage_id:
+            return system_exec_running
+        return self._check_for_active_executions(execution, queue)
 
     def _check_for_active_executions(self, execution, queue):
-        if execution.created_at is not None:
-            status_filter = sql_or(
-                modelsExecution.status.in_(ExecutionState.ACTIVE_STATES),
-                sql_and(
-                    models.Execution.status == ExecutionState.QUEUED,
-                    models.Execution.created_at < execution.created_at
+        def status_filter(col):
+            if execution.created_at is not None:
+                return sql_or(
+                        col.in_(ExecutionState.ACTIVE_STATES),
+                        sql_and(
+                            col == ExecutionState.QUEUED,
+                            models.Execution.created_at < execution.created_at
+                        )
+                    )
+            else:
+                return col.in_(
+                    ExecutionState.ACTIVE_STATES + [ExecutionState.QUEUED]
                 )
-            )
-        else:
-            status_filter = models.Execution.status.in_(
-                ExecutionState.ACTIVE_STATES + [ExecutionState.QUEUED]
-            )
 
         running = self.list_executions(
             filters={
