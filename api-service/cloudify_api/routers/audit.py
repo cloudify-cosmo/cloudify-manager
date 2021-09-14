@@ -8,7 +8,7 @@ from sqlalchemy.future import select
 
 from cloudify_api import models
 from cloudify_api.common import common_parameters, get_app, make_db_session
-from cloudify_api.results import ExecutionResult, Paginated
+from cloudify_api.results import DeletedResult, Paginated
 
 
 class AuditLog(BaseModel):
@@ -29,7 +29,7 @@ class PaginatedAuditLog(Paginated):
 
 
 class TruncateParams(BaseModel):
-    """Parameters passed to /audit/truncate endpoint."""
+    """Parameters passed to DELETE /audit endpoint."""
     before: datetime
     creator_name: Optional[str]
     execution_id: Optional[str]
@@ -58,11 +58,11 @@ async def list_audit_log(
     return await PaginatedAuditLog.paginated(session, stmt, p)
 
 
-@router.post("/truncate",
-             response_model=ExecutionResult,
-             tags=["Audit Log"])
+@router.delete("",
+               response_model=DeletedResult,
+               tags=["Audit Log"])
 async def truncate_audit_log(
-            p: TruncateParams,
+            p=Depends(TruncateParams),
             session=Depends(make_db_session),
             app=Depends(get_app),
         ):
@@ -73,4 +73,4 @@ async def truncate_audit_log(
         stmt = stmt.where(models.AuditLog.creator_name == p.creator_name)
     if p.execution_id:
         stmt = stmt.where(models.AuditLog.execution_id == p.execution_id)
-    return await ExecutionResult.executed(session, stmt)
+    return await DeletedResult.executed(session, stmt)

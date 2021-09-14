@@ -50,19 +50,18 @@ class Paginated(PaginatedBase):
                    ))
 
 
-class ExecutionResultBase(BaseModel):
+class DeletedResultBase(BaseModel):
     """Model describing execution result."""
-    status: str = "OK"
-    processed: int
+    deleted: int
 
 
-class ExecutionResult(ExecutionResultBase):
+class DeletedResult(DeletedResultBase):
     @classmethod
     async def executed(
                 cls,
                 session: AsyncSession,
                 stmt: Executable,
-            ) -> ExecutionResultBase:
+            ) -> DeletedResultBase:
         result = await session.execute(stmt)
         await session.commit()
-        return cls(processed=result.rowcount)
+        return cls(deleted=result.rowcount)
