@@ -85,11 +85,11 @@ class DeploymentLabelsDependenciesTest(BaseServerTestCase):
         self.assertEqual(deployment.sub_services_count, 1)
         self.assertEqual(deployment.sub_environments_count, 0)
 
-    def test_upload_blueprint_with_invalid_parent_id_on_dsl(self):
+    def test_deploy_blueprint_with_invalid_parent_id_on_dsl(self):
         with self.assertRaisesRegex(
                 CloudifyClientError,
                 'using label `csys-obj-parent` that does not exist'):
-            self.put_blueprint(
+            self.put_deployment(
                 blueprint_id='bp1',
                 blueprint_file_name='blueprint_with_invalid_parent_labels.yaml'
             )
