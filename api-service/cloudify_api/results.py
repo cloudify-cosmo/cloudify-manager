@@ -1,10 +1,12 @@
-from typing import Any, Dict, List, Union
+from typing import Any, List
 
 from pydantic import BaseModel
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.expression import Executable
 from sqlalchemy.sql.selectable import Select
+
+from cloudify_api.common import CommonParameters
 
 
 class Pagination(BaseModel):
@@ -28,22 +30,22 @@ class Paginated(PaginatedBase):
         cls,
         session: AsyncSession,
         query: Select,
-        params: Dict[str, Union[None, str, int]],
+        params: CommonParameters,
     ):
         count = await session.execute(select(func.count()).select_from(query))
         total_result = count.scalars().one()
-        if params["order_by"] and isinstance(params["order_by"], str):
-            order_by = params["order_by"].split(",")
-            if params["desc"]:
+        if params.order_by:
+            order_by = params.order_by.split(",")
+            if params.desc:
                 order_by = [desc(f) for f in order_by]
             query = query.order_by(*order_by)
-        query = query.offset(params["offset"]).limit(params["size"])
+        query = query.offset(params.offset).limit(params.size)
         result = await session.execute(query)
         return cls(items=result.scalars().all(),
                    metadata=Metadata(
                        pagination=Pagination(
-                           offset=params["offset"],
-                           size=params["size"],
+                           offset=params.offset,
+                           size=params.size,
                            total=total_result)
                    ))
 

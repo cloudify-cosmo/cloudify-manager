@@ -1,6 +1,7 @@
-from typing import Optional, Dict, Union
+from typing import Optional
 
 from fastapi import Request
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from cloudify_api import CloudifyAPI
@@ -15,14 +16,21 @@ async def make_db_session(request: Request) -> AsyncSession:
         yield session
 
 
+class CommonParameters(BaseModel):
+    order_by: Optional[str] = None
+    desc: bool = False
+    offset: int = 0
+    size: int = 100
+
+
 def common_parameters(
         order_by: Optional[str] = None,
         desc: bool = False,
         offset: int = 0,
-        size: int = 100) -> Dict[str, Union[None, str, int]]:
-    return {
-        "order_by": order_by,
-        "desc": desc,
-        "offset": offset,
-        "size": size
-    }
+        size: int = 100) -> CommonParameters:
+    return CommonParameters(
+        order_by=order_by,
+        desc=desc,
+        offset=offset,
+        size=size,
+    )
