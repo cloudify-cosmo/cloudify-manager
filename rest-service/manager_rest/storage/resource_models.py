@@ -13,6 +13,7 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import hashlib
 import typing
 import uuid
 
@@ -54,7 +55,7 @@ from .models_base import (
     JSONString,
     UTCDateTime,
 )
-from .management_models import User
+from .management_models import User, Manager
 from .resource_models_base import SQLResourceBase, SQLModelBase
 from .relationships import (
     foreign_key,
@@ -66,7 +67,6 @@ from .relationships import (
 if typing.TYPE_CHECKING:
     from manager_rest.resource_manager import ResourceManager
     from manager_rest.storage.storage_manager import SQLStorageManager
-    from cloudify.amqp_client import SendHandler
 
 
 RELATIONSHIP = 'relationship'
@@ -1064,12 +1064,16 @@ class Execution(CreatedAtMixin, SQLResourceBase):
         if system_task_name:
             self.allow_custom_parameters = True
             return {'operation': system_task_name}
-        raise manager_exceptions.NonexistentWorkflowError(
-            f'Workflow {workflow_id} does not exist in the '
-            f'deployment {deployment.id}')
+        if deployment:
+            raise manager_exceptions.NonexistentWorkflowError(
+                f'Workflow {workflow_id} does not exist in the '
+                f'deployment {deployment.id}')
+        else:
+            raise manager_exceptions.NonexistentWorkflowError(
+                f'Builtin workflow {workflow_id} does not exist')
 
     def merge_workflow_parameters(self, parameters, deployment, workflow_id):
-        if not deployment.workflows:
+        if not deployment or not deployment.workflows:
             return
         workflow = self.get_workflow(deployment, workflow_id)
         workflow_parameters = workflow.get('parameters', {})
@@ -1146,8 +1150,12 @@ class Execution(CreatedAtMixin, SQLResourceBase):
         else:
             return param
 
-    def render_context(self):
+    def render_message(self, wait_after_fail=600, bypass_maintenance=None):
+        self.ensure_defaults()
         workflow = self.get_workflow()
+        session = db.session.object_session(self)
+
+        token = uuid.uuid4().hex
         context = {
             'type': 'workflow',
             'task_id': self.id,
@@ -1160,6 +1168,13 @@ class Execution(CreatedAtMixin, SQLResourceBase):
             'task_target': MGMTWORKER_QUEUE,
             'tenant': {'name': self.tenant.name},
             'resume': self.resume,
+            'wait_after_fail': wait_after_fail,
+            'bypass_maintenance': bypass_maintenance,
+            'execution_token': token,
+            'rest_token': self.creator.get_auth_token(),
+            'rest_host': [
+                mgr.private_ip for mgr in session.query(Manager).all()
+            ],
         }
         if self.deployment is not None:
             context['deployment_id'] = self.deployment.id
@@ -1181,7 +1196,35 @@ class Execution(CreatedAtMixin, SQLResourceBase):
                     'tenant_name': plugin.get('tenant_name'),
                     'source': plugin.get('source')
                 }
-        return context
+                managed_plugin = (
+                    session.query(Plugin)
+                    .tenant(self.tenant)
+                    .filter_by(
+                        package_name=plugin.get('package_name'),
+                        package_version=plugin.get('package_version'),
+                    )
+                    .first()
+                )
+                if managed_plugin:
+                    context['plugin'].update(
+                        visibility=managed_plugin.visibility,
+                        tenant_name=managed_plugin.tenant_name
+                    )
+        self.merge_workflow_parameters(
+            self.parameters,
+            self.deployment,
+            self.workflow_id
+        )
+        parameters = self.parameters.copy()
+        parameters['__cloudify_context'] = context
+
+        self.token = hashlib.sha256(token.encode('ascii')).hexdigest()
+        session.add(self)
+        return {
+            'cloudify_task': {'kwargs': parameters},
+            'id': self.id,
+            'execution_creator': self.creator.id
+        }
 
 
 class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
@@ -1283,7 +1326,6 @@ class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
     def start_executions(self,
                          sm: 'SQLStorageManager',
                          rm: 'ResourceManager',
-                         send_handler: 'SendHandler',
                          force=False):
         """Start the executions belonging to this group.
 
@@ -1294,18 +1336,12 @@ class ExecutionGroup(CreatedAtMixin, SQLResourceBase):
             exc for exc in self.executions
             if exc.status == ExecutionState.PENDING
         ]
-        with sm.transaction():
-            for execution in executions[self.concurrency:]:
-                execution.status = ExecutionState.QUEUED
-                sm.update(execution, modified_attrs=('status', ))
+        for execution in executions[self.concurrency:]:
+            execution.status = ExecutionState.QUEUED
+            sm.update(execution, modified_attrs=('status', ))
 
-        for execution in executions[:self.concurrency]:
-            rm.execute_workflow(
-                execution,
-                force=force,
-                send_handler=send_handler,
-                queue=True,  # allow queue, but it will try to run
-            )
+        return rm.prepare_executions(
+            executions[:self.concurrency], force=force, queue=True)
 
 
 class ExecutionSchedule(CreatedAtMixin, SQLResourceBase):
