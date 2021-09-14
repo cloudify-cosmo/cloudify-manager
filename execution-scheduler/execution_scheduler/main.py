@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 
 from cloudify.models_states import ExecutionState
 
-from manager_rest import config
+from manager_rest import config, workflow_executor
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.flask_utils import setup_flask_app
 from manager_rest.maintenance import get_maintenance_state
@@ -132,7 +132,9 @@ def execute_workflow(schedule):
         **execution_arguments,
     )
     rm.sm.put(execution)
-    return rm.execute_workflow(execution, **start_arguments)
+    messages = rm.prepare_executions([execution], **start_arguments)
+    db.session.commit()
+    workflow_executor.execute_workflow(messages)
 
 
 def main():

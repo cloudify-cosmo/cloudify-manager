@@ -58,12 +58,12 @@ class ComponentCascadingCancelAndResume(AgentlessTestCase):
             deployment_id=deployment_id)[0].id
         for retry in range(30):
             if self.client.node_instances.get(
-                    node_instance_id).state == 'creating':
+                    node_instance_id).state != 'uninitialized':
                 break
             time.sleep(1)
         else:
-            raise RuntimeError("sleep node instance was expected to go"
-                               " into 'creating' status")
+            raise RuntimeError("sleep node instance was expected to start "
+                               "being created")
 
     def _verify_cancel_install_execution(self,
                                          execution,
@@ -725,7 +725,6 @@ workflows:
         main_blueprint_path = self.make_yaml_file(main_blueprint)
         self.deploy_application(main_blueprint_path,
                                 deployment_id=deployment_id)
-
         self.execute_workflow('nothing_workflow', deployment_id)
         self.client.executions.start(deployment_id,
                                      'nothing_workflow',
