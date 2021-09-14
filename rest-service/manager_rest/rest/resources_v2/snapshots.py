@@ -21,8 +21,8 @@ from flask_restful_swagger import swagger
 
 from cloudify.models_states import SnapshotState, ExecutionState
 
+from manager_rest import config, manager_exceptions, workflow_executor
 from manager_rest.security import SecuredResource
-from manager_rest import config, manager_exceptions
 from manager_rest.security.authorization import authorize
 from manager_rest.rest import rest_decorators, rest_utils
 from manager_rest.storage import get_storage_manager, models
@@ -112,7 +112,7 @@ class SnapshotsId(SecuredResource):
             'queue',
             request_dict.get('queue', False)
         )
-        execution = get_resource_manager().create_snapshot(
+        execution, messages = get_resource_manager().create_snapshot(
             snapshot_id,
             include_credentials,
             include_logs,
@@ -120,7 +120,7 @@ class SnapshotsId(SecuredResource):
             True,
             queue
         )
-
+        workflow_executor.execute_workflow(messages)
         return execution, 201
 
     @swagger.operation(
@@ -250,7 +250,7 @@ class SnapshotsIdRestore(SecuredResource):
         default_timeout_sec = 300
         request_timeout = request_dict.get('timeout', default_timeout_sec)
         timeout = rest_utils.convert_to_int(request_timeout)
-        execution = get_resource_manager().restore_snapshot(
+        execution, messages = get_resource_manager().restore_snapshot(
             snapshot_id,
             force,
             True,
@@ -258,4 +258,5 @@ class SnapshotsIdRestore(SecuredResource):
             restore_certificates,
             no_reboot
         )
+        workflow_executor.execute_workflow(messages)
         return execution, 200

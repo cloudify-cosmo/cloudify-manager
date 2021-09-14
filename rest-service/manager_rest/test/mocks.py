@@ -195,14 +195,15 @@ def task_state():
     return Execution.TERMINATED
 
 
-def mock_send_mgmtworker_task(message, **_):
-    execution_id = message['id']
-    sm = get_storage_manager()
-    execution = sm.get(models.Execution, execution_id)
-    execution.status = task_state()
-    execution.ended_at = utils.get_formatted_timestamp()
-    execution.error = ''
-    sm.update(execution)
+def mock_send_mgmtworker_task(messages, **_):
+    for message in messages:
+        execution_id = message['id']
+        sm = get_storage_manager()
+        execution = sm.get(models.Execution, execution_id)
+        execution.status = task_state()
+        execution.ended_at = utils.get_formatted_timestamp()
+        execution.error = ''
+        sm.update(execution)
 
 
 def put_node_instance(storage_manager,

@@ -18,7 +18,7 @@ import json
 from collections import OrderedDict
 
 from dateutil import parser as date_parser
-from flask_sqlalchemy import SQLAlchemy, inspect
+from flask_sqlalchemy import SQLAlchemy, inspect, BaseQuery
 from flask_restful import fields as flask_fields
 from sqlalchemy import MetaData
 from sqlalchemy.ext.associationproxy import (ASSOCIATION_PROXY,
@@ -27,10 +27,34 @@ from sqlalchemy.ext.hybrid import HYBRID_PROPERTY
 from sqlalchemy.orm.interfaces import NOT_EXTENSION
 
 from cloudify._compat import text_type
-from manager_rest.utils import classproperty
+from cloudify.models_states import VisibilityState
+from manager_rest.utils import classproperty, current_tenant
 
 
-db = SQLAlchemy(metadata=MetaData(naming_convention={
+class DBQuery(BaseQuery):
+    def tenant(self, *tenants):
+        descrs = self.column_descriptions
+        if len(descrs) != 1:
+            raise RuntimeError(
+                f'Can only apply a tenant filter when querying for a single '
+                f'entity, but querying for {len(descrs)}')
+        model = descrs[0]['entity']
+        if not (getattr(model, 'is_resource', False)
+                or getattr(model, 'is_label', False)):
+            raise RuntimeError(
+                f'Can only apply a tenant filter to resources or labels, '
+                f'but got {model}')
+        if not tenants:
+            tenants = [current_tenant._get_current_object()]
+        return self.filter(
+            db.or_(
+                model.visibility == VisibilityState.GLOBAL,
+                model._tenant_id.in_([t.id for t in tenants])
+            )
+        )
+
+
+db = SQLAlchemy(query_class=DBQuery, metadata=MetaData(naming_convention={
     # This is to generate migration scripts with constraint names
     # using the same naming convention used by PostgreSQL by default
     # http://stackoverflow.com/a/4108266/183066
@@ -144,6 +168,24 @@ class SQLModelBase(db.Model):
         'LargeBinary': flask_fields.Raw,
         'Float': flask_fields.Float
     }
+
+    def ensure_defaults(self):
+        """Synchronously set the defaults for this model's properties.
+
+        Normally the python-side defaults are only applied when the
+        model is committed, but if you need them to be applied _right now_,
+        call this.
+
+        This will only apply scalar and callable defaults, of course it
+        cannot apply defaults that are db-side (eg. a selectable).
+        """
+        for col_name, col in self.__table__.c.items():
+            if getattr(self, col_name, None) is None and col.default:
+                if col.default.is_scalar:
+                    value = col.default.arg
+                elif col.default.is_callable:
+                    value = col.default.arg(self)
+                setattr(self, col_name, value)
 
     def to_dict(self, suppress_error=False):
         """Return a dict representation of the model
