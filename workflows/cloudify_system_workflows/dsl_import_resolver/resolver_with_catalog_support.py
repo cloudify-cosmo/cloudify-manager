@@ -172,7 +172,10 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
         return file_path
 
     def _upload_missing_plugin(self, name, specifier_set, distribution):
-        plugins_data = urllib.request.urlopen(PLUGIN_CATALOG_URL).read()
+        plugin_target_path = tempfile.mkdtemp()
+        catalog_path = self._download_file(PLUGIN_CATALOG_URL,
+                                           plugin_target_path)
+        plugins_data = open(catalog_path).read()
         plugins_data = json.loads(plugins_data)
         try:
             plugin = next(x for x in plugins_data if x["name"] == name)
@@ -199,7 +202,6 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
             raise FileNotFoundError()
         p_wagon = p_wagons[0]
 
-        plugin_target_path = tempfile.mkdtemp()
         self._download_file(p_yaml, plugin_target_path)
         self._download_file(p_wagon, plugin_target_path)
         if plugin['icon']:
