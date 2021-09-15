@@ -296,21 +296,15 @@ class SQLStorageManager(object):
             if all_tenants_authorization():
                 return query
             # Filter by all the tenants the user is allowed to list in
-            tenant_ids = [
-                tenant.id for tenant in current_user.all_tenants
+            tenants = [
+                tenant for tenant in current_user.all_tenants
                 if utils.tenant_specific_authorization(tenant,
                                                        model_class.__name__)
             ]
         else:
             # Specific tenant only
-            tenant_ids = [current_tenant.id] if current_tenant else []
-
-        # Match any of the applicable tenant ids or if it's a global resource
-        tenant_filter = sql_or(
-            model_class.visibility == VisibilityState.GLOBAL,
-            model_class._tenant_id.in_(tenant_ids)
-        )
-        return query.filter(tenant_filter)
+            tenants = [current_tenant] if current_tenant else []
+        return query.tenant(*tenants)
 
     def _add_permissions_filter(self, query, model_class):
         """Filter by the users present in either the `viewers` or `owners`

@@ -345,7 +345,8 @@ class BaseServerTestCase(unittest.TestCase):
             patch('manager_rest.workflow_executor._send_mgmtworker_task',
                   mock_send_mgmtworker_task),
             patch('manager_rest.workflow_executor._broadcast_mgmtworker_task'),
-            patch('manager_rest.workflow_executor.get_client'),
+            patch('manager_rest.workflow_executor.execute_workflow',
+                  mock_send_mgmtworker_task),
             patch('manager_rest.resource_manager.send_event'),
         ]
         cls._patchers.extend(amqp_patches)

@@ -1064,9 +1064,9 @@ class ExecutionQueueingTests(BaseServerTestCase):
         exc2 = self._make_execution(status=ExecutionState.PENDING)
         with self.assertRaises(
                 manager_exceptions.ExistingRunningExecutionError):
-            self.rm.execute_workflow(exc2)
+            self.rm.prepare_executions([exc2])
 
-        self.rm.execute_workflow(exc2, queue=True)
+        self.rm.prepare_executions([exc2], queue=True)
         assert exc2.status == ExecutionState.QUEUED
 
     @mock.patch('manager_rest.resource_manager.send_event', mock.Mock())
@@ -1080,9 +1080,9 @@ class ExecutionQueueingTests(BaseServerTestCase):
         exc2 = self._make_execution(status=ExecutionState.PENDING)
         with self.assertRaises(
                 manager_exceptions.ExistingRunningExecutionError):
-            self.rm.execute_workflow(exc2)
+            self.rm.prepare_executions([exc2])
 
-        self.rm.execute_workflow(exc2, queue=True)
+        self.rm.prepare_executions([exc2], queue=True)
         assert exc2.status == ExecutionState.QUEUED
 
     @mock.patch('manager_rest.resource_manager.send_event', mock.Mock())

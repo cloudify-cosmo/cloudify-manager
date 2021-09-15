@@ -17,10 +17,6 @@ from manager_rest.rest.resources_v3_1.deployments import DeploymentGroupsId
 from manager_rest.test import base_test
 
 
-@mock.patch(
-    'manager_rest.rest.resources_v3_1.deployments.workflow_sendhandler',
-    mock.Mock()
-)
 class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
     def setUp(self):
         super(DeploymentGroupsTestCase, self).setUp()
@@ -974,10 +970,6 @@ class DeploymentGroupsTestCase(base_test.BaseServerTestCase):
                 ])
 
 
-@mock.patch(
-    'manager_rest.rest.resources_v3_1.executions.workflow_sendhandler',
-    mock.Mock()
-)
 class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
     def setUp(self):
         super(ExecutionGroupsTestCase, self).setUp()
@@ -1159,6 +1151,12 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
             deployment_group_id='group1',
             workflow_id='install'
         )
+        group_execs = self.sm.get(
+            models.ExecutionGroup, exc_group.id).executions
+        for exc in group_execs:
+            exc.status = ExecutionState.QUEUED
+            self.sm.update(exc)
+
         with self.assertRaisesRegex(CloudifyClientError, 'running or queued'):
             self.client.deployments.delete('dep1')
 
@@ -1201,14 +1199,15 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
         group_execs = self.sm.get(
             models.ExecutionGroup, exc_group.id).executions
         pending_execs = sum(
-            exc.status == ExecutionState.PENDING for exc in group_execs)
+            exc.status == ExecutionState.TERMINATED for exc in group_execs)
         queued_execs = sum(
             exc.status == ExecutionState.QUEUED for exc in group_execs)
         assert pending_execs == exc_group.concurrency
         assert queued_execs == len(group_execs) - exc_group.concurrency
 
+    # these test want a no-op mock, because the default mock in this
+    # test would just set the executions to TERMINATED
     @mock.patch('manager_rest.workflow_executor.execute_workflow', mock.Mock())
-    @mock.patch('manager_rest.resource_manager.send_event', mock.Mock())
     def test_cancel_group(self):
         self.client.deployment_groups.add_deployments(
             'group1',
@@ -1230,7 +1229,6 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
             )
 
     @mock.patch('manager_rest.workflow_executor.execute_workflow', mock.Mock())
-    @mock.patch('manager_rest.resource_manager.send_event', mock.Mock())
     def test_resume_group(self):
         """After all executions have been cancelled, resume them"""
         self.client.deployment_groups.add_deployments(
@@ -1275,7 +1273,6 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
             )
 
     @mock.patch('manager_rest.workflow_executor.execute_workflow', mock.Mock())
-    @mock.patch('manager_rest.resource_manager.send_event', mock.Mock())
     def test_group_status_queued(self):
         self.client.deployment_groups.add_deployments('group1', count=2)
         for dep in self.client.deployments.list():
@@ -1295,7 +1292,6 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
         assert group.status == ExecutionState.QUEUED
 
     @mock.patch('manager_rest.workflow_executor.execute_workflow', mock.Mock())
-    @mock.patch('manager_rest.resource_manager.send_event', mock.Mock())
     def test_group_status_pending(self):
         self.client.deployment_groups.add_deployments('group1', count=2)
         for dep in self.client.deployments.list():
@@ -1312,7 +1308,6 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
         assert group.status == ExecutionState.PENDING
 
     @mock.patch('manager_rest.workflow_executor.execute_workflow', mock.Mock())
-    @mock.patch('manager_rest.resource_manager.send_event', mock.Mock())
     def test_success_group(self):
         # executions are already terminated when we add success_group, so
         # they should be in the success group
@@ -1361,7 +1356,6 @@ class ExecutionGroupsTestCase(base_test.BaseServerTestCase):
         assert len(target_group.deployments) == 1
 
     @mock.patch('manager_rest.workflow_executor.execute_workflow', mock.Mock())
-    @mock.patch('manager_rest.resource_manager.send_event', mock.Mock())
     def test_failed_group(self):
         # similar to test_success_group, but for the failed group
         exc_group = self.client.execution_groups.start(
