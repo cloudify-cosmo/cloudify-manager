@@ -197,7 +197,8 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
 
         p_yaml = matching_plugin_data['yaml']
         p_wagons = [x['url'] for x in matching_plugin_data['wagons'] if
-                    x['name'].lower() == distribution]
+                    x['name'].lower() == distribution or
+                    x['name'].lower().startswith('manylinux')]
 
         if not p_wagons:
             raise FileNotFoundError()
