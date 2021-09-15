@@ -41,8 +41,7 @@ from manager_rest.rest.rest_utils import (get_labels_from_plan,
                                           get_args_and_verify_arguments)
 from manager_rest.manager_exceptions import (ConflictError,
                                              IllegalActionError,
-                                             BadParametersError,
-                                             DeploymentParentNotFound,)
+                                             BadParametersError)
 from manager_rest import config
 from manager_rest.constants import FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER
 
@@ -235,23 +234,6 @@ class BlueprintsId(resources_v2.BlueprintsId):
             blueprint.main_file_name = request_dict['main_file_name']
         provided_labels = request_dict.get('labels')
 
-        if request_dict.get('plan'):
-            dsl_labels = request_dict['plan'].get('labels', {})
-            csys_obj_parents = dsl_labels.get('csys-obj-parent')
-            if csys_obj_parents:
-                dep_parents = csys_obj_parents['values']
-                missing_parents = rm.get_missing_deployment_parents(
-                    dep_parents
-                )
-                if missing_parents:
-                    raise DeploymentParentNotFound(
-                        'Blueprint {0}: is referencing deployments'
-                        ' using label `csys-obj-parent` that does not exist, '
-                        'make sure that deployment(s) {1} exist before '
-                        'creating blueprint'.format(
-                            blueprint.id, ','.join(missing_parents)
-                        )
-                    )
         # set blueprint state
         state = request_dict.get('state')
         if state:

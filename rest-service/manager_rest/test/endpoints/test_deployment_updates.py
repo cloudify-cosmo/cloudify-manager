@@ -331,11 +331,12 @@ class DeploymentUpdatesTestCase(DeploymentUpdatesBase):
         self.assertEqual(updated_deployment.sub_services_count, 1)
 
     def test_add_invalid_parent_label(self):
-        error_message = 'label `csys-obj-parent` that does not exist'
         self.put_deployment(deployment_id='parent', blueprint_id='parent')
         self._deploy_base('child', 'one_node.yaml')
-        with self.assertRaisesRegex(CloudifyClientError, error_message):
-            self._update('child', 'invalid_one_label.yaml')
+        response = self._update('child', 'invalid_one_label.yaml')
+        self.assertEqual(400, response.status_code)
+        self.assertEqual('deployment_parent_not_found_error',
+                         response.json['error_code'])
 
 
 @mark.skip
