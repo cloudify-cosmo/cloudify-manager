@@ -111,9 +111,11 @@ class DeploymentsId(SecuredResource):
             visibility=None,
         )
         try:
-            rm.execute_workflow(deployment.make_create_environment_execution(
-                inputs=request_dict.get('inputs', {}),
-            ), bypass_maintenance=bypass_maintenance)
+            exc = deployment.make_create_environment_execution(
+                inputs=request_dict.get('inputs', {}))
+            messages = rm.prepare_executions(
+                [exc], bypass_maintenance=bypass_maintenance)
+            workflow_executor.execute_workflow(messages)
         except manager_exceptions.ExistingRunningExecutionError:
             rm.delete_deployment(deployment)
             raise
@@ -160,8 +162,9 @@ class DeploymentsId(SecuredResource):
         rm.check_deployment_delete(dep, force=args.force)
         delete_execution = dep.make_delete_environment_execution(
             delete_logs=args.delete_logs)
-        rm.execute_workflow(
-            delete_execution, bypass_maintenance=bypass_maintenance)
+        messages = rm.prepare_executions(
+            [delete_execution], bypass_maintenance=bypass_maintenance)
+        workflow_executor.execute_workflow(messages)
         workflow_executor.delete_source_plugins(dep.id)
         return None, 204
 

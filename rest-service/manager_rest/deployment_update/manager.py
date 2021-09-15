@@ -24,7 +24,7 @@ from cloudify.utils import extract_and_merge_plugins
 
 from dsl_parser import constants, tasks
 
-from manager_rest import manager_exceptions
+from manager_rest import manager_exceptions, workflow_executor
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.deployment_update import step_extractor
 from manager_rest.deployment_update.utils import extract_ids
@@ -618,11 +618,13 @@ class DeploymentUpdateManager(object):
             for exec_group in current_execution.execution_groups:
                 exec_group.executions.append(execution)
             db.session.commit()
-        return get_resource_manager().execute_workflow(
-            execution,
+        messages = get_resource_manager().prepare_executions(
+            [execution],
             allow_overlapping_running_wf=True,
             force=force,
         )
+        workflow_executor.execute_workflow(messages)
+        return execution
 
     def finalize_commit(self, deployment_update_id):
         """ finalizes the update process by removing any removed

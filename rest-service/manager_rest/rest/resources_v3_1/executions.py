@@ -20,8 +20,9 @@ from flask import request
 from sqlalchemy.dialects.postgresql import insert
 
 from cloudify.models_states import ExecutionState
-from manager_rest.rest.responses_v3 import ItemsCount
 
+from manager_rest import workflow_executor
+from manager_rest.rest.responses_v3 import ItemsCount
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.rest import resources_v2, rest_decorators
@@ -34,10 +35,6 @@ from manager_rest.rest.rest_utils import (
     parse_datetime_multiple_formats
 )
 from manager_rest.storage import models, db, get_storage_manager, ListResult
-from manager_rest.workflow_executor import (
-    get_amqp_client,
-    workflow_sendhandler
-)
 
 
 class Executions(resources_v2.Executions):
@@ -218,12 +215,8 @@ class ExecutionGroups(SecuredResource):
                     sm.put(execution)
                     executions.append(execution)
                     group.executions.append(execution)
-
-        amqp_client = get_amqp_client()
-        handler = workflow_sendhandler()
-        amqp_client.add_handler(handler)
-        with amqp_client:
-            group.start_executions(sm, rm, handler, force=force)
+            messages = group.start_executions(sm, rm, force=force)
+        workflow_executor.execute_workflow(messages)
         return group
 
 
@@ -292,12 +285,8 @@ class ExecutionGroupsId(SecuredResource):
                 exc.ended_at = None
                 exc.resumed = True
                 sm.update(exc, modified_attrs=('status', 'ended_at', 'resume'))
-
-        amqp_client = get_amqp_client()
-        handler = workflow_sendhandler()
-        amqp_client.add_handler(handler)
-        with amqp_client:
-            group.start_executions(sm, rm, handler)
+            messages = group.start_executions(sm, rm)
+        workflow_executor.execute_workflow(messages)
 
     @authorize('execution_group_update')
     @rest_decorators.marshal_with(models.ExecutionGroup)

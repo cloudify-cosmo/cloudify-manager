@@ -219,34 +219,29 @@ class ResourceManager(object):
         any of those fail to run, try running more.
         """
         to_run = []
-        with self.sm.transaction():
-            while True:
+        while True:
+            with self.sm.transaction():
                 dequeued = self._get_queued_executions(deployment_storage_id)
                 all_started = True
                 for execution in dequeued:
                     if self._refresh_execution(execution):
-                        to_run.append(execution)
+                        try:
+                            if execution.is_system_workflow:
+                                _, messages = self._execute_system_workflow(
+                                    execution, queue=True)
+                            else:
+                                messages = self.prepare_executions(
+                                    [execution], queue=True)
+                            to_run.extend(messages)
+                        except Exception as e:
+                            current_app.logger.warning(
+                                'Could not dequeue execution %s: %s',
+                                execution, e)
                     else:
                         all_started = False
                 if all_started:
                     break
-
-        amqp_client = workflow_executor.get_amqp_client()
-        handler = workflow_executor.workflow_sendhandler()
-        amqp_client.add_handler(handler)
-        with amqp_client:
-            for execution in to_run:
-                try:
-                    if execution.is_system_workflow:
-                        self._execute_system_workflow(
-                            execution, queue=True, send_handler=handler)
-                    else:
-                        self.execute_workflow(
-                            execution, queue=True, send_handler=handler)
-                except Exception as e:
-                    current_app.logger.warning(
-                        'Could not dequeue execution %s: %s',
-                        execution, e)
+        workflow_executor.execute_workflow(to_run)
 
     def _refresh_execution(self, execution: models.Execution) -> bool:
         """Prepare the execution to be started.
@@ -271,7 +266,7 @@ class ResourceManager(object):
                 execution.deployment,
                 execution.workflow_id
             )
-            execution.render_context()  # try this here to fail early
+            execution.get_workflow()  # try this here to fail early
         except Exception as e:
             execution.status = ExecutionState.FAILED
             execution.error = str(e)
@@ -443,7 +438,7 @@ class ResourceManager(object):
                 status=ExecutionState.PENDING,
             )
             self.sm.put(execution)
-            execution = self._execute_system_workflow(
+            return self._execute_system_workflow(
                 execution,
                 bypass_maintenance=bypass_maintenance,
                 queue=queue,
@@ -453,8 +448,6 @@ class ResourceManager(object):
             self.sm.delete(snapshot)
             self.sm.delete(execution)
             raise
-
-        return execution
 
     def restore_snapshot(self,
                          snapshot_id,
@@ -486,11 +479,10 @@ class ResourceManager(object):
             status=ExecutionState.PENDING,
         )
         self.sm.put(execution)
-        execution = self._execute_system_workflow(
+        return self._execute_system_workflow(
             execution,
             bypass_maintenance=bypass_maintenance
         )
-        return execution
 
     def _validate_plugin_yaml(self, plugin):
         """Is the plugin YAML file valid?"""
@@ -541,7 +533,7 @@ class ResourceManager(object):
         if no_changes_required:
             execution.status = ExecutionState.TERMINATED
             self.sm.put(execution)
-            return execution
+            return execution, []
         else:
             self.sm.put(execution)
             return self._execute_system_workflow(
@@ -602,7 +594,8 @@ class ResourceManager(object):
             status=ExecutionState.PENDING,
         )
         self.sm.put(execution)
-        return self.execute_workflow(execution)
+        messages = self.prepare_executions([execution])
+        return execution, messages
 
     def publish_blueprint(self,
                           application_dir,
@@ -948,11 +941,13 @@ class ResourceManager(object):
 
         execution.status = ExecutionState.STARTED
         execution.ended_at = None
-        execution.resumed = True
+        execution.resume = True
         self.sm.update(execution,
                        modified_attrs=('status', 'ended_at', 'resume'))
 
-        workflow_executor.execute_workflow(execution, bypass_maintenance=False)
+        message = execution.render_message(bypass_maintenance=False)
+        db.session.commit()
+        workflow_executor.execute_workflow([message])
 
         # Dealing with the inner Components' deployments
         components_executions = self._find_all_components_executions(
@@ -965,82 +960,76 @@ class ResourceManager(object):
 
         return execution
 
-    def execute_workflow(self, execution, *, force=False, queue=False,
-                         bypass_maintenance=None, wait_after_fail=600,
-                         allow_overlapping_running_wf=False,
-                         send_handler: 'SendHandler' = None):
-        with self.sm.transaction():
-            if execution.deployment:
+    def get_component_executions(self, execution):
+        workflow = execution.get_workflow()
+        if not workflow.get('is_cascading', False):
+            return []
+
+        component_executions = []
+        components_dep_ids = self._find_all_components_deployment_id(
+            execution.deployment.id)
+
+        for component_dep_id in components_dep_ids:
+            dep = self.sm.get(models.Deployment, component_dep_id)
+            component_execution = models.Execution(
+                deployment=dep,
+                workflow_id=execution.workflow_id,
+                parameters=execution.parameters,
+                allow_custom_parameters=execution.allow_custom_parameters,
+                is_dry_run=execution.is_dry_run,
+                creator=execution.creator,
+                status=ExecutionState.PENDING,
+            )
+            self.sm.put(component_execution)
+            component_executions.append(component_execution)
+        return component_executions
+
+    def prepare_executions(self, executions, *, force=False, queue=False,
+                           bypass_maintenance=None, wait_after_fail=600,
+                           allow_overlapping_running_wf=False,
+                           commit=True):
+        executions = list(executions)
+        messages = []
+        errors = []
+        while executions:
+            exc = executions.pop()
+            exc.ensure_defaults()
+            if exc.deployment:
                 try:
-                    self._check_allow_global_execution(execution.deployment)
+                    self._check_allow_global_execution(exc.deployment)
                     self._verify_dependencies_not_affected(
-                        execution.workflow_id, execution.deployment, force)
+                        exc.workflow_id, exc.deployment, force)
                 except Exception as e:
-                    execution.status = ExecutionState.FAILED
-                    execution.error = str(e)
-                    self.sm.update(execution)
-                    db.session.commit()
-                    raise
+                    errors.append(e)
+                    exc.status = ExecutionState.FAILED
+                    exc.error = str(e)
+                    self.sm.update(exc)
+                    continue
 
             should_queue = queue
             if not allow_overlapping_running_wf:
                 should_queue = self.check_for_executions(
-                    execution, force, queue)
-
+                    exc, force, queue)
             if should_queue:
-                self._workflow_queued(execution)
-                return execution
-            if execution.deployment:
-                if not self._refresh_execution(execution):
-                    return
+                self._workflow_queued(exc)
+                continue
 
-        try:
-            workflow_executor.execute_workflow(
-                execution,
-                bypass_maintenance=bypass_maintenance,
+            message = exc.render_message(
                 wait_after_fail=wait_after_fail,
-                handler=send_handler,
+                bypass_maintenance=bypass_maintenance
             )
-        except Exception as e:
-            execution.status = ExecutionState.FAILED
-            execution.error = str(e)
-            self.sm.update(execution)
-            return
-
-        workflow = execution.get_workflow()
-        is_cascading_workflow = workflow.get('is_cascading', False)
-        if not is_cascading_workflow:
-            return execution
-
-        component_executions = []
-        with self.sm.transaction():
-            components_dep_ids = self._find_all_components_deployment_id(
-                execution.deployment.id)
-
-            for component_dep_id in components_dep_ids:
-                dep = self.sm.get(models.Deployment, component_dep_id)
-                component_execution = models.Execution(
-                    deployment=dep,
-                    workflow_id=execution.workflow_id,
-                    parameters=execution.parameters,
-                    allow_custom_parameters=execution.allow_custom_parameters,
-                    is_dry_run=execution.is_dry_run,
-                    creator=execution.creator,
-                    status=ExecutionState.PENDING,
-                )
-                self.sm.put(component_execution)
-                component_executions.append(component_execution)
-
-        for component_execution in component_executions:
-            self.execute_workflow(
-                component_execution,
-                force=force,
-                queue=queue,
-                bypass_maintenance=bypass_maintenance,
-                wait_after_fail=wait_after_fail,
-                send_handler=send_handler,
-            )
-        return execution
+            exc.status = ExecutionState.PENDING
+            messages.append(message)
+            workflow = exc.get_workflow()
+            if not workflow.get('is_cascading', False):
+                continue
+            component_executions = self.get_component_executions(exc)
+            executions.extend(component_executions)
+        if commit:
+            db.session.commit()
+        if errors:
+            raise errors[0]
+        return messages
 
     @staticmethod
     def _verify_workflow_in_deployment(wf_id, deployment, dep_id):
@@ -1059,25 +1048,34 @@ class ResourceManager(object):
         """
         system_exec_running = self._check_for_active_system_wide_execution(
             queue)
-        if force or not execution.deployment:
+        if system_exec_running:
+            return True
+        if force:
             return system_exec_running
-        else:
-            execution_running = self._check_for_active_executions(
-                execution, queue)
-            return system_exec_running or execution_running
+        if not execution.deployment or not execution.deployment._storage_id:
+            return system_exec_running
+        return self._check_for_active_executions(execution, queue)
 
     def _check_for_active_executions(self, execution, queue):
+        def status_filter(col):
+            if execution.created_at is not None:
+                return sql_or(
+                        col.in_(ExecutionState.ACTIVE_STATES),
+                        sql_and(
+                            col == ExecutionState.QUEUED,
+                            models.Execution.created_at < execution.created_at
+                        )
+                    )
+            else:
+                return col.in_(
+                    ExecutionState.ACTIVE_STATES + [ExecutionState.QUEUED]
+                )
+
         running = self.list_executions(
             filters={
-                '_deployment_fk': execution._deployment_fk,
+                'deployment': execution.deployment,
                 'id': lambda col: col != execution.id,
-                'status': lambda col: sql_or(
-                    col.in_(ExecutionState.ACTIVE_STATES),
-                    sql_and(
-                        col == ExecutionState.QUEUED,
-                        models.Execution.created_at < execution.created_at
-                    )
-                )
+                'status': status_filter
             },
             is_include_system_workflows=True
         ).items
@@ -1178,15 +1176,11 @@ class ResourceManager(object):
         if should_queue:
             self.sm.put(execution)
             self._workflow_queued(execution)
-            return execution
-
-        workflow_executor.execute_workflow(
-            execution,
-            bypass_maintenance=bypass_maintenance,
-            handler=send_handler,
-        )
-
-        return execution
+            return execution, []
+        message = execution.render_message(
+            bypass_maintenance=bypass_maintenance)
+        db.session.commit()
+        return execution, [message]
 
     def _retrieve_components_from_deployment(self, deployment_id_filter):
         return [node.id for node in
@@ -1282,49 +1276,56 @@ class ResourceManager(object):
         """
         if kill:
             force = True
-        execution = self.sm.get(models.Execution, execution_id)
-        # When a user cancels queued execution automatically use the kill flag
-        if execution.status in (ExecutionState.QUEUED,
-                                ExecutionState.SCHEDULED):
-            kill = True
-            force = True
-        if execution.status not in (ExecutionState.PENDING,
-                                    ExecutionState.STARTED,
-                                    ExecutionState.SCHEDULED) and \
-                (not force or execution.status != ExecutionState.CANCELLING)\
-                and not kill:
-            raise manager_exceptions.IllegalActionError(
-                "Can't {0} cancel execution {1} because it's in status {2}"
-                .format(
-                    'kill-' if kill else 'force-' if force else '',
-                    execution_id,
-                    execution.status))
-
         if kill:
             new_status = ExecutionState.KILL_CANCELLING
         elif force:
             new_status = ExecutionState.FORCE_CANCELLING
         else:
             new_status = ExecutionState.CANCELLING
-        execution.status = new_status
-        execution.error = ''
-        if kill:
-            workflow_executor.cancel_execution(execution)
 
-        # Dealing with the inner Components' deployments
-        components_executions = self._find_all_components_executions(
-            execution.deployment_id)
-        for exec_id in components_executions:
-            execution = self.sm.get(models.Execution, exec_id)
-            if execution.status not in ExecutionState.END_STATES:
-                self.cancel_execution(exec_id, force, kill)
+        executions = [self.sm.get(models.Execution, execution_id)]
+        while executions:
+            execution = executions.pop()
+            kill_execution, force_execution = kill, force
+            # When a user cancels queued execution automatically
+            # use the kill flag
+            if execution.status in (ExecutionState.QUEUED,
+                                    ExecutionState.SCHEDULED):
+                kill_execution = True
+                force_execution = True
+            if execution.status not in (ExecutionState.PENDING,
+                                        ExecutionState.STARTED,
+                                        ExecutionState.SCHEDULED) and \
+                    (not force_execution
+                     or execution.status != ExecutionState.CANCELLING)\
+                    and not kill_execution:
+                raise manager_exceptions.IllegalActionError(
+                    "Can't {0} cancel execution {1} because it's in status {2}"
+                    .format(
+                        'kill-' if kill_execution
+                        else 'force-' if force_execution else '',
+                        execution_id,
+                        execution.status))
 
-        execution = self.sm.update(execution)
-        if execution.deployment_id:
-            dep = execution.deployment
-            dep.latest_execution = execution
-            dep.deployment_status = dep.evaluate_deployment_status()
-            self.sm.update(dep)
+            execution.status = new_status
+            execution.error = ''
+            if kill_execution:
+                workflow_executor.cancel_execution(execution)
+
+            execution = self.sm.update(execution)
+            if execution.deployment_id:
+                dep = execution.deployment
+                dep.latest_execution = execution
+                dep.deployment_status = dep.evaluate_deployment_status()
+                self.sm.update(dep)
+
+            # Dealing with the inner Components' deployments
+            components_executions = self._find_all_components_executions(
+                execution.deployment_id)
+            for exec_id in components_executions:
+                component_execution = self.sm.get(models.Execution, exec_id)
+                if component_execution.status not in ExecutionState.END_STATES:
+                    executions.append(component_execution)
 
         return execution
 

@@ -14,43 +14,13 @@ from manager_rest import config, utils
 from manager_rest.storage import get_storage_manager, models
 
 
-def execute_workflow(execution,
-                     bypass_maintenance=None,
-                     wait_after_fail=600,
-                     handler: SendHandler = None,):
-    sm = get_storage_manager()
-    token = generate_execution_token(execution)
-    context = execution.render_context()
-    context.update({
-        'wait_after_fail': wait_after_fail,
-        'bypass_maintenance': bypass_maintenance,
-        'execution_token': token,
-        'rest_host': [
-            manager.private_ip for manager in sm.list(models.Manager)
-        ],
-        'rest_token': execution.creator.get_auth_token(),
-    })
-    if context.get('plugin'):
-        managed_plugins = sm.list(models.Plugin, filters={
-            'package_name': context['plugin'].get('package_name'),
-            'package_version': context['plugin'].get('package_version'),
-        }).items
-        if managed_plugins:
-            context['plugin']['visibility'] = managed_plugins[0].visibility
-            context['plugin']['tenant_name'] = managed_plugins[0].tenant_name
-
-    execution_parameters = execution.parameters.copy()
-    execution_parameters['__cloudify_context'] = context
-    message = {
-        'cloudify_task': {'kwargs': execution_parameters},
-        'id': execution.id,
-        'execution_creator': execution.creator.id
-    }
-
-    if handler is not None:
-        handler.publish(message)
-    else:
-        _send_mgmtworker_task(message)
+def execute_workflow(messages):
+    client = get_amqp_client()
+    handler = workflow_sendhandler()
+    client.add_handler(handler)
+    with client:
+        for message in messages:
+            handler.publish(message)
 
 
 def generate_execution_token(execution):
@@ -128,7 +98,6 @@ def cancel_execution(execution):
                 'execution_id': execution.id,
                 'rest_token': current_user.get_auth_token(),
                 'tenant': _get_tenant_dict(),
-                'execution_token': generate_execution_token(execution)
             }
         }
     }
