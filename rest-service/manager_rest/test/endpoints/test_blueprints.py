@@ -490,8 +490,8 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
             'Couldn\'t download plugin cloudify-diamond-plugin',
             self.put_blueprint,
             'mock_blueprint',
-           'blueprint_with_plugin_import.yaml',
-           blueprint_id)
+            'blueprint_with_plugin_import.yaml',
+            blueprint_id)
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)

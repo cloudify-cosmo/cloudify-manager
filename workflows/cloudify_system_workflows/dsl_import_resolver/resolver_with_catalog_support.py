@@ -19,7 +19,6 @@ import json
 import zipfile
 import tempfile
 import requests
-import urllib
 import shutil
 from contextlib import closing
 
