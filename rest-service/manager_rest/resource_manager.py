@@ -693,7 +693,7 @@ class ResourceManager(object):
                 if b.state not in BlueprintUploadState.FAILED_STATES \
                         and b.plan \
                         and blueprint_id in \
-                            b.plan.get(constants.IMPORTED_BLUEPRINTS):
+                            b.plan.get(constants.IMPORTED_BLUEPRINTS, []):
                     raise manager_exceptions.BlueprintInUseError(
                         'Blueprint {} is currently in use. You can "force" '
                         'blueprint removal.'.format(blueprint_id))
