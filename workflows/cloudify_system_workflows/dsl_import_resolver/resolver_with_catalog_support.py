@@ -280,7 +280,8 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
                     version_message = ' with version {}'.format(specifier_set)
                 raise InvalidBlueprintImport(
                     'Couldn\'t find plugin "{0}"{1} for {2} in the plugins '
-                    'catalog. Please upload the plugin manually'.format(
+                    'catalog. Please upload the plugin using the console, '
+                    'or cfy plugins upload'.format(
                         name, version_message, distribution))
             # update matching versions once the plugin uploaded
             plugins = self.client.plugins.list(**filters)
