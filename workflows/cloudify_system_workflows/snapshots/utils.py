@@ -233,6 +233,7 @@ def run_service(service_management,
         service_command = '/usr/bin/supervisorctl -c /etc/supervisord.conf'
     else:
         service_command = '/usr/bin/systemctl'
+        service_name, _, _ = service_name.partition(':')
     service_command = '{0} {1} {2}'.format(
         service_command, action, service_name
     )
