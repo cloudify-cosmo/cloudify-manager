@@ -154,27 +154,28 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
 
     @staticmethod
     def _download_file(url, dest_path, target_filename=None):
-        try:
-            with requests.get(url, stream=True, timeout=(5, None)) as resp:
-                resp.raise_for_status()
-                if not target_filename:
-                    target_filename = os.path.basename(url)
-                file_path = os.path.join(dest_path, target_filename)
-                with open(file_path, 'wb') as f:
-                    for chunk in resp.iter_content(chunk_size=8192):
-                        if chunk:
-                            f.write(chunk)
-        except Exception as e:
-            raise InvalidBlueprintImport(
-                'Couldn\'t download plugin from "{0}". Please upload the '
-                'plugin using the console, or cfy plugins upload. '
-                'Error: {1}'.format(url, e))
+        with requests.get(url, stream=True, timeout=(5, None)) as resp:
+            resp.raise_for_status()
+            if not target_filename:
+                target_filename = os.path.basename(url)
+            file_path = os.path.join(dest_path, target_filename)
+            with open(file_path, 'wb') as f:
+                for chunk in resp.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
         return file_path
 
     def _upload_missing_plugin(self, name, specifier_set, distribution):
+        download_error_msg = \
+            'Couldn\'t download plugin {}. Please upload the plugin using ' \
+            'the console, or cfy plugins upload. Error: {}'
+
         plugin_target_path = tempfile.mkdtemp()
-        catalog_path = self._download_file(PLUGIN_CATALOG_URL,
-                                           plugin_target_path)
+        try:
+            catalog_path = self._download_file(PLUGIN_CATALOG_URL,
+                                               plugin_target_path)
+        except Exception as e:
+            raise InvalidBlueprintImport(download_error_msg.format(name, e))
         plugins_data = open(catalog_path).read()
         plugins_data = json.loads(plugins_data)
         try:
@@ -202,10 +203,14 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
             raise FileNotFoundError()
         p_wagon = p_wagons[0]
 
-        self._download_file(p_yaml, plugin_target_path)
-        self._download_file(p_wagon, plugin_target_path)
-        if plugin['icon']:
-            self._download_file(plugin['icon'], plugin_target_path, 'icon.png')
+        try:
+            self._download_file(p_yaml, plugin_target_path)
+            self._download_file(p_wagon, plugin_target_path)
+            if plugin['icon']:
+                self._download_file(plugin['icon'], plugin_target_path,
+                                    'icon.png')
+        except Exception as e:
+            raise InvalidBlueprintImport(download_error_msg.format(name, e))
 
         plugin_zip = plugin_target_path + '.zip'
         self._create_zip(plugin_target_path, plugin_zip,

@@ -15,6 +15,7 @@
 
 import os
 import uuid
+import mock
 import tempfile
 import shutil
 
@@ -25,9 +26,17 @@ from manager_rest.storage.resource_models import Blueprint, db
 
 from cloudify._compat import text_type
 from cloudify_rest_client import exceptions
-from cloudify.exceptions import WorkflowFailed
+from cloudify.exceptions import WorkflowFailed, InvalidBlueprintImport
 
 from .test_utils import generate_progress_func
+
+
+def mocked_requests_get(*args, **kwargs):
+    class MockResponse:
+        def __init__(self, json_data, status_code):
+            self.json_data = json_data
+            self.status_code = status_code
+    return MockResponse({'error_code': 'no can do'}, 404)
 
 
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
@@ -467,6 +476,22 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
             blueprint_id,
             {'plan': 'abcd'}
         )
+
+    @mock.patch('cloudify_rest_client.manager.ManagerClient.get_managers',
+                return_value=[{'distribution': 'centos',
+                               'distro_release': 'Core'}])
+    @mock.patch('requests.get', side_effect=mocked_requests_get)
+    def test_blueprint_upload_autoupload_plugins_network_failure(
+            self, mock_get, mock_get_managers):
+        mock_get.side_effect = Exception('Faulty network')
+        blueprint_id = 'bp_with_plugin_import_no_github'
+        self.assertRaisesRegex(
+            InvalidBlueprintImport,
+            'Couldn\'t download plugin cloudify-diamond-plugin',
+            self.put_blueprint,
+            'mock_blueprint',
+           'blueprint_with_plugin_import.yaml',
+           blueprint_id)
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
