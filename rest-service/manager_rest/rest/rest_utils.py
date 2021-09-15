@@ -912,7 +912,7 @@ def _execution_ended(result):
     return result.status not in ExecutionState.END_STATES
 
 
-@retry(wait_fixed=1000, stop_max_attempt_number=60,
+@retry(wait_fixed=1000, stop_max_attempt_number=120,
        retry_on_result=_execution_ended)
 def wait_for_execution(sm, execution_id):
     execution = sm.get(models.Execution, execution_id)
