@@ -1,12 +1,9 @@
 import pytest
-import requests
 
 from cloudify.models_states import BlueprintUploadState
-from cloudify.utils import ipv6_url_compat
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from integration_tests import AgentlessTestCase
-from integration_tests.framework import docker
 from integration_tests.tests.utils import get_resource as resource
 
 from packaging.version import parse as parse_version
