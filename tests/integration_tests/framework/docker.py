@@ -24,7 +24,7 @@ service_management: {0}
     command = [
         'docker', 'run', '-d',
         '-v', '/sys/fs/cgroup:/sys/fs/cgroup:ro',
-        '-v', '{0}:/etc/cloudify/config.yaml:rw'.format(conf.name),
+        '-v', '{0}:/etc/cloudify/config.yaml:Z'.format(conf.name),
         '--tmpfs', '/run', '--tmpfs', '/run/lock',
     ]
     if resource_mapping:
