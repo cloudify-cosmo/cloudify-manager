@@ -164,11 +164,11 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
                     for chunk in resp.iter_content(chunk_size=8192):
                         if chunk:
                             f.write(chunk)
-        except Exception:
+        except Exception as e:
             raise InvalidBlueprintImport(
-                'Couldn\'t download plugin from "{0}". Please check your '
-                'network connection and/or upload the plugin manually'.format(
-                    url))
+                'Couldn\'t download plugin from "{0}". Please upload the '
+                'plugin using the console, or cfy plugins upload. '
+                'Error: {1}'.format(url, e))
         return file_path
 
     def _upload_missing_plugin(self, name, specifier_set, distribution):
@@ -177,7 +177,7 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
         try:
             plugin = next(x for x in plugins_data if x["name"] == name)
         except StopIteration:
-            raise FileNotFoundError
+            raise FileNotFoundError()
 
         matching_versions = [
             (v, parse_version(v)) for v in plugin['versions'].keys()
@@ -186,7 +186,7 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
                 and plugin['versions'][v]['wagons'])
         ]
         if not matching_versions:
-            raise FileNotFoundError
+            raise FileNotFoundError()
 
         max_item = max(matching_versions, key=lambda v_p: v_p[1])
         matching_plugin_data = plugin['versions'][max_item[0]]
@@ -196,7 +196,7 @@ class ResolverWithCatalogSupport(DefaultImportResolver):
                     x['name'].lower() == distribution]
 
         if not p_wagons:
-            raise FileNotFoundError
+            raise FileNotFoundError()
         p_wagon = p_wagons[0]
 
         plugin_target_path = tempfile.mkdtemp()
