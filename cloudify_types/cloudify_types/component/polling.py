@@ -76,7 +76,6 @@ def redirect_logs(client, execution_id, instance_ctx=None):
         events, full_count = _fetch_events(client, execution_id, last_event)
 
         for event in events:
-            ctx.logger.debug('Event %s for execution %s', event, execution_id)
             instance_prompt = event.get('node_instance_id', "")
             if instance_prompt:
                 event_operation = event.get('operation')
@@ -175,11 +174,9 @@ def is_deployment_execution_at_state(client,
                                       _include=execution_get_args)
     ctx.logger.debug(
         'Execution "%s" of component "%s" state is %s',
-        execution_id, dep_id, execution)
+        execution_id, dep_id, execution.status_display)
 
     if log_redirect:
-        ctx.logger.debug(
-            'Execution info with log_redirect is %s', execution)
         redirect_logs(client, execution_id, instance_ctx)
 
     execution_status = execution.get('status')
