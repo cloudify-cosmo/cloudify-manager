@@ -43,7 +43,7 @@ class TestDeployment(TestDeploymentBase):
         self._ctx.instance.runtime_properties['deployment']['id'] =\
             deployment_name
 
-        deployment_id_exists = 'cloudify_types.component.component' \
+        deployment_id_exists = 'cloudify_types.component.operations' \
                                '.deployment_id_exists'
         with mock.patch(deployment_id_exists) as exists:
             exists.return_value = True
@@ -60,7 +60,7 @@ class TestDeployment(TestDeploymentBase):
         self._ctx.instance.runtime_properties['deployment']['id'] =\
             deployment_name
 
-        deployment_id_exists = 'cloudify_types.component.component' \
+        deployment_id_exists = 'cloudify_types.component.operations' \
                                '.deployment_id_exists'
         with mock.patch(deployment_id_exists) as exists:
             exists.return_value = False

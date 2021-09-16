@@ -103,8 +103,8 @@ class TestExecute(ComponentTestBase):
             self.cfy_mock_client.deployments.capabilities.get = \
                 mock.MagicMock(return_value={'capabilities': {}})
             poll_with_timeout_test = \
-                'cloudify_types.component.component.Component.' \
-                'verify_execution_successful'
+                'cloudify_types.component.operations.' \
+                'verify_execution_state'
             with mock.patch(poll_with_timeout_test) as poll:
                 poll.return_value = False
                 output = execute_start(operation='execute_workflow',
