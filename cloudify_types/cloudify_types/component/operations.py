@@ -12,10 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 from cloudify import manager, ctx
 from cloudify.decorators import operation
+from cloudify.constants import COMPONENT
 from cloudify._compat import urlparse
 from cloudify.exceptions import NonRecoverableError, OperationRetry
+from cloudify.deployment_dependencies import (dependency_creator_generator,
+                                              create_deployment_dependency)
 from cloudify_rest_client.client import CloudifyClient
 from cloudify_rest_client.exceptions import (
     CloudifyClientError,
@@ -41,6 +45,10 @@ from .utils import (
     blueprint_id_exists,
     deployment_id_exists,
     update_runtime_properties,
+    get_local_path,
+    zip_files,
+    should_upload_plugin,
+    populate_runtime_with_wf_results
 )
 
 
@@ -58,14 +66,18 @@ def _get_desired_operation_input(key, args):
             ctx.node.properties.get(key))
 
 
+def _get_client(kwargs):
+    client_config = _get_desired_operation_input('client', kwargs)
+    if client_config:
+        return CloudifyClient(**client_config)
+    else:
+        return manager.get_rest_client()
+
+
 @operation(resumable=True)
 def upload_blueprint(ctx, **kwargs):
     resource_config = _get_desired_operation_input('resource_config', kwargs)
-    client_config = _get_desired_operation_input('client', kwargs)
-    if client_config:
-        client = CloudifyClient(**client_config)
-    else:
-        client = manager.get_rest_client()
+    client = _get_client(kwargs)
 
     blueprint = resource_config.get('blueprint', {})
     blueprint_id = blueprint.get('id') or ctx.instance.id
@@ -124,10 +136,244 @@ def upload_blueprint(ctx, **kwargs):
     return True
 
 
+def _verify_secrets_clash(client, secrets):
+    existing_secrets = {secret.key: secret.value
+                        for secret in
+                        _http_client_wrapper(client, 'secrets', 'list')}
+
+    duplicate_secrets = set(secrets).intersection(existing_secrets)
+
+    if duplicate_secrets:
+        raise NonRecoverableError('The secrets: {0} already exist, '
+                                  'not updating...'.format(
+                                    '"' + '", "'.join(duplicate_secrets)
+                                    + '"'))
+
+
+def _set_secrets(client, secrets):
+    if not secrets:
+        return
+
+    _verify_secrets_clash(client, secrets)
+
+    for secret_name in secrets:
+        _http_client_wrapper(client, 'secrets', 'create', {
+            'key': secret_name,
+            'value': u'{0}'.format(secrets[secret_name]),
+        })
+        ctx.logger.info('Created secret {}'.format(repr(secret_name)))
+
+
+def _http_client_wrapper(client,
+                         option,
+                         request_action,
+                         request_args=None):
+    """
+    wrapper for http client requests with CloudifyClientError custom
+    handling.
+    :param option: can be blueprints, executions and etc.
+    :param request_action: action to be done, like list, get and etc.
+    :param request_args: args for the actual call.
+    :return: The http response.
+    """
+    request_args = request_args or dict()
+    generic_client = getattr(client, option)
+    option_client = getattr(generic_client, request_action)
+
+    try:
+        return option_client(**request_args)
+    except ForbiddenWhileCancelling:
+        raise OperationRetry()
+    except CloudifyClientError as ex:
+        raise NonRecoverableError(
+            'Client action "{0}" failed: {1}.'.format(request_action, ex),
+            causes=[{
+                'option': option,
+                'request_action': request_action,
+                'request_args': request_args,
+                'error_code': ex.error_code,
+            }]
+        )
+
+
+def _upload_plugins(client, plugins):
+    if (not plugins or 'plugins' in ctx.instance.runtime_properties):
+        # No plugins to install or already uploaded them.
+        return
+
+    ctx.instance.runtime_properties['plugins'] = []
+    existing_plugins = _http_client_wrapper(client, 'plugins', 'list')
+
+    for plugin_name, plugin in plugins.items():
+        zip_list = []
+        zip_path = None
+        try:
+            if (not plugin.get('wagon_path') or
+                    not plugin.get('plugin_yaml_path')):
+                raise NonRecoverableError(
+                    'You should provide both values wagon_path: {}'
+                    ' and plugin_yaml_path: {}'
+                    .format(repr(plugin.get('wagon_path')),
+                            repr(plugin.get('plugin_yaml_path'))))
+            wagon_path = get_local_path(plugin['wagon_path'],
+                                        create_temp=True)
+            yaml_path = get_local_path(plugin['plugin_yaml_path'],
+                                       create_temp=True)
+            zip_list = [wagon_path, yaml_path]
+            if 'icon_png_path' in plugin:
+                icon_path = get_local_path(plugin['icon_png_path'],
+                                           create_temp=True)
+                zip_list.append(icon_path)
+            if not should_upload_plugin(yaml_path, existing_plugins):
+                ctx.logger.warn('Plugin "{0}" was already '
+                                'uploaded...'.format(plugin_name))
+                continue
+
+            ctx.logger.info('Creating plugin "{0}" zip '
+                            'archive...'.format(plugin_name))
+            zip_path = zip_files(zip_list)
+
+            # upload plugin
+            plugin = _http_client_wrapper(
+                client, 'plugins', 'upload', {'plugin_path': zip_path})
+            ctx.instance.runtime_properties['plugins'].append(
+                plugin.id)
+            ctx.logger.info('Uploaded {}'.format(repr(plugin.id)))
+        finally:
+            for f in zip_list:
+                os.remove(f)
+            if zip_path:
+                os.remove(zip_path)
+
+
+def _generate_suffix_deployment_id(client, deployment_id):
+    dep_exists = True
+    suffix_index = ctx.instance.runtime_properties['deployment'].get(
+        'current_suffix_index', 0)
+
+    while dep_exists:
+        suffix_index += 1
+        inc_deployment_id = '{0}-{1}'.format(deployment_id, suffix_index)
+        dep_exists = deployment_id_exists(client, inc_deployment_id)
+
+    update_runtime_properties('deployment',
+                              'current_suffix_index',
+                              suffix_index)
+    return inc_deployment_id
+
+
 @operation(resumable=True)
-@proxy_operation('create_deployment')
-def create(operation, **_):
-    return getattr(Component(_), operation)()
+def create(ctx, timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL,
+           **kwargs):
+    client = _get_client(kwargs)
+    secrets = _get_desired_operation_input('secrets', kwargs)
+    _set_secrets(client, secrets, )
+    plugins = _get_desired_operation_input('plugins', kwargs)
+    _upload_plugins(client, plugins)
+
+    if 'deployment' not in ctx.instance.runtime_properties:
+        ctx.instance.runtime_properties['deployment'] = dict()
+
+    config = _get_desired_operation_input('resource_config', kwargs)
+
+    runtime_deployment_prop = ctx.instance.runtime_properties.get(
+            'deployment', {})
+    runtime_deployment_id = runtime_deployment_prop.get('id')
+
+    deployment = config.get('deployment', {})
+    deployment_id = (runtime_deployment_id or
+                     deployment.get('id') or
+                     ctx.instance.id)
+    deployment_inputs = deployment.get('inputs', {})
+    deployment_capabilities = deployment.get('capabilities')
+    deployment_log_redirect = deployment.get('logs', True)
+    deployment_auto_suffix = deployment.get('auto_inc_suffix', False)
+
+    blueprint = config.get('blueprint', {})
+    blueprint_id = blueprint.get('id') or ctx.instance.id
+
+    _inter_deployment_dependency = create_deployment_dependency(
+        dependency_creator_generator(COMPONENT, ctx.instance.id),
+        ctx.deployment.id)
+
+    if deployment_auto_suffix:
+        base_deployment_id = deployment_id
+    elif deployment_id_exists(client, deployment_id):
+        raise NonRecoverableError(
+            'Component\'s deployment ID "{0}" already exists, '
+            'please verify the chosen name.'.format(
+                deployment_id))
+
+    retries = DEPLOYMENTS_CREATE_RETRIES
+    while True:
+        if deployment_auto_suffix:
+            deployment_id = _generate_suffix_deployment_id(
+                client, base_deployment_id)
+        _inter_deployment_dependency['target_deployment'] = \
+            deployment_id
+
+        update_runtime_properties('deployment', 'id', deployment_id)
+        ctx.logger.info('Creating "{0}" component deployment.'
+                        .format(deployment_id))
+        try:
+            _http_client_wrapper(client, 'deployments', 'create', {
+                'blueprint_id': blueprint_id,
+                'deployment_id': deployment_id,
+                'inputs': deployment_inputs
+            })
+            break
+        except NonRecoverableError as ex:
+            if (ex.causes
+                    and ex.causes[-1].get('error_code') == 'conflict_error'
+                    and deployment_auto_suffix
+                    and retries > 0):
+                ctx.logger.info(
+                    f'Component\'s deployment ID "{deployment_id}" '
+                    'already exists, will try to automatically create an '
+                    'ID with a new suffix.')
+                retries -= 1
+            else:
+                raise ex
+
+    _http_client_wrapper(
+        client,
+        'inter_deployment_dependencies',
+        'create',
+        _inter_deployment_dependency)
+
+    # Prepare executions list fields
+    execution_list_fields = ['workflow_id', 'id']
+
+    # Call list executions for the current deployment
+    executions = _http_client_wrapper(client, 'executions', 'list', {
+        'deployment_id': deployment_id,
+        '_include': execution_list_fields
+    })
+
+    # Retrieve the ``execution_id`` associated with the current deployment
+    execution_id = [execution.get('id') for execution in executions
+                    if (execution.get('workflow_id') ==
+                        'create_deployment_environment')]
+
+    # If the ``execution_id`` cannot be found raise error
+    if not execution_id:
+        raise NonRecoverableError(
+            'No execution Found for component "{}"'
+            ' deployment'.format(deployment_id)
+        )
+
+    # If a match was found there can only be one, so we will extract it.
+    execution_id = execution_id[0]
+    ctx.logger.info('Found execution id "{0}" for deployment id "{1}"'
+                    .format(execution_id,
+                            deployment_id))
+    return verify_execution_state(client,
+                                  execution_id,
+                                  deployment_id,
+                                  deployment_log_redirect,
+                                  kwargs.get('workflow_state', 'terminated'),
+                                  timeout,
+                                  interval)
 
 
 @operation(resumable=True)
