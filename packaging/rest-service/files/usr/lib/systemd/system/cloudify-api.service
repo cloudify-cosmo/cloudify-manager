@@ -10,7 +10,16 @@ TimeoutStartSec=0
 Restart=on-failure
 Environment="LC_ALL=en_US.utf8"
 EnvironmentFile=-/etc/sysconfig/cloudify-api
-ExecStart=/bin/sh -c '/opt/manager/env/bin/uvicorn --host 127.0.0.1 --port ${UVICORN_PORT} --workers ${UVICORN_WORKER_COUNT} --limit-max-requests ${UVICORN_MAX_REQUESTS} --timeout-keep-alive 300  --no-server-header --root-path / --access-log cloudify_api.main:app'
+ExecStart=/bin/sh -c '/opt/manager/env/bin/gunicorn \
+    -k uvicorn.workers.UvicornWorker \
+    --pid /run/cloudify-api/pid \
+    -w ${UVICORN_WORKER_COUNT} \
+    --max-requests ${UVICORN_MAX_REQUESTS} \
+    -b 127.0.0.1:${UVICORN_PORT} \
+    --timeout 300 cloudify_api.main:app \
+    --log-file /var/log/cloudify/rest/api-gunicorn.log \
+    --access-logfile /var/log/cloudify/rest/api-audit.log \
+    --access-logformat "%(t)s %(h)s %({X-Cloudify-Audit-Username}o)s %({X-Cloudify-Audit-Tenant}o)s %({X-Cloudify-Audit-Auth-Method}o)s \"%(r)s\" %(s)s %(b)s \"%(a)s\" took %(M)sms"'
 
 RuntimeDirectory=cloudify-api
 RuntimeDirectoryMode=0750
