@@ -72,9 +72,11 @@ def upgrade():
     _create_audit_triggers()
     _add_config_manager_service_log()
     _add_audit_log_indexes()
+    _add_audit_log_notify()
 
 
 def downgrade():
+    _drop_audit_log_notify()
     _drop_audit_log_indexes()
     _drop_config_manager_service_log()
     _drop_audit_triggers()
@@ -259,3 +261,24 @@ def _add_audit_log_indexes():
 def _drop_audit_log_indexes():
     op.drop_index(op.f('audit_log_creator_name_idx'), table_name='audit_log')
     op.drop_index(op.f('audit_log_execution_id_idx'), table_name='audit_log')
+
+
+# flake8: noqa
+def _add_audit_log_notify():
+    op.execute("""CREATE OR REPLACE FUNCTION notify_new_audit_log() RETURNS TRIGGER AS $$
+        BEGIN
+            PERFORM pg_notify(
+                'audit_log_inserted'::text,
+                 row_to_json(NEW)::text
+            );
+            return NEW;
+        END;
+    $$ LANGUAGE plpgsql;""")
+    op.execute("""CREATE TRIGGER audit_log_inserted
+                  AFTER INSERT ON audit_log FOR EACH ROW
+                  EXECUTE PROCEDURE notify_new_audit_log();""")
+
+
+def _drop_audit_log_notify():
+    op.execute("""DROP FUNCTION notify_new_audit_log();""")
+    op.execute("""DROP TRIGGER audit_log_inserted ON audit_log;""")
