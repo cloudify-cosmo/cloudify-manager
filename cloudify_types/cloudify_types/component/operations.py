@@ -29,7 +29,6 @@ from cloudify_rest_client.exceptions import (
 
 from cloudify_types.utils import errors_nonrecoverable
 
-from .component import Component
 from .polling import (
     poll_with_timeout,
     is_all_executions_finished,

@@ -25,7 +25,6 @@ from cloudify.deployment_dependencies import (dependency_creator_generator,
 from cloudify_types.utils import get_deployment_by_id
 from cloudify_types.component.utils import (
     populate_runtime_with_wf_results)
-from .shared_resource import SharedResource
 from .constants import WORKFLOW_EXECUTION_TIMEOUT
 from .execute_shared_resource_workflow import execute_shared_resource_workflow
 
