@@ -63,14 +63,14 @@ class TestExecute(ComponentTestBase):
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             self.cfy_mock_client.executions.start = REST_CLIENT_EXCEPTION
             mock_client.return_value = self.cfy_mock_client
-            with self.assertRaisesRegexp(
+            with self.assertRaisesRegex(
                     NonRecoverableError, 'action "start" failed'):
                 execute_start(deployment_id='dep_name', workflow_id='install')
 
     def test_execute_start_timeout(self):
         with mock.patch('cloudify.manager.get_rest_client') as mock_client:
             mock_client.return_value = self.cfy_mock_client
-            with self.assertRaisesRegexp(
+            with self.assertRaisesRegex(
                     NonRecoverableError, 'Execution timed out'):
                 execute_start(
                     deployment_id='dep_name',

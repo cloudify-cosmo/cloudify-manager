@@ -45,7 +45,7 @@ class TestBlueprint(ComponentTestBase):
             blueprint_params['blueprint']['blueprint_archive'] = self.archive
             self.resource_config['resource_config'] = blueprint_params
 
-            with self.assertRaisesRegexp(
+            with self.assertRaisesRegex(
                 NonRecoverableError,
                 'action "_upload" failed'
             ):
@@ -89,7 +89,7 @@ class TestBlueprint(ComponentTestBase):
             blueprint_params['blueprint']['id'] = 'blu_name'
             self.resource_config['resource_config'] = blueprint_params
 
-            with self.assertRaisesRegexp(
+            with self.assertRaisesRegex(
                 NonRecoverableError,
                 'No blueprint_archive supplied, but '
                 'external_resource is False'
@@ -123,7 +123,7 @@ class TestBlueprint(ComponentTestBase):
 
             mock_client.return_value = self.cfy_mock_client
 
-            with self.assertRaisesRegexp(
+            with self.assertRaisesRegex(
                 NonRecoverableError,
                 'Blueprint ID "test" does not exist'
             ):

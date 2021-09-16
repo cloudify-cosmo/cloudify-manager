@@ -58,10 +58,10 @@ class TestSharedResource(TestSharedResourceBase):
                 '.get_deployment_by_id',
                 return_value=False)
     def test_validate_deployment_fails_when_deployment_doesnt_exist(self, _):
-        self.assertRaisesRegexp(NonRecoverableError,
-                                r'SharedResource\'s deployment ID '
-                                r'"test_deployment" does not exist.',
-                                connect_deployment)
+        self.assertRaisesRegex(NonRecoverableError,
+                               r'SharedResource\'s deployment ID '
+                               r'"test_deployment" does not exist.',
+                               connect_deployment)
         self.assertNotIn('deployment',
                          self._ctx.instance.runtime_properties)
         self.cfy_mock_client.inter_deployment_dependencies.create \
