@@ -2085,6 +2085,6 @@ class AuditLog(CreatedAtMixin, SQLModelBase):
     ref_id = db.Column(db.Integer, nullable=False)
     operation = db.Column(db.Enum(*AUDIT_OPERATIONS, name='audit_operation'),
                           nullable=False)
-    creator_name = db.Column(db.Text, nullable=True)
-    execution_id = db.Column(db.Text, nullable=True)
+    creator_name = db.Column(db.Text, nullable=True, index=True)
+    execution_id = db.Column(db.Text, nullable=True, index=True)
 # endregion
