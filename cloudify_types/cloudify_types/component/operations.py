@@ -291,11 +291,9 @@ def create(timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL,
                 inputs=deployment_inputs
             )
             break
-        except NonRecoverableError as ex:
-            if (ex.causes
-                    and ex.causes[-1].get('error_code') == 'conflict_error'
-                    and deployment_auto_suffix
-                    and retries > 0):
+        except CloudifyClientError as ex:
+            if ex.error_code == 'conflict_error' \
+                    and deployment_auto_suffix and retries > 0:
                 ctx.logger.info(
                     f'Component\'s deployment ID "{deployment_id}" '
                     'already exists, will try to automatically create an '
