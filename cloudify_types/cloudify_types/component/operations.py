@@ -496,6 +496,61 @@ def delete(ctx, timeout=EXECUTIONS_TIMEOUT, **kwargs):
 
 
 @operation(resumable=True)
-@proxy_operation('execute_workflow')
-def execute_start(operation, **_):
-    return getattr(Component(_), operation)()
+def execute_start(ctx, timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL,
+                  **kwargs):
+    client = _get_client(kwargs)
+    config = _get_desired_operation_input('resource_config', kwargs)
+
+    runtime_deployment_prop = ctx.instance.runtime_properties.get(
+            'deployment', {})
+    runtime_deployment_id = runtime_deployment_prop.get('id')
+
+    deployment = config.get('deployment', {})
+    deployment_id = (runtime_deployment_id or
+                     deployment.get('id') or
+                     ctx.instance.id)
+    deployment_log_redirect = deployment.get('logs', True)
+    workflow_id = kwargs.get('workflow_id', 'create_deployment_environment')
+    # Wait for the deployment to finish any executions
+    if not poll_with_timeout(
+            lambda: is_all_executions_finished(client, deployment_id),
+            timeout=timeout,
+            expected_result=True):
+        return ctx.operation.retry(
+            'The "{0}" deployment is not ready for execution.'.format(
+                deployment_id))
+
+    execution_args = config.get('executions_start_args', {})
+
+    request_args = dict(
+        deployment_id=deployment_id,
+        workflow_id=workflow_id,
+        **execution_args
+    )
+    if workflow_id == ctx.workflow_id:
+        request_args.update(dict(parameters=ctx.workflow_parameters))
+
+    ctx.logger.info('Starting execution for "{0}" deployment'.format(
+        deployment_id))
+    execution = _http_client_wrapper(
+        client, 'executions', 'start', request_args)
+
+    ctx.logger.debug('Execution start response: "{0}".'.format(execution))
+
+    execution_id = execution['id']
+    if not verify_execution_state(
+            client,
+            execution_id,
+            deployment_id,
+            deployment_log_redirect,
+            kwargs.get('workflow_state', 'terminated'),
+            timeout,
+            interval):
+        ctx.logger.error('Execution {0} failed for "{1}" '
+                         'deployment'.format(execution_id,
+                                             deployment_id))
+
+    ctx.logger.info('Execution succeeded for "{0}" deployment'.format(
+        deployment_id))
+    populate_runtime_with_wf_results(client, deployment_id)
+    return True
