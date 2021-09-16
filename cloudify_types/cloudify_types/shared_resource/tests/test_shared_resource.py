@@ -67,7 +67,7 @@ class TestSharedResource(TestSharedResourceBase):
         self.cfy_mock_client.inter_deployment_dependencies.create \
             .assert_not_called()
 
-    @mock.patch('cloudify_types.shared_resource.shared_resource'
+    @mock.patch('cloudify_types.shared_resource.operations'
                 '.get_deployment_by_id',
                 return_value=True)
     def test_disconnecting_deployment_removes_deployment_dependency(self, _):
