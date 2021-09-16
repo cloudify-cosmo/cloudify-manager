@@ -138,9 +138,9 @@ def upload_blueprint(**kwargs):
 
 
 def _verify_secrets_clash(client, secrets):
-    existing_secrets = {secret.key: secret.value
-                        for secret in
-                        _http_client_wrapper(client, 'secrets', 'list')}
+    existing_secrets = {
+        secret.key: secret.value for secret in client.secrets.list()
+    }
 
     duplicate_secrets = set(secrets).intersection(existing_secrets)
 
@@ -158,43 +158,12 @@ def _set_secrets(client, secrets):
     _verify_secrets_clash(client, secrets)
 
     for secret_name in secrets:
-        _http_client_wrapper(client, 'secrets', 'create', {
-            'key': secret_name,
-            'value': u'{0}'.format(secrets[secret_name]),
-        })
+        client.secrets.create(
+            key=secret_name,
+            value=u'{0}'.format(secrets[secret_name]),
+        )
         ctx.logger.info('Created secret {}'.format(repr(secret_name)))
 
-
-def _http_client_wrapper(client,
-                         option,
-                         request_action,
-                         request_args=None):
-    """
-    wrapper for http client requests with CloudifyClientError custom
-    handling.
-    :param option: can be blueprints, executions and etc.
-    :param request_action: action to be done, like list, get and etc.
-    :param request_args: args for the actual call.
-    :return: The http response.
-    """
-    request_args = request_args or dict()
-    generic_client = getattr(client, option)
-    option_client = getattr(generic_client, request_action)
-
-    try:
-        return option_client(**request_args)
-    except ForbiddenWhileCancelling:
-        raise OperationRetry()
-    except CloudifyClientError as ex:
-        raise NonRecoverableError(
-            'Client action "{0}" failed: {1}.'.format(request_action, ex),
-            causes=[{
-                'option': option,
-                'request_action': request_action,
-                'request_args': request_args,
-                'error_code': ex.error_code,
-            }]
-        )
 
 
 def _upload_plugins(client, plugins):
@@ -203,7 +172,7 @@ def _upload_plugins(client, plugins):
         return
 
     ctx.instance.runtime_properties['plugins'] = []
-    existing_plugins = _http_client_wrapper(client, 'plugins', 'list')
+    existing_plugins = client.plugins.list()
 
     for plugin_name, plugin in plugins.items():
         zip_list = []
@@ -235,8 +204,7 @@ def _upload_plugins(client, plugins):
             zip_path = zip_files(zip_list)
 
             # upload plugin
-            plugin = _http_client_wrapper(
-                client, 'plugins', 'upload', {'plugin_path': zip_path})
+            plugin = client.plugins.upload(plugin_path=zip_path)
             ctx.instance.runtime_properties['plugins'].append(
                 plugin.id)
             ctx.logger.info('Uploaded {}'.format(repr(plugin.id)))
@@ -317,11 +285,11 @@ def create(timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL,
         ctx.logger.info('Creating "{0}" component deployment.'
                         .format(deployment_id))
         try:
-            _http_client_wrapper(client, 'deployments', 'create', {
-                'blueprint_id': blueprint_id,
-                'deployment_id': deployment_id,
-                'inputs': deployment_inputs
-            })
+            client.deployments.create(
+                blueprint_id=blueprint_id,
+                deployment_id=deployment_id,
+                inputs=deployment_inputs
+            )
             break
         except NonRecoverableError as ex:
             if (ex.causes
@@ -336,20 +304,12 @@ def create(timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL,
             else:
                 raise ex
 
-    _http_client_wrapper(
-        client,
-        'inter_deployment_dependencies',
-        'create',
-        _inter_deployment_dependency)
+    client.inter_deployment_dependencies.create(**_inter_deployment_dependency)
 
-    # Prepare executions list fields
-    execution_list_fields = ['workflow_id', 'id']
-
-    # Call list executions for the current deployment
-    executions = _http_client_wrapper(client, 'executions', 'list', {
-        'deployment_id': deployment_id,
-        '_include': execution_list_fields
-    })
+    executions = client.executions.list(
+        deployment_id=deployment_id,
+        _include=['workflow_id', 'id']
+    )
 
     # Retrieve the ``execution_id`` associated with the current deployment
     execution_id = [execution.get('id') for execution in executions
@@ -402,9 +362,7 @@ def _delete_secrets(client, secrets):
         return
 
     for secret_name in secrets:
-        _http_client_wrapper(client, 'secrets', 'delete', {
-            'key': secret_name,
-        })
+        client.secrets.delete(key=secret_name)
         ctx.logger.info('Removed secret "{}"'.format(repr(secret_name)))
 
 
@@ -451,11 +409,7 @@ def delete(timeout=EXECUTIONS_TIMEOUT, **kwargs):
                            'so nothing to do and moving on.'
                            .format(deployment_id))
     else:
-        _http_client_wrapper(
-            client,
-            'deployments',
-            'delete',
-            dict(deployment_id=deployment_id))
+        client.deployments.delete(deployment_id=deployment_id)
 
         ctx.logger.info("Waiting for component's deployment delete.")
         poll_result = poll_with_timeout(
@@ -475,9 +429,7 @@ def delete(timeout=EXECUTIONS_TIMEOUT, **kwargs):
     if not blueprint.get(EXTERNAL_RESOURCE):
         ctx.logger.info('Delete component\'s blueprint "{0}".'
                         .format(blueprint_id))
-        _http_client_wrapper(
-            client, 'blueprints', 'delete',
-            dict(blueprint_id=blueprint_id))
+        client.blueprints.delete(blueprint_id=blueprint_id)
 
     ctx.logger.info('Removing inter-deployment dependency between this '
                     'deployment ("{0}") and "{1}" the Component\'s '
@@ -532,8 +484,7 @@ def execute_start(timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL,
 
     ctx.logger.info('Starting execution for "{0}" deployment'.format(
         deployment_id))
-    execution = _http_client_wrapper(
-        client, 'executions', 'start', request_args)
+    execution = client.executions.start(**request_args)
 
     ctx.logger.debug('Execution start response: "{0}".'.format(execution))
 
