@@ -91,7 +91,7 @@ def _mark_verified_shared_resource_node(deployment_id):
 
 
 @operation(resumable=True)
-def connect_deployment(ctx, **kwargs):
+def connect_deployment(**kwargs):
     config = _get_desired_operation_input('resource_config', kwargs)
     deployment = config.get('deployment', '')
     deployment_id = deployment.get('id', '')
@@ -119,7 +119,7 @@ def connect_deployment(ctx, **kwargs):
 
 
 @operation(resumable=True)
-def disconnect_deployment(ctx, **kwargs):
+def disconnect_deployment(**kwargs):
     client, is_external_host = _get_client(kwargs)
     config = _get_desired_operation_input('resource_config', kwargs)
     deployment = config.get('deployment', '')

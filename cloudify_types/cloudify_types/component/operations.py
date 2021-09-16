@@ -76,7 +76,7 @@ def _get_client(kwargs):
 
 
 @operation(resumable=True)
-def upload_blueprint(ctx, **kwargs):
+def upload_blueprint(**kwargs):
     resource_config = _get_desired_operation_input('resource_config', kwargs)
     client = _get_client(kwargs)
 
@@ -264,7 +264,7 @@ def _generate_suffix_deployment_id(client, deployment_id):
 
 
 @operation(resumable=True)
-def create(ctx, timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL,
+def create(timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL,
            **kwargs):
     client = _get_client(kwargs)
     secrets = _get_desired_operation_input('secrets', kwargs)
@@ -415,7 +415,7 @@ def _delete_runtime_properties():
 
 
 @operation(resumable=True)
-def delete(ctx, timeout=EXECUTIONS_TIMEOUT, **kwargs):
+def delete(timeout=EXECUTIONS_TIMEOUT, **kwargs):
     client = _get_client(kwargs)
     ctx.logger.info("Wait for component's stop deployment operation "
                     "related executions.")
@@ -496,7 +496,7 @@ def delete(ctx, timeout=EXECUTIONS_TIMEOUT, **kwargs):
 
 
 @operation(resumable=True)
-def execute_start(ctx, timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL,
+def execute_start(timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL,
                   **kwargs):
     client = _get_client(kwargs)
     config = _get_desired_operation_input('resource_config', kwargs)
