@@ -114,15 +114,36 @@ def connect_deployment(ctx, **kwargs):
     _mark_verified_shared_resource_node(deployment_id)
     populate_runtime_with_wf_results(client, deployment_id)
 
-    client.inter_deployment_dependencies.create(
-        **_inter_deployment_dependency)
+    client.inter_deployment_dependencies.create(**_inter_deployment_dependency)
     return True
 
 
 @operation(resumable=True)
-@proxy_operation('remove_inter_deployment_dependency')
-def disconnect_deployment(operation, **_):
-    return getattr(SharedResource(_), operation)()
+def disconnect_deployment(ctx, **kwargs):
+    client, is_external_host = _get_client(kwargs)
+    config = _get_desired_operation_input('resource_config', kwargs)
+    deployment = config.get('deployment', '')
+    deployment_id = deployment.get('id', '')
+    runtime_deployment_prop = ctx.instance.runtime_properties.get(
+        'deployment', {})
+    runtime_deployment_id = runtime_deployment_prop.get('id')
+    _inter_deployment_dependency, _local_dependency_params = \
+        _get_idd(deployment_id, is_external_host, kwargs)
+    target_deployment = runtime_deployment_id or deployment_id
+    ctx.logger.info('Removing inter-deployment dependency between this '
+                    'deployment ("{0}") and "{1}" SharedResource\'s '
+                    'deployment...'
+                    ''.format(ctx.deployment.id,
+                              target_deployment))
+    _inter_deployment_dependency['target_deployment'] = target_deployment
+
+    if is_external_host:
+        _local_dependency_params['target_deployment'] = ' '
+        manager.get_rest_client().inter_deployment_dependencies.delete(
+            **_local_dependency_params)
+
+    client.inter_deployment_dependencies.delete(**_inter_deployment_dependency)
+    return True
 
 
 @operation(resumable=True)
