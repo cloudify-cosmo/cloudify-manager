@@ -226,8 +226,8 @@ def _upload_plugins(client, plugins):
                                            create_temp=True)
                 zip_list.append(icon_path)
             if not should_upload_plugin(yaml_path, existing_plugins):
-                ctx.logger.warn('Plugin "{0}" was already '
-                                'uploaded...'.format(plugin_name))
+                ctx.logger.warning('Plugin "{0}" was already '
+                                   'uploaded...'.format(plugin_name))
                 continue
 
             ctx.logger.info('Creating plugin "{0}" zip '
@@ -382,8 +382,8 @@ def _try_to_remove_plugin(client, plugin_id):
         client.plugins.delete(plugin_id=plugin_id)
     except CloudifyClientError as ex:
         if 'currently in use in blueprints' in str(ex):
-            ctx.logger.warn('Could not remove plugin "{0}", it '
-                            'is currently in use...'.format(plugin_id))
+            ctx.logger.warning('Could not remove plugin "{0}", it '
+                               'is currently in use...'.format(plugin_id))
         else:
             raise NonRecoverableError('Failed to remove plugin '
                                       '"{0}"....'.format(plugin_id))
@@ -447,9 +447,9 @@ def delete(timeout=EXECUTIONS_TIMEOUT, **kwargs):
     poll_result = True
     if not deployment_id_exists(client, deployment_id):
         # Could happen in case that deployment failed to install
-        ctx.logger.warn('Didn\'t find component\'s "{0}" deployment,'
-                        'so nothing to do and moving on.'
-                        .format(deployment_id))
+        ctx.logger.warning('Didn\'t find component\'s "{0}" deployment,'
+                           'so nothing to do and moving on.'
+                           .format(deployment_id))
     else:
         _http_client_wrapper(
             client,
