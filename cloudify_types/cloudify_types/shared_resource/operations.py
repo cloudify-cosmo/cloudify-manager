@@ -15,7 +15,7 @@
 from cloudify import manager, ctx
 from cloudify.decorators import operation
 
-from cloudify_types.utils import proxy_operation
+from cloudify_types.utils import errors_nonrecoverable
 from cloudify.constants import SHARED_RESOURCE
 from cloudify.exceptions import NonRecoverableError
 from cloudify_rest_client.client import CloudifyClient
@@ -91,6 +91,7 @@ def _mark_verified_shared_resource_node(deployment_id):
 
 
 @operation(resumable=True)
+@errors_nonrecoverable
 def connect_deployment(**kwargs):
     config = _get_desired_operation_input('resource_config', kwargs)
     deployment = config.get('deployment', '')
@@ -119,6 +120,7 @@ def connect_deployment(**kwargs):
 
 
 @operation(resumable=True)
+@errors_nonrecoverable
 def disconnect_deployment(**kwargs):
     client, is_external_host = _get_client(kwargs)
     config = _get_desired_operation_input('resource_config', kwargs)
@@ -147,6 +149,7 @@ def disconnect_deployment(**kwargs):
 
 
 @operation(resumable=True)
+@errors_nonrecoverable
 def execute_workflow(workflow_id,
                      parameters,
                      timeout=WORKFLOW_EXECUTION_TIMEOUT,

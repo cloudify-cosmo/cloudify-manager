@@ -19,8 +19,6 @@ from cloudify import ctx
 from cloudify.exceptions import NonRecoverableError
 from cloudify.models_states import ExecutionState, BlueprintUploadState
 
-from cloudify_types.utils import handle_client_exception
-
 from .constants import POLLING_INTERVAL, PAGINATION_SIZE, EXECUTIONS_TIMEOUT
 
 
@@ -63,7 +61,6 @@ def _get_ctx(instance_ctx):
     return instance_ctx if instance_ctx else ctx.instance
 
 
-@handle_client_exception('Redirecting logs from the deployment failed')
 def redirect_logs(client, execution_id, instance_ctx=None):
     instance_ctx = _get_ctx(instance_ctx)
     count_events = "received_events"
@@ -127,7 +124,6 @@ def _is_execution_not_ended(execution_status):
     return execution_status not in ('terminated', 'failed', 'cancelled')
 
 
-@handle_client_exception('Checking all executions had failed')
 def is_all_executions_finished(client, deployment_id=None):
     """
     Checks if all system workflows or given deployment id are finished
@@ -162,8 +158,6 @@ def is_all_executions_finished(client, deployment_id=None):
     return True
 
 
-@handle_client_exception('Checking deployment\'s latest execution state '
-                         'had failed')
 def is_deployment_execution_at_state(client,
                                      dep_id,
                                      state,

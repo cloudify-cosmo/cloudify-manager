@@ -26,7 +26,7 @@ from cloudify import ctx
 from cloudify._compat import urlparse
 from cloudify.exceptions import NonRecoverableError
 
-from cloudify_types.utils import handle_client_exception, get_deployment_by_id
+from cloudify_types.utils import get_deployment_by_id
 
 from .constants import CAPABILITIES
 
@@ -123,7 +123,6 @@ def zip_files(files_paths):
     return destination_zip
 
 
-@handle_client_exception('Blueprint search failed')
 def blueprint_id_exists(client, blueprint_id):
     """
     Searching for blueprint_id in all blueprints in order to differentiate
@@ -156,7 +155,6 @@ def should_upload_plugin(plugin_yaml_path, existing_plugins):
     return True
 
 
-@handle_client_exception('Failed fetching workflow results')
 def populate_runtime_with_wf_results(client,
                                      deployment_id,
                                      node_instance=None):

@@ -27,7 +27,7 @@ from cloudify_rest_client.exceptions import (
     ForbiddenWhileCancelling,
 )
 
-from cloudify_types.utils import proxy_operation
+from cloudify_types.utils import errors_nonrecoverable
 
 from .component import Component
 from .polling import (
@@ -76,6 +76,7 @@ def _get_client(kwargs):
 
 
 @operation(resumable=True)
+@errors_nonrecoverable
 def upload_blueprint(**kwargs):
     resource_config = _get_desired_operation_input('resource_config', kwargs)
     client = _get_client(kwargs)
@@ -232,6 +233,7 @@ def _generate_suffix_deployment_id(client, deployment_id):
 
 
 @operation(resumable=True)
+@errors_nonrecoverable
 def create(timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL,
            **kwargs):
     client = _get_client(kwargs)
@@ -371,6 +373,7 @@ def _delete_runtime_properties():
 
 
 @operation(resumable=True)
+@errors_nonrecoverable
 def delete(timeout=EXECUTIONS_TIMEOUT, **kwargs):
     client = _get_client(kwargs)
     ctx.logger.info("Wait for component's stop deployment operation "
@@ -446,6 +449,7 @@ def delete(timeout=EXECUTIONS_TIMEOUT, **kwargs):
 
 
 @operation(resumable=True)
+@errors_nonrecoverable
 def execute_start(timeout=EXECUTIONS_TIMEOUT, interval=POLLING_INTERVAL,
                   **kwargs):
     client = _get_client(kwargs)

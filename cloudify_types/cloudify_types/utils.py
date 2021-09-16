@@ -17,7 +17,10 @@ import functools
 
 from cloudify import ctx
 from cloudify.utils import exception_to_error_cause
-from cloudify_rest_client.exceptions import CloudifyClientError
+from cloudify_rest_client.exceptions import (
+    CloudifyClientError,
+    ForbiddenWhileCancelling
+)
 from cloudify.exceptions import NonRecoverableError, OperationRetry
 
 
@@ -27,52 +30,25 @@ def generate_traceback_exception():
     return response
 
 
-def proxy_operation(operation):
-    def decorator(task, **kwargs):
-        def wrapper(**kwargs):
-            try:
-                kwargs['operation'] = operation
-                return task(**kwargs)
-            except OperationRetry:
-                response = generate_traceback_exception()
+def errors_nonrecoverable(f):
+    @functools.wraps(f)
+    def wrapper(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except ForbiddenWhileCancelling:
+            raise OperationRetry()
+        except Exception as ex:
+            response = generate_traceback_exception()
 
-                ctx.logger.error(
-                    'Error traceback {0} with message {1}'.format(
-                        response['traceback'], response['message']))
+            ctx.logger.error(
+                'Error traceback {0} with message {1}'.format(
+                    response['traceback'], response['message']))
 
-                raise OperationRetry(
-                    'Error: {0} while trying to run proxy task {1}'
-                    ''.format(response['message'], operation))
-
-            except Exception:
-                response = generate_traceback_exception()
-
-                ctx.logger.error(
-                    'Error traceback {0} with message {1}'.format(
-                        response['traceback'], response['message']))
-
-                raise NonRecoverableError(
-                    'Error: {0} while trying to run proxy task {1}'
-                    ''.format(response['message'], operation))
-
-        return wrapper
-    return decorator
+            raise NonRecoverableError(
+                'Error in {0}: {1}.'.format(f.__name__, ex))
+    return wrapper
 
 
-def handle_client_exception(error_msg):
-    def exception_decorator(func):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            try:
-                return func(*args, **kwargs)
-            except CloudifyClientError as ex:
-                raise NonRecoverableError(
-                    '{0}, due to {1}.'.format(error_msg, str(ex)))
-        return wrapper
-    return exception_decorator
-
-
-@handle_client_exception('Deployment search failed')
 def get_deployment_by_id(client, deployment_id):
     """
     Searching for deployment_id in all deployments in order to differentiate
